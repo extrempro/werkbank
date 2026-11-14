@@ -12,7 +12,7 @@ Nach [`entra-setup.md`](entra-setup.md):
 - [ ] Mindestens ein Konto hat die Rolle `Werkbank.Admin`, eines `Config.Reviewer` (kann dasselbe sein)
 - [ ] Conditional Access **CA-Werkbank-MFA** (Abschnitt 2), zuerst „Nur Bericht“
 - [ ] App-Registrierung **Werkbank Collector** (Abschnitt 4.1) mit eigenem Zertifikat und Administratorzustimmung
-- [ ] Dienstprinzipal von UTCM angelegt und mit `Policy.Read.All` versehen (Abschnitt 4.2)
+- [ ] Dienstprinzipale von UTCM angelegt und Leserechte vergeben (Abschnitt 4.2)
 
 Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkbank Collector“.
 
