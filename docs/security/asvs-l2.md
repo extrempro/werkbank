@@ -1,6 +1,6 @@
 # Sicherheitsnachweis – OWASP ASVS Stufe 2
 
-> **Stand:** Ende Phase 3 (Kern, Module M365-Konfiguration und Evergreen). Anmeldung und Abruf aus dem Tenant sind an einer ersten Installation bestätigt.
+> **Stand:** Version 0.3 (Kern, Module M365-Konfiguration und Evergreen, Konto mit Profilbild). Anmeldung, Abruf aus dem Tenant und Nachrichtencenter sind an einer ersten Installation bestätigt.
 > **Grundlage:** OWASP ASVS **5.0.0** (Mai 2025), Stufe 2. Verweise auf einzelne Anforderungen im Format `v5.0.0-<Kapitel>.<Abschnitt>.<Anforderung>`. Die Übersicht unten ist nach Themen gegliedert; die Aufschlüsselung je Anforderung folgt.
 
 Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht anwendbar
@@ -35,14 +35,15 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 | **Fehlerbehandlung** | Keine Stacktraces nach außen, Health-Endpunkte ohne Details | `test_health_ok`, `test_ready_with_database` | ✅ |
 | **Rate-Limits** | Höchstzahl Anfragen pro Minute und Absender-IP für Anmeldung, API und Exporte, Antwort 429 mit `Retry-After`; Zähler nur im Arbeitsspeicher, begrenzte Größe (`core/ratelimit.py`) | `tests/test_ratelimit.py` | ✅ |
 | **Hintergrundaufträge** | Worker ohne Port nach außen, gleiche Härtung wie der Web-Dienst; führt nur fest hinterlegte Auftragsarten aus; Fehler im Audit-Log; räumt abgelaufene Sitzungen und Anmeldevorgänge weg (`werkbank/worker/`) | `tests/test_worker.py`, Docker-Smoke-Test | ✅ |
-| **Dateien und Anhänge** | Noch keine Uploads | – | n/a (Phase 1) |
-| **Browser-Speicher / PWA** | Service Worker cacht nur die App-Hülle, `/api` und `/auth` nie; keine Fachdaten im lokalen Speicher | E2E `pwa.spec.ts` (Cache-Inhalt), Offline-Seite | ✅ |
+| **Profilbild** | Optional (`ENTRA_PROFILE_PHOTO`); Abruf nur des eigenen Bildes mit der delegierten Berechtigung `User.Read`, nur von `https://graph.microsoft.com`, Zeitlimit; nur JPEG/PNG (am Dateianfang geprüft), höchstens 512 KB; das Zugriffstoken wird nicht gespeichert; Auslieferung nur an angemeldete Personen mit festem Medientyp und `nosniff`; ein Fehler beim Abruf verhindert die Anmeldung nicht (`core/avatar.py`) | `tests/test_avatar.py`, E2E `konto.spec.ts` | ✅ (Abruf am echten Tenant noch nicht bestätigt) |
+| **Dateien und Anhänge** | Keine Uploads durch Personen | – | n/a (kommt mit Phase 4) |
+| **Browser-Speicher / PWA** | Service Worker cacht nur die App-Hülle, `/api` und `/auth` nie; keine Fachdaten im lokalen Speicher (dort nur die gewählte Darstellung und die zuletzt gesehene Version der Neuigkeiten) | E2E `pwa.spec.ts` (Cache-Inhalt), Offline-Seite | ✅ |
 | **Konfiguration und Container** | Container ohne Root, schreibgeschütztes Dateisystem, keine Capabilities, `no-new-privileges`; Secrets nur als Docker-Secrets | Trivy (Konfiguration), Docker-Smoke-Test | ✅ |
 | **Lieferkette** | Actions per Commit-Hash gepinnt, Dependabot mit 7 Tagen Wartezeit, Lockfiles, `npm audit`/`pip-audit`, Semgrep, CodeQL, gitleaks, Trivy | CI-Workflows `ci.yml`, `security.yml`, `codeql.yml` | ✅ |
 | **Secrets im Repository** | gitleaks, GitHub Secret Scanning mit Push Protection, `.gitignore` für Schlüssel und `.env` | `security.yml` | ✅ |
 
-## Offene Punkte für Phase 2
+## Offene Punkte
 
-1. Objektberechtigungen für die fachlichen Daten der Module
+1. Objektberechtigungen für die fachlichen Daten der Module: für M365-Konfiguration und Evergreen umgesetzt (siehe Tabelle), bei jedem neuen Modul erneut zu prüfen
 2. E2E-Tests über HTTPS (auch WebKit), HSTS prüfen
 3. Einzelnachweis je Anforderung nach ASVS 5.0.0 (Kapitel V1 bis V17)

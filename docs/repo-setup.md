@@ -60,7 +60,11 @@ Settings → **Rules** → Rulesets → **New branch ruleset**:
 - `gitleaks (Secrets)`
 - `Trivy (Abhängigkeiten, Konfiguration, Secrets)`
 - `CodeQL (python)`
-- später zusätzlich: `Frontend (Lint, Typen, Tests, Build)`, `E2E, Barrierefreiheit, Lighthouse`, `CodeQL (javascript-typescript)`
+- `Frontend (Lint, Typen, Tests, Build)`
+- `E2E, Barrierefreiheit, Lighthouse`
+- `CodeQL (javascript-typescript)`
+
+Die letzten drei gibt es seit Phase 1. Ob sie im Ruleset schon als Pflicht eingetragen sind, bitte in den Einstellungen nachsehen.
 
 ## 7. Private vulnerability reporting
 
@@ -79,7 +83,7 @@ Settings → **Code security**:
 
 ## Releases
 
-Keine Einrichtung nötig. Ein gepushter Tag `vX.Y.Z` erzeugt über `.github/workflows/release.yml` ein Release mit den Notizen aus `CHANGELOG.md`.
+Keine Einrichtung nötig. Sobald ein PR mit einer neuen Version in `main` gemergt ist, legt `.github/workflows/release.yml` den Tag `vX.Y.Z` und das Release mit dem Abschnitt aus `CHANGELOG.md` an. Ein von Hand gepushter Tag erzeugt ebenfalls ein Release. Der Workflow braucht dafür Schreibrechte auf Inhalte; er fordert sie selbst an (`contents: write`).
 
 ## Arcane
 

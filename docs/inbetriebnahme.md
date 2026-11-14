@@ -10,6 +10,7 @@ Nach [`entra-setup.md`](entra-setup.md):
 
 - [ ] App-Registrierung **Werkbank** (Abschnitt 1): Redirect-URI `https://werkbank.example.com/auth/callback`, Zertifikat hochgeladen, optionale Ansprüche `email`, `preferred_username`, `auth_time`, acht App-Rollen, „Zuweisung erforderlich“, Gruppen zugewiesen
 - [ ] Mindestens ein Konto hat die Rolle `Werkbank.Admin`, eines `Config.Reviewer` (kann dasselbe sein)
+- [ ] Optional für Profilbilder: delegierte Berechtigung `User.Read` mit Administratorzustimmung (Abschnitt 1.5), danach `ENTRA_PROFILE_PHOTO=true`
 - [ ] Conditional Access **CA-Werkbank-MFA** (Abschnitt 2), zuerst „Nur Bericht“
 - [ ] App-Registrierung **Werkbank Collector** (Abschnitt 4.1) mit eigenem Zertifikat und Administratorzustimmung
 - [ ] Dienstprinzipale von UTCM angelegt und Leserechte vergeben (Abschnitt 4.2)
@@ -24,7 +25,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 
 ## 3. Arcane
 
-- [ ] Git-Sync auf das Repository, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Arcane holt dabei nur den Ordner `deploy/`; das ist richtig so, das Image wird aus GitHub gebaut
+- [ ] Git-Sync auf das Repository, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Arcane holt dabei nur den Ordner `deploy/`; das ist richtig so. Das `Dockerfile` dort holt den Quellcode beim Bauen von GitHub
 - [ ] Umgebungsvariablen eingetragen:
 
 | Variable | Wert |
@@ -59,11 +60,14 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 | Snapshots nach einigen Minuten | Abruf „Erfolgreich“ mit Objekten; Einstellungen sind gefüllt |
 | Evergreen → Eingang, einige Stunden nach dem Start | Meldungen aus dem Nachrichtencenter sind da; größere Änderungen stehen als Vorgänge unter „Vorgänge“ |
 | Zweiter Abruf nach einer Änderung im Tenant | Änderung erscheint unter „Änderungen“ mit „Geändert von“ |
-| Update-Hinweis nach einer neuen Version | Banner „Neue Version“, „Neu laden“ lädt sie |
+| Seite „Konto“ (Klick auf den Namen oben rechts) | Zeigt Rollen, Sitzung und die laufende Version |
+| Update auf eine neue Version | Image neu bauen (siehe [`deploy/README.md`](../deploy/README.md)); danach Banner „Neue Version“, „Neu laden“ lädt sie; auf der Seite „Konto“ steht die neue Version |
 | iPhone und iPad | Zum Home-Bildschirm hinzufügen, Anmeldung, Bedienung |
 
 ## 6. Wenn etwas nicht klappt
 
+- **Nach einem Update sieht die Werkbank aus wie vorher:** Das Image wurde nicht neu gebaut. Ein Neu-Bereitstellen kann das vorhandene Image weiterverwenden. Auf dem Docker-Host im Projektordner `docker compose build --no-cache --pull` und `docker compose up -d` ausführen.
+- **Anmeldung schlägt fehl, nachdem `ENTRA_PROFILE_PHOTO=true` gesetzt wurde:** An der App-Registrierung fehlt die delegierte Berechtigung `User.Read` oder die Administratorzustimmung ([`entra-setup.md`](entra-setup.md), 1.5).
 - **Compose startet nicht, „bind source path does not exist: …/secrets/postgres_password“:** `WERKBANK_SECRETS_DIR` ist nicht gesetzt (dann sucht Compose im Ordner `secrets` neben der Compose-Datei) oder eine der fünf Dateien fehlt.
 - **„env file not found“:** In Arcane sind noch keine Umgebungsvariablen für das Projekt eingetragen.
 - **Anmeldung endet mit „Anmeldung nicht möglich“:** Im Audit-Log steht der Grund (`anmeldung.abgelehnt`), z. B. `falscher_mandant` oder `keine_rolle`.
