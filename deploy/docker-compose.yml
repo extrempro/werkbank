@@ -1,15 +1,20 @@
 # Werkbank – Docker Compose
 # Konfiguration: deploy/.env (Vorlage: deploy/.env.example)
-# Secrets: deploy/secrets/ auf dem Host (nicht im Repository), siehe deploy/README.md
+# Secrets: Ordner WERKBANK_SECRETS_DIR auf dem Host (nicht im Repository), siehe deploy/README.md
 # Web-Dienst (API und Oberfläche), Worker (Hintergrundaufträge) und Datenbank. PowerShell folgt.
 
 name: werkbank
 
+# Das Image wird aus dem Repository gebaut. Standard ist der Stand von main auf GitHub, damit
+# neben dieser Datei kein Quellcode liegen muss (z. B. bei Arcane Git-Sync).
+# Für einen lokalen Stand: WERKBANK_BUILD_CONTEXT=.. (Wurzel des ausgecheckten Repositorys).
+x-werkbank-build: &werkbank-build
+  context: ${WERKBANK_BUILD_CONTEXT:-https://github.com/extrempro/werkbank.git#main}
+  dockerfile: backend/Dockerfile
+
 services:
   web:
-    build:
-      context: ..
-      dockerfile: backend/Dockerfile
+    build: *werkbank-build
     image: werkbank-web:local
     restart: unless-stopped
     env_file: .env
@@ -18,6 +23,10 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets:
       - postgres_password
+      - source: entra_client_key
+        target: entra_client_key.pem
+      - source: entra_client_cert
+        target: entra_client_cert.pem
     ports:
       - "${BIND_IP:-127.0.0.1}:${BIND_PORT:-8080}:8000"
     depends_on:
@@ -36,9 +45,7 @@ services:
 
   worker:
     # Gleiches Image wie web, anderer Startbefehl. Kein Port nach außen.
-    build:
-      context: ..
-      dockerfile: backend/Dockerfile
+    build: *werkbank-build
     image: werkbank-web:local
     command: ["python", "-m", "werkbank.worker"]
     restart: unless-stopped
@@ -48,6 +55,10 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets:
       - postgres_password
+      - source: collector_client_key
+        target: collector_client_key.pem
+      - source: collector_client_cert
+        target: collector_client_cert.pem
     depends_on:
       # web spielt beim Start die Datenbank-Migrationen ein
       web:
@@ -99,6 +110,17 @@ networks:
 volumes:
   db-data:
 
+# Alle Dateien müssen vorhanden sein, sonst startet Compose nicht (siehe deploy/README.md).
+# WERKBANK_SECRETS_DIR: Ordner auf dem Docker-Host, am besten ein absoluter Pfad außerhalb
+# des Projektordners, damit ein Git-Sync die Dateien nicht anfasst.
 secrets:
   postgres_password:
-    file: ./secrets/postgres_password
+    file: ${WERKBANK_SECRETS_DIR:-./secrets}/postgres_password
+  entra_client_key:
+    file: ${WERKBANK_SECRETS_DIR:-./secrets}/entra_client_key.pem
+  entra_client_cert:
+    file: ${WERKBANK_SECRETS_DIR:-./secrets}/entra_client_cert.pem
+  collector_client_key:
+    file: ${WERKBANK_SECRETS_DIR:-./secrets}/collector_client_key.pem
+  collector_client_cert:
+    file: ${WERKBANK_SECRETS_DIR:-./secrets}/collector_client_cert.pem
