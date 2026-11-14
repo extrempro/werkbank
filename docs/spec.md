@@ -56,7 +56,7 @@ Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen spä
 | Laufzeit | Docker / Docker Compose |
 | Veröffentlichung | Hinter dem **NetBird Reverse Proxy**, **öffentlich erreichbar**. TLS endet am Proxy. |
 | Deployment | **Arcane Git-Sync** zieht `deploy/docker-compose.yml` aus dem Repo. Ein Merge auf `main` führt zum Deployment. |
-| Netzwerkbindung | `BIND_IP` und `BIND_PORT` über `.env`, z. B. `BIND_IP=10.0.0.5`, `BIND_PORT=8080`. |
+| Netzwerkbindung | `BIND_IP` und `BIND_PORT` über `.env`. `BIND_IP` ist die Adresse, über die der NetBird Reverse Proxy den Docker-Host erreicht (NetBird-IP des Hosts oder `127.0.0.1`), **nicht** die öffentliche IP. Details: `deploy/README.md`. |
 | Konfiguration | Ausschließlich über Umgebungsvariablen bzw. Docker-Secrets. `.env.example` im Repo, `.env` niemals. |
 | Zeitzone | Speicherung in UTC, Anzeige in `Europe/Berlin`. |
 | Sprache | Oberfläche Deutsch. Texte zentral abgelegt, damit später weitere Sprachen möglich sind. |
