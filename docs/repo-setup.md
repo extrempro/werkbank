@@ -13,11 +13,10 @@ Repository-Einstellungen können nur Personen mit Admin-Rechten ändern, Claude 
 | 3 | Secret Scanning und Push Protection | ✅ aktiv (Standard bei öffentlichen Repos) |
 | 4 | Beschreibung und Topics | ⬜ offen |
 | 5 | Actions-Berechtigungen | ⬜ offen |
-| 6 | Branch Protection (Ruleset) für `main` | ⬜ offen |
-| 7 | Private vulnerability reporting | ⬜ offen |
-| 8 | Dependabot alerts und security updates | ⬜ offen |
+| 6 | Branch Protection (Ruleset) für `main` | ✅ erledigt |
+| 7 | Private vulnerability reporting | ✅ erledigt |
+| 8 | Dependabot alerts und security updates | ✅ erledigt |
 | 9 | Platzhalter ersetzen (Copyright-Inhaber, Mail-Adressen) | ⬜ offen |
-| 10 | Freigabe der Veröffentlichung durch die Geschäftsführung | ⬜ offen |
 
 ## 4. Beschreibung und Topics
 
@@ -84,11 +83,6 @@ Settings → **Code security**:
 - `SECURITY.md` und `CODE_OF_CONDUCT.md`: `[E-MAIL-ADRESSE EINTRAGEN]` ersetzen
 
 Die Änderung über einen Branch und Pull Request einbringen, nicht direkt auf `main`.
-
-## 10. Freigabe
-
-Das Repository ist bereits öffentlich, die Freigabe der Geschäftsführung steht noch aus (siehe `docs/spec.md`, offener Punkt 11).
-Bis dahin keine firmenbezogenen Inhalte ergänzen. Wird die Freigabe verweigert: Repository auf privat stellen (Settings → General → Danger Zone → Change repository visibility).
 
 ## Releases
 
