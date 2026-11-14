@@ -1,32 +1,103 @@
-# Erstellt ein GitHub Release, wenn ein Tag vX.Y.Z gepusht wird.
+# Veröffentlicht ein GitHub Release mit Tag vX.Y.Z.
+#
+# Auslöser:
+# - Push auf main (also das Mergen eines PRs): Ist die Version in frontend/package.json neu,
+#   gibt es also noch kein Release dazu, und hat CHANGELOG.md einen Abschnitt für diese Version,
+#   legt der Workflow Tag und Release auf dem gemergten Commit an. Sonst passiert nichts.
+# - Push eines Tags vX.Y.Z von Hand: Release für diesen Tag, falls es noch keins gibt.
+# - Manuell über „Run workflow“: wie ein Push auf main.
+#
 # Die Release Notes kommen aus dem passenden Abschnitt in CHANGELOG.md.
 name: Release
 
 on:
   push:
+    branches: [main]
     tags: ["v*.*.*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Release Notes aus CHANGELOG.md lesen
+
+      - name: Version ermitteln und prüfen
+        id: version
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          set -euo pipefail
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(jq -r .version frontend/package.json)"
+          fi
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Ungültige Version: $VERSION"
+            exit 1
+          fi
+
+          # Alle Stellen mit der Version müssen übereinstimmen.
+          E2E="$(jq -r .version e2e/package.json)"
+          PY="$(sed -n 's/^version = "\(.*\)"$/\1/p' backend/pyproject.toml | head -n 1)"
+          INIT="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' backend/werkbank/__init__.py)"
+          for pair in "e2e/package.json:$E2E" "backend/pyproject.toml:$PY" "backend/werkbank/__init__.py:$INIT"; do
+            if [ "${pair#*:}" != "$VERSION" ]; then
+              echo "::error::${pair%%:*} hat Version ${pair#*:}, erwartet $VERSION"
+              exit 1
+            fi
+          done
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Prüfen, ob es das Release schon gibt
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG gibt es schon, nichts zu tun."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Release Notes aus CHANGELOG.md lesen
+        id: notes
+        if: steps.exists.outputs.skip == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
           awk -v v="$VERSION" '
-            $0 ~ "^## \\[" v "\\]" {found=1; next}
+            index($0, "## [" v "]") == 1 {found=1; next}
             found && /^## \[/ {exit}
             found {print}
           ' CHANGELOG.md > release-notes.md
-          if [ ! -s release-notes.md ]; then
-            echo "Kein Abschnitt für Version $VERSION in CHANGELOG.md gefunden."
+          if [ -s release-notes.md ] && grep -q '[^[:space:]]' release-notes.md; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "::error::Kein Abschnitt für Version $VERSION in CHANGELOG.md gefunden."
             exit 1
+          else
+            echo "Kein Abschnitt für Version $VERSION in CHANGELOG.md, kein Release."
+            echo "found=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: GitHub Release erstellen
+
+      - name: Tag und GitHub Release erstellen
+        if: steps.exists.outputs.skip == 'false' && steps.notes.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "Werkbank $GITHUB_REF_NAME" --notes-file release-notes.md
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "Werkbank $TAG" \
+            --notes-file release-notes.md

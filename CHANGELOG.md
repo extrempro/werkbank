@@ -4,6 +4,10 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- **Releases automatisch:** Wird ein PR mit neuer Version in `main` gemergt, legt der Workflow `release.yml` Tag und GitHub Release an. Er prüft vorher, dass die Version an allen Stellen gleich ist
+
 ## [0.1.0] – 2026-11-14
 
 Erste Version mit den Modulen M365-Konfiguration und Evergreen.
