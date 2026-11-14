@@ -176,12 +176,55 @@ Für die automatischen Tests (CI) wird **keine** Entra-Registrierung benötigt: 
 
 ## 4. App-Registrierung „Werkbank Collector“ (Phase 2)
 
-Wird erst mit dem Modul M365-Konfiguration angelegt. Grundsätze schon jetzt:
+Der Collector liest die Einstellungen des Tenants über **Unified Tenant Configuration Management (UTCM)** in Microsoft Graph. Grundsätze:
 
 - Eigene Registrierung, **keine** Umleitungs-URI, **nur Anwendungsberechtigungen**
 - Anmeldung **nur per Zertifikat**, kein Secret
-- **Nur lesende** Berechtigungen. Die genaue Liste je Datenquelle (Graph, UTCM, Exchange Online, Teams) wird in Phase 2 ergänzt und begründet.
+- Die Werkbank ändert keine Einstellung des Tenants.
 - Wird in Phase 3 um `ServiceMessage.Read.All` für das Nachrichtencenter erweitert.
+
+> **Stand:** Diese Schritte folgen der Dokumentation von Microsoft und sind noch nicht gegen einen echten Tenant geprüft. Das geschieht bei der ersten Inbetriebnahme.
+
+### 4.1 App-Registrierung anlegen
+
+1. **App-Registrierungen → Neue Registrierung**, Name `Werkbank Collector`, nur dieses Verzeichnis, keine Umleitungs-URI.
+2. **Zertifikate & Geheimnisse → Zertifikate**: ein eigenes Zertifikat hochladen (Erzeugung wie in 1.3, Dateinamen `collector_client_key.pem` und `collector_client_cert.pem`).
+3. **API-Berechtigungen → Microsoft Graph → Anwendungsberechtigungen**, danach **Administratorzustimmung erteilen**:
+
+| Berechtigung | Wofür |
+|---|---|
+| `ConfigurationMonitoring.ReadWrite.All` | Snapshots bei UTCM anstoßen, abholen und wieder entfernen. Das Schreibrecht betrifft nur diese Snapshot-Aufträge, nicht die Einstellungen des Tenants. Mit `ConfigurationMonitoring.Read.All` allein lassen sich keine Snapshots erstellen. |
+| `AuditLog.Read.All` | „Geändert von“: Wer eine Einstellung geändert hat, steht im Entra-Audit-Log. |
+
+### 4.2 Dienstprinzipal von UTCM einrichten
+
+UTCM liest die Einstellungen nicht mit den Rechten der Collector-App, sondern mit einem eigenen Dienstprinzipal von Microsoft („Tenant Configuration Management“, App-ID `03b07b79-c5bc-4b5e-9bfa-13acf4a99998`). Er muss einmal im Tenant angelegt werden und die Leserechte bekommen. Mit einem Global-Administrator-Konto in PowerShell:
+
+```powershell
+Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Applications
+Connect-MgGraph -Scopes 'Application.ReadWrite.All', 'AppRoleAssignment.ReadWrite.All'
+
+# Dienstprinzipal von UTCM anlegen
+New-MgServicePrincipal -AppId '03b07b79-c5bc-4b5e-9bfa-13acf4a99998'
+
+# Leserechte für die Entra-Richtlinien vergeben
+$graph = Get-MgServicePrincipal -Filter "AppId eq '00000003-0000-0000-c000-000000000000'"
+$tcm   = Get-MgServicePrincipal -Filter "AppId eq '03b07b79-c5bc-4b5e-9bfa-13acf4a99998'"
+foreach ($name in @('Policy.Read.All')) {
+    $role = $graph.AppRoles | Where-Object { $_.Value -eq $name }
+    New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $tcm.Id -BodyParameter @{
+        AppRoleId = $role.Id; ResourceId = $graph.Id; PrincipalId = $tcm.Id
+    }
+}
+```
+
+Fehlt dem Dienstprinzipal ein Recht, schlägt nicht das Anlegen des Snapshots fehl, sondern erst der Abruf. Die Werkbank zeigt die Fehlerangabe von UTCM dann beim Abruf an. Für weitere Ressourcentypen (`COLLECTOR_RESOURCES`) braucht der Dienstprinzipal die passenden Leserechte.
+
+### 4.3 Grenzen von UTCM
+
+- höchstens **20.000 gelesene Objekte pro Monat** (jede Richtlinie zählt als ein Objekt); deshalb ruft die Werkbank standardmäßig einmal täglich ab
+- Snapshots werden von Microsoft höchstens 7 Tage aufbewahrt; den Verlauf hält die Werkbank selbst
+- Voraussetzung laut Microsoft: Microsoft 365 E3 oder Entra ID P1
 
 ---
 
@@ -191,12 +234,14 @@ Wird erst mit dem Modul M365-Konfiguration angelegt. Grundsätze schon jetzt:
 PUBLIC_URL=https://werkbank.example.com
 ENTRA_TENANT_ID=<Verzeichnis-ID>
 ENTRA_CLIENT_ID=<Anwendungs-ID der Registrierung „Werkbank“>
+COLLECTOR_CLIENT_ID=<Anwendungs-ID der Registrierung „Werkbank Collector“>
 ```
 
 Dateien in `deploy/secrets/` (je nach Variante aus 1.3):
 
 - `entra_client_key.pem` und `entra_client_cert.pem`, **oder**
 - `entra_client_secret`
+- für den Collector: `collector_client_key.pem` und `collector_client_cert.pem`
 
 ## Checkliste
 

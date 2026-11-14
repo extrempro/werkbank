@@ -7,7 +7,7 @@ import threading
 
 from werkbank.config import get_settings
 from werkbank.worker.runner import heartbeat_is_fresh, run_forever
-from werkbank.worker.tasks import REGISTRY
+from werkbank.worker.tasks import build_registry
 
 
 def main(argv: list[str]) -> int:
@@ -20,7 +20,7 @@ def main(argv: list[str]) -> int:
     stop = threading.Event()
     for signum in (signal.SIGTERM, signal.SIGINT):
         signal.signal(signum, lambda *_: stop.set())
-    run_forever(settings, stop, REGISTRY)
+    run_forever(settings, stop, build_registry(settings))
     return 0
 
 

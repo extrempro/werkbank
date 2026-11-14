@@ -4,12 +4,9 @@ Backend-for-Frontend: Tokens von Entra bleiben im Backend, der Browser erhält n
 Session-Cookie. Siehe docs/spec.md, Kapitel 6.1, und docs/entra-setup.md.
 """
 
-import hashlib
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Protocol
 
-from cryptography import x509
-from cryptography.hazmat.primitives import serialization
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -17,6 +14,7 @@ from sqlalchemy import delete, select
 
 from werkbank.config import Settings
 from werkbank.core.audit import write_audit
+from werkbank.core.credentials import certificate_credential
 from werkbank.core.deps import CurrentUserDep, DbDep, SettingsDep
 from werkbank.core.models import AuthFlow, User, UserSession
 from werkbank.core.roles import filter_known_roles
@@ -50,15 +48,9 @@ class EntraClient(Protocol):
 def _client_credential(settings: Settings) -> str | dict[str, str]:
     """Zertifikat (bevorzugt) oder geheimer Clientschlüssel aus Docker-Secrets."""
     if settings.entra_client_key_file.exists() and settings.entra_client_cert_file.exists():
-        cert = x509.load_pem_x509_certificate(settings.entra_client_cert_file.read_bytes())
-        der = cert.public_bytes(serialization.Encoding.DER)
-        # Entra erwartet den SHA-1-Fingerabdruck des Zertifikats (Header x5t). Er dient nur als
-        # Kennung des Zertifikats, nicht der Sicherheit; signiert wird mit dem privaten Schlüssel.
-        thumbprint = hashlib.sha1(der, usedforsecurity=False).hexdigest()  # nosemgrep
-        return {
-            "private_key": settings.entra_client_key_file.read_text(encoding="utf-8"),
-            "thumbprint": thumbprint,
-        }
+        return certificate_credential(
+            settings.entra_client_key_file, settings.entra_client_cert_file
+        )
     if settings.entra_client_secret_file.exists():
         return settings.entra_client_secret_file.read_text(encoding="utf-8").strip()
     raise RuntimeError("Kein Zertifikat und kein geheimer Clientschlüssel für Entra gefunden.")

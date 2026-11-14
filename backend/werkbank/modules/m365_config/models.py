@@ -45,6 +45,8 @@ class CfgSnapshot(Base):
         JSONB, default=dict, server_default=text("'{}'::jsonb")
     )
     change_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    # Anzahl gelesener Objekte (zählt gegen das Monatskontingent der Quelle)
+    resource_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
 
 
 class CfgSetting(Base):

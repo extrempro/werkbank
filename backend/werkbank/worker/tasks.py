@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from werkbank.config import Settings
 from werkbank.core.models import AuthFlow, Job, JobStatus, UserSession
 from werkbank.core.sessions import now_utc
+from werkbank.modules.m365_config.jobs import COLLECT, collect_job
 from werkbank.worker.jobs import JobType
 
 CLEANUP = "kern.aufraeumen"
@@ -36,3 +37,13 @@ def cleanup(db: Session, settings: Settings, payload: dict[str, Any]) -> None:
 REGISTRY: dict[str, JobType] = {
     CLEANUP: JobType(handler=cleanup, interval=timedelta(hours=1)),
 }
+
+
+def build_registry(settings: Settings) -> dict[str, JobType]:
+    """Auftragsarten dieser Installation: Kern und, wenn eingerichtet, der Abruf aus dem Tenant."""
+    registry = dict(REGISTRY)
+    if settings.collector_configured:
+        registry[COLLECT] = JobType(
+            handler=collect_job, interval=timedelta(hours=max(settings.collector_interval_hours, 1))
+        )
+    return registry
