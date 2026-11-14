@@ -11,6 +11,7 @@ export interface NavGroup {
 const ADMIN = "Werkbank.Admin";
 const AUDITOR = "Werkbank.Auditor";
 const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
+const EVERGREEN_EDITORS = ["Evergreen.IT", "Evergreen.Team"];
 const EVERGREEN_ROLES = ["Evergreen.IT", "Evergreen.Team", "Evergreen.Betriebsrat", "Evergreen.GF"];
 
 function hasAny(roles: readonly string[], wanted: readonly string[]): boolean {
@@ -36,7 +37,11 @@ export function navigationFor(roles: readonly string[]): NavGroup[] {
     });
   }
   if (hasAny(roles, EVERGREEN_ROLES)) {
-    groups.push({ title: "Evergreen", items: [{ path: "/evergreen", label: "Vorgänge" }] });
+    const items: NavItem[] = [{ path: "/evergreen", label: "Vorgänge" }];
+    if (hasAny(roles, EVERGREEN_EDITORS)) {
+      items.push({ path: "/evergreen/eingang", label: "Eingang" });
+    }
+    groups.push({ title: "Evergreen", items });
   }
   if (hasAny(roles, [ADMIN, AUDITOR, ...CONFIG_ROLES])) {
     const items: NavItem[] = [{ path: "/reports", label: "Reports" }];

@@ -22,7 +22,7 @@ UTCM_URL = f"{GRAPH_URL}/admin/configurationManagement"
 GRAPH_SCOPE = f"https://{GRAPH_HOST}/.default"
 
 JOB_SELECT = "id,displayName,status,resourceLocation,errorDetails,createdDateTime"
-MAX_PAGES = 10
+MAX_PAGES = 20
 ERROR_TEXT_LENGTH = 300
 _JOB_ID = re.compile(r"^[0-9A-Za-z-]{1,64}$")
 
@@ -139,6 +139,14 @@ class UtcmClient:
     def download(self, location: str) -> dict[str, Any]:
         """Lädt den fertigen Snapshot von der Adresse aus dem Auftrag."""
         return self._json("GET", location)
+
+    def service_messages(self, since: datetime) -> list[dict[str, Any]]:
+        """Meldungen des Nachrichtencenters, die seit einem Zeitpunkt geändert wurden."""
+        moment = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return self._pages(
+            f"{GRAPH_URL}/admin/serviceAnnouncement/messages",
+            {"$filter": f"lastModifiedDateTime ge {moment}", "$top": "100"},
+        )
 
     def directory_audits(self, since: datetime) -> list[dict[str, Any]]:
         """Einträge des Entra-Audit-Logs seit einem Zeitpunkt (für „Geändert von“)."""

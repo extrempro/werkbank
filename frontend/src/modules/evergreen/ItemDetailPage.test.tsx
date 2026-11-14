@@ -33,6 +33,8 @@ function detail(overrides: Record<string, unknown> = {}) {
       waiting_for_me: true,
       created_at: "2026-11-14T08:00:00Z",
     },
+    message: null,
+    message_updated: false,
     summary: "Neue Zusammenfassungen",
     departments_feedback: null,
     not_controllable: false,

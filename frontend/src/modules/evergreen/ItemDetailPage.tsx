@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 import { ApiError, formatDateTime } from "../../api";
 import { Link } from "../../components/Link";
 import {
+  categoryLabel,
   fetchItem,
   formatDate,
   isUrgent,
@@ -259,6 +260,26 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
           </>
         )}
       </section>
+
+      {detail.message && (
+        <section className="card" aria-labelledby="meldung-titel">
+          <h2 id="meldung-titel">Meldung von Microsoft</h2>
+          {detail.message_updated && (
+            <p className="notice" role="status">
+              <strong>Microsoft hat diese Meldung geändert</strong>, nachdem der Vorgang angelegt
+              wurde (zuletzt am {formatDateTime(detail.message.modified_at)}). Bitte prüfen, ob
+              sich dadurch etwas an der Bewertung ändert.
+            </p>
+          )}
+          <p className="small">
+            {detail.message.message_id} · {categoryLabel(detail.message.category)}
+          </p>
+          <details>
+            <summary>Text der Meldung anzeigen</summary>
+            <p className="text">{detail.message.body ?? "Die Meldung enthält keinen Text."}</p>
+          </details>
+        </section>
+      )}
 
       {actions.length > 0 && (
         <section className="card review" aria-labelledby="entscheidung-titel">

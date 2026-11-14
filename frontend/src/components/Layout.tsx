@@ -6,6 +6,7 @@ import { AuditPage } from "../pages/AuditPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { StartPage } from "../pages/StartPage";
+import { InboxPage } from "../modules/evergreen/InboxPage";
 import { ItemDetailPage } from "../modules/evergreen/ItemDetailPage";
 import { ItemsPage } from "../modules/evergreen/ItemsPage";
 import { ChangesPage } from "../modules/m365/ChangesPage";
@@ -76,6 +77,8 @@ export function Layout({ me }: LayoutProps) {
     page = <SettingDetailPage id={settingId} me={me} />;
   } else if (path === "/evergreen" && current) {
     page = <ItemsPage />;
+  } else if (path === "/evergreen/eingang" && current) {
+    page = <InboxPage />;
   } else if (itemId !== null && items.some((item) => item.path === "/evergreen")) {
     page = <ItemDetailPage id={itemId} />;
   } else if (current) {

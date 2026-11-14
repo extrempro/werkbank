@@ -183,7 +183,6 @@ Der Collector liest die Einstellungen des Tenants über **Unified Tenant Configu
 - Eigene Registrierung, **keine** Umleitungs-URI, **nur Anwendungsberechtigungen**
 - Anmeldung **nur per Zertifikat**, kein Secret
 - Die Werkbank ändert keine Einstellung des Tenants.
-- Wird in Phase 3 um `ServiceMessage.Read.All` für das Nachrichtencenter erweitert.
 
 > **Stand:** Diese Schritte folgen der Dokumentation von Microsoft und sind an einem Tenant durchlaufen worden: Der Abruf der voreingestellten Entra-Typen funktioniert damit.
 
@@ -197,6 +196,7 @@ Der Collector liest die Einstellungen des Tenants über **Unified Tenant Configu
 |---|---|
 | `ConfigurationMonitoring.ReadWrite.All` | Snapshots bei UTCM anstoßen, abholen und wieder entfernen. Das Schreibrecht betrifft nur diese Snapshot-Aufträge, nicht die Einstellungen des Tenants. Mit `ConfigurationMonitoring.Read.All` allein lassen sich keine Snapshots erstellen. |
 | `AuditLog.Read.All` | „Geändert von“: Wer eine Einstellung geändert hat, steht im Entra-Audit-Log. |
+| `ServiceMessage.Read.All` | Evergreen: Meldungen aus dem Nachrichtencenter lesen. |
 
 ### 4.2 Dienstprinzipal von UTCM einrichten
 

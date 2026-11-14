@@ -16,6 +16,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from werkbank.db import Base
@@ -61,3 +62,31 @@ class EvItem(Base):
     @property
     def number(self) -> str:
         return f"EV-{self.year}-{self.sequence:03d}"
+
+
+class MessageStatus(StrEnum):
+    NEW = "neu"
+    ADOPTED = "uebernommen"
+    IGNORED = "ignoriert"
+
+
+class EvMessage(Base):
+    """Meldung aus dem Nachrichtencenter von Microsoft (Eingang für Vorgänge)."""
+
+    __tablename__ = "ev_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Kennung bei Microsoft, z. B. MC123456
+    message_id: Mapped[str] = mapped_column(String(64), unique=True)
+    title: Mapped[str] = mapped_column(String(500))
+    services: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    category: Mapped[str | None] = mapped_column(String(32))
+    major_change: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    action_required_by: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    modified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Text der Meldung ohne HTML
+    body: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default=MessageStatus.NEW, index=True)
+    item_id: Mapped[int | None] = mapped_column(ForeignKey("ev_items.id"), index=True)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -5,14 +5,15 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, require_roles
 from werkbank.core.models import User, WorkflowEvent, WorkflowInstance
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.core.workflow import WorkflowError, available_actions, perform_action
-from werkbank.modules.evergreen.models import EvItem
+from werkbank.modules.evergreen.message_center import adopt
+from werkbank.modules.evergreen.models import EvItem, EvMessage, MessageStatus
 from werkbank.modules.evergreen.service import (
     ALL_ROLES,
     EDITOR_ROLES,
@@ -79,8 +80,33 @@ class EventOut(BaseModel):
     session_date: str | None
 
 
+class MessageOut(BaseModel):
+    id: int
+    message_id: str
+    title: str
+    services: list[str]
+    category: str | None
+    major_change: bool
+    action_required_by: datetime | None
+    published_at: datetime | None
+    modified_at: datetime | None
+    body: str | None
+    status: str
+    item_id: int | None
+
+
+class MessageListOut(BaseModel):
+    entries: list[MessageOut]
+    has_more: bool
+    new_count: int
+
+
 class ItemDetailOut(BaseModel):
     item: ItemOut
+    # Meldung von Microsoft, aus der der Vorgang entstanden ist
+    message: MessageOut | None
+    # wahr: Microsoft hat die Meldung geändert, nachdem der Vorgang angelegt wurde
+    message_updated: bool
     summary: str | None
     departments_feedback: str | None
     not_controllable: bool
@@ -121,6 +147,23 @@ class ActionIn(BaseModel):
 
 def _clean(value: str | None) -> str | None:
     return (value or "").strip() or None
+
+
+def _message_out(message: EvMessage) -> MessageOut:
+    return MessageOut(
+        id=message.id,
+        message_id=message.message_id,
+        title=message.title,
+        services=list(message.services or []),
+        category=message.category,
+        major_change=message.major_change,
+        action_required_by=message.action_required_by,
+        published_at=message.published_at,
+        modified_at=message.modified_at,
+        body=message.body,
+        status=message.status,
+        item_id=message.item_id,
+    )
 
 
 def _item_out(item: EvItem, instance: WorkflowInstance, waiting_steps: list[str]) -> ItemOut:
@@ -230,8 +273,13 @@ def _detail(
         action = step.action(action_id) if step else None
         return action.title if action else action_id
 
+    message = db.execute(select(EvMessage).where(EvMessage.item_id == item.id)).scalar_one_or_none()
     return ItemDetailOut(
         item=_item_out(item, instance, actionable_steps(user)),
+        message=_message_out(message) if message else None,
+        message_updated=bool(
+            message and message.modified_at and message.modified_at > item.created_at
+        ),
         summary=item.summary,
         departments_feedback=item.departments_feedback,
         not_controllable=item.not_controllable,
@@ -354,3 +402,99 @@ def act(
     db.commit()
     db.refresh(instance)
     return _detail(db, user, item, instance)
+
+
+MessageId = Annotated[int, Path(ge=1)]
+
+
+@router.get("/messages")
+def list_messages(
+    user: Editor,
+    db: DbDep,
+    view: Annotated[Literal["neu", "ignoriert", "alle"], Query()] = "neu",
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,
+) -> MessageListOut:
+    """Eingang: Meldungen aus dem Nachrichtencenter, neueste zuerst."""
+    query = select(EvMessage)
+    if view != "alle":
+        query = query.where(EvMessage.status == view)
+    rows = db.scalars(
+        query.order_by(EvMessage.published_at.desc().nulls_last(), EvMessage.id.desc())
+        .limit(limit + 1)
+        .offset(offset)
+    ).all()
+    new_count = db.scalar(
+        select(func.count()).select_from(EvMessage).where(EvMessage.status == MessageStatus.NEW)
+    )
+    return MessageListOut(
+        entries=[_message_out(row) for row in rows[:limit]],
+        has_more=len(rows) > limit,
+        new_count=int(new_count or 0),
+    )
+
+
+def _message(db: DbDep, message_id: int) -> EvMessage:
+    message = db.execute(
+        select(EvMessage).where(EvMessage.id == message_id).with_for_update()
+    ).scalar_one_or_none()
+    if message is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    return message
+
+
+@router.post("/messages/{message_id}/adopt", status_code=status.HTTP_201_CREATED)
+def adopt_message(request: Request, user: Editor, db: DbDep, message_id: MessageId) -> ItemOut:
+    """Übernimmt eine Meldung als Vorgang."""
+    message = _message(db, message_id)
+    if message.item_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Zu dieser Meldung gibt es schon einen Vorgang",
+        )
+    item = adopt(db, message, created_by=user.user_id)
+    write_audit(
+        db,
+        module=MODULE,
+        action="vorgang.angelegt",
+        user_id=user.user_id,
+        object_type=OBJECT_TYPE,
+        object_id=item.number,
+        ip=request.client.host if request.client else None,
+        details={"quelle": item.source, "meldung": message.message_id},
+    )
+    instance = db.get(WorkflowInstance, item.workflow_instance_id)
+    db.commit()
+    if instance is None:  # pragma: no cover - der Ablauf wurde eben angelegt
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return _item_out(item, instance, actionable_steps(user))
+
+
+class MessageStatusIn(BaseModel):
+    status: Literal["neu", "ignoriert"]
+
+
+@router.post("/messages/{message_id}/status")
+def set_message_status(
+    request: Request, body: MessageStatusIn, user: Editor, db: DbDep, message_id: MessageId
+) -> MessageOut:
+    """Legt eine Meldung beiseite („ignoriert“) oder holt sie in den Eingang zurück."""
+    message = _message(db, message_id)
+    if message.item_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Zu dieser Meldung gibt es schon einen Vorgang",
+        )
+    if message.status != body.status:
+        message.status = body.status
+        write_audit(
+            db,
+            module=MODULE,
+            action="meldung.ignoriert" if body.status == "ignoriert" else "meldung.zurueckgeholt",
+            user_id=user.user_id,
+            object_type="meldung",
+            object_id=message.message_id,
+            ip=request.client.host if request.client else None,
+        )
+    db.commit()
+    return _message_out(message)
