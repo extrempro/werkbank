@@ -91,7 +91,9 @@ export function PlanSection({ detail, onChange }: PlanSectionProps) {
   const onConfirm = (entry: PlanEntry, done: boolean) => {
     confirmPlanEntry(itemId, entry.id, done)
       .then(onChange)
-      .catch((failure: unknown) => fail(failure, "Die Bestätigung konnte nicht gespeichert werden."));
+      .catch((failure: unknown) =>
+        fail(failure, "Die Bestätigung konnte nicht gespeichert werden."),
+      );
   };
 
   return (
@@ -187,7 +189,11 @@ export function PlanSection({ detail, onChange }: PlanSectionProps) {
       )}
 
       {adding && (
-        <form className="meta-form plan-form" onSubmit={onAdd} aria-label="Neuer Eintrag der geplanten Umsetzung">
+        <form
+          className="meta-form plan-form"
+          onSubmit={onAdd}
+          aria-label="Neuer Eintrag der geplanten Umsetzung"
+        >
           <label>
             Bezeichnung (verständlich für Betriebsrat und Geschäftsführung)
             <input
