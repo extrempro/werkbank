@@ -23,7 +23,7 @@ test.describe("PWA und Service Worker", () => {
       await navigator.serviceWorker.ready;
     });
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Guten Tag, Otto Offline" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Otto Offline$/ })).toBeVisible();
 
     const cachedUrls = await page.evaluate(async () => {
       const urls: string[] = [];
