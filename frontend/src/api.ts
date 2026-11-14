@@ -44,10 +44,7 @@ async function getJson<T>(url: string): Promise<T> {
     headers: { Accept: "application/json" },
   });
   if (!response.ok) {
-    throw new ApiError(
-      response.status,
-      response.headers.get("X-Werkbank-Step-Up") === "required",
-    );
+    throw new ApiError(response.status, response.headers.get("X-Werkbank-Step-Up") === "required");
   }
   return (await response.json()) as T;
 }
