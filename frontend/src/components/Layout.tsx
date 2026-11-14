@@ -1,8 +1,9 @@
-import { useEffect, useId, useState, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useState, type MouseEvent, type ReactNode } from "react";
 import { fetchTasks, type Me, type Task } from "../api";
-import { allNavItems, navigationFor } from "../navigation";
+import { allNavItems, navigationFor, NEWS_PATH } from "../navigation";
 import { AdminPage } from "../pages/AdminPage";
 import { AuditPage } from "../pages/AuditPage";
+import { NewsPage } from "../pages/NewsPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { StartPage } from "../pages/StartPage";
@@ -14,6 +15,7 @@ import { OverviewPage } from "../modules/m365/OverviewPage";
 import { SettingDetailPage } from "../modules/m365/SettingDetailPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
+import { hasUnseenRelease } from "../release-notes";
 import { navigate, usePath } from "../router";
 import { ThemeSwitch } from "./ThemeSwitch";
 import { initials, roleLabel } from "../user";
@@ -29,6 +31,8 @@ export function Layout({ me }: LayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const navId = useId();
   const [tasks, setTasks] = useState<Task[] | null>(null);
+  const [newsUnseen, setNewsUnseen] = useState(hasUnseenRelease);
+  const onNewsSeen = useCallback(() => setNewsUnseen(false), []);
   const taskCount = (tasks ?? []).reduce((sum, task) => sum + task.count, 0);
 
   // Aufgaben bei jedem Seitenwechsel neu laden, damit Zähler und Startseite aktuell sind.
@@ -71,6 +75,8 @@ export function Layout({ me }: LayoutProps) {
   let page: ReactNode;
   if (path === "/") {
     page = <StartPage me={me} tasks={tasks} />;
+  } else if (path === NEWS_PATH) {
+    page = <NewsPage onSeen={onNewsSeen} />;
   } else if (path === "/audit" && current) {
     page = <AuditPage />;
   } else if (path === "/verwaltung" && current) {
@@ -200,6 +206,9 @@ export function Layout({ me }: LayoutProps) {
                             {item.path === "/" ? " offene Aufgaben" : " offen"}
                           </span>
                         </span>
+                      )}
+                      {item.path === NEWS_PATH && newsUnseen && (
+                        <span className="nav-new">neu</span>
                       )}
                     </a>
                   </li>

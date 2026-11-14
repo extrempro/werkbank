@@ -23,6 +23,7 @@ die jeder lesen darf: keine Hostnamen, IP-Adressen, Tenant-IDs, Zugangsdaten, Fi
 
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`, `security:`), Beschreibung auf Deutsch.
 - **Versionen:** SemVer, Einträge in `CHANGELOG.md` unter „Unveröffentlicht“ pflegen.
+- **Neuigkeiten in der App:** `frontend/src/release-notes.ts` ist die Quelle der Seite „Neuigkeiten“. Dort steht nur, was man in der Anwendung bemerkt (neue Funktionen, geänderte Bedienung, behobene Fehler), in einfacher Sprache und ohne Fachbegriffe aus der Entwicklung. Änderungen nur am Repository (CI, Abhängigkeiten, Tests, Doku) kommen ausschließlich in `CHANGELOG.md`. Bei einer neuen Version: Version in `frontend/package.json`, `e2e/package.json` und `backend/pyproject.toml` anheben und einen Eintrag in `release-notes.ts` anlegen.
 - **Backend:** Python 3.12+, FastAPI, SQLAlchemy 2, Alembic, Pydantic. ruff und mypy müssen fehlerfrei sein.
 - **Frontend:** React, Vite, TypeScript (strict). eslint und prettier müssen fehlerfrei sein.
 - **Tests:** Jede Funktion mit Unit-Tests. Jeder Screen mit E2E-Test in `e2e/` (Playwright, Profile Desktop/Tablet/iPhone, axe-core).
@@ -34,6 +35,8 @@ die jeder lesen darf: keine Hostnamen, IP-Adressen, Tenant-IDs, Zugangsdaten, Fi
 - Service Worker: niemals API-Antworten oder Anhänge cachen.
 - Push- und Mail-Benachrichtigungen ohne fachliche Inhalte.
 - Barrierefreiheit (WCAG 2.2 AA) und Designrichtlinie einhalten.
+- Prüfen, ob die Änderung in der Anwendung zu bemerken ist. Wenn ja: Eintrag für die Seite „Neuigkeiten“ vorbereiten (siehe Konventionen).
+- **Handbuch:** Bei jeder Änderung an der Anwendung prüfen, ob das Handbuch angepasst werden muss, und es im selben Branch mit anpassen. Das Ergebnis der Prüfung in der Rückmeldung nennen („Handbuch angepasst“ oder „keine Anpassung nötig“). Das Handbuch entsteht zu einem späteren Zeitpunkt; bis dahin entfällt die Anpassung, die Regel gilt ab dem ersten Stand des Handbuchs.
 - Betroffene Nachweise in `docs/` aktualisieren (ASVS, WCAG, Datenschutz), wenn sich etwas ändert.
 
 ## Regelmäßige Prüfung

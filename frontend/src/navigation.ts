@@ -8,6 +8,8 @@ export interface NavGroup {
   items: NavItem[];
 }
 
+export const NEWS_PATH = "/neuigkeiten";
+
 const ADMIN = "Werkbank.Admin";
 const AUDITOR = "Werkbank.Auditor";
 const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
@@ -23,7 +25,15 @@ function hasAny(roles: readonly string[], wanted: readonly string[]): boolean {
  * Nur Komfort: Die Rechte prüft immer der Server.
  */
 export function navigationFor(roles: readonly string[]): NavGroup[] {
-  const groups: NavGroup[] = [{ title: null, items: [{ path: "/", label: "Start" }] }];
+  const groups: NavGroup[] = [
+    {
+      title: null,
+      items: [
+        { path: "/", label: "Start" },
+        { path: NEWS_PATH, label: "Neuigkeiten" },
+      ],
+    },
+  ];
 
   if (hasAny(roles, CONFIG_ROLES)) {
     groups.push({
