@@ -11,7 +11,7 @@ from werkbank.core.models import AuditLog
 from werkbank.main import create_app
 from werkbank.modules.evergreen.implementation import check_open_items
 from werkbank.modules.evergreen.jobs import CHECK_IMPLEMENTATION
-from werkbank.modules.m365_config.models import CfgSetting, CfgSettingMeta
+from werkbank.modules.m365_config.models import CfgChange, CfgSetting, CfgSettingMeta
 from werkbank.modules.m365_config.normalize import normalize_object
 from werkbank.modules.m365_config.versioning import apply_snapshot
 from werkbank.worker.tasks import REGISTRY
@@ -299,3 +299,33 @@ def test_setting_search_is_for_it_only(migrated_db: None, db_session: Session) -
         ).status_code
         == 403
     )
+
+
+@pytest.mark.db
+def test_item_from_detected_change(migrated_db: None, db_session: Session) -> None:
+    db = db_session
+    snapshot(db, "plan-aenderung", "enabled")
+    snapshot(db, "plan-aenderung", "disabled")
+    setting = db.execute(
+        select(CfgSetting).where(CfgSetting.object_id == "plan-aenderung")
+    ).scalar_one()
+    change = db.execute(select(CfgChange).where(CfgChange.setting_id == setting.id)).scalar_one()
+
+    client = it()
+    url = f"{BASE}/items/from-change"
+    created = client.post(url, json={"change_id": change.id}, headers=HEADERS)
+    assert created.status_code == 201, created.text
+    data = created.json()
+    assert data["source"] == "einstellung"
+    assert data["title"] == "Besprechungsrichtlinie: AllowRecording (geändert)"
+    assert data["service"] == "teams"
+    detail = client.get(f"{BASE}/items/{data['id']}").json()
+    assert "Vorher: enabled" in detail["summary"]
+    assert "Nachher: disabled" in detail["summary"]
+
+    again = client.post(url, json={"change_id": change.id}, headers=HEADERS)
+    assert again.status_code == 409
+    assert data["number"] in again.json()["detail"]
+    assert client.post(url, json={"change_id": 999_999_999}, headers=HEADERS).status_code == 404
+    team = client_for(["Evergreen.Team"], "ev-team", "Tom Team")
+    assert team.post(url, json={"change_id": change.id}, headers=HEADERS).status_code == 403

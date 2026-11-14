@@ -107,6 +107,12 @@ export function Layout({ me }: LayoutProps) {
           Werkbank
         </a>
         <div className="user">
+          {taskCount > 0 && (
+            <a className="header-tasks" href="/" onClick={(event) => onNavClick(event, "/")}>
+              <span className="header-tasks-label">Aufgaben: </span>
+              {taskCount}
+            </a>
+          )}
           <span className="user-name">{me.display_name}</span>
           <form method="post" action="/auth/logout">
             <button type="submit" className="button button-quiet">

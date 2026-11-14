@@ -2,7 +2,7 @@
 
 Reihenfolge für das erste Deployment mit Prüfschritten. Beispielwerte verwenden `example.com`; echte Adressen, Kennungen und Zertifikate gehören nicht ins Repository.
 
-> **Stand:** Einmal an einer echten Installation durchlaufen (Arcane Git-Sync, NetBird Reverse Proxy auf einem anderen Server, Entra-Anmeldung, Abruf über UTCM). Bestätigt: Arcane synchronisiert nur den Ordner `deploy/` und baut das Image aus GitHub; Anmeldung, Proxy und der erste Abruf funktionieren wie beschrieben. Noch nicht bestätigt: Änderungserkennung mit „Geändert von“ nach einer Änderung im Tenant, erneute Anmeldung für die Verwaltung mit `auth_time`, Installation auf iPhone und iPad.
+> **Stand:** Einmal an einer echten Installation durchlaufen (Arcane Git-Sync, NetBird Reverse Proxy auf einem anderen Server, Entra-Anmeldung, Abruf über UTCM). Bestätigt: Arcane synchronisiert nur den Ordner `deploy/` und baut das Image aus GitHub; Anmeldung, Proxy und der erste Abruf funktionieren wie beschrieben. Ebenfalls bestätigt: Abruf des Nachrichtencenters (Evergreen → Eingang). Noch nicht bestätigt: Änderungserkennung mit „Geändert von“ nach einer Änderung im Tenant, erneute Anmeldung für die Verwaltung mit `auth_time`, Installation auf iPhone und iPad.
 
 ## 1. Entra ID
 

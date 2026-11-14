@@ -148,6 +148,11 @@ export function createItem(item: NewItem): Promise<Item> {
   });
 }
 
+/** Legt aus einer erkannten Änderung in M365-Konfiguration einen Vorgang an. */
+export function createItemFromChange(changeId: number): Promise<Item> {
+  return postJson(`${BASE}/items/from-change`, { change_id: changeId });
+}
+
 export function updateItem(id: number, update: ItemUpdate): Promise<ItemDetail> {
   return patchJson(`${BASE}/items/${id}`, update);
 }

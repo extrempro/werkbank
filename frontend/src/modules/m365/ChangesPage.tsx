@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ApiError, formatDateTime, type Me } from "../../api";
 import { Link } from "../../components/Link";
+import { navigate } from "../../router";
+import { createItemFromChange } from "../evergreen/api";
 import {
   fetchChanges,
   formatValue,
@@ -34,6 +36,7 @@ export function ChangesPage({ me }: ChangesPageProps) {
   const [comment, setComment] = useState("");
   const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
   const canReview = me.roles.includes("Config.Reviewer");
+  const canCreateItem = me.roles.includes("Evergreen.IT");
 
   useEffect(() => {
     let active = true;
@@ -73,6 +76,18 @@ export function ChangesPage({ me }: ChangesPageProps) {
     setMessage(null);
     setFilter(draft);
     setReloadKey((key) => key + 1);
+  };
+
+  const onCreateItem = (entry: Change) => {
+    setMessage(null);
+    createItemFromChange(entry.id)
+      .then((item) => {
+        navigate(`/evergreen/${item.id}`);
+      })
+      .catch((error: unknown) => {
+        const detail = error instanceof ApiError ? error.detail : null;
+        setMessage({ kind: "alert", text: detail ?? "Der Vorgang konnte nicht angelegt werden." });
+      });
   };
 
   const toggle = (id: number) => {
@@ -157,6 +172,7 @@ export function ChangesPage({ me }: ChangesPageProps) {
                 <th scope="col">Nachher</th>
                 <th scope="col">Geändert von</th>
                 <th scope="col">Bewertung</th>
+                {canCreateItem && <th scope="col">Evergreen</th>}
               </tr>
             </thead>
             <tbody>
@@ -193,6 +209,18 @@ export function ChangesPage({ me }: ChangesPageProps) {
                     )}
                     {entry.comment && <span className="small path">{entry.comment}</span>}
                   </td>
+                  {canCreateItem && (
+                    <td>
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        onClick={() => onCreateItem(entry)}
+                      >
+                        Vorgang anlegen
+                        <span className="visually-hidden">: {settingTitle(entry)}</span>
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

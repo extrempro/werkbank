@@ -1,6 +1,6 @@
 # Sicherheitsnachweis – OWASP ASVS Stufe 2
 
-> **Stand:** Ende Phase 2 (Kern und Modul M365-Konfiguration). Anmeldung und Abruf aus dem Tenant sind an einer ersten Installation bestätigt.
+> **Stand:** Ende Phase 3 (Kern, Module M365-Konfiguration und Evergreen). Anmeldung und Abruf aus dem Tenant sind an einer ersten Installation bestätigt.
 > **Grundlage:** OWASP ASVS **5.0.0** (Mai 2025), Stufe 2. Verweise auf einzelne Anforderungen im Format `v5.0.0-<Kapitel>.<Abschnitt>.<Anforderung>`. Die Übersicht unten ist nach Themen gegliedert; die Aufschlüsselung je Anforderung folgt.
 
 Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht anwendbar
