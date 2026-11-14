@@ -1,5 +1,5 @@
-import { useId, useState, type MouseEvent, type ReactNode } from "react";
-import type { Me } from "../api";
+import { useEffect, useId, useState, type MouseEvent, type ReactNode } from "react";
+import { fetchTasks, type Me, type Task } from "../api";
 import { allNavItems, navigationFor } from "../navigation";
 import { AdminPage } from "../pages/AdminPage";
 import { AuditPage } from "../pages/AuditPage";
@@ -23,6 +23,21 @@ export function Layout({ me }: LayoutProps) {
   const path = usePath();
   const [menuOpen, setMenuOpen] = useState(false);
   const navId = useId();
+  const [tasks, setTasks] = useState<Task[] | null>(null);
+  const taskCount = (tasks ?? []).reduce((sum, task) => sum + task.count, 0);
+
+  // Aufgaben bei jedem Seitenwechsel neu laden, damit Zähler und Startseite aktuell sind.
+  useEffect(() => {
+    let active = true;
+    fetchTasks().then((result) => {
+      if (active) {
+        setTasks(result);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [path]);
   const groups = navigationFor(me.roles);
   const items = allNavItems(groups);
   const current = items.find((item) => item.path === path);
@@ -39,7 +54,7 @@ export function Layout({ me }: LayoutProps) {
 
   let page: ReactNode;
   if (path === "/") {
-    page = <StartPage me={me} />;
+    page = <StartPage me={me} tasks={tasks} />;
   } else if (path === "/audit" && current) {
     page = <AuditPage />;
   } else if (path === "/verwaltung" && current) {
@@ -106,6 +121,12 @@ export function Layout({ me }: LayoutProps) {
                       onClick={(event) => onNavClick(event, item.path)}
                     >
                       {item.label}
+                      {item.path === "/" && taskCount > 0 && (
+                        <span className="nav-count">
+                          {taskCount}
+                          <span className="visually-hidden"> offene Aufgaben</span>
+                        </span>
+                      )}
                     </a>
                   </li>
                 ))}

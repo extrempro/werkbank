@@ -178,6 +178,7 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
 - Module melden Aufgaben über eine gemeinsame Schnittstelle: Titel, Untertitel, Modul, Fälligkeit, Ziel-Link, zuständige Rolle bzw. Person.
 - Beispiele: offene Änderung prüfen (Config.Reviewer), Evergreen-Schritt (zuständige Rolle), Konnektor-Fehler (Admin).
 - Zähler in der Kopfzeile und in der Navigation.
+- Stand: Die Aufgaben werden bei jeder Abfrage aus dem Stand der Module ermittelt (`/api/tasks`) und nicht gespeichert; der Zähler steht in der Navigation beim Eintrag „Start“. M365-Konfiguration meldet offene Änderungen und Abweichungen vom Soll-Wert (`Config.Reviewer`) sowie einen fehlgeschlagenen Abruf (`Werkbank.Admin`). Die Tabelle `tasks` für einzeln zugewiesene Aufgaben und der Zähler in der Kopfzeile folgen mit der Workflow-Engine.
 
 ### 6.3 Workflow-Engine
 
@@ -331,7 +332,7 @@ Alle Metadaten haben einen eigenen Verlauf (je geändertem Feld ein Eintrag mit 
 
 ### 7.6 Soll/Ist
 
-- Weicht der Ist-Wert vom Soll-Wert ab, wird die Einstellung markiert (Detail, Liste mit Filter, Zähler in der Übersicht) und eine Aufgabe erzeugt (Aufgabe: folgt mit 2e).
+- Weicht der Ist-Wert vom Soll-Wert ab, wird die Einstellung markiert (Detail, Liste mit Filter, Zähler in der Übersicht) und eine Aufgabe erzeugt (Aufgabe auf der Startseite für `Config.Reviewer`).
 - Abweichung von einem **BR-Beschluss** löst eine sofortige Benachrichtigung aus.
 
 ### 7.7 Reports
@@ -616,7 +617,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 |---|---|---|---|
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
-| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | in Arbeit: 2a Kern, 2b Versionierung, 2c Collector (UTCM) und 2d Oberfläche (Übersicht, Einstellungen mit Verlauf, Änderungen bewerten, Snapshots, Abruf anstoßen) sowie die Angaben je Einstellung (7.5) mit Soll/Ist-Vergleich umgesetzt; es folgt 2e Abschluss (Aufgaben, Benachrichtigung bei Abweichung, Nachweise). Der Collector ist noch nicht gegen einen echten Tenant geprüft |
+| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Offen: Prüfung des Collectors gegen einen echten Tenant bei der ersten Inbetriebnahme; später Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | offen |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |

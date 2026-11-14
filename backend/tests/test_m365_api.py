@@ -393,3 +393,52 @@ def test_high_criticality_needs_comment_for_intended(db: Session) -> None:
     assert client.post(url, json=body, headers=headers).status_code == 422
     body["comment"] = "Mit der IT-Leitung abgestimmt"
     assert client.post(url, json=body, headers=headers).status_code == 200
+
+
+@pytest.mark.db
+def test_tasks_depend_on_role_and_state(db: Session) -> None:
+    assert (
+        TestClient(create_app(Settings(public_url=ORIGIN, environment="test")))
+        .get("/api/tasks")
+        .status_code
+        == 401
+    )
+    headers = {"Origin": ORIGIN}
+    reviewer = client_for(["Config.Reviewer"], "m365-pruefer")
+    data = reviewer.get("/api/tasks").json()
+    assert data["total"] == 3
+    assert [(task["title"], task["count"], task["link"]) for task in data["tasks"]] == [
+        ("Änderungen bewerten", 3, "/m365/aenderungen")
+    ]
+
+    setting_id = first_setting_id(reviewer)
+    reviewer.put(
+        f"{BASE}/settings/{setting_id}/meta",
+        json={"target_set": True, "target_value": "enabled"},
+        headers=headers,
+    )
+    titles = [task["title"] for task in reviewer.get("/api/tasks").json()["tasks"]]
+    assert titles == ["Änderungen bewerten", "Abweichungen vom Soll-Wert prüfen"]
+
+    # Leser und andere Rollen bekommen keine Aufgaben aus dem Modul
+    for roles, oid in ((["Config.Reader"], "m365-leser"), (["Evergreen.Team"], "m365-team")):
+        assert client_for(roles, oid).get("/api/tasks").json() == {"tasks": [], "total": 0}
+
+
+@pytest.mark.db
+def test_failed_collect_is_a_task_for_admins(db: Session) -> None:
+    configured = {
+        "entra_tenant_id": "00000000-0000-0000-0000-00000000aaaa",
+        "collector_client_id": "00000000-0000-0000-0000-00000000cccc",
+    }
+    admin = client_for(["Werkbank.Admin"], "m365-admin", **configured)
+    assert admin.get("/api/tasks").json()["tasks"] == []
+
+    apply_snapshot(db, [], {SOURCE: False})
+    db.commit()
+    tasks = admin.get("/api/tasks").json()["tasks"]
+    assert [(task["title"], task["link"]) for task in tasks] == [
+        ("Abruf aus dem Tenant ist fehlgeschlagen", "/audit")
+    ]
+    # ohne eingerichteten Abruf keine Meldung
+    assert client_for(["Werkbank.Admin"], "m365-admin").get("/api/tasks").json()["tasks"] == []

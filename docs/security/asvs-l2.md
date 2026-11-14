@@ -1,6 +1,6 @@
 # Sicherheitsnachweis – OWASP ASVS Stufe 2
 
-> **Stand:** Ende Phase 1 (Kern: Anmeldung, Sitzungen, Rollen, Audit-Log, Oberfläche, PWA).
+> **Stand:** Ende Phase 2 (Kern und Modul M365-Konfiguration). Der Abruf aus dem Tenant ist noch nicht gegen einen echten Tenant geprüft.
 > **Grundlage:** OWASP ASVS **5.0.0** (Mai 2025), Stufe 2. Verweise auf einzelne Anforderungen im Format `v5.0.0-<Kapitel>.<Abschnitt>.<Anforderung>`. Die Übersicht unten ist nach Themen gegliedert; die Aufschlüsselung je Anforderung folgt.
 
 Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht anwendbar
@@ -28,6 +28,8 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 | **Datenbank** | Nur internes Docker-Netz, Passwort als Docker-Secret, ORM ohne zusammengesetzte SQL-Strings | Backend-Tests gegen PostgreSQL | ✅ |
 | **Protokollierung** | Audit-Log nur anhängend (Datenbank-Trigger gegen UPDATE/DELETE/TRUNCATE); Anmeldung, Ablehnung mit Grund, Abmeldung, Export; IP gekürzt (`core/audit.py`, Migration 0001) | `test_audit_update_is_rejected`, `…delete…`, `…truncate…`, `test_audit_entry_is_written` | ✅ |
 | **Abruf aus dem Tenant** | Eigene App-Registrierung nur mit Zertifikat; Zugriff nur auf `https://graph.microsoft.com` (Adressen aus Antworten werden geprüft, keine Weiterleitungen); keine Änderung von Tenant-Einstellungen; Fehlertexte gekürzt; Abruf im Audit-Log (`modules/m365_config/utcm.py`, `collector.py`) | `tests/test_m365_collector.py` | ✅ (gegen echten Tenant noch zu prüfen) |
+| **Aufgaben** | `/api/tasks` nur angemeldet; jedes Modul liefert nur, was die Rollen der Person erlauben (`core/tasks.py`, `modules/m365_config/tasks.py`) | `test_tasks_depend_on_role_and_state` | ✅ |
+| **Gepflegte Angaben** | Nur `Config.Reviewer`; Längen begrenzt; Link nur mit `https://` (kein Skript-Link); Ausgabe als Text; Verlauf und Audit-Log (`modules/m365_config/api.py`) | `test_metadata_validation`, `test_metadata_update_history_and_audit` | ✅ |
 | **Fehlerbehandlung** | Keine Stacktraces nach außen, Health-Endpunkte ohne Details | `test_health_ok`, `test_ready_with_database` | ✅ |
 | **Rate-Limits** | Höchstzahl Anfragen pro Minute und Absender-IP für Anmeldung, API und Exporte, Antwort 429 mit `Retry-After`; Zähler nur im Arbeitsspeicher, begrenzte Größe (`core/ratelimit.py`) | `tests/test_ratelimit.py` | ✅ |
 | **Hintergrundaufträge** | Worker ohne Port nach außen, gleiche Härtung wie der Web-Dienst; führt nur fest hinterlegte Auftragsarten aus; Fehler im Audit-Log; räumt abgelaufene Sitzungen und Anmeldevorgänge weg (`werkbank/worker/`) | `tests/test_worker.py`, Docker-Smoke-Test | ✅ |
