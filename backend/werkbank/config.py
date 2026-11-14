@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     session_max_hours: int = 8
     step_up_minutes: int = 15
 
+    # Verzeichnis mit dem Frontend-Build (im Docker-Image /app/static)
+    static_dir: Path = Path("/app/static")
+
     # Test-Login ohne Entra. Nur in den Umgebungen "test" und "development" zulässig.
     enable_test_login: bool = False
 

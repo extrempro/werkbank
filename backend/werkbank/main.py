@@ -8,6 +8,7 @@ from werkbank.core.auth import router as auth_router
 from werkbank.core.csrf import OriginCheckMiddleware
 from werkbank.db import database_ready
 from werkbank.security import SecurityHeadersMiddleware
+from werkbank.web import mount_frontend
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -41,6 +42,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "unavailable"}
 
+    # Zuletzt: alle übrigen GET-Pfade liefern die Oberfläche aus.
+    mount_frontend(app, settings.static_dir)
     return app
 
 

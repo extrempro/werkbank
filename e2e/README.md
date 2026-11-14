@@ -1,14 +1,24 @@
 # End-to-End-Tests
 
-Ab Phase 1. Werkzeug: **Playwright** mit **axe-core** und **Lighthouse CI**.
+Werkzeuge: **Playwright** mit **axe-core** (Barrierefreiheit nach WCAG 2.2 AA) und **Lighthouse CI**.
 
-Geplant:
+| Test | Inhalt |
+|---|---|
+| `tests/login.spec.ts` | Login-Seite, Navigation je Rolle (Admin, Betriebsrat), Abmelden, API ohne Anmeldung gesperrt |
+| `tests/pwa.spec.ts` | Manifest, Offline-Seite, keine API-Daten im Cache des Service Workers |
+| `tests/mobile.spec.ts` | Menü-Button und Navigation auf dem Handy |
 
-- **Geräteprofile:** Desktop (1440 px), Tablet (iPad), Handy (iPhone)
-- **Rollen:** Ein Test-Login je Rolle (Admin, Config.Reviewer, Config.Reader, Evergreen.Team, Evergreen.Betriebsrat, Evergreen.GF). Er ist nur in der Testumgebung aktiv und in Produktion technisch ausgeschlossen.
-- **Barrierefreiheit:** axe-core-Prüfung auf jedem Screen
-- **Service Worker:**
-  - Offline-Seite erscheint ohne Netz
-  - keine API-Antworten im Cache
-  - Update-Hinweis bei neuer Version
-- **Lighthouse:** Mindestwerte siehe `docs/spec.md`, Kapitel 13
+- **Geräteprofile:** Desktop, Tablet (iPad), Handy (iPhone). Tablet und Handy laufen vorerst als Chromium-Emulation. Echte WebKit-Tests folgen, sobald die Testumgebung HTTPS hat.
+- **Anmeldung:** Test-Login, nur aktiv bei `ENVIRONMENT=test` und `ENABLE_TEST_LOGIN=true`
+- **Lighthouse:** Mindestwerte in `lighthouserc.json` (Barrierefreiheit und Best Practices ≥ 95, Performance ≥ 85 als Warnung)
+
+## Lokal ausführen
+
+```bash
+# im Wurzelverzeichnis: App im Testmodus starten (siehe .github/workflows/ci.yml, Job E2E)
+cd e2e
+npm ci
+npx playwright install chromium
+npx playwright test
+npx lhci autorun
+```

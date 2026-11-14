@@ -1,0 +1,60 @@
+# Erzeugt package-lock.json (frontend, e2e) und gleicht die Formatierung im Frontend an
+# (Prettier). Läuft bei Pushes auf Feature-Branches mit Änderungen im Frontend bzw. an den
+# E2E-Abhängigkeiten, nie auf main. Commits dieses Workflows lösen keine weiteren Läufe aus.
+# Hintergrund: Lockfiles sollen reproduzierbar mit npm erzeugt werden, nicht von Hand.
+name: Lockfile und Formatierung
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "frontend/**"
+      - "e2e/package.json"
+      - ".github/workflows/lockfile.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: Lockfiles erzeugen, Frontend formatieren
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - name: Lockfiles erzeugen
+        run: |
+          for dir in frontend e2e; do
+            if [ -f "$dir/package.json" ]; then
+              (
+                cd "$dir"
+                if ! npm install --package-lock-only --ignore-scripts --no-audit --no-fund; then
+                  echo "Lockfile passt nicht mehr zu package.json, wird neu erzeugt."
+                  rm -f package-lock.json
+                  npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+                fi
+              )
+            fi
+          done
+      - name: Frontend formatieren
+        working-directory: frontend
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx prettier --write .
+      - name: Änderungen committen
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend e2e
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen."
+          else
+            git commit -m "chore: Lockfiles erzeugen und Frontend formatieren"
+            git push
+          fi

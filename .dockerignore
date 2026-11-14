@@ -1,0 +1,13 @@
+.git
+.github
+**/node_modules
+**/__pycache__
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+frontend/dist
+backend/tests
+e2e
+docs
+deploy
+*.md
