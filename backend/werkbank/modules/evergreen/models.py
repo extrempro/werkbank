@@ -3,6 +3,7 @@
 import uuid
 from datetime import date, datetime
 from enum import StrEnum
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -90,3 +91,27 @@ class EvMessage(Base):
     status: Mapped[str] = mapped_column(String(16), default=MessageStatus.NEW, index=True)
     item_id: Mapped[int | None] = mapped_column(ForeignKey("ev_items.id"), index=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EvPlan(Base):
+    """Geplante Umsetzung eines Vorgangs: ein Soll-Wert, den die IT im Tenant setzt."""
+
+    __tablename__ = "ev_plan"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("ev_items.id"), index=True)
+    # Einstellung aus M365-Konfiguration, wenn die Werkbank sie überwacht; sonst None
+    setting_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cfg_settings.id", ondelete="SET NULL"), index=True
+    )
+    label: Mapped[str] = mapped_column(String(300))
+    target_value: Mapped[Any] = mapped_column(JSONB)
+    # wo bzw. mit welchem Befehl die IT den Wert setzt
+    instruction: Mapped[str | None] = mapped_column(Text)
+    # vorläufige Sperre bis zum Beschluss (spec.md 8.4)
+    provisional: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # nur ohne überwachte Einstellung: von der IT als umgesetzt bestätigt
+    confirmed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

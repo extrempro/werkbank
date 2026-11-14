@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { ApiError, formatDateTime } from "../../api";
 import { Link } from "../../components/Link";
+import { PlanSection } from "./PlanSection";
 import {
   categoryLabel,
   fetchItem,
@@ -260,6 +261,16 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
           </>
         )}
       </section>
+
+      {detail.provisional_hint && (
+        <p className="notice" role="status">
+          <strong>Der Rollout steht kurz bevor und es gibt noch keinen Beschluss.</strong> Lässt
+          sich die Funktion abschalten, sollte die IT eine vorläufige Sperre in der geplanten
+          Umsetzung eintragen.
+        </p>
+      )}
+
+      <PlanSection detail={detail} onChange={setDetail} />
 
       {detail.message && (
         <section className="card" aria-labelledby="meldung-titel">

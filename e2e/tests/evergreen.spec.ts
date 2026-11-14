@@ -64,7 +64,24 @@ test("Ein Vorgang läuft von der IT über Betriebsrat bis zur Geschäftsführung
   await expect(page.getByText("Neuer Schritt: Umsetzung.")).toBeVisible();
   await expect(page.getByRole("cell", { name: "Nur für die Pilotgruppe" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Abnehmen" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Soll-Wert hinzufügen" })).toHaveCount(0);
   await expectNoA11yViolations(page);
+
+  // IT plant die Umsetzung und bestätigt sie: Der Vorgang schließt von selbst
+  await loginAs(page, ["Evergreen.IT"], "Ina IT");
+  await page.goto(itemUrl);
+  await page.getByRole("button", { name: "Soll-Wert hinzufügen" }).click();
+  await page.getByLabel(/Bezeichnung/).fill("Funktion für alle abschalten");
+  await page.getByLabel(/^Soll-Wert/).fill("false");
+  await page.getByLabel(/Anleitung/).fill("Teams Admin Center, Besprechungsrichtlinien");
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Eintragen" }).click();
+  await expect(page.getByText("Noch nicht bestätigt")).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: /Als umgesetzt bestätigen/ }).click();
+  await expect(page.getByText("An diesem Vorgang ist nichts mehr zu tun.")).toBeVisible();
+  await expect(page.getByText("Umgesetzt (von der IT bestätigt)")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Soll-Wert hinzufügen" })).toHaveCount(0);
 });
 
 test("Der Betriebsrat sieht einen Vorgang erst, wenn er ihm vorgelegt wurde", async ({ page }) => {
