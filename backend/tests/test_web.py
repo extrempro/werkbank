@@ -32,9 +32,11 @@ def test_service_worker_headers(tmp_path: Path) -> None:
     assert response.headers["service-worker-allowed"] == "/"
 
 
-def test_assets_served(tmp_path: Path) -> None:
+def test_assets_served_with_long_cache(tmp_path: Path) -> None:
     client = make_client(tmp_path)
-    assert client.get("/assets/app-123.js").status_code == 200
+    response = client.get("/assets/app-123.js")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "public, max-age=31536000, immutable"
 
 
 def test_api_paths_not_replaced_by_frontend(tmp_path: Path) -> None:

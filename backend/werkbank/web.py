@@ -5,11 +5,24 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.responses import Response
+from starlette.types import Scope
 
 # Diese Pfade gehören zur API und werden nie durch die Oberfläche ersetzt.
 API_PREFIXES = ("api/", "auth/", "health")
 
 NO_CACHE = {"Cache-Control": "no-cache"}
+
+
+class ImmutableStaticFiles(StaticFiles):
+    """Dateien mit Versionskennung im Namen (Vite-Build) dürfen dauerhaft gecacht werden."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        if response.status_code == status.HTTP_200_OK:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
 
 
 def mount_frontend(app: FastAPI, static_dir: Path) -> None:
@@ -21,7 +34,9 @@ def mount_frontend(app: FastAPI, static_dir: Path) -> None:
 
     assets = root / "assets"
     if assets.is_dir():
-        app.mount("/assets", StaticFiles(directory=assets), name="assets")
+        # Komprimiert nur die statischen Dateien, nicht die API-Antworten.
+        assets_app = GZipMiddleware(ImmutableStaticFiles(directory=assets), minimum_size=500)
+        app.mount("/assets", assets_app, name="assets")
 
     @app.get("/{path:path}", include_in_schema=False)
     def frontend(path: str) -> FileResponse:
