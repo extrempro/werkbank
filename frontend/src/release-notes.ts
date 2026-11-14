@@ -26,8 +26,7 @@ export const RELEASES: readonly Release[] = [
   {
     version: "0.1.0",
     date: "2026-11-14",
-    summary:
-      "Erste Version der Werkbank mit den Modulen M365-Konfiguration und Evergreen.",
+    summary: "Erste Version der Werkbank mit den Modulen M365-Konfiguration und Evergreen.",
     sections: [
       {
         area: "Allgemein",
