@@ -40,6 +40,7 @@ class AuditEntryOut(BaseModel):
     object_type: str | None
     object_id: str | None
     result: str
+    origin: str | None
     details: dict[str, Any] | None
 
 
@@ -75,6 +76,7 @@ def _to_out(entry: AuditLog, display_name: str | None) -> AuditEntryOut:
         object_type=entry.object_type,
         object_id=entry.object_id,
         result=entry.result,
+        origin=entry.ip_truncated,
         details=entry.details,
     )
 
@@ -119,7 +121,16 @@ def export_audit(
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=";")
     writer.writerow(
-        ["Zeitpunkt (UTC)", "Person", "Modul", "Aktion", "Ergebnis", "Objekt", "Objekt-ID"]
+        [
+            "Zeitpunkt (UTC)",
+            "Person",
+            "Modul",
+            "Aktion",
+            "Ergebnis",
+            "Objekt",
+            "Objekt-ID",
+            "Herkunft (gekürzte IP)",
+        ]
     )
     for entry, name in rows:
         writer.writerow(
@@ -131,6 +142,7 @@ def export_audit(
                 safe_cell(entry.result),
                 safe_cell(entry.object_type),
                 safe_cell(entry.object_id),
+                safe_cell(entry.ip_truncated),
             ]
         )
     write_audit(
