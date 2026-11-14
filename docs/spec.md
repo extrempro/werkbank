@@ -299,6 +299,9 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 - Tabelle `setting_versions` mit `gueltig_ab` und `gueltig_bis`. Eine neue Zeile nur bei geändertem Wert.
 - Art der Änderung: **neu** (Pfad unbekannt), **geändert**, **entfernt** (Pfad fehlt im vollständigen Snapshot).
 - Ein Snapshot mit Fehlern in einer Quelle markiert Pfade dieser Quelle **nicht** als entfernt.
+- Der **erste erfolgreiche Abruf einer Quelle** ist der Ausgangsstand: Die Einstellungen werden mit ihrer ersten Version gespeichert, aber nicht als Änderungen zur Bewertung vorgelegt.
+- Eine entfernte Einstellung, die wieder auftaucht, gilt erneut als **neu**.
+- Verglichen wird der JSON-Wert; die Reihenfolge der Schlüssel in Objekten spielt keine Rolle, die Reihenfolge in Listen schon.
 - „Geändert von“: Abgleich mit Entra-Audit-Log bzw. Unified Audit Log im Zeitfenster, sonst „unbekannt“.
 
 ### 7.4 Bewertung von Änderungen
@@ -608,7 +611,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 |---|---|---|---|
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
-| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | in Arbeit: 2a Kern (Worker, Rate-Limits, Step-up) umgesetzt; es folgen 2b Versionierung, 2c Collector, 2d Oberfläche, 2e Abschluss |
+| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | in Arbeit: 2a Kern (Worker, Rate-Limits, Step-up) und 2b Versionierung umgesetzt; es folgen 2c Collector, 2d Oberfläche, 2e Abschluss |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | offen |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |
