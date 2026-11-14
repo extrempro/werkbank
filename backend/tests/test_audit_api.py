@@ -111,3 +111,16 @@ def test_admin_roles_lists_holders(migrated_db: None) -> None:
     assert "Berta Rat" in holders
     admins = [holder["display_name"] for holder in roles["Werkbank.Admin"]["holders"]]
     assert "Ada Admin" in admins
+
+
+@pytest.mark.db
+def test_audit_shows_truncated_origin(migrated_db: None, db_session: Session) -> None:
+    write_audit(db_session, module="kern", action="test.herkunft", ip="203.0.113.77")
+    db_session.commit()
+    client = login(["Werkbank.Auditor"], "audit-herkunft")
+    entries = client.get("/api/audit", params={"action": "test.herkunft"}).json()["entries"]
+    assert entries[0]["origin"] == "203.0.113.0/24"
+    export = client.get("/api/audit/export.csv", params={"action": "test.herkunft"})
+    rows = list(csv.reader(io.StringIO(export.text.lstrip("\ufeff")), delimiter=";"))
+    assert rows[0][-1] == "Herkunft (gekürzte IP)"
+    assert rows[1][-1] == "203.0.113.0/24"

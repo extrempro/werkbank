@@ -618,7 +618,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 |---|---|---|---|
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
-| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Offen: Prüfung des Collectors gegen einen echten Tenant bei der ersten Inbetriebnahme; später Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
+| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Erste Inbetriebnahme erfolgt, Abruf über UTCM am echten Tenant bestätigt. Offen: Bestätigung der Änderungserkennung mit „Geändert von“; später Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | in Arbeit: 3a Workflow-Engine umgesetzt; es folgen 3b Vorgänge mit Oberfläche, 3c Nachrichtencenter, 3d Umsetzung mit Soll-Werten, 3e Abschluss |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |

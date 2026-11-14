@@ -115,6 +115,8 @@ export interface AuditEntry {
   object_type: string | null;
   object_id: string | null;
   result: string;
+  /** Gekürzte IP-Adresse des Absenders (Netz, nicht das einzelne Gerät). */
+  origin: string | null;
   details: Record<string, unknown> | null;
 }
 
