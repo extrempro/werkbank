@@ -3,7 +3,9 @@
 Diese Anleitung beschreibt, was im Entra Admin Center (https://entra.microsoft.com) angelegt wird.
 Alle Beispiele verwenden `werkbank.example.com`. Ersetze das durch die öffentliche Adresse deiner Werkbank.
 
-> **Nichts davon gehört ins Repository.** Tenant-ID, Client-ID und öffentliche Adresse kommen in `deploy/.env` auf dem Server, Zertifikate und Secrets in `deploy/secrets/`. Secrets nie in Chats, Issues oder Commits einfügen.
+Microsoft ordnet das Menü des Entra Admin Centers gelegentlich neu. Stimmt ein Pfad wie „Identität → Anwendungen“ nicht mehr, führt die Suche oben im Portal (z. B. „App-Registrierungen“, „Bedingter Zugriff“) zum selben Ziel.
+
+> **Nichts davon gehört ins Repository.** Tenant-ID, Client-ID und öffentliche Adresse kommen in die Umgebungsvariablen des Projekts (`.env` bzw. Arcane), Zertifikate und Secrets in den Secrets-Ordner auf dem Server (`WERKBANK_SECRETS_DIR`, z. B. `/opt/werkbank/secrets`, siehe [`deploy/README.md`](../deploy/README.md)). Secrets nie in Chats, Issues oder Commits einfügen.
 
 ## Überblick
 
@@ -31,7 +33,7 @@ Entra Admin Center → **Identität → Anwendungen → App-Registrierungen → 
 
 → **Registrieren**
 
-Von der Übersichtsseite notieren (für `deploy/.env`):
+Von der Übersichtsseite notieren (für die Umgebungsvariablen):
 
 - **Anwendungs-ID (Client)** → `ENTRA_CLIENT_ID`
 - **Verzeichnis-ID (Mandant)** → `ENTRA_TENANT_ID`
@@ -42,7 +44,7 @@ App-Registrierung → **Authentifizierung**
 
 | Einstellung | Wert |
 |---|---|
-| URL für Front-Channel-Abmeldung | `https://werkbank.example.com/auth/logout` |
+| URL für Front-Channel-Abmeldung | leer lassen (derzeit ohne Wirkung: Das Sitzungs-Cookie der Werkbank wird bei eingebetteten Aufrufen aus Sicherheitsgründen nicht mitgesendet. Die Sitzung endet über „Abmelden“ oder nach 30 Minuten Leerlauf) |
 | Implizite Genehmigung (Zugriffstoken, ID-Token) | **beide aus** (die Werkbank nutzt den Authorization Code Flow mit PKCE) |
 | Öffentliche Clientflows zulassen | **Nein** |
 
@@ -53,18 +55,18 @@ Die Werkbank meldet sich als vertraulicher Client an. Beim Server (Backend-for-F
 **Empfohlen: Zertifikat** (läuft nicht so schnell ab und ist schwerer zu missbrauchen als ein Secret):
 
 ```bash
-# auf dem Server, im Ordner deploy/secrets
-openssl req -x509 -newkey rsa:3072 -sha256 -days 730 -nodes \
+# auf dem Server, im Secrets-Ordner (z. B. /opt/werkbank/secrets)
+sudo openssl req -x509 -newkey rsa:3072 -sha256 -days 730 -nodes \
   -keyout entra_client_key.pem -out entra_client_cert.pem \
   -subj "/CN=Werkbank Login"
-chmod 444 entra_client_key.pem entra_client_cert.pem
+sudo chmod 444 entra_client_key.pem entra_client_cert.pem
 ```
 
 → App-Registrierung → **Zertifikate & Geheimnisse → Zertifikate → Zertifikat hochladen** → `entra_client_cert.pem`.
 Der private Schlüssel (`entra_client_key.pem`) verlässt den Server nicht.
 
 **Alternative: Geheimer Clientschlüssel** (einfacher, aber höchstens 24 Monate gültig):
-→ **Neuer geheimer Clientschlüssel**, Ablauf 12 Monate, den **Wert** sofort in `deploy/secrets/entra_client_secret` speichern. Er wird nur einmal angezeigt.
+→ **Neuer geheimer Clientschlüssel**, Ablauf 12 Monate, den **Wert** sofort im Secrets-Ordner als `entra_client_secret` speichern. Er wird nur einmal angezeigt. Die mitgelieferte `docker-compose.yml` bindet nur das Zertifikat ein; für diese Variante muss dort das Secret `entra_client_secret` statt der beiden Zertifikatsdateien eingetragen werden.
 
 Ablaufdatum in den Kalender eintragen. Später überwacht die Werkbank das selbst (Verwaltung → Konnektoren).
 
@@ -207,10 +209,19 @@ Connect-MgGraph -Scopes 'Application.ReadWrite.All', 'AppRoleAssignment.ReadWrit
 # Dienstprinzipal von UTCM anlegen
 New-MgServicePrincipal -AppId '03b07b79-c5bc-4b5e-9bfa-13acf4a99998'
 
-# Leserechte für die Entra-Richtlinien vergeben
+# Microsoft verlangt außerdem den Dienstprinzipal „M365 Admin Services“. Meist gibt es ihn schon:
+if (-not (Get-MgServicePrincipal -Filter "AppId eq '6b91db1b-f05b-405a-a0b2-e3f60b28d645'")) {
+    New-MgServicePrincipal -AppId '6b91db1b-f05b-405a-a0b2-e3f60b28d645'
+}
+
+# Leserechte für die voreingestellten Entra-Typen vergeben (siehe Tabelle unten)
 $graph = Get-MgServicePrincipal -Filter "AppId eq '00000003-0000-0000-c000-000000000000'"
 $tcm   = Get-MgServicePrincipal -Filter "AppId eq '03b07b79-c5bc-4b5e-9bfa-13acf4a99998'"
-foreach ($name in @('Policy.Read.All')) {
+$rechte = @(
+    'Policy.Read.All', 'Application.Read.All', 'Group.Read.All', 'User.Read.All',
+    'RoleManagement.Read.Directory', 'Agreement.Read.All', 'CustomSecAttributeDefinition.Read.All'
+)
+foreach ($name in $rechte) {
     $role = $graph.AppRoles | Where-Object { $_.Value -eq $name }
     New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $tcm.Id -BodyParameter @{
         AppRoleId = $role.Id; ResourceId = $graph.Id; PrincipalId = $tcm.Id
@@ -218,7 +229,17 @@ foreach ($name in @('Policy.Read.All')) {
 }
 ```
 
-Fehlt dem Dienstprinzipal ein Recht, schlägt nicht das Anlegen des Snapshots fehl, sondern erst der Abruf. Die Werkbank zeigt die Fehlerangabe von UTCM dann beim Abruf an. Für weitere Ressourcentypen (`COLLECTOR_RESOURCES`) braucht der Dienstprinzipal die passenden Leserechte.
+Welche Leserechte ein Ressourcentyp braucht, legt Microsoft fest ([Liste der Entra-Typen](https://learn.microsoft.com/en-us/graph/utcm-entra-resources)). Für die voreingestellten Typen:
+
+| Ressourcentyp | Leserechte des Dienstprinzipals von UTCM |
+|---|---|
+| `microsoft.entra.conditionalaccesspolicy` | `Policy.Read.All`, `Application.Read.All`, `Group.Read.All`, `User.Read.All`, `RoleManagement.Read.Directory`, `Agreement.Read.All`, `CustomSecAttributeDefinition.Read.All` |
+| `microsoft.entra.namedlocationpolicy` | `Policy.Read.All` |
+| `microsoft.entra.authorizationpolicy` | `Policy.Read.All` |
+
+Die vielen Rechte für Conditional Access braucht UTCM, um in den Richtlinien genannte Benutzer, Gruppen, Rollen und Anwendungen mit Namen statt mit Kennungen auszugeben. Im Snapshot und damit in der Werkbank stehen deshalb auch Namen von Konten, die in Richtlinien ein- oder ausgeschlossen sind (siehe [`datenschutz.md`](datenschutz.md)). Diese Rechte erhält der Dienstprinzipal von Microsoft, nicht die Werkbank.
+
+Fehlt dem Dienstprinzipal ein Recht, schlägt nicht das Anlegen des Snapshots fehl, sondern erst der Abruf. Die Werkbank zeigt den Abruf dann als fehlgeschlagen; die Fehlerangabe von UTCM steht im Protokoll des Workers. Für weitere Ressourcentypen (`COLLECTOR_RESOURCES`) braucht der Dienstprinzipal die dort genannten Leserechte.
 
 ### 4.3 Grenzen von UTCM
 
@@ -228,7 +249,7 @@ Fehlt dem Dienstprinzipal ein Recht, schlägt nicht das Anlegen des Snapshots fe
 
 ---
 
-## 5. Werte für `deploy/.env`
+## 5. Werte für die Umgebungsvariablen
 
 ```dotenv
 PUBLIC_URL=https://werkbank.example.com
@@ -237,21 +258,23 @@ ENTRA_CLIENT_ID=<Anwendungs-ID der Registrierung „Werkbank“>
 COLLECTOR_CLIENT_ID=<Anwendungs-ID der Registrierung „Werkbank Collector“>
 ```
 
-Dateien in `deploy/secrets/` (je nach Variante aus 1.3):
+Dateien im Secrets-Ordner (Schritt für Schritt: [`deploy/README.md`](../deploy/README.md), Abschnitt „Secrets anlegen“):
 
-- `entra_client_key.pem` und `entra_client_cert.pem`, **oder**
-- `entra_client_secret`
-- für den Collector: `collector_client_key.pem` und `collector_client_cert.pem`
+- `postgres_password`
+- `entra_client_key.pem` und `entra_client_cert.pem`
+- `collector_client_key.pem` und `collector_client_cert.pem`
 
 ## Checkliste
 
 - [ ] App-Registrierung „Werkbank“ angelegt (1.1)
 - [ ] Authentifizierung eingestellt (1.2)
 - [ ] Zertifikat hochgeladen oder Secret erstellt (1.3)
-- [ ] Optionale Ansprüche `email`, `preferred_username` (1.4)
+- [ ] Optionale Ansprüche `email`, `preferred_username`, `auth_time` (1.4)
 - [ ] Delegierte Berechtigungen und Administratorzustimmung (1.5)
 - [ ] Acht App-Rollen angelegt (1.6)
 - [ ] „Zuweisung erforderlich“ = Ja (1.7)
 - [ ] Gruppen angelegt und Rollen zugewiesen (1.8)
 - [ ] CA-Richtlinie `CA-Werkbank-MFA` im Modus „Nur Bericht“ (2)
-- [ ] Werte in `deploy/.env` und `deploy/secrets/` auf dem Server (5)
+- [ ] App-Registrierung „Werkbank Collector“ mit Zertifikat, Berechtigungen und Administratorzustimmung (4.1)
+- [ ] Dienstprinzipale von UTCM angelegt, Leserechte vergeben (4.2)
+- [ ] Werte in den Umgebungsvariablen und Dateien im Secrets-Ordner auf dem Server (5)
