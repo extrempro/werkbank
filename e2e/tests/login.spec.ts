@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs } from "./helpers";
+import { expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
 
 test("ohne Anmeldung erscheint die Login-Seite", async ({ page }) => {
   await page.goto("/");
@@ -16,9 +16,7 @@ test("Admin sieht alle Bereiche", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Guten Tag, Erika Beispiel" })).toBeVisible();
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
-  if (await page.getByRole("button", { name: "Menü" }).isVisible()) {
-    await page.getByRole("button", { name: "Menü" }).click();
-  }
+  await openNavigation(page);
   await expect(nav.getByRole("link", { name: "Änderungen" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Audit-Log" })).toBeVisible();
@@ -28,9 +26,7 @@ test("Admin sieht alle Bereiche", async ({ page }) => {
 test("Betriebsrat sieht nur Start und Evergreen", async ({ page }) => {
   await loginAs(page, ["Evergreen.Betriebsrat"], "Karl Rat");
   await page.goto("/");
-  if (await page.getByRole("button", { name: "Menü" }).isVisible()) {
-    await page.getByRole("button", { name: "Menü" }).click();
-  }
+  await openNavigation(page);
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
   await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
   await expect(nav.getByText("M365-Konfiguration")).toHaveCount(0);

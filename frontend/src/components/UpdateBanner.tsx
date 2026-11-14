@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { UPDATE_EVENT } from "../sw-register";
+import { UPDATE_EVENT, applyUpdate } from "../sw-register";
 
 /** Hinweis auf eine neue Version. Gewechselt wird erst nach Klick (spec.md, Kapitel 11). */
 export function UpdateBanner() {
@@ -20,7 +20,7 @@ export function UpdateBanner() {
       <button
         type="button"
         className="button button-primary"
-        onClick={() => worker.postMessage("SKIP_WAITING")}
+        onClick={() => applyUpdate(worker)}
       >
         Neu laden
       </button>

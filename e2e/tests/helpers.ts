@@ -19,3 +19,12 @@ export async function expectNoA11yViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
   expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
 }
+
+/** Öffnet auf kleinen Bildschirmen das Menü, damit die Navigation sichtbar ist. */
+export async function openNavigation(page: Page) {
+  const toggle = page.getByRole("button", { name: "Menü" });
+  if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) === "false") {
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  }
+}

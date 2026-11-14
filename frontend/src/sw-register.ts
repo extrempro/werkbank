@@ -1,5 +1,13 @@
 export const UPDATE_EVENT = "werkbank:update-available";
 
+let updateRequested = false;
+
+/** Neue Version aktivieren. Die Seite lädt neu, sobald der neue Service Worker übernimmt. */
+export function applyUpdate(worker: ServiceWorker): void {
+  updateRequested = true;
+  worker.postMessage("SKIP_WAITING");
+}
+
 /** Registriert den Service Worker und meldet neue Versionen an die Oberfläche. */
 export function registerServiceWorker(): void {
   if (!("serviceWorker" in navigator) || import.meta.env.DEV) {
@@ -29,10 +37,11 @@ export function registerServiceWorker(): void {
       })
       .catch(() => undefined);
 
-    let reloading = false;
+    // Nur neu laden, wenn die Person das Update angestoßen hat. Beim allerersten Besuch
+    // übernimmt der Service Worker ebenfalls (clients.claim), dann soll nichts neu laden.
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (!reloading) {
-        reloading = true;
+      if (updateRequested) {
+        updateRequested = false;
         window.location.reload();
       }
     });
