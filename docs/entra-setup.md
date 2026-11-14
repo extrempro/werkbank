@@ -3,7 +3,7 @@
 Diese Anleitung beschreibt, was im Entra Admin Center (https://entra.microsoft.com) angelegt wird.
 Alle Beispiele verwenden `werkbank.example.com`. Ersetze das durch die öffentliche Adresse deiner Werkbank.
 
-> **Nichts davon gehört ins Repository.** Tenant-ID, Client-ID und öffentliche Adresse kommen in `deploy/.env` auf dem Server, Zertifikate und Secrets in `deploy/secrets/`. Secrets nie in Chats, Issues oder Commits einfügen.
+> **Nichts davon gehört ins Repository.** Tenant-ID, Client-ID und öffentliche Adresse kommen in die Umgebungsvariablen des Projekts (`.env` bzw. Arcane), Zertifikate und Secrets in den Secrets-Ordner auf dem Server (`WERKBANK_SECRETS_DIR`, z. B. `/opt/werkbank/secrets`, siehe [`deploy/README.md`](../deploy/README.md)). Secrets nie in Chats, Issues oder Commits einfügen.
 
 ## Überblick
 
@@ -53,18 +53,18 @@ Die Werkbank meldet sich als vertraulicher Client an. Beim Server (Backend-for-F
 **Empfohlen: Zertifikat** (läuft nicht so schnell ab und ist schwerer zu missbrauchen als ein Secret):
 
 ```bash
-# auf dem Server, im Ordner deploy/secrets
-openssl req -x509 -newkey rsa:3072 -sha256 -days 730 -nodes \
+# auf dem Server, im Secrets-Ordner (z. B. /opt/werkbank/secrets)
+sudo openssl req -x509 -newkey rsa:3072 -sha256 -days 730 -nodes \
   -keyout entra_client_key.pem -out entra_client_cert.pem \
   -subj "/CN=Werkbank Login"
-chmod 444 entra_client_key.pem entra_client_cert.pem
+sudo chmod 444 entra_client_key.pem entra_client_cert.pem
 ```
 
 → App-Registrierung → **Zertifikate & Geheimnisse → Zertifikate → Zertifikat hochladen** → `entra_client_cert.pem`.
 Der private Schlüssel (`entra_client_key.pem`) verlässt den Server nicht.
 
 **Alternative: Geheimer Clientschlüssel** (einfacher, aber höchstens 24 Monate gültig):
-→ **Neuer geheimer Clientschlüssel**, Ablauf 12 Monate, den **Wert** sofort in `deploy/secrets/entra_client_secret` speichern. Er wird nur einmal angezeigt.
+→ **Neuer geheimer Clientschlüssel**, Ablauf 12 Monate, den **Wert** sofort im Secrets-Ordner als `entra_client_secret` speichern. Er wird nur einmal angezeigt. Die mitgelieferte `docker-compose.yml` bindet nur das Zertifikat ein; für diese Variante muss dort das Secret `entra_client_secret` statt der beiden Zertifikatsdateien eingetragen werden.
 
 Ablaufdatum in den Kalender eintragen. Später überwacht die Werkbank das selbst (Verwaltung → Konnektoren).
 
@@ -237,7 +237,7 @@ ENTRA_CLIENT_ID=<Anwendungs-ID der Registrierung „Werkbank“>
 COLLECTOR_CLIENT_ID=<Anwendungs-ID der Registrierung „Werkbank Collector“>
 ```
 
-Dateien in `deploy/secrets/` (je nach Variante aus 1.3):
+Dateien im Secrets-Ordner (Schritt für Schritt: [`deploy/README.md`](../deploy/README.md), Abschnitt „Secrets anlegen“):
 
 - `entra_client_key.pem` und `entra_client_cert.pem`, **oder**
 - `entra_client_secret`
@@ -254,4 +254,4 @@ Dateien in `deploy/secrets/` (je nach Variante aus 1.3):
 - [ ] „Zuweisung erforderlich“ = Ja (1.7)
 - [ ] Gruppen angelegt und Rollen zugewiesen (1.8)
 - [ ] CA-Richtlinie `CA-Werkbank-MFA` im Modus „Nur Bericht“ (2)
-- [ ] Werte in `deploy/.env` und `deploy/secrets/` auf dem Server (5)
+- [ ] Werte in den Umgebungsvariablen und Dateien im Secrets-Ordner auf dem Server (5)
