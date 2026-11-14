@@ -267,8 +267,8 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
           {detail.message_updated && (
             <p className="notice" role="status">
               <strong>Microsoft hat diese Meldung geändert</strong>, nachdem der Vorgang angelegt
-              wurde (zuletzt am {formatDateTime(detail.message.modified_at)}). Bitte prüfen, ob
-              sich dadurch etwas an der Bewertung ändert.
+              wurde (zuletzt am {formatDateTime(detail.message.modified_at)}). Bitte prüfen, ob sich
+              dadurch etwas an der Bewertung ändert.
             </p>
           )}
           <p className="small">

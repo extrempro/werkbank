@@ -1,13 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ApiError, formatDateTime } from "../../api";
 import { Link } from "../../components/Link";
-import {
-  adoptMessage,
-  categoryLabel,
-  fetchMessages,
-  setMessageStatus,
-  type Message,
-} from "./api";
+import { adoptMessage, categoryLabel, fetchMessages, setMessageStatus, type Message } from "./api";
 
 const VIEWS = [
   { value: "neu", label: "Neu" },
@@ -123,7 +117,9 @@ export function InboxPage() {
       </form>
 
       {notice && <p role={notice.kind}>{notice.text}</p>}
-      {status === "forbidden" && <p>Keine Berechtigung. Den Eingang sehen IT und Evergreen-Team.</p>}
+      {status === "forbidden" && (
+        <p>Keine Berechtigung. Den Eingang sehen IT und Evergreen-Team.</p>
+      )}
       {status === "error" && <p role="alert">Die Meldungen konnten nicht geladen werden.</p>}
       {status === "loading" && <p role="status">Wird geladen …</p>}
       {status === "ready" && entries.length === 0 && (

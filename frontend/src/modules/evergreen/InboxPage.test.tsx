@@ -34,10 +34,9 @@ function stubFetch() {
       if (init?.method === "POST") {
         return new Response(JSON.stringify({ ...message, status: "ignoriert" }), { status: 200 });
       }
-      return new Response(
-        JSON.stringify({ entries: [message], has_more: false, new_count: 1 }),
-        { status: 200 },
-      );
+      return new Response(JSON.stringify({ entries: [message], has_more: false, new_count: 1 }), {
+        status: 200,
+      });
     }),
   );
   return calls;
