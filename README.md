@@ -7,7 +7,7 @@ Open-Source-Plattform für IT-Abteilungen mit gemeinsamer Anmeldung (Microsoft E
 - **M365-Konfiguration**: erfasst die Einstellungen des Microsoft-365-Tenants, erkennt Änderungen und führt einen Verlauf je Einstellung.
 - **Evergreen**: neue Microsoft-Funktionen bewerten, dem Betriebsrat vorlegen, von der Geschäftsführung abnehmen lassen und die Umsetzung im Tenant überwachen.
 
-> Status: **Phase 0 – Grundgerüst**. Es gibt noch keinen lauffähigen Anwendungscode. Siehe [`docs/spec.md`](docs/spec.md), Kapitel 15.
+> Status: **Phase 1 in Arbeit** – Backend-Grundgerüst vorhanden, noch keine Fachfunktionen. Siehe [`docs/spec.md`](docs/spec.md), Kapitel 15.
 
 ## Dokumentation
 

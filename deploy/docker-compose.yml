@@ -1,0 +1,22 @@
+# Werkbank – Docker Compose
+# Konfiguration: deploy/.env (Vorlage: deploy/.env.example)
+# Phase 1a: nur der Web-Dienst. Datenbank, Worker und PowerShell folgen in den nächsten Schritten.
+
+name: werkbank
+
+services:
+  web:
+    build:
+      context: ../backend
+    image: werkbank-web:local
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${BIND_IP:-127.0.0.1}:${BIND_PORT:-8080}:8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
