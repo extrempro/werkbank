@@ -65,7 +65,7 @@ Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen spä
 
 | Punkt | Festlegung |
 |---|---|
-| Hosting | GitHub, **öffentliches** Repository (vor Veröffentlichung Freigabe durch die Geschäftsführung) |
+| Hosting | GitHub, **öffentliches** Repository [`extrempro/werkbank`](https://github.com/extrempro/werkbank). Freigabe durch die Geschäftsführung steht noch aus (offener Punkt 11). |
 | Lizenz | MIT |
 | Öffentlichkeit | Keine internen Informationen im Repo: keine Firmen-, Personen-, Host- oder Tenant-Namen, nur neutrale Beispieldaten. Firmenspezifisches nur über Konfiguration. |
 | Branches | Arbeit nur auf Feature-Branches (`feature/…`, `fix/…`, `docs/…`). `main` ist geschützt. |
