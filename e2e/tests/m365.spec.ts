@@ -11,6 +11,8 @@ test("Übersicht zeigt den Stand und den Hinweis auf den fehlenden Abruf", async
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
   await expect(page.getByText("noch nicht eingerichtet")).toBeVisible();
   await expect(page.getByText("Offene Änderungen")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Änderungen pro Tag" })).toBeVisible();
+  await expect(page.getByText("Noch keine Änderungen erkannt.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Jetzt abrufen" })).toHaveCount(0);
   await expectNoA11yViolations(page);
 });
@@ -21,6 +23,15 @@ test("Änderungen, Einstellungen und Snapshots sind erreichbar und leer", async 
   await page.goto("/m365/aenderungen");
   await expect(page.getByRole("heading", { level: 1, name: "Änderungen" })).toBeVisible();
   await expect(page.getByText("Keine Änderungen für diese Auswahl.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Offen (0)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("button", { name: "Alle (0)" }).click();
+  await expect(page.getByRole("button", { name: "Alle (0)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expectNoA11yViolations(page);
 
   await page.goto("/m365/einstellungen");

@@ -6,6 +6,7 @@ import {
   fetchSettings,
   formatValue,
   settingTitle,
+  workloadLabel,
   type Setting,
   type SettingFilter,
 } from "./api";
@@ -16,6 +17,25 @@ const EMPTY_FILTER: SettingFilter = {
   includeRemoved: false,
   onlyDeviating: false,
 };
+
+interface WorkloadGroup {
+  workload: string;
+  entries: Setting[];
+}
+
+/** Gruppiert nach Workload in der Reihenfolge, in der die Einstellungen geliefert werden. */
+function groupByWorkload(entries: Setting[]): WorkloadGroup[] {
+  const groups: WorkloadGroup[] = [];
+  for (const entry of entries) {
+    const group = groups.find((item) => item.workload === entry.workload);
+    if (group) {
+      group.entries.push(entry);
+    } else {
+      groups.push({ workload: entry.workload, entries: [entry] });
+    }
+  }
+  return groups.sort((a, b) => workloadLabel(a.workload).localeCompare(workloadLabel(b.workload)));
+}
 
 export function SettingsPage() {
   const [draft, setDraft] = useState<SettingFilter>(EMPTY_FILTER);
@@ -64,10 +84,14 @@ export function SettingsPage() {
   };
 
   return (
-    <>
-      <p className="module-label">M365-Konfiguration</p>
-      <h1>Einstellungen</h1>
-      <p className="lead">Alle gelesenen Einstellungen des Tenants mit ihrem aktuellen Wert.</p>
+    <div className="page">
+      <header className="page-head">
+        <p className="module-label">M365-Konfiguration</p>
+        <h1>Einstellungen</h1>
+        <p className="page-sub">
+          Alle gelesenen Einstellungen des Tenants mit ihrem aktuellen Wert, nach Workload.
+        </p>
+      </header>
 
       <form className="filter card" onSubmit={onSubmit} aria-label="Einstellungen filtern">
         <label>
@@ -88,7 +112,7 @@ export function SettingsPage() {
             <option value="">Alle</option>
             {workloads.map((workload) => (
               <option key={workload} value={workload}>
-                {workload}
+                {workloadLabel(workload)}
               </option>
             ))}
           </select>
@@ -123,37 +147,44 @@ export function SettingsPage() {
       {status === "ready" && entries.length === 0 && (
         <p className="empty">Keine Einstellungen für diese Auswahl.</p>
       )}
-      {entries.length > 0 && (
-        <div className="table-wrap" tabIndex={0} role="region" aria-label="Einstellungen">
-          <table>
-            <caption className="visually-hidden">Einstellungen, sortiert nach Pfad</caption>
-            <thead>
-              <tr>
-                <th scope="col">Einstellung</th>
-                <th scope="col">Aktueller Wert</th>
-                <th scope="col">Gültig seit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => (
-                <tr key={entry.id}>
-                  <td>
-                    <Link to={`/m365/einstellungen/${entry.id}`}>{settingTitle(entry)}</Link>
-                    {!entry.active && <span className="badge">Entfernt</span>}
-                    {entry.deviates && <span className="badge">Weicht vom Soll-Wert ab</span>}
-                    {entry.criticality === "hoch" && (
-                      <span className="badge">Kritikalität hoch</span>
-                    )}
+      {entries.length > 0 &&
+        groupByWorkload(entries).map((group) => (
+          <section
+            className="panel tree-group"
+            key={group.workload}
+            aria-labelledby={`workload-${group.workload}`}
+          >
+            <div className="panel-head">
+              <h2 id={`workload-${group.workload}`}>{workloadLabel(group.workload)}</h2>
+              <span className="small">{group.entries.length} Einstellungen</span>
+            </div>
+            <ul className="rows">
+              {group.entries.map((entry) => (
+                <li key={entry.id}>
+                  <span className="row-main">
+                    <Link to={`/m365/einstellungen/${entry.id}`} className="row-title">
+                      {settingTitle(entry)}
+                    </Link>
                     <span className="mono small path">{entry.path}</span>
-                  </td>
-                  <td className="value">{formatValue(entry.value)}</td>
-                  <td className="nowrap">{formatDateTime(entry.valid_from)}</td>
-                </tr>
+                    <span className="badges">
+                      {!entry.active && <span className="pill pill-neutral">Entfernt</span>}
+                      {entry.deviates && (
+                        <span className="pill pill-bad">Weicht vom Soll-Wert ab</span>
+                      )}
+                      {entry.criticality === "hoch" && (
+                        <span className="pill pill-todo">Kritikalität hoch</span>
+                      )}
+                    </span>
+                  </span>
+                  <span className="row-side">
+                    <span className="mono row-value">{formatValue(entry.value)}</span>
+                    <span className="small">seit {formatDateTime(entry.valid_from)}</span>
+                  </span>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </ul>
+          </section>
+        ))}
       {hasMore && (
         <button
           type="button"
@@ -163,6 +194,6 @@ export function SettingsPage() {
           Weitere laden
         </button>
       )}
-    </>
+    </div>
   );
 }

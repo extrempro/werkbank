@@ -12,12 +12,23 @@ export interface Snapshot {
   resource_count: number;
 }
 
+export interface DayCount {
+  /** Kalendertag JJJJ-MM-TT in der Zeitzone des Browsers. */
+  day: string;
+  count: number;
+}
+
 export interface Overview {
   collector_configured: boolean;
   collect_pending: boolean;
   last_snapshot: Snapshot | null;
   settings_total: number;
+  described_total: number;
   open_changes: number;
+  open_critical: number;
+  changes_last_7_days: number;
+  changes_last_30_days: number;
+  changes_per_day: DayCount[];
   deviations: number;
   resources_this_month: number;
   monthly_limit: number;
@@ -81,8 +92,11 @@ export interface Change {
   id: number;
   setting_id: number;
   path: string;
+  workload: string;
   object_name: string | null;
   property: string;
+  criticality: string | null;
+  description: string | null;
   kind: string;
   status: string;
   detected_at: string;
@@ -111,8 +125,17 @@ export interface SettingFilter {
 
 export type ReviewStatus = "offen" | "gewollt" | "ungewollt";
 
+function browserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
 export function fetchOverview(): Promise<Overview> {
-  return getJson(`${BASE}/overview`);
+  const params = new URLSearchParams({ tz: browserTimezone() });
+  return getJson(`${BASE}/overview?${params.toString()}`);
 }
 
 export function fetchSnapshots(): Promise<Snapshot[]> {
@@ -147,11 +170,21 @@ export function updateMeta(id: number, update: MetaUpdate): Promise<Meta> {
   return putJson(`${BASE}/settings/${id}/meta`, update);
 }
 
-export function fetchChanges(
-  status: string,
-  offset: number,
-): Promise<{ entries: Change[]; has_more: boolean }> {
-  const params = new URLSearchParams({ offset: String(offset), limit: "50" });
+export interface ChangeCounts {
+  alle: number;
+  offen: number;
+  gewollt: number;
+  ungewollt: number;
+}
+
+export interface ChangeList {
+  entries: Change[];
+  has_more: boolean;
+  counts?: ChangeCounts;
+}
+
+export function fetchChanges(status: string, offset: number, limit = 50): Promise<ChangeList> {
+  const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
   if (status) {
     params.set("status", status);
   }
@@ -271,4 +304,24 @@ export function targetInputText(value: unknown): string {
     }
   }
   return JSON.stringify(value, null, 2);
+}
+
+const WORKLOAD_LABELS: Record<string, string> = {
+  entra: "Entra",
+  exchange: "Exchange",
+  intune: "Intune",
+  teams: "Teams",
+  sharepoint: "SharePoint",
+};
+
+export function workloadLabel(workload: string): string {
+  return WORKLOAD_LABELS[workload] ?? workload.charAt(0).toUpperCase() + workload.slice(1);
+}
+
+/** CSS-Klasse für den Status einer Änderung (Farbe nach docs/design.md, Kapitel 4). */
+export function statusClass(status: string): string {
+  if (status === "gewollt") {
+    return "pill pill-ok";
+  }
+  return status === "ungewollt" ? "pill pill-bad" : "pill pill-todo";
 }
