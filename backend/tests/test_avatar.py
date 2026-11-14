@@ -69,8 +69,8 @@ def entra_login(result: PhotoResult, *, enabled: bool = True, oid: str | None = 
     client = client_for(app)
     assert client.get("/auth/login").status_code == 303
     assert client.get("/auth/callback", params={"code": "x", "state": "abc"}).status_code == 303
-    client.fake = fake  # type: ignore[attr-defined]
-    client.tokens = tokens  # type: ignore[attr-defined]
+    client.fake = fake
+    client.tokens = tokens
     return client
 
 
@@ -109,8 +109,8 @@ def test_fetch_photo_results() -> None:
 @pytest.mark.db
 def test_login_without_setting_asks_no_extra_scope(migrated_db: None) -> None:
     client = entra_login(Photo("image/jpeg", JPEG), enabled=False)
-    assert client.fake.scopes == ["email"]  # type: ignore[attr-defined]
-    assert client.tokens == []  # type: ignore[attr-defined]
+    assert client.fake.scopes == ["email"]
+    assert client.tokens == []
     assert client.get("/api/me").json()["avatar_url"] is None
 
 
@@ -118,8 +118,8 @@ def test_login_without_setting_asks_no_extra_scope(migrated_db: None) -> None:
 def test_login_stores_photo_and_everyone_can_see_it(migrated_db: None, db_session: Session) -> None:
     oid = "22222222-2222-2222-2222-222222222222"
     client = entra_login(Photo("image/jpeg", JPEG), oid=oid)
-    assert client.fake.scopes == ["email", "User.Read"]  # type: ignore[attr-defined]
-    assert client.tokens == ["zugriff"]  # type: ignore[attr-defined]
+    assert client.fake.scopes == ["email", "User.Read"]
+    assert client.tokens == ["zugriff"]
 
     me = client.get("/api/me").json()
     assert me["version"] == __version__

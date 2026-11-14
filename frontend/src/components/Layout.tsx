@@ -172,7 +172,6 @@ export function Layout({ me }: LayoutProps) {
           <a
             className="user-pill"
             href={ACCOUNT_PATH}
-            aria-label={`${me.display_name} – Konto öffnen`}
             aria-current={path === ACCOUNT_PATH ? "page" : undefined}
             onClick={(event) => onNavClick(event, ACCOUNT_PATH)}
           >
@@ -181,6 +180,7 @@ export function Layout({ me }: LayoutProps) {
               <span className="user-name">{me.display_name}</span>
               {role && <span className="user-role">{role}</span>}
             </span>
+            <span className="visually-hidden"> – Konto öffnen</span>
           </a>
           <form method="post" action="/auth/logout">
             <button type="submit" className="button button-quiet">

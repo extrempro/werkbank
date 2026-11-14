@@ -550,9 +550,18 @@ a {
     align-items: center;
   }
 
-  .user-text,
   .brand-sub {
     display: none;
+  }
+
+  /* Der Name bleibt für Screenreader erhalten, sichtbar ist nur das Bild. */
+  .user-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .user-pill {
