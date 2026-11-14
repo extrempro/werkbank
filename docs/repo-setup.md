@@ -11,7 +11,7 @@ Repository-Einstellungen können nur Personen mit Admin-Rechten ändern, Claude 
 | 1 | Repository angelegt (öffentlich) | ✅ erledigt |
 | 2 | Grundgerüst als erster Commit auf `main` | ✅ erledigt |
 | 3 | Secret Scanning und Push Protection | ✅ aktiv (Standard bei öffentlichen Repos) |
-| 4 | Beschreibung und Topics | ⬜ offen |
+| 4 | Beschreibung und Topics | ✅ erledigt |
 | 5 | Actions-Berechtigungen | ⬜ offen |
 | 6 | Branch Protection (Ruleset) für `main` | ✅ erledigt |
 | 7 | Private vulnerability reporting | ✅ erledigt |
