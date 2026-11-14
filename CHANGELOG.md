@@ -11,6 +11,13 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ### Hinzugefügt
 
+- Anmeldung über Microsoft Entra ID (OIDC, Authorization Code Flow mit PKCE, Backend-for-Frontend): Zertifikat oder Secret, Mandantenprüfung, nur bekannte App-Rollen
+- Serverseitige Sitzungen: zufälliges Token im `__Host-`-Cookie, in der Datenbank nur als Hash; 30 Minuten Leerlauf, höchstens 8 Stunden
+- Rollenprüfung serverseitig (`require_roles`), `/api/me` für die Oberfläche
+- CSRF-Schutz: verändernde Anfragen nur von der eigenen Origin
+- Schutz vor offenen Weiterleitungen nach der Anmeldung
+- Audit-Einträge für Anmeldung, Ablehnung und Abmeldung
+- Test-Login für automatische Tests, in Produktion technisch ausgeschlossen
 - Anleitung zur Einrichtung in Microsoft Entra ID (`docs/entra-setup.md`): App-Registrierung, App-Rollen, Gruppen, Conditional Access für MFA
 - PostgreSQL als Datenbank (Docker-Dienst `db`, nur internes Netz, Passwort als Docker-Secret)
 - Migrationen mit Alembic, automatisch beim Start

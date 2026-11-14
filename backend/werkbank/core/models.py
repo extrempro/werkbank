@@ -42,3 +42,29 @@ class AuditLog(Base):
     ip_truncated: Mapped[str | None] = mapped_column(String(64))
     details: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     note: Mapped[str | None] = mapped_column(Text)
+
+
+class UserSession(Base):
+    """Serverseitige Sitzung. Im Browser liegt nur ein zufälliges Token, hier sein Hash."""
+
+    __tablename__ = "user_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    roles: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    authenticated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AuthFlow(Base):
+    """Laufende Anmeldung (state, nonce, PKCE) zwischen Weiterleitung und Rückkehr von Entra."""
+
+    __tablename__ = "auth_flows"
+
+    id_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    flow: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    return_to: Mapped[str] = mapped_column(String(512), default="/")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
