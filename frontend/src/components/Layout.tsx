@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useState, type MouseEvent, type ReactNode } from "react";
 import { fetchTasks, type Me, type Task } from "../api";
 import { allNavItems, navigationFor, NEWS_PATH } from "../navigation";
+import { AccountPage } from "../pages/AccountPage";
 import { AdminPage } from "../pages/AdminPage";
 import { AuditPage } from "../pages/AuditPage";
 import { NewsPage } from "../pages/NewsPage";
@@ -17,10 +18,11 @@ import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { hasUnseenRelease } from "../release-notes";
 import { navigate, usePath } from "../router";
-import { ThemeSwitch } from "./ThemeSwitch";
-import { initials, roleLabel } from "../user";
+import { Avatar } from "./Avatar";
+import { roleLabel } from "../user";
 
 const SETTINGS_PATH = "/m365/einstellungen";
+const ACCOUNT_PATH = "/konto";
 
 interface LayoutProps {
   me: Me;
@@ -75,6 +77,8 @@ export function Layout({ me }: LayoutProps) {
   let page: ReactNode;
   if (path === "/") {
     page = <StartPage me={me} tasks={tasks} />;
+  } else if (path === ACCOUNT_PATH) {
+    page = <AccountPage me={me} />;
   } else if (path === NEWS_PATH) {
     page = <NewsPage onSeen={onNewsSeen} />;
   } else if (path === "/audit" && current) {
@@ -165,15 +169,19 @@ export function Layout({ me }: LayoutProps) {
               </span>
             )}
           </a>
-          <div className="user-pill">
-            <span className="user-avatar" aria-hidden="true">
-              {initials(me.display_name)}
-            </span>
+          <a
+            className="user-pill"
+            href={ACCOUNT_PATH}
+            aria-label={`${me.display_name} – Konto öffnen`}
+            aria-current={path === ACCOUNT_PATH ? "page" : undefined}
+            onClick={(event) => onNavClick(event, ACCOUNT_PATH)}
+          >
+            <Avatar name={me.display_name} url={me.avatar_url} />
             <span className="user-text">
               <span className="user-name">{me.display_name}</span>
               {role && <span className="user-role">{role}</span>}
             </span>
-          </div>
+          </a>
           <form method="post" action="/auth/logout">
             <button type="submit" className="button button-quiet">
               Abmelden
@@ -216,7 +224,6 @@ export function Layout({ me }: LayoutProps) {
               </ul>
             </div>
           ))}
-          <ThemeSwitch />
         </nav>
         <main id="inhalt" className="app-main" tabIndex={-1}>
           {page}

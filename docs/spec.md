@@ -161,6 +161,8 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
 - Session: Leerlauf-Timeout 30 Minuten, absolute Dauer 8 Stunden. Abmelden beendet die Session serverseitig.
 - **Erneute Anmeldung (Step-up)** beim Öffnen der Verwaltung, wenn die letzte Anmeldung länger als 15 Minuten zurückliegt (`STEP_UP_MINUTES`). Die Werkbank schickt die Person dann mit `prompt=login` zu Entra. Liefert Entra den Zeitpunkt der letzten echten Anmeldung mit (`auth_time`), zählt dieser; eine stille Anmeldung über eine bestehende Entra-Sitzung gilt dann nicht als frisch.
 - Jede Anmeldung beendet die vorherige Sitzung desselben Browsers (neues Token).
+- **Profilbild (optional, `ENTRA_PROFILE_PHOTO`):** Bei der Anmeldung liest die Werkbank mit der delegierten Berechtigung `User.Read` das eigene Bild der Person, speichert es und zeigt es allen angemeldeten Personen. Das Zugriffstoken wird danach verworfen. Ein Fehler beim Abruf verhindert die Anmeldung nicht.
+- **Seite „Konto“:** eigene Angaben, Rollen, Sitzung, Darstellung, Version.
 - **Entra Conditional Access** mit einer eigenen Richtlinie nur für die Werkbank, da MFA im Tenant noch nicht allgemein erzwungen wird:
   - **Benutzer:** alle Gruppen mit Werkbank-Rollen (bzw. alle Benutzer)
   - **Zielressource:** Enterprise-App „Werkbank“

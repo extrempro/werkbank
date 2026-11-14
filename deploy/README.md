@@ -110,7 +110,15 @@ Arcane holt beim Git-Sync die Compose-Datei (und auf Wunsch die Dateien daneben)
 1. **Git-Sync anlegen** (Pull): Repository dieses Projekts, Branch `main`, Compose-Datei `deploy/docker-compose.yml`.
 2. **Umgebungsvariablen** des Projekts in Arcane nach [`.env.example`](.env.example) eintragen, mindestens `WERKBANK_SECRETS_DIR`, `BIND_IP`, `BIND_PORT`, `PUBLIC_URL`, `TRUSTED_PROXY_IPS`, `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `COLLECTOR_CLIENT_ID`.
 3. **Secrets** wie oben auf dem Host anlegen.
-4. Projekt **bauen und starten**. Nach einer neuen Version auf `main`: Projekt in Arcane neu bauen und neu bereitstellen.
+4. Projekt **bauen und starten**.
+   **Nach einer neuen Version auf `main`** muss das Image neu gebaut werden. Ein reines Neu-Bereitstellen in Arcane kann das vorhandene Image `werkbank-web:local` weiterverwenden; dann läuft der alte Stand weiter. Sicher ist der Neubau auf dem Docker-Host im Projektordner (je nach Einrichtung mit `sudo`):
+
+   ```bash
+   docker compose build --no-cache --pull
+   docker compose up -d
+   ```
+
+   Welche Version läuft, steht in der Werkbank auf der Seite „Konto“.
 5. Im **NetBird Reverse Proxy** die öffentliche Adresse der Werkbank auf `BIND_IP:BIND_PORT` des Docker-Hosts leiten.
 6. In **Entra** die Redirect-URI `${PUBLIC_URL}/auth/callback` eintragen.
 

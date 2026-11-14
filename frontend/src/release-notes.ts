@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.3.0",
+    date: "2026-11-14",
+    summary: "Neue Seite „Konto“ und Profilbilder.",
+    sections: [
+      {
+        area: "Allgemein",
+        entries: [
+          "Neue Seite „Konto“: Ein Klick auf deinen Namen oben rechts zeigt deine Angaben, deine Rollen und was sie erlauben, deine Sitzung und die Version der Werkbank.",
+          "Die Auswahl für den hellen und dunklen Modus findest du jetzt auf der Seite „Konto“.",
+          "Profilbild: Ist die Funktion eingeschaltet, zeigt die Werkbank dein Bild aus Microsoft Entra ID. Es wird bei jeder Anmeldung aktualisiert und ist für alle Angemeldeten sichtbar. Ohne Bild erscheinen deine Initialen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.2.0",
     date: "2026-11-14",
     summary: "Die M365-Konfiguration hat ein neues Aussehen und zeigt mehr auf einen Blick.",

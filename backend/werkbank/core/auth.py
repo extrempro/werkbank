@@ -12,8 +12,17 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 
+from werkbank import __version__
 from werkbank.config import Settings
 from werkbank.core.audit import write_audit
+from werkbank.core.avatar import (
+    PHOTO_SCOPE,
+    PhotoFetcherDep,
+    PhotoResult,
+    avatar_etags,
+    avatar_url,
+    store_photo,
+)
 from werkbank.core.credentials import certificate_credential
 from werkbank.core.deps import CurrentUserDep, DbDep, SettingsDep
 from werkbank.core.models import AuthFlow, User, UserSession
@@ -116,6 +125,7 @@ def _start_session(
     method: str,
     return_to: str,
     authenticated_at: datetime | None = None,
+    photo: PhotoResult = None,
 ) -> RedirectResponse:
     """Legt bzw. aktualisiert die Person an, startet die Sitzung und protokolliert."""
     now = now_utc()
@@ -133,6 +143,7 @@ def _start_session(
     user.last_login_at = now
     user.last_roles = roles
     db.flush()
+    store_photo(db, user.id, photo)
     token = create_session(db, settings, user, roles, authenticated_at=authenticated_at or now)
     write_audit(
         db,
@@ -173,7 +184,7 @@ def login(
 ) -> RedirectResponse:
     """Leitet zur Anmeldung bei Entra weiter. Mit step_up fragt Entra die Anmeldung neu ab."""
     flow = entra.initiate_auth_code_flow(
-        scopes=["email"],
+        scopes=["email", PHOTO_SCOPE] if settings.entra_profile_photo else ["email"],
         redirect_uri=f"{settings.public_url}/auth/callback",
         prompt="login" if step_up else None,
     )
@@ -195,7 +206,11 @@ def login(
 
 @router.get("/auth/callback")
 def callback(
-    request: Request, db: DbDep, settings: SettingsDep, entra: EntraDep
+    request: Request,
+    db: DbDep,
+    settings: SettingsDep,
+    entra: EntraDep,
+    photo_fetcher: PhotoFetcherDep,
 ) -> RedirectResponse:
     """Rückkehr von Entra: Code einlösen, Token prüfen, Sitzung starten."""
     flow_id = request.cookies.get(AUTH_FLOW_COOKIE)
@@ -222,6 +237,11 @@ def callback(
     name = str(claims.get("name") or claims.get("preferred_username") or "Unbekannt")[:256]
     email_claim = claims.get("email") or claims.get("preferred_username")
     email = str(email_claim)[:320] if email_claim else None
+    # Profilbild im Namen der Person holen. Ein Fehler dabei verhindert die Anmeldung nicht.
+    photo: PhotoResult = None
+    access_token = result.get("access_token")
+    if settings.entra_profile_photo and isinstance(access_token, str) and access_token:
+        photo = photo_fetcher(access_token)
     return _start_session(
         request,
         db,
@@ -233,6 +253,7 @@ def callback(
         method="entra",
         return_to=return_to,
         authenticated_at=_auth_time(claims),
+        photo=photo,
     )
 
 
@@ -281,16 +302,25 @@ def test_login(
 
 
 class MeResponse(BaseModel):
+    user_id: str
     display_name: str
     email: str | None
     roles: list[str]
     authenticated_at: datetime
+    session_expires_at: datetime
+    avatar_url: str | None
+    version: str
 
 
 @router.get("/api/me")
-def me(user: CurrentUserDep) -> MeResponse:
+def me(user: CurrentUserDep, db: DbDep) -> MeResponse:
     """Angaben zur angemeldeten Person (für die Oberfläche)."""
+    etag = avatar_etags(db, [user.user_id]).get(user.user_id)
     return MeResponse(
+        user_id=str(user.user_id),
+        session_expires_at=user.expires_at.astimezone(UTC),
+        avatar_url=avatar_url(user.user_id, etag),
+        version=__version__,
         display_name=user.display_name,
         email=user.email,
         roles=list(user.roles),

@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import Select, select
 
 from werkbank.core.audit import write_audit
+from werkbank.core.avatar import avatar_etags, avatar_url
 from werkbank.core.deps import DbDep, require_recent_login, require_roles
 from werkbank.core.models import AuditLog, User
 from werkbank.core.roles import ROLE_INFO, Role
@@ -174,6 +175,7 @@ def export_audit(
 
 
 class RoleHolderOut(BaseModel):
+    avatar_url: str | None
     display_name: str
     email: str | None
     last_login_at: datetime | None
@@ -190,11 +192,13 @@ class RoleOut(BaseModel):
 def list_roles(user: AdminUser, db: DbDep) -> list[RoleOut]:
     """App-Rollen mit den Personen, die sie bei ihrer letzten Anmeldung hatten (nur Admin)."""
     people = db.scalars(select(User).order_by(User.display_name)).all()
+    etags = avatar_etags(db, [person.id for person in people])
     result: list[RoleOut] = []
     for role in Role:
         label, description = ROLE_INFO[role]
         holders = [
             RoleHolderOut(
+                avatar_url=avatar_url(person.id, etags.get(person.id)),
                 display_name=person.display_name,
                 email=person.email,
                 last_login_at=person.last_login_at,

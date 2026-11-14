@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.3.0] – 2026-11-14
+
+Seite „Konto“ und Profilbild aus Entra.
+
+### Hinzugefügt
+
+- **Konto:** Eigene Seite mit Name, E-Mail, Profilbild, Rollen samt Beschreibung, Sitzung (angemeldet seit, läuft ab, Abmelden), Darstellung und Version der Werkbank. Erreichbar über den Namen in der Kopfzeile
+- **Profilbild aus Entra ID:** Wird bei der Anmeldung im Namen der Person geholt (delegierte Berechtigung `User.Read`), in der Datenbank gespeichert und allen angemeldeten Personen angezeigt (Kopfzeile, Konto, Rollen in der Verwaltung). Abschaltbar, Standard aus: `ENTRA_PROFILE_PHOTO=true`. Ohne Bild erscheinen die Initialen
+- API: `GET /api/users/{id}/avatar`; `/api/me` liefert zusätzlich Kennung, Ablauf der Sitzung, Adresse des Profilbilds und Version
+
+### Geändert
+
+- Die Auswahl der Darstellung (hell/dunkel) steht nur noch auf der Seite „Konto“
+- Anleitung für Updates: Arcane kann beim Neu-Bereitstellen das alte Image behalten; die Befehle zum Neubauen stehen in `deploy/README.md`
+
 ## [0.2.0] – 2026-11-14
 
 M365-Konfiguration im neuen Aussehen.

@@ -14,6 +14,7 @@
 |---|---|---|---|
 | Name, Mail, Entra-Objekt-ID der Nutzer | Entra-Anmeldung | Anmeldung, Zuordnung von Aktionen | solange Zugang besteht **[OFFEN]** |
 | Rollen | Entra-App-Rollen | Berechtigung | solange Zugang besteht |
+| Profilbild (nur wenn `ENTRA_PROFILE_PHOTO` eingeschaltet ist) | Entra, bei der Anmeldung im Namen der Person gelesen (120 × 120 Pixel) | Wiedererkennen von Personen in der Oberfläche; für alle angemeldeten Personen sichtbar | bis zur nächsten Anmeldung ohne Bild in Entra, sonst solange Zugang besteht **[OFFEN]** |
 | Aktionen im Audit-Log (wer, wann, was) | Werkbank | Nachweis, Sicherheit | **[OFFEN]** Vorschlag 2 Jahre |
 | IP-Adresse (gekürzt) | Anfrage | Sicherheit | wie Audit-Log |
 | IP-Adresse (vollständig, nur als Zähler im Arbeitsspeicher) | Anfrage | Schutz vor Missbrauch (Begrenzung der Anfragerate) | höchstens wenige Minuten, wird nicht gespeichert |

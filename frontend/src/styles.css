@@ -346,13 +346,21 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 44px;
   padding: 4px 12px 4px 4px;
   border: 1px solid var(--farbe-kopf-rand);
   border-radius: 999px;
+  color: var(--farbe-auf-primaer);
+  text-decoration: none;
 }
 
-.user-avatar {
-  display: flex;
+.user-pill:hover,
+.user-pill[aria-current="page"] {
+  background: var(--farbe-kopf-flaeche);
+}
+
+.avatar {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
@@ -363,6 +371,14 @@ a {
   color: var(--farbe-kopf);
   font-size: 0.75rem;
   font-weight: 700;
+  object-fit: cover;
+  vertical-align: middle;
+}
+
+.avatar-large {
+  width: 72px;
+  height: 72px;
+  font-size: 1.5rem;
 }
 
 .user-text {
@@ -2051,4 +2067,52 @@ details summary {
   .setting {
     padding: 16px;
   }
+}
+
+/* Konto */
+
+.account {
+  max-width: 820px;
+}
+
+.account-profile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+}
+
+.account-profile p {
+  margin: 0 0 4px;
+}
+
+.account-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.account .theme-switch {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+  max-width: 360px;
+}
+
+.account .theme-switch legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.account .detail-body p,
+.account .detail-body form {
+  margin: 0;
+}
+
+.plain li + li {
+  margin-top: 6px;
 }

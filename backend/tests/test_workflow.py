@@ -48,6 +48,7 @@ def person(*roles: str, user_id: uuid.UUID | None = None) -> CurrentUser:
         email=None,
         roles=tuple(roles),
         authenticated_at=now_utc(),
+        expires_at=now_utc(),
     )
 
 
