@@ -36,6 +36,10 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  // Nur Nachrichten von Seiten der eigenen Herkunft annehmen
+  if (event.origin !== self.location.origin) {
+    return;
+  }
   if (event.data === "SKIP_WAITING") {
     self.skipWaiting();
   }
