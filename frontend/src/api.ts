@@ -88,6 +88,24 @@ export function putJson<T>(url: string, body?: unknown): Promise<T> {
   return sendJson("PUT", url, body);
 }
 
+export interface Task {
+  module: string;
+  title: string;
+  subtitle: string | null;
+  link: string;
+  count: number;
+}
+
+/** Aufgaben der angemeldeten Person. Bei einem Fehler oder unerwarteter Antwort: keine. */
+export async function fetchTasks(): Promise<Task[]> {
+  try {
+    const data = await getJson<{ tasks?: unknown }>("/api/tasks");
+    return Array.isArray(data.tasks) ? (data.tasks as Task[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 export interface AuditEntry {
   id: number;
   occurred_at: string;

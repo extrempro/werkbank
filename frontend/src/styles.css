@@ -654,3 +654,41 @@ section + section {
   font-size: 0.875rem;
   color: var(--farbe-text-leise);
 }
+
+/* Aufgaben */
+
+.tasks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tasks li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 0;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.tasks li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.task-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.nav-count {
+  display: inline-block;
+  min-width: 24px;
+  margin-left: 8px;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}

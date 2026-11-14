@@ -18,7 +18,9 @@
 | IP-Adresse (gekürzt) | Anfrage | Sicherheit | wie Audit-Log |
 | IP-Adresse (vollständig, nur als Zähler im Arbeitsspeicher) | Anfrage | Schutz vor Missbrauch (Begrenzung der Anfragerate) | höchstens wenige Minuten, wird nicht gespeichert |
 | Kommentare, Begründungen, Beschlüsse | Eingabe | Nachweis | **[OFFEN]** |
-| „Geändert von“ (Konto, das eine Tenant-Einstellung geändert hat) | Entra-Audit-Log | Nachvollziehbarkeit | **[OFFEN]** |
+| „Geändert von“ (Konto oder Anwendung, die eine Tenant-Einstellung geändert hat) | Entra-Audit-Log, beim Abruf abgefragt | Nachvollziehbarkeit | **[OFFEN]**; gespeichert je erkannter Änderung |
+| Bewertungen und gepflegte Angaben (wer, wann, Kommentar; „Verantwortlich“ als Freitext) | Eingabe | Nachweis | **[OFFEN]** |
+| Namen in Tenant-Einstellungen (z. B. Konten in Ausnahmen von Richtlinien) | Abruf über UTCM | Überwachung der Konfiguration | solange der Verlauf aufbewahrt wird **[OFFEN]** |
 | Push-Abonnement (Endpunkt, Schlüssel) | Browser, nach Opt-in | Benachrichtigung | bis Widerruf |
 
 Keine Tracking- oder Analysedienste. Keine Cookies außer dem technisch notwendigen Session-Cookie.
@@ -31,7 +33,7 @@ Keine Tracking- oder Analysedienste. Keine Cookies außer dem technisch notwendi
 
 | Empfänger | Daten | Hinweis |
 |---|---|---|
-| Microsoft (Entra, Graph) | Anmeldung, Mailversand | bestehender Vertrag M365 |
+| Microsoft (Entra, Graph, UTCM) | Anmeldung, Mailversand, Abruf der Tenant-Einstellungen (Daten verlassen den Tenant nur in Richtung Werkbank) | bestehender Vertrag M365 |
 | Push-Dienste der Browserhersteller (Apple, Google, Mozilla) | verschlüsselte Push-Nachricht ohne Inhalt | nur nach Opt-in |
 | KI-Anbieter (optional) | nur technische Metadaten, keine personenbezogenen Daten | **[OFFEN]** Anbieter, AVV |
 
