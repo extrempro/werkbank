@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
 import { ApiError, formatDateTime, type Me } from "../../api";
 import { Link } from "../../components/Link";
-import { fetchOverview, snapshotLabel, startCollect, type Overview } from "./api";
+import {
+  fetchChanges,
+  fetchOverview,
+  kindLabel,
+  settingTitle,
+  snapshotLabel,
+  startCollect,
+  statusClass,
+  statusLabel,
+  workloadLabel,
+  type Change,
+  type Overview,
+} from "./api";
+import { ChangesChart } from "./ChangesChart";
 
 interface OverviewPageProps {
   me: Me;
@@ -11,6 +24,7 @@ const numbers = new Intl.NumberFormat("de-DE");
 
 export function OverviewPage({ me }: OverviewPageProps) {
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [recent, setRecent] = useState<Change[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -29,6 +43,15 @@ export function OverviewPage({ me }: OverviewPageProps) {
         if (active) {
           setStatus("error");
         }
+      });
+    fetchChanges("", 0, 6)
+      .then((page) => {
+        if (active && Array.isArray(page.entries)) {
+          setRecent(page.entries);
+        }
+      })
+      .catch(() => {
+        // Ohne Liste bleibt der Bereich leer; die Kennzahlen stehen trotzdem.
       });
     return () => {
       active = false;
@@ -54,67 +77,116 @@ export function OverviewPage({ me }: OverviewPageProps) {
   };
 
   return (
-    <>
-      <p className="module-label">M365-Konfiguration</p>
-      <h1>Übersicht</h1>
-      <p className="lead">Einstellungen des Tenants, ihr Verlauf und erkannte Änderungen.</p>
+    <div className="page">
+      <header className="page-head">
+        <p className="module-label">M365-Konfiguration</p>
+        <h1>Übersicht</h1>
+        <p className="page-sub">Einstellungen des Tenants, ihr Verlauf und erkannte Änderungen.</p>
+      </header>
 
       {status === "loading" && <p role="status">Wird geladen …</p>}
       {status === "error" && <p role="alert">Die Übersicht konnte nicht geladen werden.</p>}
       {status === "ready" && overview && (
         <>
           {!overview.collector_configured && (
-            <p className="note card">
+            <p className="hint-box hint-warn">
               Der Abruf aus dem Tenant ist noch nicht eingerichtet. Solange erscheinen hier keine
               Einstellungen.
             </p>
           )}
-          <dl className="stats">
-            <div className="card">
+
+          <dl className="kpis">
+            <div className="kpi">
               <dt>Offene Änderungen</dt>
               <dd>
-                <span className="stat-number">{numbers.format(overview.open_changes)}</span>
+                <span
+                  className={overview.open_changes > 0 ? "kpi-number kpi-todo" : "kpi-number"}
+                >
+                  {numbers.format(overview.open_changes)}
+                </span>
+                <span className="small">
+                  davon kritisch: {numbers.format(overview.open_critical)}
+                </span>
                 <Link to="/m365/aenderungen">Änderungen ansehen</Link>
               </dd>
             </div>
-            <div className="card">
-              <dt>Abweichungen vom Soll-Wert</dt>
+            <div className="kpi">
+              <dt>Letzte 7 Tage</dt>
               <dd>
-                <span className="stat-number">{numbers.format(overview.deviations)}</span>
-                <span className="small">
-                  In den Einstellungen mit „Nur Abweichungen vom Soll-Wert“ filtern
-                </span>
+                <span className="kpi-number">{numbers.format(overview.changes_last_7_days)}</span>
+                <span className="small">erkannte Änderungen</span>
               </dd>
             </div>
-            <div className="card">
-              <dt>Einstellungen</dt>
+            <div className="kpi">
+              <dt>Letzte 30 Tage</dt>
               <dd>
-                <span className="stat-number">{numbers.format(overview.settings_total)}</span>
+                <span className="kpi-number">{numbers.format(overview.changes_last_30_days)}</span>
+                <span className="small">erkannte Änderungen</span>
+              </dd>
+            </div>
+            <div className="kpi">
+              <dt>Überwachte Einstellungen</dt>
+              <dd>
+                <span className="kpi-number">{numbers.format(overview.settings_total)}</span>
+                <span className="small">
+                  davon beschrieben: {numbers.format(overview.described_total)}
+                </span>
                 <Link to="/m365/einstellungen">Einstellungen ansehen</Link>
               </dd>
             </div>
-            <div className="card">
+          </dl>
+
+          <div className="overview-columns">
+            <ChangesChart days={overview.changes_per_day ?? []} />
+
+            <section className="panel" aria-labelledby="letzte-titel">
+              <div className="panel-head">
+                <h2 id="letzte-titel">Letzte Änderungen</h2>
+                <Link to="/m365/aenderungen">Alle Änderungen</Link>
+              </div>
+              {recent.length === 0 ? (
+                <p className="panel-empty">Noch keine Änderungen erkannt.</p>
+              ) : (
+                <ul className="rows">
+                  {recent.map((change) => (
+                    <li key={change.id}>
+                      <span className="row-main">
+                        <Link to={`/m365/einstellungen/${change.setting_id}`} className="row-title">
+                          {settingTitle(change)}
+                        </Link>
+                        <span className="small">
+                          {workloadLabel(change.workload)} · {kindLabel(change.kind)} ·{" "}
+                          {formatDateTime(change.detected_at)}
+                        </span>
+                      </span>
+                      <span className={statusClass(change.status)}>
+                        {statusLabel(change.status)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+
+          <dl className="facts panel">
+            <div>
+              <dt>Abweichungen vom Soll-Wert</dt>
+              <dd>{numbers.format(overview.deviations)}</dd>
+            </div>
+            <div>
               <dt>Letzter Abruf</dt>
               <dd>
-                <span className="stat-number">
-                  {overview.last_snapshot
-                    ? snapshotLabel(overview.last_snapshot.status)
-                    : "Noch keiner"}
-                </span>
-                <span className="small">
-                  {overview.last_snapshot
-                    ? formatDateTime(overview.last_snapshot.started_at)
-                    : "Sobald der Abruf eingerichtet ist"}
-                </span>
+                {overview.last_snapshot
+                  ? `${snapshotLabel(overview.last_snapshot.status)}, ${formatDateTime(overview.last_snapshot.started_at)}`
+                  : "Noch keiner"}
               </dd>
             </div>
-            <div className="card">
+            <div>
               <dt>Gelesene Objekte in diesem Monat</dt>
               <dd>
-                <span className="stat-number">{numbers.format(overview.resources_this_month)}</span>
-                <span className="small">
-                  von höchstens {numbers.format(overview.monthly_limit)} (Grenze von Microsoft)
-                </span>
+                {numbers.format(overview.resources_this_month)} von höchstens{" "}
+                {numbers.format(overview.monthly_limit)} (Grenze von Microsoft)
               </dd>
             </div>
           </dl>
@@ -135,6 +207,6 @@ export function OverviewPage({ me }: OverviewPageProps) {
           {message && <p role={message.kind}>{message.text}</p>}
         </>
       )}
-    </>
+    </div>
   );
 }

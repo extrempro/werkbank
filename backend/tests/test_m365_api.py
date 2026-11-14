@@ -14,6 +14,7 @@ from werkbank.modules.m365_config.jobs import COLLECT
 from werkbank.modules.m365_config.models import (
     CfgChange,
     CfgSetting,
+    CfgSettingMeta,
     CfgSettingVersion,
     CfgSnapshot,
     ChangeStatus,
@@ -100,6 +101,43 @@ def test_overview(db: Session) -> None:
     assert data["monthly_limit"] == 20000
     assert data["workloads"] == ["entra"]
     assert data["last_snapshot"]["change_count"] == 3
+    assert data["open_critical"] == 0
+    assert data["described_total"] == 0
+    assert data["changes_last_7_days"] == 3
+    assert data["changes_last_30_days"] == 3
+    days = data["changes_per_day"]
+    assert len(days) == 14
+    assert days[-1]["count"] == 3
+    assert sum(day["count"] for day in days) == 3
+
+
+@pytest.mark.db
+def test_overview_counts_critical_and_described(db: Session) -> None:
+    setting_id = db.scalars(
+        select(CfgSetting.id).where(CfgSetting.object_id == "p1", CfgSetting.active)
+    ).one()
+    db.add(
+        CfgSettingMeta(
+            setting_id=setting_id,
+            description="Mehrstufige Anmeldung für alle",
+            criticality="hoch",
+            target_set=False,
+            target_value=None,
+        )
+    )
+    db.commit()
+    client = client_for(["Config.Reader"], "m365-leser")
+    data = client.get(f"{BASE}/overview", params={"tz": "Europe/Berlin"}).json()
+    assert data["open_critical"] == 1
+    assert data["described_total"] == 1
+    assert sum(day["count"] for day in data["changes_per_day"]) == 3
+    assert client.get(f"{BASE}/overview", params={"tz": "Mars/Olympus"}).status_code == 422
+
+    changes = client.get(f"{BASE}/changes").json()["entries"]
+    changed = next(entry for entry in changes if entry["setting_id"] == setting_id)
+    assert changed["criticality"] == "hoch"
+    assert changed["description"] == "Mehrstufige Anmeldung für alle"
+    assert changed["workload"] == "entra"
 
 
 @pytest.mark.db
@@ -138,7 +176,11 @@ def test_changes_list_and_filter(db: Session) -> None:
     data = client.get(f"{BASE}/changes").json()
     assert {entry["kind"] for entry in data["entries"]} == {"neu", "geaendert", "entfernt"}
     assert all(entry["status"] == "offen" for entry in data["entries"])
-    assert client.get(f"{BASE}/changes", params={"status": "gewollt"}).json()["entries"] == []
+    assert data["counts"] == {"alle": 3, "offen": 3, "gewollt": 0, "ungewollt": 0}
+    intended = client.get(f"{BASE}/changes", params={"status": "gewollt"}).json()
+    assert intended["entries"] == []
+    # Die Zähler gelten unabhängig vom Filter, für die Filter-Chips
+    assert intended["counts"]["alle"] == 3
     assert client.get(f"{BASE}/changes", params={"status": "unsinn"}).status_code == 422
 
 

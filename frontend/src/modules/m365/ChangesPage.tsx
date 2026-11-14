@@ -1,40 +1,47 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError, formatDateTime, type Me } from "../../api";
-import { Link } from "../../components/Link";
 import { navigate } from "../../router";
 import { createItemFromChange } from "../evergreen/api";
 import {
   fetchChanges,
-  formatValue,
   kindLabel,
   reviewChanges,
   settingTitle,
+  statusClass,
   statusLabel,
+  workloadLabel,
   type Change,
+  type ChangeCounts,
   type ReviewStatus,
 } from "./api";
+import { ChangeDetail } from "./ChangeDetail";
 
 interface ChangesPageProps {
   me: Me;
 }
 
-const FILTERS = [
-  { value: "offen", label: "Offen" },
-  { value: "ungewollt", label: "Ungewollt" },
-  { value: "gewollt", label: "Gewollt" },
-  { value: "", label: "Alle" },
+const FILTERS: { value: "" | ReviewStatus; label: string; key: keyof ChangeCounts }[] = [
+  { value: "offen", label: "Offen", key: "offen" },
+  { value: "ungewollt", label: "Ungewollt", key: "ungewollt" },
+  { value: "gewollt", label: "Gewollt", key: "gewollt" },
+  { value: "", label: "Alle", key: "alle" },
 ];
 
+type Message = { kind: "status" | "alert"; text: string };
+
 export function ChangesPage({ me }: ChangesPageProps) {
-  const [draft, setDraft] = useState("offen");
-  const [filter, setFilter] = useState("offen");
+  const [filter, setFilter] = useState<string>("offen");
   const [reloadKey, setReloadKey] = useState(0);
   const [entries, setEntries] = useState<Change[]>([]);
+  const [counts, setCounts] = useState<ChangeCounts | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [current, setCurrent] = useState<number | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
-  const [comment, setComment] = useState("");
-  const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
+  const [bulkComment, setBulkComment] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<Message | null>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
   const canReview = me.roles.includes("Config.Reviewer");
   const canCreateItem = me.roles.includes("Evergreen.IT");
 
@@ -45,6 +52,7 @@ export function ChangesPage({ me }: ChangesPageProps) {
         if (active) {
           setEntries(page.entries);
           setHasMore(page.has_more);
+          setCounts(page.counts ?? null);
           setStatus("ready");
         }
       })
@@ -69,13 +77,27 @@ export function ChangesPage({ me }: ChangesPageProps) {
       });
   };
 
-  const onFilter = (event: FormEvent) => {
-    event.preventDefault();
+  const pickFilter = (value: string) => {
+    if (value === filter) {
+      return;
+    }
     setStatus("loading");
     setSelected([]);
+    setCurrent(null);
     setMessage(null);
-    setFilter(draft);
-    setReloadKey((key) => key + 1);
+    setFilter(value);
+  };
+
+  const open = (id: number) => {
+    setCurrent(id);
+    setMessage(null);
+    // Auf schmalen Bildschirmen steht der Detailbereich unter der Liste.
+    window.requestAnimationFrame(() => {
+      const target = detailRef.current;
+      if (target && typeof target.scrollIntoView === "function" && window.innerWidth < 1100) {
+        target.scrollIntoView({ block: "start" });
+      }
+    });
   };
 
   const onCreateItem = (entry: Change) => {
@@ -90,31 +112,17 @@ export function ChangesPage({ me }: ChangesPageProps) {
       });
   };
 
-  const toggle = (id: number) => {
-    setSelected((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
-  };
-
-  const review = (target: ReviewStatus) => {
-    if (selected.length === 0) {
-      setMessage({ kind: "alert", text: "Bitte zuerst mindestens eine Änderung auswählen." });
-      return;
-    }
-    if (target === "ungewollt" && comment.trim() === "") {
-      setMessage({ kind: "alert", text: "Für „ungewollt“ ist ein Kommentar nötig." });
-      return;
-    }
+  const send = (ids: number[], target: ReviewStatus, comment: string, after: () => void) => {
+    setBusy(true);
     setMessage(null);
-    reviewChanges(selected, target, comment.trim())
+    reviewChanges(ids, target, comment)
       .then((result) => {
         const text =
           target === "offen"
             ? `${result.updated} Bewertung(en) zurückgesetzt.`
             : `${result.updated} Änderung(en) als ${statusLabel(target).toLowerCase()} bewertet.`;
         setMessage({ kind: "status", text });
-        setSelected([]);
-        setComment("");
+        after();
         setReloadKey((key) => key + 1);
       })
       .catch((error: unknown) => {
@@ -123,63 +131,77 @@ export function ChangesPage({ me }: ChangesPageProps) {
           kind: "alert",
           text: detail ?? "Die Bewertung konnte nicht gespeichert werden.",
         });
-      });
+      })
+      .finally(() => setBusy(false));
   };
 
-  return (
-    <>
-      <p className="module-label">M365-Konfiguration</p>
-      <h1>Änderungen</h1>
-      <p className="lead">
-        Erkannte Änderungen an Einstellungen des Tenants. Jede Änderung wird als gewollt oder
-        ungewollt bewertet.
-      </p>
+  const reviewSelection = (target: ReviewStatus) => {
+    if (selected.length === 0) {
+      setMessage({ kind: "alert", text: "Bitte zuerst mindestens eine Änderung auswählen." });
+      return;
+    }
+    if (target === "ungewollt" && bulkComment.trim() === "") {
+      setMessage({ kind: "alert", text: "Für „ungewollt“ ist ein Kommentar nötig." });
+      return;
+    }
+    send(selected, target, bulkComment.trim(), () => {
+      setSelected([]);
+      setBulkComment("");
+    });
+  };
 
-      <form className="filter card" onSubmit={onFilter} aria-label="Änderungen filtern">
-        <label>
-          Bewertung
-          <select value={draft} onChange={(event) => setDraft(event.target.value)}>
-            {FILTERS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="filter-actions">
-          <button type="submit" className="button button-primary">
-            Anzeigen
+  const toggle = (id: number) => {
+    setSelected((list) => (list.includes(id) ? list.filter((item) => item !== id) : [...list, id]));
+  };
+
+  const shown = entries.find((entry) => entry.id === current) ?? null;
+
+  return (
+    <div className="page page-wide">
+      <header className="page-head">
+        <p className="module-label">M365-Konfiguration</p>
+        <h1>Änderungen</h1>
+        <p className="page-sub">
+          Erkannte Änderungen an Einstellungen des Tenants. Jede Änderung wird als gewollt oder
+          ungewollt bewertet.
+        </p>
+      </header>
+
+      <div className="chips" role="group" aria-label="Änderungen filtern">
+        {FILTERS.map((option) => (
+          <button
+            type="button"
+            key={option.key}
+            className="chip chip-filter"
+            aria-pressed={filter === option.value}
+            onClick={() => pickFilter(option.value)}
+          >
+            {option.label}
+            {counts && ` (${counts[option.key]})`}
           </button>
-        </div>
-      </form>
+        ))}
+      </div>
+
+      {message && (
+        <p role={message.kind} className={message.kind === "alert" ? "hint-box hint-bad" : ""}>
+          {message.text}
+        </p>
+      )}
 
       {status === "error" && <p role="alert">Die Änderungen konnten nicht geladen werden.</p>}
       {status === "loading" && <p role="status">Wird geladen …</p>}
       {status === "ready" && entries.length === 0 && (
-        <p className="empty">Keine Änderungen für diese Auswahl.</p>
+        <p className="panel panel-empty">Keine Änderungen für diese Auswahl.</p>
       )}
+
       {entries.length > 0 && (
-        <div className="table-wrap" tabIndex={0} role="region" aria-label="Änderungen">
-          <table>
-            <caption className="visually-hidden">Änderungen, neueste zuerst</caption>
-            <thead>
-              <tr>
-                {canReview && <th scope="col">Auswahl</th>}
-                <th scope="col">Erkannt</th>
-                <th scope="col">Einstellung</th>
-                <th scope="col">Art</th>
-                <th scope="col">Vorher</th>
-                <th scope="col">Nachher</th>
-                <th scope="col">Geändert von</th>
-                <th scope="col">Bewertung</th>
-                {canCreateItem && <th scope="col">Evergreen</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => (
-                <tr key={entry.id}>
-                  {canReview && (
-                    <td>
+        <div className="split">
+          <div className="split-list">
+            <section className="panel" aria-label="Änderungen">
+              <ul className="rows change-rows">
+                {entries.map((entry) => (
+                  <li key={entry.id} className={entry.id === current ? "row-current" : undefined}>
+                    {canReview && (
                       <input
                         type="checkbox"
                         className="check"
@@ -187,87 +209,102 @@ export function ChangesPage({ me }: ChangesPageProps) {
                         onChange={() => toggle(entry.id)}
                         aria-label={`${settingTitle(entry)} auswählen`}
                       />
-                    </td>
-                  )}
-                  <td className="nowrap">{formatDateTime(entry.detected_at)}</td>
-                  <td>
-                    <Link to={`/m365/einstellungen/${entry.setting_id}`}>
-                      {settingTitle(entry)}
-                    </Link>
-                    <span className="mono small path">{entry.path}</span>
-                  </td>
-                  <td>{kindLabel(entry.kind)}</td>
-                  <td className="value">{formatValue(entry.old_value)}</td>
-                  <td className="value">{formatValue(entry.new_value)}</td>
-                  <td>{entry.changed_by ?? "unbekannt"}</td>
-                  <td>
-                    {statusLabel(entry.status)}
-                    {entry.reviewed_by && (
-                      <span className="small path">
-                        {entry.reviewed_by}, {formatDateTime(entry.reviewed_at)}
-                      </span>
                     )}
-                    {entry.comment && <span className="small path">{entry.comment}</span>}
-                  </td>
-                  {canCreateItem && (
-                    <td>
+                    <span className="row-main">
                       <button
                         type="button"
-                        className="button button-secondary"
-                        onClick={() => onCreateItem(entry)}
+                        className="row-title row-button"
+                        aria-current={entry.id === current ? "true" : undefined}
+                        onClick={() => open(entry.id)}
                       >
-                        Vorgang anlegen
-                        <span className="visually-hidden">: {settingTitle(entry)}</span>
+                        {settingTitle(entry)}
                       </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      <span className="small">
+                        <span className="module-tag">{workloadLabel(entry.workload)}</span>{" "}
+                        {kindLabel(entry.kind)} · {formatDateTime(entry.detected_at)} · von{" "}
+                        {entry.changed_by ?? "unbekannt"}
+                      </span>
+                    </span>
+                    <span className={statusClass(entry.status)}>{statusLabel(entry.status)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            {hasMore && (
+              <button
+                type="button"
+                className="button button-secondary load-more"
+                onClick={loadMore}
+              >
+                Weitere laden
+              </button>
+            )}
+
+            {canReview && (
+              <section className="panel bulk" aria-labelledby="bewerten-titel">
+                <div className="panel-head">
+                  <h2 id="bewerten-titel">Auswahl bewerten</h2>
+                  <span className="small">{selected.length} ausgewählt</span>
+                </div>
+                <div className="detail-body">
+                  <label>
+                    Kommentar für die Auswahl (Pflicht bei „ungewollt“)
+                    <textarea
+                      value={bulkComment}
+                      maxLength={2000}
+                      rows={2}
+                      onChange={(event) => setBulkComment(event.target.value)}
+                    />
+                  </label>
+                  <div className="actions">
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      disabled={busy}
+                      onClick={() => reviewSelection("gewollt")}
+                    >
+                      Als gewollt bewerten
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-danger"
+                      disabled={busy}
+                      onClick={() => reviewSelection("ungewollt")}
+                    >
+                      Als ungewollt bewerten
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-link"
+                      disabled={busy}
+                      onClick={() => reviewSelection("offen")}
+                    >
+                      Bewertung zurücksetzen
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
+
+          <div className="split-detail" ref={detailRef}>
+            {shown ? (
+              <ChangeDetail
+                change={shown}
+                canReview={canReview}
+                canCreateItem={canCreateItem}
+                busy={busy}
+                onReview={(target, comment) => send([shown.id], target, comment, () => undefined)}
+                onCreateItem={() => onCreateItem(shown)}
+              />
+            ) : (
+              <p className="panel panel-empty">
+                Änderung in der Liste wählen, um Vorher und Nachher zu sehen.
+              </p>
+            )}
+          </div>
         </div>
       )}
-      {hasMore && (
-        <button type="button" className="button button-secondary load-more" onClick={loadMore}>
-          Weitere laden
-        </button>
-      )}
-
-      {canReview && entries.length > 0 && (
-        <section className="card review" aria-labelledby="bewerten-titel">
-          <h2 id="bewerten-titel">Auswahl bewerten</h2>
-          <p className="small">{selected.length} ausgewählt</p>
-          <label>
-            Kommentar (Pflicht bei „ungewollt“)
-            <textarea
-              value={comment}
-              maxLength={2000}
-              rows={3}
-              onChange={(event) => setComment(event.target.value)}
-            />
-          </label>
-          <div className="filter-actions">
-            <button
-              type="button"
-              className="button button-primary"
-              onClick={() => review("gewollt")}
-            >
-              Als gewollt bewerten
-            </button>
-            <button
-              type="button"
-              className="button button-secondary"
-              onClick={() => review("ungewollt")}
-            >
-              Als ungewollt bewerten
-            </button>
-            <button type="button" className="button button-quiet" onClick={() => review("offen")}>
-              Bewertung zurücksetzen
-            </button>
-          </div>
-        </section>
-      )}
-      {message && <p role={message.kind}>{message.text}</p>}
-    </>
+    </div>
   );
 }

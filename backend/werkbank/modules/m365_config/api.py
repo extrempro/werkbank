@@ -1,8 +1,10 @@
 """API des Moduls M365-Konfiguration: Einstellungen, Verlauf, Änderungen, Abrufe (spec.md 7)."""
 
 import json
-from datetime import datetime
+from datetime import date, datetime, timedelta
+from functools import lru_cache
 from typing import Annotated, Any, Literal
+from zoneinfo import ZoneInfo, available_timezones
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
@@ -57,12 +59,22 @@ class SnapshotOut(BaseModel):
     resource_count: int
 
 
+class DayCountOut(BaseModel):
+    day: date
+    count: int
+
+
 class OverviewOut(BaseModel):
     collector_configured: bool
     collect_pending: bool
     last_snapshot: SnapshotOut | None
     settings_total: int
+    described_total: int
     open_changes: int
+    open_critical: int
+    changes_last_7_days: int
+    changes_last_30_days: int
+    changes_per_day: list[DayCountOut]
     deviations: int
     resources_this_month: int
     monthly_limit: int
@@ -140,8 +152,11 @@ class ChangeOut(BaseModel):
     id: int
     setting_id: int
     path: str
+    workload: str
     object_name: str | None
     property: str
+    criticality: str | None
+    description: str | None
     kind: str
     status: str
     detected_at: datetime
@@ -153,9 +168,17 @@ class ChangeOut(BaseModel):
     comment: str | None
 
 
+class ChangeCountsOut(BaseModel):
+    alle: int
+    offen: int
+    gewollt: int
+    ungewollt: int
+
+
 class ChangeListOut(BaseModel):
     entries: list[ChangeOut]
     has_more: bool
+    counts: ChangeCountsOut
 
 
 class SettingDetailOut(BaseModel):
@@ -245,13 +268,18 @@ CURRENT_VERSION = and_(
 )
 
 
-def _change_out(change: CfgChange, setting: CfgSetting, reviewer: str | None) -> ChangeOut:
+def _change_out(
+    change: CfgChange, setting: CfgSetting, reviewer: str | None, meta: CfgSettingMeta | None
+) -> ChangeOut:
     return ChangeOut(
         id=change.id,
         setting_id=setting.id,
         path=setting.path,
+        workload=setting.workload,
         object_name=setting.object_name,
         property=setting.property,
+        criticality=meta.criticality if meta else None,
+        description=meta.description if meta else None,
         kind=change.kind,
         status=change.status,
         detected_at=change.detected_at,
@@ -277,23 +305,85 @@ def _collect_pending(db: DbDep) -> bool:
     return pending is not None
 
 
+CHART_DAYS = 14
+
+
+@lru_cache(maxsize=1)
+def _known_timezones() -> frozenset[str]:
+    return frozenset(available_timezones())
+
+
+def _timezone(name: str) -> str:
+    """Zeitzone für die Tage im Diagramm. Unbekannte Namen werden abgelehnt."""
+    if name != "UTC" and name not in _known_timezones():
+        raise HTTPException(status_code=422, detail="Unbekannte Zeitzone")
+    return name
+
+
+def _changes_per_day(db: DbDep, tz: str) -> list[DayCountOut]:
+    """Erkannte Änderungen je Kalendertag der letzten 14 Tage, Tage ohne Änderung mit 0."""
+    today = now_utc().astimezone(ZoneInfo(tz)).date()
+    first = today - timedelta(days=CHART_DAYS - 1)
+    local_day = func.date(func.timezone(tz, CfgChange.detected_at))
+    rows = db.execute(
+        select(local_day, func.count())
+        .where(CfgChange.detected_at >= now_utc() - timedelta(days=CHART_DAYS + 1))
+        .group_by(local_day)
+    ).all()
+    counts = {row[0]: int(row[1]) for row in rows}
+    days = (first + timedelta(days=offset) for offset in range(CHART_DAYS))
+    return [DayCountOut(day=day, count=counts.get(day, 0)) for day in days]
+
+
+def _count(db: DbDep, query: Any) -> int:
+    return int(db.scalar(query) or 0)
+
+
 @router.get("/overview")
-def overview(user: Reader, db: DbDep, settings: SettingsDep) -> OverviewOut:
-    """Stand des Moduls: letzter Abruf, offene Änderungen, Verbrauch des Monatskontingents."""
+def overview(
+    user: Reader,
+    db: DbDep,
+    settings: SettingsDep,
+    tz: Annotated[str, Query(max_length=64)] = "UTC",
+) -> OverviewOut:
+    """Stand des Moduls: letzter Abruf, offene Änderungen, Verbrauch des Monatskontingents.
+
+    `tz` (IANA-Name, z. B. aus dem Browser) legt fest, wie die Tage im Diagramm geschnitten werden.
+    """
+    zone = _timezone(tz)
     last = db.scalars(select(CfgSnapshot).order_by(CfgSnapshot.id.desc()).limit(1)).first()
     workloads = db.scalars(select(CfgSetting.workload).distinct().order_by(CfgSetting.workload))
+    now = now_utc()
+    changes = select(func.count()).select_from(CfgChange)
+    open_changes = changes.where(CfgChange.status == ChangeStatus.OPEN)
     return OverviewOut(
         collector_configured=settings.collector_configured,
         collect_pending=_collect_pending(db),
         last_snapshot=_snapshot_out(last) if last else None,
-        settings_total=db.scalar(
-            select(func.count()).select_from(CfgSetting).where(CfgSetting.active)
-        )
-        or 0,
-        open_changes=db.scalar(
-            select(func.count()).select_from(CfgChange).where(CfgChange.status == ChangeStatus.OPEN)
-        )
-        or 0,
+        settings_total=_count(
+            db, select(func.count()).select_from(CfgSetting).where(CfgSetting.active)
+        ),
+        described_total=_count(
+            db,
+            select(func.count())
+            .select_from(CfgSetting)
+            .join(CfgSettingMeta, CfgSettingMeta.setting_id == CfgSetting.id)
+            .where(CfgSetting.active, CfgSettingMeta.description.is_not(None)),
+        ),
+        open_changes=_count(db, open_changes),
+        open_critical=_count(
+            db,
+            open_changes.join(
+                CfgSettingMeta, CfgSettingMeta.setting_id == CfgChange.setting_id
+            ).where(CfgSettingMeta.criticality == Criticality.HIGH),
+        ),
+        changes_last_7_days=_count(
+            db, changes.where(CfgChange.detected_at >= now - timedelta(days=7))
+        ),
+        changes_last_30_days=_count(
+            db, changes.where(CfgChange.detected_at >= now - timedelta(days=30))
+        ),
+        changes_per_day=_changes_per_day(db, zone),
         deviations=db.scalar(
             select(func.count())
             .select_from(CfgSetting)
@@ -380,9 +470,10 @@ def list_settings(
 
 def _changes_query() -> Any:
     return (
-        select(CfgChange, CfgSetting, User.display_name)
+        select(CfgChange, CfgSetting, User.display_name, CfgSettingMeta)
         .join(CfgSetting, CfgSetting.id == CfgChange.setting_id)
         .outerjoin(User, User.id == CfgChange.reviewed_by)
+        .outerjoin(CfgSettingMeta, CfgSettingMeta.setting_id == CfgChange.setting_id)
     )
 
 
@@ -438,7 +529,7 @@ def get_setting(
             )
             for version in versions
         ],
-        changes=[_change_out(row[0], row[1], row[2]) for row in changes],
+        changes=[_change_out(row[0], row[1], row[2], row[3]) for row in changes],
     )
 
 
@@ -457,8 +548,18 @@ def list_changes(
     if status_filter:
         query = query.where(CfgChange.status == status_filter)
     rows = db.execute(query.order_by(CfgChange.id.desc()).limit(limit + 1).offset(offset)).all()
-    entries = [_change_out(row[0], row[1], row[2]) for row in rows[:limit]]
-    return ChangeListOut(entries=entries, has_more=len(rows) > limit)
+    entries = [_change_out(row[0], row[1], row[2], row[3]) for row in rows[:limit]]
+    per_status = {
+        str(row[0]): int(row[1])
+        for row in db.execute(select(CfgChange.status, func.count()).group_by(CfgChange.status))
+    }
+    counts = ChangeCountsOut(
+        alle=sum(per_status.values()),
+        offen=per_status.get(ChangeStatus.OPEN, 0),
+        gewollt=per_status.get(ChangeStatus.INTENDED, 0),
+        ungewollt=per_status.get(ChangeStatus.UNINTENDED, 0),
+    )
+    return ChangeListOut(entries=entries, has_more=len(rows) > limit, counts=counts)
 
 
 @router.post("/changes/review")

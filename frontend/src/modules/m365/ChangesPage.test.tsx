@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Me } from "../../api";
 import { ChangesPage } from "./ChangesPage";
@@ -12,8 +12,11 @@ const change = {
   id: 7,
   setting_id: 3,
   path: "entra/conditionalaccesspolicy/p1/State",
+  workload: "entra",
   object_name: "MFA für alle",
   property: "State",
+  criticality: "hoch",
+  description: "Mehrstufige Anmeldung für alle Konten",
   kind: "geaendert",
   status: "offen",
   detected_at: "2026-11-14T08:00:00Z",
@@ -38,38 +41,93 @@ function stubFetch() {
       if (init?.method === "POST") {
         return new Response(JSON.stringify({ updated: 1 }), { status: 200 });
       }
-      return new Response(JSON.stringify({ entries: [change], has_more: false }), { status: 200 });
+      const counts = { alle: 4, offen: 1, gewollt: 2, ungewollt: 1 };
+      return new Response(JSON.stringify({ entries: [change], has_more: false, counts }), {
+        status: 200,
+      });
     }),
   );
   return calls;
 }
 
 describe("ChangesPage", () => {
-  it("zeigt Änderungen mit altem und neuem Wert", async () => {
+  it("zeigt Filter mit Anzahl und die Details mit altem und neuem Wert", async () => {
     const calls = stubFetch();
     render(<ChangesPage me={me(["Config.Reader"])} />);
-    expect(await screen.findByRole("link", { name: "MFA für alle – State" })).toHaveAttribute(
-      "href",
-      "/m365/einstellungen/3",
+    const row = await screen.findByRole("button", { name: "MFA für alle – State" });
+    expect(screen.getByRole("button", { name: "Offen (1)" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
-    expect(screen.getByText("enabled")).toBeVisible();
-    expect(screen.getByText("disabled")).toBeVisible();
-    expect(screen.getByText("ada@example.com")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Gewollt (2)" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
     expect(calls[0]?.url).toContain("status=offen");
+
+    fireEvent.click(row);
+    const detail = screen.getByRole("article", { name: "Details zur Änderung" });
+    expect(within(detail).getByText("enabled")).toBeVisible();
+    expect(within(detail).getByText("disabled")).toBeVisible();
+    expect(within(detail).getByText("ada@example.com")).toBeVisible();
+    expect(within(detail).getByText("Mehrstufige Anmeldung für alle Konten")).toBeVisible();
+    expect(
+      within(detail).getByRole("link", { name: "Einstellung und Verlauf öffnen →" }),
+    ).toHaveAttribute("href", "/m365/einstellungen/3");
+  });
+
+  it("lädt beim Wechsel des Filters neu", async () => {
+    const calls = stubFetch();
+    render(<ChangesPage me={me(["Config.Reader"])} />);
+    await screen.findByRole("button", { name: "MFA für alle – State" });
+    fireEvent.click(screen.getByRole("button", { name: "Alle (4)" }));
+    await waitFor(() => {
+      expect(calls.some((call) => !call.url.includes("status="))).toBe(true);
+    });
+  });
+
+  it("verlangt bei Kritikalität hoch einen Kommentar und bewertet aus dem Detail", async () => {
+    const calls = stubFetch();
+    render(<ChangesPage me={me(["Config.Reviewer"])} />);
+    fireEvent.click(await screen.findByRole("button", { name: "MFA für alle – State" }));
+    const detail = screen.getByRole("article", { name: "Details zur Änderung" });
+    const intended = within(detail).getByRole("button", { name: "Als gewollt markieren" });
+    expect(intended).toBeDisabled();
+    expect(within(detail).getByText(/Für beide Bewertungen ist ein Kommentar nötig/)).toBeVisible();
+
+    fireEvent.click(within(detail).getByRole("button", { name: "Geplante Änderung" }));
+    expect(within(detail).getByLabelText("Kommentar zu dieser Änderung")).toHaveValue(
+      "Geplante Änderung: ",
+    );
+    fireEvent.change(within(detail).getByLabelText("Kommentar zu dieser Änderung"), {
+      target: { value: "Geplante Änderung: CHG-1" },
+    });
+    expect(intended).toBeEnabled();
+    fireEvent.click(intended);
+
+    expect(await screen.findByText("1 Änderung(en) als gewollt bewertet.")).toBeVisible();
+    const post = calls.find((call) => call.init?.method === "POST");
+    expect(JSON.parse(String(post?.init?.body))).toEqual({
+      ids: [7],
+      status: "gewollt",
+      comment: "Geplante Änderung: CHG-1",
+    });
   });
 
   it("bietet Lesern keine Bewertung an", async () => {
     stubFetch();
     render(<ChangesPage me={me(["Config.Reader"])} />);
-    await screen.findByText("enabled");
+    await screen.findByRole("button", { name: "MFA für alle – State" });
     expect(screen.queryByRole("checkbox")).toBeNull();
     expect(screen.queryByRole("button", { name: "Als gewollt bewerten" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "MFA für alle – State" }));
+    expect(screen.queryByRole("button", { name: "Als gewollt markieren" })).toBeNull();
   });
 
   it("verlangt Auswahl und bei ungewollt einen Kommentar", async () => {
     const calls = stubFetch();
     render(<ChangesPage me={me(["Config.Reviewer"])} />);
-    await screen.findByText("enabled");
+    await screen.findByRole("button", { name: "MFA für alle – State" });
 
     fireEvent.click(screen.getByRole("button", { name: "Als gewollt bewerten" }));
     expect(screen.getByRole("alert")).toHaveTextContent("mindestens eine Änderung");
@@ -83,12 +141,14 @@ describe("ChangesPage", () => {
   it("bietet der Evergreen-IT an, aus einer Änderung einen Vorgang zu machen", async () => {
     const calls = stubFetch();
     render(<ChangesPage me={me(["Config.Reader"])} />);
-    await screen.findByText("enabled");
+    await screen.findByRole("button", { name: "MFA für alle – State" });
+    fireEvent.click(screen.getByRole("button", { name: "MFA für alle – State" }));
     expect(screen.queryByRole("button", { name: /Vorgang anlegen/ })).toBeNull();
     cleanup();
 
     render(<ChangesPage me={me(["Config.Reader", "Evergreen.IT"])} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Vorgang anlegen/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "MFA für alle – State" }));
+    fireEvent.click(screen.getByRole("button", { name: "Evergreen-Vorgang anlegen" }));
     await waitFor(() => {
       const post = calls.find((call) => call.init?.method === "POST");
       expect(post?.url).toBe("/api/evergreen/items/from-change");
@@ -99,7 +159,7 @@ describe("ChangesPage", () => {
   it("sendet die Bewertung und lädt neu", async () => {
     const calls = stubFetch();
     render(<ChangesPage me={me(["Config.Reviewer"])} />);
-    await screen.findByText("enabled");
+    await screen.findByRole("button", { name: "MFA für alle – State" });
 
     fireEvent.click(screen.getByRole("checkbox", { name: "MFA für alle – State auswählen" }));
     fireEvent.change(screen.getByLabelText(/Kommentar/), {
