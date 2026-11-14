@@ -93,9 +93,9 @@ def apply_snapshot(
             )
             .where(CfgSetting.source.in_(ok_sources))
         ).all()
-        for setting, version in rows:
-            known[setting.path] = (setting, version)
-            known_sources.add(setting.source)
+        for row in rows:
+            known[row[0].path] = (row[0], row[1])
+            known_sources.add(row[0].source)
 
     new = changed = removed = baseline = 0
     seen: set[str] = set()
