@@ -9,6 +9,7 @@ on:
     branches-ignore: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -145,11 +146,17 @@ jobs:
         with:
           node-version: "22"
       - run: npm ci
-      - run: npx playwright install --with-deps
-      - name: App für Tests starten
+      - run: npx playwright install --with-deps chromium
+      - name: App für Tests starten (Test-Login, localhost)
         working-directory: .
         run: |
           cp deploy/.env.example deploy/.env
+          sed -i \
+            -e 's#^PUBLIC_URL=.*#PUBLIC_URL=http://localhost:8080#' \
+            -e 's#^ENVIRONMENT=.*#ENVIRONMENT=test#' \
+            -e 's#^ENABLE_TEST_LOGIN=.*#ENABLE_TEST_LOGIN=true#' \
+            -e 's#^TRUSTED_PROXY_IPS=.*#TRUSTED_PROXY_IPS=127.0.0.1#' \
+            deploy/.env
           mkdir -p deploy/secrets
           openssl rand -hex 24 > deploy/secrets/postgres_password
           chmod 444 deploy/secrets/postgres_password

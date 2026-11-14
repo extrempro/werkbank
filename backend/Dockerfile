@@ -1,4 +1,15 @@
-# Werkbank – Backend (API und später Auslieferung der PWA)
+# Werkbank – Image mit Backend (API) und Frontend (PWA)
+# Build-Kontext ist das Wurzelverzeichnis des Repositorys (siehe deploy/docker-compose.yml).
+
+# --- Frontend bauen ---
+FROM node:22-alpine AS frontend
+WORKDIR /build
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY frontend/ ./
+RUN npm run build
+
+# --- Laufzeit ---
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -10,10 +21,11 @@ RUN groupadd --system --gid 10001 werkbank \
     && useradd --system --uid 10001 --gid werkbank --no-create-home werkbank
 
 WORKDIR /app
-COPY pyproject.toml alembic.ini ./
-COPY werkbank ./werkbank
-COPY migrations ./migrations
+COPY backend/pyproject.toml backend/alembic.ini ./
+COPY backend/werkbank ./werkbank
+COPY backend/migrations ./migrations
 RUN pip install .
+COPY --from=frontend /build/dist /app/static
 
 USER werkbank
 EXPOSE 8000

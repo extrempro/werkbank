@@ -1,0 +1,324 @@
+/* Werkbank – Grundgestaltung nach docs/design.md */
+
+:root {
+  --farbe-kopf: #14213d;
+  --farbe-akzent: #f2a33a;
+  --farbe-primaer: #1f57c3;
+  --farbe-primaer-dunkel: #163f8f;
+  --farbe-grund: #f5f6f8;
+  --farbe-flaeche: #ffffff;
+  --farbe-rand: #e3e6eb;
+  --farbe-text: #171a1f;
+  --farbe-text-leise: #4f5765;
+  --farbe-auswahl: #e8eefb;
+  --radius: 10px;
+  --schrift:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--farbe-grund);
+  color: var(--farbe-text);
+  font-family: var(--schrift);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin: 0 0 16px;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 0 0 8px;
+}
+
+a {
+  color: var(--farbe-primaer);
+}
+
+:focus-visible {
+  outline: 3px solid var(--farbe-akzent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Buttons */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button-primary {
+  background: var(--farbe-primaer);
+  color: #ffffff;
+}
+
+.button-primary:hover {
+  background: var(--farbe-primaer-dunkel);
+}
+
+.button-quiet {
+  background: transparent;
+  color: #ffffff;
+  border-color: #4a5b80;
+}
+
+.button-wide {
+  width: 100%;
+}
+
+/* Hinweise */
+
+.page-message {
+  max-width: 32rem;
+  margin: 15vh auto 0;
+  padding: 0 16px;
+  text-align: center;
+}
+
+.update-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: #fff6e5;
+  border-bottom: 1px solid #f5d9a8;
+  color: #5c3300;
+}
+
+.empty {
+  color: var(--farbe-text-leise);
+}
+
+.card {
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+/* Login */
+
+.login {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+}
+
+.login-card {
+  width: 100%;
+  max-width: 26rem;
+  background: var(--farbe-flaeche);
+  border: 1px solid var(--farbe-rand);
+  border-radius: 14px;
+  padding: 32px;
+  text-align: center;
+}
+
+.login-hint {
+  margin-top: 20px;
+  font-size: 0.875rem;
+  color: var(--farbe-text-leise);
+}
+
+.brand-mark {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--farbe-akzent);
+  box-shadow: inset 0 0 0 7px var(--farbe-akzent);
+}
+
+.brand-mark-large {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+/* Rahmen der Anwendung */
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 10;
+  background: var(--farbe-flaeche);
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.skip-link:focus {
+  left: 8px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+  padding-top: max(10px, env(safe-area-inset-top));
+  background: var(--farbe-kopf);
+  color: #ffffff;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-decoration: none;
+}
+
+.user {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user form {
+  margin: 0;
+}
+
+.menu-toggle {
+  display: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #4a5b80;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+}
+
+.app-body {
+  display: flex;
+  align-items: stretch;
+  min-height: calc(100dvh - 64px);
+}
+
+.app-nav {
+  flex: 0 0 240px;
+  background: var(--farbe-flaeche);
+  border-right: 1px solid var(--farbe-rand);
+  padding: 16px 12px;
+}
+
+.nav-group + .nav-group {
+  margin-top: 16px;
+}
+
+.nav-title {
+  margin: 0 0 4px;
+  padding: 0 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--farbe-text-leise);
+}
+
+.app-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-nav a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: var(--farbe-text);
+  text-decoration: none;
+}
+
+.app-nav a:hover {
+  background: var(--farbe-grund);
+}
+
+.app-nav a[aria-current="page"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-primaer-dunkel);
+  font-weight: 600;
+}
+
+.app-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 24px max(24px, env(safe-area-inset-right)) 48px 24px;
+}
+
+.app-main:focus {
+  outline: none;
+}
+
+/* Handy */
+
+@media (max-width: 767px) {
+  .menu-toggle {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .app-body {
+    display: block;
+  }
+
+  .app-nav {
+    display: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--farbe-rand);
+  }
+
+  .app-nav.open {
+    display: block;
+  }
+
+  .app-main {
+    padding: 16px max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left));
+  }
+}

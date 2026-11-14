@@ -7,7 +7,7 @@ Geplanter Aufbau:
 
 | Dienst | Aufgabe | Netzwerk |
 |---|---|---|
-| `web` | API und PWA | gebunden an `${BIND_IP}:${BIND_PORT}` |
+| `web` | API und Oberfläche (PWA), ein Image aus `backend/Dockerfile` mit Build-Kontext Repository-Wurzel | gebunden an `${BIND_IP}:${BIND_PORT}` |
 | `worker` | Collector, Erinnerungen, Reports, Push | nur intern |
 | `pwsh` | PowerShell-Jobs (Exchange Online, Teams) | nur intern |
 | `db` | PostgreSQL | nur intern (Docker-Netz ohne Außenzugang) |

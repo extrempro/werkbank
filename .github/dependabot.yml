@@ -58,16 +58,6 @@ updates:
       prefix: "chore(docker)"
 
   - package-ecosystem: "docker"
-    directory: "/frontend"
-    cooldown:
-      default-days: 7
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    commit-message:
-      prefix: "chore(docker)"
-
-  - package-ecosystem: "docker"
     directory: "/powershell"
     cooldown:
       default-days: 7

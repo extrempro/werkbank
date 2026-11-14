@@ -1,14 +1,15 @@
 # Werkbank – Docker Compose
 # Konfiguration: deploy/.env (Vorlage: deploy/.env.example)
 # Secrets: deploy/secrets/ auf dem Host (nicht im Repository), siehe deploy/README.md
-# Phase 1: Web-Dienst und Datenbank. Worker und PowerShell folgen.
+# Phase 1: Web-Dienst (API und Oberfläche) und Datenbank. Worker und PowerShell folgen.
 
 name: werkbank
 
 services:
   web:
     build:
-      context: ../backend
+      context: ..
+      dockerfile: backend/Dockerfile
     image: werkbank-web:local
     restart: unless-stopped
     env_file: .env
