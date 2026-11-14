@@ -27,7 +27,7 @@ jobs:
       docker: ${{ steps.d.outputs.docker }}
       e2e: ${{ steps.d.outputs.e2e }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: d
         run: |
           f() { [ -f "$1" ] && echo true || echo false; }
@@ -40,7 +40,7 @@ jobs:
     name: Dokumentation vorhanden
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Pflichtdokumente prüfen
         run: |
           for f in README.md LICENSE CLAUDE.md SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md CHANGELOG.md docs/spec.md; do
@@ -56,7 +56,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -77,7 +77,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -97,7 +97,7 @@ jobs:
     needs: detect
     if: needs.detect.outputs.docker == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Test-Umgebung vorbereiten
         run: cp deploy/.env.example deploy/.env
       - name: Images bauen und starten
@@ -120,7 +120,7 @@ jobs:
       run:
         working-directory: e2e
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
