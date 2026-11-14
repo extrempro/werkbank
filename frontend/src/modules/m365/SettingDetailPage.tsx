@@ -145,7 +145,9 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
             <p className="hint-title">Geregelt durch Evergreen-Vorgang</p>
             <p>
               Der Soll-Wert stammt aus {meta.target_source}.{" "}
-              {setting.deviates ? "Der Wert weicht vom Beschluss ab." : "Der Beschluss ist eingehalten."}
+              {setting.deviates
+                ? "Der Wert weicht vom Beschluss ab."
+                : "Der Beschluss ist eingehalten."}
             </p>
             <Link to="/evergreen">Zu den Vorgängen →</Link>
           </div>
@@ -227,9 +229,7 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
                   <div className="timeline-head">
                     <strong>{formatDateTime(change.detected_at)}</strong>
                     <span>{kindLabel(change.kind)}</span>
-                    <span className={statusClass(change.status)}>
-                      {statusLabel(change.status)}
-                    </span>
+                    <span className={statusClass(change.status)}>{statusLabel(change.status)}</span>
                   </div>
                   <div className="timeline-diff mono">
                     {change.kind !== "neu" && (
