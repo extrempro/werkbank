@@ -85,7 +85,9 @@ describe("SettingDetailPage", () => {
   it("zeigt Angaben, Abweichung und Verlauf der Angaben", async () => {
     stubFetch();
     render(<SettingDetailPage id={3} me={me(["Config.Reader"])} />);
-    expect(await screen.findByRole("heading", { level: 1, name: "MFA für alle – State" })).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "MFA für alle – State" }),
+    ).toBeVisible();
     expect(screen.getByText("Weicht vom Soll-Wert ab.")).toBeVisible();
     expect(screen.getByText("Erzwingt MFA")).toBeVisible();
     expect(screen.getByRole("link", { name: /Dokumentation öffnen/ })).toHaveAttribute(

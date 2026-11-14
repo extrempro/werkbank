@@ -179,7 +179,9 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
           <h2 id="angaben-verlauf-titel">Verlauf der Angaben</h2>
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Verlauf der Angaben">
             <table>
-              <caption className="visually-hidden">Änderungen an den Angaben, neueste zuerst</caption>
+              <caption className="visually-hidden">
+                Änderungen an den Angaben, neueste zuerst
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">Zeitpunkt</th>

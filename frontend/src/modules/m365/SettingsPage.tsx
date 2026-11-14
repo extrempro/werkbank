@@ -141,7 +141,9 @@ export function SettingsPage() {
                     <Link to={`/m365/einstellungen/${entry.id}`}>{settingTitle(entry)}</Link>
                     {!entry.active && <span className="badge">Entfernt</span>}
                     {entry.deviates && <span className="badge">Weicht vom Soll-Wert ab</span>}
-                    {entry.criticality === "hoch" && <span className="badge">Kritikalität hoch</span>}
+                    {entry.criticality === "hoch" && (
+                      <span className="badge">Kritikalität hoch</span>
+                    )}
                     <span className="mono small path">{entry.path}</span>
                   </td>
                   <td className="value">{formatValue(entry.value)}</td>
