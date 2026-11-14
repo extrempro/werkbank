@@ -313,6 +313,7 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 - Status: **offen**, **gewollt**, **ungewollt**.
 - Bewertung durch `Config.Reviewer` mit Kommentarregeln (6.4). Sammelbewertung mehrerer Änderungen mit einem Kommentar.
 - Rücksetzen einer Bewertung möglich (protokolliert).
+- Stand der Kommentarregeln: „ungewollt“ verlangt einen Kommentar. Die Regeln zu Kritikalität, Konten außerhalb der IT und BR-Beschluss folgen mit den Metadaten (7.5) bzw. Evergreen.
 
 ### 7.5 Metadaten je Einstellung
 
@@ -615,7 +616,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 |---|---|---|---|
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
-| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | in Arbeit: 2a Kern, 2b Versionierung und 2c Collector (UTCM) umgesetzt; es folgen 2d Oberfläche, 2e Abschluss. Der Collector ist noch nicht gegen einen echten Tenant geprüft |
+| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | in Arbeit: 2a Kern, 2b Versionierung, 2c Collector (UTCM) und 2d Oberfläche (Übersicht, Einstellungen mit Verlauf, Änderungen bewerten, Snapshots, Abruf anstoßen) umgesetzt; es folgen Metadaten je Einstellung (7.5) und 2e Abschluss. Der Collector ist noch nicht gegen einen echten Tenant geprüft |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | offen |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |

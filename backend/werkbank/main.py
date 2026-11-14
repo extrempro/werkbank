@@ -9,6 +9,7 @@ from werkbank.core.auth import router as auth_router
 from werkbank.core.csrf import OriginCheckMiddleware
 from werkbank.core.ratelimit import RateLimitMiddleware, default_rules
 from werkbank.db import database_ready
+from werkbank.modules.m365_config.api import router as m365_config_router
 from werkbank.security import SecurityHeadersMiddleware
 from werkbank.web import mount_frontend
 
@@ -32,6 +33,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(SecurityHeadersMiddleware)
     app.include_router(auth_router)
     app.include_router(audit_router)
+    app.include_router(m365_config_router)
 
     @app.get("/health", include_in_schema=False)
     def health() -> dict[str, str]:

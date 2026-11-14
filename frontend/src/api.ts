@@ -25,10 +25,14 @@ export class ApiError extends Error {
   /** Der Server verlangt eine erneute Anmeldung (Verwaltung, siehe spec.md 6.1). */
   readonly stepUpRequired: boolean;
 
-  constructor(status: number, stepUpRequired = false) {
+  /** Fehlertext des Servers, falls er einen mitgeschickt hat. */
+  readonly detail: string | null;
+
+  constructor(status: number, stepUpRequired = false, detail: string | null = null) {
     super(`Unerwartete Antwort: ${status}`);
     this.status = status;
     this.stepUpRequired = stepUpRequired;
+    this.detail = detail;
   }
 }
 
@@ -38,13 +42,40 @@ export function stepUpLoginUrl(returnTo: string): string {
   return `/auth/login?${params.toString()}`;
 }
 
-async function getJson<T>(url: string): Promise<T> {
+export async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url, {
     credentials: "same-origin",
     headers: { Accept: "application/json" },
   });
   if (!response.ok) {
     throw new ApiError(response.status, response.headers.get("X-Werkbank-Step-Up") === "required");
+  }
+  return (await response.json()) as T;
+}
+
+async function errorDetail(response: Response): Promise<string | null> {
+  try {
+    const body: unknown = await response.json();
+    if (typeof body === "object" && body !== null && "detail" in body) {
+      const detail = (body as { detail: unknown }).detail;
+      return typeof detail === "string" ? detail : null;
+    }
+  } catch {
+    // Antwort ohne JSON: kein Fehlertext
+  }
+  return null;
+}
+
+/** Verändernde Anfrage mit JSON-Inhalt. */
+export async function postJson<T>(url: string, body?: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, false, await errorDetail(response));
   }
   return (await response.json()) as T;
 }
