@@ -30,7 +30,9 @@ describe("App", () => {
       authenticated_at: "2026-11-14T08:00:00Z",
     });
     render(<App />);
-    expect(await screen.findByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ })).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ }),
+    ).toBeVisible();
     expect(screen.getByRole("link", { name: "Vorgänge" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Meine Aufgaben" })).toHaveAttribute("href", "/");
     expect(screen.getByText("EB")).toBeInTheDocument();
