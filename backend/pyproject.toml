@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "werkbank"
 version = "0.1.0"
-description = "Werkbank – Open-Source-Plattform für IT-Abteilungen"
+description = "Werkbank - Open-Source-Plattform für IT-Abteilungen"
 license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
