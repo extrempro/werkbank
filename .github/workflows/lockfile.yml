@@ -1,9 +1,15 @@
 # Erzeugt package-lock.json (frontend, e2e) und gleicht die Formatierung im Frontend an
-# (Prettier). Nur manuell startbar und nur auf Feature-Branches, nie auf main.
+# (Prettier). Läuft bei Pushes auf Feature-Branches mit Änderungen im Frontend bzw. an den
+# E2E-Abhängigkeiten, nie auf main. Commits dieses Workflows lösen keine weiteren Läufe aus.
 # Hintergrund: Lockfiles sollen reproduzierbar mit npm erzeugt werden, nicht von Hand.
 name: Lockfile und Formatierung
 
 on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "frontend/**"
+      - "e2e/package.json"
   workflow_dispatch:
 
 permissions:
