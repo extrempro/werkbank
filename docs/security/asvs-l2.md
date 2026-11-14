@@ -13,7 +13,8 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 | **Kein eigener Passwortspeicher** | Keine lokalen Konten, keine Passwörter in der Werkbank | – | ✅ |
 | **Test-Zugang** | Test-Login nur bei `ENVIRONMENT=test/development`, sonst Startabbruch; in Produktion 404 (`config.py`, `auth.py`) | `test_test_login_not_allowed_in_production`, `test_test_login_hidden_when_disabled` | ✅ |
 | **Sitzungen** | Serverseitig; Zufallstoken (256 Bit) im Cookie `__Host-werkbank` (`Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/`); in der Datenbank nur SHA-256-Hash; Leerlauf 30 min, höchstens 8 h; Abmelden löscht serverseitig (`core/sessions.py`) | `test_session_token_not_stored_in_plain_text`, `test_idle_timeout`, `test_logout_ends_session` | ✅ |
-| **Erneute Anmeldung für Verwaltung (Step-up)** | Vorgesehen (`STEP_UP_MINUTES`), noch nicht erzwungen | – | ❌ Phase 2 |
+| **Erneute Anmeldung für Verwaltung (Step-up)** | Verwaltung nur, wenn die Anmeldung höchstens `STEP_UP_MINUTES` alt ist (`require_recent_login` in `core/deps.py`); sonst 403 mit Hinweis, die Oberfläche bietet die erneute Anmeldung an (`prompt=login`). Der Claim `auth_time` von Entra wird ausgewertet, wenn vorhanden | `tests/test_step_up.py`, `AdminPage.test.tsx` | ✅ (`auth_time`: Entra-Konfiguration) |
+| **Sitzungswechsel bei Anmeldung** | Jede Anmeldung beendet die vorherige Sitzung des Browsers und vergibt ein neues Token (`core/auth.py`) | `test_new_login_replaces_old_session` | ✅ |
 | **Zugriffskontrolle** | Rollenprüfung serverseitig bei jeder Anfrage (`require_roles`), Navigation nur Komfort; Audit-Log nur Admin/Auditor, Rollenübersicht nur Admin (`core/deps.py`, `core/audit_api.py`) | `test_role_check`, `test_audit_forbidden_for_other_roles`, E2E `verwaltung.spec.ts` | ✅ |
 | **Objektberechtigung** | Noch keine fachlichen Objekte; gilt ab Phase 2 für jede Abfrage | – | n/a (Phase 1) |
 | **CSRF** | Verändernde Anfragen nur mit eigener Origin bzw. eigenem Referer (`core/csrf.py`), zusätzlich `SameSite=Lax` | `test_post_without_origin_is_rejected`, `test_post_with_foreign_origin_is_rejected` | ✅ |
@@ -27,7 +28,8 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 | **Datenbank** | Nur internes Docker-Netz, Passwort als Docker-Secret, ORM ohne zusammengesetzte SQL-Strings | Backend-Tests gegen PostgreSQL | ✅ |
 | **Protokollierung** | Audit-Log nur anhängend (Datenbank-Trigger gegen UPDATE/DELETE/TRUNCATE); Anmeldung, Ablehnung mit Grund, Abmeldung, Export; IP gekürzt (`core/audit.py`, Migration 0001) | `test_audit_update_is_rejected`, `…delete…`, `…truncate…`, `test_audit_entry_is_written` | ✅ |
 | **Fehlerbehandlung** | Keine Stacktraces nach außen, Health-Endpunkte ohne Details | `test_health_ok`, `test_ready_with_database` | ✅ |
-| **Rate-Limits** | Noch nicht umgesetzt (Login, API, Exporte) | – | ❌ Phase 2 |
+| **Rate-Limits** | Höchstzahl Anfragen pro Minute und Absender-IP für Anmeldung, API und Exporte, Antwort 429 mit `Retry-After`; Zähler nur im Arbeitsspeicher, begrenzte Größe (`core/ratelimit.py`) | `tests/test_ratelimit.py` | ✅ |
+| **Hintergrundaufträge** | Worker ohne Port nach außen, gleiche Härtung wie der Web-Dienst; führt nur fest hinterlegte Auftragsarten aus; Fehler im Audit-Log; räumt abgelaufene Sitzungen und Anmeldevorgänge weg (`werkbank/worker/`) | `tests/test_worker.py`, Docker-Smoke-Test | ✅ |
 | **Dateien und Anhänge** | Noch keine Uploads | – | n/a (Phase 1) |
 | **Browser-Speicher / PWA** | Service Worker cacht nur die App-Hülle, `/api` und `/auth` nie; keine Fachdaten im lokalen Speicher | E2E `pwa.spec.ts` (Cache-Inhalt), Offline-Seite | ✅ |
 | **Konfiguration und Container** | Container ohne Root, schreibgeschütztes Dateisystem, keine Capabilities, `no-new-privileges`; Secrets nur als Docker-Secrets | Trivy (Konfiguration), Docker-Smoke-Test | ✅ |
@@ -36,8 +38,6 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 
 ## Offene Punkte für Phase 2
 
-1. Step-up-Anmeldung für die Verwaltung erzwingen
-2. Rate-Limits für Login, API und Exporte
-3. Objektberechtigungen für die fachlichen Daten der Module
-4. E2E-Tests über HTTPS (auch WebKit), HSTS prüfen
-5. Einzelnachweis je Anforderung nach ASVS 5.0.0 (Kapitel V1 bis V17)
+1. Objektberechtigungen für die fachlichen Daten der Module
+2. E2E-Tests über HTTPS (auch WebKit), HSTS prüfen
+3. Einzelnachweis je Anforderung nach ASVS 5.0.0 (Kapitel V1 bis V17)

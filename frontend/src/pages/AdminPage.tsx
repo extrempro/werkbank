@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { ApiError, fetchRoles, formatDateTime, type RoleInfo } from "../api";
+import { ApiError, fetchRoles, formatDateTime, stepUpLoginUrl, type RoleInfo } from "../api";
 
 export function AdminPage() {
   const [roles, setRoles] = useState<RoleInfo[] | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "stepup" | "forbidden" | "error">(
+    "loading",
+  );
 
   useEffect(() => {
     let active = true;
@@ -16,7 +18,13 @@ export function AdminPage() {
       })
       .catch((error: unknown) => {
         if (active) {
-          setStatus(error instanceof ApiError && error.status === 403 ? "forbidden" : "error");
+          if (error instanceof ApiError && error.stepUpRequired) {
+            setStatus("stepup");
+          } else if (error instanceof ApiError && error.status === 403) {
+            setStatus("forbidden");
+          } else {
+            setStatus("error");
+          }
         }
       });
     return () => {
@@ -37,6 +45,19 @@ export function AdminPage() {
           dient nur zur Information.
         </p>
         {status === "loading" && <p role="status">Wird geladen …</p>}
+        {status === "stepup" && (
+          <div role="status">
+            <p>
+              Zur Sicherheit öffnet sich die Verwaltung nur kurz nach einer Anmeldung. Bitte melde
+              dich erneut an.
+            </p>
+            <p>
+              <a className="button button-primary" href={stepUpLoginUrl("/verwaltung")}>
+                Erneut anmelden
+              </a>
+            </p>
+          </div>
+        )}
         {status === "forbidden" && <p>Keine Berechtigung. Die Verwaltung sehen nur Admins.</p>}
         {status === "error" && <p role="alert">Die Rollen konnten nicht geladen werden.</p>}
         {status === "ready" && roles && (

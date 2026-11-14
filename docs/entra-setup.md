@@ -74,6 +74,7 @@ App-Registrierung → **Tokenkonfiguration → Optionalen Anspruch hinzufügen**
 
 - `email`
 - `preferred_username`
+- `auth_time` (empfohlen): Zeitpunkt der letzten echten Anmeldung. Damit erkennt die Werkbank bei der erneuten Anmeldung für die Verwaltung (Step-up), ob wirklich neu angemeldet wurde. Ohne diesen Anspruch zählt der Zeitpunkt der Rückkehr von Entra.
 
 Gruppenansprüche sind **nicht** nötig, die Werkbank arbeitet mit App-Rollen.
 

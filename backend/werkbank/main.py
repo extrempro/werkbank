@@ -7,6 +7,7 @@ from werkbank.config import Settings, get_settings
 from werkbank.core.audit_api import router as audit_router
 from werkbank.core.auth import router as auth_router
 from werkbank.core.csrf import OriginCheckMiddleware
+from werkbank.core.ratelimit import RateLimitMiddleware, default_rules
 from werkbank.db import database_ready
 from werkbank.security import SecurityHeadersMiddleware
 from werkbank.web import mount_frontend
@@ -27,6 +28,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     # Reihenfolge: zuletzt hinzugefügt = äußerste Schicht. Sicherheits-Header immer setzen.
     app.add_middleware(OriginCheckMiddleware, allowed_origin=settings.public_origin)
+    app.add_middleware(RateLimitMiddleware, rules=default_rules(settings))
     app.add_middleware(SecurityHeadersMiddleware)
     app.include_router(auth_router)
     app.include_router(audit_router)

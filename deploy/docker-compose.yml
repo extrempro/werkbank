@@ -1,7 +1,7 @@
 # Werkbank – Docker Compose
 # Konfiguration: deploy/.env (Vorlage: deploy/.env.example)
 # Secrets: deploy/secrets/ auf dem Host (nicht im Repository), siehe deploy/README.md
-# Phase 1: Web-Dienst (API und Oberfläche) und Datenbank. Worker und PowerShell folgen.
+# Web-Dienst (API und Oberfläche), Worker (Hintergrundaufträge) und Datenbank. PowerShell folgt.
 
 name: werkbank
 
@@ -26,6 +26,41 @@ services:
     networks:
       - intern
       - extern
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  worker:
+    # Gleiches Image wie web, anderer Startbefehl. Kein Port nach außen.
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    image: werkbank-web:local
+    command: ["python", "-m", "werkbank.worker"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    depends_on:
+      # web spielt beim Start die Datenbank-Migrationen ein
+      web:
+        condition: service_healthy
+    networks:
+      - intern
+      - extern
+    healthcheck:
+      test: ["CMD", "python", "-m", "werkbank.worker", "--check"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
     read_only: true
     tmpfs:
       - /tmp

@@ -22,11 +22,20 @@ export async function fetchMe(): Promise<Me | null> {
 
 export class ApiError extends Error {
   readonly status: number;
+  /** Der Server verlangt eine erneute Anmeldung (Verwaltung, siehe spec.md 6.1). */
+  readonly stepUpRequired: boolean;
 
-  constructor(status: number) {
+  constructor(status: number, stepUpRequired = false) {
     super(`Unerwartete Antwort: ${status}`);
     this.status = status;
+    this.stepUpRequired = stepUpRequired;
   }
+}
+
+/** Adresse für die erneute Anmeldung, danach zurück zur angegebenen Seite. */
+export function stepUpLoginUrl(returnTo: string): string {
+  const params = new URLSearchParams({ step_up: "true", return_to: returnTo });
+  return `/auth/login?${params.toString()}`;
 }
 
 async function getJson<T>(url: string): Promise<T> {
@@ -35,7 +44,10 @@ async function getJson<T>(url: string): Promise<T> {
     headers: { Accept: "application/json" },
   });
   if (!response.ok) {
-    throw new ApiError(response.status);
+    throw new ApiError(
+      response.status,
+      response.headers.get("X-Werkbank-Step-Up") === "required",
+    );
   }
   return (await response.json()) as T;
 }

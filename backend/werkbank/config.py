@@ -42,6 +42,14 @@ class Settings(BaseSettings):
     session_max_hours: int = 8
     step_up_minutes: int = 15
 
+    # Höchstzahl Anfragen pro Minute und Absender-IP (0 = aus), siehe core/ratelimit.py
+    rate_limit_login_per_minute: int = 60
+    rate_limit_api_per_minute: int = 600
+    rate_limit_export_per_minute: int = 10
+
+    # Worker: Pause zwischen zwei Blicken in die Auftragsliste, wenn nichts zu tun ist
+    worker_poll_seconds: int = 10
+
     # Verzeichnis mit dem Frontend-Build (im Docker-Image /app/static)
     static_dir: Path = Path("/app/static")
 

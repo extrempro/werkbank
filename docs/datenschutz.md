@@ -16,6 +16,7 @@
 | Rollen | Entra-App-Rollen | Berechtigung | solange Zugang besteht |
 | Aktionen im Audit-Log (wer, wann, was) | Werkbank | Nachweis, Sicherheit | **[OFFEN]** Vorschlag 2 Jahre |
 | IP-Adresse (gekürzt) | Anfrage | Sicherheit | wie Audit-Log |
+| IP-Adresse (vollständig, nur als Zähler im Arbeitsspeicher) | Anfrage | Schutz vor Missbrauch (Begrenzung der Anfragerate) | höchstens wenige Minuten, wird nicht gespeichert |
 | Kommentare, Begründungen, Beschlüsse | Eingabe | Nachweis | **[OFFEN]** |
 | „Geändert von“ (Konto, das eine Tenant-Einstellung geändert hat) | Entra-Audit-Log | Nachvollziehbarkeit | **[OFFEN]** |
 | Push-Abonnement (Endpunkt, Schlüssel) | Browser, nach Opt-in | Benachrichtigung | bis Widerruf |
