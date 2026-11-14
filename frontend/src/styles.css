@@ -401,6 +401,10 @@ a {
     padding: 4px;
   }
 
+  .button-quiet {
+    padding: 0 10px;
+  }
+
   .app-header {
     gap: 8px;
   }
@@ -1180,4 +1184,16 @@ details summary {
   color: var(--farbe-kopf);
   font-size: 0.6875rem;
   font-weight: 700;
+}
+
+/* Schmale Handys: Der Name „Werkbank“ bleibt für Screenreader, damit die Kopfzeile in eine Zeile passt. */
+@media (max-width: 480px) {
+  .brand-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
