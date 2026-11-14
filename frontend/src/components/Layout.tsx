@@ -1,6 +1,8 @@
 import { useId, useState, type MouseEvent, type ReactNode } from "react";
 import type { Me } from "../api";
 import { allNavItems, navigationFor } from "../navigation";
+import { AdminPage } from "../pages/AdminPage";
+import { AuditPage } from "../pages/AuditPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { StartPage } from "../pages/StartPage";
@@ -28,6 +30,10 @@ export function Layout({ me }: LayoutProps) {
   let page: ReactNode;
   if (path === "/") {
     page = <StartPage me={me} />;
+  } else if (path === "/audit" && current) {
+    page = <AuditPage />;
+  } else if (path === "/verwaltung" && current) {
+    page = <AdminPage />;
   } else if (current) {
     page = <PlaceholderPage title={current.label} />;
   } else {

@@ -118,6 +118,7 @@ def _start_session(
         user.display_name = name
         user.email = email
     user.last_login_at = now
+    user.last_roles = roles
     db.flush()
     token = create_session(db, settings, user, roles, authenticated_at=now)
     write_audit(
