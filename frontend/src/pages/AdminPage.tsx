@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Avatar } from "../components/Avatar";
 import { ApiError, fetchRoles, formatDateTime, stepUpLoginUrl, type RoleInfo } from "../api";
 
 export function AdminPage() {
@@ -86,6 +87,7 @@ export function AdminPage() {
                         <ul className="plain">
                           {role.holders.map((holder) => (
                             <li key={`${role.value}-${holder.display_name}-${holder.email}`}>
+                              <Avatar name={holder.display_name} url={holder.avatar_url} />{" "}
                               {holder.display_name}{" "}
                               <span className="small">
                                 ({formatDateTime(holder.last_login_at)})

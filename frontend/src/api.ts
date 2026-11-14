@@ -1,8 +1,14 @@
 export interface Me {
+  user_id?: string;
   display_name: string;
   email: string | null;
   roles: string[];
   authenticated_at: string;
+  session_expires_at?: string;
+  /** Adresse des Profilbilds aus Entra, falls vorhanden. */
+  avatar_url?: string | null;
+  /** Version der laufenden Werkbank. */
+  version?: string;
 }
 
 /** Angemeldete Person laden. `null` bedeutet: nicht angemeldet. */
@@ -157,6 +163,7 @@ export function fetchAudit(
 }
 
 export interface RoleHolder {
+  avatar_url?: string | null;
   display_name: string;
   email: string | null;
   last_login_at: string | null;

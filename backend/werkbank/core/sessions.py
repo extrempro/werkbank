@@ -39,6 +39,7 @@ class CurrentUser:
     email: str | None
     roles: tuple[str, ...]
     authenticated_at: datetime
+    expires_at: datetime
 
     def has_any_role(self, *roles: str) -> bool:
         return any(role in self.roles for role in roles)
@@ -91,6 +92,7 @@ def load_session(db: Session, settings: Settings, token: str | None) -> CurrentU
         email=user.email,
         roles=tuple(user_session.roles),
         authenticated_at=user_session.authenticated_at,
+        expires_at=user_session.expires_at,
     )
 
 

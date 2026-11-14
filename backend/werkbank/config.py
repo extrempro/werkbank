@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     entra_client_key_file: Path = Path("/run/secrets/entra_client_key.pem")
     entra_client_cert_file: Path = Path("/run/secrets/entra_client_cert.pem")
     entra_client_secret_file: Path = Path("/run/secrets/entra_client_secret")
+    # Profilbild bei der Anmeldung aus Entra holen. Braucht die delegierte Berechtigung
+    # User.Read an der App-Registrierung für die Anmeldung (docs/entra-setup.md).
+    entra_profile_photo: bool = False
 
     session_idle_minutes: int = 30
     session_max_hours: int = 8

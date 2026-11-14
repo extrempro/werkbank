@@ -11,6 +11,40 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Config.Reader", "Lesezugriff"],
 ];
 
+const ROLE_INFO: Record<string, { label: string; description: string }> = {
+  "Werkbank.Admin": {
+    label: "Werkbank Admin",
+    description: "Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log",
+  },
+  "Werkbank.Auditor": { label: "Werkbank Auditor", description: "Audit-Log und Reports lesen" },
+  "Config.Reader": {
+    label: "Konfiguration Leser",
+    description: "M365-Konfiguration ansehen und exportieren",
+  },
+  "Config.Reviewer": {
+    label: "Konfiguration Prüfer",
+    description: "Änderungen bewerten, Beschreibungen und Soll-Werte pflegen",
+  },
+  "Evergreen.IT": {
+    label: "Evergreen IT",
+    description: "Technische Bewertung und Umsetzung von Evergreen-Vorgängen",
+  },
+  "Evergreen.Team": {
+    label: "Evergreen Team",
+    description: "Rückmeldungen der Fachabteilungen und BR-Vorlagen",
+  },
+  "Evergreen.Betriebsrat": {
+    label: "Evergreen Betriebsrat",
+    description: "Stellungnahme zu vorgelegten Vorgängen",
+  },
+  "Evergreen.GF": { label: "Evergreen Geschäftsführung", description: "Abnahme von Vorgängen" },
+};
+
+/** Name und Beschreibung einer App-Rolle (wie in der Verwaltung). */
+export function roleInfo(role: string): { label: string; description: string } {
+  return ROLE_INFO[role] ?? { label: role, description: "" };
+}
+
 /** Bezeichnung der wichtigsten Rolle; ohne bekannte Rolle `null`. */
 export function roleLabel(roles: readonly string[]): string | null {
   const match = ROLE_LABELS.find(([role]) => roles.includes(role));

@@ -90,8 +90,12 @@ Microsoft Graph, **delegiert**:
 - `profile`
 - `email`
 
-`User.Read` kann entfernt werden, die Werkbank ruft Graph nicht im Namen des Benutzers auf.
+- `User.Read` – nur, wenn die Werkbank das **Profilbild** anzeigen soll (`ENTRA_PROFILE_PHOTO=true`). Die Werkbank liest damit bei der Anmeldung ausschließlich das eigene Bild der Person (`/me/photos/120x120`).
+
+Ohne Profilbild kann `User.Read` entfernt werden; die Werkbank ruft Graph dann nicht im Namen des Benutzers auf.
 → **Administratorzustimmung für <Mandant> erteilen**
+
+**Reihenfolge beim Einschalten des Profilbilds:** erst `User.Read` eintragen und die Administratorzustimmung erteilen, danach `ENTRA_PROFILE_PHOTO=true` setzen und die Werkbank neu starten. Fehlt die Zustimmung, schlägt die Anmeldung fehl.
 
 ### 1.6 App-Rollen
 

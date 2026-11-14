@@ -37,6 +37,10 @@ describe("App", () => {
     expect(screen.getByRole("link", { name: "Meine Aufgaben" })).toHaveAttribute("href", "/");
     expect(screen.getByText("EB")).toBeInTheDocument();
     expect(screen.getByText("Evergreen-Team")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Erika Beispiel.*Konto öffnen/ })).toHaveAttribute(
+      "href",
+      "/konto",
+    );
     expect(screen.queryByText("M365-Konfiguration")).not.toBeInTheDocument();
   });
 
