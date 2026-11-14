@@ -65,7 +65,7 @@ Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen spä
 
 | Punkt | Festlegung |
 |---|---|
-| Hosting | GitHub, **öffentliches** Repository (vor Veröffentlichung Freigabe durch die Geschäftsführung) |
+| Hosting | GitHub, **öffentliches** Repository [`extrempro/werkbank`](https://github.com/extrempro/werkbank). |
 | Lizenz | MIT |
 | Öffentlichkeit | Keine internen Informationen im Repo: keine Firmen-, Personen-, Host- oder Tenant-Namen, nur neutrale Beispieldaten. Firmenspezifisches nur über Konfiguration. |
 | Branches | Arbeit nur auf Feature-Branches (`feature/…`, `fix/…`, `docs/…`). `main` ist geschützt. |
@@ -626,4 +626,4 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 | 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit DSB, BR-Beteiligung für die Werkbank selbst |
 | 9 | Hostname | Öffentlicher Hostname der Werkbank (für Entra-Redirect-URI) |
 | 10 | Mail | Absenderadresse für Benachrichtigungen |
-| 11 | Veröffentlichung | Freigabe der Geschäftsführung für Open Source (MIT) und Copyright-Inhaber |
+| 11 | Copyright | Copyright-Inhaber für `LICENSE` festlegen |
