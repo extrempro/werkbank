@@ -5,12 +5,16 @@
 
 name: werkbank
 
-# Das Image wird aus dem Repository gebaut. Standard ist der Stand von main auf GitHub, damit
-# neben dieser Datei kein Quellcode liegen muss (z. B. bei Arcane Git-Sync).
-# Für einen lokalen Stand: WERKBANK_BUILD_CONTEXT=.. (Wurzel des ausgecheckten Repositorys).
+# Das Image wird mit dem Dockerfile neben dieser Datei gebaut. Es holt den Quellcode selbst von
+# GitHub (Standard: main), damit hier kein Quellcode liegen muss (z. B. bei Arcane Git-Sync).
+# Anderer Stand: WERKBANK_REF=v0.3.0 (Tag, Branch oder Commit).
+# Aus einem ausgecheckten Repository bauen: WERKBANK_BUILD_CONTEXT=.. und
+# WERKBANK_DOCKERFILE=backend/Dockerfile.
 x-werkbank-build: &werkbank-build
-  context: ${WERKBANK_BUILD_CONTEXT:-https://github.com/extrempro/werkbank.git#main}
-  dockerfile: backend/Dockerfile
+  context: ${WERKBANK_BUILD_CONTEXT:-.}
+  dockerfile: ${WERKBANK_DOCKERFILE:-Dockerfile}
+  args:
+    WERKBANK_REF: ${WERKBANK_REF:-main}
 
 services:
   web:

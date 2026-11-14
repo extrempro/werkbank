@@ -7,7 +7,7 @@ Geplanter Aufbau:
 
 | Dienst | Aufgabe | Netzwerk |
 |---|---|---|
-| `web` | API und Oberfläche (PWA), ein Image aus `backend/Dockerfile` mit Build-Kontext Repository-Wurzel | gebunden an `${BIND_IP}:${BIND_PORT}` |
+| `web` | API und Oberfläche (PWA), ein Image aus `deploy/Dockerfile` (holt den Quellcode von GitHub) oder aus `backend/Dockerfile` mit Build-Kontext Repository-Wurzel | gebunden an `${BIND_IP}:${BIND_PORT}` |
 | `worker` | Hintergrundaufträge: derzeit Aufräumen abgelaufener Sitzungen; später Collector, Erinnerungen, Reports, Push. Gleiches Image wie `web`, startet nach `web` (das die Datenbank migriert) | kein Port nach außen; ausgehend für Microsoft Graph |
 | `pwsh` | PowerShell-Jobs (Exchange Online, Teams) | nur intern |
 | `db` | PostgreSQL | nur intern (Docker-Netz ohne Außenzugang) |
@@ -101,13 +101,13 @@ Zum Ausprobieren ohne Entra legt `deploy/test-secrets.sh` Wegwerf-Dateien an (ni
 
 ## Image
 
-Das Image wird aus dem Repository gebaut, standardmäßig aus dem Stand von `main` auf GitHub (`WERKBANK_BUILD_CONTEXT`). Neben der Compose-Datei muss deshalb kein Quellcode liegen. Eine neue Version kommt erst mit einem **neuen Build** auf den Server; ein bloßer Neustart nimmt das vorhandene Image.
+Das Image wird mit `deploy/Dockerfile` gebaut. Dieses Dockerfile holt den Quellcode beim Bauen selbst von GitHub, standardmäßig den Stand von `main` (`WERKBANK_REF` für einen Tag, Branch oder Commit). Neben der Compose-Datei muss deshalb nur das Dockerfile liegen, kein Quellcode. Wer aus einem ausgecheckten Repository baut, setzt `WERKBANK_BUILD_CONTEXT=..` und `WERKBANK_DOCKERFILE=backend/Dockerfile`. Eine neue Version kommt erst mit einem **neuen Build** auf den Server; ein bloßer Neustart nimmt das vorhandene Image.
 
 ## Arcane
 
 Arcane holt beim Git-Sync die Compose-Datei (und auf Wunsch die Dateien daneben) in einen eigenen Projektordner und ersetzt sie bei jedem Sync. Die Werte der `.env` pflegt man in Arcane; sie bleiben beim Sync erhalten.
 
-1. **Git-Sync anlegen** (Pull): Repository dieses Projekts, Branch `main`, Compose-Datei `deploy/docker-compose.yml`.
+1. **Git-Sync anlegen** (Pull): Repository dieses Projekts, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Arcane holt den Ordner `deploy/` und findet dort auch das `Dockerfile`, das es zum Bauen braucht.
 2. **Umgebungsvariablen** des Projekts in Arcane nach [`.env.example`](.env.example) eintragen, mindestens `WERKBANK_SECRETS_DIR`, `BIND_IP`, `BIND_PORT`, `PUBLIC_URL`, `TRUSTED_PROXY_IPS`, `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `COLLECTOR_CLIENT_ID`.
 3. **Secrets** wie oben auf dem Host anlegen.
 4. Projekt **bauen und starten**.
