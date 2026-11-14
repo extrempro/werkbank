@@ -4,6 +4,7 @@ from fastapi import FastAPI, Response, status
 
 from werkbank import __version__
 from werkbank.config import Settings, get_settings
+from werkbank.core.audit_api import router as audit_router
 from werkbank.core.auth import router as auth_router
 from werkbank.core.csrf import OriginCheckMiddleware
 from werkbank.db import database_ready
@@ -28,6 +29,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(OriginCheckMiddleware, allowed_origin=settings.public_origin)
     app.add_middleware(SecurityHeadersMiddleware)
     app.include_router(auth_router)
+    app.include_router(audit_router)
 
     @app.get("/health", include_in_schema=False)
     def health() -> dict[str, str]:

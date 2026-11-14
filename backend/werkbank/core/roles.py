@@ -24,3 +24,28 @@ def filter_known_roles(roles: object) -> list[str]:
     if not isinstance(roles, list):
         return []
     return sorted({r for r in roles if isinstance(r, str) and r in KNOWN_ROLES})
+
+
+# Anzeigename und Beschreibung je Rolle (wie in docs/entra-setup.md, Abschnitt 1.6)
+ROLE_INFO: dict[str, tuple[str, str]] = {
+    Role.WERKBANK_ADMIN: (
+        "Werkbank Admin",
+        "Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log",
+    ),
+    Role.WERKBANK_AUDITOR: ("Werkbank Auditor", "Audit-Log und Reports lesen"),
+    Role.CONFIG_READER: ("Konfiguration Leser", "M365-Konfiguration ansehen und exportieren"),
+    Role.CONFIG_REVIEWER: (
+        "Konfiguration Prüfer",
+        "Änderungen bewerten, Beschreibungen und Soll-Werte pflegen",
+    ),
+    Role.EVERGREEN_IT: (
+        "Evergreen IT",
+        "Technische Bewertung und Umsetzung von Evergreen-Vorgängen",
+    ),
+    Role.EVERGREEN_TEAM: ("Evergreen Team", "Rückmeldungen der Fachabteilungen und BR-Vorlagen"),
+    Role.EVERGREEN_BETRIEBSRAT: (
+        "Evergreen Betriebsrat",
+        "Stellungnahme zu vorgelegten Vorgängen",
+    ),
+    Role.EVERGREEN_GF: ("Evergreen Geschäftsführung", "Abnahme von Vorgängen"),
+}
