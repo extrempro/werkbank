@@ -99,9 +99,7 @@ export function OverviewPage({ me }: OverviewPageProps) {
             <div className="kpi">
               <dt>Offene Änderungen</dt>
               <dd>
-                <span
-                  className={overview.open_changes > 0 ? "kpi-number kpi-todo" : "kpi-number"}
-                >
+                <span className={overview.open_changes > 0 ? "kpi-number kpi-todo" : "kpi-number"}>
                   {numbers.format(overview.open_changes)}
                 </span>
                 <span className="small">

@@ -15,7 +15,9 @@ export function ChangesChart({ days }: { days: DayCount[] }) {
     <section className="panel" aria-labelledby="diagramm-titel">
       <div className="panel-head">
         <h2 id="diagramm-titel">Änderungen pro Tag</h2>
-        <span className="small">letzte {days.length} Tage · {total} insgesamt</span>
+        <span className="small">
+          letzte {days.length} Tage · {total} insgesamt
+        </span>
       </div>
       <div className="chart" aria-hidden="true">
         {days.map((day) => (

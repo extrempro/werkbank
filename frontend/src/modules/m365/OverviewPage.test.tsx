@@ -63,7 +63,11 @@ function stubFetch() {
       urls.push(url);
       const body = url.includes("/overview")
         ? overview
-        : { entries: [change], has_more: false, counts: { alle: 1, offen: 0, gewollt: 0, ungewollt: 1 } };
+        : {
+            entries: [change],
+            has_more: false,
+            counts: { alle: 1, offen: 0, gewollt: 0, ungewollt: 1 },
+          };
       return new Response(JSON.stringify(body), { status: 200 });
     }),
   );
@@ -82,10 +86,9 @@ describe("OverviewPage", () => {
     expect(within(chart).getAllByRole("row")).toHaveLength(3);
 
     const recent = screen.getByRole("region", { name: "Letzte Änderungen" });
-    expect(await within(recent).findByRole("link", { name: "MFA für alle – State" })).toHaveAttribute(
-      "href",
-      "/m365/einstellungen/3",
-    );
+    expect(
+      await within(recent).findByRole("link", { name: "MFA für alle – State" }),
+    ).toHaveAttribute("href", "/m365/einstellungen/3");
     expect(within(recent).getByText("Ungewollt")).toBeVisible();
   });
 });
