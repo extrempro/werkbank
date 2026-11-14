@@ -62,7 +62,9 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
         <p className="module-label">Evergreen</p>
         <h1>Vorgang</h1>
         {status === "loading" && <p role="status">Wird geladen …</p>}
-        {status === "missing" && <p>Diesen Vorgang gibt es nicht oder er ist für dich nicht sichtbar.</p>}
+        {status === "missing" && (
+          <p>Diesen Vorgang gibt es nicht oder er ist für dich nicht sichtbar.</p>
+        )}
         {status === "error" && <p role="alert">Der Vorgang konnte nicht geladen werden.</p>}
         {back}
       </>
@@ -97,7 +99,10 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
       })
       .catch((failure: unknown) => {
         const text = failure instanceof ApiError ? failure.detail : null;
-        setMessage({ kind: "alert", text: text ?? "Die Angaben konnten nicht gespeichert werden." });
+        setMessage({
+          kind: "alert",
+          text: text ?? "Die Angaben konnten nicht gespeichert werden.",
+        });
       });
   };
 
@@ -315,11 +320,15 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
       <section aria-labelledby="protokoll-titel">
         <h2 id="protokoll-titel">Protokoll</h2>
         {events.length === 0 ? (
-          <p className="empty">Noch keine Entscheidung. Angelegt am {formatDateTime(item.created_at)}.</p>
+          <p className="empty">
+            Noch keine Entscheidung. Angelegt am {formatDateTime(item.created_at)}.
+          </p>
         ) : (
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Protokoll">
             <table>
-              <caption className="visually-hidden">Entscheidungen in zeitlicher Reihenfolge</caption>
+              <caption className="visually-hidden">
+                Entscheidungen in zeitlicher Reihenfolge
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">Zeitpunkt</th>

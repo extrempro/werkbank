@@ -99,7 +99,9 @@ describe("ItemDetailPage", () => {
   it("zeigt Ablauf, Angaben und Protokoll", async () => {
     stubFetch(detail());
     render(<ItemDetailPage id={5} />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Copilot in Outlook" })).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Copilot in Outlook" }),
+    ).toBeVisible();
     const current = screen.getByText("Betriebsrat", { selector: "li" });
     expect(current).toHaveAttribute("aria-current", "step");
     expect(screen.getByText("Neue Zusammenfassungen")).toBeVisible();
@@ -118,7 +120,9 @@ describe("ItemDetailPage", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Kommentar nötig");
     expect(calls.some((call) => call.init?.method === "POST")).toBe(false);
 
-    fireEvent.change(screen.getByLabelText("Kommentar"), { target: { value: " Zu viel Kontrolle " } });
+    fireEvent.change(screen.getByLabelText("Kommentar"), {
+      target: { value: " Zu viel Kontrolle " },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Ablehnen" }));
     expect(await screen.findByText(/Neuer Schritt: Abgelehnt/)).toBeVisible();
     const post = calls.find((call) => call.init?.method === "POST");

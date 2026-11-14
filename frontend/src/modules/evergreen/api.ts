@@ -145,6 +145,8 @@ export function rolloutText(item: Pick<Item, "rollout_date" | "finished">, today
 
 export function isUrgent(item: Pick<Item, "rollout_date" | "finished">, today?: Date): boolean {
   return (
-    !item.finished && item.rollout_date !== null && daysUntil(item.rollout_date, today) <= URGENT_DAYS
+    !item.finished &&
+    item.rollout_date !== null &&
+    daysUntil(item.rollout_date, today) <= URGENT_DAYS
   );
 }
