@@ -19,6 +19,13 @@ describe("navigationFor", () => {
     expect(labels).not.toContain("Audit-Log");
   });
 
+  it("zeigt den Eingang nur IT und Evergreen-Team", () => {
+    const labels = (roles: string[]) => allNavItems(navigationFor(roles)).map((item) => item.label);
+    expect(labels(["Evergreen.IT"])).toContain("Eingang");
+    expect(labels(["Evergreen.Team"])).toContain("Eingang");
+    expect(labels(["Evergreen.GF"])).not.toContain("Eingang");
+  });
+
   it("ignoriert unbekannte Rollen", () => {
     expect(navigationFor(["Irgendwas"])).toHaveLength(1);
   });

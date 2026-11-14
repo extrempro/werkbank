@@ -88,3 +88,16 @@ test("Ohne Evergreen-Rolle bleibt das Modul verschlossen", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
   expect((await page.request.get("/api/evergreen/items")).status()).toBe(403);
 });
+
+test("Der Eingang ist für IT erreichbar und zunächst leer", async ({ page }) => {
+  await loginAs(page, ["Evergreen.IT"], "Ina IT");
+  await page.goto("/evergreen/eingang");
+  await expect(page.getByRole("heading", { level: 1, name: "Eingang" })).toBeVisible();
+  await expect(page.getByText("Keine Meldungen für diese Auswahl.")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await loginAs(page, ["Evergreen.GF"], "Gerd Geschaeftsfuehrung");
+  await page.goto("/evergreen/eingang");
+  await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
+  expect((await page.request.get("/api/evergreen/messages")).status()).toBe(403);
+});

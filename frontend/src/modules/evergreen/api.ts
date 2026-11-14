@@ -47,8 +47,31 @@ export interface WorkflowEvent {
   session_date: string | null;
 }
 
+export interface Message {
+  id: number;
+  message_id: string;
+  title: string;
+  services: string[];
+  category: string | null;
+  major_change: boolean;
+  action_required_by: string | null;
+  published_at: string | null;
+  modified_at: string | null;
+  body: string | null;
+  status: string;
+  item_id: number | null;
+}
+
+export interface MessageList {
+  entries: Message[];
+  has_more: boolean;
+  new_count: number;
+}
+
 export interface ItemDetail {
   item: Item;
+  message: Message | null;
+  message_updated: boolean;
   summary: string | null;
   departments_feedback: string | null;
   not_controllable: boolean;
@@ -109,6 +132,29 @@ export function performAction(
     comment: comment || null,
     session_date: sessionDate || null,
   });
+}
+
+export function fetchMessages(view: string, offset: number): Promise<MessageList> {
+  const params = new URLSearchParams({ view, offset: String(offset), limit: "50" });
+  return getJson(`${BASE}/messages?${params.toString()}`);
+}
+
+export function adoptMessage(id: number): Promise<Item> {
+  return postJson(`${BASE}/messages/${id}/adopt`);
+}
+
+export function setMessageStatus(id: number, status: "neu" | "ignoriert"): Promise<Message> {
+  return postJson(`${BASE}/messages/${id}/status`, { status });
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  planForChange: "Geplante Änderung",
+  stayInformed: "Zur Information",
+  preventOrFixIssue: "Problem vermeiden oder beheben",
+};
+
+export function categoryLabel(category: string | null): string {
+  return category ? (CATEGORY_LABELS[category] ?? category) : "–";
 }
 
 const dateOnly = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });

@@ -54,6 +54,8 @@ class Settings(BaseSettings):
         "microsoft.entra.authorizationpolicy"
     )
     collector_timeout_minutes: int = 30
+    # Abstand, in dem das Nachrichtencenter von Microsoft gelesen wird (Modul Evergreen)
+    message_center_interval_hours: int = 6
     collector_poll_seconds: int = 20
 
     # Höchstzahl Anfragen pro Minute und Absender-IP (0 = aus), siehe core/ratelimit.py

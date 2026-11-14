@@ -352,6 +352,14 @@ Wochenbericht, Monatsbericht, Änderungen im Zeitraum, Abweichungen von Soll-Wer
 
 Doppelte Vorgänge (gleiche Nachrichten-ID) werden verhindert. Aktualisierungen einer Meldung werden am Vorgang vermerkt.
 
+Stand Nachrichtencenter:
+
+- Der Worker liest alle 6 Stunden (`MESSAGE_CENTER_INTERVAL_HOURS`) die seit dem letzten Abruf geänderten Meldungen, beim ersten Mal die der letzten 30 Tage. Aktiv, sobald der Collector eingerichtet ist; die Collector-App braucht dafür `ServiceMessage.Read.All`.
+- Alle Meldungen landen im **Eingang** (`Evergreen.IT`, `Evergreen.Team`). Der Text wird ohne HTML gespeichert.
+- **Automatisch zu Vorgängen** werden Meldungen mit „Major Change“ oder mit einer Frist für Handlungsbedarf („Action required by“; sie wird als Rollout-Datum übernommen). Alle anderen lassen sich im Eingang als Vorgang übernehmen oder beiseitelegen. Wird eine Meldung nachträglich zur größeren Änderung, entsteht der Vorgang beim nächsten Abruf.
+- Ändert Microsoft eine Meldung, nachdem der Vorgang angelegt wurde, zeigt der Vorgang einen Hinweis. Titel und Zusammenfassung des Vorgangs werden dabei nicht überschrieben.
+- Ein Filter nach Diensten ist nicht umgesetzt. Die Quelle „Neue Einstellung“ aus M365-Konfiguration folgt.
+
 ### 8.2 Workflow
 
 | # | Schritt | Zuständig | Aktionen | Weiter zu |
@@ -621,7 +629,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
 | 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Erste Inbetriebnahme erfolgt, Abruf über UTCM am echten Tenant bestätigt. Offen: Bestätigung der Änderungserkennung mit „Geändert von“; später Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
-| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | in Arbeit: 3a Workflow-Engine und 3b Vorgänge mit Oberfläche umgesetzt; es folgen 3c Nachrichtencenter, 3d Umsetzung mit Soll-Werten, 3e Abschluss |
+| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | in Arbeit: 3a Workflow-Engine, 3b Vorgänge mit Oberfläche und 3c Nachrichtencenter umgesetzt (Abruf des Nachrichtencenters noch nicht am echten Tenant geprüft); es folgen 3d Umsetzung mit Soll-Werten, 3e Abschluss |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |
 

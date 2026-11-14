@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from werkbank.config import Settings
 from werkbank.core.models import AuthFlow, Job, JobStatus, UserSession
 from werkbank.core.sessions import now_utc
+from werkbank.modules.evergreen.jobs import FETCH_MESSAGES, fetch_messages_job
 from werkbank.modules.m365_config.jobs import COLLECT, collect_job
 from werkbank.worker.jobs import JobType
 
@@ -45,5 +46,9 @@ def build_registry(settings: Settings) -> dict[str, JobType]:
     if settings.collector_configured:
         registry[COLLECT] = JobType(
             handler=collect_job, interval=timedelta(hours=max(settings.collector_interval_hours, 1))
+        )
+        registry[FETCH_MESSAGES] = JobType(
+            handler=fetch_messages_job,
+            interval=timedelta(hours=max(settings.message_center_interval_hours, 1)),
         )
     return registry
