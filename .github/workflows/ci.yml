@@ -146,6 +146,8 @@ jobs:
         with:
           node-version: "22"
       - run: npm ci
+      - name: Abhängigkeits-Audit (Testwerkzeuge)
+        run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
       - name: App für Tests starten (Test-Login, localhost)
         working-directory: .

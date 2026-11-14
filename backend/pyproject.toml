@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=70"]
+requires = ["setuptools>=84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,23 +9,23 @@ description = "Werkbank - Open-Source-Plattform für IT-Abteilungen"
 license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.32",
+    "fastapi>=0.162.0",
+    "uvicorn[standard]>=0.54.0",
     "pydantic>=2.14.3",
     "pydantic-settings>=2.16.2",
-    "sqlalchemy>=2.1",
-    "alembic>=1.14",
-    "psycopg[binary]>=3.2",
-    "msal>=1.31",
+    "sqlalchemy>=2.1.8",
+    "alembic>=1.20.1",
+    "psycopg[binary]>=3.3.8",
+    "msal>=1.39.0",
     "cryptography>=50.0.2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.3",
+    "pytest>=9.2.0",
     "httpx>=0.28.1",
     "ruff>=0.17.4",
-    "mypy>=1.13",
+    "mypy>=2.4.1",
 ]
 
 [tool.setuptools.packages.find]

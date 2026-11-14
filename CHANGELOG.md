@@ -7,8 +7,10 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 ### Sicherheit
 
 - Frontend: `minimatch` für typescript-eslint auf 11.0.8 angehoben (GHSA-g3hv-75wg-m249, nur Entwicklungswerkzeug)
+- E2E-Werkzeuge: Abhängigkeits-Audit in der CI, `basic-ftp` per `overrides` auf eine sichere Version gezwungen (9 Lücken mit hoher Schwere über Lighthouse CI)
 - GitHub Actions auf feste Commit-Hashes gepinnt und auf aktuelle Hauptversionen gehoben
 - Dependabot mit 7 Tagen Wartezeit für neue Versionen
+- Sicherheitsnachweis bezieht sich verbindlich auf OWASP ASVS 5.0.0, Stufe 2
 
 ### Hinzugefügt
 
