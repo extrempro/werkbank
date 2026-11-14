@@ -78,15 +78,8 @@ updates:
     commit-message:
       prefix: "chore(docker)"
 
-  - package-ecosystem: "docker"
-    directory: "/powershell"
-    cooldown:
-      default-days: 7
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    commit-message:
-      prefix: "chore(docker)"
+  # Docker in /powershell: Eintrag ergänzen, sobald der PowerShell-Container existiert
+  # (bis dahin würde Dependabot jede Woche mit "No Dockerfiles found" fehlschlagen)
 
   - package-ecosystem: "docker-compose"
     directory: "/deploy"
