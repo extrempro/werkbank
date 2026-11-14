@@ -246,3 +246,150 @@ def test_collect_queues_once_and_pulls_planned_run_forward(db: Session) -> None:
     overview = admin.get(f"{BASE}/overview").json()
     assert overview["collector_configured"] is True
     assert overview["collect_pending"] is True
+
+
+def first_setting_id(client: TestClient) -> int:
+    entries = client.get(f"{BASE}/settings").json()["entries"]
+    setting_id: int = entries[0]["id"]
+    return setting_id
+
+
+@pytest.mark.db
+def test_reader_cannot_edit_metadata(db: Session) -> None:
+    client = client_for(["Config.Reader"], "m365-leser")
+    setting_id = first_setting_id(client)
+    response = client.put(
+        f"{BASE}/settings/{setting_id}/meta",
+        json={"description": "x"},
+        headers={"Origin": ORIGIN},
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.db
+def test_metadata_update_history_and_audit(db: Session) -> None:
+    client = client_for(["Config.Reviewer"], "m365-pruefer")
+    setting_id = first_setting_id(client)
+    url = f"{BASE}/settings/{setting_id}/meta"
+    headers = {"Origin": ORIGIN}
+
+    empty = client.get(f"{BASE}/settings/{setting_id}").json()
+    assert empty["meta"]["description"] is None
+    assert empty["meta"]["target_set"] is False
+    assert empty["meta_history"] == []
+
+    first = client.put(
+        url,
+        json={
+            "description": "  Erzwingt MFA  ",
+            "criticality": "hoch",
+            "learn_url": "https://learn.microsoft.com/de-de/entra/",
+        },
+        headers=headers,
+    )
+    assert first.status_code == 200, first.text
+    assert first.json()["description"] == "Erzwingt MFA"
+    assert first.json()["criticality"] == "hoch"
+
+    # nur mitgeschickte Felder ändern sich; gleicher Wert erzeugt keinen Verlaufseintrag
+    second = client.put(
+        url, json={"description": "Erzwingt MFA", "owner": "IT-Betrieb"}, headers=headers
+    )
+    assert second.json()["criticality"] == "hoch"
+    assert second.json()["owner"] == "IT-Betrieb"
+    # leerer Text löscht das Feld
+    client.put(url, json={"owner": "  "}, headers=headers)
+
+    detail = client.get(f"{BASE}/settings/{setting_id}").json()
+    assert detail["meta"]["owner"] is None
+    fields = [entry["field"] for entry in detail["meta_history"]]
+    assert fields == [
+        "verantwortlich",
+        "verantwortlich",
+        "learn_url",
+        "kritikalitaet",
+        "beschreibung",
+    ]
+    assert detail["meta_history"][0]["old_value"] == "IT-Betrieb"
+    assert detail["meta_history"][0]["new_value"] is None
+    assert detail["meta_history"][0]["user"] == "Rita Reviewer"
+
+    audit = db.scalars(
+        select(AuditLog).where(
+            AuditLog.action == "metadaten.geaendert", AuditLog.object_id == str(setting_id)
+        )
+    ).all()
+    assert [entry.details for entry in audit[-3:]] == [
+        {"felder": ["beschreibung", "kritikalitaet", "learn_url"]},
+        {"felder": ["verantwortlich"]},
+        {"felder": ["verantwortlich"]},
+    ]
+
+
+@pytest.mark.db
+def test_metadata_validation(db: Session) -> None:
+    client = client_for(["Config.Reviewer"], "m365-pruefer")
+    setting_id = first_setting_id(client)
+    url = f"{BASE}/settings/{setting_id}/meta"
+    headers = {"Origin": ORIGIN}
+    for body in (
+        {"learn_url": "javascript:alert(1)"},
+        {"learn_url": "http://example.com"},
+        {"criticality": "extrem"},
+        {"description": "x" * 4001},
+        {"target_set": True, "target_value": "x" * 20_001},
+    ):
+        assert client.put(url, json=body, headers=headers).status_code == 422, body
+    assert (
+        client.put(f"{BASE}/settings/999999999/meta", json={}, headers=headers).status_code == 404
+    )
+    assert client.put(url, json={"description": "x"}).status_code == 403
+
+
+@pytest.mark.db
+def test_target_value_and_deviation(db: Session) -> None:
+    client = client_for(["Config.Reviewer"], "m365-pruefer")
+    setting_id = first_setting_id(client)
+    url = f"{BASE}/settings/{setting_id}/meta"
+    headers = {"Origin": ORIGIN}
+    assert client.get(f"{BASE}/overview").json()["deviations"] == 0
+
+    # Soll-Wert gleich dem Ist-Wert ("disabled"): keine Abweichung
+    client.put(url, json={"target_set": True, "target_value": "disabled"}, headers=headers)
+    detail = client.get(f"{BASE}/settings/{setting_id}").json()
+    assert detail["meta"]["target_value"] == "disabled"
+    assert detail["meta"]["target_source"] == "manuell"
+    assert detail["setting"]["deviates"] is False
+
+    # anderer Soll-Wert: Abweichung in Detail, Liste, Filter und Übersicht
+    client.put(url, json={"target_value": "enabled"}, headers=headers)
+    assert client.get(f"{BASE}/settings/{setting_id}").json()["setting"]["deviates"] is True
+    deviating = client.get(f"{BASE}/settings", params={"only_deviating": "true"}).json()
+    assert [entry["id"] for entry in deviating["entries"]] == [setting_id]
+    assert client.get(f"{BASE}/overview").json()["deviations"] == 1
+
+    # Soll-Wert entfernen
+    cleared = client.put(url, json={"target_set": False}, headers=headers).json()
+    assert cleared["target_set"] is False
+    assert cleared["target_value"] is None
+    assert client.get(f"{BASE}/overview").json()["deviations"] == 0
+    history = client.get(f"{BASE}/settings/{setting_id}").json()["meta_history"]
+    assert [entry["field"] for entry in history] == ["soll_wert"] * 3
+    assert history[0]["old_value"] == {"wert": "enabled"}
+    assert history[0]["new_value"] is None
+
+
+@pytest.mark.db
+def test_high_criticality_needs_comment_for_intended(db: Session) -> None:
+    client = client_for(["Config.Reviewer"], "m365-pruefer")
+    headers = {"Origin": ORIGIN}
+    change = db.scalars(select(CfgChange).order_by(CfgChange.id)).first()
+    assert change is not None
+    client.put(
+        f"{BASE}/settings/{change.setting_id}/meta", json={"criticality": "hoch"}, headers=headers
+    )
+    url = f"{BASE}/changes/review"
+    body: dict[str, Any] = {"ids": [change.id], "status": "gewollt"}
+    assert client.post(url, json=body, headers=headers).status_code == 422
+    body["comment"] = "Mit der IT-Leitung abgestimmt"
+    assert client.post(url, json=body, headers=headers).status_code == 200

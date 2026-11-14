@@ -1,4 +1,4 @@
-import { getJson, postJson } from "../../api";
+import { getJson, postJson, putJson } from "../../api";
 
 const BASE = "/api/m365-config";
 
@@ -18,6 +18,7 @@ export interface Overview {
   last_snapshot: Snapshot | null;
   settings_total: number;
   open_changes: number;
+  deviations: number;
   resources_this_month: number;
   monthly_limit: number;
   workloads: string[];
@@ -35,6 +36,38 @@ export interface Setting {
   active: boolean;
   value: unknown;
   valid_from: string | null;
+  criticality: string | null;
+  deviates: boolean;
+}
+
+export interface Meta {
+  description: string | null;
+  reasoning: string | null;
+  criticality: string | null;
+  owner: string | null;
+  learn_url: string | null;
+  target_set: boolean;
+  target_value: unknown;
+  target_source: string | null;
+}
+
+export interface MetaHistoryEntry {
+  id: number;
+  field: string;
+  old_value: unknown;
+  new_value: unknown;
+  user: string | null;
+  changed_at: string;
+}
+
+export interface MetaUpdate {
+  description: string;
+  reasoning: string;
+  criticality: string | null;
+  owner: string;
+  learn_url: string;
+  target_set: boolean;
+  target_value: unknown;
 }
 
 export interface Version {
@@ -63,6 +96,8 @@ export interface Change {
 
 export interface SettingDetail {
   setting: Setting;
+  meta: Meta;
+  meta_history: MetaHistoryEntry[];
   versions: Version[];
   changes: Change[];
 }
@@ -71,6 +106,7 @@ export interface SettingFilter {
   search: string;
   workload: string;
   includeRemoved: boolean;
+  onlyDeviating: boolean;
 }
 
 export type ReviewStatus = "offen" | "gewollt" | "ungewollt";
@@ -97,11 +133,18 @@ export function fetchSettings(
   if (filter.includeRemoved) {
     params.set("include_removed", "true");
   }
+  if (filter.onlyDeviating) {
+    params.set("only_deviating", "true");
+  }
   return getJson(`${BASE}/settings?${params.toString()}`);
 }
 
 export function fetchSetting(id: number): Promise<SettingDetail> {
   return getJson(`${BASE}/settings/${id}`);
+}
+
+export function updateMeta(id: number, update: MetaUpdate): Promise<Meta> {
+  return putJson(`${BASE}/settings/${id}/meta`, update);
 }
 
 export function fetchChanges(
@@ -171,4 +214,61 @@ export function formatValue(value: unknown, pretty = false): string {
 
 export function settingTitle(item: { object_name: string | null; property: string }): string {
   return item.object_name ? `${item.object_name} – ${item.property}` : item.property;
+}
+
+const CRITICALITY_LABELS: Record<string, string> = {
+  niedrig: "Niedrig",
+  mittel: "Mittel",
+  hoch: "Hoch",
+};
+
+const META_FIELD_LABELS: Record<string, string> = {
+  beschreibung: "Beschreibung",
+  begruendung: "Begründung",
+  kritikalitaet: "Kritikalität",
+  verantwortlich: "Verantwortlich",
+  learn_url: "Link zu Microsoft Learn",
+  soll_wert: "Soll-Wert",
+};
+
+export function criticalityLabel(value: string | null): string {
+  return value ? (CRITICALITY_LABELS[value] ?? value) : "Nicht festgelegt";
+}
+
+export function metaFieldLabel(field: string): string {
+  return META_FIELD_LABELS[field] ?? field;
+}
+
+/** Wert im Verlauf der Angaben: Der Soll-Wert steckt in einer Hülle, damit „kein Soll-Wert“ erkennbar bleibt. */
+export function formatMetaValue(field: string, value: unknown): string {
+  if (field === "soll_wert" && typeof value === "object" && value !== null && "wert" in value) {
+    return formatValue((value as { wert: unknown }).wert);
+  }
+  if (field === "kritikalitaet" && typeof value === "string") {
+    return criticalityLabel(value);
+  }
+  return formatValue(value);
+}
+
+/** Eingabe für den Soll-Wert: gültiges JSON wird als JSON übernommen, alles andere als Text. */
+export function parseTargetInput(text: string): unknown {
+  const trimmed = text.trim();
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return trimmed;
+  }
+}
+
+/** Soll-Wert als Text für das Eingabefeld (Umkehrung von parseTargetInput). */
+export function targetInputText(value: unknown): string {
+  if (typeof value === "string") {
+    try {
+      JSON.parse(value);
+      return JSON.stringify(value);
+    } catch {
+      return value;
+    }
+  }
+  return JSON.stringify(value, null, 2);
 }

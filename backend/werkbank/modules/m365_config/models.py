@@ -104,3 +104,44 @@ class CfgChange(Base):
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     comment: Mapped[str | None] = mapped_column(Text)
+
+
+class Criticality(StrEnum):
+    LOW = "niedrig"
+    MEDIUM = "mittel"
+    HIGH = "hoch"
+
+
+class CfgSettingMeta(Base):
+    """Gepflegte Angaben zu einer Einstellung (spec.md 7.5). Höchstens eine Zeile je Einstellung."""
+
+    __tablename__ = "cfg_setting_meta"
+
+    setting_id: Mapped[int] = mapped_column(
+        ForeignKey("cfg_settings.id", ondelete="CASCADE"), primary_key=True
+    )
+    description: Mapped[str | None] = mapped_column(Text)
+    reasoning: Mapped[str | None] = mapped_column(Text)
+    criticality: Mapped[str | None] = mapped_column(String(16))
+    owner: Mapped[str | None] = mapped_column(String(256))
+    learn_url: Mapped[str | None] = mapped_column(String(500))
+    # Soll-Wert: target_value zählt nur, wenn target_set wahr ist (auch JSON null ist ein Wert)
+    target_set: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    target_value: Mapped[Any] = mapped_column(JSONB, default=None, server_default=text("'null'"))
+    target_source: Mapped[str | None] = mapped_column(String(64))
+
+
+class CfgSettingMetaHistory(Base):
+    """Verlauf der gepflegten Angaben: je geändertem Feld eine Zeile."""
+
+    __tablename__ = "cfg_setting_meta_history"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    setting_id: Mapped[int] = mapped_column(
+        ForeignKey("cfg_settings.id", ondelete="CASCADE"), index=True
+    )
+    field: Mapped[str] = mapped_column(String(32))
+    old_value: Mapped[Any | None] = mapped_column(JSONB(none_as_null=True))
+    new_value: Mapped[Any | None] = mapped_column(JSONB(none_as_null=True))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

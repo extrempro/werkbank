@@ -10,7 +10,12 @@ import {
   type SettingFilter,
 } from "./api";
 
-const EMPTY_FILTER: SettingFilter = { search: "", workload: "", includeRemoved: false };
+const EMPTY_FILTER: SettingFilter = {
+  search: "",
+  workload: "",
+  includeRemoved: false,
+  onlyDeviating: false,
+};
 
 export function SettingsPage() {
   const [draft, setDraft] = useState<SettingFilter>(EMPTY_FILTER);
@@ -97,6 +102,15 @@ export function SettingsPage() {
           />
           Entfernte anzeigen
         </label>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            className="check"
+            checked={draft.onlyDeviating}
+            onChange={(event) => setDraft({ ...draft, onlyDeviating: event.target.checked })}
+          />
+          Nur Abweichungen vom Soll-Wert
+        </label>
         <div className="filter-actions">
           <button type="submit" className="button button-primary">
             Anzeigen
@@ -126,6 +140,8 @@ export function SettingsPage() {
                   <td>
                     <Link to={`/m365/einstellungen/${entry.id}`}>{settingTitle(entry)}</Link>
                     {!entry.active && <span className="badge">Entfernt</span>}
+                    {entry.deviates && <span className="badge">Weicht vom Soll-Wert ab</span>}
+                    {entry.criticality === "hoch" && <span className="badge">Kritikalität hoch</span>}
                     <span className="mono small path">{entry.path}</span>
                   </td>
                   <td className="value">{formatValue(entry.value)}</td>

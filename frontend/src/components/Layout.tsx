@@ -53,7 +53,7 @@ export function Layout({ me }: LayoutProps) {
   } else if (path === "/m365/snapshots" && current) {
     page = <SnapshotsPage />;
   } else if (settingId !== null && items.some((item) => item.path === SETTINGS_PATH)) {
-    page = <SettingDetailPage id={settingId} />;
+    page = <SettingDetailPage id={settingId} me={me} />;
   } else if (current) {
     page = <PlaceholderPage title={current.label} />;
   } else {
