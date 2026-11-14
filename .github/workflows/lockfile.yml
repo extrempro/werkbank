@@ -32,7 +32,14 @@ jobs:
         run: |
           for dir in frontend e2e; do
             if [ -f "$dir/package.json" ]; then
-              (cd "$dir" && npm install --package-lock-only --ignore-scripts --no-audit --no-fund)
+              (
+                cd "$dir"
+                if ! npm install --package-lock-only --ignore-scripts --no-audit --no-fund; then
+                  echo "Lockfile passt nicht mehr zu package.json, wird neu erzeugt."
+                  rm -f package-lock.json
+                  npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+                fi
+              )
             fi
           done
       - name: Frontend formatieren
