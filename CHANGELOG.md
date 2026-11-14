@@ -8,6 +8,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 - GitHub Actions auf feste Commit-Hashes gepinnt und auf aktuelle Hauptversionen gehoben
 - Dependabot mit 7 Tagen Wartezeit für neue Versionen
+- Sicherheitsnachweis bezieht sich verbindlich auf OWASP ASVS 5.0.0, Stufe 2
 
 ### Hinzugefügt
 

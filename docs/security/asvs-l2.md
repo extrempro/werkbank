@@ -1,7 +1,7 @@
 # Sicherheitsnachweis – OWASP ASVS Stufe 2
 
 > **Stand:** Ende Phase 1 (Kern: Anmeldung, Sitzungen, Rollen, Audit-Log, Oberfläche, PWA).
-> **Grundlage:** OWASP ASVS, Stufe 2. **[OFFEN]** Die Version (aktuell vermutlich 5.0) ist noch zu bestätigen. Danach wird die Übersicht unten Anforderung für Anforderung nach der Gliederung dieser Version aufgeschlüsselt.
+> **Grundlage:** OWASP ASVS **5.0.0** (Mai 2025), Stufe 2. Verweise auf einzelne Anforderungen im Format `v5.0.0-<Kapitel>.<Abschnitt>.<Anforderung>`. Die Übersicht unten ist nach Themen gegliedert; die Aufschlüsselung je Anforderung folgt.
 
 Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht anwendbar
 
@@ -40,4 +40,4 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 2. Rate-Limits für Login, API und Exporte
 3. Objektberechtigungen für die fachlichen Daten der Module
 4. E2E-Tests über HTTPS (auch WebKit), HSTS prüfen
-5. Einzelnachweis je ASVS-Anforderung nach Festlegung der Version
+5. Einzelnachweis je Anforderung nach ASVS 5.0.0 (Kapitel V1 bis V17)

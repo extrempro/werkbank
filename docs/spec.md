@@ -472,6 +472,7 @@ Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz
 
 ### 12.1 Sicherheit – OWASP ASVS Stufe 2
 
+- Grundlage: OWASP ASVS **5.0.0**, Stufe 2.
 - Nachweis je Anforderung in `docs/security/asvs-l2.md` (umgesetzt durch / getestet durch / nicht anwendbar mit Begründung).
 - Auszug der wichtigsten Maßnahmen:
   - **Rechte:** serverseitige Rechteprüfung für jede Anfrage, Objektberechtigung (kein Zugriff über geratene IDs).
@@ -628,3 +629,4 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 | 9 | Hostname | Öffentlicher Hostname der Werkbank (für Entra-Redirect-URI) |
 | 10 | Mail | Absenderadresse für Benachrichtigungen |
 | 11 | Copyright | Entschieden: `extrempro` |
+| 12 | ASVS-Version | Entschieden: OWASP ASVS 5.0.0 |
