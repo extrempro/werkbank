@@ -9,7 +9,7 @@ die jeder lesen darf: keine Hostnamen, IP-Adressen, Tenant-IDs, Zugangsdaten, Fi
 1. **Pull Requests nur auf ausdrückliche Aufforderung.** Ohne klare Anweisung („erstelle einen PR“) wird kein Pull Request erstellt. Das gilt immer.
 2. **Bei Unsicherheit fragen, nicht handeln.** Wenn etwas unklar ist, Informationen fehlen oder eine Entscheidung mehrere sinnvolle Möglichkeiten hat: nachfragen, statt eine Annahme zu treffen.
 3. **Nie direkt auf `main` arbeiten.** Jede Änderung auf einem eigenen Branch (`feature/…`, `fix/…`, `docs/…`, `chore/…`, `security/…`).
-4. **Keine Tags und Releases ohne Aufforderung.** Release Notes vorbereiten ist erlaubt, Tags setzen nur auf Anweisung.
+4. **Keine Tags und Releases von Hand.** Tag und GitHub Release legt der Workflow `release.yml` an, sobald ein PR mit einer neuen Version in `main` gemergt wird. Das Mergen durch den Menschen ist die Freigabe. Eine neue Version (Versionsnummer anheben, Abschnitt im `CHANGELOG.md`, Eintrag in den Neuigkeiten) nur auf Anweisung vorbereiten.
 5. **Keine Secrets und keine internen Informationen.** Niemals Zugangsdaten, Zertifikate, Tokens, echte Hostnamen, Domains, Tenant-IDs, Firmen- oder Personennamen in Code, Tests, Beispieldaten, Doku, Commits oder Issues. Beispiele nur mit `example.com` und erfundenen, neutralen Daten. Konfiguration nur über Umgebungsvariablen bzw. Docker-Secrets.
 6. **Nichts Destruktives ohne Rückfrage.** Kein `git push --force`, kein Löschen von Branches, Daten oder Migrationen ohne ausdrückliche Zustimmung.
 
@@ -23,7 +23,7 @@ die jeder lesen darf: keine Hostnamen, IP-Adressen, Tenant-IDs, Zugangsdaten, Fi
 
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`, `security:`), Beschreibung auf Deutsch.
 - **Versionen:** SemVer, Einträge in `CHANGELOG.md` unter „Unveröffentlicht“ pflegen.
-- **Neuigkeiten in der App:** `frontend/src/release-notes.ts` ist die Quelle der Seite „Neuigkeiten“. Dort steht nur, was man in der Anwendung bemerkt (neue Funktionen, geänderte Bedienung, behobene Fehler), in einfacher Sprache und ohne Fachbegriffe aus der Entwicklung. Änderungen nur am Repository (CI, Abhängigkeiten, Tests, Doku) kommen ausschließlich in `CHANGELOG.md`. Bei einer neuen Version: Version in `frontend/package.json`, `e2e/package.json` und `backend/pyproject.toml` anheben und einen Eintrag in `release-notes.ts` anlegen.
+- **Neuigkeiten in der App:** `frontend/src/release-notes.ts` ist die Quelle der Seite „Neuigkeiten“. Dort steht nur, was man in der Anwendung bemerkt (neue Funktionen, geänderte Bedienung, behobene Fehler), in einfacher Sprache und ohne Fachbegriffe aus der Entwicklung. Änderungen nur am Repository (CI, Abhängigkeiten, Tests, Doku) kommen ausschließlich in `CHANGELOG.md`. Bei einer neuen Version: Version in `frontend/package.json`, `e2e/package.json`, `backend/pyproject.toml` und `backend/werkbank/__init__.py` anheben, den Abschnitt „Unveröffentlicht“ im `CHANGELOG.md` in die Versionsnummer mit Datum umbenennen und einen Eintrag in `release-notes.ts` anlegen.
 - **Backend:** Python 3.12+, FastAPI, SQLAlchemy 2, Alembic, Pydantic. ruff und mypy müssen fehlerfrei sein.
 - **Frontend:** React, Vite, TypeScript (strict). eslint und prettier müssen fehlerfrei sein.
 - **Tests:** Jede Funktion mit Unit-Tests. Jeder Screen mit E2E-Test in `e2e/` (Playwright, Profile Desktop/Tablet/iPhone, axe-core).
