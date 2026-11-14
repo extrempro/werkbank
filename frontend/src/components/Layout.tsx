@@ -6,6 +6,8 @@ import { AuditPage } from "../pages/AuditPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { StartPage } from "../pages/StartPage";
+import { ItemDetailPage } from "../modules/evergreen/ItemDetailPage";
+import { ItemsPage } from "../modules/evergreen/ItemsPage";
 import { ChangesPage } from "../modules/m365/ChangesPage";
 import { OverviewPage } from "../modules/m365/OverviewPage";
 import { SettingDetailPage } from "../modules/m365/SettingDetailPage";
@@ -52,6 +54,9 @@ export function Layout({ me }: LayoutProps) {
   const settingMatch = /^\/m365\/einstellungen\/(\d{1,9})$/.exec(path);
   const settingId = settingMatch ? Number(settingMatch[1]) : null;
 
+  const itemMatch = /^\/evergreen\/(\d{1,9})$/.exec(path);
+  const itemId = itemMatch ? Number(itemMatch[1]) : null;
+
   let page: ReactNode;
   if (path === "/") {
     page = <StartPage me={me} tasks={tasks} />;
@@ -69,6 +74,10 @@ export function Layout({ me }: LayoutProps) {
     page = <SnapshotsPage />;
   } else if (settingId !== null && items.some((item) => item.path === SETTINGS_PATH)) {
     page = <SettingDetailPage id={settingId} me={me} />;
+  } else if (path === "/evergreen" && current) {
+    page = <ItemsPage />;
+  } else if (itemId !== null && items.some((item) => item.path === "/evergreen")) {
+    page = <ItemDetailPage id={itemId} />;
   } else if (current) {
     page = <PlaceholderPage title={current.label} />;
   } else {

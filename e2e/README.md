@@ -7,6 +7,8 @@ Werkzeuge: **Playwright** mit **axe-core** (Barrierefreiheit nach WCAG 2.2 AA) u
 | `tests/login.spec.ts` | Login-Seite, Navigation je Rolle (Admin, Betriebsrat), Abmelden, API ohne Anmeldung gesperrt |
 | `tests/pwa.spec.ts` | Manifest, Offline-Seite, keine API-Daten im Cache des Service Workers |
 | `tests/mobile.spec.ts` | Menü-Button und Navigation auf dem Handy |
+| `tests/evergreen.spec.ts` | Vorgang anlegen, Durchlauf IT → Betriebsrat → Geschäftsführung, Kommentarpflicht, Sichtbarkeit je Rolle |
+| `tests/m365.spec.ts` | Seiten der M365-Konfiguration im leeren Zustand, Rechte |
 | `tests/verwaltung.spec.ts` | Audit-Log (Anzeige, Filter, Export-Link), Rollenübersicht, Sperre für andere Rollen |
 
 - **Geräteprofile:** Desktop, Tablet (iPad), Handy (iPhone). Tablet und Handy laufen vorerst als Chromium-Emulation. Echte WebKit-Tests folgen, sobald die Testumgebung HTTPS hat.

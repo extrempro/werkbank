@@ -370,6 +370,8 @@ Endzustände: **Abgeschlossen**, **Ohne Vorlage abgeschlossen**, **Abgelehnt**.
 
 ### 8.3 Inhalte eines Vorgangs
 
+Stand: Vorgänge werden von Hand angelegt (`Evergreen.IT`, `Evergreen.Team`), haben eine Nummer `EV-JJJJ-NNN`, Liste mit den Ansichten „Offen“, „Wartet auf mich“, „Abgeschlossen“, „Alle“ und eine Detailseite mit Schrittleiste, Angaben, Entscheidung und Protokoll. Betriebsrat und Geschäftsführung sehen einen Vorgang erst, wenn er ihnen vorgelegt wurde; für andere antwortet die Werkbank mit „nicht gefunden“. Mitbestimmungs-Einschätzung und Begründung stehen als Entscheidung der IT-Bewertung im Protokoll. Geplante Umsetzung (Soll-Werte) und Anhänge folgen.
+
 ID (`EV-JJJJ-NNN`), Titel, Dienst, Quelle mit Referenz, Major Change, Rollout-Datum, Zusammenfassung (verständlich, ggf. KI-Vorschlag), Einschätzung Mitbestimmung mit Begründung, Rückmeldungen der Fachabteilungen, geplante Umsetzung (Liste von Soll-Werten), Kennzeichen „nicht steuerbar“, Protokoll, Anhänge (z. B. BR-Sitzungsprotokoll).
 
 ### 8.4 Fristen
@@ -387,7 +389,7 @@ ID (`EV-JJJJ-NNN`), Titel, Dienst, Quelle mit Referenz, Major Change, Rollout-Da
 ### 8.6 BR-Beschluss im Auftrag
 
 - `Evergreen.Team` und `Evergreen.IT` können in Schritt 4 den Beschluss aus einem Sitzungsprotokoll erfassen.
-- Pflicht: Sitzungsdatum und Inhalt des Beschlusses. Optional: Protokoll als Anhang.
+- Pflicht: Sitzungsdatum (nicht in der Zukunft) und Inhalt des Beschlusses. Optional: Protokoll als Anhang (folgt mit den Anhängen).
 - Protokolleintrag: „<Person> – im Auftrag des BR“.
 
 ### 8.7 Reports
@@ -619,7 +621,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
 | 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Erste Inbetriebnahme erfolgt, Abruf über UTCM am echten Tenant bestätigt. Offen: Bestätigung der Änderungserkennung mit „Geändert von“; später Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
-| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | in Arbeit: 3a Workflow-Engine umgesetzt; es folgen 3b Vorgänge mit Oberfläche, 3c Nachrichtencenter, 3d Umsetzung mit Soll-Werten, 3e Abschluss |
+| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | in Arbeit: 3a Workflow-Engine und 3b Vorgänge mit Oberfläche umgesetzt; es folgen 3c Nachrichtencenter, 3d Umsetzung mit Soll-Werten, 3e Abschluss |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |
 

@@ -66,7 +66,11 @@ async function errorDetail(response: Response): Promise<string | null> {
   return null;
 }
 
-async function sendJson<T>(method: "POST" | "PUT", url: string, body?: unknown): Promise<T> {
+async function sendJson<T>(
+  method: "POST" | "PUT" | "PATCH",
+  url: string,
+  body?: unknown,
+): Promise<T> {
   const response = await fetch(url, {
     method,
     credentials: "same-origin",
@@ -86,6 +90,10 @@ export function postJson<T>(url: string, body?: unknown): Promise<T> {
 
 export function putJson<T>(url: string, body?: unknown): Promise<T> {
   return sendJson("PUT", url, body);
+}
+
+export function patchJson<T>(url: string, body?: unknown): Promise<T> {
+  return sendJson("PATCH", url, body);
 }
 
 export interface Task {

@@ -243,9 +243,9 @@ def test_full_path_to_completion(db_session: Session, actor: uuid.UUID) -> None:
     assert log[3].on_behalf_of is None
     assert log[-1].user_id is None
     audit = db.scalars(
-        select(AuditLog).where(
-            AuditLog.module == "evergreen", AuditLog.object_id == instance.object_id
-        )
+        select(AuditLog)
+        .where(AuditLog.module == "evergreen", AuditLog.object_id == instance.object_id)
+        .order_by(AuditLog.id)
     ).all()
     assert len(audit) == 6
     assert audit[-1].details is not None and audit[-1].details["automatisch"] is True

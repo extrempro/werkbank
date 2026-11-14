@@ -13,7 +13,12 @@ test("Admin sieht das Audit-Log mit der eigenen Anmeldung", async ({ page }) => 
 test("Audit-Log lässt sich nach Modul filtern", async ({ page }) => {
   await loginAs(page, ["Werkbank.Auditor"], "Udo Auditor");
   await page.goto("/audit");
-  await page.getByLabel("Modul").selectOption("evergreen");
+  await page.getByLabel("Modul").selectOption("kern");
+  await page.getByLabel("Aktion enthält").fill("anmeldung");
+  await page.getByRole("button", { name: "Anzeigen" }).click();
+  await expect(page.getByText("anmeldung.erfolgreich").first()).toBeVisible();
+
+  await page.getByLabel("Aktion enthält").fill("gibt-es-nicht");
   await page.getByRole("button", { name: "Anzeigen" }).click();
   await expect(page.getByText("Keine Einträge für diese Auswahl.")).toBeVisible();
 });

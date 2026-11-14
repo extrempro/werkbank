@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Me } from "../../api";
 import { ChangesPage } from "./ChangesPage";
@@ -99,6 +99,8 @@ describe("ChangesPage", () => {
       status: "ungewollt",
       comment: "Nicht abgestimmt",
     });
-    expect(calls.filter((call) => call.init?.method !== "POST").length).toBeGreaterThan(1);
+    await waitFor(() => {
+      expect(calls.filter((call) => call.init?.method !== "POST").length).toBeGreaterThan(1);
+    });
   });
 });
