@@ -66,10 +66,9 @@ async function errorDetail(response: Response): Promise<string | null> {
   return null;
 }
 
-/** Verändernde Anfrage mit JSON-Inhalt. */
-export async function postJson<T>(url: string, body?: unknown): Promise<T> {
+async function sendJson<T>(method: "POST" | "PUT", url: string, body?: unknown): Promise<T> {
   const response = await fetch(url, {
-    method: "POST",
+    method,
     credentials: "same-origin",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
@@ -78,6 +77,15 @@ export async function postJson<T>(url: string, body?: unknown): Promise<T> {
     throw new ApiError(response.status, false, await errorDetail(response));
   }
   return (await response.json()) as T;
+}
+
+/** Verändernde Anfrage mit JSON-Inhalt. */
+export function postJson<T>(url: string, body?: unknown): Promise<T> {
+  return sendJson("POST", url, body);
+}
+
+export function putJson<T>(url: string, body?: unknown): Promise<T> {
+  return sendJson("PUT", url, body);
 }
 
 export interface AuditEntry {

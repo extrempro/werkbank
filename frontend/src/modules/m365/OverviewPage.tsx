@@ -78,6 +78,15 @@ export function OverviewPage({ me }: OverviewPageProps) {
               </dd>
             </div>
             <div className="card">
+              <dt>Abweichungen vom Soll-Wert</dt>
+              <dd>
+                <span className="stat-number">{numbers.format(overview.deviations)}</span>
+                <span className="small">
+                  In den Einstellungen mit „Nur Abweichungen vom Soll-Wert“ filtern
+                </span>
+              </dd>
+            </div>
+            <div className="card">
               <dt>Einstellungen</dt>
               <dd>
                 <span className="stat-number">{numbers.format(overview.settings_total)}</span>

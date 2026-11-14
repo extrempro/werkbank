@@ -593,3 +593,64 @@ tbody tr:last-child td {
 section + section {
   margin-top: 24px;
 }
+
+.notice {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  background: #fff4e0;
+  border: 1px solid #b26a00;
+  border-radius: 8px;
+  color: var(--farbe-text);
+  overflow-wrap: anywhere;
+}
+
+.text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  margin: 16px 0 0;
+}
+
+.meta-form {
+  display: grid;
+  gap: 12px;
+  max-width: 48rem;
+}
+
+.meta-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.meta-form input[type="text"],
+.meta-form input[type="url"],
+.meta-form select,
+.meta-form textarea {
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid #c9ced6;
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.meta-form .check-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.meta-form .hint {
+  margin: -8px 0 0;
+  font-size: 0.875rem;
+  color: var(--farbe-text-leise);
+}
