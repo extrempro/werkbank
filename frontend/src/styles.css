@@ -692,3 +692,82 @@ section + section {
   font-weight: 700;
   text-align: center;
 }
+
+/* Evergreen */
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+  counter-reset: schritt;
+}
+
+.step {
+  counter-increment: schritt;
+  padding: 6px 12px;
+  border: 1px solid #8a93a3;
+  border-radius: 999px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text-leise);
+  font-size: 0.875rem;
+}
+
+.step::before {
+  content: counter(schritt) ". ";
+}
+
+.step.done {
+  color: var(--farbe-text);
+}
+
+.step.done::after {
+  content: " ✓";
+}
+
+.step.current {
+  border: 2px solid var(--farbe-primaer);
+  background: var(--farbe-auswahl);
+  color: var(--farbe-text);
+  font-weight: 700;
+}
+
+.urgent {
+  font-weight: 700;
+}
+
+.notice-neutral {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  background: var(--farbe-flaeche);
+  border: 1px solid #8a93a3;
+  border-radius: 8px;
+}
+
+.review input[type="date"] {
+  min-height: 44px;
+  max-width: 16rem;
+  padding: 0 10px;
+  border: 1px solid #c9ced6;
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.meta-form input[type="date"] {
+  min-height: 44px;
+  max-width: 16rem;
+  padding: 0 10px;
+  border: 1px solid #c9ced6;
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
