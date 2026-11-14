@@ -178,7 +178,7 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
 - Module melden Aufgaben über eine gemeinsame Schnittstelle: Titel, Untertitel, Modul, Fälligkeit, Ziel-Link, zuständige Rolle bzw. Person.
 - Beispiele: offene Änderung prüfen (Config.Reviewer), Evergreen-Schritt (zuständige Rolle), Konnektor-Fehler (Admin).
 - Zähler in der Kopfzeile und in der Navigation.
-- Stand: Die Aufgaben werden bei jeder Abfrage aus dem Stand der Module ermittelt (`/api/tasks`) und nicht gespeichert; der Zähler steht in der Navigation beim Eintrag „Start“. M365-Konfiguration meldet offene Änderungen und Abweichungen vom Soll-Wert (`Config.Reviewer`) sowie einen fehlgeschlagenen Abruf (`Werkbank.Admin`). Die Tabelle `tasks` für einzeln zugewiesene Aufgaben und der Zähler in der Kopfzeile folgen mit der Workflow-Engine.
+- Stand: Die Aufgaben werden bei jeder Abfrage aus dem Stand der Module ermittelt (`/api/tasks`) und nicht gespeichert; der Zähler steht in der Navigation beim Eintrag „Start“. M365-Konfiguration meldet offene Änderungen und Abweichungen vom Soll-Wert (`Config.Reviewer`) sowie einen fehlgeschlagenen Abruf (`Werkbank.Admin`). Der Zähler steht auch in der Kopfzeile. Evergreen meldet je Rolle die Vorgänge, die in ihrem Schritt warten, und der IT neue Meldungen im Eingang. Eine Tabelle `tasks` für einzeln zugewiesene Aufgaben ist bisher nicht nötig und nicht umgesetzt.
 
 ### 6.3 Workflow-Engine
 
@@ -358,7 +358,10 @@ Stand Nachrichtencenter:
 - Alle Meldungen landen im **Eingang** (`Evergreen.IT`, `Evergreen.Team`). Der Text wird ohne HTML gespeichert.
 - **Automatisch zu Vorgängen** werden Meldungen mit „Major Change“ oder mit einer Frist für Handlungsbedarf („Action required by“; sie wird als Rollout-Datum übernommen). Alle anderen lassen sich im Eingang als Vorgang übernehmen oder beiseitelegen. Wird eine Meldung nachträglich zur größeren Änderung, entsteht der Vorgang beim nächsten Abruf.
 - Ändert Microsoft eine Meldung, nachdem der Vorgang angelegt wurde, zeigt der Vorgang einen Hinweis. Titel und Zusammenfassung des Vorgangs werden dabei nicht überschrieben.
-- Ein Filter nach Diensten ist nicht umgesetzt. Die Quelle „Neue Einstellung“ aus M365-Konfiguration folgt.
+- Ein Filter nach Diensten ist nicht umgesetzt.
+- Der Abruf des Nachrichtencenters ist an einem echten Tenant bestätigt.
+
+Stand Quelle „Einstellung“: Aus einer erkannten Änderung in M365-Konfiguration legt `Evergreen.IT` mit einem Klick einen Vorgang an (Seite „Änderungen“). Das geschieht bewusst nicht automatisch, weil eine neue Richtlinie aus vielen einzelnen Einstellungen besteht. Je Änderung gibt es höchstens einen Vorgang.
 
 ### 8.2 Workflow
 
@@ -635,7 +638,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
 | 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Erste Inbetriebnahme erfolgt, Abruf über UTCM am echten Tenant bestätigt. Offen: Bestätigung der Änderungserkennung mit „Geändert von“; später Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
-| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | in Arbeit: 3a Workflow-Engine, 3b Vorgänge mit Oberfläche, 3c Nachrichtencenter (noch nicht am echten Tenant geprüft) und 3d Umsetzung mit Soll-Werten umgesetzt; es folgt 3d Umsetzung mit Soll-Werten, 3e Abschluss |
+| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e), Nachrichtencenter am echten Tenant bestätigt. Offen: Anhänge (z. B. BR-Sitzungsprotokoll), Erinnerungen und Benachrichtigungen (Phase 4), KI-Vorschlag für die Zusammenfassung |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |
 

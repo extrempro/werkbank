@@ -3,7 +3,7 @@
 Automatisch: axe-core in jedem E2E-Test (alle Screens, Profile Desktop/Tablet/iPhone). Ziel: keine Verstöße der Stufen „serious“ und „critical“.
 Automatische Tests finden nur einen Teil der Probleme. Diese Checkliste wird bei jedem neuen Screen manuell geprüft.
 
-> **Stand:** Ende Phase 2. ✅ heißt: durch Umsetzung und automatische Tests belegt. ⚠️ heißt: umgesetzt, aber die manuelle Prüfung (Tastatur, Zoom, Screenreader, echte Geräte) steht noch aus. Sie ist mit der ersten Inbetriebnahme vorgesehen.
+> **Stand:** Ende Phase 3. Die Seiten von Evergreen (Liste, Vorgang mit Entscheidung, geplante Umsetzung) laufen im Browsertest mit Inhalt durch axe-core, auf Desktop, Tablet und Handy. ✅ heißt: durch Umsetzung und automatische Tests belegt. ⚠️ heißt: umgesetzt, aber die manuelle Prüfung (Tastatur, Zoom, Screenreader, echte Geräte) steht noch aus. Sie ist mit der ersten Inbetriebnahme vorgesehen.
 
 Status: ✅ erfüllt · ⚠️ teilweise · ❌ offen · n/a nicht anwendbar
 

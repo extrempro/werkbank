@@ -80,6 +80,22 @@ describe("ChangesPage", () => {
     expect(calls.some((call) => call.init?.method === "POST")).toBe(false);
   });
 
+  it("bietet der Evergreen-IT an, aus einer Änderung einen Vorgang zu machen", async () => {
+    const calls = stubFetch();
+    render(<ChangesPage me={me(["Config.Reader"])} />);
+    await screen.findByText("enabled");
+    expect(screen.queryByRole("button", { name: /Vorgang anlegen/ })).toBeNull();
+    cleanup();
+
+    render(<ChangesPage me={me(["Config.Reader", "Evergreen.IT"])} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Vorgang anlegen/ }));
+    await waitFor(() => {
+      const post = calls.find((call) => call.init?.method === "POST");
+      expect(post?.url).toBe("/api/evergreen/items/from-change");
+      expect(JSON.parse(String(post?.init?.body))).toEqual({ change_id: 7 });
+    });
+  });
+
   it("sendet die Bewertung und lädt neu", async () => {
     const calls = stubFetch();
     render(<ChangesPage me={me(["Config.Reviewer"])} />);

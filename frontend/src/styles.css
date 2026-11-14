@@ -857,3 +857,34 @@ details summary {
   display: grid;
   gap: 8px;
 }
+
+.header-tasks {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #8fa1c7;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Auf schmalen Bildschirmen nur die Zahl zeigen; der Text bleibt für Screenreader erhalten. */
+@media (max-width: 640px) {
+  .header-tasks-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .header-tasks {
+    min-width: 44px;
+    justify-content: center;
+  }
+}

@@ -22,7 +22,13 @@ from werkbank.modules.evergreen.implementation import (
     load_plan,
 )
 from werkbank.modules.evergreen.message_center import adopt
-from werkbank.modules.evergreen.models import EvItem, EvMessage, EvPlan, MessageStatus
+from werkbank.modules.evergreen.models import (
+    EvItem,
+    EvMessage,
+    EvPlan,
+    ItemSource,
+    MessageStatus,
+)
 from werkbank.modules.evergreen.service import (
     ALL_ROLES,
     EDITOR_ROLES,
@@ -33,7 +39,7 @@ from werkbank.modules.evergreen.service import (
     visibility,
 )
 from werkbank.modules.evergreen.workflow import evergreen_workflow
-from werkbank.modules.m365_config.models import CfgSetting, CfgSettingVersion
+from werkbank.modules.m365_config.models import CfgChange, CfgSetting, CfgSettingVersion
 
 router = APIRouter(prefix="/api/evergreen")
 
@@ -757,3 +763,75 @@ def confirm_plan(
         details={"bezeichnung": entry.label},
     )
     return _after_plan_change(db, user, item, instance)
+
+
+class FromChangeIn(BaseModel):
+    change_id: int = Field(ge=1)
+
+
+CHANGE_KIND_LABELS = {"neu": "neue Einstellung", "geaendert": "geändert", "entfernt": "entfernt"}
+
+
+def _value_text(value: Any) -> str:
+    if value is None:
+        return "-"
+    return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+
+
+@router.post("/items/from-change", status_code=status.HTTP_201_CREATED)
+def create_from_change(
+    request: Request, body: FromChangeIn, user: Technician, db: DbDep
+) -> ItemOut:
+    """Legt aus einer erkannten Änderung in M365-Konfiguration einen Vorgang an (nur IT)."""
+    row = db.execute(
+        select(CfgChange, CfgSetting)
+        .join(CfgSetting, CfgSetting.id == CfgChange.setting_id)
+        .where(CfgChange.id == body.change_id)
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    change, setting = row[0], row[1]
+    source_ref = f"aenderung:{change.id}"
+    existing = db.execute(
+        select(EvItem).where(EvItem.source == ItemSource.SETTING, EvItem.source_ref == source_ref)
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Zu dieser Änderung gibt es schon den Vorgang {existing.number}",
+        )
+    kind = CHANGE_KIND_LABELS.get(change.kind, change.kind)
+    name = setting.object_name or setting.object_id
+    summary = "\n".join(
+        [
+            f"Erkannte Änderung im Tenant ({kind}).",
+            f"Einstellung: {setting.path}",
+            f"Vorher: {_value_text(change.old_value)}",
+            f"Nachher: {_value_text(change.new_value)}",
+            f"Geändert von: {change.changed_by or 'unbekannt'}",
+        ]
+    )
+    item = create_item(
+        db,
+        title=f"{name}: {setting.property} ({kind})"[:300],
+        service=setting.workload[:100],
+        summary=summary[:TEXT_MAX_LENGTH],
+        source=ItemSource.SETTING,
+        source_ref=source_ref,
+        created_by=user.user_id,
+    )
+    write_audit(
+        db,
+        module=MODULE,
+        action="vorgang.angelegt",
+        user_id=user.user_id,
+        object_type=OBJECT_TYPE,
+        object_id=item.number,
+        ip=request.client.host if request.client else None,
+        details={"quelle": item.source, "aenderung": change.id},
+    )
+    instance = db.get(WorkflowInstance, item.workflow_instance_id)
+    db.commit()
+    if instance is None:  # pragma: no cover - der Ablauf wurde eben angelegt
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return _item_out(item, instance, actionable_steps(user))
