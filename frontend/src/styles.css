@@ -1871,3 +1871,184 @@ details summary {
 .tree-group .panel-head h2 {
   font-size: 0.9375rem;
 }
+
+/* Einstellung im Detail */
+
+.back {
+  margin: 0;
+}
+
+.setting {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  overflow: visible;
+}
+
+.setting-head h1 {
+  margin: 2px 0;
+  font-size: 1.375rem;
+  overflow-wrap: anywhere;
+}
+
+.setting-head p {
+  margin: 0;
+}
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px 20px;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--farbe-grund);
+}
+
+.strip-wide {
+  grid-column: 1 / -1;
+}
+
+.strip dt {
+  font-size: 0.75rem;
+  color: var(--farbe-text-leise);
+}
+
+.strip dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.strip .value-block {
+  margin: 0;
+  font-weight: 400;
+}
+
+.mark-ok {
+  color: var(--farbe-ok-text);
+  font-weight: 700;
+}
+
+.mark-bad {
+  color: var(--farbe-bad-text);
+  font-weight: 700;
+}
+
+.hint-evergreen {
+  background: var(--farbe-warn-flaeche);
+  border: 1px solid var(--farbe-warn-rand);
+  color: var(--farbe-warn-text);
+}
+
+.setting-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.setting-section h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.setting-section h3 {
+  margin: 6px 0 0;
+  font-size: 0.875rem;
+}
+
+.setting-section p {
+  margin: 0;
+}
+
+.setting-section .text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.timeline {
+  margin: 0;
+  padding: 0 0 0 22px;
+  list-style: none;
+  border-left: 2px solid var(--farbe-rand);
+}
+
+.timeline li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 0 18px;
+}
+
+.timeline li:last-child {
+  padding-bottom: 0;
+}
+
+.timeline li::before {
+  content: "";
+  position: absolute;
+  left: -29px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid var(--farbe-flaeche);
+  background: var(--farbe-todo-text);
+}
+
+.timeline-gewollt::before {
+  background: var(--farbe-ok-text);
+}
+
+.timeline-ungewollt::before {
+  background: var(--farbe-bad-text);
+}
+
+.timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+.timeline-diff {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.8125rem;
+}
+
+.timeline-diff .diff-old,
+.timeline-diff .diff-new {
+  display: inline-block;
+  padding: 3px 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.more summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .setting {
+    padding: 16px;
+  }
+}

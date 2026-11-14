@@ -14,8 +14,10 @@ describe("Neuigkeiten", () => {
     render(<NewsPage />);
     expect(screen.getByRole("heading", { level: 1, name: "Neuigkeiten" })).toBeVisible();
     expect(screen.getByRole("heading", { level: 2, name: "Version 0.1.0" })).toBeVisible();
-    expect(screen.getByText("14. November 2026")).toBeVisible();
-    expect(screen.getByRole("heading", { level: 3, name: "Evergreen" })).toBeVisible();
+    expect(screen.getAllByText("14. November 2026").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("heading", { level: 3, name: "Evergreen" }).length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("merkt sich, dass die aktuelle Version gesehen wurde", () => {

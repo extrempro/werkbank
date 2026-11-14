@@ -129,4 +129,43 @@ describe("SettingDetailPage", () => {
       target_value: ["mfa"],
     });
   });
+
+  it("zeigt den Verlauf als Zeitleiste und den Hinweis auf den Evergreen-Vorgang", async () => {
+    const change = {
+      id: 9,
+      setting_id: 3,
+      path: detail.setting.path,
+      workload: "entra",
+      object_name: "MFA für alle",
+      property: "State",
+      criticality: "hoch",
+      description: null,
+      kind: "geaendert",
+      status: "ungewollt",
+      detected_at: "2026-11-14T08:00:00Z",
+      old_value: "enabled",
+      new_value: "disabled",
+      changed_by: "ada@example.com",
+      reviewed_by: "Rita Reviewer",
+      reviewed_at: "2026-11-14T09:00:00Z",
+      comment: "Nicht abgestimmt",
+    };
+    const body = {
+      ...detail,
+      meta: { ...detail.meta, target_source: "Evergreen EV-2026-014" },
+      changes: [change],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(body), { status: 200 })),
+    );
+    render(<SettingDetailPage id={3} me={me(["Config.Reader"])} />);
+    expect(await screen.findByText("Geregelt durch Evergreen-Vorgang")).toBeVisible();
+    expect(screen.getByText(/Der Soll-Wert stammt aus Evergreen EV-2026-014/)).toBeVisible();
+    expect(screen.getByText("✗ weicht ab")).toBeVisible();
+    expect(screen.getByText("1 Änderung")).toBeVisible();
+    const entry = screen.getByText(/bewertet von Rita Reviewer · Nicht abgestimmt/);
+    expect(entry).toHaveTextContent("von ada@example.com");
+    expect(screen.getByText("Ungewollt")).toBeVisible();
+  });
 });

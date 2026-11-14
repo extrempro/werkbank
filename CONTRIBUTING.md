@@ -45,8 +45,8 @@ docs: Datenschutzkonzept ergänzt
 ## Versionen und Release Notes
 
 - SemVer: `MAJOR.MINOR.PATCH`
-- Jede Änderung mit Auswirkung für Nutzer kommt in `CHANGELOG.md` unter „Unveröffentlicht“.
-- Für ein Release wird in einem eigenen PR der Abschnitt in die Versionsnummer mit Datum umbenannt (`## [X.Y.Z] – JJJJ-MM-TT`) und die Version an allen Stellen angehoben: `frontend/package.json`, `e2e/package.json`, `backend/pyproject.toml`, `backend/werkbank/__init__.py`. Dazu ein Eintrag in `frontend/src/release-notes.ts` für die Seite „Neuigkeiten“.
+- Jede Änderung kommt in `CHANGELOG.md`.
+- Jeder PR, der die Anwendung ändert, hebt die Version an (Funktion → Minor, Fehlerbehebung → Patch) und legt im `CHANGELOG.md` den Abschnitt `## [X.Y.Z] – JJJJ-MM-TT` an. Die Version steht in `frontend/package.json`, `e2e/package.json`, `backend/pyproject.toml` und `backend/werkbank/__init__.py`. Dazu ein Eintrag in `frontend/src/release-notes.ts` für die Seite „Neuigkeiten“. PRs nur am Repository (CI, Tests, Doku) bleiben unter „Unveröffentlicht“.
 - Nach dem Mergen legt der Workflow `release.yml` den Tag `vX.Y.Z` und das GitHub Release mit dem Abschnitt aus `CHANGELOG.md` an. Gibt es das Release schon oder fehlt der Abschnitt, passiert nichts.
 - Ein Tag von Hand (`git push origin vX.Y.Z`) funktioniert weiterhin; der Workflow erstellt dann das Release dazu.
 
