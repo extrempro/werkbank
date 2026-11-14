@@ -1,0 +1,59 @@
+# Ablauf eines Evergreen-Vorgangs (docs/spec.md, Kapitel 8.2).
+# kommentar: pflicht  -> die Aktion braucht einen Kommentar
+# im_auftrag          -> diese Rollen dürfen die Entscheidung stellvertretend erfassen
+# automatisch: true   -> nur das System löst die Aktion aus
+workflow: evergreen
+start: it_bewertung
+
+endzustaende:
+  abgeschlossen: Abgeschlossen
+  ohne_vorlage_abgeschlossen: Ohne Vorlage abgeschlossen
+  abgelehnt: Abgelehnt
+
+schritte:
+  - id: it_bewertung
+    titel: IT-Bewertung
+    rollen: [Evergreen.IT]
+    aktionen:
+      - { id: pflichtig, titel: Mitbestimmungspflichtig, ziel: fachabteilungen }
+      - id: nicht_pflichtig
+        titel: Nicht mitbestimmungspflichtig
+        ziel: ohne_vorlage_abgeschlossen
+        kommentar: pflicht
+
+  - id: fachabteilungen
+    titel: Fachabteilungen
+    rollen: [Evergreen.Team, Evergreen.IT]
+    aktionen:
+      - { id: rueckmeldungen_liegen_vor, titel: Rückmeldungen liegen vor, ziel: vorlage_br }
+
+  - id: vorlage_br
+    titel: Vorlage BR
+    rollen: [Evergreen.Team, Evergreen.IT]
+    aktionen:
+      - { id: an_br_uebergeben, titel: An den Betriebsrat übergeben, ziel: betriebsrat }
+
+  - id: betriebsrat
+    titel: Betriebsrat
+    rollen: [Evergreen.Betriebsrat]
+    im_auftrag: [Evergreen.Team, Evergreen.IT]
+    aktionen:
+      - { id: zustimmen, titel: Zustimmen, ziel: geschaeftsfuehrung }
+      - { id: auflagen, titel: Mit Auflagen zustimmen, ziel: geschaeftsfuehrung, kommentar: pflicht }
+      - { id: ablehnen, titel: Ablehnen, ziel: abgelehnt, kommentar: pflicht }
+
+  - id: geschaeftsfuehrung
+    titel: Geschäftsführung
+    rollen: [Evergreen.GF]
+    aktionen:
+      - { id: abnehmen, titel: Abnehmen, ziel: umsetzung }
+      - { id: zurueckgeben, titel: Zurückgeben, ziel: vorlage_br, kommentar: pflicht }
+
+  - id: umsetzung
+    titel: Umsetzung
+    rollen: [Evergreen.IT]
+    aktionen:
+      - id: soll_ist_erfuellt
+        titel: Alle Soll-Werte sind umgesetzt
+        ziel: abgeschlossen
+        automatisch: true

@@ -208,6 +208,7 @@ Regeln:
 - Der Status eines Vorgangs ist der aktuelle Schritt. Er ändert sich **nur** über definierte Aktionen der zuständigen Rolle oder über automatische Bedingungen (z. B. Soll/Ist-Abgleich).
 - Jede Aktion erzeugt einen unveränderlichen Protokolleintrag: Person, Zeitpunkt, Schritt, Aktion, Entscheidung, Kommentar und gegebenenfalls „im Auftrag von“.
 - Keine Aktion zum direkten Setzen eines Status.
+- Stand: Die Engine ist umgesetzt (`core/workflow.py`). Die Beschreibung wird beim Start geprüft (unbekannte Ziele oder Rollen, Sackgassen). Das Protokoll (`workflow_events`) ist per Datenbank-Trigger nur anhängend; jede Aktion steht zusätzlich im Audit-Log. Eine Aktion kann den erwarteten Schritt mitgeben und wird abgewiesen, wenn der Vorgang inzwischen weiterbearbeitet wurde. Das Überspringen von Schritten ergibt sich aus dem Ziel der Aktion; ein eigenes Feld `ueberspringt` gibt es nicht.
 
 ### 6.4 Kommentare und Kommentarregeln
 
@@ -618,7 +619,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
 | 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Erste Inbetriebnahme erfolgt, Abruf über UTCM am echten Tenant bestätigt. Offen: Bestätigung der Änderungserkennung mit „Geändert von“; später Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
-| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | offen |
+| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | in Arbeit: 3a Workflow-Engine umgesetzt; es folgen 3b Vorgänge mit Oberfläche, 3c Nachrichtencenter, 3d Umsetzung mit Soll-Werten, 3e Abschluss |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |
 

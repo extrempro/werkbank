@@ -10,6 +10,7 @@ from werkbank.core.csrf import OriginCheckMiddleware
 from werkbank.core.ratelimit import RateLimitMiddleware, default_rules
 from werkbank.core.tasks import router as tasks_router
 from werkbank.db import database_ready
+from werkbank.modules.evergreen.workflow import evergreen_workflow
 from werkbank.modules.m365_config.api import router as m365_config_router
 from werkbank.modules.m365_config.tasks import m365_config_tasks
 from werkbank.security import SecurityHeadersMiddleware
@@ -20,6 +21,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     """Erzeugt die FastAPI-Anwendung."""
     settings = settings or get_settings()
     settings.validate_for_startup()
+    # Workflow-Beschreibungen beim Start prüfen: Ein Fehler darin soll sofort auffallen.
+    evergreen_workflow()
 
     app = FastAPI(
         title="Werkbank",
