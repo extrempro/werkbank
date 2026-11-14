@@ -112,20 +112,22 @@ export function MetaForm({ settingId, meta, onSaved, onCancel }: MetaFormProps) 
         Soll-Wert festlegen
       </label>
       {targetSet && (
-        <label>
-          Soll-Wert
-          <textarea
-            className="mono"
-            value={target}
-            rows={4}
-            aria-describedby={targetHintId}
-            onChange={(event) => setTarget(event.target.value)}
-          />
-          <span className="hint" id={targetHintId}>
+        <>
+          <label>
+            Soll-Wert
+            <textarea
+              className="mono"
+              value={target}
+              rows={4}
+              aria-describedby={targetHintId}
+              onChange={(event) => setTarget(event.target.value)}
+            />
+          </label>
+          <p className="hint" id={targetHintId}>
             Einfacher Text oder JSON, so wie der Wert oben angezeigt wird. Weicht der gelesene Wert
             davon ab, wird die Einstellung markiert.
-          </span>
-        </label>
+          </p>
+        </>
       )}
       {error && <p role="alert">{error}</p>}
       <div className="filter-actions">
