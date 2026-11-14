@@ -128,7 +128,7 @@ Sichtbarkeit:
 |---|---|
 | Backend | Python 3.12+, FastAPI, SQLAlchemy 2, Alembic (Migrationen je Modul), Pydantic |
 | Frontend | React + Vite + TypeScript, als PWA mit Service Worker |
-| Worker | gleicher Code wie Backend, eigener Container, Job-Tabelle in PostgreSQL (keine zusätzliche Queue in v1) |
+| Worker | gleicher Code wie Backend, eigener Container (`python -m werkbank.worker`), Job-Tabelle in PostgreSQL (keine zusätzliche Queue in v1). Genau ein Worker; regelmäßige Aufträge plant er selbst ein. Fehlgeschlagene Aufträge stehen im Audit-Log. |
 | PowerShell | Container mit PowerShell 7, ExchangeOnlineManagement- und MicrosoftTeams-Modul. Nimmt **nur** benannte Jobs vom Worker an (kein freier Befehl). |
 | Datenbank | PostgreSQL 16+, JSONB für Einstellungswerte |
 | Container | non-root, schreibgeschütztes Dateisystem wo möglich, Healthchecks, Image-Versionen fest |
@@ -159,7 +159,8 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
 - Unternehmensanwendung mit „Zuweisung erforderlich“: Nur Personen bzw. Gruppen mit zugewiesener App-Rolle können sich anmelden.
 - **Backend-for-Frontend**: Tokens bleiben im Backend. Der Browser erhält nur ein Session-Cookie (`HttpOnly`, `Secure`, `SameSite=Lax`, `__Host-`-Präfix).
 - Session: Leerlauf-Timeout 30 Minuten, absolute Dauer 8 Stunden. Abmelden beendet die Session serverseitig.
-- **Erneute Anmeldung (Step-up)** beim Öffnen der Verwaltung, wenn die letzte Anmeldung länger als 15 Minuten zurückliegt.
+- **Erneute Anmeldung (Step-up)** beim Öffnen der Verwaltung, wenn die letzte Anmeldung länger als 15 Minuten zurückliegt (`STEP_UP_MINUTES`). Die Werkbank schickt die Person dann mit `prompt=login` zu Entra. Liefert Entra den Zeitpunkt der letzten echten Anmeldung mit (`auth_time`), zählt dieser; eine stille Anmeldung über eine bestehende Entra-Sitzung gilt dann nicht als frisch.
+- Jede Anmeldung beendet die vorherige Sitzung desselben Browsers (neues Token).
 - **Entra Conditional Access** mit einer eigenen Richtlinie nur für die Werkbank, da MFA im Tenant noch nicht allgemein erzwungen wird:
   - **Benutzer:** alle Gruppen mit Werkbank-Rollen (bzw. alle Benutzer)
   - **Zielressource:** Enterprise-App „Werkbank“
@@ -403,7 +404,7 @@ Kern:
 | `comment_rules` | id, module, kontext, bedingung, pflicht, muster |
 | `notification_rules` | id, module, ereignis, kanal, ziel |
 | `push_subscriptions` | id, user_id, endpoint, keys, erstellt |
-| `jobs` | id, typ, status, geplant, gestartet, beendet, fehler |
+| `jobs` | id, typ, status (geplant, laeuft, fertig, fehler), daten (JSONB), geplant, gestartet, beendet, versuche, fehler |
 | `connectors` | key, typ, status, letzter_erfolg, letzter_fehler, zertifikat_ablauf |
 
 M365-Konfiguration:
@@ -477,7 +478,7 @@ Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz
 - Auszug der wichtigsten Maßnahmen:
   - **Rechte:** serverseitige Rechteprüfung für jede Anfrage, Objektberechtigung (kein Zugriff über geratene IDs).
   - **Header und Cookies:** strikte CSP ohne `unsafe-inline`, HSTS (über Proxy), `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`. CSRF-Schutz zusätzlich zu `SameSite`.
-  - **Missbrauch:** Rate-Limits für Login, API und Exporte.
+  - **Missbrauch:** Rate-Limits für Login, API und Exporte: Höchstzahl Anfragen pro Minute und Absender-IP, einstellbar über `RATE_LIMIT_*`, Antwort `429` mit `Retry-After`. Gezählt wird im Arbeitsspeicher des Web-Dienstes (ein Prozess).
   - **Eingaben:** Validierung aller Eingaben über Pydantic-Schemas. Ausgaben werden immer kodiert, keine HTML-Darstellung von Nutzertexten.
   - **Secrets:** nur als Docker-Secrets, niemals im Repo oder in Logs. Zertifikate für Konnektoren mit Ablaufüberwachung.
   - **Proxy:** Proxy-Header werden nur von der konfigurierten Proxy-IP akzeptiert (`TRUSTED_PROXY_IPS`).
@@ -607,7 +608,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 |---|---|---|---|
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
-| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | offen |
+| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | in Arbeit: 2a Kern (Worker, Rate-Limits, Step-up) umgesetzt; es folgen 2b Versionierung, 2c Collector, 2d Oberfläche, 2e Abschluss |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | offen |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |

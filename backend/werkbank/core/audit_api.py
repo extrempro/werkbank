@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy import Select, select
 
 from werkbank.core.audit import write_audit
-from werkbank.core.deps import DbDep, require_roles
+from werkbank.core.deps import DbDep, require_recent_login, require_roles
 from werkbank.core.models import AuditLog, User
 from werkbank.core.roles import ROLE_INFO, Role
 from werkbank.core.sessions import CurrentUser
@@ -21,7 +21,8 @@ router = APIRouter(prefix="/api")
 AuditReader = Annotated[
     CurrentUser, Depends(require_roles(Role.WERKBANK_ADMIN, Role.WERKBANK_AUDITOR))
 ]
-AdminUser = Annotated[CurrentUser, Depends(require_roles(Role.WERKBANK_ADMIN))]
+# Verwaltung: nur Admin und nur kurz nach einer Anmeldung (Step-up)
+AdminUser = Annotated[CurrentUser, Depends(require_recent_login(Role.WERKBANK_ADMIN))]
 
 ModuleFilter = Annotated[str | None, Query(max_length=64)]
 ActionFilter = Annotated[str | None, Query(max_length=128)]

@@ -1,6 +1,6 @@
 # Deployment
 
-Die `docker-compose.yml` enthält derzeit den Web-Dienst und die Datenbank. Worker und PowerShell folgen.
+Die `docker-compose.yml` enthält den Web-Dienst, den Worker und die Datenbank. PowerShell folgt.
 Die Einbindung in **Arcane** erfolgt, sobald Login und Datenbank vorhanden sind.
 
 Geplanter Aufbau:
@@ -8,7 +8,7 @@ Geplanter Aufbau:
 | Dienst | Aufgabe | Netzwerk |
 |---|---|---|
 | `web` | API und Oberfläche (PWA), ein Image aus `backend/Dockerfile` mit Build-Kontext Repository-Wurzel | gebunden an `${BIND_IP}:${BIND_PORT}` |
-| `worker` | Collector, Erinnerungen, Reports, Push | nur intern |
+| `worker` | Hintergrundaufträge: derzeit Aufräumen abgelaufener Sitzungen; später Collector, Erinnerungen, Reports, Push. Gleiches Image wie `web`, startet nach `web` (das die Datenbank migriert) | kein Port nach außen; ausgehend für Microsoft Graph |
 | `pwsh` | PowerShell-Jobs (Exchange Online, Teams) | nur intern |
 | `db` | PostgreSQL | nur intern (Docker-Netz ohne Außenzugang) |
 

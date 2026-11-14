@@ -1,13 +1,14 @@
 """FastAPI-Abhängigkeiten für Einstellungen, Anmeldung und Rollen."""
 
 from collections.abc import Callable
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
-from werkbank.core.sessions import SESSION_COOKIE, CurrentUser, load_session
+from werkbank.core.sessions import SESSION_COOKIE, CurrentUser, load_session, now_utc
 from werkbank.db import get_session
 
 
@@ -19,6 +20,9 @@ def get_app_settings(request: Request) -> Settings:
 
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 DbDep = Annotated[Session, Depends(get_session)]
+
+# Antwort-Header, an dem die Oberfläche erkennt, dass eine erneute Anmeldung nötig ist
+STEP_UP_HEADER = "X-Werkbank-Step-Up"
 
 
 def get_current_user(request: Request, settings: SettingsDep, db: DbDep) -> CurrentUser:
@@ -38,6 +42,25 @@ def require_roles(*roles: str) -> Callable[[CurrentUser], CurrentUser]:
     def dependency(user: CurrentUserDep) -> CurrentUser:
         if not user.has_any_role(*roles):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung")
+        return user
+
+    return dependency
+
+
+def require_recent_login(*roles: str) -> Callable[[CurrentUser, Settings], CurrentUser]:
+    """Wie require_roles, zusätzlich darf die Anmeldung höchstens STEP_UP_MINUTES alt sein."""
+    role_check = require_roles(*roles)
+
+    def dependency(
+        user: Annotated[CurrentUser, Depends(role_check)], settings: SettingsDep
+    ) -> CurrentUser:
+        limit = user.authenticated_at + timedelta(minutes=settings.step_up_minutes)
+        if now_utc() >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Erneute Anmeldung erforderlich",
+                headers={STEP_UP_HEADER: "required"},
+            )
         return user
 
     return dependency

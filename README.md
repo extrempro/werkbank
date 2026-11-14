@@ -7,7 +7,7 @@ Open-Source-Plattform für IT-Abteilungen mit gemeinsamer Anmeldung (Microsoft E
 - **M365-Konfiguration**: erfasst die Einstellungen des Microsoft-365-Tenants, erkennt Änderungen und führt einen Verlauf je Einstellung.
 - **Evergreen**: neue Microsoft-Funktionen bewerten, dem Betriebsrat vorlegen, von der Geschäftsführung abnehmen lassen und die Umsetzung im Tenant überwachen.
 
-> Status: **Phase 1 abgeschlossen**: Anmeldung über Entra ID, Rollen, Datenbank, Audit-Log, Oberfläche als PWA. Die Fachmodule folgen ab Phase 2. Siehe [`docs/spec.md`](docs/spec.md), Kapitel 15.
+> Status: **Phase 1 abgeschlossen**: Anmeldung über Entra ID, Rollen, Datenbank, Audit-Log, Oberfläche als PWA. Phase 2 (Modul M365-Konfiguration) ist in Arbeit. Siehe [`docs/spec.md`](docs/spec.md), Kapitel 15.
 
 ## Dokumentation
 

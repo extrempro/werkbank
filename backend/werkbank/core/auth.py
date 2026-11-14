@@ -18,7 +18,7 @@ from sqlalchemy import delete, select
 from werkbank.config import Settings
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import CurrentUserDep, DbDep, SettingsDep
-from werkbank.core.models import AuthFlow, User
+from werkbank.core.models import AuthFlow, User, UserSession
 from werkbank.core.roles import filter_known_roles
 from werkbank.core.sessions import (
     SESSION_COOKIE,
@@ -96,6 +96,22 @@ def _safe_return_to(value: str | None) -> str:
     return "/"
 
 
+def _auth_time(claims: dict[str, Any]) -> datetime | None:
+    """Zeitpunkt der letzten echten Anmeldung bei Entra (Claim auth_time), falls vorhanden.
+
+    Ohne den Claim gilt der Zeitpunkt der Rückkehr. Mit dem Claim zählt eine stille Anmeldung
+    über eine bestehende Entra-Sitzung nicht als frische Anmeldung (Step-up).
+    """
+    value = claims.get("auth_time")
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return None
+    try:
+        moment = datetime.fromtimestamp(value, UTC)
+    except (OverflowError, OSError, ValueError):
+        return None
+    return min(moment, now_utc())
+
+
 def _start_session(
     request: Request,
     db: DbDep,
@@ -107,9 +123,14 @@ def _start_session(
     roles: list[str],
     method: str,
     return_to: str,
+    authenticated_at: datetime | None = None,
 ) -> RedirectResponse:
     """Legt bzw. aktualisiert die Person an, startet die Sitzung und protokolliert."""
     now = now_utc()
+    # Eine bestehende Sitzung dieses Browsers endet: neue Anmeldung, neues Token.
+    previous = request.cookies.get(SESSION_COOKIE)
+    if previous:
+        db.execute(delete(UserSession).where(UserSession.token_hash == hash_token(previous)))
     user = db.execute(select(User).where(User.entra_oid == oid)).scalar_one_or_none()
     if user is None:
         user = User(entra_oid=oid, display_name=name, email=email)
@@ -120,7 +141,7 @@ def _start_session(
     user.last_login_at = now
     user.last_roles = roles
     db.flush()
-    token = create_session(db, settings, user, roles, authenticated_at=now)
+    token = create_session(db, settings, user, roles, authenticated_at=authenticated_at or now)
     write_audit(
         db,
         module="kern",
@@ -156,10 +177,13 @@ def login(
     settings: SettingsDep,
     entra: EntraDep,
     return_to: str | None = None,
+    step_up: bool = False,
 ) -> RedirectResponse:
-    """Leitet zur Anmeldung bei Entra weiter."""
+    """Leitet zur Anmeldung bei Entra weiter. Mit step_up fragt Entra die Anmeldung neu ab."""
     flow = entra.initiate_auth_code_flow(
-        scopes=["email"], redirect_uri=f"{settings.public_url}/auth/callback"
+        scopes=["email"],
+        redirect_uri=f"{settings.public_url}/auth/callback",
+        prompt="login" if step_up else None,
     )
     flow_id = new_token()
     db.execute(delete(AuthFlow).where(AuthFlow.expires_at < now_utc()))
@@ -216,6 +240,7 @@ def callback(
         roles=roles,
         method="entra",
         return_to=return_to,
+        authenticated_at=_auth_time(claims),
     )
 
 

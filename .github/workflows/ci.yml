@@ -125,6 +125,18 @@ jobs:
         run: |
           curl --fail --silent http://127.0.0.1:8080/health
           curl --fail --silent http://127.0.0.1:8080/health/ready
+      - name: Worker läuft und hat aufgeräumt
+        run: |
+          docker compose -f deploy/docker-compose.yml ps worker
+          for i in $(seq 1 30); do
+            if docker compose -f deploy/docker-compose.yml exec -T db sh -c \
+              'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "select count(*) from jobs where finished_at is not null and error is null"' \
+              | grep -qx '[1-9][0-9]*'; then
+              echo "Aufräum-Auftrag erledigt"; exit 0
+            fi
+            sleep 2
+          done
+          echo "Kein erledigter Aufräum-Auftrag gefunden"; exit 1
       - name: Logs bei Fehler
         if: failure()
         run: docker compose -f deploy/docker-compose.yml logs
@@ -158,6 +170,8 @@ jobs:
             -e 's#^ENVIRONMENT=.*#ENVIRONMENT=test#' \
             -e 's#^ENABLE_TEST_LOGIN=.*#ENABLE_TEST_LOGIN=true#' \
             -e 's#^TRUSTED_PROXY_IPS=.*#TRUSTED_PROXY_IPS=127.0.0.1#' \
+            -e 's#^RATE_LIMIT_LOGIN_PER_MINUTE=.*#RATE_LIMIT_LOGIN_PER_MINUTE=100000#' \
+            -e 's#^RATE_LIMIT_API_PER_MINUTE=.*#RATE_LIMIT_API_PER_MINUTE=100000#' \
             deploy/.env
           mkdir -p deploy/secrets
           openssl rand -hex 24 > deploy/secrets/postgres_password
