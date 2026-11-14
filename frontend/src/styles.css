@@ -794,3 +794,66 @@ details summary {
   cursor: pointer;
   color: var(--farbe-primaer);
 }
+
+.plan {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan li {
+  padding: 12px 0;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.plan li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.plan h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.plan-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.plan-link {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+}
+
+.plan-link legend {
+  padding: 0 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.plan-link .hint {
+  margin: 0;
+}
+
+.plan-link input[type="search"] {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid #c9ced6;
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.choices {
+  display: grid;
+  gap: 8px;
+}

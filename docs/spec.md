@@ -393,6 +393,12 @@ ID (`EV-JJJJ-NNN`), Titel, Dienst, Quelle mit Referenz, Major Change, Rollout-Da
 - Für jeden Soll-Wert zeigt die Werkbank, wo bzw. mit welchem Befehl die IT ihn setzt (Anleitungstext je Einstellung).
 - Schritt 6 schließt automatisch, sobald der Collector für alle Soll-Werte Übereinstimmung meldet. Manuelles Schließen ist nicht möglich.
 - Danach gilt der Soll-Wert dauerhaft (7.6).
+- Stand:
+  - Die **geplante Umsetzung** pflegt `Evergreen.IT`, solange der Vorgang offen ist: Bezeichnung, Soll-Wert, Anleitung, Kennzeichen „vorläufig“ und optional die Verknüpfung mit einer überwachten Einstellung aus M365-Konfiguration. Betriebsrat, Geschäftsführung und Team sehen Bezeichnung, Soll-Wert und Stand, aber keine Pfade und Ist-Werte.
+  - **Mit Verknüpfung** gilt ein Eintrag als umgesetzt, sobald der Abruf aus dem Tenant den Soll-Wert meldet. **Ohne Verknüpfung** (die Werkbank überwacht die Einstellung nicht) bestätigt die IT die Umsetzung je Eintrag; Person und Zeitpunkt stehen am Eintrag und im Audit-Log. Das ist nötig, solange der Abruf nur einen Teil der Einstellungen abdeckt.
+  - Der Schritt „Umsetzung“ schließt automatisch, wenn alle Einträge umgesetzt sind: sofort nach einer Änderung am Plan und stündlich durch den Worker. Ohne Einträge schließt er nur, wenn der Vorgang als „nicht steuerbar“ gekennzeichnet ist.
+  - Beim Abschluss werden die Soll-Werte verknüpfter Einstellungen dort dauerhaft hinterlegt (Quelle „Evergreen EV-…“). Eine **vorläufige Sperre** wird sofort beim Eintragen hinterlegt (Quelle mit Zusatz „vorläufig bis Beschluss“).
+  - Hinweis auf die vorläufige Sperre: Rollout in höchstens 21 Tagen, noch kein Beschluss, steuerbar und kein vorläufiger Eintrag.
 
 ### 8.6 BR-Beschluss im Auftrag
 
@@ -629,7 +635,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
 | 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Erste Inbetriebnahme erfolgt, Abruf über UTCM am echten Tenant bestätigt. Offen: Bestätigung der Änderungserkennung mit „Geändert von“; später Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
-| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | in Arbeit: 3a Workflow-Engine, 3b Vorgänge mit Oberfläche und 3c Nachrichtencenter umgesetzt (Abruf des Nachrichtencenters noch nicht am echten Tenant geprüft); es folgen 3d Umsetzung mit Soll-Werten, 3e Abschluss |
+| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | in Arbeit: 3a Workflow-Engine, 3b Vorgänge mit Oberfläche, 3c Nachrichtencenter (noch nicht am echten Tenant geprüft) und 3d Umsetzung mit Soll-Werten umgesetzt; es folgt 3d Umsetzung mit Soll-Werten, 3e Abschluss |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |
 

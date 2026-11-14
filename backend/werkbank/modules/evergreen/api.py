@@ -1,5 +1,6 @@
 """API des Moduls Evergreen: Vorgänge, Aktionen im Ablauf, Protokoll (spec.md 8)."""
 
+import json
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
@@ -10,10 +11,18 @@ from sqlalchemy import func, select
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, require_roles
 from werkbank.core.models import User, WorkflowEvent, WorkflowInstance
+from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.core.workflow import WorkflowError, available_actions, perform_action
+from werkbank.modules.evergreen.implementation import (
+    IMPLEMENTATION_STEP,
+    PlanRow,
+    apply_target,
+    evaluate,
+    load_plan,
+)
 from werkbank.modules.evergreen.message_center import adopt
-from werkbank.modules.evergreen.models import EvItem, EvMessage, MessageStatus
+from werkbank.modules.evergreen.models import EvItem, EvMessage, EvPlan, MessageStatus
 from werkbank.modules.evergreen.service import (
     ALL_ROLES,
     EDITOR_ROLES,
@@ -24,15 +33,20 @@ from werkbank.modules.evergreen.service import (
     visibility,
 )
 from werkbank.modules.evergreen.workflow import evergreen_workflow
+from werkbank.modules.m365_config.models import CfgSetting, CfgSettingVersion
 
 router = APIRouter(prefix="/api/evergreen")
 
 Member = Annotated[CurrentUser, Depends(require_roles(*ALL_ROLES))]
 Editor = Annotated[CurrentUser, Depends(require_roles(*EDITOR_ROLES))]
+# Technische Umsetzung (Soll-Werte, Verknüpfung mit Einstellungen) pflegt nur die IT
+Technician = Annotated[CurrentUser, Depends(require_roles(Role.EVERGREEN_IT))]
 ItemId = Annotated[int, Path(ge=1)]
 
 TEXT_MAX_LENGTH = 8000
 ERROR_STATUS = {"forbidden": 403, "conflict": 409, "invalid": 422}
+TARGET_MAX_LENGTH = 20_000
+URGENT_DAYS = 21
 
 
 class ItemOut(BaseModel):
@@ -101,8 +115,48 @@ class MessageListOut(BaseModel):
     new_count: int
 
 
+class PlanOut(BaseModel):
+    id: int
+    label: str
+    target_value: Any
+    instruction: str | None
+    provisional: bool
+    # erfuellt, offen (überwachte Einstellung) bzw. bestaetigt, unbestaetigt (ohne Überwachung)
+    status: str
+    monitored: bool
+    confirmed_by: str | None
+    confirmed_at: datetime | None
+    # nur für die IT: technische Angaben zur Einstellung
+    setting_id: int | None
+    setting_path: str | None
+    current_value: Any
+
+
+class SettingChoiceOut(BaseModel):
+    id: int
+    path: str
+    title: str
+    value: Any
+
+
+class PlanIn(BaseModel):
+    label: str = Field(min_length=3, max_length=300)
+    target_value: Any = None
+    instruction: str | None = Field(default=None, max_length=TEXT_MAX_LENGTH)
+    provisional: bool = False
+    setting_id: int | None = Field(default=None, ge=1)
+
+
+class ConfirmIn(BaseModel):
+    done: bool
+
+
 class ItemDetailOut(BaseModel):
     item: ItemOut
+    plan: list[PlanOut]
+    can_plan: bool
+    # wahr: Rollout steht kurz bevor, es gibt noch keinen Beschluss und keine vorläufige Sperre
+    provisional_hint: bool
     # Meldung von Microsoft, aus der der Vorgang entstanden ist
     message: MessageOut | None
     # wahr: Microsoft hat die Meldung geändert, nachdem der Vorgang angelegt wurde
@@ -163,6 +217,25 @@ def _message_out(message: EvMessage) -> MessageOut:
         body=message.body,
         status=message.status,
         item_id=message.item_id,
+    )
+
+
+def _plan_out(row: PlanRow, names: dict[Any, str], technical: bool) -> PlanOut:
+    entry = row.entry
+    monitored = entry.setting_id is not None and row.setting is not None
+    return PlanOut(
+        id=entry.id,
+        label=entry.label,
+        target_value=entry.target_value,
+        instruction=entry.instruction,
+        provisional=entry.provisional,
+        status=row.status,
+        monitored=monitored,
+        confirmed_by=names.get(entry.confirmed_by) if entry.confirmed_by else None,
+        confirmed_at=entry.confirmed_at,
+        setting_id=entry.setting_id if technical and monitored else None,
+        setting_path=row.setting.path if technical and row.setting else None,
+        current_value=row.version.value if technical and row.version else None,
     )
 
 
@@ -274,8 +347,28 @@ def _detail(
         return action.title if action else action_id
 
     message = db.execute(select(EvMessage).where(EvMessage.item_id == item.id)).scalar_one_or_none()
+    technical = user.has_any_role(Role.EVERGREEN_IT)
+    plan = load_plan(db, item.id)
+    names = dict(
+        db.execute(
+            select(User.id, User.display_name).where(
+                User.id.in_([row.entry.confirmed_by for row in plan if row.entry.confirmed_by])
+            )
+        ).all()
+    )
+    days_left = (item.rollout_date - now_utc().date()).days if item.rollout_date else None
+    decided = instance.finished or instance.step == IMPLEMENTATION_STEP
     return ItemDetailOut(
         item=_item_out(item, instance, actionable_steps(user)),
+        plan=[_plan_out(row, names, technical) for row in plan],
+        can_plan=technical and not instance.finished,
+        provisional_hint=(
+            not decided
+            and not item.not_controllable
+            and days_left is not None
+            and days_left <= URGENT_DAYS
+            and not any(row.entry.provisional for row in plan)
+        ),
         message=_message_out(message) if message else None,
         message_updated=bool(
             message and message.modified_at and message.modified_at > item.created_at
@@ -358,7 +451,10 @@ def update_item(
             ip=request.client.host if request.client else None,
             details={"felder": changed},
         )
+    db.flush()
+    evaluate(db, item, instance)
     db.commit()
+    db.refresh(instance)
     return _detail(db, user, item, instance)
 
 
@@ -399,6 +495,9 @@ def act(
         raise HTTPException(
             status_code=ERROR_STATUS.get(error.code, 400), detail=error.message
         ) from error
+    db.flush()
+    db.refresh(instance)
+    evaluate(db, item, instance)
     db.commit()
     db.refresh(instance)
     return _detail(db, user, item, instance)
@@ -498,3 +597,163 @@ def set_message_status(
         )
     db.commit()
     return _message_out(message)
+
+
+PlanId = Annotated[int, Path(ge=1)]
+
+
+def _open_item(db: DbDep, user: CurrentUser, item_id: int) -> tuple[EvItem, WorkflowInstance]:
+    item, instance = _load(db, user, item_id)
+    if instance.finished:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Der Vorgang ist abgeschlossen"
+        )
+    return item, instance
+
+
+def _after_plan_change(
+    db: DbDep, user: CurrentUser, item: EvItem, instance: WorkflowInstance
+) -> ItemDetailOut:
+    db.flush()
+    evaluate(db, item, instance)
+    db.commit()
+    db.refresh(instance)
+    return _detail(db, user, item, instance)
+
+
+@router.get("/settings")
+def search_settings(
+    user: Technician,
+    db: DbDep,
+    search: Annotated[str, Query(min_length=2, max_length=200)],
+) -> list[SettingChoiceOut]:
+    """Überwachte Einstellungen zum Verknüpfen mit einem Soll-Wert (nur IT)."""
+    rows = db.execute(
+        select(CfgSetting, CfgSettingVersion)
+        .outerjoin(
+            CfgSettingVersion,
+            (CfgSettingVersion.setting_id == CfgSetting.id) & CfgSettingVersion.valid_to.is_(None),
+        )
+        .where(
+            CfgSetting.active,
+            CfgSetting.path.icontains(search, autoescape=True)
+            | CfgSetting.object_name.icontains(search, autoescape=True),
+        )
+        .order_by(CfgSetting.path)
+        .limit(20)
+    ).all()
+    return [
+        SettingChoiceOut(
+            id=row[0].id,
+            path=row[0].path,
+            title=f"{row[0].object_name}: {row[0].property}"
+            if row[0].object_name
+            else row[0].property,
+            value=row[1].value if row[1] else None,
+        )
+        for row in rows
+    ]
+
+
+@router.post("/items/{item_id}/plan", status_code=status.HTTP_201_CREATED)
+def add_plan(
+    request: Request, body: PlanIn, user: Technician, db: DbDep, item_id: ItemId
+) -> ItemDetailOut:
+    """Trägt einen Soll-Wert in die geplante Umsetzung ein (nur IT)."""
+    item, instance = _open_item(db, user, item_id)
+    if len(json.dumps(body.target_value)) > TARGET_MAX_LENGTH:
+        raise HTTPException(status_code=422, detail="Der Soll-Wert ist zu groß")
+    if body.setting_id is not None and db.get(CfgSetting, body.setting_id) is None:
+        raise HTTPException(status_code=422, detail="Diese Einstellung gibt es nicht")
+    entry = EvPlan(
+        item_id=item.id,
+        setting_id=body.setting_id,
+        label=body.label.strip(),
+        target_value=body.target_value,
+        instruction=_clean(body.instruction),
+        provisional=body.provisional,
+        created_by=user.user_id,
+    )
+    db.add(entry)
+    db.flush()
+    if entry.provisional:
+        # vorläufige Sperre gilt sofort als Soll-Wert der Einstellung
+        apply_target(db, item, entry, provisional=True)
+    write_audit(
+        db,
+        module=MODULE,
+        action="umsetzung.geplant",
+        user_id=user.user_id,
+        object_type=OBJECT_TYPE,
+        object_id=item.number,
+        ip=request.client.host if request.client else None,
+        details={
+            "bezeichnung": entry.label,
+            "vorlaeufig": entry.provisional,
+            "ueberwacht": entry.setting_id is not None,
+        },
+    )
+    return _after_plan_change(db, user, item, instance)
+
+
+def _plan_entry(db: DbDep, item: EvItem, plan_id: int) -> EvPlan:
+    entry = db.execute(
+        select(EvPlan).where(EvPlan.id == plan_id, EvPlan.item_id == item.id).with_for_update()
+    ).scalar_one_or_none()
+    if entry is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    return entry
+
+
+@router.delete("/items/{item_id}/plan/{plan_id}")
+def remove_plan(
+    request: Request, user: Technician, db: DbDep, item_id: ItemId, plan_id: PlanId
+) -> ItemDetailOut:
+    """Entfernt einen Eintrag aus der geplanten Umsetzung (nur IT)."""
+    item, instance = _open_item(db, user, item_id)
+    entry = _plan_entry(db, item, plan_id)
+    label = entry.label
+    db.delete(entry)
+    write_audit(
+        db,
+        module=MODULE,
+        action="umsetzung.entfernt",
+        user_id=user.user_id,
+        object_type=OBJECT_TYPE,
+        object_id=item.number,
+        ip=request.client.host if request.client else None,
+        details={"bezeichnung": label},
+    )
+    return _after_plan_change(db, user, item, instance)
+
+
+@router.post("/items/{item_id}/plan/{plan_id}/confirm")
+def confirm_plan(
+    request: Request,
+    body: ConfirmIn,
+    user: Technician,
+    db: DbDep,
+    item_id: ItemId,
+    plan_id: PlanId,
+) -> ItemDetailOut:
+    """Bestätigt die Umsetzung eines Eintrags, den die Werkbank nicht selbst prüfen kann."""
+    item, instance = _open_item(db, user, item_id)
+    entry = _plan_entry(db, item, plan_id)
+    if entry.setting_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Diese Einstellung prüft die Werkbank selbst über den Abruf aus dem Tenant",
+        )
+    entry.confirmed_by = user.user_id if body.done else None
+    entry.confirmed_at = now_utc() if body.done else None
+    write_audit(
+        db,
+        module=MODULE,
+        action="umsetzung.bestaetigt" if body.done else "umsetzung.bestaetigung_zurueckgenommen",
+        user_id=user.user_id,
+        object_type=OBJECT_TYPE,
+        object_id=item.number,
+        ip=request.client.host if request.client else None,
+        details={"bezeichnung": entry.label},
+    )
+    return _after_plan_change(db, user, item, instance)

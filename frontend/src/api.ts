@@ -67,7 +67,7 @@ async function errorDetail(response: Response): Promise<string | null> {
 }
 
 async function sendJson<T>(
-  method: "POST" | "PUT" | "PATCH",
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
   url: string,
   body?: unknown,
 ): Promise<T> {
@@ -94,6 +94,10 @@ export function putJson<T>(url: string, body?: unknown): Promise<T> {
 
 export function patchJson<T>(url: string, body?: unknown): Promise<T> {
   return sendJson("PATCH", url, body);
+}
+
+export function deleteJson<T>(url: string): Promise<T> {
+  return sendJson("DELETE", url);
 }
 
 export interface Task {

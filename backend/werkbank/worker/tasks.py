@@ -9,7 +9,12 @@ from sqlalchemy.orm import Session
 from werkbank.config import Settings
 from werkbank.core.models import AuthFlow, Job, JobStatus, UserSession
 from werkbank.core.sessions import now_utc
-from werkbank.modules.evergreen.jobs import FETCH_MESSAGES, fetch_messages_job
+from werkbank.modules.evergreen.jobs import (
+    CHECK_IMPLEMENTATION,
+    FETCH_MESSAGES,
+    check_implementation_job,
+    fetch_messages_job,
+)
 from werkbank.modules.m365_config.jobs import COLLECT, collect_job
 from werkbank.worker.jobs import JobType
 
@@ -37,6 +42,7 @@ def cleanup(db: Session, settings: Settings, payload: dict[str, Any]) -> None:
 
 REGISTRY: dict[str, JobType] = {
     CLEANUP: JobType(handler=cleanup, interval=timedelta(hours=1)),
+    CHECK_IMPLEMENTATION: JobType(handler=check_implementation_job, interval=timedelta(hours=1)),
 }
 
 

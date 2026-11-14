@@ -1,4 +1,4 @@
-import { getJson, patchJson, postJson } from "../../api";
+import { deleteJson, getJson, patchJson, postJson } from "../../api";
 
 const BASE = "/api/evergreen";
 
@@ -68,8 +68,41 @@ export interface MessageList {
   new_count: number;
 }
 
+export interface PlanEntry {
+  id: number;
+  label: string;
+  target_value: unknown;
+  instruction: string | null;
+  provisional: boolean;
+  status: string;
+  monitored: boolean;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+  setting_id: number | null;
+  setting_path: string | null;
+  current_value: unknown;
+}
+
+export interface SettingChoice {
+  id: number;
+  path: string;
+  title: string;
+  value: unknown;
+}
+
+export interface NewPlanEntry {
+  label: string;
+  target_value: unknown;
+  instruction: string;
+  provisional: boolean;
+  setting_id: number | null;
+}
+
 export interface ItemDetail {
   item: Item;
+  plan: PlanEntry[];
+  can_plan: boolean;
+  provisional_hint: boolean;
   message: Message | null;
   message_updated: boolean;
   summary: string | null;
@@ -132,6 +165,40 @@ export function performAction(
     comment: comment || null,
     session_date: sessionDate || null,
   });
+}
+
+export function searchSettings(search: string): Promise<SettingChoice[]> {
+  return getJson(`${BASE}/settings?${new URLSearchParams({ search }).toString()}`);
+}
+
+export function addPlanEntry(itemId: number, entry: NewPlanEntry): Promise<ItemDetail> {
+  return postJson(`${BASE}/items/${itemId}/plan`, {
+    ...entry,
+    instruction: entry.instruction || null,
+  });
+}
+
+export function removePlanEntry(itemId: number, planId: number): Promise<ItemDetail> {
+  return deleteJson(`${BASE}/items/${itemId}/plan/${planId}`);
+}
+
+export function confirmPlanEntry(
+  itemId: number,
+  planId: number,
+  done: boolean,
+): Promise<ItemDetail> {
+  return postJson(`${BASE}/items/${itemId}/plan/${planId}/confirm`, { done });
+}
+
+const PLAN_STATUS_LABELS: Record<string, string> = {
+  erfuellt: "Umgesetzt (vom Abruf bestätigt)",
+  offen: "Noch nicht umgesetzt",
+  bestaetigt: "Umgesetzt (von der IT bestätigt)",
+  unbestaetigt: "Noch nicht bestätigt",
+};
+
+export function planStatusLabel(status: string): string {
+  return PLAN_STATUS_LABELS[status] ?? status;
 }
 
 export function fetchMessages(view: string, offset: number): Promise<MessageList> {
