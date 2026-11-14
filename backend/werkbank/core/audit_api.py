@@ -49,7 +49,7 @@ class AuditListOut(BaseModel):
 
 def _query(
     module: str | None, action: str | None, since: date | None, until: date | None
-) -> Select[tuple[AuditLog, str]]:
+) -> Select[AuditLog, str]:
     """Gefilterte Abfrage, neueste zuerst. Datumsgrenzen in UTC, „bis“ einschließlich."""
     query = select(AuditLog, User.display_name).outerjoin(User, User.id == AuditLog.user_id)
     if module:
