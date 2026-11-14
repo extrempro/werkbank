@@ -23,3 +23,13 @@ npx playwright install chromium
 npx playwright test
 npx lhci autorun
 ```
+
+## Abhängigkeiten
+
+`package.json` erzwingt über `overrides` sichere Versionen von Unterpaketen, für die die Werkzeuge selbst noch keine Aktualisierung liefern:
+
+| Paket | Grund |
+|---|---|
+| `basic-ftp` ≥ 6.2.6 | Lücken mit hoher Schwere (Denial of Service) in älteren Versionen, eingebunden über Lighthouse CI → proxy-agent → get-uri |
+
+Die CI prüft die E2E-Werkzeuge mit `npm audit --audit-level=high`.
