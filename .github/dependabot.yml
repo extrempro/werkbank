@@ -1,4 +1,5 @@
 # cooldown: neue Versionen erst nach 7 Tagen vorschlagen (Schutz vor kompromittierten Releases)
+# groups: Updates gesammelt, damit nicht für jedes Paket ein eigener PR entsteht
 version: 2
 updates:
   - package-ecosystem: "github-actions"
@@ -8,6 +9,9 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      github-actions:
+        patterns: ["*"]
     commit-message:
       prefix: "chore(ci)"
 
@@ -21,8 +25,9 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
-      python-minor-patch:
-        update-types: ["minor", "patch"]
+      # Alle Python-Updates in einem PR pro Woche (meist nur angehobene Mindestversionen)
+      python:
+        patterns: ["*"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -41,7 +46,9 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
-      npm-minor-patch:
+      # Kleinere Updates gesammelt in einem PR, Hauptversionen einzeln zur Prüfung
+      frontend-klein:
+        patterns: ["*"]
         update-types: ["minor", "patch"]
 
   - package-ecosystem: "npm"
@@ -58,6 +65,10 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    groups:
+      e2e-klein:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
     commit-message:
       prefix: "chore(deps)"
 
