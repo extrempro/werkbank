@@ -137,6 +137,7 @@ export function AuditPage() {
                 <th scope="col">Modul</th>
                 <th scope="col">Aktion</th>
                 <th scope="col">Ergebnis</th>
+                <th scope="col">Herkunft</th>
                 <th scope="col">Details</th>
               </tr>
             </thead>
@@ -148,6 +149,7 @@ export function AuditPage() {
                   <td>{entry.module}</td>
                   <td className="mono">{entry.action}</td>
                   <td>{entry.result}</td>
+                  <td className="mono nowrap">{entry.origin ?? "–"}</td>
                   <td className="details">{describeDetails(entry.details)}</td>
                 </tr>
               ))}

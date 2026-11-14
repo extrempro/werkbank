@@ -2,7 +2,7 @@
 
 Reihenfolge für das erste Deployment mit Prüfschritten. Beispielwerte verwenden `example.com`; echte Adressen, Kennungen und Zertifikate gehören nicht ins Repository.
 
-> **Stand:** Diese Anleitung ist noch nicht an einer echten Installation durchlaufen worden. Was sich dabei als anders herausstellt, wird hier nachgetragen.
+> **Stand:** Einmal an einer echten Installation durchlaufen (Arcane Git-Sync, NetBird Reverse Proxy auf einem anderen Server, Entra-Anmeldung, Abruf über UTCM). Bestätigt: Arcane synchronisiert nur den Ordner `deploy/` und baut das Image aus GitHub; Anmeldung, Proxy und der erste Abruf funktionieren wie beschrieben. Noch nicht bestätigt: Änderungserkennung mit „Geändert von“ nach einer Änderung im Tenant, erneute Anmeldung für die Verwaltung mit `auth_time`, Installation auf iPhone und iPad.
 
 ## 1. Entra ID
 
@@ -24,7 +24,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 
 ## 3. Arcane
 
-- [ ] Git-Sync auf das Repository, Branch `main`, Compose-Datei `deploy/docker-compose.yml`
+- [ ] Git-Sync auf das Repository, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Arcane holt dabei nur den Ordner `deploy/`; das ist richtig so, das Image wird aus GitHub gebaut
 - [ ] Umgebungsvariablen eingetragen:
 
 | Variable | Wert |
@@ -53,7 +53,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 | Startseite ohne Anmeldung | Login-Seite, sonst nichts erreichbar |
 | Anmeldung mit einem Konto mit Rolle | Weiterleitung zu Microsoft, MFA, zurück zur Startseite |
 | Anmeldung mit einem Konto ohne Rolle | Entra lehnt ab („Zuweisung erforderlich“) |
-| Audit-Log (Admin) | Eintrag `anmeldung.erfolgreich`; die gekürzte IP gehört zum Client, **nicht** zum Proxy. Sonst `TRUSTED_PROXY_IPS` anpassen |
+| Audit-Log (Admin) | Eintrag `anmeldung.erfolgreich`; in der Spalte „Herkunft“ steht das Netz des Clients (gekürzte IP), **nicht** das des Proxys oder ein Docker-Netz (`172.x`). Sonst `TRUSTED_PROXY_IPS` auf die Adresse setzen, die dort bzw. im Protokoll des Dienstes `web` erscheint, und neu bereitstellen |
 | Verwaltung nach mehr als 15 Minuten | Hinweis „Erneut anmelden“, danach erreichbar. Mit `auth_time` darf eine stille Anmeldung nicht genügen |
 | M365-Konfiguration → Übersicht (Admin mit Config-Rolle) | Kein Hinweis „nicht eingerichtet“; „Jetzt abrufen“ startet einen Abruf |
 | Snapshots nach einigen Minuten | Abruf „Erfolgreich“ mit Objekten; Einstellungen sind gefüllt |
@@ -63,7 +63,8 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 
 ## 6. Wenn etwas nicht klappt
 
-- **Compose startet nicht, „secret … not found“:** Eine der fünf Dateien fehlt oder `WERKBANK_SECRETS_DIR` stimmt nicht.
+- **Compose startet nicht, „bind source path does not exist: …/secrets/postgres_password“:** `WERKBANK_SECRETS_DIR` ist nicht gesetzt (dann sucht Compose im Ordner `secrets` neben der Compose-Datei) oder eine der fünf Dateien fehlt.
+- **„env file not found“:** In Arcane sind noch keine Umgebungsvariablen für das Projekt eingetragen.
 - **Anmeldung endet mit „Anmeldung nicht möglich“:** Im Audit-Log steht der Grund (`anmeldung.abgelehnt`), z. B. `falscher_mandant` oder `keine_rolle`.
 - **Abruf fehlgeschlagen:** Unter Snapshots steht der Abruf als „Fehlgeschlagen“; die Fehlerangabe von Microsoft steht im Protokoll des Dienstes `worker`. Häufig fehlt dem Dienstprinzipal von UTCM ein Leserecht.
 - **POST-Anfragen werden mit 403 abgewiesen:** `PUBLIC_URL` stimmt nicht exakt mit der Adresse im Browser überein.

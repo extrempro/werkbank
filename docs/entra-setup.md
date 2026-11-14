@@ -185,7 +185,7 @@ Der Collector liest die Einstellungen des Tenants über **Unified Tenant Configu
 - Die Werkbank ändert keine Einstellung des Tenants.
 - Wird in Phase 3 um `ServiceMessage.Read.All` für das Nachrichtencenter erweitert.
 
-> **Stand:** Diese Schritte folgen der Dokumentation von Microsoft und sind noch nicht gegen einen echten Tenant geprüft. Das geschieht bei der ersten Inbetriebnahme.
+> **Stand:** Diese Schritte folgen der Dokumentation von Microsoft und sind an einem Tenant durchlaufen worden: Der Abruf der voreingestellten Entra-Typen funktioniert damit.
 
 ### 4.1 App-Registrierung anlegen
 

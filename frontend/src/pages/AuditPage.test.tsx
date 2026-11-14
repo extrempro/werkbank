@@ -20,6 +20,7 @@ describe("AuditPage", () => {
           object_type: null,
           object_id: null,
           result: "ok",
+          origin: "203.0.113.0/24",
           details: { methode: "entra" },
         },
       ],
@@ -33,6 +34,7 @@ describe("AuditPage", () => {
     expect(await screen.findByText("anmeldung.erfolgreich")).toBeVisible();
     expect(screen.getByText("Ada Admin")).toBeVisible();
     expect(screen.getByText("methode: entra")).toBeVisible();
+    expect(screen.getByText("203.0.113.0/24")).toBeVisible();
     expect(screen.getByRole("link", { name: "Als CSV exportieren" })).toHaveAttribute(
       "href",
       "/api/audit/export.csv?",
