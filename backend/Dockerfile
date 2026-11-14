@@ -2,7 +2,7 @@
 # Build-Kontext ist das Wurzelverzeichnis des Repositorys (siehe deploy/docker-compose.yml).
 
 # --- Frontend bauen ---
-FROM node:22-alpine AS frontend
+FROM node:25-alpine AS frontend
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
