@@ -66,7 +66,9 @@ export function AdminPage() {
                           {role.holders.map((holder) => (
                             <li key={`${role.value}-${holder.display_name}-${holder.email}`}>
                               {holder.display_name}{" "}
-                              <span className="small">({formatDateTime(holder.last_login_at)})</span>
+                              <span className="small">
+                                ({formatDateTime(holder.last_login_at)})
+                              </span>
                             </li>
                           ))}
                         </ul>

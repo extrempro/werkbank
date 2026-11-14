@@ -112,7 +112,10 @@ export function AuditPage() {
           <button type="submit" className="button button-primary">
             Anzeigen
           </button>
-          <a className="button button-secondary" href={`/api/audit/export.csv?${auditQuery(filter)}`}>
+          <a
+            className="button button-secondary"
+            href={`/api/audit/export.csv?${auditQuery(filter)}`}
+          >
             Als CSV exportieren
           </a>
         </div>

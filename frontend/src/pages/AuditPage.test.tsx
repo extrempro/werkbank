@@ -40,7 +40,10 @@ describe("AuditPage", () => {
   });
 
   it("zeigt ohne Berechtigung einen Hinweis", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 403 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 403 })),
+    );
     render(<AuditPage />);
     expect(await screen.findByText(/Keine Berechtigung/)).toBeVisible();
   });
