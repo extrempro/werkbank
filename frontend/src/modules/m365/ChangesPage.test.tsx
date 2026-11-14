@@ -86,7 +86,9 @@ describe("ChangesPage", () => {
     await screen.findByText("enabled");
 
     fireEvent.click(screen.getByRole("checkbox", { name: "MFA für alle – State auswählen" }));
-    fireEvent.change(screen.getByLabelText(/Kommentar/), { target: { value: " Nicht abgestimmt " } });
+    fireEvent.change(screen.getByLabelText(/Kommentar/), {
+      target: { value: " Nicht abgestimmt " },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Als ungewollt bewerten" }));
 
     expect(await screen.findByText("1 Änderung(en) als ungewollt bewertet.")).toBeVisible();

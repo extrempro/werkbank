@@ -104,7 +104,10 @@ export function ChangesPage({ me }: ChangesPageProps) {
       })
       .catch((error: unknown) => {
         const detail = error instanceof ApiError ? error.detail : null;
-        setMessage({ kind: "alert", text: detail ?? "Die Bewertung konnte nicht gespeichert werden." });
+        setMessage({
+          kind: "alert",
+          text: detail ?? "Die Bewertung konnte nicht gespeichert werden.",
+        });
       });
   };
 
