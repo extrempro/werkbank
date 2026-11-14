@@ -52,8 +52,9 @@ def _client_credential(settings: Settings) -> str | dict[str, str]:
     if settings.entra_client_key_file.exists() and settings.entra_client_cert_file.exists():
         cert = x509.load_pem_x509_certificate(settings.entra_client_cert_file.read_bytes())
         der = cert.public_bytes(serialization.Encoding.DER)
-        # Entra erwartet den SHA-1-Fingerabdruck (dient als Kennung, nicht der Sicherheit)
-        thumbprint = hashlib.sha1(der, usedforsecurity=False).hexdigest()
+        # Entra erwartet den SHA-1-Fingerabdruck des Zertifikats (Header x5t). Er dient nur als
+        # Kennung des Zertifikats, nicht der Sicherheit; signiert wird mit dem privaten Schlüssel.
+        thumbprint = hashlib.sha1(der, usedforsecurity=False).hexdigest()  # nosemgrep
         return {
             "private_key": settings.entra_client_key_file.read_text(encoding="utf-8"),
             "thumbprint": thumbprint,
