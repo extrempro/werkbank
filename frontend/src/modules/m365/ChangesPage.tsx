@@ -290,6 +290,7 @@ export function ChangesPage({ me }: ChangesPageProps) {
           <div className="split-detail" ref={detailRef}>
             {shown ? (
               <ChangeDetail
+                key={`${shown.id}-${shown.status}`}
                 change={shown}
                 canReview={canReview}
                 canCreateItem={canCreateItem}

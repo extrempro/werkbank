@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { formatDateTime } from "../../api";
 import { Link } from "../../components/Link";
 import {
@@ -29,7 +29,10 @@ interface ChangeDetailProps {
   onCreateItem: () => void;
 }
 
-/** Detailbereich einer Änderung: Vorher/Nachher, Beschreibung, Bewertung. */
+/**
+ * Detailbereich einer Änderung: Vorher/Nachher, Beschreibung, Bewertung.
+ * Die aufrufende Seite setzt `key`, damit der Kommentar bei einer anderen Änderung leer beginnt.
+ */
 export function ChangeDetail({
   change,
   canReview,
@@ -41,11 +44,6 @@ export function ChangeDetail({
   const [comment, setComment] = useState("");
   const commentId = useId();
   const hintId = useId();
-
-  // Beim Wechsel der Änderung beginnt der Kommentar leer.
-  useEffect(() => {
-    setComment("");
-  }, [change.id]);
 
   const critical = change.criticality === "hoch";
   const hasComment = comment.trim() !== "";
