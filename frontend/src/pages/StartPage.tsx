@@ -14,9 +14,7 @@ export function StartPage({ me, tasks }: StartPageProps) {
       <section className="card" aria-labelledby="aufgaben-titel">
         <h2 id="aufgaben-titel">Meine Aufgaben</h2>
         {tasks === null && <p role="status">Wird geladen …</p>}
-        {tasks !== null && tasks.length === 0 && (
-          <p className="empty">Keine offenen Aufgaben.</p>
-        )}
+        {tasks !== null && tasks.length === 0 && <p className="empty">Keine offenen Aufgaben.</p>}
         {tasks !== null && tasks.length > 0 && (
           <ul className="tasks">
             {tasks.map((task) => (
