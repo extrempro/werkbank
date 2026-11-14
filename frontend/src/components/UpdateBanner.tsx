@@ -17,11 +17,7 @@ export function UpdateBanner() {
   return (
     <div className="update-banner" role="status">
       <span>Eine neue Version der Werkbank ist verfügbar.</span>
-      <button
-        type="button"
-        className="button button-primary"
-        onClick={() => applyUpdate(worker)}
-      >
+      <button type="button" className="button button-primary" onClick={() => applyUpdate(worker)}>
         Neu laden
       </button>
     </div>
