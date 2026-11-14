@@ -12,8 +12,7 @@
   --farbe-text-leise: #4f5765;
   --farbe-auswahl: #e8eefb;
   --radius: 10px;
-  --schrift:
-    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --schrift: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 *,

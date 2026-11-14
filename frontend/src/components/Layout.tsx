@@ -63,7 +63,11 @@ export function Layout({ me }: LayoutProps) {
         </div>
       </header>
       <div className="app-body">
-        <nav id={navId} className={menuOpen ? "app-nav open" : "app-nav"} aria-label="Hauptnavigation">
+        <nav
+          id={navId}
+          className={menuOpen ? "app-nav open" : "app-nav"}
+          aria-label="Hauptnavigation"
+        >
           {groups.map((group) => (
             <div className="nav-group" key={group.title ?? "start"}>
               {group.title && <p className="nav-title">{group.title}</p>}

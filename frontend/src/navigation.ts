@@ -11,12 +11,7 @@ export interface NavGroup {
 const ADMIN = "Werkbank.Admin";
 const AUDITOR = "Werkbank.Auditor";
 const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
-const EVERGREEN_ROLES = [
-  "Evergreen.IT",
-  "Evergreen.Team",
-  "Evergreen.Betriebsrat",
-  "Evergreen.GF",
-];
+const EVERGREEN_ROLES = ["Evergreen.IT", "Evergreen.Team", "Evergreen.Betriebsrat", "Evergreen.GF"];
 
 function hasAny(roles: readonly string[], wanted: readonly string[]): boolean {
   return wanted.some((role) => roles.includes(role));
