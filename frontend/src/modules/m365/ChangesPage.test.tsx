@@ -55,7 +55,7 @@ describe("ChangesPage", () => {
     expect(screen.getByText("enabled")).toBeVisible();
     expect(screen.getByText("disabled")).toBeVisible();
     expect(screen.getByText("ada@example.com")).toBeVisible();
-    expect(calls[0].url).toContain("status=offen");
+    expect(calls[0]?.url).toContain("status=offen");
   });
 
   it("bietet Lesern keine Bewertung an", async () => {
