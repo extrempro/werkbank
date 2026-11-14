@@ -12,7 +12,7 @@ const EMPTY_FILTER: AuditFilter = { module: "", action: "", since: "", until: ""
 const MODULES = [
   { value: "", label: "Alle" },
   { value: "kern", label: "Kern" },
-  { value: "m365", label: "M365-Konfiguration" },
+  { value: "m365_config", label: "M365-Konfiguration" },
   { value: "evergreen", label: "Evergreen" },
 ];
 

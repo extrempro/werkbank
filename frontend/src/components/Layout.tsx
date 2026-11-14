@@ -6,7 +6,14 @@ import { AuditPage } from "../pages/AuditPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { StartPage } from "../pages/StartPage";
+import { ChangesPage } from "../modules/m365/ChangesPage";
+import { OverviewPage } from "../modules/m365/OverviewPage";
+import { SettingDetailPage } from "../modules/m365/SettingDetailPage";
+import { SettingsPage } from "../modules/m365/SettingsPage";
+import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { navigate, usePath } from "../router";
+
+const SETTINGS_PATH = "/m365/einstellungen";
 
 interface LayoutProps {
   me: Me;
@@ -27,6 +34,9 @@ export function Layout({ me }: LayoutProps) {
     document.getElementById("inhalt")?.focus();
   };
 
+  const settingMatch = /^\/m365\/einstellungen\/(\d{1,9})$/.exec(path);
+  const settingId = settingMatch ? Number(settingMatch[1]) : null;
+
   let page: ReactNode;
   if (path === "/") {
     page = <StartPage me={me} />;
@@ -34,6 +44,16 @@ export function Layout({ me }: LayoutProps) {
     page = <AuditPage />;
   } else if (path === "/verwaltung" && current) {
     page = <AdminPage />;
+  } else if (path === "/m365" && current) {
+    page = <OverviewPage me={me} />;
+  } else if (path === "/m365/aenderungen" && current) {
+    page = <ChangesPage me={me} />;
+  } else if (path === "/m365/einstellungen" && current) {
+    page = <SettingsPage />;
+  } else if (path === "/m365/snapshots" && current) {
+    page = <SnapshotsPage />;
+  } else if (settingId !== null && items.some((item) => item.path === SETTINGS_PATH)) {
+    page = <SettingDetailPage id={settingId} />;
   } else if (current) {
     page = <PlaceholderPage title={current.label} />;
   } else {

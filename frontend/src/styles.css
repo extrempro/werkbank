@@ -461,3 +461,135 @@ tbody tr:last-child td {
 .load-more {
   margin-top: 16px;
 }
+
+/* M365-Konfiguration */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 0 0 20px;
+}
+
+.stats dt {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+}
+
+.stats dd {
+  margin: 4px 0 0;
+}
+
+.stat-number {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.stats .small {
+  display: block;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 24px;
+  margin: 16px 0 0;
+}
+
+.facts dt {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+}
+
+.facts dd {
+  margin: 2px 0 0;
+}
+
+.path {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.value {
+  max-width: 24rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.value-block {
+  margin: 0;
+  padding: 12px;
+  max-height: 24rem;
+  overflow: auto;
+  background: var(--farbe-grund);
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 8px;
+  border: 1px solid #8a93a3;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--farbe-text);
+}
+
+.check {
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--farbe-primaer);
+}
+
+.filter .check-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.filter .check-label .check {
+  min-height: 0;
+  padding: 0;
+}
+
+.review {
+  margin-top: 20px;
+}
+
+.review label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.review textarea {
+  padding: 10px;
+  border: 1px solid #c9ced6;
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+  resize: vertical;
+}
+
+section + section {
+  margin-top: 24px;
+}
