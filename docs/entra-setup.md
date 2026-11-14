@@ -121,7 +121,7 @@ Entra Admin Center → **Identität → Anwendungen → Unternehmensanwendungen 
 
 ### 1.8 Gruppen den Rollen zuweisen
 
-Zuerst je Rolle eine Sicherheitsgruppe anlegen (Vorschlag):
+Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wählbar**, z. B. nach eurem bestehenden Namensschema. Die Werkbank sieht die Gruppen nicht, sie wertet nur die **App-Rollen** aus (deren Werte aus 1.6 müssen exakt stimmen). Vorschlag:
 
 | Gruppe | Rolle |
 |---|---|
