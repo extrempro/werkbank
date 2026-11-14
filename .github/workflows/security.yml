@@ -1,0 +1,60 @@
+# Sicherheitsprüfungen bei jedem Pull Request und wöchentlich (Montag 05:00 UTC).
+# Deckt den regelmäßigen Prüfauftrag ab: XSS (Semgrep), Secrets (gitleaks),
+# Abhängigkeiten und Container (Trivy). Service-Worker-Updates prüft der E2E-Job.
+name: Sicherheit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: Semgrep (statische Analyse, XSS)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep
+        run: >
+          semgrep scan
+          --config p/owasp-top-ten
+          --config p/xss
+          --config p/python
+          --config p/typescript
+          --config p/dockerfile
+          --metrics=off
+          --error
+
+  gitleaks:
+    name: gitleaks (Secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        # TODO: Image-Version festlegen (Tag statt latest)
+        run: >
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest
+          detect --source /repo --redact --verbose
+
+  trivy:
+    name: Trivy (Abhängigkeiten, Konfiguration, Secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy Dateisystem-Scan
+        # TODO: Image-Version festlegen (Tag statt latest)
+        run: >
+          docker run --rm -v "$PWD:/repo" aquasec/trivy:latest
+          fs --scanners vuln,misconfig,secret --severity HIGH,CRITICAL
+          --exit-code 1 /repo

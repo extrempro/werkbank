@@ -1,0 +1,145 @@
+# Prüfungen bei jedem Push auf einen Branch und bei jedem Pull Request.
+# Jobs für Backend, Frontend, E2E und Docker laufen erst, wenn die jeweiligen
+# Projektdateien existieren (ab Phase 1). Bis dahin werden sie übersprungen.
+# Die Erkennung läuft im Job "detect" (Dateiprüfung nach dem Checkout).
+name: CI
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Projektteile erkennen
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.d.outputs.backend }}
+      frontend: ${{ steps.d.outputs.frontend }}
+      docker: ${{ steps.d.outputs.docker }}
+      e2e: ${{ steps.d.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: d
+        run: |
+          f() { [ -f "$1" ] && echo true || echo false; }
+          echo "backend=$(f backend/pyproject.toml)" >> "$GITHUB_OUTPUT"
+          echo "frontend=$(f frontend/package.json)" >> "$GITHUB_OUTPUT"
+          if [ -f deploy/docker-compose.yml ] && [ -f backend/Dockerfile ]; then echo docker=true; else echo docker=false; fi >> "$GITHUB_OUTPUT"
+          echo "e2e=$(f e2e/package.json)" >> "$GITHUB_OUTPUT"
+
+  docs:
+    name: Dokumentation vorhanden
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pflichtdokumente prüfen
+        run: |
+          for f in README.md LICENSE CLAUDE.md SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md CHANGELOG.md docs/spec.md; do
+            test -s "$f" || { echo "Fehlt oder leer: $f"; exit 1; }
+          done
+
+  backend:
+    name: Backend (Lint, Typen, Tests)
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.backend == 'true'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy .
+      - run: pytest --maxfail=1
+      - name: Abhängigkeits-Audit
+        run: pip install pip-audit && pip-audit
+
+  frontend:
+    name: Frontend (Lint, Typen, Tests, Build)
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.frontend == 'true'
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Abhängigkeits-Audit
+        run: npm audit --audit-level=high
+
+  docker:
+    name: Docker-Deployment (Build, Start, Smoke-Test)
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.docker == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test-Umgebung vorbereiten
+        run: cp deploy/.env.example deploy/.env
+      - name: Images bauen und starten
+        run: docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build --wait
+      - name: Smoke-Test
+        run: curl --fail --silent http://127.0.0.1:8080/health
+      - name: Logs bei Fehler
+        if: failure()
+        run: docker compose -f deploy/docker-compose.yml logs
+      - name: Aufräumen
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml down -v
+
+  e2e:
+    name: E2E, Barrierefreiheit, Lighthouse
+    runs-on: ubuntu-latest
+    needs: [detect, docker]
+    if: needs.detect.outputs.e2e == 'true' && needs.detect.outputs.docker == 'true'
+    defaults:
+      run:
+        working-directory: e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - name: App für Tests starten
+        working-directory: .
+        run: |
+          cp deploy/.env.example deploy/.env
+          docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build --wait
+      - name: Playwright (Desktop, Tablet, iPhone, inkl. axe-core)
+        run: npx playwright test
+      - name: Lighthouse CI
+        run: npx lhci autorun
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-berichte
+          path: |
+            e2e/playwright-report
+            .lighthouseci
+          retention-days: 14

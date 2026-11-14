@@ -1,0 +1,48 @@
+# Konfiguration und Secrets – niemals einchecken
+.env
+*.env
+!.env.example
+deploy/.env
+secrets/
+*.pem
+*.key
+*.pfx
+*.p12
+*.cer
+*.crt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Playwright / Lighthouse
+e2e/test-results/
+e2e/playwright-report/
+e2e/.auth/
+.lighthouseci/
+
+# Editor / System
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# Laufzeitdaten
+data/
+uploads/
+*.log

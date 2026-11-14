@@ -1,0 +1,40 @@
+name: Fehler melden
+description: Etwas funktioniert nicht wie erwartet.
+labels: ["fehler"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bitte keine internen Daten (Hostnamen, Tenant-IDs, Namen) eintragen.
+        Sicherheitslücken bitte nicht hier, sondern vertraulich melden (siehe SECURITY.md).
+  - type: textarea
+    id: beschreibung
+    attributes:
+      label: Was ist passiert?
+    validations:
+      required: true
+  - type: textarea
+    id: erwartet
+    attributes:
+      label: Was hättest du erwartet?
+    validations:
+      required: true
+  - type: textarea
+    id: schritte
+    attributes:
+      label: Schritte zum Nachvollziehen
+      placeholder: "1. … 2. … 3. …"
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: z. B. v0.3.1
+  - type: dropdown
+    id: geraet
+    attributes:
+      label: Gerät
+      options: [Desktop, Tablet, Handy, mehrere]
+  - type: input
+    id: browser
+    attributes:
+      label: Browser und Version

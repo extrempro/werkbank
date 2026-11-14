@@ -1,0 +1,32 @@
+# Erstellt ein GitHub Release, wenn ein Tag vX.Y.Z gepusht wird.
+# Die Release Notes kommen aus dem passenden Abschnitt in CHANGELOG.md.
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release Notes aus CHANGELOG.md lesen
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" {found=1; next}
+            found && /^## \[/ {exit}
+            found {print}
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "Kein Abschnitt für Version $VERSION in CHANGELOG.md gefunden."
+            exit 1
+          fi
+      - name: GitHub Release erstellen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "Werkbank $GITHUB_REF_NAME" --notes-file release-notes.md
