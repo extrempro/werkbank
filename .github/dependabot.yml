@@ -63,6 +63,13 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/backend"
+    ignore:
+      # Node-Image: nur LTS-Versionen, Hauptversionen bewusst anheben (keine ungeraden Versionen)
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+      # Python-Image: Hauptversionen bewusst und zusammen mit requires-python anheben
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     cooldown:
       default-days: 7
     schedule:
