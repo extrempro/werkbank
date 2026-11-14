@@ -18,12 +18,12 @@ dependencies = [
     "psycopg[binary]>=3.3.8",
     "msal>=1.39.0",
     "cryptography>=50.0.2",
+    "httpx>=0.28.1",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=9.2.0",
-    "httpx>=0.28.1",
     "ruff>=0.17.4",
     "mypy>=2.4.1",
 ]

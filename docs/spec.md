@@ -280,13 +280,17 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 
 | Quelle | Inhalt |
 |---|---|
-| UTCM (Graph beta: Snapshots, Monitore, Drifts) | breite Abdeckung über Entra, Exchange, Intune, Teams, Security & Compliance |
+| UTCM (Microsoft Graph v1.0, Snapshots) | breite Abdeckung über Entra, Exchange, Intune, Teams, Security & Compliance |
 | Microsoft Graph (v1.0/beta) | Ergänzung für nicht abgedeckte Bereiche, Entra-Audit-Logs („wer hat geändert“) |
 | Exchange Online PowerShell | Org-, Transport-, Anti-Spam-Konfiguration u. a. |
 | Teams PowerShell | Richtlinien, die nicht über Graph verfügbar sind |
 
 - Zugriff ausschließlich **lesend**, Anmeldung per **Zertifikat** (separate App-Registrierung „Werkbank Collector“).
-- Abruf alle 6 Stunden (konfigurierbar), zusätzlich manuell durch Admin.
+- Abruf **einmal täglich** (`COLLECTOR_INTERVAL_HOURS`), zusätzlich manuell durch Admin.
+- **Ablauf mit UTCM:** Der Worker lässt UTCM einen Snapshot der eingetragenen Ressourcentypen (`COLLECTOR_RESOURCES`) erstellen, wartet auf das Ergebnis, lädt es herunter und vergleicht es selbst mit dem Bestand (7.3). Den Verlauf hält die Werkbank; UTCM bewahrt Snapshots höchstens 7 Tage auf. Die UTCM-Monitore werden nicht genutzt.
+- **Grenzen von UTCM:** höchstens 20.000 gelesene Objekte pro Tenant und Monat, höchstens 12 sichtbare Snapshot-Aufträge. Die Werkbank zählt die gelesenen Objekte je Abruf, warnt ab 80 % und ruft bei ausgeschöpftem Kontingent nicht mehr ab. Eigene, abgeschlossene Snapshot-Aufträge entfernt sie wieder.
+- **Berechtigungen:** Die Collector-App braucht `ConfigurationMonitoring.ReadWrite.All` (Schreibrecht nur auf die Snapshot-Aufträge von UTCM, nicht auf Einstellungen des Tenants) und `AuditLog.Read.All` für „Geändert von“. Die eigentlichen Leserechte erhält der Dienstprinzipal „Tenant Configuration Management“ von Microsoft. Einrichtung: [`docs/entra-setup.md`](entra-setup.md), Abschnitt 4.
+- **Erster Umfang:** Entra (Conditional-Access-Richtlinien, benannte Standorte, Autorisierungsrichtlinie). Weitere Typen über `COLLECTOR_RESOURCES`.
 
 ### 7.2 Normalisierung
 
@@ -611,7 +615,7 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 |---|---|---|---|
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
-| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | in Arbeit: 2a Kern (Worker, Rate-Limits, Step-up) und 2b Versionierung umgesetzt; es folgen 2c Collector, 2d Oberfläche, 2e Abschluss |
+| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | in Arbeit: 2a Kern, 2b Versionierung und 2c Collector (UTCM) umgesetzt; es folgen 2d Oberfläche, 2e Abschluss. Der Collector ist noch nicht gegen einen echten Tenant geprüft |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | offen |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |

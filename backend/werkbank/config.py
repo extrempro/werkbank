@@ -42,6 +42,20 @@ class Settings(BaseSettings):
     session_max_hours: int = 8
     step_up_minutes: int = 15
 
+    # Datenabruf aus dem Tenant (App-Registrierung "Werkbank Collector", nur Zertifikat)
+    collector_client_id: str = ""
+    collector_client_key_file: Path = Path("/run/secrets/collector_client_key.pem")
+    collector_client_cert_file: Path = Path("/run/secrets/collector_client_cert.pem")
+    collector_interval_hours: int = 24
+    # UTCM-Ressourcentypen, kommagetrennt
+    collector_resources: str = (
+        "microsoft.entra.conditionalaccesspolicy,"
+        "microsoft.entra.namedlocationpolicy,"
+        "microsoft.entra.authorizationpolicy"
+    )
+    collector_timeout_minutes: int = 30
+    collector_poll_seconds: int = 20
+
     # Höchstzahl Anfragen pro Minute und Absender-IP (0 = aus), siehe core/ratelimit.py
     rate_limit_login_per_minute: int = 60
     rate_limit_api_per_minute: int = 600
@@ -75,6 +89,17 @@ class Settings(BaseSettings):
         """Origin der öffentlichen Adresse, z. B. https://werkbank.example.com."""
         parts = urlsplit(self.public_url)
         return f"{parts.scheme}://{parts.netloc}"
+
+    @property
+    def collector_configured(self) -> bool:
+        """Der Abruf läuft nur, wenn Mandant und Collector-App eingetragen sind."""
+        empty = ("", "00000000-0000-0000-0000-000000000000")
+        return self.collector_client_id not in empty and self.entra_tenant_id not in empty
+
+    def collector_resource_list(self) -> list[str]:
+        """Ressourcentypen in Kleinbuchstaben, ohne Doppelte, in der angegebenen Reihenfolge."""
+        names = [name.strip().lower() for name in self.collector_resources.split(",")]
+        return list(dict.fromkeys(name for name in names if name))
 
     def validate_for_startup(self) -> None:
         """Bricht den Start ab, wenn die Konfiguration unsicher ist."""

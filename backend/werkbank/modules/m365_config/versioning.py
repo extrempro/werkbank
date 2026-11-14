@@ -55,6 +55,7 @@ def apply_snapshot(
     source_status: Mapping[str, bool],
     *,
     started_at: datetime | None = None,
+    resource_count: int = 0,
 ) -> SnapshotResult:
     """Übernimmt einen Abruf. Der Aufrufer entscheidet über das Commit.
 
@@ -76,6 +77,7 @@ def apply_snapshot(
         finished_at=now,
         status=status,
         source_status=dict(source_status),
+        resource_count=resource_count,
     )
     db.add(snapshot)
     db.flush()
