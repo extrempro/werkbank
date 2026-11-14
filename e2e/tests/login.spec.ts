@@ -14,7 +14,7 @@ test("ohne Anmeldung erscheint die Login-Seite", async ({ page }) => {
 test("Admin sieht alle Bereiche", async ({ page }) => {
   await loginAs(page, ["Werkbank.Admin", "Config.Reviewer", "Evergreen.IT"]);
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Guten Tag, Erika Beispiel" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ })).toBeVisible();
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
   await openNavigation(page);
   await expect(nav.getByRole("link", { name: "Änderungen" })).toBeVisible();

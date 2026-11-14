@@ -15,6 +15,7 @@ import { SettingDetailPage } from "../modules/m365/SettingDetailPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { navigate, usePath } from "../router";
+import { initials, roleLabel } from "../user";
 
 const SETTINGS_PATH = "/m365/einstellungen";
 
@@ -41,6 +42,14 @@ export function Layout({ me }: LayoutProps) {
       active = false;
     };
   }, [path]);
+  const role = roleLabel(me.roles);
+  // Zähler in der Navigation: Aufgaben, die auf genau diese Seite führen; bei „Start“ alle.
+  const badgeFor = (target: string): number =>
+    target === "/"
+      ? taskCount
+      : (tasks ?? [])
+          .filter((task) => task.link === target)
+          .reduce((sum, task) => sum + task.count, 0);
   const groups = navigationFor(me.roles);
   const items = allNavItems(groups);
   const current = items.find((item) => item.path === path);
@@ -103,17 +112,61 @@ export function Layout({ me }: LayoutProps) {
           Menü
         </button>
         <a className="brand" href="/" onClick={(event) => onNavClick(event, "/")}>
-          <span className="brand-mark" aria-hidden="true" />
-          Werkbank
+          <span className="brand-mark" aria-hidden="true">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" />
+            </svg>
+          </span>
+          <span className="brand-text">
+            <span className="brand-name">Werkbank</span>
+            <span className="brand-sub">IT-Plattform</span>
+          </span>
         </a>
         <div className="user">
-          {taskCount > 0 && (
-            <a className="header-tasks" href="/" onClick={(event) => onNavClick(event, "/")}>
-              <span className="header-tasks-label">Aufgaben: </span>
-              {taskCount}
-            </a>
-          )}
-          <span className="user-name">{me.display_name}</span>
+          <a
+            className="header-tasks"
+            href="/"
+            aria-label={taskCount > 0 ? `Meine Aufgaben: ${taskCount} offen` : "Meine Aufgaben"}
+            onClick={(event) => onNavClick(event, "/")}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+              <path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z" />
+            </svg>
+            {taskCount > 0 && (
+              <span className="header-tasks-count" aria-hidden="true">
+                {taskCount}
+              </span>
+            )}
+          </a>
+          <div className="user-pill">
+            <span className="user-avatar" aria-hidden="true">
+              {initials(me.display_name)}
+            </span>
+            <span className="user-text">
+              <span className="user-name">{me.display_name}</span>
+              {role && <span className="user-role">{role}</span>}
+            </span>
+          </div>
           <form method="post" action="/auth/logout">
             <button type="submit" className="button button-quiet">
               Abmelden
@@ -138,11 +191,13 @@ export function Layout({ me }: LayoutProps) {
                       aria-current={item.path === path ? "page" : undefined}
                       onClick={(event) => onNavClick(event, item.path)}
                     >
-                      {item.label}
-                      {item.path === "/" && taskCount > 0 && (
+                      <span>{item.label}</span>
+                      {badgeFor(item.path) > 0 && (
                         <span className="nav-count">
-                          {taskCount}
-                          <span className="visually-hidden"> offene Aufgaben</span>
+                          {badgeFor(item.path)}
+                          <span className="visually-hidden">
+                            {item.path === "/" ? " offene Aufgaben" : " offen"}
+                          </span>
                         </span>
                       )}
                     </a>
