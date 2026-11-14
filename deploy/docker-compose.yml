@@ -1,6 +1,7 @@
 # Werkbank – Docker Compose
 # Konfiguration: deploy/.env (Vorlage: deploy/.env.example)
-# Phase 1a: nur der Web-Dienst. Datenbank, Worker und PowerShell folgen in den nächsten Schritten.
+# Secrets: deploy/secrets/ auf dem Host (nicht im Repository), siehe deploy/README.md
+# Phase 1: Web-Dienst und Datenbank. Worker und PowerShell folgen.
 
 name: werkbank
 
@@ -11,8 +12,19 @@ services:
     image: werkbank-web:local
     restart: unless-stopped
     env_file: .env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
     ports:
       - "${BIND_IP:-127.0.0.1}:${BIND_PORT:-8080}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - intern
+      - extern
     read_only: true
     tmpfs:
       - /tmp
@@ -20,3 +32,37 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-werkbank}
+      POSTGRES_USER: ${POSTGRES_USER:-werkbank}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - intern
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  # Datenbank nur intern erreichbar, kein Zugang nach außen
+  intern:
+    internal: true
+  extern: {}
+
+volumes:
+  db-data:
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password

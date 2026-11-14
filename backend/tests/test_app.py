@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from werkbank.main import create_app
@@ -21,3 +22,10 @@ def test_security_headers_present() -> None:
 def test_api_docs_disabled() -> None:
     for path in ("/docs", "/redoc", "/openapi.json"):
         assert client.get(path).status_code == 404
+
+
+@pytest.mark.db
+def test_ready_with_database(migrated_db: None) -> None:
+    response = client.get("/health/ready")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
