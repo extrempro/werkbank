@@ -18,6 +18,11 @@ export default tseslint.config(
     languageOptions: { globals: globals.serviceworker },
   },
   {
+    files: ["public/theme.js"],
+    extends: [js.configs.recommended],
+    languageOptions: { globals: globals.browser, sourceType: "script" },
+  },
+  {
     files: ["eslint.config.js"],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },

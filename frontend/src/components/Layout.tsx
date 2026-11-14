@@ -15,6 +15,7 @@ import { SettingDetailPage } from "../modules/m365/SettingDetailPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { navigate, usePath } from "../router";
+import { ThemeSwitch } from "./ThemeSwitch";
 import { initials, roleLabel } from "../user";
 
 const SETTINGS_PATH = "/m365/einstellungen";
@@ -206,6 +207,7 @@ export function Layout({ me }: LayoutProps) {
               </ul>
             </div>
           ))}
+          <ThemeSwitch />
         </nav>
         <main id="inhalt" className="app-main" tabIndex={-1}>
           {page}

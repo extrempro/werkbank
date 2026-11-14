@@ -49,3 +49,19 @@ p {
   outline: 3px solid #f2a33a;
   outline-offset: 2px;
 }
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #0f131a;
+    color: #e8ebf0;
+  }
+
+  .offline {
+    background: #171c26;
+    border-color: #2a3140;
+  }
+
+  p {
+    color: #c5cbd6;
+  }
+}
