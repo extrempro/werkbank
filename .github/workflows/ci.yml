@@ -52,6 +52,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: detect
     if: needs.detect.outputs.backend == 'true'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: werkbank_test
+          POSTGRES_USER: werkbank
+          POSTGRES_PASSWORD: nur-fuer-ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U werkbank -d werkbank_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://werkbank:nur-fuer-ci@127.0.0.1:5432/werkbank_test
     defaults:
       run:
         working-directory: backend
@@ -99,11 +113,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Test-Umgebung vorbereiten
-        run: cp deploy/.env.example deploy/.env
+        run: |
+          cp deploy/.env.example deploy/.env
+          mkdir -p deploy/secrets
+          openssl rand -hex 24 > deploy/secrets/postgres_password
+          chmod 444 deploy/secrets/postgres_password
       - name: Images bauen und starten
         run: docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build --wait
       - name: Smoke-Test
-        run: curl --fail --silent http://127.0.0.1:8080/health
+        run: |
+          curl --fail --silent http://127.0.0.1:8080/health
+          curl --fail --silent http://127.0.0.1:8080/health/ready
       - name: Logs bei Fehler
         if: failure()
         run: docker compose -f deploy/docker-compose.yml logs
@@ -130,6 +150,9 @@ jobs:
         working-directory: .
         run: |
           cp deploy/.env.example deploy/.env
+          mkdir -p deploy/secrets
+          openssl rand -hex 24 > deploy/secrets/postgres_password
+          chmod 444 deploy/secrets/postgres_password
           docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build --wait
       - name: Playwright (Desktop, Tablet, iPhone, inkl. axe-core)
         run: npx playwright test
