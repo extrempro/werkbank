@@ -26,6 +26,13 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/frontend"
+    ignore:
+      # Node-Typen passend zur verwendeten Node-Version (22) halten
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # Hauptversionen von TypeScript nur bewusst und zusammen mit typescript-eslint
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     cooldown:
       default-days: 7
     schedule:
@@ -39,6 +46,13 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/e2e"
+    ignore:
+      # Node-Typen passend zur verwendeten Node-Version (22) halten
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # Hauptversionen von TypeScript nur bewusst und zusammen mit typescript-eslint
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     cooldown:
       default-days: 7
     schedule:
