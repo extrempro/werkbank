@@ -1,7 +1,7 @@
 # Deployment
 
-Die `docker-compose.yml` entsteht in Phase 1 zusammen mit dem ersten lauffähigen Code.
-Erst dann wird das Repository in **Arcane** per Git-Sync eingebunden. Vorher gibt es nichts zu deployen.
+Die `docker-compose.yml` enthält derzeit nur den Web-Dienst (Phase 1a). Datenbank, Worker und PowerShell folgen.
+Die Einbindung in **Arcane** erfolgt, sobald Login und Datenbank vorhanden sind.
 
 Geplanter Aufbau:
 
