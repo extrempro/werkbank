@@ -5,7 +5,17 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func, text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -99,3 +109,40 @@ class Job(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     attempts: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     error: Mapped[str | None] = mapped_column(Text)
+
+
+class WorkflowInstance(Base):
+    """Laufender oder beendeter Ablauf zu einem Objekt (spec.md 6.3). step ist der Status."""
+
+    __tablename__ = "workflow_instances"
+    __table_args__ = (UniqueConstraint("workflow", "object_type", "object_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    workflow: Mapped[str] = mapped_column(String(64))
+    object_type: Mapped[str] = mapped_column(String(64))
+    object_id: Mapped[str] = mapped_column(String(128))
+    step: Mapped[str] = mapped_column(String(64), index=True)
+    finished: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class WorkflowEvent(Base):
+    """Unveränderlicher Protokolleintrag einer Aktion. UPDATE und DELETE verhindert ein Trigger."""
+
+    __tablename__ = "workflow_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    instance_id: Mapped[int] = mapped_column(ForeignKey("workflow_instances.id"), index=True)
+    step: Mapped[str] = mapped_column(String(64))
+    action: Mapped[str] = mapped_column(String(64))
+    target: Mapped[str] = mapped_column(String(64))
+    comment: Mapped[str | None] = mapped_column(Text)
+    # None: automatische Aktion des Systems
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    # gesetzt, wenn jemand die Aktion stellvertretend erfasst hat (z. B. "Betriebsrat")
+    on_behalf_of: Mapped[str | None] = mapped_column(String(128))
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

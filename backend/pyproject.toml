@@ -19,6 +19,7 @@ dependencies = [
     "msal>=1.39.0",
     "cryptography>=50.0.2",
     "httpx>=0.28.1",
+    "pyyaml>=6.0.2",
 ]
 
 [project.optional-dependencies]
@@ -30,6 +31,9 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["werkbank*"]
+
+[tool.setuptools.package-data]
+werkbank = ["**/*.yaml"]
 
 [tool.ruff]
 line-length = 100
@@ -48,7 +52,7 @@ strict = true
 packages = ["werkbank", "tests"]
 
 [[tool.mypy.overrides]]
-module = ["msal", "msal.*"]
+module = ["msal", "msal.*", "yaml"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
