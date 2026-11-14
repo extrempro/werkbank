@@ -20,6 +20,7 @@ Open-Source-Plattform für IT-Abteilungen mit gemeinsamer Anmeldung (Microsoft E
 | [`docs/usability-iso9241.md`](docs/usability-iso9241.md) | Gebrauchstauglichkeit nach ISO 9241 |
 | [`docs/security/asvs-l2.md`](docs/security/asvs-l2.md) | Sicherheitsnachweis nach OWASP ASVS Stufe 2 |
 | [`docs/repo-setup.md`](docs/repo-setup.md) | Einrichtung des GitHub-Repositorys |
+| [`docs/entra-setup.md`](docs/entra-setup.md) | Einrichtung in Microsoft Entra ID (App-Registrierungen, Rollen, MFA) |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Mitarbeit: Branches, Commits, Pull Requests |
 | [`SECURITY.md`](SECURITY.md) | Sicherheitslücken melden |
 | [`CLAUDE.md`](CLAUDE.md) | Arbeitsregeln für Claude |
