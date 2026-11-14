@@ -626,4 +626,4 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 | 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit DSB, BR-Beteiligung für die Werkbank selbst |
 | 9 | Hostname | Öffentlicher Hostname der Werkbank (für Entra-Redirect-URI) |
 | 10 | Mail | Absenderadresse für Benachrichtigungen |
-| 11 | Copyright | Copyright-Inhaber für `LICENSE` festlegen |
+| 11 | Copyright | Entschieden: `extrempro` |
