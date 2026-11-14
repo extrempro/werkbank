@@ -1,7 +1,10 @@
+# cooldown: neue Versionen erst nach 7 Tagen vorschlagen (Schutz vor kompromittierten Releases)
 version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -10,6 +13,8 @@ updates:
 
   - package-ecosystem: "pip"
     directory: "/backend"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -21,6 +26,8 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/frontend"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -32,6 +39,8 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/e2e"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -40,6 +49,8 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/backend"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -48,6 +59,8 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/frontend"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -56,6 +69,8 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/powershell"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
@@ -64,6 +79,8 @@ updates:
 
   - package-ecosystem: "docker-compose"
     directory: "/deploy"
+    cooldown:
+      default-days: 7
     schedule:
       interval: "weekly"
       day: "monday"
