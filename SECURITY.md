@@ -4,8 +4,7 @@
 
 Bitte Sicherheitslücken **nicht** als öffentliches Issue melden.
 
-- Bevorzugt: GitHub **„Report a vulnerability“** im Reiter „Security“ dieses Repositorys (vertrauliche Meldung)
-- Alternativ per Mail: [E-MAIL-ADRESSE EINTRAGEN]
+- Über GitHub **„Report a vulnerability“** im Reiter „Security“ dieses Repositorys (vertrauliche Meldung)
 
 Bitte angeben:
 

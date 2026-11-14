@@ -16,7 +16,7 @@ Repository-Einstellungen können nur Personen mit Admin-Rechten ändern, Claude 
 | 6 | Branch Protection (Ruleset) für `main` | ✅ erledigt |
 | 7 | Private vulnerability reporting | ✅ erledigt |
 | 8 | Dependabot alerts und security updates | ✅ erledigt |
-| 9 | Platzhalter ersetzen (Copyright-Inhaber, Mail-Adressen) | ⬜ offen |
+| 9 | Platzhalter ersetzen (Copyright-Inhaber, Kontakt) | ✅ erledigt |
 
 ## 4. Beschreibung und Topics
 
@@ -76,13 +76,6 @@ Settings → **Code security**:
 - Versions-Updates laufen bereits über `.github/dependabot.yml`
 
 **Code scanning:** Hier **kein** „Default setup“ für CodeQL aktivieren. `.github/workflows/codeql.yml` ist das „Advanced setup“, beides zusammen führt zu Konflikten.
-
-## 9. Platzhalter
-
-- `LICENSE`: `[NAME BZW. FIRMA]` durch den Copyright-Inhaber ersetzen
-- `SECURITY.md` und `CODE_OF_CONDUCT.md`: `[E-MAIL-ADRESSE EINTRAGEN]` ersetzen
-
-Die Änderung über einen Branch und Pull Request einbringen, nicht direkt auf `main`.
 
 ## Releases
 
