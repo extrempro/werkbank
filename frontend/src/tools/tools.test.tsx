@@ -170,10 +170,10 @@ describe("ToolPage", () => {
     render(<ToolPage id="subnetting-bits" />);
     expect(await screen.findByLabelText("Ausgangsnetz")).toHaveValue("192.168.10.0/24");
     expect(screen.getByRole("row", { name: /^Neues Präfix/ })).toHaveTextContent("/24 + 2 = /26");
-    expect(screen.getByRole("row", { name: /^Subnetzmaske/ })).toHaveTextContent(
-      "255.255.255.192",
-    );
-    expect(within(screen.getByRole("region", { name: "Subnetze" })).getAllByRole("row")).toHaveLength(5);
+    expect(screen.getByRole("row", { name: /^Subnetzmaske/ })).toHaveTextContent("255.255.255.192");
+    expect(
+      within(screen.getByRole("region", { name: "Subnetze" })).getAllByRole("row"),
+    ).toHaveLength(5);
     fireEvent.change(screen.getByLabelText("Hosts je Subnetz (0 = egal)"), {
       target: { value: "100" },
     });

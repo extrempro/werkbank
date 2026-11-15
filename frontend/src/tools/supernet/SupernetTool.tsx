@@ -54,8 +54,9 @@ export default function SupernetTool() {
           />
           {common && common.prefix > 0 && aggregated.cidrs.length > 1 && (
             <p className="small">
-              Kleinstes gemeinsames Netz: <span className="mono">{cidrString(version, common)}</span>.
-              Es deckt {formatCountShort(common.addresses)} Adressen ab,{" "}
+              Kleinstes gemeinsames Netz:{" "}
+              <span className="mono">{cidrString(version, common)}</span>. Es deckt{" "}
+              {formatCountShort(common.addresses)} Adressen ab,{" "}
               {formatCountShort(common.addresses - aggregated.addresses)} davon gehören nicht zur
               Liste.
             </p>

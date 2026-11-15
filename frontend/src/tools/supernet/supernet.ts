@@ -73,7 +73,9 @@ export interface Aggregated {
 
 /** Überlappende und angrenzende Bereiche zusammenführen und in minimale CIDR-Blöcke zerlegen */
 export function aggregate(entries: Entry[], version: IpVersion): Aggregated {
-  const list = entries.filter((e) => e.version === version).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+  const list = entries
+    .filter((e) => e.version === version)
+    .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
   const merged: { start: bigint; end: bigint }[] = [];
   for (const e of list) {
     const last = merged[merged.length - 1];
@@ -87,14 +89,18 @@ export function aggregate(entries: Entry[], version: IpVersion): Aggregated {
 }
 
 /** Kleinstes einzelnes Netz, das alle Einträge enthält (deckt meist mehr ab als nötig) */
-export function commonSupernet(entries: Entry[], version: IpVersion): { network: bigint; prefix: number; addresses: bigint } | null {
+export function commonSupernet(
+  entries: Entry[],
+  version: IpVersion,
+): { network: bigint; prefix: number; addresses: bigint } | null {
   const list = entries.filter((e) => e.version === version);
   if (!list.length) return null;
   const min = list.reduce((m, e) => (e.start < m ? e.start : m), list[0]!.start);
   const max = list.reduce((m, e) => (e.end > m ? e.end : m), list[0]!.end);
   const bits = bitsOf(version);
   let prefix = bits;
-  while (prefix > 0 && (min & prefixMask(version, prefix)) !== (max & prefixMask(version, prefix))) prefix--;
+  while (prefix > 0 && (min & prefixMask(version, prefix)) !== (max & prefixMask(version, prefix)))
+    prefix--;
   // auch Start und Ende müssen innerhalb des Netzes ausgerichtet sein
   while (prefix > 0) {
     const mask = prefixMask(version, prefix);
@@ -107,4 +113,5 @@ export function commonSupernet(entries: Entry[], version: IpVersion): { network:
   return { network, prefix, addresses: 1n << BigInt(bits - prefix) };
 }
 
-export const cidrString = (version: IpVersion, c: { network: bigint; prefix: number }) => `${formatIp(version, c.network)}/${c.prefix}`;
+export const cidrString = (version: IpVersion, c: { network: bigint; prefix: number }) =>
+  `${formatIp(version, c.network)}/${c.prefix}`;

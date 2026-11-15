@@ -43,7 +43,16 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "netzwerk",
     description:
       "Wie viele Bits muss ich für eine Anzahl Subnetze oder Hosts borgen? Zeigt neue Maske, Schrittweite, Bit-Aufteilung und die entstehenden Subnetze.",
-    tags: ["subnetz", "borgen", "hostbits", "netzbits", "subnetzmaske", "präfix", "ipv4", "aufteilen"],
+    tags: [
+      "subnetz",
+      "borgen",
+      "hostbits",
+      "netzbits",
+      "subnetzmaske",
+      "präfix",
+      "ipv4",
+      "aufteilen",
+    ],
     component: lazy(() => import("./subnet-bits/SubnetBitsTool")),
   },
   {
@@ -61,7 +70,16 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "netzwerk",
     description:
       "Regelwerk eingeben und ein Testpaket hindurchschicken: Welche Regel greift zuerst? Findet außerdem Regeln, die nie erreicht werden.",
-    tags: ["regelwerk", "acl", "paketfilter", "first match", "allow", "deny", "testpaket", "iptables"],
+    tags: [
+      "regelwerk",
+      "acl",
+      "paketfilter",
+      "first match",
+      "allow",
+      "deny",
+      "testpaket",
+      "iptables",
+    ],
     component: lazy(() => import("./firewall-rules/FirewallRulesTool")),
   },
   {

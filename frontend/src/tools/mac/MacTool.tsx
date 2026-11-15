@@ -69,7 +69,9 @@ export default function MacTool() {
           </label>
           <Output
             value={converted}
-            label={macs.length === 1 ? "1 Adresse umgewandelt" : `${macs.length} Adressen umgewandelt`}
+            label={
+              macs.length === 1 ? "1 Adresse umgewandelt" : `${macs.length} Adressen umgewandelt`
+            }
           />
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Adressen">
             <table>

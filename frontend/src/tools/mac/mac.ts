@@ -23,7 +23,8 @@ export const formatLabels: Record<MacFormat, string> = {
 
 /** alle MAC-Adressen aus einem Text (eine pro Zeile oder gemischt, z. B. aus „arp -a“) */
 export function extractMacs(text: string): MacInfo[] {
-  const re = /(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{2}([:-])(?:[0-9A-Fa-f]{2}\1){4}[0-9A-Fa-f]{2}|[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}|[0-9A-Fa-f]{12})(?![0-9A-Fa-f])/g;
+  const re =
+    /(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{2}([:-])(?:[0-9A-Fa-f]{2}\1){4}[0-9A-Fa-f]{2}|[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}|[0-9A-Fa-f]{12})(?![0-9A-Fa-f])/g;
   const out: MacInfo[] = [];
   for (const m of text.matchAll(re)) out.push(info(m[0]));
   return out;
@@ -38,7 +39,13 @@ export function parseMac(text: string): MacInfo | null {
 function info(raw: string): MacInfo {
   const hex = raw.replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
   const first = parseInt(hex.slice(0, 2), 16);
-  return { raw, hex, multicast: (first & 1) === 1, broadcast: hex === "FFFFFFFFFFFF", local: (first & 2) === 2 };
+  return {
+    raw,
+    hex,
+    multicast: (first & 1) === 1,
+    broadcast: hex === "FFFFFFFFFFFF",
+    local: (first & 2) === 2,
+  };
 }
 
 export function formatMac(hex: string, f: MacFormat): string {

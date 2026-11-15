@@ -30,7 +30,8 @@ export function subnetBits(base: string, wantSubnets: number, wantHosts: number)
   if (basePrefix > 30) throw new Error("Das Ausgangsnetz muss /30 oder größer sein.");
   const addr = m[1] ? parseIpv4(m[1]) : null;
   if (m[1] && addr === null) throw new Error("Ungültige IPv4-Adresse.");
-  if (!(wantSubnets >= 1) || !(wantHosts >= 0)) throw new Error("Anzahl Subnetze (mind. 1) und Hosts prüfen.");
+  if (!(wantSubnets >= 1) || !(wantHosts >= 0))
+    throw new Error("Anzahl Subnetze (mind. 1) und Hosts prüfen.");
 
   const hostBitsNeeded = wantHosts > 0 ? hostBitsFor(wantHosts) : 2;
   const sBits = bitsFor(wantSubnets);
@@ -45,7 +46,12 @@ export function subnetBits(base: string, wantSubnets: number, wantHosts: number)
     const size = 1n << BigInt(hostBits);
     for (let i = 0n; i < BigInt(Math.min(2 ** sBits, 16)); i++) {
       const n = net + i * size;
-      examples.push({ network: `${formatIpv4(n)}/${newPrefix}`, first: formatIpv4(n + 1n), last: formatIpv4(n + size - 2n), broadcast: formatIpv4(n + size - 1n) });
+      examples.push({
+        network: `${formatIpv4(n)}/${newPrefix}`,
+        first: formatIpv4(n + 1n),
+        last: formatIpv4(n + size - 2n),
+        broadcast: formatIpv4(n + size - 1n),
+      });
     }
   }
   return {
