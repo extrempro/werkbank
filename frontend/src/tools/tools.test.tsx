@@ -674,7 +674,7 @@ describe("ToolPage", () => {
     render(<ToolPage id="immutableid" />);
     const input = await screen.findByRole("textbox", { name: "Kennung" });
     fireEvent.change(input, { target: { value: "748b2d72-706b-42f8-8b25-82fd8733860f" } });
-    expect(screen.getByRole("status")).toHaveTextContent("Erkannt als objectGUID");
+    expect(screen.getByText(/^Erkannt als/)).toHaveTextContent("Erkannt als objectGUID");
     expect(screen.getByRole("row", { name: /^ImmutableID/ })).toHaveTextContent(
       "ci2LdGtw+EKLJYL9hzOGDw==",
     );
@@ -779,7 +779,7 @@ describe("ToolPage", () => {
     expect(screen.getByLabelText("Text").textContent).toMatch(/^Lorem ipsum dolor sit amet/);
     fireEvent.change(screen.getByLabelText("Einheit"), { target: { value: "woerter" } });
     fireEvent.change(screen.getByLabelText("Anzahl"), { target: { value: "7" } });
-    expect(screen.getByRole("status")).toHaveTextContent("7 Wörter");
+    expect(screen.getByText(/^7 Wörter, \d+ Zeichen$/)).toBeVisible();
     expect(window.location.search).toBe("?einheit=woerter&anzahl=7");
   });
 
