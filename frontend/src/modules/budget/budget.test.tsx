@@ -355,9 +355,7 @@ describe("Hilfen für Verträge", () => {
   });
 
   it("beschreibt Laufzeit, Partnerrolle und Anteile", () => {
-    expect(termText(contract())).toBe(
-      "01.01.2026 bis 31.12.2026, verlängert sich um 12 Monate",
-    );
+    expect(termText(contract())).toBe("01.01.2026 bis 31.12.2026, verlängert sich um 12 Monate");
     expect(termText(contract({ ends_on: null, term_end: null, renewal_months: null }))).toBe(
       "seit 01.01.2026, unbefristet",
     );

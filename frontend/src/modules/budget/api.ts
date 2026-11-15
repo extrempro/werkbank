@@ -178,11 +178,7 @@ export interface Partner {
 export type PartnerUpdate = Omit<Partner, "id">;
 
 export type ContractInterval =
-  | "monatlich"
-  | "vierteljaehrlich"
-  | "halbjaehrlich"
-  | "jaehrlich"
-  | "einmalig";
+  "monatlich" | "vierteljaehrlich" | "halbjaehrlich" | "jaehrlich" | "einmalig";
 
 export type DpaStatus = "vorhanden" | "fehlt" | "nicht_erforderlich";
 

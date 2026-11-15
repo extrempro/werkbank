@@ -413,8 +413,7 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                         {overview.rows.map((row) => (
                           <tr key={row.account.id}>
                             <th scope="row">
-                              <span className="mono">{row.account.number}</span>{" "}
-                              {row.account.name}
+                              <span className="mono">{row.account.number}</span> {row.account.name}
                               {!row.account.active && (
                                 <span className="pill pill-neutral budget-pill">stillgelegt</span>
                               )}

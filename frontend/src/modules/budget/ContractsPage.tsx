@@ -277,8 +277,8 @@ function ContractForm({ contract, partners, accounts, onSaved, onCancel }: FormP
         </label>
         <p className="small">
           Die erste Zahlung zählt zum Beginn, die weiteren im gewählten Turnus. Daraus rechnet die
-          Werkbank, was im Geschäftsjahr gebunden ist. Die Kündigungsfrist zählt rückwärts vom
-          Ende der Laufzeit.
+          Werkbank, was im Geschäftsjahr gebunden ist. Die Kündigungsfrist zählt rückwärts vom Ende
+          der Laufzeit.
         </p>
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>
@@ -362,8 +362,8 @@ export function ContractsPage({ roles }: { roles: readonly string[] }) {
         <p className="module-label">IT-Budget</p>
         <h1>Verträge</h1>
         <p className="page-sub">
-          Verträge mit Laufzeit und Kündigungstermin. Ihre erwarteten Kosten zählen in der
-          Übersicht als „gebunden“. Alle Beträge sind brutto.
+          Verträge mit Laufzeit und Kündigungstermin. Ihre erwarteten Kosten zählen in der Übersicht
+          als „gebunden“. Alle Beträge sind brutto.
         </p>
       </header>
 
