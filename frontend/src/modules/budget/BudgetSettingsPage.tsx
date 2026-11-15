@@ -1,11 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
-import {
-  fetchBudgetSettings,
-  MONTHS,
-  saveBudgetSettings,
-  type BudgetSettings,
-} from "./api";
+import { fetchBudgetSettings, MONTHS, saveBudgetSettings, type BudgetSettings } from "./api";
 
 function SettingsForm({ initial }: { initial: BudgetSettings }) {
   const [settings, setSettings] = useState(initial);
@@ -18,7 +13,10 @@ function SettingsForm({ initial }: { initial: BudgetSettings }) {
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!yearLabel.trim()) {
-      setMessage({ kind: "alert", text: "Bitte eine Bezeichnung für das Geschäftsjahr eintragen." });
+      setMessage({
+        kind: "alert",
+        text: "Bitte eine Bezeichnung für das Geschäftsjahr eintragen.",
+      });
       return;
     }
     setBusy(true);
@@ -86,9 +84,9 @@ function SettingsForm({ initial }: { initial: BudgetSettings }) {
         </div>
         <p className="small">
           Das Geschäftsjahr dauert zwölf Monate und endet am letzten Tag im {endMonth}. Die
-          Bezeichnung erscheint überall, wo die Werkbank das Jahr nennt, z. B. „Geschäftsjahr“
-          oder „Wirtschaftsjahr“. Wer den Beginn ändert, ordnet auch frühere Pläne den neuen
-          Zeiträumen zu.
+          Bezeichnung erscheint überall, wo die Werkbank das Jahr nennt, z. B. „Geschäftsjahr“ oder
+          „Wirtschaftsjahr“. Wer den Beginn ändert, ordnet auch frühere Pläne den neuen Zeiträumen
+          zu.
         </p>
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>

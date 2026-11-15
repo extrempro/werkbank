@@ -117,9 +117,7 @@ describe("Übersicht", () => {
     expect(plain(row.textContent)).toContain("11.900,00 €");
     expect(plain(row.textContent)).toContain("10.000,00 €");
     expect(table.getByRole("row", { name: /0420 Hardware/ })).toHaveTextContent("stillgelegt");
-    expect(plain(table.getByRole("row", { name: /^Gesamt/ }).textContent)).toContain(
-      "61.900,50 €",
-    );
+    expect(plain(table.getByRole("row", { name: /^Gesamt/ }).textContent)).toContain("61.900,50 €");
     expect(screen.getByText(/Kostenstelle 4711/)).toBeVisible();
     expect(screen.getByText(/01\.08\.2026 bis 31\.07\.2027 · läuft gerade/)).toBeVisible();
     // Lesende Rollen können den Plan nicht bearbeiten.
@@ -252,7 +250,9 @@ describe("Einstellungen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Einstellungen speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Bezeichnung");
 
-    fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "Wirtschaftsjahr" } });
+    fireEvent.change(screen.getByLabelText("Bezeichnung"), {
+      target: { value: "Wirtschaftsjahr" },
+    });
     fireEvent.change(screen.getByLabelText("Beginn des Geschäftsjahrs"), {
       target: { value: "1" },
     });

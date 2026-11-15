@@ -111,9 +111,7 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
         <h1>Übersicht</h1>
         <p className="page-sub">
           Geplantes Budget je Konto. Alle Beträge sind brutto.
-          {overview?.settings.cost_center
-            ? ` Kostenstelle ${overview.settings.cost_center}.`
-            : ""}
+          {overview?.settings.cost_center ? ` Kostenstelle ${overview.settings.cost_center}.` : ""}
         </p>
       </header>
 
