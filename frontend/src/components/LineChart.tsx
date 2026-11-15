@@ -1,4 +1,4 @@
-import { useId, useState, type PointerEvent } from "react";
+import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
 
 export interface ChartSeries {
   id: string;
@@ -16,13 +16,16 @@ interface LineChartProps {
   series: ChartSeries[];
 }
 
-const WIDTH = 640;
-const HEIGHT = 240;
-const LEFT = 48;
-const RIGHT = 16;
-const TOP = 12;
-const BOTTOM = 28;
-const PLOT_WIDTH = WIDTH - LEFT - RIGHT;
+// Gezeichnet wird in echten Pixeln: Die Breite folgt dem Platz, Schrift und Linien bleiben
+// dadurch auf jedem Gerät gleich groß und lesbar.
+const DEFAULT_WIDTH = 640;
+const MIN_WIDTH = 280;
+const MAX_WIDTH = 1400;
+const HEIGHT = 300;
+const LEFT = 56;
+const RIGHT = 20;
+const TOP = 16;
+const BOTTOM = 34;
 const PLOT_HEIGHT = HEIGHT - TOP - BOTTOM;
 const DAY_MS = 86_400_000;
 
@@ -71,12 +74,34 @@ export function axisTicks(min: number, max: number): number[] {
 export function LineChart({ title, days, series }: LineChartProps) {
   const sliderId = useId();
   const [picked, setPicked] = useState<number | null>(null);
+  const frame = useRef<HTMLElement>(null);
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  useEffect(() => {
+    const element = frame.current;
+    if (!element || typeof ResizeObserver === "undefined") {
+      return undefined;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const measured = entries[0]?.contentRect.width ?? 0;
+      if (measured > 0) {
+        setWidth(Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, measured))));
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const WIDTH = width;
+  const PLOT_WIDTH = WIDTH - LEFT - RIGHT;
   const shown = series.slice(0, 3);
   const numbers = shown.flatMap((entry) =>
     entry.values.filter((value): value is number => value !== null),
   );
   if (days.length === 0 || numbers.length === 0) {
-    return <p className="panel-empty">Noch kein Verlauf vorhanden.</p>;
+    return (
+      <figure className="chart" ref={frame}>
+        <p className="panel-empty">Noch kein Verlauf vorhanden.</p>
+      </figure>
+    );
   }
 
   const last = days.length - 1;
@@ -122,13 +147,16 @@ export function LineChart({ title, days, series }: LineChartProps) {
     setPicked(nearest);
   };
 
-  const labelDays = days.length <= 2 ? [...days.keys()] : [0, Math.floor(last / 2), last];
+  const labelDays =
+    days.length <= 2 ? [...days.keys()] : WIDTH < 420 ? [0, last] : [0, Math.floor(last / 2), last];
   const activeDay = days[active] ?? "";
 
   return (
-    <figure className="chart">
+    <figure className="chart" ref={frame}>
       <svg
         className="chart-plot"
+        width={WIDTH}
+        height={HEIGHT}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="img"
         aria-label={`${title}: ${formatDay(days[0] ?? "")} bis ${formatDay(days[last] ?? "")}. Die Werte stehen in der Tabelle darunter.`}
@@ -138,7 +166,7 @@ export function LineChart({ title, days, series }: LineChartProps) {
         {ticks.map((tick) => (
           <g key={tick}>
             <line className="chart-grid" x1={LEFT} x2={WIDTH - RIGHT} y1={y(tick)} y2={y(tick)} />
-            <text className="chart-axis" x={LEFT - 8} y={y(tick) + 4} textAnchor="end">
+            <text className="chart-axis" x={LEFT - 10} y={y(tick) + 5} textAnchor="end">
               {numberFormat.format(tick)}
             </text>
           </g>
@@ -148,7 +176,7 @@ export function LineChart({ title, days, series }: LineChartProps) {
             key={index}
             className="chart-axis"
             x={x(index)}
-            y={HEIGHT - 8}
+            y={HEIGHT - 10}
             textAnchor={
               days.length === 1 || (position > 0 && position < labelDays.length - 1)
                 ? "middle"
@@ -182,7 +210,7 @@ export function LineChart({ title, days, series }: LineChartProps) {
               className={`chart-dot chart-dot-${position + 1}`}
               cx={x(active)}
               cy={y(value)}
-              r={5}
+              r={6}
             />
           );
         })}
@@ -204,6 +232,11 @@ export function LineChart({ title, days, series }: LineChartProps) {
           })}
         </ul>
       </figcaption>
+      {days.length === 1 && (
+        <p className="small">
+          Der Verlauf beginnt mit diesem Tag. Eine Linie entsteht, sobald weitere Tage dazukommen.
+        </p>
+      )}
       {days.length > 1 && (
         <div className="chart-slider">
           <label htmlFor={sliderId}>Tag wählen</label>

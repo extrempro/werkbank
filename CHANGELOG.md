@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.20.0] – 2026-11-15
+
+IT-Tools: Rechner und Cron.
+
+### IT-Tools
+
+- **Neue Kategorie „Rechner“:** RAID-Rechner (Kapazität, Plattenbedarf, Ausfall simulieren), Speichereinheiten (GB ↔ GiB), Speicherbedarf mit Komprimierung, Übertragungsdauer, Verfügbarkeit, Stromkosten, USV (Leistung und Laufzeit), VoIP-Bandbreite
+- **Cron-Ausdruck erklären** in der Kategorie „Linux und Server“: Klartext und die nächsten zehn Ausführungen
+- Die Zahlen der Rechner stehen in der Adresszeile, damit sich ein Link teilen lässt. Die Liste der Komponenten im Verfügbarkeits-Rechner und die ausgefallenen Platten im RAID-Rechner stehen dort nicht
+- Abweichung von der IT-Toolbox: Im Stromkosten-Rechner fehlt der Verweis auf die Amortisationsrechnung, weil es dieses Tool in der Werkbank noch nicht gibt
+
+### Geändert
+
+- **Diagramme größer und besser lesbar** (Lizenzen, Benutzer): Das Diagramm wird jetzt in echten Pixeln gezeichnet und passt seine Breite dem Platz an, statt als Ganzes verkleinert zu werden. Schrift und Linien bleiben dadurch auf jedem Gerät gleich groß; dazu größere Achsenschrift, kräftigere Linien, mehr Höhe und Abstand zum Rand. Gibt es erst einen Tag, erklärt ein Hinweis, dass die Linie mit den nächsten Abrufen entsteht
+
 ## [0.19.0] – 2026-11-15
 
 Neues Modul Tenant mit Lizenzen und Benutzerzahlen; Kategorien der IT-Tools in der Navigation; Tools in der Suche; Kopfzeile bleibt stehen.

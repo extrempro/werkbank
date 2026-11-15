@@ -7,7 +7,7 @@ import { lazy, type ComponentType } from "react";
  */
 
 export type ToolCategory =
-  "netzwerk" | "system" | "encoding" | "formatter" | "konverter" | "text" | "generator";
+  "netzwerk" | "system" | "encoding" | "formatter" | "konverter" | "text" | "rechner" | "generator";
 
 export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   netzwerk: "Netzwerk",
@@ -16,6 +16,7 @@ export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   formatter: "Formatter",
   konverter: "Konverter",
   text: "Text",
+  rechner: "Rechner",
   generator: "Generatoren",
 };
 
@@ -112,6 +113,15 @@ export const TOOLS: readonly ToolDefinition[] = [
       "Linux-Dateirechte umrechnen: oktal (755), rwxr-xr-x und u=rwx,g=rx,o=rx, mit SetUID, SetGID, Sticky und umask.",
     tags: ["linux", "unix", "rechte", "permissions", "755", "644", "rwx", "umask"],
     component: lazy(() => import("./chmod/ChmodTool")),
+  },
+  {
+    id: "cron",
+    name: "Cron-Ausdruck erklären",
+    category: "system",
+    description:
+      "Cron-Ausdrücke in Klartext übersetzen und die nächsten Ausführungen anzeigen, auch @daily und 6 Felder mit Sekunden.",
+    tags: ["crontab", "zeitplan", "schedule", "linux", "systemd", "kubernetes", "cronjob"],
+    component: lazy(() => import("./cron/CronTool")),
   },
   {
     id: "base64",
@@ -311,6 +321,168 @@ export const TOOLS: readonly ToolDefinition[] = [
       "Zwei Texte oder Konfigurationen vergleichen, nebeneinander oder als Unified-Diff, mit hervorgehobenen Wortänderungen.",
     tags: ["diff", "vergleich", "unterschied", "compare", "konfiguration", "patch", "unified"],
     component: lazy(() => import("./diff/DiffTool")),
+  },
+  {
+    id: "raid",
+    name: "RAID-Rechner",
+    category: "rechner",
+    description:
+      "Kapazität, Plattenbedarf und Ausfall-Simulation für RAID 0, 1, 5, 6, 10, 50, 60 und ZFS RAIDZ, mit Schreib-Penalty und Rebuild-Zeit.",
+    tags: [
+      "raid5",
+      "raid6",
+      "raid10",
+      "zfs",
+      "raidz",
+      "festplatten",
+      "nas",
+      "san",
+      "storage",
+      "parität",
+      "degraded",
+      "redundanz",
+    ],
+    component: lazy(() => import("./raid/RaidTool")),
+  },
+  {
+    id: "speichereinheiten",
+    name: "Speichereinheiten (GB ↔ GiB)",
+    category: "rechner",
+    description:
+      "Zwischen GB und GiB, TB und TiB, Byte und Bit umrechnen. Erklärt, warum eine 4-TB-Platte in Windows nur 3,63 „TB“ hat.",
+    tags: [
+      "gb",
+      "gib",
+      "tb",
+      "tib",
+      "mb",
+      "byte",
+      "bit",
+      "speicher",
+      "umrechnen",
+      "festplatte",
+      "binär",
+      "dezimal",
+    ],
+    component: lazy(() => import("./data-units/DataUnitsTool")),
+  },
+  {
+    id: "speicherbedarf",
+    name: "Speicherbedarf mit Komprimierung",
+    category: "rechner",
+    description:
+      "Wie viel Speicher brauche ich wirklich? Rohdaten, Komprimierung, Deduplizierung, jährliches Wachstum und Reserve, mit Verlauf über mehrere Jahre.",
+    tags: [
+      "speicher",
+      "kompression",
+      "dedup",
+      "wachstum",
+      "storage",
+      "kapazität",
+      "planung",
+      "backup",
+      "reserve",
+    ],
+    component: lazy(() => import("./storage-need/StorageNeedTool")),
+  },
+  {
+    id: "uebertragungsdauer",
+    name: "Übertragungsdauer",
+    category: "rechner",
+    description:
+      "Wie lange dauert der Upload, das Backup oder die Migration? Aus Datenmenge und Bandbreite die Dauer, oder umgekehrt die nötige Bandbreite für ein Zeitfenster.",
+    tags: [
+      "übertragung",
+      "dauer",
+      "bandbreite",
+      "upload",
+      "download",
+      "backup",
+      "migration",
+      "mbit",
+      "transfer",
+      "leitung",
+    ],
+    component: lazy(() => import("./transfer/TransferTool")),
+  },
+  {
+    id: "verfuegbarkeit",
+    name: "Verfügbarkeit",
+    category: "rechner",
+    description:
+      "Verfügbarkeit in Prozent und erlaubte Ausfallzeit, Berechnung aus MTBF und MTTR sowie Gesamtverfügbarkeit einer Kette mit redundanten Komponenten.",
+    tags: [
+      "sla",
+      "ausfallzeit",
+      "downtime",
+      "uptime",
+      "mtbf",
+      "mttr",
+      "hochverfügbarkeit",
+      "99,9",
+      "neunen",
+      "redundanz",
+    ],
+    component: lazy(() => import("./availability/AvailabilityTool")),
+  },
+  {
+    id: "stromkosten",
+    name: "Stromkosten",
+    category: "rechner",
+    description:
+      "Stromverbrauch und Kosten von Servern, Switches oder PCs pro Tag, Monat und Jahr, mit Aufschlag für Kühlung (PUE), CO₂ und Vergleich zweier Geräte.",
+    tags: [
+      "strom",
+      "verbrauch",
+      "watt",
+      "kwh",
+      "energie",
+      "kosten",
+      "server",
+      "pue",
+      "co2",
+      "betriebskosten",
+    ],
+    component: lazy(() => import("./power-cost/PowerCostTool")),
+  },
+  {
+    id: "usv",
+    name: "USV: Leistung und Laufzeit",
+    category: "rechner",
+    description:
+      "USV auslegen: Scheinleistung (VA) aus Watt und Leistungsfaktor, empfohlene Größe mit Reserve und Überbrückungszeit aus den Batteriedaten.",
+    tags: [
+      "ups",
+      "va",
+      "watt",
+      "scheinleistung",
+      "leistungsfaktor",
+      "cos phi",
+      "batterie",
+      "laufzeit",
+      "akku",
+    ],
+    component: lazy(() => import("./ups/UpsTool")),
+  },
+  {
+    id: "voip",
+    name: "VoIP-Bandbreite",
+    category: "rechner",
+    description:
+      "Bandbreite für Telefonie berechnen: Codec, Paketintervall und Header (RTP, UDP, IP, Ethernet), je Gespräch und für alle gleichzeitigen Gespräche.",
+    tags: [
+      "sip",
+      "rtp",
+      "codec",
+      "g.711",
+      "g.729",
+      "opus",
+      "telefonie",
+      "gespräche",
+      "sip-trunk",
+      "qos",
+    ],
+    component: lazy(() => import("./voip/VoipTool")),
   },
   {
     id: "uuid",

@@ -228,6 +228,53 @@ test("IT-Tools: Konverter und Text", async ({ page }) => {
   await expectNoA11yViolations(page);
 });
 
+test("IT-Tools: Rechner und Cron", async ({ page }) => {
+  await loginAs(page, ["Tools.User"], "Tina Tools");
+
+  await page.goto("/it-tools/verfuegbarkeit");
+  await expect(page.getByText("99,937 %")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/speichereinheiten?wert=4");
+  await expect(page.getByRole("row", { name: /^TiB/ })).toContainText("3,63798");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/stromkosten?alternative=200");
+  await expect(page.getByText(/pro Jahr gespart$/)).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/speicherbedarf");
+  await expect(page.getByRole("row", { name: /^\+5/ })).toContainText("12,07 TB");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/uebertragungsdauer");
+  await expect(page.getByText("12 h 20 min")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/usv");
+  await expect(page.getByText("1.111 VA")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/voip");
+  await expect(page.getByText("114 Gespräche")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/raid");
+  await expect(page.getByText("29,1 TiB")).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.goto("/it-tools/raid?bereich=ausfall");
+  await page.getByRole("button", { name: "Platte 1" }).click();
+  await expect(page.getByText("Degraded, 1 ausgefallen")).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.goto("/it-tools/raid?bereich=plattenbedarf");
+  await expect(page.getByRole("row", { name: /^RAID 6 \(/ })).toContainText("40 TB");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/cron?ausdruck=*%2F15+*+*+*+*");
+  await expect(page.getByText("Alle 15 Minuten, jeden Tag.")).toBeVisible();
+  await expectNoA11yViolations(page);
+});
+
 test("IT-Tools: Kategorien in der Navigation und Tools in der Suche", async ({ page }) => {
   await loginAs(page, ["Tools.User"], "Tina Tools");
   await page.goto("/it-tools");

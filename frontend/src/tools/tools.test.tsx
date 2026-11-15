@@ -527,4 +527,103 @@ describe("ToolPage", () => {
     });
     expect(screen.getByRole("alert")).toHaveTextContent("unterschiedliche Namen");
   });
+
+  const tile = (label: string) => screen.getByText(label, { selector: "dt" }).nextSibling;
+
+  it("Verfügbarkeit: rechnet Ausfallzeit und Gesamtsystem", async () => {
+    render(<ToolPage id="verfuegbarkeit" />);
+    const input = await screen.findByRole("textbox", { name: /^Verfügbarkeit/ });
+    expect(screen.getAllByText("8 h 45 min").length).toBeGreaterThan(0);
+    expect(tile("Gesamtverfügbarkeit")).toHaveTextContent("99,937 %");
+    expect(tile("schwächstes Glied")).toHaveTextContent("Switch");
+    fireEvent.change(input, { target: { value: "abc" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("zwischen 0 und 100");
+    // Die Liste der Komponenten steht nicht in der Adresszeile.
+    expect(window.location.search).not.toContain("Firewall");
+  });
+
+  it("Speichereinheiten: rechnet dezimal und binär um", async () => {
+    render(<ToolPage id="speichereinheiten" />);
+    expect(await screen.findByRole("row", { name: /^GiB/ })).toHaveTextContent("931,323");
+    expect(screen.getByRole("row", { name: /^TB \(Eingabe\)/ })).toHaveTextContent("1");
+    fireEvent.change(screen.getByRole("textbox", { name: "Wert" }), { target: { value: "x" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("Zahl");
+  });
+
+  it("Stromkosten: rechnet Kosten und vergleicht mit einer Alternative", async () => {
+    render(<ToolPage id="stromkosten" />);
+    await screen.findByRole("textbox", { name: /^Strompreis/ });
+    expect(tile("pro Jahr")).toHaveTextContent("981,12 €");
+    fireEvent.change(screen.getByRole("textbox", { name: /^Leistungsaufnahme der Alternative/ }), {
+      target: { value: "200" },
+    });
+    expect(screen.getByText(/pro Jahr gespart$/)).toBeVisible();
+    expect(window.location.search).toBe("?alternative=200");
+  });
+
+  it("Speicherbedarf: rechnet heute und in fünf Jahren", async () => {
+    render(<ToolPage id="speicherbedarf" />);
+    await screen.findByRole("textbox", { name: /^Datenmenge heute/ });
+    expect(tile("Bedarf heute (mit Reserve)")).toHaveTextContent("6 TB");
+    expect(tile("Bedarf in 5 Jahren")).toHaveTextContent("12,07 TB");
+    expect(screen.getByRole("row", { name: /^\+5/ })).toHaveTextContent("12,07 TB");
+  });
+
+  it("Übertragungsdauer: rechnet Dauer und nötige Bandbreite", async () => {
+    render(<ToolPage id="uebertragungsdauer" />);
+    await screen.findByRole("textbox", { name: "Datenmenge" });
+    expect(screen.getByRole("status")).toHaveTextContent("12 h 20 min");
+    fireEvent.click(screen.getByRole("button", { name: "1 Gbit/s" }));
+    expect(window.location.search).toBe("?rate=1&einheit=Gbit");
+    fireEvent.change(screen.getByLabelText("Modus"), { target: { value: "bandbreite" } });
+    expect(screen.getByRole("status")).toHaveTextContent("154,32 Mbit/s");
+  });
+
+  it("USV: empfiehlt die Größe und schätzt die Laufzeit", async () => {
+    render(<ToolPage id="usv" />);
+    await screen.findByRole("textbox", { name: /^Leistung aller Geräte/ });
+    expect(tile("USV mindestens (Scheinleistung)")).toHaveTextContent("1.111 VA");
+    expect(tile("Überbrückungszeit (geschätzt)")).toHaveTextContent("23 min 20 s");
+  });
+
+  it("VoIP: rechnet die Bandbreite je Gespräch und die Zahl möglicher Gespräche", async () => {
+    render(<ToolPage id="voip" />);
+    await screen.findByLabelText("Codec");
+    expect(tile("je Gespräch und Richtung")).toHaveTextContent("87,2 kbit/s");
+    expect(screen.getByText("114 Gespräche")).toBeVisible();
+  });
+
+  it("RAID: rechnet Kapazität und Plattenbedarf und simuliert Ausfälle", async () => {
+    render(<ToolPage id="raid" />);
+    await screen.findByLabelText("Bereich");
+    expect(tile("nutzbar (Hersteller-TB)")).toHaveTextContent("32 TB");
+    fireEvent.change(screen.getByLabelText("Bereich"), { target: { value: "plattenbedarf" } });
+    expect(screen.getByRole("row", { name: /^RAID 6 \(doppelte/ })).toHaveTextContent("40 TB");
+    expect(screen.getByRole("row", { name: /^RAID 1 \(Spiegel/ })).toHaveTextContent(
+      "nicht erreichbar",
+    );
+    fireEvent.change(screen.getByLabelText("Bereich"), { target: { value: "ausfall" } });
+    fireEvent.click(screen.getByRole("button", { name: "Platte 1" }));
+    expect(screen.getByText("Degraded, 1 ausgefallen")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Platte 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Platte 3" }));
+    expect(screen.getByText("Datenverlust")).toBeVisible();
+    expect(window.location.search).toBe("?bereich=ausfall");
+    fireEvent.click(screen.getByRole("button", { name: "Alle Platten wieder einsetzen" }));
+    expect(screen.getByText("Alles in Ordnung")).toBeVisible();
+  });
+
+  it("Cron: erklärt den Ausdruck und zeigt die nächsten Ausführungen", async () => {
+    render(<ToolPage id="cron" />);
+    const input = await screen.findByRole("textbox", { name: "Cron-Ausdruck" });
+    expect(screen.getByRole("status")).toHaveTextContent("Um 08:00 Uhr, montags bis freitags.");
+    expect(
+      within(screen.getByRole("list", { name: "Nächste Ausführungen" })).getAllByRole("listitem"),
+    ).toHaveLength(10);
+    fireEvent.click(screen.getByRole("button", { name: /^\*\/5 \* \* \* \*/ }));
+    expect(screen.getByRole("status")).toHaveTextContent("Alle 5 Minuten");
+    expect(window.location.search).toContain("ausdruck=");
+    fireEvent.change(input, { target: { value: "bla" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("Erwartet 5 Felder");
+  });
 });
