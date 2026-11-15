@@ -4,7 +4,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
-## [0.11.0] – 2026-11-15
+## [0.12.0] – 2026-11-15
 
 Empfehlungen aus Microsoft Secure Score.
 
@@ -21,6 +21,9 @@ Empfehlungen aus Microsoft Secure Score.
 ### Technik
 
 - Neue Tabellen `cfg_recommendations` und `cfg_recommendation_links` (Migration 0016), neuer Auftrag `m365_config.secure_score`
+
+## [0.11.0] – 2026-11-15
+
 Bilder passen sich beim Hochladen an, klare Hinweise zur Anmeldung.
 
 ### Verwaltung

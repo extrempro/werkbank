@@ -24,7 +24,7 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
-    version: "0.11.0",
+    version: "0.12.0",
     date: "2026-11-15",
     summary: "Empfehlungen von Microsoft: was offen ist und was schon erfüllt.",
     sections: [
@@ -34,6 +34,13 @@ export const RELEASES: readonly Release[] = [
           "Neue Seite „Empfehlungen“: Sie zeigt die Empfehlungen aus Microsoft Secure Score mit dem Stand in deinem Tenant. Du siehst, was offen ist, was Microsoft zur Umsetzung rät und wie viele Punkte es bringt. Die Texte kommen von Microsoft und sind auf Englisch.",
           "Mit der Rolle Reviewer ordnest du einer Empfehlung die passenden Einstellungen zu. Die Empfehlung steht dann auch direkt bei der Einstellung.",
           "Die Seite füllt sich erst, wenn der Abruf für eure Installation eingeschaltet ist.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "0.11.0",
+    date: "2026-11-15",
     summary:
       "Logos passen sich beim Hochladen selbst an, und die Werkbank sagt klar, wenn du dich neu anmelden musst.",
     sections: [
