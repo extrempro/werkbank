@@ -20,6 +20,7 @@ from werkbank.modules.evergreen.jobs import (
 from werkbank.modules.m365_config.ai_texts import GENERATE_AI_TEXTS, generate_ai_texts_job
 from werkbank.modules.m365_config.jobs import COLLECT, collect_job
 from werkbank.modules.m365_config.secure_score import FETCH_SECURE_SCORE, fetch_secure_score_job
+from werkbank.modules.tenant.credentials import FETCH_CREDENTIALS, fetch_credentials_job
 from werkbank.modules.tenant.inventory import FETCH_TENANT, fetch_inventory_job
 from werkbank.worker.jobs import JobType
 
@@ -96,6 +97,11 @@ def build_registry(settings: Settings) -> dict[str, JobType]:
         if settings.tenant_monitor_enabled:
             registry[FETCH_TENANT] = JobType(
                 handler=fetch_inventory_job,
+                interval=timedelta(hours=max(settings.tenant_monitor_interval_hours, 1)),
+            )
+        if settings.tenant_credentials_enabled:
+            registry[FETCH_CREDENTIALS] = JobType(
+                handler=fetch_credentials_job,
                 interval=timedelta(hours=max(settings.tenant_monitor_interval_hours, 1)),
             )
     return registry

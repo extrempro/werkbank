@@ -7,6 +7,7 @@ import {
   type AdminSettings,
   type SmtpUpdate,
 } from "../api";
+import { CredentialWarnSettings } from "./CredentialWarnSettings";
 
 type Message = { kind: "status" | "alert"; text: string };
 
@@ -21,7 +22,7 @@ interface GeneralSettingsProps {
   onChange: (settings: AdminSettings) => void;
 }
 
-/** Verwaltung › Allgemein: SMTP-Server und Aufbewahrungsfrist des Audit-Logs. */
+/** Verwaltung › Allgemein: SMTP-Server, Aufbewahrungsfrist des Audit-Logs, Vorlauf für Abläufe. */
 export function GeneralSettings({ settings, onChange }: GeneralSettingsProps) {
   const smtp = settings.smtp;
   const [host, setHost] = useState(smtp.host);
@@ -288,6 +289,8 @@ export function GeneralSettings({ settings, onChange }: GeneralSettingsProps) {
           )}
         </form>
       </section>
+
+      <CredentialWarnSettings settings={settings} onChange={onChange} />
     </>
   );
 }

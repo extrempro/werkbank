@@ -78,6 +78,7 @@ describe("areasFor", () => {
     expect(allNavItems(tenant?.groups ?? []).map((item) => item.label)).toEqual([
       "Lizenzen",
       "Benutzer",
+      "Zertifikate & Secrets",
     ]);
     const both = areasFor(["Config.Reader", "Tenant.Reader"]).find((area) => area.id === "m365");
     expect(both?.home).toBe("/m365");

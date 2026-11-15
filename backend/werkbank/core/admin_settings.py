@@ -21,12 +21,17 @@ from werkbank.core.app_settings import (
     AUDIT_RETENTION_MAX,
     AUDIT_RETENTION_MIN,
     SMTP_KEY,
+    WARN_DAYS_KEY,
+    WARN_DAYS_MAX,
+    WARN_DAYS_MIN,
     SecretKeyMissingError,
     audit_retention_days,
     encrypt_secret,
     get_setting,
     secret_key_available,
     set_setting,
+    valid_warn_days,
+    warn_days,
 )
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, SettingsDep, require_recent_login
@@ -82,6 +87,10 @@ class SettingsOut(BaseModel):
     audit_retention_days: int
     audit_retention_min: int
     audit_retention_max: int
+    # Vorlauf für ablaufende Zertifikate und Secrets: Hinweis, Warnung, dringend
+    credential_warn_days: list[int]
+    credential_warn_min: int
+    credential_warn_max: int
 
 
 class SmtpIn(BaseModel):
@@ -160,6 +169,11 @@ class AuditRetentionIn(BaseModel):
     days: int = Field(ge=AUDIT_RETENTION_MIN, le=AUDIT_RETENTION_MAX)
 
 
+class CredentialWarnIn(BaseModel):
+    # Vorlauf in Tagen: Hinweis, Warnung, dringend (absteigend)
+    days: list[int] = Field(min_length=3, max_length=3)
+
+
 class TestResultOut(BaseModel):
     recipient: str
 
@@ -198,6 +212,9 @@ def _settings_out(db: DbDep, settings: SettingsDep) -> SettingsOut:
         audit_retention_days=audit_retention_days(db),
         audit_retention_min=AUDIT_RETENTION_MIN,
         audit_retention_max=AUDIT_RETENTION_MAX,
+        credential_warn_days=list(warn_days(db)),
+        credential_warn_min=WARN_DAYS_MIN,
+        credential_warn_max=WARN_DAYS_MAX,
     )
 
 
@@ -327,6 +344,33 @@ def update_audit_retention(
         object_id=AUDIT_RETENTION_KEY,
         ip=client_ip(request),
         details={"vorher": before, "nachher": body.days},
+    )
+    db.commit()
+    return _settings_out(db, settings)
+
+
+@router.put("/credential-warn-days")
+def update_credential_warn_days(
+    request: Request, body: CredentialWarnIn, user: AdminUser, db: DbDep, settings: SettingsDep
+) -> SettingsOut:
+    """Legt fest, wie viele Tage vor dem Ablauf die Werkbank hinweist, warnt und drängt."""
+    days = valid_warn_days(body.days)
+    if days is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Drei absteigende Zahlen innerhalb der Grenzen angeben",
+        )
+    before = list(warn_days(db))
+    set_setting(db, WARN_DAYS_KEY, list(days), user.user_id)
+    write_audit(
+        db,
+        module=MODULE,
+        action="einstellungen.vorlauf_geaendert",
+        user_id=user.user_id,
+        object_type="einstellung",
+        object_id=WARN_DAYS_KEY,
+        ip=client_ip(request),
+        details={"vorher": before, "nachher": list(days)},
     )
     db.commit()
     return _settings_out(db, settings)

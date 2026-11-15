@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.22.0] – 2026-11-15
+
+Tenant: Zertifikate und Secrets mit Ablaufdatum und Aufgaben.
+
+### Tenant
+
+- **Zertifikate und Secrets:** Neue Seite im Bereich Microsoft 365 unter „Tenant“. Sie zeigt die Zertifikate und Secrets der App-Registrierungen und die Signaturzertifikate der Unternehmensanwendungen mit SAML, sortiert nach Ablauf, mit Restlaufzeit und Einstufung (im Blick behalten, läuft bald ab, dringend, abgelaufen). Zuerst steht der Handlungsbedarf, auf Wunsch alle Einträge
+- **Aufgaben:** Ablaufende und abgelaufene Einträge stehen für Personen mit `Tenant.Reader` auf der Startseite und als Zähler in der Navigation
+- **Vorlauf einstellbar:** Verwaltung › Allgemein, Standard 60, 30 und 7 Tage
+- Gelesen und gespeichert werden nur Anwendung, Art, Bezeichnung und Daten, nie der geheime Wert eines Secrets
+- Der Abruf ist freiwillig: `TENANT_CREDENTIALS_ENABLED=true` in der `.env`, vorher der Collector-App `Application.Read.All` geben (`docs/entra-setup.md` 4.1). Er läuft im selben Abstand wie Lizenzen und Benutzerzahlen
+- Migration 0018 (eine neue Tabelle)
+- Noch nicht enthalten: Benachrichtigung per Mail
+
 ## [0.21.0] – 2026-11-15
 
 IT-Tools: AD und M365, weitere Generatoren.

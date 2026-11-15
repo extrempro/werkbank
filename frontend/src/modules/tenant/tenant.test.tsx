@@ -1,6 +1,14 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { daysUntil, licenseNotes, type License } from "./api";
+import {
+  credentialKind,
+  daysUntil,
+  licenseNotes,
+  remainingText,
+  type Credential,
+  type License,
+} from "./api";
+import { CredentialsPage } from "./CredentialsPage";
 import { LicensesPage } from "./LicensesPage";
 import { UsersPage } from "./UsersPage";
 
@@ -188,5 +196,101 @@ describe("UsersPage", () => {
     });
     render(<UsersPage />);
     expect(await screen.findByText(/noch keine Benutzerzahlen gelesen/)).toBeVisible();
+  });
+});
+
+function credential(overrides: Partial<Credential> = {}): Credential {
+  return {
+    id: 1,
+    owner_kind: "app",
+    owner_name: "Zeiterfassung",
+    app_id: "11111111-1111-1111-1111-111111111111",
+    kind: "secret",
+    name: "Schnittstelle",
+    starts_at: null,
+    expires_at: "2026-11-20T10:00:00Z",
+    days_left: 5,
+    level: "dringend",
+    ...overrides,
+  };
+}
+
+describe("Zertifikate und Secrets", () => {
+  it("beschreibt Art und Restlaufzeit in Worten", () => {
+    expect(credentialKind(credential())).toBe("Secret");
+    expect(credentialKind(credential({ kind: "zertifikat" }))).toBe("Zertifikat");
+    expect(credentialKind(credential({ kind: "zertifikat", owner_kind: "sso" }))).toBe(
+      "Signaturzertifikat (SAML)",
+    );
+    expect(remainingText(null)).toBe("ohne Ablaufdatum");
+    expect(remainingText(-1)).toBe("seit 1 Tag abgelaufen");
+    expect(remainingText(-12)).toBe("seit 12 Tagen abgelaufen");
+    expect(remainingText(0)).toBe("läuft heute ab");
+    expect(remainingText(1)).toBe("noch 1 Tag");
+    expect(remainingText(45)).toBe("noch 45 Tage");
+  });
+
+  it("zeigt zuerst den Handlungsbedarf und auf Wunsch alles", async () => {
+    stubFetch({
+      "/api/tenant/credentials": {
+        enabled: true,
+        fetched_at: "2026-11-15T06:00:00Z",
+        warn_days: [60, 30, 7],
+        total: 3,
+        attention: 2,
+        entries: [
+          credential({ id: 1, days_left: -3, level: "abgelaufen", name: null }),
+          credential({ id: 2 }),
+          credential({
+            id: 3,
+            owner_name: "Reiseportal",
+            owner_kind: "sso",
+            kind: "zertifikat",
+            days_left: 200,
+            level: "ok",
+          }),
+        ],
+      },
+    });
+    render(<CredentialsPage />);
+    const table = within(await screen.findByRole("region", { name: "Zertifikate und Secrets" }));
+    expect(table.getAllByRole("row")).toHaveLength(3);
+    expect(table.getByText("seit 3 Tagen abgelaufen")).toBeVisible();
+    expect(table.getByText("dringend")).toBeVisible();
+    expect(table.queryByText("Reiseportal")).toBeNull();
+    expect(screen.getByText(/Hinweis ab 60 Tagen, Warnung ab 30/)).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Alle (3)" }));
+    expect(table.getByRole("row", { name: /^Reiseportal/ })).toHaveTextContent(
+      "Signaturzertifikat (SAML)",
+    );
+  });
+
+  it("sagt, wenn nichts ansteht, und erklärt den leeren Zustand", async () => {
+    stubFetch({
+      "/api/tenant/credentials": {
+        enabled: true,
+        fetched_at: "2026-11-15T06:00:00Z",
+        warn_days: [60, 30, 7],
+        total: 1,
+        attention: 0,
+        entries: [credential({ days_left: 200, level: "ok" })],
+      },
+    });
+    const { unmount } = render(<CredentialsPage />);
+    expect(await screen.findByText(/Kein Handlungsbedarf/)).toBeVisible();
+    unmount();
+    stubFetch({
+      "/api/tenant/credentials": {
+        enabled: false,
+        fetched_at: null,
+        warn_days: [60, 30, 7],
+        total: 0,
+        attention: 0,
+        entries: [],
+      },
+    });
+    render(<CredentialsPage />);
+    expect(await screen.findByText(/ist in dieser Installation nicht eingeschaltet/)).toBeVisible();
   });
 });
