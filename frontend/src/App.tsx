@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
-import { fetchMe, type Me } from "./api";
+import { AUTH_EVENT, fetchMe, type AuthProblem, type Me } from "./api";
+import { AuthBanner } from "./components/AuthBanner";
 import { Layout } from "./components/Layout";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { LoginPage } from "./pages/LoginPage";
 
 type State =
   | { status: "loading" }
-  | { status: "anonymous" }
+  | { status: "anonymous"; expired?: boolean }
   | { status: "error" }
   | { status: "ready"; me: Me };
+
+/** Frühestens nach dieser Zeit wird beim Zurückkehren in den Tab die Anmeldung geprüft. */
+const RECHECK_MS = 60_000;
 
 export function App() {
   const [state, setState] = useState<State>({ status: "loading" });
@@ -31,9 +35,46 @@ export function App() {
     };
   }, []);
 
+  // Läuft die Sitzung ab, während die Werkbank offen ist, erscheint gleich die Anmeldeseite:
+  // sobald eine Abfrage „nicht angemeldet“ meldet oder der Tab wieder nach vorn kommt.
+  useEffect(() => {
+    const expire = () =>
+      setState((current) =>
+        current.status === "ready" ? { status: "anonymous", expired: true } : current,
+      );
+    const onProblem = (event: Event) => {
+      if ((event as CustomEvent<AuthProblem>).detail === "abgemeldet") {
+        expire();
+      }
+    };
+    let lastCheck = Date.now();
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || Date.now() - lastCheck < RECHECK_MS) {
+        return;
+      }
+      lastCheck = Date.now();
+      fetchMe()
+        .then((me) => {
+          if (!me) {
+            expire();
+          }
+        })
+        .catch(() => {
+          // Ohne Netz bleibt die Seite, wie sie ist.
+        });
+    };
+    window.addEventListener(AUTH_EVENT, onProblem);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener(AUTH_EVENT, onProblem);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
   return (
     <>
       <UpdateBanner />
+      {state.status === "ready" && <AuthBanner />}
       {state.status === "loading" && (
         <p className="page-message" role="status">
           Werkbank wird geladen …
@@ -48,7 +89,7 @@ export function App() {
           </a>
         </main>
       )}
-      {state.status === "anonymous" && <LoginPage />}
+      {state.status === "anonymous" && <LoginPage expired={state.expired === true} />}
       {state.status === "ready" && <Layout me={state.me} />}
     </>
   );

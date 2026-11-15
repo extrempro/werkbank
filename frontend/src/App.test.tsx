@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AUTH_EVENT } from "./api";
 import { App } from "./App";
 
 function mockFetch(status: number, body: unknown = {}) {
@@ -62,5 +63,21 @@ describe("App", () => {
     mockFetch(500);
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Werkbank nicht erreichbar" })).toBeVisible();
+  });
+
+  it("zeigt die Anmeldeseite mit Hinweis, sobald die Sitzung abgelaufen ist", async () => {
+    mockFetch(200, {
+      display_name: "Erika Beispiel",
+      email: "erika@example.com",
+      roles: ["Evergreen.Team"],
+      authenticated_at: "2026-11-14T08:00:00Z",
+    });
+    render(<App />);
+    await screen.findByRole("heading", { name: /Erika Beispiel$/ });
+    act(() => {
+      window.dispatchEvent(new CustomEvent(AUTH_EVENT, { detail: "abgemeldet" }));
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Deine Sitzung ist abgelaufen.");
+    expect(screen.getByRole("link", { name: "Mit Microsoft anmelden" })).toBeVisible();
   });
 });
