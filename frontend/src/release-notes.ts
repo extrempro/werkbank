@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.23.0",
+    date: "2026-11-15",
+    summary: "Zertifikate und Secrets als Waben auf einen Blick.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Neu: Die Seite „Zertifikate & Secrets“ hat eine Wabenansicht. Jede Wabe zeigt Anwendung, Restlaufzeit und Ablaufdatum, das Dringendste zuerst.",
+          "Ein Klick auf eine Wabe zeigt die Einzelheiten. Lange Namen werden umbrochen oder gekürzt, der volle Name steht in den Einzelheiten.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.22.0",
     date: "2026-11-15",
     summary: "Ablaufende Zertifikate und Secrets im Tenant im Blick.",

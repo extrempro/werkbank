@@ -9,6 +9,7 @@ import {
   type License,
 } from "./api";
 import { CredentialsPage } from "./CredentialsPage";
+import { hexLayout, nameLines, shortRemaining } from "./honeycomb";
 import { LicensesPage } from "./LicensesPage";
 import { UsersPage } from "./UsersPage";
 
@@ -292,5 +293,89 @@ describe("Zertifikate und Secrets", () => {
     });
     render(<CredentialsPage />);
     expect(await screen.findByText(/ist in dieser Installation nicht eingeschaltet/)).toBeVisible();
+  });
+});
+
+describe("Wabenansicht", () => {
+  it("bricht lange Namen um und kürzt, was nicht passt", () => {
+    expect(nameLines("Wiki")).toEqual(["Wiki"]);
+    expect(nameLines("Zeiterfassung Schnittstelle")).toEqual(["Zeiterfassung", "Schnittstelle"]);
+    expect(nameLines("Lohn- und Gehaltsabrechnung")).toEqual(["Lohn- und", "Gehaltsabrec…"]);
+    expect(nameLines("Supercalifragilisticexpialidocious")).toEqual([
+      "Supercalifrag",
+      "ilisticexpia…",
+    ]);
+    for (const line of nameLines("Reiseportal-Anbindung Produktion Nord")) {
+      expect(line.length).toBeLessThanOrEqual(13);
+    }
+  });
+
+  it("ordnet die Waben nach der Breite an und versetzt jede zweite Zeile", () => {
+    const wide = hexLayout(17, 680);
+    expect(wide.columns).toBe(5);
+    expect(wide.width).toBeLessThanOrEqual(680);
+    expect(wide.centers[5]?.x).toBeGreaterThan(wide.centers[0]?.x ?? 0);
+    expect(wide.centers[5]?.y).toBeGreaterThan(wide.centers[0]?.y ?? 0);
+    expect(hexLayout(17, 320).columns).toBe(2);
+    expect(hexLayout(17, 100).columns).toBe(1);
+    expect(hexLayout(0, 680).height).toBe(0);
+  });
+
+  it("nennt die Restlaufzeit kurz", () => {
+    expect(shortRemaining(null)).toBe("ohne Ablauf");
+    expect(shortRemaining(-4)).toBe("abgelaufen");
+    expect(shortRemaining(0)).toBe("heute");
+    expect(shortRemaining(1)).toBe("1 Tag");
+    expect(shortRemaining(45)).toBe("45 Tage");
+  });
+
+  it("zeigt alle Einträge als Waben und die Einzelheiten nach der Auswahl", async () => {
+    stubFetch({
+      "/api/tenant/credentials": {
+        enabled: true,
+        fetched_at: "2026-11-15T06:00:00Z",
+        warn_days: [60, 30, 7],
+        total: 2,
+        attention: 1,
+        entries: [
+          credential({ id: 1, owner_name: "Zeiterfassung Schnittstelle Produktion" }),
+          credential({
+            id: 2,
+            owner_name: "Reiseportal",
+            owner_kind: "sso",
+            kind: "zertifikat",
+            name: null,
+            days_left: 200,
+            level: "ok",
+          }),
+        ],
+      },
+    });
+    render(<CredentialsPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Waben" }));
+    expect(screen.queryByRole("region", { name: "Zertifikate und Secrets" })).toBeNull();
+    const comb = within(screen.getByRole("group", { name: /als Waben/ }));
+    // Auch der Eintrag ohne Handlungsbedarf ist dabei.
+    expect(comb.getAllByRole("button")).toHaveLength(2);
+    expect(screen.getByText("Eine Wabe auswählen, um die Einzelheiten zu sehen.")).toBeVisible();
+
+    const first = comb.getByRole("button", {
+      name: /^Zeiterfassung Schnittstelle Produktion, Secret/,
+    });
+    expect(first).toHaveTextContent("Zeiterfassung");
+    expect(first).toHaveTextContent("5 Tage");
+    fireEvent.click(first);
+    expect(first).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("heading", { name: "Zeiterfassung Schnittstelle Produktion" }),
+    ).toBeVisible();
+    expect(screen.getByText("11111111-1111-1111-1111-111111111111")).toBeVisible();
+
+    fireEvent.keyDown(comb.getByRole("button", { name: /^Reiseportal/ }), { key: "Enter" });
+    expect(screen.getByRole("heading", { name: "Reiseportal" })).toBeVisible();
+    expect(screen.getByText("Signaturzertifikat (SAML)")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Liste" }));
+    expect(screen.getByRole("region", { name: "Zertifikate und Secrets" })).toBeVisible();
   });
 });

@@ -9,14 +9,17 @@ import {
   remainingText,
   type CredentialList,
 } from "./api";
+import { Honeycomb } from "./Honeycomb";
 
 type View = "handlungsbedarf" | "alle";
+type Display = "liste" | "waben";
 
 /** Microsoft 365 › Tenant › Zertifikate und Secrets: Ablaufdaten der Anwendungen im Tenant. */
 export function CredentialsPage() {
   const [list, setList] = useState<CredentialList | null>(null);
   const [failed, setFailed] = useState(false);
   const [view, setView] = useState<View>("handlungsbedarf");
+  const [display, setDisplay] = useState<Display>("liste");
 
   useEffect(() => {
     let active = true;
@@ -81,70 +84,97 @@ export function CredentialsPage() {
             Stand {formatDateTime(list.fetched_at)} · Hinweis ab {notice} Tagen, Warnung ab {warn},
             dringend ab {urgent} Tagen vor dem Ablauf
           </p>
-          <div className="chips" role="group" aria-label="Einträge filtern">
+          <div className="chips" role="group" aria-label="Ansicht">
             <button
               type="button"
               className="chip chip-filter"
-              aria-pressed={view === "handlungsbedarf"}
-              onClick={() => setView("handlungsbedarf")}
+              aria-pressed={display === "liste"}
+              onClick={() => setDisplay("liste")}
             >
-              Handlungsbedarf ({list.attention})
+              Liste
             </button>
             <button
               type="button"
               className="chip chip-filter"
-              aria-pressed={view === "alle"}
-              onClick={() => setView("alle")}
+              aria-pressed={display === "waben"}
+              onClick={() => setDisplay("waben")}
             >
-              Alle ({list.total})
+              Waben
             </button>
           </div>
-          {shown.length === 0 ? (
-            <p className="panel panel-empty">
-              Kein Handlungsbedarf: In den nächsten {notice} Tagen läuft nichts ab.
-            </p>
-          ) : (
-            <div
-              className="table-wrap"
-              tabIndex={0}
-              role="region"
-              aria-label="Zertifikate und Secrets"
-            >
-              <table>
-                <caption className="visually-hidden">Zertifikate und Secrets nach Ablauf</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Anwendung</th>
-                    <th scope="col">Art</th>
-                    <th scope="col">Bezeichnung</th>
-                    <th scope="col">Läuft ab</th>
-                    <th scope="col">Restlaufzeit</th>
-                    <th scope="col">Stand</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.map((entry) => (
-                    <tr key={entry.id}>
-                      <th scope="row">
-                        {entry.owner_name}
-                        {entry.app_id && (
-                          <span className="small mono tenant-part">{entry.app_id}</span>
-                        )}
-                      </th>
-                      <td>{credentialKind(entry)}</td>
-                      <td>{entry.name ?? "–"}</td>
-                      <td>{entry.expires_at ? formatDay(entry.expires_at.slice(0, 10)) : "–"}</td>
-                      <td>{remainingText(entry.days_left)}</td>
-                      <td>
-                        <span className={`pill pill-${LEVEL_INFO[entry.level].tone}`}>
-                          {LEVEL_INFO[entry.level].text}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {display === "waben" && <Honeycomb entries={all} />}
+          {display === "liste" && (
+            <>
+              <div className="chips" role="group" aria-label="Einträge filtern">
+                <button
+                  type="button"
+                  className="chip chip-filter"
+                  aria-pressed={view === "handlungsbedarf"}
+                  onClick={() => setView("handlungsbedarf")}
+                >
+                  Handlungsbedarf ({list.attention})
+                </button>
+                <button
+                  type="button"
+                  className="chip chip-filter"
+                  aria-pressed={view === "alle"}
+                  onClick={() => setView("alle")}
+                >
+                  Alle ({list.total})
+                </button>
+              </div>
+              {shown.length === 0 ? (
+                <p className="panel panel-empty">
+                  Kein Handlungsbedarf: In den nächsten {notice} Tagen läuft nichts ab.
+                </p>
+              ) : (
+                <div
+                  className="table-wrap"
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Zertifikate und Secrets"
+                >
+                  <table>
+                    <caption className="visually-hidden">
+                      Zertifikate und Secrets nach Ablauf
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Anwendung</th>
+                        <th scope="col">Art</th>
+                        <th scope="col">Bezeichnung</th>
+                        <th scope="col">Läuft ab</th>
+                        <th scope="col">Restlaufzeit</th>
+                        <th scope="col">Stand</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shown.map((entry) => (
+                        <tr key={entry.id}>
+                          <th scope="row">
+                            {entry.owner_name}
+                            {entry.app_id && (
+                              <span className="small mono tenant-part">{entry.app_id}</span>
+                            )}
+                          </th>
+                          <td>{credentialKind(entry)}</td>
+                          <td>{entry.name ?? "–"}</td>
+                          <td>
+                            {entry.expires_at ? formatDay(entry.expires_at.slice(0, 10)) : "–"}
+                          </td>
+                          <td>{remainingText(entry.days_left)}</td>
+                          <td>
+                            <span className={`pill pill-${LEVEL_INFO[entry.level].tone}`}>
+                              {LEVEL_INFO[entry.level].text}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
           <p className="small">
             Erneuert wird in Entra bei der jeweiligen Anwendung. Ein neues Secret oder Zertifikat
