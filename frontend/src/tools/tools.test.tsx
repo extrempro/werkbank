@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { FAVORITES_KEY, findTool, readFavorites, searchTools, TOOLS } from "./index";
 import { clampInt } from "./params";
 import { ruleName } from "./ports/PortsTool";
+import { ZONES_KEY } from "./timezone/TimezoneTool";
 import { ToolPage, ToolsOverviewPage } from "./ToolsPage";
 
 afterEach(() => {
@@ -347,5 +348,174 @@ describe("ToolPage", () => {
     expect(screen.getByLabelText("Formatiert").textContent).toBe("<a><b>x</b><c/></a>");
     fireEvent.change(input, { target: { value: "<a>\n<b></a>" } });
     expect(screen.getByRole("alert")).toHaveTextContent("Zeile 2");
+  });
+
+  it("CSV ↔ JSON: wandelt in beide Richtungen", async () => {
+    render(<ToolPage id="csv-json" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "CSV" }), {
+      target: { value: "a;b\n1;x" },
+    });
+    expect(screen.getByText("1 Zeilen · 2 Spalten · Trennzeichen „;“")).toBeVisible();
+    expect(screen.getByLabelText("Ergebnis")).toHaveTextContent('"a": 1');
+    fireEvent.change(screen.getByLabelText("Richtung"), { target: { value: "json-csv" } });
+    expect(window.location.search).toBe("?richtung=json-csv");
+    fireEvent.change(screen.getByRole("textbox", { name: /^JSON/ }), {
+      target: { value: '[{"a":1,"b":{"c":2}}]' },
+    });
+    expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("a;b.c");
+    fireEvent.change(screen.getByRole("textbox", { name: /^JSON/ }), { target: { value: "{" } });
+    expect(screen.getByRole("alert")).toBeVisible();
+  });
+
+  it("JSON ↔ YAML ↔ TOML: erkennt das Format und wandelt um", async () => {
+    render(<ToolPage id="json-yaml-toml" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Eingabe" }), {
+      target: { value: '{"a":{"b":1}}' },
+    });
+    expect(screen.getByText("erkannt: JSON")).toBeVisible();
+    expect(screen.getByLabelText("Ergebnis").textContent).toBe("a:\n  b: 1\n");
+    fireEvent.change(screen.getByLabelText("Nach"), { target: { value: "toml" } });
+    expect(screen.getByLabelText("Ergebnis").textContent).toBe("[a]\nb = 1\n");
+    expect(window.location.search).toBe("?nach=toml");
+  });
+
+  it("Zahlensysteme: rechnet um und zeigt das Zweierkomplement", async () => {
+    render(<ToolPage id="zahlensysteme" />);
+    expect(await screen.findByRole("row", { name: /^Hexadezimal/ })).toHaveTextContent("0xFF");
+    fireEvent.change(screen.getByRole("textbox", { name: "Zahl" }), {
+      target: { value: "0x80070005" },
+    });
+    expect(screen.getByRole("row", { name: /^32 Bit/ })).toHaveTextContent("-2147024891");
+    expect(screen.getByRole("row", { name: /^8 Bit/ })).toHaveTextContent("passt nicht");
+    fireEvent.change(screen.getByRole("textbox", { name: "Zahl" }), { target: { value: "xyz" } });
+    expect(screen.getByRole("alert")).toBeVisible();
+  });
+
+  it("Unix-Zeitstempel: rechnet in ein Datum um", async () => {
+    render(<ToolPage id="unix-zeit" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Zeitstempel" }), {
+      target: { value: "1700000000" },
+    });
+    const table = within(screen.getByRole("region", { name: "Datum zum Zeitstempel" }));
+    expect(table.getByRole("row", { name: /^UTC/ })).toHaveTextContent("2023-11-14T22:13:20.000Z");
+    expect(table.getByRole("row", { name: /^Erkannt als/ })).toHaveTextContent("Sekunden");
+    expect(screen.getByRole("region", { name: "Zeitstempel zum Datum" })).toBeVisible();
+  });
+
+  it("Zeitzonen: zeigt die Liste, merkt sich Änderungen und stellt den Standard wieder her", async () => {
+    render(<ToolPage id="zeitzonen" />);
+    const table = within(await screen.findByRole("region", { name: "Uhrzeit je Zeitzone" }));
+    expect(table.getByRole("row", { name: /^Europe\/Berlin/ })).toBeVisible();
+    fireEvent.click(table.getByRole("button", { name: "Entfernen – Europe/Berlin" }));
+    expect(table.queryByRole("row", { name: /^Europe\/Berlin/ })).toBeNull();
+    expect(window.localStorage.getItem(ZONES_KEY)).not.toContain("Europe/Berlin");
+    fireEvent.click(screen.getByRole("button", { name: "Standardliste" }));
+    expect(table.getByRole("row", { name: /^Europe\/Berlin/ })).toBeVisible();
+    expect(window.location.search).toBe("");
+  });
+
+  it("Schreibweise: zeigt alle Varianten", async () => {
+    render(<ToolPage id="schreibweise" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Eingabe" }), {
+      target: { value: "Mein Server Name" },
+    });
+    expect(screen.getByRole("row", { name: /^snake_case/ })).toHaveTextContent("mein_server_name");
+    expect(screen.getByRole("row", { name: /^camelCase/ })).toHaveTextContent("meinServerName");
+  });
+
+  it("Listen: bereinigt, formatiert und vergleicht", async () => {
+    render(<ToolPage id="listen" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Eingabe" }), {
+      target: { value: "b\na\nb" },
+    });
+    expect(screen.getByText("2 Einträge")).toBeVisible();
+    expect(screen.getByText("1 Duplikate entfernt")).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Sortieren"), { target: { value: "asc" } });
+    expect(screen.getByLabelText("Ergebnis").textContent).toBe("a\nb");
+    fireEvent.change(screen.getByLabelText("Ausgabe"), { target: { value: "powershell" } });
+    expect(screen.getByLabelText("Ergebnis").textContent).toBe('@("a", "b")');
+    fireEvent.change(screen.getByLabelText("Funktion"), { target: { value: "vergleichen" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Liste B" }), {
+      target: { value: "a\nc" },
+    });
+    expect(screen.getByLabelText("Nur in A (1)")).toHaveTextContent("b");
+    expect(screen.getByLabelText("Nur in B (1)")).toHaveTextContent("c");
+    expect(screen.getByLabelText("In beiden (1)")).toHaveTextContent("a");
+  });
+
+  it("Regex: markiert Treffer, zeigt Gruppen und ersetzt; der Testtext bleibt aus der Adresse", async () => {
+    render(<ToolPage id="regex" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Ausdruck" }), {
+      target: { value: "(\\d+)" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Testtext" }), {
+      target: { value: "a1b22" },
+    });
+    expect(screen.getByText("2 Treffer")).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "$1" })).toBeVisible();
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Ersetzen ausprobieren/ }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Ersetzen durch" }), {
+      target: { value: "<$1>" },
+    });
+    expect(screen.getByLabelText("Ergebnis").textContent).toBe("a<1>b<22>");
+    expect(window.location.search).toContain("ausdruck=");
+    expect(window.location.search).not.toContain("a1b22");
+    fireEvent.change(screen.getByRole("textbox", { name: "Ausdruck" }), {
+      target: { value: "(" },
+    });
+    expect(screen.getByRole("alert")).toBeVisible();
+  });
+
+  it("Zeichen zählen: findet unsichtbare Zeichen und bereinigt", async () => {
+    render(<ToolPage id="zeichen-zaehlen" />);
+    const input = await screen.findByRole("textbox", { name: "Eingabe" });
+    fireEvent.change(input, { target: { value: "pass\u200bwort" } });
+    expect(screen.getByRole("list", { name: "Gefundene Zeichen" })).toHaveTextContent("U+200B");
+    fireEvent.click(screen.getByRole("button", { name: "Bereinigten Text übernehmen" }));
+    expect(input).toHaveValue("passwort");
+    expect(screen.getByText("Keine gefunden.")).toBeVisible();
+  });
+
+  it("Text-Diff: vergleicht nebeneinander und als Unified-Diff", async () => {
+    render(<ToolPage id="text-diff" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Vorher" }), {
+      target: { value: "a\nb" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Nachher" }), {
+      target: { value: "a\nc" },
+    });
+    expect(screen.getByText("1 entfernt")).toBeVisible();
+    expect(screen.getByText("1 hinzugefügt")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Vergleich" })).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Ansicht"), { target: { value: "unified" } });
+    expect(window.location.search).toBe("?ansicht=unified");
+    const unified = screen.getByRole("region", { name: "Unified-Diff" });
+    expect(unified).toHaveTextContent("-b");
+    expect(unified).toHaveTextContent("+c");
+    fireEvent.change(screen.getByRole("textbox", { name: "Nachher" }), {
+      target: { value: "a\nb" },
+    });
+    expect(screen.getByText("identisch")).toBeVisible();
+  });
+
+  it("SQL: formatiert und führt JOINs an Beispieltabellen vor", async () => {
+    render(<ToolPage id="sql" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Eingabe" }), {
+      target: { value: "select a from t where x=1" },
+    });
+    expect(screen.getByLabelText("Formatiert").textContent).toBe(
+      "SELECT\n  a\nFROM t\nWHERE\n  x = 1",
+    );
+    fireEvent.change(screen.getByLabelText("Bereich"), { target: { value: "joins" } });
+    expect(screen.getByRole("heading", { name: "Ergebnis: 5 Zeilen" })).toBeVisible();
+    expect(screen.getByRole("img", { name: "Mengendiagramm LEFT JOIN" })).toBeVisible();
+    fireEvent.change(screen.getByLabelText("JOIN-Art"), { target: { value: "inner" } });
+    expect(screen.getByRole("heading", { name: "Ergebnis: 3 Zeilen" })).toBeVisible();
+    expect(window.location.search).toBe("?bereich=joins&join=inner");
+    const left = within(screen.getByRole("group", { name: "Linke Tabelle" }));
+    fireEvent.change(left.getByRole("textbox", { name: "Name" }), {
+      target: { value: "bestellungen" },
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("unterschiedliche Namen");
   });
 });

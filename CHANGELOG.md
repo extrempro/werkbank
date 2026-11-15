@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.18.0] – 2026-11-15
+
+IT-Tools: Konverter und Text.
+
+### IT-Tools
+
+- **Neue Kategorie „Konverter“:** CSV ↔ JSON, JSON ↔ YAML ↔ TOML, Zahlensysteme (mit Zweierkomplement), Unix-Zeitstempel, Zeitzonen-Umrechner
+- **Neue Kategorie „Text“:** Schreibweise ändern, Listen bereinigen (auch zwei Listen vergleichen), Regex-Tester, Zeichen zählen (findet unsichtbare Zeichen), Text-Diff
+- **SQL: Formatter und JOINs** in der Kategorie „Formatter“: Abfragen einrücken oder kürzen, JOINs an zwei Beispieltabellen ausprobieren, mit Mengendiagramm
+- Eingegebene Texte, Listen, Tabellen und Abfragen bleiben im Browser und stehen nicht in der Adresszeile. Dort stehen Optionen, die Zahl, der Zeitstempel und der reguläre Ausdruck
+- Der Zeitzonen-Umrechner merkt sich die Liste der Zeitzonen im Browser
+- Abweichung von der IT-Toolbox: CSV ↔ JSON hat keinen Knopf zum Herunterladen als Datei, das Ergebnis lässt sich kopieren. Im SQL-Tool stehen die Beispieltabellen nicht in der Adresszeile
+
 ## [0.17.1] – 2026-11-15
 
 Fertiges Image aus der GitHub-Registry statt Build auf dem Server.
