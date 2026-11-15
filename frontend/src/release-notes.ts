@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.15.0",
+    date: "2026-11-15",
+    summary: "Neuer Bereich IT-Tools mit den ersten fünf Werkzeugen.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "In der Navigation gibt es den neuen Bereich „IT-Tools“ mit Suche und Favoriten. Du siehst ihn, wenn dir die Rolle dafür zugewiesen ist.",
+          "Zum Start dabei: Subnetz-Rechner, chmod-Rechner, Base64, UUID-Generator und Passwort-Generator. Weitere Tools folgen.",
+          "Alle Tools rechnen in deinem Browser. Deine Eingaben werden nicht übertragen.",
+          "Die Einstellungen eines Tools stehen in der Adresszeile; so kannst du einen Link teilen. Kennwörter und eingegebene Texte stehen dort nie.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.14.0",
     date: "2026-11-15",
     summary: "Exchange Online kann dazukommen, und Bereiche haben verständliche Namen.",

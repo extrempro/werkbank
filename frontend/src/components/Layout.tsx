@@ -25,6 +25,7 @@ import { RecommendationsPage } from "../modules/m365/RecommendationsPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { hasUnseenRelease } from "../release-notes";
+import { ToolPage, TOOLS_PATH, ToolsOverviewPage } from "../tools/ToolsPage";
 import { currentTheme, saveTheme } from "../theme";
 import { navigate, usePath } from "../router";
 import { headerLogo, useBranding } from "../branding";
@@ -152,6 +153,10 @@ export function Layout({ me }: LayoutProps) {
   const itemMatch = /^\/evergreen\/(\d{1,9})$/.exec(path);
   const itemId = itemMatch ? Number(itemMatch[1]) : null;
 
+  const toolMatch = /^\/it-tools\/([a-z0-9-]{1,40})$/.exec(path);
+  const toolId = toolMatch ? (toolMatch[1] ?? null) : null;
+  const toolsAllowed = items.some((item) => item.path === TOOLS_PATH);
+
   let page: ReactNode;
   if (path === "/") {
     page = <StartPage me={me} tasks={tasks} />;
@@ -182,6 +187,10 @@ export function Layout({ me }: LayoutProps) {
     page = <SnapshotsPage />;
   } else if (settingId !== null && items.some((item) => item.path === SETTINGS_PATH)) {
     page = <SettingsPage me={me} selectedId={settingId} />;
+  } else if (path === TOOLS_PATH && current) {
+    page = <ToolsOverviewPage />;
+  } else if (toolId !== null && toolsAllowed) {
+    page = <ToolPage key={toolId} id={toolId} />;
   } else if (path === "/evergreen" && current) {
     page = <ItemsPage />;
   } else if (path === "/evergreen/eingang" && current) {

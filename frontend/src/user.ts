@@ -9,6 +9,7 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Evergreen.GF", "Geschäftsführung"],
   ["Werkbank.Auditor", "Revision"],
   ["Config.Reader", "Lesezugriff"],
+  ["Tools.User", "IT-Tools"],
 ];
 
 const ROLE_INFO: Record<string, { label: string; description: string }> = {
@@ -38,6 +39,10 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
     description: "Stellungnahme zu vorgelegten Vorgängen",
   },
   "Evergreen.GF": { label: "Evergreen Geschäftsführung", description: "Abnahme von Vorgängen" },
+  "Tools.User": {
+    label: "IT-Tools Nutzer",
+    description: "Bereich IT-Tools öffnen (Rechner, Generatoren)",
+  },
 };
 
 /** Name und Beschreibung einer App-Rolle (wie in der Verwaltung). */

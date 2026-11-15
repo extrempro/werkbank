@@ -14,6 +14,7 @@ class Role(StrEnum):
     EVERGREEN_TEAM = "Evergreen.Team"
     EVERGREEN_BETRIEBSRAT = "Evergreen.Betriebsrat"
     EVERGREEN_GF = "Evergreen.GF"
+    TOOLS_USER = "Tools.User"
 
 
 KNOWN_ROLES: frozenset[str] = frozenset(role.value for role in Role)
@@ -48,4 +49,8 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
         "Stellungnahme zu vorgelegten Vorgängen",
     ),
     Role.EVERGREEN_GF: ("Evergreen Geschäftsführung", "Abnahme von Vorgängen"),
+    Role.TOOLS_USER: (
+        "IT-Tools Nutzer",
+        "Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter)",
+    ),
 }

@@ -17,6 +17,7 @@ const ADMIN = "Werkbank.Admin";
 const AUDITOR = "Werkbank.Auditor";
 const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
 const EVERGREEN_EDITORS = ["Evergreen.IT", "Evergreen.Team"];
+const TOOLS_USER = "Tools.User";
 const EVERGREEN_ROLES = ["Evergreen.IT", "Evergreen.Team", "Evergreen.Betriebsrat", "Evergreen.GF"];
 
 function hasAny(roles: readonly string[], wanted: readonly string[]): boolean {
@@ -97,6 +98,18 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       home: "/evergreen",
       // Ohne Überschrift: Der Bereich heißt schon so.
       groups: [{ title: null, items }],
+    });
+  }
+  if (roles.includes(TOOLS_USER)) {
+    areas.push({
+      id: "it-tools",
+      label: "IT-Tools",
+      icon: "werkzeuge",
+      home: "/it-tools",
+      // Ohne Überschrift: Der Bereich heißt schon so. Die Tools selbst stehen in der Übersicht.
+      groups: [
+        { title: null, items: [{ path: "/it-tools", label: "Alle Tools", icon: "uebersicht" }] },
+      ],
     });
   }
   return areas;
