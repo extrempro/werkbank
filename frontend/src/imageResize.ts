@@ -97,23 +97,18 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-function loadImage(file: Blob): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(image);
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Bild nicht lesbar"));
-    };
-    image.src = url;
-  });
+/**
+ * Liest das Bild direkt aus der Datei. Bewusst ohne Umweg über eine blob:-Adresse: Die
+ * Content-Security-Policy der Werkbank lässt Bilder nur von der eigenen Adresse zu.
+ */
+function loadImage(file: Blob): Promise<ImageBitmap> {
+  if (typeof createImageBitmap !== "function") {
+    return Promise.reject(new Error("Bild nicht lesbar"));
+  }
+  return createImageBitmap(file);
 }
 
-function draw(image: HTMLImageElement, plan: Plan): Promise<Blob | null> {
+function draw(image: ImageBitmap, plan: Plan): Promise<Blob | null> {
   const canvas = document.createElement("canvas");
   canvas.width = plan.canvas.width;
   canvas.height = plan.canvas.height;
@@ -147,13 +142,13 @@ export async function prepareImage(
     bytes: file.size,
     changed: false,
   });
-  let image: HTMLImageElement;
+  let image: ImageBitmap;
   try {
     image = await loadImage(file);
   } catch {
     return original();
   }
-  const before = { width: image.naturalWidth, height: image.naturalHeight };
+  const before = { width: image.width, height: image.height };
   const problem = sizeProblem(before, kind);
   if (problem) {
     throw new ImageProblem(problem);
