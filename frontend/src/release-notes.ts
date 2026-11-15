@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.16.0",
+    date: "2026-11-15",
+    summary: "IT-Tools: fünf weitere Werkzeuge fürs Netzwerk.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Neu: Subnetting-Bits, Netze zusammenfassen, Firewall-Regeln prüfen, MAC-Adressen und das Port-Nachschlagewerk.",
+          "MAC-Adressen: Der Hersteller wird aus einer eingebauten Liste nachgeschlagen. Es geht keine Anfrage nach außen.",
+          "Regelwerke, Listen von Netzen und MAC-Adressen bleiben auf der Seite und stehen nie im Link.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.15.0",
     date: "2026-11-15",
     summary: "Neuer Bereich IT-Tools mit den ersten fünf Werkzeugen.",

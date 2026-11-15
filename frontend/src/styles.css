@@ -3229,3 +3229,16 @@ p.badges {
   background: var(--farbe-todo-flaeche);
   color: var(--farbe-todo-text);
 }
+
+.tool-line {
+  display: block;
+}
+
+.tool-hit td {
+  background: var(--farbe-auswahl);
+}
+
+.tool-verdict-ok {
+  background: var(--farbe-ok-flaeche);
+  color: var(--farbe-ok-text);
+}

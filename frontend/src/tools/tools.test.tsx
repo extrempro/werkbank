@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it } from "vitest";
 import { FAVORITES_KEY, findTool, readFavorites, searchTools, TOOLS } from "./index";
 import { clampInt } from "./params";
+import { ruleName } from "./ports/PortsTool";
 import { ToolPage, ToolsOverviewPage } from "./ToolsPage";
 
 afterEach(() => {
@@ -21,9 +22,9 @@ describe("Verzeichnis der IT-Tools", () => {
 
   it("sucht in Name, Beschreibung, Kategorie und Suchbegriffen", () => {
     expect(searchTools("").length).toBe(TOOLS.length);
-    expect(searchTools("ipv6").map((tool) => tool.id)).toEqual(["subnetz"]);
+    expect(searchTools("ipv6").map((tool) => tool.id)).toEqual(["subnetz", "mac-adressen"]);
     expect(searchTools("Generator zufall").map((tool) => tool.id)).toEqual(["uuid", "passwort"]);
-    expect(searchTools("netzwerk")).toHaveLength(1);
+    expect(searchTools("netzwerk")).toHaveLength(6);
     expect(searchTools("xyz-nichts")).toEqual([]);
   });
 
@@ -163,5 +164,79 @@ describe("ToolPage", () => {
     expect(screen.getByRole("heading", { name: "Bereich als CIDR-Blöcke" })).toBeVisible();
     fireEvent.change(input, { target: { value: "999.1.1.1/24" } });
     expect(screen.getByRole("alert")).toBeVisible();
+  });
+
+  it("Subnetting-Bits: zeigt geborgte Bits, Maske und die Subnetze", async () => {
+    render(<ToolPage id="subnetting-bits" />);
+    expect(await screen.findByLabelText("Ausgangsnetz")).toHaveValue("192.168.10.0/24");
+    expect(screen.getByRole("row", { name: /^Neues Präfix/ })).toHaveTextContent("/24 + 2 = /26");
+    expect(screen.getByRole("row", { name: /^Subnetzmaske/ })).toHaveTextContent(
+      "255.255.255.192",
+    );
+    expect(within(screen.getByRole("region", { name: "Subnetze" })).getAllByRole("row")).toHaveLength(5);
+    fireEvent.change(screen.getByLabelText("Hosts je Subnetz (0 = egal)"), {
+      target: { value: "100" },
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Das passt nicht");
+    expect(window.location.search).toBe("?hosts=100");
+  });
+
+  it("Netze zusammenfassen: fasst zusammen und behält die Liste für sich", async () => {
+    render(<ToolPage id="netze-zusammenfassen" />);
+    fireEvent.change(await screen.findByLabelText(/^Netze, Adressen oder Bereiche/), {
+      target: { value: "192.168.0.0/24\n192.168.1.0/24\nunsinn" },
+    });
+    expect(screen.getByLabelText("Zusammengefasst (IPv4)")).toHaveTextContent("192.168.0.0/23");
+    expect(screen.getByRole("alert")).toHaveTextContent("Nicht erkannt: unsinn");
+    expect(window.location.search).toBe("");
+  });
+
+  it("Firewall-Regeln: zeigt, welche Regel zuerst greift, und findet verdeckte Regeln", async () => {
+    render(<ToolPage id="firewall-regeln" />);
+    await screen.findByLabelText(/^Regeln/);
+    // Das Beispiel: Die Sperre in Regel 3 verdeckt die RDP-Freigabe in Regel 4.
+    expect(screen.getByText("Das Paket wird verworfen")).toBeVisible();
+    expect(screen.getByText(/Regel 3 passt als erste/)).toBeVisible();
+    expect(screen.getByText(/greift nie: Regel 3 deckt alles ab/)).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Ziel"), { target: { value: "10.0.20.10" } });
+    fireEvent.change(screen.getByLabelText("Zielport"), { target: { value: "443" } });
+    expect(screen.getByText("Das Paket wird durchgelassen")).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Zielport"), { target: { value: "25" } });
+    expect(screen.getByText(/Keine Regel passt/)).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Quelle"), { target: { value: "kaputt" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("Quelladresse des Testpakets ist ungültig");
+    expect(window.location.search).toBe("");
+  });
+
+  it("MAC-Adressen: wandelt um, erkennt die Art und schlägt den Hersteller nach", async () => {
+    render(<ToolPage id="mac-adressen" />);
+    fireEvent.change(await screen.findByLabelText(/^MAC-Adressen/), {
+      target: { value: "00-00-00-AB-CD-EF" },
+    });
+    expect(screen.getByLabelText("1 Adresse umgewandelt")).toHaveTextContent("00:00:00:ab:cd:ef");
+    expect(screen.getByText("Unicast, global")).toBeVisible();
+    expect(await screen.findByText("Xerox Corporation", {}, { timeout: 10000 })).toBeVisible();
+    expect(screen.getByRole("row", { name: /^IPv6 Link-Local/ })).toHaveTextContent(
+      "fe80::200:ff:feab:cdef",
+    );
+    fireEvent.change(screen.getByLabelText("Ausgabeformat"), { target: { value: "cisco" } });
+    expect(screen.getByLabelText("1 Adresse umgewandelt")).toHaveTextContent("0000.00ab.cdef");
+    // In der Adresszeile steht nur das Format, nie die Adresse.
+    expect(window.location.search).toBe("?format=cisco");
+  });
+
+  it("Ports: sucht nach Nummer und baut Firewall-Befehle mit harmlosem Namen", async () => {
+    render(<ToolPage id="ports" />);
+    fireEvent.change(await screen.findByLabelText(/^Port oder Dienst/), {
+      target: { value: "3389" },
+    });
+    expect(screen.getByRole("row", { name: /^3389/ })).toHaveTextContent("RDP");
+    expect(screen.getByLabelText("Windows (PowerShell)")).toHaveTextContent(
+      'New-NetFirewallRule -DisplayName "3389 (TCP)"',
+    );
+    expect(ruleName('x" ; Remove-Item C:\\ #', undefined)).toBe("Freigabe");
+    expect(ruleName("$(calc)", undefined)).toBe("Freigabe");
+    expect(ruleName("", "Windows & AD")).toBe("Windows und AD");
+    expect(ruleName("kerberos", undefined)).toBe("kerberos");
   });
 });

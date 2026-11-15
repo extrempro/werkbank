@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.16.0] – 2026-11-15
+
+IT-Tools: fünf weitere Netzwerk-Tools.
+
+### IT-Tools
+
+- **Subnetting-Bits:** geborgte Bits, neue Maske, Schrittweite, Rechenweg und die entstehenden Subnetze
+- **Netze zusammenfassen:** Liste von Netzen, Adressen und Bereichen zur kleinsten CIDR-Liste (IPv4 und IPv6)
+- **Firewall-Regeln prüfen:** Regelwerk mit Testpaket (First Match), findet Regeln, die nie erreicht werden
+- **MAC-Adressen:** Umformatieren, Art erkennen, EUI-64 und IPv6-Link-Local, Hersteller aus der Liste der IEEE. Die Liste (rund 1,8 MB) liegt in der Werkbank und wird erst geladen, wenn eine Adresse eingegeben ist; es gibt keine Abfrage nach außen
+- **Port-Nachschlagewerk:** über 150 gebräuchliche Ports, dazu Firewall-Befehle für Windows und Linux. Der Name der Regel im Befehl enthält nur harmlose Zeichen, auch wenn der Suchbegriff aus einem geteilten Link stammt
+- Listen von Netzen, Regelwerke und MAC-Adressen stehen nicht in der Adresszeile; dort stehen nur Optionen
+
 ## [0.15.0] – 2026-11-15
 
 Neuer Bereich IT-Tools (Pilot).
