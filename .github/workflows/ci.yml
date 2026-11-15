@@ -137,7 +137,7 @@ jobs:
             sleep 2
           done
           echo "Kein erledigter Aufräum-Auftrag gefunden"; exit 1
-      - name: Image ohne Quellcode bauen (deploy/Dockerfile, wie bei Arcane)
+      - name: Image ohne Quellcode bauen (deploy/Dockerfile, wie beim Betrieb per Git-Sync)
         env:
           REF: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |

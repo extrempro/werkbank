@@ -2,7 +2,7 @@
 
 Reihenfolge für das erste Deployment mit Prüfschritten. Beispielwerte verwenden `example.com`; echte Adressen, Kennungen und Zertifikate gehören nicht ins Repository.
 
-> **Stand:** Einmal an einer echten Installation durchlaufen (Arcane Git-Sync, NetBird Reverse Proxy auf einem anderen Server, Entra-Anmeldung, Abruf über UTCM). Bestätigt: Arcane synchronisiert nur den Ordner `deploy/` und baut das Image aus GitHub; Anmeldung, Proxy und der erste Abruf funktionieren wie beschrieben. Ebenfalls bestätigt: Abruf des Nachrichtencenters (Evergreen → Eingang). Noch nicht bestätigt: Änderungserkennung mit „Geändert von“ nach einer Änderung im Tenant, erneute Anmeldung für die Verwaltung mit `auth_time`, Installation auf iPhone und iPad.
+> **Stand:** Version 0.5. Die Reihenfolge beschreibt den Betrieb mit Docker Compose hinter einem Reverse Proxy, wahlweise mit einem Docker-Verwaltungswerkzeug, das den Ordner `deploy/` per Git-Sync holt.
 
 ## 1. Entra ID
 
@@ -19,29 +19,29 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 
 ## 2. Docker-Host
 
-- [ ] Der Host ist Peer im NetBird-Netz; seine NetBird-IP ist bekannt
+- [ ] Der Reverse Proxy erreicht den Host (gleicher Host oder internes Netz bzw. VPN); die Adresse des Hosts in diesem Netz ist bekannt
 - [ ] Secrets liegen in `/opt/werkbank/secrets` (fünf Dateien, siehe [`deploy/README.md`](../deploy/README.md))
 - [ ] Ausgehend erreichbar: `login.microsoftonline.com`, `graph.microsoft.com`, `github.com` (Build)
 
-## 3. Arcane
+## 3. Projekt anlegen (Compose oder Git-Sync)
 
-- [ ] Git-Sync auf das Repository, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Arcane holt dabei nur den Ordner `deploy/`; das ist richtig so. Das `Dockerfile` dort holt den Quellcode beim Bauen von GitHub
+- [ ] Git-Sync auf das Repository, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Es genügt der Ordner `deploy/`. Das `Dockerfile` dort holt den Quellcode beim Bauen von GitHub
 - [ ] Umgebungsvariablen eingetragen:
 
 | Variable | Wert |
 |---|---|
 | `WERKBANK_SECRETS_DIR` | `/opt/werkbank/secrets` |
-| `BIND_IP` | NetBird-IP des Docker-Hosts (nicht die öffentliche IP, nicht `0.0.0.0`) |
+| `BIND_IP` | interne Adresse des Docker-Hosts, über die der Proxy ihn erreicht (nicht die öffentliche IP, nicht `0.0.0.0`) |
 | `BIND_PORT` | freier Port, z. B. `8080` |
 | `PUBLIC_URL` | `https://werkbank.example.com` (ohne Schrägstrich am Ende) |
-| `TRUSTED_PROXY_IPS` | Adresse, von der die Anfragen des Proxys ankommen, zunächst die NetBird-IP des Proxy-Servers |
+| `TRUSTED_PROXY_IPS` | Adresse, von der die Anfragen des Proxys ankommen, zunächst die interne Adresse des Proxy-Servers |
 | `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `COLLECTOR_CLIENT_ID` | aus Schritt 1 |
 | `ENVIRONMENT` | `production` |
 | `ENABLE_TEST_LOGIN` | `false` |
 
 - [ ] Projekt bauen und starten; `web`, `worker` und `db` sind „healthy“
 
-## 4. NetBird Reverse Proxy
+## 4. Reverse Proxy
 
 - [ ] Öffentliche Adresse der Werkbank zeigt auf `BIND_IP:BIND_PORT` des Docker-Hosts
 - [ ] TLS endet am Proxy; HSTS ist dort gesetzt
@@ -69,7 +69,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 - **Nach einem Update sieht die Werkbank aus wie vorher:** Das Image wurde nicht neu gebaut. Ein Neu-Bereitstellen kann das vorhandene Image weiterverwenden. Auf dem Docker-Host im Projektordner `docker compose build --no-cache --pull` und `docker compose up -d` ausführen.
 - **Anmeldung schlägt fehl, nachdem `ENTRA_PROFILE_PHOTO=true` gesetzt wurde:** An der App-Registrierung fehlt die delegierte Berechtigung `User.Read` oder die Administratorzustimmung ([`entra-setup.md`](entra-setup.md), 1.5).
 - **Compose startet nicht, „bind source path does not exist: …/secrets/postgres_password“:** `WERKBANK_SECRETS_DIR` ist nicht gesetzt (dann sucht Compose im Ordner `secrets` neben der Compose-Datei) oder eine der fünf Dateien fehlt.
-- **„env file not found“:** In Arcane sind noch keine Umgebungsvariablen für das Projekt eingetragen.
+- **„env file not found“:** Es gibt noch keine `.env` neben der Compose-Datei bzw. im Verwaltungswerkzeug sind noch keine Umgebungsvariablen für das Projekt eingetragen.
 - **Anmeldung endet mit „Anmeldung nicht möglich“:** Im Audit-Log steht der Grund (`anmeldung.abgelehnt`), z. B. `falscher_mandant` oder `keine_rolle`.
 - **Abruf fehlgeschlagen:** Unter Snapshots steht der Abruf als „Fehlgeschlagen“; die Fehlerangabe von Microsoft steht im Protokoll des Dienstes `worker`. Häufig fehlt dem Dienstprinzipal von UTCM ein Leserecht.
 - **POST-Anfragen werden mit 403 abgewiesen:** `PUBLIC_URL` stimmt nicht exakt mit der Adresse im Browser überein.
