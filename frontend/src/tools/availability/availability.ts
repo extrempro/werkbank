@@ -36,7 +36,7 @@ export function parseComponents(text: string): { components: Component[]; errors
     const t = line.replace(/#.*$/, "").trim();
     if (!t) continue;
     const p = t.split(/[;\t]/).map((x) => x.trim());
-    const a = Number((p[1] ?? "").replace("%", "").replace(",", "."));
+    const a = Number((p[1] ?? "").replace(/%/g, "").replace(",", "."));
     const n = p[2] ? Number(p[2].replace(/x$/i, "")) : 1;
     if (!p[0] || !(a > 0 && a <= 100) || !Number.isInteger(n) || n < 1 || n > 64) errors.push(t);
     else components.push({ name: p[0], availability: a, redundancy: n });

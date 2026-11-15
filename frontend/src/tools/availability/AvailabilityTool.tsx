@@ -15,7 +15,7 @@ export default function AvailabilityTool() {
   const [params, setParams] = useToolParams({ prozent: "99,9", mtbf: "8760", mttr: "4" });
   // Die Liste der Komponenten bleibt nur auf dieser Seite (sie kann Namen von Systemen enthalten).
   const [parts, setParts] = useState(EXAMPLE);
-  const value = num(params.prozent.replace("%", ""));
+  const value = num(params.prozent.replace(/%/g, ""));
   const valid = value > 0 && value <= 100;
   const down = valid ? downtime(value) : null;
 
