@@ -188,7 +188,7 @@ export function ItemDetailPage({ id, onChanged }: ItemDetailPageProps) {
           <h2 id="ablauf-titel" className="visually-hidden">
             Stand im Ablauf
           </h2>
-          <div className="stepper-wrap">
+          <div className="stepper-wrap" tabIndex={0} role="region" aria-labelledby="ablauf-titel">
             <ol className="stepper">
               {steps.map((step, index) => {
                 const current = step.id === item.step;
