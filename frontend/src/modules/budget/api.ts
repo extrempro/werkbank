@@ -145,7 +145,7 @@ export function euroInput(cents: number | null): string {
  * Ergebnis in Cent; null, wenn die Eingabe kein gültiger Betrag ist.
  */
 export function parseEuro(text: string): number | null {
-  const clean = text.replace(/[\s  €]/g, "");
+  const clean = text.replace(/[\s€]/g, "");
   if (!/^(\d{1,3}(\.\d{3})+|\d+)(,\d{1,2})?$/.test(clean)) {
     return null;
   }

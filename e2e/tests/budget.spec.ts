@@ -12,7 +12,6 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Konten" })).toBeVisible();
   await page.getByLabel("Kontonummer", { exact: true }).fill(number);
   await page.getByLabel("Bezeichnung", { exact: true }).fill("Testkonto Wartung");
-  await page.getByLabel("Art", { exact: true }).selectOption("laufend");
   await page.getByRole("button", { name: "Konto anlegen" }).click();
   await expect(page.getByText(`Konto ${number} ist gespeichert.`)).toBeVisible();
   await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("aktiv");

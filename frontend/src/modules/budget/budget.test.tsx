@@ -84,7 +84,7 @@ function stubFetch(routes: Record<string, unknown>) {
 
 /** Beträge ohne die geschützten Leerzeichen der Zahlenformatierung. */
 function plain(text: string | null): string {
-  return (text ?? "").replace(/[  ]/g, " ");
+  return (text ?? "").replace(/\s/g, " ");
 }
 
 describe("Beträge", () => {
