@@ -102,7 +102,8 @@ function readable(color: string, surface: string, minimum: number, theme: Theme)
 export function accentColors(accent: string, theme: Theme): Record<string, string> {
   const surface = SURFACE[theme];
   const primary = readable(accent, surface.test, 3, theme);
-  const onPrimary = contrast(primary, "#ffffff") >= contrast(primary, DARK_TEXT) ? "#ffffff" : DARK_TEXT;
+  const onPrimary =
+    contrast(primary, "#ffffff") >= contrast(primary, DARK_TEXT) ? "#ffffff" : DARK_TEXT;
   const hover = toHex(mix(parseHex(primary), onPrimary === "#ffffff" ? BLACK : WHITE, 0.18));
   const link = readable(accent, surface.test, 4.5, theme);
   const selected = toHex(
@@ -129,7 +130,8 @@ function isBranding(value: unknown): value is Branding {
     return false;
   }
   const data = value as Record<string, unknown>;
-  const url = (entry: unknown) => entry === null || (typeof entry === "string" && ASSET_URL.test(entry));
+  const url = (entry: unknown) =>
+    entry === null || (typeof entry === "string" && ASSET_URL.test(entry));
   return (
     typeof data.app_name === "string" &&
     data.app_name.length > 0 &&
