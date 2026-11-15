@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.18.0",
+    date: "2026-11-15",
+    summary: "IT-Tools: Konverter und Werkzeuge für Text.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Neue Kategorie „Konverter“: CSV ↔ JSON, JSON ↔ YAML ↔ TOML, Zahlensysteme, Unix-Zeitstempel und Zeitzonen-Umrechner.",
+          "Neue Kategorie „Text“: Schreibweise ändern, Listen bereinigen und vergleichen, Regex-Tester, Zeichen zählen und Text-Diff.",
+          "SQL: Abfragen formatieren und JOINs an Beispieltabellen ausprobieren.",
+          "Eingegebene Texte bleiben im Browser und stehen nie in der Adresszeile.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.17.1",
     date: "2026-11-15",
     summary: "Updates der Werkbank lassen sich einfacher einspielen.",

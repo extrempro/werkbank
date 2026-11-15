@@ -6,13 +6,15 @@ import { lazy, type ComponentType } from "react";
  * Die Oberfläche wird erst beim Öffnen des Tools geladen.
  */
 
-export type ToolCategory = "netzwerk" | "system" | "encoding" | "formatter" | "generator";
+export type ToolCategory = "netzwerk" | "system" | "encoding" | "formatter" | "konverter" | "text" | "generator";
 
 export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   netzwerk: "Netzwerk",
   system: "Linux und Server",
   encoding: "Encoding",
   formatter: "Formatter",
+  konverter: "Konverter",
+  text: "Text",
   generator: "Generatoren",
 };
 
@@ -197,6 +199,117 @@ export const TOOLS: readonly ToolDefinition[] = [
     description: "XML prüfen, einrücken oder minimieren, mit Fehlermeldung samt Zeile.",
     tags: ["xml", "pretty print", "minify", "validieren", "einrücken", "gpo", "unattend"],
     component: lazy(() => import("./xml-format/XmlFormatTool")),
+  },
+  {
+    id: "sql",
+    name: "SQL: Formatter und JOINs",
+    category: "formatter",
+    description:
+      "SQL-Abfragen lesbar einrücken oder auf eine Zeile kürzen. Dazu JOINs an zwei Beispieltabellen ausprobieren, mit Ergebnis, NULL-Werten und Mengendiagramm.",
+    tags: [
+      "query",
+      "abfrage",
+      "t-sql",
+      "mysql",
+      "postgresql",
+      "minify",
+      "inner join",
+      "left join",
+      "full outer join",
+      "anti join",
+      "datenbank",
+    ],
+    component: lazy(() => import("./sql-format/SqlTool")),
+  },
+  {
+    id: "csv-json",
+    name: "CSV ↔ JSON",
+    category: "konverter",
+    description:
+      "CSV (auch aus Excel mit Semikolon) in JSON umwandeln und zurück. Das Trennzeichen wird erkannt, verschachtelte Objekte werden aufgelöst.",
+    tags: ["excel", "tabelle", "umwandeln", "semikolon", "export", "import"],
+    component: lazy(() => import("./csv-json/CsvJsonTool")),
+  },
+  {
+    id: "json-yaml-toml",
+    name: "JSON ↔ YAML ↔ TOML",
+    category: "konverter",
+    description:
+      "Daten zwischen JSON, YAML und TOML umwandeln, zum Beispiel für Konfigurationsdateien.",
+    tags: ["umwandeln", "konvertieren", "convert", "konfiguration", "config"],
+    component: lazy(() => import("./data-convert/DataConvertTool")),
+  },
+  {
+    id: "zahlensysteme",
+    name: "Zahlensysteme",
+    category: "konverter",
+    description:
+      "Zahlen zwischen Dezimal, Hex, Binär und Oktal umrechnen, beliebig groß, mit Zweierkomplement für 8, 16, 32 und 64 Bit und Bytes.",
+    tags: ["hex", "binär", "dezimal", "oktal", "umrechnen", "zweierkomplement", "bits", "base"],
+    component: lazy(() => import("./number-base/NumberBaseTool")),
+  },
+  {
+    id: "unix-zeit",
+    name: "Unix-Zeitstempel",
+    category: "konverter",
+    description:
+      "Unix-Zeitstempel (Sekunden bis Nanosekunden, automatisch erkannt) in ein Datum umrechnen und zurück, mit ISO 8601, Kalenderwoche und Excel-Wert.",
+    tags: ["timestamp", "epoch", "datum", "iso 8601", "millisekunden", "kalenderwoche", "excel"],
+    component: lazy(() => import("./unix-time/UnixTimeTool")),
+  },
+  {
+    id: "zeitzonen",
+    name: "Zeitzonen-Umrechner",
+    category: "konverter",
+    description:
+      "Uhrzeit in mehrere Zeitzonen umrechnen, mit Sommerzeit, zum Beispiel für Wartungsfenster und Termine mit Standorten weltweit.",
+    tags: ["zeitzone", "timezone", "utc", "sommerzeit", "dst", "uhrzeit", "wartungsfenster", "gmt"],
+    component: lazy(() => import("./timezone/TimezoneTool")),
+  },
+  {
+    id: "schreibweise",
+    name: "Schreibweise ändern",
+    category: "text",
+    description:
+      "Text in GROSS, klein, Jedes Wort Groß, camelCase, snake_case, kebab-case und weitere umwandeln, alle Varianten auf einen Blick.",
+    tags: ["case", "groß", "klein", "uppercase", "lowercase", "camelcase", "pascalcase"],
+    component: lazy(() => import("./case/CaseTool")),
+  },
+  {
+    id: "listen",
+    name: "Listen bereinigen",
+    category: "text",
+    description:
+      "Listen sortieren, Duplikate entfernen und als Komma-Liste, PowerShell-Array, SQL IN (…) oder JSON ausgeben. Dazu zwei Listen vergleichen.",
+    tags: ["liste", "duplikate", "sortieren", "powershell", "array", "vergleichen", "unique"],
+    component: lazy(() => import("./list-clean/ListCleanTool")),
+  },
+  {
+    id: "regex",
+    name: "Regex-Tester",
+    category: "text",
+    description:
+      "Reguläre Ausdrücke live testen: Treffer markieren, Gruppen anzeigen, Ersetzen ausprobieren (JavaScript-Syntax).",
+    tags: ["regulärer ausdruck", "regexp", "pattern", "match", "replace", "gruppen"],
+    component: lazy(() => import("./regex/RegexTool")),
+  },
+  {
+    id: "zeichen-zaehlen",
+    name: "Zeichen zählen",
+    category: "text",
+    description:
+      "Zeichen, Wörter, Zeilen und Bytes zählen. Findet und entfernt unsichtbare Zeichen (geschützte Leerzeichen, Zero-Width, BOM).",
+    tags: ["wörter", "länge", "bytes", "unsichtbar", "zero width", "nbsp", "bom", "count"],
+    component: lazy(() => import("./text-stats/TextStatsTool")),
+  },
+  {
+    id: "text-diff",
+    name: "Text-Diff",
+    category: "text",
+    description:
+      "Zwei Texte oder Konfigurationen vergleichen, nebeneinander oder als Unified-Diff, mit hervorgehobenen Wortänderungen.",
+    tags: ["diff", "vergleich", "unterschied", "compare", "konfiguration", "patch", "unified"],
+    component: lazy(() => import("./diff/DiffTool")),
   },
   {
     id: "uuid",

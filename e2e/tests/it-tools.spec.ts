@@ -164,6 +164,70 @@ test("IT-Tools: Encoding und Formatter", async ({ page }) => {
   await expectNoA11yViolations(page);
 });
 
+test("IT-Tools: Konverter und Text", async ({ page }) => {
+  await loginAs(page, ["Tools.User"], "Tina Tools");
+
+  await page.goto("/it-tools/csv-json");
+  await page.getByRole("textbox", { name: "CSV" }).fill("a;b\n1;x");
+  await expect(page.getByLabel("Ergebnis", { exact: true })).toContainText('"a": 1');
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/json-yaml-toml?nach=toml");
+  await page.getByRole("textbox", { name: "Eingabe" }).fill('{"a":{"b":1}}');
+  await expect(page.getByLabel("Ergebnis", { exact: true })).toContainText("b = 1");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/zahlensysteme?zahl=0x80070005");
+  await expect(page.getByRole("row", { name: /^32 Bit/ })).toContainText("-2147024891");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/unix-zeit?wert=1700000000");
+  await expect(
+    page.getByRole("region", { name: "Datum zum Zeitstempel" }).getByRole("row", { name: /^UTC/ }),
+  ).toContainText("2023-11-14T22:13:20.000Z");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/zeitzonen");
+  await expect(page.getByRole("row", { name: /^Asia\/Tokyo/ })).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/schreibweise");
+  await page.getByRole("textbox", { name: "Eingabe" }).fill("Mein Server Name");
+  await expect(page.getByRole("row", { name: /^kebab-case/ })).toContainText("mein-server-name");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/listen?sortieren=asc");
+  await page.getByRole("textbox", { name: "Eingabe" }).fill("b\na\nb");
+  await expect(page.getByText("1 Duplikate entfernt")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/regex");
+  await page.getByRole("textbox", { name: "Ausdruck" }).fill("(\\d+)");
+  await page.getByRole("textbox", { name: "Testtext" }).fill("a1b22");
+  await expect(page.getByText("2 Treffer")).toBeVisible();
+  expect(page.url()).not.toContain("a1b22");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/zeichen-zaehlen");
+  await page.getByRole("textbox", { name: "Eingabe" }).fill("pass\u200bwort");
+  await expect(page.getByRole("list", { name: "Gefundene Zeichen" })).toContainText("U+200B");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/text-diff");
+  await page.getByRole("textbox", { name: "Vorher" }).fill("a\nb x");
+  await page.getByRole("textbox", { name: "Nachher" }).fill("a\nb y\nc");
+  await expect(page.getByText("2 hinzugefügt")).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.getByLabel("Ansicht").selectOption("unified");
+  await expect(page.getByRole("region", { name: "Unified-Diff" })).toContainText("+c");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/sql?bereich=joins&join=full");
+  await expect(page.getByRole("heading", { name: "Ergebnis: 6 Zeilen" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Mengendiagramm FULL OUTER JOIN" })).toBeVisible();
+  await expectNoA11yViolations(page);
+});
+
 test("IT-Tools: ohne die Rolle gibt es den Bereich nicht", async ({ page }) => {
   await loginAs(page, ["Config.Reader"], "Lea Leser");
   await page.goto("/it-tools");

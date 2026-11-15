@@ -3246,3 +3246,99 @@ p.badges {
   background: var(--farbe-ok-flaeche);
   color: var(--farbe-ok-text);
 }
+
+.tool-pill-gap {
+  margin-left: 8px;
+}
+
+.regex-hit {
+  border-radius: 2px;
+  background: var(--farbe-todo-flaeche);
+  color: var(--farbe-todo-text);
+}
+
+.regex-hit-alt {
+  background: var(--farbe-info-flaeche);
+  color: var(--farbe-info-text);
+}
+
+.diff-table {
+  table-layout: fixed;
+  font-size: 0.8rem;
+}
+
+.diff-table td {
+  padding: 2px 8px;
+  vertical-align: top;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-bottom: 0;
+}
+
+.diff-table .diff-no {
+  width: 3rem;
+  text-align: right;
+  color: var(--farbe-text-leise);
+  user-select: none;
+}
+
+.diff-add {
+  background: var(--farbe-ok-flaeche);
+  color: var(--farbe-ok-text);
+}
+
+.diff-del {
+  background: var(--farbe-bad-flaeche);
+  color: var(--farbe-bad-text);
+}
+
+.diff-none {
+  background: var(--farbe-neutral-flaeche);
+}
+
+.diff-hunk {
+  background: var(--farbe-info-flaeche);
+  color: var(--farbe-info-text);
+}
+
+.diff-word {
+  background: none;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.join-split {
+  border-left: 2px solid var(--farbe-rand-stark);
+}
+
+.venn {
+  flex: 0 0 auto;
+  max-width: 100%;
+  color: var(--farbe-text);
+}
+
+.venn-area {
+  fill: none;
+}
+
+.venn-on {
+  fill: var(--farbe-primaer);
+  fill-opacity: 0.6;
+}
+
+.venn-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.venn-text {
+  fill: currentColor;
+  font-size: 11px;
+}
+
+.venn-cross {
+  font-size: 13px;
+  font-weight: 700;
+}
