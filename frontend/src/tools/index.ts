@@ -6,7 +6,8 @@ import { lazy, type ComponentType } from "react";
  * Die Oberfläche wird erst beim Öffnen des Tools geladen.
  */
 
-export type ToolCategory = "netzwerk" | "system" | "encoding" | "formatter" | "konverter" | "text" | "generator";
+export type ToolCategory =
+  "netzwerk" | "system" | "encoding" | "formatter" | "konverter" | "text" | "generator";
 
 export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   netzwerk: "Netzwerk",

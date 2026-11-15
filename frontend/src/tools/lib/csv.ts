@@ -77,18 +77,30 @@ const typed = (s: string): unknown => {
   return s;
 };
 
-export function csvToJson(text: string, o: CsvToJsonOptions): { data: unknown[]; delimiter: Delimiter; columns: number } {
+export function csvToJson(
+  text: string,
+  o: CsvToJsonOptions,
+): { data: unknown[]; delimiter: Delimiter; columns: number } {
   const delimiter = o.delimiter ?? detectDelimiter(text);
   const rows = parseCsv(text, delimiter).filter((r) => !(r.length === 1 && r[0] === ""));
   const conv = (s: string) => (o.types ? typed(s) : s);
-  if (!o.header) return { data: rows.map((r) => r.map(conv)), delimiter, columns: Math.max(0, ...rows.map((r) => r.length)) };
+  if (!o.header)
+    return {
+      data: rows.map((r) => r.map(conv)),
+      delimiter,
+      columns: Math.max(0, ...rows.map((r) => r.length)),
+    };
   const [head = [], ...body] = rows;
   const names = head.map((h, i) => h.trim() || `Spalte${i + 1}`);
   const data = body.map((r) => Object.fromEntries(names.map((n, i) => [n, conv(r[i] ?? "")])));
   return { data, delimiter, columns: names.length };
 }
 
-function flatten(obj: unknown, prefix = "", out: Record<string, unknown> = {}): Record<string, unknown> {
+function flatten(
+  obj: unknown,
+  prefix = "",
+  out: Record<string, unknown> = {},
+): Record<string, unknown> {
   if (obj && typeof obj === "object" && !Array.isArray(obj)) {
     for (const [k, v] of Object.entries(obj)) flatten(v, prefix ? `${prefix}.${k}` : k, out);
   } else out[prefix || "Wert"] = obj;
@@ -98,13 +110,23 @@ function flatten(obj: unknown, prefix = "", out: Record<string, unknown> = {}): 
 export function jsonToCsv(value: unknown, delimiter: Delimiter, flattenObjects: boolean): string {
   const arr = Array.isArray(value) ? value : [value];
   const rows: Record<string, unknown>[] = arr.map((item) =>
-    flattenObjects ? flatten(item) : item && typeof item === "object" && !Array.isArray(item) ? (item as Record<string, unknown>) : { Wert: item as unknown },
+    flattenObjects
+      ? flatten(item)
+      : item && typeof item === "object" && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : { Wert: item as unknown },
   );
   const cols: string[] = [];
   for (const r of rows) for (const k of Object.keys(r)) if (!cols.includes(k)) cols.push(k);
   const esc = (v: unknown) => {
-    const s = v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
-    return s.includes(delimiter) || /["\r\n]/.test(s) || s !== s.trim() ? `"${s.replace(/"/g, '""')}"` : s;
+    const s =
+      v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
+    return s.includes(delimiter) || /["\r\n]/.test(s) || s !== s.trim()
+      ? `"${s.replace(/"/g, '""')}"`
+      : s;
   };
-  return [cols.map(esc).join(delimiter), ...rows.map((r) => cols.map((c) => esc(r[c])).join(delimiter))].join("\r\n");
+  return [
+    cols.map(esc).join(delimiter),
+    ...rows.map((r) => cols.map((c) => esc(r[c])).join(delimiter)),
+  ].join("\r\n");
 }

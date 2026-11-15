@@ -2,7 +2,11 @@
 
 export type Op = { type: "equal" | "insert" | "delete"; a?: number; b?: number; text: string };
 
-export function diffSeq<T>(a: T[], b: T[], eq: (x: T, y: T) => boolean = (x, y) => x === y): { type: Op["type"]; ai: number; bi: number }[] {
+export function diffSeq<T>(
+  a: T[],
+  b: T[],
+  eq: (x: T, y: T) => boolean = (x, y) => x === y,
+): { type: Op["type"]; ai: number; bi: number }[] {
   const n = a.length;
   const m = b.length;
   const max = n + m;
@@ -11,7 +15,10 @@ export function diffSeq<T>(a: T[], b: T[], eq: (x: T, y: T) => boolean = (x, y) 
   outer: for (let d = 0; d <= max; d++) {
     trace.push(new Map(v));
     for (let k = -d; k <= d; k += 2) {
-      let x = k === -d || (k !== d && (v.get(k - 1) ?? -1) < (v.get(k + 1) ?? -1)) ? v.get(k + 1)! : v.get(k - 1)! + 1;
+      let x =
+        k === -d || (k !== d && (v.get(k - 1) ?? -1) < (v.get(k + 1) ?? -1))
+          ? v.get(k + 1)!
+          : v.get(k - 1)! + 1;
       let y = x - k;
       while (x < n && y < m && eq(a[x]!, b[y]!)) {
         x++;
@@ -29,7 +36,8 @@ export function diffSeq<T>(a: T[], b: T[], eq: (x: T, y: T) => boolean = (x, y) 
   for (let d = trace.length - 1; d >= 0; d--) {
     const vd = trace[d]!;
     const k = x - y;
-    const prevK = k === -d || (k !== d && (vd.get(k - 1) ?? -1) < (vd.get(k + 1) ?? -1)) ? k + 1 : k - 1;
+    const prevK =
+      k === -d || (k !== d && (vd.get(k - 1) ?? -1) < (vd.get(k + 1) ?? -1)) ? k + 1 : k - 1;
     const prevX = vd.get(prevK) ?? 0;
     const prevY = prevX - prevK;
     while (x > prevX && y > prevY) ops.push({ type: "equal", ai: --x, bi: --y });
@@ -64,9 +72,17 @@ export function diffLines(left: string, right: string, o: DiffOptions): LineDiff
   const nb = b.map(norm);
   const raw = diffSeq(na, nb);
   const ops: Op[] = raw.map((r) =>
-    r.type === "insert" ? { type: "insert", b: r.bi, text: b[r.bi]! } : r.type === "delete" ? { type: "delete", a: r.ai, text: a[r.ai]! } : { type: "equal", a: r.ai, b: r.bi, text: a[r.ai]! },
+    r.type === "insert"
+      ? { type: "insert", b: r.bi, text: b[r.bi]! }
+      : r.type === "delete"
+        ? { type: "delete", a: r.ai, text: a[r.ai]! }
+        : { type: "equal", a: r.ai, b: r.bi, text: a[r.ai]! },
   );
-  return { ops, added: ops.filter((x) => x.type === "insert").length, removed: ops.filter((x) => x.type === "delete").length };
+  return {
+    ops,
+    added: ops.filter((x) => x.type === "insert").length,
+    removed: ops.filter((x) => x.type === "delete").length,
+  };
 }
 
 /** Wort-Diff zweier Zeilen für die Hervorhebung innerhalb geänderter Zeilen */
@@ -92,10 +108,14 @@ export interface Row {
 
 export function sideBySide(ops: Op[]): Row[] {
   const rows: Row[] = [];
-  for (let i = 0; i < ops.length; ) {
+  for (let i = 0; i < ops.length;) {
     const op = ops[i]!;
     if (op.type === "equal") {
-      rows.push({ type: "equal", left: { no: op.a! + 1, text: op.text }, right: { no: op.b! + 1, text: op.text } });
+      rows.push({
+        type: "equal",
+        left: { no: op.a! + 1, text: op.text },
+        right: { no: op.b! + 1, text: op.text },
+      });
       i++;
       continue;
     }
@@ -136,7 +156,8 @@ export function unifiedDiff(ops: Op[], context = 3, names = ["vorher", "nachher"
     const aLen = hunk.filter((o) => o.type !== "insert").length;
     const bLen = hunk.filter((o) => o.type !== "delete").length;
     lines.push(`@@ -${aStart},${aLen} +${bStart},${bLen} @@`);
-    for (const o of hunk) lines.push(`${o.type === "insert" ? "+" : o.type === "delete" ? "-" : " "}${o.text}`);
+    for (const o of hunk)
+      lines.push(`${o.type === "insert" ? "+" : o.type === "delete" ? "-" : " "}${o.text}`);
     start = end;
     i++;
   }

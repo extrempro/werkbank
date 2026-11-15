@@ -3,7 +3,10 @@
 export type Base = 2 | 8 | 10 | 16;
 
 export function parseNumber(input: string, base?: Base): { value: bigint; base: Base } {
-  let v = input.trim().replace(/[\s_']/g, "").toLowerCase();
+  let v = input
+    .trim()
+    .replace(/[\s_']/g, "")
+    .toLowerCase();
   let neg = false;
   if (v.startsWith("-")) {
     neg = true;
@@ -27,7 +30,8 @@ export function parseNumber(input: string, base?: Base): { value: bigint; base: 
   return { value: neg ? -value : value, base: b };
 }
 
-export const group = (s: string, size: number, sep = " ") => s.replace(new RegExp(`\\B(?=(.{${size}})+$)`, "g"), sep);
+export const group = (s: string, size: number, sep = " ") =>
+  s.replace(new RegExp(`\\B(?=(.{${size}})+$)`, "g"), sep);
 
 /** Zweierkomplement mit fester Breite; null, wenn der Wert nicht hineinpasst */
 export function twosComplement(value: bigint, bits: number): bigint | null {

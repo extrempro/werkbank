@@ -9,7 +9,8 @@ export class TomlError extends Error {
 }
 
 type Table = Record<string, unknown>;
-const isTable = (v: unknown): v is Table => typeof v === "object" && v !== null && !Array.isArray(v);
+const isTable = (v: unknown): v is Table =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
 
 export function parseToml(input: string): Table {
   const src = input.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
@@ -69,14 +70,24 @@ export function parseToml(input: string): Table {
           }
           continue;
         }
-        const map: Record<string, string> = { b: "\b", t: "\t", n: "\n", f: "\f", r: "\r", '"': '"', "\\": "\\", e: "\x1b" };
+        const map: Record<string, string> = {
+          b: "\b",
+          t: "\t",
+          n: "\n",
+          f: "\f",
+          r: "\r",
+          '"': '"',
+          "\\": "\\",
+          e: "\x1b",
+        };
         if (map[e] !== undefined) {
           out += map[e];
           pos += 2;
         } else if (e === "u" || e === "U") {
           const len = e === "u" ? 4 : 8;
           const hex = src.slice(pos + 2, pos + 2 + len);
-          if (!/^[0-9a-fA-F]+$/.test(hex) || hex.length !== len) fail("Ungültige Unicode-Escape-Folge");
+          if (!/^[0-9a-fA-F]+$/.test(hex) || hex.length !== len)
+            fail("Ungültige Unicode-Escape-Folge");
           out += String.fromCodePoint(parseInt(hex, 16));
           pos += 2 + len;
         } else fail(`Unbekannte Escape-Folge \\${e}`);
@@ -194,8 +205,14 @@ export function parseToml(input: string): Table {
     pos += raw.length;
     if (raw === "true") return true;
     if (raw === "false") return false;
-    if (/^[+-]?(inf|nan)$/.test(raw)) return raw.includes("nan") ? NaN : raw.startsWith("-") ? -Infinity : Infinity;
-    if (/^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$|^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/i.test(raw)) return raw;
+    if (/^[+-]?(inf|nan)$/.test(raw))
+      return raw.includes("nan") ? NaN : raw.startsWith("-") ? -Infinity : Infinity;
+    if (
+      /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$|^\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/i.test(
+        raw,
+      )
+    )
+      return raw;
     const clean = raw.replace(/_/g, "");
     if (/^[+-]?(0|[1-9]\d*)$/.test(clean) && !/__|^_|_$/.test(raw)) {
       const n = Number(clean);
@@ -204,7 +221,8 @@ export function parseToml(input: string): Table {
     if (/^0x[0-9a-fA-F]+$/.test(clean)) return parseInt(clean.slice(2), 16);
     if (/^0o[0-7]+$/.test(clean)) return parseInt(clean.slice(2), 8);
     if (/^0b[01]+$/.test(clean)) return parseInt(clean.slice(2), 2);
-    if (/^[+-]?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/.test(clean) && /[.eE]/.test(clean)) return Number(clean);
+    if (/^[+-]?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?$/.test(clean) && /[.eE]/.test(clean))
+      return Number(clean);
     return fail(`Ungültiger Wert „${raw}“`);
   };
   const assign = (table: Table, keys: string[], v: unknown) => {
@@ -215,7 +233,8 @@ export function parseToml(input: string): Table {
       t = t[k] as Table;
     }
     const last = keys[keys.length - 1]!;
-    if (Object.prototype.hasOwnProperty.call(t, last)) fail(`Schlüssel „${keys.join(".")}“ doppelt`);
+    if (Object.prototype.hasOwnProperty.call(t, last))
+      fail(`Schlüssel „${keys.join(".")}“ doppelt`);
     t[last] = v;
   };
 
@@ -227,7 +246,8 @@ export function parseToml(input: string): Table {
       pos += isArray ? 2 : 1;
       const keys = dottedKey();
       skipWs();
-      if (!src.startsWith(isArray ? "]]" : "]", pos)) fail(isArray ? "„]]“ erwartet" : "„]“ erwartet");
+      if (!src.startsWith(isArray ? "]]" : "]", pos))
+        fail(isArray ? "„]]“ erwartet" : "„]“ erwartet");
       pos += isArray ? 2 : 1;
       let t = root;
       keys.forEach((k, idx) => {
@@ -270,11 +290,28 @@ const bareKey = (k: string) => (/^[A-Za-z0-9_-]+$/.test(k) ? k : JSON.stringify(
 
 function tomlValue(v: unknown, path: string): string {
   if (v === null || v === undefined) throw new Error(`TOML kennt kein null (bei „${path}“)`);
-  if (typeof v === "string") return v.includes("\n") ? `"""\n${v.replace(/\\/g, "\\\\").replace(/"""/g, '""\\"')}"""` : JSON.stringify(v);
-  if (typeof v === "number") return Number.isNaN(v) ? "nan" : v === Infinity ? "inf" : v === -Infinity ? "-inf" : Number.isInteger(v) ? String(v) : String(v).includes(".") || String(v).includes("e") ? String(v) : `${v}.0`;
+  if (typeof v === "string")
+    return v.includes("\n")
+      ? `"""\n${v.replace(/\\/g, "\\\\").replace(/"""/g, '""\\"')}"""`
+      : JSON.stringify(v);
+  if (typeof v === "number")
+    return Number.isNaN(v)
+      ? "nan"
+      : v === Infinity
+        ? "inf"
+        : v === -Infinity
+          ? "-inf"
+          : Number.isInteger(v)
+            ? String(v)
+            : String(v).includes(".") || String(v).includes("e")
+              ? String(v)
+              : `${v}.0`;
   if (typeof v === "boolean") return String(v);
   if (Array.isArray(v)) return `[${v.map((x, i) => tomlValue(x, `${path}[${i}]`)).join(", ")}]`;
-  if (isTable(v)) return `{ ${Object.entries(v).map(([k, x]) => `${bareKey(k)} = ${tomlValue(x, `${path}.${k}`)}`).join(", ")} }`;
+  if (isTable(v))
+    return `{ ${Object.entries(v)
+      .map(([k, x]) => `${bareKey(k)} = ${tomlValue(x, `${path}.${k}`)}`)
+      .join(", ")} }`;
   return JSON.stringify(String(v));
 }
 

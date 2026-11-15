@@ -1,6 +1,9 @@
 /** einfacher SQL-Formatierer (Dialekt-neutral: T-SQL, MySQL, PostgreSQL, SQLite) */
 
-type Token = { type: "word" | "string" | "ident" | "number" | "comment" | "punct" | "op" | "ws"; text: string };
+type Token = {
+  type: "word" | "string" | "ident" | "number" | "comment" | "punct" | "op" | "ws";
+  text: string;
+};
 
 const KEYWORDS = new Set(
   (
@@ -14,10 +17,46 @@ const KEYWORDS = new Set(
 
 /** Klauseln, die eine neue Zeile auf Grundebene beginnen */
 const CLAUSES = [
-  "select", "from", "where", "group by", "order by", "having", "limit", "offset", "union", "union all", "except", "intersect", "values", "set",
-  "insert into", "update", "delete from", "delete", "returning", "with", "window", "fetch", "merge into", "using", "when matched", "when not matched",
+  "select",
+  "from",
+  "where",
+  "group by",
+  "order by",
+  "having",
+  "limit",
+  "offset",
+  "union",
+  "union all",
+  "except",
+  "intersect",
+  "values",
+  "set",
+  "insert into",
+  "update",
+  "delete from",
+  "delete",
+  "returning",
+  "with",
+  "window",
+  "fetch",
+  "merge into",
+  "using",
+  "when matched",
+  "when not matched",
 ];
-const JOINS = ["join", "inner join", "left join", "right join", "full join", "left outer join", "right outer join", "full outer join", "cross join", "cross apply", "outer apply"];
+const JOINS = [
+  "join",
+  "inner join",
+  "left join",
+  "right join",
+  "full join",
+  "left outer join",
+  "right outer join",
+  "full outer join",
+  "cross join",
+  "cross apply",
+  "outer apply",
+];
 
 export function tokenizeSql(sql: string): Token[] {
   const out: Token[] = [];
@@ -26,12 +65,21 @@ export function tokenizeSql(sql: string): Token[] {
     const rest = sql.slice(i);
     let m: RegExpExecArray | null;
     if ((m = /^\s+/.exec(rest))) out.push({ type: "ws", text: m[0] });
-    else if ((m = /^--[^\n]*/.exec(rest)) || (m = /^\/\*[\s\S]*?\*\//.exec(rest)) || (m = /^#[^\n]*/.exec(rest))) out.push({ type: "comment", text: m[0] });
+    else if (
+      (m = /^--[^\n]*/.exec(rest)) ||
+      (m = /^\/\*[\s\S]*?\*\//.exec(rest)) ||
+      (m = /^#[^\n]*/.exec(rest))
+    )
+      out.push({ type: "comment", text: m[0] });
     else if ((m = /^(N?'(?:[^']|'')*')/.exec(rest))) out.push({ type: "string", text: m[0] });
-    else if ((m = /^("(?:[^"]|"")*"|`[^`]*`|\[[^\]]*\])/.exec(rest))) out.push({ type: "ident", text: m[0] });
-    else if ((m = /^(0x[0-9a-f]+|\d+(\.\d+)?(e[+-]?\d+)?)/i.exec(rest))) out.push({ type: "number", text: m[0] });
-    else if ((m = /^[@#$:]?[\p{L}_][\p{L}\p{N}_$]*/u.exec(rest))) out.push({ type: "word", text: m[0] });
-    else if ((m = /^(<>|!=|<=|>=|::|\|\||[-+*/%=<>!~^&|])/.exec(rest))) out.push({ type: "op", text: m[0] });
+    else if ((m = /^("(?:[^"]|"")*"|`[^`]*`|\[[^\]]*\])/.exec(rest)))
+      out.push({ type: "ident", text: m[0] });
+    else if ((m = /^(0x[0-9a-f]+|\d+(\.\d+)?(e[+-]?\d+)?)/i.exec(rest)))
+      out.push({ type: "number", text: m[0] });
+    else if ((m = /^[@#$:]?[\p{L}_][\p{L}\p{N}_$]*/u.exec(rest)))
+      out.push({ type: "word", text: m[0] });
+    else if ((m = /^(<>|!=|<=|>=|::|\|\||[-+*/%=<>!~^&|])/.exec(rest)))
+      out.push({ type: "op", text: m[0] });
     else out.push({ type: "punct", text: rest[0]! });
     i += out[out.length - 1]!.text.length;
   }
@@ -43,7 +91,10 @@ export interface SqlFormatOptions {
   uppercase: boolean;
 }
 
-export function formatSql(sql: string, o: SqlFormatOptions = { indent: "  ", uppercase: true }): string {
+export function formatSql(
+  sql: string,
+  o: SqlFormatOptions = { indent: "  ", uppercase: true },
+): string {
   const tokens = tokenizeSql(sql).filter((t) => t.type !== "ws");
   const lines: string[] = [];
   let cur = "";
@@ -54,7 +105,12 @@ export function formatSql(sql: string, o: SqlFormatOptions = { indent: "  ", upp
     if (cur.trim()) lines.push(cur.trimEnd());
     cur = o.indent.repeat(Math.max(0, depth + extra));
   };
-  const word = (t: Token) => (t.type === "word" && KEYWORDS.has(t.text.toLowerCase()) ? (o.uppercase ? t.text.toUpperCase() : t.text.toLowerCase()) : t.text);
+  const word = (t: Token) =>
+    t.type === "word" && KEYWORDS.has(t.text.toLowerCase())
+      ? o.uppercase
+        ? t.text.toUpperCase()
+        : t.text.toLowerCase()
+      : t.text;
   const lower = (k: number, n: number) =>
     tokens
       .slice(k, k + n)
@@ -86,7 +142,10 @@ export function formatSql(sql: string, o: SqlFormatOptions = { indent: "  ", upp
       depth = clauseIndent;
       newline();
       cur += (o.uppercase ? matched.toUpperCase() : matched) + " ";
-      if (!isJoin && ["select", "set", "values", "group by", "order by", "where", "having"].includes(matched)) {
+      if (
+        !isJoin &&
+        ["select", "set", "values", "group by", "order by", "where", "having"].includes(matched)
+      ) {
         // Inhalt der Klausel eingerückt in die nächsten Zeilen
         depth = clauseIndent + 1;
         newline();
@@ -96,7 +155,9 @@ export function formatSql(sql: string, o: SqlFormatOptions = { indent: "  ", upp
     }
     if (t.type === "word" && /^(and|or)$/i.test(t.text) && depth > clauseIndent) {
       // BETWEEN … AND nicht umbrechen
-      const prev = tokens.slice(Math.max(0, k - 4), k).some((x) => x.text.toLowerCase() === "between");
+      const prev = tokens
+        .slice(Math.max(0, k - 4), k)
+        .some((x) => x.text.toLowerCase() === "between");
       if (!prev) {
         newline();
         cur += `${word(t)} `;
@@ -111,10 +172,17 @@ export function formatSql(sql: string, o: SqlFormatOptions = { indent: "  ", upp
     }
     if (t.text === "(") {
       // Unterabfrage?
-      const sub = tokens[k + 1]?.text.toLowerCase() === "select" || tokens[k + 1]?.text.toLowerCase() === "with";
+      const sub =
+        tokens[k + 1]?.text.toLowerCase() === "select" ||
+        tokens[k + 1]?.text.toLowerCase() === "with";
       const prev = tokens[k - 1];
       // Funktionsaufruf wie COUNT(*) ohne Leerzeichen, nach IN/VALUES/AS … mit
-      const call = prev && (prev.type === "word" || prev.type === "ident") && !/^(in|values|exists|as|on|from|join|using|into|and|or|not|where|when|then|else|over|select|set|by|having|table|with|recursive|returning)$/i.test(prev.text);
+      const call =
+        prev &&
+        (prev.type === "word" || prev.type === "ident") &&
+        !/^(in|values|exists|as|on|from|join|using|into|and|or|not|where|when|then|else|over|select|set|by|having|table|with|recursive|returning)$/i.test(
+          prev.text,
+        );
       if (!call) space();
       cur += "(";
       parenStack.push({ clause: sub, depth: clauseIndent });

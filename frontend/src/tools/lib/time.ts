@@ -2,7 +2,12 @@
 
 export type Unit = "s" | "ms" | "us" | "ns";
 
-export const unitLabels: Record<Unit, string> = { s: "Sekunden", ms: "Millisekunden", us: "Mikrosekunden", ns: "Nanosekunden" };
+export const unitLabels: Record<Unit, string> = {
+  s: "Sekunden",
+  ms: "Millisekunden",
+  us: "Mikrosekunden",
+  ns: "Nanosekunden",
+};
 
 /** Einheit anhand der Größe erraten (bis Jahr ~5138 in Sekunden) */
 export function guessUnit(value: bigint): Unit {
@@ -13,7 +18,10 @@ export function guessUnit(value: bigint): Unit {
   return "ns";
 }
 
-export function parseTimestamp(input: string, unit?: Unit): { date: Date; unit: Unit; fraction: string } {
+export function parseTimestamp(
+  input: string,
+  unit?: Unit,
+): { date: Date; unit: Unit; fraction: string } {
   const v = input.trim().replace(/[\s_']/g, "");
   const m = /^(-?\d+)(?:[.,](\d+))?$/.exec(v);
   if (!m) throw new Error("Bitte eine Zahl eingeben, z. B. 1762516800");
@@ -24,7 +32,11 @@ export function parseTimestamp(input: string, unit?: Unit): { date: Date; unit: 
   const date = new Date(ms);
   if (Number.isNaN(date.getTime())) throw new Error("Außerhalb des darstellbaren Zeitraums");
   const rest = (whole * 1000n) % div;
-  return { date, unit: u, fraction: rest ? `+${rest} ${u === "us" ? "µs-Anteil" : "ns-Anteil"}` : "" };
+  return {
+    date,
+    unit: u,
+    fraction: rest ? `+${rest} ${u === "us" ? "µs-Anteil" : "ns-Anteil"}` : "",
+  };
 }
 
 export function relativeText(date: Date, now = Date.now()): string {
@@ -39,7 +51,14 @@ export function relativeText(date: Date, now = Date.now()): string {
     [86400 * 365, "month"],
     [Infinity, "year"],
   ];
-  const sizes = { second: 1, minute: 60, hour: 3600, day: 86400, month: 86400 * 30.44, year: 86400 * 365.25 };
+  const sizes = {
+    second: 1,
+    minute: 60,
+    hour: 3600,
+    day: 86400,
+    month: 86400 * 30.44,
+    year: 86400 * 365.25,
+  };
   const [, u] = steps.find(([limit]) => abs < limit)!;
   return rtf.format(Math.round(diff / sizes[u as keyof typeof sizes]), u);
 }
@@ -54,7 +73,8 @@ export function isoWeek(d: Date): number {
 }
 
 /** Excel-Seriennummer (1900-System, lokale Zeit) */
-export const excelSerial = (d: Date) => (d.getTime() - d.getTimezoneOffset() * 60000) / 86400000 + 25569;
+export const excelSerial = (d: Date) =>
+  (d.getTime() - d.getTimezoneOffset() * 60000) / 86400000 + 25569;
 
 // ---------- Zeitzonen ----------
 
@@ -71,7 +91,14 @@ export function zoneOffset(zone: string, at: Date): number {
     second: "2-digit",
   }).formatToParts(at);
   const get = (t: string) => Number(parts.find((p) => p.type === t)!.value);
-  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  const asUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second"),
+  );
   return Math.round((asUtc - Math.floor(at.getTime() / 1000) * 1000) / 60000);
 }
 
@@ -85,7 +112,8 @@ export function wallTimeToDate(local: string, zone: string): Date {
   return new Date(guess);
 }
 
-export const formatOffset = (min: number) => `UTC${min >= 0 ? "+" : "−"}${String(Math.floor(Math.abs(min) / 60)).padStart(2, "0")}:${String(Math.abs(min) % 60).padStart(2, "0")}`;
+export const formatOffset = (min: number) =>
+  `UTC${min >= 0 ? "+" : "−"}${String(Math.floor(Math.abs(min) / 60)).padStart(2, "0")}:${String(Math.abs(min) % 60).padStart(2, "0")}`;
 
 export function allZones(): string[] {
   const fn = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf;
@@ -93,4 +121,15 @@ export function allZones(): string[] {
   return list.includes("UTC") ? list : ["UTC", ...list];
 }
 
-export const defaultZones = ["Europe/Berlin", "UTC", "Europe/London", "America/New_York", "America/Chicago", "America/Los_Angeles", "Asia/Kolkata", "Asia/Shanghai", "Asia/Tokyo", "Australia/Sydney"];
+export const defaultZones = [
+  "Europe/Berlin",
+  "UTC",
+  "Europe/London",
+  "America/New_York",
+  "America/Chicago",
+  "America/Los_Angeles",
+  "Asia/Kolkata",
+  "Asia/Shanghai",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];

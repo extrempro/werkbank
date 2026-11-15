@@ -133,7 +133,9 @@ function SqlJoins({ type, onType }: { type: JoinType; onType: (type: JoinType) =
   // Beispieldaten; eigene Tabellen bleiben nur auf dieser Seite.
   const [nameA, setNameA] = useState("kunden");
   const [nameB, setNameB] = useState("bestellungen");
-  const [dataA, setDataA] = useState("id;name;ort\n1;Anna;Köln\n2;Ben;Bonn\n3;Cem;Köln\n4;Dana;Aachen");
+  const [dataA, setDataA] = useState(
+    "id;name;ort\n1;Anna;Köln\n2;Ben;Bonn\n3;Cem;Köln\n4;Dana;Aachen",
+  );
   const [dataB, setDataB] = useState(
     "nr;kunde_id;artikel\n100;1;Laptop\n101;1;Maus\n102;3;Monitor\n103;7;Kabel",
   );
@@ -227,8 +229,26 @@ function SqlJoins({ type, onType }: { type: JoinType; onType: (type: JoinType) =
       </div>
       <p>{joinInfo[type].text}</p>
       <div className="tool-columns">
-        {tableInput("Linke Tabelle", nameA, setNameA, state.a, state.keyA, setKeyA, dataA, setDataA)}
-        {tableInput("Rechte Tabelle", nameB, setNameB, state.b, state.keyB, setKeyB, dataB, setDataB)}
+        {tableInput(
+          "Linke Tabelle",
+          nameA,
+          setNameA,
+          state.a,
+          state.keyA,
+          setKeyA,
+          dataA,
+          setDataA,
+        )}
+        {tableInput(
+          "Rechte Tabelle",
+          nameB,
+          setNameB,
+          state.b,
+          state.keyB,
+          setKeyB,
+          dataB,
+          setDataB,
+        )}
       </div>
       <p className="small">
         Erste Zeile sind die Spaltennamen, Trenner Semikolon, Komma oder Tabulator. Ein leeres Feld
@@ -241,7 +261,12 @@ function SqlJoins({ type, onType }: { type: JoinType; onType: (type: JoinType) =
           <ToolSection
             title={`Ergebnis: ${state.result.rows.length} ${state.result.rows.length === 1 ? "Zeile" : "Zeilen"}`}
           >
-            <div className="table-wrap tool-scroll" tabIndex={0} role="region" aria-label="Ergebnis">
+            <div
+              className="table-wrap tool-scroll"
+              tabIndex={0}
+              role="region"
+              aria-label="Ergebnis"
+            >
               <table>
                 <caption className="visually-hidden">Ergebnis des JOINs</caption>
                 <thead>
@@ -261,7 +286,10 @@ function SqlJoins({ type, onType }: { type: JoinType; onType: (type: JoinType) =
                   {state.result.rows.slice(0, SHOWN_ROWS).map((row, rowIndex) => (
                     <tr key={rowIndex}>
                       {row.map((value, index) => (
-                        <td key={index} className={index === leftColumns ? "mono join-split" : "mono"}>
+                        <td
+                          key={index}
+                          className={index === leftColumns ? "mono join-split" : "mono"}
+                        >
                           {value === null ? <span className="pill pill-todo">NULL</span> : value}
                         </td>
                       ))}

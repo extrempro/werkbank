@@ -31,12 +31,7 @@ describe("Regex-Tester", () => {
   });
 
   it("kennt die Namen benannter Gruppen", () => {
-    const result = run(
-      String.raw`(?<tag>\d+)\.(\d+)\.(?<jahr>\d{4})`,
-      "g",
-      "7.11.2026",
-      "$<jahr>",
-    );
+    const result = run(String.raw`(?<tag>\d+)\.(\d+)\.(?<jahr>\d{4})`, "g", "7.11.2026", "$<jahr>");
     expect(result.groupNames[1]).toBe("tag");
     expect(result.groupNames[2]).toBeUndefined();
     expect(result.groupNames[3]).toBe("jahr");

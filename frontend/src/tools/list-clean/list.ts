@@ -10,7 +10,16 @@ export interface ListOptions {
   caseChange: "none" | "lower" | "upper";
 }
 
-export type OutputFormat = "lines" | "comma" | "semicolon" | "space" | "powershell" | "sql" | "json" | "csv-quoted" | "regex";
+export type OutputFormat =
+  | "lines"
+  | "comma"
+  | "semicolon"
+  | "space"
+  | "powershell"
+  | "sql"
+  | "json"
+  | "csv-quoted"
+  | "regex";
 
 export const outputLabels: Record<OutputFormat, string> = {
   lines: "Eine pro Zeile",
@@ -24,7 +33,10 @@ export const outputLabels: Record<OutputFormat, string> = {
   regex: "Regex a|b",
 };
 
-export function cleanList(input: string, o: ListOptions): { items: string[]; removedDuplicates: number; removedEmpty: number } {
+export function cleanList(
+  input: string,
+  o: ListOptions,
+): { items: string[]; removedDuplicates: number; removedEmpty: number } {
   let items = input.split(o.splitOn === "lines" ? /\r?\n/ : /\r?\n|[,;\t]/);
   if (o.trim) items = items.map((s) => s.trim());
   const before = items.length;
@@ -48,7 +60,8 @@ export function cleanList(input: string, o: ListOptions): { items: string[]; rem
   const collator = new Intl.Collator("de", { numeric: o.sort === "natural", sensitivity: "base" });
   if (o.sort === "asc" || o.sort === "natural") items = [...items].sort(collator.compare);
   if (o.sort === "desc") items = [...items].sort(collator.compare).reverse();
-  if (o.sort === "length") items = [...items].sort((a, b) => a.length - b.length || collator.compare(a, b));
+  if (o.sort === "length")
+    items = [...items].sort((a, b) => a.length - b.length || collator.compare(a, b));
   if (o.sort === "reverse") items = [...items].reverse();
   return { items, removedDuplicates, removedEmpty };
 }

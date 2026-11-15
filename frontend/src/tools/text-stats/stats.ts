@@ -13,7 +13,10 @@ export interface TextStats {
 }
 
 export function textStats(text: string): TextStats {
-  const graphemes = typeof Intl.Segmenter === "function" ? [...new Intl.Segmenter("de", { granularity: "grapheme" }).segment(text)].length : [...text].length;
+  const graphemes =
+    typeof Intl.Segmenter === "function"
+      ? [...new Intl.Segmenter("de", { granularity: "grapheme" }).segment(text)].length
+      : [...text].length;
   const words = text.match(/[\p{L}\p{N}][\p{L}\p{N}'’.-]*/gu)?.length ?? 0;
   return {
     chars: graphemes,
@@ -36,16 +39,29 @@ const special: Record<number, string> = {
   0x200d: "Verbinder (ZWJ)",
   0x200e: "Links-nach-rechts-Marke",
   0x200f: "Rechts-nach-links-Marke",
-  0x202a: "Richtungssteuerung", 0x202b: "Richtungssteuerung", 0x202c: "Richtungssteuerung", 0x202d: "Richtungssteuerung", 0x202e: "Richtungsumkehr (RLO)",
+  0x202a: "Richtungssteuerung",
+  0x202b: "Richtungssteuerung",
+  0x202c: "Richtungssteuerung",
+  0x202d: "Richtungssteuerung",
+  0x202e: "Richtungsumkehr (RLO)",
   0x2060: "Wortverbinder",
   0xfeff: "Byte Order Mark (BOM)",
   0x2028: "Zeilentrenner",
   0x2029: "Absatztrenner",
   0x0009: "Tabulator",
   0x000d: "Wagenrücklauf (CR)",
-  0x2002: "Halbgeviert-Leerzeichen", 0x2003: "Geviert-Leerzeichen", 0x2009: "schmales Leerzeichen", 0x202f: "schmales geschütztes Leerzeichen",
-  0x2018: "typografisches Anführungszeichen ‘", 0x2019: "typografisches Apostroph ’", 0x201c: "typografisches Anführungszeichen “", 0x201d: "typografisches Anführungszeichen ”",
-  0x201e: "typografisches Anführungszeichen „", 0x2013: "Halbgeviertstrich –", 0x2014: "Geviertstrich —", 0x2212: "Minuszeichen −",
+  0x2002: "Halbgeviert-Leerzeichen",
+  0x2003: "Geviert-Leerzeichen",
+  0x2009: "schmales Leerzeichen",
+  0x202f: "schmales geschütztes Leerzeichen",
+  0x2018: "typografisches Anführungszeichen ‘",
+  0x2019: "typografisches Apostroph ’",
+  0x201c: "typografisches Anführungszeichen “",
+  0x201d: "typografisches Anführungszeichen ”",
+  0x201e: "typografisches Anführungszeichen „",
+  0x2013: "Halbgeviertstrich –",
+  0x2014: "Geviertstrich —",
+  0x2212: "Minuszeichen −",
 };
 
 export interface SpecialChar {
@@ -61,7 +77,13 @@ export function findSpecialChars(text: string): SpecialChar[] {
   const map = new Map<number, number>();
   for (const ch of text) {
     const cp = ch.codePointAt(0)!;
-    if (special[cp] || (cp < 0x20 && cp !== 0x0a) || (cp >= 0x7f && cp < 0xa0) || (cp >= 0xe000 && cp <= 0xf8ff)) map.set(cp, (map.get(cp) ?? 0) + 1);
+    if (
+      special[cp] ||
+      (cp < 0x20 && cp !== 0x0a) ||
+      (cp >= 0x7f && cp < 0xa0) ||
+      (cp >= 0xe000 && cp <= 0xf8ff)
+    )
+      map.set(cp, (map.get(cp) ?? 0) + 1);
   }
   return [...map].map(([cp, count]) => ({
     char: String.fromCodePoint(cp),

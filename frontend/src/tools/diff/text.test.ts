@@ -6,7 +6,10 @@ import { diffLines, diffWords, sideBySide, unifiedDiff } from "./diff";
 
 describe("Diff", () => {
   it("Zeilen", () => {
-    const d = diffLines("a\nb\nc\nd", "a\nB\nc\nd\ne", { ignoreCase: false, ignoreWhitespace: false });
+    const d = diffLines("a\nb\nc\nd", "a\nB\nc\nd\ne", {
+      ignoreCase: false,
+      ignoreWhitespace: false,
+    });
     expect(d.ops.map((o) => `${o.type[0]}${o.text}`)).toEqual(["ea", "db", "iB", "ec", "ed", "ie"]);
     expect([d.added, d.removed]).toEqual([2, 1]);
     expect(diffLines("a\nb", "A\n b ", { ignoreCase: true, ignoreWhitespace: true }).added).toBe(0);
@@ -15,12 +18,23 @@ describe("Diff", () => {
     expect(unifiedDiff(d.ops, 1)).toContain("@@ -1,4 +1,5 @@");
   });
   it("Wörter", () => {
-    expect(diffWords("Server alt läuft", "Server neu läuft").filter((p) => p.type !== "equal").map((p) => p.type + ":" + p.text)).toEqual(["delete:alt", "insert:neu"]);
+    expect(
+      diffWords("Server alt läuft", "Server neu läuft")
+        .filter((p) => p.type !== "equal")
+        .map((p) => p.type + ":" + p.text),
+    ).toEqual(["delete:alt", "insert:neu"]);
   });
 });
 
 describe("Listen", () => {
-  const o = { trim: true, removeEmpty: true, dedupe: "ignoreCase" as const, sort: "natural" as const, splitOn: "any" as const, caseChange: "none" as const };
+  const o = {
+    trim: true,
+    removeEmpty: true,
+    dedupe: "ignoreCase" as const,
+    sort: "natural" as const,
+    splitOn: "any" as const,
+    caseChange: "none" as const,
+  };
   it("bereinigt und formatiert", () => {
     const r = cleanList("srv10\n srv2 ,SRV2;\n\nsrv1", o);
     expect(r.items).toEqual(["srv1", "srv2", "srv10"]);
@@ -30,7 +44,11 @@ describe("Listen", () => {
     expect(formatList(["a.b", "c"], "regex")).toBe("a\\.b|c");
   });
   it("vergleicht", () => {
-    expect(compareLists(["a", "B"], ["b", "c"], true)).toEqual({ onlyA: ["a"], onlyB: ["c"], both: ["B"] });
+    expect(compareLists(["a", "B"], ["b", "c"], true)).toEqual({
+      onlyA: ["a"],
+      onlyB: ["c"],
+      both: ["B"],
+    });
   });
 });
 

@@ -101,7 +101,10 @@ export default function RegexTool() {
               part.hit === undefined ? (
                 <span key={index}>{part.text}</span>
               ) : (
-                <mark key={index} className={part.hit % 2 ? "regex-hit regex-hit-alt" : "regex-hit"}>
+                <mark
+                  key={index}
+                  className={part.hit % 2 ? "regex-hit regex-hit-alt" : "regex-hit"}
+                >
                   {part.text}
                 </mark>
               ),
@@ -109,7 +112,12 @@ export default function RegexTool() {
           </pre>
           {groupCount > 0 && (
             <ToolSection title="Gruppen">
-              <div className="table-wrap tool-scroll" tabIndex={0} role="region" aria-label="Gruppen">
+              <div
+                className="table-wrap tool-scroll"
+                tabIndex={0}
+                role="region"
+                aria-label="Gruppen"
+              >
                 <table>
                   <caption className="visually-hidden">Gruppen je Treffer</caption>
                   <thead>

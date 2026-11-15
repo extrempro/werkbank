@@ -518,5 +518,4 @@ describe("ToolPage", () => {
     });
     expect(screen.getByRole("alert")).toHaveTextContent("unterschiedliche Namen");
   });
-
 });

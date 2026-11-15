@@ -143,7 +143,12 @@ export default function DiffTool() {
               </pre>
             </div>
           ) : (
-            <div className="table-wrap tool-scroll" tabIndex={0} role="region" aria-label="Vergleich">
+            <div
+              className="table-wrap tool-scroll"
+              tabIndex={0}
+              role="region"
+              aria-label="Vergleich"
+            >
               <table className="diff-table mono">
                 <caption className="visually-hidden">Vergleich Zeile für Zeile</caption>
                 <thead className="visually-hidden">
