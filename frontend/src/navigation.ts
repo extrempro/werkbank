@@ -62,16 +62,26 @@ export function areasFor(roles: readonly string[]): NavArea[] {
     });
   }
 
-  const m365: NavGroup[] = [];
+  const areas: NavArea[] = [
+    { id: "werkbank", label: "Werkbank", icon: "start", home: "/", groups: general },
+  ];
   if (hasAny(roles, CONFIG_ROLES)) {
-    m365.push({
-      title: "Konfiguration",
-      items: [
-        { path: "/m365", label: "Übersicht", icon: "uebersicht" },
-        { path: "/m365/aenderungen", label: "Änderungen", icon: "aenderungen" },
-        { path: "/m365/einstellungen", label: "Einstellungen", icon: "einstellungen" },
-        { path: "/m365/empfehlungen", label: "Empfehlungen", icon: "empfehlungen" },
-        { path: "/m365/snapshots", label: "Snapshots", icon: "snapshots" },
+    areas.push({
+      id: "m365",
+      label: "Microsoft 365",
+      icon: "m365",
+      home: "/m365",
+      groups: [
+        {
+          title: "Konfiguration",
+          items: [
+            { path: "/m365", label: "Übersicht", icon: "uebersicht" },
+            { path: "/m365/aenderungen", label: "Änderungen", icon: "aenderungen" },
+            { path: "/m365/einstellungen", label: "Einstellungen", icon: "einstellungen" },
+            { path: "/m365/empfehlungen", label: "Empfehlungen", icon: "empfehlungen" },
+            { path: "/m365/snapshots", label: "Snapshots", icon: "snapshots" },
+          ],
+        },
       ],
     });
   }
@@ -80,20 +90,13 @@ export function areasFor(roles: readonly string[]): NavArea[] {
     if (hasAny(roles, EVERGREEN_EDITORS)) {
       items.push({ path: "/evergreen/eingang", label: "Eingang", icon: "eingang" });
     }
-    m365.push({ title: "Evergreen", items });
-  }
-
-  const areas: NavArea[] = [
-    { id: "werkbank", label: "Werkbank", icon: "start", home: "/", groups: general },
-  ];
-  const first = m365[0]?.items[0];
-  if (first) {
     areas.push({
-      id: "m365",
-      label: "Microsoft 365",
-      icon: "m365",
-      home: first.path,
-      groups: m365,
+      id: "evergreen",
+      label: "Evergreen",
+      icon: "vorgaenge",
+      home: "/evergreen",
+      // Ohne Überschrift: Der Bereich heißt schon so.
+      groups: [{ title: null, items }],
     });
   }
   return areas;

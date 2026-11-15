@@ -21,6 +21,8 @@ test("Admin sieht alle Bereiche", async ({ page }) => {
   await nav.getByRole("link", { name: /^Microsoft 365/ }).click();
   await openNavigation(page);
   await expect(nav.getByRole("link", { name: "Änderungen" })).toBeVisible();
+  await nav.getByRole("link", { name: /^Evergreen/ }).click();
+  await openNavigation(page);
   await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
   await expectNoA11yViolations(page);
 });
@@ -31,11 +33,11 @@ test("Betriebsrat sieht nur Start und Evergreen", async ({ page }) => {
   await openNavigation(page);
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
   await expect(nav.getByText("Verwaltung")).toHaveCount(0);
-  await nav.getByRole("link", { name: /^Microsoft 365/ }).click();
+  await expect(nav.getByRole("link", { name: /^Microsoft 365/ })).toHaveCount(0);
+  await nav.getByRole("link", { name: /^Evergreen/ }).click();
   await expect(page).toHaveURL(/\/evergreen$/);
   await openNavigation(page);
   await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
-  await expect(nav.getByText("Konfiguration")).toHaveCount(0);
 });
 
 test("Abmelden führt zur Login-Seite", async ({ page }) => {

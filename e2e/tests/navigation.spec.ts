@@ -17,7 +17,7 @@ test("Navigation lässt sich einklappen und merkt sich das", async ({ page }, te
   await expectNoA11yViolations(page);
   await nav.getByRole("link", { name: "Microsoft 365" }).click();
   await expect(page).toHaveURL(/\/m365$/);
-  await nav.getByRole("link", { name: "Vorgänge" }).click();
+  await nav.getByRole("link", { name: "Evergreen" }).click();
   await expect(page).toHaveURL(/\/evergreen$/);
 
   await page.reload();
@@ -55,14 +55,18 @@ test("Bereiche: Die Navigation zeigt nur die Seiten des gewählten Bereichs", as
   await openNavigation(page);
   await expect(m365).toHaveAttribute("aria-current", "true");
   await expect(nav.getByRole("link", { name: "Änderungen" })).toBeVisible();
-  await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Vorgänge" })).toHaveCount(0);
   await expect(nav.getByRole("link", { name: "Audit-Log" })).toHaveCount(0);
   await expectNoA11yViolations(page);
 
   // Eine Seite des Bereichs direkt aufrufen: Der Bereich ist gleich der richtige.
   await page.goto("/evergreen");
   await openNavigation(page);
-  await expect(m365).toHaveAttribute("aria-current", "true");
+  await expect(nav.getByRole("link", { name: /^Evergreen/ })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
   await general.click();
   await expect(page).toHaveURL(/\/$/);
 });

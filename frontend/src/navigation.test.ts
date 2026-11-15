@@ -4,7 +4,7 @@ import { allNavItems, areaForPath, areasFor, navigationFor } from "./navigation"
 describe("navigationFor", () => {
   it("zeigt Betriebsrat nur Start und Evergreen", () => {
     const groups = navigationFor(["Evergreen.Betriebsrat"]);
-    expect(groups.map((group) => group.title)).toEqual([null, "Evergreen"]);
+    expect(allNavItems(groups).map((item) => item.label)).toEqual(["Start", "Suche", "Vorgänge"]);
   });
 
   it("zeigt dem Admin die Verwaltung und das Audit-Log", () => {
@@ -40,20 +40,22 @@ describe("navigationFor", () => {
 describe("areasFor", () => {
   const all = ["Werkbank.Admin", "Config.Reader", "Evergreen.IT"];
 
-  it("trennt die allgemeinen Seiten vom Bereich Microsoft 365", () => {
+  it("gibt Microsoft 365 und Evergreen je einen eigenen Bereich", () => {
     const areas = areasFor(all);
-    expect(areas.map((area) => area.label)).toEqual(["Werkbank", "Microsoft 365"]);
-    expect(areas[1]?.groups.map((group) => group.title)).toEqual(["Konfiguration", "Evergreen"]);
-    expect(areas[1]?.home).toBe("/m365");
-    const general = allNavItems(areas[0]?.groups ?? []).map((item) => item.path);
-    expect(general).toEqual(["/", "/suche", "/reports", "/audit", "/verwaltung"]);
+    expect(areas.map((area) => area.label)).toEqual(["Werkbank", "Microsoft 365", "Evergreen"]);
+    expect(areas.map((area) => area.home)).toEqual(["/", "/m365", "/evergreen"]);
+    const paths = (index: number) => allNavItems(areas[index]?.groups ?? []).map((i) => i.path);
+    expect(paths(0)).toEqual(["/", "/suche", "/reports", "/audit", "/verwaltung"]);
+    expect(paths(1).every((path) => path.startsWith("/m365"))).toBe(true);
+    expect(paths(2)).toEqual(["/evergreen", "/evergreen/eingang"]);
   });
 
-  it("führt ohne Rolle für die Konfiguration direkt zu den Vorgängen", () => {
-    expect(areasFor(["Evergreen.Betriebsrat"])[1]?.home).toBe("/evergreen");
-  });
-
-  it("zeigt ohne Rolle für Microsoft 365 nur den allgemeinen Bereich", () => {
+  it("zeigt nur Bereiche, für die es eine Rolle gibt", () => {
+    expect(areasFor(["Evergreen.Betriebsrat"]).map((area) => area.id)).toEqual([
+      "werkbank",
+      "evergreen",
+    ]);
+    expect(areasFor(["Config.Reader"]).map((area) => area.id)).toEqual(["werkbank", "m365"]);
     expect(areasFor(["Werkbank.Auditor"]).map((area) => area.id)).toEqual(["werkbank"]);
   });
 
@@ -64,7 +66,7 @@ describe("areasFor", () => {
     expect(id("/konto")).toBe("werkbank");
     expect(id("/m365/einstellungen/12")).toBe("m365");
     expect(id("/m365/empfehlungen")).toBe("m365");
-    expect(id("/evergreen/7")).toBe("m365");
+    expect(id("/evergreen/7")).toBe("evergreen");
     expect(id("/verwaltung")).toBe("werkbank");
   });
 });

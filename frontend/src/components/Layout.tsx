@@ -307,7 +307,7 @@ export function Layout({ me }: LayoutProps) {
           )}
           <div className="nav-items">
             {groups.map((group) => (
-              <div className="nav-group" key={group.title ?? "start"}>
+              <div className="nav-group" key={group.title ?? group.items[0]?.path ?? "start"}>
                 {group.title && <p className="nav-title">{group.title}</p>}
                 <ul>
                   {group.items.map((item) => (
