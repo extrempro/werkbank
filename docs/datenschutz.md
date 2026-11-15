@@ -35,7 +35,7 @@ Keine Tracking- oder Analysedienste. Keine Cookies außer dem technisch notwendi
 | Empfänger | Daten | Hinweis |
 |---|---|---|
 | SMTP-Server des Betreibers (in der Verwaltung eingetragen) | E-Mail-Adresse der Empfängerin oder des Empfängers, Hinweistext ohne fachliche Inhalte | derzeit nur Testmail an die eigene Adresse |
-| Microsoft (Entra, Graph, UTCM) | Anmeldung, optional Abruf des eigenen Profilbilds, Abruf der Tenant-Einstellungen und des Nachrichtencenters, später Mailversand (Daten verlassen den Tenant nur in Richtung Werkbank) | bestehender Vertrag M365 |
+| Microsoft (Entra, Graph, UTCM) | Anmeldung, optional Abruf des eigenen Profilbilds, Abruf der Tenant-Einstellungen und des Nachrichtencenters, optional der Empfehlungen aus Secure Score (Statustexte nennen Anzahlen, z. B. „16 von 23 Konten“, keine Namen), später Mailversand (Daten verlassen den Tenant nur in Richtung Werkbank) | bestehender Vertrag M365 |
 | Push-Dienste der Browserhersteller (Apple, Google, Mozilla) | verschlüsselte Push-Nachricht ohne Inhalt | nur nach Opt-in |
 | KI-Anbieter (optional, in der Verwaltung eingetragen, Standard: aus) | nur Dienst, Bereich und Name der Eigenschaft einer Einstellung (z. B. „entra / conditionalAccessPolicy / state“); keine Werte, keine Namen von Objekten, keine personenbezogenen Daten | **[OFFEN]** AVV und Freigabe je nach gewähltem Anbieter; bei einem eigenen Dienst im internen Netz verlassen die Daten das Haus nicht |
 

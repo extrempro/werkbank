@@ -5,10 +5,11 @@ interface LinkProps {
   to: string;
   children: ReactNode;
   className?: string;
+  "aria-current"?: "page";
 }
 
 /** Verweis innerhalb der Werkbank ohne Neuladen der Seite. */
-export function Link({ to, children, className }: LinkProps) {
+export function Link({ to, children, className, "aria-current": ariaCurrent }: LinkProps) {
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
     if (event.defaultPrevented || event.button !== 0 || modified) {
@@ -19,7 +20,7 @@ export function Link({ to, children, className }: LinkProps) {
     document.getElementById("inhalt")?.focus();
   };
   return (
-    <a href={to} className={className} onClick={onClick}>
+    <a href={to} className={className} aria-current={ariaCurrent} onClick={onClick}>
       {children}
     </a>
   );

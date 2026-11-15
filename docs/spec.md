@@ -331,11 +331,11 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 | Begründung „Warum bei uns so“ | manuell |
 | Kritikalität (Niedrig/Mittel/Hoch) | manuell, Vorschlag je Bereich |
 | Soll-Wert | manuell oder aus Evergreen-Beschluss |
-| Empfehlung/Benchmark | **[OFFEN]** Quelle (CIS-Benchmark: Lizenz klären; Microsoft-Empfehlungen) |
+| Empfehlung/Benchmark | Microsoft Secure Score: Empfehlungen („Controls“) mit Stand im Tenant, von Reviewern von Hand den Einstellungen zugeordnet. CIS-Benchmarks werden wegen der Lizenz nicht mitgeliefert |
 | Verantwortlich | Person oder Abteilung |
 | Link Microsoft Learn | je Bereich hinterlegt |
 
-Alle Metadaten haben einen eigenen Verlauf (je geändertem Feld ein Eintrag mit Person und Zeitpunkt). Pflege durch `Config.Reviewer`. Der Link muss mit `https://` beginnen. Stand: Beschreibung, Begründung, Kritikalität, Soll-Wert (manuell), Verantwortlich und Link sind umgesetzt; KI-Texte je Art von Einstellung sind umgesetzt (6.9); Empfehlung/Benchmark folgt.
+Alle Metadaten haben einen eigenen Verlauf (je geändertem Feld ein Eintrag mit Person und Zeitpunkt). Pflege durch `Config.Reviewer`. Der Link muss mit `https://` beginnen. Stand: Beschreibung, Begründung, Kritikalität, Soll-Wert (manuell), Verantwortlich und Link sind umgesetzt; KI-Texte je Art von Einstellung sind umgesetzt (6.9), Empfehlungen aus Microsoft Secure Score ebenfalls (Seite „Empfehlungen“, `SECURE_SCORE_ENABLED`, tägliche Abfrage; Microsoft liefert keinen Bezug zu einzelnen Einstellungen, deshalb die Zuordnung von Hand).
 
 ### 7.6 Soll/Ist
 
@@ -471,6 +471,7 @@ Evergreen:
 | M365 › Übersicht | Config.* | Kennzahlen, Änderungen pro Tag, letzte Änderungen, Collector-Hinweise |
 | M365 › Änderungen | Config.* | Liste mit Filtern, Detailbereich mit Vorher/Nachher, Audit-Eintrag, Beschreibung, Bewertung mit Kommentarregeln |
 | M365 › Einstellungen | Config.* | Baum nach Workload, Detail: Wert, gültig seit, Kritikalität, Empfehlung, Soll-Wert/BR-Beschluss, Beschreibung, Begründung, Microsoft-Schema, Verlauf |
+| M365 › Empfehlungen | Config.* (Zuordnen: Config.Reviewer) | Empfehlungen aus Microsoft Secure Score: Liste mit Stand und Punkten (offen, erfüllt, alle), Detail mit Statustext, Umsetzung laut Microsoft und zugeordneten Einstellungen |
 | M365 › Snapshots | Config.* | Abrufe mit Status, Vergleich zweier Snapshots, JSON-Export |
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |
@@ -672,7 +673,7 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 4 | Audit-Log | Entschieden: Aufbewahrung 90 Tage, in der Verwaltung einstellbar (30 bis 3650 Tage) |
 | 5 | Anhänge | Virenscan ja/nein |
 | 6 | KI-Texte | Entschieden: Anbieter frei einstellbar (OpenAI-kompatible Adresse, Modell und Schlüssel in der Verwaltung; der Schlüssel liegt verschlüsselt in der Datenbank). Texte entstehen automatisch und bleiben „ungeprüft“ bis zur Freigabe. Offen: AVV und Freigabe Datenschutz je nach gewähltem Anbieter |
-| 7 | Benchmarks | Entschieden: nur frei verwendbare Empfehlungen von Microsoft; CIS-Benchmarks werden wegen der Lizenz nicht mitgeliefert |
+| 7 | Benchmarks | Entschieden: Empfehlungen aus Microsoft Secure Score (eigene Seite, Zuordnung zu Einstellungen von Hand, später ergänzt um eine mitgelieferte Zuordnung); CIS-Benchmarks werden wegen der Lizenz nicht mitgeliefert |
 | 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit DSB, BR-Beteiligung für die Werkbank selbst |
 | 9 | Hostname | Erledigt: Der öffentliche Hostname ist Konfiguration (`PUBLIC_URL`) und steht nicht im Repository |
 | 14 | Anrede | Entschieden: überall „du“ (`design.md`, Kapitel 7) |

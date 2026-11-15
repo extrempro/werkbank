@@ -34,6 +34,10 @@ from werkbank.modules.m365_config.models import (
     ChangeStatus,
     Criticality,
 )
+from werkbank.modules.m365_config.recommendations_api import (
+    RecommendationOut,
+    recommendations_for_setting,
+)
 from werkbank.modules.m365_config.versioning import same_value
 from werkbank.worker.jobs import enqueue
 
@@ -207,6 +211,8 @@ class SettingDetailOut(BaseModel):
     meta: MetaOut
     # KI-Text für diese Art von Einstellung, falls es einen gibt (nicht verworfen)
     ai_text: AiTextOut | None
+    # Zugeordnete Empfehlungen aus Microsoft Secure Score
+    recommendations: list[RecommendationOut]
     meta_history: list[MetaHistoryOut]
     versions: list[VersionOut]
     changes: list[ChangeOut]
@@ -588,6 +594,7 @@ def get_setting(
         ),
         meta=_meta_out(meta),
         ai_text=_ai_text_out(ai_text),
+        recommendations=recommendations_for_setting(db, setting_id),
         meta_history=[
             MetaHistoryOut(
                 id=row[0].id,

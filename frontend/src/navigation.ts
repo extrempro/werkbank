@@ -45,6 +45,7 @@ export function navigationFor(roles: readonly string[]): NavGroup[] {
         { path: "/m365", label: "Übersicht", icon: "uebersicht" },
         { path: "/m365/aenderungen", label: "Änderungen", icon: "aenderungen" },
         { path: "/m365/einstellungen", label: "Einstellungen", icon: "einstellungen" },
+        { path: "/m365/empfehlungen", label: "Empfehlungen", icon: "empfehlungen" },
         { path: "/m365/snapshots", label: "Snapshots", icon: "snapshots" },
       ],
     });

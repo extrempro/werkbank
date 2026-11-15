@@ -5,6 +5,7 @@ import {
   criticalityLabel,
   fetchSetting,
   formatMetaValue,
+  formatScore,
   formatValue,
   kindLabel,
   metaFieldLabel,
@@ -86,6 +87,7 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
   const { setting, meta, versions, changes } = detail;
   const history = detail.meta_history;
   const aiText = detail.ai_text ?? null;
+  const recommendations = detail.recommendations ?? [];
   const crumbs = [workloadLabel(setting.workload), setting.area, setting.object_name]
     .filter((part): part is string => Boolean(part))
     .join(" › ");
@@ -273,6 +275,38 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
             </>
           )}
         </section>
+
+        {recommendations.length > 0 && (
+          <section className="setting-section" aria-labelledby="empfehlungen-titel">
+            <div className="section-head">
+              <h2 id="empfehlungen-titel">Empfehlungen von Microsoft</h2>
+              <span className="small">Secure Score</span>
+            </div>
+            <ul className="rows">
+              {recommendations.map((entry) => (
+                <li key={entry.id}>
+                  <span className="row-main">
+                    <Link to={`/m365/empfehlungen/${entry.id}`} className="row-title">
+                      <span lang="en">{entry.title}</span>
+                    </Link>
+                    <span className="small">
+                      {formatScore(entry.score, entry.max_score)} Punkten
+                      {entry.status_text && (
+                        <>
+                          {" · "}
+                          <span lang="en">{entry.status_text}</span>
+                        </>
+                      )}
+                    </span>
+                  </span>
+                  <span className={entry.fulfilled ? "pill pill-ok" : "pill pill-todo"}>
+                    {entry.fulfilled ? "erfüllt" : "offen"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="setting-section" aria-labelledby="verlauf-titel">
           <div className="section-head">

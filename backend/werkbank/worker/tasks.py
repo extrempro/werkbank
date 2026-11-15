@@ -19,6 +19,7 @@ from werkbank.modules.evergreen.jobs import (
 )
 from werkbank.modules.m365_config.ai_texts import GENERATE_AI_TEXTS, generate_ai_texts_job
 from werkbank.modules.m365_config.jobs import COLLECT, collect_job
+from werkbank.modules.m365_config.secure_score import FETCH_SECURE_SCORE, fetch_secure_score_job
 from werkbank.worker.jobs import JobType
 
 CLEANUP = "kern.aufraeumen"
@@ -86,4 +87,9 @@ def build_registry(settings: Settings) -> dict[str, JobType]:
             handler=fetch_messages_job,
             interval=timedelta(hours=max(settings.message_center_interval_hours, 1)),
         )
+        if settings.secure_score_enabled:
+            registry[FETCH_SECURE_SCORE] = JobType(
+                handler=fetch_secure_score_job,
+                interval=timedelta(hours=max(settings.secure_score_interval_hours, 1)),
+            )
     return registry
