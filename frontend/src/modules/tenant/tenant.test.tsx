@@ -359,7 +359,9 @@ describe("Wabenansicht", () => {
     expect(comb.getAllByRole("button")).toHaveLength(2);
     expect(screen.getByText("Eine Wabe auswählen, um die Einzelheiten zu sehen.")).toBeVisible();
 
-    const first = comb.getByRole("button", { name: /^Zeiterfassung Schnittstelle Produktion, Secret/ });
+    const first = comb.getByRole("button", {
+      name: /^Zeiterfassung Schnittstelle Produktion, Secret/,
+    });
     expect(first).toHaveTextContent("Zeiterfassung");
     expect(first).toHaveTextContent("5 Tage");
     fireEvent.click(first);

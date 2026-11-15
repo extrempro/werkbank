@@ -135,7 +135,9 @@ export function CredentialsPage() {
                   aria-label="Zertifikate und Secrets"
                 >
                   <table>
-                    <caption className="visually-hidden">Zertifikate und Secrets nach Ablauf</caption>
+                    <caption className="visually-hidden">
+                      Zertifikate und Secrets nach Ablauf
+                    </caption>
                     <thead>
                       <tr>
                         <th scope="col">Anwendung</th>
@@ -157,7 +159,9 @@ export function CredentialsPage() {
                           </th>
                           <td>{credentialKind(entry)}</td>
                           <td>{entry.name ?? "–"}</td>
-                          <td>{entry.expires_at ? formatDay(entry.expires_at.slice(0, 10)) : "–"}</td>
+                          <td>
+                            {entry.expires_at ? formatDay(entry.expires_at.slice(0, 10)) : "–"}
+                          </td>
                           <td>{remainingText(entry.days_left)}</td>
                           <td>
                             <span className={`pill pill-${LEVEL_INFO[entry.level].tone}`}>
