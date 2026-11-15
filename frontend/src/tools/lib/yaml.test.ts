@@ -60,11 +60,18 @@ copy: *base
   });
 
   it("schreibt YAML, das wieder gleich gelesen wird", () => {
-    const v = { name: "x: y", n: "123", yes: "yes", list: [1, { a: true, b: null }, []], multi: "a\nb\n", empty: {}, "key with space": 1 };
+    const v = {
+      name: "x: y",
+      n: "123",
+      yes: "yes",
+      list: [1, { a: true, b: null }, []],
+      multi: "a\nb\n",
+      empty: {},
+      "key with space": 1,
+    };
     const y = toYaml(v);
     expect(y).toContain('name: "x: y"');
     expect(y).toContain('"n": "123"');
     expect(parseYaml(y).value).toEqual(v);
   });
 });
-

@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import { decodeJwt, tokenStatus, verifyJwt } from "./jwt";
 
 // Öffentliche Beispiel-Token, keine echten Zugangsdaten.
-const HS = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"; // gitleaks:allow
-const ES = "eyJhbGciOiJFUzI1NiIsImtpZCI6ImsxIn0.eyJzdWIiOiJ4IiwiZXhwIjo0MTAyNDQ0ODAwfQ.4Xy9agF4iqVOWPOdD17dG6U92Wr414R_wPzoK6yA0wEl5oIf8nJoOdUDaWgzLgKftrft54oQwtsTHwPNtB0_zA"; // gitleaks:allow
-const ES_PEM = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjAXPs8pbUDxbRdtw800jnf6lWJlD\nMKkattiFKTAmt95MinfVg3c1/OOXofaaQTxr+WrJO4SXZCuVsJNUmVn84w==\n-----END PUBLIC KEY-----\n";
+const HS =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"; // gitleaks:allow
+const ES =
+  "eyJhbGciOiJFUzI1NiIsImtpZCI6ImsxIn0.eyJzdWIiOiJ4IiwiZXhwIjo0MTAyNDQ0ODAwfQ.4Xy9agF4iqVOWPOdD17dG6U92Wr414R_wPzoK6yA0wEl5oIf8nJoOdUDaWgzLgKftrft54oQwtsTHwPNtB0_zA"; // gitleaks:allow
+const ES_PEM =
+  "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjAXPs8pbUDxbRdtw800jnf6lWJlD\nMKkattiFKTAmt95MinfVg3c1/OOXofaaQTxr+WrJO4SXZCuVsJNUmVn84w==\n-----END PUBLIC KEY-----\n";
 
 describe("JWT", () => {
   it("dekodiert Header und Payload", () => {

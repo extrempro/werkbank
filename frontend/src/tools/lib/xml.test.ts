@@ -3,9 +3,19 @@ import { find, formatXml, minifyXml, parseXml, textOf } from "./xml";
 
 describe("XML", () => {
   it("formatiert und minimiert", () => {
-    const nodes = parseXml('<?xml version="1.0"?><a x="1 &amp; 2"><b>Text &lt;hier&gt;</b><c/><!-- k --><d><![CDATA[<roh>]]></d></a>');
+    const nodes = parseXml(
+      '<?xml version="1.0"?><a x="1 &amp; 2"><b>Text &lt;hier&gt;</b><c/><!-- k --><d><![CDATA[<roh>]]></d></a>',
+    );
     expect(formatXml(nodes)).toBe(
-      ['<?xml version="1.0"?>', '<a x="1 &amp; 2">', "  <b>Text &lt;hier&gt;</b>", "  <c/>", "  <!-- k -->", "  <d><![CDATA[<roh>]]></d>", "</a>"].join("\n"),
+      [
+        '<?xml version="1.0"?>',
+        '<a x="1 &amp; 2">',
+        "  <b>Text &lt;hier&gt;</b>",
+        "  <c/>",
+        "  <!-- k -->",
+        "  <d><![CDATA[<roh>]]></d>",
+        "</a>",
+      ].join("\n"),
     );
     expect(minifyXml(parseXml("<a>\n  <b> x </b>\n</a>"))).toBe("<a><b>x</b></a>");
     expect(textOf(find(nodes, "b"))).toBe("Text <hier>");

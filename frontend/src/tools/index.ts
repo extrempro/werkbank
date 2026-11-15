@@ -142,7 +142,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "encoding",
     description:
       "JSON Web Tokens lesen: Header, Claims mit Erklärung, Ablaufzeiten. Dazu die Signatur mit Secret, PEM-Schlüssel oder JWKS prüfen.",
-    tags: ["token", "bearer", "oauth", "oidc", "entra", "id token", "access token", "claims", "jwks"],
+    tags: [
+      "token",
+      "bearer",
+      "oauth",
+      "oidc",
+      "entra",
+      "id token",
+      "access token",
+      "claims",
+      "jwks",
+    ],
     component: lazy(() => import("./jwt/JwtTool")),
   },
   {
@@ -168,7 +178,16 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "formatter",
     description:
       "YAML prüfen (mit Zeilenangabe bei Fehlern) und einheitlich formatieren, zum Beispiel docker-compose, Kubernetes, Ansible.",
-    tags: ["yaml", "yml", "validieren", "prüfen", "docker compose", "kubernetes", "ansible", "lint"],
+    tags: [
+      "yaml",
+      "yml",
+      "validieren",
+      "prüfen",
+      "docker compose",
+      "kubernetes",
+      "ansible",
+      "lint",
+    ],
     component: lazy(() => import("./yaml-format/YamlFormatTool")),
   },
   {

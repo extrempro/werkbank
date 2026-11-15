@@ -13,15 +13,28 @@ describe("URL", () => {
 
   it("zerlegt URLs", () => {
     const u = parseUrl("https://user:pw@example.com:8443/pfad/ä?x=1&y=a%20b#oben")!;
-    expect(u).toMatchObject({ protocol: "https", username: "user", password: "••••", host: "example.com", port: "8443", path: "/pfad/ä", hash: "oben" });
-    expect(u.params).toEqual([{ key: "x", value: "1" }, { key: "y", value: "a b" }]);
+    expect(u).toMatchObject({
+      protocol: "https",
+      username: "user",
+      password: "••••",
+      host: "example.com",
+      port: "8443",
+      path: "/pfad/ä",
+      hash: "oben",
+    });
+    expect(u.params).toEqual([
+      { key: "x", value: "1" },
+      { key: "y", value: "a b" },
+    ]);
     expect(parseUrl("kein url")).toBeNull();
   });
 });
 
 describe("HTML-Entities", () => {
   it("kodiert in drei Stufen", () => {
-    expect(htmlEncode('<a href="x">Grüße & €</a>', "minimal")).toBe("&lt;a href=&quot;x&quot;&gt;Grüße &amp; €&lt;/a&gt;");
+    expect(htmlEncode('<a href="x">Grüße & €</a>', "minimal")).toBe(
+      "&lt;a href=&quot;x&quot;&gt;Grüße &amp; €&lt;/a&gt;",
+    );
     expect(htmlEncode("Grüße €", "named")).toBe("Gr&uuml;&szlig;e &euro;");
     expect(htmlEncode("ü😀", "numeric")).toBe("&#252;&#128512;");
   });

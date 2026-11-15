@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { analyzeSaml, decodeSaml } from "./saml";
 
-const REDIRECT = "https://idp.example/sso?SAMLRequest=fc%2FNCsIwEATgVyn7AI16XNpA0UuhXlo8SwgLLeTP7Eb6%2BKIiVASPw8B8TMPGu4RdkTmMdCvEUq3eBcZX0ULJAaPhhTEYT4xicerOAx7qHaYcJdrooOpPLVz3UHXMlGWJ4RgDF095onxfLF3GoYVZJDEqxamm1fjkSBnLoJsnhT1zobzB%2F9vmI4H%2B3W3UZlK%2F0%2FdJ%2FQA%3D&RelayState=x";
+const REDIRECT =
+  "https://idp.example/sso?SAMLRequest=fc%2FNCsIwEATgVyn7AI16XNpA0UuhXlo8SwgLLeTP7Eb6%2BKIiVASPw8B8TMPGu4RdkTmMdCvEUq3eBcZX0ULJAaPhhTEYT4xicerOAx7qHaYcJdrooOpPLVz3UHXMlGWJ4RgDF095onxfLF3GoYVZJDEqxamm1fjkSBnLoJsnhT1zobzB%2F9vmI4H%2B3W3UZlK%2F0%2FdJ%2FQA%3D&RelayState=x";
 
 const RESPONSE = `<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_r1" InResponseTo="_1" Destination="https://sp.example/acs" IssueInstant="2026-11-07T10:00:00Z">
   <saml:Issuer>https://sts.windows.net/abc/</saml:Issuer>
@@ -33,7 +34,9 @@ describe("SAML", () => {
     expect(r.binding).toMatch(/POST/);
     const info = analyzeSaml(r.xml);
     expect(info.rows.find((x) => x.label === "Status")?.value).toBe("Success");
-    expect(info.rows.find((x) => x.label === "NameID")?.value).toBe("max@example.com (emailAddress)");
+    expect(info.rows.find((x) => x.label === "NameID")?.value).toBe(
+      "max@example.com (emailAddress)",
+    );
     expect(info.attributes[0]!.values).toEqual(["g1", "g2"]);
     expect(info.signed).toEqual({ message: false, assertion: true });
     expect(info.certificates).toEqual(["MIICAAA="]);

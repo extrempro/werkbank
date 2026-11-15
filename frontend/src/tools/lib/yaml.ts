@@ -59,19 +59,30 @@ export function resolveScalar(raw: string): Value {
 function unescapeDouble(s: string, line: number): string {
   return s.replace(/\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|.)/g, (_, e: string) => {
     switch (e[0]) {
-      case "n": return "\n";
-      case "t": return "\t";
-      case "r": return "\r";
-      case "0": return "\0";
-      case "\\": return "\\";
-      case '"': return '"';
-      case "/": return "/";
-      case " ": return " ";
-      case "e": return "\x1b";
+      case "n":
+        return "\n";
+      case "t":
+        return "\t";
+      case "r":
+        return "\r";
+      case "0":
+        return "\0";
+      case "\\":
+        return "\\";
+      case '"':
+        return '"';
+      case "/":
+        return "/";
+      case " ":
+        return " ";
+      case "e":
+        return "\x1b";
       case "x":
       case "u":
-      case "U": return String.fromCodePoint(parseInt(e.slice(1), 16));
-      default: throw new YamlError(`Unbekannte Escape-Folge \\${e}`, line);
+      case "U":
+        return String.fromCodePoint(parseInt(e.slice(1), 16));
+      default:
+        throw new YamlError(`Unbekannte Escape-Folge \\${e}`, line);
     }
   });
 }
@@ -89,17 +100,17 @@ function parseFlow(s: string, line: number, anchors: Map<string, Value>): Value 
       pos++;
       const arr: Value[] = [];
       ws();
-      if (s[pos] === "]") return pos++, arr;
+      if (s[pos] === "]") return (pos++, arr);
       for (;;) {
         arr.push(entryOrPair());
         ws();
         if (s[pos] === ",") {
           pos++;
           ws();
-          if (s[pos] === "]") return pos++, arr;
+          if (s[pos] === "]") return (pos++, arr);
           continue;
         }
-        if (s[pos] === "]") return pos++, arr;
+        if (s[pos] === "]") return (pos++, arr);
         throw new YamlError("In […] fehlt „,“ oder „]“", line);
       }
     }
@@ -107,7 +118,7 @@ function parseFlow(s: string, line: number, anchors: Map<string, Value>): Value 
       pos++;
       const obj: Record<string, Value> = {};
       ws();
-      if (s[pos] === "}") return pos++, obj;
+      if (s[pos] === "}") return (pos++, obj);
       for (;;) {
         const k = value(true);
         ws();
@@ -121,10 +132,10 @@ function parseFlow(s: string, line: number, anchors: Map<string, Value>): Value 
         if (s[pos] === ",") {
           pos++;
           ws();
-          if (s[pos] === "}") return pos++, obj;
+          if (s[pos] === "}") return (pos++, obj);
           continue;
         }
-        if (s[pos] === "}") return pos++, obj;
+        if (s[pos] === "}") return (pos++, obj);
         throw new YamlError("In {…} fehlt „,“ oder „}“", line);
       }
     }
@@ -209,7 +220,8 @@ function mappingColon(text: string): number {
       if (c === "\\" && quote === '"') i++;
       else if (c === quote) quote = null;
     } else if ((c === '"' || c === "'") && i === 0) quote = c;
-    else if (c === ":" && (i + 1 === text.length || text[i + 1] === " " || text[i + 1] === "\t")) return i;
+    else if (c === ":" && (i + 1 === text.length || text[i + 1] === " " || text[i + 1] === "\t"))
+      return i;
   }
   return -1;
 }
@@ -223,15 +235,23 @@ export function parseYaml(input: string): { value: Value; documents: number } {
       if (/^---(\s|$)/.test(raw)) {
         if (docs[docs.length - 1]!.length) docs.push([]);
         const rest = raw.slice(3).trim();
-        if (rest && !rest.startsWith("#")) docs[docs.length - 1]!.push({ indent: 0, text: rest, no: i + 1 });
+        if (rest && !rest.startsWith("#"))
+          docs[docs.length - 1]!.push({ indent: 0, text: rest, no: i + 1 });
         return;
       }
       if (/^\.\.\.(\s|$)/.test(raw)) return;
       if (/^%/.test(raw)) return; // Direktiven
-      if (/^\t/.test(raw) && raw.trim()) throw new YamlError("Tabulatoren sind zur Einrückung nicht erlaubt", i + 1);
-      docs[docs.length - 1]!.push({ indent: raw.length - raw.trimStart().length, text: raw.trimStart(), no: i + 1 });
+      if (/^\t/.test(raw) && raw.trim())
+        throw new YamlError("Tabulatoren sind zur Einrückung nicht erlaubt", i + 1);
+      docs[docs.length - 1]!.push({
+        indent: raw.length - raw.trimStart().length,
+        text: raw.trimStart(),
+        no: i + 1,
+      });
     });
-  const values = docs.filter((d) => d.some((l) => stripComment(l.text) !== "")).map((d) => new Parser(d).parseDocument());
+  const values = docs
+    .filter((d) => d.some((l) => stripComment(l.text) !== ""))
+    .map((d) => new Parser(d).parseDocument());
   if (values.length === 0) return { value: null, documents: 0 };
   return { value: values.length === 1 ? values[0] : values, documents: values.length };
 }
@@ -252,7 +272,8 @@ class Parser {
     this.skipEmpty();
     const v = this.parseNode(-1);
     this.skipEmpty();
-    if (this.i < this.lines.length) throw new YamlError("Unerwarteter Inhalt (Einrückung?)", this.lines[this.i]!.no);
+    if (this.i < this.lines.length)
+      throw new YamlError("Unerwarteter Inhalt (Einrückung?)", this.lines[this.i]!.no);
     return v;
   }
 
@@ -300,7 +321,8 @@ class Parser {
       const text = stripComment(line.text);
       const colon = mappingColon(text);
       if (colon <= 0) {
-        if (text === "-" || text.startsWith("- ")) throw new YamlError("Liste und Schlüssel auf derselben Ebene gemischt", line.no);
+        if (text === "-" || text.startsWith("- "))
+          throw new YamlError("Liste und Schlüssel auf derselben Ebene gemischt", line.no);
         throw new YamlError(`„${text}“ ist kein Schlüssel: Wert`, line.no);
       }
       let keyRaw = text.slice(0, colon).trim();
@@ -311,7 +333,8 @@ class Parser {
         keyRaw = keyRaw.replace(/^!!\w+\s+/, "");
         key = keyRaw;
       }
-      if (Object.prototype.hasOwnProperty.call(obj, key)) throw new YamlError(`Schlüssel „${key}“ doppelt`, line.no);
+      if (Object.prototype.hasOwnProperty.call(obj, key))
+        throw new YamlError(`Schlüssel „${key}“ doppelt`, line.no);
       const rest = text.slice(colon + 1).trim();
       if (!rest) {
         this.i++;
@@ -319,7 +342,8 @@ class Parser {
         this.skipEmpty();
         const next = this.lines[this.i];
         const nt = next ? stripComment(next.text) : "";
-        if (next && next.indent === indent && (nt === "-" || nt.startsWith("- "))) obj[key] = this.parseSeq(indent);
+        if (next && next.indent === indent && (nt === "-" || nt.startsWith("- ")))
+          obj[key] = this.parseSeq(indent);
         else obj[key] = this.parseNode(indent);
       } else {
         obj[key] = this.parseInlineValue(rest, indent, indent);
@@ -361,7 +385,14 @@ class Parser {
     const block = /^([|>])([+-]?)(\d?)([+-]?)$/.exec(text);
     if (block) {
       this.i++;
-      return store(this.blockScalar(block[1] as "|" | ">", (block[2] || block[4]) as "" | "+" | "-", block[3] ? parentIndent + Number(block[3]) : undefined, parentIndent));
+      return store(
+        this.blockScalar(
+          block[1] as "|" | ">",
+          (block[2] || block[4]) as "" | "+" | "-",
+          block[3] ? parentIndent + Number(block[3]) : undefined,
+          parentIndent,
+        ),
+      );
     }
     if (text.startsWith("*")) {
       this.i++;
@@ -373,7 +404,8 @@ class Parser {
     if (text.startsWith("[") || text.startsWith("{")) {
       let joined = text;
       this.i++;
-      while (!flowBalanced(joined) && this.i < this.lines.length) joined += ` ${stripComment(this.lines[this.i++]!.text)}`;
+      while (!flowBalanced(joined) && this.i < this.lines.length)
+        joined += ` ${stripComment(this.lines[this.i++]!.text)}`;
       return store(parseFlow(joined, line.no, this.anchors));
     }
     // Strings in Anführungszeichen, ggf. über mehrere Zeilen
@@ -387,9 +419,15 @@ class Parser {
       }
       const end = findQuoteEnd(joined, 0, q);
       if (end < 0) throw new YamlError("Anführungszeichen nicht geschlossen", line.no);
-      if (joined.slice(end + 1).trim()) throw new YamlError(`Unerwartetes „${joined.slice(end + 1).trim()}“ nach dem String`, line.no);
+      if (joined.slice(end + 1).trim())
+        throw new YamlError(
+          `Unerwartetes „${joined.slice(end + 1).trim()}“ nach dem String`,
+          line.no,
+        );
       const inner = joined.slice(1, end);
-      return store(q === '"' ? unescapeDouble(inner.replace(/\\\n/g, ""), line.no) : inner.replace(/''/g, "'"));
+      return store(
+        q === '"' ? unescapeDouble(inner.replace(/\\\n/g, ""), line.no) : inner.replace(/''/g, "'"),
+      );
     }
     // Plain-Scalar, Folgezeilen mit größerer Einrückung gehören dazu
     let value = text;
@@ -418,7 +456,12 @@ class Parser {
     return store(resolved);
   }
 
-  private blockScalar(style: "|" | ">", chomp: "" | "+" | "-", fixedIndent: number | undefined, parentIndent: number): string {
+  private blockScalar(
+    style: "|" | ">",
+    chomp: "" | "+" | "-",
+    fixedIndent: number | undefined,
+    parentIndent: number,
+  ): string {
     const lines: string[] = [];
     let indent = fixedIndent;
     while (this.i < this.lines.length) {
@@ -445,7 +488,13 @@ class Parser {
       body = "";
       lines.forEach((l, idx) => {
         if (idx === 0) body = l;
-        else if (l === "" || l.startsWith(" ") || lines[idx - 1] === "" || lines[idx - 1]!.startsWith(" ")) body += `\n${l}`;
+        else if (
+          l === "" ||
+          l.startsWith(" ") ||
+          lines[idx - 1] === "" ||
+          lines[idx - 1]!.startsWith(" ")
+        )
+          body += `\n${l}`;
         else body += ` ${l}`;
       });
     }
@@ -470,13 +519,21 @@ const needsQuote = (s: string) =>
 function scalar(v: Value): string {
   if (v === null || v === undefined) return "null";
   if (typeof v === "boolean") return String(v);
-  if (typeof v === "number") return Number.isNaN(v) ? ".nan" : v === Infinity ? ".inf" : v === -Infinity ? "-.inf" : String(v);
+  if (typeof v === "number")
+    return Number.isNaN(v)
+      ? ".nan"
+      : v === Infinity
+        ? ".inf"
+        : v === -Infinity
+          ? "-.inf"
+          : String(v);
   const s = String(v);
   if (!needsQuote(s) && !s.includes("\n")) return s;
   return JSON.stringify(s);
 }
 
-const isPlainObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v) && !(v instanceof Date);
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v) && !(v instanceof Date);
 
 export function toYaml(value: Value, indent = 2): string {
   const pad = (n: number) => " ".repeat(n);
@@ -485,7 +542,10 @@ export function toYaml(value: Value, indent = 2): string {
     const body = s.replace(/\n$/, "");
     const chomp = s.endsWith("\n") ? (s.endsWith("\n\n") ? "+" : "") : "-";
     const indicator = /^\s/.test(s) ? String(indent) : "";
-    return `|${indicator}${chomp}\n${body.split("\n").map((l) => (l ? pad(depth) + l : "")).join("\n")}`;
+    return `|${indicator}${chomp}\n${body
+      .split("\n")
+      .map((l) => (l ? pad(depth) + l : ""))
+      .join("\n")}`;
   };
   const emit = (v: Value, depth: number): string => {
     if (Array.isArray(v)) {
@@ -496,7 +556,8 @@ export function toYaml(value: Value, indent = 2): string {
             const inner = emit(item, depth + indent);
             return `${pad(depth)}- ${inner.slice(depth + indent)}`;
           }
-          if (Array.isArray(item) && item.length) return `${pad(depth)}-\n${emit(item, depth + indent)}`;
+          if (Array.isArray(item) && item.length)
+            return `${pad(depth)}-\n${emit(item, depth + indent)}`;
           return `${pad(depth)}- ${typeof item === "string" && item.includes("\n") ? multiline(item, depth + indent) : emit(item, depth + indent)}`;
         })
         .join("\n");
@@ -506,8 +567,10 @@ export function toYaml(value: Value, indent = 2): string {
       if (entries.length === 0) return "{}";
       return entries
         .map(([k, val]) => {
-          if ((Array.isArray(val) && val.length) || (isPlainObject(val) && Object.keys(val).length)) return `${pad(depth)}${key(k)}:\n${emit(val, Array.isArray(val) ? depth : depth + indent)}`;
-          if (typeof val === "string" && val.includes("\n")) return `${pad(depth)}${key(k)}: ${multiline(val, depth + indent)}`;
+          if ((Array.isArray(val) && val.length) || (isPlainObject(val) && Object.keys(val).length))
+            return `${pad(depth)}${key(k)}:\n${emit(val, Array.isArray(val) ? depth : depth + indent)}`;
+          if (typeof val === "string" && val.includes("\n"))
+            return `${pad(depth)}${key(k)}: ${multiline(val, depth + indent)}`;
           return `${pad(depth)}${key(k)}: ${emit(val, depth + indent)}`;
         })
         .join("\n");

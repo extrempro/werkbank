@@ -33,7 +33,8 @@ export function decodeXmlEntities(text: string): string {
   });
 }
 
-export const escapeXmlText = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+export const escapeXmlText = (t: string) =>
+  t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 export const escapeXmlAttr = (t: string) => escapeXmlText(t).replace(/"/g, "&quot;");
 
 export class XmlError extends Error {
@@ -117,7 +118,12 @@ export function parseXml(input: string): XmlNode[] {
           break;
         }
         const am = /^([A-Za-z_][\w.:-]*)\s*=\s*("([^"]*)"|'([^']*)')/.exec(src.slice(pos));
-        if (!am) fail(pos >= src.length ? `<${el.name}> nicht geschlossen` : `Ungültiges Attribut in <${el.name}>`);
+        if (!am)
+          fail(
+            pos >= src.length
+              ? `<${el.name}> nicht geschlossen`
+              : `Ungültiges Attribut in <${el.name}>`,
+          );
         if (el.attrs.some((a) => a.name === am![1])) fail(`Attribut „${am![1]}“ doppelt`);
         el.attrs.push({ name: am![1]!, value: decodeXmlEntities(am![3] ?? am![4] ?? "") });
         pos += am![0].length;
@@ -135,18 +141,27 @@ export interface FormatOptions {
   stripWhitespace: boolean;
 }
 
-export function formatXml(nodes: XmlNode[], opts: FormatOptions = { indent: "  ", stripWhitespace: true }): string {
+export function formatXml(
+  nodes: XmlNode[],
+  opts: FormatOptions = { indent: "  ", stripWhitespace: true },
+): string {
   const out: string[] = [];
-  const attrs = (el: XmlElement) => el.attrs.map((a) => ` ${a.name}="${escapeXmlAttr(a.value)}"`).join("");
+  const attrs = (el: XmlElement) =>
+    el.attrs.map((a) => ` ${a.name}="${escapeXmlAttr(a.value)}"`).join("");
   const write = (n: XmlNode, depth: number) => {
     const pad = opts.indent.repeat(depth);
     switch (n.kind) {
       case "element": {
-        const kids = opts.stripWhitespace ? n.children.filter((c) => !(c.kind === "text" && !c.value.trim())) : n.children;
+        const kids = opts.stripWhitespace
+          ? n.children.filter((c) => !(c.kind === "text" && !c.value.trim()))
+          : n.children;
         if (kids.length === 0) out.push(`${pad}<${n.name}${attrs(n)}/>`);
         else if (kids.length === 1 && (kids[0]!.kind === "text" || kids[0]!.kind === "cdata")) {
           const k = kids[0]!;
-          const inner = k.kind === "cdata" ? `<![CDATA[${k.value}]]>` : escapeXmlText(opts.stripWhitespace ? k.value.trim() : k.value);
+          const inner =
+            k.kind === "cdata"
+              ? `<![CDATA[${k.value}]]>`
+              : escapeXmlText(opts.stripWhitespace ? k.value.trim() : k.value);
           out.push(`${pad}<${n.name}${attrs(n)}>${inner}</${n.name}>`);
         } else {
           out.push(`${pad}<${n.name}${attrs(n)}>`);
@@ -193,8 +208,16 @@ export function* walk(nodes: XmlNode[]): Generator<XmlElement> {
   }
 }
 
-export const findAll = (nodes: XmlNode[], local: string) => [...walk(nodes)].filter((e) => localName(e.name) === local);
+export const findAll = (nodes: XmlNode[], local: string) =>
+  [...walk(nodes)].filter((e) => localName(e.name) === local);
 export const find = (nodes: XmlNode[], local: string) => findAll(nodes, local)[0];
 export const textOf = (el: XmlElement | undefined): string =>
-  el ? el.children.map((c) => (c.kind === "text" || c.kind === "cdata" ? c.value : c.kind === "element" ? textOf(c) : "")).join("") : "";
-export const attr = (el: XmlElement | undefined, name: string) => el?.attrs.find((a) => a.name === name || localName(a.name) === name)?.value;
+  el
+    ? el.children
+        .map((c) =>
+          c.kind === "text" || c.kind === "cdata" ? c.value : c.kind === "element" ? textOf(c) : "",
+        )
+        .join("")
+    : "";
+export const attr = (el: XmlElement | undefined, name: string) =>
+  el?.attrs.find((a) => a.name === name || localName(a.name) === name)?.value;

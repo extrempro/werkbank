@@ -57,9 +57,7 @@ export default function SamlTool() {
           <p className="badges" role="status">
             <span className="pill pill-neutral">{result.info.type}</span>
             <span className="pill pill-neutral">{result.binding}</span>
-            {result.info.signed.message && (
-              <span className="pill pill-ok">Nachricht signiert</span>
-            )}
+            {result.info.signed.message && <span className="pill pill-ok">Nachricht signiert</span>}
             {result.info.signed.assertion && (
               <span className="pill pill-ok">Assertion signiert</span>
             )}

@@ -147,8 +147,8 @@ export default function JwtTool() {
             </label>
             <p className="small">
               Entra ID: Die Schlüssel stehen unter
-              https://login.microsoftonline.com/&lt;tenant&gt;/discovery/v2.0/keys. Den Inhalt
-              hier einfügen; die Werkbank ruft die Adresse nicht selbst ab.
+              https://login.microsoftonline.com/&lt;tenant&gt;/discovery/v2.0/keys. Den Inhalt hier
+              einfügen; die Werkbank ruft die Adresse nicht selbst ab.
             </p>
             <div className="tool-row">
               <button

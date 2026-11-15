@@ -2,7 +2,9 @@
 import { attr, find, findAll, formatXml, parseXml, textOf, type XmlNode } from "../lib/xml";
 
 export async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([data as BlobPart]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  const stream = new Blob([data as BlobPart])
+    .stream()
+    .pipeThrough(new DecompressionStream("deflate-raw"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
@@ -31,7 +33,10 @@ export async function decodeSaml(input: string): Promise<{ xml: string; binding:
   const asText = new TextDecoder().decode(bytes);
   if (asText.trimStart().startsWith("<")) return { xml: asText, binding: "POST (Base64)" };
   try {
-    return { xml: new TextDecoder().decode(await inflateRaw(bytes)), binding: "Redirect (Base64 + Deflate)" };
+    return {
+      xml: new TextDecoder().decode(await inflateRaw(bytes)),
+      binding: "Redirect (Base64 + Deflate)",
+    };
   } catch {
     throw new Error("Weder Base64-XML noch Deflate-komprimiert – ist das eine SAML-Nachricht?");
   }
@@ -53,7 +58,8 @@ export function analyzeSaml(xml: string): SamlInfo {
   if (!root || root.kind !== "element") throw new Error("Kein XML-Element gefunden");
   const type = root.name.replace(/^.*:/, "");
   const rows: SamlInfo["rows"] = [];
-  const push = (label: string, value: string | undefined) => value && rows.push({ label, value: value.trim() });
+  const push = (label: string, value: string | undefined) =>
+    value && rows.push({ label, value: value.trim() });
   push("ID", attr(root, "ID"));
   push("Ausgestellt", attr(root, "IssueInstant"));
   push("Ziel (Destination)", attr(root, "Destination"));
@@ -62,12 +68,18 @@ export function analyzeSaml(xml: string): SamlInfo {
   push("Aussteller (Issuer)", textOf(find([root], "Issuer")));
   const status = find([root], "StatusCode");
   if (status) {
-    const codes = findAll([status], "StatusCode").map((s) => (attr(s, "Value") ?? "").replace(/^urn:oasis:names:tc:SAML:2.0:status:/, ""));
+    const codes = findAll([status], "StatusCode").map((s) =>
+      (attr(s, "Value") ?? "").replace(/^urn:oasis:names:tc:SAML:2.0:status:/, ""),
+    );
     push("Status", codes.join(" / "));
     push("Statusmeldung", textOf(find([root], "StatusMessage")));
   }
   const nameId = find([root], "NameID");
-  if (nameId) push("NameID", `${textOf(nameId)}${attr(nameId, "Format") ? ` (${attr(nameId, "Format")!.replace(/^urn:oasis:names:tc:SAML:[\d.]+:nameid-format:/, "")})` : ""}`);
+  if (nameId)
+    push(
+      "NameID",
+      `${textOf(nameId)}${attr(nameId, "Format") ? ` (${attr(nameId, "Format")!.replace(/^urn:oasis:names:tc:SAML:[\d.]+:nameid-format:/, "")})` : ""}`,
+    );
   const cond = find([root], "Conditions");
   push("Gültig ab (NotBefore)", attr(cond, "NotBefore"));
   push("Gültig bis (NotOnOrAfter)", attr(cond, "NotOnOrAfter"));
@@ -75,13 +87,22 @@ export function analyzeSaml(xml: string): SamlInfo {
   const authn = find([root], "AuthnStatement");
   push("Anmeldung", attr(authn, "AuthnInstant"));
   push("Sitzung bis", attr(authn, "SessionNotOnOrAfter"));
-  push("Anmeldeart", textOf(find([root], "AuthnContextClassRef")).replace(/^urn:oasis:names:tc:SAML:2.0:ac:classes:/, ""));
+  push(
+    "Anmeldeart",
+    textOf(find([root], "AuthnContextClassRef")).replace(
+      /^urn:oasis:names:tc:SAML:2.0:ac:classes:/,
+      "",
+    ),
+  );
   const attributes = findAll([root], "Attribute").map((a) => ({
-    name: attr(a, "FriendlyName") ? `${attr(a, "FriendlyName")} (${attr(a, "Name")})` : (attr(a, "Name") ?? "?"),
+    name: attr(a, "FriendlyName")
+      ? `${attr(a, "FriendlyName")} (${attr(a, "Name")})`
+      : (attr(a, "Name") ?? "?"),
     values: findAll([a], "AttributeValue").map((v) => textOf(v).trim()),
   }));
   const assertion = find([root], "Assertion");
-  const sigDirect = (el: typeof root) => el.children.some((c) => c.kind === "element" && c.name.replace(/^.*:/, "") === "Signature");
+  const sigDirect = (el: typeof root) =>
+    el.children.some((c) => c.kind === "element" && c.name.replace(/^.*:/, "") === "Signature");
   return {
     type,
     rows,

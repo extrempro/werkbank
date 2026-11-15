@@ -317,7 +317,9 @@ describe("ToolPage", () => {
     render(<ToolPage id="json-formatter" />);
     const input = await screen.findByRole("textbox", { name: "Eingabe" });
     fireEvent.change(input, { target: { value: '{"a":[1,2]}' } });
-    expect(screen.getByLabelText("Formatiert").textContent).toBe('{\n  "a": [\n    1,\n    2\n  ]\n}');
+    expect(screen.getByLabelText("Formatiert").textContent).toBe(
+      '{\n  "a": [\n    1,\n    2\n  ]\n}',
+    );
     fireEvent.change(screen.getByLabelText("Einrückung"), { target: { value: "minify" } });
     expect(window.location.search).toBe("?einrueckung=minify");
     expect(screen.getByLabelText("Formatiert").textContent).toBe('{"a":[1,2]}');
