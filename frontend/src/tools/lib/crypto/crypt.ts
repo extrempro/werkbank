@@ -29,7 +29,11 @@ export function randomSalt(len: number): string {
 }
 
 /** MD5-crypt: magic „$1$“ (Linux) oder „$apr1$“ (Apache htpasswd) */
-export function md5Crypt(password: string, salt: string, magic: "$1$" | "$apr1$" = "$apr1$"): string {
+export function md5Crypt(
+  password: string,
+  salt: string,
+  magic: "$1$" | "$apr1$" = "$apr1$",
+): string {
   const pw = enc.encode(password);
   const s = enc.encode(salt.slice(0, 8));
   let final = md5(cat(pw, s, pw));
@@ -38,7 +42,14 @@ export function md5Crypt(password: string, salt: string, magic: "$1$" | "$apr1$"
   for (let i = pw.length; i; i >>= 1) parts.push(i & 1 ? new Uint8Array([0]) : pw.subarray(0, 1));
   final = md5(cat(...parts));
   for (let i = 0; i < 1000; i++) {
-    final = md5(cat(i & 1 ? pw : final, i % 3 ? s : new Uint8Array(), i % 7 ? pw : new Uint8Array(), i & 1 ? final : pw));
+    final = md5(
+      cat(
+        i & 1 ? pw : final,
+        i % 3 ? s : new Uint8Array(),
+        i % 7 ? pw : new Uint8Array(),
+        i & 1 ? final : pw,
+      ),
+    );
   }
   const f = final;
   const out =
@@ -52,9 +63,15 @@ export function md5Crypt(password: string, salt: string, magic: "$1$" | "$apr1$"
 }
 
 /** SHA-crypt nach Ulrich Drepper: $5$ (SHA-256) und $6$ (SHA-512) wie in /etc/shadow */
-export async function shaCrypt(password: string, salt: string, variant: 5 | 6, rounds = 5000): Promise<string> {
+export async function shaCrypt(
+  password: string,
+  salt: string,
+  variant: 5 | 6,
+  rounds = 5000,
+): Promise<string> {
   const alg = variant === 6 ? "SHA-512" : "SHA-256";
-  const H = async (d: Uint8Array) => new Uint8Array(await crypto.subtle.digest(alg, d as BufferSource));
+  const H = async (d: Uint8Array) =>
+    new Uint8Array(await crypto.subtle.digest(alg, d as BufferSource));
   const hl = variant === 6 ? 64 : 32;
   const pw = enc.encode(password);
   const s = enc.encode(salt.slice(0, 16));
@@ -78,14 +95,48 @@ export async function shaCrypt(password: string, salt: string, variant: 5 | 6, r
     parts.push(i & 1 ? C : P);
     C = await H(cat(...parts));
   }
-  const b = (x: number, y: number, z: number, n4: number) => to64((C[x]! << 16) | (C[y]! << 8) | C[z]!, n4);
+  const b = (x: number, y: number, z: number, n4: number) =>
+    to64((C[x]! << 16) | (C[y]! << 8) | C[z]!, n4);
   let out = "";
   if (variant === 6) {
-    const g = [[0, 21, 42], [22, 43, 1], [44, 2, 23], [3, 24, 45], [25, 46, 4], [47, 5, 26], [6, 27, 48], [28, 49, 7], [50, 8, 29], [9, 30, 51], [31, 52, 10], [53, 11, 32], [12, 33, 54], [34, 55, 13], [56, 14, 35], [15, 36, 57], [37, 58, 16], [59, 17, 38], [18, 39, 60], [40, 61, 19], [62, 20, 41]];
+    const g = [
+      [0, 21, 42],
+      [22, 43, 1],
+      [44, 2, 23],
+      [3, 24, 45],
+      [25, 46, 4],
+      [47, 5, 26],
+      [6, 27, 48],
+      [28, 49, 7],
+      [50, 8, 29],
+      [9, 30, 51],
+      [31, 52, 10],
+      [53, 11, 32],
+      [12, 33, 54],
+      [34, 55, 13],
+      [56, 14, 35],
+      [15, 36, 57],
+      [37, 58, 16],
+      [59, 17, 38],
+      [18, 39, 60],
+      [40, 61, 19],
+      [62, 20, 41],
+    ];
     for (const [x, y, z] of g) out += b(x!, y!, z!, 4);
     out += to64(C[63]!, 2);
   } else {
-    const g = [[0, 10, 20], [21, 1, 11], [12, 22, 2], [3, 13, 23], [24, 4, 14], [15, 25, 5], [6, 16, 26], [27, 7, 17], [18, 28, 8], [9, 19, 29]];
+    const g = [
+      [0, 10, 20],
+      [21, 1, 11],
+      [12, 22, 2],
+      [3, 13, 23],
+      [24, 4, 14],
+      [15, 25, 5],
+      [6, 16, 26],
+      [27, 7, 17],
+      [18, 28, 8],
+      [9, 19, 29],
+    ];
     for (const [x, y, z] of g) out += b(x!, y!, z!, 4);
     out += to64((C[31]! << 8) | C[30]!, 3);
   }

@@ -25,7 +25,9 @@ describe("convertGuid", () => {
   });
 
   it("liest LDAP-Form und Hex-Bytes", () => {
-    expect(convertGuid("\\72\\2d\\8b\\74\\6b\\70\\f8\\42\\8b\\25\\82\\fd\\87\\33\\86\\0f").guid).toBe(guid);
+    expect(
+      convertGuid("\\72\\2d\\8b\\74\\6b\\70\\f8\\42\\8b\\25\\82\\fd\\87\\33\\86\\0f").guid,
+    ).toBe(guid);
     expect(convertGuid("72:2D:8B:74:6B:70:F8:42:8B:25:82:FD:87:33:86:0F").guid).toBe(guid);
   });
 

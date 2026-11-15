@@ -7,7 +7,15 @@ import { lazy, type ComponentType } from "react";
  */
 
 export type ToolCategory =
-  "netzwerk" | "system" | "encoding" | "formatter" | "identitaet" | "konverter" | "text" | "rechner" | "generator";
+  | "netzwerk"
+  | "system"
+  | "encoding"
+  | "formatter"
+  | "identitaet"
+  | "konverter"
+  | "text"
+  | "rechner"
+  | "generator";
 
 export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   netzwerk: "Netzwerk",
@@ -130,7 +138,15 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "identitaet",
     description:
       "lastLogonTimestamp, pwdLastSet, accountExpires und ähnliche Werte (FILETIME) sowie whenCreated in lesbare Daten umrechnen, und zurück.",
-    tags: ["active directory", "filetime", "lastlogontimestamp", "pwdlastset", "accountexpires", "whencreated", "ldap"],
+    tags: [
+      "active directory",
+      "filetime",
+      "lastlogontimestamp",
+      "pwdlastset",
+      "accountexpires",
+      "whencreated",
+      "ldap",
+    ],
     component: lazy(() => import("./ad-time/AdTimeTool")),
   },
   {
@@ -139,7 +155,16 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "identitaet",
     description:
       "Distinguished Names zerlegen (auch mit maskierten Zeichen), canonicalName und Domain ableiten und canonicalName in einen DN umwandeln.",
-    tags: ["distinguished name", "ldap", "canonicalname", "ou", "cn", "dc", "active directory", "pfad"],
+    tags: [
+      "distinguished name",
+      "ldap",
+      "canonicalname",
+      "ou",
+      "cn",
+      "dc",
+      "active directory",
+      "pfad",
+    ],
     component: lazy(() => import("./dn/DnTool")),
   },
   {
@@ -157,7 +182,16 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "identitaet",
     description:
       "Werte für LDAP-Filter (RFC 4515) und Distinguished Names (RFC 4514) korrekt maskieren, und zurück.",
-    tags: ["escape", "maskieren", "filter", "dn", "rfc 4515", "rfc 4514", "active directory", "sonderzeichen"],
+    tags: [
+      "escape",
+      "maskieren",
+      "filter",
+      "dn",
+      "rfc 4515",
+      "rfc 4514",
+      "active directory",
+      "sonderzeichen",
+    ],
     component: lazy(() => import("./ldap/LdapEscapeTool")),
   },
   {
@@ -166,7 +200,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "identitaet",
     description:
       "Werte von userAccountControl in Flags zerlegen und zusammenbauen, mit Sicherheitshinweisen und passenden LDAP-Filtern.",
-    tags: ["active directory", "uac", "flags", "deaktiviert", "disabled", "ldap", "514", "512", "66048"],
+    tags: [
+      "active directory",
+      "uac",
+      "flags",
+      "deaktiviert",
+      "disabled",
+      "ldap",
+      "514",
+      "512",
+      "66048",
+    ],
     component: lazy(() => import("./uac/UacTool")),
   },
   {
@@ -562,7 +606,19 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "generator",
     description:
       "Passwort-Hashes für .htpasswd, /etc/shadow, Ansible und cloud-init erzeugen (bcrypt, $6$, $5$, $apr1$) und vorhandene Hashes prüfen.",
-    tags: ["htpasswd", "bcrypt", "shadow", "crypt", "sha512", "apr1", "nginx", "apache", "basic auth", "ansible", "mkpasswd"],
+    tags: [
+      "htpasswd",
+      "bcrypt",
+      "shadow",
+      "crypt",
+      "sha512",
+      "apr1",
+      "nginx",
+      "apache",
+      "basic auth",
+      "ansible",
+      "mkpasswd",
+    ],
     component: lazy(() => import("./htpasswd/HtpasswdTool")),
   },
   {
@@ -571,7 +627,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "generator",
     description:
       "MD5, SHA-1, SHA-256, SHA-384, SHA-512 und CRC32 für Text oder Dateien berechnen und mit einem erwarteten Wert vergleichen.",
-    tags: ["prüfsumme", "checksum", "md5", "sha1", "sha256", "sha512", "crc32", "datei", "integrität"],
+    tags: [
+      "prüfsumme",
+      "checksum",
+      "md5",
+      "sha1",
+      "sha256",
+      "sha512",
+      "crc32",
+      "datei",
+      "integrität",
+    ],
     component: lazy(() => import("./hash/HashTool")),
   },
   {
@@ -587,7 +653,8 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: "lorem-ipsum",
     name: "Lorem ipsum",
     category: "generator",
-    description: "Blindtext in Absätzen, Sätzen oder Wörtern erzeugen, für Vorlagen, Mockups und Tests.",
+    description:
+      "Blindtext in Absätzen, Sätzen oder Wörtern erzeugen, für Vorlagen, Mockups und Tests.",
     tags: ["blindtext", "platzhalter", "dummy", "fülltext"],
     component: lazy(() => import("./lorem/LoremTool")),
   },

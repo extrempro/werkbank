@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { analyzeDn, canonicalToDn, escapeDnValue, escapeFilterValue, parseDn, unescapeFilterValue } from "./ldap";
+import {
+  analyzeDn,
+  canonicalToDn,
+  escapeDnValue,
+  escapeFilterValue,
+  parseDn,
+  unescapeFilterValue,
+} from "./ldap";
 
 describe("LDAP-Filter", () => {
   it("maskiert nach RFC 4515", () => {
@@ -36,7 +43,9 @@ describe("DN", () => {
   });
 
   it("canonicalName → DN", () => {
-    expect(canonicalToDn("example.com/Benutzer/Vertrieb/Max Muster")).toBe("CN=Max Muster,OU=Vertrieb,OU=Benutzer,DC=example,DC=com");
+    expect(canonicalToDn("example.com/Benutzer/Vertrieb/Max Muster")).toBe(
+      "CN=Max Muster,OU=Vertrieb,OU=Benutzer,DC=example,DC=com",
+    );
     expect(canonicalToDn("example.com/Users/Admin")).toBe("CN=Admin,CN=Users,DC=example,DC=com");
   });
 });

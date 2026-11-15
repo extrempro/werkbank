@@ -11,8 +11,10 @@ const hex2 = (b: number) => b.toString(16).padStart(2, "0");
 export function escapeFilterValue(value: string, escapeNonAscii = false): string {
   let out = "";
   for (const ch of value) {
-    if (ch === "*" || ch === "(" || ch === ")" || ch === "\\" || ch === "\0") out += `\\${hex2(ch.charCodeAt(0))}`;
-    else if (escapeNonAscii && ch.codePointAt(0)! > 0x7e) out += Array.from(utf8.encode(ch), (b) => `\\${hex2(b)}`).join("");
+    if (ch === "*" || ch === "(" || ch === ")" || ch === "\\" || ch === "\0")
+      out += `\\${hex2(ch.charCodeAt(0))}`;
+    else if (escapeNonAscii && ch.codePointAt(0)! > 0x7e)
+      out += Array.from(utf8.encode(ch), (b) => `\\${hex2(b)}`).join("");
     else out += ch;
   }
   return out;
@@ -39,7 +41,7 @@ export function escapeDnValue(value: string): string {
   let out = "";
   const chars = [...value];
   chars.forEach((ch, i) => {
-    if (",+\"\\<>;=".includes(ch)) out += `\\${ch}`;
+    if (',+"\\<>;='.includes(ch)) out += `\\${ch}`;
     else if (ch === "\0") out += "\\00";
     else if (i === 0 && (ch === "#" || ch === " ")) out += `\\${ch}`;
     else if (i === chars.length - 1 && ch === " ") out += "\\ ";
@@ -108,14 +110,16 @@ export function parseDn(dn: string): Rdn[] {
       const eq = pair.indexOf("=");
       if (eq < 1) throw new Error(`„${pair.trim()}“ hat kein „Typ=Wert“`);
       const type = pair.slice(0, eq).trim();
-      if (!/^([a-zA-Z][a-zA-Z0-9-]*|\d+(\.\d+)*)$/.test(type)) throw new Error(`Ungültiger Attributtyp „${type}“`);
+      if (!/^([a-zA-Z][a-zA-Z0-9-]*|\d+(\.\d+)*)$/.test(type))
+        throw new Error(`Ungültiger Attributtyp „${type}“`);
       return { type, value: unescapeDnValue(pair.slice(eq + 1)), raw: pair.trim() };
     });
     return { parts, raw: rdnRaw.trim() };
   });
 }
 
-export const formatRdn = (rdn: Rdn) => rdn.parts.map((p) => `${p.type}=${escapeDnValue(p.value)}`).join("+");
+export const formatRdn = (rdn: Rdn) =>
+  rdn.parts.map((p) => `${p.type}=${escapeDnValue(p.value)}`).join("+");
 
 export interface DnInfo {
   rdns: Rdn[];
@@ -132,10 +136,19 @@ export interface DnInfo {
 export function analyzeDn(dn: string): DnInfo {
   const rdns = parseDn(dn);
   const normalized = rdns.map(formatRdn).join(",");
-  const dc = rdns.filter((r) => r.parts[0]!.type.toLowerCase() === "dc").map((r) => r.parts[0]!.value);
+  const dc = rdns
+    .filter((r) => r.parts[0]!.type.toLowerCase() === "dc")
+    .map((r) => r.parts[0]!.value);
   const domain = dc.length ? dc.join(".") : undefined;
   const nonDc = rdns.filter((r) => r.parts[0]!.type.toLowerCase() !== "dc");
-  const canonical = domain ? [domain, ...[...nonDc].reverse().map((r) => r.parts.map((p) => p.value.replace(/\//g, "\\/")).join("+"))].join("/") : undefined;
+  const canonical = domain
+    ? [
+        domain,
+        ...[...nonDc]
+          .reverse()
+          .map((r) => r.parts.map((p) => p.value.replace(/\//g, "\\/")).join("+")),
+      ].join("/")
+    : undefined;
   return {
     rdns,
     normalized,
@@ -148,11 +161,22 @@ export function analyzeDn(dn: string): DnInfo {
 
 /** canonicalName (example.com/Benutzer/Max) → DN; Zwischenebenen werden als OU angenommen, das letzte Element als CN */
 export function canonicalToDn(canonical: string, leafType = "CN"): string {
-  const parts = splitUnescaped(canonical.trim().replace(/\/$/, ""), "/").map((p) => p.replace(/\\\//g, "/"));
+  const parts = splitUnescaped(canonical.trim().replace(/\/$/, ""), "/").map((p) =>
+    p.replace(/\\\//g, "/"),
+  );
   const [domain, ...path] = parts;
-  if (!domain || !/^[a-z0-9.-]+$/i.test(domain)) throw new Error("Beginnt nicht mit einem Domainnamen (z. B. example.com/…)");
+  if (!domain || !/^[a-z0-9.-]+$/i.test(domain))
+    throw new Error("Beginnt nicht mit einem Domainnamen (z. B. example.com/…)");
   const dc = domain.split(".").map((d) => `DC=${escapeDnValue(d)}`);
-  const containers = new Set(["users", "computers", "builtin", "system", "program data", "foreignsecurityprincipals", "managed service accounts"]);
+  const containers = new Set([
+    "users",
+    "computers",
+    "builtin",
+    "system",
+    "program data",
+    "foreignsecurityprincipals",
+    "managed service accounts",
+  ]);
   const rdns = path.map((p, i) => {
     const isLeaf = i === path.length - 1;
     const type = isLeaf ? leafType : i === 0 && containers.has(p.toLowerCase()) ? "CN" : "OU";

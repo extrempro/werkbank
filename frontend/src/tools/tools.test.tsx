@@ -795,5 +795,4 @@ describe("ToolPage", () => {
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
     expect(window.location.search).toBe("?anzahl=2");
   }, 20000);
-
 });

@@ -19,10 +19,19 @@ function sentence(): string {
   return `${s[0]!.toUpperCase()}${s.slice(1)}.`;
 }
 
-export function lorem(kind: "paragraphs" | "sentences" | "words", count: number, classicStart: boolean): string {
+export function lorem(
+  kind: "paragraphs" | "sentences" | "words",
+  count: number,
+  classicStart: boolean,
+): string {
   if (kind === "words") {
     const w = Array.from({ length: count }, () => WORDS[randomInt(WORDS.length)]!);
-    if (classicStart) w.splice(0, Math.min(5, count), ...START.replace(/[,.]/g, "").toLowerCase().split(" ").slice(0, Math.min(5, count)));
+    if (classicStart)
+      w.splice(
+        0,
+        Math.min(5, count),
+        ...START.replace(/[,.]/g, "").toLowerCase().split(" ").slice(0, Math.min(5, count)),
+      );
     return w.join(" ");
   }
   if (kind === "sentences") {
@@ -30,7 +39,9 @@ export function lorem(kind: "paragraphs" | "sentences" | "words", count: number,
     if (classicStart && count) s[0] = START;
     return s.join(" ");
   }
-  const p = Array.from({ length: count }, () => Array.from({ length: 4 + randomInt(4) }, sentence).join(" "));
+  const p = Array.from({ length: count }, () =>
+    Array.from({ length: 4 + randomInt(4) }, sentence).join(" "),
+  );
   if (classicStart && count) p[0] = `${START} ${p[0]!.split(". ").slice(1).join(". ")}`;
   return p.join("\n\n");
 }

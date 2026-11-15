@@ -159,7 +159,10 @@ export default function HashTool() {
                         {digest && (
                           <>
                             <CopyButton value={value} label={`${alg} als Hex kopieren`} />{" "}
-                            <CopyButton value={toB64(digest)} label={`${alg} als Base64 kopieren`} />
+                            <CopyButton
+                              value={toB64(digest)}
+                              label={`${alg} als Base64 kopieren`}
+                            />
                           </>
                         )}
                       </td>

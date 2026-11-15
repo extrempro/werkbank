@@ -10,8 +10,15 @@ describe("userAccountControl", () => {
   });
 
   it("zerlegt in Flags", () => {
-    expect(decodeUac(66050).flags.map((f) => f.name)).toEqual(["ACCOUNTDISABLE", "NORMAL_ACCOUNT", "DONT_EXPIRE_PASSWORD"]);
-    expect(decodeUac(532480).flags.map((f) => f.name)).toEqual(["SERVER_TRUST_ACCOUNT", "TRUSTED_FOR_DELEGATION"]);
+    expect(decodeUac(66050).flags.map((f) => f.name)).toEqual([
+      "ACCOUNTDISABLE",
+      "NORMAL_ACCOUNT",
+      "DONT_EXPIRE_PASSWORD",
+    ]);
+    expect(decodeUac(532480).flags.map((f) => f.name)).toEqual([
+      "SERVER_TRUST_ACCOUNT",
+      "TRUSTED_FOR_DELEGATION",
+    ]);
     expect(decodeUac(512 + 0x400000).warnings.join()).toMatch(/AS-REP/);
     expect(decodeUac(0x80000000).unknown).toBe(0x80000000);
   });

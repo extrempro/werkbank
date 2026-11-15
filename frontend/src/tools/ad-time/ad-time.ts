@@ -38,7 +38,9 @@ export function dateToGeneralizedTime(date: Date): string {
 }
 
 export function parseGeneralizedTime(value: string): Date {
-  const m = value.trim().match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:[.,](\d+))?(Z|[+-]\d{4})$/);
+  const m = value
+    .trim()
+    .match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:[.,](\d+))?(Z|[+-]\d{4})$/);
   if (!m) throw new Error("Ungültige Generalized Time (erwartet z. B. 20231015123045.0Z)");
   const [, y, mo, d, h, mi, s, frac, tz] = m;
   const ms = frac ? Math.round(Number(`0.${frac}`) * 1000) : 0;
@@ -61,18 +63,31 @@ export function parseAdTime(input: string): AdTimeResult {
         kind: "filetime",
         date: null,
         filetime: ft,
-        special: "0 = nicht gesetzt. Bei accountExpires: läuft nie ab. Bei pwdLastSet: Kennwort muss bei der nächsten Anmeldung geändert werden.",
+        special:
+          "0 = nicht gesetzt. Bei accountExpires: läuft nie ab. Bei pwdLastSet: Kennwort muss bei der nächsten Anmeldung geändert werden.",
       };
     }
     if (ft === NEVER) {
-      return { kind: "filetime", date: null, filetime: ft, special: "Läuft nie ab (Maximalwert, typisch bei accountExpires)." };
+      return {
+        kind: "filetime",
+        date: null,
+        filetime: ft,
+        special: "Läuft nie ab (Maximalwert, typisch bei accountExpires).",
+      };
     }
     if (ft === -1n) {
-      return { kind: "filetime", date: null, filetime: ft, special: "-1 bei pwdLastSet: Kennwort gilt als gerade geändert (wird beim Speichern durch die aktuelle Zeit ersetzt)." };
+      return {
+        kind: "filetime",
+        date: null,
+        filetime: ft,
+        special:
+          "-1 bei pwdLastSet: Kennwort gilt als gerade geändert (wird beim Speichern durch die aktuelle Zeit ersetzt).",
+      };
     }
     if (ft < 0n) throw new Error("Negative Werte außer -1 sind keine gültige FILETIME");
     const date = fileTimeToDate(ft);
-    if (date.getUTCFullYear() > 9999) throw new Error("Wert liegt außerhalb des darstellbaren Bereichs");
+    if (date.getUTCFullYear() > 9999)
+      throw new Error("Wert liegt außerhalb des darstellbaren Bereichs");
     return { kind: "filetime", date, filetime: ft };
   }
 
@@ -93,7 +108,8 @@ export function relativeTime(date: Date, now = new Date()): string {
   ];
   const fmt = new Intl.RelativeTimeFormat("de", { numeric: "auto" });
   for (const [unit, seconds] of units) {
-    if (Math.abs(diffSec) >= seconds || unit === "second") return fmt.format(Math.round(diffSec / seconds), unit);
+    if (Math.abs(diffSec) >= seconds || unit === "second")
+      return fmt.format(Math.round(diffSec / seconds), unit);
   }
   return "";
 }

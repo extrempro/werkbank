@@ -32,7 +32,9 @@ export default function GuidConvertTool() {
             onChange={(event) => setInput(event.target.value)}
           />
         </label>
-        <p className="small">GUID, ImmutableID (Base64), Hex-Bytes oder die Form für LDAP-Filter.</p>
+        <p className="small">
+          GUID, ImmutableID (Base64), Hex-Bytes oder die Form für LDAP-Filter.
+        </p>
       </div>
 
       {result && "error" in result && <ErrorBox>{result.error}</ErrorBox>}

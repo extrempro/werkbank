@@ -125,8 +125,8 @@ export default function HmacTool() {
         </p>
       </div>
       <p className="small">
-        Schon ein zusätzlicher Zeilenumbruch oder umformatiertes JSON ändert die Signatur.
-        Schlüssel und Nachricht bleiben im Browser.
+        Schon ein zusätzlicher Zeilenumbruch oder umformatiertes JSON ändert die Signatur. Schlüssel
+        und Nachricht bleiben im Browser.
       </p>
     </div>
   );

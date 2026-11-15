@@ -4,16 +4,40 @@ import { md5Crypt, randomSalt, shaCrypt, shaHtpasswd } from "../lib/crypto/crypt
 
 export type HashFormat = "bcrypt" | "sha512" | "sha256" | "apr1" | "md5" | "sha1";
 
-export const formats: { id: HashFormat; label: string; note: string; tone: "ok" | "warn" | "error" }[] = [
-  { id: "bcrypt", label: "bcrypt ($2y$)", note: "Empfohlen für Apache/nginx-htpasswd und viele Web-Anwendungen", tone: "ok" },
-  { id: "sha512", label: "SHA-512-crypt ($6$)", note: "Standard in /etc/shadow, Ansible password_hash, cloud-init", tone: "ok" },
+export const formats: {
+  id: HashFormat;
+  label: string;
+  note: string;
+  tone: "ok" | "warn" | "error";
+}[] = [
+  {
+    id: "bcrypt",
+    label: "bcrypt ($2y$)",
+    note: "Empfohlen für Apache/nginx-htpasswd und viele Web-Anwendungen",
+    tone: "ok",
+  },
+  {
+    id: "sha512",
+    label: "SHA-512-crypt ($6$)",
+    note: "Standard in /etc/shadow, Ansible password_hash, cloud-init",
+    tone: "ok",
+  },
   { id: "sha256", label: "SHA-256-crypt ($5$)", note: "wie $6$, seltener genutzt", tone: "ok" },
-  { id: "apr1", label: "Apache MD5 ($apr1$)", note: "alter htpasswd-Standard – nur noch für alte Systeme", tone: "warn" },
+  {
+    id: "apr1",
+    label: "Apache MD5 ($apr1$)",
+    note: "alter htpasswd-Standard – nur noch für alte Systeme",
+    tone: "warn",
+  },
   { id: "md5", label: "MD5-crypt ($1$)", note: "veraltet, schnell zu knacken", tone: "error" },
   { id: "sha1", label: "{SHA}", note: "ohne Salt – nur wenn nichts anderes geht", tone: "error" },
 ];
 
-export async function makeHash(password: string, format: HashFormat, opts: { cost: number; rounds: number }): Promise<string> {
+export async function makeHash(
+  password: string,
+  format: HashFormat,
+  opts: { cost: number; rounds: number },
+): Promise<string> {
   switch (format) {
     case "bcrypt":
       // $2y$ ist das Präfix, das Apache-htpasswd schreibt; inhaltlich identisch mit $2b$
@@ -52,7 +76,10 @@ export function splitLine(line: string): { user?: string; hash: string } {
 
 export async function verifyHash(password: string, hash: string): Promise<boolean> {
   const f = detectFormat(hash);
-  if (!f) throw new Error("Unbekanntes Hash-Format – unterstützt: $2y$/$2b$, $6$, $5$, $apr1$, $1$, {SHA}");
+  if (!f)
+    throw new Error(
+      "Unbekanntes Hash-Format – unterstützt: $2y$/$2b$, $6$, $5$, $apr1$, $1$, {SHA}",
+    );
   if (f === "bcrypt") return bcryptVerify(password, hash);
   if (f === "sha1") return (await shaHtpasswd(password)) === hash;
   if (f === "apr1" || f === "md5") {
@@ -62,5 +89,7 @@ export async function verifyHash(password: string, hash: string): Promise<boolea
   }
   const m = /^\$([56])\$(?:rounds=(\d+)\$)?([^$]{0,16})\$/.exec(hash);
   if (!m) throw new Error("SHA-crypt-Hash unvollständig");
-  return (await shaCrypt(password, m[3]!, Number(m[1]) as 5 | 6, m[2] ? Number(m[2]) : 5000)) === hash;
+  return (
+    (await shaCrypt(password, m[3]!, Number(m[1]) as 5 | 6, m[2] ? Number(m[2]) : 5000)) === hash
+  );
 }

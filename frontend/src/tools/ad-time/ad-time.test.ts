@@ -17,7 +17,9 @@ describe("parseAdTime", () => {
 
   it("liest Generalized Time inkl. Zeitzone", () => {
     expect(parseAdTime("20231015123045.0Z").date?.toISOString()).toBe("2023-10-15T12:30:45.000Z");
-    expect(parseAdTime("20231015143045.0+0200").date?.toISOString()).toBe("2023-10-15T12:30:45.000Z");
+    expect(parseAdTime("20231015143045.0+0200").date?.toISOString()).toBe(
+      "2023-10-15T12:30:45.000Z",
+    );
   });
 
   it("lehnt ungültige Werte ab", () => {

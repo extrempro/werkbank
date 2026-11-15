@@ -22,7 +22,8 @@ export interface GuidResult extends GuidForms {
   detected: GuidInputKind;
 }
 
-const guidPattern = /^\{?([0-9a-f]{8})-?([0-9a-f]{4})-?([0-9a-f]{4})-?([0-9a-f]{4})-?([0-9a-f]{12})\}?$/i;
+const guidPattern =
+  /^\{?([0-9a-f]{8})-?([0-9a-f]{4})-?([0-9a-f]{4})-?([0-9a-f]{4})-?([0-9a-f]{12})\}?$/i;
 
 export function guidToBytes(guid: string): Uint8Array {
   const m = guid.trim().match(guidPattern);
@@ -31,9 +32,14 @@ export function guidToBytes(guid: string): Uint8Array {
   const bytes = Uint8Array.from(hex.match(/../g)!, (h) => parseInt(h, 16));
   // erste drei Gruppen in Little-Endian umdrehen
   return Uint8Array.from([
-    bytes[3]!, bytes[2]!, bytes[1]!, bytes[0]!,
-    bytes[5]!, bytes[4]!,
-    bytes[7]!, bytes[6]!,
+    bytes[3]!,
+    bytes[2]!,
+    bytes[1]!,
+    bytes[0]!,
+    bytes[5]!,
+    bytes[4]!,
+    bytes[7]!,
+    bytes[6]!,
     ...bytes.slice(8),
   ]);
 }
@@ -104,7 +110,9 @@ export function convertGuid(input: string): GuidResult {
     return { detected: "immutableId", ...bytesToForms(bytes) };
   }
 
-  throw new Error("Format nicht erkannt – erwartet GUID, ImmutableID (Base64), Hex-Bytes oder LDAP-Form (\\xx\\xx…)");
+  throw new Error(
+    "Format nicht erkannt – erwartet GUID, ImmutableID (Base64), Hex-Bytes oder LDAP-Form (\\xx\\xx…)",
+  );
 }
 
 export const guidKindLabels: Record<GuidInputKind, string> = {

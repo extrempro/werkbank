@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { clampInt, useToolParams } from "../params";
 import { ErrorBox, InfoTable, Output } from "../ui";
-import {
-  detectFormat,
-  formats,
-  makeHash,
-  splitLine,
-  verifyHash,
-  type HashFormat,
-} from "./hashes";
+import { detectFormat, formats, makeHash, splitLine, verifyHash, type HashFormat } from "./hashes";
 
 /** Dem Browser Zeit geben, „Berechne …“ zu zeichnen, bevor bcrypt rechnet. */
 const nextFrame = () => new Promise((resolve) => window.setTimeout(resolve, 30));
@@ -84,7 +77,9 @@ function Create({
       return;
     }
     if (format === "bcrypt" && new TextEncoder().encode(password).length > 72) {
-      setError("bcrypt verwendet nur die ersten 72 Bytes. Bitte ein kürzeres Kennwort oder $6$ wählen.");
+      setError(
+        "bcrypt verwendet nur die ersten 72 Bytes. Bitte ein kürzeres Kennwort oder $6$ wählen.",
+      );
       return;
     }
     setBusy(true);
