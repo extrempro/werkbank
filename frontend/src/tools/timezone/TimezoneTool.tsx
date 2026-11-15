@@ -31,7 +31,7 @@ const format = (zone: string) =>
   });
 
 export default function TimezoneTool() {
-  const zonesAll = useMemo(allZones, []);
+  const zonesAll = useMemo(() => allZones(), []);
   const [time, setTime] = useState(() => localInput(new Date()));
   const [source, setSource] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [zones, setZonesState] = useState(loadZones);

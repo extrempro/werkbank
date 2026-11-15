@@ -141,12 +141,18 @@ export function parseToml(input: string): Table {
     const c = peek();
     if (src.startsWith('"""', pos)) {
       pos += 3;
-      if (src[pos] === "\n") (pos++, line++);
+      if (src[pos] === "\n") {
+        pos++;
+        line++;
+      }
       return basicString(true);
     }
     if (src.startsWith("'''", pos)) {
       pos += 3;
-      if (src[pos] === "\n") (pos++, line++);
+      if (src[pos] === "\n") {
+        pos++;
+        line++;
+      }
       return literalString(true);
     }
     if (c === '"') {

@@ -144,7 +144,7 @@ export function unifiedDiff(ops: Op[], context = 3, names = ["vorher", "nachher"
   if (!changed.length) return "";
   let i = 0;
   while (i < changed.length) {
-    let start = Math.max(0, changed[i]! - context);
+    const start = Math.max(0, changed[i]! - context);
     let end = Math.min(ops.length - 1, changed[i]! + context);
     while (i + 1 < changed.length && changed[i + 1]! - context <= end + 1) {
       i++;
@@ -158,7 +158,6 @@ export function unifiedDiff(ops: Op[], context = 3, names = ["vorher", "nachher"
     lines.push(`@@ -${aStart},${aLen} +${bStart},${bLen} @@`);
     for (const o of hunk)
       lines.push(`${o.type === "insert" ? "+" : o.type === "delete" ? "-" : " "}${o.text}`);
-    start = end;
     i++;
   }
   return lines.join("\n");
