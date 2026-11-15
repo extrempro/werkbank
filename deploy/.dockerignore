@@ -1,3 +1,6 @@
 # Nichts aus diesem Ordner gehört in den Build (insbesondere keine Secrets und keine .env).
 # deploy/Dockerfile holt den Quellcode selbst von GitHub.
+# Das Dockerfile selbst bleibt ausdrücklich im Build-Kontext: Die Docker-CLI schickt es immer
+# mit, andere Werkzeuge halten sich aber wörtlich an diese Liste und fänden es sonst nicht.
 *
+!Dockerfile
