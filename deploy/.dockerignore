@@ -1,0 +1,3 @@
+# Nichts aus diesem Ordner gehört in den Build (insbesondere keine Secrets und keine .env).
+# deploy/Dockerfile holt den Quellcode selbst von GitHub.
+*

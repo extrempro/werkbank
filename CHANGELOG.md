@@ -4,6 +4,10 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- **Deployment:** Neues `deploy/Dockerfile`, das den Quellcode beim Bauen selbst von GitHub holt. Compose baut standardmäßig damit, sodass Arcane mit dem synchronisierten Ordner `deploy/` selbst bauen kann. Stand wählbar über `WERKBANK_REF`; Bauen aus einem ausgecheckten Repository über `WERKBANK_BUILD_CONTEXT=..` und `WERKBANK_DOCKERFILE=backend/Dockerfile`
+
 ## [0.3.0] – 2026-11-14
 
 Seite „Konto“ und Profilbild aus Entra.
