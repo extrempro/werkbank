@@ -94,6 +94,9 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Evergreen.GF` | Evergreen | Vorgänge nach BR-Zustimmung sehen, abnehmen oder zurückgeben (Schritt 5) |
 | `Tools.User` | IT-Tools | Bereich IT-Tools öffnen. Die Tools rechnen vollständig im Browser und haben keine Daten auf dem Server; die Rolle steuert deshalb nur, wer den Bereich sieht |
 | `Tenant.Reader` | Tenant | Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen |
+| `Budget.Editor` | IT-Budget | Budget ansehen, Konten anlegen und ändern |
+| `Budget.Manager` | IT-Budget | wie `Budget.Editor`, dazu den Plan je Geschäftsjahr und die Einstellungen des Budgets festlegen |
+| `Budget.Reader` | IT-Budget | Budget ansehen (z. B. Geschäftsführung, Controlling) |
 
 Sichtbarkeit:
 
@@ -435,6 +438,18 @@ Offene Vorgänge je Schritt (Tagesordnungsvorlage BR), Beschlüsse im Zeitraum, 
 - **Zertifikate und Secrets:** Der Abruf (`TENANT_CREDENTIALS_ENABLED`, Berechtigung `Application.Read.All`) liest App-Registrierungen und Unternehmensanwendungen mit SAML. Gespeichert werden Anwendung, Art, Bezeichnung, Beginn und Ablauf, nie der geheime Wert. Einstufung nach Restlaufzeit: Hinweis, Warnung, dringend, abgelaufen; der Vorlauf (Standard 60, 30 und 7 Tage) steht in der Verwaltung unter „Allgemein“. Ab dem Hinweis stehen die Einträge als Aufgabe auf der Startseite (Rolle `Tenant.Reader`). Eine Mail-Benachrichtigung gibt es noch nicht.
 - **Geplant:** Mail-Benachrichtigung zu ablaufenden Zertifikaten und Secrets; Dienststatus; Domains mit Abgleich der DNS-Einträge (Abfrage über den Resolver des Docker-Hosts); Nutzung der Dienste als Summen.
 
+## 7b. Modul IT-Budget
+
+Das Budget der IT nach Konten, je Geschäftsjahr. Alle Beträge sind brutto und werden in Cent gespeichert.
+
+- **Zugriff:** `Budget.Reader` liest, `Budget.Editor` pflegt zusätzlich die Konten, `Budget.Manager` legt außerdem den Plan und die Einstellungen fest. Eigener Bereich „IT-Budget“ in der Navigation.
+- **Einstellungen:** Beginn des Geschäftsjahrs (erster Tag eines Monats, Dauer immer zwölf Monate), Bezeichnung des Geschäftsjahrs in der Oberfläche und eine Kostenstelle. Ein Geschäftsjahr wird intern nach dem Kalenderjahr benannt, in dem es beginnt, und als „2026“ oder „2026/27“ angezeigt.
+- **Konten:** Kontonummer (eindeutig), Bezeichnung, Art (laufende Kosten oder Investition), Notiz. Konten werden nicht gelöscht, sondern stillgelegt; stillgelegte Konten erscheinen in der Übersicht nur, solange für sie im gewählten Jahr oder im Vorjahr etwas geplant ist.
+- **Plan:** Ein Betrag je Konto und Geschäftsjahr. Die Übersicht zeigt Plan und Vorjahr je Konto und die Summen für laufende Kosten, Investitionen und gesamt.
+- **Audit:** Jede Änderung an Einstellungen, Konten und Plan steht im Audit-Log (Modul `budget`), beim Plan mit Betrag vorher und nachher.
+- **Stand:** Einstellungen, Konten, Plan und Übersicht sind umgesetzt.
+- **Geplant:** Vertragspartner und Rechnungssteller; Verträge mit Laufzeit und Kündigungsfrist, deren erwartete Kosten als „gebunden“ zählen; Rechnungen mit Netto, Steuersatz, Brutto, Beleg als PDF und Prüfung durch den Budgetverwalter; Auswertung über fünf Jahre; Excel-Export; Import.
+
 ## 8a. Bereich IT-Tools
 
 Kleine Werkzeuge für den Alltag in der IT (Rechner, Generatoren, Konverter), übernommen aus einer eigenständigen Toolbox.
@@ -503,6 +518,9 @@ Evergreen:
 | M365 › Lizenzen | Tenant.Reader | Liste der Lizenzen mit gekauft, zugewiesen, frei, Stichtag und Hinweisen; Detail mit Verlauf |
 | M365 › Benutzer | Tenant.Reader | Zahl der Konten (Mitglieder, Gäste, aktiv, deaktiviert, mit Lizenz) mit Verlauf |
 | M365 › Zertifikate und Secrets | Tenant.Reader | Zertifikate und Secrets der Anwendungen im Tenant mit Ablaufdatum, Restlaufzeit und Einstufung; Ansicht „Handlungsbedarf“ oder alle; zweite Ansicht als Waben mit Einzelheiten nach Auswahl |
+| IT-Budget › Übersicht | Budget.* (Plan ändern: Budget.Manager) | Plan je Konto für ein Geschäftsjahr mit Vorjahr und Summen; Plan bearbeiten |
+| IT-Budget › Konten | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Liste der Konten; anlegen, ändern, stilllegen |
+| IT-Budget › Einstellungen | Budget.Manager | Beginn und Bezeichnung des Geschäftsjahrs, Kostenstelle |
 | M365 › Snapshots | Config.* | Abrufe mit Status, Vergleich zweier Snapshots, JSON-Export |
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |

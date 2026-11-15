@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.24.0] – 2026-11-15
+
+Neuer Bereich IT-Budget: Konten und Plan je Geschäftsjahr.
+
+### IT-Budget
+
+- **Neuer Bereich „IT-Budget“** mit drei Rollen: `Budget.Reader` (lesen), `Budget.Editor` (zusätzlich Konten pflegen) und `Budget.Manager` (zusätzlich Plan und Einstellungen)
+- **Einstellungen:** Beginn des Geschäftsjahrs (erster Tag eines Monats), Bezeichnung des Geschäftsjahrs und Kostenstelle
+- **Konten:** anlegen, ändern und stilllegen, je Konto mit Art „laufende Kosten“ oder „Investition“
+- **Übersicht:** Plan je Konto für ein Geschäftsjahr mit Vorjahr und den Summen für laufende Kosten, Investitionen und gesamt. Der Budgetverwalter bearbeitet den Plan direkt in der Tabelle
+- Alle Beträge sind brutto. Jede Änderung steht im Audit-Log
+- Migration 0019 (zwei neue Tabellen)
+- Die drei Rollen müssen in Entra angelegt und zugewiesen werden (`docs/entra-setup.md` 1.6)
+- Noch nicht enthalten: Partner, Verträge, Rechnungen mit Beleg, Auswertung über fünf Jahre, Export und Import
+
 ## [0.23.0] – 2026-11-15
 
 Tenant: Zertifikate und Secrets als Waben.

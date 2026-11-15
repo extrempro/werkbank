@@ -113,6 +113,9 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Evergreen Geschäftsführung | `Evergreen.GF` | Abnahme von Vorgängen |
 | IT-Tools Nutzer | `Tools.User` | Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter) |
 | Tenant Leser | `Tenant.Reader` | Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen |
+| Budget Bearbeiter | `Budget.Editor` | IT-Budget ansehen, Konten anlegen und ändern |
+| Budgetverwalter | `Budget.Manager` | Wie Bearbeiter, dazu den Plan je Geschäftsjahr und die Einstellungen festlegen |
+| Budget Leser | `Budget.Reader` | IT-Budget ansehen |
 
 Für alle Rollen gilt:
 - **Zulässige Mitgliedstypen:** Benutzer/Gruppen
@@ -144,6 +147,9 @@ Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wä
 | `GG-Werkbank-Evergreen-GF` | Evergreen.GF |
 | `GG-Werkbank-Tools` | Tools.User |
 | `GG-Werkbank-Tenant` | Tenant.Reader |
+| `GG-Werkbank-Budget-IT` | Budget.Editor |
+| `GG-Werkbank-Budget-Verwaltung` | Budget.Manager |
+| `GG-Werkbank-Budget-Leser` | Budget.Reader |
 
 Dann: Unternehmensanwendungen → Werkbank → **Benutzer und Gruppen → Benutzer/Gruppe hinzufügen** → Gruppe wählen → Rolle wählen → **Zuweisen**. Für jede Gruppe wiederholen.
 
