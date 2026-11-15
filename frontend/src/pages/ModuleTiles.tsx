@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "../components/Link";
 import { fetchItems, formatDate, type Item } from "../modules/evergreen/api";
 import { fetchOverview, type Overview } from "../modules/m365/api";
+import { TOOLS } from "../tools";
 
 interface Tile {
   title: string;
@@ -104,7 +105,17 @@ export function ModuleTiles({ roles }: { roles: readonly string[] }) {
     };
   }, [showConfig, showEvergreen]);
 
-  const tiles = [config, evergreen].filter((tile): tile is Tile => tile !== null);
+  // IT-Tools brauchen keine Abfrage: Die Kachel steht sofort da.
+  const tools: Tile | null = roles.includes("Tools.User")
+    ? {
+        title: "IT-Tools",
+        link: "/it-tools",
+        status: `${TOOLS.length} Tools`,
+        attention: false,
+        lines: [{ label: "Rechnen im Browser", value: "ohne Übertragung" }],
+      }
+    : null;
+  const tiles = [config, evergreen, tools].filter((tile): tile is Tile => tile !== null);
   if (tiles.length === 0) {
     return null;
   }

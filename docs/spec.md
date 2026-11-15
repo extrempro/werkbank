@@ -92,6 +92,7 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Evergreen.Team` | Evergreen | Rückmeldungen der Fachabteilungen (Schritt 2), BR-Vorlage (Schritt 3), BR-Beschluss im Auftrag erfassen |
 | `Evergreen.Betriebsrat` | Evergreen | vorgelegte Vorgänge sehen, Stellung nehmen (Schritt 4) |
 | `Evergreen.GF` | Evergreen | Vorgänge nach BR-Zustimmung sehen, abnehmen oder zurückgeben (Schritt 5) |
+| `Tools.User` | IT-Tools | Bereich IT-Tools öffnen. Die Tools rechnen vollständig im Browser und haben keine Daten auf dem Server; die Rolle steuert deshalb nur, wer den Bereich sieht |
 
 Sichtbarkeit:
 
@@ -421,6 +422,17 @@ Offene Vorgänge je Schritt (Tagesordnungsvorlage BR), Beschlüsse im Zeitraum, 
 
 ---
 
+## 8a. Bereich IT-Tools
+
+Kleine Werkzeuge für den Alltag in der IT (Rechner, Generatoren, Konverter), übernommen aus einer eigenständigen Toolbox.
+
+- **Alles im Browser:** Die Tools rechnen vollständig im Browser. Es gibt keine Abfragen an den Server und keine an fremde Dienste; Eingaben verlassen den Rechner nicht. Tools, die fremde Dienste bräuchten (z. B. DNS-Abfragen), kommen erst nach einer eigenen Entscheidung zur Sicherheit dazu.
+- **Zugriff:** Rolle `Tools.User`. Weil die Tools keine Daten auf dem Server haben, steuert die Rolle nur die Sichtbarkeit des Bereichs.
+- **Aufbau:** Jedes Tool liegt in `frontend/src/tools/<ordner>/` (Rechenlogik mit Tests, Oberfläche) und ist in `frontend/src/tools/index.ts` eingetragen. Die Oberfläche eines Tools wird erst beim Öffnen geladen.
+- **Teilbare Links:** Einstellungen eines Tools stehen in der Adresszeile (`/it-tools/<id>?…`). Dort stehen nie Geheimnisse: keine Kennwörter, Schlüssel oder eingegebenen Texte.
+- **Favoriten** je Browser (`localStorage`, Schlüssel `werkbank-it-tools-favoriten`). Verlauf und Einstellungen je Konto folgen später.
+- **Stand:** Pilot mit Subnetz-Rechner, chmod-Rechner, Base64, UUID-Generator und Passwort-Generator.
+
 ## 9. Datenmodell (Überblick)
 
 Kern:
@@ -473,6 +485,7 @@ Evergreen:
 | M365 › Änderungen | Config.* | Liste mit Filtern, Detailbereich mit Vorher/Nachher, Audit-Eintrag, Beschreibung, Bewertung mit Kommentarregeln |
 | M365 › Einstellungen | Config.* | Baum nach Workload, Detail: Wert, gültig seit, Kritikalität, Empfehlung, Soll-Wert/BR-Beschluss, Beschreibung, Begründung, Microsoft-Schema, Verlauf |
 | M365 › Empfehlungen | Config.* (Zuordnen: Config.Reviewer) | Empfehlungen aus Microsoft Secure Score: Liste mit Stand und Punkten (offen, erfüllt, alle), Detail mit Statustext, Umsetzung laut Microsoft und zugeordneten Einstellungen |
+| IT-Tools | Tools.User | Übersicht aller Tools mit Suche und Favoriten; je Tool eine eigene Seite |
 | M365 › Snapshots | Config.* | Abrufe mit Status, Vergleich zweier Snapshots, JSON-Export |
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |

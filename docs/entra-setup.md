@@ -111,6 +111,7 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Evergreen Team | `Evergreen.Team` | Rückmeldungen der Fachabteilungen und BR-Vorlagen |
 | Evergreen Betriebsrat | `Evergreen.Betriebsrat` | Stellungnahme zu vorgelegten Vorgängen |
 | Evergreen Geschäftsführung | `Evergreen.GF` | Abnahme von Vorgängen |
+| IT-Tools Nutzer | `Tools.User` | Bereich IT-Tools öffnen (Rechner, Generatoren) |
 
 Für alle Rollen gilt:
 - **Zulässige Mitgliedstypen:** Benutzer/Gruppen
@@ -140,6 +141,7 @@ Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wä
 | `GG-Werkbank-Evergreen-Team` | Evergreen.Team |
 | `GG-Werkbank-Evergreen-BR` | Evergreen.Betriebsrat |
 | `GG-Werkbank-Evergreen-GF` | Evergreen.GF |
+| `GG-Werkbank-Tools` | Tools.User |
 
 Dann: Unternehmensanwendungen → Werkbank → **Benutzer und Gruppen → Benutzer/Gruppe hinzufügen** → Gruppe wählen → Rolle wählen → **Zuweisen**. Für jede Gruppe wiederholen.
 

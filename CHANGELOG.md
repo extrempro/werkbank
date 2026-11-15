@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.15.0] – 2026-11-15
+
+Neuer Bereich IT-Tools (Pilot).
+
+### IT-Tools
+
+- **Neuer Bereich „IT-Tools“** in der Navigation, mit Übersicht, Suche und Favoriten. Sichtbar mit der neuen App-Rolle `Tools.User` (in Entra anlegen und zuweisen, `docs/entra-setup.md` 1.6 und 1.8)
+- **Fünf Tools zum Start:** Subnetz-Rechner (IPv4 und IPv6, Aufteilen, Adresse prüfen, Bereich als CIDR-Blöcke), chmod-Rechner, Base64, UUID-Generator und Passwort-Generator. Rechenlogik und Tests stammen aus der eigenständigen IT-Toolbox, die Oberfläche ist im Aussehen der Werkbank neu gebaut
+- Alle Tools rechnen vollständig im Browser; es gibt keine Abfragen an den Server oder an fremde Dienste
+- Einstellungen eines Tools stehen in der Adresszeile, damit sich ein Link teilen lässt. Kennwörter und eingegebene Texte stehen dort nie
+- Startseite: Kachel „IT-Tools“ für Personen mit der Rolle
+
 ## [0.14.0] – 2026-11-15
 
 Exchange Online als weiterer Dienst.
