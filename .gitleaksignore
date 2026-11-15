@@ -1,3 +1,0 @@
-# Erfundener Testwert in einem älteren Commit dieses Branches (kein echter Schlüssel).
-# Der Wert ist inzwischen ersetzt; der Eintrag gilt nur für genau diesen Commit.
-9533fb38a81b2bc493a60e4c4a4503a8527d65e4:backend/tests/test_ai_texts.py:generic-api-key:47

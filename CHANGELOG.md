@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.14.0] – 2026-11-15
+
+Exchange Online als weiterer Dienst.
+
+### M365-Konfiguration
+
+- **Exchange Online:** Der Abruf über UTCM verarbeitet jetzt auch Exchange-Einstellungen. Exchange-Objekte werden über ihre Kennung (`Identity`) adressiert; zwei Objekte desselben Typs teilen sich nie einen Pfad. Eingeschaltet wird Exchange je Installation: Rechte für den Dienstprinzipal von UTCM vergeben und die Typen in `COLLECTOR_RESOURCES` eintragen (`docs/entra-setup.md`, Abschnitt 4.3). Die Voreinstellung bleibt bei Entra
+- **Verständliche Bereichsnamen:** In der Einstellung und im Baum steht statt des technischen Typs ein Name, z. B. „Bedingter Zugriff“ oder „Transportregeln“
+- Angaben zur Anmeldung des Abrufs (z. B. `TenantId`) werden nicht mehr als Einstellung gespeichert, falls ein Snapshot sie enthält
+
+### Aufräumen
+
+- `.gitleaksignore` entfernt: Der dort ausgenommene Commit ist nicht Teil von `main`
+
 ## [0.13.0] – 2026-11-15
 
 Eigene Bereiche für Microsoft 365 und Evergreen in der Navigation.

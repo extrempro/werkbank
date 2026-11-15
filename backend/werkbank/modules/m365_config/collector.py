@@ -36,7 +36,21 @@ JOB_NAME_PREFIX = "Werkbank "
 MONTHLY_RESOURCE_LIMIT = 20_000
 QUOTA_WARNING_SHARE = 0.8
 # Kennung des Objekts und interne Felder von UTCM sind keine Einstellungen
-UTCM_IGNORED_FIELDS = DEFAULT_IGNORED_FIELDS | {"Id", "Ensure", "IsSingleInstance"}
+UTCM_IGNORED_FIELDS = DEFAULT_IGNORED_FIELDS | {
+    "Id",
+    "Ensure",
+    "IsSingleInstance",
+    # Angaben zur Anmeldung des Abrufs, keine Einstellungen des Tenants
+    "Credential",
+    "ApplicationId",
+    "TenantId",
+    "CertificateThumbprint",
+    "CertificatePath",
+    "CertificatePassword",
+    "ApplicationSecret",
+    "ManagedIdentity",
+    "AccessTokens",
+}
 MAX_AUDIT_LOOKBACK = timedelta(days=30)
 ERROR_LENGTH = 500
 
@@ -82,10 +96,19 @@ def source_status(requested: list[str], job: Mapping[str, Any]) -> dict[str, boo
     }
 
 
+def _first_text(*candidates: Any) -> str | None:
+    """Erster Kandidat, der ein nicht leerer Text ist."""
+    for candidate in candidates:
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return None
+
+
 def parse_snapshot(document: Mapping[str, Any]) -> tuple[list[SettingValue], int]:
     """Zerlegt einen UTCM-Snapshot in Einstellungen. Liefert sie und die Zahl der Objekte."""
     items: list[SettingValue] = []
     count = 0
+    seen: dict[tuple[str, str], int] = {}
     for resource in document.get("resources") or []:
         if not isinstance(resource, Mapping):
             continue
@@ -96,18 +119,36 @@ def parse_snapshot(document: Mapping[str, Any]) -> tuple[list[SettingValue], int
             continue
         count += 1
         display_name = resource.get("displayName")
-        object_id = properties.get("Id") or display_name or properties.get("DisplayName")
+        # Entra-Objekte tragen eine Id, Exchange-Objekte ihre Kennung in „Identity“.
+        object_id = _first_text(
+            properties.get("Id"),
+            properties.get("Identity"),
+            display_name,
+            properties.get("DisplayName"),
+            properties.get("Name"),
+        )
         if not object_id:
             # ohne Kennung nicht eindeutig adressierbar (z. B. Einzelobjekt): Typ als Kennung
             object_id = parts[-1]
-        object_name = properties.get("DisplayName") or display_name
+        # Zwei Objekte desselben Typs dürfen sich nie denselben Pfad teilen.
+        key = (resource_type, object_id.lower())
+        seen[key] = seen.get(key, 0) + 1
+        if seen[key] > 1:
+            logger.warning("Typ %s: Kennung mehrfach vorhanden, Objekt nummeriert", resource_type)
+            object_id = f"{object_id} #{seen[key]}"
+        object_name = _first_text(
+            properties.get("DisplayName"),
+            display_name,
+            properties.get("Name"),
+            properties.get("Identity"),
+        )
         try:
             items.extend(
                 normalize_object(
                     workload=parts[1],
                     area=".".join(parts[2:]),
-                    object_id=str(object_id),
-                    object_name=str(object_name)[:512] if object_name else None,
+                    object_id=object_id,
+                    object_name=object_name[:512] if object_name else None,
                     properties=properties,
                     source=source_name(resource_type),
                     ignored=UTCM_IGNORED_FIELDS,

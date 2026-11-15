@@ -299,6 +299,7 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 - **Grenzen von UTCM:** höchstens 20.000 gelesene Objekte pro Tenant und Monat, höchstens 12 sichtbare Snapshot-Aufträge. Die Werkbank zählt die gelesenen Objekte je Abruf, warnt ab 80 % und ruft bei ausgeschöpftem Kontingent nicht mehr ab. Eigene, abgeschlossene Snapshot-Aufträge entfernt sie wieder.
 - **Berechtigungen:** Die Collector-App braucht `ConfigurationMonitoring.ReadWrite.All` (Schreibrecht nur auf die Snapshot-Aufträge von UTCM, nicht auf Einstellungen des Tenants) und `AuditLog.Read.All` für „Geändert von“. Die eigentlichen Leserechte erhält der Dienstprinzipal „Tenant Configuration Management“ von Microsoft (für Conditional Access neben `Policy.Read.All` auch Leserechte auf Benutzer, Gruppen, Rollen und Anwendungen, weil UTCM Namen statt Kennungen ausgibt). Einrichtung: [`docs/entra-setup.md`](entra-setup.md), Abschnitt 4.
 - **Erster Umfang:** Entra (Conditional-Access-Richtlinien, benannte Standorte, Autorisierungsrichtlinie). Weitere Typen über `COLLECTOR_RESOURCES`.
+- **Exchange Online:** über UTCM möglich, sobald der Dienstprinzipal von UTCM die Leserechte hat und die Typen in `COLLECTOR_RESOURCES` stehen (`docs/entra-setup.md` 4.3). Vorgesehen sind die organisationsweiten Einstellungen (Organisation, Transport, Schutz, Zugriff), nicht Objekte je Postfach oder Gruppe. Exchange-Objekte werden über ihre Kennung (`Identity`) adressiert. „Geändert von“ bleibt bei Exchange leer. Ein PowerShell-Container ist dafür nicht nötig.
 
 ### 7.2 Normalisierung
 

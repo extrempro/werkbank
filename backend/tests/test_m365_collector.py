@@ -178,6 +178,53 @@ def test_parse_snapshot_uses_id_and_skips_internal_fields() -> None:
     assert state.object_name == "MFA für alle"
 
 
+def test_parse_snapshot_handles_exchange_resources() -> None:
+    rule = {
+        "displayName": "",
+        "resourceType": "microsoft.exchange.transportRule",
+        "properties": {
+            "Identity": "Externe Mails kennzeichnen",
+            "Name": "Externe Mails kennzeichnen",
+            "Enabled": True,
+            "Ensure": "Present",
+            "TenantId": "00000000-0000-0000-0000-00000000aaaa",
+            "ApplicationId": "00000000-0000-0000-0000-00000000bbbb",
+        },
+    }
+    second = {
+        "resourceType": "microsoft.exchange.transportrule",
+        "properties": {"Identity": "Weiterleitung blockieren", "Enabled": False},
+    }
+    org = {
+        "resourceType": "microsoft.exchange.organizationconfig",
+        "properties": {"IsSingleInstance": "Yes", "AuditDisabled": False},
+    }
+    items, count = parse_snapshot({"resources": [rule, second, org]})
+    assert count == 3
+    assert {item.workload for item in items} == {"exchange"}
+    paths = {item.path for item in items}
+    assert "exchange/transportrule/Externe Mails kennzeichnen/Enabled" in paths
+    assert "exchange/transportrule/Weiterleitung blockieren/Enabled" in paths
+    assert "exchange/organizationconfig/organizationconfig/AuditDisabled" in paths
+    # Angaben zur Anmeldung des Abrufs und interne Felder sind keine Einstellungen
+    properties = {item.property for item in items}
+    assert properties.isdisjoint({"TenantId", "ApplicationId", "Ensure", "IsSingleInstance"})
+    first = next(item for item in items if item.path.endswith("kennzeichnen/Enabled"))
+    assert first.object_name == "Externe Mails kennzeichnen"
+    assert first.source == "utcm:microsoft.exchange.transportrule"
+
+
+def test_parse_snapshot_never_merges_objects_with_the_same_id() -> None:
+    resource = {
+        "resourceType": "microsoft.exchange.remotedomain",
+        "properties": {"AllowedOOFType": "External"},
+    }
+    items, count = parse_snapshot({"resources": [resource, dict(resource)]})
+    assert count == 2
+    assert {item.object_id for item in items} == {"remotedomain", "remotedomain #2"}
+    assert len({item.path for item in items}) == 2
+
+
 def test_source_status_for_partial_snapshots() -> None:
     assert source_status([CA, NL], {"status": "succeeded"}) == {
         f"utcm:{CA}": True,

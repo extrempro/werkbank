@@ -21,7 +21,7 @@
 | Kommentare, Begründungen, Beschlüsse (Evergreen: wer hat wann wie entschieden, auch „im Auftrag“ mit Sitzungsdatum) | Eingabe | Nachweis | **[OFFEN]** |
 | „Geändert von“ (Konto oder Anwendung, die eine Tenant-Einstellung geändert hat) | Entra-Audit-Log, beim Abruf abgefragt | Nachvollziehbarkeit | **[OFFEN]**; gespeichert je erkannter Änderung |
 | Bewertungen und gepflegte Angaben (wer, wann, Kommentar; „Verantwortlich“ als Freitext) | Eingabe | Nachweis | **[OFFEN]** |
-| Namen in Tenant-Einstellungen (z. B. Konten in Ausnahmen von Richtlinien) | Abruf über UTCM | Überwachung der Konfiguration | solange der Verlauf aufbewahrt wird **[OFFEN]** |
+| Namen und Adressen in Tenant-Einstellungen (z. B. Konten in Ausnahmen von Richtlinien; mit Exchange auch Adressen in Transportregeln und Schutz-Richtlinien) | Abruf über UTCM | Überwachung der Konfiguration | solange der Verlauf aufbewahrt wird **[OFFEN]** |
 | Push-Abonnement (Endpunkt, Schlüssel) | Browser, nach Opt-in | Benachrichtigung | bis Widerruf |
 
 Keine Tracking- oder Analysedienste. Keine Cookies außer dem technisch notwendigen Session-Cookie. Die gewählte Darstellung (hell oder dunkel) liegt nur im Browser der Person (`localStorage`, Schlüssel `werkbank-darstellung`) und wird nicht an den Server übertragen. Gleiches gilt für den Vermerk, welche Version der Neuigkeiten zuletzt geöffnet wurde (`werkbank-neuigkeiten-gesehen`) und für die Wahl, ob die Navigation eingeklappt ist (`werkbank-navigation`). Der zuletzt geladene Stand des Brandings (Name, Farbe, Adressen der Logos; `werkbank-branding`) liegt ebenfalls nur im Browser; er enthält keine personenbezogenen Daten. Name, Farbe, Logos und Favicon sind ohne Anmeldung abrufbar, weil die Anmeldeseite sie zeigt.
