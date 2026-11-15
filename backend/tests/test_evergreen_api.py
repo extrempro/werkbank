@@ -233,9 +233,9 @@ def test_update_content_and_audit(migrated_db: None, db_session: Session) -> Non
     item = db_session.get(EvItem, item_id)
     assert item is not None
     audit = db_session.scalars(
-        select(AuditLog).where(
-            AuditLog.action == "vorgang.geaendert", AuditLog.object_id == item.number
-        )
+        select(AuditLog)
+        .where(AuditLog.action == "vorgang.geaendert", AuditLog.object_id == item.number)
+        .order_by(AuditLog.id)
     ).all()
     assert [entry.details for entry in audit] == [
         {"felder": ["summary", "departments_feedback", "not_controllable"]},

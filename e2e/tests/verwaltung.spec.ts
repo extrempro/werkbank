@@ -42,7 +42,8 @@ test("Admin pflegt SMTP-Server und Aufbewahrungsfrist, das Passwort bleibt verbo
   await page.getByLabel("Port", { exact: true }).fill("587");
   await page.getByLabel("Absenderadresse", { exact: true }).fill("werkbank@example.com");
   await page.getByLabel("Benutzername (freiwillig)").fill("werkbank@example.com");
-  await page.getByLabel(/Passwort/).fill("e2e-geheim-4711");
+  // Beim ersten Durchlauf heißt das Feld „Passwort (freiwillig)“, danach „Neues Passwort“.
+  await page.getByLabel(/^(Neues Passwort|Passwort \(freiwillig\))$/).fill("e2e-geheim-4711");
   await page.getByRole("button", { name: "SMTP-Server speichern" }).click();
   await expect(page.getByText("Der SMTP-Server ist gespeichert.")).toBeVisible();
   await expect(page.getByLabel("Neues Passwort")).toHaveValue("");
