@@ -24,6 +24,26 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.9.0",
+    date: "2026-11-15",
+    summary: "Eigenes Logo, eigener Name, eigene Farbe – und eine Werkbank als Zeichen.",
+    sections: [
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter „Allgemein“ gibt es den neuen Bereich „Branding“: Dort legst du den Namen der Anwendung, eine Akzentfarbe, Logos für hellen und dunklen Hintergrund und ein eigenes Favicon fest.",
+          "Die Akzentfarbe wird automatisch so angepasst, dass alles gut lesbar bleibt, in der hellen und in der dunklen Darstellung.",
+        ],
+      },
+      {
+        area: "Allgemein",
+        entries: [
+          "Das Zeichen im Browser-Tab, auf dem Startbildschirm und oben links zeigt jetzt eine Werkbank.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.8.0",
     date: "2026-11-15",
     summary: "Einstellungen als Baum: links auswählen, rechts lesen.",

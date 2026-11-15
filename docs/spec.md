@@ -474,7 +474,7 @@ Evergreen:
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |
 | Audit-Log | Admin, Auditor | Filterbare Tabelle, Export |
-| Verwaltung | Admin (mit Step-up) | Bereiche Allgemein (Mailversand, Aufbewahrung des Audit-Logs), Module, Rollen, Konnektoren, Kommentarregeln, Benachrichtigungen |
+| Verwaltung | Admin (mit Step-up) | Bereiche Allgemein (Branding, Mailversand, Aufbewahrung des Audit-Logs), Module, Rollen, Konnektoren, Kommentarregeln, Benachrichtigungen |
 | Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Version. Später: Push an/aus, Benachrichtigungen, Hinweis zur Installation |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
