@@ -179,9 +179,7 @@ describe("Budgetposten", () => {
     expect(plain(row.textContent)).toContain("10.000,00 €");
     expect(row).toHaveTextContent("1 Vertrag");
     expect(table.getByRole("row", { name: /Server/ })).toHaveTextContent("stillgelegt");
-    expect(plain(table.getByRole("row", { name: /^Summe/ }).textContent)).toContain(
-      "61.900,50 €",
-    );
+    expect(plain(table.getByRole("row", { name: /^Summe/ }).textContent)).toContain("61.900,50 €");
     // Lesende Rollen planen nicht und legen nichts an.
     expect(screen.queryByRole("button", { name: "Plan bearbeiten" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Budgetposten anlegen" })).toBeNull();

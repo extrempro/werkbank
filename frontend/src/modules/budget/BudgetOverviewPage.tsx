@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "../../components/Link";
-import {
-  BUDGET_ACCOUNTS_PATH,
-  BUDGET_CONTRACTS_PATH,
-  BUDGET_ITEMS_PATH,
-} from "../../navigation";
+import { BUDGET_ACCOUNTS_PATH, BUDGET_CONTRACTS_PATH, BUDGET_ITEMS_PATH } from "../../navigation";
 import {
   BUDGET_EDITOR_ROLES,
   DEADLINE_WINDOW_DAYS,
