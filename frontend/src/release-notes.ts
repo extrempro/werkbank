@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.20.0",
+    date: "2026-11-15",
+    summary: "IT-Tools: Rechner für Speicher, Strom, USV, Verfügbarkeit und mehr.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Neue Kategorie „Rechner“: RAID, Speichereinheiten, Speicherbedarf, Übertragungsdauer, Verfügbarkeit, Stromkosten, USV und VoIP-Bandbreite.",
+          "Neu unter „Linux und Server“: Cron-Ausdruck erklären, mit den nächsten Ausführungen.",
+          "Die Zahlen eines Rechners stehen in der Adresszeile; so lässt sich eine Rechnung als Link teilen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.19.0",
     date: "2026-11-15",
     summary: "Lizenzen und Benutzerzahlen des Tenants, Kategorien der IT-Tools in der Navigation.",
