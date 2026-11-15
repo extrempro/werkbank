@@ -24,6 +24,13 @@ const PATHS = {
   formatter: ["M4 6h16", "M8 10h12", "M8 14h8", "M4 18h12"],
   konverter: ["M4 8h14", "M15 5l3 3-3 3", "M20 16H6", "M9 13l-3 3 3 3"],
   text: ["M5 6V4h14v2", "M12 4v16", "M9 20h6"],
+  identitaet: [
+    "M3 5h18v14H3z",
+    "M9 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+    "M6 16c.5-1.5 1.6-2 3-2s2.5.5 3 2",
+    "M15 9h3",
+    "M15 12h3",
+  ],
   rechner: [
     "M6 3h12v18H6z",
     "M9 7h6",

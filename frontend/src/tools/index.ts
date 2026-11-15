@@ -7,11 +7,20 @@ import { lazy, type ComponentType } from "react";
  */
 
 export type ToolCategory =
-  "netzwerk" | "system" | "encoding" | "formatter" | "konverter" | "text" | "rechner" | "generator";
+  | "netzwerk"
+  | "system"
+  | "encoding"
+  | "formatter"
+  | "identitaet"
+  | "konverter"
+  | "text"
+  | "rechner"
+  | "generator";
 
 export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   netzwerk: "Netzwerk",
   system: "Linux und Server",
+  identitaet: "AD und M365",
   encoding: "Encoding",
   formatter: "Formatter",
   konverter: "Konverter",
@@ -122,6 +131,87 @@ export const TOOLS: readonly ToolDefinition[] = [
       "Cron-Ausdrücke in Klartext übersetzen und die nächsten Ausführungen anzeigen, auch @daily und 6 Felder mit Sekunden.",
     tags: ["crontab", "zeitplan", "schedule", "linux", "systemd", "kubernetes", "cronjob"],
     component: lazy(() => import("./cron/CronTool")),
+  },
+  {
+    id: "ad-zeitstempel",
+    name: "AD-Zeitstempel",
+    category: "identitaet",
+    description:
+      "lastLogonTimestamp, pwdLastSet, accountExpires und ähnliche Werte (FILETIME) sowie whenCreated in lesbare Daten umrechnen, und zurück.",
+    tags: [
+      "active directory",
+      "filetime",
+      "lastlogontimestamp",
+      "pwdlastset",
+      "accountexpires",
+      "whencreated",
+      "ldap",
+    ],
+    component: lazy(() => import("./ad-time/AdTimeTool")),
+  },
+  {
+    id: "dn",
+    name: "DN-Zerleger",
+    category: "identitaet",
+    description:
+      "Distinguished Names zerlegen (auch mit maskierten Zeichen), canonicalName und Domain ableiten und canonicalName in einen DN umwandeln.",
+    tags: [
+      "distinguished name",
+      "ldap",
+      "canonicalname",
+      "ou",
+      "cn",
+      "dc",
+      "active directory",
+      "pfad",
+    ],
+    component: lazy(() => import("./dn/DnTool")),
+  },
+  {
+    id: "immutableid",
+    name: "ImmutableID ↔ objectGUID",
+    category: "identitaet",
+    description:
+      "objectGUID, ImmutableID (Base64), Hex-Bytes und die Form für LDAP-Filter ineinander umrechnen.",
+    tags: ["guid", "objectguid", "sourceanchor", "consistencyguid", "entra", "m365", "ldap"],
+    component: lazy(() => import("./guid-convert/GuidConvertTool")),
+  },
+  {
+    id: "ldap-escaper",
+    name: "LDAP-Escaper",
+    category: "identitaet",
+    description:
+      "Werte für LDAP-Filter (RFC 4515) und Distinguished Names (RFC 4514) korrekt maskieren, und zurück.",
+    tags: [
+      "escape",
+      "maskieren",
+      "filter",
+      "dn",
+      "rfc 4515",
+      "rfc 4514",
+      "active directory",
+      "sonderzeichen",
+    ],
+    component: lazy(() => import("./ldap/LdapEscapeTool")),
+  },
+  {
+    id: "useraccountcontrol",
+    name: "userAccountControl",
+    category: "identitaet",
+    description:
+      "Werte von userAccountControl in Flags zerlegen und zusammenbauen, mit Sicherheitshinweisen und passenden LDAP-Filtern.",
+    tags: [
+      "active directory",
+      "uac",
+      "flags",
+      "deaktiviert",
+      "disabled",
+      "ldap",
+      "514",
+      "512",
+      "66048",
+    ],
+    component: lazy(() => import("./uac/UacTool")),
   },
   {
     id: "base64",
@@ -500,6 +590,73 @@ export const TOOLS: readonly ToolDefinition[] = [
       "Sichere Kennwörter mit wählbaren Zeichengruppen erzeugen. Alles geschieht im Browser, nichts wird übertragen.",
     tags: ["kennwort", "password", "zufall", "sicher"],
     component: lazy(() => import("./password/PasswordTool")),
+  },
+  {
+    id: "passphrase",
+    name: "Passphrase-Generator",
+    category: "generator",
+    description:
+      "Merkbare Passphrasen aus einer deutschen Wortliste (7776 Wörter, Diceware-Prinzip), sicher und leicht zu tippen.",
+    tags: ["passwort", "kennwort", "diceware", "wörter", "merkbar"],
+    component: lazy(() => import("./passphrase/PassphraseTool")),
+  },
+  {
+    id: "passwort-hash",
+    name: "Passwort-Hash (htpasswd/shadow)",
+    category: "generator",
+    description:
+      "Passwort-Hashes für .htpasswd, /etc/shadow, Ansible und cloud-init erzeugen (bcrypt, $6$, $5$, $apr1$) und vorhandene Hashes prüfen.",
+    tags: [
+      "htpasswd",
+      "bcrypt",
+      "shadow",
+      "crypt",
+      "sha512",
+      "apr1",
+      "nginx",
+      "apache",
+      "basic auth",
+      "ansible",
+      "mkpasswd",
+    ],
+    component: lazy(() => import("./htpasswd/HtpasswdTool")),
+  },
+  {
+    id: "hash",
+    name: "Prüfsummen (Hash)",
+    category: "generator",
+    description:
+      "MD5, SHA-1, SHA-256, SHA-384, SHA-512 und CRC32 für Text oder Dateien berechnen und mit einem erwarteten Wert vergleichen.",
+    tags: [
+      "prüfsumme",
+      "checksum",
+      "md5",
+      "sha1",
+      "sha256",
+      "sha512",
+      "crc32",
+      "datei",
+      "integrität",
+    ],
+    component: lazy(() => import("./hash/HashTool")),
+  },
+  {
+    id: "hmac",
+    name: "HMAC",
+    category: "generator",
+    description:
+      "HMAC-SHA1, -256, -384 und -512 berechnen, zum Beispiel um Signaturen von Webhooks zu prüfen.",
+    tags: ["signatur", "webhook", "sha256", "mac", "secret", "prüfen"],
+    component: lazy(() => import("./hmac/HmacTool")),
+  },
+  {
+    id: "lorem-ipsum",
+    name: "Lorem ipsum",
+    category: "generator",
+    description:
+      "Blindtext in Absätzen, Sätzen oder Wörtern erzeugen, für Vorlagen, Mockups und Tests.",
+    tags: ["blindtext", "platzhalter", "dummy", "fülltext"],
+    component: lazy(() => import("./lorem/LoremTool")),
   },
 ];
 

@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.21.0",
+    date: "2026-11-15",
+    summary: "IT-Tools: Werkzeuge für Active Directory und Microsoft 365, weitere Generatoren.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Neue Kategorie „AD und M365“: AD-Zeitstempel, DN-Zerleger, ImmutableID ↔ objectGUID, LDAP-Escaper und userAccountControl.",
+          "Neue Generatoren: Passphrasen aus einer deutschen Wortliste, Passwort-Hashes für htpasswd und /etc/shadow, Prüfsummen für Text und Dateien, HMAC und Lorem ipsum.",
+          "Kennwörter, Schlüssel und Dateien bleiben im Browser und stehen nie in der Adresszeile.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.20.0",
     date: "2026-11-15",
     summary: "IT-Tools: Rechner für Speicher, Strom, USV, Verfügbarkeit und mehr.",
