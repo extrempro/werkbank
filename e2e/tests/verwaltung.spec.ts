@@ -38,9 +38,9 @@ test("Admin pflegt SMTP-Server und Aufbewahrungsfrist, das Passwort bleibt verbo
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
   await page.goto("/verwaltung");
   await expect(page.getByRole("heading", { level: 2, name: "Allgemein" })).toBeVisible();
-  await page.getByLabel("Server").fill("smtp.example.com");
-  await page.getByLabel("Port").fill("587");
-  await page.getByLabel("Absenderadresse").fill("werkbank@example.com");
+  await page.getByLabel("Server", { exact: true }).fill("smtp.example.com");
+  await page.getByLabel("Port", { exact: true }).fill("587");
+  await page.getByLabel("Absenderadresse", { exact: true }).fill("werkbank@example.com");
   await page.getByLabel("Benutzername (freiwillig)").fill("werkbank@example.com");
   await page.getByLabel(/Passwort/).fill("e2e-geheim-4711");
   await page.getByRole("button", { name: "SMTP-Server speichern" }).click();
@@ -59,7 +59,7 @@ test("Admin pflegt SMTP-Server und Aufbewahrungsfrist, das Passwort bleibt verbo
   await expect(page.getByText("Die Aufbewahrungsfrist ist gespeichert.")).toBeVisible();
   await page.reload();
   await expect(page.getByLabel("Einträge löschen nach (Tage)")).toHaveValue("120");
-  await expect(page.getByLabel("Server")).toHaveValue("smtp.example.com");
+  await expect(page.getByLabel("Server", { exact: true })).toHaveValue("smtp.example.com");
 });
 
 test("Betriebsrat kommt nicht an Audit-Log und Verwaltung", async ({ page }) => {

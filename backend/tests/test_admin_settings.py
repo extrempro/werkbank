@@ -145,7 +145,8 @@ def test_smtp_validation(clean: Session, tmp_path: Path) -> None:
     client = admin(settings_with_key(tmp_path))
 
     def put(**changes: Any) -> int:
-        return client.put(f"{BASE}/smtp", json={**SMTP, **changes}, headers=HEADERS).status_code
+        response = client.put(f"{BASE}/smtp", json={**SMTP, **changes}, headers=HEADERS)
+        return int(response.status_code)
 
     assert put(host="https://smtp.example.com/pfad") == 422
     assert put(host="smtp.example.com\r\nX: y") == 422
