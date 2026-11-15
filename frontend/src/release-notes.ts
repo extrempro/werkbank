@@ -24,6 +24,30 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.17.0",
+    date: "2026-11-15",
+    summary: "IT-Tools: Encoding und Formatter.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "URL-Encoder: Text für Adressen kodieren und dekodieren, eine URL in ihre Bestandteile zerlegen.",
+          "HTML-Entities: Sonderzeichen umwandeln und zurück.",
+          "JWT-Decoder: Token lesen, Ablauf sehen und die Signatur prüfen.",
+          "SAML-Decoder: Anmeldenachrichten lesen, mit Attributen, Gültigkeit und Zertifikat.",
+          "Neue Kategorie „Formatter“: JSON, YAML und XML prüfen und sauber formatieren.",
+          "Token, Schlüssel und eingegebene Texte bleiben im Browser und stehen nie in der Adresszeile.",
+        ],
+      },
+      {
+        area: "Allgemein",
+        entries: [
+          "Behoben: Ein offenes Fenster bemerkt eine neue Version jetzt von selbst und zeigt den Hinweis „Neu laden“. Bisher kam er erst nach einem Neuladen der Seite.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.16.0",
     date: "2026-11-15",
     summary: "IT-Tools: fünf weitere Werkzeuge fürs Netzwerk.",

@@ -82,6 +82,16 @@ export function Output({ value, label = "Ergebnis" }: { value: string; label?: s
   );
 }
 
+/** Macht doppelte Bezeichnungen eindeutig (zweites Vorkommen: „name (2)“). */
+export function numberDuplicates<T extends { label: string }>(rows: T[]): T[] {
+  const seen = new Map<string, number>();
+  return rows.map((row) => {
+    const count = (seen.get(row.label) ?? 0) + 1;
+    seen.set(row.label, count);
+    return count === 1 ? row : { ...row, label: `${row.label} (${count})` };
+  });
+}
+
 export function ErrorBox({ children }: { children: ReactNode }) {
   return (
     <p role="alert" className="hint-box hint-bad">

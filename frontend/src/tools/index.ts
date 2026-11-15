@@ -6,12 +6,13 @@ import { lazy, type ComponentType } from "react";
  * Die Oberfläche wird erst beim Öffnen des Tools geladen.
  */
 
-export type ToolCategory = "netzwerk" | "system" | "encoding" | "generator";
+export type ToolCategory = "netzwerk" | "system" | "encoding" | "formatter" | "generator";
 
 export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   netzwerk: "Netzwerk",
   system: "Linux und Server",
   encoding: "Encoding",
+  formatter: "Formatter",
   generator: "Generatoren",
 };
 
@@ -117,6 +118,85 @@ export const TOOLS: readonly ToolDefinition[] = [
       "Text in Base64 kodieren oder Base64 zurück in Text wandeln (UTF-8, auch URL-safe).",
     tags: ["encode", "decode", "kodieren", "dekodieren"],
     component: lazy(() => import("./base64/Base64Tool")),
+  },
+  {
+    id: "url-encoder",
+    name: "URL-Encoder",
+    category: "encoding",
+    description:
+      "Text für URLs kodieren (%20) und dekodieren, URLs in Bestandteile und Parameter zerlegen.",
+    tags: ["url", "encode", "decode", "percent", "%20", "query", "parameter", "uri", "urlencode"],
+    component: lazy(() => import("./url-encode/UrlEncodeTool")),
+  },
+  {
+    id: "html-entities",
+    name: "HTML-Entities",
+    category: "encoding",
+    description: "Sonderzeichen in HTML-Entities umwandeln (&lt; &auml; &#8364;) und zurück.",
+    tags: ["html", "entity", "escape", "&amp;", "&lt;", "umlaute", "sonderzeichen"],
+    component: lazy(() => import("./html-entities/HtmlEntitiesTool")),
+  },
+  {
+    id: "jwt",
+    name: "JWT-Decoder",
+    category: "encoding",
+    description:
+      "JSON Web Tokens lesen: Header, Claims mit Erklärung, Ablaufzeiten. Dazu die Signatur mit Secret, PEM-Schlüssel oder JWKS prüfen.",
+    tags: [
+      "token",
+      "bearer",
+      "oauth",
+      "oidc",
+      "entra",
+      "id token",
+      "access token",
+      "claims",
+      "jwks",
+    ],
+    component: lazy(() => import("./jwt/JwtTool")),
+  },
+  {
+    id: "saml",
+    name: "SAML-Decoder",
+    category: "encoding",
+    description:
+      "SAMLRequest und SAMLResponse dekodieren (Base64, Deflate, ganze URL), mit NameID, Attributen, Gültigkeit, Signatur und Zertifikat.",
+    tags: ["samlresponse", "samlrequest", "sso", "adfs", "entra", "assertion", "idp", "deflate"],
+    component: lazy(() => import("./saml/SamlTool")),
+  },
+  {
+    id: "json-formatter",
+    name: "JSON-Formatter",
+    category: "formatter",
+    description: "JSON prüfen, lesbar formatieren oder minifizieren.",
+    tags: ["json", "format", "validieren", "minify", "einrücken"],
+    component: lazy(() => import("./json-format/JsonFormatTool")),
+  },
+  {
+    id: "yaml-formatter",
+    name: "YAML-Formatter",
+    category: "formatter",
+    description:
+      "YAML prüfen (mit Zeilenangabe bei Fehlern) und einheitlich formatieren, zum Beispiel docker-compose, Kubernetes, Ansible.",
+    tags: [
+      "yaml",
+      "yml",
+      "validieren",
+      "prüfen",
+      "docker compose",
+      "kubernetes",
+      "ansible",
+      "lint",
+    ],
+    component: lazy(() => import("./yaml-format/YamlFormatTool")),
+  },
+  {
+    id: "xml-formatter",
+    name: "XML-Formatter",
+    category: "formatter",
+    description: "XML prüfen, einrücken oder minimieren, mit Fehlermeldung samt Zeile.",
+    tags: ["xml", "pretty print", "minify", "validieren", "einrücken", "gpo", "unattend"],
+    component: lazy(() => import("./xml-format/XmlFormatTool")),
   },
   {
     id: "uuid",

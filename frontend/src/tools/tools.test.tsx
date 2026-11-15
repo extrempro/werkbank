@@ -47,11 +47,12 @@ describe("ToolsOverviewPage", () => {
     render(<ToolsOverviewPage />);
     expect(screen.getByRole("heading", { level: 1, name: "IT-Tools" })).toBeVisible();
     expect(screen.getByRole("heading", { level: 2, name: "Netzwerk" })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 2, name: "Formatter" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Subnetz-Rechner" })).toHaveAttribute(
       "href",
       "/it-tools/subnetz",
     );
-    fireEvent.change(screen.getByLabelText("Tool suchen"), { target: { value: "base" } });
+    fireEvent.change(screen.getByLabelText("Tool suchen"), { target: { value: "url-safe" } });
     expect(screen.getByRole("status")).toHaveTextContent("1 Tool");
     expect(screen.queryByRole("link", { name: "Subnetz-Rechner" })).toBeNull();
     fireEvent.change(screen.getByLabelText("Tool suchen"), { target: { value: "gibtsnicht" } });
@@ -238,5 +239,113 @@ describe("ToolPage", () => {
     expect(ruleName("$(calc)", undefined)).toBe("Freigabe");
     expect(ruleName("", "Windows & AD")).toBe("Windows und AD");
     expect(ruleName("kerberos", undefined)).toBe("kerberos");
+  });
+
+  it("URL-Encoder: kodiert, dekodiert und zerlegt, ohne den Text in die Adresse zu schreiben", async () => {
+    render(<ToolPage id="url-encoder" />);
+    const input = await screen.findByRole("textbox", { name: "Eingabe" });
+    fireEvent.change(input, { target: { value: "a b&c" } });
+    expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("a%20b%26c");
+    fireEvent.change(screen.getByLabelText("Art"), { target: { value: "form" } });
+    expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("a+b%26c");
+    fireEvent.change(screen.getByLabelText("Modus"), { target: { value: "zerlegen" } });
+    expect(window.location.search).toBe("?modus=zerlegen&art=form");
+    fireEvent.change(screen.getByRole("textbox", { name: "URL" }), {
+      target: { value: "https://nutzer:geheim@example.com:8443/pfad?a=1&a=2#oben" },
+    });
+    const parts = within(screen.getByRole("region", { name: "Bestandteile der URL" }));
+    expect(parts.getByRole("row", { name: /^Host/ })).toHaveTextContent("example.com");
+    expect(parts.getByRole("row", { name: /^Kennwort/ })).toHaveTextContent("nicht angezeigt");
+    expect(parts.queryByText(/geheim/)).toBeNull();
+    const query = within(screen.getByRole("region", { name: "Parameter" }));
+    expect(query.getByRole("row", { name: /^a \(2\)/ })).toHaveTextContent("2");
+    expect(window.location.search).not.toContain("example");
+  });
+
+  it("HTML-Entities: wandelt in beide Richtungen", async () => {
+    render(<ToolPage id="html-entities" />);
+    const input = await screen.findByRole("textbox", { name: "Eingabe" });
+    fireEvent.change(input, { target: { value: "<b>Grüße</b>" } });
+    expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("&lt;b&gt;Grüße&lt;/b&gt;");
+    fireEvent.change(screen.getByLabelText("Umfang"), { target: { value: "named" } });
+    expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("Gr&uuml;&szlig;e");
+    fireEvent.change(screen.getByLabelText("Richtung"), { target: { value: "dekodieren" } });
+    fireEvent.change(input, { target: { value: "&euro; &amp; &#228;" } });
+    expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("€ & ä");
+  });
+
+  it("JWT: zeigt Claims und Gültigkeit, das Token bleibt aus der Adresse", async () => {
+    render(<ToolPage id="jwt" />);
+    const payload = btoa(JSON.stringify({ sub: "x", exp: 4102444800 })).replace(/=+$/, "");
+    const header = btoa(JSON.stringify({ alg: "HS256", kid: "k1" })).replace(/=+$/, "");
+    fireEvent.change(await screen.findByRole("textbox", { name: "Token" }), {
+      target: { value: `${header}.${payload}.sig` },
+    });
+    expect(screen.getByText("gültig (Zeitraum)")).toBeVisible();
+    expect(screen.getByText("kid k1")).toBeVisible();
+    expect(screen.getByRole("row", { name: /^exp · Läuft ab/ })).toHaveTextContent("2100");
+    expect(screen.getByRole("button", { name: "Prüfen" })).toBeDisabled();
+    expect(window.location.search).toBe("");
+    fireEvent.change(screen.getByRole("textbox", { name: "Token" }), {
+      target: { value: "a.b" },
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("3 durch Punkte getrennte Teile");
+  });
+
+  it("SAML: wertet eine Nachricht aus", async () => {
+    render(<ToolPage id="saml" />);
+    const xml =
+      '<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_r1">' +
+      "<saml:Issuer>https://idp.example.com/</saml:Issuer>" +
+      '<saml:Assertion ID="_a1"><saml:AttributeStatement><saml:Attribute Name="gruppe"><saml:AttributeValue>g1</saml:AttributeValue></saml:Attribute></saml:AttributeStatement></saml:Assertion>' +
+      "</samlp:Response>";
+    fireEvent.change(await screen.findByRole("textbox", { name: /^SAMLResponse/ }), {
+      target: { value: xml },
+    });
+    expect(await screen.findByText("keine Signatur")).toBeVisible();
+    expect(screen.getByRole("row", { name: /^Aussteller/ })).toHaveTextContent(
+      "https://idp.example.com/",
+    );
+    expect(screen.getByRole("row", { name: /^gruppe/ })).toHaveTextContent("g1");
+    fireEvent.change(screen.getByRole("textbox", { name: /^SAMLResponse/ }), {
+      target: { value: "<a><b></a>" },
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("passt nicht");
+  });
+
+  it("JSON-Formatter: formatiert, minifiziert und meldet Fehler", async () => {
+    render(<ToolPage id="json-formatter" />);
+    const input = await screen.findByRole("textbox", { name: "Eingabe" });
+    fireEvent.change(input, { target: { value: '{"a":[1,2]}' } });
+    expect(screen.getByLabelText("Formatiert").textContent).toBe(
+      '{\n  "a": [\n    1,\n    2\n  ]\n}',
+    );
+    fireEvent.change(screen.getByLabelText("Einrückung"), { target: { value: "minify" } });
+    expect(window.location.search).toBe("?einrueckung=minify");
+    expect(screen.getByLabelText("Formatiert").textContent).toBe('{"a":[1,2]}');
+    fireEvent.change(input, { target: { value: "{a}" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("Ungültiges JSON");
+  });
+
+  it("YAML-Formatter: prüft und formatiert", async () => {
+    render(<ToolPage id="yaml-formatter" />);
+    const input = await screen.findByRole("textbox", { name: "Eingabe" });
+    fireEvent.change(input, { target: { value: "a:\n    b: 1\n    c: [x, y]\n" } });
+    expect(screen.getByText("gültig")).toBeVisible();
+    expect(screen.getByLabelText("Formatiert").textContent).toContain("a:\n  b: 1\n");
+    fireEvent.change(input, { target: { value: "a: [1, 2" } });
+    expect(screen.getByRole("alert")).toBeVisible();
+  });
+
+  it("XML-Formatter: prüft, rückt ein und minimiert", async () => {
+    render(<ToolPage id="xml-formatter" />);
+    const input = await screen.findByRole("textbox", { name: "Eingabe" });
+    fireEvent.change(input, { target: { value: "<a><b>x</b><c/></a>" } });
+    expect(screen.getByText("wohlgeformt · 3 Elemente")).toBeVisible();
+    expect(screen.getByLabelText("Formatiert").textContent).toBe("<a>\n  <b>x</b>\n  <c/>\n</a>");
+    fireEvent.change(screen.getByLabelText("Ausgabe"), { target: { value: "minify" } });
+    expect(screen.getByLabelText("Formatiert").textContent).toBe("<a><b>x</b><c/></a>");
+    fireEvent.change(input, { target: { value: "<a>\n<b></a>" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("Zeile 2");
   });
 });
