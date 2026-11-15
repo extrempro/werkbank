@@ -98,8 +98,8 @@ export function SettingsPage({ me, selectedId }: SettingsPageProps) {
         <p className="module-label">M365-Konfiguration</p>
         {hasDetail ? <p className="page-title">Einstellungen</p> : <h1>Einstellungen</h1>}
         <p className="page-sub">
-          Alle gelesenen Einstellungen des Tenants, nach Workload. Eine Einstellung wählen, um
-          Wert, Beschreibung und Verlauf zu sehen.
+          Alle gelesenen Einstellungen des Tenants, nach Workload. Eine Einstellung wählen, um Wert,
+          Beschreibung und Verlauf zu sehen.
         </p>
       </header>
 

@@ -66,7 +66,9 @@ describe("SettingsPage", () => {
 
     const groups = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
     expect(groups).toEqual(["Entra", "Teams"]);
-    expect(within(screen.getByRole("list", { name: "Entra" })).getAllByRole("link")).toHaveLength(1);
+    expect(within(screen.getByRole("list", { name: "Entra" })).getAllByRole("link")).toHaveLength(
+      1,
+    );
     expect(screen.getByText("2 Treffer")).toBeVisible();
     expect(screen.getByRole("heading", { level: 1, name: "Einstellungen" })).toBeVisible();
     expect(screen.getByText(/Einstellung in der Liste wählen/)).toBeInTheDocument();
