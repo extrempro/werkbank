@@ -188,7 +188,9 @@ export function SettingsPage({ me, selectedId }: SettingsPageProps) {
                         aria-current={entry.id === selectedId ? "page" : undefined}
                       >
                         <span className="tree-text">
-                          <span className="tree-name">{entry.object_name ?? areaLabel(entry.area)}</span>
+                          <span className="tree-name">
+                            {entry.object_name ?? areaLabel(entry.area)}
+                          </span>
                           <span className="mono tree-prop">{entry.property}</span>
                         </span>
                         <span className="tree-badges">
