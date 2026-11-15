@@ -49,6 +49,10 @@ export interface Setting {
   valid_from: string | null;
   criticality: string | null;
   deviates: boolean;
+  /** Anzahl noch nicht bewerteter Änderungen. */
+  open_changes?: number;
+  /** Der Soll-Wert stammt aus einem Evergreen-Vorgang. */
+  from_evergreen?: boolean;
 }
 
 export interface Meta {
@@ -146,7 +150,7 @@ export function fetchSettings(
   filter: SettingFilter,
   offset: number,
 ): Promise<{ entries: Setting[]; has_more: boolean }> {
-  const params = new URLSearchParams({ offset: String(offset), limit: "50" });
+  const params = new URLSearchParams({ offset: String(offset), limit: "200" });
   if (filter.search) {
     params.set("search", filter.search);
   }

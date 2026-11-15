@@ -26,6 +26,7 @@ Ziel: Jeder Screen sieht gleich aufgebaut aus und wird gleich bedient. Visuelle 
 
 - Desktop: Liste links (oder Tabelle oben), Detail rechts.
 - Tablet und Handy: Das Detail steht unter der Liste bzw. auf einer eigenen Seite mit „Zurück“.
+- Solange nichts gewählt ist, zeigt der Detailbereich auf breiten Bildschirmen einen schraffierten Platzhalter mit Hinweis (`components/Placeholder`).
 - Ausgewähltes Element sichtbar markiert (Rahmen bzw. Hintergrund **und** `aria-current`).
 
 ## 3. Buttons und Aktionen

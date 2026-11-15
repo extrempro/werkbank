@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, formatDateTime, type Me } from "../../api";
+import { Placeholder } from "../../components/Placeholder";
 import { navigate } from "../../router";
 import { createItemFromChange } from "../evergreen/api";
 import {
@@ -299,9 +300,9 @@ export function ChangesPage({ me }: ChangesPageProps) {
                 onCreateItem={() => onCreateItem(shown)}
               />
             ) : (
-              <p className="panel panel-empty">
+              <Placeholder>
                 Änderung in der Liste wählen, um Vorher und Nachher zu sehen.
-              </p>
+              </Placeholder>
             )}
           </div>
         </div>

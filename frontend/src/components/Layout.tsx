@@ -21,7 +21,6 @@ import { InboxPage } from "../modules/evergreen/InboxPage";
 import { ItemsPage } from "../modules/evergreen/ItemsPage";
 import { ChangesPage } from "../modules/m365/ChangesPage";
 import { OverviewPage } from "../modules/m365/OverviewPage";
-import { SettingDetailPage } from "../modules/m365/SettingDetailPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { hasUnseenRelease } from "../release-notes";
@@ -152,11 +151,11 @@ export function Layout({ me }: LayoutProps) {
   } else if (path === "/m365/aenderungen" && current) {
     page = <ChangesPage me={me} />;
   } else if (path === "/m365/einstellungen" && current) {
-    page = <SettingsPage />;
+    page = <SettingsPage me={me} />;
   } else if (path === "/m365/snapshots" && current) {
     page = <SnapshotsPage />;
   } else if (settingId !== null && items.some((item) => item.path === SETTINGS_PATH)) {
-    page = <SettingDetailPage id={settingId} me={me} />;
+    page = <SettingsPage me={me} selectedId={settingId} />;
   } else if (path === "/evergreen" && current) {
     page = <ItemsPage />;
   } else if (path === "/evergreen/eingang" && current) {

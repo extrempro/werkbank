@@ -64,7 +64,9 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
         {status === "loading" && <p role="status">Wird geladen …</p>}
         {status === "missing" && <p>Diese Einstellung gibt es nicht.</p>}
         {status === "error" && <p role="alert">Die Einstellung konnte nicht geladen werden.</p>}
-        {back}
+        <p>
+          <Link to="/m365/einstellungen">Zurück zu den Einstellungen</Link>
+        </p>
       </div>
     );
   }

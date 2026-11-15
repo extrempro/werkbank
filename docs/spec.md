@@ -481,7 +481,7 @@ Evergreen:
 
 Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz.
 
-**Stand der Umsetzung (Version 0.5):** Nach dem Entwurf gebaut sind Kopfzeile mit Suche, Navigation, Startseite (ohne „letzte Aktivitäten“), M365 › Übersicht, Änderungen, Einstellungen (nach Workload gruppierte Liste statt Baum, Detail auf eigener Seite), Evergreen › Vorgänge (ohne Kennzeichen „Mitbestimmung“, ohne PDF der BR-Vorlage, geplante Umsetzung noch im ersten Aufbau) sowie Konto und Neuigkeiten. Noch im ersten Aufbau: Evergreen › Eingang, Snapshots (ohne Vergleich und Export), Audit-Log, Verwaltung (Bereiche Allgemein und Rollen). Noch nicht vorhanden: Reports (Platzhalter), Empfehlungen und Microsoft-Schema je Einstellung, KI-Texte.
+**Stand der Umsetzung (Version 0.5):** Nach dem Entwurf gebaut sind Kopfzeile mit Suche, Navigation, Startseite (ohne „letzte Aktivitäten“), M365 › Übersicht, Änderungen, Einstellungen (Baum nach Workload mit Detail daneben), Evergreen › Vorgänge (ohne Kennzeichen „Mitbestimmung“, ohne PDF der BR-Vorlage, geplante Umsetzung noch im ersten Aufbau) sowie Konto und Neuigkeiten. Noch im ersten Aufbau: Evergreen › Eingang, Snapshots (ohne Vergleich und Export), Audit-Log, Verwaltung (Bereiche Allgemein und Rollen). Noch nicht vorhanden: Reports (Platzhalter), Empfehlungen und Microsoft-Schema je Einstellung, KI-Texte.
 
 ---
 
