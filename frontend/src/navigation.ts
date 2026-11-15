@@ -1,6 +1,9 @@
+import type { IconName } from "./components/Icon";
+
 export interface NavItem {
   path: string;
   label: string;
+  icon: IconName;
 }
 
 export interface NavGroup {
@@ -29,9 +32,8 @@ export function navigationFor(roles: readonly string[]): NavGroup[] {
     {
       title: null,
       items: [
-        { path: "/", label: "Start" },
-        { path: "/suche", label: "Suche" },
-        { path: NEWS_PATH, label: "Neuigkeiten" },
+        { path: "/", label: "Start", icon: "start" },
+        { path: "/suche", label: "Suche", icon: "suche" },
       ],
     },
   ];
@@ -40,29 +42,32 @@ export function navigationFor(roles: readonly string[]): NavGroup[] {
     groups.push({
       title: "M365-Konfiguration",
       items: [
-        { path: "/m365", label: "Übersicht" },
-        { path: "/m365/aenderungen", label: "Änderungen" },
-        { path: "/m365/einstellungen", label: "Einstellungen" },
-        { path: "/m365/snapshots", label: "Snapshots" },
+        { path: "/m365", label: "Übersicht", icon: "uebersicht" },
+        { path: "/m365/aenderungen", label: "Änderungen", icon: "aenderungen" },
+        { path: "/m365/einstellungen", label: "Einstellungen", icon: "einstellungen" },
+        { path: "/m365/snapshots", label: "Snapshots", icon: "snapshots" },
       ],
     });
   }
   if (hasAny(roles, EVERGREEN_ROLES)) {
-    const items: NavItem[] = [{ path: "/evergreen", label: "Vorgänge" }];
+    const items: NavItem[] = [{ path: "/evergreen", label: "Vorgänge", icon: "vorgaenge" }];
     if (hasAny(roles, EVERGREEN_EDITORS)) {
-      items.push({ path: "/evergreen/eingang", label: "Eingang" });
+      items.push({ path: "/evergreen/eingang", label: "Eingang", icon: "eingang" });
     }
     groups.push({ title: "Evergreen", items });
   }
   if (hasAny(roles, [ADMIN, AUDITOR, ...CONFIG_ROLES])) {
-    const items: NavItem[] = [{ path: "/reports", label: "Reports" }];
+    const items: NavItem[] = [{ path: "/reports", label: "Reports", icon: "reports" }];
     if (hasAny(roles, [ADMIN, AUDITOR])) {
-      items.push({ path: "/audit", label: "Audit-Log" });
+      items.push({ path: "/audit", label: "Audit-Log", icon: "audit" });
     }
     groups.push({ title: "Allgemein", items });
   }
   if (roles.includes(ADMIN)) {
-    groups.push({ title: "Verwaltung", items: [{ path: "/verwaltung", label: "Einstellungen" }] });
+    groups.push({
+      title: "Verwaltung",
+      items: [{ path: "/verwaltung", label: "Einstellungen", icon: "verwaltung" }],
+    });
   }
   return groups;
 }

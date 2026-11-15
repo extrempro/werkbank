@@ -29,4 +29,10 @@ describe("navigationFor", () => {
   it("ignoriert unbekannte Rollen", () => {
     expect(navigationFor(["Irgendwas"])).toHaveLength(1);
   });
+
+  it("gibt jedem Eintrag ein Symbol und führt Neuigkeiten nicht mehr als Menüpunkt", () => {
+    const items = allNavItems(navigationFor(["Werkbank.Admin", "Config.Reader", "Evergreen.IT"]));
+    expect(items.every((item) => item.icon.length > 0)).toBe(true);
+    expect(items.map((item) => item.label)).not.toContain("Neuigkeiten");
+  });
 });

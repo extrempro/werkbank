@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
@@ -12,6 +12,8 @@ function mockFetch(status: number, body: unknown = {}) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.localStorage.clear();
+  delete document.documentElement.dataset.theme;
 });
 
 describe("App", () => {
@@ -35,6 +37,18 @@ describe("App", () => {
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "Vorgänge" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Meine Aufgaben" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /^Neuigkeiten/ })).toHaveAttribute(
+      "href",
+      "/neuigkeiten",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Navigation einklappen" }));
+    expect(screen.getByRole("button", { name: "Navigation ausklappen" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(window.localStorage.getItem("werkbank-navigation")).toBe("eingeklappt");
+    fireEvent.click(screen.getByRole("button", { name: "Dunkle Darstellung einschalten" }));
+    expect(document.documentElement.dataset.theme).toBe("dunkel");
     expect(screen.getByText("EB")).toBeInTheDocument();
     expect(screen.getByText("Evergreen-Team")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Erika Beispiel.*Konto öffnen/ })).toHaveAttribute(

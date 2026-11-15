@@ -25,11 +25,23 @@ import { SettingDetailPage } from "../modules/m365/SettingDetailPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { hasUnseenRelease } from "../release-notes";
+import { currentTheme, saveTheme } from "../theme";
 import { navigate, usePath } from "../router";
 import { Avatar } from "./Avatar";
+import { Icon } from "./Icon";
+import { ScrollTop } from "./ScrollTop";
 import { roleLabel } from "../user";
 
 const SETTINGS_PATH = "/m365/einstellungen";
+const NAV_KEY = "werkbank-navigation";
+
+function readCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(NAV_KEY) === "eingeklappt";
+  } catch {
+    return false;
+  }
+}
 const ACCOUNT_PATH = "/konto";
 
 interface LayoutProps {
@@ -42,6 +54,8 @@ export function Layout({ me }: LayoutProps) {
   const navId = useId();
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [newsUnseen, setNewsUnseen] = useState(hasUnseenRelease);
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [theme, setTheme] = useState(currentTheme);
   const onNewsSeen = useCallback(() => setNewsUnseen(false), []);
   const taskCount = (tasks ?? []).reduce((sum, task) => sum + task.count, 0);
 
@@ -57,7 +71,34 @@ export function Layout({ me }: LayoutProps) {
       active = false;
     };
   }, [path]);
+  // Die Darstellung kann auch auf der Seite „Konto“ oder am Gerät wechseln.
+  useEffect(() => {
+    const observer = new MutationObserver(() => setTheme(currentTheme()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
   const role = roleLabel(me.roles);
+  const navClass = ["app-nav", menuOpen ? "open" : "", collapsed ? "collapsed" : ""]
+    .filter(Boolean)
+    .join(" ");
+  const onToggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      window.localStorage.setItem(NAV_KEY, next ? "eingeklappt" : "offen");
+    } catch {
+      // Speicher gesperrt: Die Wahl gilt dann nur bis zum Neuladen.
+    }
+  };
+  const onToggleTheme = () => {
+    const next = currentTheme() === "dunkel" ? "hell" : "dunkel";
+    saveTheme(next);
+    setTheme(next);
+  };
   const onSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const field = event.currentTarget.elements.namedItem("q");
@@ -224,45 +265,86 @@ export function Layout({ me }: LayoutProps) {
         </div>
       </header>
       <div className="app-body">
-        <nav
-          id={navId}
-          className={menuOpen ? "app-nav open" : "app-nav"}
-          aria-label="Hauptnavigation"
-        >
-          {groups.map((group) => (
-            <div className="nav-group" key={group.title ?? "start"}>
-              {group.title && <p className="nav-title">{group.title}</p>}
-              <ul>
-                {group.items.map((item) => (
-                  <li key={item.path}>
-                    <a
-                      href={item.path}
-                      aria-current={item.path === path ? "page" : undefined}
-                      onClick={(event) => onNavClick(event, item.path)}
-                    >
-                      <span>{item.label}</span>
-                      {badgeFor(item.path) > 0 && (
-                        <span className="nav-count">
-                          {badgeFor(item.path)}
-                          <span className="visually-hidden">
-                            {item.path === "/" ? " offene Aufgaben" : " offen"}
+        <nav id={navId} className={navClass} aria-label="Hauptnavigation">
+          <div className="nav-items">
+            {groups.map((group) => (
+              <div className="nav-group" key={group.title ?? "start"}>
+                {group.title && <p className="nav-title">{group.title}</p>}
+                <ul>
+                  {group.items.map((item) => (
+                    <li key={item.path}>
+                      <a
+                        href={item.path}
+                        title={collapsed ? item.label : undefined}
+                        aria-current={item.path === path ? "page" : undefined}
+                        onClick={(event) => onNavClick(event, item.path)}
+                      >
+                        <Icon name={item.icon} />
+                        <span className="nav-label">{item.label}</span>
+                        {badgeFor(item.path) > 0 && (
+                          <span className="nav-count">
+                            {badgeFor(item.path)}
+                            <span className="visually-hidden">
+                              {item.path === "/" ? " offene Aufgaben" : " offen"}
+                            </span>
                           </span>
-                        </span>
-                      )}
-                      {item.path === NEWS_PATH && newsUnseen && (
-                        <span className="nav-new">neu</span>
-                      )}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                        )}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="nav-foot">
+            <a
+              className="nav-tool"
+              href={NEWS_PATH}
+              title="Neuigkeiten"
+              aria-current={path === NEWS_PATH ? "page" : undefined}
+              onClick={(event) => onNavClick(event, NEWS_PATH)}
+            >
+              <Icon name="neuigkeiten" />
+              <span className="visually-hidden">Neuigkeiten</span>
+              {newsUnseen && (
+                <span className="nav-dot">
+                  <span className="visually-hidden"> – neue Version</span>
+                </span>
+              )}
+            </a>
+            <button
+              type="button"
+              className="nav-tool"
+              title={theme === "dunkel" ? "Helle Darstellung" : "Dunkle Darstellung"}
+              onClick={onToggleTheme}
+            >
+              <Icon name={theme === "dunkel" ? "hell" : "dunkel"} />
+              <span className="visually-hidden">
+                {theme === "dunkel"
+                  ? "Helle Darstellung einschalten"
+                  : "Dunkle Darstellung einschalten"}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="nav-tool nav-collapse"
+              title={collapsed ? "Navigation ausklappen" : "Navigation einklappen"}
+              aria-expanded={!collapsed}
+              aria-controls={navId}
+              onClick={onToggleCollapsed}
+            >
+              <Icon name={collapsed ? "ausklappen" : "einklappen"} />
+              <span className="visually-hidden">
+                {collapsed ? "Navigation ausklappen" : "Navigation einklappen"}
+              </span>
+            </button>
+          </div>
         </nav>
         <main id="inhalt" className="app-main" tabIndex={-1}>
           {page}
         </main>
       </div>
+      <ScrollTop />
     </div>
   );
 }

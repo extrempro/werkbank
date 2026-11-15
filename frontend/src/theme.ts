@@ -57,3 +57,8 @@ export function watchTheme(): () => void {
     window.removeEventListener("storage", update);
   };
 }
+
+/** Aktuell angezeigte Darstellung (nach Auswahl oder Gerät). */
+export function currentTheme(): "hell" | "dunkel" {
+  return document.documentElement.dataset.theme === "dunkel" ? "dunkel" : "hell";
+}

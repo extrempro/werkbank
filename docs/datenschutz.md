@@ -24,7 +24,7 @@
 | Namen in Tenant-Einstellungen (z. B. Konten in Ausnahmen von Richtlinien) | Abruf über UTCM | Überwachung der Konfiguration | solange der Verlauf aufbewahrt wird **[OFFEN]** |
 | Push-Abonnement (Endpunkt, Schlüssel) | Browser, nach Opt-in | Benachrichtigung | bis Widerruf |
 
-Keine Tracking- oder Analysedienste. Keine Cookies außer dem technisch notwendigen Session-Cookie. Die gewählte Darstellung (hell oder dunkel) liegt nur im Browser der Person (`localStorage`, Schlüssel `werkbank-darstellung`) und wird nicht an den Server übertragen. Gleiches gilt für den Vermerk, welche Version der Neuigkeiten zuletzt geöffnet wurde (`werkbank-neuigkeiten-gesehen`).
+Keine Tracking- oder Analysedienste. Keine Cookies außer dem technisch notwendigen Session-Cookie. Die gewählte Darstellung (hell oder dunkel) liegt nur im Browser der Person (`localStorage`, Schlüssel `werkbank-darstellung`) und wird nicht an den Server übertragen. Gleiches gilt für den Vermerk, welche Version der Neuigkeiten zuletzt geöffnet wurde (`werkbank-neuigkeiten-gesehen`) und für die Wahl, ob die Navigation eingeklappt ist (`werkbank-navigation`).
 
 ## 3. Rechtsgrundlage
 

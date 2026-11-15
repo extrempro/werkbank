@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.7.0] – 2026-11-15
+
+Navigation mit Symbolen, einklappbar, mit Schnellzugriffen.
+
+### Oberfläche
+
+- **Navigation mit Symbolen:** Jeder Menüpunkt hat ein Symbol. Die Leiste lässt sich auf breiten Bildschirmen einklappen; dann bleiben nur die Symbole sichtbar (Namen weiter für Screenreader und als Tooltip). Die Wahl gilt für den jeweiligen Browser
+- **Schnellzugriffe am Fuß der Navigation:** Neuigkeiten (mit Punkt, solange die aktuelle Version noch nicht geöffnet wurde) und ein Umschalter zwischen heller und dunkler Darstellung
+- **Menüpunkt „Neuigkeiten“ entfällt;** die Seite ist über den Schnellzugriff und die Seite „Konto“ erreichbar
+- **Knopf „Nach oben“** unten rechts, sobald man ein Stück nach unten gescrollt hat
+- Die Navigation bleibt beim Scrollen stehen
+
 ## [0.6.0] – 2026-11-15
 
 Verwaltung: allgemeine Einstellungen mit Mailversand und Aufbewahrungsfrist.
