@@ -69,4 +69,34 @@ describe("areasFor", () => {
     expect(id("/evergreen/7")).toBe("evergreen");
     expect(id("/verwaltung")).toBe("werkbank");
   });
+
+  it("zeigt Lizenzen und Benutzer nur mit der Rolle für den Tenant", () => {
+    const config = areasFor(["Config.Reader"]).find((area) => area.id === "m365");
+    expect(allNavItems(config?.groups ?? []).map((item) => item.label)).not.toContain("Lizenzen");
+    const tenant = areasFor(["Tenant.Reader"]).find((area) => area.id === "m365");
+    expect(tenant?.home).toBe("/m365/lizenzen");
+    expect(allNavItems(tenant?.groups ?? []).map((item) => item.label)).toEqual([
+      "Lizenzen",
+      "Benutzer",
+    ]);
+    const both = areasFor(["Config.Reader", "Tenant.Reader"]).find((area) => area.id === "m365");
+    expect(both?.home).toBe("/m365");
+    expect(both?.groups.map((group) => group.title)).toEqual(["Konfiguration", "Tenant"]);
+  });
+
+  it("führt die Kategorien der IT-Tools als eigene Einträge", () => {
+    const areas = areasFor(["Tools.User"]);
+    const tools = areas.find((area) => area.id === "it-tools");
+    const items = allNavItems(tools?.groups ?? []);
+    expect(items[0]).toMatchObject({ path: "/it-tools", label: "Alle Tools" });
+    expect(items.map((item) => item.label)).toEqual(
+      expect.arrayContaining(["Netzwerk", "Encoding", "Formatter", "Konverter", "Text"]),
+    );
+    expect(items.find((item) => item.label === "Netzwerk")?.path).toBe(
+      "/it-tools/kategorie/netzwerk",
+    );
+    // Seiten einer Kategorie und einzelne Tools gehören zum Bereich IT-Tools.
+    expect(areaForPath(areas, "/it-tools/kategorie/text")?.id).toBe("it-tools");
+    expect(areaForPath(areas, "/it-tools/chmod")?.id).toBe("it-tools");
+  });
 });

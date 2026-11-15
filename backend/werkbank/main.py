@@ -22,6 +22,7 @@ from werkbank.modules.m365_config.api import router as m365_config_router
 from werkbank.modules.m365_config.recommendations_api import router as recommendations_router
 from werkbank.modules.m365_config.search import m365_config_search
 from werkbank.modules.m365_config.tasks import m365_config_tasks
+from werkbank.modules.tenant.api import router as tenant_router
 from werkbank.security import SecurityHeadersMiddleware
 from werkbank.web import mount_frontend
 
@@ -58,6 +59,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tasks_router)
     app.include_router(m365_config_router)
     app.include_router(recommendations_router)
+    app.include_router(tenant_router)
     app.include_router(evergreen_router)
 
     @app.get("/health", include_in_schema=False)

@@ -111,7 +111,8 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Evergreen Team | `Evergreen.Team` | Rückmeldungen der Fachabteilungen und BR-Vorlagen |
 | Evergreen Betriebsrat | `Evergreen.Betriebsrat` | Stellungnahme zu vorgelegten Vorgängen |
 | Evergreen Geschäftsführung | `Evergreen.GF` | Abnahme von Vorgängen |
-| IT-Tools Nutzer | `Tools.User` | Bereich IT-Tools öffnen (Rechner, Generatoren) |
+| IT-Tools Nutzer | `Tools.User` | Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter) |
+| Tenant Leser | `Tenant.Reader` | Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen |
 
 Für alle Rollen gilt:
 - **Zulässige Mitgliedstypen:** Benutzer/Gruppen
@@ -142,6 +143,7 @@ Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wä
 | `GG-Werkbank-Evergreen-BR` | Evergreen.Betriebsrat |
 | `GG-Werkbank-Evergreen-GF` | Evergreen.GF |
 | `GG-Werkbank-Tools` | Tools.User |
+| `GG-Werkbank-Tenant` | Tenant.Reader |
 
 Dann: Unternehmensanwendungen → Werkbank → **Benutzer und Gruppen → Benutzer/Gruppe hinzufügen** → Gruppe wählen → Rolle wählen → **Zuweisen**. Für jede Gruppe wiederholen.
 
@@ -204,6 +206,7 @@ Der Collector liest die Einstellungen des Tenants über **Unified Tenant Configu
 | `AuditLog.Read.All` | „Geändert von“: Wer eine Einstellung geändert hat, steht im Entra-Audit-Log. |
 | `ServiceMessage.Read.All` | Evergreen: Meldungen aus dem Nachrichtencenter lesen. |
 | `SecurityEvents.Read.All` | Freiwillig: Empfehlungen aus Microsoft Secure Score lesen (Seite „Empfehlungen“). Erst danach in der `.env` `SECURE_SCORE_ENABLED=true` setzen; ohne die Berechtigung schlägt der Abruf fehl. |
+| `Organization.Read.All` und `User.Read.All` | Freiwillig: Lizenzen und Benutzerzahlen lesen (Seiten „Lizenzen“ und „Benutzer“). Gelesen werden gekaufte und zugewiesene Lizenzen, die Abos mit ihrem Stichtag und die **Zahl** der Konten; Namen von Personen ruft die Werkbank nicht ab. `User.Read.All` erlaubt bei Microsoft grundsätzlich das Lesen aller Benutzerprofile, eine engere Berechtigung für die reine Anzahl gibt es nicht. Erst danach in der `.env` `TENANT_MONITOR_ENABLED=true` setzen; ohne die Berechtigungen schlägt der Abruf fehl. |
 
 ### 4.2 Dienstprinzipal von UTCM einrichten
 
@@ -325,7 +328,7 @@ Dateien im Secrets-Ordner (Schritt für Schritt: [`deploy/README.md`](../deploy/
 - [ ] Zertifikat hochgeladen oder Secret erstellt (1.3)
 - [ ] Optionale Ansprüche `email`, `preferred_username`, `auth_time` (1.4)
 - [ ] Delegierte Berechtigungen und Administratorzustimmung (1.5)
-- [ ] Acht App-Rollen angelegt (1.6)
+- [ ] App-Rollen angelegt (1.6)
 - [ ] „Zuweisung erforderlich“ = Ja (1.7)
 - [ ] Gruppen angelegt und Rollen zugewiesen (1.8)
 - [ ] CA-Richtlinie `CA-Werkbank-MFA` im Modus „Nur Bericht“ (2)

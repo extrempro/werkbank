@@ -20,6 +20,7 @@ from werkbank.modules.evergreen.jobs import (
 from werkbank.modules.m365_config.ai_texts import GENERATE_AI_TEXTS, generate_ai_texts_job
 from werkbank.modules.m365_config.jobs import COLLECT, collect_job
 from werkbank.modules.m365_config.secure_score import FETCH_SECURE_SCORE, fetch_secure_score_job
+from werkbank.modules.tenant.inventory import FETCH_TENANT, fetch_inventory_job
 from werkbank.worker.jobs import JobType
 
 CLEANUP = "kern.aufraeumen"
@@ -91,5 +92,10 @@ def build_registry(settings: Settings) -> dict[str, JobType]:
             registry[FETCH_SECURE_SCORE] = JobType(
                 handler=fetch_secure_score_job,
                 interval=timedelta(hours=max(settings.secure_score_interval_hours, 1)),
+            )
+        if settings.tenant_monitor_enabled:
+            registry[FETCH_TENANT] = JobType(
+                handler=fetch_inventory_job,
+                interval=timedelta(hours=max(settings.tenant_monitor_interval_hours, 1)),
             )
     return registry

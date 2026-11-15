@@ -1,4 +1,5 @@
 import type { IconName } from "./components/Icon";
+import { CATEGORY_LABELS, TOOLS, type ToolCategory } from "./tools";
 
 export interface NavItem {
   path: string;
@@ -18,6 +19,16 @@ const AUDITOR = "Werkbank.Auditor";
 const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
 const EVERGREEN_EDITORS = ["Evergreen.IT", "Evergreen.Team"];
 const TOOLS_USER = "Tools.User";
+const TENANT_READER = "Tenant.Reader";
+
+export const TOOLS_PATH = "/it-tools";
+export const LICENSES_PATH = "/m365/lizenzen";
+export const USERS_PATH = "/m365/benutzer";
+
+/** Seite einer Kategorie der IT-Tools. */
+export function toolCategoryPath(category: string): string {
+  return `${TOOLS_PATH}/kategorie/${category}`;
+}
 const EVERGREEN_ROLES = ["Evergreen.IT", "Evergreen.Team", "Evergreen.Betriebsrat", "Evergreen.GF"];
 
 function hasAny(roles: readonly string[], wanted: readonly string[]): boolean {
@@ -66,24 +77,35 @@ export function areasFor(roles: readonly string[]): NavArea[] {
   const areas: NavArea[] = [
     { id: "werkbank", label: "Werkbank", icon: "start", home: "/", groups: general },
   ];
-  if (hasAny(roles, CONFIG_ROLES)) {
+  if (hasAny(roles, [...CONFIG_ROLES, TENANT_READER])) {
+    const groups: NavGroup[] = [];
+    if (hasAny(roles, CONFIG_ROLES)) {
+      groups.push({
+        title: "Konfiguration",
+        items: [
+          { path: "/m365", label: "Übersicht", icon: "uebersicht" },
+          { path: "/m365/aenderungen", label: "Änderungen", icon: "aenderungen" },
+          { path: "/m365/einstellungen", label: "Einstellungen", icon: "einstellungen" },
+          { path: "/m365/empfehlungen", label: "Empfehlungen", icon: "empfehlungen" },
+          { path: "/m365/snapshots", label: "Snapshots", icon: "snapshots" },
+        ],
+      });
+    }
+    if (roles.includes(TENANT_READER)) {
+      groups.push({
+        title: "Tenant",
+        items: [
+          { path: LICENSES_PATH, label: "Lizenzen", icon: "lizenzen" },
+          { path: USERS_PATH, label: "Benutzer", icon: "benutzer" },
+        ],
+      });
+    }
     areas.push({
       id: "m365",
       label: "Microsoft 365",
       icon: "m365",
-      home: "/m365",
-      groups: [
-        {
-          title: "Konfiguration",
-          items: [
-            { path: "/m365", label: "Übersicht", icon: "uebersicht" },
-            { path: "/m365/aenderungen", label: "Änderungen", icon: "aenderungen" },
-            { path: "/m365/einstellungen", label: "Einstellungen", icon: "einstellungen" },
-            { path: "/m365/empfehlungen", label: "Empfehlungen", icon: "empfehlungen" },
-            { path: "/m365/snapshots", label: "Snapshots", icon: "snapshots" },
-          ],
-        },
-      ],
+      home: hasAny(roles, CONFIG_ROLES) ? "/m365" : LICENSES_PATH,
+      groups,
     });
   }
   if (hasAny(roles, EVERGREEN_ROLES)) {
@@ -101,14 +123,25 @@ export function areasFor(roles: readonly string[]): NavArea[] {
     });
   }
   if (roles.includes(TOOLS_USER)) {
+    const categories = (Object.keys(CATEGORY_LABELS) as ToolCategory[]).filter((category) =>
+      TOOLS.some((tool) => tool.category === category),
+    );
     areas.push({
       id: "it-tools",
       label: "IT-Tools",
       icon: "werkzeuge",
-      home: "/it-tools",
-      // Ohne Überschrift: Der Bereich heißt schon so. Die Tools selbst stehen in der Übersicht.
+      home: TOOLS_PATH,
       groups: [
-        { title: null, items: [{ path: "/it-tools", label: "Alle Tools", icon: "uebersicht" }] },
+        // Ohne Überschrift: Der Bereich heißt schon so.
+        { title: null, items: [{ path: TOOLS_PATH, label: "Alle Tools", icon: "uebersicht" }] },
+        {
+          title: "Kategorien",
+          items: categories.map((category) => ({
+            path: toolCategoryPath(category),
+            label: CATEGORY_LABELS[category],
+            icon: category,
+          })),
+        },
       ],
     });
   }

@@ -9,6 +9,7 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Evergreen.GF", "Geschäftsführung"],
   ["Werkbank.Auditor", "Revision"],
   ["Config.Reader", "Lesezugriff"],
+  ["Tenant.Reader", "Tenant"],
   ["Tools.User", "IT-Tools"],
 ];
 
@@ -41,7 +42,11 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
   "Evergreen.GF": { label: "Evergreen Geschäftsführung", description: "Abnahme von Vorgängen" },
   "Tools.User": {
     label: "IT-Tools Nutzer",
-    description: "Bereich IT-Tools öffnen (Rechner, Generatoren)",
+    description: "Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter)",
+  },
+  "Tenant.Reader": {
+    label: "Tenant Leser",
+    description: "Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen",
   },
 };
 

@@ -8,7 +8,15 @@ import {
   type ReactNode,
 } from "react";
 import { fetchTasks, type Me, type Task } from "../api";
-import { allNavItems, areaForPath, areasFor, NEWS_PATH } from "../navigation";
+import {
+  allNavItems,
+  areaForPath,
+  areasFor,
+  LICENSES_PATH,
+  NEWS_PATH,
+  toolCategoryPath,
+  USERS_PATH,
+} from "../navigation";
 import { AccountPage } from "../pages/AccountPage";
 import { AdminPage } from "../pages/AdminPage";
 import { AuditPage } from "../pages/AuditPage";
@@ -25,6 +33,9 @@ import { RecommendationsPage } from "../modules/m365/RecommendationsPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { hasUnseenRelease } from "../release-notes";
+import { LicensesPage } from "../modules/tenant/LicensesPage";
+import { UsersPage } from "../modules/tenant/UsersPage";
+import { CATEGORY_LABELS, findTool, type ToolCategory } from "../tools";
 import { ToolPage, TOOLS_PATH, ToolsOverviewPage } from "../tools/ToolsPage";
 import { currentTheme, saveTheme } from "../theme";
 import { navigate, usePath } from "../router";
@@ -156,6 +167,17 @@ export function Layout({ me }: LayoutProps) {
   const toolMatch = /^\/it-tools\/([a-z0-9-]{1,40})$/.exec(path);
   const toolId = toolMatch ? (toolMatch[1] ?? null) : null;
   const toolsAllowed = items.some((item) => item.path === TOOLS_PATH);
+  const categoryMatch = /^\/it-tools\/kategorie\/([a-z]{1,20})$/.exec(path);
+  const toolCategory =
+    categoryMatch && categoryMatch[1] && categoryMatch[1] in CATEGORY_LABELS
+      ? (categoryMatch[1] as ToolCategory)
+      : null;
+  // Auf der Seite eines Tools ist in der Navigation seine Kategorie hervorgehoben.
+  const openTool = toolId !== null ? findTool(toolId) : undefined;
+  const navPath = openTool ? toolCategoryPath(openTool.category) : path;
+
+  const licenseMatch = /^\/m365\/lizenzen\/(\d{1,9})$/.exec(path);
+  const licenseId = licenseMatch ? Number(licenseMatch[1]) : null;
 
   let page: ReactNode;
   if (path === "/") {
@@ -163,7 +185,7 @@ export function Layout({ me }: LayoutProps) {
   } else if (path === ACCOUNT_PATH) {
     page = <AccountPage me={me} />;
   } else if (path === SEARCH_PATH) {
-    page = <SearchPage />;
+    page = <SearchPage roles={me.roles} />;
   } else if (path === NEWS_PATH) {
     page = <NewsPage onSeen={onNewsSeen} />;
   } else if (path === "/audit" && current) {
@@ -189,6 +211,14 @@ export function Layout({ me }: LayoutProps) {
     page = <SettingsPage me={me} selectedId={settingId} />;
   } else if (path === TOOLS_PATH && current) {
     page = <ToolsOverviewPage />;
+  } else if (toolCategory !== null && current) {
+    page = <ToolsOverviewPage key={toolCategory} category={toolCategory} />;
+  } else if (path === LICENSES_PATH && current) {
+    page = <LicensesPage />;
+  } else if (licenseId !== null && items.some((item) => item.path === LICENSES_PATH)) {
+    page = <LicensesPage selectedId={licenseId} />;
+  } else if (path === USERS_PATH && current) {
+    page = <UsersPage />;
   } else if (toolId !== null && toolsAllowed) {
     page = <ToolPage key={toolId} id={toolId} />;
   } else if (path === "/evergreen" && current) {
@@ -324,7 +354,7 @@ export function Layout({ me }: LayoutProps) {
                       <a
                         href={item.path}
                         title={collapsed ? item.label : undefined}
-                        aria-current={item.path === path ? "page" : undefined}
+                        aria-current={item.path === navPath ? "page" : undefined}
                         onClick={(event) => onNavClick(event, item.path)}
                       >
                         <Icon name={item.icon} />

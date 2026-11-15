@@ -228,6 +228,34 @@ test("IT-Tools: Konverter und Text", async ({ page }) => {
   await expectNoA11yViolations(page);
 });
 
+test("IT-Tools: Kategorien in der Navigation und Tools in der Suche", async ({ page }) => {
+  await loginAs(page, ["Tools.User"], "Tina Tools");
+  await page.goto("/it-tools");
+  await openNavigation(page);
+  const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
+  await nav.getByRole("link", { name: "Text", exact: true }).click();
+  await expect(page).toHaveURL(/\/it-tools\/kategorie\/text$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Text" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Regex-Tester" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Subnetz-Rechner" })).toHaveCount(0);
+  await expectNoA11yViolations(page);
+
+  // Auf der Seite eines Tools ist seine Kategorie hervorgehoben.
+  await page.goto("/it-tools/regex");
+  await openNavigation(page);
+  await expect(nav.getByRole("link", { name: "Text", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+
+  await page.goto("/suche?q=subnetz");
+  await expect(page.getByRole("link", { name: "Subnetz-Rechner" })).toHaveAttribute(
+    "href",
+    "/it-tools/subnetz",
+  );
+  await expectNoA11yViolations(page);
+});
+
 test("IT-Tools: ohne die Rolle gibt es den Bereich nicht", async ({ page }) => {
   await loginAs(page, ["Config.Reader"], "Lea Leser");
   await page.goto("/it-tools");

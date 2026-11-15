@@ -72,9 +72,8 @@ class UtcmClient:
     def _request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         check_graph_url(url)
         try:
-            response = self._http.request(
-                method, url, headers={"Authorization": f"Bearer {self._token()}"}, **kwargs
-            )
+            headers = {"Authorization": f"Bearer {self._token()}", **kwargs.pop("headers", {})}
+            response = self._http.request(method, url, headers=headers, **kwargs)
         except httpx.HTTPError as exc:
             raise UtcmError(f"Microsoft Graph nicht erreichbar: {type(exc).__name__}") from exc
         if response.status_code >= 400:
@@ -166,3 +165,25 @@ class UtcmClient:
             f"{GRAPH_URL}/auditLogs/directoryAudits",
             {"$filter": f"activityDateTime ge {moment}", "$top": "500"},
         )
+
+    def subscribed_skus(self) -> list[dict[str, Any]]:
+        """Lizenzen des Tenants mit gekauften und zugewiesenen Einheiten."""
+        return self._pages(f"{GRAPH_URL}/subscribedSkus", {})
+
+    def directory_subscriptions(self) -> list[dict[str, Any]]:
+        """Abos des Tenants mit Zustand und nächstem Stichtag."""
+        return self._pages(f"{GRAPH_URL}/directory/subscriptions", {})
+
+    def user_count(self, filter_text: str | None) -> int:
+        """Zahl der Konten, optional gefiltert. Liest nur die Zahl, keine Personen."""
+        params = {"$filter": filter_text} if filter_text else {}
+        response = self._request(
+            "GET",
+            f"{GRAPH_URL}/users/$count",
+            params=params,
+            headers={"ConsistencyLevel": "eventual"},
+        )
+        text = response.text.strip().lstrip("\ufeff")
+        if not text.isdigit() or len(text) > 12:
+            raise UtcmError("Unerwartete Antwort von Microsoft Graph (Anzahl)")
+        return int(text)

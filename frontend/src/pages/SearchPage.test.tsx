@@ -38,6 +38,21 @@ function stubFetch(result: unknown[]) {
 }
 
 describe("SearchPage", () => {
+  it("zeigt mit der Rolle für IT-Tools auch passende Tools, ohne sie nicht", async () => {
+    window.history.replaceState(null, "", searchUrl("subnetz"));
+    stubFetch([]);
+    const { unmount } = render(<SearchPage roles={["Tools.User"]} />);
+    expect(await screen.findByRole("link", { name: "Subnetz-Rechner" })).toHaveAttribute(
+      "href",
+      "/it-tools/subnetz",
+    );
+    expect(screen.getAllByText("Tool · Netzwerk").length).toBeGreaterThan(0);
+    unmount();
+    render(<SearchPage roles={["Config.Reader"]} />);
+    expect(await screen.findByText("Keine Treffer für „subnetz“.")).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Subnetz-Rechner" })).toBeNull();
+  });
+
   it("sucht nach dem Begriff aus der Adresse und zeigt Treffer mit Modul", async () => {
     window.history.replaceState(null, "", searchUrl("MFA"));
     const urls = stubFetch(hits);
