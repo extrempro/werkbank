@@ -18,8 +18,7 @@ function moduleClass(module: string): string {
 }
 
 type State =
-  | { status: "idle" | "loading" | "error" }
-  | { status: "ready"; query: string; hits: SearchHit[] };
+  { status: "idle" | "loading" | "error" } | { status: "ready"; query: string; hits: SearchHit[] };
 
 /** Suche über Einstellungen, Änderungen und Vorgänge. */
 export function SearchPage() {
@@ -91,7 +90,9 @@ export function SearchPage() {
             Suchen
           </button>
         </div>
-        <p className="small">Mindestens {MIN_LENGTH} Zeichen, z. B. ein Name, ein Pfad oder EV-2026-014.</p>
+        <p className="small">
+          Mindestens {MIN_LENGTH} Zeichen, z. B. ein Name, ein Pfad oder EV-2026-014.
+        </p>
       </form>
 
       {loading && <p role="status">Wird gesucht …</p>}
