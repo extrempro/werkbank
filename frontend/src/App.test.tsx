@@ -35,7 +35,12 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ }),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "Vorgänge" })).toBeInTheDocument();
+    // Auf der Startseite zeigt die Navigation den allgemeinen Bereich; M365 ist ein eigener.
+    expect(screen.getByRole("link", { name: "Microsoft 365" })).toHaveAttribute(
+      "href",
+      "/evergreen",
+    );
+    expect(screen.getByRole("link", { name: "Werkbank" })).toHaveAttribute("aria-current", "true");
     expect(screen.getByRole("link", { name: "Meine Aufgaben" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: /^Neuigkeiten/ })).toHaveAttribute(
       "href",

@@ -17,9 +17,11 @@ test("Admin sieht alle Bereiche", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ })).toBeVisible();
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
   await openNavigation(page);
+  await expect(nav.getByRole("link", { name: "Audit-Log" })).toBeVisible();
+  await nav.getByRole("link", { name: /^Microsoft 365/ }).click();
+  await openNavigation(page);
   await expect(nav.getByRole("link", { name: "Änderungen" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
-  await expect(nav.getByRole("link", { name: "Audit-Log" })).toBeVisible();
   await expectNoA11yViolations(page);
 });
 
@@ -28,9 +30,12 @@ test("Betriebsrat sieht nur Start und Evergreen", async ({ page }) => {
   await page.goto("/");
   await openNavigation(page);
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
-  await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
-  await expect(nav.getByText("M365-Konfiguration")).toHaveCount(0);
   await expect(nav.getByText("Verwaltung")).toHaveCount(0);
+  await nav.getByRole("link", { name: /^Microsoft 365/ }).click();
+  await expect(page).toHaveURL(/\/evergreen$/);
+  await openNavigation(page);
+  await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
+  await expect(nav.getByText("Konfiguration")).toHaveCount(0);
 });
 
 test("Abmelden führt zur Login-Seite", async ({ page }) => {

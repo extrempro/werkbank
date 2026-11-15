@@ -15,6 +15,8 @@ test("Navigation lässt sich einklappen und merkt sich das", async ({ page }, te
 
   // Eingeklappt bleiben die Einträge bedienbar und behalten ihren Namen.
   await expectNoA11yViolations(page);
+  await nav.getByRole("link", { name: "Microsoft 365" }).click();
+  await expect(page).toHaveURL(/\/m365$/);
   await nav.getByRole("link", { name: "Vorgänge" }).click();
   await expect(page).toHaveURL(/\/evergreen$/);
 
@@ -35,4 +37,32 @@ test("Umschalter in der Navigation wechselt zwischen hell und dunkel", async ({ 
   await nav.getByRole("button", { name: "Helle Darstellung einschalten" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "hell");
   await expect(nav.getByRole("link", { name: "Neuigkeiten" })).toHaveCount(1);
+});
+
+test("Bereiche: Die Navigation zeigt nur die Seiten des gewählten Bereichs", async ({ page }) => {
+  await loginAs(page, ["Werkbank.Admin", "Config.Reviewer", "Evergreen.IT"], "Nina Navi");
+  await page.goto("/");
+  await openNavigation(page);
+  const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
+  const general = nav.getByRole("link", { name: "Werkbank", exact: true });
+  const m365 = nav.getByRole("link", { name: /^Microsoft 365/ });
+  await expect(general).toHaveAttribute("aria-current", "true");
+  await expect(nav.getByRole("link", { name: "Audit-Log" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Änderungen" })).toHaveCount(0);
+
+  await m365.click();
+  await expect(page).toHaveURL(/\/m365$/);
+  await openNavigation(page);
+  await expect(m365).toHaveAttribute("aria-current", "true");
+  await expect(nav.getByRole("link", { name: "Änderungen" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Audit-Log" })).toHaveCount(0);
+  await expectNoA11yViolations(page);
+
+  // Eine Seite des Bereichs direkt aufrufen: Der Bereich ist gleich der richtige.
+  await page.goto("/evergreen");
+  await openNavigation(page);
+  await expect(m365).toHaveAttribute("aria-current", "true");
+  await general.click();
+  await expect(page).toHaveURL(/\/$/);
 });
