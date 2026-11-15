@@ -252,7 +252,12 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                 <div className="actions budget-actions">
                   {draft ? (
                     <>
-                      <button key="speichern" type="submit" className="button button-primary" disabled={busy}>
+                      <button
+                        key="speichern"
+                        type="submit"
+                        className="button button-primary"
+                        disabled={busy}
+                      >
                         Plan speichern
                       </button>
                       <button
