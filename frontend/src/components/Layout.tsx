@@ -13,6 +13,8 @@ import {
   areaForPath,
   areasFor,
   BUDGET_ACCOUNTS_PATH,
+  BUDGET_CONTRACTS_PATH,
+  BUDGET_PARTNERS_PATH,
   BUDGET_PATH,
   BUDGET_SETTINGS_PATH,
   CREDENTIALS_PATH,
@@ -40,6 +42,8 @@ import { hasUnseenRelease } from "../release-notes";
 import { AccountsPage } from "../modules/budget/AccountsPage";
 import { BudgetOverviewPage } from "../modules/budget/BudgetOverviewPage";
 import { BudgetSettingsPage } from "../modules/budget/BudgetSettingsPage";
+import { ContractsPage } from "../modules/budget/ContractsPage";
+import { PartnersPage } from "../modules/budget/PartnersPage";
 import { CredentialsPage } from "../modules/tenant/CredentialsPage";
 import { LicensesPage } from "../modules/tenant/LicensesPage";
 import { UsersPage } from "../modules/tenant/UsersPage";
@@ -233,6 +237,10 @@ export function Layout({ me }: LayoutProps) {
     page = <BudgetOverviewPage roles={me.roles} />;
   } else if (path === BUDGET_ACCOUNTS_PATH && current) {
     page = <AccountsPage roles={me.roles} />;
+  } else if (path === BUDGET_CONTRACTS_PATH && current) {
+    page = <ContractsPage roles={me.roles} />;
+  } else if (path === BUDGET_PARTNERS_PATH && current) {
+    page = <PartnersPage roles={me.roles} />;
   } else if (path === BUDGET_SETTINGS_PATH && current) {
     page = <BudgetSettingsPage />;
   } else if (toolId !== null && toolsAllowed) {

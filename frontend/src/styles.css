@@ -3809,3 +3809,214 @@ p.badges {
 .budget-actions {
   margin-top: 12px;
 }
+
+/* IT-Budget: Aufbau nach dem Entwurf (Karten, Balken, Listen) in den Farben der Werkbank */
+
+.budget-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.budget-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.budget-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+}
+
+.budget-card dt {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--farbe-text-leise);
+}
+
+.budget-card dd {
+  margin: 0;
+}
+
+.budget-card-value {
+  font-size: 1.625rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-card-sub {
+  font-size: 0.8125rem;
+  color: var(--farbe-text-leise);
+}
+
+.budget-ok {
+  color: var(--farbe-ok-text);
+  font-weight: 600;
+}
+
+.budget-bad {
+  color: var(--farbe-bad-text);
+  font-weight: 600;
+}
+
+.budget-muted {
+  color: var(--farbe-text-leise);
+}
+
+.budget-columns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.budget-main {
+  flex: 3 1 460px;
+  min-width: 0;
+}
+
+.budget-side {
+  flex: 2 1 340px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.budget-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.budget-section h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.budget-section p {
+  margin: 0;
+}
+
+.budget-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.budget-legend {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.75rem;
+  color: var(--farbe-text-leise);
+}
+
+.budget-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.budget-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.budget-dot-bound {
+  background: var(--chart-1);
+}
+
+.budget-dot-over {
+  background: var(--farbe-bad-text);
+}
+
+.budget-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.budget-bar-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.875rem;
+}
+
+.budget-track {
+  display: block;
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+}
+
+.budget-track-bg {
+  fill: var(--farbe-neutral-flaeche);
+}
+
+.budget-fill {
+  fill: var(--chart-1);
+}
+
+.budget-fill-over {
+  fill: var(--farbe-bad-text);
+}
+
+.budget-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.budget-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.budget-list-start li {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.budget-line {
+  display: block;
+  font-size: 0.8125rem;
+}
+
+.budget-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.budget-table thead th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--farbe-text-leise);
+  white-space: nowrap;
+}

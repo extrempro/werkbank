@@ -12,7 +12,21 @@ from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, require_roles
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
-from werkbank.modules.budget.models import BudgetAccount, BudgetPlan
+from werkbank.modules.budget.contracts import (
+    INTERVALS,
+    NOTICE_WARN_DAYS,
+    expected_cents,
+    is_running,
+    notice_deadline,
+    term_end,
+    yearly_cents,
+)
+from werkbank.modules.budget.models import (
+    BudgetAccount,
+    BudgetContract,
+    BudgetPartner,
+    BudgetPlan,
+)
 from werkbank.modules.budget.settings import (
     SETTINGS_KEY,
     YEAR_MAX,
@@ -115,6 +129,8 @@ class OverviewRow(BaseModel):
     # Geplanter Betrag brutto in Cent; None: für dieses Jahr ist nichts geplant
     plan_cents: int | None
     previous_cents: int | None
+    # Erwartete Kosten aus Verträgen in diesem Geschäftsjahr
+    committed_cents: int
 
 
 class Totals(BaseModel):
@@ -138,6 +154,9 @@ class OverviewOut(BaseModel):
     rows: list[OverviewRow]
     plan: Totals
     previous: Totals
+    committed: Totals
+    # Zahl der Verträge, aus denen in diesem Jahr Kosten zu erwarten sind
+    committed_contracts: int
 
 
 class PlanEntryIn(BaseModel):
@@ -303,21 +322,34 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
     out = settings_out(settings)
     plans = _plans(db, year)
     previous = _plans(db, year - 1)
+    first_day, last_day = fiscal_year_range(year, settings.start_month)
+    committed: dict[int, int] = {}
+    contract_count = 0
+    for contract in db.scalars(select(BudgetContract)).all():
+        cents = expected_cents(contract, first_day, last_day)
+        if cents:
+            contract_count += 1
+            committed[contract.account_id] = committed.get(contract.account_id, 0) + cents
     rows = []
     for account in _accounts(db):
         plan = plans.get(account.id)
         before = previous.get(account.id)
-        # Stillgelegte Konten erscheinen nur, solange für sie etwas geplant ist oder war.
-        if not account.active and plan is None and before is None:
+        bound = committed.get(account.id, 0)
+        # Stillgelegte Konten erscheinen nur, solange für sie etwas geplant oder gebunden ist.
+        if not account.active and plan is None and before is None and not bound:
             continue
         rows.append(
-            OverviewRow(account=account_out(account), plan_cents=plan, previous_cents=before)
+            OverviewRow(
+                account=account_out(account),
+                plan_cents=plan,
+                previous_cents=before,
+                committed_cents=bound,
+            )
         )
     planned_years = set(db.scalars(select(BudgetPlan.fiscal_year).distinct()).all())
     years = sorted(
         {*planned_years, *range(out.current_year - 5, out.current_year + 2), year}, reverse=True
     )
-    first_day, last_day = fiscal_year_range(year, settings.start_month)
     return OverviewOut(
         settings=out,
         year=year,
@@ -332,6 +364,8 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
         rows=rows,
         plan=_totals([(row.account.kind, row.plan_cents) for row in rows]),
         previous=_totals([(row.account.kind, row.previous_cents) for row in rows]),
+        committed=_totals([(row.account.kind, row.committed_cents) for row in rows]),
+        committed_contracts=contract_count,
     )
 
 
@@ -396,3 +430,411 @@ def update_plan(
         )
     db.commit()
     return _overview(db, year)
+
+
+# --- Partner ---
+
+PartnerId = Annotated[int, Path(ge=1)]
+ContractId = Annotated[int, Path(ge=1)]
+
+
+class PartnerOut(BaseModel):
+    id: int
+    name: str
+    is_contract_partner: bool
+    is_invoicer: bool
+    customer_number: str
+    note: str
+    active: bool
+
+
+class PartnerIn(BaseModel):
+    name: str = Field(min_length=1, max_length=160)
+    is_contract_partner: bool = True
+    is_invoicer: bool = True
+    customer_number: str = Field(default="", max_length=60)
+    note: str = Field(default="", max_length=500)
+    active: bool = True
+
+    @field_validator("name", "customer_number", "note")
+    @classmethod
+    def plain(cls, value: str) -> str:
+        return _single_line(value)
+
+    @field_validator("name")
+    @classmethod
+    def not_empty(cls, value: str) -> str:
+        if not value:
+            raise ValueError("Darf nicht leer sein")
+        return value
+
+
+def partner_out(row: BudgetPartner) -> PartnerOut:
+    return PartnerOut(
+        id=row.id,
+        name=row.name,
+        is_contract_partner=row.is_contract_partner,
+        is_invoicer=row.is_invoicer,
+        customer_number=row.customer_number,
+        note=row.note,
+        active=row.active,
+    )
+
+
+def _partner_taken(db: DbDep, name: str, own_id: int | None) -> bool:
+    other = db.scalars(
+        select(BudgetPartner).where(func.lower(BudgetPartner.name) == name.lower())
+    ).first()
+    return other is not None and other.id != own_id
+
+
+def _check_partner(body: PartnerIn) -> None:
+    if not (body.is_contract_partner or body.is_invoicer):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Ein Partner ist Vertragspartner, Rechnungssteller oder beides.",
+        )
+
+
+def _apply_partner(row: BudgetPartner, body: PartnerIn) -> None:
+    row.name = body.name
+    row.is_contract_partner = body.is_contract_partner
+    row.is_invoicer = body.is_invoicer
+    row.customer_number = body.customer_number
+    row.note = body.note
+    row.active = body.active
+
+
+@router.get("/partners")
+def list_partners(user: Reader, db: DbDep) -> list[PartnerOut]:
+    rows = db.scalars(select(BudgetPartner)).all()
+    return [partner_out(row) for row in sorted(rows, key=lambda row: (row.name.lower(), row.id))]
+
+
+@router.post("/partners", status_code=status.HTTP_201_CREATED)
+def create_partner(request: Request, body: PartnerIn, user: Editor, db: DbDep) -> PartnerOut:
+    _check_partner(body)
+    if _partner_taken(db, body.name, None):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Diesen Partner gibt es schon."
+        )
+    row = BudgetPartner()
+    _apply_partner(row, body)
+    db.add(row)
+    db.flush()
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.partner_angelegt",
+        user_id=user.user_id,
+        object_type="partner",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"name": body.name},
+    )
+    db.commit()
+    return partner_out(row)
+
+
+@router.put("/partners/{partner_id}")
+def update_partner(
+    request: Request, partner_id: PartnerId, body: PartnerIn, user: Editor, db: DbDep
+) -> PartnerOut:
+    row: BudgetPartner | None = db.get(BudgetPartner, partner_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    _check_partner(body)
+    if _partner_taken(db, body.name, row.id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Diesen Partner gibt es schon."
+        )
+    before = {"name": row.name, "active": row.active}
+    _apply_partner(row, body)
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.partner_geaendert",
+        user_id=user.user_id,
+        object_type="partner",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"vorher": before, "nachher": {"name": body.name, "active": body.active}},
+    )
+    db.commit()
+    return partner_out(row)
+
+
+# --- Verträge ---
+
+DATE_MIN = date(YEAR_MIN, 1, 1)
+DATE_MAX = date(YEAR_MAX, 12, 31)
+
+
+class ContractOut(BaseModel):
+    id: int
+    title: str
+    partner_id: int
+    partner_name: str
+    account_id: int
+    account_number: str
+    account_name: str
+    # Rechnungssteller, wenn er vom Vertragspartner abweicht
+    invoicer_id: int | None
+    invoicer_name: str | None
+    dpa_status: str
+    # Kosten eines vollen Jahres; None bei einmaliger Zahlung
+    yearly_cents: int | None
+    number: str
+    starts_on: date
+    ends_on: date | None
+    renewal_months: int | None
+    notice_months: int | None
+    cancelled_to: date | None
+    amount_cents: int
+    interval: str
+    note: str
+    # Hat begonnen oder beginnt noch und ist nicht beendet
+    running: bool
+    # Ende der laufenden Laufzeit (bei Verlängerung das nächste)
+    term_end: date | None
+    # Bis zu diesem Tag muss gekündigt sein; None: kein Termin
+    notice_deadline: date | None
+    days_to_deadline: int | None
+    # Der Kündigungstermin liegt in den nächsten Wochen
+    deadline_soon: bool
+    # Erwartete Kosten im laufenden Geschäftsjahr
+    current_year_cents: int
+
+
+class ContractListOut(BaseModel):
+    current_year_name: str
+    notice_warn_days: int
+    entries: list[ContractOut]
+
+
+class ContractIn(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    partner_id: int = Field(ge=1)
+    account_id: int = Field(ge=1)
+    invoicer_id: int | None = Field(default=None, ge=1)
+    dpa_status: Literal["vorhanden", "fehlt", "nicht_erforderlich"] = "nicht_erforderlich"
+    number: str = Field(default="", max_length=60)
+    starts_on: date
+    ends_on: date | None = None
+    renewal_months: int | None = Field(default=None, ge=1, le=120)
+    notice_months: int | None = Field(default=None, ge=0, le=120)
+    cancelled_to: date | None = None
+    amount_cents: int = Field(ge=0, le=AMOUNT_MAX)
+    interval: str
+    note: str = Field(default="", max_length=500)
+
+    @field_validator("title", "number", "note")
+    @classmethod
+    def plain(cls, value: str) -> str:
+        return _single_line(value)
+
+    @field_validator("title")
+    @classmethod
+    def not_empty(cls, value: str) -> str:
+        if not value:
+            raise ValueError("Darf nicht leer sein")
+        return value
+
+    @field_validator("interval")
+    @classmethod
+    def known_interval(cls, value: str) -> str:
+        if value not in INTERVALS:
+            raise ValueError("Unbekannter Turnus")
+        return value
+
+    @field_validator("starts_on", "ends_on", "cancelled_to")
+    @classmethod
+    def in_range(cls, value: date | None) -> date | None:
+        if value is not None and not DATE_MIN <= value <= DATE_MAX:
+            raise ValueError("Das Datum liegt außerhalb des erlaubten Bereichs")
+        return value
+
+
+def contract_out(
+    row: BudgetContract,
+    partners: dict[int, BudgetPartner],
+    accounts: dict[int, BudgetAccount],
+    today: date,
+    year_range: tuple[date, date],
+) -> ContractOut:
+    deadline = notice_deadline(row, today)
+    days = (deadline - today).days if deadline is not None else None
+    partner = partners.get(row.partner_id)
+    account = accounts.get(row.account_id)
+    invoicer = partners.get(row.invoicer_id) if row.invoicer_id is not None else None
+    running = is_running(row, today)
+    return ContractOut(
+        id=row.id,
+        title=row.title,
+        partner_id=row.partner_id,
+        partner_name=partner.name if partner else "",
+        account_id=row.account_id,
+        account_number=account.number if account else "",
+        account_name=account.name if account else "",
+        invoicer_id=row.invoicer_id,
+        invoicer_name=invoicer.name if invoicer else None,
+        dpa_status=row.dpa_status,
+        yearly_cents=yearly_cents(row),
+        number=row.number,
+        starts_on=row.starts_on,
+        ends_on=row.ends_on,
+        renewal_months=row.renewal_months,
+        notice_months=row.notice_months,
+        cancelled_to=row.cancelled_to,
+        amount_cents=row.amount_cents,
+        interval=row.interval,
+        note=row.note,
+        running=running,
+        term_end=term_end(row, today),
+        notice_deadline=deadline,
+        days_to_deadline=days,
+        deadline_soon=running and days is not None and 0 <= days <= NOTICE_WARN_DAYS,
+        current_year_cents=expected_cents(row, *year_range),
+    )
+
+
+def _contract_context(
+    db: DbDep,
+) -> tuple[dict[int, BudgetPartner], dict[int, BudgetAccount], date, tuple[date, date], str]:
+    settings = load_settings(db)
+    today = now_utc().date()
+    year = fiscal_year_of(today, settings.start_month)
+    return (
+        {row.id: row for row in db.scalars(select(BudgetPartner)).all()},
+        {row.id: row for row in db.scalars(select(BudgetAccount)).all()},
+        today,
+        fiscal_year_range(year, settings.start_month),
+        fiscal_year_name(year, settings.start_month),
+    )
+
+
+def _one_contract(db: DbDep, row: BudgetContract) -> ContractOut:
+    partners, accounts, today, year_range, _ = _contract_context(db)
+    return contract_out(row, partners, accounts, today, year_range)
+
+
+def _check_contract(db: DbDep, body: ContractIn) -> None:
+    problem: str | None = None
+    if db.get(BudgetPartner, body.partner_id) is None:
+        problem = "Den Partner gibt es nicht."
+    elif db.get(BudgetAccount, body.account_id) is None:
+        problem = "Das Konto gibt es nicht."
+    elif body.invoicer_id is not None and db.get(BudgetPartner, body.invoicer_id) is None:
+        problem = "Den Rechnungssteller gibt es nicht."
+    elif body.ends_on is not None and body.ends_on < body.starts_on:
+        problem = "Das Ende der Laufzeit liegt vor dem Beginn."
+    elif body.cancelled_to is not None and body.cancelled_to < body.starts_on:
+        problem = "Der Kündigungstag liegt vor dem Beginn."
+    elif body.ends_on is None and body.renewal_months is not None:
+        problem = "Eine Verlängerung gibt es nur bei einem Ende der Laufzeit."
+    if problem:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=problem)
+
+
+def _apply_contract(row: BudgetContract, body: ContractIn) -> None:
+    row.title = body.title
+    row.partner_id = body.partner_id
+    row.account_id = body.account_id
+    # Derselbe Partner als Rechnungssteller ist keine Abweichung.
+    row.invoicer_id = body.invoicer_id if body.invoicer_id != body.partner_id else None
+    row.dpa_status = body.dpa_status
+    row.number = body.number
+    row.starts_on = body.starts_on
+    row.ends_on = body.ends_on
+    row.renewal_months = body.renewal_months
+    row.notice_months = body.notice_months
+    row.cancelled_to = body.cancelled_to
+    row.amount_cents = body.amount_cents
+    row.interval = body.interval
+    row.note = body.note
+
+
+def _contract_details(body: ContractIn) -> dict[str, object]:
+    return {
+        "title": body.title,
+        "partner_id": body.partner_id,
+        "account_id": body.account_id,
+        "amount_cents": body.amount_cents,
+        "interval": body.interval,
+        "starts_on": body.starts_on.isoformat(),
+        "ends_on": body.ends_on.isoformat() if body.ends_on else None,
+        "cancelled_to": body.cancelled_to.isoformat() if body.cancelled_to else None,
+    }
+
+
+@router.get("/contracts")
+def list_contracts(user: Reader, db: DbDep) -> ContractListOut:
+    partners, accounts, today, year_range, year_name = _contract_context(db)
+    entries = [
+        contract_out(row, partners, accounts, today, year_range)
+        for row in db.scalars(select(BudgetContract)).all()
+    ]
+    # Laufende zuerst, darin der nächste Kündigungstermin oben.
+    entries.sort(
+        key=lambda entry: (
+            not entry.running,
+            entry.notice_deadline is None,
+            entry.notice_deadline or DATE_MAX,
+            entry.title.lower(),
+            entry.id,
+        )
+    )
+    return ContractListOut(
+        current_year_name=year_name, notice_warn_days=NOTICE_WARN_DAYS, entries=entries
+    )
+
+
+@router.post("/contracts", status_code=status.HTTP_201_CREATED)
+def create_contract(request: Request, body: ContractIn, user: Editor, db: DbDep) -> ContractOut:
+    _check_contract(db, body)
+    row = BudgetContract()
+    _apply_contract(row, body)
+    db.add(row)
+    db.flush()
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.vertrag_angelegt",
+        user_id=user.user_id,
+        object_type="vertrag",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details=_contract_details(body),
+    )
+    db.commit()
+    return _one_contract(db, row)
+
+
+@router.put("/contracts/{contract_id}")
+def update_contract(
+    request: Request, contract_id: ContractId, body: ContractIn, user: Editor, db: DbDep
+) -> ContractOut:
+    row: BudgetContract | None = db.get(BudgetContract, contract_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    _check_contract(db, body)
+    before = {
+        "title": row.title,
+        "amount_cents": row.amount_cents,
+        "interval": row.interval,
+        "ends_on": row.ends_on.isoformat() if row.ends_on else None,
+        "cancelled_to": row.cancelled_to.isoformat() if row.cancelled_to else None,
+    }
+    _apply_contract(row, body)
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.vertrag_geaendert",
+        user_id=user.user_id,
+        object_type="vertrag",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"vorher": before, "nachher": _contract_details(body)},
+    )
+    db.commit()
+    return _one_contract(db, row)

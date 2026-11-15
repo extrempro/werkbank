@@ -15,6 +15,7 @@ from werkbank.core.search import router as search_router
 from werkbank.core.tasks import router as tasks_router
 from werkbank.db import database_ready
 from werkbank.modules.budget.api import router as budget_router
+from werkbank.modules.budget.tasks import budget_tasks
 from werkbank.modules.evergreen.api import router as evergreen_router
 from werkbank.modules.evergreen.search import evergreen_search
 from werkbank.modules.evergreen.tasks import evergreen_tasks
@@ -45,7 +46,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
     # Module, die Aufgaben für die Startseite melden
-    app.state.task_providers = [m365_config_tasks, evergreen_tasks, tenant_tasks]
+    app.state.task_providers = [
+        m365_config_tasks,
+        evergreen_tasks,
+        tenant_tasks,
+        budget_tasks,
+    ]
     # Module, die Treffer für die Suche liefern
     app.state.search_providers = [m365_config_search, evergreen_search]
     # Reihenfolge: zuletzt hinzugefügt = äußerste Schicht. Sicherheits-Header immer setzen.
