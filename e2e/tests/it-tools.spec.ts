@@ -77,7 +77,9 @@ test("IT-Tools: weitere Netzwerk-Tools", async ({ page }) => {
   await expectNoA11yViolations(page);
 
   await page.goto("/it-tools/netze-zusammenfassen");
-  await page.getByLabel(/^Netze, Adressen oder Bereiche/).fill("192.168.0.0/24\n192.168.1.0/24");
+  await page
+    .getByRole("textbox", { name: /^Netze, Adressen oder Bereiche/ })
+    .fill("192.168.0.0/24\n192.168.1.0/24");
   await expect(page.getByLabel("Zusammengefasst (IPv4)", { exact: true })).toHaveText(
     "192.168.0.0/23",
   );
@@ -97,7 +99,7 @@ test("IT-Tools: weitere Netzwerk-Tools", async ({ page }) => {
     }
   });
   await page.goto("/it-tools/mac-adressen");
-  await page.getByLabel(/^MAC-Adressen/).fill("00-00-00-AB-CD-EF");
+  await page.getByRole("textbox", { name: /^MAC-Adressen/ }).fill("00-00-00-AB-CD-EF");
   await expect(page.getByText("Xerox Corporation")).toBeVisible({ timeout: 15000 });
   expect(foreign).toEqual([]);
   expect(page.url()).not.toContain("AB");
