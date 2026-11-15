@@ -53,6 +53,16 @@ export interface Setting {
   open_changes?: number;
   /** Der Soll-Wert stammt aus einem Evergreen-Vorgang. */
   from_evergreen?: boolean;
+  /** Angezeigt wird ein KI-Text, den noch niemand geprüft hat. */
+  ai_unreviewed?: boolean;
+}
+
+/** KI-Text für diese Art von Einstellung. */
+export interface AiText {
+  text: string;
+  state: "ungeprueft" | "geprueft";
+  model: string;
+  generated_at: string;
 }
 
 export interface Meta {
@@ -115,6 +125,7 @@ export interface Change {
 export interface SettingDetail {
   setting: Setting;
   meta: Meta;
+  ai_text?: AiText | null;
   meta_history: MetaHistoryEntry[];
   versions: Version[];
   changes: Change[];
@@ -168,6 +179,14 @@ export function fetchSettings(
 
 export function fetchSetting(id: number): Promise<SettingDetail> {
   return getJson(`${BASE}/settings/${id}`);
+}
+
+/** Gibt den KI-Text frei oder verwirft ihn; gilt für alle Einstellungen derselben Art. */
+export function reviewAiText(
+  id: number,
+  action: "freigeben" | "verwerfen",
+): Promise<AiText | null> {
+  return postJson(`${BASE}/settings/${id}/ai-text`, { action });
 }
 
 export function updateMeta(id: number, update: MetaUpdate): Promise<Meta> {

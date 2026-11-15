@@ -9,6 +9,7 @@ import {
   type AdminSettings,
   type RoleInfo,
 } from "../api";
+import { AiSettings } from "./AiSettings";
 import { BrandingSettings } from "./BrandingSettings";
 import { GeneralSettings } from "./GeneralSettings";
 
@@ -65,6 +66,7 @@ export function AdminPage() {
           <h2 id="allgemein-titel">Allgemein</h2>
           <BrandingSettings />
           <GeneralSettings settings={general} onChange={setGeneral} />
+          {general.ai && <AiSettings ai={general.ai} onChange={setGeneral} />}
         </section>
       )}
 

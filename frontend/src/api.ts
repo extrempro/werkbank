@@ -212,8 +212,30 @@ export interface SmtpSettings {
   password_storage_available: boolean;
 }
 
+export interface AiSettings {
+  enabled: boolean;
+  base_url: string;
+  model: string;
+  texts_per_hour: number;
+  texts_per_hour_min: number;
+  texts_per_hour_max: number;
+  api_key_set: boolean;
+  key_storage_available: boolean;
+}
+
+export interface AiUpdate {
+  enabled: boolean;
+  base_url: string;
+  model: string;
+  texts_per_hour: number;
+  /** Weglassen: Schlüssel bleibt. Leerer Text: Schlüssel löschen. */
+  api_key?: string;
+}
+
 export interface AdminSettings {
   smtp: SmtpSettings;
+  /** Fehlt bei älteren Servern. */
+  ai?: AiSettings;
   audit_retention_days: number;
   audit_retention_min: number;
   audit_retention_max: number;
@@ -244,6 +266,14 @@ export function sendTestMail(): Promise<{ recipient: string }> {
 
 export function saveAuditRetention(days: number): Promise<AdminSettings> {
   return putJson("/api/admin/settings/audit-retention", { days });
+}
+
+export function saveAiSettings(update: AiUpdate): Promise<AdminSettings> {
+  return putJson("/api/admin/settings/ai", update);
+}
+
+export function testAiConnection(): Promise<{ model: string }> {
+  return postJson("/api/admin/settings/ai/test");
 }
 
 // --- Verwaltung: Branding ----------------------------------------------------------------

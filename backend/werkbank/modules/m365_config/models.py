@@ -5,7 +5,17 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func, text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -145,3 +155,35 @@ class CfgSettingMetaHistory(Base):
     new_value: Mapped[Any | None] = mapped_column(JSONB(none_as_null=True))
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AiTextState(StrEnum):
+    UNREVIEWED = "ungeprueft"
+    APPROVED = "geprueft"
+    DISMISSED = "verworfen"
+    # Das Modell kannte die Einstellung nicht; es gibt keinen Text und keinen neuen Versuch.
+    UNKNOWN = "unbekannt"
+
+
+class CfgAiText(Base):
+    """KI-Text für eine Art von Einstellung (spec.md 6.9).
+
+    Ein Text gilt für alle Einstellungen mit demselben Dienst, Bereich und derselben Eigenschaft,
+    weil an den Anbieter nur diese drei Angaben gehen (nie Werte oder Namen aus dem Tenant).
+    """
+
+    __tablename__ = "cfg_ai_texts"
+    __table_args__ = (UniqueConstraint("workload", "area", "property"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    workload: Mapped[str] = mapped_column(String(64))
+    area: Mapped[str] = mapped_column(String(128))
+    property: Mapped[str] = mapped_column(String(256))
+    text: Mapped[str | None] = mapped_column(Text)
+    state: Mapped[str] = mapped_column(String(16))
+    model: Mapped[str] = mapped_column(String(100))
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
