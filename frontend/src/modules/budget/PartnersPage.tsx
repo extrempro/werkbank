@@ -57,12 +57,7 @@ function PartnerForm({ partner, onSaved, onCancel }: FormProps) {
   };
 
   return (
-    <section
-      className="panel"
-      aria-labelledby="partner-formular-titel"
-      ref={reveal}
-      tabIndex={-1}
-    >
+    <section className="panel" aria-labelledby="partner-formular-titel" ref={reveal} tabIndex={-1}>
       <div className="panel-head">
         <h2 id="partner-formular-titel">
           {partner ? `${partner.name} bearbeiten` : "Partner anlegen"}

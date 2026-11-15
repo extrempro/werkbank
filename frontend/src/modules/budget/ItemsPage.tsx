@@ -62,12 +62,7 @@ function ItemForm({ item, accounts, onSaved, onCancel }: FormProps) {
   };
 
   return (
-    <section
-      className="panel"
-      aria-labelledby="posten-formular-titel"
-      ref={reveal}
-      tabIndex={-1}
-    >
+    <section className="panel" aria-labelledby="posten-formular-titel" ref={reveal} tabIndex={-1}>
       <div className="panel-head">
         <h2 id="posten-formular-titel">
           {item ? `${item.name} bearbeiten` : "Budgetposten anlegen"}

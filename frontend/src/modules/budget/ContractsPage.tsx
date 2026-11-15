@@ -141,12 +141,7 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
   };
 
   return (
-    <section
-      className="panel"
-      aria-labelledby="vertrag-formular-titel"
-      ref={reveal}
-      tabIndex={-1}
-    >
+    <section className="panel" aria-labelledby="vertrag-formular-titel" ref={reveal} tabIndex={-1}>
       <div className="panel-head">
         <h2 id="vertrag-formular-titel">
           {contract ? `${contract.title} bearbeiten` : "Vertrag anlegen"}
@@ -430,8 +425,8 @@ export function ContractsPage({
         title="Verträge"
         sub={
           <>
-            Verträge mit Laufzeit und Kündigungstermin. Ihre erwarteten Kosten zählen in der Übersicht
-            als „gebunden“. Alle Beträge sind brutto.
+            Verträge mit Laufzeit und Kündigungstermin. Ihre erwarteten Kosten zählen in der
+            Übersicht als „gebunden“. Alle Beträge sind brutto.
           </>
         }
       />

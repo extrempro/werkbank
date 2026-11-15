@@ -26,7 +26,8 @@ function followUp(contract: Contract): string {
   if (!contract.ends_on) {
     return "Läuft unbefristet weiter.";
   }
-  const yearly = contract.yearly_cents === null ? "" : `, ${formatEuro(contract.yearly_cents)} im Jahr`;
+  const yearly =
+    contract.yearly_cents === null ? "" : `, ${formatEuro(contract.yearly_cents)} im Jahr`;
   return contract.renewal_months
     ? `Verlängert sich um ${contract.renewal_months} Monate${yearly}.`
     : `Endet am ${formatBudgetDay(contract.ends_on)}; für die Zeit danach ist ein neuer Vertrag nötig.`;

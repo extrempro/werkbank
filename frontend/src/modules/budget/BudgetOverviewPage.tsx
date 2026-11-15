@@ -280,7 +280,9 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                           return (
                             <li key={entry.id}>
                               <span>
-                                <Link to={`${BUDGET_CONTRACTS_PATH}/${entry.id}`}>{entry.title}</Link>
+                                <Link to={`${BUDGET_CONTRACTS_PATH}/${entry.id}`}>
+                                  {entry.title}
+                                </Link>
                                 <span className="budget-muted budget-line">
                                   {entry.partner_name} · kündbar bis{" "}
                                   {entry.notice_deadline

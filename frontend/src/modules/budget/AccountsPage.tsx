@@ -47,12 +47,7 @@ function AccountForm({ account, onSaved, onCancel }: FormProps) {
 
   const title = account ? `Konto ${account.number} bearbeiten` : "Konto anlegen";
   return (
-    <section
-      className="panel"
-      aria-labelledby="konto-formular-titel"
-      ref={reveal}
-      tabIndex={-1}
-    >
+    <section className="panel" aria-labelledby="konto-formular-titel" ref={reveal} tabIndex={-1}>
       <div className="panel-head">
         <h2 id="konto-formular-titel">{title}</h2>
       </div>

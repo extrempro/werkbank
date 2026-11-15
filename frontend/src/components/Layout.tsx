@@ -246,10 +246,7 @@ export function Layout({ me }: LayoutProps) {
     page = <BudgetItemsPage roles={me.roles} />;
   } else if (path === BUDGET_CONTRACTS_PATH && current) {
     page = <ContractsPage roles={me.roles} />;
-  } else if (
-    contractId !== null &&
-    items.some((item) => item.path === BUDGET_CONTRACTS_PATH)
-  ) {
+  } else if (contractId !== null && items.some((item) => item.path === BUDGET_CONTRACTS_PATH)) {
     page = <ContractsPage key={contractId} roles={me.roles} selectedId={contractId} />;
   } else if (path === BUDGET_PARTNERS_PATH && current) {
     page = <PartnersPage roles={me.roles} />;
