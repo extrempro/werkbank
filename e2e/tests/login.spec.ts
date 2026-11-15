@@ -51,3 +51,25 @@ test("API ist ohne Anmeldung gesperrt", async ({ request }) => {
   const response = await request.get("/api/me");
   expect(response.status()).toBe(401);
 });
+
+test("Abgelaufene Sitzung: Die Anmeldeseite erscheint mit Hinweis und Rückweg", async ({
+  page,
+  context,
+}) => {
+  await loginAs(page, ["Config.Reader"], "Lea Leser");
+  await page.goto("/m365/snapshots");
+  await expect(page.getByRole("button", { name: "Abmelden" }).first()).toBeVisible();
+  // Sitzung endet, während die Seite offen ist.
+  await context.clearCookies();
+  await openNavigation(page);
+  await page
+    .getByRole("navigation", { name: "Hauptnavigation" })
+    .getByRole("link", { name: "Änderungen" })
+    .click();
+  await expect(page.getByText(/Deine Sitzung ist abgelaufen/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Mit Microsoft anmelden" })).toHaveAttribute(
+    "href",
+    "/auth/login?return_to=%2Fm365%2Faenderungen",
+  );
+  await expectNoA11yViolations(page);
+});

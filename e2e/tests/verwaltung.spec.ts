@@ -130,6 +130,43 @@ test("Admin trägt einen KI-Anbieter ein, der Schlüssel bleibt verborgen", asyn
   await expect(page.getByText(/Die Verbindung funktioniert nicht:/)).toBeVisible();
 });
 
+test("Zu große Bilder passt die Werkbank beim Hochladen selbst an", async ({ page }) => {
+  await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
+  await page.goto("/verwaltung");
+  await expect(page.getByLabel("Größe beim Hochladen")).toHaveValue("auto");
+
+  await page
+    .getByLabel(/^Bild (hochladen|ersetzen) – Logo für hellen Hintergrund$/)
+    .setInputFiles("tests/fixtures/logo-gross.png");
+  await expect(
+    page.getByText(/von 2400 × 600 Pixel auf 800 × 200 Pixel angepasst/),
+  ).toBeVisible();
+
+  // Ein breites Bild wird als Favicon mittig in ein Quadrat gesetzt.
+  await page
+    .getByLabel(/^Bild (hochladen|ersetzen) – Favicon$/)
+    .setInputFiles("tests/fixtures/favicon-breit.png");
+  await expect(page.getByText(/von 300 × 120 Pixel auf 256 × 256 Pixel angepasst/)).toBeVisible();
+  await expect(page.locator('link[rel="icon"]').first()).toHaveAttribute(
+    "href",
+    /\/api\/branding\/assets\/favicon\?v=/,
+  );
+
+  // Im Original bleibt das große Bild zu groß; die Meldung nennt den Ausweg.
+  await page.getByLabel("Größe beim Hochladen").selectOption("original");
+  await page
+    .getByLabel(/^Bild (hochladen|ersetzen) – Logo für dunklen Hintergrund$/)
+    .setInputFiles("tests/fixtures/logo-gross.png");
+  await expect(page.getByText(/Im Original ist das Bild zu groß/)).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Aufräumen, damit die übrigen Tests das gewohnte Aussehen vorfinden.
+  await page.getByRole("button", { name: "Entfernen – Logo für hellen Hintergrund" }).click();
+  await expect(page.getByText("Logo für hellen Hintergrund: entfernt.")).toBeVisible();
+  await page.getByRole("button", { name: "Entfernen – Favicon" }).click();
+  await expect(page.getByText("Favicon: entfernt.")).toBeVisible();
+});
+
 test("Betriebsrat kommt nicht an Audit-Log und Verwaltung", async ({ page }) => {
   await loginAs(page, ["Evergreen.Betriebsrat"], "Karl Rat");
   await page.goto("/audit");

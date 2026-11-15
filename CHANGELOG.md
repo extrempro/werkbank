@@ -4,7 +4,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
-## [0.12.0] – 2026-11-15
+## [0.13.0] – 2026-11-15
 
 Eigene Bereiche für Microsoft 365 und Evergreen in der Navigation.
 
@@ -13,7 +13,7 @@ Eigene Bereiche für Microsoft 365 und Evergreen in der Navigation.
 - **Bereiche in der Navigation:** Oben in der Navigation lässt sich zwischen „Werkbank“ (Start, Suche, Reports, Audit-Log, Verwaltung), „Microsoft 365“ (Übersicht, Änderungen, Einstellungen, Empfehlungen, Snapshots) und „Evergreen“ (Vorgänge, Eingang) umschalten. Die Navigation zeigt immer nur die Seiten des gewählten Bereichs; wer eine Seite direkt aufruft, landet automatisch im passenden Bereich. Weitere Tools bekommen künftig je einen eigenen Bereich
 - Der Umschalter erscheint nur, wenn die Person Zugriff auf mehr als einen Bereich hat. Offene Aufgaben eines anderen Bereichs stehen als Zahl am Umschalter
 
-## [0.11.0] – 2026-11-15
+## [0.12.0] – 2026-11-15
 
 Empfehlungen aus Microsoft Secure Score.
 
@@ -30,6 +30,24 @@ Empfehlungen aus Microsoft Secure Score.
 ### Technik
 
 - Neue Tabellen `cfg_recommendations` und `cfg_recommendation_links` (Migration 0016), neuer Auftrag `m365_config.secure_score`
+
+## [0.11.0] – 2026-11-15
+
+Bilder passen sich beim Hochladen an, klare Hinweise zur Anmeldung.
+
+### Verwaltung
+
+- **Branding: Bilder werden beim Hochladen angepasst.** Zu große Logos verkleinert die Werkbank im Browser (längste Kante höchstens 800 Pixel), Favicons setzt sie auf 256 Pixel im Quadrat, ein nicht quadratisches Bild mittig mit durchsichtigem Rand. JPEG-Dateien werden angenommen und in PNG umgewandelt. Vergrößert wird nie; die Meldung nennt die Größe vorher und nachher
+- **Wahl „Größe beim Hochladen“:** „Automatisch anpassen“ (Standard) oder „Original behalten“. Im Original muss das Bild die Grenzen selbst einhalten
+- **Erneute Anmeldung:** Scheitert eine Änderung in der Verwaltung, weil die Anmeldung zu alt ist, erscheint oben ein deutlicher Hinweis mit dem Knopf „Erneut anmelden“, der danach zur selben Seite zurückführt
+
+### Oberfläche
+
+- **Abgelaufene Sitzung:** Läuft die Sitzung ab, während die Werkbank offen ist, erscheint sofort die Anmeldeseite mit Hinweis, statt dass einzelne Seiten nur „konnte nicht geladen werden“ melden. Geprüft wird bei jeder Abfrage und wenn der Tab wieder nach vorn kommt. Nach der Anmeldung geht es auf derselben Seite weiter
+
+### Behoben
+
+- Beim Speichern in der Verwaltung wurde eine zu alte Anmeldung nicht als solche erkannt; es erschien nur die knappe Meldung des Servers
 
 ## [0.10.0] – 2026-11-15
 
