@@ -116,20 +116,18 @@ jobs:
       - name: Test-Umgebung vorbereiten
         run: |
           cp deploy/.env.example deploy/.env
-          echo 'WERKBANK_BUILD_CONTEXT=..' >> deploy/.env
-          echo 'WERKBANK_DOCKERFILE=backend/Dockerfile' >> deploy/.env
           ./deploy/test-secrets.sh deploy/secrets
       - name: Images bauen und starten
-        run: docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build --wait
+        run: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml --env-file deploy/.env up -d --build --wait
       - name: Smoke-Test
         run: |
           curl --fail --silent http://127.0.0.1:8080/health
           curl --fail --silent http://127.0.0.1:8080/health/ready
       - name: Worker läuft und hat aufgeräumt
         run: |
-          docker compose -f deploy/docker-compose.yml ps worker
+          docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml ps worker
           for i in $(seq 1 30); do
-            if docker compose -f deploy/docker-compose.yml exec -T db sh -c \
+            if docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml exec -T db sh -c \
               'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "select count(*) from jobs where finished_at is not null and error is null"' \
               | grep -qx '[1-9][0-9]*'; then
               echo "Aufräum-Auftrag erledigt"; exit 0
@@ -137,19 +135,17 @@ jobs:
             sleep 2
           done
           echo "Kein erledigter Aufräum-Auftrag gefunden"; exit 1
-      - name: Image ohne Quellcode bauen (deploy/Dockerfile, wie beim Betrieb per Git-Sync)
-        env:
-          REF: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Compose-Datei für den Betrieb ist gültig (Image aus der Registry, kein Build)
         run: |
-          docker build --build-arg "WERKBANK_REF=$REF" -t werkbank-deploy:test deploy
-          docker run --rm werkbank-deploy:test python -c "import werkbank; print(werkbank.__version__)"
-          docker run --rm werkbank-deploy:test test -f /app/static/index.html
+          docker compose -f deploy/docker-compose.yml --env-file deploy/.env config > /tmp/betrieb.yml
+          grep -q 'image: ghcr.io/extrempro/werkbank:latest' /tmp/betrieb.yml
+          if grep -q 'build:' /tmp/betrieb.yml; then echo "Betriebs-Compose darf nicht bauen"; exit 1; fi
       - name: Logs bei Fehler
         if: failure()
-        run: docker compose -f deploy/docker-compose.yml logs
+        run: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml logs
       - name: Aufräumen
         if: always()
-        run: docker compose -f deploy/docker-compose.yml down -v
+        run: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml down -v
 
   e2e:
     name: E2E, Barrierefreiheit, Lighthouse
@@ -180,10 +176,8 @@ jobs:
             -e 's#^RATE_LIMIT_LOGIN_PER_MINUTE=.*#RATE_LIMIT_LOGIN_PER_MINUTE=100000#' \
             -e 's#^RATE_LIMIT_API_PER_MINUTE=.*#RATE_LIMIT_API_PER_MINUTE=100000#' \
             deploy/.env
-          echo 'WERKBANK_BUILD_CONTEXT=..' >> deploy/.env
-          echo 'WERKBANK_DOCKERFILE=backend/Dockerfile' >> deploy/.env
           ./deploy/test-secrets.sh deploy/secrets
-          docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build --wait
+          docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml --env-file deploy/.env up -d --build --wait
       - name: Playwright (Desktop, Tablet, iPhone, inkl. axe-core)
         run: npx playwright test
       - name: Lighthouse CI

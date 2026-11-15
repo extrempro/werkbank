@@ -1,7 +1,6 @@
 # Werkbank – Image mit Backend (API) und Frontend (PWA)
-# Build-Kontext ist das Wurzelverzeichnis des Repositorys (siehe deploy/docker-compose.yml).
-# Für den Betrieb ohne Quellcode gibt es deploy/Dockerfile mit denselben Schritten.
-# Änderungen am Ablauf immer in beiden Dateien vornehmen; die CI baut beide.
+# Build-Kontext ist das Wurzelverzeichnis des Repositorys (siehe deploy/docker-compose.build.yml).
+# Der Release-Workflow baut daraus das veröffentlichte Image.
 
 # --- Frontend bauen ---
 FROM node:22-alpine AS frontend

@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.17.1",
+    date: "2026-11-15",
+    summary: "Updates der Werkbank lassen sich einfacher einspielen.",
+    sections: [
+      {
+        area: "Allgemein",
+        entries: [
+          "Für die Arbeit mit der Werkbank ändert sich nichts. Neue Versionen kommen jetzt als fertiges Paket auf den Server.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.17.0",
     date: "2026-11-15",
     summary: "IT-Tools: Encoding und Formatter.",
