@@ -9,7 +9,7 @@ test("Neuigkeiten zeigen die Version, der Hinweis „neu“ verschwindet nach de
   await openNavigation(page);
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
   const link = nav.getByRole("link", { name: /Neuigkeiten/ });
-  await expect(link).toContainText("neu");
+  await expect(link).toHaveAccessibleName("Neuigkeiten – neue Version");
   await link.click();
   await expect(page).toHaveURL(/\/neuigkeiten$/);
   await expect(page.getByRole("heading", { level: 1, name: "Neuigkeiten" })).toBeVisible();

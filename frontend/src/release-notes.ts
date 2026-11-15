@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.7.0",
+    date: "2026-11-15",
+    summary: "Die Navigation hat Symbole und lässt sich einklappen.",
+    sections: [
+      {
+        area: "Allgemein",
+        entries: [
+          "Jeder Menüpunkt hat ein Symbol. Mit dem Doppelpfeil unten in der Navigation klappst du die Leiste ein; dann siehst du nur noch die Symbole und hast mehr Platz.",
+          "Unten in der Navigation findest du zwei Schnellzugriffe: die Neuigkeiten und einen Umschalter zwischen heller und dunkler Darstellung. Ein Punkt am Symbol zeigt, dass es eine neue Version gibt.",
+          "Der Menüpunkt „Neuigkeiten“ ist dafür entfallen.",
+          "Auf langen Seiten erscheint unten rechts ein Knopf, der dich zurück nach oben bringt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.6.0",
     date: "2026-11-15",
     summary: "Verwaltung: Mailversand einrichten und Aufbewahrung des Audit-Logs festlegen.",
