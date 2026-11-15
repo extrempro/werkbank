@@ -26,7 +26,9 @@ import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { hasUnseenRelease } from "../release-notes";
 import { currentTheme, saveTheme } from "../theme";
 import { navigate, usePath } from "../router";
+import { headerLogo, useBranding } from "../branding";
 import { Avatar } from "./Avatar";
+import { BrandMark } from "./Brand";
 import { Icon } from "./Icon";
 import { ScrollTop } from "./ScrollTop";
 import { roleLabel } from "../user";
@@ -49,6 +51,8 @@ interface LayoutProps {
 
 export function Layout({ me }: LayoutProps) {
   const path = usePath();
+  const branding = useBranding();
+  const logoUrl = headerLogo(branding);
   const [menuOpen, setMenuOpen] = useState(false);
   const navId = useId();
   const [tasks, setTasks] = useState<Task[] | null>(null);
@@ -184,24 +188,15 @@ export function Layout({ me }: LayoutProps) {
           Menü
         </button>
         <a className="brand" href="/" onClick={(event) => onNavClick(event, "/")}>
-          <span className="brand-mark" aria-hidden="true">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" />
-            </svg>
-          </span>
-          <span className="brand-text">
-            <span className="brand-name">Werkbank</span>
-            <span className="brand-sub">IT-Plattform</span>
-          </span>
+          <BrandMark logoUrl={logoUrl} />
+          {logoUrl && !branding.show_name ? (
+            <span className="visually-hidden">{branding.app_name}</span>
+          ) : (
+            <span className="brand-text">
+              <span className="brand-name">{branding.app_name}</span>
+              <span className="brand-sub">IT-Plattform</span>
+            </span>
+          )}
         </a>
         <form className="header-search" role="search" onSubmit={onSearch}>
           <label htmlFor="kopf-suche" className="visually-hidden">

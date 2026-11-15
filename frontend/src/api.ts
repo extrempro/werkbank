@@ -1,3 +1,5 @@
+import type { Branding } from "./branding";
+
 export interface Me {
   user_id?: string;
   display_name: string;
@@ -242,4 +244,26 @@ export function sendTestMail(): Promise<{ recipient: string }> {
 
 export function saveAuditRetention(days: number): Promise<AdminSettings> {
   return putJson("/api/admin/settings/audit-retention", { days });
+}
+
+// --- Verwaltung: Branding ----------------------------------------------------------------
+
+export type BrandingImageKind = "logo-hell" | "logo-dunkel" | "favicon";
+
+export interface BrandingUpdate {
+  app_name: string;
+  accent: string | null;
+  show_name: boolean;
+}
+
+export function saveBranding(update: BrandingUpdate): Promise<Branding> {
+  return putJson("/api/admin/branding", update);
+}
+
+export function uploadBrandingImage(kind: BrandingImageKind, base64: string): Promise<Branding> {
+  return putJson(`/api/admin/branding/assets/${kind}`, { content_base64: base64 });
+}
+
+export function removeBrandingImage(kind: BrandingImageKind): Promise<Branding> {
+  return deleteJson(`/api/admin/branding/assets/${kind}`);
 }

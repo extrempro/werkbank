@@ -9,6 +9,7 @@ import {
   type AdminSettings,
   type RoleInfo,
 } from "../api";
+import { BrandingSettings } from "./BrandingSettings";
 import { GeneralSettings } from "./GeneralSettings";
 
 export function AdminPage() {
@@ -62,6 +63,7 @@ export function AdminPage() {
       {status === "ready" && general && (
         <section className="admin-section" aria-labelledby="allgemein-titel">
           <h2 id="allgemein-titel">Allgemein</h2>
+          <BrandingSettings />
           <GeneralSettings settings={general} onChange={setGeneral} />
         </section>
       )}
