@@ -246,14 +246,17 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                   </tfoot>
                 </table>
               </div>
+              {/* Eigene Schlüssel: Sonst verwendet React den Knopf „Plan bearbeiten“ als
+                  „Plan speichern“ weiter, und derselbe Klick schickt das Formular ab. */}
               {canPlan && (
                 <div className="actions budget-actions">
                   {draft ? (
                     <>
-                      <button type="submit" className="button button-primary" disabled={busy}>
+                      <button key="speichern" type="submit" className="button button-primary" disabled={busy}>
                         Plan speichern
                       </button>
                       <button
+                        key="abbrechen"
                         type="button"
                         className="button button-secondary"
                         disabled={busy}
@@ -266,7 +269,12 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                       </button>
                     </>
                   ) : (
-                    <button type="button" className="button button-secondary" onClick={startEdit}>
+                    <button
+                      key="bearbeiten"
+                      type="button"
+                      className="button button-secondary"
+                      onClick={startEdit}
+                    >
                       Plan bearbeiten
                     </button>
                   )}
