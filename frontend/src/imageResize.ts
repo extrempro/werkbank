@@ -158,7 +158,8 @@ export async function prepareImage(
   if (problem) {
     throw new ImageProblem(problem);
   }
-  const mustConvert = file.type === "image/jpeg" || (kind === "favicon" && file.type !== "image/png");
+  const mustConvert =
+    file.type === "image/jpeg" || (kind === "favicon" && file.type !== "image/png");
   const limit = kind === "favicon" ? FAVICON_MAX : LOGO_MAX;
   const tooLarge = Math.max(before.width, before.height) > limit || file.size > maxBytes;
   if (mode === "original" && !mustConvert) {

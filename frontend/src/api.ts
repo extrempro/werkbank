@@ -46,7 +46,9 @@ export class ApiError extends Error {
 
 /** Adresse für die Anmeldung, danach zurück zur angegebenen Seite. */
 export function loginUrl(returnTo: string): string {
-  return returnTo === "/" ? "/auth/login" : `/auth/login?${new URLSearchParams({ return_to: returnTo }).toString()}`;
+  return returnTo === "/"
+    ? "/auth/login"
+    : `/auth/login?${new URLSearchParams({ return_to: returnTo }).toString()}`;
 }
 
 /**

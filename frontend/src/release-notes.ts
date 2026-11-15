@@ -26,7 +26,8 @@ export const RELEASES: readonly Release[] = [
   {
     version: "0.11.0",
     date: "2026-11-15",
-    summary: "Logos passen sich beim Hochladen selbst an, und die Werkbank sagt klar, wenn du dich neu anmelden musst.",
+    summary:
+      "Logos passen sich beim Hochladen selbst an, und die Werkbank sagt klar, wenn du dich neu anmelden musst.",
     sections: [
       {
         area: "Verwaltung",

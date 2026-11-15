@@ -292,8 +292,8 @@ export function BrandingSettings() {
           })}
         </div>
         <p className="small">
-          PNG, WebP oder JPEG (JPEG wird in PNG umgewandelt). Gespeichert werden höchstens{" "}
-          {maxKb} KB je Bild. Ohne eigenes Bild erscheint das Zeichen der Werkbank.
+          PNG, WebP oder JPEG (JPEG wird in PNG umgewandelt). Gespeichert werden höchstens {maxKb}{" "}
+          KB je Bild. Ohne eigenes Bild erscheint das Zeichen der Werkbank.
         </p>
         {imageMessage && (
           <p
