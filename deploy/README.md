@@ -6,7 +6,7 @@ Aufbau:
 
 | Dienst | Aufgabe | Netzwerk |
 |---|---|---|
-| `web` | API und Oberfläche (PWA), ein Image aus `deploy/Dockerfile` (holt den Quellcode von GitHub) oder aus `backend/Dockerfile` mit Build-Kontext Repository-Wurzel | gebunden an `${BIND_IP}:${BIND_PORT}` |
+| `web` | API und Oberfläche (PWA), fertiges Image aus der GitHub-Registry (`ghcr.io/extrempro/werkbank`) | gebunden an `${BIND_IP}:${BIND_PORT}` |
 | `worker` | Hintergrundaufträge: Aufräumen abgelaufener Sitzungen, Abruf der Tenant-Einstellungen, Nachrichtencenter, Prüfung der Umsetzung in Evergreen; später Erinnerungen, Reports, Push. Gleiches Image wie `web`, startet nach `web` (das die Datenbank migriert) | kein Port nach außen; ausgehend für Microsoft Graph |
 | `pwsh` (geplant) | PowerShell-Jobs (Exchange Online, Teams) | nur intern |
 | `db` | PostgreSQL | nur intern (Docker-Netz ohne Außenzugang) |
@@ -109,24 +109,32 @@ Zum Ausprobieren ohne Entra legt `deploy/test-secrets.sh` Wegwerf-Dateien an (ni
 
 ## Image
 
-Das Image wird mit `deploy/Dockerfile` gebaut. Dieses Dockerfile holt den Quellcode beim Bauen selbst von GitHub, standardmäßig den Stand von `main` (`WERKBANK_REF` für einen Tag, Branch oder Commit). Neben der Compose-Datei muss deshalb nur das Dockerfile liegen, kein Quellcode. Wer aus einem ausgecheckten Repository baut, setzt `WERKBANK_BUILD_CONTEXT=..` und `WERKBANK_DOCKERFILE=backend/Dockerfile`. Eine neue Version kommt erst mit einem **neuen Build** auf den Server; ein bloßer Neustart nimmt das vorhandene Image.
+Das Image wird bei jedem Release gebaut und in der GitHub-Registry veröffentlicht: `ghcr.io/extrempro/werkbank`, mit der Versionsnummer als Tag (z. B. `0.17.1`) und zusätzlich `latest` für die neueste Version. Auf dem Server wird nichts gebaut, und neben der Compose-Datei muss kein Quellcode liegen. Das Image gibt es für `linux/amd64`.
+
+Ohne Angabe läuft `latest`. Wer eine feste Version will, setzt `WERKBANK_IMAGE=ghcr.io/extrempro/werkbank:0.17.1` in der `.env`.
+
+**Update auf eine neue Version:**
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Verwaltungswerkzeuge haben dafür meist eine eigene Funktion (Images holen und neu bereitstellen) und können nach neuen Images suchen. Ein bloßer Neustart nimmt das vorhandene Image. Welche Version läuft, steht in der Werkbank auf der Seite „Konto“.
+
+**Selbst bauen** (Entwicklung): aus dem ausgecheckten Repository mit dem Zusatz `docker-compose.build.yml`, siehe [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+
+**Umstieg von einer Installation, die das Image selbst gebaut hat** (bis Version 0.17.0): Compose-Datei aktualisieren (bei Git-Sync: synchronisieren), dann Images holen und neu bereitstellen. Die Variablen `WERKBANK_REF`, `WERKBANK_BUILD_CONTEXT` und `WERKBANK_DOCKERFILE` haben keine Wirkung mehr und können aus der `.env` entfernt werden. Daten und Secrets bleiben unberührt. Das alte Image `werkbank-web:local` kann danach gelöscht werden.
 
 ## Betrieb mit Git-Sync
 
 Viele Docker-Verwaltungswerkzeuge können ein Projekt per Git-Sync aus einem Repository holen. Sie legen die Compose-Datei und die Dateien daneben in einen eigenen Projektordner und ersetzen sie bei jedem Sync. Die Werte der `.env` pflegt man dann im Werkzeug; sie bleiben beim Sync erhalten.
 
-1. **Git-Sync anlegen** (Pull): Repository dieses Projekts, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Der Sync holt den Ordner `deploy/`; dort liegt auch das `Dockerfile` zum Bauen.
+1. **Git-Sync anlegen** (Pull): Repository dieses Projekts, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Es genügt der Ordner `deploy/`.
 2. **Umgebungsvariablen** des Projekts im Werkzeug nach [`.env.example`](.env.example) eintragen, mindestens `WERKBANK_SECRETS_DIR`, `BIND_IP`, `BIND_PORT`, `PUBLIC_URL`, `TRUSTED_PROXY_IPS`, `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `COLLECTOR_CLIENT_ID`.
 3. **Secrets** wie oben auf dem Host anlegen.
-4. Projekt **bauen und starten**.
-   **Nach einer neuen Version auf `main`** muss das Image neu gebaut werden. Ein reines Neu-Bereitstellen kann je nach Werkzeug das vorhandene Image `werkbank-web:local` weiterverwenden; dann läuft der alte Stand weiter. Sicher ist der Neubau auf dem Docker-Host im Projektordner (je nach Einrichtung mit `sudo`):
-
-   ```bash
-   docker compose build --no-cache --pull
-   docker compose up -d
-   ```
-
-   Welche Version läuft, steht in der Werkbank auf der Seite „Konto“.
+4. Projekt **starten**. Das Image wird dabei aus der Registry geholt.
+   **Nach einer neuen Version:** Images holen und neu bereitstellen (siehe „Image“). Welche Version läuft, steht in der Werkbank auf der Seite „Konto“.
 5. Im **Reverse Proxy** die öffentliche Adresse der Werkbank auf `BIND_IP:BIND_PORT` des Docker-Hosts leiten.
 6. In **Entra** die Redirect-URI `${PUBLIC_URL}/auth/callback` eintragen.
 

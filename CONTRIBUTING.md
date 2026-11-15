@@ -75,10 +75,8 @@ npm run lint && npm run typecheck && npm test && npm run build
 cp deploy/.env.example deploy/.env
 sed -i -e 's#^PUBLIC_URL=.*#PUBLIC_URL=http://localhost:8080#' \
   -e 's#^ENVIRONMENT=.*#ENVIRONMENT=test#' -e 's#^ENABLE_TEST_LOGIN=.*#ENABLE_TEST_LOGIN=true#' deploy/.env
-echo 'WERKBANK_BUILD_CONTEXT=..' >> deploy/.env
-echo 'WERKBANK_DOCKERFILE=backend/Dockerfile' >> deploy/.env
 ./deploy/test-secrets.sh deploy/secrets
-docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build --wait
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml --env-file deploy/.env up -d --build --wait
 
 # E2E-Tests gegen die laufende Anwendung
 cd e2e && npm ci && npx playwright install chromium && npx playwright test

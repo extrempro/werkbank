@@ -5,21 +5,16 @@
 
 name: werkbank
 
-# Das Image wird mit dem Dockerfile neben dieser Datei gebaut. Es holt den Quellcode selbst von
-# GitHub (Standard: main), damit hier kein Quellcode liegen muss (z. B. bei einem Git-Sync, der nur diesen Ordner holt).
-# Anderer Stand: WERKBANK_REF=v0.3.0 (Tag, Branch oder Commit).
-# Aus einem ausgecheckten Repository bauen: WERKBANK_BUILD_CONTEXT=.. und
-# WERKBANK_DOCKERFILE=backend/Dockerfile.
-x-werkbank-build: &werkbank-build
-  context: ${WERKBANK_BUILD_CONTEXT:-.}
-  dockerfile: ${WERKBANK_DOCKERFILE:-Dockerfile}
-  args:
-    WERKBANK_REF: ${WERKBANK_REF:-main}
+# Das Image kommt fertig gebaut aus der GitHub-Registry; hier wird nichts gebaut und es muss
+# kein Quellcode daneben liegen. Eine neue Version holt man mit "docker compose pull" und
+# "docker compose up -d" (oder mit der entsprechenden Funktion des Verwaltungswerkzeugs).
+# Feste Version statt der neuesten: WERKBANK_IMAGE=ghcr.io/extrempro/werkbank:0.17.1
+# Aus einem ausgecheckten Repository bauen: zusätzlich docker-compose.build.yml angeben.
+x-werkbank-image: &werkbank-image ${WERKBANK_IMAGE:-ghcr.io/extrempro/werkbank:latest}
 
 services:
   web:
-    build: *werkbank-build
-    image: werkbank-web:local
+    image: *werkbank-image
     restart: unless-stopped
     env_file: .env
     environment:
@@ -50,8 +45,7 @@ services:
 
   worker:
     # Gleiches Image wie web, anderer Startbefehl. Kein Port nach außen.
-    build: *werkbank-build
-    image: werkbank-web:local
+    image: *werkbank-image
     command: ["python", "-m", "werkbank.worker"]
     restart: unless-stopped
     env_file: .env

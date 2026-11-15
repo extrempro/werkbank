@@ -592,7 +592,7 @@ Handy (ab 360 px), Tablet, Desktop. Aktuelle Versionen von Edge, Chrome, Firefox
 | E2E-Tests (`e2e/`) | jeder PR | Playwright, Profile: Desktop, Tablet, iPhone. Test-Login statt Entra |
 | Barrierefreiheit | jeder PR | axe-core in Playwright, keine Verstöße „serious/critical“ |
 | Lighthouse | jeder PR | Lighthouse CI: Accessibility ≥ 95, Best Practices ≥ 95, Performance ≥ 85, PWA-Kriterien erfüllt |
-| Docker-Deployment | jeder PR | Images bauen (`backend/Dockerfile` und `deploy/Dockerfile`), `docker compose up`, Healthchecks, Smoke-Test |
+| Docker-Deployment | jeder PR | Image bauen (`backend/Dockerfile`), `docker compose up`, Healthchecks, Smoke-Test; die Compose-Datei für den Betrieb wird geprüft (Image aus der Registry, kein Build) |
 | Container-Scan | jeder PR, wöchentlich | Trivy |
 | Statische Analyse | jeder PR, wöchentlich | CodeQL (Python, JavaScript/TypeScript), Semgrep (inkl. XSS-Regeln) |
 | Secrets | jeder Push, wöchentlich | gitleaks |

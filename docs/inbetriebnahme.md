@@ -21,11 +21,11 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 
 - [ ] Der Reverse Proxy erreicht den Host (gleicher Host oder internes Netz bzw. VPN); die Adresse des Hosts in diesem Netz ist bekannt
 - [ ] Secrets liegen in `/opt/werkbank/secrets` (sechs Dateien, siehe [`deploy/README.md`](../deploy/README.md))
-- [ ] Ausgehend erreichbar: `login.microsoftonline.com`, `graph.microsoft.com`, `github.com` (Build)
+- [ ] Ausgehend erreichbar: `login.microsoftonline.com`, `graph.microsoft.com`, `ghcr.io` (Image holen)
 
 ## 3. Projekt anlegen (Compose oder Git-Sync)
 
-- [ ] Git-Sync auf das Repository, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Es genügt der Ordner `deploy/`. Das `Dockerfile` dort holt den Quellcode beim Bauen von GitHub
+- [ ] Git-Sync auf das Repository, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Es genügt der Ordner `deploy/`. Das Image kommt fertig aus der GitHub-Registry
 - [ ] Umgebungsvariablen eingetragen:
 
 | Variable | Wert |
@@ -61,12 +61,12 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 | Evergreen → Eingang, einige Stunden nach dem Start | Meldungen aus dem Nachrichtencenter sind da; größere Änderungen stehen als Vorgänge unter „Vorgänge“ |
 | Zweiter Abruf nach einer Änderung im Tenant | Änderung erscheint unter „Änderungen“ mit „Geändert von“ |
 | Seite „Konto“ (Klick auf den Namen oben rechts) | Zeigt Rollen, Sitzung und die laufende Version |
-| Update auf eine neue Version | Image neu bauen (siehe [`deploy/README.md`](../deploy/README.md)); danach Banner „Neue Version“, „Neu laden“ lädt sie; auf der Seite „Konto“ steht die neue Version |
+| Update auf eine neue Version | Images holen und neu bereitstellen (siehe [`deploy/README.md`](../deploy/README.md)); danach Banner „Neue Version“, „Neu laden“ lädt sie; auf der Seite „Konto“ steht die neue Version |
 | iPhone und iPad | Zum Home-Bildschirm hinzufügen, Anmeldung, Bedienung |
 
 ## 6. Wenn etwas nicht klappt
 
-- **Nach einem Update sieht die Werkbank aus wie vorher:** Das Image wurde nicht neu gebaut. Ein Neu-Bereitstellen kann das vorhandene Image weiterverwenden. Auf dem Docker-Host im Projektordner `docker compose build --no-cache --pull` und `docker compose up -d` ausführen.
+- **Nach einem Update sieht die Werkbank aus wie vorher:** Das neue Image wurde nicht geholt; ein Neustart nimmt das vorhandene. Auf dem Docker-Host im Projektordner `docker compose pull` und `docker compose up -d` ausführen. Steht in der `.env` eine feste Version (`WERKBANK_IMAGE`), dort die neue eintragen.
 - **Anmeldung schlägt fehl, nachdem `ENTRA_PROFILE_PHOTO=true` gesetzt wurde:** An der App-Registrierung fehlt die delegierte Berechtigung `User.Read` oder die Administratorzustimmung ([`entra-setup.md`](entra-setup.md), 1.5).
 - **Compose startet nicht, „bind source path does not exist: …/secrets/postgres_password“:** `WERKBANK_SECRETS_DIR` ist nicht gesetzt (dann sucht Compose im Ordner `secrets` neben der Compose-Datei) oder eine der sechs Dateien fehlt. Nach einem Update auf Version 0.6 fehlt oft `settings_key`; Anleitung in [`deploy/README.md`](../deploy/README.md), Schritt 2a.
 - **„env file not found“:** Es gibt noch keine `.env` neben der Compose-Datei bzw. im Verwaltungswerkzeug sind noch keine Umgebungsvariablen für das Projekt eingetragen.

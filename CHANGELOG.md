@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.17.1] – 2026-11-15
+
+Fertiges Image aus der GitHub-Registry statt Build auf dem Server.
+
+### Deployment
+
+- **Image aus der Registry:** Der Release-Workflow baut zu jedem Release das Image und veröffentlicht es als `ghcr.io/extrempro/werkbank:X.Y.Z` und `latest` (`linux/amd64`). `deploy/docker-compose.yml` verwendet dieses Image und baut nicht mehr. Ein Update ist damit `docker compose pull` und `docker compose up -d`; Verwaltungswerkzeuge erkennen neue Images. Bisher musste das Image auf dem Server gebaut werden, was manche Werkzeuge bei einem Neu-Bereitstellen nicht tun
+- Feste Version über `WERKBANK_IMAGE`. Die Variablen `WERKBANK_REF`, `WERKBANK_BUILD_CONTEXT` und `WERKBANK_DOCKERFILE` entfallen
+- **Umstieg:** Compose-Datei aktualisieren, Images holen, neu bereitstellen (`deploy/README.md`, Abschnitt „Image“). Daten und Secrets bleiben unberührt
+- Selbst bauen (Entwicklung, CI) mit dem Zusatz `deploy/docker-compose.build.yml`
+- Entfernt: `deploy/Dockerfile` und `deploy/.dockerignore` (das Dockerfile, das den Quellcode beim Bauen von GitHub holte)
+
 ## [0.17.0] – 2026-11-15
 
 IT-Tools: Encoding und Formatter.

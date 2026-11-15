@@ -1,0 +1,17 @@
+# Zusatz zu docker-compose.yml: Image aus dem ausgecheckten Repository bauen statt es aus der
+# Registry zu holen (Entwicklung und CI).
+#
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml \
+#     --env-file deploy/.env up -d --build --wait
+
+x-werkbank-build: &werkbank-build
+  context: ..
+  dockerfile: backend/Dockerfile
+
+services:
+  web:
+    build: *werkbank-build
+    image: werkbank-web:local
+  worker:
+    build: *werkbank-build
+    image: werkbank-web:local
