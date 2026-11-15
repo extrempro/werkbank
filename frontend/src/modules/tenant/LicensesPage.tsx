@@ -74,8 +74,8 @@ function LicenseListPage({ now }: { now: number }) {
         <p className="module-label">Microsoft 365 › Tenant</p>
         <h1>Lizenzen</h1>
         <p className="page-sub">
-          Gekaufte und zugewiesene Lizenzen deines Tenants. Der Stand wird täglich festgehalten;
-          ein Klick auf eine Lizenz zeigt den Verlauf.
+          Gekaufte und zugewiesene Lizenzen deines Tenants. Der Stand wird täglich festgehalten; ein
+          Klick auf eine Lizenz zeigt den Verlauf.
         </p>
       </header>
 
@@ -207,9 +207,7 @@ function LicenseDetailPage({ id, now }: { id: number; now: number }) {
         </header>
         {state.status === "loading" && <p role="status">Wird geladen …</p>}
         {state.status === "missing" && <p>Diese Lizenz gibt es nicht.</p>}
-        {state.status === "error" && (
-          <p role="alert">Die Lizenz konnte nicht geladen werden.</p>
-        )}
+        {state.status === "error" && <p role="alert">Die Lizenz konnte nicht geladen werden.</p>}
       </div>
     );
   }

@@ -33,7 +33,9 @@ describe("LineChart", () => {
 
   it("zeigt den letzten Tag, lässt einen anderen wählen und bietet eine Tabelle", () => {
     render(<LineChart title="Verlauf der Lizenz" days={days} series={series} />);
-    expect(screen.getByRole("img", { name: /^Verlauf der Lizenz: 01.11.2026 bis 03.11.2026/ })).toBeVisible();
+    expect(
+      screen.getByRole("img", { name: /^Verlauf der Lizenz: 01.11.2026 bis 03.11.2026/ }),
+    ).toBeVisible();
     const legend = screen.getByRole("list");
     expect(legend).toHaveTextContent("Gekauft: 60");
     expect(legend).toHaveTextContent("Zugewiesen: 49");

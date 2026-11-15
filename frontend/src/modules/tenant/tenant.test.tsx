@@ -128,7 +128,9 @@ describe("LicensesPage", () => {
       },
     });
     render(<LicensesPage selectedId={2} />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Microsoft 365 E3" })).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Microsoft 365 E3" }),
+    ).toBeVisible();
     expect(screen.getByText("aufgebraucht")).toBeVisible();
     expect(screen.getByRole("img", { name: /^Verlauf Microsoft 365 E3/ })).toBeVisible();
     expect(urls[0]).toBe("/api/tenant/licenses/2?days=90");

@@ -79,8 +79,7 @@ export function SearchPage({ roles = [] }: { roles?: readonly string[] }) {
   };
 
   const tooShort = query.length < MIN_LENGTH;
-  const fromServer =
-    !tooShort && state.status === "ready" && state.query === query ? state : null;
+  const fromServer = !tooShort && state.status === "ready" && state.query === query ? state : null;
   const withTools = roles.includes("Tools.User");
   const ready = fromServer
     ? { ...fromServer, hits: [...(withTools ? toolHits(query) : []), ...fromServer.hits] }

@@ -245,9 +245,7 @@ export function LineChart({ title, days, series }: LineChartProps) {
                       const value = entry.values[index];
                       return (
                         <td key={entry.id}>
-                          {value === null || value === undefined
-                            ? "–"
-                            : numberFormat.format(value)}
+                          {value === null || value === undefined ? "–" : numberFormat.format(value)}
                         </td>
                       );
                     })}

@@ -122,7 +122,10 @@ export function licenseNotes(license: License, now: number): LicenseNote[] {
     if (days < 0) {
       notes.push({ text: "Stichtag überschritten", tone: "bad" });
     } else if (days <= LIFECYCLE_WARN_DAYS) {
-      notes.push({ text: days === 0 ? "Stichtag heute" : `Stichtag in ${days} Tagen`, tone: "todo" });
+      notes.push({
+        text: days === 0 ? "Stichtag heute" : `Stichtag in ${days} Tagen`,
+        tone: "todo",
+      });
     }
   }
   if (license.trial) {
