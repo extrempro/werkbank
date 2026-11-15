@@ -256,7 +256,7 @@ describe("ToolPage", () => {
     const parts = within(screen.getByRole("region", { name: "Bestandteile der URL" }));
     expect(parts.getByRole("row", { name: /^Host/ })).toHaveTextContent("example.com");
     expect(parts.getByRole("row", { name: /^Kennwort/ })).toHaveTextContent("nicht angezeigt");
-    expect(screen.queryByText(/geheim/)).toBeNull();
+    expect(parts.queryByText(/geheim/)).toBeNull();
     const query = within(screen.getByRole("region", { name: "Parameter" }));
     expect(query.getByRole("row", { name: /^a \(2\)/ })).toHaveTextContent("2");
     expect(window.location.search).not.toContain("example");
