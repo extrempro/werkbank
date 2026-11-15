@@ -265,11 +265,7 @@ export function Layout({ me }: LayoutProps) {
         </div>
       </header>
       <div className="app-body">
-        <nav
-          id={navId}
-          className={navClass}
-          aria-label="Hauptnavigation"
-        >
+        <nav id={navId} className={navClass} aria-label="Hauptnavigation">
           <div className="nav-items">
             {groups.map((group) => (
               <div className="nav-group" key={group.title ?? "start"}>
@@ -324,7 +320,9 @@ export function Layout({ me }: LayoutProps) {
             >
               <Icon name={theme === "dunkel" ? "hell" : "dunkel"} />
               <span className="visually-hidden">
-                {theme === "dunkel" ? "Helle Darstellung einschalten" : "Dunkle Darstellung einschalten"}
+                {theme === "dunkel"
+                  ? "Helle Darstellung einschalten"
+                  : "Dunkle Darstellung einschalten"}
               </span>
             </button>
             <button

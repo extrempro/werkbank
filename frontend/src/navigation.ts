@@ -64,7 +64,10 @@ export function navigationFor(roles: readonly string[]): NavGroup[] {
     groups.push({ title: "Allgemein", items });
   }
   if (roles.includes(ADMIN)) {
-    groups.push({ title: "Verwaltung", items: [{ path: "/verwaltung", label: "Einstellungen", icon: "verwaltung" }] });
+    groups.push({
+      title: "Verwaltung",
+      items: [{ path: "/verwaltung", label: "Einstellungen", icon: "verwaltung" }],
+    });
   }
   return groups;
 }
