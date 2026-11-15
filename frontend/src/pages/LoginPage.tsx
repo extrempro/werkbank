@@ -1,8 +1,14 @@
+import { loginUrl } from "../api";
 import { surfaceLogo, useBranding } from "../branding";
 import { BrandMark } from "../components/Brand";
 import { useTheme } from "../theme";
 
-export function LoginPage() {
+interface LoginPageProps {
+  /** Die Sitzung ist abgelaufen, während die Werkbank offen war. */
+  expired?: boolean;
+}
+
+export function LoginPage({ expired = false }: LoginPageProps) {
   const branding = useBranding();
   const theme = useTheme();
   return (
@@ -10,8 +16,18 @@ export function LoginPage() {
       <div className="login-card">
         <BrandMark logoUrl={surfaceLogo(branding, theme)} size="large" />
         <h1>{branding.app_name}</h1>
-        <p>Melde dich mit deinem Firmenkonto an.</p>
-        <a className="button button-primary button-wide" href="/auth/login">
+        {expired ? (
+          <p className="hint-box hint-warn" role="alert">
+            Deine Sitzung ist abgelaufen. Melde dich erneut an, dann geht es auf derselben Seite
+            weiter.
+          </p>
+        ) : (
+          <p>Melde dich mit deinem Firmenkonto an.</p>
+        )}
+        <a
+          className="button button-primary button-wide"
+          href={expired ? loginUrl(window.location.pathname) : "/auth/login"}
+        >
           Mit Microsoft anmelden
         </a>
         <p className="login-hint">

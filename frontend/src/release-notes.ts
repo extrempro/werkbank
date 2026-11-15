@@ -24,6 +24,26 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.11.0",
+    date: "2026-11-15",
+    summary: "Logos passen sich beim Hochladen selbst an, und die Werkbank sagt klar, wenn du dich neu anmelden musst.",
+    sections: [
+      {
+        area: "Verwaltung",
+        entries: [
+          "Branding: Zu große Bilder verkleinert die Werkbank jetzt selbst. Ein Favicon muss nicht mehr quadratisch sein, und JPEG-Dateien gehen auch. Wer das nicht möchte, wählt „Original behalten“.",
+          "Braucht eine Änderung eine frische Anmeldung, erscheint oben ein deutlicher Hinweis mit dem Knopf „Erneut anmelden“. Danach landest du wieder auf derselben Seite.",
+        ],
+      },
+      {
+        area: "Allgemein",
+        entries: [
+          "Ist deine Sitzung abgelaufen, zeigt die Werkbank gleich die Anmeldeseite und bringt dich nach der Anmeldung zurück auf die Seite, auf der du warst.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.10.0",
     date: "2026-11-15",
     summary: "Beschreibungen per KI: als Vorschlag, klar gekennzeichnet.",
