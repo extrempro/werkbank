@@ -9,7 +9,7 @@ export default function UacTool() {
   const [params, setParams] = useToolParams({ wert: "512" });
   const input = params.wert;
 
-  const parsed = useMemo(() => {
+  const parsed = useMemo((): { value: number } | { error: string } => {
     try {
       return { value: parseUac(input) };
     } catch (caught) {

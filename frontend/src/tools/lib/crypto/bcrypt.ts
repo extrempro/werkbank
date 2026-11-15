@@ -53,7 +53,6 @@ class Blowfish {
   }
   /** ExpandKey aus dem bcrypt-Papier (mit salt) bzw. Blowfish-Schlüsselplan (ohne) */
   expand(key: Uint8Array, salt?: Uint8Array) {
-    let kp = 0;
     const word = (data: Uint8Array, pos: { p: number }) => {
       let w = 0;
       for (let i = 0; i < 4; i++) {
@@ -62,9 +61,8 @@ class Blowfish {
       }
       return w >>> 0;
     };
-    const k = { p: kp };
+    const k = { p: 0 };
     for (let i = 0; i < 18; i++) this.P[i] = (this.P[i]! ^ word(key, k)) >>> 0;
-    kp = k.p;
     const sp = { p: 0 };
     const lr = new Uint32Array(2);
     const step = (arr: Uint32Array, i: number) => {
