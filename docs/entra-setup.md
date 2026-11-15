@@ -290,7 +290,7 @@ Hinweise:
 - **Nicht eintragen:** Typen je Postfach oder Gruppe (z. B. `mailboxsettings`, `mailboxpermission`, `sharedmailbox`, `distributiongroup`). Das sind keine Tenant-Einstellungen, sie enthalten Personendaten und verbrauchen das Kontingent.
 - **„Geändert von“** bleibt bei Exchange leer: Wer etwas geändert hat, steht nicht im Entra-Audit-Log.
 - **Personenbezug:** Regeln und Richtlinien können Adressen und Namen enthalten (z. B. Bedingungen einer Transportregel). Sie stehen dann als Wert in der Werkbank (`docs/datenschutz.md`).
-- Der erste Abruf mit neuen Typen legt deren Einstellungen als Ausgangsstand an und meldet sie als neu.
+- Der erste erfolgreiche Abruf eines neuen Typs ist dessen Ausgangsstand: Die Einstellungen erscheinen, ohne dass Änderungen gemeldet werden. Änderungen erkennt die Werkbank ab dem zweiten Abruf.
 
 ### 4.4 Grenzen von UTCM
 
