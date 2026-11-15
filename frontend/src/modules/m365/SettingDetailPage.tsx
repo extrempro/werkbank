@@ -8,6 +8,7 @@ import {
   formatValue,
   kindLabel,
   metaFieldLabel,
+  reviewAiText,
   settingTitle,
   statusClass,
   statusLabel,
@@ -27,6 +28,17 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
   const [reloadKey, setReloadKey] = useState(0);
   const [editing, setEditing] = useState(false);
   const canEdit = me.roles.includes("Config.Reviewer");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState(false);
+
+  const onAiReview = (action: "freigeben" | "verwerfen") => {
+    setAiBusy(true);
+    setAiError(false);
+    reviewAiText(id, action)
+      .then(() => setReloadKey((key) => key + 1))
+      .catch(() => setAiError(true))
+      .finally(() => setAiBusy(false));
+  };
 
   useEffect(() => {
     let active = true;
@@ -73,6 +85,7 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
 
   const { setting, meta, versions, changes } = detail;
   const history = detail.meta_history;
+  const aiText = detail.ai_text ?? null;
   const crumbs = [workloadLabel(setting.workload), setting.area, setting.object_name]
     .filter((part): part is string => Boolean(part))
     .join(" › ");
@@ -180,11 +193,57 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
             />
           ) : (
             <>
-              <p className="text">
-                {meta.description ?? (
-                  <span className="empty">Noch keine Beschreibung hinterlegt.</span>
-                )}
-              </p>
+              {meta.description || !aiText ? (
+                <p className="text">
+                  {meta.description ?? (
+                    <span className="empty">Noch keine Beschreibung hinterlegt.</span>
+                  )}
+                </p>
+              ) : (
+                <div className="ai-text">
+                  <p className="text">{aiText.text}</p>
+                  <p className="ai-text-meta">
+                    <span
+                      className={aiText.state === "geprueft" ? "pill pill-ok" : "pill pill-todo"}
+                    >
+                      {aiText.state === "geprueft"
+                        ? "KI-generiert, geprüft"
+                        : "KI-generiert, ungeprüft"}
+                    </span>
+                    <span className="small">
+                      Gilt für alle Einstellungen dieser Art. Erzeugt am{" "}
+                      {formatDateTime(aiText.generated_at)} mit {aiText.model}.
+                    </span>
+                  </p>
+                  {canEdit && (
+                    <div className="actions">
+                      {aiText.state === "ungeprueft" && (
+                        <button
+                          type="button"
+                          className="button button-secondary"
+                          disabled={aiBusy}
+                          onClick={() => onAiReview("freigeben")}
+                        >
+                          Text freigeben
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        disabled={aiBusy}
+                        onClick={() => onAiReview("verwerfen")}
+                      >
+                        Text verwerfen
+                      </button>
+                    </div>
+                  )}
+                  {aiError && (
+                    <p role="alert" className="hint-box hint-bad">
+                      Das hat nicht geklappt. Bitte versuche es erneut.
+                    </p>
+                  )}
+                </div>
+              )}
               <h3>Warum bei uns so</h3>
               <p className="text">
                 {meta.reasoning ?? <span className="empty">Noch keine Begründung hinterlegt.</span>}

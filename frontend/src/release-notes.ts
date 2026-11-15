@@ -24,6 +24,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.10.0",
+    date: "2026-11-15",
+    summary: "Beschreibungen per KI: als Vorschlag, klar gekennzeichnet.",
+    sections: [
+      {
+        area: "M365-Konfiguration",
+        entries: [
+          "Einstellungen ohne eigene Beschreibung bekommen einen kurzen Text von einer KI, wenn das in der Verwaltung eingeschaltet ist. Er ist als „KI-generiert, ungeprüft“ gekennzeichnet, bis ihn jemand freigibt.",
+          "Mit der Rolle Reviewer kannst du einen KI-Text freigeben oder verwerfen. Das gilt für alle Einstellungen derselben Art. Eine eigene Beschreibung hat immer Vorrang.",
+          "Im Baum zeigt das Kennzeichen „KI“, wo noch ein ungeprüfter Text steht.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter „Allgemein“ gibt es den Bereich „KI-Texte“: Dort trägst du den Anbieter ein, schaltest die Texte ein oder aus und prüfst die Verbindung. An den Anbieter gehen nur technische Namen, keine Werte aus dem Tenant.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.9.0",
     date: "2026-11-15",
     summary: "Eigenes Logo, eigener Name, eigene Farbe – und eine Werkbank als Zeichen.",

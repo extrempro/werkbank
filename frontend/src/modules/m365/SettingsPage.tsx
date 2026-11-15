@@ -201,6 +201,12 @@ export function SettingsPage({ me, selectedId }: SettingsPageProps) {
                               <span className="visually-hidden"> – durch Beschluss geregelt</span>
                             </span>
                           )}
+                          {entry.ai_unreviewed && (
+                            <span className="pill pill-neutral" title="KI-Text, ungeprüft">
+                              KI
+                              <span className="visually-hidden"> – Beschreibung ungeprüft</span>
+                            </span>
+                          )}
                           {!entry.active && <span className="pill pill-neutral">entfernt</span>}
                         </span>
                       </Link>

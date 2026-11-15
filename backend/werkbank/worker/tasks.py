@@ -17,6 +17,7 @@ from werkbank.modules.evergreen.jobs import (
     check_implementation_job,
     fetch_messages_job,
 )
+from werkbank.modules.m365_config.ai_texts import GENERATE_AI_TEXTS, generate_ai_texts_job
 from werkbank.modules.m365_config.jobs import COLLECT, collect_job
 from werkbank.worker.jobs import JobType
 
@@ -70,6 +71,7 @@ def purge_audit_log(db: Session) -> int:
 REGISTRY: dict[str, JobType] = {
     CLEANUP: JobType(handler=cleanup, interval=timedelta(hours=1)),
     CHECK_IMPLEMENTATION: JobType(handler=check_implementation_job, interval=timedelta(hours=1)),
+    GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
 }
 
 

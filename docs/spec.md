@@ -272,6 +272,7 @@ Standardregeln:
 - Übergeben werden nur technische Metadaten (Name, Schema-Text, Wert, Microsoft-Ankündigung), **keine personenbezogenen Daten**.
 - Ergebnis gekennzeichnet als „KI-generiert, ungeprüft“, bis eine berechtigte Person es übernimmt.
 - Abschaltbar in der Verwaltung. **[OFFEN]** Anbieter, Vertrag (AVV) und Freigabe durch Datenschutz.
+- Stand: umgesetzt für Einstellungen der M365-Konfiguration. Anbieter (OpenAI-kompatible Adresse, Modell, Schlüssel) und Höchstzahl je Stunde stehen in der Verwaltung, Standard ist ausgeschaltet. Abweichung zum Schutz der Daten: Übergeben werden nur Dienst, Bereich und Name der Eigenschaft, **nicht** der Wert und nicht der Name des Objekts (beides kann Personen- oder Firmennamen enthalten). Ein Text gilt deshalb für alle Einstellungen derselben Art (`cfg_ai_texts`). Der Worker erzeugt die Texte stündlich für Einstellungen ohne eigene Beschreibung; Reviewer geben frei oder verwerfen. Noch offen: Vorschläge für Evergreen-Vorgänge.
 
 ### 6.10 Suche
 
@@ -334,7 +335,7 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 | Verantwortlich | Person oder Abteilung |
 | Link Microsoft Learn | je Bereich hinterlegt |
 
-Alle Metadaten haben einen eigenen Verlauf (je geändertem Feld ein Eintrag mit Person und Zeitpunkt). Pflege durch `Config.Reviewer`. Der Link muss mit `https://` beginnen. Stand: Beschreibung, Begründung, Kritikalität, Soll-Wert (manuell), Verantwortlich und Link sind umgesetzt; KI-Vorschläge, Empfehlung/Benchmark und Soll-Werte aus Evergreen-Beschlüssen folgen.
+Alle Metadaten haben einen eigenen Verlauf (je geändertem Feld ein Eintrag mit Person und Zeitpunkt). Pflege durch `Config.Reviewer`. Der Link muss mit `https://` beginnen. Stand: Beschreibung, Begründung, Kritikalität, Soll-Wert (manuell), Verantwortlich und Link sind umgesetzt; KI-Texte je Art von Einstellung sind umgesetzt (6.9); Empfehlung/Benchmark folgt.
 
 ### 7.6 Soll/Ist
 
@@ -474,7 +475,7 @@ Evergreen:
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |
 | Audit-Log | Admin, Auditor | Filterbare Tabelle, Export |
-| Verwaltung | Admin (mit Step-up) | Bereiche Allgemein (Branding, Mailversand, Aufbewahrung des Audit-Logs), Module, Rollen, Konnektoren, Kommentarregeln, Benachrichtigungen |
+| Verwaltung | Admin (mit Step-up) | Bereiche Allgemein (Branding, Mailversand, Aufbewahrung des Audit-Logs, KI-Texte), Module, Rollen, Konnektoren, Kommentarregeln, Benachrichtigungen |
 | Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Version. Später: Push an/aus, Benachrichtigungen, Hinweis zur Installation |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
@@ -670,7 +671,7 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 3 | Verwaltung | Nur Step-up-Anmeldung oder zusätzlich nur aus dem internen Netz erreichbar? |
 | 4 | Audit-Log | Entschieden: Aufbewahrung 90 Tage, in der Verwaltung einstellbar (30 bis 3650 Tage) |
 | 5 | Anhänge | Virenscan ja/nein |
-| 6 | KI-Texte | Entschieden: Anbieter frei einstellbar (OpenAI-kompatible Adresse in der Verwaltung, Schlüssel als Secret). Offen: AVV und Freigabe Datenschutz je nach gewähltem Anbieter |
+| 6 | KI-Texte | Entschieden: Anbieter frei einstellbar (OpenAI-kompatible Adresse, Modell und Schlüssel in der Verwaltung; der Schlüssel liegt verschlüsselt in der Datenbank). Texte entstehen automatisch und bleiben „ungeprüft“ bis zur Freigabe. Offen: AVV und Freigabe Datenschutz je nach gewähltem Anbieter |
 | 7 | Benchmarks | Entschieden: nur frei verwendbare Empfehlungen von Microsoft; CIS-Benchmarks werden wegen der Lizenz nicht mitgeliefert |
 | 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit DSB, BR-Beteiligung für die Werkbank selbst |
 | 9 | Hostname | Erledigt: Der öffentliche Hostname ist Konfiguration (`PUBLIC_URL`) und steht nicht im Repository |

@@ -15,6 +15,7 @@ from werkbank.core.deps import DbDep, SettingsDep, require_roles
 from werkbank.core.models import Job, JobStatus, User
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
+from werkbank.modules.m365_config.ai_texts import AI_TEXT_JOIN
 from werkbank.modules.m365_config.collector import (
     MODULE,
     MONTHLY_RESOURCE_LIMIT,
@@ -22,6 +23,8 @@ from werkbank.modules.m365_config.collector import (
 )
 from werkbank.modules.m365_config.jobs import COLLECT
 from werkbank.modules.m365_config.models import (
+    AiTextState,
+    CfgAiText,
     CfgChange,
     CfgSetting,
     CfgSettingMeta,
@@ -99,6 +102,8 @@ class SettingOut(BaseModel):
     open_changes: int
     # Der Soll-Wert stammt aus einem Evergreen-Vorgang (Beschluss)
     from_evergreen: bool
+    # Angezeigt wird ein KI-Text, den noch niemand geprüft hat
+    ai_unreviewed: bool
 
 
 class MetaOut(BaseModel):
@@ -185,9 +190,23 @@ class ChangeListOut(BaseModel):
     counts: ChangeCountsOut
 
 
+class AiTextOut(BaseModel):
+    text: str
+    # "ungeprueft" oder "geprueft"
+    state: str
+    model: str
+    generated_at: datetime
+
+
+class AiTextReviewIn(BaseModel):
+    action: Literal["freigeben", "verwerfen"]
+
+
 class SettingDetailOut(BaseModel):
     setting: SettingOut
     meta: MetaOut
+    # KI-Text für diese Art von Einstellung, falls es einen gibt (nicht verworfen)
+    ai_text: AiTextOut | None
     meta_history: list[MetaHistoryOut]
     versions: list[VersionOut]
     changes: list[ChangeOut]
@@ -246,6 +265,7 @@ def _setting_out(
     version: CfgSettingVersion | None,
     meta: CfgSettingMeta | None,
     open_changes: int = 0,
+    ai_state: str | None = None,
 ) -> SettingOut:
     return SettingOut(
         id=setting.id,
@@ -265,6 +285,7 @@ def _setting_out(
         from_evergreen=bool(
             meta and meta.target_set and (meta.target_source or "").startswith("Evergreen")
         ),
+        ai_unreviewed=ai_state == AiTextState.UNREVIEWED and not (meta and meta.description),
     )
 
 
@@ -457,9 +478,10 @@ def list_settings(
 ) -> SettingListOut:
     """Einstellungen mit ihrem aktuellen Wert, sortiert nach Pfad."""
     query = (
-        select(CfgSetting, CfgSettingVersion, CfgSettingMeta)
+        select(CfgSetting, CfgSettingVersion, CfgSettingMeta, CfgAiText.state)
         .outerjoin(CfgSettingVersion, CURRENT_VERSION)
         .outerjoin(CfgSettingMeta, CfgSettingMeta.setting_id == CfgSetting.id)
+        .outerjoin(CfgAiText, AI_TEXT_JOIN)
     )
     if only_deviating:
         query = query.where(DEVIATION)
@@ -477,7 +499,9 @@ def list_settings(
     rows = db.execute(query.order_by(CfgSetting.path).limit(limit + 1).offset(offset)).all()
     page = rows[:limit]
     open_counts = _open_change_counts(db, [row[0].id for row in page])
-    entries = [_setting_out(row[0], row[1], row[2], open_counts.get(row[0].id, 0)) for row in page]
+    entries = [
+        _setting_out(row[0], row[1], row[2], open_counts.get(row[0].id, 0), row[3]) for row in page
+    ]
     return SettingListOut(entries=entries, has_more=len(rows) > limit)
 
 
@@ -491,6 +515,28 @@ def _open_change_counts(db: DbDep, setting_ids: list[int]) -> dict[int, int]:
         .group_by(CfgChange.setting_id)
     ).all()
     return {int(row[0]): int(row[1]) for row in rows}
+
+
+def _ai_text_for(db: DbDep, setting: CfgSetting) -> CfgAiText | None:
+    return db.scalars(
+        select(CfgAiText).where(
+            CfgAiText.workload == setting.workload,
+            CfgAiText.area == setting.area,
+            CfgAiText.property == setting.property,
+        )
+    ).first()
+
+
+def _ai_text_out(ai_text: CfgAiText | None) -> AiTextOut | None:
+    shown = (AiTextState.UNREVIEWED, AiTextState.APPROVED)
+    if ai_text is None or not ai_text.text or ai_text.state not in shown:
+        return None
+    return AiTextOut(
+        text=ai_text.text,
+        state=ai_text.state,
+        model=ai_text.model,
+        generated_at=ai_text.generated_at,
+    )
 
 
 def _changes_query() -> Any:
@@ -524,6 +570,7 @@ def get_setting(
         .limit(200)
     ).all()
     meta = db.get(CfgSettingMeta, setting_id)
+    ai_text = _ai_text_for(db, setting)
     history = db.execute(
         select(CfgSettingMetaHistory, User.display_name)
         .outerjoin(User, User.id == CfgSettingMetaHistory.user_id)
@@ -533,9 +580,14 @@ def get_setting(
     ).all()
     return SettingDetailOut(
         setting=_setting_out(
-            setting, current, meta, _open_change_counts(db, [setting_id]).get(setting_id, 0)
+            setting,
+            current,
+            meta,
+            _open_change_counts(db, [setting_id]).get(setting_id, 0),
+            ai_text.state if ai_text else None,
         ),
         meta=_meta_out(meta),
+        ai_text=_ai_text_out(ai_text),
         meta_history=[
             MetaHistoryOut(
                 id=row[0].id,
@@ -725,3 +777,40 @@ def update_meta(
         )
     db.commit()
     return _meta_out(meta)
+
+
+@router.post("/settings/{setting_id}/ai-text")
+def review_ai_text(
+    request: Request,
+    body: AiTextReviewIn,
+    user: Reviewer,
+    db: DbDep,
+    setting_id: Annotated[int, Path(ge=1)],
+) -> AiTextOut | None:
+    """Gibt den KI-Text frei oder verwirft ihn. Gilt für alle Einstellungen derselben Art."""
+    setting = db.get(CfgSetting, setting_id)
+    if setting is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    ai_text = _ai_text_for(db, setting)
+    if _ai_text_out(ai_text) is None or ai_text is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kein KI-Text vorhanden")
+    approve = body.action == "freigeben"
+    ai_text.state = AiTextState.APPROVED if approve else AiTextState.DISMISSED
+    ai_text.reviewed_by = user.user_id
+    ai_text.reviewed_at = now_utc()
+    write_audit(
+        db,
+        module="m365_config",
+        action="ki.text_freigegeben" if approve else "ki.text_verworfen",
+        user_id=user.user_id,
+        object_type="ki_text",
+        object_id=str(ai_text.id),
+        ip=request.client.host if request.client else None,
+        details={
+            "workload": ai_text.workload,
+            "area": ai_text.area,
+            "property": ai_text.property,
+        },
+    )
+    db.commit()
+    return _ai_text_out(ai_text)

@@ -101,6 +101,35 @@ test("Admin stellt Logo und Akzentfarbe ein und nimmt beides wieder zurück", as
   await expect(headerLogo).toHaveCount(0);
 });
 
+test("Admin trägt einen KI-Anbieter ein, der Schlüssel bleibt verborgen", async ({ page }) => {
+  await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
+  await page.goto("/verwaltung");
+  await expect(page.getByRole("heading", { level: 3, name: "KI-Texte" })).toBeVisible();
+  // Ausgeschaltet lassen: Der Test soll keinen Anbieter ansprechen, außer beim Verbindungstest.
+  await page.getByLabel("KI-Texte einschalten").uncheck();
+  await page.getByLabel("Adresse der Schnittstelle").fill("https://ki.example.com/v1");
+  await page.getByLabel("Modell", { exact: true }).fill("beispiel-modell");
+  await page.getByLabel(/^(Neuer Schlüssel|Schlüssel \(freiwillig\))$/).fill("e2e-schluessel-4711");
+  await page.getByLabel("Neue Texte je Stunde (höchstens)").fill("5");
+  await page.getByRole("button", { name: "KI-Einstellungen speichern" }).click();
+  await expect(page.getByText("Die KI-Einstellungen sind gespeichert.")).toBeVisible();
+  await expect(page.getByLabel("Neuer Schlüssel")).toHaveValue("");
+  await expectNoA11yViolations(page);
+
+  const stored = await page.request.get("/api/admin/settings");
+  const text = await stored.text();
+  expect(text).not.toContain("e2e-schluessel-4711");
+  expect(JSON.parse(text).ai.api_key_set).toBe(true);
+
+  // Ohne Schlüssel an eine Adresse, an der nichts lauscht: Die Meldung nennt den Grund.
+  await page.getByLabel("Gespeicherten Schlüssel löschen").check();
+  await page.getByLabel("Adresse der Schnittstelle").fill("http://localhost:9/v1");
+  await page.getByRole("button", { name: "KI-Einstellungen speichern" }).click();
+  await expect(page.getByText("Die KI-Einstellungen sind gespeichert.")).toBeVisible();
+  await page.getByRole("button", { name: "Verbindung testen" }).click();
+  await expect(page.getByText(/Die Verbindung funktioniert nicht:/)).toBeVisible();
+});
+
 test("Betriebsrat kommt nicht an Audit-Log und Verwaltung", async ({ page }) => {
   await loginAs(page, ["Evergreen.Betriebsrat"], "Karl Rat");
   await page.goto("/audit");
