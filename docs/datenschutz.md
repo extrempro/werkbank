@@ -34,7 +34,7 @@ Keine Tracking- oder Analysedienste. Keine Cookies außer dem technisch notwendi
 
 | Empfänger | Daten | Hinweis |
 |---|---|---|
-| Microsoft (Entra, Graph, UTCM) | Anmeldung, Mailversand, Abruf der Tenant-Einstellungen (Daten verlassen den Tenant nur in Richtung Werkbank) | bestehender Vertrag M365 |
+| Microsoft (Entra, Graph, UTCM) | Anmeldung, optional Abruf des eigenen Profilbilds, Abruf der Tenant-Einstellungen und des Nachrichtencenters, später Mailversand (Daten verlassen den Tenant nur in Richtung Werkbank) | bestehender Vertrag M365 |
 | Push-Dienste der Browserhersteller (Apple, Google, Mozilla) | verschlüsselte Push-Nachricht ohne Inhalt | nur nach Opt-in |
 | KI-Anbieter (optional) | nur technische Metadaten, keine personenbezogenen Daten | **[OFFEN]** Anbieter, AVV |
 

@@ -17,7 +17,7 @@ die jeder lesen darf: keine Hostnamen, IP-Adressen, Tenant-IDs, Zugangsdaten, Fi
 
 - Fachliche Grundlage ist [`docs/spec.md`](docs/spec.md). Weicht eine Anforderung davon ab oder fehlt etwas: fragen und die Spec mit anpassen.
 - Oberfläche und Texte auf Deutsch.
-- Designrichtlinie: [`docs/design.md`](docs/design.md). Nur Komponenten aus `frontend/src/core/components` verwenden oder dort neu anlegen.
+- Designrichtlinie: [`docs/design.md`](docs/design.md). Gemeinsame Komponenten liegen in `frontend/src/components`, gemeinsame Gestaltung in `frontend/src/styles.css`; dort wiederverwenden oder neu anlegen, nicht je Seite nachbauen.
 
 ## Konventionen
 

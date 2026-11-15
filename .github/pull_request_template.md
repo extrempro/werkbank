@@ -13,7 +13,8 @@
 ## Checkliste
 
 - [ ] Tests ergänzt bzw. angepasst (Unit und E2E)
-- [ ] `CHANGELOG.md` unter „Unveröffentlicht“ ergänzt
+- [ ] `CHANGELOG.md` ergänzt. Ändert der PR die Anwendung: Version angehoben, Abschnitt `## [X.Y.Z]` angelegt, Eintrag in `frontend/src/release-notes.ts` (siehe `CONTRIBUTING.md`)
+- [ ] Handbuch geprüft und bei Bedarf angepasst (sobald es eines gibt)
 - [ ] Rechte serverseitig geprüft
 - [ ] Keine Secrets, Hostnamen oder Tenant-IDs im Code
 - [ ] Designrichtlinie eingehalten (`docs/design.md`)
