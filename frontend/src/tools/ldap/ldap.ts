@@ -146,7 +146,9 @@ export function analyzeDn(dn: string): DnInfo {
         domain,
         ...[...nonDc]
           .reverse()
-          .map((r) => r.parts.map((p) => p.value.replace(/\//g, "\\/")).join("+")),
+          .map((r) =>
+            r.parts.map((p) => p.value.replace(/\\/g, "\\\\").replace(/\//g, "\\/")).join("+"),
+          ),
       ].join("/")
     : undefined;
   return {

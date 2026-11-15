@@ -38,6 +38,8 @@ describe("DN", () => {
     const info = analyzeDn("CN=Max Muster,OU=Vertrieb,OU=Benutzer,DC=example,DC=com");
     expect(info.domain).toBe("example.com");
     expect(info.canonical).toBe("example.com/Benutzer/Vertrieb/Max Muster");
+    // Schrägstrich und Rückstrich im Namen werden im canonicalName maskiert.
+    expect(analyzeDn("CN=A/B\\\\C,DC=example,DC=com").canonical).toBe("example.com/A\\/B\\\\C");
     expect(info.parent).toBe("OU=Vertrieb,OU=Benutzer,DC=example,DC=com");
     expect(info.name).toBe("Max Muster");
   });
