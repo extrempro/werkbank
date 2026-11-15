@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.24.0",
+    date: "2026-11-15",
+    summary: "Neuer Bereich IT-Budget mit Konten und Plan je Geschäftsjahr.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Neu: Der Bereich „IT-Budget“ zeigt das geplante Budget je Konto für ein Geschäftsjahr, mit dem Vorjahr zum Vergleich.",
+          "Konten lassen sich anlegen, ändern und stilllegen, getrennt nach laufenden Kosten und Investitionen.",
+          "Der Budgetverwalter trägt den Plan direkt in der Übersicht ein und legt Beginn und Bezeichnung des Geschäftsjahrs fest.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.23.0",
     date: "2026-11-15",
     summary: "Zertifikate und Secrets als Waben auf einen Blick.",

@@ -100,4 +100,21 @@ describe("areasFor", () => {
     expect(areaForPath(areas, "/it-tools/kategorie/text")?.id).toBe("it-tools");
     expect(areaForPath(areas, "/it-tools/chmod")?.id).toBe("it-tools");
   });
+
+  it("gibt dem IT-Budget einen eigenen Bereich, Einstellungen nur für den Budgetverwalter", () => {
+    const paths = (roles: string[]) =>
+      allNavItems(areasFor(roles).find((area) => area.id === "budget")?.groups ?? []).map(
+        (item) => item.path,
+      );
+    expect(paths(["Budget.Reader"])).toEqual(["/budget", "/budget/konten"]);
+    expect(paths(["Budget.Editor"])).toEqual(["/budget", "/budget/konten"]);
+    expect(paths(["Budget.Manager"])).toEqual([
+      "/budget",
+      "/budget/konten",
+      "/budget/einstellungen",
+    ]);
+    expect(paths(["Tenant.Reader"])).toEqual([]);
+    const areas = areasFor(["Budget.Manager"]);
+    expect(areaForPath(areas, "/budget/konten")?.id).toBe("budget");
+  });
 });

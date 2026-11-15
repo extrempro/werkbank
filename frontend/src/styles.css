@@ -3769,3 +3769,43 @@ p.badges {
   margin: 0;
   padding: 16px 18px;
 }
+
+/* IT-Budget */
+
+.betrag {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.budget-year {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 16px;
+}
+
+.budget-input {
+  width: 9rem;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  text-align: right;
+}
+
+.budget-pill {
+  margin-left: 8px;
+}
+
+.budget-summe th,
+.budget-summe td {
+  font-weight: 700;
+}
+
+.budget-actions {
+  margin-top: 12px;
+}

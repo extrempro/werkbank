@@ -16,6 +16,9 @@ class Role(StrEnum):
     EVERGREEN_GF = "Evergreen.GF"
     TOOLS_USER = "Tools.User"
     TENANT_READER = "Tenant.Reader"
+    BUDGET_EDITOR = "Budget.Editor"
+    BUDGET_MANAGER = "Budget.Manager"
+    BUDGET_READER = "Budget.Reader"
 
 
 KNOWN_ROLES: frozenset[str] = frozenset(role.value for role in Role)
@@ -58,4 +61,13 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
         "Tenant Leser",
         "Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen",
     ),
+    Role.BUDGET_EDITOR: (
+        "Budget Bearbeiter",
+        "IT-Budget ansehen, Konten anlegen und ändern",
+    ),
+    Role.BUDGET_MANAGER: (
+        "Budgetverwalter",
+        "Wie Bearbeiter, dazu den Plan je Geschäftsjahr und die Einstellungen festlegen",
+    ),
+    Role.BUDGET_READER: ("Budget Leser", "IT-Budget ansehen"),
 }

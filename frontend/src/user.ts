@@ -9,7 +9,10 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Evergreen.GF", "Geschäftsführung"],
   ["Werkbank.Auditor", "Revision"],
   ["Config.Reader", "Lesezugriff"],
+  ["Budget.Manager", "Budgetverwaltung"],
   ["Tenant.Reader", "Tenant"],
+  ["Budget.Editor", "IT-Budget"],
+  ["Budget.Reader", "IT-Budget"],
   ["Tools.User", "IT-Tools"],
 ];
 
@@ -48,6 +51,15 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
     label: "Tenant Leser",
     description: "Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen",
   },
+  "Budget.Editor": {
+    label: "Budget Bearbeiter",
+    description: "IT-Budget ansehen, Konten anlegen und ändern",
+  },
+  "Budget.Manager": {
+    label: "Budgetverwalter",
+    description: "Wie Bearbeiter, dazu den Plan je Geschäftsjahr und die Einstellungen festlegen",
+  },
+  "Budget.Reader": { label: "Budget Leser", description: "IT-Budget ansehen" },
 };
 
 /** Name und Beschreibung einer App-Rolle (wie in der Verwaltung). */

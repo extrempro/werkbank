@@ -12,6 +12,9 @@ import {
   allNavItems,
   areaForPath,
   areasFor,
+  BUDGET_ACCOUNTS_PATH,
+  BUDGET_PATH,
+  BUDGET_SETTINGS_PATH,
   CREDENTIALS_PATH,
   LICENSES_PATH,
   NEWS_PATH,
@@ -34,6 +37,9 @@ import { RecommendationsPage } from "../modules/m365/RecommendationsPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { hasUnseenRelease } from "../release-notes";
+import { AccountsPage } from "../modules/budget/AccountsPage";
+import { BudgetOverviewPage } from "../modules/budget/BudgetOverviewPage";
+import { BudgetSettingsPage } from "../modules/budget/BudgetSettingsPage";
 import { CredentialsPage } from "../modules/tenant/CredentialsPage";
 import { LicensesPage } from "../modules/tenant/LicensesPage";
 import { UsersPage } from "../modules/tenant/UsersPage";
@@ -223,6 +229,12 @@ export function Layout({ me }: LayoutProps) {
     page = <UsersPage />;
   } else if (path === CREDENTIALS_PATH && current) {
     page = <CredentialsPage />;
+  } else if (path === BUDGET_PATH && current) {
+    page = <BudgetOverviewPage roles={me.roles} />;
+  } else if (path === BUDGET_ACCOUNTS_PATH && current) {
+    page = <AccountsPage roles={me.roles} />;
+  } else if (path === BUDGET_SETTINGS_PATH && current) {
+    page = <BudgetSettingsPage />;
   } else if (toolId !== null && toolsAllowed) {
     page = <ToolPage key={toolId} id={toolId} />;
   } else if (path === "/evergreen" && current) {

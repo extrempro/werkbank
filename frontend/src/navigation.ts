@@ -20,11 +20,16 @@ const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
 const EVERGREEN_EDITORS = ["Evergreen.IT", "Evergreen.Team"];
 const TOOLS_USER = "Tools.User";
 const TENANT_READER = "Tenant.Reader";
+const BUDGET_MANAGER = "Budget.Manager";
+const BUDGET_ROLES = ["Budget.Reader", "Budget.Editor", BUDGET_MANAGER];
 
 export const TOOLS_PATH = "/it-tools";
 export const LICENSES_PATH = "/m365/lizenzen";
 export const USERS_PATH = "/m365/benutzer";
 export const CREDENTIALS_PATH = "/m365/zugangsdaten";
+export const BUDGET_PATH = "/budget";
+export const BUDGET_ACCOUNTS_PATH = "/budget/konten";
+export const BUDGET_SETTINGS_PATH = "/budget/einstellungen";
 
 /** Seite einer Kategorie der IT-Tools. */
 export function toolCategoryPath(category: string): string {
@@ -120,6 +125,23 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       label: "Evergreen",
       icon: "vorgaenge",
       home: "/evergreen",
+      // Ohne Überschrift: Der Bereich heißt schon so.
+      groups: [{ title: null, items }],
+    });
+  }
+  if (hasAny(roles, BUDGET_ROLES)) {
+    const items: NavItem[] = [
+      { path: BUDGET_PATH, label: "Übersicht", icon: "uebersicht" },
+      { path: BUDGET_ACCOUNTS_PATH, label: "Konten", icon: "konten" },
+    ];
+    if (roles.includes(BUDGET_MANAGER)) {
+      items.push({ path: BUDGET_SETTINGS_PATH, label: "Einstellungen", icon: "einstellungen" });
+    }
+    areas.push({
+      id: "budget",
+      label: "IT-Budget",
+      icon: "budget",
+      home: BUDGET_PATH,
       // Ohne Überschrift: Der Bereich heißt schon so.
       groups: [{ title: null, items }],
     });

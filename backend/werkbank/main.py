@@ -14,6 +14,7 @@ from werkbank.core.ratelimit import RateLimitMiddleware, default_rules
 from werkbank.core.search import router as search_router
 from werkbank.core.tasks import router as tasks_router
 from werkbank.db import database_ready
+from werkbank.modules.budget.api import router as budget_router
 from werkbank.modules.evergreen.api import router as evergreen_router
 from werkbank.modules.evergreen.search import evergreen_search
 from werkbank.modules.evergreen.tasks import evergreen_tasks
@@ -61,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(m365_config_router)
     app.include_router(recommendations_router)
     app.include_router(tenant_router)
+    app.include_router(budget_router)
     app.include_router(evergreen_router)
 
     @app.get("/health", include_in_schema=False)
