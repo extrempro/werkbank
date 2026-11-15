@@ -3,7 +3,7 @@
 Automatisch: axe-core in jedem E2E-Test (alle Screens, Profile Desktop/Tablet/iPhone). Ziel: keine Verstöße der Stufen „serious“ und „critical“.
 Automatische Tests finden nur einen Teil der Probleme. Diese Checkliste wird bei jedem neuen Screen manuell geprüft.
 
-> **Stand:** Ende Phase 3. Die Seiten von Evergreen (Liste, Vorgang mit Entscheidung, geplante Umsetzung) laufen im Browsertest mit Inhalt durch axe-core, auf Desktop, Tablet und Handy. ✅ heißt: durch Umsetzung und automatische Tests belegt. ⚠️ heißt: umgesetzt, aber die manuelle Prüfung (Tastatur, Zoom, Screenreader, echte Geräte) steht noch aus. Sie ist mit der ersten Inbetriebnahme vorgesehen.
+> **Stand:** Version 0.3. Alle Seiten laufen im Browsertest durch axe-core, auf Desktop, Tablet und Handy; Startseite, M365-Übersicht, Änderungen, Einstellungen, Evergreen, Audit-Log und Konto zusätzlich im dunklen Modus. Die Seiten von Evergreen werden dabei mit Inhalt geprüft, die der M365-Konfiguration im leeren Zustand. ✅ heißt: durch Umsetzung und automatische Tests belegt. ⚠️ heißt: umgesetzt, aber die manuelle Prüfung (Tastatur, Zoom, Screenreader, echte Geräte) steht aus.
 
 Status: ✅ erfüllt · ⚠️ teilweise · ❌ offen · n/a nicht anwendbar
 
@@ -14,7 +14,7 @@ Status: ✅ erfüllt · ⚠️ teilweise · ❌ offen · n/a nicht anwendbar
 | Fokus | Fokus jederzeit sichtbar und nicht verdeckt (2.4.11) | ⚠️ | Einheitlicher Fokusrahmen in `styles.css`; manuelle Prüfung offen |
 | Ziele | Klickziele mind. 24 × 24 px (2.5.8), Bedienelemente 44 px | ⚠️ | Buttons und Felder 44 px, Kontrollkästchen 24 px; Links in Tabellen manuell zu prüfen |
 | Ziehen | Keine Funktion nur per Ziehen (2.5.7) | ✅ | Es gibt keine Zieh-Bedienung |
-| Kontrast | Text 4,5:1, große Schrift und Bedienelemente 3:1 | ✅ | axe-core in den E2E-Tests ohne Verstöße (leere Zustände); gefüllte Tabellen mit echten Daten nachprüfen |
+| Kontrast | Text 4,5:1, große Schrift und Bedienelemente 3:1 | ✅ | axe-core in den E2E-Tests ohne Verstöße, im hellen und im dunklen Modus; gefüllte Seiten der M365-Konfiguration mit echten Daten nachprüfen |
 | Farbe | Keine Information nur über Farbe | ✅ | Zustände stehen als Text (Bewertung, „Entfernt“, „Weicht vom Soll-Wert ab“) |
 | Struktur | Überschriften-Hierarchie, Landmarks (header, nav, main) | ✅ | axe-core; Sprunglink zum Inhalt |
 | Formulare | Sichtbare Labels, Fehlermeldungen mit Hinweis zur Behebung | ✅ | Alle Felder mit Label; Fehlermeldungen als `role="alert"` mit Hinweis |
