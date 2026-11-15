@@ -1,4 +1,4 @@
-import { getJson, postJson, putJson } from "../../api";
+import { deleteJson, getJson, postJson, putJson } from "../../api";
 
 const BASE = "/api/m365-config";
 
@@ -126,6 +126,8 @@ export interface SettingDetail {
   setting: Setting;
   meta: Meta;
   ai_text?: AiText | null;
+  /** Zugeordnete Empfehlungen aus Microsoft Secure Score. */
+  recommendations?: Recommendation[];
   meta_history: MetaHistoryEntry[];
   versions: Version[];
   changes: Change[];
@@ -347,4 +349,85 @@ export function statusClass(status: string): string {
     return "pill pill-ok";
   }
   return status === "ungewollt" ? "pill pill-bad" : "pill pill-todo";
+}
+
+// --- Empfehlungen (Microsoft Secure Score) ---------------------------------------------
+
+export interface Recommendation {
+  id: number;
+  control_id: string;
+  title: string;
+  category: string | null;
+  service: string | null;
+  user_impact: string | null;
+  implementation_cost: string | null;
+  rank: number | null;
+  score: number | null;
+  max_score: number;
+  fulfilled: boolean;
+  status_text: string | null;
+  deprecated: boolean;
+  active: boolean;
+  linked_settings: number;
+}
+
+export type RecommendationView = "offen" | "erfuellt" | "alle";
+
+export interface RecommendationList {
+  /** Der Abruf ist in dieser Installation eingeschaltet. */
+  enabled: boolean;
+  fetched_at: string | null;
+  score: number;
+  max_score: number;
+  open_count: number;
+  fulfilled_count: number;
+  entries: Recommendation[];
+}
+
+export interface LinkedSetting {
+  id: number;
+  path: string;
+  workload: string;
+  object_name: string | null;
+  property: string;
+  active: boolean;
+}
+
+export interface RecommendationDetail {
+  recommendation: Recommendation;
+  remediation: string | null;
+  action_url: string | null;
+  action_type: string | null;
+  fetched_at: string;
+  settings: LinkedSetting[];
+}
+
+export function fetchRecommendations(view: RecommendationView): Promise<RecommendationList> {
+  return getJson(`${BASE}/recommendations?${new URLSearchParams({ view }).toString()}`);
+}
+
+export function fetchRecommendation(id: number): Promise<RecommendationDetail> {
+  return getJson(`${BASE}/recommendations/${id}`);
+}
+
+export function linkRecommendation(id: number, settingId: number): Promise<RecommendationDetail> {
+  return postJson(`${BASE}/recommendations/${id}/links`, { setting_id: settingId });
+}
+
+export function unlinkRecommendation(id: number, settingId: number): Promise<RecommendationDetail> {
+  return deleteJson(`${BASE}/recommendations/${id}/links/${settingId}`);
+}
+
+/** Punkte ohne unnötige Nachkommastellen, z. B. „7,5 von 10“. */
+export function formatScore(score: number | null, maxScore: number): string {
+  const format = (value: number) =>
+    new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(value);
+  return score === null ? `– von ${format(maxScore)}` : `${format(score)} von ${format(maxScore)}`;
+}
+
+const LEVELS: Record<string, string> = { low: "gering", moderate: "mittel", high: "hoch" };
+
+/** Microsofts Stufen (Low, Moderate, High) auf Deutsch. */
+export function levelLabel(value: string | null): string {
+  return value ? (LEVELS[value.toLowerCase()] ?? value) : "–";
 }

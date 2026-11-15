@@ -201,6 +201,7 @@ Der Collector liest die Einstellungen des Tenants über **Unified Tenant Configu
 | `ConfigurationMonitoring.ReadWrite.All` | Snapshots bei UTCM anstoßen, abholen und wieder entfernen. Das Schreibrecht betrifft nur diese Snapshot-Aufträge, nicht die Einstellungen des Tenants. Mit `ConfigurationMonitoring.Read.All` allein lassen sich keine Snapshots erstellen. |
 | `AuditLog.Read.All` | „Geändert von“: Wer eine Einstellung geändert hat, steht im Entra-Audit-Log. |
 | `ServiceMessage.Read.All` | Evergreen: Meldungen aus dem Nachrichtencenter lesen. |
+| `SecurityEvents.Read.All` | Freiwillig: Empfehlungen aus Microsoft Secure Score lesen (Seite „Empfehlungen“). Erst danach in der `.env` `SECURE_SCORE_ENABLED=true` setzen; ohne die Berechtigung schlägt der Abruf fehl. |
 
 ### 4.2 Dienstprinzipal von UTCM einrichten
 

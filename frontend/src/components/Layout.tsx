@@ -21,6 +21,7 @@ import { InboxPage } from "../modules/evergreen/InboxPage";
 import { ItemsPage } from "../modules/evergreen/ItemsPage";
 import { ChangesPage } from "../modules/m365/ChangesPage";
 import { OverviewPage } from "../modules/m365/OverviewPage";
+import { RecommendationsPage } from "../modules/m365/RecommendationsPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { hasUnseenRelease } from "../release-notes";
@@ -34,6 +35,7 @@ import { ScrollTop } from "./ScrollTop";
 import { roleLabel } from "../user";
 
 const SETTINGS_PATH = "/m365/einstellungen";
+const RECOMMENDATIONS_PATH = "/m365/empfehlungen";
 const NAV_KEY = "werkbank-navigation";
 
 function readCollapsed(): boolean {
@@ -134,6 +136,9 @@ export function Layout({ me }: LayoutProps) {
   const settingMatch = /^\/m365\/einstellungen\/(\d{1,9})$/.exec(path);
   const settingId = settingMatch ? Number(settingMatch[1]) : null;
 
+  const recommendationMatch = /^\/m365\/empfehlungen\/(\d{1,9})$/.exec(path);
+  const recommendationId = recommendationMatch ? Number(recommendationMatch[1]) : null;
+
   const itemMatch = /^\/evergreen\/(\d{1,9})$/.exec(path);
   const itemId = itemMatch ? Number(itemMatch[1]) : null;
 
@@ -156,6 +161,13 @@ export function Layout({ me }: LayoutProps) {
     page = <ChangesPage me={me} />;
   } else if (path === "/m365/einstellungen" && current) {
     page = <SettingsPage me={me} />;
+  } else if (path === RECOMMENDATIONS_PATH && current) {
+    page = <RecommendationsPage me={me} />;
+  } else if (
+    recommendationId !== null &&
+    items.some((item) => item.path === RECOMMENDATIONS_PATH)
+  ) {
+    page = <RecommendationsPage me={me} selectedId={recommendationId} />;
   } else if (path === "/m365/snapshots" && current) {
     page = <SnapshotsPage />;
   } else if (settingId !== null && items.some((item) => item.path === SETTINGS_PATH)) {

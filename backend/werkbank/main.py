@@ -19,6 +19,7 @@ from werkbank.modules.evergreen.search import evergreen_search
 from werkbank.modules.evergreen.tasks import evergreen_tasks
 from werkbank.modules.evergreen.workflow import evergreen_workflow
 from werkbank.modules.m365_config.api import router as m365_config_router
+from werkbank.modules.m365_config.recommendations_api import router as recommendations_router
 from werkbank.modules.m365_config.search import m365_config_search
 from werkbank.modules.m365_config.tasks import m365_config_tasks
 from werkbank.security import SecurityHeadersMiddleware
@@ -56,6 +57,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(search_router)
     app.include_router(tasks_router)
     app.include_router(m365_config_router)
+    app.include_router(recommendations_router)
     app.include_router(evergreen_router)
 
     @app.get("/health", include_in_schema=False)

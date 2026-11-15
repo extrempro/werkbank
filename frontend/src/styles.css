@@ -2921,3 +2921,27 @@ p.badges {
   gap: 8px;
   margin: 0;
 }
+
+/* Empfehlungen: Suche nach einer Einstellung zum Zuordnen */
+
+.link-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.link-search label {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.setting-section .rows li {
+  padding-left: 0;
+  padding-right: 0;
+}

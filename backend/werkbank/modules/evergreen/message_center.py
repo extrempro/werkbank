@@ -7,7 +7,6 @@ Handlungsbedarf werden automatisch zu Vorgängen; die übrigen übernimmt die IT
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from html.parser import HTMLParser
 from typing import Any
 
 from sqlalchemy import func, select
@@ -15,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from werkbank.core.audit import write_audit
 from werkbank.core.sessions import now_utc
+from werkbank.core.text import html_to_text
 from werkbank.modules.evergreen.models import EvItem, EvMessage, ItemSource, MessageStatus
 from werkbank.modules.evergreen.service import MODULE, create_item
 from werkbank.modules.m365_config.utcm import UtcmClient
@@ -24,10 +24,7 @@ logger = logging.getLogger(__name__)
 FIRST_FETCH_DAYS = 30
 # Überlappung beim Abruf, damit keine Meldung an der Zeitgrenze verloren geht
 OVERLAP = timedelta(hours=1)
-BODY_MAX_LENGTH = 20_000
 SUMMARY_MAX_LENGTH = 8000
-BLOCK_TAGS = frozenset({"p", "br", "div", "li", "tr", "h1", "h2", "h3", "h4", "ul", "ol", "table"})
-SKIPPED_TAGS = frozenset({"script", "style"})
 
 
 @dataclass(frozen=True)
@@ -36,47 +33,6 @@ class FetchResult:
     new: int = 0
     updated: int = 0
     items_created: int = 0
-
-
-class _TextExtractor(HTMLParser):
-    """Macht aus dem HTML einer Meldung reinen Text. Skripte und Formatierung entfallen."""
-
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.parts: list[str] = []
-        self._skip = 0
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag in SKIPPED_TAGS:
-            self._skip += 1
-        elif tag in BLOCK_TAGS:
-            self.parts.append("\n")
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag in SKIPPED_TAGS:
-            self._skip = max(self._skip - 1, 0)
-        elif tag in BLOCK_TAGS:
-            self.parts.append("\n")
-
-    def handle_data(self, data: str) -> None:
-        if not self._skip:
-            self.parts.append(data)
-
-
-def html_to_text(html: str | None) -> str | None:
-    """Text einer Meldung ohne HTML, mit höchstens einer Leerzeile zwischen Absätzen."""
-    if not html:
-        return None
-    parser = _TextExtractor()
-    parser.feed(html)
-    parser.close()
-    lines = [" ".join(line.split()) for line in "".join(parser.parts).splitlines()]
-    result: list[str] = []
-    for line in lines:
-        if line or (result and result[-1]):
-            result.append(line)
-    text = "\n".join(result).strip()
-    return text[:BODY_MAX_LENGTH] or None
 
 
 def parse_time(value: Any) -> datetime | None:

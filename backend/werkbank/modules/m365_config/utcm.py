@@ -148,6 +148,17 @@ class UtcmClient:
             {"$filter": f"lastModifiedDateTime ge {moment}", "$top": "100"},
         )
 
+    def secure_score_profiles(self) -> list[dict[str, Any]]:
+        """Alle Controls von Microsoft Secure Score mit Titel und Hinweisen zur Umsetzung."""
+        return self._pages(f"{GRAPH_URL}/security/secureScoreControlProfiles", {"$top": "200"})
+
+    def latest_secure_score(self) -> dict[str, Any] | None:
+        """Der jüngste Stand des Tenants (Punkte je Control), oder None, wenn es keinen gibt."""
+        data = self._json("GET", f"{GRAPH_URL}/security/secureScores", params={"$top": "1"})
+        values = data.get("value")
+        first = values[0] if isinstance(values, list) and values else None
+        return first if isinstance(first, dict) else None
+
     def directory_audits(self, since: datetime) -> list[dict[str, Any]]:
         """Einträge des Entra-Audit-Logs seit einem Zeitpunkt (für „Geändert von“)."""
         moment = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

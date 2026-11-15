@@ -64,3 +64,14 @@ test("Ohne Rolle für die Konfiguration bleibt das Modul verschlossen", async ({
     expect(response.status()).toBe(403);
   }
 });
+
+test("Empfehlungen: Seite erklärt, wenn der Abruf nicht eingeschaltet ist", async ({ page }) => {
+  await loginAs(page, ["Config.Reader"], "Lea Leser");
+  await page.goto("/m365/empfehlungen");
+  await expect(page.getByRole("heading", { level: 1, name: "Empfehlungen" })).toBeVisible();
+  await expect(page.getByText(/ist in dieser Installation nicht eingeschaltet/)).toBeVisible();
+  await expectNoA11yViolations(page);
+  const api = await page.request.get("/api/m365-config/recommendations");
+  expect(api.status()).toBe(200);
+  expect((await api.json()).enabled).toBe(false);
+});

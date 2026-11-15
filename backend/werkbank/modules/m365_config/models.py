@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -187,3 +188,45 @@ class CfgAiText(Base):
     )
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class CfgRecommendation(Base):
+    """Empfehlung aus Microsoft Secure Score („Control“) mit dem Stand im Tenant."""
+
+    __tablename__ = "cfg_recommendations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Kennung des Controls bei Microsoft, z. B. „AdminMFAV2“
+    control_id: Mapped[str] = mapped_column(String(128), unique=True)
+    title: Mapped[str] = mapped_column(String(500))
+    category: Mapped[str | None] = mapped_column(String(64))
+    service: Mapped[str | None] = mapped_column(String(128))
+    action_type: Mapped[str | None] = mapped_column(String(32))
+    user_impact: Mapped[str | None] = mapped_column(String(32))
+    implementation_cost: Mapped[str | None] = mapped_column(String(32))
+    rank: Mapped[int | None] = mapped_column(Integer)
+    max_score: Mapped[float] = mapped_column(Float, default=0.0)
+    # Erreichte Punkte; None, solange Microsoft für dieses Control keinen Stand liefert
+    score: Mapped[float | None] = mapped_column(Float)
+    status_text: Mapped[str | None] = mapped_column(Text)
+    remediation: Mapped[str | None] = mapped_column(Text)
+    action_url: Mapped[str | None] = mapped_column(String(500))
+    deprecated: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # False: Das Control fehlte im letzten Abruf.
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CfgRecommendationLink(Base):
+    """Von Hand gepflegte Zuordnung: Diese Empfehlung betrifft diese Einstellung."""
+
+    __tablename__ = "cfg_recommendation_links"
+
+    recommendation_id: Mapped[int] = mapped_column(
+        ForeignKey("cfg_recommendations.id", ondelete="CASCADE"), primary_key=True
+    )
+    setting_id: Mapped[int] = mapped_column(
+        ForeignKey("cfg_settings.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
