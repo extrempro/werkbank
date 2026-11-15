@@ -69,6 +69,50 @@ test("IT-Tools: chmod, Base64, UUID und Passwort-Generator", async ({ page }) =>
   await expectNoA11yViolations(page);
 });
 
+test("IT-Tools: weitere Netzwerk-Tools", async ({ page }) => {
+  await loginAs(page, ["Tools.User"], "Tina Tools");
+
+  await page.goto("/it-tools/subnetting-bits");
+  await expect(page.getByRole("row", { name: /^Subnetzmaske/ })).toContainText("255.255.255.192");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/netze-zusammenfassen");
+  await page
+    .getByRole("textbox", { name: /^Netze, Adressen oder Bereiche/ })
+    .fill("192.168.0.0/24\n192.168.1.0/24");
+  await expect(page.getByLabel("Zusammengefasst (IPv4)", { exact: true })).toHaveText(
+    "192.168.0.0/23",
+  );
+  expect(page.url()).not.toContain("192.168");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/firewall-regeln");
+  await expect(page.getByText("Das Paket wird verworfen")).toBeVisible();
+  await expect(page.getByText(/greift nie: Regel 3 deckt alles ab/)).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Die Herstellerliste liegt in der Werkbank; es gibt keine Abfrage nach außen.
+  const foreign: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).origin !== new URL(page.url()).origin) {
+      foreign.push(request.url());
+    }
+  });
+  await page.goto("/it-tools/mac-adressen");
+  await page.getByRole("textbox", { name: /^MAC-Adressen/ }).fill("00-00-00-AB-CD-EF");
+  await expect(page.getByText("Xerox Corporation")).toBeVisible({ timeout: 15000 });
+  expect(foreign).toEqual([]);
+  expect(page.url()).not.toContain("AB");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/ports?suche=3389");
+  await expect(page.getByRole("row", { name: /^3389/ })).toContainText("RDP");
+  await expect(page.getByLabel("Windows (PowerShell)", { exact: true })).toContainText(
+    "-LocalPort 3389",
+  );
+  await expectNoA11yViolations(page);
+});
+
 test("IT-Tools: ohne die Rolle gibt es den Bereich nicht", async ({ page }) => {
   await loginAs(page, ["Config.Reader"], "Lea Leser");
   await page.goto("/it-tools");

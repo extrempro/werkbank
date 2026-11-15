@@ -38,6 +38,69 @@ export const TOOLS: readonly ToolDefinition[] = [
     component: lazy(() => import("./cidr/CidrTool")),
   },
   {
+    id: "subnetting-bits",
+    name: "Subnetting-Bits",
+    category: "netzwerk",
+    description:
+      "Wie viele Bits muss ich für eine Anzahl Subnetze oder Hosts borgen? Zeigt neue Maske, Schrittweite, Bit-Aufteilung und die entstehenden Subnetze.",
+    tags: [
+      "subnetz",
+      "borgen",
+      "hostbits",
+      "netzbits",
+      "subnetzmaske",
+      "präfix",
+      "ipv4",
+      "aufteilen",
+    ],
+    component: lazy(() => import("./subnet-bits/SubnetBitsTool")),
+  },
+  {
+    id: "netze-zusammenfassen",
+    name: "Netze zusammenfassen",
+    category: "netzwerk",
+    description:
+      "Liste von Netzen, Adressen und Bereichen zur kleinsten CIDR-Liste zusammenfassen, für Firewall-Regeln, Routen und Allowlists.",
+    tags: ["supernet", "supernetting", "aggregieren", "cidr", "route", "summary", "allowlist"],
+    component: lazy(() => import("./supernet/SupernetTool")),
+  },
+  {
+    id: "firewall-regeln",
+    name: "Firewall-Regeln prüfen",
+    category: "netzwerk",
+    description:
+      "Regelwerk eingeben und ein Testpaket hindurchschicken: Welche Regel greift zuerst? Findet außerdem Regeln, die nie erreicht werden.",
+    tags: [
+      "regelwerk",
+      "acl",
+      "paketfilter",
+      "first match",
+      "allow",
+      "deny",
+      "testpaket",
+      "iptables",
+    ],
+    component: lazy(() => import("./firewall-rules/FirewallRulesTool")),
+  },
+  {
+    id: "mac-adressen",
+    name: "MAC-Adressen",
+    category: "netzwerk",
+    description:
+      "MAC-Adressen umformatieren (Windows, Linux, Cisco), Hersteller nachschlagen, Multicast und lokale Adressen erkennen, EUI-64 und IPv6-Link-Local.",
+    tags: ["mac", "oui", "hersteller", "vendor", "cisco", "eui-64", "link-local", "arp"],
+    component: lazy(() => import("./mac/MacTool")),
+  },
+  {
+    id: "ports",
+    name: "Port-Nachschlagewerk",
+    category: "netzwerk",
+    description:
+      "Welcher Dienst nutzt welchen Port? Über 150 gebräuchliche Ports mit Protokoll und Hinweisen, dazu Firewall-Befehle.",
+    tags: ["port", "tcp", "udp", "firewall", "dienst", "service", "rdp", "smb", "ldap", "kerberos"],
+    component: lazy(() => import("./ports/PortsTool")),
+  },
+  {
     id: "chmod",
     name: "chmod-Rechner",
     category: "system",
