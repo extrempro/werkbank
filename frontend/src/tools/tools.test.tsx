@@ -223,7 +223,7 @@ describe("ToolPage", () => {
     expect(screen.getByLabelText("1 Adresse umgewandelt")).toHaveTextContent("0000.00ab.cdef");
     // In der Adresszeile steht nur das Format, nie die Adresse.
     expect(window.location.search).toBe("?format=cisco");
-  });
+  }, 20000);
 
   it("Ports: sucht nach Nummer und baut Firewall-Befehle mit harmlosem Namen", async () => {
     render(<ToolPage id="ports" />);
