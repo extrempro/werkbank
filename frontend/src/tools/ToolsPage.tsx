@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState, type ComponentType } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { Link } from "../components/Link";
 import {
   CATEGORY_LABELS,
@@ -11,17 +11,6 @@ import {
 } from "./index";
 
 export const TOOLS_PATH = "/it-tools";
-
-// Jede Oberfläche wird nur einmal als nachladbare Komponente angelegt.
-const loaded = new Map<string, ComponentType>();
-function componentFor(tool: ToolDefinition): ComponentType {
-  let component = loaded.get(tool.id);
-  if (!component) {
-    component = lazy(tool.load);
-    loaded.set(tool.id, component);
-  }
-  return component;
-}
 
 function useFavorites(): [string[], (id: string) => void] {
   const [favorites, setFavorites] = useState(readFavorites);
@@ -175,7 +164,6 @@ export function ToolPage({ id }: { id: string }) {
       </div>
     );
   }
-  const Component = componentFor(tool);
   return (
     <div className="page">
       {back}
@@ -193,7 +181,7 @@ export function ToolPage({ id }: { id: string }) {
       </header>
       <section className="panel tool-panel" aria-label={tool.name}>
         <Suspense fallback={<p role="status">Wird geladen …</p>}>
-          <Component />
+          <tool.component />
         </Suspense>
       </section>
     </div>

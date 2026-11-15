@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import { lazy, type ComponentType } from "react";
 
 /**
  * IT-Tools: kleine Werkzeuge, die vollständig im Browser rechnen.
@@ -23,7 +23,8 @@ export interface ToolDefinition {
   description: string;
   /** Zusätzliche Suchbegriffe. */
   tags: string[];
-  load: () => Promise<{ default: ComponentType }>;
+  /** Oberfläche des Tools; wird erst beim Öffnen geladen. */
+  component: ComponentType;
 }
 
 export const TOOLS: readonly ToolDefinition[] = [
@@ -34,7 +35,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     description:
       "IPv4- und IPv6-Netze berechnen: CIDR, Maske, Wildcard oder Bereich eingeben, Netz aufteilen, Adressen prüfen.",
     tags: ["cidr", "subnet", "ipv4", "ipv6", "netzmaske", "wildcard", "broadcast", "präfix"],
-    load: () => import("./cidr/CidrTool"),
+    component: lazy(() => import("./cidr/CidrTool")),
   },
   {
     id: "chmod",
@@ -43,7 +44,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     description:
       "Linux-Dateirechte umrechnen: oktal (755), rwxr-xr-x und u=rwx,g=rx,o=rx, mit SetUID, SetGID, Sticky und umask.",
     tags: ["linux", "unix", "rechte", "permissions", "755", "644", "rwx", "umask"],
-    load: () => import("./chmod/ChmodTool"),
+    component: lazy(() => import("./chmod/ChmodTool")),
   },
   {
     id: "base64",
@@ -52,7 +53,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     description:
       "Text in Base64 kodieren oder Base64 zurück in Text wandeln (UTF-8, auch URL-safe).",
     tags: ["encode", "decode", "kodieren", "dekodieren"],
-    load: () => import("./base64/Base64Tool"),
+    component: lazy(() => import("./base64/Base64Tool")),
   },
   {
     id: "uuid",
@@ -60,7 +61,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "generator",
     description: "Erzeugt zufällige UUIDs (Version 4).",
     tags: ["guid", "zufall"],
-    load: () => import("./uuid/UuidTool"),
+    component: lazy(() => import("./uuid/UuidTool")),
   },
   {
     id: "passwort",
@@ -69,7 +70,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     description:
       "Sichere Kennwörter mit wählbaren Zeichengruppen erzeugen. Alles geschieht im Browser, nichts wird übertragen.",
     tags: ["kennwort", "password", "zufall", "sicher"],
-    load: () => import("./password/PasswordTool"),
+    component: lazy(() => import("./password/PasswordTool")),
   },
 ];
 
