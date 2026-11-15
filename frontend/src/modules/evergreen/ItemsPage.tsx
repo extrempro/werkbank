@@ -227,7 +227,9 @@ export function ItemsPage({ selectedId }: ItemsPageProps) {
                 <li key={entry.id}>
                   <Link
                     to={`/evergreen/${entry.id}`}
-                    className={entry.id === selectedId ? "item-card item-card-current" : "item-card"}
+                    className={
+                      entry.id === selectedId ? "item-card item-card-current" : "item-card"
+                    }
                     aria-current={entry.id === selectedId ? "page" : undefined}
                   >
                     <span className="small">
@@ -244,7 +246,9 @@ export function ItemsPage({ selectedId }: ItemsPageProps) {
                         <span className="pill pill-bad">Größere Änderung</span>
                       )}
                     </span>
-                    <span className={isUrgent(entry) ? "item-card-due urgent-text" : "item-card-due"}>
+                    <span
+                      className={isUrgent(entry) ? "item-card-due urgent-text" : "item-card-due"}
+                    >
                       {rolloutShort(entry)}
                     </span>
                   </Link>
@@ -253,11 +257,7 @@ export function ItemsPage({ selectedId }: ItemsPageProps) {
             </ul>
           )}
           {hasMore && (
-            <button
-              type="button"
-              className="button button-secondary load-more"
-              onClick={loadMore}
-            >
+            <button type="button" className="button button-secondary load-more" onClick={loadMore}>
               Weitere laden
             </button>
           )}

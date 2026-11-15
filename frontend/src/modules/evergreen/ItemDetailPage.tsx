@@ -227,55 +227,55 @@ export function ItemDetailPage({ id, onChanged }: ItemDetailPageProps) {
             )}
           </div>
           {editing ? (
-          <form className="meta-form" onSubmit={onSave} aria-label="Angaben bearbeiten">
-            <label>
-              Zusammenfassung
-              <textarea
-                value={summary}
-                maxLength={8000}
-                rows={5}
-                onChange={(event) => setSummary(event.target.value)}
-              />
-            </label>
-            <label>
-              Rückmeldungen der Fachabteilungen
-              <textarea
-                value={feedback}
-                maxLength={8000}
-                rows={4}
-                onChange={(event) => setFeedback(event.target.value)}
-              />
-            </label>
-            <label>
-              Rollout-Datum
-              <input
-                type="date"
-                value={rollout}
-                onChange={(event) => setRollout(event.target.value)}
-              />
-            </label>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                className="check"
-                checked={notControllable}
-                onChange={(event) => setNotControllable(event.target.checked)}
-              />
-              Nicht steuerbar (lässt sich nicht abschalten oder einschränken)
-            </label>
-            <div className="filter-actions">
-              <button type="submit" className="button button-primary">
-                Speichern
-              </button>
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => setEditing(false)}
-              >
-                Abbrechen
-              </button>
-            </div>
-          </form>
+            <form className="meta-form" onSubmit={onSave} aria-label="Angaben bearbeiten">
+              <label>
+                Zusammenfassung
+                <textarea
+                  value={summary}
+                  maxLength={8000}
+                  rows={5}
+                  onChange={(event) => setSummary(event.target.value)}
+                />
+              </label>
+              <label>
+                Rückmeldungen der Fachabteilungen
+                <textarea
+                  value={feedback}
+                  maxLength={8000}
+                  rows={4}
+                  onChange={(event) => setFeedback(event.target.value)}
+                />
+              </label>
+              <label>
+                Rollout-Datum
+                <input
+                  type="date"
+                  value={rollout}
+                  onChange={(event) => setRollout(event.target.value)}
+                />
+              </label>
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  className="check"
+                  checked={notControllable}
+                  onChange={(event) => setNotControllable(event.target.checked)}
+                />
+                Nicht steuerbar (lässt sich nicht abschalten oder einschränken)
+              </label>
+              <div className="filter-actions">
+                <button type="submit" className="button button-primary">
+                  Speichern
+                </button>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setEditing(false)}
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </form>
           ) : (
             <>
               <p className="text">
@@ -293,67 +293,67 @@ export function ItemDetailPage({ id, onChanged }: ItemDetailPageProps) {
 
         <PlanSection detail={detail} onChange={onUpdate} />
 
-      {detail.message && (
-        <section className="setting-section" aria-labelledby="meldung-titel">
-          <h2 id="meldung-titel">Meldung von Microsoft</h2>
-          {detail.message_updated && (
-            <p className="hint-box hint-warn" role="status">
-              <strong>Microsoft hat diese Meldung geändert</strong>, nachdem der Vorgang angelegt
-              wurde (zuletzt am {formatDateTime(detail.message.modified_at)}). Bitte prüfen, ob sich
-              dadurch etwas an der Bewertung ändert.
+        {detail.message && (
+          <section className="setting-section" aria-labelledby="meldung-titel">
+            <h2 id="meldung-titel">Meldung von Microsoft</h2>
+            {detail.message_updated && (
+              <p className="hint-box hint-warn" role="status">
+                <strong>Microsoft hat diese Meldung geändert</strong>, nachdem der Vorgang angelegt
+                wurde (zuletzt am {formatDateTime(detail.message.modified_at)}). Bitte prüfen, ob
+                sich dadurch etwas an der Bewertung ändert.
+              </p>
+            )}
+            <p className="small">
+              {detail.message.message_id} · {categoryLabel(detail.message.category)}
             </p>
-          )}
-          <p className="small">
-            {detail.message.message_id} · {categoryLabel(detail.message.category)}
-          </p>
-          <details>
-            <summary>Text der Meldung anzeigen</summary>
-            <p className="text">{detail.message.body ?? "Die Meldung enthält keinen Text."}</p>
-          </details>
-        </section>
-      )}
+            <details>
+              <summary>Text der Meldung anzeigen</summary>
+              <p className="text">{detail.message.body ?? "Die Meldung enthält keinen Text."}</p>
+            </details>
+          </section>
+        )}
 
         {actions.length > 0 && (
           <section className="hint-box hint-warn decision" aria-labelledby="entscheidung-titel">
             <h2 id="entscheidung-titel">
               {onBehalf ? "Beschluss im Auftrag erfassen" : `Entscheidung: ${item.step_title}`}
             </h2>
-          {onBehalf && (
-            <>
-              <p className="note">
-                Du erfasst den Beschluss stellvertretend aus einem Sitzungsprotokoll. Im Protokoll
-                des Vorgangs steht dein Name mit dem Zusatz „im Auftrag“.
-              </p>
-              <label>
-                Datum der Sitzung
-                <input
-                  type="date"
-                  value={sessionDate}
-                  onChange={(event) => setSessionDate(event.target.value)}
-                />
-              </label>
-            </>
-          )}
-          <label>
-            {onBehalf ? "Inhalt des Beschlusses" : "Kommentar"}
-            <textarea
-              value={comment}
-              maxLength={4000}
-              rows={3}
-              aria-describedby={commentHintId}
-              onChange={(event) => setComment(event.target.value)}
-            />
-          </label>
-          <p className="rule" id={commentHintId}>
-            {onBehalf
-              ? "Pflichtangabe."
-              : actions.some((action) => action.comment_required)
-                ? `Pflicht bei: ${actions
-                    .filter((action) => action.comment_required)
-                    .map((action) => action.title)
-                    .join(", ")}.`
-                : "Freiwillig."}
-          </p>
+            {onBehalf && (
+              <>
+                <p className="note">
+                  Du erfasst den Beschluss stellvertretend aus einem Sitzungsprotokoll. Im Protokoll
+                  des Vorgangs steht dein Name mit dem Zusatz „im Auftrag“.
+                </p>
+                <label>
+                  Datum der Sitzung
+                  <input
+                    type="date"
+                    value={sessionDate}
+                    onChange={(event) => setSessionDate(event.target.value)}
+                  />
+                </label>
+              </>
+            )}
+            <label>
+              {onBehalf ? "Inhalt des Beschlusses" : "Kommentar"}
+              <textarea
+                value={comment}
+                maxLength={4000}
+                rows={3}
+                aria-describedby={commentHintId}
+                onChange={(event) => setComment(event.target.value)}
+              />
+            </label>
+            <p className="rule" id={commentHintId}>
+              {onBehalf
+                ? "Pflichtangabe."
+                : actions.some((action) => action.comment_required)
+                  ? `Pflicht bei: ${actions
+                      .filter((action) => action.comment_required)
+                      .map((action) => action.title)
+                      .join(", ")}.`
+                  : "Freiwillig."}
+            </p>
             <div className="actions">
               {actions.map((action, index) => (
                 <button
@@ -392,7 +392,8 @@ export function ItemDetailPage({ id, onChanged }: ItemDetailPageProps) {
                     <span className="small">
                       {event.user ?? "automatisch"}
                       {event.on_behalf_of && ` – im Auftrag: ${event.on_behalf_of}`}
-                      {event.session_date && `, Sitzung vom ${formatDate(event.session_date)}`} ·{" "}
+                      {event.session_date &&
+                        `, Sitzung vom ${formatDate(event.session_date)}`} ·{" "}
                       {formatDateTime(event.occurred_at)}
                     </span>
                   </div>
