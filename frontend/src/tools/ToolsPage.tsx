@@ -1,5 +1,6 @@
 import { Suspense, useMemo, useState } from "react";
 import { Link } from "../components/Link";
+import { TOOLS_PATH } from "../navigation";
 import {
   CATEGORY_LABELS,
   findTool,
@@ -10,7 +11,7 @@ import {
   type ToolDefinition,
 } from "./index";
 
-export const TOOLS_PATH = "/it-tools";
+export { TOOLS_PATH };
 
 function useFavorites(): [string[], (id: string) => void] {
   const [favorites, setFavorites] = useState(readFavorites);
@@ -70,13 +71,16 @@ function ToolCard({
   );
 }
 
-/** IT-Tools › Übersicht: alle Tools mit Suche und Favoriten. */
-export function ToolsOverviewPage() {
+/** IT-Tools › Übersicht: alle Tools oder die einer Kategorie, mit Suche und Favoriten. */
+export function ToolsOverviewPage({ category }: { category?: ToolCategory }) {
   const [query, setQuery] = useState("");
   const [favorites, toggleFavorite] = useFavorites();
-  const hits = useMemo(() => searchTools(query), [query]);
-  const categories = (Object.keys(CATEGORY_LABELS) as ToolCategory[]).filter((category) =>
-    hits.some((tool) => tool.category === category),
+  const hits = useMemo(
+    () => searchTools(query).filter((tool) => !category || tool.category === category),
+    [query, category],
+  );
+  const categories = (Object.keys(CATEGORY_LABELS) as ToolCategory[]).filter((entry) =>
+    hits.some((tool) => tool.category === entry),
   );
   const favoriteTools = hits.filter((tool) => favorites.includes(tool.id));
 
@@ -84,10 +88,11 @@ export function ToolsOverviewPage() {
     <div className="page">
       <header className="page-head">
         <p className="module-label">IT-Tools</p>
-        <h1>IT-Tools</h1>
+        <h1>{category ? CATEGORY_LABELS[category] : "IT-Tools"}</h1>
         <p className="page-sub">
-          Kleine Werkzeuge für den Alltag in der IT. Alle rechnen in deinem Browser; deine Eingaben
-          verlassen den Rechner nicht.
+          {category
+            ? "Die Tools dieser Kategorie. Alle rechnen in deinem Browser; deine Eingaben verlassen den Rechner nicht."
+            : "Kleine Werkzeuge für den Alltag in der IT. Alle rechnen in deinem Browser; deine Eingaben verlassen den Rechner nicht."}
         </p>
       </header>
 
@@ -122,12 +127,14 @@ export function ToolsOverviewPage() {
         </section>
       )}
 
-      {categories.map((category) => (
-        <section key={category} aria-labelledby={`tools-${category}`}>
-          <h2 id={`tools-${category}`}>{CATEGORY_LABELS[category]}</h2>
+      {categories.map((entry) => (
+        <section key={entry} aria-labelledby={`tools-${entry}`}>
+          <h2 id={`tools-${entry}`} className={category ? "visually-hidden" : undefined}>
+            {CATEGORY_LABELS[entry]}
+          </h2>
           <ul className="tool-cards">
             {hits
-              .filter((tool) => tool.category === category)
+              .filter((tool) => tool.category === entry)
               .map((tool) => (
                 <ToolCard
                   key={tool.id}

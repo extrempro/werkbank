@@ -15,6 +15,7 @@ class Role(StrEnum):
     EVERGREEN_BETRIEBSRAT = "Evergreen.Betriebsrat"
     EVERGREEN_GF = "Evergreen.GF"
     TOOLS_USER = "Tools.User"
+    TENANT_READER = "Tenant.Reader"
 
 
 KNOWN_ROLES: frozenset[str] = frozenset(role.value for role in Role)
@@ -52,5 +53,9 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
     Role.TOOLS_USER: (
         "IT-Tools Nutzer",
         "Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter)",
+    ),
+    Role.TENANT_READER: (
+        "Tenant Leser",
+        "Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen",
     ),
 }

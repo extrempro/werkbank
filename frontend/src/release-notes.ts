@@ -24,6 +24,34 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.19.0",
+    date: "2026-11-15",
+    summary: "Lizenzen und Benutzerzahlen des Tenants, Kategorien der IT-Tools in der Navigation.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Neu: Lizenzen des Tenants mit gekauft, zugewiesen, frei und Stichtag. Ein Klick auf eine Lizenz zeigt den Verlauf als Diagramm.",
+          "Neu: Benutzerzahlen (Mitglieder, Gäste, aktiv, deaktiviert, mit Lizenz) mit Verlauf. Es werden nur Summen gespeichert, keine Namen.",
+          "Beide Seiten brauchen die neue Rolle „Tenant Leser“ und stehen im Bereich Microsoft 365 unter „Tenant“.",
+        ],
+      },
+      {
+        area: "IT-Tools",
+        entries: [
+          "Die Kategorien stehen jetzt in der Navigation, jede mit eigener Seite.",
+          "Die Suche in der Kopfzeile findet auch IT-Tools.",
+        ],
+      },
+      {
+        area: "Allgemein",
+        entries: [
+          "Behoben: Auf langen Seiten bleibt die Kopfzeile stehen, und die Navigation reicht bis zum unteren Rand.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.18.0",
     date: "2026-11-15",
     summary: "IT-Tools: Konverter und Werkzeuge für Text.",

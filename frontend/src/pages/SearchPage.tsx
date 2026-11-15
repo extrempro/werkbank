@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { searchAll, type SearchHit } from "../api";
 import { Link } from "../components/Link";
+import { TOOLS_PATH } from "../navigation";
 import { navigate, useSearchParam } from "../router";
+import { CATEGORY_LABELS, searchTools } from "../tools";
 
 export const SEARCH_PATH = "/suche";
 const MIN_LENGTH = 2;
@@ -11,6 +13,9 @@ export function searchUrl(query: string): string {
 }
 
 function moduleClass(module: string): string {
+  if (module === "IT-Tools") {
+    return "module-tag module-tag-tools";
+  }
   if (module.startsWith("M365")) {
     return "module-tag module-tag-m365";
   }
@@ -20,8 +25,19 @@ function moduleClass(module: string): string {
 type State =
   { status: "idle" | "loading" | "error" } | { status: "ready"; query: string; hits: SearchHit[] };
 
-/** Suche über Einstellungen, Änderungen und Vorgänge. */
-export function SearchPage() {
+/** Treffer unter den IT-Tools. Die Tools liegen im Browser, deshalb sucht nicht der Server. */
+export function toolHits(query: string): SearchHit[] {
+  return searchTools(query).map((tool) => ({
+    module: "IT-Tools",
+    kind: "Tool",
+    title: tool.name,
+    subtitle: CATEGORY_LABELS[tool.category],
+    link: `${TOOLS_PATH}/${tool.id}`,
+  }));
+}
+
+/** Suche über Einstellungen, Änderungen, Vorgänge und, mit der Rolle dafür, die IT-Tools. */
+export function SearchPage({ roles = [] }: { roles?: readonly string[] }) {
   const query = useSearchParam("q").trim();
   const [draft, setDraft] = useState(query);
   const [state, setState] = useState<State>({ status: "idle" });
@@ -63,7 +79,12 @@ export function SearchPage() {
   };
 
   const tooShort = query.length < MIN_LENGTH;
-  const ready = !tooShort && state.status === "ready" && state.query === query ? state : null;
+  const fromServer =
+    !tooShort && state.status === "ready" && state.query === query ? state : null;
+  const withTools = roles.includes("Tools.User");
+  const ready = fromServer
+    ? { ...fromServer, hits: [...(withTools ? toolHits(query) : []), ...fromServer.hits] }
+    : null;
   const loading = !tooShort && !ready && state.status !== "error";
 
   return (
@@ -71,7 +92,8 @@ export function SearchPage() {
       <header className="page-head">
         <h1>Suche</h1>
         <p className="page-sub">
-          Sucht in Einstellungen, Änderungen und Vorgängen, die du sehen darfst.
+          Sucht in Einstellungen, Änderungen und Vorgängen, die du sehen darfst
+          {withTools && ", und in den IT-Tools"}.
         </p>
       </header>
 

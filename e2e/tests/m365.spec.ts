@@ -75,3 +75,29 @@ test("Empfehlungen: Seite erklärt, wenn der Abruf nicht eingeschaltet ist", asy
   expect(api.status()).toBe(200);
   expect((await api.json()).enabled).toBe(false);
 });
+
+test("Tenant: Lizenzen und Benutzer erklären den leeren Zustand, nur mit der Rolle", async ({
+  page,
+}) => {
+  await loginAs(page, ["Tenant.Reader"], "Tom Tenant");
+  await page.goto("/m365/lizenzen");
+  await expect(page.getByRole("heading", { level: 1, name: "Lizenzen" })).toBeVisible();
+  await expect(page.getByText(/ist in dieser Installation nicht eingeschaltet/)).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.goto("/m365/benutzer");
+  await expect(page.getByRole("heading", { level: 1, name: "Benutzer" })).toBeVisible();
+  await expect(page.getByText(/ist in dieser Installation nicht eingeschaltet/)).toBeVisible();
+  await expectNoA11yViolations(page);
+  // Die Konfiguration gehört nicht zu dieser Rolle.
+  await page.goto("/m365/einstellungen");
+  await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
+});
+
+test("Tenant: ohne die Rolle gibt es die Seiten und die Daten nicht", async ({ page }) => {
+  await loginAs(page, ["Config.Reader"], "Lea Leser");
+  await page.goto("/m365/lizenzen");
+  await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
+  for (const path of ["/api/tenant/licenses", "/api/tenant/users"]) {
+    expect((await page.request.get(path)).status()).toBe(403);
+  }
+});

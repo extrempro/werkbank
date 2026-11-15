@@ -60,6 +60,15 @@ describe("ToolsOverviewPage", () => {
     expect(screen.getByText("Kein Tool passt zu dieser Suche.")).toBeVisible();
   });
 
+  it("zeigt auf der Seite einer Kategorie nur deren Tools", () => {
+    render(<ToolsOverviewPage category="text" />);
+    expect(screen.getByRole("heading", { level: 1, name: "Text" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Regex-Tester" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Subnetz-Rechner" })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Tool suchen"), { target: { value: "subnetz" } });
+    expect(screen.getByText("Kein Tool passt zu dieser Suche.")).toBeVisible();
+  });
+
   it("merkt sich Favoriten und zeigt sie oben", () => {
     render(<ToolsOverviewPage />);
     expect(screen.queryByRole("heading", { name: "Favoriten" })).toBeNull();

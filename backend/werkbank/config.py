@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     # Empfehlungen aus Microsoft Secure Score (braucht die Berechtigung SecurityEvents.Read.All)
     secure_score_enabled: bool = False
     secure_score_interval_hours: int = 24
+    # Lizenzen und Benutzerzahlen (braucht Organization.Read.All und User.Read.All)
+    tenant_monitor_enabled: bool = False
+    tenant_monitor_interval_hours: int = 24
     # UTCM-Ressourcentypen, kommagetrennt
     collector_resources: str = (
         "microsoft.entra.conditionalaccesspolicy,"

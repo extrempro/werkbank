@@ -93,6 +93,7 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Evergreen.Betriebsrat` | Evergreen | vorgelegte Vorgänge sehen, Stellung nehmen (Schritt 4) |
 | `Evergreen.GF` | Evergreen | Vorgänge nach BR-Zustimmung sehen, abnehmen oder zurückgeben (Schritt 5) |
 | `Tools.User` | IT-Tools | Bereich IT-Tools öffnen. Die Tools rechnen vollständig im Browser und haben keine Daten auf dem Server; die Rolle steuert deshalb nur, wer den Bereich sieht |
+| `Tenant.Reader` | Tenant | Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen |
 
 Sichtbarkeit:
 
@@ -279,7 +280,7 @@ Standardregeln:
 
 Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) und Vorgänge (ID, Titel, Zusammenfassung). Ergebnisse gefiltert nach Berechtigung.
 
-- Stand: umgesetzt als `GET /api/search` mit einem Anbieter je Modul (`core/search.py`), Suchfeld in der Kopfzeile und Seite „Suche“. Gesucht wird in Einstellungen (Pfad, Name, Beschreibung, Begründung), erkannten Änderungen (geändert von, Kommentar) und Vorgängen (Nummer, Titel, Dienst, Zusammenfassung). Jeder Anbieter wendet dieselben Rechte an wie die Seiten seines Moduls. Abweichung: Im Wert einer Einstellung wird noch nicht gesucht.
+- Stand: umgesetzt als `GET /api/search` mit einem Anbieter je Modul (`core/search.py`), Suchfeld in der Kopfzeile und Seite „Suche“. Gesucht wird in Einstellungen (Pfad, Name, Beschreibung, Begründung), erkannten Änderungen (geändert von, Kommentar) und Vorgängen (Nummer, Titel, Dienst, Zusammenfassung). Jeder Anbieter wendet dieselben Rechte an wie die Seiten seines Moduls. Abweichung: Im Wert einer Einstellung wird noch nicht gesucht. Die IT-Tools liegen im Browser; die Seite „Suche“ ergänzt passende Tools selbst, wenn die Person die Rolle `Tools.User` hat.
 
 ---
 
@@ -422,6 +423,17 @@ Offene Vorgänge je Schritt (Tagesordnungsvorlage BR), Beschlüsse im Zeitraum, 
 
 ---
 
+## 7a. Modul Tenant
+
+Überblick über den Microsoft-365-Tenant mit Verlauf. Die Daten kommen über Microsoft Graph mit der Collector-App; der Abruf ist freiwillig (`TENANT_MONITOR_ENABLED`).
+
+- **Zugriff:** Rolle `Tenant.Reader`. Die Seiten stehen im Bereich Microsoft 365 unter „Tenant“.
+- **Datensparsamkeit:** Gespeichert werden nur Summen. Die Werkbank liest keine Namen von Personen und keine Nutzungsdaten einzelner Konten.
+- **Verlauf:** Je Tag ein Eintrag (der letzte Abruf des Tages gilt). Aufbewahrung: drei Jahre, danach löscht der Abruf alte Einträge.
+- **Diagramme:** Liniendiagramm mit einer Achse, höchstens drei Reihen in fester Farbfolge, Werte eines Tages per Zeiger oder Regler, dazu immer eine Tabelle.
+- **Stand:** Lizenzen (gekauft, zugewiesen, frei, Einheiten in Kulanzfrist oder gesperrt, nächster Stichtag der Abos, Testabo) und Benutzerzahlen (gesamt, Gäste, deaktiviert, mit Lizenz). Hinweise in der Liste: aufgebraucht, überbucht, Stichtag in höchstens 30 Tagen.
+- **Geplant:** Zertifikate und Secrets der App-Registrierungen mit Aufgaben und Mail-Benachrichtigung; Dienststatus; Domains mit Abgleich der DNS-Einträge (Abfrage über den Resolver des Docker-Hosts); Nutzung der Dienste als Summen. Schwellen für Hinweise werden dann in der Verwaltung einstellbar.
+
 ## 8a. Bereich IT-Tools
 
 Kleine Werkzeuge für den Alltag in der IT (Rechner, Generatoren, Konverter), übernommen aus einer eigenständigen Toolbox.
@@ -486,7 +498,9 @@ Evergreen:
 | M365 › Änderungen | Config.* | Liste mit Filtern, Detailbereich mit Vorher/Nachher, Audit-Eintrag, Beschreibung, Bewertung mit Kommentarregeln |
 | M365 › Einstellungen | Config.* | Baum nach Workload, Detail: Wert, gültig seit, Kritikalität, Empfehlung, Soll-Wert/BR-Beschluss, Beschreibung, Begründung, Microsoft-Schema, Verlauf |
 | M365 › Empfehlungen | Config.* (Zuordnen: Config.Reviewer) | Empfehlungen aus Microsoft Secure Score: Liste mit Stand und Punkten (offen, erfüllt, alle), Detail mit Statustext, Umsetzung laut Microsoft und zugeordneten Einstellungen |
-| IT-Tools | Tools.User | Übersicht aller Tools mit Suche und Favoriten; je Tool eine eigene Seite |
+| IT-Tools | Tools.User | Übersicht aller Tools mit Suche und Favoriten, eine Seite je Kategorie (in der Navigation), je Tool eine eigene Seite |
+| M365 › Lizenzen | Tenant.Reader | Liste der Lizenzen mit gekauft, zugewiesen, frei, Stichtag und Hinweisen; Detail mit Verlauf |
+| M365 › Benutzer | Tenant.Reader | Zahl der Konten (Mitglieder, Gäste, aktiv, deaktiviert, mit Lizenz) mit Verlauf |
 | M365 › Snapshots | Config.* | Abrufe mit Status, Vergleich zweier Snapshots, JSON-Export |
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |

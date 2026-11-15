@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.19.0] – 2026-11-15
+
+Neues Modul Tenant mit Lizenzen und Benutzerzahlen; Kategorien der IT-Tools in der Navigation; Tools in der Suche; Kopfzeile bleibt stehen.
+
+### Tenant (neu)
+
+- **Lizenzen:** Liste aller Lizenzen mit gekauft, zugewiesen, frei, nächstem Stichtag der Abos und Hinweisen (aufgebraucht, überbucht, Einheiten in Kulanzfrist oder gesperrt, Stichtag in höchstens 30 Tagen, Testabo). Ein Klick zeigt den Verlauf als Diagramm (30 Tage bis 3 Jahre)
+- **Benutzer:** Zahl der Konten (gesamt, Mitglieder, Gäste, aktiv, deaktiviert, mit Lizenz) mit Verlauf. Gelesen und gespeichert werden nur Summen, keine Namen
+- Der Stand wird täglich festgehalten und drei Jahre aufbewahrt
+- Neue App-Rolle `Tenant.Reader` (in Entra anlegen und zuweisen, `docs/entra-setup.md` 1.6 und 1.8). Die Seiten stehen im Bereich Microsoft 365 unter „Tenant“
+- Der Abruf ist freiwillig: `TENANT_MONITOR_ENABLED=true` in der `.env`, vorher der Collector-App `Organization.Read.All` und `User.Read.All` geben (`docs/entra-setup.md` 4.1)
+- Neues Liniendiagramm als eigene Komponente (ohne fremde Bibliothek): eine Achse, feste Farbfolge für hell und dunkel, Werte per Zeiger oder Regler, immer mit Tabelle
+
+### IT-Tools
+
+- **Kategorien in der Navigation:** Neben „Alle Tools“ steht jede Kategorie als eigener Eintrag mit eigener Seite. Auf der Seite eines Tools ist seine Kategorie hervorgehoben
+- **Suche:** Die Seite „Suche“ findet auch IT-Tools, wenn die Person die Rolle `Tools.User` hat
+
+### Behoben
+
+- **Kopfzeile und Navigation auf langen Seiten:** Die Kopfzeile scrollte mit dem Inhalt weg, und die Navigation endete danach oberhalb des unteren Rands. Ab Tablet-Breite bleibt die Kopfzeile jetzt stehen, die Navigation haftet darunter und füllt die Höhe. Auf dem Handy bleibt es beim bisherigen Verhalten
+
 ## [0.18.0] – 2026-11-15
 
 IT-Tools: Konverter und Text.

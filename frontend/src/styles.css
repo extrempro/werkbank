@@ -372,7 +372,7 @@ a {
   position: absolute;
   left: -9999px;
   top: 8px;
-  z-index: 10;
+  z-index: 50;
   background: var(--farbe-flaeche);
   padding: 8px 12px;
   border-radius: 6px;
@@ -382,10 +382,16 @@ a {
   left: 8px;
 }
 
+/* Höhe der Kopfzeile: Navigation und haftende Bereiche richten sich danach. */
+:root {
+  --kopf-hoehe: 64px;
+}
+
 .app-header {
   display: flex;
   align-items: center;
   gap: 16px;
+  min-height: var(--kopf-hoehe);
   padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
   padding-top: max(10px, env(safe-area-inset-top));
   background: var(--farbe-kopf);
@@ -499,7 +505,7 @@ a {
 .app-body {
   display: flex;
   align-items: stretch;
-  min-height: calc(100dvh - 64px);
+  min-height: calc(100dvh - var(--kopf-hoehe));
 }
 
 .app-nav {
@@ -509,7 +515,7 @@ a {
   position: sticky;
   top: 0;
   align-self: flex-start;
-  height: calc(100dvh - 64px);
+  height: calc(100dvh - var(--kopf-hoehe));
   background: var(--farbe-flaeche);
   border-right: 1px solid var(--farbe-rand);
 }
@@ -1253,6 +1259,11 @@ section + section {
   color: var(--farbe-todo-text);
 }
 
+.module-tag-tools {
+  background: var(--farbe-ok-flaeche);
+  color: var(--farbe-ok-text);
+}
+
 .nav-count {
   flex: 0 0 auto;
   min-width: 22px;
@@ -1993,7 +2004,7 @@ details summary {
 @media (min-width: 1100px) {
   .split-detail {
     position: sticky;
-    top: 16px;
+    top: calc(var(--kopf-hoehe) + 16px);
   }
 }
 
@@ -3341,4 +3352,179 @@ p.badges {
 .venn-cross {
   font-size: 13px;
   font-weight: 700;
+}
+
+/* Diagramme: feste Farbfolge, geprüft für helle und dunkle Fläche */
+
+:root {
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+}
+
+:root[data-theme="dunkel"] {
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+}
+
+.chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chart-plot {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+  touch-action: pan-y;
+}
+
+.chart-grid {
+  stroke: var(--farbe-trenner);
+  stroke-width: 1;
+}
+
+.chart-axis {
+  fill: var(--farbe-text-leise);
+  font-size: 12px;
+}
+
+.chart-cursor {
+  stroke: var(--farbe-rand-kontrast);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.chart-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-dot {
+  stroke: var(--farbe-flaeche);
+  stroke-width: 2;
+}
+
+.chart-line-1 {
+  stroke: var(--chart-1);
+}
+
+.chart-line-2 {
+  stroke: var(--chart-2);
+}
+
+.chart-line-3 {
+  stroke: var(--chart-3);
+}
+
+.chart-dot-1,
+.chart-key-1 {
+  fill: var(--chart-1);
+  background: var(--chart-1);
+}
+
+.chart-dot-2,
+.chart-key-2 {
+  fill: var(--chart-2);
+  background: var(--chart-2);
+}
+
+.chart-dot-3,
+.chart-key-3 {
+  fill: var(--chart-3);
+  background: var(--chart-3);
+}
+
+.chart-readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 20px;
+  font-size: 0.9rem;
+}
+
+.chart-day {
+  font-weight: 600;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart-key {
+  display: inline-block;
+  width: 14px;
+  height: 4px;
+  margin-right: 6px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.chart-slider {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 0.875rem;
+}
+
+.chart-slider input {
+  flex: 1 1 12rem;
+  min-height: 24px;
+  accent-color: var(--farbe-primaer);
+}
+
+.chart-table summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  min-height: 24px;
+}
+
+.chart-table .table-wrap {
+  margin-top: 8px;
+}
+
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ab Tablet bleibt die Kopfzeile beim Scrollen stehen; die Navigation haftet darunter
+   und füllt die restliche Höhe. Auf dem Handy scrollt die Kopfzeile mit dem Inhalt. */
+
+@media (min-width: 768px) {
+  html {
+    scroll-padding-top: calc(var(--kopf-hoehe) + 16px);
+  }
+
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .app-nav {
+    top: var(--kopf-hoehe);
+  }
+
+  /* Der Hinweis zur Anmeldung liegt über der Kopfzeile. */
+  .auth-banner {
+    z-index: 40;
+  }
+}
+
+.tenant-part {
+  display: block;
+  font-weight: 400;
 }
