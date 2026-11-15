@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    UniqueConstraint,
     func,
     text,
 )
@@ -35,13 +36,27 @@ class BudgetAccount(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class BudgetItem(Base):
+    """Ein Budgetposten: wofür das Geld eines Kontos gedacht ist. Wird nur stillgelegt."""
+
+    __tablename__ = "budget_items"
+    __table_args__ = (UniqueConstraint("account_id", "name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("budget_accounts.id"), index=True)
+    name: Mapped[str] = mapped_column(String(160))
+    note: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class BudgetPlan(Base):
-    """Geplanter Betrag (brutto, in Cent) eines Kontos in einem Geschäftsjahr."""
+    """Geplanter Betrag (brutto, in Cent) eines Budgetpostens in einem Geschäftsjahr."""
 
     __tablename__ = "budget_plans"
 
-    account_id: Mapped[int] = mapped_column(
-        ForeignKey("budget_accounts.id", ondelete="CASCADE"), primary_key=True
+    item_id: Mapped[int] = mapped_column(
+        ForeignKey("budget_items.id", ondelete="CASCADE"), primary_key=True
     )
     # Kalenderjahr, in dem das Geschäftsjahr beginnt
     fiscal_year: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -76,7 +91,8 @@ class BudgetContract(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(160))
     partner_id: Mapped[int] = mapped_column(ForeignKey("budget_partners.id"), index=True)
-    account_id: Mapped[int] = mapped_column(ForeignKey("budget_accounts.id"), index=True)
+    # Budgetposten, auf den die Kosten laufen; über ihn ergibt sich das Konto
+    item_id: Mapped[int] = mapped_column(ForeignKey("budget_items.id"), index=True)
     # Rechnungssteller, wenn er vom Vertragspartner abweicht (z. B. ein Distributor)
     invoicer_id: Mapped[int | None] = mapped_column(ForeignKey("budget_partners.id"))
     # Auftragsverarbeitungsvertrag: vorhanden, fehlt oder nicht_erforderlich
@@ -94,7 +110,10 @@ class BudgetContract(Base):
     notice_months: Mapped[int | None] = mapped_column(Integer)
     # Gekündigt zu diesem Tag; danach fallen keine Kosten mehr an
     cancelled_to: Mapped[date | None] = mapped_column(Date)
-    # Betrag je Zahlung, brutto in Cent
+    # Betrag je Zahlung netto in Cent und Steuersatz in Hundertstel Prozent (1900 = 19 %)
+    net_cents: Mapped[int] = mapped_column(BigInteger)
+    tax_rate_bp: Mapped[int] = mapped_column(Integer, default=1900, server_default="1900")
+    # Betrag je Zahlung brutto in Cent, aus Netto und Steuersatz gerechnet; zählt fürs Budget
     amount_cents: Mapped[int] = mapped_column(BigInteger)
     # monatlich, vierteljaehrlich, halbjaehrlich, jaehrlich oder einmalig
     interval: Mapped[str] = mapped_column(String(20))

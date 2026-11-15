@@ -17,6 +17,16 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("aktiv");
   await expectNoA11yViolations(page);
 
+  await page.goto("/budget/posten");
+  await expect(page.getByRole("heading", { level: 1, name: "Budgetposten" })).toBeVisible();
+  await page
+    .getByRole("combobox", { name: /^Konto/ })
+    .selectOption({ label: `${number} Testkonto Wartung` });
+  await page.getByLabel("Bezeichnung", { exact: true }).fill(`Posten ${number}`);
+  await page.getByRole("button", { name: "Budgetposten anlegen" }).click();
+  await expect(page.getByText(`Posten ${number} ist gespeichert.`)).toBeVisible();
+  await expectNoA11yViolations(page);
+
   await page.goto("/budget/partner");
   await expect(page.getByRole("heading", { level: 1, name: "Partner" })).toBeVisible();
   await page.getByLabel("Name der Firma", { exact: true }).fill(`Beispiel Partner ${number}`);
@@ -31,31 +41,40 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .getByRole("combobox", { name: /^Vertragspartner/ })
     .selectOption({ label: `Beispiel Partner ${number}` });
   await page
-    .getByRole("combobox", { name: /^Konto/ })
-    .selectOption({ label: `${number} Testkonto Wartung` });
+    .getByRole("combobox", { name: /^Budgetposten/ })
+    .selectOption({ label: `${number} Testkonto Wartung · Posten ${number}` });
   await page.getByRole("textbox", { name: /^Betrag je Zahlung/ }).fill("100,00");
+  await expect(page.getByText(/^Brutto je Zahlung: 119,00/)).toBeVisible();
   await page.getByRole("combobox", { name: /^Turnus/ }).selectOption("monatlich");
   await page.getByLabel("Beginn", { exact: true }).fill(`${new Date().getFullYear()}-01-01`);
   await page.getByRole("button", { name: "Vertrag anlegen" }).click();
   await expect(page.getByText(`Wartung ${number} ist gespeichert.`)).toBeVisible();
-  // Zwölf Monatszahlungen im laufenden Jahr
+  // Zwölf Monatszahlungen im laufenden Jahr, brutto mit 19 %
   await expect(page.getByRole("row", { name: new RegExp(`Wartung ${number}`) })).toContainText(
-    "1.200,00",
+    "1.428,00",
   );
+  await expectNoA11yViolations(page);
+
+  await page.goto("/budget/posten");
+  await page.getByRole("button", { name: "Plan bearbeiten" }).click();
+  await page
+    .getByRole("textbox", { name: new RegExp(`Plan für Posten ${number}`) })
+    .fill("1.500,00");
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Plan speichern" }).click();
+  await expect(page.getByText("Der Plan ist gespeichert.")).toBeVisible();
+  const itemRow = page.getByRole("row", { name: new RegExp(`Posten ${number}`) });
+  await expect(itemRow).toContainText("1.500,00");
+  await expect(itemRow).toContainText("1.428,00");
+  await expect(itemRow).toContainText("72,00");
   await expectNoA11yViolations(page);
 
   await page.goto("/budget");
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
-  await page.getByRole("button", { name: "Plan bearbeiten" }).click();
-  await page.getByRole("textbox", { name: new RegExp(`Plan für ${number}`) }).fill("1.234,50");
-  await expectNoA11yViolations(page);
-  await page.getByRole("button", { name: "Plan speichern" }).click();
-  await expect(page.getByText("Der Plan ist gespeichert.")).toBeVisible();
-  await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("1.234,50");
-  await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("1.200,00");
   await expect(
     page.getByRole("heading", { name: /Kündigungstermine – nächste 120 Tage/ }),
   ).toBeVisible();
+  await expect(page.getByRole("img", { name: /Testkonto Wartung: \d+ % des Plans/ }).first()).toBeVisible();
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/einstellungen");
@@ -69,7 +88,10 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
   await page.goto("/budget");
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
   await expect(page.getByText(/^Plan Geschäftsjahr/)).toBeVisible();
+  await page.goto("/budget/posten");
+  await expect(page.getByRole("heading", { level: 1, name: "Budgetposten" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Plan bearbeiten" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Budgetposten anlegen" })).toHaveCount(0);
   await page.goto("/budget/konten");
   await expect(page.getByRole("heading", { level: 1, name: "Konten" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Konto anlegen" })).toHaveCount(0);
@@ -102,6 +124,7 @@ test("Ohne Budget-Rolle gibt es den Bereich und die Daten nicht", async ({ page 
     "/api/budget/overview",
     "/api/budget/accounts",
     "/api/budget/settings",
+    "/api/budget/items",
     "/api/budget/partners",
     "/api/budget/contracts",
   ]) {

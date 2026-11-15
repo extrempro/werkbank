@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.26.0",
+    date: "2026-11-15",
+    summary: "IT-Budget mit Budgetposten und Netto am Vertrag.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Neu: Budgetposten unter den Konten. Geplant wird je Posten auf der neuen Seite „Budgetposten“, das Konto zeigt die Summe.",
+          "Verträge laufen jetzt auf einen Budgetposten und werden mit Nettobetrag und Steuersatz erfasst; das Brutto rechnet die Werkbank.",
+          "Bisherige Pläne und Verträge stehen im Posten „Allgemein“ ihres Kontos. Bei vorhandenen Verträgen bitte Netto und Steuersatz nachtragen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.25.0",
     date: "2026-11-15",
     summary: "IT-Budget mit Partnern, Verträgen und neuer Übersicht.",

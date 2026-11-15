@@ -16,6 +16,7 @@ from werkbank.modules.budget.contracts import (
     INTERVALS,
     NOTICE_WARN_DAYS,
     expected_cents,
+    gross_cents,
     is_running,
     notice_deadline,
     term_end,
@@ -24,6 +25,7 @@ from werkbank.modules.budget.contracts import (
 from werkbank.modules.budget.models import (
     BudgetAccount,
     BudgetContract,
+    BudgetItem,
     BudgetPartner,
     BudgetPlan,
 )
@@ -124,13 +126,55 @@ class AccountIn(BaseModel):
         return value
 
 
+class ItemOut(BaseModel):
+    id: int
+    account_id: int
+    account_number: str
+    account_name: str
+    # Art des Kontos: laufend oder investition
+    kind: str
+    name: str
+    note: str
+    active: bool
+
+
+class ItemIn(BaseModel):
+    account_id: int = Field(ge=1)
+    name: str = Field(min_length=1, max_length=160)
+    note: str = Field(default="", max_length=500)
+    active: bool = True
+
+    @field_validator("name", "note")
+    @classmethod
+    def plain(cls, value: str) -> str:
+        return _single_line(value)
+
+    @field_validator("name")
+    @classmethod
+    def not_empty(cls, value: str) -> str:
+        if not value:
+            raise ValueError("Darf nicht leer sein")
+        return value
+
+
 class OverviewRow(BaseModel):
+    """Ein Konto mit den Summen seiner Budgetposten."""
+
     account: AccountOut
     # Geplanter Betrag brutto in Cent; None: für dieses Jahr ist nichts geplant
     plan_cents: int | None
     previous_cents: int | None
     # Erwartete Kosten aus Verträgen in diesem Geschäftsjahr
     committed_cents: int
+
+
+class ItemRow(BaseModel):
+    item: ItemOut
+    plan_cents: int | None
+    previous_cents: int | None
+    committed_cents: int
+    # Zahl der Verträge, die auf diesem Posten laufen und in diesem Jahr Kosten haben
+    contracts: int
 
 
 class Totals(BaseModel):
@@ -152,6 +196,7 @@ class OverviewOut(BaseModel):
     last_day: date
     years: list[YearOut]
     rows: list[OverviewRow]
+    items: list[ItemRow]
     plan: Totals
     previous: Totals
     committed: Totals
@@ -160,8 +205,8 @@ class OverviewOut(BaseModel):
 
 
 class PlanEntryIn(BaseModel):
-    account_id: int = Field(ge=1)
-    # None: Plan für dieses Konto entfernen
+    item_id: int = Field(ge=1)
+    # None: Plan für diesen Budgetposten entfernen
     amount_cents: int | None = Field(default=None, ge=0, le=AMOUNT_MAX)
 
 
@@ -314,7 +359,37 @@ def update_account(
 
 def _plans(db: DbDep, year: int) -> dict[int, int]:
     rows = db.scalars(select(BudgetPlan).where(BudgetPlan.fiscal_year == year)).all()
-    return {row.account_id: row.amount_cents for row in rows}
+    return {row.item_id: row.amount_cents for row in rows}
+
+
+def item_out(row: BudgetItem, accounts: dict[int, BudgetAccount]) -> ItemOut:
+    account = accounts.get(row.account_id)
+    return ItemOut(
+        id=row.id,
+        account_id=row.account_id,
+        account_number=account.number if account else "",
+        account_name=account.name if account else "",
+        kind=account.kind if account else KIND_RUNNING,
+        name=row.name,
+        note=row.note,
+        active=row.active,
+    )
+
+
+def _items(db: DbDep, accounts: dict[int, BudgetAccount]) -> list[BudgetItem]:
+    """Budgetposten, sortiert nach Kontonummer und Name."""
+
+    def key(row: BudgetItem) -> tuple[str, str, int]:
+        account = accounts.get(row.account_id)
+        return (account.number.lower() if account else "", row.name.lower(), row.id)
+
+    return sorted(db.scalars(select(BudgetItem)).all(), key=key)
+
+
+def _sum(values: list[int | None]) -> int | None:
+    """Summe der vorhandenen Werte; None, wenn keiner vorhanden ist."""
+    known = [value for value in values if value is not None]
+    return sum(known) if known else None
 
 
 def _overview(db: DbDep, year: int) -> OverviewOut:
@@ -324,26 +399,42 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
     previous = _plans(db, year - 1)
     first_day, last_day = fiscal_year_range(year, settings.start_month)
     committed: dict[int, int] = {}
-    contract_count = 0
+    contracts: dict[int, int] = {}
     for contract in db.scalars(select(BudgetContract)).all():
         cents = expected_cents(contract, first_day, last_day)
         if cents:
-            contract_count += 1
-            committed[contract.account_id] = committed.get(contract.account_id, 0) + cents
+            committed[contract.item_id] = committed.get(contract.item_id, 0) + cents
+            contracts[contract.item_id] = contracts.get(contract.item_id, 0) + 1
+    accounts = {row.id: row for row in _accounts(db)}
+    items: list[ItemRow] = []
+    for item in _items(db, accounts):
+        plan = plans.get(item.id)
+        before = previous.get(item.id)
+        bound = committed.get(item.id, 0)
+        # Stillgelegte Posten erscheinen nur, solange für sie etwas geplant oder gebunden ist.
+        if not item.active and plan is None and before is None and not bound:
+            continue
+        items.append(
+            ItemRow(
+                item=item_out(item, accounts),
+                plan_cents=plan,
+                previous_cents=before,
+                committed_cents=bound,
+                contracts=contracts.get(item.id, 0),
+            )
+        )
     rows = []
-    for account in _accounts(db):
-        plan = plans.get(account.id)
-        before = previous.get(account.id)
-        bound = committed.get(account.id, 0)
-        # Stillgelegte Konten erscheinen nur, solange für sie etwas geplant oder gebunden ist.
-        if not account.active and plan is None and before is None and not bound:
+    for account in accounts.values():
+        own = [entry for entry in items if entry.item.account_id == account.id]
+        # Stillgelegte Konten erscheinen nur, solange sie Posten mit Plan oder Kosten haben.
+        if not account.active and not own:
             continue
         rows.append(
             OverviewRow(
                 account=account_out(account),
-                plan_cents=plan,
-                previous_cents=before,
-                committed_cents=bound,
+                plan_cents=_sum([entry.plan_cents for entry in own]),
+                previous_cents=_sum([entry.previous_cents for entry in own]),
+                committed_cents=sum(entry.committed_cents for entry in own),
             )
         )
     planned_years = set(db.scalars(select(BudgetPlan.fiscal_year).distinct()).all())
@@ -362,16 +453,17 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
             if YEAR_MIN <= entry <= YEAR_MAX
         ],
         rows=rows,
+        items=items,
         plan=_totals([(row.account.kind, row.plan_cents) for row in rows]),
         previous=_totals([(row.account.kind, row.previous_cents) for row in rows]),
         committed=_totals([(row.account.kind, row.committed_cents) for row in rows]),
-        committed_contracts=contract_count,
+        committed_contracts=sum(contracts.values()),
     )
 
 
 @router.get("/overview")
 def overview(user: Reader, db: DbDep, year: YearQuery = None) -> OverviewOut:
-    """Plan je Konto für ein Geschäftsjahr, mit dem Vorjahr zum Vergleich."""
+    """Plan und gebundene Kosten je Konto und Budgetposten für ein Geschäftsjahr."""
     if year is None:
         year = fiscal_year_of(now_utc().date(), load_settings(db).start_month)
     return _overview(db, year)
@@ -381,32 +473,32 @@ def overview(user: Reader, db: DbDep, year: YearQuery = None) -> OverviewOut:
 def update_plan(
     request: Request, year: Year, body: PlanIn, user: Manager, db: DbDep
 ) -> OverviewOut:
-    """Legt den Plan für die genannten Konten fest. Nicht genannte Konten bleiben, wie sie sind."""
-    known = {row.id for row in db.scalars(select(BudgetAccount)).all()}
-    wanted = {entry.account_id: entry.amount_cents for entry in body.entries}
+    """Legt den Plan für die genannten Budgetposten fest. Nicht genannte bleiben unverändert."""
+    known = {row.id for row in db.scalars(select(BudgetItem)).all()}
+    wanted = {entry.item_id: entry.amount_cents for entry in body.entries}
     if len(wanted) != len(body.entries) or not set(wanted) <= known:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Jedes Konto darf nur einmal vorkommen und muss vorhanden sein.",
+            detail="Jeder Budgetposten darf nur einmal vorkommen und muss vorhanden sein.",
         )
     existing = {
-        row.account_id: row
+        row.item_id: row
         for row in db.scalars(select(BudgetPlan).where(BudgetPlan.fiscal_year == year)).all()
     }
     changes: dict[str, dict[str, int | None]] = {}
-    for account_id, amount in wanted.items():
-        row = existing.get(account_id)
+    for item_id, amount in wanted.items():
+        row = existing.get(item_id)
         before = row.amount_cents if row is not None else None
         if before == amount:
             continue
-        changes[str(account_id)] = {"vorher": before, "nachher": amount}
+        changes[str(item_id)] = {"vorher": before, "nachher": amount}
         if amount is None:
             if row is not None:
                 db.delete(row)
         elif row is None:
             db.add(
                 BudgetPlan(
-                    account_id=account_id,
+                    item_id=item_id,
                     fiscal_year=year,
                     amount_cents=amount,
                     updated_by=user.user_id,
@@ -426,10 +518,89 @@ def update_plan(
             object_type="plan",
             object_id=str(year),
             ip=client_ip(request),
-            details={"konten": changes},
+            details={"posten": changes},
         )
     db.commit()
     return _overview(db, year)
+
+
+# --- Budgetposten ---
+
+ItemId = Annotated[int, Path(ge=1)]
+
+
+def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
+    if db.get(BudgetAccount, body.account_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Das Konto gibt es nicht."
+        )
+    other = db.scalars(
+        select(BudgetItem).where(
+            BudgetItem.account_id == body.account_id,
+            func.lower(BudgetItem.name) == body.name.lower(),
+        )
+    ).first()
+    if other is not None and other.id != own_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Diesen Budgetposten gibt es in dem Konto schon.",
+        )
+
+
+@router.get("/items")
+def list_items(user: Reader, db: DbDep) -> list[ItemOut]:
+    accounts = {row.id: row for row in _accounts(db)}
+    return [item_out(row, accounts) for row in _items(db, accounts)]
+
+
+@router.post("/items", status_code=status.HTTP_201_CREATED)
+def create_item(request: Request, body: ItemIn, user: Editor, db: DbDep) -> ItemOut:
+    _check_item(db, body, None)
+    row = BudgetItem(account_id=body.account_id, name=body.name, note=body.note, active=body.active)
+    db.add(row)
+    db.flush()
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.posten_angelegt",
+        user_id=user.user_id,
+        object_type="posten",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"account_id": body.account_id, "name": body.name},
+    )
+    db.commit()
+    return item_out(row, {entry.id: entry for entry in _accounts(db)})
+
+
+@router.put("/items/{item_id}")
+def update_item(
+    request: Request, item_id: ItemId, body: ItemIn, user: Editor, db: DbDep
+) -> ItemOut:
+    row: BudgetItem | None = db.get(BudgetItem, item_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    _check_item(db, body, row.id)
+    before = {"account_id": row.account_id, "name": row.name, "active": row.active}
+    row.account_id = body.account_id
+    row.name = body.name
+    row.note = body.note
+    row.active = body.active
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.posten_geaendert",
+        user_id=user.user_id,
+        object_type="posten",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={
+            "vorher": before,
+            "nachher": {"account_id": body.account_id, "name": body.name, "active": body.active},
+        },
+    )
+    db.commit()
+    return item_out(row, {entry.id: entry for entry in _accounts(db)})
 
 
 # --- Partner ---
@@ -575,7 +746,8 @@ class ContractOut(BaseModel):
     title: str
     partner_id: int
     partner_name: str
-    account_id: int
+    item_id: int
+    item_name: str
     account_number: str
     account_name: str
     # Rechnungssteller, wenn er vom Vertragspartner abweicht
@@ -590,6 +762,9 @@ class ContractOut(BaseModel):
     renewal_months: int | None
     notice_months: int | None
     cancelled_to: date | None
+    # Betrag je Zahlung: netto, Steuersatz in Hundertstel Prozent, brutto
+    net_cents: int
+    tax_rate_bp: int
     amount_cents: int
     interval: str
     note: str
@@ -615,7 +790,7 @@ class ContractListOut(BaseModel):
 class ContractIn(BaseModel):
     title: str = Field(min_length=1, max_length=160)
     partner_id: int = Field(ge=1)
-    account_id: int = Field(ge=1)
+    item_id: int = Field(ge=1)
     invoicer_id: int | None = Field(default=None, ge=1)
     dpa_status: Literal["vorhanden", "fehlt", "nicht_erforderlich"] = "nicht_erforderlich"
     number: str = Field(default="", max_length=60)
@@ -624,7 +799,10 @@ class ContractIn(BaseModel):
     renewal_months: int | None = Field(default=None, ge=1, le=120)
     notice_months: int | None = Field(default=None, ge=0, le=120)
     cancelled_to: date | None = None
-    amount_cents: int = Field(ge=0, le=AMOUNT_MAX)
+    # Betrag je Zahlung netto; das Brutto rechnet der Server aus dem Steuersatz
+    net_cents: int = Field(ge=0, le=AMOUNT_MAX)
+    # Steuersatz in Hundertstel Prozent: 1900 = 19 %
+    tax_rate_bp: int = Field(default=1900, ge=0, le=10_000)
     interval: str
     note: str = Field(default="", max_length=500)
 
@@ -659,13 +837,15 @@ def contract_out(
     row: BudgetContract,
     partners: dict[int, BudgetPartner],
     accounts: dict[int, BudgetAccount],
+    items: dict[int, BudgetItem],
     today: date,
     year_range: tuple[date, date],
 ) -> ContractOut:
     deadline = notice_deadline(row, today)
     days = (deadline - today).days if deadline is not None else None
     partner = partners.get(row.partner_id)
-    account = accounts.get(row.account_id)
+    item = items.get(row.item_id)
+    account = accounts.get(item.account_id) if item else None
     invoicer = partners.get(row.invoicer_id) if row.invoicer_id is not None else None
     running = is_running(row, today)
     return ContractOut(
@@ -673,7 +853,8 @@ def contract_out(
         title=row.title,
         partner_id=row.partner_id,
         partner_name=partner.name if partner else "",
-        account_id=row.account_id,
+        item_id=row.item_id,
+        item_name=item.name if item else "",
         account_number=account.number if account else "",
         account_name=account.name if account else "",
         invoicer_id=row.invoicer_id,
@@ -686,6 +867,8 @@ def contract_out(
         renewal_months=row.renewal_months,
         notice_months=row.notice_months,
         cancelled_to=row.cancelled_to,
+        net_cents=row.net_cents,
+        tax_rate_bp=row.tax_rate_bp,
         amount_cents=row.amount_cents,
         interval=row.interval,
         note=row.note,
@@ -700,13 +883,21 @@ def contract_out(
 
 def _contract_context(
     db: DbDep,
-) -> tuple[dict[int, BudgetPartner], dict[int, BudgetAccount], date, tuple[date, date], str]:
+) -> tuple[
+    dict[int, BudgetPartner],
+    dict[int, BudgetAccount],
+    dict[int, BudgetItem],
+    date,
+    tuple[date, date],
+    str,
+]:
     settings = load_settings(db)
     today = now_utc().date()
     year = fiscal_year_of(today, settings.start_month)
     return (
         {row.id: row for row in db.scalars(select(BudgetPartner)).all()},
         {row.id: row for row in db.scalars(select(BudgetAccount)).all()},
+        {row.id: row for row in db.scalars(select(BudgetItem)).all()},
         today,
         fiscal_year_range(year, settings.start_month),
         fiscal_year_name(year, settings.start_month),
@@ -714,16 +905,16 @@ def _contract_context(
 
 
 def _one_contract(db: DbDep, row: BudgetContract) -> ContractOut:
-    partners, accounts, today, year_range, _ = _contract_context(db)
-    return contract_out(row, partners, accounts, today, year_range)
+    partners, accounts, items, today, year_range, _ = _contract_context(db)
+    return contract_out(row, partners, accounts, items, today, year_range)
 
 
 def _check_contract(db: DbDep, body: ContractIn) -> None:
     problem: str | None = None
     if db.get(BudgetPartner, body.partner_id) is None:
         problem = "Den Partner gibt es nicht."
-    elif db.get(BudgetAccount, body.account_id) is None:
-        problem = "Das Konto gibt es nicht."
+    elif db.get(BudgetItem, body.item_id) is None:
+        problem = "Den Budgetposten gibt es nicht."
     elif body.invoicer_id is not None and db.get(BudgetPartner, body.invoicer_id) is None:
         problem = "Den Rechnungssteller gibt es nicht."
     elif body.ends_on is not None and body.ends_on < body.starts_on:
@@ -739,7 +930,7 @@ def _check_contract(db: DbDep, body: ContractIn) -> None:
 def _apply_contract(row: BudgetContract, body: ContractIn) -> None:
     row.title = body.title
     row.partner_id = body.partner_id
-    row.account_id = body.account_id
+    row.item_id = body.item_id
     # Derselbe Partner als Rechnungssteller ist keine Abweichung.
     row.invoicer_id = body.invoicer_id if body.invoicer_id != body.partner_id else None
     row.dpa_status = body.dpa_status
@@ -749,7 +940,9 @@ def _apply_contract(row: BudgetContract, body: ContractIn) -> None:
     row.renewal_months = body.renewal_months
     row.notice_months = body.notice_months
     row.cancelled_to = body.cancelled_to
-    row.amount_cents = body.amount_cents
+    row.net_cents = body.net_cents
+    row.tax_rate_bp = body.tax_rate_bp
+    row.amount_cents = gross_cents(body.net_cents, body.tax_rate_bp)
     row.interval = body.interval
     row.note = body.note
 
@@ -758,8 +951,9 @@ def _contract_details(body: ContractIn) -> dict[str, object]:
     return {
         "title": body.title,
         "partner_id": body.partner_id,
-        "account_id": body.account_id,
-        "amount_cents": body.amount_cents,
+        "item_id": body.item_id,
+        "net_cents": body.net_cents,
+        "tax_rate_bp": body.tax_rate_bp,
         "interval": body.interval,
         "starts_on": body.starts_on.isoformat(),
         "ends_on": body.ends_on.isoformat() if body.ends_on else None,
@@ -769,9 +963,9 @@ def _contract_details(body: ContractIn) -> dict[str, object]:
 
 @router.get("/contracts")
 def list_contracts(user: Reader, db: DbDep) -> ContractListOut:
-    partners, accounts, today, year_range, year_name = _contract_context(db)
+    partners, accounts, items, today, year_range, year_name = _contract_context(db)
     entries = [
-        contract_out(row, partners, accounts, today, year_range)
+        contract_out(row, partners, accounts, items, today, year_range)
         for row in db.scalars(select(BudgetContract)).all()
     ]
     # Laufende zuerst, darin der nächste Kündigungstermin oben.

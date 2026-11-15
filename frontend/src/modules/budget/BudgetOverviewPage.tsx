@@ -1,24 +1,17 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { errorText } from "../../api";
+import { useEffect, useState } from "react";
 import { Link } from "../../components/Link";
-import { BUDGET_ACCOUNTS_PATH, BUDGET_CONTRACTS_PATH } from "../../navigation";
+import { BUDGET_ACCOUNTS_PATH, BUDGET_CONTRACTS_PATH, BUDGET_ITEMS_PATH } from "../../navigation";
 import {
   BUDGET_EDITOR_ROLES,
-  BUDGET_MANAGER_ROLE,
   DEADLINE_WINDOW_DAYS,
   deadlineBadge,
-  euroInput,
   fetchBudgetOverview,
   fetchContracts,
   formatBudgetDay,
   formatEuro,
-  KIND_LABELS,
-  parseEuro,
-  savePlan,
   share,
   type Contract,
   type Overview,
-  type PlanEntry,
 } from "./api";
 
 function amount(cents: number | null): string {
@@ -78,18 +71,13 @@ function Bar({ percent, over, label }: { percent: number; over: boolean; label: 
   );
 }
 
-/** IT-Budget › Übersicht: Kennzahlen, Budget nach Konten, Fristen und der Plan je Konto. */
+/** IT-Budget › Übersicht: Kennzahlen, Budget nach Konten, Fristen und Handlungsbedarf. */
 export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
-  const canPlan = roles.includes(BUDGET_MANAGER_ROLE);
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
   const [year, setYear] = useState<number | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [failed, setFailed] = useState(false);
-  // Eingaben im Bearbeitungsmodus je Konto; null: es wird nicht bearbeitet.
-  const [draft, setDraft] = useState<Record<number, string> | null>(null);
-  const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -127,57 +115,6 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
 
   const label = overview?.settings.year_label ?? "Geschäftsjahr";
 
-  const startEdit = () => {
-    if (!overview) {
-      return;
-    }
-    setMessage(null);
-    setDraft(
-      Object.fromEntries(overview.rows.map((row) => [row.account.id, euroInput(row.plan_cents)])),
-    );
-  };
-
-  const onSave = (event: FormEvent) => {
-    event.preventDefault();
-    if (!overview || !draft) {
-      return;
-    }
-    const entries: PlanEntry[] = [];
-    for (const row of overview.rows) {
-      const text = (draft[row.account.id] ?? "").trim();
-      const cents = text === "" ? null : parseEuro(text);
-      if (text !== "" && cents === null) {
-        setMessage({
-          kind: "alert",
-          text: `Der Betrag für ${row.account.number} ${row.account.name} ist nicht lesbar. Bitte so eintragen: 11900,00`,
-        });
-        return;
-      }
-      if (cents !== row.plan_cents) {
-        entries.push({ account_id: row.account.id, amount_cents: cents });
-      }
-    }
-    if (entries.length === 0) {
-      setDraft(null);
-      return;
-    }
-    setBusy(true);
-    setMessage(null);
-    savePlan(overview.year, entries)
-      .then((result) => {
-        setOverview(result);
-        setDraft(null);
-        setMessage({ kind: "status", text: "Der Plan ist gespeichert." });
-      })
-      .catch((error: unknown) => {
-        setMessage({
-          kind: "alert",
-          text: errorText(error, "Der Plan konnte nicht gespeichert werden."),
-        });
-      })
-      .finally(() => setBusy(false));
-  };
-
   const upcoming = contracts
     .filter(
       (entry) =>
@@ -214,11 +151,7 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
               {label}
               <select
                 value={overview.year}
-                disabled={draft !== null}
-                onChange={(event) => {
-                  setMessage(null);
-                  setYear(Number(event.target.value));
-                }}
+                onChange={(event) => setYear(Number(event.target.value))}
               >
                 {overview.years.map((entry) => (
                   <option key={entry.year} value={entry.year}>
@@ -375,167 +308,12 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                 </div>
               </div>
 
-              <section className="panel budget-section" aria-labelledby="budget-plan">
-                <div className="budget-section-head">
-                  <h2 id="budget-plan">Plan je Konto</h2>
-                  <span className="budget-muted">Alle Beträge brutto</span>
-                </div>
-                <form onSubmit={onSave} noValidate>
-                  <div
-                    className="table-wrap budget-table"
-                    tabIndex={0}
-                    role="region"
-                    aria-label={`Plan ${overview.year_name}`}
-                  >
-                    <table>
-                      <caption className="visually-hidden">
-                        Plan je Konto im {label} {overview.year_name}
-                      </caption>
-                      <thead>
-                        <tr>
-                          <th scope="col">Konto</th>
-                          <th scope="col">Art</th>
-                          <th scope="col" className="betrag">
-                            Plan
-                          </th>
-                          <th scope="col" className="betrag">
-                            Durch Verträge gebunden
-                          </th>
-                          <th scope="col" className="betrag">
-                            Frei
-                          </th>
-                          <th scope="col" className="betrag">
-                            Vorjahr
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {overview.rows.map((row) => (
-                          <tr key={row.account.id}>
-                            <th scope="row">
-                              <span className="mono">{row.account.number}</span> {row.account.name}
-                              {!row.account.active && (
-                                <span className="pill pill-neutral budget-pill">stillgelegt</span>
-                              )}
-                            </th>
-                            <td>{KIND_LABELS[row.account.kind]}</td>
-                            <td className="betrag">
-                              {draft ? (
-                                <input
-                                  type="text"
-                                  inputMode="decimal"
-                                  className="budget-input"
-                                  aria-label={`Plan für ${row.account.number} ${row.account.name} in Euro`}
-                                  value={draft[row.account.id] ?? ""}
-                                  onChange={(event) =>
-                                    setDraft({ ...draft, [row.account.id]: event.target.value })
-                                  }
-                                />
-                              ) : (
-                                amount(row.plan_cents)
-                              )}
-                            </td>
-                            <td className="betrag">{formatEuro(row.committed_cents)}</td>
-                            <td
-                              className={
-                                row.plan_cents !== null && row.committed_cents > row.plan_cents
-                                  ? "betrag budget-bad"
-                                  : "betrag"
-                              }
-                            >
-                              {row.plan_cents === null
-                                ? "–"
-                                : formatEuro(row.plan_cents - row.committed_cents)}
-                            </td>
-                            <td className="betrag budget-muted">{amount(row.previous_cents)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        {(
-                          [
-                            ["Laufende Kosten", "running_cents"],
-                            ["Investitionen", "investment_cents"],
-                            ["Gesamt", "total_cents"],
-                          ] as const
-                        ).map(([title, key]) => (
-                          <tr key={key} className={key === "total_cents" ? "budget-summe" : ""}>
-                            <th scope="row" colSpan={2}>
-                              {title}
-                            </th>
-                            <td className="betrag">{formatEuro(overview.plan[key])}</td>
-                            <td className="betrag">{formatEuro(overview.committed[key])}</td>
-                            <td className="betrag">
-                              {formatEuro(overview.plan[key] - overview.committed[key])}
-                            </td>
-                            <td className="betrag budget-muted">
-                              {formatEuro(overview.previous[key])}
-                            </td>
-                          </tr>
-                        ))}
-                      </tfoot>
-                    </table>
-                  </div>
-                  {/* Eigene Schlüssel: Sonst verwendet React den Knopf „Plan bearbeiten“ als
-                      „Plan speichern“ weiter, und derselbe Klick schickt das Formular ab. */}
-                  {canPlan && (
-                    <div className="actions budget-actions">
-                      {draft ? (
-                        <>
-                          <button
-                            key="speichern"
-                            type="submit"
-                            className="button button-primary"
-                            disabled={busy}
-                          >
-                            Plan speichern
-                          </button>
-                          <button
-                            key="abbrechen"
-                            type="button"
-                            className="button button-secondary"
-                            disabled={busy}
-                            onClick={() => {
-                              setDraft(null);
-                              setMessage(null);
-                            }}
-                          >
-                            Abbrechen
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          key="bearbeiten"
-                          type="button"
-                          className="button button-secondary"
-                          onClick={startEdit}
-                        >
-                          Plan bearbeiten
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  {draft && (
-                    <p className="small">
-                      Beträge brutto in Euro, z. B. 11900,00. Ein leeres Feld heißt: für dieses
-                      Konto ist nichts geplant.
-                    </p>
-                  )}
-                </form>
-                <p className="small budget-muted">
-                  Gebunden = was aus Verträgen in diesem {label} zu erwarten ist. Frei = Plan
-                  abzüglich gebunden.
-                </p>
-              </section>
+              <p className="small budget-muted">
+                Geplant wird je Budgetposten: <Link to={BUDGET_ITEMS_PATH}>Budgetposten</Link>.
+                Gebunden = was aus Verträgen in diesem {label} zu erwarten ist. Alle Beträge sind
+                brutto.
+              </p>
             </>
-          )}
-          {message && (
-            <p
-              role={message.kind}
-              className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-            >
-              {message.text}
-            </p>
           )}
         </>
       )}

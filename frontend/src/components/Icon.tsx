@@ -50,6 +50,7 @@ const PATHS = {
     "M7.5 11h5",
     "M7.5 13.5h5",
   ],
+  posten: ["M4 6h3", "M10 6h10", "M4 12h3", "M10 12h10", "M4 18h3", "M10 18h10"],
   vertraege: ["M6 3h9l4 4v14H6z", "M15 3v4h4", "M9 12h7", "M9 15h7", "M9 18h4"],
   partner: [
     "M3 21h18",
