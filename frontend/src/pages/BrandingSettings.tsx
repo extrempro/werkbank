@@ -251,8 +251,8 @@ export function BrandingSettings() {
                 </div>
                 <p className="small">{slot.hint}</p>
                 <label>
-                  {url ? "Bild ersetzen" : "Bild hochladen"}
-                  <span className="visually-hidden"> – {slot.title}</span>
+                  {url ? "Bild ersetzen" : "Bild hochladen"}{" "}
+                  <span className="visually-hidden">– {slot.title}</span>
                   <input
                     type="file"
                     accept={slot.accept}
@@ -268,7 +268,7 @@ export function BrandingSettings() {
                       disabled={busy}
                       onClick={() => onRemove(slot)}
                     >
-                      Entfernen<span className="visually-hidden"> – {slot.title}</span>
+                      Entfernen <span className="visually-hidden">– {slot.title}</span>
                     </button>
                   </div>
                 )}

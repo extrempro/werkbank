@@ -47,7 +47,7 @@ def webp_extended(width: int, height: int) -> bytes:
 
 def webp_lossless(width: int, height: int) -> bytes:
     bits = (width - 1) | ((height - 1) << 14)
-    body = b"WEBPVP8L" + struct.pack("<I", 5) + b"\x2f" + bits.to_bytes(4, "little") + b"\x00"
+    body = b"WEBPVP8L" + struct.pack("<I", 13) + b"\x2f" + bits.to_bytes(4, "little") + b"\x00" * 9
     return b"RIFF" + struct.pack("<I", len(body)) + body
 
 
