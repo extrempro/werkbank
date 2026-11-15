@@ -24,7 +24,11 @@ describe("arrayState", () => {
     expect(arrayState("5", 4, 2, new Set([1, 2])).state).toBe("failed");
   });
   it("RAID 10: es kommt auf das Paar an", () => {
-    expect(layout("10", 6).groups).toEqual([[0, 1], [2, 3], [4, 5]]);
+    expect(layout("10", 6).groups).toEqual([
+      [0, 1],
+      [2, 3],
+      [4, 5],
+    ]);
     expect(arrayState("10", 6, 2, new Set([0, 2, 4])).state).toBe("degraded");
     expect(arrayState("10", 6, 2, new Set([0, 1])).state).toBe("failed");
   });

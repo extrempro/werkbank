@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { block, downtime, fromDowntime, fromMtbf, nines, parseComponents, system } from "./availability";
+import {
+  block,
+  downtime,
+  fromDowntime,
+  fromMtbf,
+  nines,
+  parseComponents,
+  system,
+} from "./availability";
 
 describe("Verfügbarkeit", () => {
   it("99,9 % = 8,76 h im Jahr", () => {
@@ -15,8 +23,12 @@ describe("Verfügbarkeit", () => {
     expect(() => fromMtbf(0, 1)).toThrow("MTBF");
   });
   it("Redundanz und Reihenschaltung", () => {
-    expect(Math.round(block({ name: "x", availability: 99, redundancy: 2 }) * 1e4) / 1e4).toBe(99.99);
-    const { components, errors } = parseComponents("Server; 99; 2\nSwitch; 99,9\n# Kommentar\nkaputt; abc");
+    expect(Math.round(block({ name: "x", availability: 99, redundancy: 2 }) * 1e4) / 1e4).toBe(
+      99.99,
+    );
+    const { components, errors } = parseComponents(
+      "Server; 99; 2\nSwitch; 99,9\n# Kommentar\nkaputt; abc",
+    );
     expect(components).toHaveLength(2);
     expect(errors).toEqual(["kaputt; abc"]);
     expect(Math.round(system(components) * 1e4) / 1e4).toBe(99.89);

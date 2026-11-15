@@ -22,10 +22,12 @@ export const presets: Preset[] = [
 ];
 
 /** Sekunden für `bytes` bei `rate` Bit/s und `efficiency` (0–1, Protokoll-Overhead) */
-export const duration = (bytes: number, rate: number, efficiency: number) => (bytes * 8) / (rate * efficiency);
+export const duration = (bytes: number, rate: number, efficiency: number) =>
+  (bytes * 8) / (rate * efficiency);
 
 /** benötigte Bandbreite (Bit/s) für `bytes` in `seconds` */
-export const requiredRate = (bytes: number, seconds: number, efficiency: number) => (bytes * 8) / seconds / efficiency;
+export const requiredRate = (bytes: number, seconds: number, efficiency: number) =>
+  (bytes * 8) / seconds / efficiency;
 
 export function durationText(s: number): string {
   if (!Number.isFinite(s)) return "–";
@@ -60,11 +62,21 @@ export function parseDuration(text: string): number | null {
   if (hms) return Number(hms[1]) * 3600 + Number(hms[2]) * 60 + Number(hms[3] ?? 0);
   let total = 0;
   let found = false;
-  for (const m of t.matchAll(/(\d+(?:\.\d+)?)\s*(tage?|d|stunden?|std|h|minuten?|min|m|sekunden?|sek|s)\b/g)) {
+  for (const m of t.matchAll(
+    /(\d+(?:\.\d+)?)\s*(tage?|d|stunden?|std|h|minuten?|min|m|sekunden?|sek|s)\b/g,
+  )) {
     found = true;
     const n = Number(m[1]);
     const u = m[2]!;
-    total += n * (/^(tage?|d)$/.test(u) ? 86400 : /^(stunden?|std|h)$/.test(u) ? 3600 : /^(minuten?|min|m)$/.test(u) ? 60 : 1);
+    total +=
+      n *
+      (/^(tage?|d)$/.test(u)
+        ? 86400
+        : /^(stunden?|std|h)$/.test(u)
+          ? 3600
+          : /^(minuten?|min|m)$/.test(u)
+            ? 60
+            : 1);
   }
   return found && total > 0 ? total : null;
 }

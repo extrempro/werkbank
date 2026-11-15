@@ -13,13 +13,31 @@ const bin = ["Ki", "Mi", "Gi", "Ti", "Pi", "Ei"];
 
 export const units: Unit[] = [
   { id: "B", label: "Byte (B)", bits: 8, system: "dezimal" },
-  ...dec.map((p, i) => ({ id: `${p}B`, label: `${p === "k" ? "Kilo" : p === "M" ? "Mega" : p === "G" ? "Giga" : p === "T" ? "Tera" : p === "P" ? "Peta" : "Exa"}byte (${p}B)`, bits: 8 * 1000 ** (i + 1), system: "dezimal" as const })),
-  ...bin.map((p, i) => ({ id: `${p}B`, label: `${["Kibi", "Mebi", "Gibi", "Tebi", "Pebi", "Exbi"][i]}byte (${p}B)`, bits: 8 * 1024 ** (i + 1), system: "binär" as const })),
+  ...dec.map((p, i) => ({
+    id: `${p}B`,
+    label: `${p === "k" ? "Kilo" : p === "M" ? "Mega" : p === "G" ? "Giga" : p === "T" ? "Tera" : p === "P" ? "Peta" : "Exa"}byte (${p}B)`,
+    bits: 8 * 1000 ** (i + 1),
+    system: "dezimal" as const,
+  })),
+  ...bin.map((p, i) => ({
+    id: `${p}B`,
+    label: `${["Kibi", "Mebi", "Gibi", "Tebi", "Pebi", "Exbi"][i]}byte (${p}B)`,
+    bits: 8 * 1024 ** (i + 1),
+    system: "binär" as const,
+  })),
   { id: "bit", label: "Bit", bits: 1, system: "bit" },
-  ...dec.slice(0, 4).map((p, i) => ({ id: `${p}bit`, label: `${p}bit`, bits: 1000 ** (i + 1), system: "bit" as const })),
+  ...dec
+    .slice(0, 4)
+    .map((p, i) => ({
+      id: `${p}bit`,
+      label: `${p}bit`,
+      bits: 1000 ** (i + 1),
+      system: "bit" as const,
+    })),
 ];
 
-export const unitById = (id: string) => units.find((u) => u.id === id || u.id.toLowerCase() === id.toLowerCase());
+export const unitById = (id: string) =>
+  units.find((u) => u.id === id || u.id.toLowerCase() === id.toLowerCase());
 
 /** „1,5 TB“, „931.3GiB“, „500 GB“ → Bit; KB (groß) wird als kB gelesen */
 export function parseSize(text: string): { bits: number; unit: Unit } | null {
@@ -36,7 +54,11 @@ export function parseSize(text: string): { bits: number; unit: Unit } | null {
 export function parseNumber(s: string): number | null {
   let t = s.replace(/'/g, "").trim();
   if (!t) return null;
-  if (t.includes(",") && t.includes(".")) t = t.lastIndexOf(",") > t.lastIndexOf(".") ? t.replace(/\./g, "").replace(",", ".") : t.replace(/,/g, "");
+  if (t.includes(",") && t.includes("."))
+    t =
+      t.lastIndexOf(",") > t.lastIndexOf(".")
+        ? t.replace(/\./g, "").replace(",", ".")
+        : t.replace(/,/g, "");
   else if (t.includes(",")) t = t.replace(",", ".");
   else if (/^\d{1,3}(\.\d{3}){2,}$/.test(t)) t = t.replace(/\./g, "");
   const n = Number(t);
@@ -54,7 +76,10 @@ export function fmt(n: number, digits = 4): string {
 /** passende Einheit wählen: binär oder dezimal */
 export function humanSize(bytes: number, system: "dezimal" | "binär"): string {
   const base = system === "binär" ? 1024 : 1000;
-  const names = system === "binär" ? ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"] : ["B", "kB", "MB", "GB", "TB", "PB", "EB"];
+  const names =
+    system === "binär"
+      ? ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"]
+      : ["B", "kB", "MB", "GB", "TB", "PB", "EB"];
   let i = 0;
   let v = bytes;
   while (v >= base && i < names.length - 1) {

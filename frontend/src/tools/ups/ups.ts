@@ -9,12 +9,22 @@ export interface UpsLoad {
   maxLoad: number;
 }
 
-export function sizing(l: UpsLoad): { va: number; recommendedVa: number; recommendedWatts: number } {
+export function sizing(l: UpsLoad): {
+  va: number;
+  recommendedVa: number;
+  recommendedWatts: number;
+} {
   if (!(l.watts > 0)) throw new Error("Leistung der Verbraucher fehlt.");
-  if (!(l.powerFactor > 0 && l.powerFactor <= 1)) throw new Error("Der Leistungsfaktor liegt zwischen 0 und 1.");
-  if (!(l.maxLoad > 0 && l.maxLoad <= 100)) throw new Error("Die Auslastung liegt zwischen 1 und 100 %.");
+  if (!(l.powerFactor > 0 && l.powerFactor <= 1))
+    throw new Error("Der Leistungsfaktor liegt zwischen 0 und 1.");
+  if (!(l.maxLoad > 0 && l.maxLoad <= 100))
+    throw new Error("Die Auslastung liegt zwischen 1 und 100 %.");
   const va = l.watts / l.powerFactor;
-  return { va, recommendedVa: va / (l.maxLoad / 100), recommendedWatts: l.watts / (l.maxLoad / 100) };
+  return {
+    va,
+    recommendedVa: va / (l.maxLoad / 100),
+    recommendedWatts: l.watts / (l.maxLoad / 100),
+  };
 }
 
 export interface Battery {
@@ -29,7 +39,8 @@ export interface Battery {
 }
 
 /** gespeicherte, nutzbare Energie in Wh */
-export const energyWh = (b: Battery) => b.voltage * b.ah * b.count * (b.efficiency / 100) * (b.usable / 100);
+export const energyWh = (b: Battery) =>
+  b.voltage * b.ah * b.count * (b.efficiency / 100) * (b.usable / 100);
 
 /** Überbrückungszeit in Sekunden */
 export function runtime(b: Battery, watts: number): number {
@@ -39,5 +50,7 @@ export function runtime(b: Battery, watts: number): number {
 
 /** nötige Kapazität je Batterie (Ah) für eine gewünschte Überbrückungszeit */
 export function requiredAh(b: Omit<Battery, "ah">, watts: number, seconds: number): number {
-  return (watts * (seconds / 3600)) / (b.voltage * b.count * (b.efficiency / 100) * (b.usable / 100));
+  return (
+    (watts * (seconds / 3600)) / (b.voltage * b.count * (b.efficiency / 100) * (b.usable / 100))
+  );
 }

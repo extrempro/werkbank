@@ -2,7 +2,12 @@
 import { calcRaid, levelInfo, type RaidLevel } from "./raid";
 
 /** kleinste Plattenzahl, mit der das Level die gewünschte Nutzkapazität erreicht */
-export function disksNeeded(level: RaidLevel, usable: number, diskSize: number, groups = 2): { disks: number; usable: number } | null {
+export function disksNeeded(
+  level: RaidLevel,
+  usable: number,
+  diskSize: number,
+  groups = 2,
+): { disks: number; usable: number } | null {
   if (!(usable > 0) || !(diskSize > 0)) return null;
   for (let n = levelInfo[level].min; n <= 1024; n++) {
     try {
@@ -18,9 +23,14 @@ export function disksNeeded(level: RaidLevel, usable: number, diskSize: number, 
 }
 
 /** Aufteilung in Gruppen und wie viele Ausfälle jede Gruppe verkraftet */
-export function layout(level: RaidLevel, disks: number, groups = 2): { groups: number[][]; tolerance: number; groupName: string } {
+export function layout(
+  level: RaidLevel,
+  disks: number,
+  groups = 2,
+): { groups: number[][]; tolerance: number; groupName: string } {
   const all = Array.from({ length: disks }, (_, i) => i);
-  const chunk = (size: number) => Array.from({ length: Math.ceil(disks / size) }, (_, g) => all.slice(g * size, (g + 1) * size));
+  const chunk = (size: number) =>
+    Array.from({ length: Math.ceil(disks / size) }, (_, g) => all.slice(g * size, (g + 1) * size));
   switch (level) {
     case "0":
     case "jbod":
@@ -51,18 +61,32 @@ export interface ArrayState {
   text: string;
 }
 
-export function arrayState(level: RaidLevel, disks: number, groups: number, failed: Set<number>): ArrayState {
+export function arrayState(
+  level: RaidLevel,
+  disks: number,
+  groups: number,
+  failed: Set<number>,
+): ArrayState {
   calcRaid({ level, disks, size: 1, groups }); // prüft die Kombination
   const l = layout(level, disks, groups);
   const gs = l.groups.map((g) => {
     const f = g.filter((d) => failed.has(d)).length;
-    return { disks: g, failed: f, alive: f <= l.tolerance, critical: f === l.tolerance && l.tolerance > 0 };
+    return {
+      disks: g,
+      failed: f,
+      alive: f <= l.tolerance,
+      critical: f === l.tolerance && l.tolerance > 0,
+    };
   });
   const dead = gs.findIndex((g) => !g.alive);
   if (dead >= 0) {
     const g = gs[dead]!;
     const where = gs.length > 1 ? `${l.groupName} ${dead + 1}` : "Im Verbund";
-    return { state: "failed", groups: gs, text: `${where}: ${g.failed} Platten ausgefallen, verkraftbar ${l.tolerance === 0 ? "keine" : `höchstens ${l.tolerance}`} – alle Daten sind verloren.` };
+    return {
+      state: "failed",
+      groups: gs,
+      text: `${where}: ${g.failed} Platten ausgefallen, verkraftbar ${l.tolerance === 0 ? "keine" : `höchstens ${l.tolerance}`} – alle Daten sind verloren.`,
+    };
   }
   if (failed.size === 0) return { state: "ok", groups: gs, text: "Alle Platten in Ordnung." };
   const crit = gs.some((g) => g.critical);
@@ -89,7 +113,9 @@ export function survival(level: RaidLevel, disks: number, groups = 2): number[] 
   let poly = [1];
   for (const g of l.groups) {
     const next = new Array<number>(poly.length + l.tolerance).fill(0);
-    for (let i = 0; i < poly.length; i++) for (let f = 0; f <= Math.min(l.tolerance, g.length); f++) next[i + f]! += poly[i]! * binom(g.length, f);
+    for (let i = 0; i < poly.length; i++)
+      for (let f = 0; f <= Math.min(l.tolerance, g.length); f++)
+        next[i + f]! += poly[i]! * binom(g.length, f);
     poly = next;
   }
   return Array.from({ length: disks }, (_, i) => (poly[i + 1] ?? 0) / binom(disks, i + 1));

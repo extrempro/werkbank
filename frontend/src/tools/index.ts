@@ -328,7 +328,20 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "rechner",
     description:
       "Kapazität, Plattenbedarf und Ausfall-Simulation für RAID 0, 1, 5, 6, 10, 50, 60 und ZFS RAIDZ, mit Schreib-Penalty und Rebuild-Zeit.",
-    tags: ["raid5", "raid6", "raid10", "zfs", "raidz", "festplatten", "nas", "san", "storage", "parität", "degraded", "redundanz"],
+    tags: [
+      "raid5",
+      "raid6",
+      "raid10",
+      "zfs",
+      "raidz",
+      "festplatten",
+      "nas",
+      "san",
+      "storage",
+      "parität",
+      "degraded",
+      "redundanz",
+    ],
     component: lazy(() => import("./raid/RaidTool")),
   },
   {
@@ -337,7 +350,20 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "rechner",
     description:
       "Zwischen GB und GiB, TB und TiB, Byte und Bit umrechnen. Erklärt, warum eine 4-TB-Platte in Windows nur 3,63 „TB“ hat.",
-    tags: ["gb", "gib", "tb", "tib", "mb", "byte", "bit", "speicher", "umrechnen", "festplatte", "binär", "dezimal"],
+    tags: [
+      "gb",
+      "gib",
+      "tb",
+      "tib",
+      "mb",
+      "byte",
+      "bit",
+      "speicher",
+      "umrechnen",
+      "festplatte",
+      "binär",
+      "dezimal",
+    ],
     component: lazy(() => import("./data-units/DataUnitsTool")),
   },
   {
@@ -346,7 +372,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "rechner",
     description:
       "Wie viel Speicher brauche ich wirklich? Rohdaten, Komprimierung, Deduplizierung, jährliches Wachstum und Reserve, mit Verlauf über mehrere Jahre.",
-    tags: ["speicher", "kompression", "dedup", "wachstum", "storage", "kapazität", "planung", "backup", "reserve"],
+    tags: [
+      "speicher",
+      "kompression",
+      "dedup",
+      "wachstum",
+      "storage",
+      "kapazität",
+      "planung",
+      "backup",
+      "reserve",
+    ],
     component: lazy(() => import("./storage-need/StorageNeedTool")),
   },
   {
@@ -355,7 +391,18 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "rechner",
     description:
       "Wie lange dauert der Upload, das Backup oder die Migration? Aus Datenmenge und Bandbreite die Dauer, oder umgekehrt die nötige Bandbreite für ein Zeitfenster.",
-    tags: ["übertragung", "dauer", "bandbreite", "upload", "download", "backup", "migration", "mbit", "transfer", "leitung"],
+    tags: [
+      "übertragung",
+      "dauer",
+      "bandbreite",
+      "upload",
+      "download",
+      "backup",
+      "migration",
+      "mbit",
+      "transfer",
+      "leitung",
+    ],
     component: lazy(() => import("./transfer/TransferTool")),
   },
   {
@@ -364,7 +411,18 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "rechner",
     description:
       "Verfügbarkeit in Prozent und erlaubte Ausfallzeit, Berechnung aus MTBF und MTTR sowie Gesamtverfügbarkeit einer Kette mit redundanten Komponenten.",
-    tags: ["sla", "ausfallzeit", "downtime", "uptime", "mtbf", "mttr", "hochverfügbarkeit", "99,9", "neunen", "redundanz"],
+    tags: [
+      "sla",
+      "ausfallzeit",
+      "downtime",
+      "uptime",
+      "mtbf",
+      "mttr",
+      "hochverfügbarkeit",
+      "99,9",
+      "neunen",
+      "redundanz",
+    ],
     component: lazy(() => import("./availability/AvailabilityTool")),
   },
   {
@@ -373,7 +431,18 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "rechner",
     description:
       "Stromverbrauch und Kosten von Servern, Switches oder PCs pro Tag, Monat und Jahr, mit Aufschlag für Kühlung (PUE), CO₂ und Vergleich zweier Geräte.",
-    tags: ["strom", "verbrauch", "watt", "kwh", "energie", "kosten", "server", "pue", "co2", "betriebskosten"],
+    tags: [
+      "strom",
+      "verbrauch",
+      "watt",
+      "kwh",
+      "energie",
+      "kosten",
+      "server",
+      "pue",
+      "co2",
+      "betriebskosten",
+    ],
     component: lazy(() => import("./power-cost/PowerCostTool")),
   },
   {
@@ -382,7 +451,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "rechner",
     description:
       "USV auslegen: Scheinleistung (VA) aus Watt und Leistungsfaktor, empfohlene Größe mit Reserve und Überbrückungszeit aus den Batteriedaten.",
-    tags: ["ups", "va", "watt", "scheinleistung", "leistungsfaktor", "cos phi", "batterie", "laufzeit", "akku"],
+    tags: [
+      "ups",
+      "va",
+      "watt",
+      "scheinleistung",
+      "leistungsfaktor",
+      "cos phi",
+      "batterie",
+      "laufzeit",
+      "akku",
+    ],
     component: lazy(() => import("./ups/UpsTool")),
   },
   {
@@ -391,7 +470,18 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "rechner",
     description:
       "Bandbreite für Telefonie berechnen: Codec, Paketintervall und Header (RTP, UDP, IP, Ethernet), je Gespräch und für alle gleichzeitigen Gespräche.",
-    tags: ["sip", "rtp", "codec", "g.711", "g.729", "opus", "telefonie", "gespräche", "sip-trunk", "qos"],
+    tags: [
+      "sip",
+      "rtp",
+      "codec",
+      "g.711",
+      "g.729",
+      "opus",
+      "telefonie",
+      "gespräche",
+      "sip-trunk",
+      "qos",
+    ],
     component: lazy(() => import("./voip/VoipTool")),
   },
   {

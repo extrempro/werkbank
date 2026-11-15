@@ -1,13 +1,6 @@
 import { clampInt, useToolParams } from "../params";
 import { humanSize, parseNumber, parseSize } from "../data-units/units";
-import {
-  duration,
-  durationText,
-  parseDuration,
-  presets,
-  rateText,
-  requiredRate,
-} from "./transfer";
+import { duration, durationText, parseDuration, presets, rateText, requiredRate } from "./transfer";
 
 const RATE_FACTOR = { kbit: 1e3, Mbit: 1e6, Gbit: 1e9 } as const;
 type RateUnit = keyof typeof RATE_FACTOR;

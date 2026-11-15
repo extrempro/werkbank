@@ -24,11 +24,20 @@ export interface PowerResult {
 
 export function powerCost(i: PowerInput): PowerResult {
   if (!(i.watts >= 0) || !(i.count >= 1)) throw new Error("Leistung und Anzahl prüfen.");
-  if (!(i.hoursPerDay >= 0 && i.hoursPerDay <= 24)) throw new Error("Stunden pro Tag liegen zwischen 0 und 24.");
-  if (!(i.daysPerYear >= 0 && i.daysPerYear <= 366)) throw new Error("Tage pro Jahr liegen zwischen 0 und 366.");
+  if (!(i.hoursPerDay >= 0 && i.hoursPerDay <= 24))
+    throw new Error("Stunden pro Tag liegen zwischen 0 und 24.");
+  if (!(i.daysPerYear >= 0 && i.daysPerYear <= 366))
+    throw new Error("Tage pro Jahr liegen zwischen 0 und 366.");
   if (!(i.pue >= 1)) throw new Error("PUE ist mindestens 1.");
   const kwhDay = (i.watts / 1000) * i.count * i.hoursPerDay * i.pue;
   const kwhYear = kwhDay * i.daysPerYear;
   const costYear = (kwhYear * i.price) / 100;
-  return { kwhDay, kwhYear, costDay: (kwhDay * i.price) / 100, costMonth: costYear / 12, costYear, co2Year: (kwhYear * i.co2) / 1000 };
+  return {
+    kwhDay,
+    kwhYear,
+    costDay: (kwhDay * i.price) / 100,
+    costMonth: costYear / 12,
+    costYear,
+    co2Year: (kwhYear * i.co2) / 1000,
+  };
 }

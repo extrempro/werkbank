@@ -38,9 +38,16 @@ describe("Cron", () => {
       "2026-11-07T10:45:00.000Z",
       "2026-11-07T11:00:00.000Z",
     ]);
-    expect(nextRuns(parseCron("0 8 * * 1-5"), from, 2, true).map((d) => d.toISOString())).toEqual(["2026-11-09T08:00:00.000Z", "2026-11-10T08:00:00.000Z"]);
+    expect(nextRuns(parseCron("0 8 * * 1-5"), from, 2, true).map((d) => d.toISOString())).toEqual([
+      "2026-11-09T08:00:00.000Z",
+      "2026-11-10T08:00:00.000Z",
+    ]);
     // Tag ODER Wochentag (Vixie-Cron): 13. des Monats oder freitags
-    expect(nextRuns(parseCron("0 0 13 * 5"), from, 3, true).map((d) => d.toISOString().slice(0, 10))).toEqual(["2026-11-13", "2026-11-20", "2026-11-27"]);
-    expect(nextRuns(parseCron("0 0 29 2 *"), from, 1, true)[0]!.toISOString().slice(0, 10)).toBe("2028-02-29");
+    expect(
+      nextRuns(parseCron("0 0 13 * 5"), from, 3, true).map((d) => d.toISOString().slice(0, 10)),
+    ).toEqual(["2026-11-13", "2026-11-20", "2026-11-27"]);
+    expect(nextRuns(parseCron("0 0 29 2 *"), from, 1, true)[0]!.toISOString().slice(0, 10)).toBe(
+      "2028-02-29",
+    );
   });
 });

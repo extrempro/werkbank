@@ -26,7 +26,8 @@ export const savingsFromRatio = (ratio: number) => (1 - 1 / ratio) * 100;
 
 export function storageNeed(i: StorageInput): StorageYear[] {
   if (!(i.data > 0)) throw new Error("Datenmenge fehlt.");
-  if (!(i.compression >= 1) || !(i.dedup >= 1)) throw new Error("Faktoren müssen mindestens 1 sein (1 = keine Einsparung).");
+  if (!(i.compression >= 1) || !(i.dedup >= 1))
+    throw new Error("Faktoren müssen mindestens 1 sein (1 = keine Einsparung).");
   if (i.growth <= -100) throw new Error("Wachstum muss größer als −100 % sein.");
   const out: StorageYear[] = [];
   for (let y = 0; y <= Math.max(0, Math.floor(i.years)); y++) {

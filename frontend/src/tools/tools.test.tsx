@@ -626,5 +626,4 @@ describe("ToolPage", () => {
     fireEvent.change(input, { target: { value: "bla" } });
     expect(screen.getByRole("alert")).toHaveTextContent("Erwartet 5 Felder");
   });
-
 });

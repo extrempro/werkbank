@@ -11,8 +11,7 @@ const LEVELS = Object.keys(levelInfo) as RaidLevel[];
 const PLAN_LEVELS: RaidLevel[] = ["0", "1", "5", "6", "10", "50", "60", "z1", "z2", "z3"];
 const unitFactor = (unit: string) => (unit === "GB" ? 1e9 : 1e12);
 const pct = (value: number) => `${Math.round(value * 100)} %`;
-const times = (value: number) =>
-  `${value.toLocaleString("de-DE", { maximumFractionDigits: 1 })}×`;
+const times = (value: number) => `${value.toLocaleString("de-DE", { maximumFractionDigits: 1 })}×`;
 
 const DEFAULTS = {
   bereich: "kapazitaet",
@@ -32,7 +31,10 @@ function UnitSelect({ value, onChange }: { value: string; onChange: (value: stri
   return (
     <label>
       Einheit
-      <select value={value === "GB" ? "GB" : "TB"} onChange={(event) => onChange(event.target.value)}>
+      <select
+        value={value === "GB" ? "GB" : "TB"}
+        onChange={(event) => onChange(event.target.value)}
+      >
         <option>TB</option>
         <option>GB</option>
       </select>
@@ -90,7 +92,9 @@ function NumberInput({
 export default function RaidTool() {
   // Level, Plattenzahl, Größe und Gruppen gelten in allen drei Bereichen.
   const [params, setParams] = useToolParams(DEFAULTS);
-  const area = ["plattenbedarf", "ausfall"].includes(params.bereich) ? params.bereich : "kapazitaet";
+  const area = ["plattenbedarf", "ausfall"].includes(params.bereich)
+    ? params.bereich
+    : "kapazitaet";
   const level = LEVELS.find((entry) => entry === params.level) ?? "6";
   return (
     <div className="tool-body settings-form">
@@ -181,10 +185,7 @@ function Capacity({
         <>
           <Tiles>
             <Tile value={humanSize(result.usable, "dezimal")} label="nutzbar (Hersteller-TB)" />
-            <Tile
-              value={humanSize(result.usable, "binär")}
-              label="nutzbar (wie Windows anzeigt)"
-            />
+            <Tile value={humanSize(result.usable, "binär")} label="nutzbar (wie Windows anzeigt)" />
             <Tile
               value={pct(result.efficiency)}
               label={`Effizienz (${result.dataDisks} von ${disks} Platten)`}
@@ -284,7 +285,9 @@ function DiskPlan({ params, onChange }: { params: Params; onChange: Change }) {
       })
     : [];
   const fewest = Math.min(
-    ...rows.flatMap((row) => (row.plan && row.calc && row.calc.tolerates > 0 ? [row.plan.disks] : [])),
+    ...rows.flatMap((row) =>
+      row.plan && row.calc && row.calc.tolerates > 0 ? [row.plan.disks] : [],
+    ),
   );
 
   return (

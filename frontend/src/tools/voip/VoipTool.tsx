@@ -58,7 +58,10 @@ export default function VoipTool() {
         <div className="tool-field">
           <label>
             Paketintervall
-            <select value={ptime} onChange={(event) => setParams({ intervall: event.target.value })}>
+            <select
+              value={ptime}
+              onChange={(event) => setParams({ intervall: event.target.value })}
+            >
               {PTIMES.map((entry) => (
                 <option key={entry} value={entry}>
                   {entry} ms{entry === "20" ? " (Standard)" : ""}
@@ -82,7 +85,10 @@ export default function VoipTool() {
         <div className="tool-field">
           <label>
             Übertragung
-            <select value={layer2} onChange={(event) => setParams({ schicht2: event.target.value })}>
+            <select
+              value={layer2}
+              onChange={(event) => setParams({ schicht2: event.target.value })}
+            >
               {LAYERS.map((entry) => (
                 <option key={entry} value={entry}>
                   {layer2Labels[entry]}

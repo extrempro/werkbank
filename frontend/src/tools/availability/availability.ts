@@ -3,7 +3,12 @@
 export const YEAR = 365 * 86400;
 
 /** erlaubte Ausfallzeit in Sekunden für verschiedene Zeiträume */
-export function downtime(percent: number): { year: number; month: number; week: number; day: number } {
+export function downtime(percent: number): {
+  year: number;
+  month: number;
+  week: number;
+  day: number;
+} {
   const u = 1 - percent / 100;
   return { year: u * YEAR, month: (u * YEAR) / 12, week: u * 7 * 86400, day: u * 86400 };
 }
@@ -46,4 +51,5 @@ export const block = (c: Component) => (1 - (1 - c.availability / 100) ** c.redu
 export const system = (cs: Component[]) => cs.reduce((a, c) => (a * block(c)) / 100, 100);
 
 /** „Neunen“ zählen: 99,9 → 3 */
-export const nines = (percent: number) => (percent >= 100 ? Infinity : Math.floor(-Math.log10(1 - percent / 100) + 1e-9));
+export const nines = (percent: number) =>
+  percent >= 100 ? Infinity : Math.floor(-Math.log10(1 - percent / 100) + 1e-9);
