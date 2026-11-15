@@ -17,10 +17,18 @@ export interface Item {
   created_at: string;
 }
 
+export interface ItemCounts {
+  offen: number;
+  meine: number;
+  abgeschlossen: number;
+  alle: number;
+}
+
 export interface ItemList {
   entries: Item[];
   has_more: boolean;
   can_create: boolean;
+  counts?: ItemCounts;
 }
 
 export interface Step {
@@ -267,4 +275,39 @@ export function isUrgent(item: Pick<Item, "rollout_date" | "finished">, today?: 
     item.rollout_date !== null &&
     daysUntil(item.rollout_date, today) <= URGENT_DAYS
   );
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  manuell: "von Hand angelegt",
+  nachrichtencenter: "Nachrichtencenter",
+  einstellung: "erkannte Änderung einer Einstellung",
+};
+
+export function sourceLabel(source: string): string {
+  return SOURCE_LABELS[source] ?? source;
+}
+
+/** Kurze Frist für die Liste, z. B. „Rollout am 01.12.2026 · noch 17 Tage“. */
+export function rolloutShort(item: Pick<Item, "rollout_date" | "finished">, today?: Date): string {
+  if (!item.rollout_date) {
+    return "Rollout: kein Datum";
+  }
+  const date = formatDate(item.rollout_date);
+  if (item.finished) {
+    return `Rollout: ${date}`;
+  }
+  const days = daysUntil(item.rollout_date, today);
+  if (days < 0) {
+    return `Rollout am ${date} · hat begonnen`;
+  }
+  const when = days === 0 ? "heute" : days === 1 ? "noch 1 Tag" : `noch ${days} Tage`;
+  return `Rollout am ${date} · ${when}`;
+}
+
+/** Farbe des Status: Handlung nötig (orange), abgeschlossen (grün), sonst wartend (blau). */
+export function stepClass(item: Pick<Item, "finished" | "waiting_for_me" | "step">): string {
+  if (item.finished) {
+    return item.step === "abgelehnt" ? "pill pill-bad" : "pill pill-ok";
+  }
+  return item.waiting_for_me ? "pill pill-todo" : "pill pill-info";
 }

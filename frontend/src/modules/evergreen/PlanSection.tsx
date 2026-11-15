@@ -97,7 +97,7 @@ export function PlanSection({ detail, onChange }: PlanSectionProps) {
   };
 
   return (
-    <section className="card" aria-labelledby="umsetzung-titel">
+    <section className="setting-section" aria-labelledby="umsetzung-titel">
       <h2 id="umsetzung-titel">Geplante Umsetzung</h2>
       {detail.plan.length === 0 ? (
         <p className="empty">

@@ -2125,3 +2125,240 @@ details summary {
 .plain li + li {
   margin-top: 6px;
 }
+
+/* Evergreen: Vorgänge */
+
+.page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.split-narrow {
+  flex: 1 1 340px;
+  max-width: 440px;
+}
+
+.split-wide {
+  flex: 999 1 520px;
+  position: static;
+}
+
+/* Ist ein Vorgang geöffnet, zeigen schmale Bildschirme nur ihn; „Zurück“ führt zur Liste. */
+@media (max-width: 1099px) {
+  .has-detail .list-only {
+    display: none;
+  }
+}
+
+@media (min-width: 1100px) {
+  .has-detail .back {
+    display: none;
+  }
+}
+
+.item-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 2px solid var(--farbe-rand);
+  border-radius: 12px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  text-decoration: none;
+}
+
+.item-card:hover {
+  border-color: var(--farbe-rand-stark);
+}
+
+.item-card-current {
+  border-color: var(--farbe-primaer);
+}
+
+.item-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.item-card-due {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+}
+
+.urgent-text {
+  color: var(--farbe-bad-text);
+}
+
+.pill-info {
+  background: var(--farbe-info-flaeche);
+  color: var(--farbe-info-text);
+}
+
+.hint-neutral {
+  background: var(--farbe-neutral-flaeche);
+  color: var(--farbe-text-mittel);
+}
+
+p.badges {
+  margin: 6px 0 0;
+}
+
+/* Schrittleiste */
+
+.stepper-wrap {
+  overflow-x: auto;
+}
+
+.stepper {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(92px, 1fr);
+  gap: 4px;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+}
+
+.stepper li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--farbe-text-leise);
+}
+
+.stepper-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--farbe-rand-stark);
+  border-radius: 999px;
+  background: var(--farbe-flaeche);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.stepper .done {
+  color: var(--farbe-text);
+}
+
+.stepper .done .stepper-mark {
+  border-color: var(--farbe-primaer);
+  background: var(--farbe-primaer);
+  color: var(--farbe-auf-primaer);
+}
+
+.stepper .current {
+  color: var(--farbe-text);
+  font-weight: 700;
+}
+
+.stepper .current .stepper-mark {
+  border-color: var(--farbe-warn-rand-stark);
+  background: var(--farbe-warn-flaeche);
+  color: var(--farbe-warn-text);
+}
+
+.stepper + .hint-box,
+.stepper-wrap + .hint-box {
+  margin-top: 12px;
+}
+
+/* Entscheidung */
+
+.decision {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.decision h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: inherit;
+}
+
+.decision label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.decision textarea,
+.decision input[type="date"] {
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.decision input[type="date"] {
+  max-width: 14rem;
+}
+
+.decision .rule {
+  color: inherit;
+}
+
+/* Protokoll */
+
+.protocol {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.protocol li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border: 1px solid var(--farbe-trenner);
+  border-radius: 8px;
+}
+
+.protocol-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}

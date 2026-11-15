@@ -70,10 +70,18 @@ class ItemOut(BaseModel):
     created_at: datetime
 
 
+class ItemCountsOut(BaseModel):
+    offen: int
+    meine: int
+    abgeschlossen: int
+    alle: int
+
+
 class ItemListOut(BaseModel):
     entries: list[ItemOut]
     has_more: bool
     can_create: bool
+    counts: ItemCountsOut
 
 
 class StepOut(BaseModel):
@@ -300,10 +308,31 @@ def list_items(
     else:
         query = query.order_by(EvItem.id.desc())
     rows = db.execute(query.limit(limit + 1).offset(offset)).all()
+
+    # Zähler für die Filter, unabhängig von der gewählten Ansicht und nur über Sichtbares.
+    def count(*conditions: Any) -> int:
+        return int(
+            db.scalar(
+                select(func.count())
+                .select_from(EvItem)
+                .join(WorkflowInstance, WorkflowInstance.id == EvItem.workflow_instance_id)
+                .where(visibility(user), *conditions)
+            )
+            or 0
+        )
+
+    total = count()
+    open_count = count(~WorkflowInstance.finished)
     return ItemListOut(
         entries=[_item_out(row[0], row[1], waiting) for row in rows[:limit]],
         has_more=len(rows) > limit,
         can_create=user.has_any_role(*EDITOR_ROLES),
+        counts=ItemCountsOut(
+            offen=open_count,
+            meine=count(~WorkflowInstance.finished, WorkflowInstance.step.in_(waiting)),
+            abgeschlossen=total - open_count,
+            alle=total,
+        ),
     )
 
 

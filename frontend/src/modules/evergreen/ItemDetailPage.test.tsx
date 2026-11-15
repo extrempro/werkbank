@@ -110,7 +110,8 @@ describe("ItemDetailPage", () => {
     const current = screen.getByText("Betriebsrat", { selector: "li" });
     expect(current).toHaveAttribute("aria-current", "step");
     expect(screen.getByText("Neue Zusammenfassungen")).toBeVisible();
-    expect(screen.getByRole("cell", { name: /Mitbestimmungspflichtig/ })).toBeVisible();
+    expect(screen.getAllByText(/Mitbestimmungspflichtig/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Quelle: von Hand angelegt/)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Angaben bearbeiten" })).toBeNull();
   });
 

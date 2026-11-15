@@ -129,8 +129,15 @@ def test_betriebsrat_and_gf_see_items_only_when_reached(migrated_db: None) -> No
     assert done.json()["item"]["step"] == "geschaeftsfuehrung"
     assert done.json()["actions"] == []
     assert sees(gf)
-    mine = gf.get(f"{BASE}/items?view=meine").json()["entries"]
+    listing = gf.get(f"{BASE}/items?view=meine").json()
+    mine = listing["entries"]
     assert item_id in [entry["id"] for entry in mine]
+    # Zähler für die Filter: nur Sichtbares, unabhängig von der gewählten Ansicht
+    counts = listing["counts"]
+    assert counts["meine"] == len(mine)
+    assert counts["alle"] == counts["offen"] + counts["abgeschlossen"]
+    assert counts == gf.get(f"{BASE}/items?view=abgeschlossen").json()["counts"]
+    assert client.get(f"{BASE}/items").json()["counts"]["alle"] >= counts["alle"]
     tasks = gf.get("/api/tasks").json()["tasks"]
     assert [task["title"] for task in tasks] == ["Geschäftsführung: Vorgänge bearbeiten"]
     assert tasks[0]["count"] >= 1
