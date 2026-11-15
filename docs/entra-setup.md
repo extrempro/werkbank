@@ -246,7 +246,53 @@ Die vielen Rechte für Conditional Access braucht UTCM, um in den Richtlinien ge
 
 Fehlt dem Dienstprinzipal ein Recht, schlägt nicht das Anlegen des Snapshots fehl, sondern erst der Abruf. Die Werkbank zeigt den Abruf dann als fehlgeschlagen; die Fehlerangabe von UTCM steht im Protokoll des Workers. Für weitere Ressourcentypen (`COLLECTOR_RESOURCES`) braucht der Dienstprinzipal die dort genannten Leserechte.
 
-### 4.3 Grenzen von UTCM
+### 4.3 Exchange Online dazunehmen (freiwillig)
+
+UTCM kann auch Einstellungen von Exchange Online lesen ([Liste der Exchange-Typen](https://learn.microsoft.com/en-us/graph/utcm-exchange-resources)). Die Werkbank ist für die organisationsweiten Einstellungen gedacht (Transport, Schutz, Zugriff), nicht für einzelne Postfächer oder Gruppen. Dafür sind zwei Dinge nötig.
+
+**1. Rechte für den Dienstprinzipal von UTCM.** Laut Microsoft braucht er zum Lesen die Anwendungsberechtigung `Exchange.ManageAsApp` (bei „Office 365 Exchange Online“) und je nach Typ die Entra-Rolle „Globaler Leser“ (Organisation, Transport, Zugriff) oder „Sicherheitsleseberechtigter“ (Schutz-Richtlinien). Beides sind reine Leserechte.
+
+```powershell
+Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Applications, Microsoft.Graph.Identity.Governance
+Connect-MgGraph -Scopes 'Application.Read.All', 'AppRoleAssignment.ReadWrite.All', 'RoleManagement.ReadWrite.Directory'
+
+$tcm = Get-MgServicePrincipal -Filter "AppId eq '03b07b79-c5bc-4b5e-9bfa-13acf4a99998'"
+$exo = Get-MgServicePrincipal -Filter "AppId eq '00000002-0000-0ff1-ce00-000000000000'"
+
+# Anwendungsberechtigung Exchange.ManageAsApp
+$role = $exo.AppRoles | Where-Object { $_.Value -eq 'Exchange.ManageAsApp' }
+New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $tcm.Id -BodyParameter @{
+    AppRoleId = $role.Id; ResourceId = $exo.Id; PrincipalId = $tcm.Id
+}
+
+# Entra-Rollen zum Lesen
+foreach ($name in 'Global Reader', 'Security Reader') {
+    $definition = Get-MgRoleManagementDirectoryRoleDefinition -Filter "DisplayName eq '$name'"
+    New-MgRoleManagementDirectoryRoleAssignment -BodyParameter @{
+        PrincipalId = $tcm.Id; RoleDefinitionId = $definition.Id; DirectoryScopeId = '/'
+    }
+}
+```
+
+Die Rolle „Globaler Leser“ ist weitreichend (Lesen im ganzen Tenant). Wer sie dem Dienstprinzipal nicht geben möchte, lässt sie weg und beschränkt sich auf die Schutz-Richtlinien, für die „Sicherheitsleseberechtigter“ genügt.
+
+**2. Typen in `COLLECTOR_RESOURCES` ergänzen** (kommagetrennt, hinter den vorhandenen Einträgen), danach die Werkbank neu starten:
+
+| Gruppe | Ressourcentypen |
+|---|---|
+| Organisation und Transport | `microsoft.exchange.organizationconfig`, `microsoft.exchange.transportconfig`, `microsoft.exchange.transportrule`, `microsoft.exchange.accepteddomain`, `microsoft.exchange.remotedomain`, `microsoft.exchange.inboundconnector`, `microsoft.exchange.outboundconnector`, `microsoft.exchange.dkimsigningconfig` |
+| Schutz | `microsoft.exchange.antiphishpolicy`, `microsoft.exchange.hostedcontentfilterpolicy`, `microsoft.exchange.hostedoutboundspamfilterpolicy`, `microsoft.exchange.malwarefilterpolicy`, `microsoft.exchange.safeattachmentpolicy`, `microsoft.exchange.safelinkspolicy`, `microsoft.exchange.quarantinepolicy`, `microsoft.exchange.atppolicyforo365` |
+| Zugriff und Freigabe | `microsoft.exchange.owamailboxpolicy`, `microsoft.exchange.mobiledevicemailboxpolicy`, `microsoft.exchange.sharingpolicy`, `microsoft.exchange.authenticationpolicy` |
+
+Hinweise:
+
+- **Schrittweise vorgehen:** erst wenige Typen eintragen, einen Abruf abwarten und in der Übersicht prüfen, wie viele Objekte gelesen wurden. Jedes Objekt zählt gegen das Monatskontingent (4.4).
+- **Nicht eintragen:** Typen je Postfach oder Gruppe (z. B. `mailboxsettings`, `mailboxpermission`, `sharedmailbox`, `distributiongroup`). Das sind keine Tenant-Einstellungen, sie enthalten Personendaten und verbrauchen das Kontingent.
+- **„Geändert von“** bleibt bei Exchange leer: Wer etwas geändert hat, steht nicht im Entra-Audit-Log.
+- **Personenbezug:** Regeln und Richtlinien können Adressen und Namen enthalten (z. B. Bedingungen einer Transportregel). Sie stehen dann als Wert in der Werkbank (`docs/datenschutz.md`).
+- Der erste Abruf mit neuen Typen legt deren Einstellungen als Ausgangsstand an und meldet sie als neu.
+
+### 4.4 Grenzen von UTCM
 
 - höchstens **20.000 gelesene Objekte pro Monat** (jede Richtlinie zählt als ein Objekt); deshalb ruft die Werkbank standardmäßig einmal täglich ab
 - Snapshots werden von Microsoft höchstens 7 Tage aufbewahrt; den Verlauf hält die Werkbank selbst

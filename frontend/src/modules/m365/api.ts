@@ -343,6 +343,42 @@ export function workloadLabel(workload: string): string {
   return WORKLOAD_LABELS[workload] ?? workload.charAt(0).toUpperCase() + workload.slice(1);
 }
 
+/** Verständliche Namen für die Bereiche (Ressourcentypen von Microsoft, klein geschrieben). */
+const AREA_LABELS: Record<string, string> = {
+  // Entra
+  conditionalaccesspolicy: "Bedingter Zugriff",
+  namedlocationpolicy: "Benannte Standorte",
+  authorizationpolicy: "Autorisierungsrichtlinie",
+  // Exchange: Organisation und Transport
+  organizationconfig: "Organisation",
+  transportconfig: "Transport",
+  transportrule: "Transportregeln",
+  accepteddomain: "Akzeptierte Domänen",
+  remotedomain: "Remotedomänen",
+  inboundconnector: "Eingehende Connectors",
+  outboundconnector: "Ausgehende Connectors",
+  dkimsigningconfig: "DKIM",
+  // Exchange: Schutz
+  antiphishpolicy: "Anti-Phishing",
+  hostedcontentfilterpolicy: "Anti-Spam (eingehend)",
+  hostedoutboundspamfilterpolicy: "Anti-Spam (ausgehend)",
+  malwarefilterpolicy: "Anti-Malware",
+  safeattachmentpolicy: "Sichere Anlagen",
+  safelinkspolicy: "Sichere Links",
+  quarantinepolicy: "Quarantäne",
+  atppolicyforo365: "Defender für Office 365",
+  // Exchange: Zugriff und Freigabe
+  owamailboxpolicy: "Outlook im Web",
+  mobiledevicemailboxpolicy: "Mobilgeräte",
+  sharingpolicy: "Freigaberichtlinien",
+  authenticationpolicy: "Authentifizierungsrichtlinien",
+};
+
+/** Name eines Bereichs; unbekannte Bereiche erscheinen mit ihrem technischen Namen. */
+export function areaLabel(area: string): string {
+  return AREA_LABELS[area.toLowerCase()] ?? area;
+}
+
 /** CSS-Klasse für den Status einer Änderung (Farbe nach docs/design.md, Kapitel 4). */
 export function statusClass(status: string): string {
   if (status === "gewollt") {

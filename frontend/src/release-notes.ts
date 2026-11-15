@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.14.0",
+    date: "2026-11-15",
+    summary: "Exchange Online kann dazukommen, und Bereiche haben verständliche Namen.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Die Werkbank kann jetzt auch Einstellungen von Exchange Online zeigen, zum Beispiel Transportregeln und die Richtlinien gegen Spam und Phishing. Sie erscheinen, sobald Exchange für eure Installation eingerichtet ist.",
+          "Bereiche heißen jetzt so, wie man sie kennt: „Bedingter Zugriff“ statt „conditionalaccesspolicy“.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.13.0",
     date: "2026-11-15",
     summary: "Microsoft 365 und Evergreen haben jetzt je einen eigenen Bereich in der Navigation.",

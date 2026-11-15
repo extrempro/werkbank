@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ApiError, formatDateTime, type Me } from "../../api";
 import { Link } from "../../components/Link";
 import {
+  areaLabel,
   criticalityLabel,
   fetchSetting,
   formatMetaValue,
@@ -88,7 +89,7 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
   const history = detail.meta_history;
   const aiText = detail.ai_text ?? null;
   const recommendations = detail.recommendations ?? [];
-  const crumbs = [workloadLabel(setting.workload), setting.area, setting.object_name]
+  const crumbs = [workloadLabel(setting.workload), areaLabel(setting.area), setting.object_name]
     .filter((part): part is string => Boolean(part))
     .join(" › ");
   const fromEvergreen = meta.target_set && (meta.target_source ?? "").startsWith("Evergreen");
@@ -269,7 +270,7 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
                 </div>
                 <div>
                   <dt>Bereich</dt>
-                  <dd>{setting.area}</dd>
+                  <dd>{areaLabel(setting.area)}</dd>
                 </div>
               </dl>
             </>
