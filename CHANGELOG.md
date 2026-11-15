@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.26.0] – 2026-11-15
+
+IT-Budget: Budgetposten unter den Konten, Verträge mit Netto und Steuersatz.
+
+### IT-Budget
+
+- **Budgetposten:** Unter jedem Konto stehen jetzt Posten (wofür das Geld gedacht ist). Geplant wird je Posten, das Konto zeigt die Summe. Neue Seite „Budgetposten“ mit Plan, gebunden, frei und Vorjahr; dort wird der Plan bearbeitet
+- **Verträge laufen auf einen Budgetposten** statt direkt auf ein Konto
+- **Netto und Steuersatz am Vertrag:** Erfasst wird der Nettobetrag mit Steuersatz (Standard 19 %), das Brutto rechnet die Werkbank. Fürs Budget zählt weiter das Brutto
+- Die Übersicht zeigt Kennzahlen, Balken, Termine und Handlungsbedarf; die Plantabelle steht jetzt bei den Budgetposten
+- **Umstellung vorhandener Daten (Migration 0021):** Jedes Konto mit Plan oder Vertrag bekommt einen Posten „Allgemein“, der beides übernimmt. Vorhandene Verträge behalten ihr Brutto; ihr Netto wird gleichgesetzt und der Steuersatz steht auf 0 %. Bitte danach Posten umbenennen und bei den Verträgen Netto und Steuersatz nachtragen
+
 ## [0.25.0] – 2026-11-15
 
 IT-Budget: Partner, Verträge und „gebunden“; Übersicht nach dem Entwurf.

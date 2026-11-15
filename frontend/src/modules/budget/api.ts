@@ -44,6 +44,34 @@ export interface OverviewRow {
   committed_cents: number;
 }
 
+/** Ein Budgetposten: wofür das Geld eines Kontos gedacht ist. */
+export interface Item {
+  id: number;
+  account_id: number;
+  account_number: string;
+  account_name: string;
+  kind: AccountKind;
+  name: string;
+  note: string;
+  active: boolean;
+}
+
+export interface ItemUpdate {
+  account_id: number;
+  name: string;
+  note: string;
+  active: boolean;
+}
+
+export interface ItemRow {
+  item: Item;
+  plan_cents: number | null;
+  previous_cents: number | null;
+  committed_cents: number;
+  /** Zahl der Verträge auf diesem Posten mit Kosten in diesem Jahr. */
+  contracts: number;
+}
+
 export interface Totals {
   running_cents: number;
   investment_cents: number;
@@ -57,7 +85,9 @@ export interface Overview {
   first_day: string;
   last_day: string;
   years: { year: number; name: string }[];
+  /** Je Konto die Summen seiner Budgetposten. */
   rows: OverviewRow[];
+  items: ItemRow[];
   plan: Totals;
   previous: Totals;
   committed: Totals;
@@ -66,7 +96,7 @@ export interface Overview {
 }
 
 export interface PlanEntry {
-  account_id: number;
+  item_id: number;
   amount_cents: number | null;
 }
 
@@ -111,6 +141,18 @@ export function createAccount(update: AccountUpdate): Promise<Account> {
 
 export function updateAccount(id: number, update: AccountUpdate): Promise<Account> {
   return putJson<Account>(`/api/budget/accounts/${id}`, update);
+}
+
+export function fetchItems(): Promise<Item[]> {
+  return getJson<Item[]>("/api/budget/items");
+}
+
+export function createItem(update: ItemUpdate): Promise<Item> {
+  return postJson<Item>("/api/budget/items", update);
+}
+
+export function updateItem(id: number, update: ItemUpdate): Promise<Item> {
+  return putJson<Item>(`/api/budget/items/${id}`, update);
 }
 
 export function fetchBudgetOverview(year: number | null): Promise<Overview> {
@@ -185,7 +227,7 @@ export type DpaStatus = "vorhanden" | "fehlt" | "nicht_erforderlich";
 export interface ContractUpdate {
   title: string;
   partner_id: number;
-  account_id: number;
+  item_id: number;
   /** Rechnungssteller, wenn er vom Vertragspartner abweicht. */
   invoicer_id: number | null;
   dpa_status: DpaStatus;
@@ -195,7 +237,10 @@ export interface ContractUpdate {
   renewal_months: number | null;
   notice_months: number | null;
   cancelled_to: string | null;
-  amount_cents: number;
+  /** Betrag je Zahlung netto; das Brutto rechnet der Server. */
+  net_cents: number;
+  /** Steuersatz in Hundertstel Prozent: 1900 = 19 %. */
+  tax_rate_bp: number;
   interval: ContractInterval;
   note: string;
 }
@@ -203,8 +248,11 @@ export interface ContractUpdate {
 export interface Contract extends ContractUpdate {
   id: number;
   partner_name: string;
+  item_name: string;
   account_number: string;
   account_name: string;
+  /** Betrag je Zahlung brutto. */
+  amount_cents: number;
   invoicer_name: string | null;
   /** Kosten eines vollen Jahres; null bei einmaliger Zahlung. */
   yearly_cents: number | null;
@@ -316,4 +364,25 @@ export function share(part: number, whole: number): number {
     return part > 0 ? 100 : 0;
   }
   return Math.max(0, Math.min(100, Math.round((part / whole) * 100)));
+}
+
+/** Brutto aus Netto und Steuersatz (Hundertstel Prozent), kaufmännisch gerundet wie auf dem Server. */
+export function grossCents(netCents: number, taxRateBp: number): number {
+  return Math.floor((netCents * (10_000 + taxRateBp) + 5_000) / 10_000);
+}
+
+/** Steuersatz als Text, z. B. „19 %“ oder „8,1 %“. */
+export function formatRate(taxRateBp: number): string {
+  return `${(taxRateBp / 100).toLocaleString("de-DE", { maximumFractionDigits: 2 })} %`;
+}
+
+/** Steuersatz aus einer Eingabe wie „19“ oder „8,1“ in Hundertstel Prozent; null, wenn unlesbar. */
+export function parseRate(text: string): number | null {
+  const clean = text.replace(/[\s%]/g, "");
+  if (!/^\d{1,3}(,\d{1,2})?$/.test(clean)) {
+    return null;
+  }
+  const [whole = "0", fraction = ""] = clean.split(",");
+  const rate = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+  return rate <= 10_000 ? rate : null;
 }

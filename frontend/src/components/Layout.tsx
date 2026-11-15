@@ -14,6 +14,7 @@ import {
   areasFor,
   BUDGET_ACCOUNTS_PATH,
   BUDGET_CONTRACTS_PATH,
+  BUDGET_ITEMS_PATH,
   BUDGET_PARTNERS_PATH,
   BUDGET_PATH,
   BUDGET_SETTINGS_PATH,
@@ -43,6 +44,7 @@ import { AccountsPage } from "../modules/budget/AccountsPage";
 import { BudgetOverviewPage } from "../modules/budget/BudgetOverviewPage";
 import { BudgetSettingsPage } from "../modules/budget/BudgetSettingsPage";
 import { ContractsPage } from "../modules/budget/ContractsPage";
+import { ItemsPage as BudgetItemsPage } from "../modules/budget/ItemsPage";
 import { PartnersPage } from "../modules/budget/PartnersPage";
 import { CredentialsPage } from "../modules/tenant/CredentialsPage";
 import { LicensesPage } from "../modules/tenant/LicensesPage";
@@ -237,6 +239,8 @@ export function Layout({ me }: LayoutProps) {
     page = <BudgetOverviewPage roles={me.roles} />;
   } else if (path === BUDGET_ACCOUNTS_PATH && current) {
     page = <AccountsPage roles={me.roles} />;
+  } else if (path === BUDGET_ITEMS_PATH && current) {
+    page = <BudgetItemsPage roles={me.roles} />;
   } else if (path === BUDGET_CONTRACTS_PATH && current) {
     page = <ContractsPage roles={me.roles} />;
   } else if (path === BUDGET_PARTNERS_PATH && current) {

@@ -8,20 +8,23 @@ import {
   DPA_LABELS,
   dpaTone,
   euroInput,
-  fetchAccounts,
+  fetchItems,
   fetchContracts,
   fetchPartners,
   formatBudgetDay,
   formatEuro,
+  formatRate,
+  grossCents,
   INTERVAL_LABELS,
   parseEuro,
+  parseRate,
   termText,
   updateContract,
-  type Account,
   type Contract,
   type ContractInterval,
   type ContractList,
   type DpaStatus,
+  type Item,
   type Partner,
 } from "./api";
 
@@ -29,7 +32,7 @@ interface FormProps {
   /** null: neuen Vertrag anlegen. */
   contract: Contract | null;
   partners: Partner[];
-  accounts: Account[];
+  items: Item[];
   onSaved: (contract: Contract) => void;
   onCancel: () => void;
 }
@@ -43,16 +46,19 @@ function wholeNumber(text: string): number | null {
   return /^\d{1,3}$/.test(clean) ? Number(clean) : Number.NaN;
 }
 
-function ContractForm({ contract, partners, accounts, onSaved, onCancel }: FormProps) {
+function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProps) {
   const [title, setTitle] = useState(contract?.title ?? "");
   const [partnerId, setPartnerId] = useState(contract ? String(contract.partner_id) : "");
-  const [accountId, setAccountId] = useState(contract ? String(contract.account_id) : "");
+  const [itemId, setItemId] = useState(contract ? String(contract.item_id) : "");
   const [invoicerId, setInvoicerId] = useState(
     contract?.invoicer_id ? String(contract.invoicer_id) : "",
   );
   const [dpa, setDpa] = useState<DpaStatus>(contract?.dpa_status ?? "nicht_erforderlich");
   const [number, setNumber] = useState(contract?.number ?? "");
-  const [amount, setAmount] = useState(contract ? euroInput(contract.amount_cents) : "");
+  const [amount, setAmount] = useState(contract ? euroInput(contract.net_cents) : "");
+  const [rate, setRate] = useState(
+    contract ? (contract.tax_rate_bp / 100).toLocaleString("de-DE") : "19",
+  );
   const [interval, setInterval] = useState<ContractInterval>(contract?.interval ?? "jaehrlich");
   const [startsOn, setStartsOn] = useState(contract?.starts_on ?? "");
   const [endsOn, setEndsOn] = useState(contract?.ends_on ?? "");
@@ -70,22 +76,25 @@ function ContractForm({ contract, partners, accounts, onSaved, onCancel }: FormP
   const invoicerChoices = partners.filter(
     (entry) => (entry.active && entry.is_invoicer) || entry.id === contract?.invoicer_id,
   );
-  const accountChoices = accounts.filter(
-    (entry) => entry.active || entry.id === contract?.account_id,
-  );
+  const itemChoices = items.filter((entry) => entry.active || entry.id === contract?.item_id);
+  const netPreview = parseEuro(amount);
+  const ratePreview = parseRate(rate);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     const cents = parseEuro(amount);
+    const taxRate = parseRate(rate);
     const renewalMonths = wholeNumber(renewal);
     const noticeMonths = wholeNumber(notice);
     let problem: string | null = null;
     if (!title.trim()) {
       problem = "Bitte eine Bezeichnung eintragen.";
-    } else if (!partnerId || !accountId) {
-      problem = "Bitte Vertragspartner und Konto wählen.";
+    } else if (!partnerId || !itemId) {
+      problem = "Bitte Vertragspartner und Budgetposten wählen.";
     } else if (cents === null) {
-      problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 1190,00";
+      problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 1000,00";
+    } else if (taxRate === null) {
+      problem = "Der Steuersatz ist nicht lesbar. Bitte so eintragen: 19";
     } else if (!startsOn) {
       problem = "Bitte den Beginn eintragen.";
     } else if (endsOn && endsOn < startsOn) {
@@ -95,14 +104,14 @@ function ContractForm({ contract, partners, accounts, onSaved, onCancel }: FormP
     } else if (renewalMonths !== null && !endsOn) {
       problem = "Eine Verlängerung gibt es nur bei einem Ende der Laufzeit.";
     }
-    if (problem !== null || cents === null) {
+    if (problem !== null || cents === null || taxRate === null) {
       setError(problem);
       return;
     }
     const update = {
       title: title.trim(),
       partner_id: Number(partnerId),
-      account_id: Number(accountId),
+      item_id: Number(itemId),
       invoicer_id: invoicerId ? Number(invoicerId) : null,
       dpa_status: dpa,
       number: number.trim(),
@@ -111,7 +120,8 @@ function ContractForm({ contract, partners, accounts, onSaved, onCancel }: FormP
       renewal_months: renewalMonths,
       notice_months: noticeMonths,
       cancelled_to: cancelledTo || null,
-      amount_cents: cents,
+      net_cents: cents,
+      tax_rate_bp: taxRate,
       interval,
       note: note.trim(),
     };
@@ -179,12 +189,12 @@ function ContractForm({ contract, partners, accounts, onSaved, onCancel }: FormP
         </div>
         <div className="tool-row">
           <label>
-            Konto
-            <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+            Budgetposten
+            <select value={itemId} onChange={(event) => setItemId(event.target.value)}>
               <option value="">Bitte wählen</option>
-              {accountChoices.map((entry) => (
+              {itemChoices.map((entry) => (
                 <option key={entry.id} value={entry.id}>
-                  {entry.number} {entry.name}
+                  {entry.account_number} {entry.account_name} · {entry.name}
                 </option>
               ))}
             </select>
@@ -192,12 +202,21 @@ function ContractForm({ contract, partners, accounts, onSaved, onCancel }: FormP
         </div>
         <div className="tool-row">
           <label className="narrow">
-            Betrag je Zahlung (brutto, Euro)
+            Betrag je Zahlung (netto, Euro)
             <input
               type="text"
               inputMode="decimal"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
+            />
+          </label>
+          <label className="narrow">
+            Steuersatz (%)
+            <input
+              type="text"
+              inputMode="decimal"
+              value={rate}
+              onChange={(event) => setRate(event.target.value)}
             />
           </label>
           <label className="narrow">
@@ -214,6 +233,11 @@ function ContractForm({ contract, partners, accounts, onSaved, onCancel }: FormP
             </select>
           </label>
         </div>
+        <p className="small" role="status">
+          {netPreview !== null && ratePreview !== null
+            ? `Brutto je Zahlung: ${formatEuro(grossCents(netPreview, ratePreview))}. Fürs Budget zählt das Brutto.`
+            : "Das Brutto rechnet die Werkbank aus Netto und Steuersatz. Fürs Budget zählt das Brutto."}
+        </p>
         <div className="tool-row">
           <label className="narrow">
             Beginn
@@ -303,7 +327,7 @@ function ContractForm({ contract, partners, accounts, onSaved, onCancel }: FormP
 interface Loaded {
   list: ContractList;
   partners: Partner[];
-  accounts: Account[];
+  items: Item[];
 }
 
 type View = "laufend" | "alle";
@@ -322,10 +346,10 @@ export function ContractsPage({ roles }: { roles: readonly string[] }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchContracts(), fetchPartners(), fetchAccounts()])
-      .then(([list, partners, accounts]) => {
+    Promise.all([fetchContracts(), fetchPartners(), fetchItems()])
+      .then(([list, partners, items]) => {
         if (active) {
-          setData({ list, partners, accounts });
+          setData({ list, partners, items });
         }
       })
       .catch(() => {
@@ -446,7 +470,7 @@ export function ContractsPage({ roles }: { roles: readonly string[] }) {
                             <span className="pill pill-neutral budget-pill">beendet</span>
                           )}
                           <span className="small budget-muted tenant-part">
-                            Konto {entry.account_number} · {termText(entry)}
+                            {entry.account_number} · {entry.item_name} · {termText(entry)}
                             {entry.number ? ` · Nr. ${entry.number}` : ""}
                           </span>
                         </th>
@@ -465,6 +489,7 @@ export function ContractsPage({ roles }: { roles: readonly string[] }) {
                             {entry.yearly_cents === null
                               ? "einmalig"
                               : `${formatEuro(entry.amount_cents)} ${INTERVAL_LABELS[entry.interval]}`}
+                            {` · netto ${formatEuro(entry.net_cents)} + ${formatRate(entry.tax_rate_bp)}`}
                           </span>
                         </td>
                         <td>
@@ -518,7 +543,7 @@ export function ContractsPage({ roles }: { roles: readonly string[] }) {
           key={editing ? `vertrag-${editing.id}` : `neu-${formRound}`}
           contract={editing}
           partners={data.partners}
-          accounts={data.accounts}
+          items={data.items}
           onSaved={onSaved}
           onCancel={() => setEditing(null)}
         />

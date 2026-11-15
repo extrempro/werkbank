@@ -32,6 +32,7 @@ export const BUDGET_ACCOUNTS_PATH = "/budget/konten";
 export const BUDGET_SETTINGS_PATH = "/budget/einstellungen";
 export const BUDGET_CONTRACTS_PATH = "/budget/vertraege";
 export const BUDGET_PARTNERS_PATH = "/budget/partner";
+export const BUDGET_ITEMS_PATH = "/budget/posten";
 
 /** Seite einer Kategorie der IT-Tools. */
 export function toolCategoryPath(category: string): string {
@@ -134,6 +135,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
   if (hasAny(roles, BUDGET_ROLES)) {
     const items: NavItem[] = [
       { path: BUDGET_PATH, label: "Übersicht", icon: "uebersicht" },
+      { path: BUDGET_ITEMS_PATH, label: "Budgetposten", icon: "posten" },
       { path: BUDGET_CONTRACTS_PATH, label: "Verträge", icon: "vertraege" },
       { path: BUDGET_PARTNERS_PATH, label: "Partner", icon: "partner" },
       { path: BUDGET_ACCOUNTS_PATH, label: "Konten", icon: "konten" },

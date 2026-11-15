@@ -102,3 +102,8 @@ def yearly_cents(contract: BudgetContract) -> int | None:
     if contract.interval == INTERVAL_ONCE:
         return None
     return contract.amount_cents * (12 // INTERVAL_MONTHS[contract.interval])
+
+
+def gross_cents(net_cents: int, tax_rate_bp: int) -> int:
+    """Brutto aus Netto und Steuersatz (in Hundertstel Prozent), kaufmännisch gerundet."""
+    return (net_cents * (10_000 + tax_rate_bp) + 5_000) // 10_000
