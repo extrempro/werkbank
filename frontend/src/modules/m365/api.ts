@@ -414,10 +414,7 @@ export function linkRecommendation(id: number, settingId: number): Promise<Recom
   return postJson(`${BASE}/recommendations/${id}/links`, { setting_id: settingId });
 }
 
-export function unlinkRecommendation(
-  id: number,
-  settingId: number,
-): Promise<RecommendationDetail> {
+export function unlinkRecommendation(id: number, settingId: number): Promise<RecommendationDetail> {
   return deleteJson(`${BASE}/recommendations/${id}/links/${settingId}`);
 }
 

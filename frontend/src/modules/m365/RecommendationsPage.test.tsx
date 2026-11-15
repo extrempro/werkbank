@@ -101,7 +101,9 @@ describe("RecommendationsPage", () => {
     );
     expect(screen.getByText(/Empfehlung in der Liste wählen/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Erfüllt (1)" }));
-    await vi.waitFor(() => expect(calls.some((call) => call.url.includes("view=erfuellt"))).toBe(true));
+    await vi.waitFor(() =>
+      expect(calls.some((call) => call.url.includes("view=erfuellt"))).toBe(true),
+    );
   });
 
   it("erklärt, wenn der Abruf nicht eingeschaltet ist", async () => {
@@ -140,9 +142,7 @@ describe("RecommendationsPage", () => {
     const results = await screen.findByRole("list", { name: "Suchergebnis" });
     expect(within(results).getByText("zugeordnet")).toBeVisible();
     fireEvent.click(within(results).getByRole("button", { name: /Zuordnen – Gäste – State/ }));
-    await vi.waitFor(() =>
-      expect(calls.some((call) => call.init?.method === "POST")).toBe(true),
-    );
+    await vi.waitFor(() => expect(calls.some((call) => call.init?.method === "POST")).toBe(true));
     const post = calls.find((call) => call.init?.method === "POST");
     expect(post?.url).toBe("/api/m365-config/recommendations/2/links");
     expect(JSON.parse(String(post?.init?.body))).toEqual({ setting_id: 9 });
