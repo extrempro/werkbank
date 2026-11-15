@@ -9,7 +9,6 @@ import { NotFoundPage } from "../pages/NotFoundPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { StartPage } from "../pages/StartPage";
 import { InboxPage } from "../modules/evergreen/InboxPage";
-import { ItemDetailPage } from "../modules/evergreen/ItemDetailPage";
 import { ItemsPage } from "../modules/evergreen/ItemsPage";
 import { ChangesPage } from "../modules/m365/ChangesPage";
 import { OverviewPage } from "../modules/m365/OverviewPage";
@@ -100,7 +99,7 @@ export function Layout({ me }: LayoutProps) {
   } else if (path === "/evergreen/eingang" && current) {
     page = <InboxPage />;
   } else if (itemId !== null && items.some((item) => item.path === "/evergreen")) {
-    page = <ItemDetailPage id={itemId} />;
+    page = <ItemsPage selectedId={itemId} />;
   } else if (current) {
     page = <PlaceholderPage title={current.label} />;
   } else {

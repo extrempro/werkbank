@@ -62,7 +62,7 @@ test("Ein Vorgang läuft von der IT über Betriebsrat bis zur Geschäftsführung
   await page.goto(itemUrl);
   await page.getByRole("button", { name: "Abnehmen" }).click();
   await expect(page.getByText("Neuer Schritt: Umsetzung.")).toBeVisible();
-  await expect(page.getByRole("cell", { name: "Nur für die Pilotgruppe" })).toBeVisible();
+  await expect(page.getByText("Nur für die Pilotgruppe")).toBeVisible();
   await expect(page.getByRole("button", { name: "Abnehmen" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Soll-Wert hinzufügen" })).toHaveCount(0);
   await expectNoA11yViolations(page);

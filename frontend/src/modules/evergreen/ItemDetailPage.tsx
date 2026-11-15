@@ -9,17 +9,21 @@ import {
   isUrgent,
   performAction,
   rolloutText,
+  sourceLabel,
+  stepClass,
   updateItem,
   type ItemDetail,
 } from "./api";
 
 interface ItemDetailPageProps {
   id: number;
+  /** Wird nach einer Entscheidung oder Änderung aufgerufen, z. B. um die Liste neu zu laden. */
+  onChanged?: () => void;
 }
 
 type Message = { kind: "status" | "alert"; text: string };
 
-export function ItemDetailPage({ id }: ItemDetailPageProps) {
+export function ItemDetailPage({ id, onChanged }: ItemDetailPageProps) {
   const [detail, setDetail] = useState<ItemDetail | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [comment, setComment] = useState("");
@@ -53,14 +57,14 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
   }, [id]);
 
   const back = (
-    <p>
+    <p className="back">
       <Link to="/evergreen">Zurück zu den Vorgängen</Link>
     </p>
   );
 
   if (status !== "ready" || !detail) {
     return (
-      <>
+      <div className="page">
         <p className="module-label">Evergreen</p>
         <h1>Vorgang</h1>
         {status === "loading" && <p role="status">Wird geladen …</p>}
@@ -69,7 +73,7 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
         )}
         {status === "error" && <p role="alert">Der Vorgang konnte nicht geladen werden.</p>}
         {back}
-      </>
+      </div>
     );
   }
 
@@ -98,6 +102,7 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
         setDetail(result);
         setEditing(false);
         setMessage({ kind: "status", text: "Die Angaben sind gespeichert." });
+        onChanged?.();
       })
       .catch((failure: unknown) => {
         const text = failure instanceof ApiError ? failure.detail : null;
@@ -128,6 +133,7 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
         setDetail(result);
         setComment("");
         setSessionDate("");
+        onChanged?.();
         setMessage({
           kind: "status",
           text: `„${title}“ ist erfasst. Neuer Schritt: ${result.item.step_title}.`,
@@ -139,263 +145,266 @@ export function ItemDetailPage({ id }: ItemDetailPageProps) {
       });
   };
 
+  const urgent = isUrgent(item);
+  const onUpdate = (next: ItemDetail) => {
+    setDetail(next);
+    onChanged?.();
+  };
+
   return (
-    <>
-      <p className="module-label">Evergreen · {item.number}</p>
-      <h1>{item.title}</h1>
+    <div className="page">
       {back}
-
-      <section aria-labelledby="ablauf-titel">
-        <h2 id="ablauf-titel" className="visually-hidden">
-          Stand im Ablauf
-        </h2>
-        <ol className="steps">
-          {steps.map((step, index) => {
-            const current = step.id === item.step;
-            const done = !item.finished && index < currentIndex;
-            return (
-              <li
-                key={step.id}
-                className={current ? "step current" : done ? "step done" : "step"}
-                aria-current={current ? "step" : undefined}
-              >
-                {step.title}
-                {current && <span className="visually-hidden"> (aktueller Schritt)</span>}
-              </li>
-            );
-          })}
-        </ol>
-        {item.finished && (
-          <p className="notice-neutral">
-            <strong>{item.step_title}.</strong> An diesem Vorgang ist nichts mehr zu tun.
+      <article className="panel setting" aria-labelledby="vorgang-titel">
+        <header className="setting-head">
+          <p className="module-label">Evergreen</p>
+          <p className="small">
+            {item.number}
+            {item.service && ` · ${item.service}`} · Quelle: {sourceLabel(item.source)}
           </p>
-        )}
-      </section>
+          <h1 id="vorgang-titel">{item.title}</h1>
+          <p className="badges">
+            <span className={stepClass({ ...item, waiting_for_me: actions.length > 0 })}>
+              {item.step_title}
+            </span>
+            {item.major_change && <span className="pill pill-bad">Größere Änderung</span>}
+            {detail.not_controllable && <span className="pill pill-neutral">Nicht steuerbar</span>}
+          </p>
+        </header>
 
-      <section className="card" aria-labelledby="angaben-titel">
-        <h2 id="angaben-titel">Angaben</h2>
-        {editing ? (
-          <form className="meta-form" onSubmit={onSave} aria-label="Angaben bearbeiten">
-            <label>
-              Zusammenfassung
-              <textarea
-                value={summary}
-                maxLength={8000}
-                rows={5}
-                onChange={(event) => setSummary(event.target.value)}
-              />
-            </label>
-            <label>
-              Rückmeldungen der Fachabteilungen
-              <textarea
-                value={feedback}
-                maxLength={8000}
-                rows={4}
-                onChange={(event) => setFeedback(event.target.value)}
-              />
-            </label>
-            <label>
-              Rollout-Datum
-              <input
-                type="date"
-                value={rollout}
-                onChange={(event) => setRollout(event.target.value)}
-              />
-            </label>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                className="check"
-                checked={notControllable}
-                onChange={(event) => setNotControllable(event.target.checked)}
-              />
-              Nicht steuerbar (lässt sich nicht abschalten oder einschränken)
-            </label>
-            <div className="filter-actions">
-              <button type="submit" className="button button-primary">
-                Speichern
-              </button>
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => setEditing(false)}
-              >
-                Abbrechen
-              </button>
-            </div>
-          </form>
-        ) : (
-          <>
-            <dl className="facts">
-              <div>
-                <dt>Schritt</dt>
-                <dd>{item.step_title}</dd>
-              </div>
-              <div>
-                <dt>Rollout</dt>
-                <dd className={isUrgent(item) ? "urgent" : undefined}>{rolloutText(item)}</dd>
-              </div>
-              <div>
-                <dt>Dienst</dt>
-                <dd>{item.service ?? "–"}</dd>
-              </div>
-              <div>
-                <dt>Einordnung</dt>
-                <dd>
-                  {item.major_change ? "Größere Änderung" : "Normale Änderung"}
-                  {detail.not_controllable && ", nicht steuerbar"}
-                </dd>
-              </div>
-            </dl>
-            <h3>Zusammenfassung</h3>
-            <p className="text">{detail.summary ?? "Noch keine Zusammenfassung."}</p>
-            <h3>Rückmeldungen der Fachabteilungen</h3>
-            <p className="text">{detail.departments_feedback ?? "Noch keine Rückmeldungen."}</p>
-            {detail.can_edit && (
-              <p className="actions">
-                <button type="button" className="button button-secondary" onClick={startEditing}>
-                  Angaben bearbeiten
-                </button>
+        {!item.finished && item.rollout_date && (
+          <div className={urgent ? "hint-box hint-bad" : "hint-box hint-warn"}>
+            <p className="hint-title">Rollout: {rolloutText(item)}</p>
+            {detail.provisional_hint && (
+              <p role="status">
+                <strong>Der Rollout steht kurz bevor und es gibt noch keinen Beschluss.</strong>{" "}
+                Lässt sich die Funktion abschalten, sollte die IT eine vorläufige Sperre in der
+                geplanten Umsetzung eintragen.
               </p>
             )}
-          </>
+          </div>
         )}
-      </section>
 
-      {detail.provisional_hint && (
-        <p className="notice" role="status">
-          <strong>Der Rollout steht kurz bevor und es gibt noch keinen Beschluss.</strong> Lässt
-          sich die Funktion abschalten, sollte die IT eine vorläufige Sperre in der geplanten
-          Umsetzung eintragen.
-        </p>
-      )}
-
-      <PlanSection detail={detail} onChange={setDetail} />
-
-      {detail.message && (
-        <section className="card" aria-labelledby="meldung-titel">
-          <h2 id="meldung-titel">Meldung von Microsoft</h2>
-          {detail.message_updated && (
-            <p className="notice" role="status">
-              <strong>Microsoft hat diese Meldung geändert</strong>, nachdem der Vorgang angelegt
-              wurde (zuletzt am {formatDateTime(detail.message.modified_at)}). Bitte prüfen, ob sich
-              dadurch etwas an der Bewertung ändert.
+        <section aria-labelledby="ablauf-titel">
+          <h2 id="ablauf-titel" className="visually-hidden">
+            Stand im Ablauf
+          </h2>
+          <div className="stepper-wrap" tabIndex={0} role="region" aria-labelledby="ablauf-titel">
+            <ol className="stepper">
+              {steps.map((step, index) => {
+                const current = step.id === item.step;
+                const done = !item.finished && index < currentIndex;
+                return (
+                  <li
+                    key={step.id}
+                    className={current ? "current" : done ? "done" : undefined}
+                    aria-current={current ? "step" : undefined}
+                  >
+                    <span className="stepper-mark" aria-hidden="true">
+                      {done ? "✓" : index + 1}
+                    </span>
+                    {step.title}
+                    {done && <span className="visually-hidden"> (erledigt)</span>}
+                    {current && <span className="visually-hidden"> (aktueller Schritt)</span>}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+          {item.finished && (
+            <p className="hint-box hint-neutral">
+              <strong>{item.step_title}.</strong> An diesem Vorgang ist nichts mehr zu tun.
             </p>
           )}
-          <p className="small">
-            {detail.message.message_id} · {categoryLabel(detail.message.category)}
-          </p>
-          <details>
-            <summary>Text der Meldung anzeigen</summary>
-            <p className="text">{detail.message.body ?? "Die Meldung enthält keinen Text."}</p>
-          </details>
         </section>
-      )}
 
-      {actions.length > 0 && (
-        <section className="card review" aria-labelledby="entscheidung-titel">
-          <h2 id="entscheidung-titel">
-            {onBehalf ? "Beschluss im Auftrag erfassen" : `Entscheidung: ${item.step_title}`}
-          </h2>
-          {onBehalf && (
-            <>
-              <p className="note">
-                Du erfasst den Beschluss stellvertretend aus einem Sitzungsprotokoll. Im Protokoll
-                des Vorgangs steht dein Name mit dem Zusatz „im Auftrag“.
-              </p>
+        <section className="setting-section" aria-labelledby="angaben-titel">
+          <div className="section-head">
+            <h2 id="angaben-titel">Was ändert sich?</h2>
+            {detail.can_edit && !editing && (
+              <button type="button" className="button button-secondary" onClick={startEditing}>
+                Angaben bearbeiten
+              </button>
+            )}
+          </div>
+          {editing ? (
+            <form className="meta-form" onSubmit={onSave} aria-label="Angaben bearbeiten">
               <label>
-                Datum der Sitzung
-                <input
-                  type="date"
-                  value={sessionDate}
-                  onChange={(event) => setSessionDate(event.target.value)}
+                Zusammenfassung
+                <textarea
+                  value={summary}
+                  maxLength={8000}
+                  rows={5}
+                  onChange={(event) => setSummary(event.target.value)}
                 />
               </label>
+              <label>
+                Rückmeldungen der Fachabteilungen
+                <textarea
+                  value={feedback}
+                  maxLength={8000}
+                  rows={4}
+                  onChange={(event) => setFeedback(event.target.value)}
+                />
+              </label>
+              <label>
+                Rollout-Datum
+                <input
+                  type="date"
+                  value={rollout}
+                  onChange={(event) => setRollout(event.target.value)}
+                />
+              </label>
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  className="check"
+                  checked={notControllable}
+                  onChange={(event) => setNotControllable(event.target.checked)}
+                />
+                Nicht steuerbar (lässt sich nicht abschalten oder einschränken)
+              </label>
+              <div className="filter-actions">
+                <button type="submit" className="button button-primary">
+                  Speichern
+                </button>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setEditing(false)}
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <p className="text">
+                {detail.summary ?? <span className="empty">Noch keine Zusammenfassung.</span>}
+              </p>
+              <h3>Einschätzung der Fachabteilungen</h3>
+              <p className="text">
+                {detail.departments_feedback ?? (
+                  <span className="empty">Noch keine Rückmeldungen.</span>
+                )}
+              </p>
             </>
           )}
-          <label>
-            {onBehalf ? "Inhalt des Beschlusses" : "Kommentar"}
-            <textarea
-              value={comment}
-              maxLength={4000}
-              rows={3}
-              aria-describedby={commentHintId}
-              onChange={(event) => setComment(event.target.value)}
-            />
-          </label>
-          <p className="small" id={commentHintId}>
-            {onBehalf
-              ? "Pflichtangabe."
-              : actions.some((action) => action.comment_required)
-                ? `Pflicht bei: ${actions
-                    .filter((action) => action.comment_required)
-                    .map((action) => action.title)
-                    .join(", ")}.`
-                : "Freiwillig."}
-          </p>
-          <div className="filter-actions">
-            {actions.map((action, index) => (
-              <button
-                key={action.id}
-                type="button"
-                className={index === 0 ? "button button-primary" : "button button-secondary"}
-                onClick={() => onAction(action.id, action.title, action.comment_required)}
-              >
-                {action.title}
-              </button>
-            ))}
-          </div>
         </section>
-      )}
-      {message && <p role={message.kind}>{message.text}</p>}
 
-      <section aria-labelledby="protokoll-titel">
-        <h2 id="protokoll-titel">Protokoll</h2>
-        {events.length === 0 ? (
-          <p className="empty">
-            Noch keine Entscheidung. Angelegt am {formatDateTime(item.created_at)}.
-          </p>
-        ) : (
-          <div className="table-wrap" tabIndex={0} role="region" aria-label="Protokoll">
-            <table>
-              <caption className="visually-hidden">
-                Entscheidungen in zeitlicher Reihenfolge
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Zeitpunkt</th>
-                  <th scope="col">Schritt</th>
-                  <th scope="col">Entscheidung</th>
-                  <th scope="col">Person</th>
-                  <th scope="col">Kommentar</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <tr key={event.id}>
-                    <td className="nowrap">{formatDateTime(event.occurred_at)}</td>
-                    <td>{event.step_title}</td>
-                    <td>
-                      {event.action_title}
-                      <span className="small path">weiter zu: {event.target_title}</span>
-                    </td>
-                    <td>
-                      {event.user ?? "automatisch"}
-                      {event.on_behalf_of && (
-                        <span className="small path">
-                          im Auftrag: {event.on_behalf_of}
-                          {event.session_date && `, Sitzung vom ${formatDate(event.session_date)}`}
-                        </span>
-                      )}
-                    </td>
-                    <td className="text">{event.comment ?? "–"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <PlanSection detail={detail} onChange={onUpdate} />
+
+        {detail.message && (
+          <section className="setting-section" aria-labelledby="meldung-titel">
+            <h2 id="meldung-titel">Meldung von Microsoft</h2>
+            {detail.message_updated && (
+              <p className="hint-box hint-warn" role="status">
+                <strong>Microsoft hat diese Meldung geändert</strong>, nachdem der Vorgang angelegt
+                wurde (zuletzt am {formatDateTime(detail.message.modified_at)}). Bitte prüfen, ob
+                sich dadurch etwas an der Bewertung ändert.
+              </p>
+            )}
+            <p className="small">
+              {detail.message.message_id} · {categoryLabel(detail.message.category)}
+            </p>
+            <details>
+              <summary>Text der Meldung anzeigen</summary>
+              <p className="text">{detail.message.body ?? "Die Meldung enthält keinen Text."}</p>
+            </details>
+          </section>
         )}
-      </section>
-    </>
+
+        {actions.length > 0 && (
+          <section className="hint-box hint-warn decision" aria-labelledby="entscheidung-titel">
+            <h2 id="entscheidung-titel">
+              {onBehalf ? "Beschluss im Auftrag erfassen" : `Entscheidung: ${item.step_title}`}
+            </h2>
+            {onBehalf && (
+              <>
+                <p className="note">
+                  Du erfasst den Beschluss stellvertretend aus einem Sitzungsprotokoll. Im Protokoll
+                  des Vorgangs steht dein Name mit dem Zusatz „im Auftrag“.
+                </p>
+                <label>
+                  Datum der Sitzung
+                  <input
+                    type="date"
+                    value={sessionDate}
+                    onChange={(event) => setSessionDate(event.target.value)}
+                  />
+                </label>
+              </>
+            )}
+            <label>
+              {onBehalf ? "Inhalt des Beschlusses" : "Kommentar"}
+              <textarea
+                value={comment}
+                maxLength={4000}
+                rows={3}
+                aria-describedby={commentHintId}
+                onChange={(event) => setComment(event.target.value)}
+              />
+            </label>
+            <p className="rule" id={commentHintId}>
+              {onBehalf
+                ? "Pflichtangabe."
+                : actions.some((action) => action.comment_required)
+                  ? `Pflicht bei: ${actions
+                      .filter((action) => action.comment_required)
+                      .map((action) => action.title)
+                      .join(", ")}.`
+                  : "Freiwillig."}
+            </p>
+            <div className="actions">
+              {actions.map((action, index) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  className={index === 0 ? "button button-primary" : "button button-secondary"}
+                  onClick={() => onAction(action.id, action.title, action.comment_required)}
+                >
+                  {action.title}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+        {message && (
+          <p role={message.kind} className={message.kind === "alert" ? "hint-box hint-bad" : ""}>
+            {message.text}
+          </p>
+        )}
+
+        <section className="setting-section" aria-labelledby="protokoll-titel">
+          <div className="section-head">
+            <h2 id="protokoll-titel">Protokoll und Stellungnahmen</h2>
+          </div>
+          {events.length === 0 ? (
+            <p className="empty">
+              Noch keine Entscheidung. Angelegt am {formatDateTime(item.created_at)}.
+            </p>
+          ) : (
+            <ol className="protocol">
+              {events.map((event) => (
+                <li key={event.id}>
+                  <div className="protocol-head">
+                    <strong>{event.step_title}</strong>
+                    <span className="pill pill-neutral">{event.action_title}</span>
+                    <span className="small">
+                      {event.user ?? "automatisch"}
+                      {event.on_behalf_of && ` – im Auftrag: ${event.on_behalf_of}`}
+                      {event.session_date &&
+                        `, Sitzung vom ${formatDate(event.session_date)}`} ·{" "}
+                      {formatDateTime(event.occurred_at)}
+                    </span>
+                  </div>
+                  {event.comment && <p className="text">{event.comment}</p>}
+                  <p className="small">weiter zu: {event.target_title}</p>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      </article>
+    </div>
   );
 }

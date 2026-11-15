@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.4.0",
+    date: "2026-11-15",
+    summary: "Evergreen hat ein neues Aussehen.",
+    sections: [
+      {
+        area: "Evergreen",
+        entries: [
+          "Vorgänge erscheinen als Karten. Die Filter zeigen, wie viele Vorgänge offen sind, auf dich warten oder abgeschlossen sind.",
+          "Auf großen Bildschirmen steht der geöffnete Vorgang neben der Liste, sodass du schnell zwischen Vorgängen wechseln kannst.",
+          "Im Vorgang siehst du oben Status und Frist, darunter eine Schrittleiste mit dem Stand im Ablauf. Die Entscheidung steht in einem hervorgehobenen Bereich, das Protokoll als übersichtliche Liste.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.3.0",
     date: "2026-11-14",
     summary: "Neue Seite „Konto“ und Profilbilder.",
