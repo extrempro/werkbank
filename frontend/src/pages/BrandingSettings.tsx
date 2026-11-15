@@ -35,7 +35,7 @@ const SLOTS: ImageSlot[] = [
   {
     kind: "logo-dunkel",
     title: "Logo für dunklen Hintergrund",
-    hint: "Erscheint oben links in der Kopfzeile und auf der Anmeldeseite in der dunklen Darstellung. PNG oder WebP.",
+    hint: "Erscheint oben links in der Kopfzeile und auf der Anmeldeseite in der dunklen Darstellung. PNG oder WebP. Auf dem Handy ist dort wenig Platz; ein eher quadratisches Logo bleibt gut erkennbar.",
     accept: "image/png,image/webp",
     types: ["image/png", "image/webp"],
     preview: "dunkel",

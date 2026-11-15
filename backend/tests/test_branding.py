@@ -148,7 +148,7 @@ def test_update_name_and_accent(clean: Session) -> None:
     entry = clean.scalars(
         select(AuditLog).where(AuditLog.action == "einstellungen.branding_geaendert")
     ).first()
-    assert entry is not None and entry.details["app_name"] == "IT-Portal"
+    assert entry is not None and (entry.details or {})["app_name"] == "IT-Portal"
 
     # leerer Name und leere Farbe: zurück zum Standard
     reset = client.put(ADMIN, json={"app_name": " ", "accent": ""}, headers=HEADERS).json()

@@ -1599,6 +1599,17 @@ details summary {
     clip-path: inset(50%);
     white-space: nowrap;
   }
+
+  /* Ein breites Logo darf die übrigen Knöpfe nicht aus der Kopfzeile schieben. */
+  .app-header .brand-logo {
+    max-width: 48px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 767px) {
+  .app-header .brand-logo {
+    max-width: 110px;
+  }
 }
 
 /* Seiten nach dem Entwurf: gemeinsame Bausteine */
