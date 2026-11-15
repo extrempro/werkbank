@@ -3644,3 +3644,128 @@ p.badges {
 .tool-break {
   overflow-wrap: anywhere;
 }
+
+/* Wabenansicht der Zertifikate und Secrets */
+
+.waben {
+  display: grid;
+  gap: 12px;
+}
+
+.waben-bild {
+  display: block;
+  max-width: 100%;
+}
+
+.wabe {
+  cursor: pointer;
+  color: var(--farbe-text-mittel);
+}
+
+.wabe polygon {
+  fill: var(--farbe-neutral-flaeche);
+  stroke: currentColor;
+  stroke-width: 1;
+}
+
+.wabe-ok {
+  color: var(--farbe-ok-text);
+}
+
+.wabe-ok polygon,
+.waben-farbe.wabe-ok {
+  fill: var(--farbe-ok-flaeche);
+  background: var(--farbe-ok-flaeche);
+}
+
+.wabe-warnung {
+  color: var(--farbe-todo-text);
+}
+
+.wabe-warnung polygon,
+.waben-farbe.wabe-warnung {
+  fill: var(--farbe-todo-flaeche);
+  background: var(--farbe-todo-flaeche);
+}
+
+.wabe-dringend,
+.wabe-abgelaufen {
+  color: var(--farbe-bad-text);
+}
+
+.wabe-dringend polygon,
+.wabe-abgelaufen polygon,
+.waben-farbe.wabe-dringend,
+.waben-farbe.wabe-abgelaufen {
+  fill: var(--farbe-bad-flaeche);
+  background: var(--farbe-bad-flaeche);
+}
+
+/* Abgelaufen hebt sich von „dringend“ durch den kräftigen Rand ab, nicht nur durch Farbe. */
+.wabe-abgelaufen polygon {
+  stroke-width: 3;
+}
+
+.waben-farbe.wabe-abgelaufen {
+  border-width: 3px;
+}
+
+.wabe text {
+  fill: currentColor;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.wabe .wabe-name {
+  font-weight: 700;
+}
+
+.wabe:hover polygon,
+.wabe[aria-pressed="true"] polygon {
+  stroke: var(--farbe-text);
+  stroke-width: 3;
+}
+
+.wabe:focus-visible {
+  outline: none;
+}
+
+.wabe:focus-visible polygon {
+  stroke: var(--farbe-text);
+  stroke-width: 4;
+}
+
+.waben-legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.waben-legende li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.waben-farbe {
+  width: 14px;
+  height: 14px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  background: var(--farbe-neutral-flaeche);
+}
+
+.waben-detail h2 {
+  margin: 0;
+  padding: 16px 18px 0;
+  font-size: 1rem;
+}
+
+.waben-detail p {
+  margin: 0;
+  padding: 16px 18px;
+}

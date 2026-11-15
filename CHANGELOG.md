@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.23.0] – 2026-11-15
+
+Tenant: Zertifikate und Secrets als Waben.
+
+### Tenant
+
+- **Wabenansicht:** Die Seite „Zertifikate & Secrets“ hat neben der Liste eine zweite Ansicht. Jede Wabe steht für ein Zertifikat oder Secret und zeigt Anwendung, Restlaufzeit und Ablaufdatum, das Dringendste zuerst. Die Farbe folgt der Einstufung, abgelaufene Einträge haben zusätzlich einen kräftigen Rand
+- Lange Namen werden an Leerzeichen oder Bindestrich auf zwei Zeilen umbrochen und sonst mit „…“ gekürzt. Der volle Name steht im Tooltip und in den Einzelheiten
+- Klick oder Eingabetaste auf eine Wabe zeigt darunter Art, Bezeichnung, Ablauf, Stand und App-ID
+- Die Zahl der Waben je Zeile richtet sich nach der Breite des Fensters
+
 ## [0.22.0] – 2026-11-15
 
 Tenant: Zertifikate und Secrets mit Ablaufdatum und Aufgaben.
