@@ -9,6 +9,8 @@ import {
   euroInput,
   fetchAccounts,
   fetchBudgetOverview,
+  rememberedYear,
+  rememberYear,
   formatEuro,
   parseEuro,
   savePlan,
@@ -18,6 +20,7 @@ import {
   type Overview,
   type PlanEntry,
 } from "./api";
+import { ReadOnlyNote, useRevealOnMount } from "./shared";
 
 function amount(cents: number | null): string {
   return cents === null ? "–" : formatEuro(cents);
@@ -32,6 +35,7 @@ interface FormProps {
 }
 
 function ItemForm({ item, accounts, onSaved, onCancel }: FormProps) {
+  const reveal = useRevealOnMount<HTMLElement>();
   const [accountId, setAccountId] = useState(item ? String(item.account_id) : "");
   const [name, setName] = useState(item?.name ?? "");
   const [note, setNote] = useState(item?.note ?? "");
@@ -58,7 +62,12 @@ function ItemForm({ item, accounts, onSaved, onCancel }: FormProps) {
   };
 
   return (
-    <section className="panel" aria-labelledby="posten-formular-titel">
+    <section
+      className="panel"
+      aria-labelledby="posten-formular-titel"
+      ref={reveal}
+      tabIndex={-1}
+    >
       <div className="panel-head">
         <h2 id="posten-formular-titel">
           {item ? `${item.name} bearbeiten` : "Budgetposten anlegen"}
@@ -109,13 +118,11 @@ function ItemForm({ item, accounts, onSaved, onCancel }: FormProps) {
         )}
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>
-            {item ? "Änderungen speichern" : "Budgetposten anlegen"}
+            {item ? "Änderungen speichern" : "Budgetposten speichern"}
           </button>
-          {item && (
-            <button type="button" className="button button-secondary" onClick={onCancel}>
-              Abbrechen
-            </button>
-          )}
+          <button type="button" className="button button-secondary" onClick={onCancel}>
+            Abbrechen
+          </button>
         </div>
         {error && (
           <p role="alert" className="hint-box hint-bad">
@@ -131,7 +138,7 @@ function ItemForm({ item, accounts, onSaved, onCancel }: FormProps) {
 export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const canPlan = roles.includes(BUDGET_MANAGER_ROLE);
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
-  const [year, setYear] = useState<number | null>(null);
+  const [year, setYear] = useState<number | null>(rememberedYear);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [failed, setFailed] = useState(false);
@@ -139,6 +146,11 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const [draft, setDraft] = useState<Record<number, string> | null>(null);
   const [editing, setEditing] = useState<Item | null>(null);
   const [formRound, setFormRound] = useState(0);
+  const [formOpen, setFormOpen] = useState(false);
+  const closeForm = () => {
+    setEditing(null);
+    setFormOpen(false);
+  };
   const [round, setRound] = useState(0);
   const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -219,6 +231,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const onItemSaved = (saved: Item) => {
     setMessage({ kind: "status", text: `${saved.name} ist gespeichert.` });
     setEditing(null);
+    setFormOpen(false);
     setFormRound(formRound + 1);
     setRound(round + 1);
   };
@@ -245,6 +258,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                 disabled={draft !== null}
                 onChange={(event) => {
                   setMessage(null);
+                  rememberYear(Number(event.target.value));
                   setYear(Number(event.target.value));
                 }}
               >
@@ -258,6 +272,32 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           </div>
         )}
       </header>
+      <ReadOnlyNote roles={roles} />
+      {canEdit && overview && accounts.length > 0 && (
+        <div className="budget-toolbar">
+          <button
+            type="button"
+            className="button button-primary"
+            aria-expanded={formOpen || editing !== null}
+            onClick={() => {
+              setEditing(null);
+              setFormRound(formRound + 1);
+              setFormOpen(true);
+            }}
+          >
+            Budgetposten anlegen
+          </button>
+        </div>
+      )}
+      {canEdit && overview && accounts.length > 0 && (formOpen || editing) && (
+        <ItemForm
+          key={editing ? `posten-${editing.id}` : `neu-${formRound}`}
+          item={editing}
+          accounts={accounts}
+          onSaved={onItemSaved}
+          onCancel={closeForm}
+        />
+      )}
 
       {failed && (
         <p role="alert" className="panel panel-empty">
@@ -446,15 +486,6 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
         >
           {message.text}
         </p>
-      )}
-      {canEdit && overview && accounts.length > 0 && (
-        <ItemForm
-          key={editing ? `posten-${editing.id}` : `neu-${formRound}`}
-          item={editing}
-          accounts={accounts}
-          onSaved={onItemSaved}
-          onCancel={() => setEditing(null)}
-        />
       )}
     </div>
   );

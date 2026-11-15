@@ -232,6 +232,7 @@ describe("Budgetposten", () => {
     render(<ItemsPage roles={["Budget.Editor"]} />);
     await screen.findByRole("region", { name: "Budgetposten 2026/27" });
     fireEvent.click(screen.getByRole("button", { name: "Budgetposten anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Budgetposten speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Konto wählen");
     // Stillgelegte Konten stehen bei einem neuen Posten nicht zur Wahl.
     expect(within(screen.getByLabelText("Konto")).getAllByRole("option")).toHaveLength(2);
@@ -239,7 +240,7 @@ describe("Budgetposten", () => {
     fireEvent.change(screen.getByLabelText("Bezeichnung"), {
       target: { value: "Sonstige Software" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Budgetposten anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Budgetposten speichern" }));
     expect(await screen.findByText("Sonstige Software ist gespeichert.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       account_id: 1,
@@ -303,10 +304,11 @@ describe("Konten", () => {
     await screen.findByRole("region", { name: "Konten" });
 
     fireEvent.click(screen.getByRole("button", { name: "Konto anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Konto speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Kontonummer und Bezeichnung");
     fireEvent.change(screen.getByLabelText("Kontonummer"), { target: { value: " 6820 " } });
     fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "Telefonie" } });
-    fireEvent.click(screen.getByRole("button", { name: "Konto anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Konto speichern" }));
     expect(await screen.findByText("Konto 6820 ist gespeichert.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       number: "6820",
@@ -315,8 +317,8 @@ describe("Konten", () => {
       note: "",
       active: true,
     });
-    // Das Formular beginnt danach wieder leer.
-    expect(screen.getByLabelText("Kontonummer")).toHaveValue("");
+    // Nach dem Speichern schließt das Formular.
+    expect(screen.queryByLabelText("Kontonummer")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Konto 0420 bearbeiten" }));
     expect(screen.getByRole("heading", { name: "Konto 0420 bearbeiten" })).toBeVisible();
@@ -500,8 +502,9 @@ describe("Übersicht nach dem Entwurf", () => {
     );
     expect(dates.getByRole("link", { name: "Wartung Zeiterfassung" })).toHaveAttribute(
       "href",
-      "/budget/vertraege",
+      "/budget/vertraege/1",
     );
+    expect(screen.getByText(/Nur Lesezugriff/)).toBeVisible();
     expect(dates.getByText("noch 15 Tage")).toBeVisible();
     expect(dates.queryByText("Backup")).toBeNull();
 
@@ -525,15 +528,16 @@ describe("Partner", () => {
     expect(table.getByRole("row", { name: /Beispiel Software GmbH/ })).toHaveTextContent(
       "Vertragspartner und Rechnungssteller",
     );
+    fireEvent.click(screen.getByRole("button", { name: "Partner anlegen" }));
     fireEvent.change(screen.getByLabelText("Name der Firma"), {
       target: { value: "Beispiel Distribution AG" },
     });
     fireEvent.click(screen.getByLabelText("Vertragspartner"));
     fireEvent.click(screen.getByLabelText("Rechnungssteller"));
-    fireEvent.click(screen.getByRole("button", { name: "Partner anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Partner speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("oder beides ankreuzen");
     fireEvent.click(screen.getByLabelText("Rechnungssteller"));
-    fireEvent.click(screen.getByRole("button", { name: "Partner anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Partner speichern" }));
     expect(await screen.findByText("Beispiel Distribution AG ist gespeichert.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toMatchObject({
       name: "Beispiel Distribution AG",
@@ -583,11 +587,43 @@ describe("Verträge", () => {
     expect(table.getByRole("row", { name: /^Altvertrag/ })).toHaveTextContent("beendet");
   });
 
+  it("zeigt einen Vertrag mit Daten, Fristen und Zuordnung", async () => {
+    stubFetch(routes);
+    const { unmount } = render(<ContractsPage roles={["Budget.Reader"]} selectedId={1} />);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Wartung Zeiterfassung" }),
+    ).toBeVisible();
+    const data = within(screen.getByRole("region", { name: "Vertragsdaten" }));
+    expect(data.getByText("Beispiel Distribution AG")).toBeVisible();
+    expect(data.getByText("1 Monate zum Laufzeitende")).toBeVisible();
+    expect(data.getByText("19 %")).toBeVisible();
+    const dates = within(screen.getByRole("region", { name: "Fristen" }));
+    expect(dates.getByText("30.11.2026")).toBeVisible();
+    expect(plain(dates.getByText(/^Verlängert sich um 12 Monate/).textContent)).toContain(
+      "6.000,00 € im Jahr",
+    );
+    expect(
+      within(screen.getByRole("region", { name: "Zuordnung zum Budget" })).getByText(
+        "Office-Lizenzen",
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("Kündigung: noch 15 Tage")).toBeVisible();
+    expect(screen.getByRole("link", { name: /Zurück zu den Verträgen/ })).toHaveAttribute(
+      "href",
+      "/budget/vertraege",
+    );
+    unmount();
+
+    render(<ContractsPage roles={["Budget.Reader"]} selectedId={99} />);
+    expect(await screen.findByText(/Diesen Vertrag gibt es nicht/)).toBeVisible();
+  });
+
   it("prüft die Eingaben und legt einen Vertrag an", async () => {
     const calls = stubFetch({ ...routes, "POST /api/budget/contracts": contract({ id: 3 }) });
     render(<ContractsPage roles={["Budget.Manager"]} />);
     await screen.findByRole("region", { name: "Verträge" });
     fireEvent.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Bezeichnung");
 
     fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "Neuer Vertrag" } });
@@ -595,18 +631,18 @@ describe("Verträge", () => {
     fireEvent.change(screen.getByLabelText("Rechnungssteller"), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText("Budgetposten"), { target: { value: "11" } });
     fireEvent.change(screen.getByLabelText(/^Betrag je Zahlung/), { target: { value: "abc" } });
-    fireEvent.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Betrag ist nicht lesbar");
 
     fireEvent.change(screen.getByLabelText(/^Betrag je Zahlung/), { target: { value: "500,00" } });
     expect(plain(screen.getByText(/^Brutto je Zahlung/).textContent)).toContain("595,00 €");
     fireEvent.change(screen.getByLabelText(/^Steuersatz/), { target: { value: "x" } });
-    fireEvent.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Steuersatz ist nicht lesbar");
     fireEvent.change(screen.getByLabelText(/^Steuersatz/), { target: { value: "7" } });
     fireEvent.change(screen.getByLabelText("Beginn"), { target: { value: "2026-01-01" } });
     fireEvent.change(screen.getByLabelText(/^Verlängert sich um/), { target: { value: "12" } });
-    fireEvent.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("nur bei einem Ende der Laufzeit");
 
     fireEvent.change(screen.getByLabelText(/^Ende der Laufzeit/), {
@@ -616,7 +652,7 @@ describe("Verträge", () => {
     fireEvent.change(screen.getByLabelText(/^Auftragsverarbeitungsvertrag/), {
       target: { value: "fehlt" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag speichern" }));
     expect(await screen.findByText("Wartung Zeiterfassung ist gespeichert.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       title: "Neuer Vertrag",

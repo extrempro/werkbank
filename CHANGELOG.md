@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.27.0] – 2026-11-15
+
+IT-Budget: Oberfläche näher am Entwurf.
+
+### IT-Budget
+
+- **Gemeinsamer Kopf** auf allen Seiten mit Kostenstelle und laufendem Geschäftsjahr
+- **Gewähltes Geschäftsjahr gilt für alle Seiten**, bis die Werkbank neu lädt
+- **Formulare klappen auf:** „Konto anlegen“, „Budgetposten anlegen“, „Partner anlegen“ und „Vertrag anlegen“ stehen als Knopf über der Tabelle; das Formular erscheint erst nach dem Klick oder über „Bearbeiten“ und schließt nach dem Speichern
+- **Vertragsdetail:** Klick auf einen Vertrag zeigt Vertragsdaten, Fristen und die Zuordnung zum Budget
+- **Hinweis „Nur Lesezugriff“** für Personen ohne Schreibrecht
+- Die Navigation des Bereichs bleibt, wie sie ist (keine Reiter)
+- Nur Oberfläche: keine Änderung an Daten, API oder Rechten
+
 ## [0.26.0] – 2026-11-15
 
 IT-Budget: Budgetposten unter den Konten, Verträge mit Netto und Steuersatz.

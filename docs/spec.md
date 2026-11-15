@@ -452,6 +452,7 @@ Das Budget der IT nach Konten, je Geschäftsjahr. Alle Beträge sind brutto und 
 - **Verträge:** Bezeichnung, Vertragspartner, abweichender Rechnungssteller, Budgetposten (darüber das Konto), Betrag je Zahlung netto mit Steuersatz (das Brutto rechnet der Server, kaufmännisch gerundet; fürs Budget zählt das Brutto), Turnus (monatlich, vierteljährlich, halbjährlich, jährlich, einmalig), Beginn, Ende der Laufzeit, Verlängerung, Kündigungsfrist, Kündigungstag und Stand des Auftragsverarbeitungsvertrags (AVV). Ein Vertrag läuft auf genau einen Budgetposten.
 - **Gebunden:** Summe der Zahlungen eines Vertrags, die im Geschäftsjahr fällig werden. Die erste Zahlung zählt zum Beginn, die weiteren im Turnus. Ein Vertrag mit Verlängerung läuft weiter, bis er gekündigt ist. Übersicht und Budgetposten zeigen Plan, gebunden und frei (Plan abzüglich gebunden).
 - **Kündigungstermin:** Ende der Laufzeit abzüglich der Kündigungsfrist; ist er für die laufende Laufzeit verstrichen, gilt der Termin der nächsten. Die Übersicht listet Termine der nächsten 120 Tage; ab 60 Tagen vorher steht der Vertrag als Aufgabe auf der Startseite (für `Budget.Editor` und `Budget.Manager`).
+- **Oberfläche:** Alle Seiten haben denselben Kopf mit Kostenstelle und laufendem Geschäftsjahr. Das auf einer Seite gewählte Geschäftsjahr gilt für die anderen mit, bis die Werkbank neu lädt. Formulare öffnen sich über den Knopf „… anlegen“ oder „Bearbeiten“ oberhalb der Tabelle. Wer nur lesen darf, sieht einen Hinweis.
 - **Stand:** Einstellungen, Konten, Budgetposten, Plan, Partner, Verträge und Übersicht sind umgesetzt.
 - **Geplant:** Rechnungen mit Netto, Steuersatz, Brutto, Beleg als PDF und Prüfung durch den Budgetverwalter (dann auch Ist und Prognose); Auswertung über fünf Jahre; Excel-Export; Import.
 
@@ -525,7 +526,7 @@ Evergreen:
 | M365 › Zertifikate und Secrets | Tenant.Reader | Zertifikate und Secrets der Anwendungen im Tenant mit Ablaufdatum, Restlaufzeit und Einstufung; Ansicht „Handlungsbedarf“ oder alle; zweite Ansicht als Waben mit Einzelheiten nach Auswahl |
 | IT-Budget › Übersicht | Budget.* | Kennzahlen, Budget nach Konten als Balken, Kündigungstermine der nächsten 120 Tage, Handlungsbedarf |
 | IT-Budget › Budgetposten | Budget.* (Posten ändern: Budget.Editor, Budget.Manager; Plan ändern: Budget.Manager) | Posten je Konto mit Plan, gebunden, frei und Vorjahr; Posten anlegen, ändern, stilllegen; Plan bearbeiten |
-| IT-Budget › Verträge | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Verträge mit Partnern, Jahreskosten, nächstem Kündigungstermin und AVV; anlegen, ändern, kündigen |
+| IT-Budget › Verträge | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Verträge mit Partnern, Jahreskosten, nächstem Kündigungstermin und AVV; anlegen, ändern, kündigen; Detail je Vertrag mit Vertragsdaten, Fristen und Zuordnung zum Budget |
 | IT-Budget › Partner | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Vertragspartner und Rechnungssteller; anlegen, ändern, stilllegen |
 | IT-Budget › Konten | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Liste der Konten; anlegen, ändern, stilllegen |
 | IT-Budget › Einstellungen | Budget.Manager | Beginn und Bezeichnung des Geschäftsjahrs, Kostenstelle |

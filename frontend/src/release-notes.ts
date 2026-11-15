@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.27.0",
+    date: "2026-11-15",
+    summary: "IT-Budget: aufgeräumte Seiten und Detailansicht für Verträge.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Neu: Ein Klick auf einen Vertrag zeigt seine Daten, Fristen und die Zuordnung zum Budget.",
+          "Formulare erscheinen erst über „… anlegen“ oder „Bearbeiten“ und stehen dann über der Tabelle.",
+          "Alle Seiten zeigen oben Kostenstelle und laufendes Geschäftsjahr; das gewählte Jahr gilt für alle Seiten.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.26.0",
     date: "2026-11-15",
     summary: "IT-Budget mit Budgetposten und Netto am Vertrag.",

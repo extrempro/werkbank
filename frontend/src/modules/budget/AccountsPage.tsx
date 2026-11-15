@@ -9,6 +9,7 @@ import {
   type Account,
   type AccountKind,
 } from "./api";
+import { BudgetHead, ReadOnlyNote, useRevealOnMount } from "./shared";
 
 interface FormProps {
   /** null: neues Konto anlegen. */
@@ -18,6 +19,7 @@ interface FormProps {
 }
 
 function AccountForm({ account, onSaved, onCancel }: FormProps) {
+  const reveal = useRevealOnMount<HTMLElement>();
   const [number, setNumber] = useState(account?.number ?? "");
   const [name, setName] = useState(account?.name ?? "");
   const [kind, setKind] = useState<AccountKind>(account?.kind ?? "laufend");
@@ -45,7 +47,12 @@ function AccountForm({ account, onSaved, onCancel }: FormProps) {
 
   const title = account ? `Konto ${account.number} bearbeiten` : "Konto anlegen";
   return (
-    <section className="panel" aria-labelledby="konto-formular-titel">
+    <section
+      className="panel"
+      aria-labelledby="konto-formular-titel"
+      ref={reveal}
+      tabIndex={-1}
+    >
       <div className="panel-head">
         <h2 id="konto-formular-titel">{title}</h2>
       </div>
@@ -99,13 +106,11 @@ function AccountForm({ account, onSaved, onCancel }: FormProps) {
         )}
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>
-            {account ? "Änderungen speichern" : "Konto anlegen"}
+            {account ? "Änderungen speichern" : "Konto speichern"}
           </button>
-          {account && (
-            <button type="button" className="button button-secondary" onClick={onCancel}>
-              Abbrechen
-            </button>
-          )}
+          <button type="button" className="button button-secondary" onClick={onCancel}>
+            Abbrechen
+          </button>
         </div>
         {error && (
           <p role="alert" className="hint-box hint-bad">
@@ -125,6 +130,11 @@ export function AccountsPage({ roles }: { roles: readonly string[] }) {
   const [editing, setEditing] = useState<Account | null>(null);
   // Zählt hoch, damit das Formular nach dem Speichern leer neu beginnt.
   const [formRound, setFormRound] = useState(0);
+  const [formOpen, setFormOpen] = useState(false);
+  const closeForm = () => {
+    setEditing(null);
+    setFormOpen(false);
+  };
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -154,19 +164,46 @@ export function AccountsPage({ roles }: { roles: readonly string[] }) {
     );
     setStatus(`Konto ${saved.number} ist gespeichert.`);
     setEditing(null);
+    setFormOpen(false);
     setFormRound(formRound + 1);
   };
 
   return (
     <div className="page page-wide budget-page">
-      <header className="page-head">
-        <p className="module-label">IT-Budget</p>
-        <h1>Konten</h1>
-        <p className="page-sub">
-          Die Konten, auf die das IT-Budget verteilt ist. Konten werden nicht gelöscht, sondern
-          stillgelegt, damit frühere Jahre vollständig bleiben.
-        </p>
-      </header>
+      <BudgetHead
+        title="Konten"
+        sub={
+          <>
+            Die Konten, auf die das IT-Budget verteilt ist. Konten werden nicht gelöscht, sondern
+            stillgelegt, damit frühere Jahre vollständig bleiben.
+          </>
+        }
+      />
+      <ReadOnlyNote roles={roles} />
+      {canEdit && accounts && (
+        <div className="budget-toolbar">
+          <button
+            type="button"
+            className="button button-primary"
+            aria-expanded={formOpen || editing !== null}
+            onClick={() => {
+              setEditing(null);
+              setFormRound(formRound + 1);
+              setFormOpen(true);
+            }}
+          >
+            Konto anlegen
+          </button>
+        </div>
+      )}
+      {canEdit && accounts && (formOpen || editing) && (
+        <AccountForm
+          key={editing ? `konto-${editing.id}` : `neu-${formRound}`}
+          account={editing}
+          onSaved={onSaved}
+          onCancel={closeForm}
+        />
+      )}
 
       {failed && (
         <p role="alert" className="panel panel-empty">
@@ -230,14 +267,6 @@ export function AccountsPage({ roles }: { roles: readonly string[] }) {
         <p role="status" className="hint-box">
           {status}
         </p>
-      )}
-      {canEdit && accounts && (
-        <AccountForm
-          key={editing ? `konto-${editing.id}` : `neu-${formRound}`}
-          account={editing}
-          onSaved={onSaved}
-          onCancel={() => setEditing(null)}
-        />
       )}
     </div>
   );

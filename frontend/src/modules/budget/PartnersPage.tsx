@@ -8,6 +8,7 @@ import {
   updatePartner,
   type Partner,
 } from "./api";
+import { BudgetHead, ReadOnlyNote, useRevealOnMount } from "./shared";
 
 interface FormProps {
   /** null: neuen Partner anlegen. */
@@ -17,6 +18,7 @@ interface FormProps {
 }
 
 function PartnerForm({ partner, onSaved, onCancel }: FormProps) {
+  const reveal = useRevealOnMount<HTMLElement>();
   const [name, setName] = useState(partner?.name ?? "");
   const [contractPartner, setContractPartner] = useState(partner?.is_contract_partner ?? true);
   const [invoicer, setInvoicer] = useState(partner?.is_invoicer ?? true);
@@ -55,7 +57,12 @@ function PartnerForm({ partner, onSaved, onCancel }: FormProps) {
   };
 
   return (
-    <section className="panel" aria-labelledby="partner-formular-titel">
+    <section
+      className="panel"
+      aria-labelledby="partner-formular-titel"
+      ref={reveal}
+      tabIndex={-1}
+    >
       <div className="panel-head">
         <h2 id="partner-formular-titel">
           {partner ? `${partner.name} bearbeiten` : "Partner anlegen"}
@@ -122,13 +129,11 @@ function PartnerForm({ partner, onSaved, onCancel }: FormProps) {
         )}
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>
-            {partner ? "Änderungen speichern" : "Partner anlegen"}
+            {partner ? "Änderungen speichern" : "Partner speichern"}
           </button>
-          {partner && (
-            <button type="button" className="button button-secondary" onClick={onCancel}>
-              Abbrechen
-            </button>
-          )}
+          <button type="button" className="button button-secondary" onClick={onCancel}>
+            Abbrechen
+          </button>
         </div>
         {error && (
           <p role="alert" className="hint-box hint-bad">
@@ -147,6 +152,11 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
   const [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState<Partner | null>(null);
   const [formRound, setFormRound] = useState(0);
+  const [formOpen, setFormOpen] = useState(false);
+  const closeForm = () => {
+    setEditing(null);
+    setFormOpen(false);
+  };
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -174,19 +184,46 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
     );
     setStatus(`${saved.name} ist gespeichert.`);
     setEditing(null);
+    setFormOpen(false);
     setFormRound(formRound + 1);
   };
 
   return (
     <div className="page page-wide budget-page">
-      <header className="page-head">
-        <p className="module-label">IT-Budget</p>
-        <h1>Partner</h1>
-        <p className="page-sub">
-          Firmen, mit denen Verträge bestehen oder die Rechnungen stellen. Partner werden nicht
-          gelöscht, sondern stillgelegt.
-        </p>
-      </header>
+      <BudgetHead
+        title="Partner"
+        sub={
+          <>
+            Firmen, mit denen Verträge bestehen oder die Rechnungen stellen. Partner werden nicht
+            gelöscht, sondern stillgelegt.
+          </>
+        }
+      />
+      <ReadOnlyNote roles={roles} />
+      {canEdit && partners && (
+        <div className="budget-toolbar">
+          <button
+            type="button"
+            className="button button-primary"
+            aria-expanded={formOpen || editing !== null}
+            onClick={() => {
+              setEditing(null);
+              setFormRound(formRound + 1);
+              setFormOpen(true);
+            }}
+          >
+            Partner anlegen
+          </button>
+        </div>
+      )}
+      {canEdit && partners && (formOpen || editing) && (
+        <PartnerForm
+          key={editing ? `partner-${editing.id}` : `neu-${formRound}`}
+          partner={editing}
+          onSaved={onSaved}
+          onCancel={closeForm}
+        />
+      )}
 
       {failed && (
         <p role="alert" className="panel panel-empty">
@@ -248,14 +285,6 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
         <p role="status" className="hint-box">
           {status}
         </p>
-      )}
-      {canEdit && partners && (
-        <PartnerForm
-          key={editing ? `partner-${editing.id}` : `neu-${formRound}`}
-          partner={editing}
-          onSaved={onSaved}
-          onCancel={() => setEditing(null)}
-        />
       )}
     </div>
   );

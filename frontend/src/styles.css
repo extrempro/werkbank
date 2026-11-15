@@ -4020,3 +4020,50 @@ p.badges {
   color: var(--farbe-text-leise);
   white-space: nowrap;
 }
+
+.budget-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.budget-meta {
+  font-size: 0.875rem;
+}
+
+.budget-readonly {
+  margin: 0;
+}
+
+.budget-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px 20px;
+  margin: 0;
+}
+
+.budget-facts-stack {
+  grid-template-columns: 1fr;
+}
+
+.budget-facts dt {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--farbe-text-leise);
+}
+
+.budget-facts dd {
+  margin: 2px 0 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.budget-page section:focus {
+  outline: none;
+}
+
+.budget-page section:focus-visible {
+  outline: 2px solid var(--farbe-primaer);
+  outline-offset: 2px;
+}
