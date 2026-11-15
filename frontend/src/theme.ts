@@ -4,6 +4,8 @@
  * Beim Laden der Seite setzt public/theme.js den ersten Stand.
  */
 
+import { useSyncExternalStore } from "react";
+
 export type ThemeChoice = "auto" | "hell" | "dunkel";
 
 export const THEME_KEY = "werkbank-darstellung";
@@ -61,4 +63,15 @@ export function watchTheme(): () => void {
 /** Aktuell angezeigte Darstellung (nach Auswahl oder Gerät). */
 export function currentTheme(): "hell" | "dunkel" {
   return document.documentElement.dataset.theme === "dunkel" ? "dunkel" : "hell";
+}
+
+function subscribeTheme(listener: () => void): () => void {
+  const observer = new MutationObserver(listener);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => observer.disconnect();
+}
+
+/** Aktuelle Darstellung; ändert sich mit, wenn umgeschaltet wird. */
+export function useTheme(): "hell" | "dunkel" {
+  return useSyncExternalStore(subscribeTheme, currentTheme);
 }

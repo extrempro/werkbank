@@ -14,7 +14,7 @@ Status: ✅ erfüllt · ⚠️ teilweise · ❌ offen · n/a nicht anwendbar
 | Fokus | Fokus jederzeit sichtbar und nicht verdeckt (2.4.11) | ⚠️ | Einheitlicher Fokusrahmen in `styles.css`; manuelle Prüfung offen |
 | Ziele | Klickziele mind. 24 × 24 px (2.5.8), Bedienelemente 44 px | ⚠️ | Buttons und Felder 44 px, Kontrollkästchen 24 px; Links in Tabellen manuell zu prüfen |
 | Ziehen | Keine Funktion nur per Ziehen (2.5.7) | ✅ | Es gibt keine Zieh-Bedienung |
-| Kontrast | Text 4,5:1, große Schrift und Bedienelemente 3:1 | ✅ | axe-core in den E2E-Tests ohne Verstöße, im hellen und im dunklen Modus; gefüllte Seiten der M365-Konfiguration mit echten Daten nachprüfen |
+| Kontrast | Text 4,5:1, große Schrift und Bedienelemente 3:1 | ✅ | axe-core in den E2E-Tests ohne Verstöße, im hellen und im dunklen Modus; gefüllte Seiten der M365-Konfiguration mit echten Daten nachprüfen; eigene Akzentfarbe: Kontraste rechnerisch abgesichert (`branding.test.ts`) und per axe in der Verwaltung geprüft |
 | Farbe | Keine Information nur über Farbe | ✅ | Zustände stehen als Text (Bewertung, „Entfernt“, „Weicht vom Soll-Wert ab“) |
 | Struktur | Überschriften-Hierarchie, Landmarks (header, nav, main) | ✅ | axe-core; Sprunglink zum Inhalt |
 | Formulare | Sichtbare Labels, Fehlermeldungen mit Hinweis zur Behebung | ✅ | Alle Felder mit Label; Fehlermeldungen als `role="alert"` mit Hinweis |

@@ -71,6 +71,21 @@ class AppSetting(Base):
     updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
 
 
+class BrandingAsset(Base):
+    """Bild für das Branding aus der Verwaltung: Logo (hell, dunkel) oder Favicon."""
+
+    __tablename__ = "branding_assets"
+
+    kind: Mapped[str] = mapped_column(String(16), primary_key=True)
+    content_type: Mapped[str] = mapped_column(String(32))
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    etag: Mapped[str] = mapped_column(String(32))
+    width: Mapped[int] = mapped_column(Integer)
+    height: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+
+
 class UserAvatar(Base):
     """Profilbild einer Person aus Entra ID, bei der Anmeldung aktualisiert."""
 

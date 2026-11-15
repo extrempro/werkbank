@@ -14,6 +14,7 @@
   --farbe-primaer: #1f57c3;
   --farbe-primaer-dunkel: #163f8f;
   --farbe-auf-primaer: #ffffff;
+  --farbe-auf-kopf: #ffffff;
   --farbe-link: #1f57c3;
   --farbe-grund: #f5f6f8;
   --farbe-flaeche: #ffffff;
@@ -195,7 +196,7 @@ a {
 
 .button-quiet {
   background: transparent;
-  color: var(--farbe-auf-primaer);
+  color: var(--farbe-auf-kopf);
   border-color: var(--farbe-kopf-knopf-rand);
 }
 
@@ -279,6 +280,84 @@ a {
   margin-bottom: 12px;
 }
 
+/* Eigenes Logo aus der Verwaltung (Branding) */
+
+.brand-logo {
+  display: block;
+  flex: 0 1 auto;
+  height: 34px;
+  width: auto;
+  max-width: 180px;
+  object-fit: contain;
+}
+
+.brand-logo-large {
+  height: auto;
+  max-height: 72px;
+  max-width: 100%;
+  margin: 0 auto 16px;
+}
+
+.branding-images {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.branding-image {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius);
+}
+
+.branding-image legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+.branding-preview {
+  display: grid;
+  place-items: center;
+  min-height: 72px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--farbe-rand);
+  color: var(--farbe-text-leise);
+  font-size: 0.875rem;
+}
+
+.branding-preview img {
+  max-height: 48px;
+  max-width: 100%;
+}
+
+.branding-preview-hell {
+  background: #ffffff;
+  color: #4f5765;
+}
+
+.branding-preview-dunkel {
+  background: #14213d;
+  color: #c3cbda;
+}
+
+.color-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.color-row input[type="color"] {
+  width: 56px;
+  height: 44px;
+  padding: 2px;
+}
+
 /* Rahmen der Anwendung */
 
 .skip-link {
@@ -302,7 +381,7 @@ a {
   padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
   padding-top: max(10px, env(safe-area-inset-top));
   background: var(--farbe-kopf);
-  color: var(--farbe-auf-primaer);
+  color: var(--farbe-auf-kopf);
 }
 
 .brand {
@@ -310,7 +389,7 @@ a {
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  color: var(--farbe-auf-primaer);
+  color: var(--farbe-auf-kopf);
   text-decoration: none;
 }
 
@@ -350,7 +429,7 @@ a {
   padding: 4px 12px 4px 4px;
   border: 1px solid var(--farbe-kopf-rand);
   border-radius: 999px;
-  color: var(--farbe-auf-primaer);
+  color: var(--farbe-auf-kopf);
   text-decoration: none;
 }
 
@@ -404,7 +483,7 @@ a {
   border-radius: 8px;
   border: 1px solid var(--farbe-kopf-knopf-rand);
   background: transparent;
-  color: var(--farbe-auf-primaer);
+  color: var(--farbe-auf-kopf);
   font: inherit;
   font-weight: 600;
 }
@@ -1135,7 +1214,7 @@ section + section {
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--farbe-zaehler);
-  color: var(--farbe-auf-primaer);
+  color: var(--farbe-auf-kopf);
   font-size: 0.75rem;
   font-weight: 700;
   text-align: center;
@@ -1489,7 +1568,7 @@ details summary {
   height: 44px;
   border-radius: 8px;
   background: var(--farbe-kopf-flaeche);
-  color: var(--farbe-auf-primaer);
+  color: var(--farbe-auf-kopf);
   text-decoration: none;
 }
 
@@ -1519,6 +1598,17 @@ details summary {
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  /* Ein breites Logo darf die übrigen Knöpfe nicht aus der Kopfzeile schieben. */
+  .app-header .brand-logo {
+    max-width: 48px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 767px) {
+  .app-header .brand-logo {
+    max-width: 110px;
   }
 }
 

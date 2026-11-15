@@ -8,6 +8,7 @@ from werkbank.core.admin_settings import router as admin_settings_router
 from werkbank.core.audit_api import router as audit_router
 from werkbank.core.auth import router as auth_router
 from werkbank.core.avatar import router as avatar_router
+from werkbank.core.branding import router as branding_router
 from werkbank.core.csrf import OriginCheckMiddleware
 from werkbank.core.ratelimit import RateLimitMiddleware, default_rules
 from werkbank.core.search import router as search_router
@@ -51,6 +52,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(audit_router)
     app.include_router(avatar_router)
     app.include_router(admin_settings_router)
+    app.include_router(branding_router)
     app.include_router(search_router)
     app.include_router(tasks_router)
     app.include_router(m365_config_router)
