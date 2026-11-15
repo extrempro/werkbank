@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.21.0] – 2026-11-15
+
+IT-Tools: AD und M365, weitere Generatoren.
+
+### IT-Tools
+
+- **Neue Kategorie „AD und M365“:** AD-Zeitstempel (FILETIME und Generalized Time), DN-Zerleger, ImmutableID ↔ objectGUID, LDAP-Escaper, userAccountControl
+- **Weitere Generatoren:** Passphrase-Generator (deutsche Wortliste mit 7776 Wörtern, gemeinfrei), Passwort-Hash für htpasswd und /etc/shadow (erzeugen und prüfen), Prüfsummen für Text und Dateien, HMAC, Lorem ipsum
+- Kennwörter, Schlüssel, Nachrichten, Dateien, Namen aus dem Verzeichnis und Kennungen von Konten bleiben im Browser und stehen nicht in der Adresszeile. Abweichung von der IT-Toolbox: Dort standen die GUID und der Benutzername für htpasswd in der Adresszeile
+- Die Wortliste der Passphrasen (etwa 70 KB) liegt in der Werkbank und wird erst beim Öffnen des Tools geladen
+
 ## [0.20.0] – 2026-11-15
 
 IT-Tools: Rechner und Cron.

@@ -3640,3 +3640,7 @@ p.badges {
   display: inline-block;
   margin-right: 14px;
 }
+
+.tool-break {
+  overflow-wrap: anywhere;
+}

@@ -1,10 +1,21 @@
+import { webcrypto } from "node:crypto";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { FAVORITES_KEY, findTool, readFavorites, searchTools, TOOLS } from "./index";
 import { clampInt } from "./params";
 import { ruleName } from "./ports/PortsTool";
 import { ZONES_KEY } from "./timezone/TimezoneTool";
 import { ToolPage, ToolsOverviewPage } from "./ToolsPage";
+
+// Die Testumgebung kennt Web Crypto nicht vollständig; Prüfsummen und HMAC brauchen es.
+beforeAll(() => {
+  if (!globalThis.crypto.subtle) {
+    Object.defineProperty(globalThis.crypto, "subtle", {
+      value: webcrypto.subtle,
+      configurable: true,
+    });
+  }
+});
 
 afterEach(() => {
   cleanup();
@@ -626,4 +637,163 @@ describe("ToolPage", () => {
     fireEvent.change(input, { target: { value: "bla" } });
     expect(screen.getByRole("alert")).toHaveTextContent("Erwartet 5 Felder");
   });
+
+  it("AD-Zeitstempel: rechnet FILETIME in ein Datum um und erklärt Sonderwerte", async () => {
+    render(<ToolPage id="ad-zeitstempel" />);
+    const input = await screen.findByRole("textbox", { name: "AD-Wert" });
+    fireEvent.change(input, { target: { value: "133485408000000000" } });
+    const table = within(screen.getByRole("region", { name: "Datum zum AD-Wert" }));
+    expect(table.getByRole("row", { name: /^UTC/ })).toHaveTextContent("2024-01-01T00:00:00.000Z");
+    fireEvent.change(input, { target: { value: "0" } });
+    expect(screen.getByText(/^0 = nicht gesetzt/)).toBeVisible();
+    fireEvent.change(input, { target: { value: "abc" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("Ungültige Generalized Time");
+  });
+
+  it("DN-Zerleger: zerlegt einen DN und wandelt canonicalName um, ohne Namen in der Adresse", async () => {
+    render(<ToolPage id="dn" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Distinguished Name" }), {
+      target: { value: "CN=Muster\\, Max,OU=Vertrieb,OU=Benutzer,DC=example,DC=com" },
+    });
+    expect(screen.getByRole("row", { name: /^canonicalName/ })).toHaveTextContent(
+      "example.com/Benutzer/Vertrieb/Muster, Max",
+    );
+    expect(
+      within(screen.getByRole("region", { name: "Ebenen des DN" })).getAllByRole("row"),
+    ).toHaveLength(6);
+    fireEvent.change(screen.getByRole("textbox", { name: "canonicalName" }), {
+      target: { value: "example.com/Benutzer/Vertrieb/Max Muster" },
+    });
+    expect(screen.getByRole("row", { name: /^DN/ })).toHaveTextContent(
+      "CN=Max Muster,OU=Vertrieb,OU=Benutzer,DC=example,DC=com",
+    );
+    expect(window.location.search).toBe("");
+  });
+
+  it("ImmutableID: rechnet die Schreibweisen ineinander um", async () => {
+    render(<ToolPage id="immutableid" />);
+    const input = await screen.findByRole("textbox", { name: "Kennung" });
+    fireEvent.change(input, { target: { value: "748b2d72-706b-42f8-8b25-82fd8733860f" } });
+    expect(screen.getByRole("status")).toHaveTextContent("Erkannt als objectGUID");
+    expect(screen.getByRole("row", { name: /^ImmutableID/ })).toHaveTextContent(
+      "ci2LdGtw+EKLJYL9hzOGDw==",
+    );
+    expect(window.location.search).toBe("");
+    fireEvent.change(input, { target: { value: "kaputt" } });
+    expect(screen.getByRole("alert")).toBeVisible();
+  });
+
+  it("LDAP-Escaper: maskiert für Filter und DN", async () => {
+    render(<ToolPage id="ldap-escaper" />);
+    const input = await screen.findByRole("textbox", { name: "Eingabe" });
+    fireEvent.change(input, { target: { value: "Muster (IT) *" } });
+    expect(screen.getByLabelText("Ergebnis").textContent).toBe("Muster \\28IT\\29 \\2a");
+    fireEvent.change(screen.getByLabelText("Modus"), { target: { value: "dn" } });
+    fireEvent.change(input, { target: { value: "Muster, Max" } });
+    expect(screen.getByLabelText("Ergebnis").textContent).toBe("Muster\\, Max");
+    expect(window.location.search).toBe("?modus=dn");
+  });
+
+  it("userAccountControl: zerlegt den Wert und setzt Flags", async () => {
+    render(<ToolPage id="useraccountcontrol" />);
+    const input = await screen.findByRole("textbox", { name: "Wert" });
+    expect(screen.getByRole("checkbox", { name: "NORMAL_ACCOUNT" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "ACCOUNTDISABLE" })).not.toBeChecked();
+    fireEvent.click(screen.getByRole("checkbox", { name: "ACCOUNTDISABLE" }));
+    expect(input).toHaveValue("514");
+    expect(window.location.search).toBe("?wert=514");
+    expect(screen.getByRole("button", { name: /^514/ })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.change(input, { target: { value: "xyz" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte eine Zahl eingeben");
+  });
+
+  it("Prüfsummen: berechnet Hashes und vergleicht mit einem erwarteten Wert", async () => {
+    render(<ToolPage id="hash" />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Text (UTF-8)" }), {
+      target: { value: "abc" },
+    });
+    const table = within(screen.getByRole("region", { name: "Prüfsummen" }));
+    await vi.waitFor(() =>
+      expect(table.getByRole("row", { name: /^SHA-256/ })).toHaveTextContent(
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      ),
+    );
+    expect(table.getByRole("row", { name: /^MD5/ })).toHaveTextContent(
+      "900150983cd24fb0d6963f7d28e17f72",
+    );
+    expect(table.getByRole("row", { name: /^CRC32/ })).toHaveTextContent("352441c2");
+    fireEvent.change(screen.getByRole("textbox", { name: /^Erwarteter Wert/ }), {
+      target: { value: "900150983CD24FB0D6963F7D28E17F72" },
+    });
+    expect(screen.getByText("Stimmt überein (MD5)")).toBeVisible();
+    // Der Text steht nie in der Adresszeile.
+    expect(window.location.search).toBe("");
+  });
+
+  it("HMAC: berechnet die Signatur und prüft sie", async () => {
+    render(<ToolPage id="hmac" />);
+    fireEvent.change(await screen.findByLabelText("Geheimer Schlüssel"), {
+      target: { value: "key" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Nachricht" }), {
+      target: { value: "The quick brown fox jumps over the lazy dog" },
+    });
+    const expected = "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8";
+    await vi.waitFor(() =>
+      expect(screen.getByRole("row", { name: /^Hex/ })).toHaveTextContent(expected),
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: /^Erwartete Signatur/ }), {
+      target: { value: `sha256=${expected}` },
+    });
+    expect(screen.getByText("Signatur stimmt")).toBeVisible();
+    expect(window.location.search).toBe("");
+  });
+
+  it("Passwort-Hash: erzeugt einen Hash und prüft ihn wieder", async () => {
+    render(<ToolPage id="passwort-hash" />);
+    fireEvent.change(await screen.findByLabelText("Format"), { target: { value: "apr1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Hash erzeugen" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Bitte ein Kennwort eingeben");
+    fireEvent.change(screen.getByLabelText("Kennwort"), { target: { value: "ein-testwert" } });
+    fireEvent.click(screen.getByRole("button", { name: "Hash erzeugen" }));
+    const output = await screen.findByLabelText("Hash", {}, { timeout: 5000 });
+    const hash = output.textContent ?? "";
+    expect(hash).toMatch(/^\$apr1\$/);
+
+    fireEvent.change(screen.getByLabelText("Modus"), { target: { value: "pruefen" } });
+    fireEvent.change(screen.getByRole("textbox", { name: /^Hash oder Zeile/ }), {
+      target: { value: `admin:${hash}` },
+    });
+    expect(screen.getByText(/Format: Apache MD5.*Benutzer: admin/)).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Kennwort"), { target: { value: "ein-testwert" } });
+    fireEvent.click(screen.getByRole("button", { name: "Prüfen" }));
+    expect(await screen.findByText("Kennwort passt", {}, { timeout: 5000 })).toBeVisible();
+    // Kennwort und Benutzername stehen nie in der Adresszeile.
+    expect(window.location.search).not.toContain("testwert");
+    expect(window.location.search).not.toContain("admin");
+  });
+
+  it("Lorem ipsum: erzeugt Text in der gewünschten Menge", async () => {
+    render(<ToolPage id="lorem-ipsum" />);
+    await screen.findByLabelText("Einheit");
+    expect(screen.getByLabelText("Text").textContent).toMatch(/^Lorem ipsum dolor sit amet/);
+    fireEvent.change(screen.getByLabelText("Einheit"), { target: { value: "woerter" } });
+    fireEvent.change(screen.getByLabelText("Anzahl"), { target: { value: "7" } });
+    expect(screen.getByRole("status")).toHaveTextContent("7 Wörter");
+    expect(window.location.search).toBe("?einheit=woerter&anzahl=7");
+  });
+
+  it("Passphrase: erzeugt Passphrasen aus der Wortliste, ohne sie in die Adresse zu schreiben", async () => {
+    render(<ToolPage id="passphrase" />);
+    const list = await screen.findByRole("list", { name: "Erzeugte Passphrasen" });
+    await vi.waitFor(() => expect(within(list).getAllByRole("listitem")).toHaveLength(5), {
+      timeout: 15000,
+    });
+    const first = within(list).getAllByRole("listitem")[0]?.querySelector("code")?.textContent;
+    expect(first?.split("-")).toHaveLength(5);
+    fireEvent.change(screen.getByLabelText("Anzahl"), { target: { value: "2" } });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+    expect(window.location.search).toBe("?anzahl=2");
+  }, 20000);
+
 });

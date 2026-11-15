@@ -275,6 +275,73 @@ test("IT-Tools: Rechner und Cron", async ({ page }) => {
   await expectNoA11yViolations(page);
 });
 
+test("IT-Tools: AD und M365, weitere Generatoren", async ({ page }) => {
+  await loginAs(page, ["Tools.User"], "Tina Tools");
+
+  await page.goto("/it-tools/ad-zeitstempel?wert=133485408000000000");
+  await expect(
+    page.getByRole("region", { name: "Datum zum AD-Wert" }).getByRole("row", { name: /^UTC/ }),
+  ).toContainText("2024-01-01T00:00:00.000Z");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/dn");
+  await page
+    .getByRole("textbox", { name: "Distinguished Name" })
+    .fill("CN=Max Muster,OU=Vertrieb,DC=example,DC=com");
+  await expect(page.getByRole("row", { name: /^Domain/ })).toContainText("example.com");
+  expect(page.url()).not.toContain("Muster");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/immutableid");
+  await page.getByRole("textbox", { name: "Kennung" }).fill("748b2d72-706b-42f8-8b25-82fd8733860f");
+  await expect(page.getByRole("row", { name: /^ImmutableID/ })).toContainText(
+    "ci2LdGtw+EKLJYL9hzOGDw==",
+  );
+  expect(page.url()).not.toContain("748b");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/ldap-escaper");
+  await page.getByRole("textbox", { name: "Eingabe" }).fill("Muster (IT) *");
+  await expect(page.getByLabel("Ergebnis", { exact: true })).toContainText("\\28IT\\29");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/useraccountcontrol?wert=514");
+  await expect(page.getByRole("checkbox", { name: "ACCOUNTDISABLE" })).toBeChecked();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/hash");
+  await page.getByRole("textbox", { name: "Text (UTF-8)" }).fill("abc");
+  await expect(page.getByRole("row", { name: /^SHA-256/ })).toContainText("ba7816bf8f01cfea");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/hmac");
+  await page.getByLabel("Geheimer Schlüssel").fill("key");
+  await page
+    .getByRole("textbox", { name: "Nachricht" })
+    .fill("The quick brown fox jumps over the lazy dog");
+  await expect(page.getByRole("row", { name: /^Hex/ })).toContainText("f7bc83f430538424");
+  expect(page.url()).not.toContain("key");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/passwort-hash?format=apr1");
+  await page.getByLabel("Kennwort", { exact: true }).fill("ein-testwert");
+  await page.getByRole("button", { name: "Hash erzeugen" }).click();
+  await expect(page.getByLabel("Hash", { exact: true })).toContainText("$apr1$");
+  expect(page.url()).not.toContain("testwert");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/lorem-ipsum");
+  await expect(page.getByLabel("Text", { exact: true })).toContainText("Lorem ipsum dolor sit amet");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/passphrase");
+  await expect(
+    page.getByRole("list", { name: "Erzeugte Passphrasen" }).getByRole("listitem"),
+  ).toHaveCount(5, { timeout: 15000 });
+  expect(page.url()).not.toContain("?");
+  await expectNoA11yViolations(page);
+});
+
 test("IT-Tools: Kategorien in der Navigation und Tools in der Suche", async ({ page }) => {
   await loginAs(page, ["Tools.User"], "Tina Tools");
   await page.goto("/it-tools");
