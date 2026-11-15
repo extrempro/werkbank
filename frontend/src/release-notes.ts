@@ -36,6 +36,12 @@ export const RELEASES: readonly Release[] = [
           "Die Zahlen eines Rechners stehen in der Adresszeile; so lässt sich eine Rechnung als Link teilen.",
         ],
       },
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Die Diagramme bei Lizenzen und Benutzern sind größer und besser lesbar, auch auf schmalen Bildschirmen.",
+        ],
+      },
     ],
   },
   {

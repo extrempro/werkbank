@@ -267,7 +267,7 @@ test("IT-Tools: Rechner und Cron", async ({ page }) => {
   await expect(page.getByText("Degraded, 1 ausgefallen")).toBeVisible();
   await expectNoA11yViolations(page);
   await page.goto("/it-tools/raid?bereich=plattenbedarf");
-  await expect(page.getByRole("row", { name: /^RAID 6/ })).toContainText("40 TB");
+  await expect(page.getByRole("row", { name: /^RAID 6 \(/ })).toContainText("40 TB");
   await expectNoA11yViolations(page);
 
   await page.goto("/it-tools/cron?ausdruck=*%2F15+*+*+*+*");

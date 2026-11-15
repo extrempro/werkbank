@@ -15,6 +15,10 @@ IT-Tools: Rechner und Cron.
 - Die Zahlen der Rechner stehen in der Adresszeile, damit sich ein Link teilen lässt. Die Liste der Komponenten im Verfügbarkeits-Rechner und die ausgefallenen Platten im RAID-Rechner stehen dort nicht
 - Abweichung von der IT-Toolbox: Im Stromkosten-Rechner fehlt der Verweis auf die Amortisationsrechnung, weil es dieses Tool in der Werkbank noch nicht gibt
 
+### Geändert
+
+- **Diagramme größer und besser lesbar** (Lizenzen, Benutzer): Das Diagramm wird jetzt in echten Pixeln gezeichnet und passt seine Breite dem Platz an, statt als Ganzes verkleinert zu werden. Schrift und Linien bleiben dadurch auf jedem Gerät gleich groß; dazu größere Achsenschrift, kräftigere Linien, mehr Höhe und Abstand zum Rand. Gibt es erst einen Tag, erklärt ein Hinweis, dass die Linie mit den nächsten Abrufen entsteht
+
 ## [0.19.0] – 2026-11-15
 
 Neues Modul Tenant mit Lizenzen und Benutzerzahlen; Kategorien der IT-Tools in der Navigation; Tools in der Suche; Kopfzeile bleibt stehen.

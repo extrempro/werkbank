@@ -19,7 +19,7 @@ export default function AvailabilityTool() {
   const valid = value > 0 && value <= 100;
   const down = valid ? downtime(value) : null;
 
-  let fromTimes: number | null = null;
+  let fromTimes: number | null;
   try {
     const result = fromMtbf(num(params.mtbf), num(params.mttr));
     fromTimes = Number.isNaN(result) ? null : result;

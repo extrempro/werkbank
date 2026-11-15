@@ -3372,14 +3372,17 @@ p.badges {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.panel > .chart {
+  padding: 16px 18px 18px;
 }
 
 .chart-plot {
   display: block;
-  width: 100%;
-  height: auto;
-  max-height: 320px;
+  max-width: 100%;
   touch-action: pan-y;
 }
 
@@ -3389,8 +3392,8 @@ p.badges {
 }
 
 .chart-axis {
-  fill: var(--farbe-text-leise);
-  font-size: 12px;
+  fill: var(--farbe-text-mittel);
+  font-size: 14px;
 }
 
 .chart-cursor {
@@ -3401,7 +3404,7 @@ p.badges {
 
 .chart-line {
   fill: none;
-  stroke-width: 2;
+  stroke-width: 2.5;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
@@ -3446,7 +3449,7 @@ p.badges {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px 20px;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .chart-day {
@@ -3464,8 +3467,8 @@ p.badges {
 
 .chart-key {
   display: inline-block;
-  width: 14px;
-  height: 4px;
+  width: 18px;
+  height: 5px;
   margin-right: 6px;
   border-radius: 2px;
   vertical-align: middle;
