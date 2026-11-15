@@ -54,11 +54,11 @@ Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen spä
 | Punkt | Festlegung |
 |---|---|
 | Laufzeit | Docker / Docker Compose |
-| Veröffentlichung | Hinter dem **NetBird Reverse Proxy**, **öffentlich erreichbar**. TLS endet am Proxy. |
-| Deployment | **Arcane Git-Sync** holt den Ordner `deploy/` (Compose-Datei und `Dockerfile`) aus dem Repo. Das Dockerfile holt den Quellcode beim Bauen von GitHub. Eine neue Version läuft erst nach einem neuen Build des Images (`deploy/README.md`); ein Merge auf `main` allein stellt noch nichts bereit. |
-| Netzwerkbindung | `BIND_IP` und `BIND_PORT` über `.env`. `BIND_IP` ist die Adresse, über die der NetBird Reverse Proxy den Docker-Host erreicht (NetBird-IP des Hosts oder `127.0.0.1`), **nicht** die öffentliche IP. Details: `deploy/README.md`. |
+| Veröffentlichung | Hinter einem **Reverse Proxy**, **öffentlich erreichbar**. TLS endet am Proxy. |
+| Deployment | Docker Compose. Für den Betrieb genügt der Ordner `deploy/` (Compose-Datei und `Dockerfile`), z. B. per **Git-Sync** eines Docker-Verwaltungswerkzeugs. Das Dockerfile holt den Quellcode beim Bauen von GitHub. Eine neue Version läuft erst nach einem neuen Build des Images (`deploy/README.md`); ein Merge auf `main` allein stellt noch nichts bereit. |
+| Netzwerkbindung | `BIND_IP` und `BIND_PORT` über `.env`. `BIND_IP` ist die Adresse, über die der Reverse Proxy den Docker-Host erreicht (interne Adresse des Hosts oder `127.0.0.1`), **nicht** die öffentliche IP. Details: `deploy/README.md`. |
 | Konfiguration | Ausschließlich über Umgebungsvariablen bzw. Docker-Secrets. `.env.example` im Repo, `.env` niemals. |
-| Zeitzone | Speicherung in UTC, Anzeige in der Zeitzone des Browsers (im Betrieb `Europe/Berlin`). |
+| Zeitzone | Speicherung in UTC, Anzeige in der Zeitzone des Browsers. |
 | Sprache | Oberfläche Deutsch. Die Texte stehen bisher direkt in den Seiten; eine zentrale Ablage für weitere Sprachen ist noch nicht umgesetzt. |
 
 ### 3.2 Code und Repository
@@ -107,8 +107,8 @@ Sichtbarkeit:
              Internet
                 │  HTTPS
        ┌────────▼────────┐
-       │ NetBird Reverse │
-       │      Proxy      │
+       │  Reverse Proxy  │
+       │   (TLS endet)   │
        └────────┬────────┘
                 │  HTTP (intern, BIND_IP:BIND_PORT)
 ┌───────────────▼──────────────────────────────────────────┐
@@ -276,6 +276,8 @@ Standardregeln:
 
 Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) und Vorgänge (ID, Titel, Zusammenfassung). Ergebnisse gefiltert nach Berechtigung.
 
+- Stand: umgesetzt als `GET /api/search` mit einem Anbieter je Modul (`core/search.py`), Suchfeld in der Kopfzeile und Seite „Suche“. Gesucht wird in Einstellungen (Pfad, Name, Beschreibung, Begründung), erkannten Änderungen (geändert von, Kommentar) und Vorgängen (Nummer, Titel, Dienst, Zusammenfassung). Jeder Anbieter wendet dieselben Rechte an wie die Seiten seines Moduls. Abweichung: Im Wert einer Einstellung wird noch nicht gesucht.
+
 ---
 
 ## 7. Modul M365-Konfiguration
@@ -361,7 +363,6 @@ Stand Nachrichtencenter:
 - **Automatisch zu Vorgängen** werden Meldungen mit „Major Change“ oder mit einer Frist für Handlungsbedarf („Action required by“; sie wird als Rollout-Datum übernommen). Alle anderen lassen sich im Eingang als Vorgang übernehmen oder beiseitelegen. Wird eine Meldung nachträglich zur größeren Änderung, entsteht der Vorgang beim nächsten Abruf.
 - Ändert Microsoft eine Meldung, nachdem der Vorgang angelegt wurde, zeigt der Vorgang einen Hinweis. Titel und Zusammenfassung des Vorgangs werden dabei nicht überschrieben.
 - Ein Filter nach Diensten ist nicht umgesetzt.
-- Der Abruf des Nachrichtencenters ist an einem echten Tenant bestätigt.
 
 Stand Quelle „Einstellung“: Aus einer erkannten Änderung in M365-Konfiguration legt `Evergreen.IT` mit einem Klick einen Vorgang an (Seite „Änderungen“). Das geschieht bewusst nicht automatisch, weil eine neue Richtlinie aus vielen einzelnen Einstellungen besteht. Je Änderung gibt es höchstens einen Vorgang.
 
@@ -479,7 +480,7 @@ Evergreen:
 
 Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz.
 
-**Stand der Umsetzung (Version 0.3):** Nach dem Entwurf gebaut sind Kopfzeile, Navigation, Startseite (ohne „letzte Aktivitäten“), M365 › Übersicht, Änderungen, Einstellungen (nach Workload gruppierte Liste statt Baum, Detail auf eigener Seite) sowie Konto und Neuigkeiten. Noch im ersten Aufbau: Evergreen › Vorgänge, Snapshots (ohne Vergleich und Export), Audit-Log, Verwaltung (nur Reiter Rollen). Noch nicht vorhanden: Suche in der Kopfzeile, Reports (Platzhalter), Empfehlungen und Microsoft-Schema je Einstellung, KI-Texte.
+**Stand der Umsetzung (Version 0.5):** Nach dem Entwurf gebaut sind Kopfzeile mit Suche, Navigation, Startseite (ohne „letzte Aktivitäten“), M365 › Übersicht, Änderungen, Einstellungen (nach Workload gruppierte Liste statt Baum, Detail auf eigener Seite), Evergreen › Vorgänge (ohne Kennzeichen „Mitbestimmung“, ohne PDF der BR-Vorlage, geplante Umsetzung noch im ersten Aufbau) sowie Konto und Neuigkeiten. Noch im ersten Aufbau: Evergreen › Eingang, Snapshots (ohne Vergleich und Export), Audit-Log, Verwaltung (nur Reiter Rollen). Noch nicht vorhanden: Reports (Platzhalter), Empfehlungen und Microsoft-Schema je Einstellung, KI-Texte.
 
 ---
 
@@ -650,10 +651,10 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | Phase | Inhalt | Ergebnis | Stand |
 |---|---|---|---|
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
-| 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen, erste Installation läuft |
-| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Erste Inbetriebnahme erfolgt, Abruf über UTCM am echten Tenant bestätigt. Offen: Bestätigung der Änderungserkennung mit „Geändert von“; später Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
-| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e), Nachrichtencenter am echten Tenant bestätigt. Offen: Anhänge (z. B. BR-Sitzungsprotokoll), Erinnerungen und Benachrichtigungen (Phase 4), KI-Vorschlag für die Zusammenfassung |
-| – | Oberfläche nach dem Entwurf, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen, Versionen 0.1 bis 0.3 | 🔄 in Arbeit: Kopfzeile, Navigation, Start und M365-Konfiguration sind umgestellt. Offen: Evergreen, Suche, letzte Aktivitäten, übrige Seiten; danach Handbuch |
+| 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen |
+| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Später: Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
+| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e). Offen: Anhänge (z. B. BR-Sitzungsprotokoll), Erinnerungen und Benachrichtigungen (Phase 4), KI-Vorschlag für die Zusammenfassung |
+| – | Oberfläche nach dem Entwurf, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen, Versionen 0.1 bis 0.5 | 🔄 in Arbeit: Kopfzeile mit Suche, Navigation, Start, M365-Konfiguration und Evergreen sind umgestellt. Offen: letzte Aktivitäten, übrige Seiten; danach Handbuch |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |
 
@@ -665,15 +666,14 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 |---|---|---|
 | 1 | Login | Entra-Login über eigene Login-Seite der Werkbank – entschieden |
 | 2 | MFA | Entschieden: eigene CA-Richtlinie „MFA für Werkbank“. Offen: Lizenz P1 für alle Nutzer prüfen, MFA-Registrierung für BR/GF vorbereiten |
-| 3 | Verwaltung | Nur Step-up-Anmeldung oder zusätzlich nur über NetBird erreichbar? |
+| 3 | Verwaltung | Nur Step-up-Anmeldung oder zusätzlich nur aus dem internen Netz erreichbar? |
 | 4 | Audit-Log | Aufbewahrungsdauer (Vorschlag 2 Jahre) |
 | 5 | Anhänge | Virenscan ja/nein |
 | 6 | KI-Texte | Anbieter, AVV, Freigabe Datenschutz – oder in v1 weglassen |
 | 7 | Benchmarks | CIS-Benchmark nutzbar (Lizenz) oder nur Microsoft-Empfehlungen |
 | 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit DSB, BR-Beteiligung für die Werkbank selbst |
-| 9 | Hostname | Erledigt: festgelegt, steht nur in der Konfiguration der Installation (`PUBLIC_URL`), nicht im Repository |
-| 13 | Deployment | Baut Arcane mit `deploy/Dockerfile` selbst neu, oder bleibt der Neubau auf der Kommandozeile nötig? An der Installation prüfen |
-| 14 | Anrede | „du“ oder „Sie“ einheitlich festlegen (`design.md`, Kapitel 7) |
+| 9 | Hostname | Erledigt: Der öffentliche Hostname ist Konfiguration (`PUBLIC_URL`) und steht nicht im Repository |
+| 14 | Anrede | Entschieden: überall „du“ (`design.md`, Kapitel 7) |
 | 15 | Handbuch | Entsteht nach Abschluss der Oberfläche; ab dann bei jeder Änderung mitpflegen (`CLAUDE.md`) |
 | 10 | Mail | Absenderadresse für Benachrichtigungen |
 | 11 | Copyright | Entschieden: `extrempro` |

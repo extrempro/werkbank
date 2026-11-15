@@ -5,7 +5,7 @@ Alle Beispiele verwenden `werkbank.example.com`. Ersetze das durch die öffentli
 
 Microsoft ordnet das Menü des Entra Admin Centers gelegentlich neu. Stimmt ein Pfad wie „Identität → Anwendungen“ nicht mehr, führt die Suche oben im Portal (z. B. „App-Registrierungen“, „Bedingter Zugriff“) zum selben Ziel.
 
-> **Nichts davon gehört ins Repository.** Tenant-ID, Client-ID und öffentliche Adresse kommen in die Umgebungsvariablen des Projekts (`.env` bzw. Arcane), Zertifikate und Secrets in den Secrets-Ordner auf dem Server (`WERKBANK_SECRETS_DIR`, z. B. `/opt/werkbank/secrets`, siehe [`deploy/README.md`](../deploy/README.md)). Secrets nie in Chats, Issues oder Commits einfügen.
+> **Nichts davon gehört ins Repository.** Tenant-ID, Client-ID und öffentliche Adresse kommen in die Umgebungsvariablen des Projekts (`.env` bzw. Verwaltungswerkzeug), Zertifikate und Secrets in den Secrets-Ordner auf dem Server (`WERKBANK_SECRETS_DIR`, z. B. `/opt/werkbank/secrets`, siehe [`deploy/README.md`](../deploy/README.md)). Secrets nie in Chats, Issues oder Commits einfügen.
 
 ## Überblick
 
@@ -188,7 +188,7 @@ Der Collector liest die Einstellungen des Tenants über **Unified Tenant Configu
 - Anmeldung **nur per Zertifikat**, kein Secret
 - Die Werkbank ändert keine Einstellung des Tenants.
 
-> **Stand:** Diese Schritte folgen der Dokumentation von Microsoft und sind an einem Tenant durchlaufen worden: Der Abruf der voreingestellten Entra-Typen funktioniert damit.
+> **Stand:** Diese Schritte folgen der Dokumentation von Microsoft für die voreingestellten Entra-Typen.
 
 ### 4.1 App-Registrierung anlegen
 

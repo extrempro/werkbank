@@ -16,11 +16,11 @@ Secrets: Dateien in einem Ordner auf dem Host (nicht im Repository), eingebunden
 
 ## Netzwerk: `BIND_IP`, `BIND_PORT`, `TRUSTED_PROXY_IPS`
 
-`BIND_IP` ist **nicht** die öffentliche IP. Es ist die Adresse auf dem Docker-Host, über die der NetBird Reverse Proxy den Web-Dienst erreicht:
+`BIND_IP` ist **nicht** die öffentliche IP. Es ist die Adresse auf dem Docker-Host, über die der Reverse Proxy den Web-Dienst erreicht:
 
 | Aufbau | `BIND_IP` |
 |---|---|
-| Docker-Host ist NetBird-Peer, der Proxy erreicht ihn über das NetBird-Netz | NetBird-IP des Hosts (z. B. `100.64.0.10`) |
+| Proxy läuft auf einem anderen Server und erreicht den Docker-Host über ein internes Netz oder VPN | interne Adresse des Hosts in diesem Netz (z. B. `10.0.0.10`) |
 | Proxy läuft auf demselben Host | `127.0.0.1` |
 
 Niemals die öffentliche IP oder `0.0.0.0` verwenden: Die Werkbank wäre dann am Proxy vorbei und ohne TLS direkt erreichbar.
@@ -102,15 +102,15 @@ Zum Ausprobieren ohne Entra legt `deploy/test-secrets.sh` Wegwerf-Dateien an (ni
 
 Das Image wird mit `deploy/Dockerfile` gebaut. Dieses Dockerfile holt den Quellcode beim Bauen selbst von GitHub, standardmäßig den Stand von `main` (`WERKBANK_REF` für einen Tag, Branch oder Commit). Neben der Compose-Datei muss deshalb nur das Dockerfile liegen, kein Quellcode. Wer aus einem ausgecheckten Repository baut, setzt `WERKBANK_BUILD_CONTEXT=..` und `WERKBANK_DOCKERFILE=backend/Dockerfile`. Eine neue Version kommt erst mit einem **neuen Build** auf den Server; ein bloßer Neustart nimmt das vorhandene Image.
 
-## Arcane
+## Betrieb mit Git-Sync
 
-Arcane holt beim Git-Sync die Compose-Datei (und auf Wunsch die Dateien daneben) in einen eigenen Projektordner und ersetzt sie bei jedem Sync. Die Werte der `.env` pflegt man in Arcane; sie bleiben beim Sync erhalten.
+Viele Docker-Verwaltungswerkzeuge können ein Projekt per Git-Sync aus einem Repository holen. Sie legen die Compose-Datei und die Dateien daneben in einen eigenen Projektordner und ersetzen sie bei jedem Sync. Die Werte der `.env` pflegt man dann im Werkzeug; sie bleiben beim Sync erhalten.
 
-1. **Git-Sync anlegen** (Pull): Repository dieses Projekts, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Arcane holt den Ordner `deploy/` und findet dort auch das `Dockerfile`, das es zum Bauen braucht.
-2. **Umgebungsvariablen** des Projekts in Arcane nach [`.env.example`](.env.example) eintragen, mindestens `WERKBANK_SECRETS_DIR`, `BIND_IP`, `BIND_PORT`, `PUBLIC_URL`, `TRUSTED_PROXY_IPS`, `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `COLLECTOR_CLIENT_ID`.
+1. **Git-Sync anlegen** (Pull): Repository dieses Projekts, Branch `main`, Compose-Datei `deploy/docker-compose.yml`. Der Sync holt den Ordner `deploy/`; dort liegt auch das `Dockerfile` zum Bauen.
+2. **Umgebungsvariablen** des Projekts im Werkzeug nach [`.env.example`](.env.example) eintragen, mindestens `WERKBANK_SECRETS_DIR`, `BIND_IP`, `BIND_PORT`, `PUBLIC_URL`, `TRUSTED_PROXY_IPS`, `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `COLLECTOR_CLIENT_ID`.
 3. **Secrets** wie oben auf dem Host anlegen.
 4. Projekt **bauen und starten**.
-   **Nach einer neuen Version auf `main`** muss das Image neu gebaut werden. Ein reines Neu-Bereitstellen in Arcane kann das vorhandene Image `werkbank-web:local` weiterverwenden; dann läuft der alte Stand weiter. Sicher ist der Neubau auf dem Docker-Host im Projektordner (je nach Einrichtung mit `sudo`):
+   **Nach einer neuen Version auf `main`** muss das Image neu gebaut werden. Ein reines Neu-Bereitstellen kann je nach Werkzeug das vorhandene Image `werkbank-web:local` weiterverwenden; dann läuft der alte Stand weiter. Sicher ist der Neubau auf dem Docker-Host im Projektordner (je nach Einrichtung mit `sudo`):
 
    ```bash
    docker compose build --no-cache --pull
@@ -118,7 +118,7 @@ Arcane holt beim Git-Sync die Compose-Datei (und auf Wunsch die Dateien daneben)
    ```
 
    Welche Version läuft, steht in der Werkbank auf der Seite „Konto“.
-5. Im **NetBird Reverse Proxy** die öffentliche Adresse der Werkbank auf `BIND_IP:BIND_PORT` des Docker-Hosts leiten.
+5. Im **Reverse Proxy** die öffentliche Adresse der Werkbank auf `BIND_IP:BIND_PORT` des Docker-Hosts leiten.
 6. In **Entra** die Redirect-URI `${PUBLIC_URL}/auth/callback` eintragen.
 
 Die ganze Reihenfolge mit Prüfschritten steht in [`docs/inbetriebnahme.md`](../docs/inbetriebnahme.md).

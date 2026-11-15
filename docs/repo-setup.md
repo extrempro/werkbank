@@ -85,6 +85,6 @@ Settings → **Code security**:
 
 Keine Einrichtung nötig. Sobald ein PR mit einer neuen Version in `main` gemergt ist, legt `.github/workflows/release.yml` den Tag `vX.Y.Z` und das Release mit dem Abschnitt aus `CHANGELOG.md` an. Ein von Hand gepushter Tag erzeugt ebenfalls ein Release. Der Workflow braucht dafür Schreibrechte auf Inhalte; er fordert sie selbst an (`contents: write`).
 
-## Arcane
+## Deployment
 
-Siehe [`deploy/README.md`](../deploy/README.md). Für ein öffentliches Repository braucht Arcane keinen Zugangstoken.
+Siehe [`deploy/README.md`](../deploy/README.md). Für ein öffentliches Repository braucht ein Git-Sync keinen Zugangstoken.

@@ -1,5 +1,5 @@
 # Werkbank – Image für den Betrieb, wenn neben dieser Datei kein Quellcode liegt
-# (z. B. Arcane Git-Sync, der nur den Ordner deploy/ holt).
+# (z. B. ein Git-Sync, der nur den Ordner deploy/ holt).
 #
 # Der Quellcode kommt beim Bauen als Archiv von GitHub. Docker lädt das Archiv bei jedem Build
 # und baut nur neu, wenn sich der Stand geändert hat. Die Schritte danach entsprechen

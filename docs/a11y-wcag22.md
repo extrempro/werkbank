@@ -3,7 +3,7 @@
 Automatisch: axe-core in jedem E2E-Test (alle Screens, Profile Desktop/Tablet/iPhone). Ziel: keine Verstöße der Stufen „serious“ und „critical“.
 Automatische Tests finden nur einen Teil der Probleme. Diese Checkliste wird bei jedem neuen Screen manuell geprüft.
 
-> **Stand:** Version 0.3. Alle Seiten laufen im Browsertest durch axe-core, auf Desktop, Tablet und Handy; Startseite, M365-Übersicht, Änderungen, Einstellungen, Evergreen, Audit-Log und Konto zusätzlich im dunklen Modus. Die Seiten von Evergreen werden dabei mit Inhalt geprüft, die der M365-Konfiguration im leeren Zustand. ✅ heißt: durch Umsetzung und automatische Tests belegt. ⚠️ heißt: umgesetzt, aber die manuelle Prüfung (Tastatur, Zoom, Screenreader, echte Geräte) steht aus.
+> **Stand:** Version 0.5. Alle Seiten laufen im Browsertest durch axe-core, auf Desktop, Tablet und Handy; Startseite, M365-Übersicht, Änderungen, Einstellungen, Evergreen, Audit-Log und Konto zusätzlich im dunklen Modus. Die Seiten von Evergreen werden dabei mit Inhalt geprüft, die der M365-Konfiguration im leeren Zustand. ✅ heißt: durch Umsetzung und automatische Tests belegt. ⚠️ heißt: umgesetzt, aber die manuelle Prüfung (Tastatur, Zoom, Screenreader, echte Geräte) steht aus.
 
 Status: ✅ erfüllt · ⚠️ teilweise · ❌ offen · n/a nicht anwendbar
 
