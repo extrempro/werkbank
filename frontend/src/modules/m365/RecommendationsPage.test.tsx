@@ -147,7 +147,10 @@ describe("RecommendationsPage", () => {
     expect(post?.url).toBe("/api/m365-config/recommendations/2/links");
     expect(JSON.parse(String(post?.init?.body))).toEqual({ setting_id: 9 });
 
-    fireEvent.click(screen.getByRole("button", { name: /Lösen – MFA für alle – State/ }));
+    // Während die Zuordnung gespeichert wird, sind die Knöpfe gesperrt.
+    const release = screen.getByRole("button", { name: /Lösen – MFA für alle – State/ });
+    await vi.waitFor(() => expect(release).toBeEnabled());
+    fireEvent.click(release);
     expect(await screen.findByText("Noch keine Einstellung zugeordnet.")).toBeVisible();
     expect(calls.some((call) => call.url.endsWith("/recommendations/2/links/7"))).toBe(true);
   });
