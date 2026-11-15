@@ -210,7 +210,7 @@ describe("ToolPage", () => {
 
   it("MAC-Adressen: wandelt um, erkennt die Art und schlägt den Hersteller nach", async () => {
     render(<ToolPage id="mac-adressen" />);
-    fireEvent.change(await screen.findByLabelText(/^MAC-Adressen/), {
+    fireEvent.change(await screen.findByRole("textbox", { name: /^MAC-Adressen/ }), {
       target: { value: "00-00-00-AB-CD-EF" },
     });
     expect(screen.getByLabelText("1 Adresse umgewandelt")).toHaveTextContent("00:00:00:ab:cd:ef");
