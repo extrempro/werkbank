@@ -9,7 +9,10 @@ export default function YamlFormatTool() {
   // Der Inhalt bleibt nur auf dieser Seite (Konfigurationen enthalten oft Zugangsdaten).
   const [text, setText] = useState("");
 
-  const result = useMemo(() => {
+  const result = useMemo(():
+    | { output: string; documents: number }
+    | { error: string }
+    | null => {
     if (!text.trim()) {
       return null;
     }

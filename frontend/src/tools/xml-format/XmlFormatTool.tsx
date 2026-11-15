@@ -9,7 +9,10 @@ export default function XmlFormatTool() {
   // Der Inhalt bleibt nur auf dieser Seite.
   const [text, setText] = useState("");
 
-  const result = useMemo(() => {
+  const result = useMemo(():
+    | { output: string; elements: number }
+    | { error: string }
+    | null => {
     if (!text.trim()) {
       return null;
     }

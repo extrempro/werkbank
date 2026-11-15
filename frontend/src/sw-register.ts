@@ -20,7 +20,7 @@ export const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
  * Gefragt wird im festen Abstand, wenn das Fenster wieder sichtbar wird und wenn das Netz
  * zurückkommt, aber nie öfter als alle paar Minuten.
  */
-export function watchForUpdates(registration: Pick<ServiceWorkerRegistration, "update">): void {
+export function watchForUpdates(registration: { update: () => Promise<unknown> }): void {
   let last = Date.now();
   const check = () => {
     if (document.visibilityState !== "visible" || Date.now() - last < UPDATE_CHECK_MIN_MS) {
