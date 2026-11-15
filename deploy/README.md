@@ -31,13 +31,14 @@ Die öffentliche Adresse (mit `https://`) gehört in `PUBLIC_URL`.
 
 ## Secrets anlegen
 
-Compose erwartet **fünf Dateien** in einem Ordner auf dem Docker-Host. Fehlt eine, startet nichts. Der Ordner liegt am besten außerhalb des Projektordners, damit ein Git-Sync ihn nicht anfasst; sein Pfad steht in `WERKBANK_SECRETS_DIR`.
+Compose erwartet **sechs Dateien** in einem Ordner auf dem Docker-Host. Fehlt eine, startet nichts. Der Ordner liegt am besten außerhalb des Projektordners, damit ein Git-Sync ihn nicht anfasst; sein Pfad steht in `WERKBANK_SECRETS_DIR`.
 
 | Datei | Inhalt | Für |
 |---|---|---|
 | `postgres_password` | Passwort der Datenbank | `web`, `worker`, `db` |
 | `entra_client_key.pem`, `entra_client_cert.pem` | Zertifikat der App-Registrierung „Werkbank“ (Anmeldung) | `web` |
 | `collector_client_key.pem`, `collector_client_cert.pem` | Zertifikat der App-Registrierung „Werkbank Collector“ (Abruf) | `worker` |
+| `settings_key` | Schlüssel, mit dem geheime Werte aus der Verwaltung (z. B. das SMTP-Passwort) verschlüsselt in der Datenbank liegen | `web`, `worker` |
 
 Ein Secret ist hier eine Datei auf dem Docker-Host, die Docker beim Start in den Container einblendet. So stehen Passwort und Schlüssel weder im Repository noch in den Umgebungsvariablen.
 
@@ -53,6 +54,14 @@ cd /opt/werkbank/secrets
 ```bash
 openssl rand -hex 24 | sudo tee postgres_password > /dev/null
 ```
+
+**2a. Schlüssel für die Verwaltung erzeugen.** Ebenfalls zufällig; er muss nie eingetippt werden.
+
+```bash
+openssl rand -base64 48 | sudo tee settings_key > /dev/null
+```
+
+Diesen Schlüssel sichern (z. B. im Passwortmanager) und nicht ändern: Geht er verloren, lassen sich in der Verwaltung gespeicherte Passwörter nicht mehr lesen und müssen neu eingetragen werden.
 
 **3. Zertifikat für die Anmeldung** (App-Registrierung „Werkbank“)
 
@@ -90,7 +99,7 @@ Die `…_key.pem` werden nirgends hochgeladen und nicht vom Server kopiert.
 
 **7. Ordner eintragen:** `WERKBANK_SECRETS_DIR=/opt/werkbank/secrets` in den Umgebungsvariablen des Projekts.
 
-**Kontrolle:** `ls -l /opt/werkbank/secrets` zeigt genau die fünf Dateien aus der Tabelle.
+**Kontrolle:** `ls -l /opt/werkbank/secrets` zeigt genau die sechs Dateien aus der Tabelle.
 
 Die Zertifikate gelten 730 Tage. Ablaufdatum in den Kalender eintragen; danach neu erzeugen und wieder hochladen.
 

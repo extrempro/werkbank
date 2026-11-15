@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.6.0",
+    date: "2026-11-15",
+    summary: "Verwaltung: Mailversand einrichten und Aufbewahrung des Audit-Logs festlegen.",
+    sections: [
+      {
+        area: "Verwaltung",
+        entries: [
+          "Neuer Bereich „Allgemein“ für Einstellungen der Werkbank.",
+          "Mailversand: Admins tragen dort den SMTP-Server ein und können sich eine Testmail schicken. Das Passwort wird verschlüsselt gespeichert und nie angezeigt. Benachrichtigungen per Mail folgen mit einer späteren Version.",
+          "Audit-Log: Einträge werden nach 90 Tagen gelöscht. Die Frist lässt sich in der Verwaltung ändern.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.5.0",
     date: "2026-11-15",
     summary: "Neu: Suche über Einstellungen, Änderungen und Vorgänge.",

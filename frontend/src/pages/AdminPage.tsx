@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
 import { Avatar } from "../components/Avatar";
-import { ApiError, fetchRoles, formatDateTime, stepUpLoginUrl, type RoleInfo } from "../api";
+import {
+  ApiError,
+  fetchAdminSettings,
+  fetchRoles,
+  formatDateTime,
+  stepUpLoginUrl,
+  type AdminSettings,
+  type RoleInfo,
+} from "../api";
+import { GeneralSettings } from "./GeneralSettings";
 
 export function AdminPage() {
   const [roles, setRoles] = useState<RoleInfo[] | null>(null);
+  const [general, setGeneral] = useState<AdminSettings | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "stepup" | "forbidden" | "error">(
     "loading",
   );
@@ -28,15 +38,33 @@ export function AdminPage() {
           }
         }
       });
+    fetchAdminSettings()
+      .then((result) => {
+        if (active && result && typeof result === "object" && "smtp" in result) {
+          setGeneral(result);
+        }
+      })
+      .catch(() => {
+        // Die Meldung zur Anmeldung bzw. zum Fehler kommt vom Abruf der Rollen.
+      });
     return () => {
       active = false;
     };
   }, []);
 
   return (
-    <>
-      <p className="module-label">Verwaltung</p>
-      <h1>Einstellungen der Werkbank</h1>
+    <div className="page">
+      <header className="page-head">
+        <p className="module-label">Verwaltung</p>
+        <h1>Einstellungen der Werkbank</h1>
+      </header>
+
+      {status === "ready" && general && (
+        <section className="admin-section" aria-labelledby="allgemein-titel">
+          <h2 id="allgemein-titel">Allgemein</h2>
+          <GeneralSettings settings={general} onChange={setGeneral} />
+        </section>
+      )}
 
       <section aria-labelledby="rollen-titel">
         <h2 id="rollen-titel">Rollen</h2>
@@ -104,6 +132,6 @@ export function AdminPage() {
           </div>
         )}
       </section>
-    </>
+    </div>
   );
 }

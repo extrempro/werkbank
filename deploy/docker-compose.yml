@@ -31,6 +31,7 @@ services:
         target: entra_client_key.pem
       - source: entra_client_cert
         target: entra_client_cert.pem
+      - settings_key
     ports:
       - "${BIND_IP:-127.0.0.1}:${BIND_PORT:-8080}:8000"
     depends_on:
@@ -63,6 +64,7 @@ services:
         target: collector_client_key.pem
       - source: collector_client_cert
         target: collector_client_cert.pem
+      - settings_key
     depends_on:
       # web spielt beim Start die Datenbank-Migrationen ein
       web:
@@ -128,3 +130,6 @@ secrets:
     file: ${WERKBANK_SECRETS_DIR:-./secrets}/collector_client_key.pem
   collector_client_cert:
     file: ${WERKBANK_SECRETS_DIR:-./secrets}/collector_client_cert.pem
+  # Schlüssel für geheime Werte aus der Verwaltung (z. B. SMTP-Passwort)
+  settings_key:
+    file: ${WERKBANK_SECRETS_DIR:-./secrets}/settings_key

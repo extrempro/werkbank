@@ -2428,3 +2428,69 @@ p.badges {
   font: inherit;
   font-size: 1rem;
 }
+
+/* Verwaltung */
+
+.admin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-section > h2 {
+  margin: 0;
+}
+
+.admin-section .panel-head h3 {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.settings-form p {
+  margin: 0;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px 16px;
+}
+
+.settings-form label:not(.check-label) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.settings-form .narrow {
+  max-width: 16rem;
+}
+
+.settings-form input:not([type="checkbox"]),
+.settings-form select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.settings-form input:disabled {
+  background: var(--farbe-neutral-flaeche);
+  color: var(--farbe-text-leise);
+}
+
+.settings-form .check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 0.875rem;
+}
