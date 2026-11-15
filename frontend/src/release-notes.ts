@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.25.0",
+    date: "2026-11-15",
+    summary: "IT-Budget mit Partnern, Verträgen und neuer Übersicht.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Neu: Partner und Verträge. Zu jedem Vertrag stehen Jahreskosten, der nächste Kündigungstermin und der Stand des AVV.",
+          "Die Übersicht zeigt jetzt, wie viel vom Plan durch Verträge gebunden und wie viel noch frei ist, als Karten und als Balken je Konto.",
+          "Kündigungstermine der nächsten 120 Tage und Handlungsbedarf stehen direkt in der Übersicht; kurz vor dem Termin erscheint eine Aufgabe auf der Startseite.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.24.0",
     date: "2026-11-15",
     summary: "Neuer Bereich IT-Budget mit Konten und Plan je Geschäftsjahr.",

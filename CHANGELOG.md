@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.25.0] – 2026-11-15
+
+IT-Budget: Partner, Verträge und „gebunden“; Übersicht nach dem Entwurf.
+
+### IT-Budget
+
+- **Partner:** Firmen als Vertragspartner, Rechnungssteller oder beides anlegen, ändern und stilllegen
+- **Verträge:** mit Vertragspartner, abweichendem Rechnungssteller, Konto, Betrag und Turnus, Laufzeit, Verlängerung, Kündigungsfrist und Stand des AVV. Die Liste zeigt Jahreskosten und den nächsten Kündigungstermin
+- **Gebunden:** Die erwarteten Kosten aus Verträgen zählen je Konto und Geschäftsjahr; die Übersicht zeigt Plan, gebunden und frei
+- **Übersicht neu aufgebaut** nach dem Entwurf: Kennzahlen als Karten, Budget nach Konten als Balken, Kündigungstermine der nächsten 120 Tage und Handlungsbedarf (mehr gebunden als geplant, Kosten ohne Plan, AVV fehlt). Farben und Dunkelmodus bleiben die der Werkbank
+- **Aufgabe auf der Startseite:** Verträge, deren Kündigungstermin in höchstens 60 Tagen ansteht
+- Migration 0020 (zwei neue Tabellen)
+- Noch nicht enthalten: Rechnungen mit Beleg (damit auch Ist und Prognose), Budgetposten unterhalb der Konten, Vertragsdetail mit Dokumenten, Auswertung, Export und Import
+
 ## [0.24.0] – 2026-11-15
 
 Neuer Bereich IT-Budget: Konten und Plan je Geschäftsjahr.

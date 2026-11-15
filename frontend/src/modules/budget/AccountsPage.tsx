@@ -158,7 +158,7 @@ export function AccountsPage({ roles }: { roles: readonly string[] }) {
   };
 
   return (
-    <div className="page page-wide">
+    <div className="page page-wide budget-page">
       <header className="page-head">
         <p className="module-label">IT-Budget</p>
         <h1>Konten</h1>
@@ -178,7 +178,7 @@ export function AccountsPage({ roles }: { roles: readonly string[] }) {
         <p className="panel panel-empty">Es sind noch keine Konten angelegt.</p>
       )}
       {accounts && accounts.length > 0 && (
-        <div className="table-wrap" tabIndex={0} role="region" aria-label="Konten">
+        <div className="table-wrap budget-table" tabIndex={0} role="region" aria-label="Konten">
           <table>
             <caption className="visually-hidden">Konten des IT-Budgets</caption>
             <thead>

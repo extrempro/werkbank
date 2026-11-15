@@ -106,13 +106,10 @@ describe("areasFor", () => {
       allNavItems(areasFor(roles).find((area) => area.id === "budget")?.groups ?? []).map(
         (item) => item.path,
       );
-    expect(paths(["Budget.Reader"])).toEqual(["/budget", "/budget/konten"]);
-    expect(paths(["Budget.Editor"])).toEqual(["/budget", "/budget/konten"]);
-    expect(paths(["Budget.Manager"])).toEqual([
-      "/budget",
-      "/budget/konten",
-      "/budget/einstellungen",
-    ]);
+    const shared = ["/budget", "/budget/vertraege", "/budget/partner", "/budget/konten"];
+    expect(paths(["Budget.Reader"])).toEqual(shared);
+    expect(paths(["Budget.Editor"])).toEqual(shared);
+    expect(paths(["Budget.Manager"])).toEqual([...shared, "/budget/einstellungen"]);
     expect(paths(["Tenant.Reader"])).toEqual([]);
     const areas = areasFor(["Budget.Manager"]);
     expect(areaForPath(areas, "/budget/konten")?.id).toBe("budget");

@@ -40,6 +40,8 @@ export interface OverviewRow {
   /** Geplanter Betrag brutto in Cent; null: für dieses Jahr ist nichts geplant. */
   plan_cents: number | null;
   previous_cents: number | null;
+  /** Erwartete Kosten aus Verträgen in diesem Geschäftsjahr. */
+  committed_cents: number;
 }
 
 export interface Totals {
@@ -58,6 +60,9 @@ export interface Overview {
   rows: OverviewRow[];
   plan: Totals;
   previous: Totals;
+  committed: Totals;
+  /** Zahl der Verträge, aus denen in diesem Jahr Kosten zu erwarten sind. */
+  committed_contracts: number;
 }
 
 export interface PlanEntry {
@@ -158,4 +163,161 @@ export function parseEuro(text: string): number | null {
 export function formatBudgetDay(day: string): string {
   const [year = "", month = "", date = ""] = day.split("-");
   return `${date}.${month}.${year}`;
+}
+
+export interface Partner {
+  id: number;
+  name: string;
+  is_contract_partner: boolean;
+  is_invoicer: boolean;
+  customer_number: string;
+  note: string;
+  active: boolean;
+}
+
+export type PartnerUpdate = Omit<Partner, "id">;
+
+export type ContractInterval =
+  | "monatlich"
+  | "vierteljaehrlich"
+  | "halbjaehrlich"
+  | "jaehrlich"
+  | "einmalig";
+
+export type DpaStatus = "vorhanden" | "fehlt" | "nicht_erforderlich";
+
+export interface ContractUpdate {
+  title: string;
+  partner_id: number;
+  account_id: number;
+  /** Rechnungssteller, wenn er vom Vertragspartner abweicht. */
+  invoicer_id: number | null;
+  dpa_status: DpaStatus;
+  number: string;
+  starts_on: string;
+  ends_on: string | null;
+  renewal_months: number | null;
+  notice_months: number | null;
+  cancelled_to: string | null;
+  amount_cents: number;
+  interval: ContractInterval;
+  note: string;
+}
+
+export interface Contract extends ContractUpdate {
+  id: number;
+  partner_name: string;
+  account_number: string;
+  account_name: string;
+  invoicer_name: string | null;
+  /** Kosten eines vollen Jahres; null bei einmaliger Zahlung. */
+  yearly_cents: number | null;
+  running: boolean;
+  term_end: string | null;
+  notice_deadline: string | null;
+  days_to_deadline: number | null;
+  deadline_soon: boolean;
+  /** Erwartete Kosten im laufenden Geschäftsjahr. */
+  current_year_cents: number;
+}
+
+export interface ContractList {
+  current_year_name: string;
+  notice_warn_days: number;
+  entries: Contract[];
+}
+
+export const INTERVAL_LABELS: Record<ContractInterval, string> = {
+  monatlich: "monatlich",
+  vierteljaehrlich: "vierteljährlich",
+  halbjaehrlich: "halbjährlich",
+  jaehrlich: "jährlich",
+  einmalig: "einmalig",
+};
+
+export function fetchPartners(): Promise<Partner[]> {
+  return getJson<Partner[]>("/api/budget/partners");
+}
+
+export function createPartner(update: PartnerUpdate): Promise<Partner> {
+  return postJson<Partner>("/api/budget/partners", update);
+}
+
+export function updatePartner(id: number, update: PartnerUpdate): Promise<Partner> {
+  return putJson<Partner>(`/api/budget/partners/${id}`, update);
+}
+
+export function fetchContracts(): Promise<ContractList> {
+  return getJson<ContractList>("/api/budget/contracts");
+}
+
+export function createContract(update: ContractUpdate): Promise<Contract> {
+  return postJson<Contract>("/api/budget/contracts", update);
+}
+
+export function updateContract(id: number, update: ContractUpdate): Promise<Contract> {
+  return putJson<Contract>(`/api/budget/contracts/${id}`, update);
+}
+
+/** Rollen eines Partners in Worten. */
+export function partnerRoles(partner: Partner): string {
+  if (partner.is_contract_partner && partner.is_invoicer) {
+    return "Vertragspartner und Rechnungssteller";
+  }
+  return partner.is_contract_partner ? "Vertragspartner" : "Rechnungssteller";
+}
+
+/** Laufzeit eines Vertrags in Worten. */
+export function termText(contract: Contract): string {
+  const start = formatBudgetDay(contract.starts_on);
+  if (contract.cancelled_to) {
+    return `${start} bis ${formatBudgetDay(contract.cancelled_to)} (gekündigt)`;
+  }
+  if (!contract.ends_on) {
+    return contract.interval === "einmalig" ? start : `seit ${start}, unbefristet`;
+  }
+  const end = formatBudgetDay(contract.term_end ?? contract.ends_on);
+  return contract.renewal_months
+    ? `${start} bis ${end}, verlängert sich um ${contract.renewal_months} Monate`
+    : `${start} bis ${end}`;
+}
+
+export const DPA_LABELS: Record<DpaStatus, string> = {
+  vorhanden: "vorhanden",
+  fehlt: "fehlt",
+  nicht_erforderlich: "nicht erforderlich",
+};
+
+/** Farbe des AVV-Stands: fehlt ist rot, vorhanden grün. */
+export function dpaTone(status: DpaStatus): "ok" | "bad" | "neutral" {
+  return status === "fehlt" ? "bad" : status === "vorhanden" ? "ok" : "neutral";
+}
+
+/** So viele Tage vorher zeigt die Werkbank einen Kündigungstermin als anstehend. */
+export const DEADLINE_WINDOW_DAYS = 120;
+
+/** Hinweis zum Kündigungstermin: Text und Dringlichkeit; null ohne Termin. */
+export function deadlineBadge(
+  contract: Contract,
+): { text: string; tone: "ok" | "todo" | "bad" } | null {
+  const days = contract.days_to_deadline;
+  if (days === null || !contract.running) {
+    return null;
+  }
+  if (days < 0) {
+    return { text: "Frist verstrichen", tone: "bad" };
+  }
+  if (days <= DEADLINE_WINDOW_DAYS) {
+    const text = days === 0 ? "heute" : days === 1 ? "noch 1 Tag" : `noch ${days} Tage`;
+    return { text, tone: days <= 30 ? "bad" : "todo" };
+  }
+  return { text: `in ${Math.round(days / 30)} Monaten`, tone: "ok" };
+}
+
+/** Anteil in Prozent, auf ganze Zahlen gerundet und auf 0 bis 100 begrenzt. */
+export function share(part: number, whole: number): number {
+  if (whole <= 0) {
+    return part > 0 ? 100 : 0;
+  }
+  return Math.max(0, Math.min(100, Math.round((part / whole) * 100)));
 }

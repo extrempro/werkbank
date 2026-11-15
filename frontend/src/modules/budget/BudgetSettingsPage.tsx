@@ -130,7 +130,7 @@ export function BudgetSettingsPage() {
   }, []);
 
   return (
-    <div className="page">
+    <div className="page budget-page">
       <header className="page-head">
         <p className="module-label">IT-Budget</p>
         <h1>Einstellungen</h1>

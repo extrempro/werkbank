@@ -6,12 +6,20 @@ import {
   formatBudgetDay,
   formatEuro,
   parseEuro,
+  deadlineBadge,
+  partnerRoles,
+  share,
+  termText,
   type Account,
   type BudgetSettings,
+  type Contract,
   type Overview,
+  type Partner,
 } from "./api";
 import { BudgetOverviewPage } from "./BudgetOverviewPage";
 import { BudgetSettingsPage } from "./BudgetSettingsPage";
+import { ContractsPage } from "./ContractsPage";
+import { PartnersPage } from "./PartnersPage";
 
 afterEach(() => {
   cleanup();
@@ -56,11 +64,18 @@ function overview(overrides: Partial<Overview> = {}): Overview {
       { year: 2025, name: "2025/26" },
     ],
     rows: [
-      { account: hardware, plan_cents: 5_000_050, previous_cents: null },
-      { account: software, plan_cents: 1_190_000, previous_cents: 1_000_000 },
+      { account: hardware, plan_cents: 5_000_050, previous_cents: null, committed_cents: 0 },
+      {
+        account: software,
+        plan_cents: 1_190_000,
+        previous_cents: 1_000_000,
+        committed_cents: 600_000,
+      },
     ],
     plan: { running_cents: 1_190_000, investment_cents: 5_000_050, total_cents: 6_190_050 },
     previous: { running_cents: 1_000_000, investment_cents: 0, total_cents: 1_000_000 },
+    committed: { running_cents: 600_000, investment_cents: 0, total_cents: 600_000 },
+    committed_contracts: 1,
     ...overrides,
   };
 }
@@ -132,8 +147,13 @@ describe("Übersicht", () => {
   it("lässt den Budgetverwalter den Plan ändern und prüft die Eingabe", async () => {
     const saved = overview({
       rows: [
-        { account: hardware, plan_cents: null, previous_cents: null },
-        { account: software, plan_cents: 1_250_000, previous_cents: 1_000_000 },
+        { account: hardware, plan_cents: null, previous_cents: null, committed_cents: 0 },
+        {
+          account: software,
+          plan_cents: 1_250_000,
+          previous_cents: 1_000_000,
+          committed_cents: 600_000,
+        },
       ],
       plan: { running_cents: 1_250_000, investment_cents: 0, total_cents: 1_250_000 },
     });
@@ -172,6 +192,8 @@ describe("Übersicht", () => {
       "GET /api/budget/overview": overview({
         rows: [],
         plan: { running_cents: 0, investment_cents: 0, total_cents: 0 },
+        committed: { running_cents: 0, investment_cents: 0, total_cents: 0 },
+        committed_contracts: 0,
       }),
     });
     render(<BudgetOverviewPage roles={["Budget.Editor"]} />);
@@ -265,5 +287,259 @@ describe("Einstellungen", () => {
       cost_center: "4711",
     });
     expect(screen.getByText("Laufend: Wirtschaftsjahr 2026")).toBeVisible();
+  });
+});
+
+const partner: Partner = {
+  id: 1,
+  name: "Beispiel Software GmbH",
+  is_contract_partner: true,
+  is_invoicer: true,
+  customer_number: "K-100",
+  note: "",
+  active: true,
+};
+const distributor: Partner = {
+  ...partner,
+  id: 2,
+  name: "Beispiel Distribution AG",
+  is_contract_partner: false,
+};
+
+function contract(overrides: Partial<Contract> = {}): Contract {
+  return {
+    id: 1,
+    title: "Wartung Zeiterfassung",
+    partner_id: 1,
+    partner_name: "Beispiel Software GmbH",
+    account_id: 1,
+    account_number: "6815",
+    account_name: "Softwarewartung",
+    invoicer_id: null,
+    invoicer_name: null,
+    dpa_status: "vorhanden",
+    yearly_cents: 600_000,
+    number: "V-1",
+    starts_on: "2026-01-01",
+    ends_on: "2026-12-31",
+    renewal_months: 12,
+    notice_months: 1,
+    cancelled_to: null,
+    amount_cents: 50_000,
+    interval: "monatlich",
+    note: "",
+    running: true,
+    term_end: "2026-12-31",
+    notice_deadline: "2026-11-30",
+    days_to_deadline: 15,
+    deadline_soon: true,
+    current_year_cents: 600_000,
+    ...overrides,
+  };
+}
+
+describe("Hilfen für Verträge", () => {
+  it("stuft den Kündigungstermin ein", () => {
+    expect(deadlineBadge(contract())).toEqual({ text: "noch 15 Tage", tone: "bad" });
+    expect(deadlineBadge(contract({ days_to_deadline: 90 }))).toEqual({
+      text: "noch 90 Tage",
+      tone: "todo",
+    });
+    expect(deadlineBadge(contract({ days_to_deadline: 300 }))).toEqual({
+      text: "in 10 Monaten",
+      tone: "ok",
+    });
+    expect(deadlineBadge(contract({ days_to_deadline: -3 }))?.text).toBe("Frist verstrichen");
+    expect(deadlineBadge(contract({ days_to_deadline: null }))).toBeNull();
+    expect(deadlineBadge(contract({ running: false }))).toBeNull();
+  });
+
+  it("beschreibt Laufzeit, Partnerrolle und Anteile", () => {
+    expect(termText(contract())).toBe(
+      "01.01.2026 bis 31.12.2026, verlängert sich um 12 Monate",
+    );
+    expect(termText(contract({ ends_on: null, term_end: null, renewal_months: null }))).toBe(
+      "seit 01.01.2026, unbefristet",
+    );
+    expect(termText(contract({ cancelled_to: "2026-09-30" }))).toBe(
+      "01.01.2026 bis 30.09.2026 (gekündigt)",
+    );
+    expect(partnerRoles(partner)).toBe("Vertragspartner und Rechnungssteller");
+    expect(partnerRoles(distributor)).toBe("Rechnungssteller");
+    expect(share(600_000, 1_190_000)).toBe(50);
+    expect(share(5, 0)).toBe(100);
+    expect(share(0, 0)).toBe(0);
+    expect(share(300, 100)).toBe(100);
+  });
+});
+
+describe("Übersicht nach dem Entwurf", () => {
+  it("zeigt Kennzahlen, Balken, Termine und Handlungsbedarf", async () => {
+    stubFetch({
+      "GET /api/budget/overview": overview({
+        rows: [
+          { account: hardware, plan_cents: null, previous_cents: null, committed_cents: 119_000 },
+          {
+            account: software,
+            plan_cents: 500_000,
+            previous_cents: 1_000_000,
+            committed_cents: 600_000,
+          },
+        ],
+        plan: { running_cents: 500_000, investment_cents: 0, total_cents: 500_000 },
+        committed: { running_cents: 600_000, investment_cents: 119_000, total_cents: 719_000 },
+        committed_contracts: 2,
+      }),
+      "GET /api/budget/contracts": {
+        current_year_name: "2026/27",
+        notice_warn_days: 60,
+        entries: [
+          contract(),
+          contract({ id: 2, title: "Backup", dpa_status: "fehlt", days_to_deadline: 400 }),
+        ],
+      },
+    });
+    render(<BudgetOverviewPage roles={["Budget.Reader"]} />);
+    expect(await screen.findByText("Durch Verträge gebunden", { selector: "dt" })).toBeVisible();
+    expect(screen.getByText(/2 Verträge/)).toBeVisible();
+    expect(screen.getByText("mehr gebunden als geplant")).toBeVisible();
+    expect(
+      screen.getByRole("img", { name: /Softwarewartung: 100 % des Plans/ }),
+    ).toBeInTheDocument();
+
+    const dates = within(
+      await screen.findByRole("region", { name: /Kündigungstermine – nächste 120 Tage/ }),
+    );
+    expect(dates.getByRole("link", { name: "Wartung Zeiterfassung" })).toHaveAttribute(
+      "href",
+      "/budget/vertraege",
+    );
+    expect(dates.getByText("noch 15 Tage")).toBeVisible();
+    expect(dates.queryByText("Backup")).toBeNull();
+
+    const needs = within(screen.getByRole("region", { name: "Handlungsbedarf" }));
+    expect(plain(needs.getByText(/6815 Softwarewartung: Verträge binden/).textContent)).toContain(
+      "1.000,00 € mehr als geplant",
+    );
+    expect(needs.getByText(/0420 Hardware: .* aber kein Plan/)).toBeVisible();
+    expect(needs.getByText("Backup: Auftragsverarbeitungsvertrag fehlt.")).toBeVisible();
+  });
+});
+
+describe("Partner", () => {
+  it("legt einen Partner an und prüft die Rolle", async () => {
+    const calls = stubFetch({
+      "GET /api/budget/partners": [partner],
+      "POST /api/budget/partners": distributor,
+    });
+    render(<PartnersPage roles={["Budget.Editor"]} />);
+    const table = within(await screen.findByRole("region", { name: "Partner" }));
+    expect(table.getByRole("row", { name: /Beispiel Software GmbH/ })).toHaveTextContent(
+      "Vertragspartner und Rechnungssteller",
+    );
+    fireEvent.change(screen.getByLabelText("Name der Firma"), {
+      target: { value: "Beispiel Distribution AG" },
+    });
+    fireEvent.click(screen.getByLabelText("Vertragspartner"));
+    fireEvent.click(screen.getByLabelText("Rechnungssteller"));
+    fireEvent.click(screen.getByRole("button", { name: "Partner anlegen" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("oder beides ankreuzen");
+    fireEvent.click(screen.getByLabelText("Rechnungssteller"));
+    fireEvent.click(screen.getByRole("button", { name: "Partner anlegen" }));
+    expect(await screen.findByText("Beispiel Distribution AG ist gespeichert.")).toBeVisible();
+    expect(calls.find((call) => call.method === "POST")?.body).toMatchObject({
+      name: "Beispiel Distribution AG",
+      is_contract_partner: false,
+      is_invoicer: true,
+    });
+  });
+});
+
+describe("Verträge", () => {
+  const routes = {
+    "GET /api/budget/contracts": {
+      current_year_name: "2026/27",
+      notice_warn_days: 60,
+      entries: [
+        contract({ invoicer_id: 2, invoicer_name: "Beispiel Distribution AG" }),
+        contract({
+          id: 2,
+          title: "Altvertrag",
+          running: false,
+          cancelled_to: "2025-12-31",
+          notice_deadline: null,
+          days_to_deadline: null,
+          current_year_cents: 0,
+          dpa_status: "fehlt",
+        }),
+      ],
+    },
+    "GET /api/budget/partners": [partner, distributor],
+    "GET /api/budget/accounts": [software],
+  };
+
+  it("zeigt laufende Verträge mit Termin, Rechnungssteller und AVV", async () => {
+    stubFetch(routes);
+    render(<ContractsPage roles={["Budget.Reader"]} />);
+    const table = within(await screen.findByRole("region", { name: "Verträge" }));
+    expect(table.getAllByRole("row")).toHaveLength(2);
+    const row = table.getByRole("row", { name: /^Wartung Zeiterfassung/ });
+    expect(row).toHaveTextContent("abweichend");
+    expect(row).toHaveTextContent("noch 15 Tage");
+    expect(plain(row.textContent)).toContain("6.000,00 €");
+    expect(screen.getByText("1 Termin in 120 Tagen")).toBeVisible();
+    expect(screen.getByText("0 AVV fehlt")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Vertrag anlegen" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Alle (2)" }));
+    expect(table.getByRole("row", { name: /^Altvertrag/ })).toHaveTextContent("beendet");
+  });
+
+  it("prüft die Eingaben und legt einen Vertrag an", async () => {
+    const calls = stubFetch({ ...routes, "POST /api/budget/contracts": contract({ id: 3 }) });
+    render(<ContractsPage roles={["Budget.Manager"]} />);
+    await screen.findByRole("region", { name: "Verträge" });
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Bezeichnung");
+
+    fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "Neuer Vertrag" } });
+    fireEvent.change(screen.getByLabelText("Vertragspartner"), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText("Rechnungssteller"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Konto"), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText(/^Betrag je Zahlung/), { target: { value: "abc" } });
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Betrag ist nicht lesbar");
+
+    fireEvent.change(screen.getByLabelText(/^Betrag je Zahlung/), { target: { value: "500,00" } });
+    fireEvent.change(screen.getByLabelText("Beginn"), { target: { value: "2026-01-01" } });
+    fireEvent.change(screen.getByLabelText(/^Verlängert sich um/), { target: { value: "12" } });
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("nur bei einem Ende der Laufzeit");
+
+    fireEvent.change(screen.getByLabelText(/^Ende der Laufzeit/), {
+      target: { value: "2026-12-31" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Kündigungsfrist/), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText(/^Auftragsverarbeitungsvertrag/), {
+      target: { value: "fehlt" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+    expect(await screen.findByText("Wartung Zeiterfassung ist gespeichert.")).toBeVisible();
+    expect(calls.find((call) => call.method === "POST")?.body).toEqual({
+      title: "Neuer Vertrag",
+      partner_id: 1,
+      account_id: 1,
+      invoicer_id: 2,
+      dpa_status: "fehlt",
+      number: "",
+      starts_on: "2026-01-01",
+      ends_on: "2026-12-31",
+      renewal_months: 12,
+      notice_months: 3,
+      cancelled_to: null,
+      amount_cents: 50_000,
+      interval: "jaehrlich",
+      note: "",
+    });
   });
 });

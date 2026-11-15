@@ -447,8 +447,12 @@ Das Budget der IT nach Konten, je Geschäftsjahr. Alle Beträge sind brutto und 
 - **Konten:** Kontonummer (eindeutig), Bezeichnung, Art (laufende Kosten oder Investition), Notiz. Konten werden nicht gelöscht, sondern stillgelegt; stillgelegte Konten erscheinen in der Übersicht nur, solange für sie im gewählten Jahr oder im Vorjahr etwas geplant ist.
 - **Plan:** Ein Betrag je Konto und Geschäftsjahr. Die Übersicht zeigt Plan und Vorjahr je Konto und die Summen für laufende Kosten, Investitionen und gesamt.
 - **Audit:** Jede Änderung an Einstellungen, Konten und Plan steht im Audit-Log (Modul `budget`), beim Plan mit Betrag vorher und nachher.
-- **Stand:** Einstellungen, Konten, Plan und Übersicht sind umgesetzt.
-- **Geplant:** Vertragspartner und Rechnungssteller; Verträge mit Laufzeit und Kündigungsfrist, deren erwartete Kosten als „gebunden“ zählen; Rechnungen mit Netto, Steuersatz, Brutto, Beleg als PDF und Prüfung durch den Budgetverwalter; Auswertung über fünf Jahre; Excel-Export; Import.
+- **Partner:** Firmen als Vertragspartner, Rechnungssteller oder beides, mit eigener Kundennummer. Keine Personen. Partner werden stillgelegt, nicht gelöscht.
+- **Verträge:** Bezeichnung, Vertragspartner, abweichender Rechnungssteller, Konto, Betrag je Zahlung (brutto) mit Turnus (monatlich, vierteljährlich, halbjährlich, jährlich, einmalig), Beginn, Ende der Laufzeit, Verlängerung, Kündigungsfrist, Kündigungstag und Stand des Auftragsverarbeitungsvertrags (AVV).
+- **Gebunden:** Summe der Zahlungen eines Vertrags, die im Geschäftsjahr fällig werden. Die erste Zahlung zählt zum Beginn, die weiteren im Turnus. Ein Vertrag mit Verlängerung läuft weiter, bis er gekündigt ist. Die Übersicht zeigt je Konto Plan, gebunden und frei (Plan abzüglich gebunden).
+- **Kündigungstermin:** Ende der Laufzeit abzüglich der Kündigungsfrist; ist er für die laufende Laufzeit verstrichen, gilt der Termin der nächsten. Die Übersicht listet Termine der nächsten 120 Tage; ab 60 Tagen vorher steht der Vertrag als Aufgabe auf der Startseite (für `Budget.Editor` und `Budget.Manager`).
+- **Stand:** Einstellungen, Konten, Plan, Partner, Verträge und Übersicht sind umgesetzt.
+- **Geplant:** Rechnungen mit Netto, Steuersatz, Brutto, Beleg als PDF und Prüfung durch den Budgetverwalter (dann auch Ist und Prognose); Auswertung über fünf Jahre; Excel-Export; Import.
 
 ## 8a. Bereich IT-Tools
 
@@ -518,7 +522,9 @@ Evergreen:
 | M365 › Lizenzen | Tenant.Reader | Liste der Lizenzen mit gekauft, zugewiesen, frei, Stichtag und Hinweisen; Detail mit Verlauf |
 | M365 › Benutzer | Tenant.Reader | Zahl der Konten (Mitglieder, Gäste, aktiv, deaktiviert, mit Lizenz) mit Verlauf |
 | M365 › Zertifikate und Secrets | Tenant.Reader | Zertifikate und Secrets der Anwendungen im Tenant mit Ablaufdatum, Restlaufzeit und Einstufung; Ansicht „Handlungsbedarf“ oder alle; zweite Ansicht als Waben mit Einzelheiten nach Auswahl |
-| IT-Budget › Übersicht | Budget.* (Plan ändern: Budget.Manager) | Plan je Konto für ein Geschäftsjahr mit Vorjahr und Summen; Plan bearbeiten |
+| IT-Budget › Übersicht | Budget.* (Plan ändern: Budget.Manager) | Kennzahlen, Budget nach Konten als Balken, Kündigungstermine der nächsten 120 Tage, Handlungsbedarf; Plan je Konto mit gebunden, frei und Vorjahr; Plan bearbeiten |
+| IT-Budget › Verträge | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Verträge mit Partnern, Jahreskosten, nächstem Kündigungstermin und AVV; anlegen, ändern, kündigen |
+| IT-Budget › Partner | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Vertragspartner und Rechnungssteller; anlegen, ändern, stilllegen |
 | IT-Budget › Konten | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Liste der Konten; anlegen, ändern, stilllegen |
 | IT-Budget › Einstellungen | Budget.Manager | Beginn und Bezeichnung des Geschäftsjahrs, Kostenstelle |
 | M365 › Snapshots | Config.* | Abrufe mit Status, Vergleich zweier Snapshots, JSON-Export |

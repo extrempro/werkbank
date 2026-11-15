@@ -17,6 +17,33 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("aktiv");
   await expectNoA11yViolations(page);
 
+  await page.goto("/budget/partner");
+  await expect(page.getByRole("heading", { level: 1, name: "Partner" })).toBeVisible();
+  await page.getByLabel("Name der Firma", { exact: true }).fill(`Beispiel Partner ${number}`);
+  await page.getByRole("button", { name: "Partner anlegen" }).click();
+  await expect(page.getByText(`Beispiel Partner ${number} ist gespeichert.`)).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/budget/vertraege");
+  await expect(page.getByRole("heading", { level: 1, name: "Verträge" })).toBeVisible();
+  await page.getByLabel("Bezeichnung", { exact: true }).fill(`Wartung ${number}`);
+  await page
+    .getByRole("combobox", { name: /^Vertragspartner/ })
+    .selectOption({ label: `Beispiel Partner ${number}` });
+  await page
+    .getByRole("combobox", { name: /^Konto/ })
+    .selectOption({ label: `${number} Testkonto Wartung` });
+  await page.getByRole("textbox", { name: /^Betrag je Zahlung/ }).fill("100,00");
+  await page.getByRole("combobox", { name: /^Turnus/ }).selectOption("monatlich");
+  await page.getByLabel("Beginn", { exact: true }).fill(`${new Date().getFullYear()}-01-01`);
+  await page.getByRole("button", { name: "Vertrag anlegen" }).click();
+  await expect(page.getByText(`Wartung ${number} ist gespeichert.`)).toBeVisible();
+  // Zwölf Monatszahlungen im laufenden Jahr
+  await expect(page.getByRole("row", { name: new RegExp(`Wartung ${number}`) })).toContainText(
+    "1.200,00",
+  );
+  await expectNoA11yViolations(page);
+
   await page.goto("/budget");
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
   await page.getByRole("button", { name: "Plan bearbeiten" }).click();
@@ -25,6 +52,10 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await page.getByRole("button", { name: "Plan speichern" }).click();
   await expect(page.getByText("Der Plan ist gespeichert.")).toBeVisible();
   await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("1.234,50");
+  await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("1.200,00");
+  await expect(
+    page.getByRole("heading", { name: /Kündigungstermine – nächste 120 Tage/ }),
+  ).toBeVisible();
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/einstellungen");
@@ -37,11 +68,19 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
   await loginAs(page, ["Budget.Reader"], "Lena Lesend");
   await page.goto("/budget");
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
-  await expect(page.getByText("Plan gesamt")).toBeVisible();
+  await expect(page.getByText(/^Plan Geschäftsjahr/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Plan bearbeiten" })).toHaveCount(0);
   await page.goto("/budget/konten");
   await expect(page.getByRole("heading", { level: 1, name: "Konten" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Konto anlegen" })).toHaveCount(0);
+  for (const [path, title] of [
+    ["/budget/vertraege", "Verträge"],
+    ["/budget/partner", "Partner"],
+  ] as const) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    await expect(page.getByRole("button", { name: /anlegen$/ })).toHaveCount(0);
+  }
   await page.goto("/budget/einstellungen");
   await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
 
@@ -59,7 +98,13 @@ test("Ohne Budget-Rolle gibt es den Bereich und die Daten nicht", async ({ page 
   await loginAs(page, ["Tools.User"], "Tina Tools");
   await page.goto("/budget");
   await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
-  for (const path of ["/api/budget/overview", "/api/budget/accounts", "/api/budget/settings"]) {
+  for (const path of [
+    "/api/budget/overview",
+    "/api/budget/accounts",
+    "/api/budget/settings",
+    "/api/budget/partners",
+    "/api/budget/contracts",
+  ]) {
     expect((await page.request.get(path)).status()).toBe(403);
   }
 });
