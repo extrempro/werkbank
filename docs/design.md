@@ -68,6 +68,6 @@ Kopfzeile, Navigation, Seitentitel, Filter-Chips, Tabelle, Listeneintrag, Detail
 
 ## 7. Texte
 
-- Deutsch. Gegenüber Nutzern: „du“ in IT-Bereichen, „Sie“ in Ansichten für Betriebsrat und Geschäftsführung. **[OFFEN]** einheitlich festlegen.
+- Deutsch. Anrede überall „du“, auch in den Ansichten für Betriebsrat und Geschäftsführung (entschieden).
 - Buttons beschreiben die Handlung („Als gewollt markieren“, nicht „OK“).
 - Fehlermeldungen sagen, was passiert ist und was man tun kann.
