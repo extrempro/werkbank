@@ -174,6 +174,31 @@ class UtcmClient:
         """Abos des Tenants mit Zustand und nächstem Stichtag."""
         return self._pages(f"{GRAPH_URL}/directory/subscriptions", {})
 
+    def applications(self) -> list[dict[str, Any]]:
+        """App-Registrierungen mit ihren Zertifikaten und Secrets (ohne geheime Werte)."""
+        return self._pages(
+            f"{GRAPH_URL}/applications",
+            {
+                "$select": "id,appId,displayName,passwordCredentials,keyCredentials",
+                "$top": "999",
+            },
+        )
+
+    def sso_service_principals(self) -> list[dict[str, Any]]:
+        """Unternehmensanwendungen mit SAML-Anmeldung und ihren Signaturzertifikaten.
+
+        Gefiltert wird hier und nicht bei Microsoft, weil das Feld dort nicht verlässlich
+        filterbar ist.
+        """
+        principals = self._pages(
+            f"{GRAPH_URL}/servicePrincipals",
+            {
+                "$select": "id,appId,displayName,keyCredentials,preferredSingleSignOnMode",
+                "$top": "999",
+            },
+        )
+        return [entry for entry in principals if entry.get("preferredSingleSignOnMode") == "saml"]
+
     def user_count(self, filter_text: str | None) -> int:
         """Zahl der Konten, optional gefiltert. Liest nur die Zahl, keine Personen."""
         params = {"$filter": filter_text} if filter_text else {}

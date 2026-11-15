@@ -83,3 +83,27 @@ def decrypt_secret(settings: Settings, token: str) -> str | None:
         return _fernet(settings).decrypt(token.encode("ascii")).decode("utf-8")
     except (InvalidToken, SecretKeyMissingError, ValueError):
         return None
+
+
+# Vorlauf für ablaufende Zertifikate und Secrets in Tagen: Hinweis, Warnung, dringend.
+WARN_DAYS_KEY = "tenant.credential_warn_days"
+WARN_DAYS_DEFAULT = (60, 30, 7)
+WARN_DAYS_MIN = 1
+WARN_DAYS_MAX = 365
+
+
+def valid_warn_days(value: Any) -> tuple[int, int, int] | None:
+    """Drei ganze Zahlen, absteigend und innerhalb der Grenzen; sonst None."""
+    if not isinstance(value, (list, tuple)) or len(value) != 3:
+        return None
+    if any(isinstance(day, bool) or not isinstance(day, int) for day in value):
+        return None
+    notice, warn, urgent = value
+    if not WARN_DAYS_MAX >= notice > warn > urgent >= WARN_DAYS_MIN:
+        return None
+    return (notice, warn, urgent)
+
+
+def warn_days(db: Session) -> tuple[int, int, int]:
+    """Der eingestellte Vorlauf, sonst der Standard."""
+    return valid_warn_days(get_setting(db, WARN_DAYS_KEY)) or WARN_DAYS_DEFAULT

@@ -285,6 +285,10 @@ export interface AdminSettings {
   audit_retention_days: number;
   audit_retention_min: number;
   audit_retention_max: number;
+  /** Vorlauf für ablaufende Zertifikate und Secrets in Tagen: Hinweis, Warnung, dringend. */
+  credential_warn_days?: number[];
+  credential_warn_min?: number;
+  credential_warn_max?: number;
 }
 
 export interface SmtpUpdate {
@@ -312,6 +316,10 @@ export function sendTestMail(): Promise<{ recipient: string }> {
 
 export function saveAuditRetention(days: number): Promise<AdminSettings> {
   return putJson("/api/admin/settings/audit-retention", { days });
+}
+
+export function saveCredentialWarnDays(days: number[]): Promise<AdminSettings> {
+  return putJson("/api/admin/settings/credential-warn-days", { days });
 }
 
 export function saveAiSettings(update: AiUpdate): Promise<AdminSettings> {

@@ -432,7 +432,8 @@ Offene Vorgänge je Schritt (Tagesordnungsvorlage BR), Beschlüsse im Zeitraum, 
 - **Verlauf:** Je Tag ein Eintrag (der letzte Abruf des Tages gilt). Aufbewahrung: drei Jahre, danach löscht der Abruf alte Einträge.
 - **Diagramme:** Liniendiagramm mit einer Achse, höchstens drei Reihen in fester Farbfolge, Werte eines Tages per Zeiger oder Regler, dazu immer eine Tabelle.
 - **Stand:** Lizenzen (gekauft, zugewiesen, frei, Einheiten in Kulanzfrist oder gesperrt, nächster Stichtag der Abos, Testabo) und Benutzerzahlen (gesamt, Gäste, deaktiviert, mit Lizenz). Hinweise in der Liste: aufgebraucht, überbucht, Stichtag in höchstens 30 Tagen.
-- **Geplant:** Zertifikate und Secrets der App-Registrierungen mit Aufgaben und Mail-Benachrichtigung; Dienststatus; Domains mit Abgleich der DNS-Einträge (Abfrage über den Resolver des Docker-Hosts); Nutzung der Dienste als Summen. Schwellen für Hinweise werden dann in der Verwaltung einstellbar.
+- **Zertifikate und Secrets:** Der Abruf (`TENANT_CREDENTIALS_ENABLED`, Berechtigung `Application.Read.All`) liest App-Registrierungen und Unternehmensanwendungen mit SAML. Gespeichert werden Anwendung, Art, Bezeichnung, Beginn und Ablauf, nie der geheime Wert. Einstufung nach Restlaufzeit: Hinweis, Warnung, dringend, abgelaufen; der Vorlauf (Standard 60, 30 und 7 Tage) steht in der Verwaltung unter „Allgemein“. Ab dem Hinweis stehen die Einträge als Aufgabe auf der Startseite (Rolle `Tenant.Reader`). Eine Mail-Benachrichtigung gibt es noch nicht.
+- **Geplant:** Mail-Benachrichtigung zu ablaufenden Zertifikaten und Secrets; Dienststatus; Domains mit Abgleich der DNS-Einträge (Abfrage über den Resolver des Docker-Hosts); Nutzung der Dienste als Summen.
 
 ## 8a. Bereich IT-Tools
 
@@ -501,6 +502,7 @@ Evergreen:
 | IT-Tools | Tools.User | Übersicht aller Tools mit Suche und Favoriten, eine Seite je Kategorie (in der Navigation), je Tool eine eigene Seite |
 | M365 › Lizenzen | Tenant.Reader | Liste der Lizenzen mit gekauft, zugewiesen, frei, Stichtag und Hinweisen; Detail mit Verlauf |
 | M365 › Benutzer | Tenant.Reader | Zahl der Konten (Mitglieder, Gäste, aktiv, deaktiviert, mit Lizenz) mit Verlauf |
+| M365 › Zertifikate und Secrets | Tenant.Reader | Zertifikate und Secrets der Anwendungen im Tenant mit Ablaufdatum, Restlaufzeit und Einstufung; Ansicht „Handlungsbedarf“ oder alle |
 | M365 › Snapshots | Config.* | Abrufe mit Status, Vergleich zweier Snapshots, JSON-Export |
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |

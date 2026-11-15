@@ -12,6 +12,7 @@ import {
   allNavItems,
   areaForPath,
   areasFor,
+  CREDENTIALS_PATH,
   LICENSES_PATH,
   NEWS_PATH,
   toolCategoryPath,
@@ -33,6 +34,7 @@ import { RecommendationsPage } from "../modules/m365/RecommendationsPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
 import { hasUnseenRelease } from "../release-notes";
+import { CredentialsPage } from "../modules/tenant/CredentialsPage";
 import { LicensesPage } from "../modules/tenant/LicensesPage";
 import { UsersPage } from "../modules/tenant/UsersPage";
 import { CATEGORY_LABELS, findTool, type ToolCategory } from "../tools";
@@ -219,6 +221,8 @@ export function Layout({ me }: LayoutProps) {
     page = <LicensesPage selectedId={licenseId} />;
   } else if (path === USERS_PATH && current) {
     page = <UsersPage />;
+  } else if (path === CREDENTIALS_PATH && current) {
+    page = <CredentialsPage />;
   } else if (toolId !== null && toolsAllowed) {
     page = <ToolPage key={toolId} id={toolId} />;
   } else if (path === "/evergreen" && current) {

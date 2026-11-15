@@ -207,6 +207,7 @@ Der Collector liest die Einstellungen des Tenants über **Unified Tenant Configu
 | `ServiceMessage.Read.All` | Evergreen: Meldungen aus dem Nachrichtencenter lesen. |
 | `SecurityEvents.Read.All` | Freiwillig: Empfehlungen aus Microsoft Secure Score lesen (Seite „Empfehlungen“). Erst danach in der `.env` `SECURE_SCORE_ENABLED=true` setzen; ohne die Berechtigung schlägt der Abruf fehl. |
 | `Organization.Read.All` und `User.Read.All` | Freiwillig: Lizenzen und Benutzerzahlen lesen (Seiten „Lizenzen“ und „Benutzer“). Gelesen werden gekaufte und zugewiesene Lizenzen, die Abos mit ihrem Stichtag und die **Zahl** der Konten; Namen von Personen ruft die Werkbank nicht ab. `User.Read.All` erlaubt bei Microsoft grundsätzlich das Lesen aller Benutzerprofile, eine engere Berechtigung für die reine Anzahl gibt es nicht. Erst danach in der `.env` `TENANT_MONITOR_ENABLED=true` setzen; ohne die Berechtigungen schlägt der Abruf fehl. |
+| `Application.Read.All` | Freiwillig: Zertifikate und Secrets der Anwendungen lesen (Seite „Zertifikate und Secrets“). Gelesen werden Bezeichnung und Ablaufdatum von App-Registrierungen und die Signaturzertifikate von Unternehmensanwendungen mit SAML. Den geheimen Wert eines Secrets liefert Microsoft nicht aus, die Werkbank speichert ihn nie. Erst danach in der `.env` `TENANT_CREDENTIALS_ENABLED=true` setzen; ohne die Berechtigung schlägt der Abruf fehl. |
 
 ### 4.2 Dienstprinzipal von UTCM einrichten
 

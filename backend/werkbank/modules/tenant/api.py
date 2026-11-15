@@ -7,10 +7,17 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
+from werkbank.core.app_settings import warn_days
 from werkbank.core.deps import DbDep, SettingsDep, require_roles
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
-from werkbank.modules.tenant.models import TenantLicense, TenantLicenseSample, TenantUserSample
+from werkbank.modules.tenant.credentials import ATTENTION_LEVELS, days_left, level_for
+from werkbank.modules.tenant.models import (
+    TenantCredential,
+    TenantLicense,
+    TenantLicenseSample,
+    TenantUserSample,
+)
 from werkbank.modules.tenant.names import license_name
 
 router = APIRouter(prefix="/api/tenant")
@@ -170,4 +177,72 @@ def get_users(user: Reader, db: DbDep, settings: SettingsDep, days: Days = 90) -
         fetched_at=latest.fetched_at if latest else None,
         current=user_sample_out(latest) if latest else None,
         samples=[user_sample_out(sample) for sample in samples],
+    )
+
+
+class CredentialOut(BaseModel):
+    id: int
+    # „app“: App-Registrierung; „sso“: Unternehmensanwendung mit Signaturzertifikat
+    owner_kind: str
+    owner_name: str
+    app_id: str | None
+    # „secret“ oder „zertifikat“
+    kind: str
+    name: str | None
+    starts_at: datetime | None
+    expires_at: datetime | None
+    # Ganze Tage bis zum Ablauf; negativ, wenn abgelaufen
+    days_left: int | None
+    # abgelaufen, dringend, warnung, hinweis oder ok
+    level: str
+
+
+class CredentialListOut(BaseModel):
+    enabled: bool
+    fetched_at: datetime | None
+    # Vorlauf in Tagen: Hinweis, Warnung, dringend
+    warn_days: list[int]
+    total: int
+    attention: int
+    entries: list[CredentialOut]
+
+
+@router.get("/credentials")
+def list_credentials(user: Reader, db: DbDep, settings: SettingsDep) -> CredentialListOut:
+    levels = warn_days(db)
+    now = now_utc()
+    rows = db.scalars(select(TenantCredential).where(TenantCredential.active.is_(True))).all()
+    entries = []
+    for row in rows:
+        left = days_left(row.expires_at, now)
+        entries.append(
+            CredentialOut(
+                id=row.id,
+                owner_kind=row.owner_kind,
+                owner_name=row.owner_name,
+                app_id=row.app_id,
+                kind=row.kind,
+                name=row.name,
+                starts_at=row.starts_at,
+                expires_at=row.expires_at,
+                days_left=left,
+                level=level_for(left, levels),
+            )
+        )
+    # Was zuerst abläuft, steht oben; Einträge ohne Ablaufdatum am Ende.
+    entries.sort(
+        key=lambda entry: (
+            entry.days_left is None,
+            entry.days_left or 0,
+            entry.owner_name.lower(),
+            entry.id,
+        )
+    )
+    return CredentialListOut(
+        enabled=settings.tenant_credentials_enabled and settings.collector_configured,
+        fetched_at=db.scalar(select(func.max(TenantCredential.fetched_at))),
+        warn_days=list(levels),
+        total=len(entries),
+        attention=sum(1 for entry in entries if entry.level in ATTENTION_LEVELS),
+        entries=entries,
     )

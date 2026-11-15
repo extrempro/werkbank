@@ -106,4 +106,18 @@ describe("GeneralSettings", () => {
     expect(await screen.findByText("Die Aufbewahrungsfrist ist gespeichert.")).toBeVisible();
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ days: 180 });
   });
+
+  it("speichert den Vorlauf für Zertifikate und prüft die Reihenfolge", async () => {
+    const calls = stubFetch(200, { ...settings, credential_warn_days: [90, 30, 7] });
+    render(<GeneralSettings settings={settings} onChange={() => undefined} />);
+    expect(screen.getByLabelText("Hinweis ab (Tage)")).toHaveValue(60);
+    fireEvent.change(screen.getByLabelText("Hinweis ab (Tage)"), { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: "Vorlauf speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("drei absteigende ganze Zahlen");
+    expect(calls).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText("Hinweis ab (Tage)"), { target: { value: "90" } });
+    fireEvent.click(screen.getByRole("button", { name: "Vorlauf speichern" }));
+    expect(await screen.findByText("Der Vorlauf ist gespeichert.")).toBeVisible();
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ days: [90, 30, 7] });
+  });
 });

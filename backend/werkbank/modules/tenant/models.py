@@ -2,7 +2,17 @@
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, func, text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from werkbank.db import Base
@@ -61,4 +71,32 @@ class TenantUserSample(Base):
     guests_disabled: Mapped[int] = mapped_column(Integer)
     # Konten mit mindestens einer Lizenz; None, wenn Microsoft die Zahl nicht liefert
     licensed: Mapped[int | None] = mapped_column(Integer)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TenantCredential(Base):
+    """Zertifikat oder Secret einer Anwendung im Tenant, mit Ablaufdatum.
+
+    Gespeichert werden nur Bezeichnung und Daten, nie der geheime Wert (Microsoft liefert ihn
+    ohnehin nicht).
+    """
+
+    __tablename__ = "tenant_credentials"
+    __table_args__ = (UniqueConstraint("owner_kind", "owner_id", "kind", "key_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # „app“: App-Registrierung; „sso“: Unternehmensanwendung mit Signaturzertifikat
+    owner_kind: Mapped[str] = mapped_column(String(8))
+    # Objekt-ID der Anwendung in Entra
+    owner_id: Mapped[str] = mapped_column(String(64))
+    app_id: Mapped[str | None] = mapped_column(String(64))
+    owner_name: Mapped[str] = mapped_column(String(256))
+    # „secret“ oder „zertifikat“
+    kind: Mapped[str] = mapped_column(String(16))
+    key_id: Mapped[str] = mapped_column(String(64))
+    name: Mapped[str | None] = mapped_column(String(256))
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    # False: Der Eintrag fehlte im letzten Abruf (entfernt oder Anwendung gelöscht).
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

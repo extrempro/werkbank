@@ -133,3 +133,65 @@ export function licenseNotes(license: License, now: number): LicenseNote[] {
   }
   return notes;
 }
+
+export type CredentialLevel = "abgelaufen" | "dringend" | "warnung" | "hinweis" | "ok";
+
+export interface Credential {
+  id: number;
+  /** „app“: App-Registrierung; „sso“: Unternehmensanwendung mit Signaturzertifikat. */
+  owner_kind: string;
+  owner_name: string;
+  app_id: string | null;
+  /** „secret“ oder „zertifikat“. */
+  kind: string;
+  name: string | null;
+  starts_at: string | null;
+  expires_at: string | null;
+  /** Ganze Tage bis zum Ablauf; negativ, wenn abgelaufen. */
+  days_left: number | null;
+  level: CredentialLevel;
+}
+
+export interface CredentialList {
+  enabled: boolean;
+  fetched_at: string | null;
+  /** Vorlauf in Tagen: Hinweis, Warnung, dringend. */
+  warn_days: number[];
+  total: number;
+  attention: number;
+  entries: Credential[];
+}
+
+export function fetchCredentials(): Promise<CredentialList> {
+  return getJson(`${BASE}/credentials`);
+}
+
+/** Art des Eintrags in Worten. */
+export function credentialKind(entry: Credential): string {
+  if (entry.kind === "secret") {
+    return "Secret";
+  }
+  return entry.owner_kind === "sso" ? "Signaturzertifikat (SAML)" : "Zertifikat";
+}
+
+/** Restlaufzeit in Worten. */
+export function remainingText(days: number | null): string {
+  if (days === null) {
+    return "ohne Ablaufdatum";
+  }
+  if (days < 0) {
+    return days === -1 ? "seit 1 Tag abgelaufen" : `seit ${-days} Tagen abgelaufen`;
+  }
+  if (days === 0) {
+    return "läuft heute ab";
+  }
+  return days === 1 ? "noch 1 Tag" : `noch ${formatCount(days)} Tage`;
+}
+
+export const LEVEL_INFO: Record<CredentialLevel, { text: string; tone: "ok" | "todo" | "bad" | "neutral" }> = {
+  abgelaufen: { text: "abgelaufen", tone: "bad" },
+  dringend: { text: "dringend", tone: "bad" },
+  warnung: { text: "läuft bald ab", tone: "todo" },
+  hinweis: { text: "im Blick behalten", tone: "neutral" },
+  ok: { text: "in Ordnung", tone: "ok" },
+};

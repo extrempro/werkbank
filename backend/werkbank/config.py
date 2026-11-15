@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     # Lizenzen und Benutzerzahlen (braucht Organization.Read.All und User.Read.All)
     tenant_monitor_enabled: bool = False
     tenant_monitor_interval_hours: int = 24
+    # Zertifikate und Secrets der Anwendungen (braucht Application.Read.All)
+    tenant_credentials_enabled: bool = False
     # UTCM-Ressourcentypen, kommagetrennt
     collector_resources: str = (
         "microsoft.entra.conditionalaccesspolicy,"

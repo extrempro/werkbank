@@ -23,6 +23,7 @@ from werkbank.modules.m365_config.recommendations_api import router as recommend
 from werkbank.modules.m365_config.search import m365_config_search
 from werkbank.modules.m365_config.tasks import m365_config_tasks
 from werkbank.modules.tenant.api import router as tenant_router
+from werkbank.modules.tenant.tasks import tenant_tasks
 from werkbank.security import SecurityHeadersMiddleware
 from werkbank.web import mount_frontend
 
@@ -43,7 +44,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
     # Module, die Aufgaben für die Startseite melden
-    app.state.task_providers = [m365_config_tasks, evergreen_tasks]
+    app.state.task_providers = [m365_config_tasks, evergreen_tasks, tenant_tasks]
     # Module, die Treffer für die Suche liefern
     app.state.search_providers = [m365_config_search, evergreen_search]
     # Reihenfolge: zuletzt hinzugefügt = äußerste Schicht. Sicherheits-Header immer setzen.

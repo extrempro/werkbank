@@ -24,6 +24,7 @@ const TENANT_READER = "Tenant.Reader";
 export const TOOLS_PATH = "/it-tools";
 export const LICENSES_PATH = "/m365/lizenzen";
 export const USERS_PATH = "/m365/benutzer";
+export const CREDENTIALS_PATH = "/m365/zugangsdaten";
 
 /** Seite einer Kategorie der IT-Tools. */
 export function toolCategoryPath(category: string): string {
@@ -97,6 +98,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
         items: [
           { path: LICENSES_PATH, label: "Lizenzen", icon: "lizenzen" },
           { path: USERS_PATH, label: "Benutzer", icon: "benutzer" },
+          { path: CREDENTIALS_PATH, label: "Zertifikate & Secrets", icon: "schluessel" },
         ],
       });
     }

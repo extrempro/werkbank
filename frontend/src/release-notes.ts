@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.22.0",
+    date: "2026-11-15",
+    summary: "Ablaufende Zertifikate und Secrets im Tenant im Blick.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Neu: Die Seite „Zertifikate & Secrets“ zeigt, wann Zertifikate und Secrets der Anwendungen im Tenant ablaufen, das Dringendste zuerst.",
+          "Was bald abläuft oder schon abgelaufen ist, steht als Aufgabe auf der Startseite.",
+          "Wie früh die Werkbank hinweist, lässt sich in der Verwaltung unter „Allgemein“ einstellen (Standard: 60, 30 und 7 Tage).",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.21.0",
     date: "2026-11-15",
     summary: "IT-Tools: Werkzeuge für Active Directory und Microsoft 365, weitere Generatoren.",
