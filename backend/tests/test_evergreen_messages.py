@@ -11,7 +11,8 @@ from werkbank.config import Settings
 from werkbank.core.models import AuditLog
 from werkbank.main import create_app
 from werkbank.modules.evergreen.jobs import FETCH_MESSAGES
-from werkbank.modules.evergreen.message_center import fetch_messages, html_to_text, parse_time
+from werkbank.core.text import html_to_text
+from werkbank.modules.evergreen.message_center import fetch_messages, parse_time
 from werkbank.modules.evergreen.models import EvItem, EvMessage, MessageStatus
 from werkbank.modules.m365_config.utcm import UtcmClient
 from werkbank.worker.tasks import build_registry
