@@ -9,12 +9,15 @@ from werkbank.core.auth import router as auth_router
 from werkbank.core.avatar import router as avatar_router
 from werkbank.core.csrf import OriginCheckMiddleware
 from werkbank.core.ratelimit import RateLimitMiddleware, default_rules
+from werkbank.core.search import router as search_router
 from werkbank.core.tasks import router as tasks_router
 from werkbank.db import database_ready
 from werkbank.modules.evergreen.api import router as evergreen_router
+from werkbank.modules.evergreen.search import evergreen_search
 from werkbank.modules.evergreen.tasks import evergreen_tasks
 from werkbank.modules.evergreen.workflow import evergreen_workflow
 from werkbank.modules.m365_config.api import router as m365_config_router
+from werkbank.modules.m365_config.search import m365_config_search
 from werkbank.modules.m365_config.tasks import m365_config_tasks
 from werkbank.security import SecurityHeadersMiddleware
 from werkbank.web import mount_frontend
@@ -37,6 +40,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     # Module, die Aufgaben für die Startseite melden
     app.state.task_providers = [m365_config_tasks, evergreen_tasks]
+    # Module, die Treffer für die Suche liefern
+    app.state.search_providers = [m365_config_search, evergreen_search]
     # Reihenfolge: zuletzt hinzugefügt = äußerste Schicht. Sicherheits-Header immer setzen.
     app.add_middleware(OriginCheckMiddleware, allowed_origin=settings.public_origin)
     app.add_middleware(RateLimitMiddleware, rules=default_rules(settings))
@@ -44,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth_router)
     app.include_router(audit_router)
     app.include_router(avatar_router)
+    app.include_router(search_router)
     app.include_router(tasks_router)
     app.include_router(m365_config_router)
     app.include_router(evergreen_router)

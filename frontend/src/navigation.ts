@@ -30,6 +30,7 @@ export function navigationFor(roles: readonly string[]): NavGroup[] {
       title: null,
       items: [
         { path: "/", label: "Start" },
+        { path: "/suche", label: "Suche" },
         { path: NEWS_PATH, label: "Neuigkeiten" },
       ],
     },

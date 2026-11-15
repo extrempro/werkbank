@@ -16,8 +16,24 @@ export function usePath(): string {
 }
 
 export function navigate(path: string): void {
-  if (path !== window.location.pathname) {
+  if (path !== window.location.pathname + window.location.search) {
     window.history.pushState(null, "", path);
     window.dispatchEvent(new Event("werkbank:navigate"));
   }
+}
+
+/** Wert eines Parameters aus der Adresszeile (z. B. `q` in `/suche?q=teams`), sonst leer. */
+export function useSearchParam(name: string): string {
+  const read = () => new URLSearchParams(window.location.search).get(name) ?? "";
+  const [value, setValue] = useState(read);
+  useEffect(() => {
+    const update = () => setValue(new URLSearchParams(window.location.search).get(name) ?? "");
+    window.addEventListener("popstate", update);
+    window.addEventListener("werkbank:navigate", update);
+    return () => {
+      window.removeEventListener("popstate", update);
+      window.removeEventListener("werkbank:navigate", update);
+    };
+  }, [name]);
+  return value;
 }

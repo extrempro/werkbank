@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useId, useState, type MouseEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useState,
+  type FormEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { fetchTasks, type Me, type Task } from "../api";
 import { allNavItems, navigationFor, NEWS_PATH } from "../navigation";
 import { AccountPage } from "../pages/AccountPage";
@@ -6,6 +14,7 @@ import { AdminPage } from "../pages/AdminPage";
 import { AuditPage } from "../pages/AuditPage";
 import { NewsPage } from "../pages/NewsPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
+import { SEARCH_PATH, SearchPage, searchUrl } from "../pages/SearchPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { StartPage } from "../pages/StartPage";
 import { InboxPage } from "../modules/evergreen/InboxPage";
@@ -49,6 +58,17 @@ export function Layout({ me }: LayoutProps) {
     };
   }, [path]);
   const role = roleLabel(me.roles);
+  const onSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const field = event.currentTarget.elements.namedItem("q");
+    const query = field instanceof HTMLInputElement ? field.value.trim() : "";
+    if (query.length >= 2) {
+      navigate(searchUrl(query));
+      if (field instanceof HTMLInputElement) {
+        field.value = "";
+      }
+    }
+  };
   // Zähler in der Navigation: Aufgaben, die auf genau diese Seite führen; bei „Start“ alle.
   const badgeFor = (target: string): number =>
     target === "/"
@@ -78,6 +98,8 @@ export function Layout({ me }: LayoutProps) {
     page = <StartPage me={me} tasks={tasks} />;
   } else if (path === ACCOUNT_PATH) {
     page = <AccountPage me={me} />;
+  } else if (path === SEARCH_PATH) {
+    page = <SearchPage />;
   } else if (path === NEWS_PATH) {
     page = <NewsPage onSeen={onNewsSeen} />;
   } else if (path === "/audit" && current) {
@@ -141,6 +163,19 @@ export function Layout({ me }: LayoutProps) {
             <span className="brand-sub">IT-Plattform</span>
           </span>
         </a>
+        <form className="header-search" role="search" onSubmit={onSearch}>
+          <label htmlFor="kopf-suche" className="visually-hidden">
+            Suchen
+          </label>
+          <input
+            id="kopf-suche"
+            type="search"
+            name="q"
+            maxLength={100}
+            autoComplete="off"
+            placeholder="Suchen in Einstellungen, Vorgängen, Änderungen …"
+          />
+        </form>
         <div className="user">
           <a
             className="header-tasks"

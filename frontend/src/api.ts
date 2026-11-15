@@ -185,3 +185,16 @@ const dateTime = new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyl
 export function formatDateTime(iso: string | null): string {
   return iso ? dateTime.format(new Date(iso)) : "–";
 }
+
+export interface SearchHit {
+  module: string;
+  kind: string;
+  title: string;
+  subtitle: string | null;
+  link: string;
+}
+
+/** Suche über alle Module. Der Server liefert nur, was die Person sehen darf. */
+export function searchAll(query: string): Promise<{ query: string; hits: SearchHit[] }> {
+  return getJson(`/api/search?${new URLSearchParams({ q: query }).toString()}`);
+}

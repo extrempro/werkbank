@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.5.0",
+    date: "2026-11-15",
+    summary: "Neu: Suche über Einstellungen, Änderungen und Vorgänge.",
+    sections: [
+      {
+        area: "Allgemein",
+        entries: [
+          "Suche: Oben in der Kopfzeile kannst du nach Einstellungen, Änderungen und Evergreen-Vorgängen suchen. Auf dem Handy findest du die Suche in der Navigation.",
+          "Du findest nur, was du auch sonst sehen darfst. Vorgänge erscheinen für Betriebsrat und Geschäftsführung erst, wenn sie vorgelegt wurden.",
+          "Vorgänge findest du auch über ihre Nummer, zum Beispiel EV-2026-014.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.4.0",
     date: "2026-11-15",
     summary: "Evergreen hat ein neues Aussehen.",
