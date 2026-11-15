@@ -3145,6 +3145,10 @@ p.badges {
   padding-left: 20px;
 }
 
+.tool-certs code {
+  overflow-wrap: anywhere;
+}
+
 .tool-passwords code {
   font-size: 1rem;
   overflow-wrap: anywhere;

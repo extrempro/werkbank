@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Status | Entwurf v0.2 – zur Abstimmung |
-| Stand | 14.11.2026 |
+| Stand | 15.11.2026 |
 | Verantwortlich | IT-Leitung |
 | Lizenz | MIT (Open Source) |
 
@@ -431,7 +431,7 @@ Kleine Werkzeuge für den Alltag in der IT (Rechner, Generatoren, Konverter), ü
 - **Aufbau:** Jedes Tool liegt in `frontend/src/tools/<ordner>/` (Rechenlogik mit Tests, Oberfläche) und ist in `frontend/src/tools/index.ts` eingetragen. Die Oberfläche eines Tools wird erst beim Öffnen geladen.
 - **Teilbare Links:** Einstellungen eines Tools stehen in der Adresszeile (`/it-tools/<id>?…`). Dort stehen nie Geheimnisse: keine Kennwörter, Schlüssel oder eingegebenen Texte.
 - **Favoriten** je Browser (`localStorage`, Schlüssel `werkbank-it-tools-favoriten`). Verlauf und Einstellungen je Konto folgen später.
-- **Stand:** Subnetz-Rechner, Subnetting-Bits, Netze zusammenfassen, Firewall-Regeln prüfen, MAC-Adressen (Herstellerliste der IEEE eingebaut), Port-Nachschlagewerk, chmod-Rechner, Base64, UUID-Generator und Passwort-Generator.
+- **Stand:** Subnetz-Rechner, Subnetting-Bits, Netze zusammenfassen, Firewall-Regeln prüfen, MAC-Adressen (Herstellerliste der IEEE eingebaut), Port-Nachschlagewerk, chmod-Rechner, Base64, URL-Encoder, HTML-Entities, JWT-Decoder, SAML-Decoder, JSON-, YAML- und XML-Formatter, UUID-Generator und Passwort-Generator.
 - **Was nie im Link steht:** Kennwörter, eingegebene Texte, Listen von Netzen, Regelwerke und MAC-Adressen. Texte, die aus einem Link in einen Befehl zum Kopieren gelangen (Port-Nachschlagewerk), werden auf harmlose Zeichen beschränkt.
 
 ## 9. Datenmodell (Überblick)

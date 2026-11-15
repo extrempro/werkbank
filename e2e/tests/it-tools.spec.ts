@@ -113,6 +113,57 @@ test("IT-Tools: weitere Netzwerk-Tools", async ({ page }) => {
   await expectNoA11yViolations(page);
 });
 
+test("IT-Tools: Encoding und Formatter", async ({ page }) => {
+  await loginAs(page, ["Tools.User"], "Tina Tools");
+
+  await page.goto("/it-tools/json-formatter?einrueckung=4");
+  await page.getByRole("textbox", { name: "Eingabe" }).fill('{"a":1}');
+  await expect(page.getByLabel("Formatiert", { exact: true })).toContainText('    "a": 1');
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/xml-formatter");
+  await page.getByRole("textbox", { name: "Eingabe" }).fill("<a><b>x</b></a>");
+  await expect(page.getByText("wohlgeformt · 2 Elemente")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/yaml-formatter");
+  await page.getByRole("textbox", { name: "Eingabe" }).fill("a:\n    b: 1\n");
+  await expect(page.getByText("gültig", { exact: true })).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/url-encoder?modus=zerlegen");
+  await page.getByRole("textbox", { name: "URL" }).fill("https://example.com/pfad?a=1");
+  await expect(page.getByRole("row", { name: /^Host/ })).toContainText("example.com");
+  expect(page.url()).not.toContain("example");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/html-entities");
+  await page.getByRole("textbox", { name: "Eingabe" }).fill("<b>");
+  await expect(page.getByLabel("Ergebnis", { exact: true })).toContainText("&lt;b&gt;");
+  await expectNoA11yViolations(page);
+
+  // Ein Token aus Beispielwerten, im Test zusammengesetzt (keine echten Zugangsdaten).
+  const part = (value: object) =>
+    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const token = `${part({ alg: "HS256" })}.${part({ sub: "x", exp: 4102444800 })}.sig`;
+  await page.goto("/it-tools/jwt");
+  await page.getByRole("textbox", { name: "Token" }).fill(token);
+  await expect(page.getByText("gültig (Zeitraum)")).toBeVisible();
+  await expect(page.getByRole("row", { name: /^sub · Subjekt/ })).toBeVisible();
+  expect(page.url()).not.toContain("?");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/saml");
+  await page
+    .getByRole("textbox", { name: /^SAMLResponse/ })
+    .fill(
+      '<samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" ID="_1" AssertionConsumerServiceURL="https://sp.example.com/acs"/>',
+    );
+  await expect(page.getByRole("row", { name: /^ACS-URL/ })).toContainText("sp.example.com");
+  await expect(page.getByText("keine Signatur")).toBeVisible();
+  await expectNoA11yViolations(page);
+});
+
 test("IT-Tools: ohne die Rolle gibt es den Bereich nicht", async ({ page }) => {
   await loginAs(page, ["Config.Reader"], "Lea Leser");
   await page.goto("/it-tools");

@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.17.0] – 2026-11-15
+
+IT-Tools: Encoding und Formatter.
+
+### IT-Tools
+
+- **URL-Encoder:** kodieren (Parameterwert, Formular, ganze URL), dekodieren und eine URL in Bestandteile und Parameter zerlegen. Ein Kennwort in der URL wird nicht angezeigt
+- **HTML-Entities:** Sonderzeichen in Entities und zurück, Umfang wählbar
+- **JWT-Decoder:** Header, Claims mit Erklärung, Gültigkeit; Signatur mit Secret, öffentlichem Schlüssel (PEM) oder JWKS prüfen
+- **SAML-Decoder:** SAMLRequest und SAMLResponse lesen (XML, Base64, Deflate, ganze URL), mit NameID, Attributen, Gültigkeit, Signatur und Zertifikat als PEM
+- **Neue Kategorie „Formatter“:** JSON, YAML und XML prüfen und einheitlich formatieren, mit Fehlermeldung samt Zeile bei YAML und XML
+- Token, Schlüssel, SAML-Nachrichten und alle eingegebenen Texte bleiben im Browser und stehen nicht in der Adresszeile
+
+### Tests
+
+- Die Tests für JWT und SAML laufen in der Node-Umgebung, weil sie Web Crypto und `DecompressionStream` brauchen
+
 ## [0.16.0] – 2026-11-15
 
 IT-Tools: fünf weitere Netzwerk-Tools.
