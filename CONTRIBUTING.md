@@ -60,7 +60,31 @@ docs: Datenschutzkonzept ergänzt
 
 ## Lokale Entwicklung
 
-Wird mit Phase 1 ergänzt (Docker Compose für Entwicklung, Test-Login statt Entra).
+Voraussetzungen: Python 3.12, Node.js 22, Docker.
+
+```bash
+# Backend: Lint, Typen, Tests (die Tests mit Datenbank brauchen PostgreSQL, siehe .github/workflows/ci.yml)
+cd backend && pip install -e ".[dev]"
+ruff check . && ruff format --check . && mypy . && pytest
+
+# Frontend: Lint, Typen, Tests, Build
+cd frontend && npm ci
+npm run lint && npm run typecheck && npm test && npm run build
+
+# Ganze Anwendung aus dem ausgecheckten Stand starten (Test-Login statt Entra)
+cp deploy/.env.example deploy/.env
+sed -i -e 's#^PUBLIC_URL=.*#PUBLIC_URL=http://localhost:8080#' \
+  -e 's#^ENVIRONMENT=.*#ENVIRONMENT=test#' -e 's#^ENABLE_TEST_LOGIN=.*#ENABLE_TEST_LOGIN=true#' deploy/.env
+echo 'WERKBANK_BUILD_CONTEXT=..' >> deploy/.env
+echo 'WERKBANK_DOCKERFILE=backend/Dockerfile' >> deploy/.env
+./deploy/test-secrets.sh deploy/secrets
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build --wait
+
+# E2E-Tests gegen die laufende Anwendung
+cd e2e && npm ci && npx playwright install chromium && npx playwright test
+```
+
+Die CI in `.github/workflows/ci.yml` ist die maßgebliche Beschreibung der Schritte. Der Workflow „Lockfile und Formatierung“ korrigiert auf Feature-Branches Formatierung und Lockfiles selbst.
 
 ## Regeln für Claude
 

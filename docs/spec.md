@@ -55,11 +55,11 @@ Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen spä
 |---|---|
 | Laufzeit | Docker / Docker Compose |
 | Veröffentlichung | Hinter dem **NetBird Reverse Proxy**, **öffentlich erreichbar**. TLS endet am Proxy. |
-| Deployment | **Arcane Git-Sync** zieht `deploy/docker-compose.yml` aus dem Repo. Ein Merge auf `main` führt zum Deployment. |
+| Deployment | **Arcane Git-Sync** holt den Ordner `deploy/` (Compose-Datei und `Dockerfile`) aus dem Repo. Das Dockerfile holt den Quellcode beim Bauen von GitHub. Eine neue Version läuft erst nach einem neuen Build des Images (`deploy/README.md`); ein Merge auf `main` allein stellt noch nichts bereit. |
 | Netzwerkbindung | `BIND_IP` und `BIND_PORT` über `.env`. `BIND_IP` ist die Adresse, über die der NetBird Reverse Proxy den Docker-Host erreicht (NetBird-IP des Hosts oder `127.0.0.1`), **nicht** die öffentliche IP. Details: `deploy/README.md`. |
 | Konfiguration | Ausschließlich über Umgebungsvariablen bzw. Docker-Secrets. `.env.example` im Repo, `.env` niemals. |
-| Zeitzone | Speicherung in UTC, Anzeige in `Europe/Berlin`. |
-| Sprache | Oberfläche Deutsch. Texte zentral abgelegt, damit später weitere Sprachen möglich sind. |
+| Zeitzone | Speicherung in UTC, Anzeige in der Zeitzone des Browsers (im Betrieb `Europe/Berlin`). |
+| Sprache | Oberfläche Deutsch. Die Texte stehen bisher direkt in den Seiten; eine zentrale Ablage für weitere Sprachen ist noch nicht umgesetzt. |
 
 ### 3.2 Code und Repository
 
@@ -71,8 +71,8 @@ Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen spä
 | Branches | Arbeit nur auf Feature-Branches (`feature/…`, `fix/…`, `docs/…`). `main` ist geschützt. |
 | Merge | Nur per Pull Request mit grünen Checks. PRs erstellt Claude **nur auf ausdrückliche Aufforderung**. |
 | Commits | Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `security:` …) |
-| Versionen | SemVer, Git-Tags `vX.Y.Z`, GitHub Releases mit Release Notes, `CHANGELOG.md` |
-| Abhängigkeiten | Dependabot (pip, npm, Docker, GitHub Actions) |
+| Versionen | SemVer. Jeder PR, der die Anwendung ändert, hebt die Version an. Nach dem Mergen legt der Workflow `release.yml` Tag `vX.Y.Z` und GitHub Release mit dem Abschnitt aus `CHANGELOG.md` an. Was Anwender bemerken, steht zusätzlich in der App unter „Neuigkeiten“ (`frontend/src/release-notes.ts`). |
+| Abhängigkeiten | Dependabot (pip, npm, Docker, Docker Compose, GitHub Actions) |
 | Statische Analyse | CodeQL (GitHub Code Scanning) und Semgrep |
 | Secret Scanning | GitHub Secret Scanning mit Push Protection, zusätzlich gitleaks |
 
@@ -473,10 +473,13 @@ Evergreen:
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |
 | Audit-Log | Admin, Auditor | Filterbare Tabelle, Export |
 | Verwaltung | Admin (mit Step-up) | Reiter Module, Rollen, Konnektoren, Kommentarregeln, Benachrichtigungen |
-| Einstellungen (persönlich) | alle | Push an/aus, Benachrichtigungen, Hinweis zur Installation |
+| Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Version. Später: Push an/aus, Benachrichtigungen, Hinweis zur Installation |
+| Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
 
 Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz.
+
+**Stand der Umsetzung (Version 0.3):** Nach dem Entwurf gebaut sind Kopfzeile, Navigation, Startseite (ohne „letzte Aktivitäten“), M365 › Übersicht, Änderungen, Einstellungen (nach Workload gruppierte Liste statt Baum, Detail auf eigener Seite) sowie Konto und Neuigkeiten. Noch im ersten Aufbau: Evergreen › Vorgänge, Snapshots (ohne Vergleich und Export), Audit-Log, Verwaltung (nur Reiter Rollen). Noch nicht vorhanden: Suche in der Kopfzeile, Reports (Platzhalter), Empfehlungen und Microsoft-Schema je Einstellung, KI-Texte.
 
 ---
 
@@ -547,7 +550,7 @@ Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz
 - **Liste und Detail:** Liste links bzw. oben, Detail rechts bzw. darunter.
 - **Aktionen:** Hauptaktion als gefüllter Button, Nebenaktionen umrandet, gefährliche Aktionen nie als Hauptbutton. Feste Reihenfolge der Buttons.
 - **Status-Badges:** einheitliche Farben und Texte, nie nur Farbe.
-- **Vokabular:** Komponentenbibliothek im Frontend (`src/core/components`). Neue Screens verwenden nur diese Komponenten.
+- **Vokabular:** Gemeinsame Komponenten (`frontend/src/components`) und gemeinsame Gestaltung (`frontend/src/styles.css`). Neue Screens verwenden diese und bauen nichts je Seite nach.
 
 ### 12.6 Geräte
 
@@ -570,18 +573,20 @@ Handy (ab 360 px), Tablet, Desktop. Aktuelle Versionen von Edge, Chrome, Firefox
 | E2E-Tests (`e2e/`) | jeder PR | Playwright, Profile: Desktop, Tablet, iPhone. Test-Login statt Entra |
 | Barrierefreiheit | jeder PR | axe-core in Playwright, keine Verstöße „serious/critical“ |
 | Lighthouse | jeder PR | Lighthouse CI: Accessibility ≥ 95, Best Practices ≥ 95, Performance ≥ 85, PWA-Kriterien erfüllt |
-| Docker-Deployment | jeder PR | Images bauen, `docker compose up`, Healthchecks, Smoke-Test |
+| Docker-Deployment | jeder PR | Images bauen (`backend/Dockerfile` und `deploy/Dockerfile`), `docker compose up`, Healthchecks, Smoke-Test |
 | Container-Scan | jeder PR, wöchentlich | Trivy |
 | Statische Analyse | jeder PR, wöchentlich | CodeQL (Python, JavaScript/TypeScript), Semgrep (inkl. XSS-Regeln) |
 | Secrets | jeder Push, wöchentlich | gitleaks |
-| Abhängigkeiten | wöchentlich | Dependabot, pip-audit, npm audit, Prüfung auf ungenutzte Pakete |
-| Service-Worker-Update | jeder PR | Playwright-Test: alte Version, neue Version, Update-Hinweis, keine API-Daten im Cache |
+| Abhängigkeiten | wöchentlich und jeder PR | Dependabot (wöchentlich), pip-audit und npm audit (jeder PR). Eine automatische Prüfung auf ungenutzte Pakete gibt es noch nicht |
+| Service Worker | jeder PR | Playwright-Test: Offline-Seite, keine API-Daten im Cache. Der Test für den Wechsel von alter zu neuer Version mit Update-Hinweis fehlt noch |
+| Release | Merge auf `main` | `release.yml`: Tag und GitHub Release, wenn die Version neu ist |
+| Formatierung und Lockfiles | Push auf Feature-Branches | `lockfile.yml`: Prettier und Lockfiles, Korrektur als Commit |
 
 **Regelmäßige Prüfung** (wöchentlich geplant und auf Zuruf): „Prüfe auf XSS, Secrets, unnötige Dependencies und Service-Worker-Update-Probleme.“
 
 **Branch Protection auf `main`:**
 
-- PR erforderlich, mindestens eine Freigabe
+- PR erforderlich; Freigaben: 0, solange eine Person allein arbeitet, sonst mindestens 1 (`docs/repo-setup.md`)
 - alle Checks grün
 - kein Force-Push
 - lineare Historie
@@ -593,7 +598,8 @@ Handy (ab 360 px), Tablet, Desktop. Aktuelle Versionen von Edge, Chrome, Firefox
 ```
 werkbank/
 ├── backend/
-│   ├── werkbank/core/          # Auth, Rollen, Workflow, Audit, Kommentare, Aufgaben, Reports, Push
+│   ├── Dockerfile              # Build aus dem ausgecheckten Repository
+│   ├── werkbank/core/          # Anmeldung, Sitzungen, Rollen, Workflow, Audit, Aufgaben, Profilbild
 │   ├── werkbank/modules/
 │   │   ├── m365_config/
 │   │   └── evergreen/          # inkl. workflow.yaml
@@ -601,17 +607,24 @@ werkbank/
 │   ├── migrations/
 │   └── tests/
 ├── frontend/
-│   ├── src/core/               # Layout, Komponenten, Aufgaben, Workflow-Leiste
-│   ├── src/modules/
-│   └── public/                 # Manifest, Icons, offline.html
-├── powershell/
-├── e2e/
+│   ├── src/components/         # Layout, gemeinsame Komponenten
+│   ├── src/pages/              # Start, Konto, Neuigkeiten, Audit-Log, Verwaltung
+│   ├── src/modules/            # m365, evergreen
+│   ├── src/fonts/              # Inter, JetBrains Mono (mit Lizenzen)
+│   ├── src/release-notes.ts    # Texte der Seite „Neuigkeiten“
+│   └── public/                 # Manifest, Icons, offline.html, sw.js, theme.js
+├── e2e/                        # Playwright, axe-core, Lighthouse
 ├── deploy/
 │   ├── docker-compose.yml
+│   ├── Dockerfile              # Build ohne Quellcode daneben (holt ihn von GitHub)
+│   ├── README.md
 │   └── .env.example
 ├── docs/
 │   ├── spec.md
 │   ├── design.md
+│   ├── entra-setup.md
+│   ├── inbetriebnahme.md
+│   ├── repo-setup.md
 │   ├── datenschutz.md
 │   ├── a11y-wcag22.md
 │   ├── usability-iso9241.md
@@ -628,8 +641,7 @@ werkbank/
 └── README.md
 ```
 
-GitHub-Projektbeschreibung (Vorschlag): „Werkbank – interne IT-Plattform: M365-Konfigurationsüberwachung und Evergreen-Freigaben.“
-Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `configuration-management`, `fastapi`, `react`, `pwa`, `docker`.
+Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 4). Beschreibung und Topics des Repositorys stehen in [`repo-setup.md`](repo-setup.md).
 
 ---
 
@@ -638,9 +650,10 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 | Phase | Inhalt | Ergebnis | Stand |
 |---|---|---|---|
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
-| 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen (erstes Deployment steht aus) |
+| 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen, erste Installation läuft |
 | 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Erste Inbetriebnahme erfolgt, Abruf über UTCM am echten Tenant bestätigt. Offen: Bestätigung der Änderungserkennung mit „Geändert von“; später Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e), Nachrichtencenter am echten Tenant bestätigt. Offen: Anhänge (z. B. BR-Sitzungsprotokoll), Erinnerungen und Benachrichtigungen (Phase 4), KI-Vorschlag für die Zusammenfassung |
+| – | Oberfläche nach dem Entwurf, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen, Versionen 0.1 bis 0.3 | 🔄 in Arbeit: Kopfzeile, Navigation, Start und M365-Konfiguration sind umgestellt. Offen: Evergreen, Suche, letzte Aktivitäten, übrige Seiten; danach Handbuch |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
 | 5 | weitere Module nach Bedarf | – | offen |
 
@@ -658,7 +671,10 @@ Topics (Vorschlag): `internal-tool`, `microsoft-365`, `entra-id`, `evergreen`, `
 | 6 | KI-Texte | Anbieter, AVV, Freigabe Datenschutz – oder in v1 weglassen |
 | 7 | Benchmarks | CIS-Benchmark nutzbar (Lizenz) oder nur Microsoft-Empfehlungen |
 | 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit DSB, BR-Beteiligung für die Werkbank selbst |
-| 9 | Hostname | Öffentlicher Hostname der Werkbank (für Entra-Redirect-URI) |
+| 9 | Hostname | Erledigt: festgelegt, steht nur in der Konfiguration der Installation (`PUBLIC_URL`), nicht im Repository |
+| 13 | Deployment | Baut Arcane mit `deploy/Dockerfile` selbst neu, oder bleibt der Neubau auf der Kommandozeile nötig? An der Installation prüfen |
+| 14 | Anrede | „du“ oder „Sie“ einheitlich festlegen (`design.md`, Kapitel 7) |
+| 15 | Handbuch | Entsteht nach Abschluss der Oberfläche; ab dann bei jeder Änderung mitpflegen (`CLAUDE.md`) |
 | 10 | Mail | Absenderadresse für Benachrichtigungen |
 | 11 | Copyright | Entschieden: `extrempro` |
 | 12 | ASVS-Version | Entschieden: OWASP ASVS 5.0.0 |
