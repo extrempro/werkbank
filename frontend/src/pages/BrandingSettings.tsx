@@ -1,12 +1,20 @@
 import { useId, useState, type ChangeEvent, type FormEvent } from "react";
 import {
-  ApiError,
+  errorText,
   removeBrandingImage,
   saveBranding,
   uploadBrandingImage,
   type BrandingImageKind,
 } from "../api";
 import { setBranding, useBranding, type Branding } from "../branding";
+import {
+  ImageProblem,
+  INPUT_TYPES,
+  prepareImage,
+  type Prepared,
+  type ResizeMode,
+  type Size,
+} from "../imageResize";
 
 type Message = { kind: "status" | "alert"; text: string };
 
@@ -16,8 +24,6 @@ interface ImageSlot {
   kind: BrandingImageKind;
   title: string;
   hint: string;
-  accept: string;
-  types: string[];
   preview: "hell" | "dunkel";
   url: (branding: Branding) => string | null;
 }
@@ -26,50 +32,43 @@ const SLOTS: ImageSlot[] = [
   {
     kind: "logo-hell",
     title: "Logo für hellen Hintergrund",
-    hint: "Erscheint auf der Anmeldeseite in der hellen Darstellung. PNG oder WebP.",
-    accept: "image/png,image/webp",
-    types: ["image/png", "image/webp"],
+    hint: "Erscheint auf der Anmeldeseite in der hellen Darstellung.",
     preview: "hell",
     url: (branding) => branding.logo_light_url,
   },
   {
     kind: "logo-dunkel",
     title: "Logo für dunklen Hintergrund",
-    hint: "Erscheint oben links in der Kopfzeile und auf der Anmeldeseite in der dunklen Darstellung. PNG oder WebP. Auf dem Handy ist dort wenig Platz; ein eher quadratisches Logo bleibt gut erkennbar.",
-    accept: "image/png,image/webp",
-    types: ["image/png", "image/webp"],
+    hint: "Erscheint oben links in der Kopfzeile und auf der Anmeldeseite in der dunklen Darstellung. Auf dem Handy ist dort wenig Platz; ein eher quadratisches Logo bleibt gut erkennbar.",
     preview: "dunkel",
     url: (branding) => branding.logo_dark_url,
   },
   {
     kind: "favicon",
     title: "Favicon",
-    hint: "Das kleine Bild im Browser-Tab. PNG, quadratisch, 32 bis 512 Pixel.",
-    accept: "image/png",
-    types: ["image/png"],
+    hint: "Das kleine Bild im Browser-Tab. Ein nicht quadratisches Bild setzt die Werkbank mittig in ein Quadrat.",
     preview: "hell",
     url: (branding) => branding.favicon_url,
   },
 ];
 
-function errorText(error: unknown, fallback: string): string {
-  if (error instanceof ApiError && error.stepUpRequired) {
-    return "Die Anmeldung ist zu alt. Bitte die Seite neu laden und erneut anmelden.";
-  }
-  return (error instanceof ApiError ? error.detail : null) ?? fallback;
+const ACCEPT = INPUT_TYPES.join(",");
+
+function sizeText(size: Size): string {
+  return `${size.width} × ${size.height} Pixel`;
 }
 
-/** Liest eine Datei und gibt ihren Inhalt als Base64 zurück (ohne den Vorspann der Data-URL). */
-function readBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      resolve(result.slice(result.indexOf(",") + 1));
-    };
-    reader.onerror = () => reject(new Error("Datei nicht lesbar"));
-    reader.readAsDataURL(file);
-  });
+/** Sagt, was mit dem Bild geschehen ist, damit niemand über ein verändertes Bild stolpert. */
+function savedText(title: string, prepared: Prepared): string {
+  if (!prepared.changed || !prepared.before || !prepared.after) {
+    return `${title}: gespeichert.`;
+  }
+  const same =
+    prepared.before.width === prepared.after.width &&
+    prepared.before.height === prepared.after.height;
+  return same
+    ? `${title}: gespeichert (in PNG umgewandelt).`
+    : `${title}: gespeichert. Das Bild wurde von ${sizeText(prepared.before)} auf ${sizeText(prepared.after)} angepasst.`;
 }
 
 /** Verwaltung › Allgemein: Name, Akzentfarbe, Logos und Favicon. */
@@ -82,6 +81,8 @@ export function BrandingSettings() {
   const [message, setMessage] = useState<Message | null>(null);
   const [imageMessage, setImageMessage] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<ResizeMode>("auto");
+  const modeHint = useId();
   const accentHint = useId();
   const nameHint = useId();
   const maxKb = Math.floor(branding.max_image_bytes / 1024);
@@ -112,32 +113,30 @@ export function BrandingSettings() {
       return;
     }
     input.value = "";
-    if (!slot.types.includes(file.type)) {
-      setImageMessage({
-        kind: "alert",
-        text:
-          slot.kind === "favicon"
-            ? "Das Favicon muss eine PNG-Datei sein."
-            : "Erlaubt sind nur PNG- und WebP-Dateien.",
-      });
-      return;
-    }
-    if (file.size > branding.max_image_bytes) {
-      setImageMessage({ kind: "alert", text: `Die Datei ist zu groß (höchstens ${maxKb} KB).` });
+    if (!INPUT_TYPES.includes(file.type)) {
+      setImageMessage({ kind: "alert", text: "Erlaubt sind PNG-, WebP- und JPEG-Dateien." });
       return;
     }
     setBusy(true);
     setImageMessage(null);
-    readBase64(file)
-      .then((content) => uploadBrandingImage(slot.kind, content))
-      .then((result) => {
-        setBranding(result);
-        setImageMessage({ kind: "status", text: `${slot.title}: gespeichert.` });
+    const kind = slot.kind === "favicon" ? "favicon" : "logo";
+    prepareImage(file, kind, mode, branding.max_image_bytes)
+      .then((prepared) => {
+        if (prepared.bytes > branding.max_image_bytes) {
+          throw new ImageProblem(`Die Datei ist zu groß (höchstens ${maxKb} KB).`);
+        }
+        return uploadBrandingImage(slot.kind, prepared.base64).then((result) => {
+          setBranding(result);
+          setImageMessage({ kind: "status", text: savedText(slot.title, prepared) });
+        });
       })
       .catch((error: unknown) => {
         setImageMessage({
           kind: "alert",
-          text: errorText(error, "Das Bild konnte nicht gespeichert werden."),
+          text:
+            error instanceof ImageProblem
+              ? error.message
+              : errorText(error, "Das Bild konnte nicht gespeichert werden."),
         });
       })
       .finally(() => setBusy(false));
@@ -240,6 +239,22 @@ export function BrandingSettings() {
       </form>
 
       <div className="detail-body settings-form">
+        <label className="narrow">
+          Größe beim Hochladen
+          <select
+            value={mode}
+            aria-describedby={modeHint}
+            onChange={(event) => setMode(event.target.value === "original" ? "original" : "auto")}
+          >
+            <option value="auto">Automatisch anpassen (empfohlen)</option>
+            <option value="original">Original behalten</option>
+          </select>
+        </label>
+        <p className="small" id={modeHint}>
+          Automatisch: Zu große Bilder verkleinert die Werkbank vor dem Hochladen (Logos auf
+          höchstens 800 Pixel, Favicons auf 256 Pixel im Quadrat). Vergrößert wird nie. Original:
+          Das Bild bleibt, wie es ist, und muss selbst passen.
+        </p>
         <div className="branding-images">
           {SLOTS.map((slot) => {
             const url = slot.url(branding);
@@ -255,7 +270,7 @@ export function BrandingSettings() {
                   <span className="visually-hidden">– {slot.title}</span>
                   <input
                     type="file"
-                    accept={slot.accept}
+                    accept={ACCEPT}
                     disabled={busy}
                     onChange={(event) => onFile(slot, event)}
                   />
@@ -277,7 +292,8 @@ export function BrandingSettings() {
           })}
         </div>
         <p className="small">
-          Höchstens {maxKb} KB je Bild. Ohne eigenes Bild erscheint das Zeichen der Werkbank.
+          PNG, WebP oder JPEG (JPEG wird in PNG umgewandelt). Gespeichert werden höchstens {maxKb}{" "}
+          KB je Bild. Ohne eigenes Bild erscheint das Zeichen der Werkbank.
         </p>
         {imageMessage && (
           <p

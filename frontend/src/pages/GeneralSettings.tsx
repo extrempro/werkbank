@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import {
-  ApiError,
+  errorText,
   saveAuditRetention,
   saveSmtpSettings,
   sendTestMail,
@@ -15,13 +15,6 @@ const SECURITY_OPTIONS = [
   { value: "tls", label: "TLS von Anfang an (üblich auf Port 465)" },
   { value: "none", label: "Keine Verschlüsselung (nur internes Relay ohne Anmeldung)" },
 ];
-
-function errorText(error: unknown, fallback: string): string {
-  if (error instanceof ApiError && error.stepUpRequired) {
-    return "Die Anmeldung ist zu alt. Bitte die Seite neu laden und erneut anmelden.";
-  }
-  return (error instanceof ApiError ? error.detail : null) ?? fallback;
-}
 
 interface GeneralSettingsProps {
   settings: AdminSettings;

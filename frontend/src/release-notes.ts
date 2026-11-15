@@ -34,6 +34,20 @@ export const RELEASES: readonly Release[] = [
           "Neue Seite „Empfehlungen“: Sie zeigt die Empfehlungen aus Microsoft Secure Score mit dem Stand in deinem Tenant. Du siehst, was offen ist, was Microsoft zur Umsetzung rät und wie viele Punkte es bringt. Die Texte kommen von Microsoft und sind auf Englisch.",
           "Mit der Rolle Reviewer ordnest du einer Empfehlung die passenden Einstellungen zu. Die Empfehlung steht dann auch direkt bei der Einstellung.",
           "Die Seite füllt sich erst, wenn der Abruf für eure Installation eingeschaltet ist.",
+    summary:
+      "Logos passen sich beim Hochladen selbst an, und die Werkbank sagt klar, wenn du dich neu anmelden musst.",
+    sections: [
+      {
+        area: "Verwaltung",
+        entries: [
+          "Branding: Zu große Bilder verkleinert die Werkbank jetzt selbst. Ein Favicon muss nicht mehr quadratisch sein, und JPEG-Dateien gehen auch. Wer das nicht möchte, wählt „Original behalten“.",
+          "Braucht eine Änderung eine frische Anmeldung, erscheint oben ein deutlicher Hinweis mit dem Knopf „Erneut anmelden“. Danach landest du wieder auf derselben Seite.",
+        ],
+      },
+      {
+        area: "Allgemein",
+        entries: [
+          "Ist deine Sitzung abgelaufen, zeigt die Werkbank gleich die Anmeldeseite und bringt dich nach der Anmeldung zurück auf die Seite, auf der du warst.",
         ],
       },
     ],

@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import {
-  ApiError,
+  errorText,
   saveAiSettings,
   testAiConnection,
   type AdminSettings,
@@ -9,13 +9,6 @@ import {
 } from "../api";
 
 type Message = { kind: "status" | "alert"; text: string };
-
-function errorText(error: unknown, fallback: string): string {
-  if (error instanceof ApiError && error.stepUpRequired) {
-    return "Die Anmeldung ist zu alt. Bitte die Seite neu laden und erneut anmelden.";
-  }
-  return (error instanceof ApiError ? error.detail : null) ?? fallback;
-}
 
 interface AiSettingsProps {
   ai: AiSettingsData;

@@ -74,22 +74,34 @@ describe("BrandingSettings", () => {
     ).toBeVisible();
   });
 
-  it("lehnt falsche Formate und zu große Dateien schon im Browser ab", () => {
+  it("lehnt falsche Formate und zu große Dateien schon im Browser ab", async () => {
     const calls = stubFetch(DEFAULT_BRANDING);
     render(<BrandingSettings />);
     const svg = new File(["<svg/>"], "logo.svg", { type: "image/svg+xml" });
     fireEvent.change(screen.getByLabelText(/Bild hochladen – Logo für hellen Hintergrund/), {
       target: { files: [svg] },
     });
-    expect(screen.getByRole("alert")).toHaveTextContent("Erlaubt sind nur PNG- und WebP-Dateien.");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Erlaubt sind PNG-, WebP- und JPEG-Dateien.",
+    );
+    // Lässt sich das Bild im Browser nicht verkleinern, bleibt die Grenze für die Dateigröße.
     const big = new File([new Uint8Array(DEFAULT_BRANDING.max_image_bytes + 1)], "gross.png", {
       type: "image/png",
     });
     fireEvent.change(screen.getByLabelText(/Bild hochladen – Favicon/), {
       target: { files: [big] },
     });
-    expect(screen.getByRole("alert")).toHaveTextContent("Die Datei ist zu groß");
+    expect(await screen.findByText(/Die Datei ist zu groß/)).toBeVisible();
     expect(calls).toHaveLength(0);
+  });
+
+  it("bietet die Wahl zwischen automatischer Anpassung und Original", () => {
+    render(<BrandingSettings />);
+    const select = screen.getByLabelText("Größe beim Hochladen");
+    expect(select).toHaveValue("auto");
+    fireEvent.change(select, { target: { value: "original" } });
+    expect(select).toHaveValue("original");
+    expect(screen.getByText(/Vergrößert wird nie/)).toBeVisible();
   });
 
   it("entfernt ein Bild und zeigt die Meldung des Servers bei Fehlern", async () => {

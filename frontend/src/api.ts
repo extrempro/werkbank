@@ -44,10 +44,47 @@ export class ApiError extends Error {
   }
 }
 
+/** Adresse für die Anmeldung, danach zurück zur angegebenen Seite. */
+export function loginUrl(returnTo: string): string {
+  return returnTo === "/"
+    ? "/auth/login"
+    : `/auth/login?${new URLSearchParams({ return_to: returnTo }).toString()}`;
+}
+
+/**
+ * Fehlertext für Formulare. Bei zu alter Anmeldung verweist er auf den Hinweis oben auf der
+ * Seite, der die erneute Anmeldung anbietet.
+ */
+export function errorText(error: unknown, fallback: string): string {
+  if (error instanceof ApiError && error.status === 401) {
+    return "Du bist nicht mehr angemeldet.";
+  }
+  if (error instanceof ApiError && error.stepUpRequired) {
+    return "Nicht gespeichert: Für diese Änderung ist eine frische Anmeldung nötig. Oben auf der Seite kannst du dich erneut anmelden.";
+  }
+  return (error instanceof ApiError ? error.detail : null) ?? fallback;
+}
+
 /** Adresse für die erneute Anmeldung, danach zurück zur angegebenen Seite. */
 export function stepUpLoginUrl(returnTo: string): string {
   const params = new URLSearchParams({ step_up: "true", return_to: returnTo });
   return `/auth/login?${params.toString()}`;
+}
+
+/**
+ * Meldungen zur Anmeldung, auf die die ganze Oberfläche reagiert:
+ * „abgemeldet“ (Sitzung abgelaufen) und „anmeldung-zu-alt“ (eine Änderung braucht eine
+ * frische Anmeldung). So muss nicht jede Seite selbst darauf achten.
+ */
+export type AuthProblem = "abgemeldet" | "anmeldung-zu-alt";
+export const AUTH_EVENT = "werkbank:anmeldung";
+
+function reportAuthProblem(problem: AuthProblem): void {
+  window.dispatchEvent(new CustomEvent<AuthProblem>(AUTH_EVENT, { detail: problem }));
+}
+
+function stepUpRequired(response: Response): boolean {
+  return response.headers.get("X-Werkbank-Step-Up") === "required";
 }
 
 export async function getJson<T>(url: string): Promise<T> {
@@ -56,7 +93,10 @@ export async function getJson<T>(url: string): Promise<T> {
     headers: { Accept: "application/json" },
   });
   if (!response.ok) {
-    throw new ApiError(response.status, response.headers.get("X-Werkbank-Step-Up") === "required");
+    if (response.status === 401) {
+      reportAuthProblem("abgemeldet");
+    }
+    throw new ApiError(response.status, stepUpRequired(response));
   }
   return (await response.json()) as T;
 }
@@ -86,7 +126,13 @@ async function sendJson<T>(
     body: JSON.stringify(body ?? {}),
   });
   if (!response.ok) {
-    throw new ApiError(response.status, false, await errorDetail(response));
+    const stepUp = stepUpRequired(response);
+    if (response.status === 401) {
+      reportAuthProblem("abgemeldet");
+    } else if (stepUp) {
+      reportAuthProblem("anmeldung-zu-alt");
+    }
+    throw new ApiError(response.status, stepUp, await errorDetail(response));
   }
   return (await response.json()) as T;
 }
