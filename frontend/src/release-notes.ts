@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.13.0",
+    date: "2026-11-15",
+    summary: "Microsoft 365 und Evergreen haben jetzt je einen eigenen Bereich in der Navigation.",
+    sections: [
+      {
+        area: "Allgemein",
+        entries: [
+          "Oben in der Navigation wechselst du zwischen „Werkbank“ (Start, Suche und Allgemeines), „Microsoft 365“ und „Evergreen“. Links stehen immer nur die Seiten des gewählten Bereichs.",
+          "Gibt es in einem anderen Bereich offene Aufgaben, steht die Zahl am Umschalter.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.12.0",
     date: "2026-11-15",
     summary: "Empfehlungen von Microsoft: was offen ist und was schon erfüllt.",

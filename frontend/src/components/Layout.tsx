@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { fetchTasks, type Me, type Task } from "../api";
-import { allNavItems, navigationFor, NEWS_PATH } from "../navigation";
+import { allNavItems, areaForPath, areasFor, NEWS_PATH } from "../navigation";
 import { AccountPage } from "../pages/AccountPage";
 import { AdminPage } from "../pages/AdminPage";
 import { AuditPage } from "../pages/AuditPage";
@@ -122,8 +122,18 @@ export function Layout({ me }: LayoutProps) {
       : (tasks ?? [])
           .filter((task) => task.link === target)
           .reduce((sum, task) => sum + task.count, 0);
-  const groups = navigationFor(me.roles);
-  const items = allNavItems(groups);
+  // Geprüft wird gegen alle Seiten; angezeigt werden nur die des gewählten Bereichs.
+  const areas = areasFor(me.roles);
+  const items = allNavItems(areas.flatMap((area) => area.groups));
+  const currentArea = areaForPath(areas, path);
+  const groups = currentArea?.groups ?? [];
+  const areaBadge = (areaId: string): number =>
+    areaId === "werkbank"
+      ? 0
+      : allNavItems(areas.find((area) => area.id === areaId)?.groups ?? []).reduce(
+          (sum, item) => sum + badgeFor(item.path),
+          0,
+        );
   const current = items.find((item) => item.path === path);
 
   const onNavClick = (event: MouseEvent<HTMLAnchorElement>, target: string) => {
@@ -272,9 +282,32 @@ export function Layout({ me }: LayoutProps) {
       </header>
       <div className="app-body">
         <nav id={navId} className={navClass} aria-label="Hauptnavigation">
+          {areas.length > 1 && (
+            <ul className="nav-areas" aria-label="Bereiche">
+              {areas.map((area) => (
+                <li key={area.id}>
+                  <a
+                    href={area.home}
+                    title={collapsed ? area.label : undefined}
+                    aria-current={area.id === currentArea?.id ? "true" : undefined}
+                    onClick={(event) => onNavClick(event, area.home)}
+                  >
+                    <Icon name={area.icon} />
+                    <span className="nav-label">{area.label}</span>
+                    {area.id !== currentArea?.id && areaBadge(area.id) > 0 && (
+                      <span className="nav-count">
+                        {areaBadge(area.id)}
+                        <span className="visually-hidden"> offen</span>
+                      </span>
+                    )}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="nav-items">
             {groups.map((group) => (
-              <div className="nav-group" key={group.title ?? "start"}>
+              <div className="nav-group" key={group.title ?? group.items[0]?.path ?? "start"}>
                 {group.title && <p className="nav-title">{group.title}</p>}
                 <ul>
                   {group.items.map((item) => (

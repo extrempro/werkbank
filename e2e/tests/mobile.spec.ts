@@ -10,7 +10,10 @@ test("Handy: Navigation über den Menü-Button", async ({ page }, testInfo) => {
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
-  await page.getByRole("link", { name: "Vorgänge" }).click();
+  await page
+    .getByRole("navigation", { name: "Hauptnavigation" })
+    .getByRole("link", { name: /^Evergreen/ })
+    .click();
   await expect(page.getByRole("heading", { name: "Vorgänge" })).toBeVisible();
   await expect(page).toHaveURL(/\/evergreen$/);
 });

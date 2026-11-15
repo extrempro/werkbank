@@ -18,7 +18,7 @@ Ziel: Jeder Screen sieht gleich aufgebaut aus und wird gleich bedient. Visuelle 
 
 - Navigation links, jeder Eintrag mit Symbol. Auf breiten Bildschirmen einklappbar (nur Symbole). Unter 768 px als Menü über einen Button in der Kopfzeile.
 - Am Fuß der Navigation: Neuigkeiten, Umschalter hell/dunkel, Einklappen. Unten rechts erscheint nach etwas Scrollen der Knopf „Nach oben“.
-- Gruppen: Start · M365-Konfiguration · Evergreen · Allgemein · Verwaltung. Nur Gruppen mit Berechtigung werden angezeigt.
+- Bereiche: Oben in der Navigation steht ein Umschalter zwischen „Werkbank“ (Start, Suche, Allgemein, Verwaltung) und je Tool einem eigenen Bereich, derzeit „Microsoft 365“ (Konfiguration) und „Evergreen“ (Vorgänge, Eingang). Ab etwa sechs Bereichen wird der Umschalter zu einem Auswahlmenü. Die Navigation zeigt nur die Seiten des gewählten Bereichs; der Bereich ergibt sich aus der geöffneten Seite. Neue Tools kommen als weiterer Bereich in `frontend/src/navigation.ts` dazu. Nur Bereiche und Gruppen mit Berechtigung werden angezeigt.
 - Maximale Inhaltsbreite 1180 px (Seiten mit Liste und Detail nebeneinander bis 1400 px), Abstand zum Rand 24 px (mobil 16 px).
 - Die Suche steht in der Kopfzeile, auf schmalen Bildschirmen in der Navigation. Die Person oben rechts führt zur Seite „Konto“.
 

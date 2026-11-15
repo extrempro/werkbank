@@ -573,6 +573,42 @@ a {
   min-width: 0;
 }
 
+/* Bereiche: Umschalter zwischen den allgemeinen Seiten und den Tools */
+
+.app-nav .nav-areas {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-bottom: 1px solid var(--farbe-rand);
+}
+
+.nav-areas a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--farbe-text-mittel);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav-areas a:hover {
+  background: var(--farbe-grund);
+}
+
+.nav-areas a[aria-current="true"] {
+  border-color: var(--farbe-rand-stark);
+  background: var(--farbe-neutral-flaeche);
+  color: var(--farbe-text);
+}
+
 /* Fuß der Navigation: Neuigkeiten, Darstellung, Einklappen */
 
 .nav-foot {
@@ -631,7 +667,8 @@ a {
     padding: 16px 12px;
   }
 
-  .collapsed .nav-items a {
+  .collapsed .nav-items a,
+  .collapsed .nav-areas a {
     position: relative;
     justify-content: center;
     padding: 0;
