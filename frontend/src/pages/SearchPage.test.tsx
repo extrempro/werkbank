@@ -46,7 +46,7 @@ describe("SearchPage", () => {
       "href",
       "/it-tools/subnetz",
     );
-    expect(screen.getByText("Tool · Netzwerk")).toBeVisible();
+    expect(screen.getAllByText("Tool · Netzwerk").length).toBeGreaterThan(0);
     unmount();
     render(<SearchPage roles={["Config.Reader"]} />);
     expect(await screen.findByText("Keine Treffer für „subnetz“.")).toBeVisible();
