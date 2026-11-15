@@ -26,14 +26,12 @@ export const units: Unit[] = [
     system: "binär" as const,
   })),
   { id: "bit", label: "Bit", bits: 1, system: "bit" },
-  ...dec
-    .slice(0, 4)
-    .map((p, i) => ({
-      id: `${p}bit`,
-      label: `${p}bit`,
-      bits: 1000 ** (i + 1),
-      system: "bit" as const,
-    })),
+  ...dec.slice(0, 4).map((p, i) => ({
+    id: `${p}bit`,
+    label: `${p}bit`,
+    bits: 1000 ** (i + 1),
+    system: "bit" as const,
+  })),
 ];
 
 export const unitById = (id: string) =>
