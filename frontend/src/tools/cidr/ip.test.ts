@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { formatIpv4, formatIpv6, formatIpv6Full, maskToPrefix, parseIp, parseIpv4, parseIpv6, prefixMask } from "./ip";
+import {
+  formatIpv4,
+  formatIpv6,
+  formatIpv6Full,
+  maskToPrefix,
+  parseIp,
+  parseIpv4,
+  parseIpv6,
+  prefixMask,
+} from "./ip";
 
 describe("IPv4", () => {
   it("liest und schreibt Adressen", () => {
@@ -9,7 +18,8 @@ describe("IPv4", () => {
   });
 
   it("lehnt ungültige Adressen ab", () => {
-    for (const bad of ["300.1.1.1", "1.2.3", "1.2.3.4.5", "a.b.c.d", "1..2.3", ""]) expect(parseIpv4(bad)).toBe(null);
+    for (const bad of ["300.1.1.1", "1.2.3", "1.2.3.4.5", "a.b.c.d", "1..2.3", ""])
+      expect(parseIpv4(bad)).toBe(null);
   });
 });
 
@@ -18,7 +28,9 @@ describe("IPv6", () => {
     expect(parseIpv6("::")).toBe(0n);
     expect(parseIpv6("::1")).toBe(1n);
     expect(parseIpv6("2001:db8::1")).toBe(0x20010db8000000000000000000000001n);
-    expect(parseIpv6("2001:0DB8:0000:0000:0000:0000:0000:0001")).toBe(0x20010db8000000000000000000000001n);
+    expect(parseIpv6("2001:0DB8:0000:0000:0000:0000:0000:0001")).toBe(
+      0x20010db8000000000000000000000001n,
+    );
     expect(parseIpv6("fe80::1%eth0")).toBe(0xfe800000000000000000000000000001n);
     expect(parseIpv6("[2001:db8::1]")).toBe(0x20010db8000000000000000000000001n);
   });
@@ -29,7 +41,14 @@ describe("IPv6", () => {
   });
 
   it("lehnt ungültige Adressen ab", () => {
-    for (const bad of ["1::2::3", "1:2:3", "12345::1", "2001:db8::g", "1:2:3:4:5:6:7:8:9", "::ffff:300.1.1.1"]) {
+    for (const bad of [
+      "1::2::3",
+      "1:2:3",
+      "12345::1",
+      "2001:db8::g",
+      "1:2:3:4:5:6:7:8:9",
+      "::ffff:300.1.1.1",
+    ]) {
       expect(parseIpv6(bad)).toBe(null);
     }
   });

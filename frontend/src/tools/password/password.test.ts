@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { charsets, entropyBits, generatePassword, randomInt, strengthLabel, type PasswordOptions } from "./password";
+import {
+  charsets,
+  entropyBits,
+  generatePassword,
+  randomInt,
+  strengthLabel,
+  type PasswordOptions,
+} from "./password";
 
-const base: PasswordOptions = { length: 24, lower: true, upper: true, digits: true, symbols: true, excludeAmbiguous: false };
+const base: PasswordOptions = {
+  length: 24,
+  lower: true,
+  upper: true,
+  digits: true,
+  symbols: true,
+  excludeAmbiguous: false,
+};
 
 describe("generatePassword", () => {
   it("hat die gewünschte Länge und enthält jede Gruppe", () => {
@@ -20,12 +34,16 @@ describe("generatePassword", () => {
 
   it("lässt mehrdeutige Zeichen weg", () => {
     for (let i = 0; i < 100; i++) {
-      expect(/[Il1O0o]/.test(generatePassword({ ...base, excludeAmbiguous: true, length: 64 }))).toBe(false);
+      expect(
+        /[Il1O0o]/.test(generatePassword({ ...base, excludeAmbiguous: true, length: 64 })),
+      ).toBe(false);
     }
   });
 
   it("prüft die Eingaben", () => {
-    expect(() => generatePassword({ ...base, lower: false, upper: false, digits: false, symbols: false })).toThrow();
+    expect(() =>
+      generatePassword({ ...base, lower: false, upper: false, digits: false, symbols: false }),
+    ).toThrow();
     expect(() => generatePassword({ ...base, length: 3 })).toThrow();
   });
 });

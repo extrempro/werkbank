@@ -101,7 +101,9 @@ describe("ToolPage", () => {
     const output = await screen.findByLabelText("UUIDs");
     const lines = () => (output.textContent ?? "").trim().split("\n");
     expect(lines()).toHaveLength(5);
-    expect(lines()[0]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(lines()[0]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
     fireEvent.change(screen.getByLabelText("Anzahl"), { target: { value: "2" } });
     expect(lines()).toHaveLength(2);
     const before = output.textContent;
@@ -126,7 +128,10 @@ describe("ToolPage", () => {
   it("Passwort: erzeugt Kennwörter nach den Einstellungen, ohne sie in die Adresse zu schreiben", async () => {
     render(<ToolPage id="passwort" />);
     const list = await screen.findByRole("list", { name: "Erzeugte Kennwörter" });
-    const passwords = () => within(list).getAllByRole("listitem").map((item) => item.querySelector("code")?.textContent ?? "");
+    const passwords = () =>
+      within(list)
+        .getAllByRole("listitem")
+        .map((item) => item.querySelector("code")?.textContent ?? "");
     expect(passwords()).toHaveLength(5);
     expect(passwords().every((password) => password.length === 20)).toBe(true);
     fireEvent.change(screen.getByLabelText("Länge genau"), { target: { value: "32" } });

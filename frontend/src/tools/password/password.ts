@@ -38,17 +38,25 @@ function pick(chars: string): string {
 export function activeSets(opts: PasswordOptions): string[] {
   const keys = (["lower", "upper", "digits", "symbols"] as const).filter((k) => opts[k]);
   return keys
-    .map((k) => (opts.excludeAmbiguous ? [...charsets[k]].filter((c) => !ambiguous.has(c)).join("") : charsets[k]))
+    .map((k) =>
+      opts.excludeAmbiguous
+        ? [...charsets[k]].filter((c) => !ambiguous.has(c)).join("")
+        : charsets[k],
+    )
     .filter((s) => s.length > 0);
 }
 
 export function generatePassword(opts: PasswordOptions): string {
   const sets = activeSets(opts);
   if (sets.length === 0) throw new Error("Mindestens eine Zeichengruppe auswählen");
-  if (opts.length < sets.length) throw new Error(`Mindestens ${sets.length} Zeichen nötig, damit jede Gruppe vorkommt`);
+  if (opts.length < sets.length)
+    throw new Error(`Mindestens ${sets.length} Zeichen nötig, damit jede Gruppe vorkommt`);
   const all = sets.join("");
   // aus jeder gewählten Gruppe mindestens ein Zeichen, Rest beliebig
-  const chars = [...sets.map(pick), ...Array.from({ length: opts.length - sets.length }, () => pick(all))];
+  const chars = [
+    ...sets.map(pick),
+    ...Array.from({ length: opts.length - sets.length }, () => pick(all)),
+  ];
   // Fisher-Yates mit sicherem Zufall, damit die Pflichtzeichen nicht vorne stehen
   for (let i = chars.length - 1; i > 0; i--) {
     const j = randomInt(i + 1);

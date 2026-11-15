@@ -32,11 +32,15 @@ export const sourceLabels: Record<NetworkSource, string> = {
   address: "einzelne Adresse",
 };
 
-function parsePrefixOrMask(version: IpVersion, text: string): { prefix: number; source: NetworkSource } {
+function parsePrefixOrMask(
+  version: IpVersion,
+  text: string,
+): { prefix: number; source: NetworkSource } {
   const t = text.trim().replace(/^\//, "");
   if (/^\d{1,3}$/.test(t)) {
     const prefix = Number(t);
-    if (prefix > bitsOf(version)) throw new Error(`Präfix muss zwischen 0 und ${bitsOf(version)} liegen`);
+    if (prefix > bitsOf(version))
+      throw new Error(`Präfix muss zwischen 0 und ${bitsOf(version)} liegen`);
     return { prefix, source: "cidr" };
   }
   if (version === 4) {
@@ -65,7 +69,8 @@ export function parseSubnetInput(raw: string, defaultPrefix?: number): ParsedInp
     const a = parseIp(range[1]!);
     const b = parseIp(range[2]!);
     if (a && b) {
-      if (a.version !== b.version) throw new Error("Anfang und Ende des Bereichs müssen dieselbe IP-Version haben");
+      if (a.version !== b.version)
+        throw new Error("Anfang und Ende des Bereichs müssen dieselbe IP-Version haben");
       const [start, end] = a.value <= b.value ? [a.value, b.value] : [b.value, a.value];
       return { kind: "range", version: a.version, start, end };
     }
@@ -87,7 +92,10 @@ export function parseSubnetInput(raw: string, defaultPrefix?: number): ParsedInp
   if (!ip) throw new Error(`„${addressText}“ ist keine gültige IPv4- oder IPv6-Adresse`);
 
   if (suffix === undefined || suffix === "") {
-    const prefix = defaultPrefix !== undefined && defaultPrefix <= bitsOf(ip.version) ? defaultPrefix : bitsOf(ip.version);
+    const prefix =
+      defaultPrefix !== undefined && defaultPrefix <= bitsOf(ip.version)
+        ? defaultPrefix
+        : bitsOf(ip.version);
     return { kind: "network", version: ip.version, address: ip.value, prefix, source: "address" };
   }
   const { prefix, source } = parsePrefixOrMask(ip.version, suffix);
@@ -137,7 +145,22 @@ export function calculateSubnet(version: IpVersion, address: bigint, prefix: num
   else if (version === 4 && prefix <= 30 && address === network) role = "network";
   else if (version === 4 && prefix <= 30 && address === last) role = "broadcast";
 
-  return { version, bits, prefix, address, network, last, mask, hostMask, size, usable, firstHost, lastHost, offset: address - network, role };
+  return {
+    version,
+    bits,
+    prefix,
+    address,
+    network,
+    last,
+    mask,
+    hostMask,
+    size,
+    usable,
+    firstHost,
+    lastHost,
+    offset: address - network,
+    role,
+  };
 }
 
 export function contains(info: SubnetInfo, value: bigint): boolean {
@@ -218,13 +241,17 @@ export function classify(version: IpVersion, network: bigint, prefix: number): A
   const containing = ranges
     .filter((r) => r.prefix <= prefix && (network & prefixMask(version, r.prefix)) === r.network)
     .sort((a, b) => b.prefix - a.prefix);
-  const inside = ranges.filter((r) => r.prefix > prefix && (r.network & prefixMask(version, prefix)) === network);
+  const inside = ranges.filter(
+    (r) => r.prefix > prefix && (r.network & prefixMask(version, prefix)) === network,
+  );
   if (inside.length > 0 && (containing.length === 0 || version === 4)) {
     return { label: "umfasst mehrere Adressbereiche", private: false };
   }
   const hit = containing[0];
   if (hit) return { label: hit.def.label, private: !!hit.def.private };
-  return version === 4 ? { label: "Öffentlich (global routbar)", private: false } : { label: "Reserviert / nicht zugewiesen", private: false };
+  return version === 4
+    ? { label: "Öffentlich (global routbar)", private: false }
+    : { label: "Reserviert / nicht zugewiesen", private: false };
 }
 
 /** Historische Netzklasse (nur IPv4) */
@@ -262,7 +289,9 @@ export function reverseZones(info: SubnetInfo): ReverseZones {
     const zones: string[] = [];
     for (let i = 0; i < Math.min(total, MAX_ZONES); i++) {
       const net = info.network + (BigInt(i) << BigInt(32 - zoneBits));
-      const octets = formatIp(4, net).split(".").slice(0, zoneBits / 8);
+      const octets = formatIp(4, net)
+        .split(".")
+        .slice(0, zoneBits / 8);
       zones.push(octets.length ? `${octets.reverse().join(".")}.in-addr.arpa` : "in-addr.arpa");
     }
     return { zones, total };
@@ -272,7 +301,10 @@ export function reverseZones(info: SubnetInfo): ReverseZones {
   const zones: string[] = [];
   for (let i = 0; i < total; i++) {
     const net = info.network + (BigInt(i) << BigInt(128 - zoneBits));
-    const nibbles = formatIpv6Full(net).replace(/:/g, "").slice(0, zoneBits / 4).split("");
+    const nibbles = formatIpv6Full(net)
+      .replace(/:/g, "")
+      .slice(0, zoneBits / 4)
+      .split("");
     zones.push(nibbles.length ? `${nibbles.reverse().join(".")}.ip6.arpa` : "ip6.arpa");
   }
   return { zones, total };
@@ -286,7 +318,8 @@ export interface SplitResult {
 }
 
 export function splitSubnet(info: SubnetInfo, targetPrefix: number, limit = 256): SplitResult {
-  if (targetPrefix <= info.prefix || targetPrefix > info.bits) throw new Error("Ziel-Präfix muss größer als das aktuelle sein");
+  if (targetPrefix <= info.prefix || targetPrefix > info.bits)
+    throw new Error("Ziel-Präfix muss größer als das aktuelle sein");
   const total = 1n << BigInt(targetPrefix - info.prefix);
   const step = 1n << BigInt(info.bits - targetPrefix);
   const items: SubnetInfo[] = [];
@@ -297,7 +330,11 @@ export function splitSubnet(info: SubnetInfo, targetPrefix: number, limit = 256)
 }
 
 /** Kleinste Menge an CIDR-Blöcken, die genau den Bereich start…end abdeckt. */
-export function rangeToCidrs(version: IpVersion, start: bigint, end: bigint): { network: bigint; prefix: number }[] {
+export function rangeToCidrs(
+  version: IpVersion,
+  start: bigint,
+  end: bigint,
+): { network: bigint; prefix: number }[] {
   const bits = bitsOf(version);
   const out: { network: bigint; prefix: number }[] = [];
   let cur = start;
@@ -305,7 +342,11 @@ export function rangeToCidrs(version: IpVersion, start: bigint, end: bigint): { 
     // größter Block, an dem cur ausgerichtet ist …
     let size = 1n;
     let hostBits = 0;
-    while (hostBits < bits && (cur & ((size << 1n) - 1n)) === 0n && cur + (size << 1n) - 1n <= end) {
+    while (
+      hostBits < bits &&
+      (cur & ((size << 1n) - 1n)) === 0n &&
+      cur + (size << 1n) - 1n <= end
+    ) {
       size <<= 1n;
       hostBits++;
     }

@@ -29,12 +29,26 @@ function net(input: string) {
 
 describe("parseSubnetInput", () => {
   it("erkennt alle Schreibweisen", () => {
-    expect(parseSubnetInput("192.168.10.77/24")).toMatchObject({ kind: "network", prefix: 24, source: "cidr" });
+    expect(parseSubnetInput("192.168.10.77/24")).toMatchObject({
+      kind: "network",
+      prefix: 24,
+      source: "cidr",
+    });
     expect(parseSubnetInput("192.168.10.77 / 24")).toMatchObject({ prefix: 24, source: "cidr" });
     expect(parseSubnetInput("10.1.2.3 255.255.0.0")).toMatchObject({ prefix: 16, source: "mask" });
-    expect(parseSubnetInput("10.1.2.3/255.255.252.0")).toMatchObject({ prefix: 22, source: "mask" });
-    expect(parseSubnetInput("172.16.0.0 0.0.15.255")).toMatchObject({ prefix: 20, source: "wildcard" });
-    expect(parseSubnetInput("2001:db8:abcd::/48")).toMatchObject({ version: 6, prefix: 48, source: "cidr" });
+    expect(parseSubnetInput("10.1.2.3/255.255.252.0")).toMatchObject({
+      prefix: 22,
+      source: "mask",
+    });
+    expect(parseSubnetInput("172.16.0.0 0.0.15.255")).toMatchObject({
+      prefix: 20,
+      source: "wildcard",
+    });
+    expect(parseSubnetInput("2001:db8:abcd::/48")).toMatchObject({
+      version: 6,
+      prefix: 48,
+      source: "cidr",
+    });
   });
 
   it("nimmt bei einzelner Adresse das Standard-Präfix", () => {
@@ -45,8 +59,15 @@ describe("parseSubnetInput", () => {
   });
 
   it("erkennt Bereiche in beide Richtungen", () => {
-    expect(parseSubnetInput("10.0.0.10 - 10.0.0.50")).toMatchObject({ kind: "range", start: ip("10.0.0.10"), end: ip("10.0.0.50") });
-    expect(parseSubnetInput("10.0.0.50–10.0.0.10")).toMatchObject({ kind: "range", start: ip("10.0.0.10") });
+    expect(parseSubnetInput("10.0.0.10 - 10.0.0.50")).toMatchObject({
+      kind: "range",
+      start: ip("10.0.0.10"),
+      end: ip("10.0.0.50"),
+    });
+    expect(parseSubnetInput("10.0.0.50–10.0.0.10")).toMatchObject({
+      kind: "range",
+      start: ip("10.0.0.10"),
+    });
     expect(parseSubnetInput("10.0.0.1 bis 10.0.0.9")).toMatchObject({ kind: "range" });
   });
 
@@ -151,7 +172,10 @@ describe("reverseZones", () => {
 
   it("liefert IPv6-Zonen", () => {
     expect(reverseZones(net("2001:db8::/32")).zones).toEqual(["8.b.d.0.1.0.0.2.ip6.arpa"]);
-    expect(reverseZones(net("2001:db8::/31")).zones).toEqual(["8.b.d.0.1.0.0.2.ip6.arpa", "9.b.d.0.1.0.0.2.ip6.arpa"]);
+    expect(reverseZones(net("2001:db8::/31")).zones).toEqual([
+      "8.b.d.0.1.0.0.2.ip6.arpa",
+      "9.b.d.0.1.0.0.2.ip6.arpa",
+    ]);
   });
 });
 
@@ -184,12 +208,21 @@ describe("rangeToCidrs", () => {
   const blocks = (a: string, b: string) => {
     const p = parseSubnetInput(`${a} - ${b}`);
     if (p.kind !== "range") throw new Error();
-    return rangeToCidrs(p.version, p.start, p.end).map((c) => cidrText(p.version, c.network, c.prefix));
+    return rangeToCidrs(p.version, p.start, p.end).map((c) =>
+      cidrText(p.version, c.network, c.prefix),
+    );
   };
 
   it("findet die kleinste Abdeckung", () => {
     expect(blocks("10.0.0.0", "10.0.0.255")).toEqual(["10.0.0.0/24"]);
-    expect(blocks("10.0.0.10", "10.0.0.50")).toEqual(["10.0.0.10/31", "10.0.0.12/30", "10.0.0.16/28", "10.0.0.32/28", "10.0.0.48/31", "10.0.0.50/32"]);
+    expect(blocks("10.0.0.10", "10.0.0.50")).toEqual([
+      "10.0.0.10/31",
+      "10.0.0.12/30",
+      "10.0.0.16/28",
+      "10.0.0.32/28",
+      "10.0.0.48/31",
+      "10.0.0.50/32",
+    ]);
     expect(blocks("0.0.0.0", "255.255.255.255")).toEqual(["0.0.0.0/0"]);
     expect(blocks("10.0.0.7", "10.0.0.7")).toEqual(["10.0.0.7/32"]);
     expect(blocks("2001:db8::", "2001:db8::ff")).toEqual(["2001:db8::/120"]);

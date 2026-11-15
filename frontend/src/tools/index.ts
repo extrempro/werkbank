@@ -49,7 +49,8 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: "base64",
     name: "Base64",
     category: "encoding",
-    description: "Text in Base64 kodieren oder Base64 zurück in Text wandeln (UTF-8, auch URL-safe).",
+    description:
+      "Text in Base64 kodieren oder Base64 zurück in Text wandeln (UTF-8, auch URL-safe).",
     tags: ["encode", "decode", "kodieren", "dekodieren"],
     load: () => import("./base64/Base64Tool"),
   },

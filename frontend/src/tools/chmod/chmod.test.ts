@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { applySymbolic, describe as describeMode, fromUmask, parseMode, toChmodSymbolic, toOctal, toSymbolic } from "./chmod";
+import {
+  applySymbolic,
+  describe as describeMode,
+  fromUmask,
+  parseMode,
+  toChmodSymbolic,
+  toOctal,
+  toSymbolic,
+} from "./chmod";
 
 describe("chmod", () => {
   it("oktal ↔ symbolisch", () => {

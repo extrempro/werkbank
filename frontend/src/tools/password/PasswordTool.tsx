@@ -1,12 +1,7 @@
 import { useState } from "react";
 import { clampInt, useToolParams } from "../params";
 import { CopyButton, ErrorBox } from "../ui";
-import {
-  entropyBits,
-  generatePassword,
-  strengthLabel,
-  type PasswordOptions,
-} from "./password";
+import { entropyBits, generatePassword, strengthLabel, type PasswordOptions } from "./password";
 
 const GROUPS = [
   ["klein", "Kleinbuchstaben (a–z)"],
@@ -21,7 +16,11 @@ interface Generated {
   error: string | null;
 }
 
-const TONE: Record<string, string> = { error: "pill pill-bad", warn: "pill pill-todo", ok: "pill pill-ok" };
+const TONE: Record<string, string> = {
+  error: "pill pill-bad",
+  warn: "pill pill-todo",
+  ok: "pill pill-ok",
+};
 
 export default function PasswordTool() {
   // In der Adresszeile stehen nur die Einstellungen, nie die Kennwörter.

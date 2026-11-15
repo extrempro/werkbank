@@ -159,7 +159,9 @@ export default function CidrTool() {
             {input?.kind !== "network" && <option value="">–</option>}
             {Array.from({ length: bitsOf(version) + 1 }, (_, prefix) => (
               <option key={prefix} value={prefix}>
-                {version === 4 ? `/${prefix} – ${formatIp(4, prefixMask(4, prefix))}` : `/${prefix}`}
+                {version === 4
+                  ? `/${prefix} – ${formatIp(4, prefixMask(4, prefix))}`
+                  : `/${prefix}`}
               </option>
             ))}
           </select>

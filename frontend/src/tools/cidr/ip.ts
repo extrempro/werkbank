@@ -83,7 +83,7 @@ export function formatIpv6(value: bigint): string {
   const groups = ipv6Groups(value);
   let bestStart = -1;
   let bestLen = 1;
-  for (let i = 0; i < 8; ) {
+  for (let i = 0; i < 8;) {
     if (groups[i] !== 0) {
       i++;
       continue;

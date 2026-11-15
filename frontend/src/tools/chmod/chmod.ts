@@ -8,7 +8,8 @@ export interface Mode {
 export const WHO = ["u", "g", "o"] as const;
 export const PERMS = ["r", "w", "x"] as const;
 
-export const bit = (who: (typeof WHO)[number], perm: (typeof PERMS)[number]) => (4 >> PERMS.indexOf(perm)) << (3 * (2 - WHO.indexOf(who)));
+export const bit = (who: (typeof WHO)[number], perm: (typeof PERMS)[number]) =>
+  (4 >> PERMS.indexOf(perm)) << (3 * (2 - WHO.indexOf(who)));
 export const SETUID = 0o4000;
 export const SETGID = 0o2000;
 export const STICKY = 0o1000;
@@ -43,7 +44,8 @@ export function applySymbolic(base: number, expr: string): number {
     let mask = 0;
     for (const w of new Set(who)) {
       for (const p of m[3]!) {
-        if (p === "r" || p === "w" || p === "x" || p === "X") mask |= bit(w as "u", (p === "X" ? "x" : p) as "r");
+        if (p === "r" || p === "w" || p === "x" || p === "X")
+          mask |= bit(w as "u", (p === "X" ? "x" : p) as "r");
         if (p === "s" && w === "u") mask |= SETUID;
         if (p === "s" && w === "g") mask |= SETGID;
         if (p === "t") mask |= STICKY;
@@ -53,7 +55,12 @@ export function applySymbolic(base: number, expr: string): number {
     else if (m[2] === "-") n &= ~mask;
     else {
       let clear = 0;
-      for (const w of new Set(who)) clear |= bit(w as "u", "r") | bit(w as "u", "w") | bit(w as "u", "x") | (w === "u" ? SETUID : w === "g" ? SETGID : 0);
+      for (const w of new Set(who))
+        clear |=
+          bit(w as "u", "r") |
+          bit(w as "u", "w") |
+          bit(w as "u", "x") |
+          (w === "u" ? SETUID : w === "g" ? SETGID : 0);
       n = (n & ~clear) | mask;
     }
   }
@@ -72,7 +79,8 @@ export function toSymbolic(n: number): string {
   return s;
 }
 
-export const toOctal = (n: number) => (n & 0o7000 ? n.toString(8).padStart(4, "0") : n.toString(8).padStart(3, "0"));
+export const toOctal = (n: number) =>
+  n & 0o7000 ? n.toString(8).padStart(4, "0") : n.toString(8).padStart(3, "0");
 
 /** „u=rwx,g=rx,o=“ */
 export function toChmodSymbolic(n: number): string {
@@ -88,12 +96,20 @@ export function toChmodSymbolic(n: number): string {
 export function describe(n: number): string[] {
   const names = { u: "Besitzer", g: "Gruppe", o: "Andere" };
   const out = WHO.map((w) => {
-    const p = [n & bit(w, "r") && "lesen", n & bit(w, "w") && "schreiben", n & bit(w, "x") && "ausführen"].filter(Boolean);
+    const p = [
+      n & bit(w, "r") && "lesen",
+      n & bit(w, "w") && "schreiben",
+      n & bit(w, "x") && "ausführen",
+    ].filter(Boolean);
     return `${names[w]}: ${p.length ? p.join(", ") : "keine Rechte"}`;
   });
   if (n & SETUID) out.push("SetUID: Programm läuft mit den Rechten des Besitzers");
-  if (n & SETGID) out.push("SetGID: Programm läuft mit Gruppenrechten bzw. neue Dateien im Ordner erben die Gruppe");
-  if (n & STICKY) out.push("Sticky: Im Ordner darf nur der Besitzer eigene Dateien löschen (wie /tmp)");
+  if (n & SETGID)
+    out.push(
+      "SetGID: Programm läuft mit Gruppenrechten bzw. neue Dateien im Ordner erben die Gruppe",
+    );
+  if (n & STICKY)
+    out.push("Sticky: Im Ordner darf nur der Besitzer eigene Dateien löschen (wie /tmp)");
   if (n & bit("o", "w")) out.push("⚠ Für alle beschreibbar");
   return out;
 }
