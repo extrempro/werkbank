@@ -509,7 +509,7 @@ Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz
   - cacht **nur** die App-Hülle (HTML, JS, CSS, Icons, Schriften) und die **Offline-Seite**.
   - **Niemals** API-Antworten oder Anhänge (`/api/*` = network-only).
   - Versionierte Caches, alte Caches werden beim Aktivieren gelöscht.
-  - Update: neue Version wird erkannt, die Oberfläche zeigt „Neue Version verfügbar – neu laden“. Kein unbemerkter Wechsel mitten in einer Eingabe.
+  - Update: neue Version wird erkannt, die Oberfläche zeigt „Neue Version verfügbar – neu laden“. Kein unbemerkter Wechsel mitten in einer Eingabe. Ein offenes Fenster fragt von selbst nach (alle 30 Minuten, beim Zurückkehren ins Fenster und wenn das Netz zurückkommt), weil der Browser sonst nur beim Laden einer Seite prüft.
   - Session- und Fachdaten liegen nie im Cache. Deshalb muss beim Abmelden nichts aus dem Cache gelöscht werden.
 - **Web Push** mit VAPID. Schlüssel als Docker-Secret. Inhalte siehe 6.7.
 - **iOS**:

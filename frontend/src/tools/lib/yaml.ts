@@ -514,6 +514,8 @@ const needsQuote = (s: string) =>
   /: |\s#|:$/.test(s) ||
   typeof resolveScalar(s) !== "string" ||
   /^(yes|no|on|off|y|n)$/i.test(s) ||
+  // Steuerzeichen sind hier gemeint: Solche Werte brauchen Anführungszeichen.
+  // eslint-disable-next-line no-control-regex
   /[\x00-\x08\x0b-\x1f\x7f]/.test(s);
 
 function scalar(v: Value): string {

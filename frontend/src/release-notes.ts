@@ -39,6 +39,12 @@ export const RELEASES: readonly Release[] = [
           "Token, Schlüssel und eingegebene Texte bleiben im Browser und stehen nie in der Adresszeile.",
         ],
       },
+      {
+        area: "Allgemein",
+        entries: [
+          "Behoben: Ein offenes Fenster bemerkt eine neue Version jetzt von selbst und zeigt den Hinweis „Neu laden“. Bisher kam er erst nach einem Neuladen der Seite.",
+        ],
+      },
     ],
   },
   {

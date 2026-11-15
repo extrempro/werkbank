@@ -46,7 +46,7 @@ export class XmlError extends Error {
 }
 
 export function parseXml(input: string): XmlNode[] {
-  const src = input.replace(/^﻿/, "");
+  const src = input.replace(/^\uFEFF/, "");
   let pos = 0;
   const lineAt = (p: number) => src.slice(0, p).split("\n").length;
   const fail = (msg: string, p = pos): never => {

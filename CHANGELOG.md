@@ -17,6 +17,10 @@ IT-Tools: Encoding und Formatter.
 - **Neue Kategorie „Formatter“:** JSON, YAML und XML prüfen und einheitlich formatieren, mit Fehlermeldung samt Zeile bei YAML und XML
 - Token, Schlüssel, SAML-Nachrichten und alle eingegebenen Texte bleiben im Browser und stehen nicht in der Adresszeile
 
+### Behoben
+
+- **Neue Version wurde nicht bemerkt:** Ein offenes Fenster fragte nie von selbst nach einer neuen Version, weil der Browser das nur beim Laden einer Seite tut und die Werkbank ihre Seiten ohne Neuladen wechselt. Jetzt fragt sie alle 30 Minuten nach, außerdem wenn das Fenster wieder sichtbar wird oder das Netz zurückkommt (höchstens alle 5 Minuten). Der Hinweis „Neue Version verfügbar“ erscheint dann wie bisher
+
 ### Tests
 
 - Die Tests für JWT und SAML laufen in der Node-Umgebung, weil sie Web Crypto und `DecompressionStream` brauchen
