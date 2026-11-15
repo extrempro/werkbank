@@ -44,14 +44,14 @@ from werkbank.modules.m365_config.versioning import apply_snapshot
 ADMIN = "/api/admin/settings"
 M365 = "/api/m365-config"
 HEADERS = {"Origin": ORIGIN}
-KEY = "sk-test-0123456789"
+ZUGANG = "zugang-nur-fuer-tests"
 AI = {
     "enabled": True,
     "base_url": "https://ki.example.com/v1",
     "model": "beispiel-modell",
     "texts_per_hour": 10,
 }
-CONFIG = AiConfig("https://ki.example.com/v1", "beispiel-modell", KEY, 10)
+CONFIG = AiConfig("https://ki.example.com/v1", "beispiel-modell", ZUGANG, 10)
 
 
 def answer(text: str, status: int = 200) -> httpx.MockTransport:
@@ -113,7 +113,7 @@ def test_complete_sends_only_what_it_is_given() -> None:
     text = complete(CONFIG, "System", "Frage", transport=httpx.MockTransport(handler))
     assert text == "Ein Text."
     assert seen["url"] == "https://ki.example.com/v1/chat/completions"
-    assert seen["auth"] == f"Bearer {KEY}"
+    assert seen["auth"] == f"Bearer {ZUGANG}"
     assert seen["body"]["model"] == "beispiel-modell"
     assert [message["content"] for message in seen["body"]["messages"]] == ["System", "Frage"]
 
@@ -125,7 +125,7 @@ def test_complete_sends_only_what_it_is_given() -> None:
 def test_complete_reports_errors_without_details(status: int, fragment: str) -> None:
     with pytest.raises(AiError, match=fragment) as caught:
         complete(CONFIG, "System", "Frage", transport=answer("egal", status))
-    assert KEY not in str(caught.value)
+    assert ZUGANG not in str(caught.value)
 
 
 def test_complete_rejects_unexpected_answers() -> None:
@@ -170,20 +170,20 @@ def test_ai_settings_are_saved_with_encrypted_key(clean: Session, tmp_path: Path
         False,
         30,
     )
-    response = client.put(f"{ADMIN}/ai", json={**AI, "api_key": KEY}, headers=HEADERS)
+    response = client.put(f"{ADMIN}/ai", json={**AI, "api_key": ZUGANG}, headers=HEADERS)
     assert response.status_code == 200, response.text
-    assert KEY not in response.text
+    assert ZUGANG not in response.text
     data = response.json()["ai"]
     assert (data["enabled"], data["api_key_set"], data["model"]) == (True, True, "beispiel-modell")
 
     clean.expire_all()
     stored = clean.get(AppSetting, AI_KEY)
     assert stored is not None
-    assert KEY not in json.dumps(stored.value)
+    assert ZUGANG not in json.dumps(stored.value)
     settings = settings_with_key(tmp_path)
-    assert decrypt_secret(settings, stored.value["api_key_encrypted"]) == KEY
+    assert decrypt_secret(settings, stored.value["api_key_encrypted"]) == ZUGANG
     config = load_ai_config(clean, settings)
-    assert config is not None and config.api_key == KEY and config.texts_per_hour == 10
+    assert config is not None and config.api_key == ZUGANG and config.texts_per_hour == 10
 
     # ohne neuen Schlüssel bleibt der alte; leerer Text löscht ihn
     kept = client.put(f"{ADMIN}/ai", json={**AI, "model": "anderes"}, headers=HEADERS)
@@ -195,7 +195,7 @@ def test_ai_settings_are_saved_with_encrypted_key(clean: Session, tmp_path: Path
         .where(AuditLog.action == "einstellungen.ki_geaendert")
         .order_by(AuditLog.id.desc())
     ).first()
-    assert entry is not None and KEY not in json.dumps(entry.details)
+    assert entry is not None and ZUGANG not in json.dumps(entry.details)
 
 
 @pytest.mark.db
@@ -215,7 +215,7 @@ def test_ai_settings_validation(clean: Session, tmp_path: Path) -> None:
         response = client.put(f"{ADMIN}/ai", json={**AI, **patch}, headers=HEADERS)
         assert response.status_code == 422, patch
     # Schlüssel nur über eine verschlüsselte Verbindung
-    plain = {**AI, "base_url": "http://ki.example.com/v1", "api_key": KEY}
+    plain = {**AI, "base_url": "http://ki.example.com/v1", "api_key": ZUGANG}
     assert client.put(f"{ADMIN}/ai", json=plain, headers=HEADERS).status_code == 422
     # ohne Schlüssel ist ein Dienst im internen Netz erlaubt
     local = {**AI, "base_url": "http://ki.example.com:11434/v1"}
@@ -226,7 +226,7 @@ def test_ai_settings_validation(clean: Session, tmp_path: Path) -> None:
 
     no_key_file = client_for(make_app(make_settings(settings_key_file=tmp_path / "fehlt")))
     login_as(no_key_file, ["Werkbank.Admin"], oid="ki-admin")
-    conflict = no_key_file.put(f"{ADMIN}/ai", json={**AI, "api_key": KEY}, headers=HEADERS)
+    conflict = no_key_file.put(f"{ADMIN}/ai", json={**AI, "api_key": ZUGANG}, headers=HEADERS)
     assert conflict.status_code == 409
 
 
@@ -237,11 +237,11 @@ def test_ai_connection_test(clean: Session, tmp_path: Path) -> None:
     missing = client.post(f"{ADMIN}/ai/test", headers=HEADERS)
     assert missing.status_code == 502
     # der Test geht auch, wenn die KI-Texte noch ausgeschaltet sind
-    client.put(f"{ADMIN}/ai", json={**AI, "enabled": False, "api_key": KEY}, headers=HEADERS)
+    client.put(f"{ADMIN}/ai", json={**AI, "enabled": False, "api_key": ZUGANG}, headers=HEADERS)
     ok = client.post(f"{ADMIN}/ai/test", headers=HEADERS)
     assert ok.status_code == 200, ok.text
     assert ok.json() == {"model": "beispiel-modell"}
-    assert calls == [(KEY, "Verbindungstest")]
+    assert calls == [(ZUGANG, "Verbindungstest")]
 
     client.put(f"{ADMIN}/ai", json={**AI, "model": "kaputt"}, headers=HEADERS)
     failed = client.post(f"{ADMIN}/ai/test", headers=HEADERS)
