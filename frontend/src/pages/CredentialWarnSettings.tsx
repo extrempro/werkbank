@@ -23,7 +23,10 @@ export function CredentialWarnSettings({ settings, onChange }: Props) {
     event.preventDefault();
     const values = days.map(Number);
     const [notice = 0, warn = 0, urgent = 0] = values;
-    if (!values.every(Number.isInteger) || !(max >= notice && notice > warn && warn > urgent && urgent >= min)) {
+    if (
+      !values.every(Number.isInteger) ||
+      !(max >= notice && notice > warn && warn > urgent && urgent >= min)
+    ) {
       setMessage({
         kind: "alert",
         text: `Bitte drei absteigende ganze Zahlen zwischen ${min} und ${max} eintragen, z. B. 60, 30 und 7.`,
@@ -38,7 +41,10 @@ export function CredentialWarnSettings({ settings, onChange }: Props) {
         setMessage({ kind: "status", text: "Der Vorlauf ist gespeichert." });
       })
       .catch((error: unknown) => {
-        setMessage({ kind: "alert", text: errorText(error, "Der Vorlauf konnte nicht gespeichert werden.") });
+        setMessage({
+          kind: "alert",
+          text: errorText(error, "Der Vorlauf konnte nicht gespeichert werden."),
+        });
       })
       .finally(() => setBusy(false));
   };
@@ -61,7 +67,11 @@ export function CredentialWarnSettings({ settings, onChange }: Props) {
                 max={max}
                 aria-describedby={hint}
                 onChange={(event) =>
-                  setDays(days.map((value, position) => (position === index ? event.target.value : value)))
+                  setDays(
+                    days.map((value, position) =>
+                      position === index ? event.target.value : value,
+                    ),
+                  )
                 }
               />
             </label>
@@ -78,7 +88,10 @@ export function CredentialWarnSettings({ settings, onChange }: Props) {
           </button>
         </div>
         {message && (
-          <p role={message.kind} className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}>
+          <p
+            role={message.kind}
+            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
+          >
             {message.text}
           </p>
         )}

@@ -47,8 +47,8 @@ export function CredentialsPage() {
         <h1>Zertifikate und Secrets</h1>
         <p className="page-sub">
           Ablaufdaten der Zertifikate und Secrets von App-Registrierungen und der
-          Signaturzertifikate von Unternehmensanwendungen (SAML). Die Werkbank liest nur
-          Bezeichnung und Daten, nie den geheimen Wert.
+          Signaturzertifikate von Unternehmensanwendungen (SAML). Die Werkbank liest nur Bezeichnung
+          und Daten, nie den geheimen Wert.
         </p>
       </header>
 

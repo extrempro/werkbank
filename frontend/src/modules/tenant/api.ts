@@ -188,7 +188,10 @@ export function remainingText(days: number | null): string {
   return days === 1 ? "noch 1 Tag" : `noch ${formatCount(days)} Tage`;
 }
 
-export const LEVEL_INFO: Record<CredentialLevel, { text: string; tone: "ok" | "todo" | "bad" | "neutral" }> = {
+export const LEVEL_INFO: Record<
+  CredentialLevel,
+  { text: string; tone: "ok" | "todo" | "bad" | "neutral" }
+> = {
   abgelaufen: { text: "abgelaufen", tone: "bad" },
   dringend: { text: "dringend", tone: "bad" },
   warnung: { text: "läuft bald ab", tone: "todo" },
