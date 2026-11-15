@@ -95,6 +95,10 @@ class SettingOut(BaseModel):
     valid_from: datetime | None
     criticality: str | None
     deviates: bool
+    # Anzahl noch nicht bewerteter Änderungen an dieser Einstellung
+    open_changes: int
+    # Der Soll-Wert stammt aus einem Evergreen-Vorgang (Beschluss)
+    from_evergreen: bool
 
 
 class MetaOut(BaseModel):
@@ -238,7 +242,10 @@ def _meta_out(meta: CfgSettingMeta | None) -> MetaOut:
 
 
 def _setting_out(
-    setting: CfgSetting, version: CfgSettingVersion | None, meta: CfgSettingMeta | None
+    setting: CfgSetting,
+    version: CfgSettingVersion | None,
+    meta: CfgSettingMeta | None,
+    open_changes: int = 0,
 ) -> SettingOut:
     return SettingOut(
         id=setting.id,
@@ -254,6 +261,10 @@ def _setting_out(
         valid_from=version.valid_from if version else None,
         criticality=meta.criticality if meta else None,
         deviates=_deviates(setting, version, meta),
+        open_changes=open_changes,
+        from_evergreen=bool(
+            meta and meta.target_set and (meta.target_source or "").startswith("Evergreen")
+        ),
     )
 
 
@@ -464,8 +475,22 @@ def list_settings(
             )
         )
     rows = db.execute(query.order_by(CfgSetting.path).limit(limit + 1).offset(offset)).all()
-    entries = [_setting_out(row[0], row[1], row[2]) for row in rows[:limit]]
+    page = rows[:limit]
+    open_counts = _open_change_counts(db, [row[0].id for row in page])
+    entries = [_setting_out(row[0], row[1], row[2], open_counts.get(row[0].id, 0)) for row in page]
     return SettingListOut(entries=entries, has_more=len(rows) > limit)
+
+
+def _open_change_counts(db: DbDep, setting_ids: list[int]) -> dict[int, int]:
+    """Anzahl offener Änderungen je Einstellung, in einer Abfrage."""
+    if not setting_ids:
+        return {}
+    rows = db.execute(
+        select(CfgChange.setting_id, func.count())
+        .where(CfgChange.setting_id.in_(setting_ids), CfgChange.status == ChangeStatus.OPEN)
+        .group_by(CfgChange.setting_id)
+    ).all()
+    return {int(row[0]): int(row[1]) for row in rows}
 
 
 def _changes_query() -> Any:
@@ -507,7 +532,9 @@ def get_setting(
         .limit(200)
     ).all()
     return SettingDetailOut(
-        setting=_setting_out(setting, current, meta),
+        setting=_setting_out(
+            setting, current, meta, _open_change_counts(db, [setting_id]).get(setting_id, 0)
+        ),
         meta=_meta_out(meta),
         meta_history=[
             MetaHistoryOut(

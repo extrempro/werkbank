@@ -145,6 +145,11 @@ def test_settings_list_search_and_detail(db: Session) -> None:
     client = client_for(["Config.Reader"], "m365-leser")
     listing = client.get(f"{BASE}/settings").json()
     assert [entry["object_name"] for entry in listing["entries"]] == ["MFA für alle", "Neu 100%"]
+    # Offene Änderungen je Einstellung ergeben zusammen die Zahl aus der Übersicht.
+    everything = client.get(f"{BASE}/settings", params={"include_removed": "true"}).json()
+    open_total = client.get(f"{BASE}/overview").json()["open_changes"]
+    assert sum(entry["open_changes"] for entry in everything["entries"]) == open_total
+    assert not any(entry["from_evergreen"] for entry in everything["entries"])
     assert listing["entries"][0]["value"] == "disabled"
     assert listing["has_more"] is False
 

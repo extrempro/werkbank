@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ApiError } from "../../api";
 import { Link } from "../../components/Link";
+import { Placeholder } from "../../components/Placeholder";
 import { navigate } from "../../router";
 import {
   createItem,
@@ -263,11 +264,13 @@ export function ItemsPage({ selectedId }: ItemsPageProps) {
           )}
         </div>
 
-        {hasDetail && (
-          <div className="split-detail split-wide">
+        <div className="split-detail split-wide">
+          {hasDetail ? (
             <ItemDetailPage key={selectedId} id={selectedId} onChanged={onItemChanged} />
-          </div>
-        )}
+          ) : (
+            <Placeholder>Vorgang in der Liste wählen, um die Details zu sehen.</Placeholder>
+          )}
+        </div>
       </div>
     </div>
   );

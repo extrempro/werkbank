@@ -2635,3 +2635,168 @@ p.badges {
   border-color: var(--farbe-primaer);
   color: var(--farbe-link);
 }
+
+/* Schraffierter Platzhalter für den Detailbereich, solange nichts gewählt ist */
+
+.placeholder {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+  padding: 24px;
+  border: 2px dashed var(--farbe-rand-stark);
+  border-radius: 12px;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 12px,
+    var(--farbe-neutral-flaeche) 12px 24px
+  );
+}
+
+.placeholder p {
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text-leise);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Nur wo Liste und Detail nebeneinander passen; darunter wäre es eine leere Fläche unter der Liste. */
+@media (min-width: 1100px) {
+  .placeholder {
+    display: flex;
+  }
+}
+
+/* Einstellungen: Baum nach Workload */
+
+.tree {
+  overflow: visible;
+}
+
+.tree-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--farbe-trenner);
+}
+
+.tree-filter label:not(.check-label) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.tree-filter input[type="search"],
+.tree-filter select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.tree-filter .check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 0.8125rem;
+}
+
+.tree-filter-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tree-group {
+  padding: 10px 8px 6px;
+}
+
+.tree-group + .tree-group {
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.tree-title {
+  margin: 0 0 4px;
+  padding: 0 10px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--farbe-text-leise);
+}
+
+.tree ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--farbe-text);
+  text-decoration: none;
+}
+
+.tree-item:hover {
+  background: var(--farbe-hover);
+}
+
+.tree-current {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+.tree-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tree-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-prop {
+  font-size: 0.75rem;
+  color: var(--farbe-text-leise);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-current .tree-prop {
+  color: inherit;
+}
+
+.tree-badges {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+}
+
+.tree .load-more {
+  margin: 8px 16px 16px;
+}

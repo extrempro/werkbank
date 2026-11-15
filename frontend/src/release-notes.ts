@@ -24,6 +24,26 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.8.0",
+    date: "2026-11-15",
+    summary: "Einstellungen als Baum: links auswählen, rechts lesen.",
+    sections: [
+      {
+        area: "M365-Konfiguration",
+        entries: [
+          "Einstellungen: Links steht der Baum nach Workload, rechts die gewählte Einstellung mit Wert, Beschreibung und Verlauf. So wechselst du schnell zwischen Einstellungen.",
+          "Kennzeichen im Baum zeigen auf einen Blick, wo es offene Änderungen gibt, wo ein Wert vom Soll-Wert abweicht und was durch einen Beschluss geregelt ist (BR).",
+        ],
+      },
+      {
+        area: "Allgemein",
+        entries: [
+          "Solange du in einer Liste noch nichts gewählt hast, zeigt der Bereich daneben eine schraffierte Fläche mit einem Hinweis. Das gilt für Einstellungen, Änderungen und Vorgänge.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.7.0",
     date: "2026-11-15",
     summary: "Die Navigation hat Symbole und lässt sich einklappen.",
