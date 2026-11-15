@@ -3,11 +3,13 @@
 from datetime import timedelta
 from typing import Any
 
-from sqlalchemy import delete, or_
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
-from werkbank.core.models import AuthFlow, Job, JobStatus, UserSession
+from werkbank.core.app_settings import audit_retention_days
+from werkbank.core.audit import write_audit
+from werkbank.core.models import AuditLog, AuthFlow, Job, JobStatus, UserSession
 from werkbank.core.sessions import now_utc
 from werkbank.modules.evergreen.jobs import (
     CHECK_IMPLEMENTATION,
@@ -38,6 +40,31 @@ def cleanup(db: Session, settings: Settings, payload: dict[str, Any]) -> None:
             Job.finished_at < now - timedelta(days=JOB_RETENTION_DAYS),
         )
     )
+    purge_audit_log(db)
+
+
+def purge_audit_log(db: Session) -> int:
+    """Löscht Audit-Einträge, die älter sind als die Aufbewahrungsfrist aus der Verwaltung.
+
+    Das Audit-Log ist sonst nur anhängend. Der Datenbank-Trigger lässt das Löschen nur zu, wenn
+    es für diese Transaktion angekündigt ist, und nie für Einträge, die jünger als 30 Tage sind.
+    """
+    days = audit_retention_days(db)
+    limit = now_utc() - timedelta(days=days)
+    too_old = AuditLog.occurred_at < limit
+    removed = int(db.scalar(select(func.count()).select_from(AuditLog).where(too_old)) or 0)
+    if removed:
+        db.execute(select(func.set_config("werkbank.audit_purge", "on", True)))
+        db.execute(delete(AuditLog).where(too_old))
+        db.execute(select(func.set_config("werkbank.audit_purge", "off", True)))
+        write_audit(
+            db,
+            module="kern",
+            action="audit.bereinigt",
+            object_type="audit_log",
+            details={"geloescht": removed, "aufbewahrung_tage": days},
+        )
+    return removed
 
 
 REGISTRY: dict[str, JobType] = {

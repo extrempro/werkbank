@@ -242,21 +242,22 @@ Standardregeln:
 
 ### 6.6 Audit-Log
 
-- Nur Anhängen erlaubt, keine Änderung, kein Löschen über die App.
+- Nur Anhängen erlaubt, keine Änderung, kein Löschen über die App. Einzige Ausnahme ist die Aufbewahrungsfrist.
 - Protokolliert: Anmeldung und Abmeldung, Rollennutzung, alle Workflow-Aktionen, Bewertungen, Änderungen an Beschreibungen, Soll-Werten und Regeln, Verwaltungsaktionen, Exporte, Zugriffe auf Anhänge.
 - Felder: Zeitpunkt, Person (Entra-Objekt-ID und Anzeigename), Modul, Aktion, Objekt, Ergebnis, IP (gekürzt, siehe Datenschutz).
-- Aufbewahrung: **[OFFEN]** Vorschlag 2 Jahre, danach automatische Löschung bzw. Pseudonymisierung.
+- Aufbewahrung: 90 Tage, in der Verwaltung einstellbar (30 bis 3650 Tage). Der Worker löscht ältere Einträge stündlich und protokolliert die Bereinigung. Die Datenbank lässt das Löschen nur für diesen Auftrag zu und nie für Einträge unter 30 Tagen.
 
 ### 6.7 Benachrichtigungen
 
 | Kanal | Inhalt |
 |---|---|
-| Mail (über Graph `sendMail`) | kurzer Hinweis mit Link, **ohne** fachliche Inhalte |
+| Mail (über den SMTP-Server aus der Verwaltung) | kurzer Hinweis mit Link, **ohne** fachliche Inhalte |
 | Teams-Kanal (IT) | kritische Änderungen und Konnektor-Fehler |
 | Web Push | nur „Neue Aufgabe in der Werkbank“ bzw. „Frist in X Tagen“, **keine Inhalte** |
 
 - Push ist pro Person per Opt-in zu aktivieren und jederzeit abschaltbar.
 - Erinnerungen bei Evergreen-Fristen: 14, 7 und 3 Tage vor Rollout, sofern der Vorgang noch offen ist.
+- Stand: Der SMTP-Server lässt sich in der Verwaltung eintragen und mit einer Testmail prüfen. Benachrichtigungen selbst sind noch nicht umgesetzt.
 - Regeln je Modul in der Verwaltung, z. B. „Änderung an Kritikalität Hoch → sofort Teams“.
 
 ### 6.8 Reports
@@ -473,14 +474,14 @@ Evergreen:
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |
 | Audit-Log | Admin, Auditor | Filterbare Tabelle, Export |
-| Verwaltung | Admin (mit Step-up) | Reiter Module, Rollen, Konnektoren, Kommentarregeln, Benachrichtigungen |
+| Verwaltung | Admin (mit Step-up) | Bereiche Allgemein (Mailversand, Aufbewahrung des Audit-Logs), Module, Rollen, Konnektoren, Kommentarregeln, Benachrichtigungen |
 | Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Version. Später: Push an/aus, Benachrichtigungen, Hinweis zur Installation |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
 
 Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz.
 
-**Stand der Umsetzung (Version 0.5):** Nach dem Entwurf gebaut sind Kopfzeile mit Suche, Navigation, Startseite (ohne „letzte Aktivitäten“), M365 › Übersicht, Änderungen, Einstellungen (nach Workload gruppierte Liste statt Baum, Detail auf eigener Seite), Evergreen › Vorgänge (ohne Kennzeichen „Mitbestimmung“, ohne PDF der BR-Vorlage, geplante Umsetzung noch im ersten Aufbau) sowie Konto und Neuigkeiten. Noch im ersten Aufbau: Evergreen › Eingang, Snapshots (ohne Vergleich und Export), Audit-Log, Verwaltung (nur Reiter Rollen). Noch nicht vorhanden: Reports (Platzhalter), Empfehlungen und Microsoft-Schema je Einstellung, KI-Texte.
+**Stand der Umsetzung (Version 0.5):** Nach dem Entwurf gebaut sind Kopfzeile mit Suche, Navigation, Startseite (ohne „letzte Aktivitäten“), M365 › Übersicht, Änderungen, Einstellungen (nach Workload gruppierte Liste statt Baum, Detail auf eigener Seite), Evergreen › Vorgänge (ohne Kennzeichen „Mitbestimmung“, ohne PDF der BR-Vorlage, geplante Umsetzung noch im ersten Aufbau) sowie Konto und Neuigkeiten. Noch im ersten Aufbau: Evergreen › Eingang, Snapshots (ohne Vergleich und Export), Audit-Log, Verwaltung (Bereiche Allgemein und Rollen). Noch nicht vorhanden: Reports (Platzhalter), Empfehlungen und Microsoft-Schema je Einstellung, KI-Texte.
 
 ---
 
@@ -667,14 +668,14 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 1 | Login | Entra-Login über eigene Login-Seite der Werkbank – entschieden |
 | 2 | MFA | Entschieden: eigene CA-Richtlinie „MFA für Werkbank“. Offen: Lizenz P1 für alle Nutzer prüfen, MFA-Registrierung für BR/GF vorbereiten |
 | 3 | Verwaltung | Nur Step-up-Anmeldung oder zusätzlich nur aus dem internen Netz erreichbar? |
-| 4 | Audit-Log | Aufbewahrungsdauer (Vorschlag 2 Jahre) |
+| 4 | Audit-Log | Entschieden: Aufbewahrung 90 Tage, in der Verwaltung einstellbar (30 bis 3650 Tage) |
 | 5 | Anhänge | Virenscan ja/nein |
-| 6 | KI-Texte | Anbieter, AVV, Freigabe Datenschutz – oder in v1 weglassen |
-| 7 | Benchmarks | CIS-Benchmark nutzbar (Lizenz) oder nur Microsoft-Empfehlungen |
+| 6 | KI-Texte | Entschieden: Anbieter frei einstellbar (OpenAI-kompatible Adresse in der Verwaltung, Schlüssel als Secret). Offen: AVV und Freigabe Datenschutz je nach gewähltem Anbieter |
+| 7 | Benchmarks | Entschieden: nur frei verwendbare Empfehlungen von Microsoft; CIS-Benchmarks werden wegen der Lizenz nicht mitgeliefert |
 | 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit DSB, BR-Beteiligung für die Werkbank selbst |
 | 9 | Hostname | Erledigt: Der öffentliche Hostname ist Konfiguration (`PUBLIC_URL`) und steht nicht im Repository |
 | 14 | Anrede | Entschieden: überall „du“ (`design.md`, Kapitel 7) |
 | 15 | Handbuch | Entsteht nach Abschluss der Oberfläche; ab dann bei jeder Änderung mitpflegen (`CLAUDE.md`) |
-| 10 | Mail | Absenderadresse für Benachrichtigungen |
+| 10 | Mail | Entschieden: Versand über einen SMTP-Server, der in der Verwaltung eingetragen wird (Absender dort). Benachrichtigungen selbst folgen in Phase 4 |
 | 11 | Copyright | Entschieden: `extrempro` |
 | 12 | ASVS-Version | Entschieden: OWASP ASVS 5.0.0 |

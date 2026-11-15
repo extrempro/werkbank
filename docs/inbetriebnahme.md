@@ -20,7 +20,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 ## 2. Docker-Host
 
 - [ ] Der Reverse Proxy erreicht den Host (gleicher Host oder internes Netz bzw. VPN); die Adresse des Hosts in diesem Netz ist bekannt
-- [ ] Secrets liegen in `/opt/werkbank/secrets` (fünf Dateien, siehe [`deploy/README.md`](../deploy/README.md))
+- [ ] Secrets liegen in `/opt/werkbank/secrets` (sechs Dateien, siehe [`deploy/README.md`](../deploy/README.md))
 - [ ] Ausgehend erreichbar: `login.microsoftonline.com`, `graph.microsoft.com`, `github.com` (Build)
 
 ## 3. Projekt anlegen (Compose oder Git-Sync)
@@ -68,7 +68,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 
 - **Nach einem Update sieht die Werkbank aus wie vorher:** Das Image wurde nicht neu gebaut. Ein Neu-Bereitstellen kann das vorhandene Image weiterverwenden. Auf dem Docker-Host im Projektordner `docker compose build --no-cache --pull` und `docker compose up -d` ausführen.
 - **Anmeldung schlägt fehl, nachdem `ENTRA_PROFILE_PHOTO=true` gesetzt wurde:** An der App-Registrierung fehlt die delegierte Berechtigung `User.Read` oder die Administratorzustimmung ([`entra-setup.md`](entra-setup.md), 1.5).
-- **Compose startet nicht, „bind source path does not exist: …/secrets/postgres_password“:** `WERKBANK_SECRETS_DIR` ist nicht gesetzt (dann sucht Compose im Ordner `secrets` neben der Compose-Datei) oder eine der fünf Dateien fehlt.
+- **Compose startet nicht, „bind source path does not exist: …/secrets/postgres_password“:** `WERKBANK_SECRETS_DIR` ist nicht gesetzt (dann sucht Compose im Ordner `secrets` neben der Compose-Datei) oder eine der sechs Dateien fehlt. Nach einem Update auf Version 0.6 fehlt oft `settings_key`; Anleitung in [`deploy/README.md`](../deploy/README.md), Schritt 2a.
 - **„env file not found“:** Es gibt noch keine `.env` neben der Compose-Datei bzw. im Verwaltungswerkzeug sind noch keine Umgebungsvariablen für das Projekt eingetragen.
 - **Anmeldung endet mit „Anmeldung nicht möglich“:** Im Audit-Log steht der Grund (`anmeldung.abgelehnt`), z. B. `falscher_mandant` oder `keine_rolle`.
 - **Abruf fehlgeschlagen:** Unter Snapshots steht der Abruf als „Fehlgeschlagen“; die Fehlerangabe von Microsoft steht im Protokoll des Dienstes `worker`. Häufig fehlt dem Dienstprinzipal von UTCM ein Leserecht.

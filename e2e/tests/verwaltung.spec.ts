@@ -32,12 +32,43 @@ test("Admin sieht die Rollen in der Verwaltung", async ({ page }) => {
   await expectNoA11yViolations(page);
 });
 
+test("Admin pflegt SMTP-Server und Aufbewahrungsfrist, das Passwort bleibt verborgen", async ({
+  page,
+}) => {
+  await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
+  await page.goto("/verwaltung");
+  await expect(page.getByRole("heading", { level: 2, name: "Allgemein" })).toBeVisible();
+  await page.getByLabel("Server").fill("smtp.example.com");
+  await page.getByLabel("Port").fill("587");
+  await page.getByLabel("Absenderadresse").fill("werkbank@example.com");
+  await page.getByLabel("Benutzername (freiwillig)").fill("werkbank@example.com");
+  await page.getByLabel(/Passwort/).fill("e2e-geheim-4711");
+  await page.getByRole("button", { name: "SMTP-Server speichern" }).click();
+  await expect(page.getByText("Der SMTP-Server ist gespeichert.")).toBeVisible();
+  await expect(page.getByLabel("Neues Passwort")).toHaveValue("");
+  await expectNoA11yViolations(page);
+
+  const stored = await page.request.get("/api/admin/settings");
+  expect(stored.status()).toBe(200);
+  const text = await stored.text();
+  expect(text).not.toContain("e2e-geheim-4711");
+  expect(JSON.parse(text).smtp.password_set).toBe(true);
+
+  await page.getByLabel("Einträge löschen nach (Tage)").fill("120");
+  await page.getByRole("button", { name: "Aufbewahrung speichern" }).click();
+  await expect(page.getByText("Die Aufbewahrungsfrist ist gespeichert.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Einträge löschen nach (Tage)")).toHaveValue("120");
+  await expect(page.getByLabel("Server")).toHaveValue("smtp.example.com");
+});
+
 test("Betriebsrat kommt nicht an Audit-Log und Verwaltung", async ({ page }) => {
   await loginAs(page, ["Evergreen.Betriebsrat"], "Karl Rat");
   await page.goto("/audit");
   await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
   const api = await page.request.get("/api/audit");
   expect(api.status()).toBe(403);
+  expect((await page.request.get("/api/admin/settings")).status()).toBe(403);
   const roles = await page.request.get("/api/admin/roles");
   expect(roles.status()).toBe(403);
 });

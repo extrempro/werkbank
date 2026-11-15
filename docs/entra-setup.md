@@ -267,6 +267,7 @@ Dateien im Secrets-Ordner (Schritt für Schritt: [`deploy/README.md`](../deploy/
 - `postgres_password`
 - `entra_client_key.pem` und `entra_client_cert.pem`
 - `collector_client_key.pem` und `collector_client_cert.pem`
+- `settings_key`
 
 ## Checkliste
 

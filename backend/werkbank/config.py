@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # Profilbild bei der Anmeldung aus Entra holen. Braucht die delegierte Berechtigung
     # User.Read an der App-Registrierung für die Anmeldung (docs/entra-setup.md).
     entra_profile_photo: bool = False
+    # Schlüssel für geheime Werte aus der Verwaltung (z. B. SMTP-Passwort): beliebiger
+    # Zufallstext mit mindestens 32 Zeichen als Secret-Datei.
+    settings_key_file: Path = Path("/run/secrets/settings_key")
 
     session_idle_minutes: int = 30
     session_max_hours: int = 8

@@ -15,7 +15,7 @@
 | Name, Mail, Entra-Objekt-ID der Nutzer | Entra-Anmeldung | Anmeldung, Zuordnung von Aktionen | solange Zugang besteht **[OFFEN]** |
 | Rollen | Entra-App-Rollen | Berechtigung | solange Zugang besteht |
 | Profilbild (nur wenn `ENTRA_PROFILE_PHOTO` eingeschaltet ist) | Entra, bei der Anmeldung im Namen der Person gelesen (120 × 120 Pixel) | Wiedererkennen von Personen in der Oberfläche; für alle angemeldeten Personen sichtbar | bis zur nächsten Anmeldung ohne Bild in Entra, sonst solange Zugang besteht **[OFFEN]** |
-| Aktionen im Audit-Log (wer, wann, was) | Werkbank | Nachweis, Sicherheit | **[OFFEN]** Vorschlag 2 Jahre |
+| Aktionen im Audit-Log (wer, wann, was) | Werkbank | Nachweis, Sicherheit | 90 Tage (in der Verwaltung einstellbar), danach automatische Löschung |
 | IP-Adresse (gekürzt) | Anfrage | Sicherheit | wie Audit-Log |
 | IP-Adresse (vollständig, nur als Zähler im Arbeitsspeicher) | Anfrage | Schutz vor Missbrauch (Begrenzung der Anfragerate) | höchstens wenige Minuten, wird nicht gespeichert |
 | Kommentare, Begründungen, Beschlüsse (Evergreen: wer hat wann wie entschieden, auch „im Auftrag“ mit Sitzungsdatum) | Eingabe | Nachweis | **[OFFEN]** |
@@ -34,6 +34,7 @@ Keine Tracking- oder Analysedienste. Keine Cookies außer dem technisch notwendi
 
 | Empfänger | Daten | Hinweis |
 |---|---|---|
+| SMTP-Server des Betreibers (in der Verwaltung eingetragen) | E-Mail-Adresse der Empfängerin oder des Empfängers, Hinweistext ohne fachliche Inhalte | derzeit nur Testmail an die eigene Adresse |
 | Microsoft (Entra, Graph, UTCM) | Anmeldung, optional Abruf des eigenen Profilbilds, Abruf der Tenant-Einstellungen und des Nachrichtencenters, später Mailversand (Daten verlassen den Tenant nur in Richtung Werkbank) | bestehender Vertrag M365 |
 | Push-Dienste der Browserhersteller (Apple, Google, Mozilla) | verschlüsselte Push-Nachricht ohne Inhalt | nur nach Opt-in |
 | KI-Anbieter (optional) | nur technische Metadaten, keine personenbezogenen Daten | **[OFFEN]** Anbieter, AVV |
@@ -51,7 +52,9 @@ Keine Tracking- oder Analysedienste. Keine Cookies außer dem technisch notwendi
 
 ## 6. Löschkonzept
 
-**[OFFEN]** Automatische Löschung bzw. Pseudonymisierung nach Fristablauf (Job im Worker).
+- **Audit-Log:** Der Worker löscht Einträge automatisch nach der eingestellten Frist (Standard 90 Tage).
+- **Sitzungen und Anmeldevorgänge:** werden nach Ablauf stündlich gelöscht.
+- **[OFFEN]** Fristen für Vorgänge, Protokolle und Bewertungen sowie Löschung bzw. Pseudonymisierung von Personen, die die Werkbank nicht mehr nutzen.
 
 ## 7. Mitbestimmung
 

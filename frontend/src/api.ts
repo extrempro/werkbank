@@ -198,3 +198,48 @@ export interface SearchHit {
 export function searchAll(query: string): Promise<{ query: string; hits: SearchHit[] }> {
   return getJson(`/api/search?${new URLSearchParams({ q: query }).toString()}`);
 }
+
+export interface SmtpSettings {
+  host: string;
+  port: number;
+  security: "starttls" | "tls" | "none";
+  username: string;
+  sender_address: string;
+  sender_name: string;
+  password_set: boolean;
+  password_storage_available: boolean;
+}
+
+export interface AdminSettings {
+  smtp: SmtpSettings;
+  audit_retention_days: number;
+  audit_retention_min: number;
+  audit_retention_max: number;
+}
+
+export interface SmtpUpdate {
+  host: string;
+  port: number;
+  security: string;
+  username: string;
+  sender_address: string;
+  sender_name: string;
+  /** Weglassen: Passwort bleibt. Leerer Text: Passwort löschen. */
+  password?: string;
+}
+
+export function fetchAdminSettings(): Promise<AdminSettings> {
+  return getJson("/api/admin/settings");
+}
+
+export function saveSmtpSettings(update: SmtpUpdate): Promise<AdminSettings> {
+  return putJson("/api/admin/settings/smtp", update);
+}
+
+export function sendTestMail(): Promise<{ recipient: string }> {
+  return postJson("/api/admin/settings/smtp/test");
+}
+
+export function saveAuditRetention(days: number): Promise<AdminSettings> {
+  return putJson("/api/admin/settings/audit-retention", { days });
+}
