@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.33.0] – 2026-11-16
+
+IT-Budget: Budgetposten als Vorgang mit erwarteten Kosten, Laufzeit und Status; Verträge mehreren Posten zuordnen; Tag-Liste in den Einstellungen; Mehrjahresübersicht mit Excel-Export; Masken gegliedert.
+
+### IT-Budget
+
+- **Posten hinzufügen als Vorgang:** Konto, Bezeichnung, erwartete Kosten je Geschäftsjahr und Laufzeit (einmalig, mehrere Jahre, bis auf Weiteres). Die erwarteten Kosten sind der Plan und gelten in jedem Jahr der Laufzeit. Tags, Notiz und Stilllegen stehen unter „Weitere Angaben“
+- **Entfallen:** Plan je Posten und Jahr, Freigabe des Plans (Entwurf/freigegeben), „Plan bearbeiten“, Vorschläge aus Verträgen und der Partner am Budgetposten. Der Partner steht an der Rechnung
+- **Status je Posten und Geschäftsjahr:** offen, Rechnung liegt vor, abgeschlossen. Er ergibt sich aus den Rechnungspositionen; abgeschlossen ist ein Posten, sobald eine gebuchte Position mit dem neuen Kennzeichen „Schließt den Budgetposten ab“ auf ihm liegt. Das Kennzeichen ist vorbelegt, außer die Position gehört zu einem Vertrag
+- **Prognose:** abgeschlossen das Ist, sonst das Höhere aus erwarteten Kosten und Ist. Statt „Frei“ zeigen Budgetposten und Übersicht die Abweichung von der Erwartung
+- **Verträge mehreren Budgetposten zuordnen:** Die Zuordnung ist nur eine Verknüpfung. Verträge binden kein Budget mehr; „Durch Verträge gebunden“ entfällt in Übersicht und Budgetposten. Ins Budget gehen Vertragskosten allein über die Rechnungspositionen. Am Vertrag stehen die Zahlungen im Geschäftsjahr nur zur Information
+- **Tag-Liste:** Tags pflegt der Budgetverwalter unter Einstellungen (anlegen, umbenennen, löschen); Umbenennen und Löschen wirken auf alle Posten und gespeicherten Statistiken. Am Budgetposten werden Tags aus der Liste gewählt, nicht mehr frei eingetippt
+- Übersicht: Kennzahl „Offene Budgetposten“ statt „Durch Verträge gebunden“
+- **Budgetposten:** Spalte Status, Filter nach Status, Laufzeit unter dem Namen
+- **Rechnungsposition:** Budgetposten mit Suchfeld und nach Status im Geschäftsjahr des Rechnungsdatums gruppiert, mit erwarteten Kosten
+- **Mehrjahresübersicht** (vorher Mehrjahresplanung): erwartete Kosten, Ist und Status je Posten über fünf Jahre, Ausblick oder Rückblick, nur lesend
+- **Excel-Export** der Mehrjahresübersicht mit einem zweiten Blatt aller Rechnungspositionen des Zeitraums. Die Datei schreibt die Werkbank selbst, ohne neue Abhängigkeit; Texte stehen nie als Formel in den Zellen
+- **Vertragsmaske** in Abschnitte gegliedert (Vertrag und Partner, Kosten, Laufzeit); AVV, Kündigung und Notiz unter „Weitere Angaben“
+- Rollentexte von Budget Bearbeiter und Budgetverwalter an die tatsächlichen Rechte angepasst
+- Migration 0029: Tabelle `budget_tags`, gefüllt mit allen bis dahin vergebenen Tags. Migration 0030: Tabelle `budget_contract_items`; jeder Vertrag behält seinen bisherigen Posten als Zuordnung, die Spalte `budget_contracts.item_id` entfällt
+- Migration 0028: Posten mit Plan bekommen die Laufzeit vom ersten bis zum letzten geplanten Jahr und die erwarteten Kosten des ersten Jahrs; weichen Beträge ab oder fehlen Jahre, steht der bisherige Plan in der Notiz, ebenso ein bisheriger Partner. Posten ohne Plan laufen im laufenden Geschäftsjahr mit 0 Euro. Positionen ohne Vertrag schließen ab, Positionen mit Vertrag nicht. Die Tabellen `budget_plans` und `budget_years` entfallen
+
 ## [0.32.0] – 2026-11-16
 
 IT-Budget: Rechnungen mit Positionen für mehrere Budgetposten.

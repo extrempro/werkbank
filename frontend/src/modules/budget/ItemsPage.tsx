@@ -5,31 +5,27 @@ import { BUDGET_ACCOUNTS_PATH, BUDGET_STATISTICS_PATH } from "../../navigation";
 import { useSearchParam } from "../../router";
 import {
   BUDGET_EDITOR_ROLES,
-  deleteItem,
-  BUDGET_MANAGER_ROLE,
   createItem,
+  deleteItem,
   euroInput,
   fetchAccounts,
   fetchBudgetOverview,
-  fetchPartners,
   fetchTags,
+  formatEuro,
   hasTag,
+  ITEM_STATUS_LABELS,
   itemMatches,
-  parseTags,
-  setYearStatus,
+  parseEuro,
+  TAGS_MAX,
   rememberedYear,
   rememberYear,
-  formatEuro,
-  parseEuro,
-  savePlan,
+  runtimeText,
   updateItem,
   type Account,
   type Item,
+  type ItemStatus,
   type ItemUpdate,
-  type Partner,
-  type YearStatus,
   type Overview,
-  type PlanEntry,
   type TagCount,
 } from "./api";
 import { DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
@@ -38,66 +34,128 @@ function amount(cents: number | null): string {
   return cents === null ? "–" : formatEuro(cents);
 }
 
+/** Abweichung der Prognose von der Erwartung mit Vorzeichen; mehr ausgegeben ist positiv. */
+function deviation(expected: number | null, forecast: number): string {
+  const delta = forecast - (expected ?? 0);
+  if (delta === 0) {
+    return formatEuro(0);
+  }
+  return `${delta > 0 ? "+" : "−"} ${formatEuro(Math.abs(delta))}`;
+}
+
+function deviationClass(expected: number | null, forecast: number): string {
+  const delta = forecast - (expected ?? 0);
+  return delta > 0 ? "betrag budget-bad" : delta < 0 ? "betrag budget-ok" : "betrag";
+}
+
+const STATUS_PILLS: Record<ItemStatus, string> = {
+  offen: "pill pill-neutral",
+  rechnung: "pill pill-todo",
+  abgeschlossen: "pill pill-ok",
+};
+
+/** Status als kleines Etikett; ohne Status (Posten läuft im Jahr nicht) ein Strich. */
+export function StatusPill({ status }: { status: ItemStatus | null | undefined }) {
+  if (!status) {
+    return <span className="budget-muted">–</span>;
+  }
+  return (
+    <span className={`${STATUS_PILLS[status]} budget-pill`}>{ITEM_STATUS_LABELS[status]}</span>
+  );
+}
+
+type Runtime = "einmalig" | "bis" | "offen";
+
 interface FormProps {
   /** null: neuen Budgetposten anlegen. */
   item: Item | null;
   accounts: Account[];
-  partners: Partner[];
-  /** Schon vergebene Tags als Vorschläge. */
+  /** Die Liste der Tags, aus der der Posten wählt. */
   knownTags: TagCount[];
-  /** Geschäftsjahr, für das beim Anlegen gleich ein Plan eingetragen werden kann; null: gesperrt. */
-  planYear: { year: number; name: string } | null;
+  /** Wählbare Geschäftsjahre, aufsteigend. */
+  years: { year: number; name: string }[];
+  /** Vorgabe für den Beginn eines neuen Postens: das gerade gezeigte Geschäftsjahr. */
+  defaultYear: number;
+  yearLabel: string;
   onSaved: (item: Item) => void;
   onCancel: () => void;
 }
 
-function ItemForm({ item, accounts, partners, knownTags, planYear, onSaved, onCancel }: FormProps) {
+function ItemForm({
+  item,
+  accounts,
+  knownTags,
+  years,
+  defaultYear,
+  yearLabel,
+  onSaved,
+  onCancel,
+}: FormProps) {
   const reveal = useRevealOnMount<HTMLElement>();
   const [accountId, setAccountId] = useState(item ? String(item.account_id) : "");
   const [name, setName] = useState(item?.name ?? "");
-  const [partnerId, setPartnerId] = useState(item?.partner_id ? String(item.partner_id) : "");
-  const [plan, setPlan] = useState("");
+  const [cost, setCost] = useState(item ? euroInput(item.amount_cents) : "");
+  const [start, setStart] = useState(String(item?.start_year ?? defaultYear));
+  const [runtime, setRuntime] = useState<Runtime>(
+    !item || item.end_year === item.start_year
+      ? "einmalig"
+      : item.end_year === null
+        ? "offen"
+        : "bis",
+  );
+  const [end, setEnd] = useState(item?.end_year ? String(item.end_year) : "");
   const [note, setNote] = useState(item?.note ?? "");
-  const [tags, setTags] = useState(item ? item.tags.join(", ") : "");
+  const [tags, setTags] = useState<string[]>(item?.tags ?? []);
   const [active, setActive] = useState(item?.active ?? true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const choices = accounts.filter((entry) => entry.active || entry.id === item?.account_id);
-  const parsed = parseTags(tags);
-  const chosen = typeof parsed === "string" ? [] : parsed;
-  // Vorschläge: vergebene Tags, die noch nicht im Feld stehen
-  const suggestions = knownTags.filter(
-    (entry) => !chosen.some((tag) => tag.toLowerCase() === entry.tag.toLowerCase()),
-  );
+  const isChosen = (tag: string) => tags.some((entry) => entry.toLowerCase() === tag.toLowerCase());
+  const toggleTag = (tag: string) =>
+    setTags(
+      isChosen(tag)
+        ? tags.filter((entry) => entry.toLowerCase() !== tag.toLowerCase())
+        : [...tags, tag],
+    );
+  // Ein Jahr außerhalb der Liste (z. B. ein alter Posten) bleibt wählbar.
+  const yearChoices = [...years];
+  for (const value of [item?.start_year, item?.end_year]) {
+    if (value && !yearChoices.some((entry) => entry.year === value)) {
+      yearChoices.push({ year: value, name: String(value) });
+    }
+  }
+  yearChoices.sort((left, right) => left.year - right.year);
+  const endChoices = yearChoices.filter((entry) => entry.year > Number(start));
+  // Weitere Angaben stehen offen, wenn sie schon etwas enthalten.
+  const hasMore = Boolean(item && (item.note || item.tags.length > 0 || !item.active));
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
+    const costCents = parseEuro(cost);
+    let problem: string | null = null;
     if (!accountId || !name.trim()) {
-      setError("Bitte Konto wählen und eine Bezeichnung eintragen.");
-      return;
+      problem = "Bitte Konto wählen und eine Bezeichnung eintragen.";
+    } else if (costCents === null) {
+      problem = "Die erwarteten Kosten sind nicht lesbar. Bitte so eintragen: 15000,00";
+    } else if (runtime === "bis" && (!end || Number(end) <= Number(start))) {
+      problem = `Bitte wählen, bis zu welchem ${yearLabel} der Posten läuft.`;
+    } else if (tags.length > TAGS_MAX) {
+      problem = `Es sind höchstens ${TAGS_MAX} Tags je Budgetposten möglich.`;
     }
-    const planCents = plan.trim() === "" ? null : parseEuro(plan);
-    if (plan.trim() !== "" && planCents === null) {
-      setError("Der Planbetrag ist nicht lesbar. Bitte so eintragen: 15000,00");
-      return;
-    }
-    const tagList = parseTags(tags);
-    if (typeof tagList === "string") {
-      setError(tagList);
+    if (problem !== null || costCents === null) {
+      setError(problem);
       return;
     }
     const update: ItemUpdate = {
       account_id: Number(accountId),
       name: name.trim(),
-      partner_id: partnerId ? Number(partnerId) : null,
+      amount_cents: costCents,
+      start_year: Number(start),
+      end_year: runtime === "einmalig" ? Number(start) : runtime === "bis" ? Number(end) : null,
       note: note.trim(),
-      tags: tagList,
+      tags,
       active,
     };
-    if (!item && planYear && planCents !== null) {
-      update.plan_year = planYear.year;
-      update.plan_cents = planCents;
-    }
     setBusy(true);
     setError(null);
     (item ? updateItem(item.id, update) : createItem(update))
@@ -111,109 +169,133 @@ function ItemForm({ item, accounts, partners, knownTags, planYear, onSaved, onCa
   return (
     <section className="panel" aria-labelledby="posten-formular-titel" ref={reveal} tabIndex={-1}>
       <div className="panel-head">
-        <h2 id="posten-formular-titel">
-          {item ? `${item.name} bearbeiten` : "Budgetposten anlegen"}
-        </h2>
+        <h2 id="posten-formular-titel">{item ? `${item.name} bearbeiten` : "Posten hinzufügen"}</h2>
       </div>
       <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-        <div className="tool-row">
-          <label>
-            Konto
-            <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-              <option value="">Bitte wählen</option>
-              {choices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.number} {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Bezeichnung
-            <input
-              type="text"
-              value={name}
-              maxLength={160}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
-        </div>
-        <div className="tool-row">
-          <label>
-            Üblicher Partner (freiwillig)
-            <select value={partnerId} onChange={(event) => setPartnerId(event.target.value)}>
-              <option value="">ohne Vorgabe</option>
-              {partners
-                .filter((entry) => entry.active || entry.id === item?.partner_id)
-                .map((entry) => (
+        <fieldset className="budget-fieldset">
+          <legend>Was</legend>
+          <div className="tool-row">
+            <label>
+              Konto
+              <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+                <option value="">Bitte wählen</option>
+                {choices.map((entry) => (
                   <option key={entry.id} value={entry.id}>
-                    {entry.name}
+                    {entry.number} {entry.name}
                   </option>
                 ))}
-            </select>
-          </label>
-          {!item && planYear && (
+              </select>
+            </label>
+            <label>
+              Bezeichnung
+              <input
+                type="text"
+                value={name}
+                maxLength={160}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </label>
+          </div>
+        </fieldset>
+        <fieldset className="budget-fieldset">
+          <legend>Kosten und Laufzeit</legend>
+          <div className="tool-row">
             <label className="narrow">
-              Plan {planYear.name} (brutto, Euro, freiwillig)
+              Erwartete Kosten je {yearLabel} (brutto, Euro)
               <input
                 type="text"
                 inputMode="decimal"
-                value={plan}
-                onChange={(event) => setPlan(event.target.value)}
+                value={cost}
+                onChange={(event) => setCost(event.target.value)}
               />
             </label>
-          )}
-        </div>
-        <label>
-          Notiz (freiwillig)
-          <input
-            type="text"
-            value={note}
-            maxLength={500}
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </label>
-        <label>
-          Tags (freiwillig, mit Komma getrennt)
-          <input
-            type="text"
-            value={tags}
-            aria-describedby="posten-tags-hinweis"
-            onChange={(event) => setTags(event.target.value)}
-          />
-        </label>
-        <p id="posten-tags-hinweis" className="small budget-muted">
-          Zum Beispiel: Cloud, Lizenzen. Über Tags lassen sich Posten suchen und in der Statistik
-          zusammen auswerten.
-        </p>
-        {suggestions.length > 0 && (
-          <div className="chips" role="group" aria-label="Schon vergebene Tags übernehmen">
-            {suggestions.map((entry) => (
-              <button
-                key={entry.tag}
-                type="button"
-                className="chip budget-tag"
-                onClick={() => setTags([...chosen, entry.tag].join(", "))}
+            <label className="narrow">
+              Ab {yearLabel}
+              <select value={start} onChange={(event) => setStart(event.target.value)}>
+                {yearChoices.map((entry) => (
+                  <option key={entry.year} value={entry.year}>
+                    {entry.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="narrow">
+              Laufzeit
+              <select
+                value={runtime}
+                onChange={(event) => setRuntime(event.target.value as Runtime)}
               >
-                {entry.tag}
-              </button>
-            ))}
+                <option value="einmalig">einmalig</option>
+                <option value="bis">mehrere Jahre</option>
+                <option value="offen">bis auf Weiteres</option>
+              </select>
+            </label>
+            {runtime === "bis" && (
+              <label className="narrow">
+                Bis {yearLabel}
+                <select value={end} onChange={(event) => setEnd(event.target.value)}>
+                  <option value="">Bitte wählen</option>
+                  {endChoices.map((entry) => (
+                    <option key={entry.year} value={entry.year}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
-        )}
-        {item && (
-          <label className="check-label">
-            <input
-              type="checkbox"
-              className="check"
-              checked={active}
-              onChange={(event) => setActive(event.target.checked)}
-            />
-            Budgetposten ist aktiv
-          </label>
-        )}
+          <p className="small budget-muted">
+            Die erwarteten Kosten gelten in jedem {yearLabel} der Laufzeit. Der Posten ist offen,
+            bis eine Rechnung ihn abschließt.
+          </p>
+        </fieldset>
+        <details className="budget-more" open={hasMore}>
+          <summary>Weitere Angaben: Tags, Notiz{item ? ", stilllegen" : ""}</summary>
+          <div className="budget-more-body">
+            {knownTags.length > 0 ? (
+              <div className="chips" role="group" aria-label="Tags (freiwillig)">
+                {knownTags.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className="chip budget-tag"
+                    aria-pressed={isChosen(entry.tag)}
+                    onClick={() => toggleTag(entry.tag)}
+                  >
+                    {entry.tag}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="small budget-muted">
+                Es gibt noch keine Tags. Der Budgetverwalter legt sie unter Einstellungen an.
+              </p>
+            )}
+            <label>
+              Notiz (freiwillig)
+              <input
+                type="text"
+                value={note}
+                maxLength={500}
+                onChange={(event) => setNote(event.target.value)}
+              />
+            </label>
+            {item && (
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  className="check"
+                  checked={active}
+                  onChange={(event) => setActive(event.target.checked)}
+                />
+                Budgetposten ist aktiv
+              </label>
+            )}
+          </div>
+        </details>
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>
-            {item ? "Änderungen speichern" : "Budgetposten speichern"}
+            {item ? "Änderungen speichern" : "Posten speichern"}
           </button>
           <button type="button" className="button button-secondary" onClick={onCancel}>
             Abbrechen
@@ -229,25 +311,22 @@ function ItemForm({ item, accounts, partners, knownTags, planYear, onSaved, onCa
   );
 }
 
-/** IT-Budget › Budgetposten: Posten je Konto mit Plan, gebunden und frei; hier wird geplant. */
+/** IT-Budget › Budgetposten: Vorhaben mit erwarteten Kosten, Status, Ist und Prognose. */
 export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
-  const canRelease = roles.includes(BUDGET_MANAGER_ROLE);
   const [year, setYear] = useState<number | null>(rememberedYear);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [partners, setPartners] = useState<Partner[]>([]);
   const [knownTags, setKnownTags] = useState<TagCount[]>([]);
-  // Suchtext aus der Adresse (Treffer der Suche oben führen mit dem Namen des Postens hierher)
-  const linked = useSearchParam("suche");
+  // Suchtext aus der Adresse (Treffer der Suche oben führen mit dem Namen des Postens hierher).
   // Eigene Eingabe gilt, bis ein neuer Suchtext über die Adresse kommt.
+  const linked = useSearchParam("suche");
   const [typed, setTyped] = useState({ from: linked, text: linked });
   const search = typed.from === linked ? typed.text : linked;
   const setSearch = (text: string) => setTyped({ from: linked, text });
   const [tagFilter, setTagFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ItemStatus | "">("");
   const [failed, setFailed] = useState(false);
-  // Eingaben im Bearbeitungsmodus je Posten; null: es wird nicht bearbeitet.
-  const [draft, setDraft] = useState<Record<number, string> | null>(null);
   const [editing, setEditing] = useState<Item | null>(null);
   const [formRound, setFormRound] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
@@ -257,18 +336,16 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   };
   const [round, setRound] = useState(0);
   const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
-    // Die Liste der Tags ist eine Zugabe für Filter und Vorschläge: Ohne sie bleibt die Seite nutzbar.
+    // Die Tag-Liste ist eine Zugabe für Filter und Auswahl: Ohne sie bleibt die Seite nutzbar.
     const tagList = fetchTags().catch((): TagCount[] => []);
-    Promise.all([fetchBudgetOverview(year), fetchAccounts(), fetchPartners(), tagList])
-      .then(([result, list, firms, tags]) => {
+    Promise.all([fetchBudgetOverview(year), fetchAccounts(), tagList])
+      .then(([result, list, tags]) => {
         if (active) {
           setOverview(result);
           setAccounts(list);
-          setPartners(firms);
           setKnownTags(tags);
           setFailed(false);
         }
@@ -284,98 +361,22 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   }, [year, round]);
 
   const label = overview?.settings.year_label ?? "Geschäftsjahr";
-  const filtered = search.trim() !== "" || tagFilter !== "";
+  const filtered = search.trim() !== "" || tagFilter !== "" || statusFilter !== "";
   const rows = (overview?.items ?? []).filter(
-    (row) => itemMatches(row.item, search) && (tagFilter === "" || hasTag(row.item, tagFilter)),
+    (row) =>
+      itemMatches(row.item, search) &&
+      (tagFilter === "" || hasTag(row.item, tagFilter)) &&
+      (statusFilter === "" || row.status === statusFilter),
   );
   const total = (pick: (row: (typeof rows)[number]) => number | null) =>
     rows.reduce((sum, row) => sum + (pick(row) ?? 0), 0);
   const sums = {
-    plan: total((row) => row.plan_cents),
-    committed: total((row) => row.committed_cents),
+    expected: total((row) => row.expected_cents),
     actual: total((row) => row.actual_cents),
     forecast: total((row) => row.forecast_cents),
     previous: total((row) => row.previous_cents),
   };
-  // Geplant wird nur, solange das Jahr ein Entwurf ist.
-  const draftYear = overview?.year_status === "entwurf";
-  const canPlan = canEdit && draftYear;
-
-  const onRelease = (status: YearStatus) => {
-    if (!overview) {
-      return;
-    }
-    setBusy(true);
-    setYearStatus(overview.year, status)
-      .then(() => {
-        setMessage({
-          kind: "status",
-          text:
-            status === "freigegeben"
-              ? `Der Plan ${overview.year_name} ist freigegeben.`
-              : `Die Freigabe für ${overview.year_name} ist aufgehoben.`,
-        });
-        setRound(round + 1);
-      })
-      .catch((error: unknown) => {
-        setMessage({
-          kind: "alert",
-          text: errorText(error, "Der Stand konnte nicht geändert werden."),
-        });
-      })
-      .finally(() => setBusy(false));
-  };
-
-  const startEdit = () => {
-    if (!overview) {
-      return;
-    }
-    setMessage(null);
-    setDraft(
-      Object.fromEntries(overview.items.map((row) => [row.item.id, euroInput(row.plan_cents)])),
-    );
-  };
-
-  const onSave = (event: FormEvent) => {
-    event.preventDefault();
-    if (!overview || !draft) {
-      return;
-    }
-    const entries: PlanEntry[] = [];
-    for (const row of overview.items) {
-      const text = (draft[row.item.id] ?? "").trim();
-      const cents = text === "" ? null : parseEuro(text);
-      if (text !== "" && cents === null) {
-        setMessage({
-          kind: "alert",
-          text: `Der Betrag für ${row.item.name} ist nicht lesbar. Bitte so eintragen: 11900,00`,
-        });
-        return;
-      }
-      if (cents !== row.plan_cents) {
-        entries.push({ item_id: row.item.id, amount_cents: cents });
-      }
-    }
-    if (entries.length === 0) {
-      setDraft(null);
-      return;
-    }
-    setBusy(true);
-    setMessage(null);
-    savePlan(overview.year, entries)
-      .then((result) => {
-        setOverview(result);
-        setDraft(null);
-        setMessage({ kind: "status", text: "Der Plan ist gespeichert." });
-      })
-      .catch((error: unknown) => {
-        setMessage({
-          kind: "alert",
-          text: errorText(error, "Der Plan konnte nicht gespeichert werden."),
-        });
-      })
-      .finally(() => setBusy(false));
-  };
+  const yearChoices = [...(overview?.years ?? [])].sort((left, right) => left.year - right.year);
 
   const onItemSaved = (saved: Item) => {
     setMessage({ kind: "status", text: `${saved.name} ist gespeichert.` });
@@ -394,9 +395,9 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           <p className="module-label">IT-Budget</p>
           <h1>Budgetposten</h1>
           <p className="page-sub">
-            Wofür das Geld eines Kontos gedacht ist. Geplant wird je Posten; das Konto zeigt die
-            Summe. Prognose = Ist plus noch gebunden, Frei = Plan abzüglich Prognose. Alle Beträge
-            sind brutto.
+            Jeder Posten ist ein Vorhaben mit erwarteten Kosten und Laufzeit. Er bleibt offen, bis
+            eine Rechnung ihn abschließt. Prognose: abgeschlossen das Ist, sonst das Höhere aus
+            Erwartung und Ist. Alle Beträge sind brutto.
           </p>
         </div>
         {overview && (
@@ -405,7 +406,6 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
               {label}
               <select
                 value={overview.year}
-                disabled={draft !== null}
                 onChange={(event) => {
                   setMessage(null);
                   rememberYear(Number(event.target.value));
@@ -423,25 +423,6 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
         )}
       </header>
       <ReadOnlyNote roles={roles} />
-      {overview && (
-        <div className="budget-toolbar budget-toolbar-split">
-          <p className="budget-badges">
-            <span className={draftYear ? "pill pill-todo" : "pill pill-ok"}>
-              Plan {overview.year_name}: {draftYear ? "Entwurf" : "freigegeben"}
-            </span>
-          </p>
-          {canRelease && !draft && (
-            <button
-              type="button"
-              className="button button-secondary"
-              disabled={busy}
-              onClick={() => onRelease(draftYear ? "freigegeben" : "entwurf")}
-            >
-              {draftYear ? "Plan freigeben" : "Freigabe aufheben"}
-            </button>
-          )}
-        </div>
-      )}
       {canEdit && overview && accounts.length > 0 && (
         <div className="budget-toolbar">
           <button
@@ -450,11 +431,12 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
             aria-expanded={formOpen || editing !== null}
             onClick={() => {
               setEditing(null);
+              setMessage(null);
               setFormRound(formRound + 1);
               setFormOpen(true);
             }}
           >
-            Budgetposten anlegen
+            Posten hinzufügen
           </button>
         </div>
       )}
@@ -463,9 +445,10 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           key={editing ? `posten-${editing.id}` : `neu-${formRound}`}
           item={editing}
           accounts={accounts}
-          partners={partners}
           knownTags={knownTags}
-          planYear={draftYear ? { year: overview.year, name: overview.year_name } : null}
+          years={yearChoices}
+          defaultYear={overview.year}
+          yearLabel={label}
           onSaved={onItemSaved}
           onCancel={closeForm}
         />
@@ -484,7 +467,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
         </p>
       )}
       {overview && accounts.length > 0 && overview.items.length === 0 && (
-        <p className="panel panel-empty">Es sind noch keine Budgetposten angelegt.</p>
+        <p className="panel panel-empty">In {overview.year_name} läuft noch kein Budgetposten.</p>
       )}
       {overview && overview.items.length > 0 && (
         <div className="budget-toolbar budget-filter settings-form">
@@ -493,9 +476,23 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
             <input
               type="search"
               value={search}
-              placeholder="Name, Konto, Partner oder Tag"
+              placeholder="Name, Konto oder Tag"
               onChange={(event) => setSearch(event.target.value)}
             />
+          </label>
+          <label className="narrow">
+            Status
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as ItemStatus | "")}
+            >
+              <option value="">alle</option>
+              {(Object.keys(ITEM_STATUS_LABELS) as ItemStatus[]).map((entry) => (
+                <option key={entry} value={entry}>
+                  {ITEM_STATUS_LABELS[entry]}
+                </option>
+              ))}
+            </select>
           </label>
           {knownTags.length > 0 && (
             <label className="narrow">
@@ -517,6 +514,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
               onClick={() => {
                 setSearch("");
                 setTagFilter("");
+                setStatusFilter("");
               }}
             >
               Filter aufheben
@@ -537,206 +535,133 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
         </p>
       )}
       {overview && overview.items.length > 0 && (
-        <form onSubmit={onSave} noValidate>
-          <div
-            className="table-wrap budget-table"
-            tabIndex={0}
-            role="region"
-            aria-label={`Budgetposten ${overview.year_name}`}
-          >
-            <table>
-              <caption className="visually-hidden">
-                Budgetposten mit Plan im {label} {overview.year_name}
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Konto</th>
-                  <th scope="col">Budgetposten</th>
-                  <th scope="col" className="betrag">
-                    Plan
-                  </th>
-                  <th scope="col" className="betrag">
-                    Durch Verträge gebunden
-                  </th>
-                  <th scope="col" className="betrag">
-                    Ist
-                  </th>
-                  <th scope="col" className="betrag">
-                    Prognose
-                  </th>
-                  <th scope="col" className="betrag">
-                    Frei
-                  </th>
-                  <th scope="col" className="betrag">
-                    Vorjahr
-                  </th>
-                  {canEdit && <th scope="col">Aktion</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.item.id}>
-                    <td>
-                      <span className="mono">{row.item.account_number}</span>
-                      <span className="small budget-muted tenant-part">
-                        {row.item.account_name}
-                      </span>
-                    </td>
-                    <th scope="row">
-                      {row.item.name}
-                      {!row.item.active && (
-                        <span className="pill pill-neutral budget-pill">stillgelegt</span>
-                      )}
-                      <span className="small budget-muted tenant-part">
-                        {row.contracts === 0
-                          ? "kein Vertrag zugeordnet"
-                          : row.contracts === 1
-                            ? "1 Vertrag"
-                            : `${row.contracts} Verträge`}
-                      </span>
-                      {row.item.tags.length > 0 && (
-                        <span className="budget-tags">
-                          {row.item.tags.map((tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              className="chip budget-tag"
-                              aria-pressed={tagFilter.toLowerCase() === tag.toLowerCase()}
-                              aria-label={`Nach Tag ${tag} filtern`}
-                              onClick={() =>
-                                setTagFilter(
-                                  tagFilter.toLowerCase() === tag.toLowerCase() ? "" : tag,
-                                )
-                              }
-                            >
-                              {tag}
-                            </button>
-                          ))}
-                        </span>
-                      )}
-                    </th>
-                    <td className="betrag">
-                      {draft ? (
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          className="budget-input"
-                          aria-label={`Plan für ${row.item.name} (${row.item.account_number}) in Euro`}
-                          value={draft[row.item.id] ?? ""}
-                          onChange={(event) =>
-                            setDraft({ ...draft, [row.item.id]: event.target.value })
-                          }
-                        />
-                      ) : (
-                        amount(row.plan_cents)
-                      )}
-                    </td>
-                    <td className="betrag">{formatEuro(row.committed_cents)}</td>
-                    <td className="betrag">{formatEuro(row.actual_cents)}</td>
-                    <td className="betrag">{formatEuro(row.forecast_cents)}</td>
-                    <td
-                      className={
-                        row.plan_cents !== null && row.forecast_cents > row.plan_cents
-                          ? "betrag budget-bad"
-                          : "betrag"
-                      }
-                    >
-                      {row.plan_cents === null
-                        ? "–"
-                        : formatEuro(row.plan_cents - row.forecast_cents)}
-                    </td>
-                    <td className="betrag budget-muted">{amount(row.previous_cents)}</td>
-                    {canEdit && (
-                      <td>
-                        <button
-                          type="button"
-                          className="button button-secondary"
-                          aria-label={`${row.item.name} bearbeiten`}
-                          disabled={draft !== null}
-                          onClick={() => {
-                            setMessage(null);
-                            setEditing(row.item);
-                          }}
-                        >
-                          Bearbeiten
-                        </button>
-                        <DeleteButton
-                          what={`Budgetposten ${row.item.name}`}
-                          run={() => deleteItem(row.item.id)}
-                          onDeleted={() => {
-                            closeForm();
-                            setMessage({ kind: "status", text: `${row.item.name} ist gelöscht.` });
-                            setRound(round + 1);
-                          }}
-                        />
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="budget-summe">
-                  <th scope="row" colSpan={2}>
-                    {filtered ? "Summe der gezeigten Posten" : "Summe"}
-                  </th>
-                  <td className="betrag">{formatEuro(sums.plan)}</td>
-                  <td className="betrag">{formatEuro(sums.committed)}</td>
-                  <td className="betrag">{formatEuro(sums.actual)}</td>
-                  <td className="betrag">{formatEuro(sums.forecast)}</td>
-                  <td className="betrag">{formatEuro(sums.plan - sums.forecast)}</td>
-                  <td className="betrag budget-muted" colSpan={columns - 7}>
-                    {formatEuro(sums.previous)}
+        <div
+          className="table-wrap budget-table"
+          tabIndex={0}
+          role="region"
+          aria-label={`Budgetposten ${overview.year_name}`}
+        >
+          <table>
+            <caption className="visually-hidden">
+              Budgetposten im {label} {overview.year_name}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Konto</th>
+                <th scope="col">Budgetposten</th>
+                <th scope="col">Status</th>
+                <th scope="col" className="betrag">
+                  Erwartet
+                </th>
+                <th scope="col" className="betrag">
+                  Ist
+                </th>
+                <th scope="col" className="betrag">
+                  Prognose
+                </th>
+                <th scope="col" className="betrag">
+                  Abweichung
+                </th>
+                <th scope="col" className="betrag">
+                  Vorjahr
+                </th>
+                {canEdit && <th scope="col">Aktion</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.item.id}>
+                  <td>
+                    <span className="mono">{row.item.account_number}</span>
+                    <span className="small budget-muted tenant-part">{row.item.account_name}</span>
                   </td>
+                  <th scope="row">
+                    {row.item.name}
+                    {!row.item.active && (
+                      <span className="pill pill-neutral budget-pill">stillgelegt</span>
+                    )}
+                    <span className="small budget-muted tenant-part">
+                      {runtimeText(row.item)}
+                      {row.contracts === 1
+                        ? " · 1 Vertrag"
+                        : row.contracts > 1
+                          ? ` · ${row.contracts} Verträge`
+                          : ""}
+                    </span>
+                    {row.item.tags.length > 0 && (
+                      <span className="budget-tags">
+                        {row.item.tags.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            className="chip budget-tag"
+                            aria-pressed={tagFilter.toLowerCase() === tag.toLowerCase()}
+                            aria-label={`Nach Tag ${tag} filtern`}
+                            onClick={() =>
+                              setTagFilter(tagFilter.toLowerCase() === tag.toLowerCase() ? "" : tag)
+                            }
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </span>
+                    )}
+                  </th>
+                  <td>
+                    <StatusPill status={row.status} />
+                  </td>
+                  <td className="betrag">{amount(row.expected_cents)}</td>
+                  <td className="betrag">{formatEuro(row.actual_cents)}</td>
+                  <td className="betrag">{formatEuro(row.forecast_cents)}</td>
+                  <td className={deviationClass(row.expected_cents, row.forecast_cents)}>
+                    {deviation(row.expected_cents, row.forecast_cents)}
+                  </td>
+                  <td className="betrag budget-muted">{amount(row.previous_cents)}</td>
+                  {canEdit && (
+                    <td>
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        aria-label={`${row.item.name} bearbeiten`}
+                        onClick={() => {
+                          setMessage(null);
+                          setEditing(row.item);
+                        }}
+                      >
+                        Bearbeiten
+                      </button>
+                      <DeleteButton
+                        what={`Budgetposten ${row.item.name}`}
+                        run={() => deleteItem(row.item.id)}
+                        onDeleted={() => {
+                          closeForm();
+                          setMessage({ kind: "status", text: `${row.item.name} ist gelöscht.` });
+                          setRound(round + 1);
+                        }}
+                      />
+                    </td>
+                  )}
                 </tr>
-              </tfoot>
-            </table>
-          </div>
-          {/* Eigene Schlüssel: Sonst verwendet React den Knopf „Plan bearbeiten“ als
-              „Plan speichern“ weiter, und derselbe Klick schickt das Formular ab. */}
-          {canPlan && (
-            <div className="actions budget-actions">
-              {draft ? (
-                <>
-                  <button
-                    key="speichern"
-                    type="submit"
-                    className="button button-primary"
-                    disabled={busy}
-                  >
-                    Plan speichern
-                  </button>
-                  <button
-                    key="abbrechen"
-                    type="button"
-                    className="button button-secondary"
-                    disabled={busy}
-                    onClick={() => {
-                      setDraft(null);
-                      setMessage(null);
-                    }}
-                  >
-                    Abbrechen
-                  </button>
-                </>
-              ) : (
-                <button
-                  key="bearbeiten"
-                  type="button"
-                  className="button button-secondary"
-                  onClick={startEdit}
-                >
-                  Plan bearbeiten
-                </button>
-              )}
-            </div>
-          )}
-          {draft && (
-            <p className="small">
-              Beträge brutto in Euro, z. B. 11900,00. Ein leeres Feld heißt: für diesen Posten ist
-              nichts geplant.
-            </p>
-          )}
-        </form>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="budget-summe">
+                <th scope="row" colSpan={3}>
+                  {filtered ? "Summe der gezeigten Posten" : "Summe"}
+                </th>
+                <td className="betrag">{formatEuro(sums.expected)}</td>
+                <td className="betrag">{formatEuro(sums.actual)}</td>
+                <td className="betrag">{formatEuro(sums.forecast)}</td>
+                <td className={deviationClass(sums.expected, sums.forecast)}>
+                  {deviation(sums.expected, sums.forecast)}
+                </td>
+                <td className="betrag budget-muted" colSpan={columns - 7}>
+                  {formatEuro(sums.previous)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       )}
       {message && (
         <p

@@ -4,6 +4,7 @@ import { Link } from "../../components/Link";
 import { BUDGET_CONTRACTS_PATH, BUDGET_PARTNERS_PATH } from "../../navigation";
 import { navigate } from "../../router";
 import {
+  contractItemsText,
   BUDGET_MANAGER_ROLE,
   fetchPartnerDetail,
   fetchPartners,
@@ -72,9 +73,11 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
   // Budgetposten, auf denen Verträge oder Rechnungen dieser Firma liegen
   const items = new Map<string, { contracts: number; invoices: number }>();
   for (const entry of detail?.contracts ?? []) {
-    const key = `${entry.account_number} ${entry.account_name} · ${entry.item_name}`;
-    const row = items.get(key) ?? { contracts: 0, invoices: 0 };
-    items.set(key, { ...row, contracts: row.contracts + 1 });
+    for (const item of entry.items) {
+      const key = `${item.account_number} ${item.account_name} · ${item.name}`;
+      const row = items.get(key) ?? { contracts: 0, invoices: 0 };
+      items.set(key, { ...row, contracts: row.contracts + 1 });
+    }
   }
   for (const entry of detail?.invoices ?? []) {
     // Je Rechnung zählt ein Budgetposten einmal, auch mit mehreren Positionen.
@@ -127,7 +130,7 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
                       <span className="budget-muted budget-line">
                         {entry.partner_id === partner.id ? "Vertragspartner" : "Rechnungssteller"}
                         {" · "}
-                        {entry.account_number} · {entry.item_name}
+                        {contractItemsText(entry)}
                         {entry.running ? "" : " · beendet"}
                       </span>
                     </span>

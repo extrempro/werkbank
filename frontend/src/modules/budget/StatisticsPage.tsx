@@ -43,9 +43,11 @@ function barPath(x: number, base: number, height: number): string {
   ].join(" ");
 }
 
-/** Plan und Ist je Geschäftsjahr als Balkenpaare. Die Tabelle darunter zeigt dieselben Zahlen. */
+/** Erwartet und Ist je Geschäftsjahr als Balkenpaare. Die Tabelle darunter zeigt dieselben Zahlen. */
 function TagChart({ years, label }: { years: StatisticYear[]; label: string }) {
-  const max = niceMax(Math.max(...years.flatMap((year) => [year.plan_cents, year.actual_cents])));
+  const max = niceMax(
+    Math.max(...years.flatMap((year) => [year.expected_cents, year.actual_cents])),
+  );
   const base = HEIGHT - BOTTOM;
   const plot = base - TOP;
   const slot = (WIDTH - 2 * LEFT) / Math.max(years.length, 1);
@@ -55,7 +57,7 @@ function TagChart({ years, label }: { years: StatisticYear[]; label: string }) {
       <ul className="budget-legend">
         <li>
           <span className="budget-dot budget-dot-plan" aria-hidden="true" />
-          Plan
+          Erwartet
         </li>
         <li>
           <span className="budget-dot budget-dot-bound" aria-hidden="true" />
@@ -65,7 +67,7 @@ function TagChart({ years, label }: { years: StatisticYear[]; label: string }) {
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="img"
-        aria-label={`Plan und Ist je ${label}. Die Zahlen stehen in der Tabelle darunter.`}
+        aria-label={`Erwartet und Ist je ${label}. Die Zahlen stehen in der Tabelle darunter.`}
       >
         {lines.map((part) => (
           <g key={part}>
@@ -85,16 +87,16 @@ function TagChart({ years, label }: { years: StatisticYear[]; label: string }) {
         ))}
         {years.map((year, index) => {
           const center = LEFT + slot * index + slot / 2;
-          const planHeight = (year.plan_cents / max) * plot;
+          const planHeight = (year.expected_cents / max) * plot;
           const actualHeight = (year.actual_cents / max) * plot;
           return (
             <g key={year.year}>
-              {year.plan_cents > 0 && (
+              {year.expected_cents > 0 && (
                 <path
                   className="budget-chart-plan"
                   d={barPath(center - BAR - GAP / 2, base, planHeight)}
                 >
-                  <title>{`${year.name}: Plan ${formatEuro(year.plan_cents)}`}</title>
+                  <title>{`${year.name}: erwartet ${formatEuro(year.expected_cents)}`}</title>
                 </path>
               )}
               {year.actual_cents > 0 && (
@@ -121,7 +123,7 @@ function sameTags(left: readonly string[], right: readonly string[]): boolean {
   return lower(left).join("\n") === lower(right).join("\n");
 }
 
-/** IT-Budget › Statistik: Plan und Ist der Budgetposten mit bestimmten Tags über fünf Jahre. */
+/** IT-Budget › Statistik: erwartete Kosten und Ist der Budgetposten mit bestimmten Tags über fünf Jahre. */
 export function StatisticsPage({ roles }: { roles: readonly string[] }) {
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
   const linked = useSearchParam("tag");
@@ -197,7 +199,7 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
   const openSaved = saved.find((entry) => entry.mode === mode && sameTags(entry.tags, chosen));
   const shown = chosen.length > 0 ? result : null;
   const label = shown?.year_label ?? "Geschäftsjahr";
-  const planSum = shown ? shown.years.reduce((sum, year) => sum + year.plan_cents, 0) : 0;
+  const planSum = shown ? shown.years.reduce((sum, year) => sum + year.expected_cents, 0) : 0;
   const actualSum = shown ? shown.years.reduce((sum, year) => sum + year.actual_cents, 0) : 0;
 
   const onSave = (event: FormEvent) => {
@@ -227,7 +229,7 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
     <div className="page page-wide budget-page">
       <BudgetHead
         title="Statistik"
-        sub="Plan und Ist aller Budgetposten mit bestimmten Tags über fünf Jahre. Ist sind gebuchte Rechnungen; alle Beträge sind brutto."
+        sub="Erwartete Kosten und Ist aller Budgetposten mit bestimmten Tags über fünf Jahre. Ist sind gebuchte Rechnungen; alle Beträge sind brutto."
       />
       {failed && (
         <p role="alert" className="panel panel-empty">
@@ -332,7 +334,7 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
           </h2>
           <p role="status" className="small budget-muted">
             {shown.items.length === 1 ? "1 Budgetposten" : `${shown.items.length} Budgetposten`} ·
-            Plan {formatEuro(planSum)} · Ist {formatEuro(actualSum)}
+            Erwartet {formatEuro(planSum)} · Ist {formatEuro(actualSum)}
           </p>
           {shown.items.length === 0 ? (
             <p>Zu dieser Auswahl gibt es keinen Budgetposten.</p>
@@ -343,21 +345,21 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
                 className="table-wrap budget-table"
                 tabIndex={0}
                 role="region"
-                aria-label={`Plan und Ist je ${label}`}
+                aria-label={`Erwartet und Ist je ${label}`}
               >
                 <table>
-                  <caption className="visually-hidden">Plan und Ist je {label}</caption>
+                  <caption className="visually-hidden">Erwartet und Ist je {label}</caption>
                   <thead>
                     <tr>
                       <th scope="col">{label}</th>
                       <th scope="col" className="betrag">
-                        Plan
+                        Erwartet
                       </th>
                       <th scope="col" className="betrag">
                         Ist
                       </th>
                       <th scope="col" className="betrag">
-                        Plan abzüglich Ist
+                        Erwartet abzüglich Ist
                       </th>
                     </tr>
                   </thead>
@@ -370,14 +372,14 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
                             <span className="pill pill-neutral budget-pill">läuft</span>
                           )}
                         </th>
-                        <td className="betrag">{formatEuro(year.plan_cents)}</td>
+                        <td className="betrag">{formatEuro(year.expected_cents)}</td>
                         <td className="betrag">{formatEuro(year.actual_cents)}</td>
                         <td
                           className={
-                            year.actual_cents > year.plan_cents ? "betrag budget-bad" : "betrag"
+                            year.actual_cents > year.expected_cents ? "betrag budget-bad" : "betrag"
                           }
                         >
-                          {formatEuro(year.plan_cents - year.actual_cents)}
+                          {formatEuro(year.expected_cents - year.actual_cents)}
                         </td>
                       </tr>
                     ))}
@@ -408,7 +410,7 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
                       <th scope="col">Budgetposten</th>
                       <th scope="col">Tags</th>
                       <th scope="col" className="betrag">
-                        Plan im Zeitraum
+                        Erwartet im Zeitraum
                       </th>
                       <th scope="col" className="betrag">
                         Ist im Zeitraum
@@ -431,7 +433,7 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
                           )}
                         </th>
                         <td>{row.item.tags.join(", ")}</td>
-                        <td className="betrag">{formatEuro(row.plan_cents)}</td>
+                        <td className="betrag">{formatEuro(row.expected_cents)}</td>
                         <td className="betrag">{formatEuro(row.actual_cents)}</td>
                       </tr>
                     ))}

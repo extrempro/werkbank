@@ -113,8 +113,8 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Evergreen Geschäftsführung | `Evergreen.GF` | Abnahme von Vorgängen |
 | IT-Tools Nutzer | `Tools.User` | Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter) |
 | Tenant Leser | `Tenant.Reader` | Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen |
-| Budget Bearbeiter | `Budget.Editor` | IT-Budget ansehen, Konten anlegen und ändern |
-| Budgetverwalter | `Budget.Manager` | Wie Bearbeiter, dazu den Plan je Geschäftsjahr und die Einstellungen festlegen |
+| Budget Bearbeiter | `Budget.Editor` | IT-Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen |
+| Budgetverwalter | `Budget.Manager` | Wie Bearbeiter, dazu Rechnungen buchen und die Einstellungen festlegen |
 | Budget Leser | `Budget.Reader` | IT-Budget ansehen |
 
 Für alle Rollen gilt:

@@ -4235,3 +4235,44 @@ p.badges {
   padding: 0;
   list-style: none;
 }
+
+/* IT-Budget: einklappbare weitere Angaben in Formularen */
+
+.budget-more {
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+}
+
+.budget-more summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--farbe-text-mittel);
+  cursor: pointer;
+}
+
+.budget-more summary:focus-visible {
+  outline: 2px solid var(--farbe-primaer);
+  outline-offset: 2px;
+}
+
+.budget-more-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+/* IT-Budget: Auswahl mehrerer Budgetposten am Vertrag */
+
+.budget-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

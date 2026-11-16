@@ -258,7 +258,7 @@ export function Layout({ me }: LayoutProps) {
   } else if (contractId !== null && items.some((item) => item.path === BUDGET_CONTRACTS_PATH)) {
     page = <ContractsPage key={contractId} roles={me.roles} selectedId={contractId} />;
   } else if (path === BUDGET_PLANNING_PATH && current) {
-    page = <PlanningPage roles={me.roles} />;
+    page = <PlanningPage />;
   } else if (path === BUDGET_STATISTICS_PATH && current) {
     page = <StatisticsPage roles={me.roles} />;
   } else if (path === BUDGET_INVOICES_PATH && current) {

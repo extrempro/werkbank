@@ -14,7 +14,10 @@ import {
   euroInput,
   fetchContracts,
   fetchInvoices,
+  fetchBudgetSettings,
   fetchItems,
+  fiscalYearOf,
+  itemMatches,
   fetchPartners,
   fileSize,
   formatBudgetDay,
@@ -36,6 +39,7 @@ import {
   type InvoiceList,
   type InvoiceUpdate,
   type Item,
+  type ItemStatus,
   type Partner,
 } from "./api";
 import { BudgetHead, DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
@@ -46,6 +50,9 @@ interface FormProps {
   partners: Partner[];
   items: Item[];
   contracts: Contract[];
+  /** Monat, mit dem das Geschäftsjahr beginnt, und das gerade gezeigte Jahr als Vorgabe. */
+  startMonth: number;
+  listYear: number;
   onSaved: (invoice: Invoice) => void;
   onCancel: () => void;
 }
@@ -62,6 +69,10 @@ interface LineDraft {
   description: string;
   project: boolean;
   yearly: boolean;
+  /** Schließt den Posten für das Geschäftsjahr der Rechnung ab. */
+  closes: boolean;
+  /** Suchtext, der die Auswahl der Budgetposten eingrenzt. */
+  search: string;
 }
 
 function emptyLine(key: number): LineDraft {
@@ -75,6 +86,8 @@ function emptyLine(key: number): LineDraft {
     description: "",
     project: false,
     yearly: false,
+    closes: true,
+    search: "",
   };
 }
 
@@ -92,7 +105,22 @@ function draftOf(line: InvoiceLine, key: number): LineDraft {
     description: line.description,
     project: line.is_project,
     yearly: line.is_yearly,
+    closes: line.closes_item,
+    search: "",
   };
+}
+
+const STATUS_ORDER: (ItemStatus | null)[] = ["offen", "rechnung", "abgeschlossen", null];
+
+function groupLabel(status: ItemStatus | null, yearName: string): string {
+  if (status === null) {
+    return `Läuft ${yearName} nicht`;
+  }
+  return status === "offen"
+    ? `Offen ${yearName}`
+    : status === "rechnung"
+      ? `Rechnung liegt vor ${yearName}`
+      : `Abgeschlossen ${yearName}`;
 }
 
 /** Brutto einer Position, solange Netto und Steuersatz lesbar sind; sonst null. */
@@ -106,7 +134,16 @@ function lineGross(line: LineDraft): number | null {
   return net === null || rate === null ? null : grossCents(net, rate);
 }
 
-function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }: FormProps) {
+function InvoiceForm({
+  invoice,
+  partners,
+  items,
+  contracts,
+  startMonth,
+  listYear,
+  onSaved,
+  onCancel,
+}: FormProps) {
   const reveal = useRevealOnMount<HTMLElement>();
   const [invoicerId, setInvoicerId] = useState(invoice ? String(invoice.invoicer_id) : "");
   const [number, setNumber] = useState(invoice?.number ?? "");
@@ -120,6 +157,35 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
   const [total, setTotal] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Status der Budgetposten im Geschäftsjahr des Rechnungsdatums, für die Auswahl
+  const fiscalYear = fiscalYearOf(date, startMonth) ?? listYear;
+  const [statuses, setStatuses] = useState<{
+    year: number;
+    byItem: Map<number, ItemStatus | null>;
+  }>({ year: 0, byItem: new Map() });
+  useEffect(() => {
+    let active = true;
+    fetchItems(fiscalYear)
+      .then((list) => {
+        if (active) {
+          setStatuses({
+            year: fiscalYear,
+            byItem: new Map(list.map((entry) => [entry.id, entry.status ?? null])),
+          });
+        }
+      })
+      // Ohne Status bleibt die Auswahl nutzbar, nur ungruppiert.
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [fiscalYear]);
+  const yearName =
+    startMonth === 1
+      ? String(fiscalYear)
+      : `${fiscalYear}/${String((fiscalYear + 1) % 100).padStart(2, "0")}`;
+  const statusOf = (id: number): ItemStatus | null =>
+    statuses.year === fiscalYear ? (statuses.byItem.get(id) ?? null) : null;
 
   const usedItems = new Set(invoice?.lines.map((line) => line.item_id));
   const usedContracts = new Set(invoice?.lines.map((line) => line.contract_id));
@@ -133,11 +199,16 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
     setLines(lines.map((line) => (line.key === key ? { ...line, ...update } : line)));
 
   const pickContract = (line: LineDraft, value: string) => {
-    // Der Vertrag bringt seinen Budgetposten mit, wenn noch keiner gewählt ist.
+    // Ein Vertrag mit genau einem Posten bringt diesen mit, wenn noch keiner gewählt ist.
     const chosen = contracts.find((entry) => String(entry.id) === value);
     change(line.key, {
       contractId: value,
-      itemId: chosen && !line.itemId ? String(chosen.item_id) : line.itemId,
+      itemId:
+        chosen && !line.itemId && chosen.items.length === 1
+          ? String(chosen.items[0]?.id ?? "")
+          : line.itemId,
+      // Laufende Vertragszahlungen schließen den Posten in der Regel nicht ab.
+      closes: value === "",
     });
   };
 
@@ -191,6 +262,7 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
           description: line.description.trim(),
           is_project: line.project,
           is_yearly: line.yearly,
+          closes_item: line.closes,
         });
       }
     });
@@ -276,6 +348,15 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
             <fieldset key={line.key} className="budget-fieldset">
               <legend>{lines.length > 1 ? `Position ${index + 1}` : "Position"}</legend>
               <div className="tool-row">
+                <label className="narrow">
+                  Budgetposten suchen
+                  <input
+                    type="search"
+                    value={line.search}
+                    placeholder="Name oder Konto"
+                    onChange={(event) => change(line.key, { search: event.target.value })}
+                  />
+                </label>
                 <label>
                   Budgetposten
                   <select
@@ -283,11 +364,26 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
                     onChange={(event) => change(line.key, { itemId: event.target.value })}
                   >
                     <option value="">Bitte wählen</option>
-                    {itemChoices.map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        {entry.account_number} {entry.account_name} · {entry.name}
-                      </option>
-                    ))}
+                    {STATUS_ORDER.map((group) => {
+                      const members = itemChoices.filter(
+                        (entry) =>
+                          statusOf(entry.id) === group &&
+                          (itemMatches(entry, line.search) || String(entry.id) === line.itemId),
+                      );
+                      if (members.length === 0) {
+                        return null;
+                      }
+                      return (
+                        <optgroup key={group ?? "ohne"} label={groupLabel(group, yearName)}>
+                          {members.map((entry) => (
+                            <option key={entry.id} value={entry.id}>
+                              {entry.account_number} · {entry.name} · erwartet{" "}
+                              {formatEuro(entry.amount_cents)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
                   </select>
                 </label>
                 <label>
@@ -367,6 +463,15 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
                   />
                   Kommt jährlich wieder
                 </label>
+                <label className="check-label">
+                  <input
+                    type="checkbox"
+                    className="check"
+                    checked={line.closes}
+                    onChange={(event) => change(line.key, { closes: event.target.checked })}
+                  />
+                  Schließt den Budgetposten ab
+                </label>
                 {lines.length > 1 && (
                   <button
                     type="button"
@@ -442,6 +547,7 @@ interface Loaded {
   partners: Partner[];
   items: Item[];
   contracts: Contract[];
+  startMonth: number;
 }
 
 /** IT-Budget › Rechnungen: erfassen, prüfen und buchen. Erst Gebuchtes zählt zum Ist. */
@@ -461,10 +567,22 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchInvoices(year), fetchPartners(), fetchItems(), fetchContracts()])
-      .then(([list, partners, items, contracts]) => {
+    Promise.all([
+      fetchInvoices(year),
+      fetchPartners(),
+      fetchItems(),
+      fetchContracts(),
+      fetchBudgetSettings(),
+    ])
+      .then(([list, partners, items, contracts, settings]) => {
         if (active) {
-          setData({ list, partners, items, contracts: contracts.entries });
+          setData({
+            list,
+            partners,
+            items,
+            contracts: contracts.entries,
+            startMonth: settings.start_month,
+          });
           setFailed(false);
         }
       })
@@ -604,6 +722,8 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
           partners={data.partners}
           items={data.items}
           contracts={data.contracts}
+          startMonth={data.startMonth}
+          listYear={data.list.year}
           onSaved={onSaved}
           onCancel={closeForm}
         />
@@ -672,6 +792,7 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
                               line.description,
                               line.is_project ? "Projekt" : "",
                               line.is_yearly ? "jährlich" : "",
+                              line.closes_item ? "schließt ab" : "",
                             ]
                               .filter(Boolean)
                               .join(" · ")}
