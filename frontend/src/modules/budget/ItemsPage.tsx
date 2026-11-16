@@ -4,6 +4,7 @@ import { Link } from "../../components/Link";
 import { BUDGET_ACCOUNTS_PATH } from "../../navigation";
 import {
   BUDGET_EDITOR_ROLES,
+  deleteItem,
   BUDGET_MANAGER_ROLE,
   createItem,
   euroInput,
@@ -20,7 +21,7 @@ import {
   type Overview,
   type PlanEntry,
 } from "./api";
-import { ReadOnlyNote, useRevealOnMount } from "./shared";
+import { DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
 
 function amount(cents: number | null): string {
   return cents === null ? "–" : formatEuro(cents);
@@ -414,6 +415,15 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                         >
                           Bearbeiten
                         </button>
+                        <DeleteButton
+                          what={`Budgetposten ${row.item.name}`}
+                          run={() => deleteItem(row.item.id)}
+                          onDeleted={() => {
+                            closeForm();
+                            setMessage({ kind: "status", text: `${row.item.name} ist gelöscht.` });
+                            setRound(round + 1);
+                          }}
+                        />
                       </td>
                     )}
                   </tr>

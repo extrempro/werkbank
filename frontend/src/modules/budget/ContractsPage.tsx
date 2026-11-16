@@ -4,6 +4,7 @@ import { Link } from "../../components/Link";
 import { BUDGET_CONTRACTS_PATH } from "../../navigation";
 import {
   BUDGET_EDITOR_ROLES,
+  deleteContract,
   createContract,
   DEADLINE_WINDOW_DAYS,
   deadlineBadge,
@@ -30,7 +31,7 @@ import {
   type Partner,
 } from "./api";
 import { ContractDetail } from "./ContractDetail";
-import { BudgetHead, ReadOnlyNote, useRevealOnMount } from "./shared";
+import { BudgetHead, DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
 
 interface FormProps {
   /** null: neuen Vertrag anlegen. */
@@ -589,6 +590,15 @@ export function ContractsPage({
                             >
                               Bearbeiten
                             </button>
+                            <DeleteButton
+                              what={`Vertrag ${entry.title}`}
+                              run={() => deleteContract(entry.id)}
+                              onDeleted={() => {
+                                closeForm();
+                                setStatus(`${entry.title} ist gelöscht.`);
+                                setRound(round + 1);
+                              }}
+                            />
                           </td>
                         )}
                       </tr>

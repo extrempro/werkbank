@@ -813,3 +813,68 @@ def test_partner_detail_and_merge(db: Session) -> None:
         select(AuditLog).where(AuditLog.action == "budget.partner_zusammengelegt")
     ).first()
     assert entry is not None
+
+
+@pytest.mark.db
+def test_delete_only_without_dependencies(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "loesch-verwalter")
+    reader = client_for(["Budget.Reader"], "loesch-leser")
+    account = post(
+        manager, "/accounts", {"number": "6815", "name": "Software", "kind": "laufend"}
+    ).json()
+    item = post(manager, "/items", {"account_id": account["id"], "name": "Lizenzen"}).json()
+    partner = post(manager, "/partners", {"name": "Beispiel Software GmbH"}).json()
+    year = manager.get(f"{BASE}/settings").json()["current_year"]
+    put(manager, f"/plans/{year}", {"entries": [{"item_id": item["id"], "amount_cents": 100}]})
+    contract = post(
+        manager,
+        "/contracts",
+        {
+            "title": "Wartung",
+            "partner_id": partner["id"],
+            "item_id": item["id"],
+            "starts_on": f"{year}-01-01",
+            "net_cents": 1_000,
+            "interval": "jaehrlich",
+        },
+    ).json()
+    invoice = post(
+        manager,
+        "/invoices",
+        {
+            "invoicer_id": partner["id"],
+            "number": "RE-1",
+            "invoice_date": f"{year}-02-01",
+            "item_id": item["id"],
+            "contract_id": contract["id"],
+            "net_cents": 1_000,
+        },
+    ).json()
+
+    def delete(client: Any, path: str) -> int:
+        code: int = client.delete(f"{BASE}{path}", headers=HEADERS).status_code
+        return code
+
+    paths = [
+        f"/contracts/{contract['id']}",
+        f"/items/{item['id']}",
+        f"/partners/{partner['id']}",
+    ]
+    # Lesende löschen nichts; mit Abhängigkeiten geht es für niemanden.
+    assert [delete(reader, path) for path in paths] == [403, 403, 403]
+    assert [delete(manager, path) for path in paths] == [409, 409, 409]
+
+    # Ohne die Rechnung fällt der Vertrag, danach Posten (samt Plan) und Partner.
+    assert delete(manager, f"/invoices/{invoice['id']}") == 200
+    assert delete(manager, paths[1]) == 409
+    assert delete(manager, paths[2]) == 409
+    assert [delete(manager, path) for path in paths] == [200, 200, 200]
+    assert [delete(manager, path) for path in paths] == [404, 404, 404]
+    assert manager.get(f"{BASE}/overview", params={"year": year}).json()["plan"]["total_cents"] == 0
+    db.expire_all()
+    actions = set(db.scalars(select(AuditLog.action).where(AuditLog.module == "budget")).all())
+    assert {
+        "budget.vertrag_geloescht",
+        "budget.posten_geloescht",
+        "budget.partner_geloescht",
+    } <= actions

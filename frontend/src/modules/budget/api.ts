@@ -491,3 +491,17 @@ export function mergePartner(
 ): Promise<{ partner: Partner; moved_contracts: number; moved_invoices: number }> {
   return postJson(`/api/budget/partners/${id}/merge`, { into_id: intoId });
 }
+
+type Deleted = Promise<{ deleted: boolean }>;
+
+export function deleteContract(id: number): Deleted {
+  return deleteJson(`/api/budget/contracts/${id}`);
+}
+
+export function deleteItem(id: number): Deleted {
+  return deleteJson(`/api/budget/items/${id}`);
+}
+
+export function deletePartner(id: number): Deleted {
+  return deleteJson(`/api/budget/partners/${id}`);
+}

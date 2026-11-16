@@ -15,6 +15,7 @@ IT-Budget: Rechnungen mit Prüfung, Ist und Prognose; Partner im Detail und zusa
 - **Ist und Prognose:** Übersicht und Budgetposten zeigen Ist (gebuchte Rechnungen) und Prognose (Ist plus noch gebunden). „Gebunden“ ist jetzt der Rest der Vertragskosten, der noch nicht gebucht ist. „Frei“ ist der Plan abzüglich der Prognose. Die Balken zeigen Ist und Prognose
 - **Partner im Detail:** Klick auf einen Partner zeigt seine Verträge, die betroffenen Budgetposten und seine Rechnungen
 - **Partner zusammenlegen:** Der Budgetverwalter kann einen doppelt angelegten Partner mit einem anderen zusammenlegen, z. B. nach einem Schreibfehler. Verträge und Rechnungen wandern zum Ziel, der andere Partner wird gelöscht
+- **Löschen mit Bestätigung:** Verträge, Budgetposten, Rechnungen und Partner lassen sich löschen. Ein Vertrag nur ohne Rechnungen, ein Partner nur ohne Verträge und Rechnungen, ein Budgetposten nur ohne Verträge und Rechnungen (seine Pläne werden mitgelöscht). Sonst nennt die Werkbank, was noch dranhängt
 - Migration 0022 (eine neue Tabelle)
 - Noch nicht enthalten: Beleg als PDF, Auswertung über fünf Jahre, Export und Import
 

@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 
 from werkbank.core.app_settings import set_setting
 from werkbank.core.audit import write_audit
@@ -13,6 +13,7 @@ from werkbank.core.deps import DbDep, require_roles
 from werkbank.core.models import User
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
+from werkbank.db import Base
 from werkbank.modules.budget.contracts import (
     INTERVALS,
     NOTICE_WARN_DAYS,
@@ -1496,3 +1497,92 @@ def merge_partner(
     return MergeOut(
         partner=partner_out(target), moved_contracts=moved_contracts, moved_invoices=moved_invoices
     )
+
+
+# --- Löschen ---
+
+
+def _deleted(
+    db: DbDep, request: Request, user: CurrentUser, kind: str, object_id: int, name: str
+) -> dict[str, bool]:
+    write_audit(
+        db,
+        module=MODULE,
+        action=f"budget.{kind}_geloescht",
+        user_id=user.user_id,
+        object_type=kind,
+        object_id=str(object_id),
+        ip=client_ip(request),
+        details={"name": name},
+    )
+    db.commit()
+    return {"deleted": True}
+
+
+def _count(db: DbDep, model: type[Base], condition: ColumnElement[bool]) -> int:
+    return db.scalar(select(func.count()).select_from(model).where(condition)) or 0
+
+
+def _blocked(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+
+@router.delete("/contracts/{contract_id}")
+def delete_contract(
+    request: Request, contract_id: ContractId, user: Editor, db: DbDep
+) -> dict[str, bool]:
+    """Löscht einen Vertrag, solange keine Rechnung an ihm hängt."""
+    row: BudgetContract | None = db.get(BudgetContract, contract_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    invoices = _count(db, BudgetInvoice, BudgetInvoice.contract_id == row.id)
+    if invoices:
+        raise _blocked(
+            f"Am Vertrag hängen noch {invoices} Rechnung(en). "
+            "Bitte erst diese umhängen oder löschen."
+        )
+    title = row.title
+    db.delete(row)
+    return _deleted(db, request, user, "vertrag", contract_id, title)
+
+
+@router.delete("/items/{item_id}")
+def delete_item(request: Request, item_id: ItemId, user: Editor, db: DbDep) -> dict[str, bool]:
+    """Löscht einen Budgetposten samt Plänen, wenn kein Vertrag und keine Rechnung auf ihm liegt."""
+    row: BudgetItem | None = db.get(BudgetItem, item_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    contracts = _count(db, BudgetContract, BudgetContract.item_id == row.id)
+    invoices = _count(db, BudgetInvoice, BudgetInvoice.item_id == row.id)
+    if contracts or invoices:
+        raise _blocked(
+            f"Auf dem Budgetposten liegen noch {contracts} Vertrag/Verträge und {invoices} "
+            "Rechnung(en). Bitte erst diese umhängen oder löschen, oder den Posten stilllegen."
+        )
+    name = row.name
+    db.delete(row)
+    return _deleted(db, request, user, "posten", item_id, name)
+
+
+@router.delete("/partners/{partner_id}")
+def delete_partner(
+    request: Request, partner_id: PartnerId, user: Editor, db: DbDep
+) -> dict[str, bool]:
+    """Löscht einen Partner, solange kein Vertrag und keine Rechnung auf ihn verweist."""
+    row: BudgetPartner | None = db.get(BudgetPartner, partner_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    contracts = _count(
+        db,
+        BudgetContract,
+        (BudgetContract.partner_id == row.id) | (BudgetContract.invoicer_id == row.id),
+    )
+    invoices = _count(db, BudgetInvoice, BudgetInvoice.invoicer_id == row.id)
+    if contracts or invoices:
+        raise _blocked(
+            f"Der Partner hat noch {contracts} Vertrag/Verträge und {invoices} Rechnung(en). "
+            "Bitte erst diese umhängen oder löschen, den Partner zusammenlegen oder stilllegen."
+        )
+    name = row.name
+    db.delete(row)
+    return _deleted(db, request, user, "partner", partner_id, name)

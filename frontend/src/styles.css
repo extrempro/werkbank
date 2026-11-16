@@ -4095,3 +4095,16 @@ p.badges {
   align-items: center;
   justify-content: space-between;
 }
+
+.budget-delete {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+}
+
+.budget-delete-error {
+  flex-basis: 100%;
+  white-space: normal;
+}

@@ -28,6 +28,7 @@ import { InvoicesPage } from "./InvoicesPage";
 import { ItemsPage } from "./ItemsPage";
 import { PartnerDetailPage } from "./PartnerDetailPage";
 import { PartnersPage } from "./PartnersPage";
+import { DeleteButton } from "./shared";
 
 afterEach(() => {
   cleanup();
@@ -526,7 +527,9 @@ describe("Übersicht nach dem Entwurf", () => {
     render(<BudgetOverviewPage roles={["Budget.Reader"]} />);
     expect(await screen.findByText("Durch Verträge gebunden", { selector: "dt" })).toBeVisible();
     expect(screen.getByText(/2 Verträge/)).toBeVisible();
-    expect(plain(screen.getByText(/über Plan$/).textContent)).toBe("2.190,00 € über Plan");
+    expect(plain(screen.getByText(/über Plan$/, { selector: "dd" }).textContent)).toBe(
+      "2.190,00 € über Plan",
+    );
     expect(
       screen.getByRole("img", { name: /Softwarewartung: Ist 0 %, Prognose 100 % des Plans/ }),
     ).toBeInTheDocument();
@@ -909,5 +912,44 @@ describe("Partner im Detail", () => {
       expect(calls.find((call) => call.method === "POST")?.body).toEqual({ into_id: 1 }),
     );
     await vi.waitFor(() => expect(window.location.pathname).toBe("/budget/partner/1"));
+  });
+});
+
+describe("Löschen", () => {
+  it("fragt nach und zeigt den Grund, wenn der Server ablehnt", async () => {
+    const run = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("abgelehnt"))
+      .mockResolvedValueOnce({ deleted: true });
+    const onDeleted = vi.fn();
+    render(<DeleteButton what="Vertrag Wartung" run={run} onDeleted={onDeleted} />);
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag Wartung löschen" }));
+    expect(run).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Doch nicht" }));
+    expect(screen.queryByRole("button", { name: "Wirklich löschen" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag Wartung löschen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Das Löschen hat nicht geklappt.");
+    expect(onDeleted).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag Wartung löschen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    await vi.waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+  });
+
+  it("löscht einen Partner aus der Liste", async () => {
+    const calls = stubFetch({
+      "GET /api/budget/partners": [partner, distributor],
+      "DELETE /api/budget/partners/2": { deleted: true },
+    });
+    render(<PartnersPage roles={["Budget.Editor"]} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Partner Beispiel Distribution AG löschen" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    expect(await screen.findByText("Beispiel Distribution AG ist gelöscht.")).toBeVisible();
+    expect(calls.some((call) => call.method === "DELETE")).toBe(true);
+    expect(screen.queryByRole("link", { name: "Beispiel Distribution AG" })).toBeNull();
   });
 });
