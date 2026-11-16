@@ -423,11 +423,8 @@ export function rememberYear(year: number): void {
 
 export type InvoiceStatus = "zu_pruefen" | "gebucht";
 
-export interface InvoiceUpdate {
-  invoicer_id: number;
-  number: string;
-  internal_number: string;
-  invoice_date: string;
+/** Eine Position einer Rechnung: ein Betrag für genau einen Budgetposten. */
+export interface InvoiceLineUpdate {
   item_id: number;
   contract_id: number | null;
   net_cents: number;
@@ -439,14 +436,36 @@ export interface InvoiceUpdate {
   is_yearly: boolean;
 }
 
-export interface Invoice extends Omit<InvoiceUpdate, "gross_cents"> {
+export interface InvoiceLine extends Omit<InvoiceLineUpdate, "gross_cents"> {
   id: number;
   gross_cents: number;
-  invoicer_name: string;
   item_name: string;
   account_number: string;
   account_name: string;
   contract_title: string | null;
+}
+
+export interface InvoiceUpdate {
+  invoicer_id: number;
+  number: string;
+  internal_number: string;
+  invoice_date: string;
+  lines: InvoiceLineUpdate[];
+  /** Rechnungsbetrag laut Beleg (brutto); angegeben muss er der Summe der Positionen entsprechen. */
+  total_gross_cents: number | null;
+}
+
+export interface Invoice {
+  id: number;
+  invoicer_id: number;
+  invoicer_name: string;
+  number: string;
+  internal_number: string;
+  invoice_date: string;
+  /** Summen der Positionen. */
+  net_cents: number;
+  gross_cents: number;
+  lines: InvoiceLine[];
   status: InvoiceStatus;
   created_by_name: string | null;
   booked_by_name: string | null;
@@ -455,6 +474,8 @@ export interface Invoice extends Omit<InvoiceUpdate, "gross_cents"> {
   doc_name: string | null;
   doc_size: number | null;
 }
+
+export const INVOICE_LINES_MAX = 50;
 
 export interface InvoiceList {
   year: number;

@@ -25,6 +25,7 @@ from werkbank.modules.budget.models import (
     BudgetAccount,
     BudgetContract,
     BudgetInvoice,
+    BudgetInvoiceLine,
     BudgetItem,
     BudgetPartner,
     BudgetPlan,
@@ -174,12 +175,32 @@ def test_accounts_are_managed_by_editors(db: Session) -> None:
     assert {"budget.konto_angelegt", "budget.konto_geaendert"} <= actions
 
 
+LINE_KEYS = (
+    "item_id",
+    "contract_id",
+    "net_cents",
+    "tax_rate_bp",
+    "gross_cents",
+    "description",
+    "is_project",
+    "is_yearly",
+)
+
+
+def with_lines(path: str, body: dict[str, Any]) -> dict[str, Any]:
+    """Rechnung in Kurzform (ein Posten, ein Betrag) als Rechnung mit einer Position."""
+    if not path.startswith("/invoices") or "lines" in body or "invoicer_id" not in body:
+        return body
+    head = {key: value for key, value in body.items() if key not in LINE_KEYS}
+    return {**head, "lines": [{key: body[key] for key in LINE_KEYS if key in body}]}
+
+
 def post(client: Any, path: str, body: dict[str, Any]) -> Any:
-    return client.post(f"{BASE}{path}", json=body, headers=HEADERS)
+    return client.post(f"{BASE}{path}", json=with_lines(path, body), headers=HEADERS)
 
 
 def put(client: Any, path: str, body: dict[str, Any]) -> Any:
-    return client.put(f"{BASE}{path}", json=body, headers=HEADERS)
+    return client.put(f"{BASE}{path}", json=with_lines(path, body), headers=HEADERS)
 
 
 @pytest.mark.db
@@ -648,11 +669,13 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
         119_000,
         None,
     )
-    assert (first["invoicer_name"], first["item_name"], first["contract_title"]) == (
+    line = first["lines"][0]
+    assert (first["invoicer_name"], line["item_name"], line["contract_title"]) == (
         "Beispiel Software GmbH",
         "Zeiterfassung",
         "Wartung",
     )
+    assert (line["net_cents"], line["tax_rate_bp"], line["is_yearly"]) == (100_000, 1900, True)
     assert first["created_by_name"]
     overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
     assert (overview["open_invoices"], overview["actual"]["total_cents"]) == (1, 0)
@@ -1272,3 +1295,72 @@ def test_tags_statistics_and_search(db: Session) -> None:
     db.expire_all()
     actions = set(db.scalars(select(AuditLog.action).where(AuditLog.module == "budget")).all())
     assert {"budget.statistik_gespeichert", "budget.statistik_geloescht"} <= actions
+
+
+@pytest.mark.db
+def test_invoices_have_lines_for_several_items(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "position-verwalter")
+    reader = client_for(["Budget.Reader"], "position-leser")
+    account = post(
+        manager, "/accounts", {"number": "6815", "name": "Software", "kind": "laufend"}
+    ).json()
+    licence = post(manager, "/items", {"account_id": account["id"], "name": "Lizenz"}).json()
+    training = post(manager, "/items", {"account_id": account["id"], "name": "Schulung"}).json()
+    partner = post(manager, "/partners", {"name": "Beispiel Software GmbH"}).json()
+    year = manager.get(f"{BASE}/settings").json()["current_year"]
+    body = {
+        "invoicer_id": partner["id"],
+        "number": "RE-7",
+        "internal_number": "re.0007",
+        "invoice_date": f"{year}-03-01",
+        "lines": [
+            {"item_id": licence["id"], "net_cents": 100_000, "description": "Lizenz"},
+            {
+                "item_id": training["id"],
+                "net_cents": 20_000,
+                "tax_rate_bp": 700,
+                "is_project": True,
+            },
+        ],
+        "total_gross_cents": 140_400,
+    }
+    created = post(manager, "/invoices", body)
+    assert created.status_code == 201, created.text
+    invoice = created.json()
+    assert (invoice["net_cents"], invoice["gross_cents"]) == (120_000, 140_400)
+    assert [
+        (line["item_name"], line["gross_cents"], line["tax_rate_bp"], line["is_project"])
+        for line in invoice["lines"]
+    ] == [("Lizenz", 119_000, 1900, False), ("Schulung", 21_400, 700, True)]
+
+    # Das Ist landet je Position beim richtigen Budgetposten.
+    overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
+    assert {row["item"]["name"]: row["actual_cents"] for row in overview["items"]} == {
+        "Lizenz": 119_000,
+        "Schulung": 21_400,
+    }
+
+    # Der Rechnungsbetrag muss ganz verteilt sein; Fehler nennen die Position.
+    assert post(manager, "/invoices", {**body, "total_gross_cents": 150_000}).status_code == 422
+    assert post(manager, "/invoices", {**body, "lines": []}).status_code == 422
+    broken = {**body, "lines": [body["lines"][0], {"item_id": 999_999, "net_cents": 1}]}
+    rejected = post(manager, "/invoices", {**broken, "total_gross_cents": None})
+    assert rejected.status_code == 422
+    assert rejected.json()["detail"].startswith("Position 2:")
+
+    # Ändern ersetzt die Positionen; ein Posten mit Position lässt sich nicht löschen.
+    changed = put(
+        manager,
+        f"/invoices/{invoice['id']}",
+        {**body, "lines": [body["lines"][0]], "total_gross_cents": 119_000},
+    ).json()
+    assert [line["item_name"] for line in changed["lines"]] == ["Lizenz"]
+    db.expire_all()
+    assert len(db.scalars(select(BudgetInvoiceLine)).all()) == 1
+    assert manager.delete(f"{BASE}/items/{licence['id']}", headers=HEADERS).status_code == 409
+    assert manager.delete(f"{BASE}/items/{training['id']}", headers=HEADERS).json() == {
+        "deleted": True
+    }
+    assert manager.delete(f"{BASE}/invoices/{invoice['id']}", headers=HEADERS).status_code == 200
+    db.expire_all()
+    assert db.scalars(select(BudgetInvoiceLine)).all() == []

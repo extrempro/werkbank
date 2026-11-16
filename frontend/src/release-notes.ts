@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.32.0",
+    date: "2026-11-16",
+    summary: "IT-Budget: Eine Rechnung kann auf mehrere Budgetposten verteilt werden.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Rechnungen haben jetzt Positionen. Jede Position gehört zu einem Budgetposten, so lässt sich eine Rechnung auf mehrere Posten verteilen.",
+          "Jede Position hat ihren eigenen Steuersatz. Rechnungen mit 19 % und 7 % lassen sich damit in einem Stück erfassen.",
+          "Trägst du den Rechnungsbetrag vom Beleg ein, zeigt die Werkbank, wie viel noch nicht verteilt ist.",
+          "Deine bisherigen Rechnungen bleiben erhalten; jede hat jetzt genau eine Position.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.31.0",
     date: "2026-11-16",
     summary: "IT-Budget: Tags am Budgetposten und eine Statistik nach Tags.",

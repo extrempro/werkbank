@@ -29,8 +29,12 @@ import {
   updateInvoice,
   uploadDocument,
   type Contract,
+  INVOICE_LINES_MAX,
   type Invoice,
+  type InvoiceLine,
+  type InvoiceLineUpdate,
   type InvoiceList,
+  type InvoiceUpdate,
   type Item,
   type Partner,
 } from "./api";
@@ -46,97 +50,171 @@ interface FormProps {
   onCancel: () => void;
 }
 
+/** Eingaben einer Position als Text, wie sie in den Feldern stehen. */
+interface LineDraft {
+  key: number;
+  itemId: string;
+  contractId: string;
+  net: string;
+  rate: string;
+  /** Leer: Brutto wird gerechnet. Gefüllt: Brutto laut Rechnung. */
+  gross: string;
+  description: string;
+  project: boolean;
+  yearly: boolean;
+}
+
+function emptyLine(key: number): LineDraft {
+  return {
+    key,
+    itemId: "",
+    contractId: "",
+    net: "",
+    rate: "19",
+    gross: "",
+    description: "",
+    project: false,
+    yearly: false,
+  };
+}
+
+function draftOf(line: InvoiceLine, key: number): LineDraft {
+  return {
+    key,
+    itemId: String(line.item_id),
+    contractId: line.contract_id ? String(line.contract_id) : "",
+    net: euroInput(line.net_cents),
+    rate: (line.tax_rate_bp / 100).toLocaleString("de-DE"),
+    gross:
+      line.gross_cents !== grossCents(line.net_cents, line.tax_rate_bp)
+        ? euroInput(line.gross_cents)
+        : "",
+    description: line.description,
+    project: line.is_project,
+    yearly: line.is_yearly,
+  };
+}
+
+/** Brutto einer Position, solange Netto und Steuersatz lesbar sind; sonst null. */
+function lineGross(line: LineDraft): number | null {
+  const typed = line.gross.trim();
+  if (typed !== "") {
+    return parseEuro(typed);
+  }
+  const net = parseEuro(line.net);
+  const rate = parseRate(line.rate);
+  return net === null || rate === null ? null : grossCents(net, rate);
+}
+
 function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }: FormProps) {
   const reveal = useRevealOnMount<HTMLElement>();
   const [invoicerId, setInvoicerId] = useState(invoice ? String(invoice.invoicer_id) : "");
   const [number, setNumber] = useState(invoice?.number ?? "");
   const [internal, setInternal] = useState(invoice?.internal_number ?? "");
   const [date, setDate] = useState(invoice?.invoice_date ?? "");
-  const [itemId, setItemId] = useState(invoice ? String(invoice.item_id) : "");
-  const [contractId, setContractId] = useState(
-    invoice?.contract_id ? String(invoice.contract_id) : "",
+  const [lines, setLines] = useState<LineDraft[]>(
+    invoice ? invoice.lines.map(draftOf) : [emptyLine(0)],
   );
-  const [net, setNet] = useState(invoice ? euroInput(invoice.net_cents) : "");
-  const [rate, setRate] = useState(
-    invoice ? (invoice.tax_rate_bp / 100).toLocaleString("de-DE") : "19",
-  );
-  // Leer: Brutto wird gerechnet. Gefüllt: Brutto laut Rechnung.
-  const [gross, setGross] = useState(
-    invoice && invoice.gross_cents !== grossCents(invoice.net_cents, invoice.tax_rate_bp)
-      ? euroInput(invoice.gross_cents)
-      : "",
-  );
-  const [description, setDescription] = useState(invoice?.description ?? "");
-  const [project, setProject] = useState(invoice?.is_project ?? false);
-  const [yearly, setYearly] = useState(invoice?.is_yearly ?? false);
+  const [nextKey, setNextKey] = useState(invoice ? invoice.lines.length : 1);
+  // Rechnungsbetrag laut Beleg: freiwillig, dient dem Abgleich mit der Summe der Positionen
+  const [total, setTotal] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const usedItems = new Set(invoice?.lines.map((line) => line.item_id));
+  const usedContracts = new Set(invoice?.lines.map((line) => line.contract_id));
   const partnerChoices = partners.filter(
     (entry) => (entry.active && entry.is_invoicer) || entry.id === invoice?.invoicer_id,
   );
-  const itemChoices = items.filter((entry) => entry.active || entry.id === invoice?.item_id);
+  const itemChoices = items.filter((entry) => entry.active || usedItems.has(entry.id));
   const contractChoices = contracts.filter(
-    (entry) => entry.running || entry.id === invoice?.contract_id,
+    (entry) => entry.running || usedContracts.has(entry.id),
   );
-  const netPreview = parseEuro(net);
-  const ratePreview = parseRate(rate);
 
-  const pickContract = (value: string) => {
-    setContractId(value);
+  const change = (key: number, update: Partial<LineDraft>) =>
+    setLines(lines.map((line) => (line.key === key ? { ...line, ...update } : line)));
+
+  const pickContract = (line: LineDraft, value: string) => {
     // Der Vertrag bringt seinen Budgetposten mit, wenn noch keiner gewählt ist.
     const chosen = contracts.find((entry) => String(entry.id) === value);
-    if (chosen && !itemId) {
-      setItemId(String(chosen.item_id));
-    }
+    change(line.key, {
+      contractId: value,
+      itemId: chosen && !line.itemId ? String(chosen.item_id) : line.itemId,
+    });
   };
 
-  const pickItem = (value: string) => {
-    setItemId(value);
-    // Der Posten bringt seinen üblichen Partner mit, wenn noch keiner gewählt ist.
-    const chosen = items.find((entry) => String(entry.id) === value);
-    if (chosen?.partner_id && !invoicerId) {
-      setInvoicerId(String(chosen.partner_id));
-    }
-  };
+  const sums = lines.map(lineGross);
+  const grossSum = sums.every((value) => value !== null)
+    ? sums.reduce<number>((sum, value) => sum + (value ?? 0), 0)
+    : null;
+  const netSum = lines.reduce<number | null>((sum, line) => {
+    const net = parseEuro(line.net);
+    return sum === null || net === null ? null : sum + net;
+  }, 0);
+  const totalText = total.trim();
+  const totalCents = totalText === "" ? null : parseEuro(totalText);
+  const rest = totalCents !== null && grossSum !== null ? totalCents - grossSum : null;
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    const netCents = parseEuro(net);
-    const taxRate = parseRate(rate);
-    const grossText = gross.trim();
-    const grossValue = grossText === "" ? null : parseEuro(grossText);
     let problem: string | null = null;
-    if (!invoicerId || !itemId) {
-      problem = "Bitte Rechnungssteller und Budgetposten wählen.";
+    if (!invoicerId) {
+      problem = "Bitte den Rechnungssteller wählen.";
     } else if (!number.trim()) {
       problem = "Bitte die Rechnungsnummer eintragen.";
     } else if (!date) {
       problem = "Bitte das Rechnungsdatum eintragen.";
-    } else if (netCents === null) {
-      problem = "Der Nettobetrag ist nicht lesbar. Bitte so eintragen: 1000,00";
-    } else if (taxRate === null) {
-      problem = "Der Steuersatz ist nicht lesbar. Bitte so eintragen: 19";
-    } else if (grossText !== "" && grossValue === null) {
-      problem = "Das Brutto ist nicht lesbar. Bitte so eintragen: 1190,00";
     }
-    if (problem !== null || netCents === null || taxRate === null) {
+    const parsed: InvoiceLineUpdate[] = [];
+    lines.forEach((line, index) => {
+      if (problem !== null) {
+        return;
+      }
+      const where = lines.length > 1 ? `Position ${index + 1}: ` : "";
+      const netCents = parseEuro(line.net);
+      const taxRate = parseRate(line.rate);
+      const grossText = line.gross.trim();
+      const grossValue = grossText === "" ? null : parseEuro(grossText);
+      if (!line.itemId) {
+        problem = `${where}Bitte den Budgetposten wählen.`;
+      } else if (netCents === null) {
+        problem = `${where}Der Nettobetrag ist nicht lesbar. Bitte so eintragen: 1000,00`;
+      } else if (taxRate === null) {
+        problem = `${where}Der Steuersatz ist nicht lesbar. Bitte so eintragen: 19`;
+      } else if (grossText !== "" && grossValue === null) {
+        problem = `${where}Das Brutto ist nicht lesbar. Bitte so eintragen: 1190,00`;
+      } else {
+        parsed.push({
+          item_id: Number(line.itemId),
+          contract_id: line.contractId ? Number(line.contractId) : null,
+          net_cents: netCents,
+          tax_rate_bp: taxRate,
+          gross_cents: grossValue,
+          description: line.description.trim(),
+          is_project: line.project,
+          is_yearly: line.yearly,
+        });
+      }
+    });
+    if (problem === null && totalText !== "" && totalCents === null) {
+      problem = "Der Rechnungsbetrag ist nicht lesbar. Bitte so eintragen: 1190,00";
+    } else if (problem === null && rest !== null && rest !== 0) {
+      problem =
+        rest > 0
+          ? `Vom Rechnungsbetrag sind noch ${formatEuro(rest)} nicht auf Positionen verteilt.`
+          : `Die Positionen ergeben ${formatEuro(-rest)} mehr als der Rechnungsbetrag.`;
+    }
+    if (problem !== null) {
       setError(problem);
       return;
     }
-    const update = {
+    const update: InvoiceUpdate = {
       invoicer_id: Number(invoicerId),
       number: number.trim(),
       internal_number: internal.trim(),
       invoice_date: date,
-      item_id: Number(itemId),
-      contract_id: contractId ? Number(contractId) : null,
-      net_cents: netCents,
-      tax_rate_bp: taxRate,
-      gross_cents: grossValue,
-      description: description.trim(),
-      is_project: project,
-      is_yearly: yearly,
+      lines: parsed,
+      total_gross_cents: totalCents,
     };
     setBusy(true);
     setError(null);
@@ -156,126 +234,192 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
         </h2>
       </div>
       <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-        <div className="tool-row">
-          <label>
-            Rechnungssteller
-            <select value={invoicerId} onChange={(event) => setInvoicerId(event.target.value)}>
-              <option value="">Bitte wählen</option>
-              {partnerChoices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="narrow">
-            Rechnungsnummer
-            <input
-              type="text"
-              value={number}
-              maxLength={80}
-              onChange={(event) => setNumber(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Interne Nummer (freiwillig)
-            <input
-              type="text"
-              value={internal}
-              maxLength={60}
-              onChange={(event) => setInternal(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Rechnungsdatum
-            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-          </label>
-        </div>
-        <div className="tool-row">
-          <label>
-            Vertrag (freiwillig)
-            <select value={contractId} onChange={(event) => pickContract(event.target.value)}>
-              <option value="">ohne Vertrag</option>
-              {contractChoices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.title} · {entry.partner_name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Budgetposten
-            <select value={itemId} onChange={(event) => pickItem(event.target.value)}>
-              <option value="">Bitte wählen</option>
-              {itemChoices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.account_number} {entry.account_name} · {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="tool-row">
-          <label className="narrow">
-            Betrag netto (Euro)
-            <input
-              type="text"
-              inputMode="decimal"
-              value={net}
-              onChange={(event) => setNet(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Steuersatz (%)
-            <input
-              type="text"
-              inputMode="decimal"
-              value={rate}
-              onChange={(event) => setRate(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Brutto laut Rechnung (freiwillig)
-            <input
-              type="text"
-              inputMode="decimal"
-              value={gross}
-              onChange={(event) => setGross(event.target.value)}
-            />
-          </label>
-        </div>
-        <p className="small" role="status">
-          {netPreview !== null && ratePreview !== null
-            ? `Gerechnetes Brutto: ${formatEuro(grossCents(netPreview, ratePreview))}. Weicht die Rechnung um Cent ab, trage ihr Brutto ein (höchstens 1 Euro Abweichung).`
-            : "Das Brutto rechnet die Werkbank aus Netto und Steuersatz. Fürs Budget zählt das Brutto."}
-        </p>
-        <label>
-          Bezeichnung (freiwillig)
-          <input
-            type="text"
-            value={description}
-            maxLength={200}
-            onChange={(event) => setDescription(event.target.value)}
-          />
-        </label>
-        <label className="check-label">
-          <input
-            type="checkbox"
-            className="check"
-            checked={project}
-            onChange={(event) => setProject(event.target.checked)}
-          />
-          Gehört zu einem Projekt
-        </label>
-        <label className="check-label">
-          <input
-            type="checkbox"
-            className="check"
-            checked={yearly}
-            onChange={(event) => setYearly(event.target.checked)}
-          />
-          Kommt jährlich wieder
-        </label>
+        <fieldset className="budget-fieldset">
+          <legend>Kopf</legend>
+          <div className="tool-row">
+            <label>
+              Rechnungssteller
+              <select value={invoicerId} onChange={(event) => setInvoicerId(event.target.value)}>
+                <option value="">Bitte wählen</option>
+                {partnerChoices.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="narrow">
+              Rechnungsnummer
+              <input
+                type="text"
+                value={number}
+                maxLength={80}
+                onChange={(event) => setNumber(event.target.value)}
+              />
+            </label>
+            <label className="narrow">
+              Interne Nummer (freiwillig)
+              <input
+                type="text"
+                value={internal}
+                maxLength={60}
+                onChange={(event) => setInternal(event.target.value)}
+              />
+            </label>
+            <label className="narrow">
+              Rechnungsdatum
+              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            </label>
+          </div>
+        </fieldset>
+        {lines.map((line, index) => {
+          const gross = lineGross(line);
+          return (
+            <fieldset key={line.key} className="budget-fieldset">
+              <legend>{lines.length > 1 ? `Position ${index + 1}` : "Position"}</legend>
+              <div className="tool-row">
+                <label>
+                  Budgetposten
+                  <select
+                    value={line.itemId}
+                    onChange={(event) => change(line.key, { itemId: event.target.value })}
+                  >
+                    <option value="">Bitte wählen</option>
+                    {itemChoices.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.account_number} {entry.account_name} · {entry.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Vertrag (freiwillig)
+                  <select
+                    value={line.contractId}
+                    onChange={(event) => pickContract(line, event.target.value)}
+                  >
+                    <option value="">ohne Vertrag</option>
+                    {contractChoices.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.title} · {entry.partner_name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="tool-row">
+                <label className="narrow">
+                  Betrag netto (Euro)
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={line.net}
+                    onChange={(event) => change(line.key, { net: event.target.value })}
+                  />
+                </label>
+                <label className="narrow">
+                  Steuersatz (%)
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={line.rate}
+                    onChange={(event) => change(line.key, { rate: event.target.value })}
+                  />
+                </label>
+                <label className="narrow">
+                  Brutto laut Rechnung (freiwillig)
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={line.gross}
+                    onChange={(event) => change(line.key, { gross: event.target.value })}
+                  />
+                </label>
+                <label>
+                  Bezeichnung (freiwillig)
+                  <input
+                    type="text"
+                    value={line.description}
+                    maxLength={200}
+                    onChange={(event) => change(line.key, { description: event.target.value })}
+                  />
+                </label>
+              </div>
+              <p className="small">
+                {gross !== null
+                  ? `Brutto der Position: ${formatEuro(gross)}`
+                  : "Das Brutto rechnet die Werkbank aus Netto und Steuersatz."}
+              </p>
+              <div className="budget-checks">
+                <label className="check-label">
+                  <input
+                    type="checkbox"
+                    className="check"
+                    checked={line.project}
+                    onChange={(event) => change(line.key, { project: event.target.checked })}
+                  />
+                  Gehört zu einem Projekt
+                </label>
+                <label className="check-label">
+                  <input
+                    type="checkbox"
+                    className="check"
+                    checked={line.yearly}
+                    onChange={(event) => change(line.key, { yearly: event.target.checked })}
+                  />
+                  Kommt jährlich wieder
+                </label>
+                {lines.length > 1 && (
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    aria-label={`Position ${index + 1} entfernen`}
+                    onClick={() => setLines(lines.filter((entry) => entry.key !== line.key))}
+                  >
+                    Position entfernen
+                  </button>
+                )}
+              </div>
+            </fieldset>
+          );
+        })}
+        {lines.length < INVOICE_LINES_MAX && (
+          <div>
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => {
+                setLines([...lines, emptyLine(nextKey)]);
+                setNextKey(nextKey + 1);
+              }}
+            >
+              Position hinzufügen
+            </button>
+          </div>
+        )}
+        <fieldset className="budget-fieldset">
+          <legend>Summe</legend>
+          <div className="tool-row">
+            <label className="narrow">
+              Rechnungsbetrag laut Beleg (brutto, freiwillig)
+              <input
+                type="text"
+                inputMode="decimal"
+                value={total}
+                onChange={(event) => setTotal(event.target.value)}
+              />
+            </label>
+          </div>
+          <p className="small" role="status">
+            {grossSum !== null && netSum !== null
+              ? `Summe der Positionen: netto ${formatEuro(netSum)}, brutto ${formatEuro(grossSum)}.`
+              : "Die Summe erscheint, sobald alle Beträge lesbar sind."}
+            {rest === 0 && " Das entspricht dem Rechnungsbetrag."}
+            {rest !== null && rest > 0 && ` Noch nicht verteilt: ${formatEuro(rest)}.`}
+            {rest !== null && rest < 0 && ` Zu viel verteilt: ${formatEuro(-rest)}.`}
+            {" Fürs Budget zählt das Brutto. Weicht eine Position um Cent ab, trage ihr Brutto ein (höchstens 1 Euro Abweichung)."}
+          </p>
+        </fieldset>
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>
             {invoice ? "Änderungen speichern" : "Rechnung speichern"}
@@ -494,8 +638,7 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
                 <th scope="col">Datum</th>
                 <th scope="col">Rechnungssteller</th>
                 <th scope="col">Rechnungsnr.</th>
-                <th scope="col">Vertrag</th>
-                <th scope="col">Konto / Budgetposten</th>
+                <th scope="col">Positionen (Konto, Budgetposten)</th>
                 <th scope="col" className="betrag">
                   Netto
                 </th>
@@ -514,36 +657,39 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
                   <td>{entry.invoicer_name}</td>
                   <th scope="row">
                     {entry.number}
-                    <span className="small budget-muted tenant-part">
-                      {[
-                        entry.internal_number,
-                        entry.description,
-                        entry.is_project ? "Projekt" : "",
-                        entry.is_yearly ? "jährlich" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
+                    <span className="small budget-muted tenant-part">{entry.internal_number}</span>
                   </th>
                   <td>
-                    {entry.contract_id !== null ? (
-                      <Link to={`${BUDGET_CONTRACTS_PATH}/${entry.contract_id}`}>
-                        {entry.contract_title}
-                      </Link>
-                    ) : (
-                      <span className="budget-muted">ohne Vertrag</span>
-                    )}
+                    <ul className="budget-lines">
+                      {entry.lines.map((line) => (
+                        <li key={line.id}>
+                          <span className="mono">{line.account_number}</span> {line.item_name}
+                          <span className="small budget-muted tenant-part">
+                            {[
+                              entry.lines.length > 1
+                                ? `${formatEuro(line.gross_cents)} brutto`
+                                : "",
+                              `${formatRate(line.tax_rate_bp)} Steuer`,
+                              line.description,
+                              line.is_project ? "Projekt" : "",
+                              line.is_yearly ? "jährlich" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                            {line.contract_id !== null && (
+                              <>
+                                {" · "}
+                                <Link to={`${BUDGET_CONTRACTS_PATH}/${line.contract_id}`}>
+                                  {line.contract_title}
+                                </Link>
+                              </>
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </td>
-                  <td>
-                    <span className="mono">{entry.account_number}</span> {entry.account_name}
-                    <span className="small budget-muted tenant-part">{entry.item_name}</span>
-                  </td>
-                  <td className="betrag">
-                    {formatEuro(entry.net_cents)}
-                    <span className="small budget-muted tenant-part">
-                      + {formatRate(entry.tax_rate_bp)}
-                    </span>
-                  </td>
+                  <td className="betrag">{formatEuro(entry.net_cents)}</td>
                   <td className="betrag">{formatEuro(entry.gross_cents)}</td>
                   <td>
                     <span

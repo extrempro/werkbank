@@ -22,6 +22,7 @@ import {
   type BudgetSettings,
   type Contract,
   type Invoice,
+  type InvoiceLine,
   type Item,
   type Overview,
   type Partner,
@@ -733,14 +734,9 @@ describe("Verträge", () => {
   });
 });
 
-function invoice(overrides: Partial<Invoice> = {}): Invoice {
+function invoiceLine(overrides: Partial<InvoiceLine> = {}): InvoiceLine {
   return {
     id: 1,
-    invoicer_id: 1,
-    invoicer_name: "Beispiel Software GmbH",
-    number: "RE-1",
-    internal_number: "re.26.0001",
-    invoice_date: "2026-10-12",
     item_id: 11,
     item_name: "Office-Lizenzen",
     account_number: "6815",
@@ -753,6 +749,21 @@ function invoice(overrides: Partial<Invoice> = {}): Invoice {
     description: "Wartung Oktober",
     is_project: false,
     is_yearly: true,
+    ...overrides,
+  };
+}
+
+function invoice(overrides: Partial<Invoice> = {}): Invoice {
+  return {
+    id: 1,
+    invoicer_id: 1,
+    invoicer_name: "Beispiel Software GmbH",
+    number: "RE-1",
+    internal_number: "re.26.0001",
+    invoice_date: "2026-10-12",
+    net_cents: 100_000,
+    gross_cents: 119_000,
+    lines: [invoiceLine()],
     status: "zu_pruefen",
     created_by_name: "Ida IT",
     booked_by_name: null,
@@ -773,8 +784,25 @@ describe("Rechnungen", () => {
       invoice({
         id: 2,
         number: "RE-2",
-        contract_id: null,
-        contract_title: null,
+        net_cents: 120_000,
+        gross_cents: 140_400,
+        lines: [
+          invoiceLine({ id: 2, contract_id: null, contract_title: null }),
+          invoiceLine({
+            id: 3,
+            item_id: 12,
+            item_name: "Server",
+            account_number: "0420",
+            account_name: "Hardware",
+            contract_id: null,
+            contract_title: null,
+            net_cents: 20_000,
+            tax_rate_bp: 700,
+            gross_cents: 21_400,
+            description: "Schulung",
+            is_yearly: false,
+          }),
+        ],
         status: "gebucht",
         booked_by_name: "Bodo Budget",
       }),
@@ -800,7 +828,14 @@ describe("Rechnungen", () => {
     expect(row).toHaveTextContent("erfasst: Ida IT");
     expect(row).toHaveTextContent("jährlich");
     expect(plain(row.textContent)).toContain("1.190,00 €");
-    expect(table.getByRole("row", { name: /RE-2/ })).toHaveTextContent("ohne Vertrag");
+    expect(within(row).getByRole("link", { name: "Wartung Zeiterfassung" })).toBeVisible();
+    // Eine Rechnung mit zwei Positionen nennt je Position Posten, Brutto und Steuersatz.
+    const split = table.getByRole("row", { name: /RE-2/ });
+    expect(within(split).getAllByRole("listitem")).toHaveLength(2);
+    expect(plain(split.textContent)).toContain("214,00 € brutto");
+    expect(plain(split.textContent)).toContain("7 % Steuer");
+    expect(plain(split.textContent)).toContain("1.404,00 €");
+    expect(within(split).queryByRole("link", { name: "Wartung Zeiterfassung" })).toBeNull();
     expect(screen.getByText("1 zu prüfen")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Rechnung erfassen" })).toBeNull();
     expect(screen.queryByRole("button", { name: /prüfen und buchen/ })).toBeNull();
@@ -838,7 +873,7 @@ describe("Rechnungen", () => {
     render(<InvoicesPage roles={["Budget.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Rechnung erfassen" }));
     fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Rechnungssteller und Budgetposten");
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte den Rechnungssteller wählen");
 
     fireEvent.change(screen.getByLabelText("Rechnungssteller"), { target: { value: "2" } });
     // Der Vertrag bringt seinen Budgetposten mit.
@@ -847,7 +882,7 @@ describe("Rechnungen", () => {
     fireEvent.change(screen.getByLabelText("Rechnungsnummer"), { target: { value: " RE-3 " } });
     fireEvent.change(screen.getByLabelText("Rechnungsdatum"), { target: { value: "2026-11-02" } });
     fireEvent.change(screen.getByLabelText(/^Betrag netto/), { target: { value: "1.000,00" } });
-    expect(plain(screen.getByText(/^Gerechnetes Brutto/).textContent)).toContain("1.190,00 €");
+    expect(plain(screen.getByText(/^Brutto der Position/).textContent)).toContain("1.190,00 €");
     fireEvent.change(screen.getByLabelText(/^Brutto laut Rechnung/), { target: { value: "x" } });
     fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Das Brutto ist nicht lesbar");
@@ -856,6 +891,29 @@ describe("Rechnungen", () => {
       target: { value: "1190,02" },
     });
     fireEvent.click(screen.getByLabelText("Gehört zu einem Projekt"));
+
+    // Zweite Position für einen anderen Budgetposten, mit anderem Steuersatz
+    fireEvent.click(screen.getByRole("button", { name: "Position hinzufügen" }));
+    const second = within(screen.getByRole("group", { name: "Position 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Position 2: Bitte den Budgetposten");
+    fireEvent.change(second.getByLabelText("Budgetposten"), { target: { value: "12" } });
+    fireEvent.change(second.getByLabelText(/^Betrag netto/), { target: { value: "200,00" } });
+    fireEvent.change(second.getByLabelText(/^Steuersatz/), { target: { value: "7" } });
+    expect(plain(screen.getByText(/^Summe der Positionen/).textContent)).toContain(
+      "brutto 1.404,02 €",
+    );
+    // Der Rechnungsbetrag laut Beleg muss ganz verteilt sein.
+    fireEvent.change(screen.getByLabelText(/^Rechnungsbetrag laut Beleg/), {
+      target: { value: "1.500,00" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
+    expect(plain(screen.getByRole("alert").textContent)).toContain(
+      "noch 95,98 € nicht auf Positionen verteilt",
+    );
+    fireEvent.change(screen.getByLabelText(/^Rechnungsbetrag laut Beleg/), {
+      target: { value: "1.404,02" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
     expect(
       await screen.findByText(/RE-3 ist gespeichert und wartet auf die Prüfung/),
@@ -865,15 +923,52 @@ describe("Rechnungen", () => {
       number: "RE-3",
       internal_number: "",
       invoice_date: "2026-11-02",
-      item_id: 11,
-      contract_id: 1,
-      net_cents: 100_000,
-      tax_rate_bp: 1900,
-      gross_cents: 119_002,
-      description: "",
-      is_project: true,
-      is_yearly: false,
+      lines: [
+        {
+          item_id: 11,
+          contract_id: 1,
+          net_cents: 100_000,
+          tax_rate_bp: 1900,
+          gross_cents: 119_002,
+          description: "",
+          is_project: true,
+          is_yearly: false,
+        },
+        {
+          item_id: 12,
+          contract_id: null,
+          net_cents: 20_000,
+          tax_rate_bp: 700,
+          gross_cents: null,
+          description: "",
+          is_project: false,
+          is_yearly: false,
+        },
+      ],
+      total_gross_cents: 140_402,
     });
+  });
+
+  it("öffnet eine Rechnung mit ihren Positionen und entfernt eine", async () => {
+    const calls = stubFetch({
+      ...routes,
+      "PUT /api/budget/invoices/2": invoice({ id: 2, number: "RE-2", status: "gebucht" }),
+    });
+    render(<InvoicesPage roles={["Budget.Manager"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Rechnung RE-2 bearbeiten" }));
+    expect(
+      within(screen.getByRole("group", { name: "Position 2" })).getByLabelText("Budgetposten"),
+    ).toHaveValue("12");
+    fireEvent.click(screen.getByRole("button", { name: "Position 2 entfernen" }));
+    expect(screen.queryByRole("group", { name: "Position 2" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Änderungen speichern" }));
+    await vi.waitFor(() =>
+      expect(calls.find((call) => call.method === "PUT")?.body).toMatchObject({
+        number: "RE-2",
+        lines: [{ item_id: 11, net_cents: 100_000, tax_rate_bp: 1900, gross_cents: null }],
+        total_gross_cents: null,
+      }),
+    );
   });
 });
 
