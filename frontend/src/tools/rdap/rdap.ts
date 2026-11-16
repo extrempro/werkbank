@@ -21,7 +21,7 @@ export function detectQuery(input: string): RdapQuery | null {
   const [addr, pfx] = t.split("/");
   const ip = parseIp(addr!);
   if (ip) return { kind: "ip", value: pfx ? `${addr}/${pfx}` : addr!, display: t, ipVersion: ip.version };
-  let domain = "";
+  let domain: string;
   try {
     domain = toAscii(t.replace(/\.$/, ""));
   } catch {

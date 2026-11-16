@@ -12,7 +12,8 @@ import { queryResolver, type Resolver } from "./resolvers";
 
 /** Umlaute → Punycode (bürger.hamburg → xn--brger-kva.hamburg) über die URL-API des Browsers */
 export function toAscii(name: string): string {
-  if (/^[\x00-\x7f]*$/.test(name)) return name;
+  // Nur ASCII: nichts umzuwandeln
+  if (![...name].some((char) => char.charCodeAt(0) > 0x7f)) return name;
   try {
     return new URL(`http://${name}`).hostname;
   } catch {
@@ -238,5 +239,5 @@ export function subdomainsToCsv(items: Subdomain[]): string {
         .join(";"),
     );
   }
-  return `﻿${lines.join("\r\n")}\r\n`;
+  return `\uFEFF${lines.join("\r\n")}\r\n`;
 }

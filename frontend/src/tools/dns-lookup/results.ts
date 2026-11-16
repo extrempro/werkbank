@@ -101,7 +101,7 @@ export function toCsv(results: TypeResult[]): string {
       for (const a of r.answers) lines.push([...base, ...status, a.name, a.ttl, a.type, a.data].map(esc).join(";"));
     }
   }
-  return `﻿${lines.join("\r\n")}\r\n`;
+  return `\uFEFF${lines.join("\r\n")}\r\n`;
 }
 
 export function toJson(results: TypeResult[]): string {
