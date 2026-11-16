@@ -77,9 +77,14 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
     items.set(key, { ...row, contracts: row.contracts + 1 });
   }
   for (const entry of detail?.invoices ?? []) {
-    const key = `${entry.account_number} ${entry.account_name} · ${entry.item_name}`;
-    const row = items.get(key) ?? { contracts: 0, invoices: 0 };
-    items.set(key, { ...row, invoices: row.invoices + 1 });
+    // Je Rechnung zählt ein Budgetposten einmal, auch mit mehreren Positionen.
+    const keys = new Set(
+      entry.lines.map((line) => `${line.account_number} ${line.account_name} · ${line.item_name}`),
+    );
+    for (const key of keys) {
+      const row = items.get(key) ?? { contracts: 0, invoices: 0 };
+      items.set(key, { ...row, invoices: row.invoices + 1 });
+    }
   }
   const targetName = others.find((entry) => String(entry.id) === target)?.name ?? "";
 
@@ -167,8 +172,13 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
                     <span>
                       {formatBudgetDay(entry.invoice_date)} · {entry.number}
                       <span className="budget-muted budget-line">
-                        {entry.account_number} · {entry.item_name}
-                        {entry.contract_title ? ` · ${entry.contract_title}` : ""}
+                        {entry.lines
+                          .map(
+                            (line) =>
+                              `${line.account_number} · ${line.item_name}` +
+                              (line.contract_title ? ` · ${line.contract_title}` : ""),
+                          )
+                          .join("; ")}
                       </span>
                     </span>
                     <span className="betrag">

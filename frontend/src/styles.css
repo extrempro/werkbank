@@ -4200,3 +4200,38 @@ p.badges {
 .budget-dot-plan {
   background: var(--chart-2);
 }
+
+/* IT-Budget: Rechnung mit Positionen */
+
+.budget-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 16px 16px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+}
+
+.budget-fieldset legend {
+  padding: 0 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--farbe-text-mittel);
+}
+
+.budget-checks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+
+.budget-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

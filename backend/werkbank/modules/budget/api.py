@@ -37,6 +37,7 @@ from werkbank.modules.budget.models import (
     BudgetAccount,
     BudgetContract,
     BudgetInvoice,
+    BudgetInvoiceLine,
     BudgetItem,
     BudgetPartner,
     BudgetPlan,
@@ -487,9 +488,10 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
         if invoice.status != STATUS_BOOKED:
             open_invoices += 1
             continue
-        actual[invoice.item_id] = actual.get(invoice.item_id, 0) + invoice.gross_cents
-        if invoice.contract_id is not None:
-            paid[invoice.contract_id] = paid.get(invoice.contract_id, 0) + invoice.gross_cents
+        for line in invoice.lines:
+            actual[line.item_id] = actual.get(line.item_id, 0) + line.gross_cents
+            if line.contract_id is not None:
+                paid[line.contract_id] = paid.get(line.contract_id, 0) + line.gross_cents
     for contract in db.scalars(select(BudgetContract)).all():
         cents = expected_cents(contract, first_day, last_day)
         if cents:
@@ -1198,13 +1200,8 @@ def update_contract(
 InvoiceId = Annotated[int, Path(ge=1)]
 
 
-class InvoiceOut(BaseModel):
+class InvoiceLineOut(BaseModel):
     id: int
-    invoicer_id: int
-    invoicer_name: str
-    number: str
-    internal_number: str
-    invoice_date: date
     item_id: int
     item_name: str
     account_number: str
@@ -1217,6 +1214,19 @@ class InvoiceOut(BaseModel):
     description: str
     is_project: bool
     is_yearly: bool
+
+
+class InvoiceOut(BaseModel):
+    id: int
+    invoicer_id: int
+    invoicer_name: str
+    number: str
+    internal_number: str
+    invoice_date: date
+    # Summen der Positionen
+    net_cents: int
+    gross_cents: int
+    lines: list[InvoiceLineOut]
     status: str
     created_by_name: str | None
     booked_by_name: str | None
@@ -1233,11 +1243,10 @@ class InvoiceListOut(BaseModel):
     entries: list[InvoiceOut]
 
 
-class InvoiceIn(BaseModel):
-    invoicer_id: int = Field(ge=1)
-    number: str = Field(min_length=1, max_length=80)
-    internal_number: str = Field(default="", max_length=60)
-    invoice_date: date
+LINES_MAX = 50
+
+
+class InvoiceLineIn(BaseModel):
     item_id: int = Field(ge=1)
     contract_id: int | None = Field(default=None, ge=1)
     net_cents: int = Field(ge=0, le=AMOUNT_MAX)
@@ -1248,7 +1257,23 @@ class InvoiceIn(BaseModel):
     is_project: bool = False
     is_yearly: bool = False
 
-    @field_validator("number", "internal_number", "description")
+    @field_validator("description")
+    @classmethod
+    def plain(cls, value: str) -> str:
+        return _single_line(value)
+
+
+class InvoiceIn(BaseModel):
+    invoicer_id: int = Field(ge=1)
+    number: str = Field(min_length=1, max_length=80)
+    internal_number: str = Field(default="", max_length=60)
+    invoice_date: date
+    # Eine Rechnung hat mindestens eine Position; jede gehört zu genau einem Budgetposten.
+    lines: list[InvoiceLineIn] = Field(min_length=1, max_length=LINES_MAX)
+    # Rechnungsbetrag laut Beleg (brutto). Angegeben muss er der Summe der Positionen entsprechen.
+    total_gross_cents: int | None = Field(default=None, ge=0, le=2 * AMOUNT_MAX * LINES_MAX)
+
+    @field_validator("number", "internal_number")
     @classmethod
     def plain(cls, value: str) -> str:
         return _single_line(value)
@@ -1280,12 +1305,30 @@ def _invoice_rows(db: DbDep, rows: list[BudgetInvoice]) -> list[InvoiceOut]:
             user.id: user.display_name
             for user in db.scalars(select(User).where(User.id.in_(user_ids))).all()
         }
+
+    def line_out(line: BudgetInvoiceLine) -> InvoiceLineOut:
+        item = items.get(line.item_id)
+        account = accounts.get(item.account_id) if item else None
+        contract = contracts.get(line.contract_id) if line.contract_id is not None else None
+        return InvoiceLineOut(
+            id=line.id,
+            item_id=line.item_id,
+            item_name=item.name if item else "",
+            account_number=account.number if account else "",
+            account_name=account.name if account else "",
+            contract_id=line.contract_id,
+            contract_title=contract.title if contract else None,
+            net_cents=line.net_cents,
+            tax_rate_bp=line.tax_rate_bp,
+            gross_cents=line.gross_cents,
+            description=line.description,
+            is_project=line.is_project,
+            is_yearly=line.is_yearly,
+        )
+
     out = []
     for row in rows:
-        item = items.get(row.item_id)
-        account = accounts.get(item.account_id) if item else None
         partner = partners.get(row.invoicer_id)
-        contract = contracts.get(row.contract_id) if row.contract_id is not None else None
         out.append(
             InvoiceOut(
                 id=row.id,
@@ -1294,18 +1337,9 @@ def _invoice_rows(db: DbDep, rows: list[BudgetInvoice]) -> list[InvoiceOut]:
                 number=row.number,
                 internal_number=row.internal_number,
                 invoice_date=row.invoice_date,
-                item_id=row.item_id,
-                item_name=item.name if item else "",
-                account_number=account.number if account else "",
-                account_name=account.name if account else "",
-                contract_id=row.contract_id,
-                contract_title=contract.title if contract else None,
                 net_cents=row.net_cents,
-                tax_rate_bp=row.tax_rate_bp,
                 gross_cents=row.gross_cents,
-                description=row.description,
-                is_project=row.is_project,
-                is_yearly=row.is_yearly,
+                lines=[line_out(line) for line in row.lines],
                 status=row.status,
                 created_by_name=names.get(row.created_by),
                 booked_by_name=names.get(row.booked_by),
@@ -1317,47 +1351,76 @@ def _invoice_rows(db: DbDep, rows: list[BudgetInvoice]) -> list[InvoiceOut]:
     return out
 
 
-def _invoice_gross(db: DbDep, body: InvoiceIn) -> int:
-    """Prüft die Bezüge der Rechnung und liefert ihr Brutto."""
-    problem: str | None = None
-    computed = gross_cents(body.net_cents, body.tax_rate_bp)
+def _invoice_gross(db: DbDep, body: InvoiceIn) -> list[int]:
+    """Prüft die Bezüge der Rechnung und liefert das Brutto je Position."""
     if db.get(BudgetPartner, body.invoicer_id) is None:
-        problem = "Den Rechnungssteller gibt es nicht."
-    elif db.get(BudgetItem, body.item_id) is None:
-        problem = "Den Budgetposten gibt es nicht."
-    elif body.contract_id is not None and db.get(BudgetContract, body.contract_id) is None:
-        problem = "Den Vertrag gibt es nicht."
-    elif body.gross_cents is not None and abs(body.gross_cents - computed) > GROSS_TOLERANCE:
-        problem = "Das Brutto weicht um mehr als 1 Euro vom gerechneten Betrag ab."
-    if problem:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=problem)
-    return computed if body.gross_cents is None else body.gross_cents
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Den Rechnungssteller gibt es nicht.",
+        )
+    gross: list[int] = []
+    for number, line in enumerate(body.lines, start=1):
+        problem: str | None = None
+        computed = gross_cents(line.net_cents, line.tax_rate_bp)
+        if db.get(BudgetItem, line.item_id) is None:
+            problem = "Den Budgetposten gibt es nicht."
+        elif line.contract_id is not None and db.get(BudgetContract, line.contract_id) is None:
+            problem = "Den Vertrag gibt es nicht."
+        elif line.gross_cents is not None and abs(line.gross_cents - computed) > GROSS_TOLERANCE:
+            problem = "Das Brutto weicht um mehr als 1 Euro vom gerechneten Betrag ab."
+        if problem:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Position {number}: {problem}",
+            )
+        gross.append(computed if line.gross_cents is None else line.gross_cents)
+    if body.total_gross_cents is not None and body.total_gross_cents != sum(gross):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Die Positionen ergeben nicht den Rechnungsbetrag. "
+            "Bitte den ganzen Betrag auf Positionen verteilen.",
+        )
+    return gross
 
 
-def _apply_invoice(row: BudgetInvoice, body: InvoiceIn, gross: int) -> None:
+def _apply_invoice(row: BudgetInvoice, body: InvoiceIn, gross: list[int]) -> None:
     row.invoicer_id = body.invoicer_id
     row.number = body.number
     row.internal_number = body.internal_number
     row.invoice_date = body.invoice_date
-    row.item_id = body.item_id
-    row.contract_id = body.contract_id
-    row.net_cents = body.net_cents
-    row.tax_rate_bp = body.tax_rate_bp
-    row.gross_cents = gross
-    row.description = body.description
-    row.is_project = body.is_project
-    row.is_yearly = body.is_yearly
+    row.net_cents = sum(line.net_cents for line in body.lines)
+    row.gross_cents = sum(gross)
+    row.lines = [
+        BudgetInvoiceLine(
+            position=position,
+            item_id=line.item_id,
+            contract_id=line.contract_id,
+            net_cents=line.net_cents,
+            tax_rate_bp=line.tax_rate_bp,
+            gross_cents=gross[position],
+            description=line.description,
+            is_project=line.is_project,
+            is_yearly=line.is_yearly,
+        )
+        for position, line in enumerate(body.lines)
+    ]
 
 
 def _invoice_details(row: BudgetInvoice) -> dict[str, object]:
     return {
         "number": row.number,
         "invoicer_id": row.invoicer_id,
-        "item_id": row.item_id,
-        "contract_id": row.contract_id,
         "invoice_date": row.invoice_date.isoformat(),
         "gross_cents": row.gross_cents,
         "status": row.status,
+        "positionen": [
+            {
+                "item_id": line.item_id,
+                "contract_id": line.contract_id,
+                "gross_cents": line.gross_cents,
+            }
+            for line in row.lines
+        ],
     }
 
 
@@ -1665,10 +1728,10 @@ def delete_contract(
     row: BudgetContract | None = db.get(BudgetContract, contract_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
-    invoices = _count(db, BudgetInvoice, BudgetInvoice.contract_id == row.id)
+    invoices = _count(db, BudgetInvoiceLine, BudgetInvoiceLine.contract_id == row.id)
     if invoices:
         raise _blocked(
-            f"Am Vertrag hängen noch {invoices} Rechnung(en). "
+            f"Am Vertrag hängen noch {invoices} Rechnungsposition(en). "
             "Bitte erst diese umhängen oder löschen."
         )
     title = row.title
@@ -1683,11 +1746,12 @@ def delete_item(request: Request, item_id: ItemId, user: Editor, db: DbDep) -> d
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
     contracts = _count(db, BudgetContract, BudgetContract.item_id == row.id)
-    invoices = _count(db, BudgetInvoice, BudgetInvoice.item_id == row.id)
+    invoices = _count(db, BudgetInvoiceLine, BudgetInvoiceLine.item_id == row.id)
     if contracts or invoices:
         raise _blocked(
             f"Auf dem Budgetposten liegen noch {contracts} Vertrag/Verträge und {invoices} "
-            "Rechnung(en). Bitte erst diese umhängen oder löschen, oder den Posten stilllegen."
+            "Rechnungsposition(en). Bitte erst diese umhängen oder löschen, "
+            "oder den Posten stilllegen."
         )
     name = row.name
     db.delete(row)
@@ -2040,16 +2104,18 @@ def query_statistic(body: StatisticQuery, user: Reader, db: DbDep) -> StatisticO
             plan.setdefault(entry.fiscal_year, {})[entry.item_id] = entry.amount_cents
         first_day = fiscal_year_range(years[0], settings.start_month)[0]
         last_day = fiscal_year_range(years[-1], settings.start_month)[1]
-        for invoice in db.scalars(
-            select(BudgetInvoice).where(
-                BudgetInvoice.item_id.in_(ids),
+        for line, invoice_date in db.execute(
+            select(BudgetInvoiceLine, BudgetInvoice.invoice_date)
+            .join(BudgetInvoice, BudgetInvoice.id == BudgetInvoiceLine.invoice_id)
+            .where(
+                BudgetInvoiceLine.item_id.in_(ids),
                 BudgetInvoice.status == STATUS_BOOKED,
                 BudgetInvoice.invoice_date.between(first_day, last_day),
             )
         ).all():
-            year = fiscal_year_of(invoice.invoice_date, settings.start_month)
+            year = fiscal_year_of(invoice_date, settings.start_month)
             by_item = actual.setdefault(year, {})
-            by_item[invoice.item_id] = by_item.get(invoice.item_id, 0) + invoice.gross_cents
+            by_item[line.item_id] = by_item.get(line.item_id, 0) + line.gross_cents
     partners = _partner_map(db)
     return StatisticOut(
         year_label=settings.year_label,

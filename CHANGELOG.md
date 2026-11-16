@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.32.0] – 2026-11-16
+
+IT-Budget: Rechnungen mit Positionen für mehrere Budgetposten.
+
+### IT-Budget
+
+- **Rechnung mit Positionen:** Eine Rechnung besteht aus Kopf (Rechnungssteller, Nummern, Datum) und einer bis 50 Positionen. Jede Position hat ihren Budgetposten, optional einen Vertrag, Netto, Steuersatz, Bezeichnung und die Kennzeichen „Projekt“ und „jährlich“. Eine Rechnung lässt sich damit auf mehrere Budgetposten verteilen und kann mehrere Steuersätze enthalten
+- **Abgleich mit dem Beleg:** Wer den Rechnungsbetrag laut Beleg einträgt, sieht, wie viel noch nicht verteilt ist; gespeichert wird erst, wenn die Positionen den Betrag ergeben. Der Server prüft dasselbe
+- Das Formular ist in die Abschnitte Kopf, Positionen und Summe gegliedert. Die Liste zeigt je Rechnung ihre Positionen
+- Ist, Gebundenes, Statistik, Partner-Detail und die Sperren beim Löschen rechnen je Position
+- Migration 0027: Jede bestehende Rechnung bekommt genau eine Position mit ihren bisherigen Angaben; Posten, Vertrag und Steuersatz stehen danach an der Position
+
 ## [0.31.0] – 2026-11-16
 
 IT-Budget: Tags am Budgetposten und Statistik nach Tags.

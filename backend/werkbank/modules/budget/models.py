@@ -16,7 +16,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from werkbank.db import Base
 
@@ -153,7 +153,7 @@ class BudgetContract(Base):
 
 
 class BudgetInvoice(Base):
-    """Eine Rechnung. Erst gebucht zählt sie zum Ist ihres Budgetpostens."""
+    """Eine Rechnung mit ihren Positionen. Erst gebucht zählt sie zum Ist der Budgetposten."""
 
     __tablename__ = "budget_invoices"
 
@@ -164,15 +164,9 @@ class BudgetInvoice(Base):
     internal_number: Mapped[str] = mapped_column(String(60), default="", server_default="")
     # Rechnungsdatum; es entscheidet über das Geschäftsjahr
     invoice_date: Mapped[date] = mapped_column(Date, index=True)
-    item_id: Mapped[int] = mapped_column(ForeignKey("budget_items.id"), index=True)
-    contract_id: Mapped[int | None] = mapped_column(ForeignKey("budget_contracts.id"), index=True)
+    # Summen der Positionen
     net_cents: Mapped[int] = mapped_column(BigInteger)
-    tax_rate_bp: Mapped[int] = mapped_column(Integer)
-    # Brutto: aus Netto und Steuersatz gerechnet oder um wenige Cent von Hand angepasst
     gross_cents: Mapped[int] = mapped_column(BigInteger)
-    description: Mapped[str] = mapped_column(String(200), default="", server_default="")
-    is_project: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
-    is_yearly: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     # zu_pruefen oder gebucht
     status: Mapped[str] = mapped_column(String(16), index=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
@@ -183,3 +177,32 @@ class BudgetInvoice(Base):
     doc_name: Mapped[str | None] = mapped_column(String(200))
     doc_key: Mapped[str | None] = mapped_column(String(64))
     doc_size: Mapped[int | None] = mapped_column(Integer)
+
+    lines: Mapped[list["BudgetInvoiceLine"]] = relationship(
+        order_by="BudgetInvoiceLine.position",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="selectin",
+    )
+
+
+class BudgetInvoiceLine(Base):
+    """Eine Position einer Rechnung: ein Betrag für genau einen Budgetposten."""
+
+    __tablename__ = "budget_invoice_lines"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    invoice_id: Mapped[int] = mapped_column(
+        ForeignKey("budget_invoices.id", ondelete="CASCADE"), index=True
+    )
+    # Reihenfolge auf der Rechnung, ab 0
+    position: Mapped[int] = mapped_column(Integer)
+    item_id: Mapped[int] = mapped_column(ForeignKey("budget_items.id"), index=True)
+    contract_id: Mapped[int | None] = mapped_column(ForeignKey("budget_contracts.id"), index=True)
+    net_cents: Mapped[int] = mapped_column(BigInteger)
+    tax_rate_bp: Mapped[int] = mapped_column(Integer)
+    # Brutto: aus Netto und Steuersatz gerechnet oder um wenige Cent von Hand angepasst
+    gross_cents: Mapped[int] = mapped_column(BigInteger)
+    description: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    is_project: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    is_yearly: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
