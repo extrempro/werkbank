@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.40.1",
+    date: "2026-11-16",
+    summary: "Zähler in der Navigation bleiben auch in der App am Handy aktuell.",
+    sections: [
+      {
+        area: "Navigation",
+        entries: [
+          "Behoben: Die Zahlen an der Navigation konnten einen alten Stand zeigen, obwohl die Aufgabe schon erledigt war. Sie werden jetzt auch neu geladen, wenn du die App am Handy wieder öffnest.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.40.0",
     date: "2026-11-16",
     summary: "Neu: das Handbuch.",

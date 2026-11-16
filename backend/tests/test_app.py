@@ -19,6 +19,13 @@ def test_security_headers_present() -> None:
         assert response.headers[name] == value
 
 
+def test_api_answers_are_never_stored() -> None:
+    assert client.get("/health").headers["Cache-Control"] == "no-store"
+    # Auch Fehlerantworten der API (hier: nicht angemeldet)
+    assert client.get("/api/tasks").headers["Cache-Control"] == "no-store"
+    assert client.get("/api/notifications").headers["Cache-Control"] == "no-store"
+
+
 def test_api_docs_disabled() -> None:
     for path in ("/docs", "/redoc", "/openapi.json"):
         assert client.get(path).status_code == 404

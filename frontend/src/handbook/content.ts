@@ -1002,7 +1002,7 @@ export const CHAPTERS: readonly Chapter[] = [
               ],
               [
                 "Ein Zähler stimmt nicht.",
-                "Die Zähler laden alle fünf Minuten und bei jedem Seitenwechsel neu. Ein Wechsel der Seite hilft sofort.",
+                "Die Zähler laden alle fünf Minuten, bei jedem Seitenwechsel und beim Zurückkehren in die Werkbank neu. Ein Wechsel der Seite hilft sofort. Am Handy: App schließen und neu öffnen.",
               ],
               [
                 "Die Glocke bleibt leer.",

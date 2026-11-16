@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.40.1] – 2026-11-16
+
+Zähler in der Navigation bleiben auch in der App am Handy aktuell.
+
+### Behoben
+
+- Antworten unter `/api`, `/auth` und `/health` tragen `Cache-Control: no-store`; Browser und Proxys dürfen sie nicht zwischenspeichern (Profilbilder und Branding behalten ihre eigene Regel). Vorher konnte ein Zähler einen alten Stand zeigen
+- Zähler und Glocke laden zusätzlich neu, wenn das Fenster den Fokus zurückbekommt oder die installierte App aus dem Hintergrund zurückkommt (`focus`, `pageshow`)
+
+### Doku
+
+- ASVS-Nachweis ergänzt
+
 ## [0.40.0] – 2026-11-16
 
 Handbuch in der Werkbank.

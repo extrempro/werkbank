@@ -130,11 +130,16 @@ export function Layout({ me }: LayoutProps) {
     reload();
     window.addEventListener(TASKS_CHANGED, reload);
     document.addEventListener("visibilitychange", onVisible);
+    // Installierte App am Handy: Beim Zurückkommen meldet nicht jedes Gerät „visibilitychange“.
+    window.addEventListener("pageshow", reload);
+    window.addEventListener("focus", reload);
     const timer = window.setInterval(reload, TASK_REFRESH_MS);
     return () => {
       active = false;
       window.removeEventListener(TASKS_CHANGED, reload);
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", reload);
+      window.removeEventListener("focus", reload);
       window.clearInterval(timer);
     };
   }, [path]);
