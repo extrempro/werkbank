@@ -14,6 +14,7 @@ import {
   areasFor,
   BUDGET_ACCOUNTS_PATH,
   BUDGET_CONTRACTS_PATH,
+  BUDGET_INVOICES_PATH,
   BUDGET_ITEMS_PATH,
   BUDGET_PARTNERS_PATH,
   BUDGET_PATH,
@@ -44,7 +45,9 @@ import { AccountsPage } from "../modules/budget/AccountsPage";
 import { BudgetOverviewPage } from "../modules/budget/BudgetOverviewPage";
 import { BudgetSettingsPage } from "../modules/budget/BudgetSettingsPage";
 import { ContractsPage } from "../modules/budget/ContractsPage";
+import { InvoicesPage } from "../modules/budget/InvoicesPage";
 import { ItemsPage as BudgetItemsPage } from "../modules/budget/ItemsPage";
+import { PartnerDetailPage } from "../modules/budget/PartnerDetailPage";
 import { PartnersPage } from "../modules/budget/PartnersPage";
 import { CredentialsPage } from "../modules/tenant/CredentialsPage";
 import { LicensesPage } from "../modules/tenant/LicensesPage";
@@ -190,6 +193,8 @@ export function Layout({ me }: LayoutProps) {
   const openTool = toolId !== null ? findTool(toolId) : undefined;
   const navPath = openTool ? toolCategoryPath(openTool.category) : path;
 
+  const partnerMatch = /^\/budget\/partner\/(\d{1,9})$/.exec(path);
+  const partnerId = partnerMatch ? Number(partnerMatch[1]) : null;
   const contractMatch = /^\/budget\/vertraege\/(\d{1,9})$/.exec(path);
   const contractId = contractMatch ? Number(contractMatch[1]) : null;
 
@@ -248,6 +253,10 @@ export function Layout({ me }: LayoutProps) {
     page = <ContractsPage roles={me.roles} />;
   } else if (contractId !== null && items.some((item) => item.path === BUDGET_CONTRACTS_PATH)) {
     page = <ContractsPage key={contractId} roles={me.roles} selectedId={contractId} />;
+  } else if (path === BUDGET_INVOICES_PATH && current) {
+    page = <InvoicesPage roles={me.roles} />;
+  } else if (partnerId !== null && items.some((item) => item.path === BUDGET_PARTNERS_PATH)) {
+    page = <PartnerDetailPage key={partnerId} roles={me.roles} partnerId={partnerId} />;
   } else if (path === BUDGET_PARTNERS_PATH && current) {
     page = <PartnersPage roles={me.roles} />;
   } else if (path === BUDGET_SETTINGS_PATH && current) {

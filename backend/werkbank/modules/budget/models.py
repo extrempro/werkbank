@@ -119,3 +119,32 @@ class BudgetContract(Base):
     interval: Mapped[str] = mapped_column(String(20))
     note: Mapped[str] = mapped_column(String(500), default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BudgetInvoice(Base):
+    """Eine Rechnung. Erst gebucht zählt sie zum Ist ihres Budgetpostens."""
+
+    __tablename__ = "budget_invoices"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    invoicer_id: Mapped[int] = mapped_column(ForeignKey("budget_partners.id"), index=True)
+    # Rechnungsnummer des Rechnungsstellers und die eigene interne Nummer
+    number: Mapped[str] = mapped_column(String(80))
+    internal_number: Mapped[str] = mapped_column(String(60), default="", server_default="")
+    # Rechnungsdatum; es entscheidet über das Geschäftsjahr
+    invoice_date: Mapped[date] = mapped_column(Date, index=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("budget_items.id"), index=True)
+    contract_id: Mapped[int | None] = mapped_column(ForeignKey("budget_contracts.id"), index=True)
+    net_cents: Mapped[int] = mapped_column(BigInteger)
+    tax_rate_bp: Mapped[int] = mapped_column(Integer)
+    # Brutto: aus Netto und Steuersatz gerechnet oder um wenige Cent von Hand angepasst
+    gross_cents: Mapped[int] = mapped_column(BigInteger)
+    description: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    is_project: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    is_yearly: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # zu_pruefen oder gebucht
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    booked_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    booked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

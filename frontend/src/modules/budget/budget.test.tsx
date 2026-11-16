@@ -16,6 +16,7 @@ import {
   type Account,
   type BudgetSettings,
   type Contract,
+  type Invoice,
   type Item,
   type Overview,
   type Partner,
@@ -23,8 +24,11 @@ import {
 import { BudgetOverviewPage } from "./BudgetOverviewPage";
 import { BudgetSettingsPage } from "./BudgetSettingsPage";
 import { ContractsPage } from "./ContractsPage";
+import { InvoicesPage } from "./InvoicesPage";
 import { ItemsPage } from "./ItemsPage";
+import { PartnerDetailPage } from "./PartnerDetailPage";
 import { PartnersPage } from "./PartnersPage";
+import { DeleteButton } from "./shared";
 
 afterEach(() => {
   cleanup();
@@ -90,12 +94,21 @@ function overview(overrides: Partial<Overview> = {}): Overview {
       { year: 2025, name: "2025/26" },
     ],
     rows: [
-      { account: hardware, plan_cents: 5_000_050, previous_cents: null, committed_cents: 0 },
+      {
+        account: hardware,
+        plan_cents: 5_000_050,
+        previous_cents: null,
+        committed_cents: 0,
+        actual_cents: 0,
+        forecast_cents: 0,
+      },
       {
         account: software,
         plan_cents: 1_190_000,
         previous_cents: 1_000_000,
         committed_cents: 600_000,
+        actual_cents: 0,
+        forecast_cents: 600_000,
       },
     ],
     items: [
@@ -104,6 +117,8 @@ function overview(overrides: Partial<Overview> = {}): Overview {
         plan_cents: 5_000_050,
         previous_cents: null,
         committed_cents: 0,
+        actual_cents: 0,
+        forecast_cents: 0,
         contracts: 0,
       },
       {
@@ -111,12 +126,17 @@ function overview(overrides: Partial<Overview> = {}): Overview {
         plan_cents: 1_190_000,
         previous_cents: 1_000_000,
         committed_cents: 600_000,
+        actual_cents: 0,
+        forecast_cents: 600_000,
         contracts: 1,
       },
     ],
     plan: { running_cents: 1_190_000, investment_cents: 5_000_050, total_cents: 6_190_050 },
     previous: { running_cents: 1_000_000, investment_cents: 0, total_cents: 1_000_000 },
     committed: { running_cents: 600_000, investment_cents: 0, total_cents: 600_000 },
+    actual: { running_cents: 0, investment_cents: 0, total_cents: 0 },
+    forecast: { running_cents: 600_000, investment_cents: 0, total_cents: 600_000 },
+    open_invoices: 0,
     committed_contracts: 1,
     ...overrides,
   };
@@ -270,6 +290,9 @@ describe("Übersicht", () => {
         plan: { running_cents: 0, investment_cents: 0, total_cents: 0 },
         items: [],
         committed: { running_cents: 0, investment_cents: 0, total_cents: 0 },
+        actual: { running_cents: 0, investment_cents: 0, total_cents: 0 },
+        forecast: { running_cents: 0, investment_cents: 0, total_cents: 0 },
+        open_invoices: 0,
         committed_contracts: 0,
       }),
     });
@@ -468,16 +491,28 @@ describe("Übersicht nach dem Entwurf", () => {
     stubFetch({
       "GET /api/budget/overview": overview({
         rows: [
-          { account: hardware, plan_cents: null, previous_cents: null, committed_cents: 119_000 },
+          {
+            account: hardware,
+            plan_cents: null,
+            previous_cents: null,
+            committed_cents: 119_000,
+            actual_cents: 0,
+            forecast_cents: 119_000,
+          },
           {
             account: software,
             plan_cents: 500_000,
             previous_cents: 1_000_000,
             committed_cents: 600_000,
+            actual_cents: 0,
+            forecast_cents: 600_000,
           },
         ],
         plan: { running_cents: 500_000, investment_cents: 0, total_cents: 500_000 },
         committed: { running_cents: 600_000, investment_cents: 119_000, total_cents: 719_000 },
+        actual: { running_cents: 0, investment_cents: 0, total_cents: 0 },
+        forecast: { running_cents: 600_000, investment_cents: 119_000, total_cents: 719_000 },
+        open_invoices: 0,
         committed_contracts: 2,
       }),
       "GET /api/budget/contracts": {
@@ -492,9 +527,11 @@ describe("Übersicht nach dem Entwurf", () => {
     render(<BudgetOverviewPage roles={["Budget.Reader"]} />);
     expect(await screen.findByText("Durch Verträge gebunden", { selector: "dt" })).toBeVisible();
     expect(screen.getByText(/2 Verträge/)).toBeVisible();
-    expect(screen.getByText("mehr gebunden als geplant")).toBeVisible();
+    expect(plain(screen.getByText(/über Plan$/, { selector: "dd" }).textContent)).toBe(
+      "2.190,00 € über Plan",
+    );
     expect(
-      screen.getByRole("img", { name: /Softwarewartung: 100 % des Plans/ }),
+      screen.getByRole("img", { name: /Softwarewartung: Ist 0 %, Prognose 100 % des Plans/ }),
     ).toBeInTheDocument();
 
     const dates = within(
@@ -509,8 +546,8 @@ describe("Übersicht nach dem Entwurf", () => {
     expect(dates.queryByText("Backup")).toBeNull();
 
     const needs = within(screen.getByRole("region", { name: "Handlungsbedarf" }));
-    expect(plain(needs.getByText(/6815 Softwarewartung: Verträge binden/).textContent)).toContain(
-      "1.000,00 € mehr als geplant",
+    expect(plain(needs.getByText(/6815 Softwarewartung: Prognose liegt/).textContent)).toContain(
+      "1.000,00 € über Plan",
     );
     expect(needs.getByText(/0420 Hardware: .* aber kein Plan/)).toBeVisible();
     expect(needs.getByText("Backup: Auftragsverarbeitungsvertrag fehlt.")).toBeVisible();
@@ -671,5 +708,248 @@ describe("Verträge", () => {
       interval: "jaehrlich",
       note: "",
     });
+  });
+});
+
+function invoice(overrides: Partial<Invoice> = {}): Invoice {
+  return {
+    id: 1,
+    invoicer_id: 1,
+    invoicer_name: "Beispiel Software GmbH",
+    number: "RE-1",
+    internal_number: "re.26.0001",
+    invoice_date: "2026-10-12",
+    item_id: 11,
+    item_name: "Office-Lizenzen",
+    account_number: "6815",
+    account_name: "Softwarewartung",
+    contract_id: 1,
+    contract_title: "Wartung Zeiterfassung",
+    net_cents: 100_000,
+    tax_rate_bp: 1900,
+    gross_cents: 119_000,
+    description: "Wartung Oktober",
+    is_project: false,
+    is_yearly: true,
+    status: "zu_pruefen",
+    created_by_name: "Ida IT",
+    booked_by_name: null,
+    booked_at: null,
+    ...overrides,
+  };
+}
+
+describe("Rechnungen", () => {
+  const list = {
+    year: 2026,
+    year_name: "2026/27",
+    years: [{ year: 2026, name: "2026/27" }],
+    entries: [
+      invoice(),
+      invoice({
+        id: 2,
+        number: "RE-2",
+        contract_id: null,
+        contract_title: null,
+        status: "gebucht",
+        booked_by_name: "Bodo Budget",
+      }),
+    ],
+  };
+  const routes = {
+    "GET /api/budget/invoices": list,
+    "GET /api/budget/partners": [partner, distributor],
+    "GET /api/budget/items": [office, server],
+    "GET /api/budget/contracts": {
+      current_year_name: "2026/27",
+      notice_warn_days: 60,
+      entries: [contract()],
+    },
+  };
+
+  it("zeigt Lesenden die Liste ohne Aktionen", async () => {
+    stubFetch(routes);
+    render(<InvoicesPage roles={["Budget.Reader"]} />);
+    const table = within(await screen.findByRole("region", { name: "Rechnungen 2026/27" }));
+    const row = table.getByRole("row", { name: /RE-1/ });
+    expect(row).toHaveTextContent("zu prüfen");
+    expect(row).toHaveTextContent("erfasst: Ida IT");
+    expect(row).toHaveTextContent("jährlich");
+    expect(plain(row.textContent)).toContain("1.190,00 €");
+    expect(table.getByRole("row", { name: /RE-2/ })).toHaveTextContent("ohne Vertrag");
+    expect(screen.getByText("1 zu prüfen")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Rechnung erfassen" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /prüfen und buchen/ })).toBeNull();
+  });
+
+  it("lässt die IT nur Offenes ändern und den Budgetverwalter buchen und löschen", async () => {
+    const calls = stubFetch({
+      ...routes,
+      "POST /api/budget/invoices/1/book": invoice({ status: "gebucht" }),
+      "DELETE /api/budget/invoices/2": { deleted: true },
+    });
+    const { unmount } = render(<InvoicesPage roles={["Budget.Editor"]} />);
+    await screen.findByRole("region", { name: "Rechnungen 2026/27" });
+    expect(screen.getByText("wartet auf Budgetverwalter")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Rechnung RE-1 bearbeiten" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Rechnung RE-2 bearbeiten" })).toBeNull();
+    unmount();
+
+    render(<InvoicesPage roles={["Budget.Manager"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Rechnung RE-1 prüfen und buchen" }));
+    expect(await screen.findByText(/RE-1 ist geprüft und gebucht/)).toBeVisible();
+    expect(calls.some((call) => call.url === "/api/budget/invoices/1/book")).toBe(true);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Rechnung RE-2 löschen" }));
+    expect(calls.some((call) => call.method === "DELETE")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    expect(await screen.findByText("Rechnung RE-2 ist gelöscht.")).toBeVisible();
+  });
+
+  it("prüft die Eingaben und erfasst eine Rechnung", async () => {
+    const calls = stubFetch({
+      ...routes,
+      "POST /api/budget/invoices": invoice({ id: 3, number: "RE-3" }),
+    });
+    render(<InvoicesPage roles={["Budget.Editor"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Rechnung erfassen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Rechnungssteller und Budgetposten");
+
+    fireEvent.change(screen.getByLabelText("Rechnungssteller"), { target: { value: "2" } });
+    // Der Vertrag bringt seinen Budgetposten mit.
+    fireEvent.change(screen.getByLabelText(/^Vertrag/), { target: { value: "1" } });
+    expect(screen.getByLabelText("Budgetposten")).toHaveValue("11");
+    fireEvent.change(screen.getByLabelText("Rechnungsnummer"), { target: { value: " RE-3 " } });
+    fireEvent.change(screen.getByLabelText("Rechnungsdatum"), { target: { value: "2026-11-02" } });
+    fireEvent.change(screen.getByLabelText(/^Betrag netto/), { target: { value: "1.000,00" } });
+    expect(plain(screen.getByText(/^Gerechnetes Brutto/).textContent)).toContain("1.190,00 €");
+    fireEvent.change(screen.getByLabelText(/^Brutto laut Rechnung/), { target: { value: "x" } });
+    fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Das Brutto ist nicht lesbar");
+
+    fireEvent.change(screen.getByLabelText(/^Brutto laut Rechnung/), {
+      target: { value: "1190,02" },
+    });
+    fireEvent.click(screen.getByLabelText("Gehört zu einem Projekt"));
+    fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
+    expect(
+      await screen.findByText(/RE-3 ist gespeichert und wartet auf die Prüfung/),
+    ).toBeVisible();
+    expect(calls.find((call) => call.method === "POST")?.body).toEqual({
+      invoicer_id: 2,
+      number: "RE-3",
+      internal_number: "",
+      invoice_date: "2026-11-02",
+      item_id: 11,
+      contract_id: 1,
+      net_cents: 100_000,
+      tax_rate_bp: 1900,
+      gross_cents: 119_002,
+      description: "",
+      is_project: true,
+      is_yearly: false,
+    });
+  });
+});
+
+describe("Partner im Detail", () => {
+  const detail = {
+    partner: distributor,
+    contracts: [contract({ invoicer_id: 2, invoicer_name: "Beispiel Distribution AG" })],
+    invoices: [invoice({ invoicer_id: 2, status: "gebucht" })],
+    invoice_total: 1,
+  };
+
+  it("zeigt Verträge, Budgetposten und Rechnungen der Firma", async () => {
+    stubFetch({
+      "GET /api/budget/partners/2": detail,
+      "GET /api/budget/partners": [partner, distributor],
+    });
+    render(<PartnerDetailPage roles={["Budget.Reader"]} partnerId={2} />);
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Beispiel Distribution AG" }),
+    ).toBeVisible();
+    const contracts = within(screen.getByRole("region", { name: "Verträge (1)" }));
+    expect(contracts.getByRole("link", { name: "Wartung Zeiterfassung" })).toHaveAttribute(
+      "href",
+      "/budget/vertraege/1",
+    );
+    expect(contracts.getByText(/^Rechnungssteller · 6815/)).toBeVisible();
+    const items = within(screen.getByRole("region", { name: "Budgetposten (1)" }));
+    expect(items.getByText("1 Vertrag, 1 Rechnung")).toBeVisible();
+    expect(
+      within(screen.getByRole("region", { name: "Rechnungen (1)" })).getByText(
+        /12\.10\.2026 · RE-1/,
+      ),
+    ).toBeVisible();
+    // Zusammenlegen darf nur der Budgetverwalter.
+    expect(screen.queryByRole("heading", { name: /zusammenlegen/ })).toBeNull();
+  });
+
+  it("legt erst nach Bestätigung zusammen", async () => {
+    const calls = stubFetch({
+      "GET /api/budget/partners/2": detail,
+      "GET /api/budget/partners": [partner, distributor],
+      "POST /api/budget/partners/2/merge": {
+        partner,
+        moved_contracts: 1,
+        moved_invoices: 1,
+      },
+    });
+    render(<PartnerDetailPage roles={["Budget.Manager"]} partnerId={2} />);
+    const start = await screen.findByRole("button", { name: "Zusammenlegen" });
+    expect(start).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Zusammenlegen mit"), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Zusammenlegen" }));
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Wirklich mit „Beispiel Software GmbH“ zusammenlegen",
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(calls.find((call) => call.method === "POST")?.body).toEqual({ into_id: 1 }),
+    );
+    await vi.waitFor(() => expect(window.location.pathname).toBe("/budget/partner/1"));
+  });
+});
+
+describe("Löschen", () => {
+  it("fragt nach und zeigt den Grund, wenn der Server ablehnt", async () => {
+    const run = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("abgelehnt"))
+      .mockResolvedValueOnce({ deleted: true });
+    const onDeleted = vi.fn();
+    render(<DeleteButton what="Vertrag Wartung" run={run} onDeleted={onDeleted} />);
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag Wartung löschen" }));
+    expect(run).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Doch nicht" }));
+    expect(screen.queryByRole("button", { name: "Wirklich löschen" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag Wartung löschen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Das Löschen hat nicht geklappt.");
+    expect(onDeleted).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag Wartung löschen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    await vi.waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
+  });
+
+  it("löscht einen Partner aus der Liste", async () => {
+    const calls = stubFetch({
+      "GET /api/budget/partners": [partner, distributor],
+      "DELETE /api/budget/partners/2": { deleted: true },
+    });
+    render(<PartnersPage roles={["Budget.Editor"]} />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Partner Beispiel Distribution AG löschen" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    expect(await screen.findByText("Beispiel Distribution AG ist gelöscht.")).toBeVisible();
+    expect(calls.some((call) => call.method === "DELETE")).toBe(true);
+    expect(screen.queryByRole("link", { name: "Beispiel Distribution AG" })).toBeNull();
   });
 });

@@ -1,14 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { Link } from "../../components/Link";
+import { BUDGET_PARTNERS_PATH } from "../../navigation";
 import {
   BUDGET_EDITOR_ROLES,
+  deletePartner,
   createPartner,
   fetchPartners,
   partnerRoles,
   updatePartner,
   type Partner,
 } from "./api";
-import { BudgetHead, ReadOnlyNote, useRevealOnMount } from "./shared";
+import { BudgetHead, DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
 
 interface FormProps {
   /** null: neuen Partner anlegen. */
@@ -246,7 +249,9 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
             <tbody>
               {partners.map((partner) => (
                 <tr key={partner.id}>
-                  <th scope="row">{partner.name}</th>
+                  <th scope="row">
+                    <Link to={`${BUDGET_PARTNERS_PATH}/${partner.id}`}>{partner.name}</Link>
+                  </th>
                   <td>{partnerRoles(partner)}</td>
                   <td>{partner.customer_number || "–"}</td>
                   <td>{partner.note || "–"}</td>
@@ -268,6 +273,15 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
                       >
                         Bearbeiten
                       </button>
+                      <DeleteButton
+                        what={`Partner ${partner.name}`}
+                        run={() => deletePartner(partner.id)}
+                        onDeleted={() => {
+                          setPartners((partners ?? []).filter((entry) => entry.id !== partner.id));
+                          closeForm();
+                          setStatus(`${partner.name} ist gelöscht.`);
+                        }}
+                      />
                     </td>
                   )}
                 </tr>

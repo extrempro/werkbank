@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { errorText } from "../../api";
 import { BUDGET_EDITOR_ROLES, fetchBudgetSettings, type BudgetSettings } from "./api";
 
 interface HeadProps {
@@ -76,4 +77,77 @@ export function useRevealOnMount<T extends HTMLElement>(): RefObject<T | null> {
     }
   }, []);
   return ref;
+}
+
+interface DeleteProps {
+  /** Was gelöscht wird, für Screenreader: „Vertrag Wartung“. */
+  what: string;
+  run: () => Promise<unknown>;
+  onDeleted: () => void;
+  disabled?: boolean;
+}
+
+/** „Löschen“ mit Bestätigung. Lehnt der Server ab, steht der Grund daneben. */
+export function DeleteButton({ what, run, onDeleted, disabled = false }: DeleteProps) {
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onDelete = () => {
+    setBusy(true);
+    setError(null);
+    run()
+      .then(onDeleted)
+      .catch((problem: unknown) => {
+        setError(errorText(problem, "Das Löschen hat nicht geklappt."));
+        setBusy(false);
+        setConfirm(false);
+      });
+  };
+
+  return (
+    <span className="budget-delete">
+      {confirm ? (
+        <>
+          <button
+            key="ja"
+            type="button"
+            className="button button-danger"
+            disabled={busy}
+            onClick={onDelete}
+          >
+            Wirklich löschen
+          </button>
+          <button
+            key="nein"
+            type="button"
+            className="button button-secondary"
+            disabled={busy}
+            onClick={() => setConfirm(false)}
+          >
+            Doch nicht
+          </button>
+        </>
+      ) : (
+        <button
+          key="start"
+          type="button"
+          className="button button-secondary"
+          aria-label={`${what} löschen`}
+          disabled={disabled}
+          onClick={() => {
+            setError(null);
+            setConfirm(true);
+          }}
+        >
+          Löschen
+        </button>
+      )}
+      {error && (
+        <span role="alert" className="small budget-bad budget-delete-error">
+          {error}
+        </span>
+      )}
+    </span>
+  );
 }

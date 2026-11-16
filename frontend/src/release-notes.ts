@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.28.0",
+    date: "2026-11-16",
+    summary: "IT-Budget mit Rechnungen, Ist und Prognose.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Neu: Rechnungen erfassen, prüfen und buchen. Erst gebuchte Rechnungen zählen zum Ist.",
+          "Übersicht und Budgetposten zeigen jetzt Ist und Prognose; „Frei“ ist der Plan abzüglich der Prognose.",
+          "Ein Klick auf einen Partner zeigt seine Verträge, Budgetposten und Rechnungen. Doppelt angelegte Partner lassen sich zusammenlegen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.27.0",
     date: "2026-11-15",
     summary: "IT-Budget: aufgeräumte Seiten und Detailansicht für Verträge.",

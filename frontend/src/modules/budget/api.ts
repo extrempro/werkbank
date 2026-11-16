@@ -1,4 +1,4 @@
-import { getJson, postJson, putJson } from "../../api";
+import { deleteJson, getJson, postJson, putJson } from "../../api";
 
 export type AccountKind = "laufend" | "investition";
 
@@ -40,8 +40,12 @@ export interface OverviewRow {
   /** Geplanter Betrag brutto in Cent; null: für dieses Jahr ist nichts geplant. */
   plan_cents: number | null;
   previous_cents: number | null;
-  /** Erwartete Kosten aus Verträgen in diesem Geschäftsjahr. */
+  /** Was aus Verträgen in diesem Geschäftsjahr noch zu erwarten ist (ohne schon Gebuchtes). */
   committed_cents: number;
+  /** Summe der gebuchten Rechnungen. */
+  actual_cents: number;
+  /** Ist plus noch gebunden. */
+  forecast_cents: number;
 }
 
 /** Ein Budgetposten: wofür das Geld eines Kontos gedacht ist. */
@@ -68,6 +72,8 @@ export interface ItemRow {
   plan_cents: number | null;
   previous_cents: number | null;
   committed_cents: number;
+  actual_cents: number;
+  forecast_cents: number;
   /** Zahl der Verträge auf diesem Posten mit Kosten in diesem Jahr. */
   contracts: number;
 }
@@ -91,6 +97,10 @@ export interface Overview {
   plan: Totals;
   previous: Totals;
   committed: Totals;
+  actual: Totals;
+  forecast: Totals;
+  /** Rechnungen dieses Jahres, die noch auf die Prüfung warten. */
+  open_invoices: number;
   /** Zahl der Verträge, aus denen in diesem Jahr Kosten zu erwarten sind. */
   committed_contracts: number;
 }
@@ -396,4 +406,102 @@ export function rememberedYear(): number | null {
 
 export function rememberYear(year: number): void {
   chosenYear = year;
+}
+
+export type InvoiceStatus = "zu_pruefen" | "gebucht";
+
+export interface InvoiceUpdate {
+  invoicer_id: number;
+  number: string;
+  internal_number: string;
+  invoice_date: string;
+  item_id: number;
+  contract_id: number | null;
+  net_cents: number;
+  tax_rate_bp: number;
+  /** null: Brutto aus Netto und Steuersatz rechnen; sonst das Brutto laut Rechnung. */
+  gross_cents: number | null;
+  description: string;
+  is_project: boolean;
+  is_yearly: boolean;
+}
+
+export interface Invoice extends Omit<InvoiceUpdate, "gross_cents"> {
+  id: number;
+  gross_cents: number;
+  invoicer_name: string;
+  item_name: string;
+  account_number: string;
+  account_name: string;
+  contract_title: string | null;
+  status: InvoiceStatus;
+  created_by_name: string | null;
+  booked_by_name: string | null;
+  booked_at: string | null;
+}
+
+export interface InvoiceList {
+  year: number;
+  year_name: string;
+  years: { year: number; name: string }[];
+  entries: Invoice[];
+}
+
+export interface PartnerDetail {
+  partner: Partner;
+  contracts: Contract[];
+  invoices: Invoice[];
+  invoice_total: number;
+}
+
+export const STATUS_LABELS: Record<InvoiceStatus, string> = {
+  zu_pruefen: "zu prüfen",
+  gebucht: "gebucht",
+};
+
+export function fetchInvoices(year: number | null): Promise<InvoiceList> {
+  return getJson<InvoiceList>(
+    year === null ? "/api/budget/invoices" : `/api/budget/invoices?year=${year}`,
+  );
+}
+
+export function createInvoice(update: InvoiceUpdate): Promise<Invoice> {
+  return postJson<Invoice>("/api/budget/invoices", update);
+}
+
+export function updateInvoice(id: number, update: InvoiceUpdate): Promise<Invoice> {
+  return putJson<Invoice>(`/api/budget/invoices/${id}`, update);
+}
+
+export function bookInvoice(id: number): Promise<Invoice> {
+  return postJson<Invoice>(`/api/budget/invoices/${id}/book`);
+}
+
+export function deleteInvoice(id: number): Promise<{ deleted: boolean }> {
+  return deleteJson<{ deleted: boolean }>(`/api/budget/invoices/${id}`);
+}
+
+export function fetchPartnerDetail(id: number): Promise<PartnerDetail> {
+  return getJson<PartnerDetail>(`/api/budget/partners/${id}`);
+}
+
+export function mergePartner(
+  id: number,
+  intoId: number,
+): Promise<{ partner: Partner; moved_contracts: number; moved_invoices: number }> {
+  return postJson(`/api/budget/partners/${id}/merge`, { into_id: intoId });
+}
+
+type Deleted = Promise<{ deleted: boolean }>;
+
+export function deleteContract(id: number): Deleted {
+  return deleteJson(`/api/budget/contracts/${id}`);
+}
+
+export function deleteItem(id: number): Deleted {
+  return deleteJson(`/api/budget/items/${id}`);
+}
+
+export function deletePartner(id: number): Deleted {
+  return deleteJson(`/api/budget/partners/${id}`);
 }
