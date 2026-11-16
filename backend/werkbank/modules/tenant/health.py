@@ -124,24 +124,24 @@ def fetch_health(db: Session, client: UtcmClient, now: datetime | None = None) -
         service_id = _service_id(raw, names)
         if issue_id is None or service_id is None:
             continue
-        row = db.get(TenantServiceIssue, issue_id)
-        if row is None:
-            row = TenantServiceIssue(issue_id=issue_id)
-            db.add(row)
-        row.service_id = service_id
-        row.service_name = _text(raw.get("service"), 128) or SERVICES[service_id]
-        row.title = _text(raw.get("title"), 500) or issue_id
-        row.classification = _text(raw.get("classification"), 16) or "advisory"
-        row.status = _text(raw.get("status"), 48) or "unbekannt"
-        row.feature_group = _text(raw.get("featureGroup"), 128)
-        row.feature = _text(raw.get("feature"), 128)
-        row.impact = _text(raw.get("impactDescription"), 2000)
-        row.resolved = bool(raw.get("isResolved"))
-        row.start_at = _moment(raw.get("startDateTime"))
-        row.end_at = _moment(raw.get("endDateTime"))
-        row.modified_at = _moment(raw.get("lastModifiedDateTime"))
-        row.posts = read_posts(raw.get("posts"))
-        row.fetched_at = moment
+        stored = db.get(TenantServiceIssue, issue_id)
+        if stored is None:
+            stored = TenantServiceIssue(issue_id=issue_id)
+            db.add(stored)
+        stored.service_id = service_id
+        stored.service_name = _text(raw.get("service"), 128) or SERVICES[service_id]
+        stored.title = _text(raw.get("title"), 500) or issue_id
+        stored.classification = _text(raw.get("classification"), 16) or "advisory"
+        stored.status = _text(raw.get("status"), 48) or "unbekannt"
+        stored.feature_group = _text(raw.get("featureGroup"), 128)
+        stored.feature = _text(raw.get("feature"), 128)
+        stored.impact = _text(raw.get("impactDescription"), 2000)
+        stored.resolved = bool(raw.get("isResolved"))
+        stored.start_at = _moment(raw.get("startDateTime"))
+        stored.end_at = _moment(raw.get("endDateTime"))
+        stored.modified_at = _moment(raw.get("lastModifiedDateTime"))
+        stored.posts = read_posts(raw.get("posts"))
+        stored.fetched_at = moment
         issues += 1
 
     limit = moment - timedelta(days=RETENTION_DAYS)

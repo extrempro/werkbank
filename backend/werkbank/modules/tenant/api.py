@@ -397,16 +397,16 @@ def service_health(user: Reader, db: DbDep, settings: SettingsDep) -> HealthOut:
                 advisories=0,
                 incident_hours=0.0,
             )
-    for row in issues:
-        if row.start_at is None:
+    for counted in issues:
+        if counted.start_at is None:
             continue
-        entry = stats.get((row.start_at.year, row.service_id))
+        entry = stats.get((counted.start_at.year, counted.service_id))
         if entry is None:
             continue
-        if row.classification == "incident":
+        if counted.classification == "incident":
             entry.incidents += 1
-            end = row.end_at or (row.modified_at if row.resolved else None) or now
-            entry.incident_hours += max((end - row.start_at).total_seconds(), 0) / 3600
+            end = counted.end_at or (counted.modified_at if counted.resolved else None) or now
+            entry.incident_hours += max((end - counted.start_at).total_seconds(), 0) / 3600
         else:
             entry.advisories += 1
     for entry in stats.values():
