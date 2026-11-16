@@ -262,7 +262,27 @@ Standardregeln:
 
 - Push ist pro Person per Opt-in zu aktivieren und jederzeit abschaltbar.
 - Erinnerungen bei Evergreen-Fristen: 14, 7 und 3 Tage vor Rollout, sofern der Vorgang noch offen ist.
-- Stand: Der SMTP-Server lässt sich in der Verwaltung eintragen und mit einer Testmail prüfen. Benachrichtigungen selbst sind noch nicht umgesetzt.
+- Stand: Der SMTP-Server lässt sich in der Verwaltung eintragen und mit einer Testmail prüfen. Mail, Teams und Push folgen; umgesetzt ist die **Glocke** in der Kopfzeile (siehe unten).
+
+**Glocke (umgesetzt):** Ein Auftrag im Worker (`kern.benachrichtigungen`, alle 5 Minuten) fragt die Quellen der Module ab. Jede Quelle meldet die aktuell vorliegenden Ereignisse mit festem Schlüssel; gemeldet wird nur, was neu ist, jedes Ereignis einmal. Beim ersten Lauf einer Art gilt der Bestand als gemeldet (keine Flut alter Meldungen). Empfänger sind alle Personen, deren Rollen bei der letzten Anmeldung passen; die API zeigt zusätzlich nur Arten, die zu den Rollen der laufenden Sitzung passen. Alle Arten sind eingeschaltet; jede Person kann einzelne Arten auf der Seite „Benachrichtigungen“ ausschalten. Gespeichert werden Art, Titel, Link und Zeitpunkt (Titel nennt z. B. Vorgang, Vertrag oder Rechnungsnummer), Aufbewahrung 90 Tage.
+
+| Art | Bereich | Rollen | Auslöser |
+|---|---|---|---|
+| Kritische Änderung | M365-Konfiguration | Config.Reviewer | offene Änderung an einer Einstellung mit Kritikalität hoch (letzte 7 Tage) |
+| Abweichung | M365-Konfiguration | Config.Reviewer | neue Abweichung vom Soll-Wert (je Einstellung und Version) |
+| Abruf fehlgeschlagen | M365-Konfiguration | Werkbank.Admin | letzter Snapshot fehlgeschlagen |
+| Störung | M365-Tenant | Tenant.Reader | Störung (nicht Hinweis) beginnt und ist behoben |
+| Zugangsdaten | M365-Tenant | Tenant.Reader | Geheimnis oder Zertifikat erreicht Warnung, dringend, abgelaufen |
+| Lizenzen | M365-Tenant | Tenant.Reader | aufgebraucht, überbucht, Stichtag in 30 Tagen |
+| Schritt | Evergreen | Rollen des Schritts | Vorgang wartet auf den Schritt (ohne die Person, die ihn weitergegeben hat) |
+| Kommentar oder Beschluss | Evergreen | Beteiligte am Vorgang | Kommentar oder Entscheidung im Schritt Betriebsrat (ohne die handelnde Person) |
+| Rollout | Evergreen | Evergreen.IT | 14, 7 und 3 Tage vor dem Rollout offener Vorgänge |
+| Meldung mit Frist | Evergreen | Evergreen.IT | neue Meldung von Microsoft mit „Handeln bis“ |
+| Rechnung prüfen | IT-Budget | Budget.Manager | neue, noch nicht gebuchte Rechnung |
+| Rechnung gebucht | IT-Budget | wer sie erfasst hat | gebucht von einer anderen Person |
+| Kündigung | IT-Budget | Budget.Editor, Budget.Manager | 60, 30 und 7 Tage vor dem Kündigungstermin |
+| Ist über Plan | IT-Budget | Budget.Editor, Budget.Manager | Ist eines Postens im laufenden Geschäftsjahr übersteigt den Plan |
+| Auftrag fehlgeschlagen | Werkbank | Werkbank.Admin | Hintergrundauftrag fehlgeschlagen (außer dem Abruf der Einstellungen) |
 - Regeln je Modul in der Verwaltung, z. B. „Änderung an Kritikalität Hoch → sofort Teams“.
 
 ### 6.8 Reports
@@ -436,8 +456,8 @@ Offene Vorgänge je Schritt (Tagesordnungsvorlage BR), Beschlüsse im Zeitraum, 
 - **Diagramme:** Liniendiagramm mit einer Achse, höchstens drei Reihen in fester Farbfolge, Werte eines Tages per Zeiger oder Regler, dazu immer eine Tabelle.
 - **Stand:** Lizenzen (gekauft, zugewiesen, frei, Einheiten in Kulanzfrist oder gesperrt, nächster Stichtag der Abos, Testabo) und Benutzerzahlen (gesamt, Gäste, deaktiviert, mit Lizenz). Hinweise in der Liste: aufgebraucht, überbucht, Stichtag in höchstens 30 Tagen.
 - **Zertifikate und Secrets:** Der Abruf (`TENANT_CREDENTIALS_ENABLED`, Berechtigung `Application.Read.All`) liest App-Registrierungen und Unternehmensanwendungen mit SAML. Gespeichert werden Anwendung, Art, Bezeichnung, Beginn und Ablauf, nie der geheime Wert. Einstufung nach Restlaufzeit: Hinweis, Warnung, dringend, abgelaufen; der Vorlauf (Standard 60, 30 und 7 Tage) steht in der Verwaltung unter „Allgemein“. Ab dem Hinweis stehen die Einträge als Aufgabe auf der Startseite (Rolle `Tenant.Reader`). Eine Mail-Benachrichtigung gibt es noch nicht.
-- **Dienststatus:** Der Abruf (`TENANT_HEALTH_ENABLED`, Berechtigung `ServiceHealth.Read.All`, alle 15 Minuten) liest den Zustand von Exchange Online, Microsoft Teams, SharePoint Online und Microsoft Entra sowie deren Störungen und Hinweise samt Mitteilungen von Microsoft (als Text ohne HTML). Die Seite „Dienststatus“ zeigt je Dienst eine Ampel (Unterbrechung, eingeschränkt, in Ordnung; das Schwerste oben), offene und in den letzten 30 Tagen beendete Störungen und Hinweise sowie „Ausfälle je Dienst“ (Störungen, Stunden mit Störung und Hinweise je Jahr). Störungen und Hinweise bleiben drei Jahre. Aufgaben auf der Startseite gibt es dafür nicht.
-- **Geplant:** Mail-Benachrichtigung zu ablaufenden Zertifikaten und Secrets; Domains mit Abgleich der DNS-Einträge (Abfrage über den Resolver des Docker-Hosts); Nutzung der Dienste als Summen.
+- **Dienststatus:** Der Abruf (`TENANT_HEALTH_ENABLED`, Berechtigung `ServiceHealth.Read.All`, alle 15 Minuten) liest den Zustand von Exchange Online, Microsoft Teams, SharePoint Online und Microsoft Entra sowie deren Störungen und Hinweise samt Mitteilungen von Microsoft (als Text ohne HTML). Die Seite „Dienststatus“ zeigt je Dienst eine Ampel (Unterbrechung, eingeschränkt, in Ordnung; das Schwerste oben), offene und in den letzten 30 Tagen beendete Störungen und Hinweise sowie „Ausfälle je Dienst“ (Störungen, Stunden mit Störung und Hinweise je Jahr). Diagramme: Zeitleiste der letzten 90 Tage je Dienst (Tag mit Störung, Hinweis oder ohne Meldung; Tage in UTC), Ausfalldauer je Dienst als waagerechte Balken je Jahr, Störungen pro Monat über 36 Monate, wählbar je Dienst; dazu immer Text oder Tabelle. Jede Meldung verlinkt auf dieselbe Meldung im Microsoft 365 Admin Center (Anmeldung dort nötig). Störungen und Hinweise bleiben drei Jahre. Aufgaben auf der Startseite gibt es dafür nicht; Beginn und Ende einer Störung meldet die Glocke (6.7).
+- **Geplant:** Mail-Benachrichtigung (die Glocke meldet es bereits, 6.7) zu ablaufenden Zertifikaten und Secrets; Domains mit Abgleich der DNS-Einträge (Abfrage über den Resolver des Docker-Hosts); Nutzung der Dienste als Summen.
 
 ## 7b. Modul IT-Budget
 
@@ -552,7 +572,8 @@ Evergreen:
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |
 | Audit-Log | Admin, Auditor | Filterbare Tabelle, Export |
 | Verwaltung | Admin (mit Step-up) | Bereiche Allgemein (Branding, Mailversand, Aufbewahrung des Audit-Logs, KI-Texte), Module, Rollen, Konnektoren, Kommentarregeln, Benachrichtigungen |
-| Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Version. Später: Push an/aus, Benachrichtigungen, Hinweis zur Installation |
+| Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Link zu den Benachrichtigungen, Version. Später: Push an/aus, Hinweis zur Installation |
+| Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Arten ein- und ausschalten. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
 

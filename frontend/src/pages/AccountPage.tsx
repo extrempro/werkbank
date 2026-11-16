@@ -3,6 +3,7 @@ import { Avatar } from "../components/Avatar";
 import { Link } from "../components/Link";
 import { ThemeSwitch } from "../components/ThemeSwitch";
 import { NEWS_PATH } from "../navigation";
+import { NOTIFICATIONS_PATH } from "../notifications";
 import { roleInfo } from "../user";
 
 /** Eigene Angaben, Rollen, Sitzung und persönliche Einstellungen. */
@@ -83,6 +84,16 @@ export function AccountPage({ me }: { me: Me }) {
         </div>
         <div className="detail-body">
           <ThemeSwitch />
+        </div>
+      </section>
+
+      <section className="panel" aria-labelledby="konto-benachrichtigungen">
+        <div className="panel-head">
+          <h2 id="konto-benachrichtigungen">Benachrichtigungen</h2>
+        </div>
+        <div className="detail-body">
+          <p>Die Glocke oben meldet, was sich in deinen Bereichen getan hat.</p>
+          <Link to={NOTIFICATIONS_PATH}>Benachrichtigungen ansehen und einstellen</Link>
         </div>
       </section>
 

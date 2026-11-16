@@ -1,9 +1,11 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  adminCenterUrl,
   credentialKind,
   daysUntil,
   licenseNotes,
+  monthlyIncidents,
   remainingText,
   type Credential,
   type License,
@@ -435,6 +437,25 @@ describe("Dienststatus", () => {
             incident_hours: 5.5,
           },
         ],
+        months: [
+          { month: "2026-10", service_id: "Exchange", incidents: 1 },
+          { month: "2026-10", service_id: "microsoftteams", incidents: 2 },
+          { month: "2026-11", service_id: "Exchange", incidents: 1 },
+          { month: "2026-11", service_id: "microsoftteams", incidents: 0 },
+        ],
+        timeline_days: ["2026-11-14", "2026-11-15", "2026-11-16"],
+        timeline: [
+          {
+            service_id: "Exchange",
+            service_name: "Exchange Online",
+            days: ["hinweis", "ok", "stoerung"],
+          },
+          {
+            service_id: "microsoftteams",
+            service_name: "Microsoft Teams",
+            days: ["ok", "ok", "ok"],
+          },
+        ],
       },
     });
     render(<HealthPage />);
@@ -448,6 +469,21 @@ describe("Dienststatus", () => {
     details.open = true;
     fireEvent(details, new Event("toggle"));
     expect(await screen.findByText("Wir prüfen das.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /EX1001 im Microsoft 365 Admin Center öffnen/ }),
+    ).toHaveAttribute(
+      "href",
+      "https://admin.microsoft.com/Adminportal/Home#/servicehealth/:/alerts/EX1001",
+    );
+
+    // Zeitleiste, Ausfalldauer und Monate
+    expect(screen.getByText("1 Tag Störung, 1 Tag Hinweis")).toBeInTheDocument();
+    expect(screen.getByText("ohne Meldung")).toBeInTheDocument();
+    expect(screen.getByText(/14\.11\. Hinweis; 16\.11\. Störung/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2026" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("letzte 2 Monate · 4 insgesamt")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Microsoft Teams" }));
+    expect(screen.getByText("letzte 2 Monate · 2 insgesamt")).toBeInTheDocument();
   });
 
   it("erklärt, wenn der Abruf aus ist", async () => {
@@ -459,9 +495,33 @@ describe("Dienststatus", () => {
         open: [],
         recent: [],
         stats: [],
+        months: [],
+        timeline_days: [],
+        timeline: [],
       },
     });
     render(<HealthPage />);
     expect(await screen.findByText(/nicht eingeschaltet/)).toBeVisible();
+  });
+});
+
+describe("Störungen je Monat", () => {
+  it("summiert ohne Dienst alle Dienste und sortiert aufsteigend", () => {
+    const months = [
+      { month: "2026-11", service_id: "Exchange", incidents: 1 },
+      { month: "2026-10", service_id: "Exchange", incidents: 2 },
+      { month: "2026-10", service_id: "SharePoint", incidents: 3 },
+    ];
+    expect(monthlyIncidents(months, null)).toEqual([
+      { month: "2026-10", incidents: 5 },
+      { month: "2026-11", incidents: 1 },
+    ]);
+    expect(monthlyIncidents(months, "SharePoint")).toEqual([{ month: "2026-10", incidents: 3 }]);
+  });
+
+  it("verlinkt die Meldung im Admin Center", () => {
+    expect(adminCenterUrl("EX1001")).toBe(
+      "https://admin.microsoft.com/Adminportal/Home#/servicehealth/:/alerts/EX1001",
+    );
   });
 });

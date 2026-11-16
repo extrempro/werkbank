@@ -1,6 +1,7 @@
 """Aufträge des Kerns und das Verzeichnis aller Auftragsarten."""
 
-from datetime import timedelta
+from collections.abc import Iterable
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, func, or_, select
@@ -10,19 +11,24 @@ from werkbank.config import Settings
 from werkbank.core.app_settings import audit_retention_days
 from werkbank.core.audit import write_audit
 from werkbank.core.models import AuditLog, AuthFlow, Job, JobStatus, UserSession
+from werkbank.core.notifications import NOTIFY, NOTIFY_INTERVAL, Event, make_notify_job
 from werkbank.core.sessions import now_utc
+from werkbank.modules.budget.notifications import budget_notifications
 from werkbank.modules.evergreen.jobs import (
     CHECK_IMPLEMENTATION,
     FETCH_MESSAGES,
     check_implementation_job,
     fetch_messages_job,
 )
+from werkbank.modules.evergreen.notifications import evergreen_notifications
 from werkbank.modules.m365_config.ai_texts import GENERATE_AI_TEXTS, generate_ai_texts_job
 from werkbank.modules.m365_config.jobs import COLLECT, collect_job
+from werkbank.modules.m365_config.notifications import m365_config_notifications
 from werkbank.modules.m365_config.secure_score import FETCH_SECURE_SCORE, fetch_secure_score_job
 from werkbank.modules.tenant.credentials import FETCH_CREDENTIALS, fetch_credentials_job
 from werkbank.modules.tenant.health import FETCH_HEALTH, fetch_health_job
 from werkbank.modules.tenant.inventory import FETCH_TENANT, fetch_inventory_job
+from werkbank.modules.tenant.notifications import tenant_notifications
 from werkbank.worker.jobs import JobType
 
 CLEANUP = "kern.aufraeumen"
@@ -72,8 +78,38 @@ def purge_audit_log(db: Session) -> int:
     return removed
 
 
+# Fehlgeschlagene Aufträge, die jünger sind, meldet die Glocke
+FAILED_JOB_DAYS = 2
+
+
+def core_notifications(db: Session, settings: Settings, now: datetime) -> Iterable[Event]:
+    """Fehlgeschlagene Hintergrundaufträge (der Abruf der Einstellungen meldet sich selbst)."""
+    for job in db.scalars(
+        select(Job).where(
+            Job.status == JobStatus.FAILED,
+            Job.type != COLLECT,
+            Job.finished_at >= now - timedelta(days=FAILED_JOB_DAYS),
+        )
+    ):
+        yield Event(
+            kind="kern.auftrag_fehlgeschlagen",
+            key=str(job.id),
+            title=f"Hintergrundauftrag „{job.type}“ ist fehlgeschlagen",
+            link="/audit",
+        )
+
+
+NOTIFICATION_SOURCES = (
+    core_notifications,
+    m365_config_notifications,
+    tenant_notifications,
+    evergreen_notifications,
+    budget_notifications,
+)
+
 REGISTRY: dict[str, JobType] = {
     CLEANUP: JobType(handler=cleanup, interval=timedelta(hours=1)),
+    NOTIFY: JobType(handler=make_notify_job(NOTIFICATION_SOURCES), interval=NOTIFY_INTERVAL),
     CHECK_IMPLEMENTATION: JobType(handler=check_implementation_job, interval=timedelta(hours=1)),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
 }

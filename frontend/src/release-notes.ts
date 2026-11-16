@@ -24,6 +24,28 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.39.0",
+    date: "2026-11-16",
+    summary:
+      "Neu: Benachrichtigungen mit Glocke. Der Dienststatus zeigt Diagramme und führt ins Admin Center.",
+    sections: [
+      {
+        area: "Benachrichtigungen",
+        entries: [
+          "Neu: die Glocke oben rechts. Sie meldet, was sich in deinen Bereichen getan hat, zum Beispiel eine neue Rechnung zur Prüfung, ein Vorgang, der auf dich wartet, eine Störung bei Microsoft 365 oder ein Zertifikat, das bald abläuft. Die Zahl an der Glocke zeigt, wie viele du noch nicht gelesen hast.",
+          "Unter „Alle anzeigen“ findest du alle Benachrichtigungen der letzten 90 Tage. Dort kannst du auch einstellen, welche Benachrichtigungen du bekommen möchtest.",
+        ],
+      },
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Dienststatus: neue Diagramme mit den letzten 90 Tagen je Dienst, der Ausfalldauer je Dienst und den Störungen pro Monat.",
+          "Jede Störung und jeder Hinweis lässt sich direkt im Microsoft 365 Admin Center öffnen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.38.0",
     date: "2026-11-16",
     summary: "Microsoft 365: Dienststatus. Zähler in der Navigation bleiben aktuell.",

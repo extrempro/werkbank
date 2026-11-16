@@ -240,6 +240,23 @@ export interface OutageStat {
   incident_hours: number;
 }
 
+export interface MonthStat {
+  /** Monat des Beginns als JJJJ-MM */
+  month: string;
+  service_id: string;
+  incidents: number;
+}
+
+/** Zustand eines Tages in der Zeitleiste: die schwerste Meldung, die an dem Tag lief. */
+export type DayLevel = "ok" | "hinweis" | "stoerung";
+
+export interface ServiceTimeline {
+  service_id: string;
+  service_name: string;
+  /** Ein Eintrag je Tag aus `timeline_days`, ältester zuerst */
+  days: DayLevel[];
+}
+
 export interface Health {
   enabled: boolean;
   fetched_at: string | null;
@@ -247,6 +264,31 @@ export interface Health {
   open: ServiceIssue[];
   recent: ServiceIssue[];
   stats: OutageStat[];
+  months: MonthStat[];
+  /** Tage als JJJJ-MM-TT, ältester zuerst */
+  timeline_days: string[];
+  timeline: ServiceTimeline[];
+}
+
+/** Die Meldung im Microsoft 365 Admin Center (dort ist eine Anmeldung nötig). */
+export function adminCenterUrl(issueId: string): string {
+  return `https://admin.microsoft.com/Adminportal/Home#/servicehealth/:/alerts/${encodeURIComponent(issueId)}`;
+}
+
+/** Störungen je Monat, aufsteigend; ohne Dienst die Summe aller Dienste. */
+export function monthlyIncidents(
+  months: MonthStat[],
+  serviceId: string | null,
+): { month: string; incidents: number }[] {
+  const totals = new Map<string, number>();
+  for (const entry of months) {
+    if (serviceId === null || entry.service_id === serviceId) {
+      totals.set(entry.month, (totals.get(entry.month) ?? 0) + entry.incidents);
+    }
+  }
+  return [...totals.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, incidents]) => ({ month, incidents }));
 }
 
 export function fetchHealth(): Promise<Health> {

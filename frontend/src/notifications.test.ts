@@ -1,0 +1,34 @@
+import { describe, expect, it } from "vitest";
+import { groupByModule, safeLink, timeAgo } from "./notifications";
+
+describe("Benachrichtigungen", () => {
+  it("lässt nur Pfade in der Werkbank als Ziel zu", () => {
+    expect(safeLink("/budget/rechnungen")).toBe("/budget/rechnungen");
+    expect(safeLink("/m365/dienststatus#EX1001")).toBe("/m365/dienststatus#EX1001");
+    expect(safeLink("//example.com/x")).toBe("/benachrichtigungen");
+    expect(safeLink("https://example.com")).toBe("/benachrichtigungen");
+    expect(safeLink("javascript:alert(1)")).toBe("/benachrichtigungen");
+  });
+
+  it("nennt die Zeit relativ und nach einer Woche das Datum", () => {
+    const now = new Date("2026-11-16T12:00:00Z");
+    expect(timeAgo("2026-11-16T11:59:40Z", now)).toBe("gerade eben");
+    expect(timeAgo("2026-11-16T11:55:00Z", now)).toBe("vor 5 Minuten");
+    expect(timeAgo("2026-11-16T09:00:00Z", now)).toBe("vor 3 Stunden");
+    expect(timeAgo("2026-11-15T12:00:00Z", now)).toBe("gestern");
+    expect(timeAgo("2026-11-01T12:00:00Z", now)).toBe("01.11.2026");
+    expect(timeAgo("kein Datum", now)).toBe("");
+  });
+
+  it("gruppiert die Arten nach Bereich", () => {
+    const kinds = [
+      { kind: "a", module: "IT-Budget", label: "A", enabled: true },
+      { kind: "b", module: "Evergreen", label: "B", enabled: false },
+      { kind: "c", module: "IT-Budget", label: "C", enabled: true },
+    ];
+    expect(groupByModule(kinds).map(([module, list]) => [module, list.length])).toEqual([
+      ["IT-Budget", 2],
+      ["Evergreen", 1],
+    ]);
+  });
+});

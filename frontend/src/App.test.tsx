@@ -90,6 +90,49 @@ describe("App", () => {
     await vi.waitFor(() => expect(link).toHaveAttribute("aria-label", "Meine Aufgaben"));
   });
 
+  it("zeigt in der Glocke die ungelesenen Benachrichtigungen", async () => {
+    const me = {
+      display_name: "Erika Beispiel",
+      email: "erika@example.com",
+      roles: ["Budget.Manager"],
+      authenticated_at: "2026-11-14T08:00:00Z",
+    };
+    const list = {
+      unread: 1,
+      entries: [
+        {
+          id: 7,
+          kind: "budget.rechnung_pruefen",
+          module: "IT-Budget",
+          title: "Rechnung R-1 von Beispiel GmbH prüfen",
+          link: "/budget/rechnungen",
+          created_at: "2026-11-14T08:00:00Z",
+          read: false,
+        },
+      ],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        url.startsWith("/api/notifications")
+          ? new Response(JSON.stringify(list), { status: 200 })
+          : url === "/api/tasks"
+            ? new Response(JSON.stringify({ tasks: [] }), { status: 200 })
+            : new Response(JSON.stringify(me), { status: 200 }),
+      ),
+    );
+    render(<App />);
+    const bell = await screen.findByRole("button", { name: "Benachrichtigungen: 1 ungelesen" });
+    expect(bell).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(bell);
+    expect(bell).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByRole("link", { name: /Rechnung R-1 von Beispiel GmbH prüfen/ }),
+    ).toHaveAttribute("href", "/budget/rechnungen");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(bell).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("zeigt bei Serverfehler einen Hinweis", async () => {
     mockFetch(500);
     render(<App />);

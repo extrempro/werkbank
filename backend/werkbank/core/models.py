@@ -187,3 +187,55 @@ class WorkflowEvent(Base):
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class Notification(Base):
+    """Eine Benachrichtigung für eine Person (Glocke). Nur Text, Link und Zeitpunkt."""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # Art, z. B. „budget.rechnung_pruefen“ (siehe core/notifications.py)
+    kind: Mapped[str] = mapped_column(String(64))
+    title: Mapped[str] = mapped_column(String(300))
+    link: Mapped[str] = mapped_column(String(300))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class NotificationMark(Base):
+    """Ereignis, das schon gemeldet wurde; dieselbe Sache meldet die Glocke nur einmal."""
+
+    __tablename__ = "notification_marks"
+
+    # Art und Schlüssel des Ereignisses, z. B. „tenant.zugangsdaten:17:dringend“
+    key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # Zuletzt von einer Quelle gemeldet; verschwindet das Ereignis, wird die Marke gelöscht
+    seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class NotificationKind(Base):
+    """Seit wann eine Art beobachtet wird. Beim ersten Mal gilt der Bestand als gemeldet."""
+
+    __tablename__ = "notification_kinds"
+
+    kind: Mapped[str] = mapped_column(String(64), primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class NotificationMute(Base):
+    """Art, die eine Person ausgeschaltet hat (Vorgabe: alle an)."""
+
+    __tablename__ = "notification_mutes"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    kind: Mapped[str] = mapped_column(String(64), primary_key=True)
