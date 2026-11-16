@@ -35,22 +35,29 @@ export interface AccountUpdate {
   active: boolean;
 }
 
-export type YearStatus = "entwurf" | "freigegeben";
+/** Status eines Budgetpostens in einem Geschäftsjahr; rechnung: Rechnung liegt vor. */
+export type ItemStatus = "offen" | "rechnung" | "abgeschlossen";
+
+export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
+  offen: "offen",
+  rechnung: "Rechnung liegt vor",
+  abgeschlossen: "abgeschlossen",
+};
 
 export interface OverviewRow {
   account: Account;
-  /** Geplanter Betrag brutto in Cent; null: für dieses Jahr ist nichts geplant. */
-  plan_cents: number | null;
+  /** Erwartete Kosten brutto in Cent; null: in diesem Jahr läuft kein Posten des Kontos. */
+  expected_cents: number | null;
   previous_cents: number | null;
   /** Was aus Verträgen in diesem Geschäftsjahr noch zu erwarten ist (ohne schon Gebuchtes). */
   committed_cents: number;
-  /** Summe der gebuchten Rechnungen. */
+  /** Summe der gebuchten Rechnungspositionen. */
   actual_cents: number;
-  /** Ist plus noch gebunden. */
+  /** Abgeschlossen das Ist, sonst das Höhere aus Erwartung und Ist plus Gebundenem. */
   forecast_cents: number;
 }
 
-/** Ein Budgetposten: wofür das Geld eines Kontos gedacht ist. */
+/** Ein Budgetposten: ein Vorhaben mit erwarteten Kosten je Geschäftsjahr und Laufzeit. */
 export interface Item {
   id: number;
   account_id: number;
@@ -58,22 +65,27 @@ export interface Item {
   account_name: string;
   kind: AccountKind;
   name: string;
-  /** Üblicher Partner des Postens; beim Erfassen einer Rechnung vorausgewählt. */
-  partner_id: number | null;
-  partner_name: string | null;
+  /** Erwartete Kosten je Geschäftsjahr, brutto. */
+  amount_cents: number;
+  start_year: number;
+  start_year_name: string;
+  /** null: bis auf Weiteres; gleich start_year: einmalig. */
+  end_year: number | null;
+  end_year_name: string | null;
   note: string;
   /** Frei vergebene Schlagworte zum Suchen und Auswerten. */
   tags: string[];
   active: boolean;
+  /** Nur wenn mit Geschäftsjahr abgefragt: Status in diesem Jahr. */
+  status?: ItemStatus | null;
 }
 
 export interface ItemUpdate {
   account_id: number;
   name: string;
-  partner_id: number | null;
-  /** Nur beim Anlegen: Plan für dieses Geschäftsjahr gleich mit eintragen. */
-  plan_year?: number;
-  plan_cents?: number;
+  amount_cents: number;
+  start_year: number;
+  end_year: number | null;
   note: string;
   tags: string[];
   active: boolean;
@@ -81,11 +93,12 @@ export interface ItemUpdate {
 
 export interface ItemRow {
   item: Item;
-  plan_cents: number | null;
+  expected_cents: number | null;
   previous_cents: number | null;
   committed_cents: number;
   actual_cents: number;
   forecast_cents: number;
+  status: ItemStatus | null;
   /** Zahl der Verträge auf diesem Posten mit Kosten in diesem Jahr. */
   contracts: number;
 }
@@ -103,24 +116,20 @@ export interface Overview {
   first_day: string;
   last_day: string;
   years: { year: number; name: string }[];
-  year_status: YearStatus;
   /** Je Konto die Summen seiner Budgetposten. */
   rows: OverviewRow[];
   items: ItemRow[];
-  plan: Totals;
+  expected: Totals;
   previous: Totals;
   committed: Totals;
   actual: Totals;
   forecast: Totals;
+  /** Budgetposten dieses Jahres nach Status. */
+  statuses: { open: number; invoiced: number; closed: number };
   /** Rechnungen dieses Jahres, die noch auf die Prüfung warten. */
   open_invoices: number;
   /** Zahl der Verträge, aus denen in diesem Jahr Kosten zu erwarten sind. */
   committed_contracts: number;
-}
-
-export interface PlanEntry {
-  item_id: number;
-  amount_cents: number | null;
 }
 
 export const BUDGET_EDITOR_ROLES = ["Budget.Editor", "Budget.Manager"];
@@ -166,7 +175,10 @@ export function updateAccount(id: number, update: AccountUpdate): Promise<Accoun
   return putJson<Account>(`/api/budget/accounts/${id}`, update);
 }
 
-export function fetchItems(): Promise<Item[]> {
+export function fetchItems(year: number | null = null): Promise<Item[]> {
+  if (year !== null) {
+    return getJson<Item[]>(`/api/budget/items?year=${year}`);
+  }
   return getJson<Item[]>("/api/budget/items");
 }
 
@@ -182,10 +194,6 @@ export function fetchBudgetOverview(year: number | null): Promise<Overview> {
   return getJson<Overview>(
     year === null ? "/api/budget/overview" : `/api/budget/overview?year=${year}`,
   );
-}
-
-export function savePlan(year: number, entries: PlanEntry[]): Promise<Overview> {
-  return putJson<Overview>(`/api/budget/plans/${year}`, { entries });
 }
 
 /** Obergrenze je Betrag in Cent (wie auf dem Server). */
@@ -434,6 +442,8 @@ export interface InvoiceLineUpdate {
   description: string;
   is_project: boolean;
   is_yearly: boolean;
+  /** Schließt den Budgetposten für das Geschäftsjahr der Rechnung ab, sobald sie gebucht ist. */
+  closes_item: boolean;
 }
 
 export interface InvoiceLine extends Omit<InvoiceLineUpdate, "gross_cents"> {
@@ -546,29 +556,59 @@ export function deletePartner(id: number): Deleted {
 export interface PlanYear {
   year: number;
   name: string;
-  status: YearStatus;
+  expected_cents: number;
+  actual_cents: number;
+}
+
+export interface PlanCell {
+  /** null: der Posten läuft in dem Jahr nicht. */
+  expected_cents: number | null;
+  actual_cents: number;
+  status: ItemStatus | null;
 }
 
 export interface PlanningRow {
   item: Item;
-  /** Plan je Geschäftsjahr; fehlt ein Jahr, ist nichts geplant. */
-  plans: Record<string, number>;
-  /** Erwartete Vertragskosten je Geschäftsjahr als Vorschlag. */
-  proposals: Record<string, number>;
+  /** Je Geschäftsjahr (Schlüssel: Jahr). */
+  years: Record<string, PlanCell>;
 }
 
 export interface Planning {
   year_label: string;
+  current_year: number;
   years: PlanYear[];
   rows: PlanningRow[];
 }
 
-export function fetchPlanning(): Promise<Planning> {
-  return getJson<Planning>("/api/budget/planning");
+/** Fünf Geschäftsjahre ab `start`; ohne Angabe ab dem laufenden. */
+export function fetchPlanning(start: number | null): Promise<Planning> {
+  return getJson<Planning>(`/api/budget/planning${start === null ? "" : `?start=${start}`}`);
 }
 
-export function setYearStatus(year: number, status: YearStatus): Promise<PlanYear> {
-  return putJson<PlanYear>(`/api/budget/years/${year}/status`, { status });
+/** Adresse der Excel-Datei mit Mehrjahresübersicht und Rechnungspositionen. */
+export function exportUrl(start: number | null): string {
+  return `/api/budget/export${start === null ? "" : `?start=${start}`}`;
+}
+
+/** Laufzeit in Worten: „2026/27“, „2026/27 bis 2028/29“ oder „ab 2026/27, bis auf Weiteres“. */
+export function runtimeText(item: Item): string {
+  if (item.end_year === item.start_year) {
+    return `einmalig ${item.start_year_name}`;
+  }
+  if (item.end_year_name === null) {
+    return `ab ${item.start_year_name}, bis auf Weiteres`;
+  }
+  return `${item.start_year_name} bis ${item.end_year_name}`;
+}
+
+/** Geschäftsjahr eines Tages (JJJJ-MM-TT) bei Beginn im Monat `startMonth`. */
+export function fiscalYearOf(day: string, startMonth: number): number | null {
+  const match = /^(\d{4})-(\d{2})-\d{2}$/.exec(day);
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  return Number(match[2]) >= startMonth ? year : year - 1;
 }
 
 /** Höchstgröße eines Belegs in Megabyte (wie auf dem Server). */
@@ -634,7 +674,7 @@ export type TagMode = "any" | "all";
 export interface StatisticYear {
   year: number;
   name: string;
-  plan_cents: number;
+  expected_cents: number;
   actual_cents: number;
 }
 
@@ -645,7 +685,7 @@ export interface Statistic {
   mode: TagMode;
   years: StatisticYear[];
   /** Passende Budgetposten mit ihren Summen über den Zeitraum. */
-  items: { item: Item; plan_cents: number; actual_cents: number }[];
+  items: { item: Item; expected_cents: number; actual_cents: number }[];
 }
 
 export interface SavedStatistic {
@@ -712,7 +752,7 @@ export function parseTags(text: string): string[] | string {
   return tags;
 }
 
-/** Ob ein Budgetposten zum Suchtext passt: Name, Notiz, Konto, Partner oder Tag. */
+/** Ob ein Budgetposten zum Suchtext passt: Name, Notiz, Konto oder Tag. */
 export function itemMatches(item: Item, search: string): boolean {
   const needle = search.trim().toLowerCase();
   if (needle === "") {
@@ -723,7 +763,6 @@ export function itemMatches(item: Item, search: string): boolean {
     item.note,
     item.account_number,
     item.account_name,
-    item.partner_name ?? "",
     ...item.tags,
   ].some((text) => text.toLowerCase().includes(needle));
 }

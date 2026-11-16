@@ -20,13 +20,17 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
 
   await page.goto("/budget/posten");
   await expect(page.getByRole("heading", { level: 1, name: "Budgetposten" })).toBeVisible();
-  await page.getByRole("button", { name: "Budgetposten anlegen" }).click();
+  await page.getByRole("button", { name: "Posten hinzufügen" }).click();
   await page
     .getByRole("combobox", { name: /^Konto/ })
     .selectOption({ label: `${number} Testkonto Wartung` });
   await page.getByLabel("Bezeichnung", { exact: true }).fill(`Posten ${number}`);
+  await page.getByRole("textbox", { name: /^Erwartete Kosten/ }).fill("1.500,00");
+  // Tags stehen unter den weiteren Angaben.
+  await page.getByText(/^Weitere Angaben/).click();
   await page.getByRole("textbox", { name: /^Tags/ }).fill(`Tag ${number}, tag ${number}`);
-  await page.getByRole("button", { name: "Budgetposten speichern" }).click();
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Posten speichern" }).click();
   await expect(page.getByText(`Posten ${number} ist gespeichert.`)).toBeVisible();
   await expectNoA11yViolations(page);
 
@@ -80,14 +84,17 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .getByRole("combobox", { name: /^Vertrag/ })
     .selectOption({ label: `Wartung ${number} · Beispiel Partner ${number}` });
   await page.getByRole("textbox", { name: /^Betrag netto/ }).fill("100,00");
-  // Zweite Position ohne Vertrag und mit anderem Steuersatz auf denselben Budgetposten
+  // Mit Vertrag schließt die Position den Posten nicht ab.
+  await expect(page.getByLabel("Schließt den Budgetposten ab")).not.toBeChecked();
+  // Zweite Position ohne Vertrag und mit anderem Steuersatz auf denselben Budgetposten;
+  // als Abschlag schließt auch sie den Posten nicht ab.
   await page.getByRole("button", { name: "Position hinzufügen" }).click();
   const second = page.getByRole("group", { name: "Position 2" });
-  await second
-    .getByRole("combobox", { name: /^Budgetposten/ })
-    .selectOption({ label: `${number} Testkonto Wartung · Posten ${number}` });
+  await second.getByRole("searchbox", { name: "Budgetposten suchen" }).fill(`Posten ${number}`);
+  await second.getByRole("combobox", { name: /^Budgetposten/ }).selectOption({ index: 1 });
   await second.getByRole("textbox", { name: /^Betrag netto/ }).fill("50,00");
   await second.getByRole("textbox", { name: /^Steuersatz/ }).fill("7");
+  await second.getByLabel("Schließt den Budgetposten ab").uncheck();
   await page.getByRole("textbox", { name: /^Rechnungsbetrag laut Beleg/ }).fill("170,00");
   await page.getByRole("button", { name: "Rechnung speichern" }).click();
   await expect(page.getByRole("alert")).toContainText("mehr als der Rechnungsbetrag");
@@ -127,20 +134,14 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/posten");
-  await page.getByRole("button", { name: "Plan bearbeiten" }).click();
-  await page
-    .getByRole("textbox", { name: new RegExp(`Plan für Posten ${number}`) })
-    .fill("1.500,00");
-  await expectNoA11yViolations(page);
-  await page.getByRole("button", { name: "Plan speichern" }).click();
-  await expect(page.getByText("Der Plan ist gespeichert.")).toBeVisible();
   const itemRow = page.getByRole("row", { name: new RegExp(`Posten ${number}`) });
+  // Rechnung da, aber nichts schließt ab: Erwartung 1.500,00; gebucht 172,50; nur die Position
+  // mit Vertrag (119,00) mindert das Gebundene. Prognose ist das Höhere aus Erwartung und
+  // Ist plus Gebundenem (1.481,50), also 1.500,00.
+  await expect(itemRow).toContainText("Rechnung liegt vor");
   await expect(itemRow).toContainText("1.500,00");
-  // Gebucht sind 172,50; nur die Position mit Vertrag (119,00) mindert das Gebundene.
   await expect(itemRow).toContainText("172,50");
   await expect(itemRow).toContainText("1.309,00");
-  await expect(itemRow).toContainText("1.481,50");
-  await expect(itemRow).toContainText("18,50");
   await expectNoA11yViolations(page);
 
   // Tags: in der Liste filtern, dann über fünf Jahre auswerten und die Auswahl speichern.
@@ -150,11 +151,11 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await page.getByRole("link", { name: `Statistik zu „Tag ${number}“` }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Statistik" })).toBeVisible();
   const yearRow = page
-    .getByRole("region", { name: "Plan und Ist je Geschäftsjahr" })
+    .getByRole("region", { name: "Erwartet und Ist je Geschäftsjahr" })
     .getByRole("row", { name: new RegExp(`^${new Date().getFullYear()}`) });
   await expect(yearRow).toContainText("1.500,00");
   await expect(yearRow).toContainText("172,50");
-  await expect(page.getByRole("img", { name: /^Plan und Ist je Geschäftsjahr/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: /^Erwartet und Ist je Geschäftsjahr/ })).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Budgetposten der Auswahl" }).getByRole("row", {
       name: new RegExp(`Posten ${number}`),
@@ -180,21 +181,24 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     page.getByRole("heading", { name: /Kündigungstermine – nächste 120 Tage/ }),
   ).toBeVisible();
   await expect(
-    page.getByRole("img", { name: /Testkonto Wartung: Ist \d+ %, Prognose \d+ % des Plans/ }).first(),
+    page.getByRole("img", { name: /Testkonto Wartung: Ist \d+ %, Prognose \d+ % der Erwartung/ }).first(),
   ).toBeVisible();
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/planung");
-  await expect(page.getByRole("heading", { level: 1, name: "Mehrjahresplanung" })).toBeVisible();
-  await expect(
-    page.getByRole("row", { name: new RegExp(`^Posten ${number}`) }),
-  ).toContainText("Verträge: 1.428,00");
-  await page.getByRole("button", { name: "Plan bearbeiten" }).click();
-  await page.getByRole("button", { name: "Leere Felder aus Verträgen füllen" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Mehrjahresübersicht" })).toBeVisible();
+  const planRow = page.getByRole("row", { name: new RegExp(`^Posten ${number}`) });
+  await expect(planRow).toContainText("Rechnung liegt vor");
+  await expect(planRow).toContainText("Ist 172,50");
   await expectNoA11yViolations(page);
-  await page.getByRole("button", { name: "Plan speichern" }).click();
-  await expect(page.getByText("Der Plan ist gespeichert.")).toBeVisible();
-  await expectNoA11yViolations(page);
+  const excel = await page.request.get(
+    (await page.getByRole("link", { name: "Als Excel-Datei herunterladen" }).getAttribute("href")) ??
+      "",
+  );
+  expect(excel.status()).toBe(200);
+  expect(excel.headers()["content-type"]).toContain("spreadsheetml");
+  // Eine xlsx-Datei ist ein ZIP-Archiv.
+  expect((await excel.body()).subarray(0, 2).toString()).toBe("PK");
 
   await page.goto("/budget/einstellungen");
   await expect(page.getByRole("heading", { level: 1, name: "Einstellungen" })).toBeVisible();
@@ -210,16 +214,14 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
   await expect(page.getByText(/Nur Lesezugriff/)).toBeVisible();
   await page.goto("/budget/posten");
   await expect(page.getByRole("heading", { level: 1, name: "Budgetposten" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Plan bearbeiten" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Plan freigeben" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Budgetposten anlegen" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Posten hinzufügen" })).toHaveCount(0);
   await page.goto("/budget/konten");
   await expect(page.getByRole("heading", { level: 1, name: "Konten" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Konto anlegen" })).toHaveCount(0);
   for (const [path, title] of [
     ["/budget/vertraege", "Verträge"],
     ["/budget/rechnungen", "Rechnungen"],
-    ["/budget/planung", "Mehrjahresplanung"],
+    ["/budget/planung", "Mehrjahresübersicht"],
     ["/budget/statistik", "Statistik"],
     ["/budget/partner", "Partner"],
   ] as const) {
@@ -235,9 +237,10 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
   expect(
     (await page.request.post("/api/budget/accounts", { data: account, headers })).status(),
   ).toBe(403);
-  expect(
-    (await page.request.put("/api/budget/plans/2026", { data: { entries: [] }, headers })).status(),
-  ).toBe(403);
+  const item = { account_id: 1, name: "Unerlaubt", amount_cents: 1 };
+  expect((await page.request.post("/api/budget/items", { data: item, headers })).status()).toBe(
+    403,
+  );
   const statistic = { name: "Unerlaubt", tags: ["Cloud"], mode: "any" };
   expect(
     (await page.request.post("/api/budget/statistics", { data: statistic, headers })).status(),
@@ -256,6 +259,7 @@ test("Ohne Budget-Rolle gibt es den Bereich und die Daten nicht", async ({ page 
     "/api/budget/partners",
     "/api/budget/invoices",
     "/api/budget/planning",
+    "/api/budget/export",
     "/api/budget/tags",
     "/api/budget/statistics",
     "/api/budget/contracts",

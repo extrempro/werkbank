@@ -8,8 +8,10 @@ import {
   formatEuro,
   formatRate,
   grossCents,
+  fiscalYearOf,
   hasTag,
   itemMatches,
+  runtimeText,
   niceMax,
   parseEuro,
   parseRate,
@@ -75,8 +77,11 @@ const office: Item = {
   account_name: "Softwarewartung",
   kind: "laufend",
   name: "Office-Lizenzen",
-  partner_id: null,
-  partner_name: null,
+  amount_cents: 1_190_000,
+  start_year: 2025,
+  start_year_name: "2025/26",
+  end_year: null,
+  end_year_name: null,
   note: "",
   tags: ["Lizenzen", "Cloud"],
   active: true,
@@ -88,8 +93,11 @@ const server: Item = {
   account_name: "Hardware",
   kind: "investition",
   name: "Server",
-  partner_id: null,
-  partner_name: null,
+  amount_cents: 5_000_050,
+  start_year: 2026,
+  start_year_name: "2026/27",
+  end_year: 2026,
+  end_year_name: "2026/27",
   note: "",
   tags: [],
   active: false,
@@ -102,7 +110,6 @@ function overview(overrides: Partial<Overview> = {}): Overview {
     year_name: "2026/27",
     first_day: "2026-08-01",
     last_day: "2027-07-31",
-    year_status: "entwurf",
     years: [
       { year: 2027, name: "2027/28" },
       { year: 2026, name: "2026/27" },
@@ -111,7 +118,7 @@ function overview(overrides: Partial<Overview> = {}): Overview {
     rows: [
       {
         account: hardware,
-        plan_cents: 5_000_050,
+        expected_cents: 5_000_050,
         previous_cents: null,
         committed_cents: 0,
         actual_cents: 0,
@@ -119,7 +126,7 @@ function overview(overrides: Partial<Overview> = {}): Overview {
       },
       {
         account: software,
-        plan_cents: 1_190_000,
+        expected_cents: 1_190_000,
         previous_cents: 1_000_000,
         committed_cents: 600_000,
         actual_cents: 0,
@@ -129,28 +136,31 @@ function overview(overrides: Partial<Overview> = {}): Overview {
     items: [
       {
         item: server,
-        plan_cents: 5_000_050,
+        expected_cents: 5_000_050,
         previous_cents: null,
         committed_cents: 0,
         actual_cents: 0,
-        forecast_cents: 0,
+        forecast_cents: 5_000_050,
+        status: "offen",
         contracts: 0,
       },
       {
         item: office,
-        plan_cents: 1_190_000,
+        expected_cents: 1_190_000,
         previous_cents: 1_000_000,
         committed_cents: 600_000,
         actual_cents: 0,
-        forecast_cents: 600_000,
+        forecast_cents: 1_190_000,
+        status: "rechnung",
         contracts: 1,
       },
     ],
-    plan: { running_cents: 1_190_000, investment_cents: 5_000_050, total_cents: 6_190_050 },
+    expected: { running_cents: 1_190_000, investment_cents: 5_000_050, total_cents: 6_190_050 },
     previous: { running_cents: 1_000_000, investment_cents: 0, total_cents: 1_000_000 },
     committed: { running_cents: 600_000, investment_cents: 0, total_cents: 600_000 },
     actual: { running_cents: 0, investment_cents: 0, total_cents: 0 },
     forecast: { running_cents: 600_000, investment_cents: 0, total_cents: 600_000 },
+    statuses: { open: 1, invoiced: 1, closed: 0 },
     open_invoices: 0,
     committed_contracts: 1,
     ...overrides,
@@ -203,24 +213,32 @@ describe("Beträge", () => {
 });
 
 describe("Budgetposten", () => {
-  it("zeigt Plan, gebunden, frei und Vorjahr je Posten und lädt ein anderes Jahr", async () => {
+  it("zeigt Status, Erwartung, Prognose und Abweichung je Posten und lädt ein anderes Jahr", async () => {
     const calls = stubFetch({
       "GET /api/budget/overview": overview(),
       "GET /api/budget/accounts": [hardware, software],
-      "GET /api/budget/partners": [partner],
     });
     render(<ItemsPage roles={["Budget.Reader"]} />);
     const table = within(await screen.findByRole("region", { name: "Budgetposten 2026/27" }));
     const row = table.getByRole("row", { name: /Office-Lizenzen/ });
-    expect(plain(row.textContent)).toContain("11.900,00 €");
-    expect(plain(row.textContent)).toContain("5.900,00 €");
-    expect(plain(row.textContent)).toContain("10.000,00 €");
+    expect(row).toHaveTextContent("Rechnung liegt vor");
+    expect(row).toHaveTextContent("ab 2025/26, bis auf Weiteres");
     expect(row).toHaveTextContent("1 Vertrag");
-    expect(table.getByRole("row", { name: /Server/ })).toHaveTextContent("stillgelegt");
+    expect(plain(row.textContent)).toContain("11.900,00 €");
+    expect(plain(row.textContent)).toContain("6.000,00 €");
+    expect(plain(row.textContent)).toContain("10.000,00 €");
+    const server = table.getByRole("row", { name: /Server/ });
+    expect(server).toHaveTextContent("stillgelegt");
+    expect(server).toHaveTextContent("einmalig 2026/27");
+    expect(server).toHaveTextContent("offen");
     expect(plain(table.getByRole("row", { name: /^Summe/ }).textContent)).toContain("61.900,50 €");
-    // Lesende Rollen planen nicht und legen nichts an.
-    expect(screen.queryByRole("button", { name: "Plan bearbeiten" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Budgetposten anlegen" })).toBeNull();
+    // Lesende Rollen legen nichts an.
+    expect(screen.queryByRole("button", { name: "Posten hinzufügen" })).toBeNull();
+
+    // Nach Status filtern
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "offen" } });
+    expect(table.queryByRole("row", { name: /Office-Lizenzen/ })).toBeNull();
+    expect(screen.getByText("1 von 2 Budgetposten")).toBeVisible();
 
     fireEvent.change(screen.getByLabelText("Wirtschaftsjahr"), { target: { value: "2025" } });
     await vi.waitFor(() =>
@@ -228,76 +246,89 @@ describe("Budgetposten", () => {
     );
   });
 
-  it("lässt den Budgetverwalter den Plan ändern und prüft die Eingabe", async () => {
-    const calls = stubFetch({
-      "GET /api/budget/overview": overview(),
+  it("zeigt die Abweichung von der Erwartung mit Vorzeichen", async () => {
+    const base = overview();
+    stubFetch({
+      "GET /api/budget/overview": overview({
+        items: [
+          { ...base.items[1], actual_cents: 1_290_000, forecast_cents: 1_290_000 },
+          { ...base.items[0], status: "abgeschlossen", actual_cents: 4_000_000, forecast_cents: 4_000_000 },
+        ],
+      }),
       "GET /api/budget/accounts": [hardware, software],
-      "GET /api/budget/partners": [partner],
-      "PUT /api/budget/plans/2026": overview(),
     });
-    render(<ItemsPage roles={["Budget.Manager"]} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Plan bearbeiten" }));
-    const field = screen.getByRole("textbox", { name: /Plan für Office-Lizenzen/ });
-    expect(field).toHaveValue("11900,00");
-
-    fireEvent.change(field, { target: { value: "zwölftausend" } });
-    fireEvent.click(screen.getByRole("button", { name: "Plan speichern" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("ist nicht lesbar");
-    expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
-
-    fireEvent.change(field, { target: { value: "12.500,00" } });
-    fireEvent.change(screen.getByRole("textbox", { name: /Plan für Server/ }), {
-      target: { value: "" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Plan speichern" }));
-    expect(await screen.findByText("Der Plan ist gespeichert.")).toBeVisible();
-    // Gesendet wird nur, was sich geändert hat; ein leeres Feld entfernt den Plan.
-    expect(calls.find((call) => call.method === "PUT")?.body).toEqual({
-      entries: [
-        { item_id: 12, amount_cents: null },
-        { item_id: 11, amount_cents: 1_250_000 },
-      ],
-    });
-    expect(screen.queryByRole("textbox", { name: /Plan für/ })).toBeNull();
+    render(<ItemsPage roles={["Budget.Reader"]} />);
+    const table = within(await screen.findByRole("region", { name: "Budgetposten 2026/27" }));
+    expect(plain(table.getByRole("row", { name: /Office-Lizenzen/ }).textContent)).toContain(
+      "+ 1.000,00 €",
+    );
+    const server = table.getByRole("row", { name: /Server/ });
+    expect(server).toHaveTextContent("abgeschlossen");
+    expect(plain(server.textContent)).toContain("− 10.000,50 €");
   });
 
-  it("legt einen Posten an und ändert einen", async () => {
+  it("fügt einen Posten als Vorgang hinzu und ändert einen", async () => {
     const calls = stubFetch({
       "GET /api/budget/overview": overview(),
       "GET /api/budget/accounts": [hardware, software],
-      "GET /api/budget/partners": [partner],
-      "POST /api/budget/items": { ...office, id: 13, name: "Sonstige Software" },
+      "POST /api/budget/items": { ...office, id: 13, name: "Zeiterfassung Lizenz" },
       "PUT /api/budget/items/12": { ...server, active: true },
     });
     render(<ItemsPage roles={["Budget.Editor"]} />);
     await screen.findByRole("region", { name: "Budgetposten 2026/27" });
-    fireEvent.click(screen.getByRole("button", { name: "Budgetposten anlegen" }));
-    fireEvent.click(screen.getByRole("button", { name: "Budgetposten speichern" }));
+    fireEvent.click(screen.getByRole("button", { name: "Posten hinzufügen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Posten speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Konto wählen");
     // Stillgelegte Konten stehen bei einem neuen Posten nicht zur Wahl.
     expect(within(screen.getByLabelText("Konto")).getAllByRole("option")).toHaveLength(2);
     fireEvent.change(screen.getByLabelText("Konto"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("Bezeichnung"), {
-      target: { value: "Sonstige Software" },
+      target: { value: "Zeiterfassung Lizenz" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Budgetposten speichern" }));
-    expect(await screen.findByText("Sonstige Software ist gespeichert.")).toBeVisible();
+    fireEvent.change(screen.getByLabelText(/^Erwartete Kosten/), { target: { value: "viel" } });
+    fireEvent.click(screen.getByRole("button", { name: "Posten speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Die erwarteten Kosten sind nicht lesbar");
+    fireEvent.change(screen.getByLabelText(/^Erwartete Kosten/), {
+      target: { value: "5.000,00" },
+    });
+    // Beginn: das gezeigte Jahr; mehrere Jahre brauchen ein Ende.
+    expect(screen.getByLabelText(/^Ab Wirtschaftsjahr/)).toHaveValue("2026");
+    fireEvent.change(screen.getByLabelText("Laufzeit"), { target: { value: "bis" } });
+    fireEvent.click(screen.getByRole("button", { name: "Posten speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("bis zu welchem Wirtschaftsjahr");
+    // Als Ende stehen nur Jahre nach dem Beginn zur Wahl.
+    expect(
+      within(screen.getByLabelText(/^Bis Wirtschaftsjahr/))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Bitte wählen", "2027/28"]);
+    fireEvent.change(screen.getByLabelText(/^Bis Wirtschaftsjahr/), { target: { value: "2027" } });
+    fireEvent.click(screen.getByRole("button", { name: "Posten speichern" }));
+    expect(await screen.findByText("Zeiterfassung Lizenz ist gespeichert.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       account_id: 1,
-      name: "Sonstige Software",
-      partner_id: null,
+      name: "Zeiterfassung Lizenz",
+      amount_cents: 500_000,
+      start_year: 2026,
+      end_year: 2027,
       note: "",
       tags: [],
       active: true,
     });
 
+    // Bearbeiten: Laufzeit und Kosten sind vorbelegt, stilllegen steht unter weiteren Angaben.
     fireEvent.click(await screen.findByRole("button", { name: "Server bearbeiten" }));
+    expect(screen.getByLabelText("Laufzeit")).toHaveValue("einmalig");
+    expect(screen.getByLabelText(/^Erwartete Kosten/)).toHaveValue("50000,50");
     fireEvent.click(screen.getByLabelText("Budgetposten ist aktiv"));
+    fireEvent.change(screen.getByLabelText("Laufzeit"), { target: { value: "offen" } });
     fireEvent.click(screen.getByRole("button", { name: "Änderungen speichern" }));
     await vi.waitFor(() =>
       expect(calls.find((call) => call.method === "PUT")?.body).toMatchObject({
         account_id: 2,
         name: "Server",
+        start_year: 2026,
+        end_year: null,
         active: true,
       }),
     );
@@ -309,8 +340,9 @@ describe("Übersicht", () => {
     stubFetch({
       "GET /api/budget/overview": overview({
         rows: [],
-        plan: { running_cents: 0, investment_cents: 0, total_cents: 0 },
+        expected: { running_cents: 0, investment_cents: 0, total_cents: 0 },
         items: [],
+        statuses: { open: 0, invoiced: 0, closed: 0 },
         committed: { running_cents: 0, investment_cents: 0, total_cents: 0 },
         actual: { running_cents: 0, investment_cents: 0, total_cents: 0 },
         forecast: { running_cents: 0, investment_cents: 0, total_cents: 0 },
@@ -516,7 +548,7 @@ describe("Übersicht nach dem Entwurf", () => {
         rows: [
           {
             account: hardware,
-            plan_cents: null,
+            expected_cents: null,
             previous_cents: null,
             committed_cents: 119_000,
             actual_cents: 0,
@@ -524,14 +556,14 @@ describe("Übersicht nach dem Entwurf", () => {
           },
           {
             account: software,
-            plan_cents: 500_000,
+            expected_cents: 500_000,
             previous_cents: 1_000_000,
             committed_cents: 600_000,
             actual_cents: 0,
             forecast_cents: 600_000,
           },
         ],
-        plan: { running_cents: 500_000, investment_cents: 0, total_cents: 500_000 },
+        expected: { running_cents: 500_000, investment_cents: 0, total_cents: 500_000 },
         committed: { running_cents: 600_000, investment_cents: 119_000, total_cents: 719_000 },
         actual: { running_cents: 0, investment_cents: 0, total_cents: 0 },
         forecast: { running_cents: 600_000, investment_cents: 119_000, total_cents: 719_000 },
@@ -550,11 +582,12 @@ describe("Übersicht nach dem Entwurf", () => {
     render(<BudgetOverviewPage roles={["Budget.Reader"]} />);
     expect(await screen.findByText("Durch Verträge gebunden", { selector: "dt" })).toBeVisible();
     expect(screen.getByText(/2 Verträge/)).toBeVisible();
-    expect(plain(screen.getByText(/über Plan$/, { selector: "dd" }).textContent)).toBe(
-      "2.190,00 € über Plan",
-    );
     expect(
-      screen.getByRole("img", { name: /Softwarewartung: Ist 0 %, Prognose 100 % des Plans/ }),
+      plain(screen.getByText(/über der Erwartung$/, { selector: "dd" }).textContent),
+    ).toBe("2.190,00 € über der Erwartung");
+    expect(screen.getByText(/1 offen, 1 mit Rechnung, 0 abgeschlossen/)).toBeVisible();
+    expect(
+      screen.getByRole("img", { name: /Softwarewartung: Ist 0 %, Prognose 100 % der Erwartung/ }),
     ).toBeInTheDocument();
 
     const dates = within(
@@ -570,9 +603,11 @@ describe("Übersicht nach dem Entwurf", () => {
 
     const needs = within(screen.getByRole("region", { name: "Handlungsbedarf" }));
     expect(plain(needs.getByText(/6815 Softwarewartung: Prognose liegt/).textContent)).toContain(
-      "1.000,00 € über Plan",
+      "1.000,00 € über der Erwartung",
     );
-    expect(needs.getByText(/0420 Hardware: .* aber kein Plan/)).toBeVisible();
+    expect(plain(needs.getByText(/0420 Hardware: Prognose liegt/).textContent)).toContain(
+      "1.190,00 € über der Erwartung",
+    );
     expect(needs.getByText("Backup: Auftragsverarbeitungsvertrag fehlt.")).toBeVisible();
   });
 });
@@ -749,6 +784,7 @@ function invoiceLine(overrides: Partial<InvoiceLine> = {}): InvoiceLine {
     description: "Wartung Oktober",
     is_project: false,
     is_yearly: true,
+    closes_item: false,
     ...overrides,
   };
 }
@@ -801,6 +837,7 @@ describe("Rechnungen", () => {
             gross_cents: 21_400,
             description: "Schulung",
             is_yearly: false,
+            closes_item: true,
           }),
         ],
         status: "gebucht",
@@ -810,6 +847,7 @@ describe("Rechnungen", () => {
   };
   const routes = {
     "GET /api/budget/invoices": list,
+    "GET /api/budget/settings": settings,
     "GET /api/budget/partners": [partner, distributor],
     "GET /api/budget/items": [office, server],
     "GET /api/budget/contracts": {
@@ -937,6 +975,7 @@ describe("Rechnungen", () => {
           description: "",
           is_project: true,
           is_yearly: false,
+          closes_item: false,
         },
         {
           item_id: 11,
@@ -947,6 +986,7 @@ describe("Rechnungen", () => {
           description: "",
           is_project: false,
           is_yearly: false,
+          closes_item: true,
         },
       ],
       total_gross_cents: 140_402,
@@ -1077,110 +1117,69 @@ describe("Löschen", () => {
   });
 });
 
-describe("Planung", () => {
-  it("meldet ein Vorhaben mit Partner und Plan an und gibt das Jahr frei", async () => {
-    const calls = stubFetch({
-      "GET /api/budget/overview": overview(),
-      "GET /api/budget/accounts": [software],
-      "GET /api/budget/partners": [partner],
-      "POST /api/budget/items": { ...office, id: 14, name: "Projekt Ablage" },
-      "PUT /api/budget/years/2026/status": { year: 2026, name: "2026/27", status: "freigegeben" },
-    });
-    render(<ItemsPage roles={["Budget.Manager"]} />);
-    expect(await screen.findByText("Plan 2026/27: Entwurf")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Budgetposten anlegen" }));
-    fireEvent.change(screen.getByLabelText("Konto"), { target: { value: "1" } });
-    fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "Projekt Ablage" } });
-    fireEvent.change(screen.getByLabelText(/^Üblicher Partner/), { target: { value: "1" } });
-    fireEvent.change(screen.getByLabelText(/^Plan 2026\/27/), { target: { value: "viel" } });
-    fireEvent.click(screen.getByRole("button", { name: "Budgetposten speichern" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Planbetrag ist nicht lesbar");
-    fireEvent.change(screen.getByLabelText(/^Plan 2026\/27/), { target: { value: "15.000,00" } });
-    fireEvent.click(screen.getByRole("button", { name: "Budgetposten speichern" }));
-    expect(await screen.findByText("Projekt Ablage ist gespeichert.")).toBeVisible();
-    expect(calls.find((call) => call.method === "POST")?.body).toEqual({
-      account_id: 1,
-      name: "Projekt Ablage",
-      partner_id: 1,
-      note: "",
-      tags: [],
-      active: true,
-      plan_year: 2026,
-      plan_cents: 1_500_000,
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Plan freigeben" }));
-    expect(await screen.findByText("Der Plan 2026/27 ist freigegeben.")).toBeVisible();
-    expect(calls.find((call) => call.method === "PUT")?.body).toEqual({ status: "freigegeben" });
-  });
-
-  it("sperrt den Plan eines freigegebenen Jahrs", async () => {
-    stubFetch({
-      "GET /api/budget/overview": overview({ year_status: "freigegeben" }),
-      "GET /api/budget/accounts": [software],
-      "GET /api/budget/partners": [partner],
-    });
-    render(<ItemsPage roles={["Budget.Manager"]} />);
-    expect(await screen.findByText("Plan 2026/27: freigegeben")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Plan bearbeiten" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Freigabe aufheben" })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Budgetposten anlegen" }));
-    expect(screen.queryByLabelText(/^Plan 2026\/27/)).toBeNull();
-  });
-
-  it("plant mehrere Jahre und übernimmt Vorschläge aus Verträgen", async () => {
-    const planning = {
-      year_label: "Wirtschaftsjahr",
-      years: [
-        { year: 2026, name: "2026/27", status: "freigegeben" },
-        { year: 2027, name: "2027/28", status: "entwurf" },
-        { year: 2028, name: "2028/29", status: "entwurf" },
-      ],
-      rows: [
-        {
-          item: office,
-          plans: { "2026": 600_000, "2027": 600_000 },
-          proposals: { "2026": 600_000, "2027": 600_000, "2028": 300_000 },
+describe("Mehrjahresübersicht", () => {
+  const planning = {
+    year_label: "Wirtschaftsjahr",
+    current_year: 2026,
+    years: [2026, 2027, 2028, 2029, 2030].map((year) => ({
+      year,
+      name: `${year}/${String((year + 1) % 100).padStart(2, "0")}`,
+      expected_cents: year <= 2027 ? 500_000 : 0,
+      actual_cents: year === 2026 ? 119_000 : 0,
+    })),
+    rows: [
+      {
+        item: { ...office, end_year: 2027, end_year_name: "2027/28" },
+        years: {
+          "2026": { expected_cents: 500_000, actual_cents: 119_000, status: "abgeschlossen" },
+          "2027": { expected_cents: 500_000, actual_cents: 0, status: "offen" },
+          "2028": { expected_cents: null, actual_cents: 0, status: null },
+          "2029": { expected_cents: null, actual_cents: 0, status: null },
+          "2030": { expected_cents: null, actual_cents: 0, status: null },
         },
-      ],
-    };
-    const calls = stubFetch({
-      "GET /api/budget/planning": planning,
-      "PUT /api/budget/plans/": overview(),
-    });
-    const { unmount } = render(<PlanningPage roles={["Budget.Reader"]} />);
-    const table = within(await screen.findByRole("region", { name: "Mehrjahresplanung" }));
-    expect(plain(table.getByRole("row", { name: /^Office-Lizenzen/ }).textContent)).toContain(
-      "Verträge: 3.000,00 €",
-    );
-    expect(plain(table.getByRole("row", { name: /^Summe Plan/ }).textContent)).toContain(
-      "6.000,00 €",
-    );
-    expect(screen.queryByRole("button", { name: "Plan bearbeiten" })).toBeNull();
-    unmount();
+      },
+    ],
+  };
 
-    render(<PlanningPage roles={["Budget.Editor"]} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Plan bearbeiten" }));
-    // Das freigegebene Jahr hat kein Eingabefeld.
-    expect(screen.queryByRole("textbox", { name: /im 2026\/27/ })).toBeNull();
-    const next = screen.getByRole("textbox", { name: /Office-Lizenzen im 2027\/28/ });
-    const later = screen.getByRole("textbox", { name: /Office-Lizenzen im 2028\/29/ });
-    expect(next).toHaveValue("6000,00");
-    expect(later).toHaveValue("");
-    fireEvent.click(screen.getByRole("button", { name: "Leere Felder aus Verträgen füllen" }));
-    expect(later).toHaveValue("3000,00");
-    expect(next).toHaveValue("6000,00");
-    fireEvent.change(next, { target: { value: "6.500,00" } });
-    fireEvent.click(screen.getByRole("button", { name: "Plan speichern" }));
-    expect(await screen.findByText("Der Plan ist gespeichert.")).toBeVisible();
-    const saved = calls.filter((call) => call.method === "PUT");
-    expect(saved.map((call) => call.url).sort()).toEqual([
-      "/api/budget/plans/2027",
-      "/api/budget/plans/2028",
-    ]);
-    expect(saved.find((call) => call.url.endsWith("2027"))?.body).toEqual({
-      entries: [{ item_id: 11, amount_cents: 650_000 }],
-    });
+  it("zeigt Erwartung, Ist und Status je Jahr und bietet den Export an", async () => {
+    const calls = stubFetch({ "GET /api/budget/planning": planning });
+    render(<PlanningPage />);
+    const table = within(await screen.findByRole("region", { name: /^Mehrjahresübersicht/ }));
+    const row = table.getByRole("row", { name: /Office-Lizenzen/ });
+    expect(row).toHaveTextContent("2025/26 bis 2027/28");
+    expect(row).toHaveTextContent("abgeschlossen");
+    expect(row).toHaveTextContent("offen");
+    expect(plain(row.textContent)).toContain("Ist 1.190,00 €");
+    expect(plain(table.getByRole("row", { name: /^Summe erwartet/ }).textContent)).toContain(
+      "5.000,00 €",
+    );
+    expect(screen.getByRole("link", { name: "Als Excel-Datei herunterladen" })).toHaveAttribute(
+      "href",
+      "/api/budget/export",
+    );
+    // Planen gibt es hier nicht mehr; geändert wird am Budgetposten.
+    expect(screen.queryByRole("button", { name: /bearbeiten/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Rückblick: letzte fünf Jahre" }));
+    await vi.waitFor(() =>
+      expect(calls.map((call) => call.url)).toContain("/api/budget/planning?start=2022"),
+    );
+    expect(screen.getByRole("link", { name: "Als Excel-Datei herunterladen" })).toHaveAttribute(
+      "href",
+      "/api/budget/export?start=2022",
+    );
+  });
+
+  it("beschreibt die Laufzeit in Worten und rechnet das Geschäftsjahr eines Tages", () => {
+    expect(runtimeText(office)).toBe("ab 2025/26, bis auf Weiteres");
+    expect(runtimeText(server)).toBe("einmalig 2026/27");
+    expect(runtimeText({ ...office, end_year: 2027, end_year_name: "2027/28" })).toBe(
+      "2025/26 bis 2027/28",
+    );
+    expect(fiscalYearOf("2026-07-31", 8)).toBe(2025);
+    expect(fiscalYearOf("2026-08-01", 8)).toBe(2026);
+    expect(fiscalYearOf("2026-01-15", 1)).toBe(2026);
+    expect(fiscalYearOf("", 8)).toBeNull();
   });
 });
 
@@ -1194,6 +1193,7 @@ describe("Belege", () => {
     },
     "GET /api/budget/partners": [partner],
     "GET /api/budget/items": [office],
+    "GET /api/budget/settings": settings,
     "GET /api/budget/contracts": {
       current_year_name: "2026/27",
       notice_warn_days: 60,
@@ -1351,10 +1351,10 @@ describe("Statistik", () => {
     tags: ["Cloud"],
     mode: "any",
     years: [
-      { year: 2025, name: "2025/26", plan_cents: 1_000_000, actual_cents: 1_250_000 },
-      { year: 2026, name: "2026/27", plan_cents: 1_190_000, actual_cents: 300_000 },
+      { year: 2025, name: "2025/26", expected_cents: 1_000_000, actual_cents: 1_250_000 },
+      { year: 2026, name: "2026/27", expected_cents: 1_190_000, actual_cents: 300_000 },
     ],
-    items: [{ item: office, plan_cents: 2_190_000, actual_cents: 1_550_000 }],
+    items: [{ item: office, expected_cents: 2_190_000, actual_cents: 1_550_000 }],
   };
   const routes = {
     "GET /api/budget/settings": settings,
@@ -1373,13 +1373,13 @@ describe("Statistik", () => {
     expect(await screen.findByText(/Es sind noch keine Tags vergeben/)).toBeVisible();
   });
 
-  it("wertet gewählte Tags aus und zeigt Plan und Ist je Jahr", async () => {
+  it("wertet gewählte Tags aus und zeigt Erwartung und Ist je Jahr", async () => {
     const calls = stubFetch(routes);
     render(<StatisticsPage roles={["Budget.Reader"]} />);
     expect(await screen.findByText("Bitte mindestens einen Tag wählen.")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Cloud (1)" }));
     const years = within(
-      await screen.findByRole("region", { name: "Plan und Ist je Wirtschaftsjahr" }),
+      await screen.findByRole("region", { name: "Erwartet und Ist je Wirtschaftsjahr" }),
     );
     expect(calls.find((call) => call.url.endsWith("/query"))?.body).toEqual({
       tags: ["Cloud"],
@@ -1391,7 +1391,7 @@ describe("Statistik", () => {
     expect(years.getByRole("row", { name: /^2026\/27/ })).toHaveTextContent("läuft");
     expect(plain(years.getByRole("row", { name: /^Summe/ }).textContent)).toContain("21.900,00 €");
     expect(
-      screen.getByRole("img", { name: /^Plan und Ist je Wirtschaftsjahr/ }),
+      screen.getByRole("img", { name: /^Erwartet und Ist je Wirtschaftsjahr/ }),
     ).toBeInTheDocument();
     expect(
       within(screen.getByRole("region", { name: "Budgetposten der Auswahl" })).getByRole("row", {

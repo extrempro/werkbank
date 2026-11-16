@@ -139,7 +139,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
     const items: NavItem[] = [
       { path: BUDGET_PATH, label: "Übersicht", icon: "uebersicht" },
       { path: BUDGET_ITEMS_PATH, label: "Budgetposten", icon: "posten" },
-      { path: BUDGET_PLANNING_PATH, label: "Mehrjahresplanung", icon: "kalender" },
+      { path: BUDGET_PLANNING_PATH, label: "Mehrjahresübersicht", icon: "kalender" },
       { path: BUDGET_STATISTICS_PATH, label: "Statistik", icon: "statistik" },
       { path: BUDGET_CONTRACTS_PATH, label: "Verträge", icon: "vertraege" },
       { path: BUDGET_INVOICES_PATH, label: "Rechnungen", icon: "rechnungen" },

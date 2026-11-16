@@ -63,11 +63,11 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
     ),
     Role.BUDGET_EDITOR: (
         "Budget Bearbeiter",
-        "IT-Budget ansehen, Konten anlegen und ändern",
+        "IT-Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen",
     ),
     Role.BUDGET_MANAGER: (
         "Budgetverwalter",
-        "Wie Bearbeiter, dazu den Plan je Geschäftsjahr und die Einstellungen festlegen",
+        "Wie Bearbeiter, dazu Rechnungen buchen und die Einstellungen festlegen",
     ),
     Role.BUDGET_READER: ("Budget Leser", "IT-Budget ansehen"),
 }

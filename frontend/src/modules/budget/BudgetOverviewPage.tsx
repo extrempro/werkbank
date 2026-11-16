@@ -27,22 +27,17 @@ interface Notice {
   text: string;
 }
 
-/** Was auffällt: Konten, die mehr binden als geplant, und Verträge ohne AVV. */
+/** Was auffällt: Konten über der Erwartung, offene Rechnungen und Verträge ohne AVV. */
 function notices(overview: Overview, contracts: Contract[]): Notice[] {
   const found: Notice[] = [];
   for (const row of overview.rows) {
     const name = `${row.account.number} ${row.account.name}`;
-    if (row.plan_cents === null && row.forecast_cents > 0) {
-      found.push({
-        kind: "Plan",
-        tone: "todo",
-        text: `${name}: ${formatEuro(row.forecast_cents)} Kosten, aber kein Plan.`,
-      });
-    } else if (row.plan_cents !== null && row.forecast_cents > row.plan_cents) {
+    const expected = row.expected_cents ?? 0;
+    if (row.forecast_cents > expected) {
       found.push({
         kind: "Budget",
         tone: "bad",
-        text: `${name}: Prognose liegt ${formatEuro(row.forecast_cents - row.plan_cents)} über Plan.`,
+        text: `${name}: Prognose liegt ${formatEuro(row.forecast_cents - expected)} über der Erwartung.`,
       });
     }
   }
@@ -68,7 +63,7 @@ function notices(overview: Overview, contracts: Contract[]): Notice[] {
   return found;
 }
 
-/** Balken „Ist und Prognose vom Plan“. Als SVG, weil die Breite ohne Inline-Style gesetzt wird. */
+/** Balken „Ist und Prognose von der Erwartung“. Als SVG, weil die Breite ohne Inline-Style gesetzt wird. */
 function Bar({
   actual,
   forecast,
@@ -153,8 +148,11 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
     )
     .sort((a, b) => (a.days_to_deadline ?? 0) - (b.days_to_deadline ?? 0));
   const attention = overview ? notices(overview, contracts) : [];
-  const free = overview ? overview.plan.total_cents - overview.forecast.total_cents : 0;
-  const bars = overview?.rows.filter((row) => row.plan_cents !== null || row.forecast_cents > 0);
+  const expected = overview?.expected.total_cents ?? 0;
+  const delta = overview ? overview.forecast.total_cents - expected : 0;
+  const bars = overview?.rows.filter(
+    (row) => row.expected_cents !== null || row.forecast_cents > 0,
+  );
 
   return (
     <div className="page page-wide budget-page">
@@ -207,18 +205,20 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
           <dl className="budget-cards">
             <div className="panel budget-card">
               <dt>
-                Plan {label} {overview.year_name}
+                Erwartet {label} {overview.year_name}
               </dt>
-              <dd className="budget-card-value">{formatEuro(overview.plan.total_cents)}</dd>
+              <dd className="budget-card-value">{formatEuro(expected)}</dd>
               <dd className="budget-card-sub">
-                Vorjahr {formatEuro(overview.previous.total_cents)}
+                Vorjahr {formatEuro(overview.previous.total_cents)} ·{" "}
+                {overview.statuses.open} offen, {overview.statuses.invoiced} mit Rechnung,{" "}
+                {overview.statuses.closed} abgeschlossen
               </dd>
             </div>
             <div className="panel budget-card">
               <dt>Durch Verträge gebunden</dt>
               <dd className="budget-card-value">{formatEuro(overview.committed.total_cents)}</dd>
               <dd className="budget-card-sub">
-                {share(overview.committed.total_cents, overview.plan.total_cents)} % des Plans ·{" "}
+                {share(overview.committed.total_cents, expected)} % der Erwartung ·{" "}
                 {overview.committed_contracts}{" "}
                 {overview.committed_contracts === 1 ? "Vertrag" : "Verträge"}
               </dd>
@@ -227,7 +227,7 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
               <dt>Ist bis heute</dt>
               <dd className="budget-card-value">{formatEuro(overview.actual.total_cents)}</dd>
               <dd className="budget-card-sub">
-                {share(overview.actual.total_cents, overview.plan.total_cents)} % des Plans
+                {share(overview.actual.total_cents, expected)} % der Erwartung
                 {overview.open_invoices > 0
                   ? ` · ${overview.open_invoices} ${overview.open_invoices === 1 ? "Rechnung" : "Rechnungen"} zu prüfen`
                   : ""}
@@ -236,8 +236,12 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
             <div className="panel budget-card">
               <dt>Prognose Jahresende</dt>
               <dd className="budget-card-value">{formatEuro(overview.forecast.total_cents)}</dd>
-              <dd className={free < 0 ? "budget-card-sub budget-bad" : "budget-card-sub budget-ok"}>
-                {free < 0 ? `${formatEuro(-free)} über Plan` : `noch ${formatEuro(free)} verfügbar`}
+              <dd className={delta > 0 ? "budget-card-sub budget-bad" : "budget-card-sub budget-ok"}>
+                {delta > 0
+                  ? `${formatEuro(delta)} über der Erwartung`
+                  : delta < 0
+                    ? `${formatEuro(-delta)} unter der Erwartung`
+                    : "wie erwartet"}
               </dd>
             </div>
           </dl>
@@ -264,13 +268,13 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                       </li>
                       <li>
                         <span className="budget-dot budget-dot-over" aria-hidden="true" />
-                        über Plan
+                        über der Erwartung
                       </li>
                     </ul>
                   </div>
                   {bars && bars.length > 0 ? (
                     bars.map((row) => {
-                      const plan = row.plan_cents ?? 0;
+                      const plan = row.expected_cents ?? 0;
                       const over = row.forecast_cents > plan;
                       const actual = share(row.actual_cents, plan);
                       const forecast = share(row.forecast_cents, plan);
@@ -281,21 +285,21 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                               <strong>{row.account.number}</strong> {row.account.name}
                             </span>
                             <span className="betrag budget-muted">
-                              {formatEuro(row.forecast_cents)} von {amount(row.plan_cents)}
+                              {formatEuro(row.forecast_cents)} von {amount(row.expected_cents)}
                             </span>
                           </div>
                           <Bar
                             actual={actual}
                             forecast={forecast}
                             over={over}
-                            label={`${row.account.name}: Ist ${actual} %, Prognose ${forecast} % des Plans`}
+                            label={`${row.account.name}: Ist ${actual} %, Prognose ${forecast} % der Erwartung`}
                           />
                         </div>
                       );
                     })
                   ) : (
                     <p className="budget-muted">
-                      Für dieses Jahr ist noch nichts geplant, gebunden oder gebucht.
+                      Für dieses Jahr ist noch nichts erwartet, gebunden oder gebucht.
                     </p>
                   )}
                 </section>
@@ -352,9 +356,10 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
               </div>
 
               <p className="small budget-muted">
-                Geplant wird je Budgetposten: <Link to={BUDGET_ITEMS_PATH}>Budgetposten</Link>. Ist
-                = gebuchte Rechnungen. Gebunden = was aus Verträgen in diesem {label} noch zu
-                erwarten ist. Prognose = Ist plus gebunden. Alle Beträge sind brutto.
+                Erwartete Kosten stehen am <Link to={BUDGET_ITEMS_PATH}>Budgetposten</Link>. Ist =
+                gebuchte Rechnungen. Gebunden = was aus Verträgen in diesem {label} noch zu
+                erwarten ist. Prognose = bei abgeschlossenen Posten das Ist, sonst das Höhere aus
+                Erwartung und Ist plus gebunden. Alle Beträge sind brutto.
               </p>
             </>
           )}

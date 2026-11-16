@@ -149,6 +149,8 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
         </h2>
       </div>
       <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
+        <fieldset className="budget-fieldset">
+          <legend>Vertrag und Partner</legend>
         <div className="tool-row">
           <label>
             Bezeichnung
@@ -206,6 +208,9 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
             </select>
           </label>
         </div>
+        </fieldset>
+        <fieldset className="budget-fieldset">
+          <legend>Kosten</legend>
         <div className="tool-row">
           <label className="narrow">
             Betrag je Zahlung (netto, Euro)
@@ -244,6 +249,9 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
             ? `Brutto je Zahlung: ${formatEuro(grossCents(netPreview, ratePreview))}. Fürs Budget zählt das Brutto.`
             : "Das Brutto rechnet die Werkbank aus Netto und Steuersatz. Fürs Budget zählt das Brutto."}
         </p>
+        </fieldset>
+        <fieldset className="budget-fieldset">
+          <legend>Laufzeit</legend>
         <div className="tool-row">
           <label className="narrow">
             Beginn
@@ -276,6 +284,10 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
             />
           </label>
         </div>
+        </fieldset>
+        <details className="budget-more" open={contract !== null}>
+          <summary>Weitere Angaben: AVV, Kündigung, Notiz</summary>
+          <div className="budget-more-body">
         <label className="narrow">
           Auftragsverarbeitungsvertrag (AVV)
           <select value={dpa} onChange={(event) => setDpa(event.target.value as DpaStatus)}>
@@ -305,6 +317,8 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
             onChange={(event) => setNote(event.target.value)}
           />
         </label>
+        </div>
+        </details>
         <p className="small">
           Die erste Zahlung zählt zum Beginn, die weiteren im gewählten Turnus. Daraus rechnet die
           Werkbank, was im Geschäftsjahr gebunden ist. Die Kündigungsfrist zählt rückwärts vom Ende
