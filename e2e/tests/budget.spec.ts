@@ -169,6 +169,32 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   );
   await expectNoA11yViolations(page);
 
+  // Tags: in der Liste filtern, dann über fünf Jahre auswerten und die Auswahl speichern.
+  await page.getByRole("button", { name: `Nach Tag Tag ${number} filtern` }).click();
+  await expect(page.getByText(/^1 von \d+ Budgetposten$/)).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.getByRole("link", { name: `Statistik zu „Tag ${number}“` }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Statistik" })).toBeVisible();
+  const yearRow = page
+    .getByRole("region", { name: "Plan und Ist je Geschäftsjahr" })
+    .getByRole("row", { name: new RegExp(`^${new Date().getFullYear()}`) });
+  await expect(yearRow).toContainText("1.500,00");
+  await expect(yearRow).toContainText("119,00");
+  await expect(page.getByRole("img", { name: /^Plan und Ist je Geschäftsjahr/ })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Budgetposten der Auswahl" }).getByRole("row", {
+      name: new RegExp(`Posten ${number}`),
+    }),
+  ).toBeVisible();
+  await page.getByLabel("Auswahl speichern unter", { exact: true }).fill(`Statistik ${number}`);
+  await page.getByRole("button", { name: "Statistik speichern" }).click();
+  await expect(page.getByText(`Die Statistik „Statistik ${number}“ ist gespeichert.`)).toBeVisible();
+  await expect(page.getByRole("button", { name: `Statistik ${number}`, exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expectNoA11yViolations(page);
+
   await page.goto("/budget");
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
   await expect(
