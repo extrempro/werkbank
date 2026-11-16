@@ -371,10 +371,9 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
                   <button
                     type="button"
                     className="button button-secondary"
-                    aria-label={`Position ${index + 1} entfernen`}
                     onClick={() => setLines(lines.filter((entry) => entry.key !== line.key))}
                   >
-                    Position entfernen
+                    Position {index + 1} entfernen
                   </button>
                 )}
               </div>
