@@ -19,14 +19,16 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
+from werkbank.core.app_settings import SMTP_KEY, TEAMS_KEY, get_setting
 from werkbank.core.deps import CurrentUserDep, DbDep
 from werkbank.core.models import (
     Notification,
+    NotificationChannel,
     NotificationKind,
     NotificationMark,
     NotificationMute,
@@ -308,15 +310,31 @@ class KindOut(BaseModel):
     kind: str
     module: str
     label: str
+    # Glocke
     enabled: bool
+    mail: bool
+    teams: bool
+
+
+class ChannelsOut(BaseModel):
+    # In der Verwaltung eingerichtet
+    mail: bool
+    teams: bool
+    # Ohne Mailadresse im Konto gehen weder Mail noch Teams
+    has_email: bool
 
 
 class SettingsOut(BaseModel):
     kinds: list[KindOut]
+    channels: ChannelsOut
 
 
 class SettingsIn(BaseModel):
-    disabled: list[str]
+    # Arten ohne Glocke
+    disabled: list[str] = Field(max_length=100)
+    # Arten zusätzlich per Mail bzw. Teams; None: unverändert
+    mail: list[str] | None = Field(default=None, max_length=100)
+    teams: list[str] | None = Field(default=None, max_length=100)
 
 
 @router.get("")
@@ -386,12 +404,36 @@ def read_one(notification_id: int, user: CurrentUserDep, db: DbDep) -> UnreadOut
     return _unread(db, user)
 
 
+def _channel_kinds(db: Session, user_id: uuid.UUID, channel: str) -> set[str]:
+    return set(
+        db.scalars(
+            select(NotificationChannel.kind).where(
+                NotificationChannel.user_id == user_id, NotificationChannel.channel == channel
+            )
+        )
+    )
+
+
+def _channels(db: Session, user: CurrentUser) -> ChannelsOut:
+    smtp: Any = get_setting(db, SMTP_KEY)
+    teams: Any = get_setting(db, TEAMS_KEY)
+    return ChannelsOut(
+        mail=isinstance(smtp, dict) and bool(smtp.get("host")) and bool(smtp.get("sender_address")),
+        teams=isinstance(teams, dict)
+        and teams.get("enabled") is True
+        and bool(teams.get("url_encrypted")),
+        has_email=bool(user.email),
+    )
+
+
 @router.get("/settings")
 def get_settings(user: CurrentUserDep, db: DbDep) -> SettingsOut:
-    """Arten, die für die Person in Frage kommen, und ob sie eingeschaltet sind."""
+    """Arten, die für die Person in Frage kommen, und auf welchen Wegen sie sie bekommt."""
     muted = set(
         db.scalars(select(NotificationMute.kind).where(NotificationMute.user_id == user.user_id))
     )
+    mail = _channel_kinds(db, user.user_id, "mail")
+    teams = _channel_kinds(db, user.user_id, "teams")
     return SettingsOut(
         kinds=[
             KindOut(
@@ -399,24 +441,42 @@ def get_settings(user: CurrentUserDep, db: DbDep) -> SettingsOut:
                 module=KINDS[kind].module,
                 label=KINDS[kind].label,
                 enabled=kind not in muted,
+                mail=kind in mail,
+                teams=kind in teams,
             )
             for kind in _allowed_kinds(user)
-        ]
+        ],
+        channels=_channels(db, user),
     )
+
+
+def _save_channel(
+    db: Session, user: CurrentUser, channel: str, wanted: set[str], allowed: set[str]
+) -> None:
+    current = _channel_kinds(db, user.user_id, channel)
+    for kind in (current & allowed) - wanted:
+        db.execute(
+            delete(NotificationChannel).where(
+                NotificationChannel.user_id == user.user_id,
+                NotificationChannel.channel == channel,
+                NotificationChannel.kind == kind,
+            )
+        )
+    for kind in wanted - current:
+        db.add(NotificationChannel(user_id=user.user_id, channel=channel, kind=kind))
 
 
 @router.put("/settings")
 def put_settings(body: SettingsIn, user: CurrentUserDep, db: DbDep) -> SettingsOut:
-    """Speichert, welche Arten die Person ausgeschaltet hat."""
-    unknown = [kind for kind in body.disabled if kind not in KINDS]
-    if unknown:
+    """Speichert Glocke, Mail und Teams je Art. Nur Arten, die die Person sieht, ändern sich."""
+    named = [*body.disabled, *(body.mail or []), *(body.teams or [])]
+    if any(kind not in KINDS for kind in named):
         raise HTTPException(status_code=422, detail="Unbekannte Art einer Benachrichtigung")
     allowed = set(_allowed_kinds(user))
     wanted = {kind for kind in body.disabled if kind in allowed}
     current = set(
         db.scalars(select(NotificationMute.kind).where(NotificationMute.user_id == user.user_id))
     )
-    # Nur Arten ändern, die die Person sieht; andere bleiben, wie sie sind
     for kind in (current & allowed) - wanted:
         db.execute(
             delete(NotificationMute).where(
@@ -425,5 +485,10 @@ def put_settings(body: SettingsIn, user: CurrentUserDep, db: DbDep) -> SettingsO
         )
     for kind in wanted - current:
         db.add(NotificationMute(user_id=user.user_id, kind=kind))
+    # Ohne Glocke gibt es auch keine Mail oder Teams-Nachricht: Die Art entsteht gar nicht.
+    if body.mail is not None:
+        _save_channel(db, user, "mail", {k for k in body.mail if k in allowed} - wanted, allowed)
+    if body.teams is not None:
+        _save_channel(db, user, "teams", {k for k in body.teams if k in allowed} - wanted, allowed)
     db.commit()
     return get_settings(user, db)

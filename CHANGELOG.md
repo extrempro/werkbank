@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.41.0] – 2026-11-16
+
+Benachrichtigungen zusätzlich per Mail und Teams, einstellbar im Konto.
+
+### Benachrichtigungen
+
+- Mail und Teams: Auftrag `kern.benachrichtigungen_versand` alle 15 Minuten, je Person und Kanal höchstens eine Sammelnachricht mit der Zahl der neuen, ungelesenen Benachrichtigungen je Bereich und Link, ohne fachliche Inhalte; Name, Farbe und Logo (PNG, eingebettet) aus dem Branding, Anrede mit „du“
+- Teams über einen Workflow in Power Automate, der die Adaptive Card als Flow-Bot in den Chat der Person stellt; Adresse in Verwaltung › Allgemein (verschlüsselt, nie ausgegeben, nur Adressen von Power Automate bzw. Logic Apps), mit Testnachricht; Anleitung `docs/teams-workflow.md`
+- Konto: neue Tabelle je Art mit Glocke, Mail und Teams (Mail und Teams anfangs aus); die Einstellungen sind von der Seite „Benachrichtigungen“ ins Konto gewandert
+- API: `GET`/`PUT /api/notifications/settings` mit `mail`, `teams` und `channels`; `PUT /api/admin/settings/teams`, `POST /api/admin/settings/teams/test`
+- Migration 0034: Tabelle `notification_channels`, Spalten `mailed_at` und `teams_at`
+
+### Verwaltung
+
+- SMTP: Hinweistext angepasst; der Versand nutzt jetzt auch eine HTML-Mail mit Textteil
+
+### Doku
+
+- Spec 6.7 und Screens, Datenschutz (Empfänger SMTP und Power Automate), Anleitung zum Teams-Workflow, Handbuch
+
 ## [0.40.1] – 2026-11-16
 
 Zähler in der Navigation bleiben auch in der App am Handy aktuell.

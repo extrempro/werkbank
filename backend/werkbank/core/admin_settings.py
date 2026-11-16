@@ -21,6 +21,7 @@ from werkbank.core.app_settings import (
     AUDIT_RETENTION_MAX,
     AUDIT_RETENTION_MIN,
     SMTP_KEY,
+    TEAMS_KEY,
     TOOLS_INTERNET_KEY,
     WARN_DAYS_KEY,
     WARN_DAYS_MAX,
@@ -38,6 +39,15 @@ from werkbank.core.app_settings import (
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, SettingsDep, require_recent_login
 from werkbank.core.mail import MailError, MailSenderDep, load_smtp_config
+from werkbank.core.notify_channels import (
+    TeamsError,
+    TeamsSenderDep,
+    load_brand,
+    load_teams_url,
+    sample_digest,
+    teams_payload,
+    valid_workflow_url,
+)
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser
 
@@ -83,8 +93,22 @@ class AiOut(BaseModel):
     key_storage_available: bool
 
 
+class TeamsOut(BaseModel):
+    enabled: bool
+    # Eine Adresse ist gespeichert (sie wird nie ausgegeben)
+    url_set: bool
+    url_storage_available: bool
+
+
+class TeamsIn(BaseModel):
+    enabled: bool
+    # None: Adresse unverändert lassen. Leerer Text: Adresse löschen.
+    url: str | None = Field(default=None, max_length=2000)
+
+
 class SettingsOut(BaseModel):
     smtp: SmtpOut
+    teams: TeamsOut
     ai: AiOut
     audit_retention_days: int
     audit_retention_min: int
@@ -213,9 +237,19 @@ def _ai_out(stored: dict[str, Any], key_available: bool) -> AiOut:
     )
 
 
+def _teams_out(stored: Any, key_available: bool) -> TeamsOut:
+    data = stored if isinstance(stored, dict) else {}
+    return TeamsOut(
+        enabled=data.get("enabled") is True,
+        url_set=bool(data.get("url_encrypted")),
+        url_storage_available=key_available,
+    )
+
+
 def _settings_out(db: DbDep, settings: SettingsDep) -> SettingsOut:
     return SettingsOut(
         smtp=_smtp_out(get_setting(db, SMTP_KEY), secret_key_available(settings)),
+        teams=_teams_out(get_setting(db, TEAMS_KEY), secret_key_available(settings)),
         ai=_ai_out(stored_ai(db), secret_key_available(settings)),
         audit_retention_days=audit_retention_days(db),
         audit_retention_min=AUDIT_RETENTION_MIN,
@@ -327,6 +361,98 @@ def test_smtp(
         user_id=user.user_id,
         object_type="einstellung",
         object_id=SMTP_KEY,
+        result="ok" if failure is None else "fehler",
+        ip=client_ip(request),
+        note=failure,
+    )
+    db.commit()
+    if failure is not None:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=failure)
+    return TestResultOut(recipient=user.email)
+
+
+@router.put("/teams")
+def update_teams(
+    request: Request, body: TeamsIn, user: AdminUser, db: DbDep, settings: SettingsDep
+) -> SettingsOut:
+    """Speichert den Teams-Workflow. Die Adresse enthält ein Geheimnis und liegt verschlüsselt."""
+    stored = get_setting(db, TEAMS_KEY)
+    previous = stored if isinstance(stored, dict) else {}
+    token = previous.get("url_encrypted") or None
+    url_changed = body.url is not None
+    if body.url == "":
+        token = None
+    elif body.url:
+        url = body.url.strip()
+        if not valid_workflow_url(url):
+            raise HTTPException(
+                status_code=422,
+                detail="Bitte die https-Adresse des Workflows aus Power Automate eintragen "
+                "(…logic.azure.com oder …api.powerplatform.com).",
+            )
+        try:
+            token = encrypt_secret(settings, url)
+        except SecretKeyMissingError as error:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Auf dem Server fehlt die Schlüsseldatei (settings_key). "
+                "Ohne sie kann keine Adresse gespeichert werden.",
+            ) from error
+    if body.enabled and not token:
+        raise HTTPException(status_code=422, detail="Zum Einschalten fehlt die Adresse.")
+    set_setting(db, TEAMS_KEY, {"enabled": body.enabled, "url_encrypted": token}, user.user_id)
+    write_audit(
+        db,
+        module=MODULE,
+        action="einstellungen.teams_geaendert",
+        user_id=user.user_id,
+        object_type="einstellung",
+        object_id=TEAMS_KEY,
+        ip=client_ip(request),
+        details={"eingeschaltet": body.enabled, "adresse_geaendert": url_changed},
+    )
+    db.commit()
+    return _settings_out(db, settings)
+
+
+@router.post("/teams/test")
+def test_teams(
+    request: Request,
+    user: AdminUser,
+    db: DbDep,
+    settings: SettingsDep,
+    sender: TeamsSenderDep,
+) -> TestResultOut:
+    """Schickt eine Testnachricht über den Workflow an die eigene Mailadresse (Teams-Chat)."""
+    if not user.email:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Für dein Konto ist keine E-Mail-Adresse hinterlegt.",
+        )
+    failure: str | None = None
+    url = load_teams_url(db, settings)
+    if url is None:
+        failure = "Teams ist nicht eingerichtet oder ausgeschaltet."
+    else:
+        try:
+            sender(
+                url,
+                teams_payload(
+                    user.email,
+                    load_brand(db),
+                    sample_digest(user.display_name),
+                    settings.public_origin,
+                ),
+            )
+        except TeamsError as error:
+            failure = str(error)
+    write_audit(
+        db,
+        module=MODULE,
+        action="einstellungen.teams_test",
+        user_id=user.user_id,
+        object_type="einstellung",
+        object_id=TEAMS_KEY,
         result="ok" if failure is None else "fehler",
         ip=client_ip(request),
         note=failure,

@@ -287,8 +287,23 @@ export interface AiUpdate {
   api_key?: string;
 }
 
+export interface TeamsSettings {
+  enabled: boolean;
+  /** Eine Adresse ist gespeichert; sie wird nie angezeigt. */
+  url_set: boolean;
+  url_storage_available: boolean;
+}
+
+export interface TeamsUpdate {
+  enabled: boolean;
+  /** Weglassen: Adresse bleibt. Leerer Text: Adresse löschen. */
+  url?: string;
+}
+
 export interface AdminSettings {
   smtp: SmtpSettings;
+  /** Fehlt bei älteren Servern. */
+  teams?: TeamsSettings;
   /** Fehlt bei älteren Servern. */
   ai?: AiSettings;
   audit_retention_days: number;
@@ -323,6 +338,14 @@ export function saveSmtpSettings(update: SmtpUpdate): Promise<AdminSettings> {
 
 export function sendTestMail(): Promise<{ recipient: string }> {
   return postJson("/api/admin/settings/smtp/test");
+}
+
+export function saveTeamsSettings(update: TeamsUpdate): Promise<AdminSettings> {
+  return putJson("/api/admin/settings/teams", update);
+}
+
+export function sendTestTeams(): Promise<{ recipient: string }> {
+  return postJson("/api/admin/settings/teams/test");
 }
 
 export function saveAuditRetention(days: number): Promise<AdminSettings> {

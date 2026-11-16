@@ -1,6 +1,7 @@
 import { formatDateTime, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Link } from "../components/Link";
+import { NotificationPreferences } from "../components/NotificationPreferences";
 import { ThemeSwitch } from "../components/ThemeSwitch";
 import { NEWS_PATH } from "../navigation";
 import { HANDBOOK_PATH } from "../handbook";
@@ -88,15 +89,10 @@ export function AccountPage({ me }: { me: Me }) {
         </div>
       </section>
 
-      <section className="panel" aria-labelledby="konto-benachrichtigungen">
-        <div className="panel-head">
-          <h2 id="konto-benachrichtigungen">Benachrichtigungen</h2>
-        </div>
-        <div className="detail-body">
-          <p>Die Glocke oben meldet, was sich in deinen Bereichen getan hat.</p>
-          <Link to={NOTIFICATIONS_PATH}>Benachrichtigungen ansehen und einstellen</Link>
-        </div>
-      </section>
+      <NotificationPreferences />
+      <p>
+        <Link to={NOTIFICATIONS_PATH}>Alle Benachrichtigungen ansehen</Link>
+      </p>
 
       <section className="panel" aria-labelledby="konto-version">
         <div className="panel-head">

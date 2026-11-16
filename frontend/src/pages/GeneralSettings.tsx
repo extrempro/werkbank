@@ -8,6 +8,7 @@ import {
   type SmtpUpdate,
 } from "../api";
 import { CredentialWarnSettings } from "./CredentialWarnSettings";
+import { TeamsSettings } from "./TeamsSettings";
 import { ToolsInternetSettings } from "./ToolsInternetSettings";
 
 type Message = { kind: "status" | "alert"; text: string };
@@ -125,8 +126,8 @@ export function GeneralSettings({ settings, onChange }: GeneralSettingsProps) {
         </div>
         <form className="detail-body settings-form" onSubmit={onSaveSmtp}>
           <p className="small">
-            Über diesen Server versendet die Werkbank Mails. Benachrichtigungen folgen mit einer
-            späteren Version; die Testmail funktioniert schon jetzt.
+            Über diesen Server versendet die Werkbank Mails, auch die Benachrichtigungen. Welche
+            Benachrichtigungen jemand per Mail bekommt, stellt jede Person im Konto selbst ein.
           </p>
           <div className="form-grid">
             <label>
@@ -291,6 +292,7 @@ export function GeneralSettings({ settings, onChange }: GeneralSettingsProps) {
         </form>
       </section>
 
+      {settings.teams && <TeamsSettings teams={settings.teams} onChange={onChange} />}
       <CredentialWarnSettings settings={settings} onChange={onChange} />
       <ToolsInternetSettings settings={settings} onChange={onChange} />
     </>

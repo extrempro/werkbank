@@ -32,27 +32,38 @@ test("Glocke öffnet die Benachrichtigungen, Arten lassen sich ausschalten", asy
   ).toBeVisible();
   await expect(panel).toBeHidden();
 
-  const kind = page.getByRole("checkbox", {
-    name: "Rechnung wartet auf Prüfung",
+  await expectNoA11yViolations(page);
+
+  // Eingestellt wird im Konto
+  await page.getByRole("link", { name: "Konto", exact: true }).click();
+  await expect(page).toHaveURL(/\/konto$/);
+  const bellBox = page.getByRole("checkbox", {
+    name: "Rechnung wartet auf Prüfung: Glocke",
   });
-  await expect(kind).toBeChecked();
+  const mailBox = page.getByRole("checkbox", {
+    name: "Rechnung wartet auf Prüfung: Mail",
+  });
+  await expect(bellBox).toBeChecked();
+  // Ohne eingerichteten Mailversand lässt sich Mail nicht einschalten
+  await expect(mailBox).not.toBeChecked();
+  await expect(mailBox).toBeDisabled();
   // Arten anderer Rollen stehen nicht zur Wahl
   await expect(
     page.getByRole("checkbox", {
       name: /Störung eines Microsoft-365-Dienstes/,
     }),
   ).toHaveCount(0);
-  await kind.uncheck();
+  await bellBox.uncheck();
   await expect(
     page.getByRole("status").filter({ hasText: "Gespeichert." }),
   ).toBeVisible();
-  await expect(kind).toBeEnabled();
+  await expect(bellBox).toBeEnabled();
   await page.reload();
   await expect(
-    page.getByRole("checkbox", { name: "Rechnung wartet auf Prüfung" }),
+    page.getByRole("checkbox", { name: "Rechnung wartet auf Prüfung: Glocke" }),
   ).not.toBeChecked();
   await page
-    .getByRole("checkbox", { name: "Rechnung wartet auf Prüfung" })
+    .getByRole("checkbox", { name: "Rechnung wartet auf Prüfung: Glocke" })
     .check();
   await expect(
     page.getByRole("status").filter({ hasText: "Gespeichert." }),

@@ -67,7 +67,11 @@ def build_message(config: SmtpConfig, recipient: str, subject: str, body: str) -
 
 def send_mail(config: SmtpConfig, recipient: str, subject: str, body: str) -> None:
     """Sendet eine Textmail. Anmeldung am Server nur über eine verschlüsselte Verbindung."""
-    message = build_message(config, recipient, subject, body)
+    send_message(config, build_message(config, recipient, subject, body))
+
+
+def send_message(config: SmtpConfig, message: EmailMessage) -> None:
+    """Sendet eine fertige Mail. Anmeldung am Server nur über eine verschlüsselte Verbindung."""
     context = ssl.create_default_context()
     try:
         if config.security == "tls":

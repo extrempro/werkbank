@@ -24,6 +24,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.41.0",
+    date: "2026-11-16",
+    summary: "Benachrichtigungen jetzt auch per Mail und in Teams.",
+    sections: [
+      {
+        area: "Benachrichtigungen",
+        entries: [
+          "Neu: Benachrichtigungen auch per Mail und in Teams. Im Konto stellst du je Art ein, ob du sie in der Glocke, per Mail oder in Teams bekommst. Mail und Teams sind anfangs aus.",
+          "Per Mail und in Teams kommt höchstens alle 15 Minuten eine kurze Sammelnachricht mit einem Link in die Werkbank.",
+          "Die Einstellungen zu den Benachrichtigungen findest du jetzt im Konto.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Neu: Unter „Allgemein“ lässt sich ein Workflow für Teams eintragen und mit einer Testnachricht prüfen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.40.1",
     date: "2026-11-16",
     summary: "Zähler in der Navigation bleiben auch in der App am Handy aktuell.",

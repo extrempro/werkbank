@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupByModule, safeLink, timeAgo } from "./notifications";
+import { groupByModule, safeLink, timeAgo, toggleChannel } from "./notifications";
 
 describe("Benachrichtigungen", () => {
   it("lässt nur Pfade in der Werkbank als Ziel zu", () => {
@@ -22,13 +22,25 @@ describe("Benachrichtigungen", () => {
 
   it("gruppiert die Arten nach Bereich", () => {
     const kinds = [
-      { kind: "a", module: "IT-Budget", label: "A", enabled: true },
-      { kind: "b", module: "Evergreen", label: "B", enabled: false },
-      { kind: "c", module: "IT-Budget", label: "C", enabled: true },
+      { kind: "a", module: "IT-Budget", label: "A", enabled: true, mail: false, teams: false },
+      { kind: "b", module: "Evergreen", label: "B", enabled: false, mail: false, teams: false },
+      { kind: "c", module: "IT-Budget", label: "C", enabled: true, mail: false, teams: false },
     ];
     expect(groupByModule(kinds).map(([module, list]) => [module, list.length])).toEqual([
       ["IT-Budget", 2],
       ["Evergreen", 1],
     ]);
+  });
+
+  it("schaltet Wege um; ohne Glocke auch keine Mail und kein Teams", () => {
+    const kinds = [
+      { kind: "a", module: "M", label: "A", enabled: true, mail: false, teams: false },
+      { kind: "b", module: "M", label: "B", enabled: true, mail: true, teams: false },
+    ];
+    const mailed = toggleChannel(kinds, "a", "mail", true);
+    expect(mailed[0]).toMatchObject({ enabled: true, mail: true });
+    expect(mailed[1]).toBe(kinds[1]);
+    const off = toggleChannel(mailed, "a", "enabled", false);
+    expect(off[0]).toMatchObject({ enabled: false, mail: false, teams: false });
   });
 });

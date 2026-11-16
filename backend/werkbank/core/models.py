@@ -206,6 +206,9 @@ class Notification(Base):
         DateTime(timezone=True), server_default=func.now(), index=True
     )
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Zuletzt per Mail bzw. Teams mitgeteilt (gesammelt, ohne fachlichen Inhalt)
+    mailed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    teams_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class NotificationMark(Base):
@@ -239,3 +242,18 @@ class NotificationMute(Base):
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     kind: Mapped[str] = mapped_column(String(64), primary_key=True)
+
+
+class NotificationChannel(Base):
+    """Art, die eine Person zusätzlich per Mail oder Teams bekommt (Vorgabe: aus)."""
+
+    __tablename__ = "notification_channels"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    # „mail“ oder „teams“
+    channel: Mapped[str] = mapped_column(String(16), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(64), primary_key=True)
+    # Ab hier wird mitgeteilt; ältere Benachrichtigungen nicht
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

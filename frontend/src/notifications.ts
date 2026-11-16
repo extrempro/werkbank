@@ -24,8 +24,26 @@ export interface NotificationKind {
   kind: string;
   module: string;
   label: string;
+  /** In der Glocke */
   enabled: boolean;
+  /** Zusätzlich per Mail bzw. in Teams (gesammelt, ohne Inhalte) */
+  mail: boolean;
+  teams: boolean;
 }
+
+export interface NotificationChannels {
+  /** In der Verwaltung eingerichtet */
+  mail: boolean;
+  teams: boolean;
+  has_email: boolean;
+}
+
+export interface NotificationSettings {
+  kinds: NotificationKind[];
+  channels: NotificationChannels;
+}
+
+export type Channel = "enabled" | "mail" | "teams";
 
 /** Benachrichtigungen der angemeldeten Person; bei einem Fehler eine leere Liste. */
 export async function fetchNotifications(limit = 10): Promise<NotificationList> {
@@ -48,14 +66,32 @@ export function markAllRead(): Promise<{ unread: number }> {
   return postJson(`${BASE}/read-all`);
 }
 
-export function fetchNotificationSettings(): Promise<{ kinds: NotificationKind[] }> {
+export function fetchNotificationSettings(): Promise<NotificationSettings> {
   return getJson(`${BASE}/settings`);
 }
 
-export function saveNotificationSettings(
-  disabled: string[],
-): Promise<{ kinds: NotificationKind[] }> {
-  return putJson(`${BASE}/settings`, { disabled });
+export function saveNotificationSettings(kinds: NotificationKind[]): Promise<NotificationSettings> {
+  return putJson(`${BASE}/settings`, {
+    disabled: kinds.filter((entry) => !entry.enabled).map((entry) => entry.kind),
+    mail: kinds.filter((entry) => entry.enabled && entry.mail).map((entry) => entry.kind),
+    teams: kinds.filter((entry) => entry.enabled && entry.teams).map((entry) => entry.kind),
+  });
+}
+
+/** Schaltet einen Weg für eine Art um. Ohne Glocke gibt es auch keine Mail und kein Teams. */
+export function toggleChannel(
+  kinds: NotificationKind[],
+  kind: string,
+  channel: Channel,
+  on: boolean,
+): NotificationKind[] {
+  return kinds.map((entry) => {
+    if (entry.kind !== kind) {
+      return entry;
+    }
+    const next = { ...entry, [channel]: on };
+    return channel === "enabled" && !on ? { ...next, mail: false, teams: false } : next;
+  });
 }
 
 /** Nur Pfade innerhalb der Werkbank sind als Ziel erlaubt. */

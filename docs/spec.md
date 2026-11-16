@@ -262,9 +262,14 @@ Standardregeln:
 
 - Push ist pro Person per Opt-in zu aktivieren und jederzeit abschaltbar.
 - Erinnerungen bei Evergreen-Fristen: 14, 7 und 3 Tage vor Rollout, sofern der Vorgang noch offen ist.
-- Stand: Der SMTP-Server lässt sich in der Verwaltung eintragen und mit einer Testmail prüfen. Mail, Teams und Push folgen; umgesetzt ist die **Glocke** in der Kopfzeile (siehe unten).
+- Stand: Umgesetzt sind die **Glocke** in der Kopfzeile und **Mail und Teams** (siehe unten). Push folgt.
 
-**Glocke (umgesetzt):** Ein Auftrag im Worker (`kern.benachrichtigungen`, alle 5 Minuten) fragt die Quellen der Module ab. Jede Quelle meldet die aktuell vorliegenden Ereignisse mit festem Schlüssel; gemeldet wird nur, was neu ist, jedes Ereignis einmal. Beim ersten Lauf einer Art gilt der Bestand als gemeldet (keine Flut alter Meldungen). Empfänger sind alle Personen, deren Rollen bei der letzten Anmeldung passen; die API zeigt zusätzlich nur Arten, die zu den Rollen der laufenden Sitzung passen. Alle Arten sind eingeschaltet; jede Person kann einzelne Arten auf der Seite „Benachrichtigungen“ ausschalten. Gespeichert werden Art, Titel, Link und Zeitpunkt (Titel nennt z. B. Vorgang, Vertrag oder Rechnungsnummer), Aufbewahrung 90 Tage.
+**Mail und Teams (umgesetzt):** Ein Auftrag (`kern.benachrichtigungen_versand`, alle 15 Minuten) fasst je Person und Kanal die neuen, ungelesenen Benachrichtigungen der eingeschalteten Arten zusammen und schickt höchstens eine Nachricht: Name aus dem Branding, Anrede mit „du“, Zahl der Benachrichtigungen je Bereich, Link auf „Benachrichtigungen“ und auf das Konto, **keine fachlichen Inhalte** (keine Titel). Jede Person stellt je Art Glocke, Mail und Teams im Konto ein; Mail und Teams sind anfangs aus, mitgeteilt wird nur, was nach dem Einschalten entsteht. Ohne Glocke gibt es auch keine Mail und kein Teams. Ohne Mailadresse in Entra weder Mail noch Teams. Fehlgeschlagene Sendungen werden beim nächsten Lauf wiederholt, nach 24 Stunden verfallen sie.
+
+- **Mail:** über den SMTP-Server aus der Verwaltung, als Text und HTML mit Farbe und Logo (PNG, eingebettet, keine externe Adresse) aus dem Branding.
+- **Teams:** Adaptive Card an einen Power-Automate-Workflow, der sie als Flow-Bot in den Chat der Person stellt (Empfänger: Mailadresse). Die Adresse des Workflows trägt ein Admin unter Verwaltung › Allgemein ein; sie liegt verschlüsselt in der Datenbank, wird nie ausgegeben und muss eine https-Adresse von Power Automate bzw. Logic Apps sein (`…logic.azure.com`, `…api.powerplatform.com`, Port 443, keine Weiterleitungen). Testnachricht an die eigene Adresse. Einrichtung: [`docs/teams-workflow.md`](teams-workflow.md).
+
+**Glocke (umgesetzt):** Ein Auftrag im Worker (`kern.benachrichtigungen`, alle 5 Minuten) fragt die Quellen der Module ab. Jede Quelle meldet die aktuell vorliegenden Ereignisse mit festem Schlüssel; gemeldet wird nur, was neu ist, jedes Ereignis einmal. Beim ersten Lauf einer Art gilt der Bestand als gemeldet (keine Flut alter Meldungen). Empfänger sind alle Personen, deren Rollen bei der letzten Anmeldung passen; die API zeigt zusätzlich nur Arten, die zu den Rollen der laufenden Sitzung passen. Alle Arten sind eingeschaltet; jede Person kann einzelne Arten im Konto ausschalten. Gespeichert werden Art, Titel, Link und Zeitpunkt (Titel nennt z. B. Vorgang, Vertrag oder Rechnungsnummer), Aufbewahrung 90 Tage.
 
 | Art | Bereich | Rollen | Auslöser |
 |---|---|---|---|
@@ -579,8 +584,8 @@ Evergreen:
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |
 | Audit-Log | Admin, Auditor | Filterbare Tabelle, Export |
 | Verwaltung | Admin (mit Step-up) | Bereiche Allgemein (Branding, Mailversand, Aufbewahrung des Audit-Logs, KI-Texte), Module, Rollen, Konnektoren, Kommentarregeln, Benachrichtigungen |
-| Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Link zu den Benachrichtigungen, Version. Später: Push an/aus, Hinweis zur Installation |
-| Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Arten ein- und ausschalten. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |
+| Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Benachrichtigungen je Art mit Glocke, Mail und Teams, Version. Später: Push an/aus, Hinweis zur Installation |
+| Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Verweis auf die Einstellungen im Konto. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
 | Handbuch | alle | Kapitel je Bereich nach Rollen, Suche im Handbuch, je Kapitel Inhaltsverzeichnis und Abschnitte mit Verweisen |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
