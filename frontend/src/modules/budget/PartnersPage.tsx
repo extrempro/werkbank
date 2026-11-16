@@ -277,10 +277,10 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
                         what={`Partner ${partner.name}`}
                         run={() => deletePartner(partner.id)}
                         onDeleted={() => {
-                            setPartners((partners ?? []).filter((entry) => entry.id !== partner.id));
-                            closeForm();
-                            setStatus(`${partner.name} ist gelöscht.`);
-                          }}
+                          setPartners((partners ?? []).filter((entry) => entry.id !== partner.id));
+                          closeForm();
+                          setStatus(`${partner.name} ist gelöscht.`);
+                        }}
                       />
                     </td>
                   )}
