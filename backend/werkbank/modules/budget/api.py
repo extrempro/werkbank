@@ -4,12 +4,13 @@ from datetime import date, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import ColumnElement, func, select
 
 from werkbank.core.app_settings import set_setting
 from werkbank.core.audit import write_audit
-from werkbank.core.deps import DbDep, require_roles
+from werkbank.core.deps import DbDep, SettingsDep, require_roles
 from werkbank.core.models import User
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
@@ -23,6 +24,14 @@ from werkbank.modules.budget.contracts import (
     notice_deadline,
     term_end,
     yearly_cents,
+)
+from werkbank.modules.budget.documents import (
+    PDF_TYPE,
+    clean_name,
+    document_path,
+    looks_like_pdf,
+    remove_document,
+    store_document,
 )
 from werkbank.modules.budget.models import (
     BudgetAccount,
@@ -1180,6 +1189,9 @@ class InvoiceOut(BaseModel):
     created_by_name: str | None
     booked_by_name: str | None
     booked_at: datetime | None
+    # PDF-Beleg: Dateiname und Größe in Bytes; None: kein Beleg
+    doc_name: str | None
+    doc_size: int | None
 
 
 class InvoiceListOut(BaseModel):
@@ -1266,6 +1278,8 @@ def _invoice_rows(db: DbDep, rows: list[BudgetInvoice]) -> list[InvoiceOut]:
                 created_by_name=names.get(row.created_by),
                 booked_by_name=names.get(row.booked_by),
                 booked_at=row.booked_at,
+                doc_name=row.doc_name,
+                doc_size=row.doc_size,
             )
         )
     return out
@@ -1433,9 +1447,10 @@ def book_invoice(request: Request, invoice_id: InvoiceId, user: Manager, db: DbD
 
 @router.delete("/invoices/{invoice_id}")
 def delete_invoice(
-    request: Request, invoice_id: InvoiceId, user: Editor, db: DbDep
+    request: Request, invoice_id: InvoiceId, user: Editor, db: DbDep, settings: SettingsDep
 ) -> dict[str, bool]:
     row = _own_invoice(db, invoice_id, user)
+    doc_key = row.doc_key
     write_audit(
         db,
         module=MODULE,
@@ -1448,6 +1463,8 @@ def delete_invoice(
     )
     db.delete(row)
     db.commit()
+    if doc_key:
+        remove_document(settings.budget_documents_dir, doc_key)
     return {"deleted": True}
 
 
@@ -1769,3 +1786,109 @@ def planning(user: Reader, db: DbDep) -> PlanningOut:
         ],
         rows=rows,
     )
+
+
+# --- PDF-Beleg an der Rechnung ---
+
+
+@router.put("/invoices/{invoice_id}/document")
+async def upload_document(
+    request: Request, invoice_id: InvoiceId, user: Editor, db: DbDep, settings: SettingsDep
+) -> InvoiceOut:
+    """Hängt einen PDF-Beleg an die Rechnung; ein vorhandener wird ersetzt.
+
+    Der Inhalt der Anfrage ist die Datei selbst, der Dateiname steht im Kopf `X-Dateiname`.
+    """
+    row = _own_invoice(db, invoice_id, user)
+    limit = settings.budget_document_max_mb * 1024 * 1024
+    too_large = HTTPException(
+        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        detail=f"Die Datei ist größer als {settings.budget_document_max_mb} MB.",
+    )
+    if not request.headers.get("content-type", "").lower().startswith(PDF_TYPE):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Nur PDF-Dateien."
+        )
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > limit:
+        raise too_large
+    # Auch ohne ehrliche Längenangabe nie mehr als die Höchstgröße in den Speicher lesen.
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > limit:
+            raise too_large
+        chunks.append(chunk)
+    data = b"".join(chunks)
+    if not looks_like_pdf(data):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Die Datei ist kein PDF.",
+        )
+    old_key = row.doc_key
+    row.doc_key = store_document(settings.budget_documents_dir, data)
+    row.doc_name = clean_name(request.headers.get("x-dateiname", ""))
+    row.doc_size = len(data)
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.beleg_hochgeladen",
+        user_id=user.user_id,
+        object_type="rechnung",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"name": row.doc_name, "bytes": row.doc_size, "ersetzt": old_key is not None},
+    )
+    db.commit()
+    if old_key:
+        remove_document(settings.budget_documents_dir, old_key)
+    return _invoice_rows(db, [row])[0]
+
+
+@router.get("/invoices/{invoice_id}/document")
+def download_document(
+    invoice_id: InvoiceId, user: Reader, db: DbDep, settings: SettingsDep
+) -> FileResponse:
+    """Liefert den Beleg als Download, nie zur Anzeige im Browser."""
+    row: BudgetInvoice | None = db.get(BudgetInvoice, invoice_id)
+    path = (
+        document_path(settings.budget_documents_dir, row.doc_key)
+        if row is not None and row.doc_key
+        else None
+    )
+    if row is None or path is None or not path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    return FileResponse(
+        path,
+        media_type=PDF_TYPE,
+        filename=row.doc_name or "Beleg.pdf",
+        content_disposition_type="attachment",
+        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"},
+    )
+
+
+@router.delete("/invoices/{invoice_id}/document")
+def delete_document(
+    request: Request, invoice_id: InvoiceId, user: Editor, db: DbDep, settings: SettingsDep
+) -> InvoiceOut:
+    row = _own_invoice(db, invoice_id, user)
+    if not row.doc_key:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    old_key, old_name = row.doc_key, row.doc_name
+    row.doc_key = None
+    row.doc_name = None
+    row.doc_size = None
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.beleg_entfernt",
+        user_id=user.user_id,
+        object_type="rechnung",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"name": old_name},
+    )
+    db.commit()
+    remove_document(settings.budget_documents_dir, old_key)
+    return _invoice_rows(db, [row])[0]

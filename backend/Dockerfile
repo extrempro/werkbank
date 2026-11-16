@@ -28,6 +28,9 @@ COPY backend/migrations ./migrations
 RUN pip install .
 COPY --from=frontend /build/dist /app/static
 
+# Ablage der PDF-Belege: Ein Volume an dieser Stelle übernimmt beim ersten Anlegen den Besitzer.
+RUN mkdir -p /data/belege && chown werkbank:werkbank /data/belege
+
 USER werkbank
 EXPOSE 8000
 

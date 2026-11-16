@@ -84,6 +84,21 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   // Der Budgetverwalter bucht beim Erfassen sofort.
   await expect(page.getByText(`Rechnung RE-${number} ist gespeichert und gebucht.`)).toBeVisible();
   await expect(page.getByRole("row", { name: new RegExp(`RE-${number}`) })).toContainText("119,00");
+
+  // Beleg hochladen: eine kleine PDF-Datei aus dem Speicher, dann wieder herunterladen.
+  const pdf = Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n");
+  await page
+    .getByLabel(`Beleg zu Rechnung RE-${number} hochladen (PDF)`)
+    .setInputFiles({ name: "Rechnung Test.pdf", mimeType: "application/pdf", buffer: pdf });
+  await expect(page.getByText(`Der Beleg zu RE-${number} ist gespeichert.`)).toBeVisible();
+  const beleg = page
+    .getByRole("row", { name: new RegExp(`RE-${number}`) })
+    .getByRole("link", { name: "Rechnung Test.pdf" });
+  await expect(beleg).toBeVisible();
+  const download = await page.request.get((await beleg.getAttribute("href")) ?? "");
+  expect(download.status()).toBe(200);
+  expect(download.headers()["content-disposition"]).toContain("attachment");
+  expect((await download.body()).equals(pdf)).toBe(true);
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/partner");

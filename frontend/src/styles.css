@@ -4108,3 +4108,14 @@ p.badges {
   flex-basis: 100%;
   white-space: normal;
 }
+
+.budget-upload {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.budget-upload:focus-within {
+  outline: 2px solid var(--farbe-primaer);
+  outline-offset: 2px;
+}

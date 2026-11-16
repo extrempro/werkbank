@@ -162,3 +162,7 @@ class BudgetInvoice(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     booked_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     booked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # PDF-Beleg: Dateiname zur Anzeige, zufälliger Name der Datei in der Ablage, Größe in Bytes
+    doc_name: Mapped[str | None] = mapped_column(String(200))
+    doc_key: Mapped[str | None] = mapped_column(String(64))
+    doc_size: Mapped[int | None] = mapped_column(Integer)
