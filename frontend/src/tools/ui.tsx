@@ -109,3 +109,32 @@ export function ToolSection({ title, children }: { title: string; children: Reac
     </section>
   );
 }
+
+/** Auswahl aus wenigen Möglichkeiten als Knopfgruppe; die gewählte ist gedrückt. */
+export function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: readonly (readonly [T, string])[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="chips" role="group" aria-label={label}>
+      {options.map(([key, text]) => (
+        <button
+          key={key}
+          type="button"
+          className="chip chip-filter"
+          aria-pressed={value === key}
+          onClick={() => onChange(key)}
+        >
+          {text}
+        </button>
+      ))}
+    </div>
+  );
+}

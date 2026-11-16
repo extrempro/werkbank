@@ -41,6 +41,7 @@ const PATHS = {
     "M12 16h.01",
     "M15 16h.01",
   ],
+  planung: ["M3 5h6v4H3z", "M15 15h6v4h-6z", "M15 5h6v4h-6z", "M9 7h6", "M6 9v8h9"],
   generator: ["M5 5h14v14H5z", "M9 9h.01", "M15 9h.01", "M12 12h.01", "M9 15h.01", "M15 15h.01"],
   schluessel: ["M8 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M11.5 11H21", "M17 11v3", "M20 11v2"],
   lizenzen: ["M4 6h16v12H4z", "M8 11h8", "M8 14h5", "M4 9h16"],

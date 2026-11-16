@@ -381,3 +381,51 @@ test("IT-Tools: ohne die Rolle gibt es den Bereich nicht", async ({ page }) => {
     page.getByRole("navigation", { name: "Hauptnavigation" }).getByRole("link", { name: /^IT-Tools/ }),
   ).toHaveCount(0);
 });
+
+test("IT-Tools: Planung und E-Mail-Header", async ({ page }) => {
+  await loginAs(page, ["Tools.User"], "Tina Tools");
+
+  await page.goto("/it-tools/amortisation");
+  await expect(page.getByRole("heading", { level: 1, name: "Amortisation" })).toBeVisible();
+  await page.getByRole("textbox", { name: /^Anschaffungskosten/ }).fill("10000");
+  await page.getByRole("textbox", { name: /^Rückfluss pro Jahr/ }).fill("4000");
+  await page.getByRole("textbox", { name: /^Laufende Kosten pro Jahr/ }).fill("0");
+  await expect(page.getByText("2 Jahre 6 Monate")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/backup-planer");
+  await expect(page.getByRole("heading", { level: 1, name: "Backup-Planer" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Wochenplan der Sicherungen" })).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/netzplan");
+  await expect(page.getByText(/^Projektdauer:/)).toBeVisible();
+  await expect(page.getByRole("img", { name: /Netzplan als Diagramm/ })).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/nutzwertanalyse");
+  await expect(page.getByRole("region", { name: "Bewertungsmatrix" })).toBeVisible();
+  await expect(page.getByText("Nutzwert des Siegers")).toBeVisible();
+  await expectNoA11yViolations(page);
+  // Die Tabelle steht nicht in der Adresszeile.
+  await expect(page).toHaveURL(/\/it-tools\/nutzwertanalyse$/);
+
+  await page.goto("/it-tools/mail-header");
+  await page
+    .getByLabel("E-Mail-Header oder kompletter Quelltext")
+    .fill(
+      [
+        "Received: from mail.example.com (mail.example.com [192.0.2.10]) by mx.example.org with ESMTPS; Mon, 16 Nov 2026 10:00:05 +0000",
+        "Received: from client.example.com by mail.example.com with ESMTPSA; Mon, 16 Nov 2026 10:00:00 +0000",
+        "Authentication-Results: mx.example.org; spf=pass smtp.mailfrom=example.com; dkim=pass header.d=example.com; dmarc=pass header.from=example.com",
+        "From: Absender <absender@example.com>",
+        "To: empfaenger@example.org",
+        "Subject: Test",
+        "Date: Mon, 16 Nov 2026 10:00:00 +0000",
+        "Message-ID: <test@example.com>",
+      ].join("\n"),
+    );
+  await expect(page.getByRole("heading", { name: "Authentifizierung" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Zustellweg \(2 Stationen/ })).toBeVisible();
+  await expectNoA11yViolations(page);
+});

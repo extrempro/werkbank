@@ -123,3 +123,15 @@ export function DataTable({
     </div>
   );
 }
+
+/** Waagerechter Balken für einen Anteil von 0 bis 100. Als SVG, weil die Breite ohne Inline-Style
+ * gesetzt wird. Die Zahl dazu steht immer als Text daneben. */
+export function Bar({ share, tone = "neutral" }: { share: number; tone?: "neutral" | "ok" }) {
+  const width = Math.max(0, Math.min(100, share));
+  return (
+    <svg className="tool-bar" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
+      <rect className="tool-bar-bg" width="100" height="10" />
+      <rect className={tone === "ok" ? "tool-bar-ok" : "tool-bar-fill"} width={width} height="10" />
+    </svg>
+  );
+}
