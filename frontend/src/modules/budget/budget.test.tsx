@@ -156,7 +156,9 @@ function stubFetch(routes: Record<string, unknown>) {
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? "GET";
-      calls.push({ url, method, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      // Nur JSON-Inhalte auslesen; ein hochgeladener Beleg ist eine Datei.
+      const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
+      calls.push({ url, method, body });
       const key = Object.keys(routes).find((route) => `${method} ${url}`.startsWith(route));
       return key
         ? new Response(JSON.stringify(routes[key]), { status: 200 })
