@@ -25,11 +25,27 @@ describe("Passwortstärke", () => {
 describe("Passphrase & Blindtext", () => {
   it("erzeugt Passphrasen", () => {
     const list = ["alpha", "beta", "gamma", "delta"];
-    const p = makePassphrase(list, { words: 5, separator: "-", capitalize: true, addNumber: true, addSymbol: false });
+    const p = makePassphrase(list, {
+      words: 5,
+      separator: "-",
+      capitalize: true,
+      addNumber: true,
+      addSymbol: false,
+    });
     expect(p.split("-").length).toBe(5);
     expect(p).toMatch(/\d/);
     expect(p.split("-").every((w) => /^[A-Z]/.test(w))).toBe(true);
-    expect(Math.round(passphraseBits(7776, { words: 6, separator: " ", capitalize: false, addNumber: false, addSymbol: false }))).toBe(78);
+    expect(
+      Math.round(
+        passphraseBits(7776, {
+          words: 6,
+          separator: " ",
+          capitalize: false,
+          addNumber: false,
+          addSymbol: false,
+        }),
+      ),
+    ).toBe(78);
   });
   it("Lorem ipsum", () => {
     expect(lorem("words", 5, true)).toBe("lorem ipsum dolor sit amet");
@@ -39,7 +55,8 @@ describe("Passphrase & Blindtext", () => {
 
 describe("Datenlecks", () => {
   it("findet das Hash-Ende in der Liste", () => {
-    const body = "0018A45C4D1DEF81644B54AB7F969B88D65:1\r\n00D4F6E8FA6EECAD2A3AA415EEC418D38EC:2\r\n011053FD0102E94D6AE2F8B83D76FAF94F6:0";
+    const body =
+      "0018A45C4D1DEF81644B54AB7F969B88D65:1\r\n00D4F6E8FA6EECAD2A3AA415EEC418D38EC:2\r\n011053FD0102E94D6AE2F8B83D76FAF94F6:0";
     expect(countInRange(body, "00D4F6E8FA6EECAD2A3AA415EEC418D38EC")).toBe(2);
     expect(countInRange(body, "011053FD0102E94D6AE2F8B83D76FAF94F6")).toBe(0);
     expect(countInRange(body, "FFFF")).toBe(0);

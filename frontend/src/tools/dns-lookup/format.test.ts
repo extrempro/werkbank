@@ -13,9 +13,14 @@ describe("lesbare DNS-Daten", () => {
   });
 
   it("MX, Null-MX und SRV", () => {
-    expect(readable("MX", "10 mail.example.com.")).toEqual({ main: "mail.example.com", fields: [{ label: "Priorität", value: "10" }] });
+    expect(readable("MX", "10 mail.example.com.")).toEqual({
+      main: "mail.example.com",
+      fields: [{ label: "Priorität", value: "10" }],
+    });
     expect(readable("MX", "0 .").kind).toBe("Null-MX");
-    expect(readable("SRV", "100 1 443 sipdir.online.lync.com.").main).toBe("sipdir.online.lync.com:443");
+    expect(readable("SRV", "100 1 443 sipdir.online.lync.com.").main).toBe(
+      "sipdir.online.lync.com:443",
+    );
   });
 
   it("SOA mit Mailadresse und Zeiten", () => {
@@ -23,7 +28,9 @@ describe("lesbare DNS-Daten", () => {
     expect(r.main).toBe("ns.icann.org");
     expect(r.fields).toContainEqual({ label: "Verantwortlich", value: "noc@dns.icann.org" });
     expect(r.fields).toContainEqual({ label: "Expire", value: "14 d" });
-    expect(readable("SOA", "ns1.x. john\\.doe.example.com. 1 2 3 4 5").fields[0]!.value).toBe("john.doe@example.com");
+    expect(readable("SOA", "ns1.x. john\\.doe.example.com. 1 2 3 4 5").fields[0]!.value).toBe(
+      "john.doe@example.com",
+    );
   });
 
   it("TXT entpackt und eingeordnet", () => {
@@ -31,14 +38,20 @@ describe("lesbare DNS-Daten", () => {
       main: "v=spf1 include:spf.protection.outlook.com -all",
       kind: "SPF",
     });
-    expect(readable("TXT", '"v=DMARC1; p=reject; rua=mailto:d@example.com"')).toMatchObject({ kind: "DMARC", hint: "Richtlinie: abweisen" });
+    expect(readable("TXT", '"v=DMARC1; p=reject; rua=mailto:d@example.com"')).toMatchObject({
+      kind: "DMARC",
+      hint: "Richtlinie: abweisen",
+    });
     expect(readable("TXT", '"MS=ms12345678"').kind).toBe("Microsoft 365");
     expect(readable("TXT", '"apple-domain-verification=abc"').kind).toBe("Bestätigung");
     expect(readable("TXT", '"hallo welt"').kind).toBeUndefined();
   });
 
   it("CAA", () => {
-    expect(readable("CAA", '0 issue "letsencrypt.org"')).toMatchObject({ main: "letsencrypt.org", hint: "darf Zertifikate ausstellen" });
+    expect(readable("CAA", '0 issue "letsencrypt.org"')).toMatchObject({
+      main: "letsencrypt.org",
+      hint: "darf Zertifikate ausstellen",
+    });
     expect(readable("CAA", '0 issue ";"').main).toBe(";");
   });
 

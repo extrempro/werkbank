@@ -38,7 +38,12 @@ describe("Zertifikats-Logs", () => {
     ];
     const r = parseCrtSh(json, "example.com");
     const byName = Object.fromEntries(r.map((x) => [x.name, x]));
-    expect(Object.keys(byName).sort()).toEqual(["app.example.com", "example.com", "mail.example.com", "www.example.com"]);
+    expect(Object.keys(byName).sort()).toEqual([
+      "app.example.com",
+      "example.com",
+      "mail.example.com",
+      "www.example.com",
+    ]);
     expect(byName["www.example.com"]!.lastSeen!.toISOString()).toBe("2025-03-01T12:00:00.000Z");
     expect(byName["app.example.com"]!.wildcard).toBe(true);
     expect(byName["mail.example.com"]!.lastSeen).toBeUndefined();
@@ -47,10 +52,27 @@ describe("Zertifikats-Logs", () => {
 
   it("CSV", () => {
     const csv = subdomainsToCsv([
-      { name: "www.example.com", sources: ["crtsh", "list"], certWildcard: false, addresses: ["192.0.2.1"], live: true, viaWildcard: false, lastSeen: new Date("2025-03-01T00:00:00Z") },
-      { name: "alt.example.com", sources: ["crtsh"], certWildcard: false, addresses: [], live: false, viaWildcard: false },
+      {
+        name: "www.example.com",
+        sources: ["crtsh", "list"],
+        certWildcard: false,
+        addresses: ["192.0.2.1"],
+        live: true,
+        viaWildcard: false,
+        lastSeen: new Date("2025-03-01T00:00:00Z"),
+      },
+      {
+        name: "alt.example.com",
+        sources: ["crtsh"],
+        certWildcard: false,
+        addresses: [],
+        live: false,
+        viaWildcard: false,
+      },
     ]);
-    expect(csv).toContain("www.example.com;aktiv;;192.0.2.1;Zertifikats-Log, Namensliste;2025-03-01");
+    expect(csv).toContain(
+      "www.example.com;aktiv;;192.0.2.1;Zertifikats-Log, Namensliste;2025-03-01",
+    );
     expect(csv).toContain("alt.example.com;löst nicht auf");
   });
 });

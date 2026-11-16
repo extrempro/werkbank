@@ -24,7 +24,9 @@ export function txtContent(value: string): string {
   if (!v.startsWith('"')) return v;
   let out = "";
   for (const m of v.matchAll(/"((?:[^"\\]|\\.)*)"/g)) {
-    out += m[1]!.replace(/\\(\d{3}|.)/g, (_, esc: string) => (esc.length === 3 ? String.fromCharCode(Number(esc)) : esc));
+    out += m[1]!.replace(/\\(\d{3}|.)/g, (_, esc: string) =>
+      esc.length === 3 ? String.fromCharCode(Number(esc)) : esc,
+    );
   }
   return out;
 }
@@ -76,7 +78,9 @@ export function normalizeValue(type: string, value: string, zone?: string): stri
     }
     case "SRV": {
       const [prio = "", weight = "", port = "", target = ""] = v.split(/\s+/);
-      return nameCandidates(target, zone).map((t) => `${Number(prio)} ${Number(weight)} ${Number(port)} ${t}`);
+      return nameCandidates(target, zone).map(
+        (t) => `${Number(prio)} ${Number(weight)} ${Number(port)} ${t}`,
+      );
     }
     case "TXT":
     case "SPF":

@@ -15,14 +15,88 @@ const COMMON = new Set(
 );
 
 const WORDS = [
-  "passwort", "password", "kennwort", "admin", "welcome", "willkommen", "hallo", "sommer", "winter", "herbst", "fruehling", "frühling", "summer", "spring", "autumn",
-  "januar", "februar", "maerz", "märz", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "dezember",
-  "montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag", "sonntag", "schatz", "liebe", "love", "test", "start", "geheim", "secret",
-  "server", "firma", "office", "service", "user", "login", "master", "dragon", "monkey", "qwertz", "qwerty", "asdf", "yxcv", "zxcv", "berlin", "hamburg", "muenchen", "köln",
+  "passwort",
+  "password",
+  "kennwort",
+  "admin",
+  "welcome",
+  "willkommen",
+  "hallo",
+  "sommer",
+  "winter",
+  "herbst",
+  "fruehling",
+  "frühling",
+  "summer",
+  "spring",
+  "autumn",
+  "januar",
+  "februar",
+  "maerz",
+  "märz",
+  "april",
+  "mai",
+  "juni",
+  "juli",
+  "august",
+  "september",
+  "oktober",
+  "november",
+  "dezember",
+  "montag",
+  "dienstag",
+  "mittwoch",
+  "donnerstag",
+  "freitag",
+  "samstag",
+  "sonntag",
+  "schatz",
+  "liebe",
+  "love",
+  "test",
+  "start",
+  "geheim",
+  "secret",
+  "server",
+  "firma",
+  "office",
+  "service",
+  "user",
+  "login",
+  "master",
+  "dragon",
+  "monkey",
+  "qwertz",
+  "qwerty",
+  "asdf",
+  "yxcv",
+  "zxcv",
+  "berlin",
+  "hamburg",
+  "muenchen",
+  "köln",
 ];
 
-const KEY_ROWS = ["qwertzuiopü", "asdfghjklöä", "yxcvbnm", "qwertyuiop", "asdfghjkl", "zxcvbnm", "1234567890"];
-const LEET: Record<string, string> = { "@": "a", "4": "a", "3": "e", "1": "i", "!": "i", "0": "o", "$": "s", "5": "s", "7": "t" };
+const KEY_ROWS = [
+  "qwertzuiopü",
+  "asdfghjklöä",
+  "yxcvbnm",
+  "qwertyuiop",
+  "asdfghjkl",
+  "zxcvbnm",
+  "1234567890",
+];
+const LEET: Record<string, string> = {
+  "@": "a",
+  "4": "a",
+  "3": "e",
+  "1": "i",
+  "!": "i",
+  "0": "o",
+  $: "s",
+  "5": "s",
+  "7": "t",
+};
 
 export interface StrengthResult {
   score: 0 | 1 | 2 | 3 | 4;
@@ -62,7 +136,9 @@ export function checkStrength(pw: string): StrengthResult {
     if (idx >= 0 && w.length >= 4) {
       flat(idx, idx + w.length, 0);
       weight[idx] = 11; // ein Wort aus einem Wörterbuch ≈ 2^11 Möglichkeiten
-      findings.push(`Enthält das Wort „${w}“${lower.includes(w) ? "" : " (mit Ziffern statt Buchstaben – hilft kaum)"}.`);
+      findings.push(
+        `Enthält das Wort „${w}“${lower.includes(w) ? "" : " (mit Ziffern statt Buchstaben – hilft kaum)"}.`,
+      );
     }
   }
   const years = [...pw.matchAll(/(19|20)\d{2}/g)];
@@ -77,10 +153,12 @@ export function checkStrength(pw: string): StrengthResult {
     const c = lower.charCodeAt(i + 2);
     if (a === b && b === c) {
       flat(i + 1, i + 3);
-      if (!findings.some((f) => f.startsWith("Wiederholte"))) findings.push("Wiederholte Zeichen (z. B. aaa).");
+      if (!findings.some((f) => f.startsWith("Wiederholte")))
+        findings.push("Wiederholte Zeichen (z. B. aaa).");
     } else if (b - a === c - b && Math.abs(b - a) === 1) {
       flat(i + 1, i + 3);
-      if (!findings.some((f) => f.startsWith("Zeichenfolgen"))) findings.push("Zeichenfolgen wie abc oder 123.");
+      if (!findings.some((f) => f.startsWith("Zeichenfolgen")))
+        findings.push("Zeichenfolgen wie abc oder 123.");
     }
   }
   for (const row of KEY_ROWS) {
@@ -90,15 +168,24 @@ export function checkStrength(pw: string): StrengthResult {
         const idx = lower.indexOf(part);
         if (idx >= 0) {
           flat(idx + 1, idx + n);
-          if (!findings.some((f) => f.startsWith("Tastaturmuster"))) findings.push(`Tastaturmuster („${part}“).`);
+          if (!findings.some((f) => f.startsWith("Tastaturmuster")))
+            findings.push(`Tastaturmuster („${part}“).`);
         }
       }
     }
   }
-  if (/^[A-ZÄÖÜ][a-zäöüß]+\d{1,4}[!.?]?$/.test(pw)) findings.push("Typisches Schema „Wort + Zahl (+ Zeichen)“ – Knackprogramme probieren das gezielt.");
-  if (len < 12) findings.push(`Nur ${len} Zeichen – empfohlen sind mindestens 12, für Admin-Konten 16 und mehr.`);
+  if (/^[A-ZÄÖÜ][a-zäöüß]+\d{1,4}[!.?]?$/.test(pw))
+    findings.push(
+      "Typisches Schema „Wort + Zahl (+ Zeichen)“ – Knackprogramme probieren das gezielt.",
+    );
+  if (len < 12)
+    findings.push(
+      `Nur ${len} Zeichen – empfohlen sind mindestens 12, für Admin-Konten 16 und mehr.`,
+    );
   const bits = Math.round(weight.reduce((a, b) => a + b, 0));
-  const score = (bits < 28 ? 0 : bits < 40 ? 1 : bits < 60 ? 2 : bits < 80 ? 3 : 4) as StrengthResult["score"];
+  const score = (
+    bits < 28 ? 0 : bits < 40 ? 1 : bits < 60 ? 2 : bits < 80 ? 3 : 4
+  ) as StrengthResult["score"];
   if (score >= 3 && findings.length === 0) findings.push("Keine auffälligen Muster gefunden.");
   const label = ["sehr schwach", "schwach", "mittel", "stark", "sehr stark"][score]!;
   return { score, bits, label, findings, crackTimes: times(bits) };
@@ -110,7 +197,10 @@ function times(bits: number) {
     { label: "Online, mit Sperre (100 Versuche/Stunde)", seconds: guesses / (100 / 3600) },
     { label: "Online, ohne Sperre (10/s)", seconds: guesses / 10 },
     { label: "Gestohlene Datenbank, langsamer Hash (bcrypt, 10 000/s)", seconds: guesses / 1e4 },
-    { label: "Gestohlene Datenbank, schneller Hash (NTLM/MD5, 100 Mrd./s)", seconds: guesses / 1e11 },
+    {
+      label: "Gestohlene Datenbank, schneller Hash (NTLM/MD5, 100 Mrd./s)",
+      seconds: guesses / 1e11,
+    },
   ];
 }
 

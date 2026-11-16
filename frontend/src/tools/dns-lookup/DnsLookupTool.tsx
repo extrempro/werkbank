@@ -145,8 +145,7 @@ function TypeCard({ tr, side }: { tr: TypeResult; side: boolean }) {
                 {(cell.result?.answers ?? []).map((answer, index) => {
                   const key = rowKeyOf(answer.name, answer.type, answer.data);
                   const row = matrix.rows.find((entry) => entry.key === key);
-                  const differs =
-                    !!row && okCells.some((other) => !row.present[other.resolver.id]);
+                  const differs = !!row && okCells.some((other) => !row.present[other.resolver.id]);
                   return (
                     <RecordView
                       key={index}
@@ -415,9 +414,7 @@ export default function DnsLookupTool() {
             value={domain}
             spellCheck={false}
             placeholder={
-              mode === "subdomains"
-                ? "example.com"
-                : "example.com, *.example.com oder 192.0.2.10"
+              mode === "subdomains" ? "example.com" : "example.com, *.example.com oder 192.0.2.10"
             }
             onChange={(event) => setDomain(event.target.value)}
           />
@@ -463,7 +460,11 @@ export default function DnsLookupTool() {
             >
               {showMore ? "weniger Typen" : "weitere Typen"}
             </button>
-            <button type="button" className="button button-link" onClick={() => setTypes(QUICK_COMMON)}>
+            <button
+              type="button"
+              className="button button-link"
+              onClick={() => setTypes(QUICK_COMMON)}
+            >
               gängige
             </button>
             <button type="button" className="button button-link" onClick={() => setTypes(["A"])}>

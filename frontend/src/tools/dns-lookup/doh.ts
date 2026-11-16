@@ -5,8 +5,29 @@
 import { typeNamesByCode } from "./wire";
 
 /** gängige Typen (Auswahl oben) und weitere */
-export const commonRecordTypes = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "SRV", "CAA", "PTR"] as const;
-export const moreRecordTypes = ["HTTPS", "SVCB", "TLSA", "DS", "DNSKEY", "SSHFP", "NAPTR", "DNAME", "SPF"] as const;
+export const commonRecordTypes = [
+  "A",
+  "AAAA",
+  "CNAME",
+  "MX",
+  "NS",
+  "TXT",
+  "SOA",
+  "SRV",
+  "CAA",
+  "PTR",
+] as const;
+export const moreRecordTypes = [
+  "HTTPS",
+  "SVCB",
+  "TLSA",
+  "DS",
+  "DNSKEY",
+  "SSHFP",
+  "NAPTR",
+  "DNAME",
+  "SPF",
+] as const;
 export const dnsRecordTypes = [...commonRecordTypes, ...moreRecordTypes] as const;
 export type DnsRecordType = (typeof dnsRecordTypes)[number];
 
@@ -64,7 +85,11 @@ export function expandIpv6(ip: string): string {
   const tailParts = tail ? tail.split(":") : [];
   const missing = 8 - headParts.length - tailParts.length;
   if (tail === undefined ? missing !== 0 : missing < 1) throw invalid();
-  const groups = [...headParts, ...Array<string>(tail === undefined ? 0 : missing).fill("0"), ...tailParts];
+  const groups = [
+    ...headParts,
+    ...Array<string>(tail === undefined ? 0 : missing).fill("0"),
+    ...tailParts,
+  ];
   if (groups.some((g) => g.length === 0 || g.length > 4)) throw invalid();
   return groups.map((g) => g.toLowerCase().padStart(4, "0")).join(":");
 }

@@ -57,6 +57,9 @@ describe("parseDohResponse", () => {
   });
 
   it("liefert NXDOMAIN ohne Antworten", () => {
-    expect(parseDohResponse("nope.invalid", { Status: 3 })).toMatchObject({ status: "NXDOMAIN", answers: [] });
+    expect(parseDohResponse("nope.invalid", { Status: 3 })).toMatchObject({
+      status: "NXDOMAIN",
+      answers: [],
+    });
   });
 });

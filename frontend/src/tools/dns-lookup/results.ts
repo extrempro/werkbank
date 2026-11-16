@@ -35,7 +35,8 @@ export interface Matrix {
   showNames: boolean;
 }
 
-export const rowKeyOf = (name: string, type: string, data: string) => `${name.toLowerCase()}|${type}|${normalizeValue(type, data)[0]}`;
+export const rowKeyOf = (name: string, type: string, data: string) =>
+  `${name.toLowerCase()}|${type}|${normalizeValue(type, data)[0]}`;
 
 export function buildMatrix(tr: TypeResult): Matrix {
   const rows = new Map<string, MatrixRow>();
@@ -53,12 +54,21 @@ export function buildMatrix(tr: TypeResult): Matrix {
   }
   const ok = tr.cells.filter((c) => c.result);
   const statuses = new Set(ok.map((c) => c.result!.status));
-  const consistent = statuses.size <= 1 && [...rows.values()].every((r) => ok.every((c) => r.present[c.resolver.id]));
+  const consistent =
+    statuses.size <= 1 &&
+    [...rows.values()].every((r) => ok.every((c) => r.present[c.resolver.id]));
   // Reihenfolge: Kette zuerst (andere Typen, z. B. CNAME), dann abgefragter Typ; innerhalb nach Daten
   const list = [...rows.values()].sort(
-    (a, b) => Number(a.type === tr.type) - Number(b.type === tr.type) || a.name.localeCompare(b.name) || a.data.localeCompare(b.data, undefined, { numeric: true }),
+    (a, b) =>
+      Number(a.type === tr.type) - Number(b.type === tr.type) ||
+      a.name.localeCompare(b.name) ||
+      a.data.localeCompare(b.data, undefined, { numeric: true }),
   );
-  return { rows: list, consistent, showNames: list.some((r) => r.name.toLowerCase() !== tr.query.toLowerCase()) };
+  return {
+    rows: list,
+    consistent,
+    showNames: list.some((r) => r.name.toLowerCase() !== tr.query.toLowerCase()),
+  };
 }
 
 // ---------- Export ----------
@@ -87,7 +97,11 @@ export function toCsv(results: TypeResult[]): string {
     const s = String(v);
     return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const lines = [["Abfrage", "Typ", "Resolver", "Status", "DNSSEC", "Name", "TTL", "Eintragstyp", "Daten"].join(";")];
+  const lines = [
+    ["Abfrage", "Typ", "Resolver", "Status", "DNSSEC", "Name", "TTL", "Eintragstyp", "Daten"].join(
+      ";",
+    ),
+  ];
   for (const tr of results) {
     for (const cell of tr.cells) {
       const base = [tr.query, tr.type, cell.resolver.name];
@@ -97,8 +111,10 @@ export function toCsv(results: TypeResult[]): string {
       }
       const r = cell.result!;
       const status = [r.status, r.authenticated ? "ja" : "nein"];
-      if (r.answers.length === 0) lines.push([...base, ...status, "", "", "", ""].map(esc).join(";"));
-      for (const a of r.answers) lines.push([...base, ...status, a.name, a.ttl, a.type, a.data].map(esc).join(";"));
+      if (r.answers.length === 0)
+        lines.push([...base, ...status, "", "", "", ""].map(esc).join(";"));
+      for (const a of r.answers)
+        lines.push([...base, ...status, a.name, a.ttl, a.type, a.data].map(esc).join(";"));
     }
   }
   return `\uFEFF${lines.join("\r\n")}\r\n`;

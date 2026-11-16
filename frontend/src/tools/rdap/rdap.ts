@@ -14,20 +14,25 @@ export interface RdapQuery {
 }
 
 export function detectQuery(input: string): RdapQuery | null {
-  const t = input.trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, (m) => (/^\/\d{1,3}$/.test(m) ? m : ""));
+  const t = input
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/.*$/, (m) => (/^\/\d{1,3}$/.test(m) ? m : ""));
   if (!t) return null;
   const as = /^AS\s*(\d{1,10})$/i.exec(t) ?? /^(\d{1,10})$/.exec(t);
   if (as && !t.includes(".")) return { kind: "autnum", value: as[1]!, display: `AS${as[1]}` };
   const [addr, pfx] = t.split("/");
   const ip = parseIp(addr!);
-  if (ip) return { kind: "ip", value: pfx ? `${addr}/${pfx}` : addr!, display: t, ipVersion: ip.version };
+  if (ip)
+    return { kind: "ip", value: pfx ? `${addr}/${pfx}` : addr!, display: t, ipVersion: ip.version };
   let domain: string;
   try {
     domain = toAscii(t.replace(/\.$/, ""));
   } catch {
     return null;
   }
-  if (/^[a-z0-9.-]+\.[a-z0-9-]{2,}$/i.test(domain)) return { kind: "domain", value: domain.toLowerCase(), display: t };
+  if (/^[a-z0-9.-]+\.[a-z0-9-]{2,}$/i.test(domain))
+    return { kind: "domain", value: domain.toLowerCase(), display: t };
   return null;
 }
 
@@ -61,8 +66,16 @@ export interface RdapObject {
   status?: string[];
   events?: { eventAction: string; eventDate: string; eventActor?: string }[];
   entities?: RdapEntity[];
-  nameservers?: { ldhName?: string; unicodeName?: string; ipAddresses?: { v4?: string[]; v6?: string[] } }[];
-  secureDNS?: { delegationSigned?: boolean; zoneSigned?: boolean; dsData?: { keyTag: number; algorithm: number; digestType: number; digest: string }[] };
+  nameservers?: {
+    ldhName?: string;
+    unicodeName?: string;
+    ipAddresses?: { v4?: string[]; v6?: string[] };
+  }[];
+  secureDNS?: {
+    delegationSigned?: boolean;
+    zoneSigned?: boolean;
+    dsData?: { keyTag: number; algorithm: number; digestType: number; digest: string }[];
+  };
   cidr0_cidrs?: { v4prefix?: string; v6prefix?: string; length: number }[];
   remarks?: { title?: string; description?: string[] }[];
   notices?: { title?: string; description?: string[]; links?: { href?: string }[] }[];
@@ -99,11 +112,22 @@ export function contactOf(e: RdapEntity): Contact {
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
   const adr = vcard(e, "adr");
   const adrLabel = e.vcardArray?.[1]?.find((p) => p[0] === "adr")?.[1]?.label;
-  const address = str(adrLabel) ?? (Array.isArray(adr) ? adr.flat().filter((x) => typeof x === "string" && x.trim()).join(", ") || undefined : undefined);
+  const address =
+    str(adrLabel) ??
+    (Array.isArray(adr)
+      ? adr
+          .flat()
+          .filter((x) => typeof x === "string" && x.trim())
+          .join(", ") || undefined
+      : undefined);
   const tel = vcard(e, "tel");
   const name = str(vcard(e, "fn"));
-  const org = str(vcard(e, "org")) ?? (Array.isArray(vcard(e, "org")) ? str((vcard(e, "org") as unknown[])[0]) : undefined);
-  const remarksText = (e.remarks ?? []).map((r) => `${r.title ?? ""} ${(r.description ?? []).join(" ")}`).join(" ");
+  const org =
+    str(vcard(e, "org")) ??
+    (Array.isArray(vcard(e, "org")) ? str((vcard(e, "org") as unknown[])[0]) : undefined);
+  const remarksText = (e.remarks ?? [])
+    .map((r) => `${r.title ?? ""} ${(r.description ?? []).join(" ")}`)
+    .join(" ");
   return {
     roles: e.roles ?? [],
     handle: e.handle,
@@ -182,5 +206,7 @@ export function ipRangeText(o: RdapObject): string | undefined {
 
 export const dateText = (iso: string) => {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
 };
