@@ -46,7 +46,12 @@ export interface Asn1Node {
  * Liest ein DER-Element. Mit `ber = true` sind auch BER-Eigenheiten erlaubt (unbestimmte Längen),
  * wie sie manche PFX-Dateien (z. B. aus Java oder macOS) verwenden.
  */
-export function parseDer(buffer: Uint8Array, offset = 0, limit = buffer.length, ber = false): Asn1Node {
+export function parseDer(
+  buffer: Uint8Array,
+  offset = 0,
+  limit = buffer.length,
+  ber = false,
+): Asn1Node {
   let pos = offset;
   const need = (n: number) => {
     if (pos + n > limit) throw new Error("DER-Daten sind abgeschnitten");
@@ -71,7 +76,17 @@ export function parseDer(buffer: Uint8Array, offset = 0, limit = buffer.length, 
   let length = buffer[pos++]!;
   if (length === 0x80) {
     if (!ber || !constructed) throw new Error("Unbestimmte Länge ist in DER nicht erlaubt");
-    const node: Asn1Node = { cls, tag, constructed, start: offset, contentStart: pos, contentEnd: pos, end: pos, children: [], buffer };
+    const node: Asn1Node = {
+      cls,
+      tag,
+      constructed,
+      start: offset,
+      contentStart: pos,
+      contentEnd: pos,
+      end: pos,
+      children: [],
+      buffer,
+    };
     let p = pos;
     for (;;) {
       if (p + 2 > limit) throw new Error("BER-Daten sind abgeschnitten (Endmarke fehlt)");
@@ -96,7 +111,17 @@ export function parseDer(buffer: Uint8Array, offset = 0, limit = buffer.length, 
   const end = contentStart + length;
   if (end > limit) throw new Error("DER-Daten sind abgeschnitten");
 
-  const node: Asn1Node = { cls, tag, constructed, start: offset, contentStart, contentEnd: end, end, children: [], buffer };
+  const node: Asn1Node = {
+    cls,
+    tag,
+    constructed,
+    start: offset,
+    contentStart,
+    contentEnd: end,
+    end,
+    children: [],
+    buffer,
+  };
   if (constructed) {
     let p = contentStart;
     while (p < end) {
@@ -201,13 +226,16 @@ export function readString(node: Asn1Node): string {
       return new TextDecoder("utf-8").decode(bytes);
     case Tag.BmpString: {
       let s = "";
-      for (let i = 0; i + 1 < bytes.length; i += 2) s += String.fromCharCode((bytes[i]! << 8) | bytes[i + 1]!);
+      for (let i = 0; i + 1 < bytes.length; i += 2)
+        s += String.fromCharCode((bytes[i]! << 8) | bytes[i + 1]!);
       return s;
     }
     case Tag.UniversalString: {
       let s = "";
       for (let i = 0; i + 3 < bytes.length; i += 4) {
-        s += String.fromCodePoint(((bytes[i]! << 24) | (bytes[i + 1]! << 16) | (bytes[i + 2]! << 8) | bytes[i + 3]!) >>> 0);
+        s += String.fromCodePoint(
+          ((bytes[i]! << 24) | (bytes[i + 1]! << 16) | (bytes[i + 2]! << 8) | bytes[i + 3]!) >>> 0,
+        );
       }
       return s;
     }
@@ -226,5 +254,7 @@ export function readTime(node: Asn1Node): Date {
   if (!m) throw new Error(`Unbekanntes Zeitformat: ${s}`);
   let year = Number(m[1]);
   if (node.tag === Tag.UtcTime) year += year < 50 ? 2000 : 1900;
-  return new Date(Date.UTC(year, Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6] ?? 0)));
+  return new Date(
+    Date.UTC(year, Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6] ?? 0)),
+  );
 }

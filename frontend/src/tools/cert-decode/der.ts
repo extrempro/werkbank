@@ -96,7 +96,8 @@ export const bitString = (data: Uint8Array) => tlv(0x03, concat([new Uint8Array(
 
 export function toBase64(bytes: Uint8Array): string {
   let binary = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(binary);
 }
 
@@ -106,7 +107,9 @@ export function fromBase64(text: string): Uint8Array {
 }
 
 export function pem(label: string, der: Uint8Array, headers?: string[]): string {
-  const body = toBase64(der).replace(/(.{64})/g, "$1\n").replace(/\n$/, "");
+  const body = toBase64(der)
+    .replace(/(.{64})/g, "$1\n")
+    .replace(/\n$/, "");
   const head = headers?.length ? `${headers.join("\n")}\n\n` : "";
   return `-----BEGIN ${label}-----\n${head}${body}\n-----END ${label}-----\n`;
 }

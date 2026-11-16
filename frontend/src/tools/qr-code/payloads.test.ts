@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { emailPayload, emptyVcard, escapeWifi, phonePayload, smsPayload, urlPayload, vcardPayload, wifiPayload } from "./payloads";
+import {
+  emailPayload,
+  emptyVcard,
+  escapeWifi,
+  phonePayload,
+  smsPayload,
+  urlPayload,
+  vcardPayload,
+  wifiPayload,
+} from "./payloads";
 
 describe("Link", () => {
   it("ergänzt https:// nur ohne Schema", () => {
@@ -11,14 +20,20 @@ describe("Link", () => {
 
 describe("WLAN", () => {
   it("baut das WIFI-Format", () => {
-    expect(wifiPayload({ ssid: "Büro", password: "geheim", security: "WPA", hidden: false })).toBe("WIFI:T:WPA;S:Büro;P:geheim;;");
-    expect(wifiPayload({ ssid: "Gäste", password: "x", security: "nopass", hidden: true })).toBe("WIFI:T:nopass;S:Gäste;H:true;;");
+    expect(wifiPayload({ ssid: "Büro", password: "geheim", security: "WPA", hidden: false })).toBe(
+      "WIFI:T:WPA;S:Büro;P:geheim;;",
+    );
+    expect(wifiPayload({ ssid: "Gäste", password: "x", security: "nopass", hidden: true })).toBe(
+      "WIFI:T:nopass;S:Gäste;H:true;;",
+    );
     expect(wifiPayload({ ssid: "", password: "x", security: "WPA", hidden: false })).toBe("");
   });
 
   it("maskiert Sonderzeichen", () => {
     expect(escapeWifi('a;b,c:d"e\\f')).toBe('a\\;b\\,c\\:d\\"e\\\\f');
-    expect(wifiPayload({ ssid: "Netz;1", password: "p:w", security: "WPA", hidden: false })).toBe("WIFI:T:WPA;S:Netz\\;1;P:p\\:w;;");
+    expect(wifiPayload({ ssid: "Netz;1", password: "p:w", security: "WPA", hidden: false })).toBe(
+      "WIFI:T:WPA;S:Netz\\;1;P:p\\:w;;",
+    );
   });
 });
 
@@ -56,10 +71,12 @@ describe("Kontakt", () => {
 
 describe("E-Mail, Telefon, SMS", () => {
   it("baut mailto-Links", () => {
-    expect(emailPayload({ to: "it@example.com", subject: "Drucker defekt", body: "Raum 1.23 & 1.24" })).toBe(
-      "mailto:it@example.com?subject=Drucker%20defekt&body=Raum%201.23%20%26%201.24",
+    expect(
+      emailPayload({ to: "it@example.com", subject: "Drucker defekt", body: "Raum 1.23 & 1.24" }),
+    ).toBe("mailto:it@example.com?subject=Drucker%20defekt&body=Raum%201.23%20%26%201.24");
+    expect(emailPayload({ to: "it@example.com", subject: "", body: "" })).toBe(
+      "mailto:it@example.com",
     );
-    expect(emailPayload({ to: "it@example.com", subject: "", body: "" })).toBe("mailto:it@example.com");
   });
 
   it("normalisiert Telefonnummern", () => {
@@ -68,7 +85,9 @@ describe("E-Mail, Telefon, SMS", () => {
   });
 
   it("baut SMS-Inhalte", () => {
-    expect(smsPayload({ phone: "0170 1234567", message: "Server down" })).toBe("SMSTO:01701234567:Server down");
+    expect(smsPayload({ phone: "0170 1234567", message: "Server down" })).toBe(
+      "SMSTO:01701234567:Server down",
+    );
     expect(smsPayload({ phone: "+49170", message: "" })).toBe("SMSTO:+49170");
   });
 });

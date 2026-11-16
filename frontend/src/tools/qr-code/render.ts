@@ -1,7 +1,8 @@
 import { blockLayout, eclInfo, encodeText, MAX_VERSION, type Ecl, type QrCode } from "./qr";
 
 /** Inhalt der freigestellten Mitte: Kürzel oder Logo (als data:-URL) */
-export type Center = { kind: "text"; text: string } | { kind: "image"; href: string; width?: number; height?: number };
+export type Center =
+  { kind: "text"; text: string } | { kind: "image"; href: string; width?: number; height?: number };
 
 export interface RenderOptions {
   /** Ruhezone in Modulen (Norm: mindestens 4) */
@@ -35,7 +36,11 @@ export function centerModules(size: number, percent: number): number {
 /** Module unter der Mitte entfernen – dort steht später das Logo auf dem Hintergrund */
 export function clearCenter(modules: boolean[][], k: number): boolean[][] {
   const from = (modules.length - k) / 2;
-  return modules.map((row, y) => (y < from || y >= from + k ? row : row.map((dark, x) => (x >= from && x < from + k ? false : dark))));
+  return modules.map((row, y) =>
+    y < from || y >= from + k
+      ? row
+      : row.map((dark, x) => (x >= from && x < from + k ? false : dark)),
+  );
 }
 
 /** Mit einer überdeckten Mitte muss die Fehlerkorrektur die fehlenden Module ausgleichen: mindestens Q */
@@ -52,10 +57,11 @@ export function centerLoad(qr: QrCode, k: number): number {
   const { blockOf, blocks, correctable } = blockLayout(qr.version, qr.ecl);
   const from = (qr.size - k) / 2;
   const hit = new Set<number>();
-  for (let y = from; y < from + k; y++) for (let x = from; x < from + k; x++) {
-    const cw = qr.codewordAt[y]![x]!;
-    if (cw >= 0) hit.add(cw);
-  }
+  for (let y = from; y < from + k; y++)
+    for (let x = from; x < from + k; x++) {
+      const cw = qr.codewordAt[y]![x]!;
+      if (cw >= 0) hit.add(cw);
+    }
   const perBlock = new Array<number>(blocks).fill(0);
   for (const cw of hit) perBlock[blockOf[cw]!]!++;
   return Math.max(...perBlock) / correctable;
@@ -69,8 +75,13 @@ export const CENTER_LOAD_MAX = 0.6;
  * zu viel verdeckt (vor allem bei sehr kurzen Inhalten) – eine höhere Stufe oder ein größerer Code.
  * `safe` = false: Auch der größte geprüfte Code reicht nicht; die Mitte sollte kleiner werden.
  */
-export function encodeForCenter(text: string, ecl: Ecl, percent: number): { qr: QrCode; load: number; safe: boolean } {
-  const levels: Ecl[] = eclInfo[ecl].index >= eclInfo.H.index ? ["H"] : [eclForCenter(ecl, true), "H"];
+export function encodeForCenter(
+  text: string,
+  ecl: Ecl,
+  percent: number,
+): { qr: QrCode; load: number; safe: boolean } {
+  const levels: Ecl[] =
+    eclInfo[ecl].index >= eclInfo.H.index ? ["H"] : [eclForCenter(ecl, true), "H"];
   let fallback: { qr: QrCode; load: number } | null = null;
   let firstError: unknown = null;
   for (let extra = 0; extra <= 6; extra++) {
@@ -78,7 +89,12 @@ export function encodeForCenter(text: string, ecl: Ecl, percent: number): { qr: 
       let qr: QrCode;
       try {
         const natural = encodeText(text, { ecl: level });
-        qr = extra === 0 ? natural : natural.version + extra > MAX_VERSION ? natural : encodeText(text, { ecl: level, minVersion: natural.version + extra });
+        qr =
+          extra === 0
+            ? natural
+            : natural.version + extra > MAX_VERSION
+              ? natural
+              : encodeText(text, { ecl: level, minVersion: natural.version + extra });
       } catch (e) {
         firstError ??= e;
         continue;
@@ -129,14 +145,18 @@ export function centerLayout(qr: QrCode, o: RenderOptions): CenterLayout | null 
   return layout;
 }
 
-const xml = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
+const xml = (s: string) =>
+  s.replace(
+    /[&<>"']/g,
+    (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!,
+  );
 const r = (n: number) => Math.round(n * 1000) / 1000;
 
 /** SVG-Pfad aller dunklen Module, zeilenweise zu Rechtecken zusammengefasst. */
 export function svgPath(modules: boolean[][], margin: number): string {
   const parts: string[] = [];
   modules.forEach((row, y) => {
-    for (let x = 0; x < row.length; ) {
+    for (let x = 0; x < row.length;) {
       if (!row[x]) {
         x++;
         continue;
@@ -169,7 +189,11 @@ export function svgMarkup(qr: QrCode, o: RenderOptions): string {
 }
 
 /** Ganzzahlige Pixel pro Modul, damit die Kanten scharf bleiben. */
-export function pngScale(qr: QrCode, margin: number, targetPx: number): { scale: number; px: number } {
+export function pngScale(
+  qr: QrCode,
+  margin: number,
+  targetPx: number,
+): { scale: number; px: number } {
   const dim = qr.size + margin * 2;
   const scale = Math.max(1, Math.round(targetPx / dim));
   return { scale, px: scale * dim };
@@ -209,10 +233,19 @@ export async function pngBlob(qr: QrCode, o: RenderOptions, targetPx: number): P
   if (c?.image) {
     const img = await loadImage(c.image.href);
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, c.image.x * scale, c.image.y * scale, c.image.width * scale, c.image.height * scale);
+    ctx.drawImage(
+      img,
+      c.image.x * scale,
+      c.image.y * scale,
+      c.image.width * scale,
+      c.image.height * scale,
+    );
   }
   return new Promise((resolve, reject) =>
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("PNG konnte nicht erzeugt werden"))), "image/png"),
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("PNG konnte nicht erzeugt werden"))),
+      "image/png",
+    ),
   );
 }
 
@@ -226,7 +259,9 @@ function luminance(hex: string): number | null {
     const s = c / 255;
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
   };
-  return 0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255);
+  return (
+    0.2126 * channel((n >> 16) & 255) + 0.7152 * channel((n >> 8) & 255) + 0.0722 * channel(n & 255)
+  );
 }
 
 /** Hinweise zur Lesbarkeit der gewählten Farben */
@@ -236,7 +271,13 @@ export function colorWarnings(foreground: string, background: string): string[] 
   if (fg === null || bg === null) return [];
   const warnings: string[] = [];
   const ratio = (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
-  if (ratio < 4) warnings.push(`Geringer Kontrast (${ratio.toFixed(1)} : 1) – manche Scanner lesen den Code dann nicht.`);
-  if (fg > bg) warnings.push("Heller Code auf dunklem Grund: Viele ältere Scanner können invertierte QR-Codes nicht lesen.");
+  if (ratio < 4)
+    warnings.push(
+      `Geringer Kontrast (${ratio.toFixed(1)} : 1) – manche Scanner lesen den Code dann nicht.`,
+    );
+  if (fg > bg)
+    warnings.push(
+      "Heller Code auf dunklem Grund: Viele ältere Scanner können invertierte QR-Codes nicht lesen.",
+    );
   return warnings;
 }

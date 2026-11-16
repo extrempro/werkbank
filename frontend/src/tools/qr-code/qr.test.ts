@@ -14,10 +14,30 @@ import {
 
 describe("Kapazität", () => {
   it("stimmt mit den Tabellen der Norm überein", () => {
-    expect([numDataCodewords(1, "L"), numDataCodewords(1, "M"), numDataCodewords(1, "Q"), numDataCodewords(1, "H")]).toEqual([19, 16, 13, 9]);
-    expect([numDataCodewords(2, "L"), numDataCodewords(2, "M"), numDataCodewords(2, "Q"), numDataCodewords(2, "H")]).toEqual([34, 28, 22, 16]);
-    expect([numDataCodewords(10, "L"), numDataCodewords(10, "M"), numDataCodewords(10, "Q"), numDataCodewords(10, "H")]).toEqual([274, 216, 154, 122]);
-    expect([numDataCodewords(40, "L"), numDataCodewords(40, "M"), numDataCodewords(40, "Q"), numDataCodewords(40, "H")]).toEqual([2956, 2334, 1666, 1276]);
+    expect([
+      numDataCodewords(1, "L"),
+      numDataCodewords(1, "M"),
+      numDataCodewords(1, "Q"),
+      numDataCodewords(1, "H"),
+    ]).toEqual([19, 16, 13, 9]);
+    expect([
+      numDataCodewords(2, "L"),
+      numDataCodewords(2, "M"),
+      numDataCodewords(2, "Q"),
+      numDataCodewords(2, "H"),
+    ]).toEqual([34, 28, 22, 16]);
+    expect([
+      numDataCodewords(10, "L"),
+      numDataCodewords(10, "M"),
+      numDataCodewords(10, "Q"),
+      numDataCodewords(10, "H"),
+    ]).toEqual([274, 216, 154, 122]);
+    expect([
+      numDataCodewords(40, "L"),
+      numDataCodewords(40, "M"),
+      numDataCodewords(40, "Q"),
+      numDataCodewords(40, "H"),
+    ]).toEqual([2956, 2334, 1666, 1276]);
   });
 });
 
@@ -42,7 +62,9 @@ describe("Referenzbeispiel „HELLO WORLD“ (Version 1-M)", () => {
   });
 
   it("erzeugt die Fehlerkorrektur-Codewörter", () => {
-    expect(reedSolomonRemainder(data, reedSolomonDivisor(10))).toEqual([196, 35, 39, 119, 235, 215, 231, 226, 93, 23]);
+    expect(reedSolomonRemainder(data, reedSolomonDivisor(10))).toEqual([
+      196, 35, 39, 119, 235, 215, 231, 226, 93, 23,
+    ]);
     expect(addEccAndInterleave(data, 1, "M")).toHaveLength(26);
   });
 });
@@ -59,7 +81,11 @@ describe("Format- und Versionsinformation", () => {
 
 describe("encodeText", () => {
   it("wählt die kleinste passende Version", () => {
-    expect(encodeText("HELLO WORLD", { ecl: "M" })).toMatchObject({ version: 1, size: 21, mode: "alphanumeric" });
+    expect(encodeText("HELLO WORLD", { ecl: "M" })).toMatchObject({
+      version: 1,
+      size: 21,
+      mode: "alphanumeric",
+    });
     expect(encodeText("https://example.com", { ecl: "M" }).version).toBe(2);
   });
 
@@ -67,7 +93,13 @@ describe("encodeText", () => {
     const qr = encodeText("Test", { ecl: "L" });
     const m = qr.modules;
     // Finder oben links: äußerer Ring dunkel, zweiter Ring hell, Kern dunkel
-    expect([m[0]![0], m[1]![1], m[3]![3], m[0]![6], m[6]![6]]).toEqual([true, false, true, true, true]);
+    expect([m[0]![0], m[1]![1], m[3]![3], m[0]![6], m[6]![6]]).toEqual([
+      true,
+      false,
+      true,
+      true,
+      true,
+    ]);
     expect(m[qr.size - 8]![8]).toBe(true);
   });
 

@@ -80,14 +80,26 @@ export const emptyVcard: VcardData = {
 
 /** Text-Werte in vCard maskieren: \ , ; und Zeilenumbrüche */
 export function escapeVcard(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\r?\n/g, "\\n");
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;")
+    .replace(/\r?\n/g, "\\n");
 }
 
 export function vcardPayload(d: VcardData): string {
   const e = (s: string) => escapeVcard(s.trim());
-  const fullName = [d.firstName, d.lastName].map((s) => s.trim()).filter(Boolean).join(" ");
+  const fullName = [d.firstName, d.lastName]
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(" ");
   if (!fullName && !d.organization.trim()) return "";
-  const lines = ["BEGIN:VCARD", "VERSION:3.0", `N:${e(d.lastName)};${e(d.firstName)};;;`, `FN:${e(fullName || d.organization)}`];
+  const lines = [
+    "BEGIN:VCARD",
+    "VERSION:3.0",
+    `N:${e(d.lastName)};${e(d.firstName)};;;`,
+    `FN:${e(fullName || d.organization)}`,
+  ];
   if (d.organization.trim()) lines.push(`ORG:${e(d.organization)}`);
   if (d.title.trim()) lines.push(`TITLE:${e(d.title)}`);
   if (d.phoneWork.trim()) lines.push(`TEL;TYPE=WORK,VOICE:${d.phoneWork.trim()}`);

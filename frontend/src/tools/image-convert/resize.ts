@@ -20,7 +20,11 @@ export const resizeLabels: Record<ResizeMode, string> = {
 
 export const MAX_DIMENSION = 16384;
 
-export function targetSize(width: number, height: number, o: ResizeOptions): { width: number; height: number } {
+export function targetSize(
+  width: number,
+  height: number,
+  o: ResizeOptions,
+): { width: number; height: number } {
   if (width <= 0 || height <= 0) throw new Error("Bild hat keine gültige Größe");
   let factor = 1;
   const v = Number.isFinite(o.value) && o.value > 0 ? o.value : 0;
@@ -48,7 +52,11 @@ export function targetSize(width: number, height: number, o: ResizeOptions): { w
 }
 
 /** Bild mittig in ein Quadrat einpassen (für Symbole) */
-export function fitSquare(width: number, height: number, size: number): { x: number; y: number; width: number; height: number } {
+export function fitSquare(
+  width: number,
+  height: number,
+  size: number,
+): { x: number; y: number; width: number; height: number } {
   const scale = size / Math.max(width, height);
   const w = Math.max(1, Math.round(width * scale));
   const h = Math.max(1, Math.round(height * scale));

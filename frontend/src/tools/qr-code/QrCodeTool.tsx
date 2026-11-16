@@ -187,10 +187,7 @@ export default function QrCodeTool() {
   }, [payload, ecl, centerSize, hasCenter]);
 
   const centerText = center?.kind === "text" ? center.text : "";
-  const textWidth = useMemo(
-    () => (centerText ? measureText(centerText) : undefined),
-    [centerText],
-  );
+  const textWidth = useMemo(() => (centerText ? measureText(centerText) : undefined), [centerText]);
   const render = {
     margin,
     foreground: fg,
@@ -552,7 +549,9 @@ export default function QrCodeTool() {
               </svg>
             ) : (
               <p className="small">
-                {error ? "Kein Code, siehe Hinweis." : "Inhalt eingeben, um den QR-Code zu erzeugen."}
+                {error
+                  ? "Kein Code, siehe Hinweis."
+                  : "Inhalt eingeben, um den QR-Code zu erzeugen."}
               </p>
             )}
           </div>
@@ -597,7 +596,9 @@ export default function QrCodeTool() {
                 </button>
               </div>
               {pngError && <ErrorBox>{pngError}</ErrorBox>}
-              <p className="small">SVG bleibt in jeder Größe scharf, ideal für Druck und Dokumente.</p>
+              <p className="small">
+                SVG bleibt in jeder Größe scharf, ideal für Druck und Dokumente.
+              </p>
             </>
           )}
 

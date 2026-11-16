@@ -3,7 +3,20 @@
  * Lesen: BER erlaubt, Inhalte unverschlüsselt oder verschlüsselt (PBES2/AES, 3DES, RC2), MAC-Prüfung.
  * Erzeugen: „modern“ (AES-256, wie OpenSSL 3 / Windows „AES256-SHA256“) oder „kompatibel“ (3DES/SHA-1).
  */
-import { child, content, isContext, isUniversal, octetString, parseDer, readOid, readSmallInt, readString, Tag, toHex, type Asn1Node } from "./asn1";
+import {
+  child,
+  content,
+  isContext,
+  isUniversal,
+  octetString,
+  parseDer,
+  readOid,
+  readSmallInt,
+  readString,
+  Tag,
+  toHex,
+  type Asn1Node,
+} from "./asn1";
 import { explicit, implicitPrimitive, integer, nul, octets, oid, seq, set, bmpString } from "./der";
 import { PasswordError } from "./keys";
 import {
@@ -122,7 +135,10 @@ export async function parsePfx(bytes: Uint8Array, password: string): Promise<Pfx
       const expected = content(child(digestInfo, 1));
       const salt = content(child(macData, 1));
       const iterations = macData.children[2] ? readSmallInt(child(macData, 2)) : 1;
-      details.push({ label: "Integrität (MAC)", value: `HMAC-${hash}, ${iterationText(iterations)}` });
+      details.push({
+        label: "Integrität (MAC)",
+        value: `HMAC-${hash}, ${iterationText(iterations)}`,
+      });
       let ok: (typeof candidates)[number] | undefined;
       for (const c of candidates) {
         const pw = c.emptyAsNull ? new Uint8Array(0) : bmpPassword(c.pw);
@@ -135,8 +151,14 @@ export async function parsePfx(bytes: Uint8Array, password: string): Promise<Pfx
       }
       if (!ok) {
         throw password
-          ? new PasswordError("Kennwort ist falsch (die Integritätsprüfung der PFX-Datei schlägt fehl).", false)
-          : new PasswordError("Die PFX-Datei ist kennwortgeschützt – bitte Kennwort eingeben.", true);
+          ? new PasswordError(
+              "Kennwort ist falsch (die Integritätsprüfung der PFX-Datei schlägt fehl).",
+              false,
+            )
+          : new PasswordError(
+              "Die PFX-Datei ist kennwortgeschützt – bitte Kennwort eingeben.",
+              true,
+            );
       }
       chosen = ok;
     }
@@ -156,7 +178,10 @@ export async function parsePfx(bytes: Uint8Array, password: string): Promise<Pfx
       if (e instanceof Error && /falsches Kennwort|ungültige Länge/.test(e.message)) {
         throw password
           ? new PasswordError("Kennwort ist falsch.", false)
-          : new PasswordError("Die PFX-Datei ist kennwortgeschützt – bitte Kennwort eingeben.", true);
+          : new PasswordError(
+              "Die PFX-Datei ist kennwortgeschützt – bitte Kennwort eingeben.",
+              true,
+            );
       }
       throw e;
     }
@@ -221,15 +246,21 @@ export async function parsePfx(bytes: Uint8Array, password: string): Promise<Pfx
       const label = describe(algId);
       await readBags(await decrypt(algId, octetString(encrypted)), label);
     } else if (type === OID.envelopedData) {
-      warnings.push("Mit einem Zertifikat verschlüsselte Inhalte (envelopedData) werden nicht unterstützt.");
+      warnings.push(
+        "Mit einem Zertifikat verschlüsselte Inhalte (envelopedData) werden nicht unterstützt.",
+      );
     }
   }
 
   if (certs.length && !certEncryption.size) certEncryption.add("keine");
-  if (keyEncryption.size) details.push({ label: "Verschlüsselung Schlüssel", value: [...keyEncryption].join("; ") });
-  if (certEncryption.size) details.push({ label: "Verschlüsselung Zertifikate", value: [...certEncryption].join("; ") });
+  if (keyEncryption.size)
+    details.push({ label: "Verschlüsselung Schlüssel", value: [...keyEncryption].join("; ") });
+  if (certEncryption.size)
+    details.push({ label: "Verschlüsselung Zertifikate", value: [...certEncryption].join("; ") });
   if ([...keyEncryption, ...certEncryption].some((e) => /RC2|RC4|2-Key/.test(e))) {
-    warnings.push("Die Datei nutzt veraltete Verschlüsselung (RC2/RC4). Für OpenSSL 3 ohne „-legacy“ neu exportieren, z. B. hier als PFX (modern).");
+    warnings.push(
+      "Die Datei nutzt veraltete Verschlüsselung (RC2/RC4). Für OpenSSL 3 ohne „-legacy“ neu exportieren, z. B. hier als PFX (modern).",
+    );
   }
 
   return { certs, keys, details, warnings };
@@ -251,7 +282,10 @@ export interface BuildPfxOptions {
   mode: EncryptionMode;
 }
 
-function attributes(friendlyName: string | undefined, localKeyId: Uint8Array | undefined): Uint8Array[] {
+function attributes(
+  friendlyName: string | undefined,
+  localKeyId: Uint8Array | undefined,
+): Uint8Array[] {
   const attrs: Uint8Array[] = [];
   if (friendlyName) attrs.push(seq(oid(OID.friendlyName), set(bmpString(friendlyName))));
   if (localKeyId) attrs.push(seq(oid(OID.localKeyId), set(octets(localKeyId))));
@@ -261,7 +295,10 @@ function attributes(friendlyName: string | undefined, localKeyId: Uint8Array | u
 export async function buildPfx(options: BuildPfxOptions): Promise<Uint8Array> {
   const { key, certs, password, friendlyName, mode } = options;
   if (certs.length === 0 && !key) throw new Error("Nichts zum Exportieren");
-  const localKeyId = key && certs[0] ? new Uint8Array(await crypto.subtle.digest("SHA-1", certs[0] as BufferSource)) : undefined;
+  const localKeyId =
+    key && certs[0]
+      ? new Uint8Array(await crypto.subtle.digest("SHA-1", certs[0] as BufferSource))
+      : undefined;
 
   const certBags = certs.map((der, i) =>
     seq(
@@ -275,12 +312,19 @@ export async function buildPfx(options: BuildPfxOptions): Promise<Uint8Array> {
   if (certBags.length) {
     const enc = await pbeEncrypt(mode, password, seq(...certBags));
     contentInfos.push(
-      seq(oid(OID.encryptedData), explicit(0, seq(integer(0), seq(oid(OID.data), enc.algId, implicitPrimitive(0, enc.data))))),
+      seq(
+        oid(OID.encryptedData),
+        explicit(0, seq(integer(0), seq(oid(OID.data), enc.algId, implicitPrimitive(0, enc.data)))),
+      ),
     );
   }
   if (key) {
     const enc = await pbeEncrypt(mode, password, key);
-    const bag = seq(oid(OID.shroudedKeyBag), explicit(0, seq(enc.algId, octets(enc.data))), ...attributes(friendlyName, localKeyId));
+    const bag = seq(
+      oid(OID.shroudedKeyBag),
+      explicit(0, seq(enc.algId, octets(enc.data))),
+      ...attributes(friendlyName, localKeyId),
+    );
     contentInfos.push(seq(oid(OID.data), explicit(0, octets(seq(bag)))));
   }
   const authSafe = seq(...contentInfos);
@@ -288,9 +332,20 @@ export async function buildPfx(options: BuildPfxOptions): Promise<Uint8Array> {
   const hash: HashName = mode === "aes" ? "SHA-256" : "SHA-1";
   const macSalt = random(mode === "aes" ? 16 : 8);
   const macIterations = 2048;
-  const macKey = await pkcs12Kdf(hash, bmpPassword(password), macSalt, macIterations, 3, hashLength(hash));
+  const macKey = await pkcs12Kdf(
+    hash,
+    bmpPassword(password),
+    macSalt,
+    macIterations,
+    3,
+    hashLength(hash),
+  );
   const mac = await hmac(hash, macKey, authSafe);
-  const macData = seq(seq(seq(oid(hashToDigestOid[hash]), nul()), octets(mac)), octets(macSalt), integer(macIterations));
+  const macData = seq(
+    seq(seq(oid(hashToDigestOid[hash]), nul()), octets(mac)),
+    octets(macSalt),
+    integer(macIterations),
+  );
 
   return seq(integer(3), seq(oid(OID.data), explicit(0, octets(authSafe))), macData);
 }

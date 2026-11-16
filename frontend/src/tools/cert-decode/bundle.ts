@@ -5,10 +5,25 @@
 import { parseDerStrict, toHex } from "./asn1";
 import { explicit, fromBase64, integer, oid, pem, seq, set, tlv, concat } from "./der";
 import { createZip } from "../image-convert/zip";
-import { detectKeyDer, keyFromDer, keyToPkcs8Pem, PasswordError, publicKeyId, type KeyDerKind, type PrivateKey } from "./keys";
+import {
+  detectKeyDer,
+  keyFromDer,
+  keyToPkcs8Pem,
+  PasswordError,
+  publicKeyId,
+  type KeyDerKind,
+  type PrivateKey,
+} from "./keys";
 import { looksLikeApcP15, readApcP15 } from "./apc-p15";
 import { looksLikePfx, parsePfx } from "./pkcs12";
-import { decodeDer, decodeText, isIssuedBy, parseCertificate, type CertificateInfo, type CsrInfo } from "./x509";
+import {
+  decodeDer,
+  decodeText,
+  isIssuedBy,
+  parseCertificate,
+  type CertificateInfo,
+  type CsrInfo,
+} from "./x509";
 
 export interface Source {
   name: string;
@@ -70,7 +85,15 @@ const isText = (bytes: Uint8Array) => {
 };
 
 export async function loadSources(sources: Source[], password: string): Promise<LoadResult> {
-  const result: LoadResult = { certs: [], csrs: [], keys: [], pfx: [], warnings: [], errors: [], password: "ok" };
+  const result: LoadResult = {
+    certs: [],
+    csrs: [],
+    keys: [],
+    pfx: [],
+    warnings: [],
+    errors: [],
+    password: "ok",
+  };
   const seenCerts = new Set<string>();
   const seenKeys = new Set<string>();
   const multi = sources.length > 1;
@@ -95,7 +118,13 @@ export async function loadSources(sources: Source[], password: string): Promise<
     const hex = toHex(key.pkcs8);
     if (seenKeys.has(hex)) return;
     seenKeys.add(hex);
-    result.keys.push({ key, source, format, friendlyName, keyId: key.spki ? publicKeyId(key.spki) : undefined });
+    result.keys.push({
+      key,
+      source,
+      format,
+      friendlyName,
+      keyId: key.spki ? publicKeyId(key.spki) : undefined,
+    });
   };
 
   const addDecoded = (r: ReturnType<typeof decodeDer>, source: string) => {
@@ -130,10 +159,18 @@ export async function loadSources(sources: Source[], password: string): Promise<
       kind: "apc",
       source,
       details: [
-        { label: "Format", value: p15.header ? "APC-Netzwerkkarte (.p15 mit APC-Header)" : "PKCS#15 ohne APC-Header" },
+        {
+          label: "Format",
+          value: p15.header ? "APC-Netzwerkkarte (.p15 mit APC-Header)" : "PKCS#15 ohne APC-Header",
+        },
         ...(p15.header ? [{ label: "Header", value: "Länge und Prüfsummen korrekt" }] : []),
         ...(p15.tool ? [{ label: "Erzeugt mit", value: p15.tool }] : []),
-        { label: "Inhalt", value: p15.certificate ? "Zertifikat und privater Schlüssel" : "nur privater Schlüssel (kein Zertifikat – z. B. aus „--csr“ des Security Wizard)" },
+        {
+          label: "Inhalt",
+          value: p15.certificate
+            ? "Zertifikat und privater Schlüssel"
+            : "nur privater Schlüssel (kein Zertifikat – z. B. aus „--csr“ des Security Wizard)",
+        },
         { label: "Bezeichnung", value: p15.label },
         { label: "Schlüssel", value: `${key.publicKey.algorithm}${bits ? ` ${bits} Bit` : ""}` },
         {
@@ -159,7 +196,8 @@ export async function loadSources(sources: Source[], password: string): Promise<
     const blocks = [...text.matchAll(/-----BEGIN ([A-Z0-9 ]+)-----([\s\S]*?)-----END \1-----/g)];
     if (blocks.length === 0) {
       const compact = text.replace(/\s+/g, "");
-      if (!/^[A-Za-z0-9+/]+=*$/.test(compact)) throw new Error("Kein PEM-Block und kein Base64 gefunden.");
+      if (!/^[A-Za-z0-9+/]+=*$/.test(compact))
+        throw new Error("Kein PEM-Block und kein Base64 gefunden.");
       return readBinary(fromBase64(compact), source);
     }
     for (const [block, label, body] of blocks) {
@@ -194,7 +232,12 @@ export async function loadSources(sources: Source[], password: string): Promise<
       if (e instanceof PasswordError) notePassword(e, s.name);
       else {
         const msg = (e as Error).message;
-        result.errors.push(prefix(s.name) + (/abgeschnitten|Unerwarteter Aufbau|Zusätzliche Daten/.test(msg) ? `Datei ist beschädigt oder kein unterstütztes Format (${msg}).` : msg));
+        result.errors.push(
+          prefix(s.name) +
+            (/abgeschnitten|Unerwarteter Aufbau|Zusätzliche Daten/.test(msg)
+              ? `Datei ist beschädigt oder kein unterstütztes Format (${msg}).`
+              : msg),
+        );
       }
     }
   }
@@ -203,8 +246,10 @@ export async function loadSources(sources: Source[], password: string): Promise<
 
 // ---------- Zuordnung & Kette ----------
 
-export const certForKey = (key: LoadedKey, certs: LoadedCert[]) => (key.keyId ? certs.find((c) => c.keyId === key.keyId) : undefined);
-export const keyForCert = (cert: LoadedCert, keys: LoadedKey[]) => keys.find((k) => k.keyId && k.keyId === cert.keyId);
+export const certForKey = (key: LoadedKey, certs: LoadedCert[]) =>
+  key.keyId ? certs.find((c) => c.keyId === key.keyId) : undefined;
+export const keyForCert = (cert: LoadedCert, keys: LoadedKey[]) =>
+  keys.find((k) => k.keyId && k.keyId === cert.keyId);
 
 /** Kette ab `leaf` bis zur Root, soweit vorhanden */
 export function chainFrom(leaf: CertificateInfo, all: CertificateInfo[]): CertificateInfo[] {
@@ -223,12 +268,17 @@ export function chainFrom(leaf: CertificateInfo, all: CertificateInfo[]): Certif
 export function defaultMainCert(certs: LoadedCert[], keys: LoadedKey[]): LoadedCert | undefined {
   const withKey = certs.find((c) => keyForCert(c, keys));
   if (withKey) return withKey;
-  return certs.find((c) => !certs.some((o) => o !== c && !o.info.selfSigned && isIssuedBy(o.info, c.info))) ?? certs[0];
+  return (
+    certs.find(
+      (c) => !certs.some((o) => o !== c && !o.info.selfSigned && isIssuedBy(o.info, c.info)),
+    ) ?? certs[0]
+  );
 }
 
 // ---------- Exportformate ----------
 
-export const certsToPem = (certs: CertificateInfo[]) => certs.map((c) => pem("CERTIFICATE", c.der)).join("");
+export const certsToPem = (certs: CertificateInfo[]) =>
+  certs.map((c) => pem("CERTIFICATE", c.der)).join("");
 
 /** PKCS#7 „degenerate SignedData“ – nur Zertifikate, keine Signatur (.p7b) */
 export function buildP7b(certs: CertificateInfo[]): Uint8Array {
@@ -267,7 +317,9 @@ export function webserverZip(chain: CertificateInfo[], key: PrivateKey): Uint8Ar
   ].join("\r\n");
   return createZip([
     { name: "cert.pem", data: enc.encode(certsToPem([leaf])) },
-    ...(intermediates.length ? [{ name: "chain.pem", data: enc.encode(certsToPem(intermediates)) }] : []),
+    ...(intermediates.length
+      ? [{ name: "chain.pem", data: enc.encode(certsToPem(intermediates)) }]
+      : []),
     { name: "fullchain.pem", data: enc.encode(certsToPem([leaf, ...intermediates])) },
     { name: "privkey.pem", data: enc.encode(keyPem) },
     { name: "combined.pem", data: enc.encode(certsToPem([leaf, ...intermediates]) + keyPem) },
@@ -277,6 +329,14 @@ export function webserverZip(chain: CertificateInfo[], key: PrivateKey): Uint8Ar
 
 /** Dateiname aus dem CN, z. B. „*.example.com“ → „wildcard.example.com“ */
 export function baseName(cert: CertificateInfo | undefined): string {
-  const cn = cert?.subject.attrs.find((a) => a.type === "CN")?.value ?? cert?.san.find((s) => s.type === "DNS")?.value ?? "zertifikat";
-  return cn.replace(/^\*\./, "wildcard.").replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^[._]+|[._]+$/g, "") || "zertifikat";
+  const cn =
+    cert?.subject.attrs.find((a) => a.type === "CN")?.value ??
+    cert?.san.find((s) => s.type === "DNS")?.value ??
+    "zertifikat";
+  return (
+    cn
+      .replace(/^\*\./, "wildcard.")
+      .replace(/[^A-Za-z0-9._-]+/g, "_")
+      .replace(/^[._]+|[._]+$/g, "") || "zertifikat"
+  );
 }

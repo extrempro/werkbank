@@ -200,7 +200,9 @@ function ItemCard({
   rows.push({
     label: "Erweiterungen",
     value: list(
-      item.extensions.map((extension) => `${extension.name}${extension.critical ? " (kritisch)" : ""}`),
+      item.extensions.map(
+        (extension) => `${extension.name}${extension.critical ? " (kritisch)" : ""}`,
+      ),
     ),
     plain: true,
   });
@@ -436,7 +438,9 @@ function ExportPanel({ result }: { result: LoadResult }) {
             <button
               type="button"
               className="button button-secondary"
-              onClick={() => downloadBlob(textBlob(certsToPem(chain.slice(1))), `${name}-chain.pem`)}
+              onClick={() =>
+                downloadBlob(textBlob(certsToPem(chain.slice(1))), `${name}-chain.pem`)
+              }
             >
               Nur Kette ohne Zertifikat (.pem)
             </button>
@@ -545,8 +549,7 @@ function ExportPanel({ result }: { result: LoadResult }) {
                   key: key?.key.pkcs8,
                   certs: chain.map((entry) => entry.der),
                   password,
-                  friendlyName:
-                    friendlyName.trim() || main.friendlyName || commonName(main.info),
+                  friendlyName: friendlyName.trim() || main.friendlyName || commonName(main.info),
                   mode,
                 });
                 downloadBlob(binBlob(pfx, "application/x-pkcs12"), `${name}.pfx`);
@@ -625,8 +628,8 @@ function ExportPanel({ result }: { result: LoadResult }) {
                   <p key={check.text}>{check.text}</p>
                 ))}
               <p>
-                So geht es: neuen RSA-Schlüssel mit 2048 Bit und CSR erstellen, von der CA
-                signieren lassen und das Zertifikat zusammen mit dem neuen Schlüssel hier laden.{" "}
+                So geht es: neuen RSA-Schlüssel mit 2048 Bit und CSR erstellen, von der CA signieren
+                lassen und das Zertifikat zusammen mit dem neuen Schlüssel hier laden.{" "}
                 <Link to={`${TOOLS_PATH}/csr?schluessel=rsa2048`}>CSR mit RSA 2048 erstellen</Link>
               </p>
             </div>
@@ -710,7 +713,10 @@ export default function CertDecodeTool() {
     const loaded = await Promise.all(
       picked
         .filter((file) => file.size <= MAX_FILE)
-        .map(async (file) => ({ name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) })),
+        .map(async (file) => ({
+          name: file.name,
+          bytes: new Uint8Array(await file.arrayBuffer()),
+        })),
     );
     setFiles((previous) => [
       ...previous.filter((entry) => !loaded.some((fresh) => fresh.name === entry.name)),

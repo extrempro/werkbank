@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { intermediatePem, leafCsrPem, leafPem, rootPem } from "./fixtures";
-import { analyzeChain, decodeText, fingerprints, validityStatus, type CertificateInfo, type CsrInfo } from "./x509";
+import {
+  analyzeChain,
+  decodeText,
+  fingerprints,
+  validityStatus,
+  type CertificateInfo,
+  type CsrInfo,
+} from "./x509";
 
 const cert = (pem: string) => decodeText(pem).items[0] as CertificateInfo;
 
@@ -8,7 +15,9 @@ describe("Zertifikat", () => {
   const leaf = cert(leafPem);
 
   it("liest Antragsteller, Aussteller und Seriennummer", () => {
-    expect(leaf.subject.text).toBe("CN=intranet.example.com, OU=IT, O=Beispiel GmbH, L=München, ST=Bayern, C=DE");
+    expect(leaf.subject.text).toBe(
+      "CN=intranet.example.com, OU=IT, O=Beispiel GmbH, L=München, ST=Bayern, C=DE",
+    );
     expect(leaf.issuer.text).toBe("CN=Beispiel Issuing CA, O=Beispiel GmbH, C=DE");
     expect(leaf.serial).toBe("FB7F6AFB6E68466FD9F4B1C58FD821AB0C69BF6F");
     expect(leaf.version).toBe(3);
@@ -46,7 +55,8 @@ describe("Zertifikat", () => {
   it("berechnet Fingerprints wie OpenSSL", async () => {
     expect(await fingerprints(leaf.der)).toEqual({
       sha1: "48:97:D6:DA:24:EF:65:F7:17:7D:C6:E8:93:C5:2C:5D:C2:DF:4E:97",
-      sha256: "6A:30:FE:26:44:ED:0F:AF:D8:5E:2F:45:E4:9F:F5:16:17:9F:31:B2:FF:6E:6C:BB:D4:53:93:12:64:D1:F6:4B",
+      sha256:
+        "6A:30:FE:26:44:ED:0F:AF:D8:5E:2F:45:E4:9F:F5:16:17:9F:31:B2:FF:6E:6C:BB:D4:53:93:12:64:D1:F6:4B",
     });
   });
 

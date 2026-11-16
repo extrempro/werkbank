@@ -2,13 +2,7 @@ import { useCallback, useEffect, useRef, useState, type DragEvent } from "react"
 import { downloadBlob } from "../download";
 import { clampInt, useToolParams } from "../params";
 import { ErrorBox, ToolSection } from "../ui";
-import {
-  convertImage,
-  dataUrl,
-  detectEncoders,
-  loadImage,
-  type ConvertSettings,
-} from "./convert";
+import { convertImage, dataUrl, detectEncoders, loadImage, type ConvertSettings } from "./convert";
 import {
   detectFormat,
   formatBytes,
@@ -121,7 +115,9 @@ export default function ImageConvertTool() {
       try {
         const image = await loadImage(item.file);
         const preview =
-          item.file.size <= MAX_PREVIEW_BYTES ? await dataUrl(item.file).catch(() => undefined) : undefined;
+          item.file.size <= MAX_PREVIEW_BYTES
+            ? await dataUrl(item.file).catch(() => undefined)
+            : undefined;
         update(item.id, {
           status: "ready",
           format: detected,
@@ -226,8 +222,7 @@ export default function ImageConvertTool() {
   };
 
   // Ergebnisse gelten nur für die Einstellungen, mit denen sie entstanden.
-  const current = (item: Item) =>
-    item.result?.settings === settingsKey ? item.result : undefined;
+  const current = (item: Item) => (item.result?.settings === settingsKey ? item.result : undefined);
   const ready = items.filter((item) => item.status === "ready").length;
   const results = items.filter((item) => current(item));
   const totalBefore = results.reduce((sum, item) => sum + item.file.size, 0);
@@ -433,68 +428,67 @@ export default function ImageConvertTool() {
             {items.map((item) => {
               const result = current(item);
               return (
-              <li key={item.id} className="image-item">
-                {item.preview ? (
-                  <img src={item.preview} alt="" className="image-thumb" />
-                ) : (
-                  <span className="image-thumb" aria-hidden="true" />
-                )}
-                <div className="image-info">
-                  <strong className="tool-break">{item.file.name}</strong>
-                  <span className="small">
-                    {item.format ? inputLabels[item.format] : "…"}
-                    {item.width ? ` · ${item.width} × ${item.height} px` : ""} ·{" "}
-                    {formatBytes(item.file.size)}
-                  </span>
-                  {item.error && <span className="hint-box hint-bad">{item.error}</span>}
-                  {item.status === "converting" && (
-                    <span className="small">wird umgewandelt …</span>
+                <li key={item.id} className="image-item">
+                  {item.preview ? (
+                    <img src={item.preview} alt="" className="image-thumb" />
+                  ) : (
+                    <span className="image-thumb" aria-hidden="true" />
                   )}
-                  {result && (
+                  <div className="image-info">
+                    <strong className="tool-break">{item.file.name}</strong>
                     <span className="small">
-                      → <span className="mono tool-break">{result.name}</span> ·{" "}
-                      {result.width} × {result.height} px ·{" "}
-                      {formatBytes(result.blob.size)}{" "}
-                      <span
-                        className={
-                          result.blob.size <= item.file.size
-                            ? "pill pill-ok"
-                            : "pill pill-neutral"
-                        }
-                      >
-                        {sizeChange(item.file.size, result.blob.size)}
+                      {item.format ? inputLabels[item.format] : "…"}
+                      {item.width ? ` · ${item.width} × ${item.height} px` : ""} ·{" "}
+                      {formatBytes(item.file.size)}
+                    </span>
+                    {item.error && <span className="hint-box hint-bad">{item.error}</span>}
+                    {item.status === "converting" && (
+                      <span className="small">wird umgewandelt …</span>
+                    )}
+                    {result && (
+                      <span className="small">
+                        → <span className="mono tool-break">{result.name}</span> · {result.width} ×{" "}
+                        {result.height} px · {formatBytes(result.blob.size)}{" "}
+                        <span
+                          className={
+                            result.blob.size <= item.file.size
+                              ? "pill pill-ok"
+                              : "pill pill-neutral"
+                          }
+                        >
+                          {sizeChange(item.file.size, result.blob.size)}
+                        </span>
                       </span>
-                    </span>
-                  )}
-                  {result?.notes.map((note) => (
-                    <span key={note} className="small">
-                      {note}
-                    </span>
-                  ))}
-                </div>
-                <div className="tool-row">
-                  {result && (
+                    )}
+                    {result?.notes.map((note) => (
+                      <span key={note} className="small">
+                        {note}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="tool-row">
+                    {result && (
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        onClick={() => downloadBlob(result.blob, result.name)}
+                      >
+                        Herunterladen
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="button button-secondary"
-                      onClick={() => downloadBlob(result.blob, result.name)}
+                      disabled={busy}
+                      aria-label={`${item.file.name} entfernen`}
+                      onClick={() =>
+                        setItems((list) => list.filter((entry) => entry.id !== item.id))
+                      }
                     >
-                      Herunterladen
+                      Entfernen
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    className="button button-secondary"
-                    disabled={busy}
-                    aria-label={`${item.file.name} entfernen`}
-                    onClick={() =>
-                      setItems((list) => list.filter((entry) => entry.id !== item.id))
-                    }
-                  >
-                    Entfernen
-                  </button>
-                </div>
-              </li>
+                  </div>
+                </li>
               );
             })}
           </ul>
@@ -503,8 +497,8 @@ export default function ImageConvertTool() {
 
       <p className="small">
         Alle Bilder werden nur in deinem Browser verarbeitet und nirgends hochgeladen. Beim
-        Umwandeln gehen Metadaten wie EXIF, Kameradaten und GPS-Position verloren; Handyfotos
-        werden dabei richtig herum gedreht.
+        Umwandeln gehen Metadaten wie EXIF, Kameradaten und GPS-Position verloren; Handyfotos werden
+        dabei richtig herum gedreht.
       </p>
     </div>
   );

@@ -171,7 +171,10 @@ export interface DecodeResult {
 // ---------- Hilfsfunktionen ----------
 
 function escapeDn(value: string): string {
-  return value.replace(/([,+"\\<>;=])/g, "\\$1").replace(/^([ #])/, "\\$1").replace(/ $/, "\\ ");
+  return value
+    .replace(/([,+"\\<>;=])/g, "\\$1")
+    .replace(/^([ #])/, "\\$1")
+    .replace(/ $/, "\\ ");
 }
 
 export function parseName(node: Asn1Node): ParsedName {
@@ -199,7 +202,7 @@ function formatIp(bytes: Uint8Array): string {
   // längste Folge von Null-Gruppen durch :: ersetzen
   let bestStart = -1;
   let bestLen = 0;
-  for (let i = 0; i < 8; ) {
+  for (let i = 0; i < 8;) {
     if (groups[i] !== 0) {
       i++;
       continue;
@@ -299,7 +302,15 @@ interface ParsedExtensions {
 }
 
 function parseExtensions(seq: Asn1Node | undefined): ParsedExtensions {
-  const result: ParsedExtensions = { list: [], san: [], keyUsage: [], extKeyUsage: [], crlUrls: [], ocspUrls: [], caIssuerUrls: [] };
+  const result: ParsedExtensions = {
+    list: [],
+    san: [],
+    keyUsage: [],
+    extKeyUsage: [],
+    crlUrls: [],
+    ocspUrls: [],
+    caIssuerUrls: [],
+  };
   if (!seq) return result;
   for (const ext of seq.children) {
     const oid = readOid(child(ext, 0));
@@ -333,7 +344,9 @@ function parseExtensions(seq: Asn1Node | undefined): ParsedExtensions {
           });
           break;
         case "2.5.29.19": {
-          const ca = isUniversal(inner.children[0], Tag.Boolean) ? readBoolean(inner.children[0]!) : false;
+          const ca = isUniversal(inner.children[0], Tag.Boolean)
+            ? readBoolean(inner.children[0]!)
+            : false;
           const lenNode = inner.children.find((n) => isUniversal(n, Tag.Integer));
           result.basicConstraints = { ca, pathLength: lenNode ? readSmallInt(lenNode) : undefined };
           break;
@@ -386,7 +399,8 @@ export function parseCertificate(der: Uint8Array): CertificateInfo {
   const ext = parseExtensions(extWrapper?.children[0]);
 
   const selfSigned =
-    subject.text === issuer.text && (!ext.authorityKeyId || !ext.subjectKeyId || ext.authorityKeyId === ext.subjectKeyId);
+    subject.text === issuer.text &&
+    (!ext.authorityKeyId || !ext.subjectKeyId || ext.authorityKeyId === ext.subjectKeyId);
 
   return {
     kind: "certificate",
@@ -446,7 +460,9 @@ export function parseCsr(der: Uint8Array): CsrInfo {
 function parsePkcs7(top: Asn1Node): Uint8Array[] {
   const signedData = child(child(top, 1), 0);
   const certs = signedData.children.find((n) => isContext(n, 0));
-  return (certs?.children ?? []).filter((n) => isUniversal(n, Tag.Sequence)).map((n) => raw(n).slice());
+  return (certs?.children ?? [])
+    .filter((n) => isUniversal(n, Tag.Sequence))
+    .map((n) => raw(n).slice());
 }
 
 type DerKind = "certificate" | "csr" | "pkcs7" | "pkcs12" | "unknown";
@@ -455,12 +471,18 @@ function detectDer(der: Uint8Array): { kind: DerKind; node: Asn1Node } {
   const top = parseDerStrict(der);
   const first = top.children[0];
   const second = top.children[1];
-  if (isUniversal(first, Tag.Oid) && readOid(first) === "1.2.840.113549.1.7.2") return { kind: "pkcs7", node: top };
-  if (isUniversal(first, Tag.Integer) && readSmallInt(first) === 3 && isUniversal(second, Tag.Sequence)) {
+  if (isUniversal(first, Tag.Oid) && readOid(first) === "1.2.840.113549.1.7.2")
+    return { kind: "pkcs7", node: top };
+  if (
+    isUniversal(first, Tag.Integer) &&
+    readSmallInt(first) === 3 &&
+    isUniversal(second, Tag.Sequence)
+  ) {
     return { kind: "pkcs12", node: top };
   }
   if (isUniversal(first, Tag.Sequence) && top.children.length === 3) {
-    if (isContext(first.children[0], 0) || first.children.length >= 6) return { kind: "certificate", node: top };
+    if (isContext(first.children[0], 0) || first.children.length >= 6)
+      return { kind: "certificate", node: top };
     return { kind: "csr", node: top };
   }
   return { kind: "unknown", node: top };
@@ -489,7 +511,9 @@ export function decodeDer(der: Uint8Array): DecodeResult {
       for (const c of parsePkcs7(node)) items.push(parseCertificate(c));
       break;
     case "pkcs12":
-      warnings.push("PFX/PKCS#12-Dateien enthalten private Schlüssel und werden hier bewusst nicht geöffnet.");
+      warnings.push(
+        "PFX/PKCS#12-Dateien enthalten private Schlüssel und werden hier bewusst nicht geöffnet.",
+      );
       break;
     default:
       warnings.push("Unbekanntes Format – erwartet Zertifikat, CSR oder PKCS#7.");
@@ -505,19 +529,24 @@ export function decodeText(text: string): DecodeResult {
 
   if (blocks.length === 0) {
     const compact = text.replace(/\s+/g, "");
-    if (!/^[A-Za-z0-9+/]+=*$/.test(compact)) throw new Error("Kein PEM-Block und kein Base64 gefunden.");
+    if (!/^[A-Za-z0-9+/]+=*$/.test(compact))
+      throw new Error("Kein PEM-Block und kein Base64 gefunden.");
     return decodeDer(base64ToBytes(compact));
   }
 
   for (const [, label, body] of blocks) {
     if (privateKeyLabels.test(label!)) {
-      warnings.push("Ein privater Schlüssel wurde ignoriert. Private Schlüssel bitte nirgends einfügen!");
+      warnings.push(
+        "Ein privater Schlüssel wurde ignoriert. Private Schlüssel bitte nirgends einfügen!",
+      );
       continue;
     }
     try {
       const der = base64ToBytes(body!);
-      if (label === "CERTIFICATE" || label === "TRUSTED CERTIFICATE") items.push(parseCertificate(der));
-      else if (label === "CERTIFICATE REQUEST" || label === "NEW CERTIFICATE REQUEST") items.push(parseCsr(der));
+      if (label === "CERTIFICATE" || label === "TRUSTED CERTIFICATE")
+        items.push(parseCertificate(der));
+      else if (label === "CERTIFICATE REQUEST" || label === "NEW CERTIFICATE REQUEST")
+        items.push(parseCsr(der));
       else if (label === "PKCS7") {
         const r = decodeDer(der);
         items.push(...r.items);
@@ -539,7 +568,8 @@ export async function fingerprints(der: Uint8Array): Promise<{ sha1: string; sha
 // ---------- Kette ----------
 
 export function isIssuedBy(cert: CertificateInfo, issuer: CertificateInfo): boolean {
-  if (cert.authorityKeyId && issuer.subjectKeyId) return cert.authorityKeyId === issuer.subjectKeyId;
+  if (cert.authorityKeyId && issuer.subjectKeyId)
+    return cert.authorityKeyId === issuer.subjectKeyId;
   return cert.issuer.text === issuer.subject.text;
 }
 
@@ -553,7 +583,8 @@ export interface ChainAnalysis {
 export function analyzeChain(certs: CertificateInfo[]): ChainAnalysis | null {
   if (certs.length < 2) return null;
   const issues: string[] = [];
-  const name = (c: CertificateInfo) => c.subject.attrs.find((a) => a.type === "CN")?.value ?? c.subject.text;
+  const name = (c: CertificateInfo) =>
+    c.subject.attrs.find((a) => a.type === "CN")?.value ?? c.subject.text;
 
   let inOrder = true;
   for (let i = 0; i + 1 < certs.length; i++) {
@@ -561,14 +592,18 @@ export function analyzeChain(certs: CertificateInfo[]): ChainAnalysis | null {
   }
 
   // Blatt = Zertifikat, das kein anderes ausgestellt hat
-  const leaf = certs.find((c) => !certs.some((o) => o !== c && !o.selfSigned && isIssuedBy(o, c))) ?? certs[0]!;
+  const leaf =
+    certs.find((c) => !certs.some((o) => o !== c && !o.selfSigned && isIssuedBy(o, c))) ??
+    certs[0]!;
   const ordered: CertificateInfo[] = [leaf];
   let current = leaf;
   let gap = false;
   while (!current.selfSigned) {
     const next = certs.find((c) => !ordered.includes(c) && isIssuedBy(current, c));
     if (!next) {
-      issues.push(`Der Aussteller von „${name(current)}“ (${current.issuer.text}) fehlt in der Kette.`);
+      issues.push(
+        `Der Aussteller von „${name(current)}“ (${current.issuer.text}) fehlt in der Kette.`,
+      );
       gap = true;
       break;
     }
@@ -583,24 +618,34 @@ export function analyzeChain(certs: CertificateInfo[]): ChainAnalysis | null {
         : `„${name(c)}“ gehört nicht zu dieser Kette.`,
     );
   }
-  if (!inOrder && unused.length === 0) issues.unshift("Die Reihenfolge stimmt nicht – erwartet wird Blatt → Zwischenzertifikat(e) → Root.");
+  if (!inOrder && unused.length === 0)
+    issues.unshift(
+      "Die Reihenfolge stimmt nicht – erwartet wird Blatt → Zwischenzertifikat(e) → Root.",
+    );
   if (ordered.length > 1 && ordered[ordered.length - 1]!.selfSigned) {
-    issues.push("Das Root-Zertifikat ist enthalten. Server sollten es meist nicht mitsenden – Clients haben es bereits im Vertrauensspeicher.");
+    issues.push(
+      "Das Root-Zertifikat ist enthalten. Server sollten es meist nicht mitsenden – Clients haben es bereits im Vertrauensspeicher.",
+    );
   }
 
   return { inOrder, issues, ordered };
 }
 
-export function validityStatus(cert: CertificateInfo, now = new Date()): { tone: "ok" | "warn" | "error"; text: string } {
+export function validityStatus(
+  cert: CertificateInfo,
+  now = new Date(),
+): { tone: "ok" | "warn" | "error"; text: string } {
   const day = 86_400_000;
   if (now < cert.notBefore) return { tone: "error", text: "noch nicht gültig" };
   if (now > cert.notAfter) {
-    return { tone: "error", text: `abgelaufen seit ${Math.floor((now.getTime() - cert.notAfter.getTime()) / day)} Tagen` };
+    return {
+      tone: "error",
+      text: `abgelaufen seit ${Math.floor((now.getTime() - cert.notAfter.getTime()) / day)} Tagen`,
+    };
   }
   const left = Math.floor((cert.notAfter.getTime() - now.getTime()) / day);
   return { tone: left <= 30 ? "warn" : "ok", text: `gültig, noch ${left} Tage` };
 }
-
 
 /** Beschreibung eines SubjectPublicKeyInfo (DER), z. B. eines aus einem privaten Schlüssel abgeleiteten */
 export function describePublicKey(spki: Uint8Array): PublicKeyInfo {

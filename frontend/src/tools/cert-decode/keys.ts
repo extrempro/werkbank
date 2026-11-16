@@ -2,8 +2,32 @@
  * Private Schlüssel: PKCS#8 (auch verschlüsselt), PKCS#1 (RSA) und SEC1 (EC) lesen und umwandeln.
  * Zu jedem Schlüssel wird der öffentliche Schlüssel abgeleitet, um ihn einem Zertifikat zuzuordnen.
  */
-import { child, content, isContext, isUniversal, parseDerStrict, raw, readBitString, readOid, readSmallInt, Tag, toHex, type Asn1Node } from "./asn1";
-import { bitString, explicit, fromBase64, integer, nul, octets, oid, pem, seq, toBase64 } from "./der";
+import {
+  child,
+  content,
+  isContext,
+  isUniversal,
+  parseDerStrict,
+  raw,
+  readBitString,
+  readOid,
+  readSmallInt,
+  Tag,
+  toHex,
+  type Asn1Node,
+} from "./asn1";
+import {
+  bitString,
+  explicit,
+  fromBase64,
+  integer,
+  nul,
+  octets,
+  oid,
+  pem,
+  seq,
+  toBase64,
+} from "./der";
 import { describePbe, encryptedParts, OID as PBE_OID, pbeDecrypt, pbeEncrypt } from "./pbe";
 import { curveOids, describePublicKey, type PublicKeyInfo } from "./x509";
 
@@ -35,7 +59,10 @@ export interface PrivateKey {
 
 const b64url = (s: string) => fromBase64(s.replace(/-/g, "+").replace(/_/g, "/"));
 
-async function publicFromWebCrypto(pkcs8: Uint8Array, alg: EcKeyImportParams | Algorithm): Promise<Uint8Array | undefined> {
+async function publicFromWebCrypto(
+  pkcs8: Uint8Array,
+  alg: EcKeyImportParams | Algorithm,
+): Promise<Uint8Array | undefined> {
   try {
     const subtle = globalThis.crypto?.subtle;
     if (!subtle) return undefined;
@@ -68,23 +95,32 @@ export async function parsePkcs8(der: Uint8Array): Promise<PrivateKey> {
       const rsa = parseDerStrict(inner);
       const n = content(child(rsa, 1));
       const e = content(child(rsa, 2));
-      const spki = seq(alg === KEY_OID.rsa ? seq(oid(KEY_OID.rsa), nul()) : raw(algId), bitString(seq(integer(n), integer(e))));
+      const spki = seq(
+        alg === KEY_OID.rsa ? seq(oid(KEY_OID.rsa), nul()) : raw(algId),
+        bitString(seq(integer(n), integer(e))),
+      );
       return {
         pkcs8: der,
         spki,
         publicKey: describePublicKey(spki),
-        traditional: alg === KEY_OID.rsa ? { label: "RSA PRIVATE KEY", der: inner.slice() } : undefined,
+        traditional:
+          alg === KEY_OID.rsa ? { label: "RSA PRIVATE KEY", der: inner.slice() } : undefined,
       };
     }
     case KEY_OID.ec: {
       const param = algId.children[1];
-      if (!isUniversal(param, Tag.Oid)) throw new Error("EC-Schlüssel mit expliziten Kurvenparametern werden nicht unterstützt");
+      if (!isUniversal(param, Tag.Oid))
+        throw new Error("EC-Schlüssel mit expliziten Kurvenparametern werden nicht unterstützt");
       const curve = readOid(param);
       const ec = parseDerStrict(inner);
       const privateScalar = content(child(ec, 1));
       const pubNode = ec.children.find((n) => isContext(n, 1));
       let point = pubNode ? readBitString(child(pubNode, 0)) : undefined;
-      if (!point && webCryptoCurves[curve]) point = await publicFromWebCrypto(der, { name: "ECDSA", namedCurve: webCryptoCurves[curve]! });
+      if (!point && webCryptoCurves[curve])
+        point = await publicFromWebCrypto(der, {
+          name: "ECDSA",
+          namedCurve: webCryptoCurves[curve]!,
+        });
       const spki = point ? seq(seq(oid(KEY_OID.ec), oid(curve)), bitString(point)) : undefined;
       const sec1 = seq(
         integer(1),
@@ -95,7 +131,9 @@ export async function parsePkcs8(der: Uint8Array): Promise<PrivateKey> {
       return {
         pkcs8: der,
         spki,
-        publicKey: spki ? describePublicKey(spki) : { algorithm: "ECDSA", curve: curveOids[curve]?.name ?? curve },
+        publicKey: spki
+          ? describePublicKey(spki)
+          : { algorithm: "ECDSA", curve: curveOids[curve]?.name ?? curve },
         traditional: { label: "EC PRIVATE KEY", der: sec1 },
       };
     }
@@ -103,11 +141,21 @@ export async function parsePkcs8(der: Uint8Array): Promise<PrivateKey> {
     case KEY_OID.ed448:
     case KEY_OID.x25519:
     case KEY_OID.x448: {
-      const names = { [KEY_OID.ed25519]: "Ed25519", [KEY_OID.ed448]: "Ed448", [KEY_OID.x25519]: "X25519", [KEY_OID.x448]: "X448" };
+      const names = {
+        [KEY_OID.ed25519]: "Ed25519",
+        [KEY_OID.ed448]: "Ed448",
+        [KEY_OID.x25519]: "X25519",
+        [KEY_OID.x448]: "X448",
+      };
       let pub = embeddedPublicKey(top);
-      if (!pub && alg === KEY_OID.ed25519) pub = await publicFromWebCrypto(der, { name: "Ed25519" });
+      if (!pub && alg === KEY_OID.ed25519)
+        pub = await publicFromWebCrypto(der, { name: "Ed25519" });
       const spki = pub ? seq(seq(oid(alg)), bitString(pub)) : undefined;
-      return { pkcs8: der, spki, publicKey: spki ? describePublicKey(spki) : { algorithm: names[alg] } };
+      return {
+        pkcs8: der,
+        spki,
+        publicKey: spki ? describePublicKey(spki) : { algorithm: names[alg] },
+      };
     }
     default:
       throw new Error(`Schlüsseltyp ${alg} wird nicht unterstützt`);
@@ -125,7 +173,8 @@ export function sec1ToPkcs8(der: Uint8Array): Uint8Array {
   const ec = parseDerStrict(der);
   const params = ec.children.find((n) => isContext(n, 0));
   const curveNode = params?.children[0];
-  if (!isUniversal(curveNode, Tag.Oid)) throw new Error("EC-Schlüssel ohne benannte Kurve werden nicht unterstützt");
+  if (!isUniversal(curveNode, Tag.Oid))
+    throw new Error("EC-Schlüssel ohne benannte Kurve werden nicht unterstützt");
   const pub = ec.children.find((n) => isContext(n, 1));
   const inner = seq(integer(1), raw(child(ec, 1)), ...(pub ? [raw(pub)] : []));
   return seq(integer(0), seq(oid(KEY_OID.ec), raw(curveNode)), octets(inner));
@@ -133,20 +182,44 @@ export function sec1ToPkcs8(der: Uint8Array): Uint8Array {
 
 export type KeyDerKind = "pkcs8" | "pkcs8-encrypted" | "pkcs1" | "sec1";
 
-const pbeOids = new Set<string>([PBE_OID.pbes2, PBE_OID.pbeSha1And3Des, PBE_OID.pbeSha1And2Des, PBE_OID.pbeSha1AndRc2_128, PBE_OID.pbeSha1AndRc2_40, PBE_OID.pbeSha1AndRc4_128, PBE_OID.pbeSha1AndRc4_40]);
+const pbeOids = new Set<string>([
+  PBE_OID.pbes2,
+  PBE_OID.pbeSha1And3Des,
+  PBE_OID.pbeSha1And2Des,
+  PBE_OID.pbeSha1AndRc2_128,
+  PBE_OID.pbeSha1AndRc2_40,
+  PBE_OID.pbeSha1AndRc4_128,
+  PBE_OID.pbeSha1AndRc4_40,
+]);
 
 /** erkennt, ob ein DER-Element ein privater Schlüssel ist */
 export function detectKeyDer(top: Asn1Node): KeyDerKind | null {
   const [a, b, c] = top.children;
   if (!isUniversal(top, Tag.Sequence) || !a) return null;
-  if (isUniversal(a, Tag.Integer) && isUniversal(b, Tag.Sequence) && isUniversal(b.children[0], Tag.Oid) && isUniversal(c, Tag.OctetString)) {
+  if (
+    isUniversal(a, Tag.Integer) &&
+    isUniversal(b, Tag.Sequence) &&
+    isUniversal(b.children[0], Tag.Oid) &&
+    isUniversal(c, Tag.OctetString)
+  ) {
     return "pkcs8";
   }
-  if (top.children.length === 2 && isUniversal(a, Tag.Sequence) && isUniversal(a.children[0], Tag.Oid) && isUniversal(b, Tag.OctetString)) {
+  if (
+    top.children.length === 2 &&
+    isUniversal(a, Tag.Sequence) &&
+    isUniversal(a.children[0], Tag.Oid) &&
+    isUniversal(b, Tag.OctetString)
+  ) {
     return pbeOids.has(readOid(a.children[0])) ? "pkcs8-encrypted" : null;
   }
-  if (top.children.length >= 9 && top.children.every((n) => isUniversal(n, Tag.Integer)) && readSmallInt(a) === 0) return "pkcs1";
-  if (isUniversal(a, Tag.Integer) && readSmallInt(a) === 1 && isUniversal(b, Tag.OctetString)) return "sec1";
+  if (
+    top.children.length >= 9 &&
+    top.children.every((n) => isUniversal(n, Tag.Integer)) &&
+    readSmallInt(a) === 0
+  )
+    return "pkcs1";
+  if (isUniversal(a, Tag.Integer) && readSmallInt(a) === 1 && isUniversal(b, Tag.OctetString))
+    return "sec1";
   return null;
 }
 
@@ -161,12 +234,19 @@ export class PasswordError extends Error {
 }
 
 /** EncryptedPrivateKeyInfo entschlüsseln; liefert PKCS#8 und das verwendete Verfahren */
-export async function decryptPkcs8(der: Uint8Array, password: string): Promise<{ pkcs8: Uint8Array; method: string }> {
+export async function decryptPkcs8(
+  der: Uint8Array,
+  password: string,
+): Promise<{ pkcs8: Uint8Array; method: string }> {
   const node = parseDerStrict(der);
   const { algId, data } = encryptedParts(node);
   const info = describePbe(algId);
   const method = `${info.label}, ${info.iterations.toLocaleString("de-DE")} Iterationen`;
-  if (!password) throw new PasswordError("Der private Schlüssel ist verschlüsselt – bitte Kennwort eingeben.", true);
+  if (!password)
+    throw new PasswordError(
+      "Der private Schlüssel ist verschlüsselt – bitte Kennwort eingeben.",
+      true,
+    );
   let plain: Uint8Array;
   try {
     plain = await pbeDecrypt(algId, data, password);
@@ -179,7 +259,11 @@ export async function decryptPkcs8(der: Uint8Array, password: string): Promise<{
 }
 
 /** Schlüssel aus DER beliebigen Formats → PKCS#8 */
-export async function keyFromDer(der: Uint8Array, kind: KeyDerKind, password: string): Promise<{ key: PrivateKey; method?: string }> {
+export async function keyFromDer(
+  der: Uint8Array,
+  kind: KeyDerKind,
+  password: string,
+): Promise<{ key: PrivateKey; method?: string }> {
   switch (kind) {
     case "pkcs8":
       return { key: await parsePkcs8(der) };

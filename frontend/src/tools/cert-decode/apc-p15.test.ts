@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { apcCertPem, apcKeyPem, apcReferenceKeyP15, apcReferenceP15 } from "./apc-fixtures";
-import { APC_HEADER_LENGTH, apcHeader, buildApcP15, checkApcCompatibility, crc16Xmodem, looksLikeApcP15, readApcP15 } from "./apc-p15";
+import {
+  APC_HEADER_LENGTH,
+  apcHeader,
+  buildApcP15,
+  checkApcCompatibility,
+  crc16Xmodem,
+  looksLikeApcP15,
+  readApcP15,
+} from "./apc-p15";
 import { child, parseDerStrict, raw } from "./asn1";
 import { integer, seq } from "./der";
 import type { PrivateKey } from "./keys";
@@ -152,7 +160,10 @@ describe("APC-.p15 erzeugen", () => {
       const big: PrivateKey = {
         pkcs8: new Uint8Array(),
         publicKey: { algorithm: "RSA", bits },
-        traditional: { label: "RSA PRIVATE KEY", der: seq(integer(0), integer(n), ...[3, 5, 7, 11, 13, 17, 19].map((v) => integer(v))) },
+        traditional: {
+          label: "RSA PRIVATE KEY",
+          der: seq(integer(0), integer(n), ...[3, 5, 7, 11, 13, 17, 19].map((v) => integer(v))),
+        },
       };
       const checks = checkApcCompatibility(cert, big);
       expect(checks.some((c) => c.tone === "error" && c.text.includes(`${bits} Bit`))).toBe(true);
@@ -176,7 +187,11 @@ describe("Kompatibilitätsprüfung", () => {
 
   it("warnt bei abgelaufenen Zertifikaten und fehlendem Schlüssel", async () => {
     const { cert, key } = await load(apcKeyPem, apcCertPem);
-    expect(checkApcCompatibility(cert, key, new Date("2200-01-01")).some((c) => /abgelaufen/.test(c.text))).toBe(true);
+    expect(
+      checkApcCompatibility(cert, key, new Date("2200-01-01")).some((c) =>
+        /abgelaufen/.test(c.text),
+      ),
+    ).toBe(true);
     expect(checkApcCompatibility(cert, undefined)[0]!.tone).toBe("error");
   });
 });

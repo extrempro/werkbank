@@ -55,7 +55,12 @@ export function rc2(key: Uint8Array, effectiveBits = key.length * 8) {
       let j = 0;
       const mix = () => {
         for (let i = 0; i < 4; i++) {
-          R[i] = (R[i]! + K[j]! + (R[(i + 3) % 4]! & R[(i + 2) % 4]!) + (~R[(i + 3) % 4]! & R[(i + 1) % 4]!)) & 0xffff;
+          R[i] =
+            (R[i]! +
+              K[j]! +
+              (R[(i + 3) % 4]! & R[(i + 2) % 4]!) +
+              (~R[(i + 3) % 4]! & R[(i + 1) % 4]!)) &
+            0xffff;
           j++;
           R[i] = rol(R[i]!, S[i]!);
         }
@@ -76,7 +81,12 @@ export function rc2(key: Uint8Array, effectiveBits = key.length * 8) {
       const rmix = () => {
         for (let i = 3; i >= 0; i--) {
           R[i] = ror(R[i]!, S[i]!);
-          R[i] = (R[i]! - K[j]! - (R[(i + 3) % 4]! & R[(i + 2) % 4]!) - (~R[(i + 3) % 4]! & R[(i + 1) % 4]!)) & 0xffff;
+          R[i] =
+            (R[i]! -
+              K[j]! -
+              (R[(i + 3) % 4]! & R[(i + 2) % 4]!) -
+              (~R[(i + 3) % 4]! & R[(i + 1) % 4]!)) &
+            0xffff;
           j--;
         }
       };

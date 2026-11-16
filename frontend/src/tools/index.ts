@@ -839,7 +839,19 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "zertifikate",
     description:
       "Zertifikatsanforderung (CSR) mit privatem Schlüssel im Browser erzeugen, RSA oder ECDSA, mit alternativen Namen. Der Schlüssel verlässt den Browser nicht.",
-    tags: ["csr", "zertifikat", "request", "pkcs10", "ssl", "tls", "san", "schlüssel", "openssl", "rsa", "ecdsa"],
+    tags: [
+      "csr",
+      "zertifikat",
+      "request",
+      "pkcs10",
+      "ssl",
+      "tls",
+      "san",
+      "schlüssel",
+      "openssl",
+      "rsa",
+      "ecdsa",
+    ],
     component: lazy(() => import("./csr/CsrTool")),
   },
 ];

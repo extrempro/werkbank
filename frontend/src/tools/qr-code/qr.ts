@@ -8,7 +8,10 @@
 
 export type Ecl = "L" | "M" | "Q" | "H";
 
-export const eclInfo: Record<Ecl, { label: string; recovery: string; formatBits: number; index: number }> = {
+export const eclInfo: Record<
+  Ecl,
+  { label: string; recovery: string; formatBits: number; index: number }
+> = {
   L: { label: "L – niedrig", recovery: "ca. 7 %", formatBits: 1, index: 0 },
   M: { label: "M – mittel", recovery: "ca. 15 %", formatBits: 0, index: 1 },
   Q: { label: "Q – hoch", recovery: "ca. 25 %", formatBits: 3, index: 2 },
@@ -17,17 +20,41 @@ export const eclInfo: Record<Ecl, { label: string; recovery: string; formatBits:
 
 // Tabellen aus der Norm (Index = Version, Index 0 unbenutzt)
 const ECC_CODEWORDS_PER_BLOCK: number[][] = [
-  [-1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
-  [-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28],
-  [-1, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
-  [-1, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+  [
+    -1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30,
+    30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,
+  ],
+  [
+    -1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28,
+    28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28,
+  ],
+  [
+    -1, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30,
+    30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,
+  ],
+  [
+    -1, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30,
+    30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30,
+  ],
 ];
 
 const NUM_ERROR_CORRECTION_BLOCKS: number[][] = [
-  [-1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25],
-  [-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49],
-  [-1, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68],
-  [-1, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81],
+  [
+    -1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14,
+    15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25,
+  ],
+  [
+    -1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23,
+    25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49,
+  ],
+  [
+    -1, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34,
+    34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68,
+  ],
+  [
+    -1, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35,
+    37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81,
+  ],
 ];
 
 export const MIN_VERSION = 1;
@@ -49,7 +76,10 @@ export function numRawDataModules(ver: number): number {
 /** Anzahl der Daten-Codewörter (Bytes) für Version und Fehlerkorrektur */
 export function numDataCodewords(ver: number, ecl: Ecl): number {
   const e = eclInfo[ecl].index;
-  return Math.floor(numRawDataModules(ver) / 8) - ECC_CODEWORDS_PER_BLOCK[e]![ver]! * NUM_ERROR_CORRECTION_BLOCKS[e]![ver]!;
+  return (
+    Math.floor(numRawDataModules(ver) / 8) -
+    ECC_CODEWORDS_PER_BLOCK[e]![ver]! * NUM_ERROR_CORRECTION_BLOCKS[e]![ver]!
+  );
 }
 
 // ---------- Segmente ----------
@@ -99,7 +129,8 @@ export function makeSegment(text: string): Segment {
   if (mode === "alphanumeric") {
     for (let i = 0; i < text.length; i += 2) {
       const a = ALPHANUMERIC_CHARSET.indexOf(text[i]!);
-      if (i + 1 < text.length) appendBits(bits, a * 45 + ALPHANUMERIC_CHARSET.indexOf(text[i + 1]!), 11);
+      if (i + 1 < text.length)
+        appendBits(bits, a * 45 + ALPHANUMERIC_CHARSET.indexOf(text[i + 1]!), 11);
       else appendBits(bits, a, 6);
     }
     return { mode, numChars: text.length, bits };
@@ -206,7 +237,10 @@ export function addEccAndInterleave(data: number[], ver: number, ecl: Ecl): numb
  * Aufbau der Fehlerkorrektur: zu welchem Block jedes Codewort des verschränkten Datenstroms gehört
  * und wie viele fehlerhafte Codewörter ein Block höchstens verkraftet.
  */
-export function blockLayout(ver: number, ecl: Ecl): { blockOf: number[]; blocks: number; correctable: number } {
+export function blockLayout(
+  ver: number,
+  ecl: Ecl,
+): { blockOf: number[]; blocks: number; correctable: number } {
   const e = eclInfo[ecl].index;
   const numBlocks = NUM_ERROR_CORRECTION_BLOCKS[e]![ver]!;
   const blockEccLen = ECC_CODEWORDS_PER_BLOCK[e]![ver]!;
@@ -220,7 +254,11 @@ export function blockLayout(ver: number, ecl: Ecl): { blockOf: number[]; blocks:
       if (i !== shortBlockLen - blockEccLen || j >= numShortBlocks) blockOf.push(j);
     }
   }
-  return { blockOf: blockOf.slice(0, rawCodewords), blocks: numBlocks, correctable: Math.floor(blockEccLen / 2) };
+  return {
+    blockOf: blockOf.slice(0, rawCodewords),
+    blocks: numBlocks,
+    correctable: Math.floor(blockEccLen / 2),
+  };
 }
 
 // ---------- Matrix ----------
@@ -263,9 +301,15 @@ class Matrix {
   constructor(version: number) {
     this.version = version;
     this.size = version * 4 + 17;
-    this.modules = Array.from({ length: this.size }, () => new Array<boolean>(this.size).fill(false));
-    this.isFunction = Array.from({ length: this.size }, () => new Array<boolean>(this.size).fill(false));
-    this.codewordAt = Array.from({ length: this.size }, () => new Array<number>(this.size).fill(-1));
+    this.modules = Array.from({ length: this.size }, () =>
+      new Array<boolean>(this.size).fill(false),
+    );
+    this.isFunction = Array.from({ length: this.size }, () =>
+      new Array<boolean>(this.size).fill(false),
+    );
+    this.codewordAt = Array.from({ length: this.size }, () =>
+      new Array<number>(this.size).fill(-1),
+    );
   }
 
   setFunction(x: number, y: number, dark: boolean) {
@@ -300,14 +344,16 @@ class Matrix {
         const dist = Math.max(Math.abs(dx), Math.abs(dy));
         const xx = x + dx;
         const yy = y + dy;
-        if (xx >= 0 && xx < this.size && yy >= 0 && yy < this.size) this.setFunction(xx, yy, dist !== 2 && dist !== 4);
+        if (xx >= 0 && xx < this.size && yy >= 0 && yy < this.size)
+          this.setFunction(xx, yy, dist !== 2 && dist !== 4);
       }
     }
   }
 
   private drawAlignment(x: number, y: number) {
     for (let dy = -2; dy <= 2; dy++) {
-      for (let dx = -2; dx <= 2; dx++) this.setFunction(x + dx, y + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+      for (let dx = -2; dx <= 2; dx++)
+        this.setFunction(x + dx, y + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
     }
   }
 
@@ -361,14 +407,29 @@ class Matrix {
         if (this.isFunction[y]![x]) continue;
         let invert: boolean;
         switch (mask) {
-          case 0: invert = (x + y) % 2 === 0; break;
-          case 1: invert = y % 2 === 0; break;
-          case 2: invert = x % 3 === 0; break;
-          case 3: invert = (x + y) % 3 === 0; break;
-          case 4: invert = (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0; break;
-          case 5: invert = ((x * y) % 2) + ((x * y) % 3) === 0; break;
-          case 6: invert = (((x * y) % 2) + ((x * y) % 3)) % 2 === 0; break;
-          default: invert = (((x + y) % 2) + ((x * y) % 3)) % 2 === 0;
+          case 0:
+            invert = (x + y) % 2 === 0;
+            break;
+          case 1:
+            invert = y % 2 === 0;
+            break;
+          case 2:
+            invert = x % 3 === 0;
+            break;
+          case 3:
+            invert = (x + y) % 3 === 0;
+            break;
+          case 4:
+            invert = (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0;
+            break;
+          case 5:
+            invert = ((x * y) % 2) + ((x * y) % 3) === 0;
+            break;
+          case 6:
+            invert = (((x * y) % 2) + ((x * y) % 3)) % 2 === 0;
+            break;
+          default:
+            invert = (((x + y) % 2) + ((x * y) % 3)) % 2 === 0;
         }
         if (invert) this.modules[y]![x] = !this.modules[y]![x];
       }
@@ -400,8 +461,30 @@ class Matrix {
       const at = (k: number) => (k >= 0 && k < size ? get(k) : false);
       for (let i = -4; i + 10 < size + 4; i++) {
         const p = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((k) => at(i + k));
-        const a = p[0] && !p[1] && p[2] && p[3] && p[4] && !p[5] && p[6] && !p[7] && !p[8] && !p[9] && !p[10];
-        const b = !p[0] && !p[1] && !p[2] && !p[3] && p[4] && !p[5] && p[6] && p[7] && p[8] && !p[9] && p[10];
+        const a =
+          p[0] &&
+          !p[1] &&
+          p[2] &&
+          p[3] &&
+          p[4] &&
+          !p[5] &&
+          p[6] &&
+          !p[7] &&
+          !p[8] &&
+          !p[9] &&
+          !p[10];
+        const b =
+          !p[0] &&
+          !p[1] &&
+          !p[2] &&
+          !p[3] &&
+          p[4] &&
+          !p[5] &&
+          p[6] &&
+          p[7] &&
+          p[8] &&
+          !p[9] &&
+          p[10];
         if (a) score += 40;
         if (b) score += 40;
       }

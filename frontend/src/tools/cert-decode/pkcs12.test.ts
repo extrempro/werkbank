@@ -3,8 +3,25 @@ import { parseDerStrict } from "./asn1";
 import { buildP7b, chainFrom, loadSources, webserverZip } from "./bundle";
 import { fromBase64 } from "./der";
 import { intermediatePem, leafPem, rootPem } from "./fixtures";
-import { decryptPkcs8, detectKeyDer, keyFromDer, keyToEncryptedPem, keyToTraditionalPem, PasswordError, publicKeyId } from "./keys";
-import { pfxBer, pfxLegacy, pfxModern, pfxWindows3des, ecCertPem, ecKeyEncryptedPem, ecKeyPem, rsaKeyPem } from "./pfx-fixtures";
+import {
+  decryptPkcs8,
+  detectKeyDer,
+  keyFromDer,
+  keyToEncryptedPem,
+  keyToTraditionalPem,
+  PasswordError,
+  publicKeyId,
+} from "./keys";
+import {
+  pfxBer,
+  pfxLegacy,
+  pfxModern,
+  pfxWindows3des,
+  ecCertPem,
+  ecKeyEncryptedPem,
+  ecKeyPem,
+  rsaKeyPem,
+} from "./pfx-fixtures";
 import { buildPfx, looksLikePfx, parsePfx } from "./pkcs12";
 import { decodeDer, parseCertificate } from "./x509";
 
@@ -66,7 +83,13 @@ describe("PFX erzeugen", () => {
   for (const mode of ["aes", "3des"] as const) {
     it(`Rundreise ${mode}`, async () => {
       const { key } = await keyFromDer(pemBody(ecKeyPem), "sec1", "");
-      const pfx = await buildPfx({ key: key.pkcs8, certs: [ecCert.der], password: "Grüße!", friendlyName: "Server", mode });
+      const pfx = await buildPfx({
+        key: key.pkcs8,
+        certs: [ecCert.der],
+        password: "Grüße!",
+        friendlyName: "Server",
+        mode,
+      });
       const r = await parsePfx(pfx, "Grüße!");
       expect(r.certs[0]!.der).toEqual(ecCert.der);
       expect(r.certs[0]!.friendlyName).toBe("Server");
@@ -143,14 +166,18 @@ describe("Laden und Export", () => {
   it("baut P7B und Webserver-Paket", async () => {
     const r = await loadSources([text(rootPem + leafPem + intermediatePem)], "");
     const leaf = r.certs.find((c) => !c.info.basicConstraints?.ca)!.info;
-    const chain = chainFrom(leaf, r.certs.map((c) => c.info));
+    const chain = chainFrom(
+      leaf,
+      r.certs.map((c) => c.info),
+    );
     expect(chain.length).toBe(3);
     const p7b = decodeDer(buildP7b(chain));
     expect(p7b.items.map((i) => i.der)).toEqual(chain.map((c) => c.der));
 
     const { key } = await keyFromDer(pemBody(ecKeyPem), "sec1", "");
     const zip = new TextDecoder("latin1").decode(webserverZip(chain, key));
-    for (const name of ["cert.pem", "chain.pem", "fullchain.pem", "privkey.pem", "combined.pem"]) expect(zip).toContain(name);
+    for (const name of ["cert.pem", "chain.pem", "fullchain.pem", "privkey.pem", "combined.pem"])
+      expect(zip).toContain(name);
     // Root gehört nicht ins Paket
     expect((zip.match(/BEGIN CERTIFICATE/g) ?? []).length).toBe(1 + 1 + 2 + 2);
   });

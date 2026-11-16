@@ -1,5 +1,17 @@
 /** CSR (PKCS#10) im Browser erzeugen – der private Schlüssel verlässt den Browser nicht. */
-import { bitString, concat, explicit, integer, nul, octets, oid, pem, seq, set, tlv } from "../cert-decode/der";
+import {
+  bitString,
+  concat,
+  explicit,
+  integer,
+  nul,
+  octets,
+  oid,
+  pem,
+  seq,
+  set,
+  tlv,
+} from "../cert-decode/der";
 
 export type KeyType = "rsa2048" | "rsa3072" | "rsa4096" | "p256" | "p384";
 
@@ -50,7 +62,8 @@ function ipBytes(ip: string): Uint8Array | null {
     const [head, tail] = ip.split("::");
     const h = head ? head.split(":") : [];
     const t = tail !== undefined && tail ? tail.split(":") : [];
-    const groups = tail === undefined ? h : [...h, ...Array(8 - h.length - t.length).fill("0"), ...t];
+    const groups =
+      tail === undefined ? h : [...h, ...Array(8 - h.length - t.length).fill("0"), ...t];
     if (groups.length !== 8 || !groups.every((g) => /^[0-9a-f]{1,4}$/i.test(g))) return null;
     return Uint8Array.from(groups.flatMap((g) => [parseInt(g, 16) >> 8, parseInt(g, 16) & 0xff]));
   }
@@ -70,18 +83,70 @@ export function parseSans(text: string): SanParsed {
     const v = raw.replace(/^(DNS|IP|email):/i, "");
     if (ipBytes(v)) r.ip.push(v);
     else if (/^[^@\s]+@[^@\s]+$/.test(v)) r.email.push(v);
-    else if (/^(\*\.)?([a-z0-9_]([a-z0-9_-]*[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(v)) r.dns.push(v.toLowerCase());
+    else if (/^(\*\.)?([a-z0-9_]([a-z0-9_-]*[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]*[a-z0-9])?$/i.test(v))
+      r.dns.push(v.toLowerCase());
     else r.invalid.push(raw);
   }
   return r;
 }
 
-const algs: Record<KeyType, { gen: RsaHashedKeyGenParams | EcKeyGenParams; sign: AlgorithmIdentifier | EcdsaParams; sigOid: string; rsa: boolean; ecLen?: number }> = {
-  rsa2048: { gen: { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, sign: "RSASSA-PKCS1-v1_5", sigOid: "1.2.840.113549.1.1.11", rsa: true },
-  rsa3072: { gen: { name: "RSASSA-PKCS1-v1_5", modulusLength: 3072, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, sign: "RSASSA-PKCS1-v1_5", sigOid: "1.2.840.113549.1.1.11", rsa: true },
-  rsa4096: { gen: { name: "RSASSA-PKCS1-v1_5", modulusLength: 4096, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, sign: "RSASSA-PKCS1-v1_5", sigOid: "1.2.840.113549.1.1.11", rsa: true },
-  p256: { gen: { name: "ECDSA", namedCurve: "P-256" }, sign: { name: "ECDSA", hash: "SHA-256" }, sigOid: "1.2.840.10045.4.3.2", rsa: false, ecLen: 32 },
-  p384: { gen: { name: "ECDSA", namedCurve: "P-384" }, sign: { name: "ECDSA", hash: "SHA-384" }, sigOid: "1.2.840.10045.4.3.3", rsa: false, ecLen: 48 },
+const algs: Record<
+  KeyType,
+  {
+    gen: RsaHashedKeyGenParams | EcKeyGenParams;
+    sign: AlgorithmIdentifier | EcdsaParams;
+    sigOid: string;
+    rsa: boolean;
+    ecLen?: number;
+  }
+> = {
+  rsa2048: {
+    gen: {
+      name: "RSASSA-PKCS1-v1_5",
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
+    sign: "RSASSA-PKCS1-v1_5",
+    sigOid: "1.2.840.113549.1.1.11",
+    rsa: true,
+  },
+  rsa3072: {
+    gen: {
+      name: "RSASSA-PKCS1-v1_5",
+      modulusLength: 3072,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
+    sign: "RSASSA-PKCS1-v1_5",
+    sigOid: "1.2.840.113549.1.1.11",
+    rsa: true,
+  },
+  rsa4096: {
+    gen: {
+      name: "RSASSA-PKCS1-v1_5",
+      modulusLength: 4096,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: "SHA-256",
+    },
+    sign: "RSASSA-PKCS1-v1_5",
+    sigOid: "1.2.840.113549.1.1.11",
+    rsa: true,
+  },
+  p256: {
+    gen: { name: "ECDSA", namedCurve: "P-256" },
+    sign: { name: "ECDSA", hash: "SHA-256" },
+    sigOid: "1.2.840.10045.4.3.2",
+    rsa: false,
+    ecLen: 32,
+  },
+  p384: {
+    gen: { name: "ECDSA", namedCurve: "P-384" },
+    sign: { name: "ECDSA", hash: "SHA-384" },
+    sigOid: "1.2.840.10045.4.3.3",
+    rsa: false,
+    ecLen: 48,
+  },
 };
 
 export interface CsrOptions {
@@ -102,9 +167,11 @@ export interface CsrResult {
 
 export async function createCsr(o: CsrOptions): Promise<CsrResult> {
   if (!o.subject.CN.trim()) throw new Error("Common Name (CN) fehlt");
-  if (o.subject.C && !/^[A-Z]{2}$/.test(o.subject.C.trim())) throw new Error("Land (C) muss ein zweistelliger Code sein, z. B. DE");
+  if (o.subject.C && !/^[A-Z]{2}$/.test(o.subject.C.trim()))
+    throw new Error("Land (C) muss ein zweistelliger Code sein, z. B. DE");
   const sans = parseSans(o.sans);
-  if (sans.invalid.length) throw new Error(`Ungültige alternative Namen: ${sans.invalid.join(", ")}`);
+  if (sans.invalid.length)
+    throw new Error(`Ungültige alternative Namen: ${sans.invalid.join(", ")}`);
   const subtle = crypto.subtle;
   if (!subtle) throw new Error("Schlüsselerzeugung braucht HTTPS (Web Crypto)");
   const a = algs[o.keyType];
@@ -119,14 +186,26 @@ export async function createCsr(o: CsrOptions): Promise<CsrResult> {
     ...sans.email.map((e) => tlv(0x81, utf8(e))),
   ];
   if (names.length) extensions.push(seq(oid("2.5.29.17"), octets(seq(...names))));
-  const eku = [o.serverAuth && "1.3.6.1.5.5.7.3.1", o.clientAuth && "1.3.6.1.5.5.7.3.2"].filter(Boolean) as string[];
+  const eku = [o.serverAuth && "1.3.6.1.5.5.7.3.1", o.clientAuth && "1.3.6.1.5.5.7.3.2"].filter(
+    Boolean,
+  ) as string[];
   if (eku.length) extensions.push(seq(oid("2.5.29.37"), octets(seq(...eku.map(oid)))));
   // keyUsage: RSA digitalSignature+keyEncipherment, EC digitalSignature (kritisch)
-  extensions.push(seq(oid("2.5.29.15"), tlv(0x01, new Uint8Array([0xff])), octets(a.rsa ? tlv(0x03, new Uint8Array([5, 0xa0])) : tlv(0x03, new Uint8Array([7, 0x80])))));
-  const attrs = extensions.length ? tlv(0xa0, seq(oid("1.2.840.113549.1.9.14"), set(seq(...extensions)))) : tlv(0xa0, new Uint8Array());
+  extensions.push(
+    seq(
+      oid("2.5.29.15"),
+      tlv(0x01, new Uint8Array([0xff])),
+      octets(a.rsa ? tlv(0x03, new Uint8Array([5, 0xa0])) : tlv(0x03, new Uint8Array([7, 0x80]))),
+    ),
+  );
+  const attrs = extensions.length
+    ? tlv(0xa0, seq(oid("1.2.840.113549.1.9.14"), set(seq(...extensions))))
+    : tlv(0xa0, new Uint8Array());
 
   const cri = seq(integer(0), encodeName(o.subject), spki, attrs);
-  let sig: Uint8Array = new Uint8Array(await subtle.sign(a.sign, keys.privateKey, cri as BufferSource));
+  let sig: Uint8Array = new Uint8Array(
+    await subtle.sign(a.sign, keys.privateKey, cri as BufferSource),
+  );
   if (!a.rsa) {
     const n = a.ecLen!;
     sig = seq(integer(sig.subarray(0, n)), integer(sig.subarray(n)));
@@ -143,8 +222,14 @@ export function opensslCommand(o: CsrOptions): string {
     .map((k) => `/${k}=${o.subject[k]!.trim().replace(/\//g, "\\/")}`)
     .join("");
   const sans = parseSans(o.sans);
-  const san = [...sans.dns.map((d) => `DNS:${d}`), ...sans.ip.map((i) => `IP:${i}`), ...sans.email.map((e) => `email:${e}`)].join(",");
-  const key = o.keyType.startsWith("rsa") ? `-newkey rsa:${o.keyType.slice(3)}` : `-newkey ec -pkeyopt ec_paramgen_curve:${o.keyType === "p256" ? "P-256" : "P-384"}`;
+  const san = [
+    ...sans.dns.map((d) => `DNS:${d}`),
+    ...sans.ip.map((i) => `IP:${i}`),
+    ...sans.email.map((e) => `email:${e}`),
+  ].join(",");
+  const key = o.keyType.startsWith("rsa")
+    ? `-newkey rsa:${o.keyType.slice(3)}`
+    : `-newkey ec -pkeyopt ec_paramgen_curve:${o.keyType === "p256" ? "P-256" : "P-384"}`;
   // In einfachen Anführungszeichen, damit die Shell nichts aus den Namen ausführt
   const quote = (text: string) => `'${text.replace(/'/g, "'\\''")}'`;
   return `openssl req -new ${key} -nodes -keyout server.key -out server.csr -subj ${quote(subj)}${san ? ` -addext ${quote(`subjectAltName=${san}`)}` : ""}`;

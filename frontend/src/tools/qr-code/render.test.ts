@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { blockLayout, encodeText } from "./qr";
-import { CENTER_LOAD_MAX, centerLayout, centerLoad, centerModules, clearCenter, colorWarnings, eclForCenter, encodeForCenter, pngScale, svgMarkup, svgPath } from "./render";
+import {
+  CENTER_LOAD_MAX,
+  centerLayout,
+  centerLoad,
+  centerModules,
+  clearCenter,
+  colorWarnings,
+  eclForCenter,
+  encodeForCenter,
+  pngScale,
+  svgMarkup,
+  svgPath,
+} from "./render";
 
 describe("svgPath", () => {
   it("fasst dunkle Module zeilenweise zusammen", () => {
@@ -54,7 +66,11 @@ describe("Fehlerkorrektur unter der Mitte", () => {
   });
 
   it("Aufbau der Blöcke passt zum Code", () => {
-    for (const [text, ecl] of [["a", "H"], ["x".repeat(200), "Q"], ["y".repeat(900), "M"]] as const) {
+    for (const [text, ecl] of [
+      ["a", "H"],
+      ["x".repeat(200), "Q"],
+      ["y".repeat(900), "M"],
+    ] as const) {
       const qr = encodeText(text, { ecl });
       const { blockOf, blocks } = blockLayout(qr.version, ecl);
       expect(Math.max(...qr.codewordAt.flat())).toBe(blockOf.length - 1);
@@ -117,7 +133,15 @@ describe("Mitte mit Logo oder Kürzel", () => {
   it("räumt genau die Mitte frei", () => {
     const full = Array.from({ length: 7 }, () => Array.from({ length: 7 }, () => true));
     const cleared = clearCenter(full, 3);
-    expect(cleared.map((row) => row.map((d) => (d ? "#" : ".")).join(""))).toEqual(["#######", "#######", "##...##", "##...##", "##...##", "#######", "#######"]);
+    expect(cleared.map((row) => row.map((d) => (d ? "#" : ".")).join(""))).toEqual([
+      "#######",
+      "#######",
+      "##...##",
+      "##...##",
+      "##...##",
+      "#######",
+      "#######",
+    ]);
     expect(full[3]![3]).toBe(true);
   });
 
@@ -135,17 +159,28 @@ describe("Mitte mit Logo oder Kürzel", () => {
   });
 
   it("Kürzel: höchstens drei Zeichen, mittig, passt in die Fläche", () => {
-    const c = centerLayout(qr, { ...base, center: { kind: "text", text: " ABCD " }, centerPercent: 22 })!;
+    const c = centerLayout(qr, {
+      ...base,
+      center: { kind: "text", text: " ABCD " },
+      centerPercent: 22,
+    })!;
     expect(c.text!.value).toBe("ABC");
     expect(c.text!.x).toBe(4 + qr.size / 2);
     expect(c.text!.fontSize * 3 * 0.72 <= c.inner.size).toBe(true);
     expect(c.coverage < 0.1).toBe(true);
-    const wide = centerLayout(qr, { ...base, center: { kind: "text", text: "WWW" }, textWidth: 2.8 })!;
+    const wide = centerLayout(qr, {
+      ...base,
+      center: { kind: "text", text: "WWW" },
+      textWidth: 2.8,
+    })!;
     expect(wide.text!.fontSize * 2.8 <= wide.inner.size).toBe(true);
   });
 
   it("Logo behält sein Seitenverhältnis", () => {
-    const c = centerLayout(qr, { ...base, center: { kind: "image", href: "data:image/png;base64,AAAA", width: 200, height: 100 } })!;
+    const c = centerLayout(qr, {
+      ...base,
+      center: { kind: "image", href: "data:image/png;base64,AAAA", width: 200, height: 100 },
+    })!;
     expect(c.image!.width).toBe(c.inner.size);
     expect(c.image!.height).toBe(c.inner.size / 2);
     expect(c.image!.y + c.image!.height / 2).toBe(4 + qr.size / 2);
@@ -155,8 +190,15 @@ describe("Mitte mit Logo oder Kürzel", () => {
     const text = svgMarkup(qr, { ...base, center: { kind: "text", text: "<A&" } });
     expect(text).toContain(">&lt;A&amp;</text>");
     expect(text).toContain('font-weight="700"');
-    const logo = svgMarkup(qr, { ...base, center: { kind: "image", href: 'data:image/svg+xml,<svg a="1">' } });
+    const logo = svgMarkup(qr, {
+      ...base,
+      center: { kind: "image", href: 'data:image/svg+xml,<svg a="1">' },
+    });
     expect(logo).toContain('<image href="data:image/svg+xml,&lt;svg a=&quot;1&quot;&gt;"');
-    expect(svgMarkup(qr, base).length > svgMarkup(qr, { ...base, center: { kind: "text", text: "IT" }, centerPercent: 30 }).length - 200).toBe(true);
+    expect(
+      svgMarkup(qr, base).length >
+        svgMarkup(qr, { ...base, center: { kind: "text", text: "IT" }, centerPercent: 30 }).length -
+          200,
+    ).toBe(true);
   });
 });

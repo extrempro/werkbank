@@ -4,7 +4,16 @@
  * - PBES2 (PBKDF2 + AES-CBC) – moderne Dateien (OpenSSL 3, Windows ab 10/1709 „AES256-SHA256“)
  * AES, PBKDF2, HMAC und SHA kommen aus Web Crypto, 3DES/RC2 aus eigenen Modulen.
  */
-import { child, content, isUniversal, octetString, readOid, readSmallInt, Tag, type Asn1Node } from "./asn1";
+import {
+  child,
+  content,
+  isUniversal,
+  octetString,
+  readOid,
+  readSmallInt,
+  Tag,
+  type Asn1Node,
+} from "./asn1";
 import { cbcDecrypt, cbcEncrypt, tripleDesCipher } from "./des";
 import { concat, integer, octets, oid, seq } from "./der";
 import { rc2 } from "./rc2";
@@ -67,7 +76,10 @@ export const algorithmLabels: Record<string, string> = {
 };
 
 const subtle = () => {
-  if (!globalThis.crypto?.subtle) throw new Error("Für Kennwort-Verschlüsselung muss die Toolbox über HTTPS (oder localhost) aufgerufen werden.");
+  if (!globalThis.crypto?.subtle)
+    throw new Error(
+      "Für Kennwort-Verschlüsselung muss die Toolbox über HTTPS (oder localhost) aufgerufen werden.",
+    );
   return globalThis.crypto.subtle;
 };
 
@@ -138,15 +150,35 @@ export const hashLength = (h: HashName) => hashInfo[h].u;
 
 // ---------- AES / PBKDF2 ----------
 
-async function pbkdf2(password: string, salt: Uint8Array, iterations: number, hash: HashName, length: number): Promise<Uint8Array> {
+async function pbkdf2(
+  password: string,
+  salt: Uint8Array,
+  iterations: number,
+  hash: HashName,
+  length: number,
+): Promise<Uint8Array> {
   const key = await subtle().importKey("raw", buf(utf8(password)), "PBKDF2", false, ["deriveBits"]);
-  return new Uint8Array(await subtle().deriveBits({ name: "PBKDF2", salt: buf(salt), iterations, hash }, key, length * 8));
+  return new Uint8Array(
+    await subtle().deriveBits(
+      { name: "PBKDF2", salt: buf(salt), iterations, hash },
+      key,
+      length * 8,
+    ),
+  );
 }
 
-async function aesCbc(mode: "encrypt" | "decrypt", key: Uint8Array, iv: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
+async function aesCbc(
+  mode: "encrypt" | "decrypt",
+  key: Uint8Array,
+  iv: Uint8Array,
+  data: Uint8Array,
+): Promise<Uint8Array> {
   const k = await subtle().importKey("raw", buf(key), "AES-CBC", false, [mode]);
   try {
-    const result = mode === "encrypt" ? await subtle().encrypt({ name: "AES-CBC", iv: buf(iv) }, k, buf(data)) : await subtle().decrypt({ name: "AES-CBC", iv: buf(iv) }, k, buf(data));
+    const result =
+      mode === "encrypt"
+        ? await subtle().encrypt({ name: "AES-CBC", iv: buf(iv) }, k, buf(data))
+        : await subtle().decrypt({ name: "AES-CBC", iv: buf(iv) }, k, buf(data));
     return new Uint8Array(result);
   } catch {
     throw new Error("Entschlüsselung fehlgeschlagen – falsches Kennwort?");
@@ -174,8 +206,14 @@ export function describePbe(algId: Asn1Node): PbeInfo {
     const enc = readOid(child(child(params, 1), 0));
     const kdfParams = child(kdf, 1);
     const prfNode = kdfParams.children.find((n) => isUniversal(n, Tag.Sequence));
-    const prf = prfNode ? hmacOidToHash[readOid(child(prfNode, 0))] ?? "?" : "SHA-1";
-    const cipher = { [OID.aes128Cbc]: "AES-128", [OID.aes192Cbc]: "AES-192", [OID.aes256Cbc]: "AES-256", [OID.desEde3Cbc]: "3DES" }[enc] ?? enc;
+    const prf = prfNode ? (hmacOidToHash[readOid(child(prfNode, 0))] ?? "?") : "SHA-1";
+    const cipher =
+      {
+        [OID.aes128Cbc]: "AES-128",
+        [OID.aes192Cbc]: "AES-192",
+        [OID.aes256Cbc]: "AES-256",
+        [OID.desEde3Cbc]: "3DES",
+      }[enc] ?? enc;
     return { label: `${cipher} (PBKDF2-${prf})`, iterations: readSmallInt(child(kdfParams, 1)) };
   }
   return { label: algorithmLabels[o] ?? o, iterations: pkcs12Params(algId).iterations };
@@ -185,13 +223,19 @@ export function describePbe(algId: Asn1Node): PbeInfo {
  * Entschlüsselt mit dem in `algId` (AlgorithmIdentifier) angegebenen Verfahren.
  * `emptyAsNull`: leeres Kennwort ohne abschließende 0 (manche Programme machen das so).
  */
-export async function pbeDecrypt(algId: Asn1Node, data: Uint8Array, password: string, emptyAsNull = false): Promise<Uint8Array> {
+export async function pbeDecrypt(
+  algId: Asn1Node,
+  data: Uint8Array,
+  password: string,
+  emptyAsNull = false,
+): Promise<Uint8Array> {
   const o = readOid(child(algId, 0));
 
   if (o === OID.pbes2) {
     const params = child(algId, 1);
     const kdf = child(params, 0);
-    if (readOid(child(kdf, 0)) !== OID.pbkdf2) throw new Error("Unbekannte Schlüsselableitung in PBES2");
+    if (readOid(child(kdf, 0)) !== OID.pbkdf2)
+      throw new Error("Unbekannte Schlüsselableitung in PBES2");
     const kdfParams = child(kdf, 1);
     const salt = content(child(kdfParams, 0));
     const iterations = readSmallInt(child(kdfParams, 1));
@@ -202,7 +246,13 @@ export async function pbeDecrypt(algId: Asn1Node, data: Uint8Array, password: st
     const encOid = readOid(child(encAlg, 0));
     const iv = content(child(encAlg, 1));
     if (encOid === OID.aes128Cbc || encOid === OID.aes256Cbc) {
-      const key = await pbkdf2(password, salt, iterations, hash, encOid === OID.aes128Cbc ? 16 : 32);
+      const key = await pbkdf2(
+        password,
+        salt,
+        iterations,
+        hash,
+        encOid === OID.aes128Cbc ? 16 : 32,
+      );
       return aesCbc("decrypt", key, iv, data);
     }
     if (encOid === OID.aes192Cbc) throw new Error("AES-192 wird von Browsern nicht unterstützt");
@@ -232,7 +282,9 @@ export async function pbeDecrypt(algId: Asn1Node, data: Uint8Array, password: st
     }
     case OID.pbeSha1AndRc4_128:
     case OID.pbeSha1AndRc4_40:
-      throw new Error("RC4-verschlüsselte PFX-Dateien werden nicht unterstützt (sehr alt und unsicher).");
+      throw new Error(
+        "RC4-verschlüsselte PFX-Dateien werden nicht unterstützt (sehr alt und unsicher).",
+      );
     default:
       throw new Error(`Unbekanntes Verschlüsselungsverfahren (${o})`);
   }
@@ -272,7 +324,14 @@ export async function pbeEncrypt(
     const algId = seq(
       oid(OID.pbes2),
       seq(
-        seq(oid(OID.pbkdf2), seq(octets(salt), integer(iterations), seq(oid(OID.hmacSha256), new Uint8Array([0x05, 0x00])))),
+        seq(
+          oid(OID.pbkdf2),
+          seq(
+            octets(salt),
+            integer(iterations),
+            seq(oid(OID.hmacSha256), new Uint8Array([0x05, 0x00])),
+          ),
+        ),
         seq(oid(OID.aes256Cbc), octets(iv)),
       ),
     );

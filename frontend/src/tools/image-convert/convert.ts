@@ -1,6 +1,12 @@
 /** Umwandlung im Browser: Dekodieren, Skalieren und Kodieren über Canvas. Nichts verlässt den Rechner. */
 
-import { detectFormat, inputLabels, outputInfo, type InputFormat, type OutputFormat } from "./formats";
+import {
+  detectFormat,
+  inputLabels,
+  outputInfo,
+  type InputFormat,
+  type OutputFormat,
+} from "./formats";
 import { buildIco } from "./ico";
 import { fitSquare, targetSize, type ResizeOptions } from "./resize";
 import { bytesToBase64, embedRasterInSvg, svgIntrinsicSize } from "./svg";
@@ -77,7 +83,13 @@ export async function loadImage(file: Blob): Promise<LoadedImage> {
     const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`;
     try {
       const img = await loadViaImgElement(url);
-      return { source: img, width: size.width, height: size.height, format, release: () => undefined };
+      return {
+        source: img,
+        width: size.width,
+        height: size.height,
+        format,
+        release: () => undefined,
+      };
     } catch {
       throw new Error("SVG konnte nicht dargestellt werden (fehlerhafte Datei?)");
     }
@@ -86,28 +98,48 @@ export async function loadImage(file: Blob): Promise<LoadedImage> {
   try {
     // berücksichtigt die EXIF-Ausrichtung von Handyfotos
     const bitmap = await createImageBitmap(file);
-    return { source: bitmap, width: bitmap.width, height: bitmap.height, format, release: () => bitmap.close() };
+    return {
+      source: bitmap,
+      width: bitmap.width,
+      height: bitmap.height,
+      format,
+      release: () => bitmap.close(),
+    };
   } catch {
     // Fallback: manche Formate (z. B. HEIC in Safari) kann nur das <img>-Element
     try {
       const img = await loadViaImgElement(await dataUrl(file));
-      return { source: img, width: img.naturalWidth, height: img.naturalHeight, format, release: () => undefined };
+      return {
+        source: img,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        format,
+        release: () => undefined,
+      };
     } catch {
       if (format === "heic") {
-        throw new Error("HEIC (iPhone-Foto) kann nur Safari lesen. Tipp: in Safari öffnen oder am iPhone „Kompatibelste“ als Kameraformat wählen.");
+        throw new Error(
+          "HEIC (iPhone-Foto) kann nur Safari lesen. Tipp: in Safari öffnen oder am iPhone „Kompatibelste“ als Kameraformat wählen.",
+        );
       }
       if (format === "tiff") throw new Error("TIFF kann nur Safari lesen.");
       if (format === "unknown") throw new Error("Unbekanntes Dateiformat – keine Bilddatei?");
-      if (format === "avif") throw new Error("AVIF kann dieser Browser nicht lesen (oder die Datei ist beschädigt).");
+      if (format === "avif")
+        throw new Error("AVIF kann dieser Browser nicht lesen (oder die Datei ist beschädigt).");
       // PNG, JPEG, GIF, WebP, BMP, ICO kann jeder aktuelle Browser – dann ist die Datei kaputt
-      throw new Error(`Die Datei ist beschädigt oder unvollständig (kein gültiges ${inputLabels[format]}).`);
+      throw new Error(
+        `Die Datei ist beschädigt oder unvollständig (kein gültiges ${inputLabels[format]}).`,
+      );
     }
   }
 }
 
 // ---------- Zeichnen & Kodieren ----------
 
-function createCanvas(width: number, height: number): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+function createCanvas(
+  width: number,
+  height: number,
+): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -154,12 +186,21 @@ function fillBackground(canvas: HTMLCanvasElement, color: string) {
   ctx.restore();
 }
 
-export function canvasToBlob(canvas: HTMLCanvasElement, mime: string, quality?: number): Promise<Blob> {
+export function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  mime: string,
+  quality?: number,
+): Promise<Blob> {
   return new Promise((resolve, reject) =>
     canvas.toBlob(
       (blob) => {
         if (!blob) reject(new Error("Bild konnte nicht erzeugt werden (zu groß für den Browser?)"));
-        else if (blob.type !== mime) reject(new Error(`Dieser Browser kann kein ${mime.replace("image/", "").toUpperCase()} erzeugen.`));
+        else if (blob.type !== mime)
+          reject(
+            new Error(
+              `Dieser Browser kann kein ${mime.replace("image/", "").toUpperCase()} erzeugen.`,
+            ),
+          );
         else resolve(blob);
       },
       mime,
@@ -186,15 +227,28 @@ function squareIcon(img: LoadedImage, size: number, background?: string): HTMLCa
 
 // ---------- Umwandeln ----------
 
-export async function convertImage(img: LoadedImage, s: ConvertSettings, original?: Blob): Promise<ConvertResult> {
+export async function convertImage(
+  img: LoadedImage,
+  s: ConvertSettings,
+  original?: Blob,
+): Promise<ConvertResult> {
   const notes: string[] = [];
   if (img.format === "gif") notes.push("Bei animierten GIFs wird nur das erste Bild übernommen.");
 
   if (s.format === "ico") {
     const sizes = [...s.icoSizes].sort((a, b) => a - b);
-    if (img.width !== img.height) notes.push("Nicht quadratisch – mittig eingepasst, Ränder transparent.");
-    const images = await Promise.all(sizes.map(async (size) => ({ size, png: await pngBytes(squareIcon(img, size)) })));
-    return { blob: new Blob([buildIco(images) as BlobPart], { type: "image/x-icon" }), extension: "ico", width: sizes.at(-1)!, height: sizes.at(-1)!, notes };
+    if (img.width !== img.height)
+      notes.push("Nicht quadratisch – mittig eingepasst, Ränder transparent.");
+    const images = await Promise.all(
+      sizes.map(async (size) => ({ size, png: await pngBytes(squareIcon(img, size)) })),
+    );
+    return {
+      blob: new Blob([buildIco(images) as BlobPart], { type: "image/x-icon" }),
+      extension: "ico",
+      width: sizes.at(-1)!,
+      height: sizes.at(-1)!,
+      notes,
+    };
   }
 
   if (s.format === "favicon") {
@@ -208,32 +262,54 @@ export async function convertImage(img: LoadedImage, s: ConvertSettings, origina
   if (s.format === "svg") {
     const png = await pngBytes(canvas);
     const svg = embedRasterInSvg(bytesToBase64(png), width, height);
-    return { blob: new Blob([svg], { type: "image/svg+xml" }), extension: "svg", width, height, notes };
+    return {
+      blob: new Blob([svg], { type: "image/svg+xml" }),
+      extension: "svg",
+      width,
+      height,
+      notes,
+    };
   }
 
   if (!info.alpha && hasTransparency(canvas)) {
     fillBackground(canvas, s.background);
-    notes.push(`Transparente Bereiche mit ${s.background.toUpperCase()} gefüllt (${info.label} kennt keine Transparenz).`);
+    notes.push(
+      `Transparente Bereiche mit ${s.background.toUpperCase()} gefüllt (${info.label} kennt keine Transparenz).`,
+    );
   }
-  const blob = await canvasToBlob(canvas, info.mime, info.lossy ? Math.min(1, Math.max(0.01, s.quality / 100)) : undefined);
+  const blob = await canvasToBlob(
+    canvas,
+    info.mime,
+    info.lossy ? Math.min(1, Math.max(0.01, s.quality / 100)) : undefined,
+  );
   return { blob, extension: info.extension, width, height, notes };
 }
 
-async function faviconPackage(img: LoadedImage, s: ConvertSettings, original: Blob | undefined, notes: string[]): Promise<ConvertResult> {
+async function faviconPackage(
+  img: LoadedImage,
+  s: ConvertSettings,
+  original: Blob | undefined,
+  notes: string[],
+): Promise<ConvertResult> {
   if (Math.min(img.width, img.height) < 512 && img.format !== "svg") {
-    notes.push(`Vorlage nur ${img.width} × ${img.height} px – für scharfe Symbole mindestens 512 × 512 px oder SVG verwenden.`);
+    notes.push(
+      `Vorlage nur ${img.width} × ${img.height} px – für scharfe Symbole mindestens 512 × 512 px oder SVG verwenden.`,
+    );
   }
   const date = new Date();
   const entries: ZipEntry[] = [];
   const add = (name: string, data: Uint8Array) => entries.push({ name, data, date });
 
-  const icoImages = await Promise.all([16, 32, 48].map(async (size) => ({ size, png: await pngBytes(squareIcon(img, size)) })));
+  const icoImages = await Promise.all(
+    [16, 32, 48].map(async (size) => ({ size, png: await pngBytes(squareIcon(img, size)) })),
+  );
   add("favicon.ico", buildIco(icoImages));
   add("favicon-32x32.png", icoImages.find((i) => i.size === 32)!.png);
   add("apple-touch-icon.png", await pngBytes(squareIcon(img, 180, s.background))); // iOS: ohne Transparenz
   add("icon-192.png", await pngBytes(squareIcon(img, 192)));
   add("icon-512.png", await pngBytes(squareIcon(img, 512)));
-  if (img.format === "svg" && original) add("icon.svg", new Uint8Array(await original.arrayBuffer()));
+  if (img.format === "svg" && original)
+    add("icon.svg", new Uint8Array(await original.arrayBuffer()));
 
   const manifest = {
     icons: [
@@ -248,8 +324,17 @@ async function faviconPackage(img: LoadedImage, s: ConvertSettings, original: Bl
     '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
     '<link rel="manifest" href="/site.webmanifest">',
   ].join("\n");
-  add("einbinden.html", new TextEncoder().encode(`<!-- In den <head> der Seite einfügen -->\n${html}\n`));
+  add(
+    "einbinden.html",
+    new TextEncoder().encode(`<!-- In den <head> der Seite einfügen -->\n${html}\n`),
+  );
 
   notes.push(`${entries.length} Dateien: ${entries.map((e) => e.name).join(", ")}`);
-  return { blob: new Blob([createZip(entries) as BlobPart], { type: "application/zip" }), extension: "zip", width: 512, height: 512, notes };
+  return {
+    blob: new Blob([createZip(entries) as BlobPart], { type: "application/zip" }),
+    extension: "zip",
+    width: 512,
+    height: 512,
+    notes,
+  };
 }

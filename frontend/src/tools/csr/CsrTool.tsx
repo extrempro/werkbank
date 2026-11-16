@@ -231,9 +231,7 @@ export default function CsrTool() {
         </>
       )}
 
-      {cn !== "" && (
-        <Output value={opensslCommand(options)} label="Dasselbe mit OpenSSL" />
-      )}
+      {cn !== "" && <Output value={opensslCommand(options)} label="Dasselbe mit OpenSSL" />}
 
       <p className="small">
         Schlüssel und CSR entstehen nur in diesem Browser. Nichts davon wird gespeichert, übertragen

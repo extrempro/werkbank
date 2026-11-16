@@ -6,7 +6,9 @@ import { bytesToBase64, embedRasterInSvg, svgIntrinsicSize } from "./svg";
 import { crc32, createZip } from "./zip";
 
 const bytes = (...parts: (number[] | string)[]) =>
-  Uint8Array.from(parts.flatMap((p) => (typeof p === "string" ? [...p].map((c) => c.charCodeAt(0)) : p)));
+  Uint8Array.from(
+    parts.flatMap((p) => (typeof p === "string" ? [...p].map((c) => c.charCodeAt(0)) : p)),
+  );
 
 describe("detectFormat", () => {
   it("erkennt Formate an der Signatur", () => {
@@ -23,7 +25,9 @@ describe("detectFormat", () => {
 
   it("erkennt SVG auch mit XML-Kopf, Kommentar und BOM", () => {
     expect(detectFormat(bytes('<svg xmlns="http://www.w3.org/2000/svg"></svg>'))).toBe("svg");
-    expect(detectFormat(new TextEncoder().encode('﻿<?xml version="1.0"?>\n<!-- Logo -->\n<svg>'))).toBe("svg");
+    expect(
+      detectFormat(new TextEncoder().encode('﻿<?xml version="1.0"?>\n<!-- Logo -->\n<svg>')),
+    ).toBe("svg");
     expect(detectFormat(bytes("<html><svg></svg></html>"))).toBe("unknown");
     expect(detectFormat(bytes("Hallo"))).toBe("unknown");
   });
@@ -50,20 +54,44 @@ describe("Dateinamen und Größen", () => {
 
 describe("targetSize", () => {
   it("hält das Seitenverhältnis", () => {
-    expect(targetSize(4000, 3000, { mode: "width", value: 1000, noUpscale: true })).toEqual({ width: 1000, height: 750 });
-    expect(targetSize(4000, 3000, { mode: "height", value: 600, noUpscale: true })).toEqual({ width: 800, height: 600 });
-    expect(targetSize(3000, 4000, { mode: "longest", value: 2000, noUpscale: true })).toEqual({ width: 1500, height: 2000 });
-    expect(targetSize(4000, 3000, { mode: "percent", value: 25, noUpscale: true })).toEqual({ width: 1000, height: 750 });
-    expect(targetSize(4000, 3000, { mode: "original", value: 0, noUpscale: true })).toEqual({ width: 4000, height: 3000 });
+    expect(targetSize(4000, 3000, { mode: "width", value: 1000, noUpscale: true })).toEqual({
+      width: 1000,
+      height: 750,
+    });
+    expect(targetSize(4000, 3000, { mode: "height", value: 600, noUpscale: true })).toEqual({
+      width: 800,
+      height: 600,
+    });
+    expect(targetSize(3000, 4000, { mode: "longest", value: 2000, noUpscale: true })).toEqual({
+      width: 1500,
+      height: 2000,
+    });
+    expect(targetSize(4000, 3000, { mode: "percent", value: 25, noUpscale: true })).toEqual({
+      width: 1000,
+      height: 750,
+    });
+    expect(targetSize(4000, 3000, { mode: "original", value: 0, noUpscale: true })).toEqual({
+      width: 4000,
+      height: 3000,
+    });
   });
 
   it("vergrößert nur, wenn erlaubt", () => {
-    expect(targetSize(200, 100, { mode: "width", value: 400, noUpscale: true })).toEqual({ width: 200, height: 100 });
-    expect(targetSize(200, 100, { mode: "width", value: 400, noUpscale: false })).toEqual({ width: 400, height: 200 });
+    expect(targetSize(200, 100, { mode: "width", value: 400, noUpscale: true })).toEqual({
+      width: 200,
+      height: 100,
+    });
+    expect(targetSize(200, 100, { mode: "width", value: 400, noUpscale: false })).toEqual({
+      width: 400,
+      height: 200,
+    });
   });
 
   it("begrenzt auf die maximale Canvas-Größe", () => {
-    expect(targetSize(1000, 500, { mode: "percent", value: 10000, noUpscale: false })).toEqual({ width: 16384, height: 8192 });
+    expect(targetSize(1000, 500, { mode: "percent", value: 10000, noUpscale: false })).toEqual({
+      width: 16384,
+      height: 8192,
+    });
   });
 
   it("passt Bilder in ein Quadrat ein", () => {
@@ -109,11 +137,26 @@ describe("ICO", () => {
 
 describe("SVG", () => {
   it("liest die Eigengröße", () => {
-    expect(svgIntrinsicSize('<svg width="200" height="100">')).toMatchObject({ width: 200, height: 100 });
-    expect(svgIntrinsicSize('<svg width="10mm" height="5mm">')).toMatchObject({ width: 38, height: 19 });
-    expect(svgIntrinsicSize('<svg viewBox="0 0 24 12">')).toMatchObject({ width: 1024, height: 512, fromViewBox: true });
-    expect(svgIntrinsicSize('<svg width="300" viewBox="0 0 30 10">')).toMatchObject({ width: 300, height: 100 });
-    expect(svgIntrinsicSize('<svg width="100%" height="100%" viewBox="0 0 2000 1000">')).toMatchObject({ width: 2000, height: 1000 });
+    expect(svgIntrinsicSize('<svg width="200" height="100">')).toMatchObject({
+      width: 200,
+      height: 100,
+    });
+    expect(svgIntrinsicSize('<svg width="10mm" height="5mm">')).toMatchObject({
+      width: 38,
+      height: 19,
+    });
+    expect(svgIntrinsicSize('<svg viewBox="0 0 24 12">')).toMatchObject({
+      width: 1024,
+      height: 512,
+      fromViewBox: true,
+    });
+    expect(svgIntrinsicSize('<svg width="300" viewBox="0 0 30 10">')).toMatchObject({
+      width: 300,
+      height: 100,
+    });
+    expect(
+      svgIntrinsicSize('<svg width="100%" height="100%" viewBox="0 0 2000 1000">'),
+    ).toMatchObject({ width: 2000, height: 1000 });
     expect(svgIntrinsicSize("<svg>")).toMatchObject({ width: 1024, height: 1024 });
   });
 
