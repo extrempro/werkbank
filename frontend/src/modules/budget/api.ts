@@ -568,14 +568,14 @@ export async function uploadDocument(invoiceId: number, file: File): Promise<Inv
     body: file,
   });
   if (!response.ok) {
-    let detail: string | null = null;
-    try {
-      const body: unknown = await response.json();
-      const value = (body as { detail?: unknown }).detail;
-      detail = typeof value === "string" ? value : null;
-    } catch {
-      detail = null;
-    }
+    // Der Server nennt den Grund als JSON; fehlt er, bleibt es beim allgemeinen Fehlertext.
+    const detail = await response
+      .json()
+      .then((body: unknown) => {
+        const value = (body as { detail?: unknown } | null)?.detail;
+        return typeof value === "string" ? value : null;
+      })
+      .catch(() => null);
     throw new ApiError(response.status, false, detail);
   }
   return (await response.json()) as Invoice;
