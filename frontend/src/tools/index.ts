@@ -860,7 +860,19 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "netzwerk",
     description:
       "DNS-Einträge über die Werkbank bei Cloudflare, Google oder Quad9 abfragen: mehrere Typen und Resolver im Vergleich, Export, Subdomains finden.",
-    tags: ["dns", "doh", "resolver", "mx", "txt", "cname", "ptr", "nslookup", "dig", "subdomain", "crt.sh"],
+    tags: [
+      "dns",
+      "doh",
+      "resolver",
+      "mx",
+      "txt",
+      "cname",
+      "ptr",
+      "nslookup",
+      "dig",
+      "subdomain",
+      "crt.sh",
+    ],
     component: lazy(() => import("./dns-lookup/DnsLookupTool")),
   },
   {
@@ -869,7 +881,18 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "netzwerk",
     description:
       "Domain prüfen: MX, SPF mit der Grenze von 10 Lookups, DMARC, DKIM, MTA-STS, Nameserver, DNSSEC und CAA, mit Ampel und Erklärung.",
-    tags: ["mail", "e-mail", "spf", "dkim", "dmarc", "mx", "mta-sts", "dnssec", "caa", "zustellung"],
+    tags: [
+      "mail",
+      "e-mail",
+      "spf",
+      "dkim",
+      "dmarc",
+      "mx",
+      "mta-sts",
+      "dnssec",
+      "caa",
+      "zustellung",
+    ],
     component: lazy(() => import("./mail-check/MailCheckTool")),
   },
   {
@@ -887,7 +910,16 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "zertifikate",
     description:
       "Stärke eines Kennworts einschätzen (Muster, Wörter, Tastaturfolgen) und auf Wunsch prüfen, ob es in Datenlecks vorkommt, per k-Anonymität.",
-    tags: ["passwort", "kennwort", "stärke", "entropie", "have i been pwned", "hibp", "datenleck", "pwned"],
+    tags: [
+      "passwort",
+      "kennwort",
+      "stärke",
+      "entropie",
+      "have i been pwned",
+      "hibp",
+      "datenleck",
+      "pwned",
+    ],
     component: lazy(() => import("./password-check/PasswordCheckTool")),
   },
 ];

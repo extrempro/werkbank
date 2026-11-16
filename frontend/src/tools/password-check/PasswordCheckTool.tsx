@@ -81,8 +81,7 @@ export default function PasswordCheckTool() {
               rows={result.crackTimes.map((entry) => [entry.label, durationText(entry.seconds)])}
             />
             <p className="small">
-              Grobe Schätzung für einen gezielten Angriff (im Schnitt nach der Hälfte der
-              Versuche).
+              Grobe Schätzung für einen gezielten Angriff (im Schnitt nach der Hälfte der Versuche).
             </p>
           </ToolSection>
 

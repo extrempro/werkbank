@@ -243,7 +243,9 @@ export function SubdomainPanel({
                       </button>
                       <span className="tool-row">
                         {kind === "live" && <span className="pill pill-ok">aktiv</span>}
-                        {kind === "wildcard" && <span className="pill pill-todo">über Wildcard</span>}
+                        {kind === "wildcard" && (
+                          <span className="pill pill-todo">über Wildcard</span>
+                        )}
                         {kind === "dead" && !entry.error && (
                           <span className="pill pill-neutral">löst nicht auf</span>
                         )}

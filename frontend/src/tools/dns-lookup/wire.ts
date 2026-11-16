@@ -4,11 +4,41 @@
  */
 
 export const typeCodes: Record<string, number> = {
-  A: 1, NS: 2, CNAME: 5, SOA: 6, PTR: 12, HINFO: 13, MX: 15, TXT: 16, RP: 17, AAAA: 28, LOC: 29, SRV: 33, NAPTR: 35,
-  DNAME: 39, OPT: 41, DS: 43, SSHFP: 44, RRSIG: 46, NSEC: 47, DNSKEY: 48, NSEC3: 50, NSEC3PARAM: 51, TLSA: 52,
-  SMIMEA: 53, CDS: 59, CDNSKEY: 60, OPENPGPKEY: 61, SVCB: 64, HTTPS: 65, SPF: 99, CAA: 257,
+  A: 1,
+  NS: 2,
+  CNAME: 5,
+  SOA: 6,
+  PTR: 12,
+  HINFO: 13,
+  MX: 15,
+  TXT: 16,
+  RP: 17,
+  AAAA: 28,
+  LOC: 29,
+  SRV: 33,
+  NAPTR: 35,
+  DNAME: 39,
+  OPT: 41,
+  DS: 43,
+  SSHFP: 44,
+  RRSIG: 46,
+  NSEC: 47,
+  DNSKEY: 48,
+  NSEC3: 50,
+  NSEC3PARAM: 51,
+  TLSA: 52,
+  SMIMEA: 53,
+  CDS: 59,
+  CDNSKEY: 60,
+  OPENPGPKEY: 61,
+  SVCB: 64,
+  HTTPS: 65,
+  SPF: 99,
+  CAA: 257,
 };
-export const typeNamesByCode: Record<number, string> = Object.fromEntries(Object.entries(typeCodes).map(([k, v]) => [v, k]));
+export const typeNamesByCode: Record<number, string> = Object.fromEntries(
+  Object.entries(typeCodes).map(([k, v]) => [v, k]),
+);
 
 export interface WireAnswer {
   name: string;
@@ -32,7 +62,8 @@ export function encodeName(name: string): number[] {
   if (clean) {
     for (const label of clean.split(".")) {
       const bytes = new TextEncoder().encode(label);
-      if (bytes.length === 0 || bytes.length > 63) throw new Error(`Ungültiger Namensteil „${label}“`);
+      if (bytes.length === 0 || bytes.length > 63)
+        throw new Error(`Ungültiger Namensteil „${label}“`);
       out.push(bytes.length, ...bytes);
     }
   }
@@ -46,7 +77,8 @@ export function encodeName(name: string): number[] {
  * Ohne EDNS/DO-Bit – sonst kämen RRSIG-Einträge mit, die hier nur stören.
  */
 export function buildQuery(name: string, type: string): Uint8Array {
-  const code = typeCodes[type.toUpperCase()] ?? (/^TYPE\d+$/i.test(type) ? Number(type.slice(4)) : undefined);
+  const code =
+    typeCodes[type.toUpperCase()] ?? (/^TYPE\d+$/i.test(type) ? Number(type.slice(4)) : undefined);
   if (code === undefined) throw new Error(`Unbekannter Typ ${type}`);
   const header = [0, 0, 0x01, 0x20, 0, 1, 0, 0, 0, 0, 0, 0];
   const question = [...encodeName(name), code >> 8, code & 0xff, 0, 1];
@@ -107,7 +139,8 @@ class Reader {
         const target = ((len & 0x3f) << 8) | this.buf[pos + 1]!;
         if (!jumped) this.pos = pos + 2;
         jumped = true;
-        if (++jumps > 64 || target >= this.buf.length) throw new Error("Fehlerhafte Namenskompression");
+        if (++jumps > 64 || target >= this.buf.length)
+          throw new Error("Fehlerhafte Namenskompression");
         pos = target;
         continue;
       }
@@ -132,7 +165,10 @@ function escapeLabel(bytes: Uint8Array): string {
   return s;
 }
 
-const hex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("").toUpperCase();
+const hex = (b: Uint8Array) =>
+  Array.from(b, (x) => x.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
 const base64 = (b: Uint8Array) => {
   let s = "";
   for (const x of b) s += String.fromCharCode(x);
@@ -152,11 +188,13 @@ function characterString(r: Reader): string {
 }
 
 function ipv6(b: Uint8Array): string {
-  const groups = Array.from({ length: 8 }, (_, i) => ((b[i * 2]! << 8) | b[i * 2 + 1]!).toString(16));
+  const groups = Array.from({ length: 8 }, (_, i) =>
+    ((b[i * 2]! << 8) | b[i * 2 + 1]!).toString(16),
+  );
   // längste Folge von Nullen durch :: ersetzen
   let best = -1;
   let bestLen = 1;
-  for (let i = 0; i < 8; ) {
+  for (let i = 0; i < 8;) {
     if (groups[i] !== "0") {
       i++;
       continue;
@@ -173,7 +211,15 @@ function ipv6(b: Uint8Array): string {
   return `${groups.slice(0, best).join(":")}::${groups.slice(best + bestLen).join(":")}`;
 }
 
-const svcKeys: Record<number, string> = { 0: "mandatory", 1: "alpn", 2: "no-default-alpn", 3: "port", 4: "ipv4hint", 5: "ech", 6: "ipv6hint" };
+const svcKeys: Record<number, string> = {
+  0: "mandatory",
+  1: "alpn",
+  2: "no-default-alpn",
+  3: "port",
+  4: "ipv4hint",
+  5: "ech",
+  6: "ipv6hint",
+};
 
 function svcParams(r: Reader, end: number): string {
   const parts: string[] = [];
@@ -198,7 +244,8 @@ function svcParams(r: Reader, end: number): string {
         break;
       case 4: {
         const ips: string[] = [];
-        for (let i = 0; i + 4 <= v.length; i += 4) ips.push(Array.from(v.subarray(i, i + 4)).join("."));
+        for (let i = 0; i + 4 <= v.length; i += 4)
+          ips.push(Array.from(v.subarray(i, i + 4)).join("."));
         parts.push(`ipv4hint=${ips.join(",")}`);
         break;
       }
@@ -338,5 +385,10 @@ export function parseResponse(bytes: Uint8Array): WireResponse {
     if (type === 41) continue;
     answers.push({ name, type: typeNamesByCode[type] ?? `TYPE${type}`, ttl, data });
   }
-  return { rcode: flags & 0x0f, authenticated: (flags & 0x0020) !== 0, truncated: (flags & 0x0200) !== 0, answers };
+  return {
+    rcode: flags & 0x0f,
+    authenticated: (flags & 0x0020) !== 0,
+    truncated: (flags & 0x0200) !== 0,
+    answers,
+  };
 }

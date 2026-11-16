@@ -165,7 +165,9 @@ function Result({ data, url, kind }: Found) {
               <span
                 key={entry}
                 className={
-                  /hold|pending delete|redemption/.test(entry) ? "pill pill-bad" : "pill pill-neutral"
+                  /hold|pending delete|redemption/.test(entry)
+                    ? "pill pill-bad"
+                    : "pill pill-neutral"
                 }
               >
                 {statusLabels[entry] ?? entry}

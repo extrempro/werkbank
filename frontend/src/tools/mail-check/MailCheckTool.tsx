@@ -13,7 +13,12 @@ const PILL: Record<Level, string> = {
   warn: "pill pill-todo",
   error: "pill pill-bad",
 };
-const LABEL: Record<Level, string> = { ok: "OK", info: "Hinweis", warn: "Warnung", error: "Fehler" };
+const LABEL: Record<Level, string> = {
+  ok: "OK",
+  info: "Hinweis",
+  warn: "Warnung",
+  error: "Fehler",
+};
 const RANK: Record<Level, number> = { error: 0, warn: 1, info: 2, ok: 3 };
 
 function worst(section: Section): Level {
