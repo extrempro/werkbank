@@ -43,13 +43,17 @@ HEADERS = {"Origin": ORIGIN}
 @pytest.fixture
 def db(db_session: Session) -> Iterator[Session]:
     def clean() -> None:
-        db_session.execute(delete(BudgetInvoice))
-        db_session.execute(delete(BudgetContract))
-        db_session.execute(delete(BudgetPartner))
-        db_session.execute(delete(BudgetPlan))
-        db_session.execute(delete(BudgetYear))
-        db_session.execute(delete(BudgetItem))
-        db_session.execute(delete(BudgetAccount))
+        # Reihenfolge nach Abhängigkeiten: erst, was auf anderes verweist.
+        for model in (
+            BudgetInvoice,
+            BudgetContract,
+            BudgetPlan,
+            BudgetYear,
+            BudgetItem,
+            BudgetPartner,
+            BudgetAccount,
+        ):
+            db_session.execute(delete(model))
         db_session.execute(delete(AppSetting).where(AppSetting.key == SETTINGS_KEY))
         db_session.commit()
 
