@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.40.0] – 2026-11-16
+
+Handbuch in der Werkbank.
+
+### Handbuch
+
+- Neue Seite **Handbuch** (`/handbuch`) mit sieben Kapiteln: Erste Schritte, Microsoft 365 (Konfiguration und Tenant), Evergreen, IT-Budget, IT-Tools, Verwaltung und Audit-Log, Fragen und Hilfe
+- Kapitel und Abschnitte je Rolle; Admins sehen alles; Kapitel ohne passende Rolle gelten als nicht vorhanden
+- Je Kapitel Inhaltsverzeichnis, Anleitungen in Schritten, Begriffe, Hinweise und Verweise auf die Seiten; Sprung zu Abschnitten über `#abschnitt`
+- Suche im Handbuch; die Seite „Suche“ zeigt passende Abschnitte mit (im Browser gesucht)
+- Erreichbar über die Navigation (unten), die Seite „Konto“ und die Suche
+- Inhalte als Daten in `frontend/src/handbook/content.ts`, nur als Text dargestellt
+
+### Doku
+
+- Spec 6.11 und Screens ergänzt; CLAUDE.md: Regel zum Handbuch gilt ab jetzt, mit Ort der Inhalte
+
 ## [0.39.0] – 2026-11-16
 
 Benachrichtigungen mit Glocke in der Kopfzeile. Dienststatus mit Diagrammen und Links ins Admin Center.

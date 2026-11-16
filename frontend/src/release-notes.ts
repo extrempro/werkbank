@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.40.0",
+    date: "2026-11-16",
+    summary: "Neu: das Handbuch.",
+    sections: [
+      {
+        area: "Handbuch",
+        entries: [
+          "Neu: das Handbuch. Es erklärt Schritt für Schritt, wie du mit der Werkbank arbeitest, und zeigt dir die Kapitel, die zu deinen Rollen passen. Du findest es unten in der Navigation und auf der Seite „Konto“.",
+          "Die Suche findet jetzt auch passende Abschnitte im Handbuch.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.39.0",
     date: "2026-11-16",
     summary:
