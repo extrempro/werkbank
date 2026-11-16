@@ -93,12 +93,21 @@ function overview(overrides: Partial<Overview> = {}): Overview {
       { year: 2025, name: "2025/26" },
     ],
     rows: [
-      { account: hardware, plan_cents: 5_000_050, previous_cents: null, committed_cents: 0, actual_cents: 0, forecast_cents: 0 },
+      {
+        account: hardware,
+        plan_cents: 5_000_050,
+        previous_cents: null,
+        committed_cents: 0,
+        actual_cents: 0,
+        forecast_cents: 0,
+      },
       {
         account: software,
         plan_cents: 1_190_000,
         previous_cents: 1_000_000,
-        committed_cents: 600_000, actual_cents: 0, forecast_cents: 600_000,
+        committed_cents: 600_000,
+        actual_cents: 0,
+        forecast_cents: 600_000,
       },
     ],
     items: [
@@ -106,14 +115,18 @@ function overview(overrides: Partial<Overview> = {}): Overview {
         item: server,
         plan_cents: 5_000_050,
         previous_cents: null,
-        committed_cents: 0, actual_cents: 0, forecast_cents: 0,
+        committed_cents: 0,
+        actual_cents: 0,
+        forecast_cents: 0,
         contracts: 0,
       },
       {
         item: office,
         plan_cents: 1_190_000,
         previous_cents: 1_000_000,
-        committed_cents: 600_000, actual_cents: 0, forecast_cents: 600_000,
+        committed_cents: 600_000,
+        actual_cents: 0,
+        forecast_cents: 600_000,
         contracts: 1,
       },
     ],
@@ -477,12 +490,21 @@ describe("Übersicht nach dem Entwurf", () => {
     stubFetch({
       "GET /api/budget/overview": overview({
         rows: [
-          { account: hardware, plan_cents: null, previous_cents: null, committed_cents: 119_000, actual_cents: 0, forecast_cents: 119_000 },
+          {
+            account: hardware,
+            plan_cents: null,
+            previous_cents: null,
+            committed_cents: 119_000,
+            actual_cents: 0,
+            forecast_cents: 119_000,
+          },
           {
             account: software,
             plan_cents: 500_000,
             previous_cents: 1_000_000,
-            committed_cents: 600_000, actual_cents: 0, forecast_cents: 600_000,
+            committed_cents: 600_000,
+            actual_cents: 0,
+            forecast_cents: 600_000,
           },
         ],
         plan: { running_cents: 500_000, investment_cents: 0, total_cents: 500_000 },
@@ -808,7 +830,9 @@ describe("Rechnungen", () => {
     });
     fireEvent.click(screen.getByLabelText("Gehört zu einem Projekt"));
     fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
-    expect(await screen.findByText(/RE-3 ist gespeichert und wartet auf die Prüfung/)).toBeVisible();
+    expect(
+      await screen.findByText(/RE-3 ist gespeichert und wartet auf die Prüfung/),
+    ).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       invoicer_id: 2,
       number: "RE-3",
@@ -852,7 +876,9 @@ describe("Partner im Detail", () => {
     const items = within(screen.getByRole("region", { name: "Budgetposten (1)" }));
     expect(items.getByText("1 Vertrag, 1 Rechnung")).toBeVisible();
     expect(
-      within(screen.getByRole("region", { name: "Rechnungen (1)" })).getByText(/12\.10\.2026 · RE-1/),
+      within(screen.getByRole("region", { name: "Rechnungen (1)" })).getByText(
+        /12\.10\.2026 · RE-1/,
+      ),
     ).toBeVisible();
     // Zusammenlegen darf nur der Budgetverwalter.
     expect(screen.queryByRole("heading", { name: /zusammenlegen/ })).toBeNull();

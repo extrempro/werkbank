@@ -135,12 +135,7 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
   };
 
   return (
-    <section
-      className="panel"
-      aria-labelledby="rechnung-formular-titel"
-      ref={reveal}
-      tabIndex={-1}
-    >
+    <section className="panel" aria-labelledby="rechnung-formular-titel" ref={reveal} tabIndex={-1}>
       <div className="panel-head">
         <h2 id="rechnung-formular-titel">
           {invoice ? `Rechnung ${invoice.number} bearbeiten` : "Rechnung erfassen"}
@@ -349,7 +344,9 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
   };
   const onBook = (entry: Invoice) => {
     bookInvoice(entry.id)
-      .then(() => done(`Rechnung ${entry.number} ist geprüft und gebucht. Sie zählt jetzt zum Ist.`))
+      .then(() =>
+        done(`Rechnung ${entry.number} ist geprüft und gebucht. Sie zählt jetzt zum Ist.`),
+      )
       .catch((error: unknown) => fail(error, "Die Rechnung konnte nicht gebucht werden."));
   };
   const onDelete = (entry: Invoice) => {

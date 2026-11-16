@@ -154,9 +154,7 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
     .sort((a, b) => (a.days_to_deadline ?? 0) - (b.days_to_deadline ?? 0));
   const attention = overview ? notices(overview, contracts) : [];
   const free = overview ? overview.plan.total_cents - overview.forecast.total_cents : 0;
-  const bars = overview?.rows.filter(
-    (row) => row.plan_cents !== null || row.forecast_cents > 0,
-  );
+  const bars = overview?.rows.filter((row) => row.plan_cents !== null || row.forecast_cents > 0);
 
   return (
     <div className="page page-wide budget-page">
@@ -239,9 +237,7 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
               <dt>Prognose Jahresende</dt>
               <dd className="budget-card-value">{formatEuro(overview.forecast.total_cents)}</dd>
               <dd className={free < 0 ? "budget-card-sub budget-bad" : "budget-card-sub budget-ok"}>
-                {free < 0
-                  ? `${formatEuro(-free)} über Plan`
-                  : `noch ${formatEuro(free)} verfügbar`}
+                {free < 0 ? `${formatEuro(-free)} über Plan` : `noch ${formatEuro(free)} verfügbar`}
               </dd>
             </div>
           </dl>
@@ -356,8 +352,8 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
               </div>
 
               <p className="small budget-muted">
-                Geplant wird je Budgetposten: <Link to={BUDGET_ITEMS_PATH}>Budgetposten</Link>.
-                Ist = gebuchte Rechnungen. Gebunden = was aus Verträgen in diesem {label} noch zu
+                Geplant wird je Budgetposten: <Link to={BUDGET_ITEMS_PATH}>Budgetposten</Link>. Ist
+                = gebuchte Rechnungen. Gebunden = was aus Verträgen in diesem {label} noch zu
                 erwarten ist. Prognose = Ist plus gebunden. Alle Beträge sind brutto.
               </p>
             </>
