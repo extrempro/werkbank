@@ -54,7 +54,6 @@ from werkbank.modules.budget.settings import (
     load_settings,
 )
 from werkbank.modules.budget.tags import (
-    MODE_ANY,
     adopt_spelling,
     clean_tags,
     matches,
@@ -1943,7 +1942,7 @@ class TagOut(BaseModel):
 class StatisticQuery(BaseModel):
     tags: list[str] = Field(min_length=1, max_length=50)
     # any: einer der Tags reicht; all: alle Tags müssen am Posten stehen
-    mode: Literal["any", "all"] = MODE_ANY
+    mode: Literal["any", "all"] = "any"
     # Erstes Geschäftsjahr des Zeitraums; ohne Angabe enden die fünf Jahre mit dem laufenden
     start: int | None = Field(default=None, ge=YEAR_MIN, le=YEAR_MAX)
 
@@ -1979,7 +1978,7 @@ class StatisticOut(BaseModel):
 class SavedStatisticIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     tags: list[str] = Field(min_length=1, max_length=50)
-    mode: Literal["any", "all"] = MODE_ANY
+    mode: Literal["any", "all"] = "any"
 
     @field_validator("name")
     @classmethod
