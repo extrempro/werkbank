@@ -41,6 +41,7 @@ from werkbank.modules.budget.models import (
     BudgetItem,
     BudgetPartner,
     BudgetStatistic,
+    BudgetTag,
 )
 from werkbank.modules.budget.plan import (
     ITEM_CLOSED,
@@ -63,6 +64,7 @@ from werkbank.modules.budget.settings import (
 )
 from werkbank.modules.budget.tags import (
     adopt_spelling,
+    clean_tag,
     clean_tags,
     matches,
 )
@@ -634,10 +636,22 @@ def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
         )
 
 
-def _known_tags(db: DbDep, skip_id: int | None = None) -> list[str]:
-    """Alle vergebenen Tags in der Reihenfolge der Posten (ältester zuerst)."""
-    rows = db.execute(select(BudgetItem.id, BudgetItem.tags).order_by(BudgetItem.id)).all()
-    return [tag for item_id, tags in rows if item_id != skip_id for tag in tags]
+def _known_tags(db: DbDep) -> list[str]:
+    """Die Tags aus der Liste des Budgetverwalters."""
+    return list(db.scalars(select(BudgetTag.name).order_by(BudgetTag.id)).all())
+
+
+def _listed_tags(db: DbDep, tags: list[str]) -> list[str]:
+    """Tags in der Schreibweise der Liste; 422, wenn einer nicht in der Liste steht."""
+    known = {tag.casefold(): tag for tag in _known_tags(db)}
+    missing = [tag for tag in tags if tag.casefold() not in known]
+    if missing:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Den Tag „{missing[0]}“ gibt es nicht. "
+            "Tags legt der Budgetverwalter unter Einstellungen an.",
+        )
+    return [known[tag.casefold()] for tag in tags]
 
 
 @router.get("/items")
@@ -689,7 +703,7 @@ def _apply_item(db: DbDep, row: BudgetItem, body: ItemIn) -> None:
 def create_item(request: Request, body: ItemIn, user: Editor, db: DbDep) -> ItemOut:
     """Legt einen Budgetposten an: Konto, Bezeichnung, erwartete Kosten und Laufzeit."""
     _check_item(db, body, None)
-    row = BudgetItem(tags=adopt_spelling(body.tags, _known_tags(db)))
+    row = BudgetItem(tags=_listed_tags(db, body.tags))
     _apply_item(db, row, body)
     db.add(row)
     db.flush()
@@ -719,7 +733,7 @@ def update_item(
     _check_item(db, body, row.id)
     before = _item_details(row)
     _apply_item(db, row, body)
-    row.tags = adopt_spelling(body.tags, _known_tags(db, skip_id=row.id))
+    row.tags = _listed_tags(db, body.tags)
     write_audit(
         db,
         module=MODULE,
@@ -2070,6 +2084,7 @@ STATISTIC_YEARS = 5
 
 
 class TagOut(BaseModel):
+    id: int
     tag: str
     # Anzahl der Budgetposten mit diesem Tag
     items: int
@@ -2141,17 +2156,148 @@ def saved_statistic_out(row: BudgetStatistic) -> SavedStatisticOut:
     return SavedStatisticOut(id=row.id, name=row.name, tags=list(row.tags), mode=row.mode)
 
 
+class TagIn(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+    @field_validator("name")
+    @classmethod
+    def tidy(cls, value: str) -> str:
+        return clean_tag(value)
+
+
+TagId = Annotated[int, Path(ge=1)]
+
+
+def _tag_out(row: BudgetTag, counts: dict[str, int]) -> TagOut:
+    return TagOut(id=row.id, tag=row.name, items=counts.get(row.name.casefold(), 0))
+
+
+def _tag_counts(db: DbDep) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for tags in db.scalars(select(BudgetItem.tags)).all():
+        for key in {tag.casefold() for tag in tags}:
+            counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def _tag_taken(db: DbDep, name: str, own_id: int | None) -> None:
+    other = db.scalars(select(BudgetTag).where(func.lower(BudgetTag.name) == name.lower())).first()
+    if other is not None and other.id != own_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Diesen Tag gibt es schon."
+        )
+
+
+def _replace_tag(db: DbDep, old: str, new: str | None) -> tuple[int, int]:
+    """Benennt einen Tag an Posten und Statistiken um (new) oder entfernt ihn (None).
+
+    Statistiken, denen danach kein Tag mehr bleibt, werden gelöscht.
+    Liefert die Zahl der geänderten Posten und Statistiken.
+    """
+    key = old.casefold()
+
+    def swap(tags: list[str]) -> list[str]:
+        out: list[str] = []
+        for tag in tags:
+            value = (new if new is not None else None) if tag.casefold() == key else tag
+            if value is not None and value.casefold() not in {entry.casefold() for entry in out}:
+                out.append(value)
+        return out
+
+    items = 0
+    for item in db.scalars(select(BudgetItem)).all():
+        if any(tag.casefold() == key for tag in item.tags):
+            item.tags = swap(list(item.tags))
+            items += 1
+    statistics = 0
+    for statistic in db.scalars(select(BudgetStatistic)).all():
+        if any(tag.casefold() == key for tag in statistic.tags):
+            remaining = swap(list(statistic.tags))
+            if remaining:
+                statistic.tags = remaining
+            else:
+                db.delete(statistic)
+            statistics += 1
+    return items, statistics
+
+
 @router.get("/tags")
 def list_tags(user: Reader, db: DbDep) -> list[TagOut]:
-    """Alle vergebenen Tags mit der Zahl ihrer Budgetposten, nach Name sortiert."""
-    spelling: dict[str, str] = {}
-    counts: dict[str, int] = {}
-    for tags in db.scalars(select(BudgetItem.tags).order_by(BudgetItem.id)).all():
-        for key in {tag.casefold(): tag for tag in tags}:
-            counts[key] = counts.get(key, 0) + 1
-        for tag in tags:
-            spelling.setdefault(tag.casefold(), tag)
-    return [TagOut(tag=spelling[key], items=counts[key]) for key in sorted(counts)]
+    """Die Tag-Liste mit der Zahl der Budgetposten je Tag, nach Name sortiert."""
+    counts = _tag_counts(db)
+    rows = db.scalars(select(BudgetTag).order_by(func.lower(BudgetTag.name))).all()
+    return [_tag_out(row, counts) for row in rows]
+
+
+@router.post("/tags", status_code=status.HTTP_201_CREATED)
+def create_tag(request: Request, body: TagIn, user: Manager, db: DbDep) -> TagOut:
+    _tag_taken(db, body.name, None)
+    row = BudgetTag(name=body.name)
+    db.add(row)
+    db.flush()
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.tag_angelegt",
+        user_id=user.user_id,
+        object_type="tag",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"name": row.name},
+    )
+    db.commit()
+    return _tag_out(row, {})
+
+
+@router.put("/tags/{tag_id}")
+def rename_tag(request: Request, tag_id: TagId, body: TagIn, user: Manager, db: DbDep) -> TagOut:
+    """Benennt einen Tag um, auch an allen Budgetposten und gespeicherten Statistiken."""
+    row: BudgetTag | None = db.get(BudgetTag, tag_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    _tag_taken(db, body.name, row.id)
+    before = row.name
+    items, statistics = _replace_tag(db, before, body.name)
+    row.name = body.name
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.tag_umbenannt",
+        user_id=user.user_id,
+        object_type="tag",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={
+            "vorher": before,
+            "nachher": body.name,
+            "posten": items,
+            "statistiken": statistics,
+        },
+    )
+    db.commit()
+    return _tag_out(row, _tag_counts(db))
+
+
+@router.delete("/tags/{tag_id}")
+def delete_tag(request: Request, tag_id: TagId, user: Manager, db: DbDep) -> dict[str, bool]:
+    """Löscht einen Tag aus der Liste und von allen Budgetposten und Statistiken."""
+    row: BudgetTag | None = db.get(BudgetTag, tag_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    items, statistics = _replace_tag(db, row.name, None)
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.tag_geloescht",
+        user_id=user.user_id,
+        object_type="tag",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"name": row.name, "posten": items, "statistiken": statistics},
+    )
+    db.delete(row)
+    db.commit()
+    return {"deleted": True}
 
 
 @router.post("/statistics/query")

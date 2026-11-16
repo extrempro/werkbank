@@ -62,6 +62,16 @@ class BudgetItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class BudgetTag(Base):
+    """Ein Tag aus der Liste, die der Budgetverwalter pflegt. Posten wählen nur aus dieser Liste."""
+
+    __tablename__ = "budget_tags"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(30), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class BudgetStatistic(Base):
     """Eine gespeicherte Auswertung nach Tags. Für alle Rollen des Budgets sichtbar."""
 
