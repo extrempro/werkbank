@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.43.0",
+    date: "2026-11-16",
+    summary: "IT-Tools: Favoriten auf jedem Gerät, zuletzt genutzte Tools und ein Verlauf.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Deine Favoriten gelten jetzt für dein Konto, also auf jedem Gerät. Darüber zeigt die Übersicht die Tools, die du zuletzt genutzt hast.",
+          "Neu: der Verlauf. Die Werkbank merkt sich die Einstellungen deiner Tools und öffnet sie mit einem Klick wieder, auf der Seite des Tools oder unter „Verlauf“. Kennwörter und eingegebene Texte werden nie gespeichert. Den Verlauf kannst du löschen oder ausschalten.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.42.0",
     date: "2026-11-16",
     summary: "Neu: der Bereich IT-Monitoring mit dem DNS-Abgleich mit NetBox.",

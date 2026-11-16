@@ -27,6 +27,7 @@ import {
   LICENSES_PATH,
   NEWS_PATH,
   toolCategoryPath,
+  TOOLS_HISTORY_PATH,
   USERS_PATH,
 } from "../navigation";
 import { AccountPage } from "../pages/AccountPage";
@@ -67,6 +68,7 @@ import { LicensesPage } from "../modules/tenant/LicensesPage";
 import { UsersPage } from "../modules/tenant/UsersPage";
 import { CATEGORY_LABELS, findTool, type ToolCategory } from "../tools";
 import { ToolPage, TOOLS_PATH, ToolsOverviewPage } from "../tools/ToolsPage";
+import { ToolsHistoryPage } from "../tools/ToolsHistoryPage";
 import { currentTheme, saveTheme } from "../theme";
 import { navigate, usePath } from "../router";
 import { headerLogo, useBranding } from "../branding";
@@ -322,6 +324,8 @@ export function Layout({ me }: LayoutProps) {
     page = <PartnersPage roles={me.roles} />;
   } else if (path === BUDGET_SETTINGS_PATH && current) {
     page = <BudgetSettingsPage />;
+  } else if (path === TOOLS_HISTORY_PATH && current) {
+    page = <ToolsHistoryPage />;
   } else if (toolId !== null && toolsAllowed) {
     page = <ToolPage key={toolId} id={toolId} />;
   } else if (path === "/evergreen" && current) {

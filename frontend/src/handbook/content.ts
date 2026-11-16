@@ -886,10 +886,29 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Mit dem Knopf „zu den Favoriten“ an einem Tool merkst du es dir; Favoriten stehen oben in der Übersicht. Sie gelten nur in diesem Browser.",
+            text: "Mit dem Knopf „zu den Favoriten“ an einem Tool merkst du es dir; Favoriten stehen oben in der Übersicht, darüber „Zuletzt genutzt“ mit den letzten sechs Tools. Beides gilt für dein Konto, also auf jedem Gerät.",
           },
         ],
         links: [{ to: "/it-tools", label: "Zu den IT-Tools" }],
+      },
+      {
+        id: "verlauf",
+        title: "Verlauf",
+        blocks: [
+          {
+            kind: "text",
+            text: "Ändern sich die Einstellungen eines Tools und bleiben zwei Sekunden so, merkt sich die Werkbank sie in deinem Verlauf. Gespeichert wird nur, was ohnehin in der Adresszeile steht, nie Kennwörter, Schlüssel oder eingegebene Texte. Den Verlauf siehst nur du; er reicht 90 Tage zurück.",
+          },
+          {
+            kind: "list",
+            items: [
+              "Auf der Seite eines Tools öffnet „Zuletzt verwendete Einstellungen“ die letzten fünf; ein Klick stellt sie wieder ein.",
+              "Die Seite „Verlauf“ zeigt alles nach Tagen, mit Löschen je Eintrag und „Ganzen Verlauf löschen“.",
+              "Unter „Einstellungen“ auf derselben Seite schaltest du den Verlauf aus. Favoriten und zuletzt genutzte Tools bleiben trotzdem.",
+            ],
+          },
+        ],
+        links: [{ to: "/it-tools/verlauf", label: "Zum Verlauf" }],
       },
       {
         id: "daten",

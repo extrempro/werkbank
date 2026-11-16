@@ -1,11 +1,19 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "../components/Link";
 import { TOOLS_PATH } from "../navigation";
+import { timeAgo } from "../notifications";
+import {
+  deleteHistoryEntry,
+  entryLink,
+  recordRecent,
+  toggleFavorite as toggleStoredFavorite,
+  TOOLS_HISTORY_PATH,
+  useHistory,
+  useToolPrefs,
+} from "./account";
 import {
   CATEGORY_LABELS,
   findTool,
-  readFavorites,
-  saveFavorites,
   searchTools,
   type ToolCategory,
   type ToolDefinition,
@@ -14,15 +22,8 @@ import {
 export { TOOLS_PATH };
 
 function useFavorites(): [string[], (id: string) => void] {
-  const [favorites, setFavorites] = useState(readFavorites);
-  const toggle = (id: string) => {
-    const next = favorites.includes(id)
-      ? favorites.filter((entry) => entry !== id)
-      : [...favorites, id];
-    setFavorites(next);
-    saveFavorites(next);
-  };
-  return [favorites, toggle];
+  const prefs = useToolPrefs();
+  return [prefs.favorites, toggleStoredFavorite];
 }
 
 function FavoriteButton({
@@ -83,6 +84,13 @@ export function ToolsOverviewPage({ category }: { category?: ToolCategory }) {
     hits.some((tool) => tool.category === entry),
   );
   const favoriteTools = hits.filter((tool) => favorites.includes(tool.id));
+  const { recent } = useToolPrefs();
+  const recentTools = query
+    ? []
+    : recent
+        .map((id) => findTool(id))
+        .filter((tool): tool is ToolDefinition => tool !== undefined)
+        .filter((tool) => !category || tool.category === category);
 
   return (
     <div className="page">
@@ -110,6 +118,22 @@ export function ToolsOverviewPage({ category }: { category?: ToolCategory }) {
       </p>
 
       {hits.length === 0 && <p className="panel panel-empty">Kein Tool passt zu dieser Suche.</p>}
+
+      {recentTools.length > 0 && (
+        <section aria-labelledby="tools-zuletzt">
+          <h2 id="tools-zuletzt">Zuletzt genutzt</h2>
+          <ul className="tool-cards">
+            {recentTools.map((tool) => (
+              <ToolCard
+                key={tool.id}
+                tool={tool}
+                favorite={favorites.includes(tool.id)}
+                onToggle={() => toggleFavorite(tool.id)}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
 
       {favoriteTools.length > 0 && (
         <section aria-labelledby="tools-favoriten">
@@ -150,10 +174,53 @@ export function ToolsOverviewPage({ category }: { category?: ToolCategory }) {
   );
 }
 
+/** Die letzten Einstellungen dieses Tools aus dem eigenen Verlauf, zum Wiederöffnen. */
+function ToolHistory({ tool }: { tool: ToolDefinition }) {
+  const entries = useHistory(tool.id, 5);
+  const [open, setOpen] = useState(false);
+  if (!entries || entries.length === 0) {
+    return null;
+  }
+  return (
+    <details
+      className="panel tool-history"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary>Zuletzt verwendete Einstellungen ({entries.length})</summary>
+      <ul className="tool-history-list">
+        {entries.map((entry) => (
+          <li key={entry.id}>
+            <Link to={entryLink(entry)}>{entry.summary || "Einstellungen"}</Link>
+            <span className="small"> · {timeAgo(entry.created_at)}</span>
+            <button
+              type="button"
+              className="button button-quiet"
+              onClick={() => {
+                deleteHistoryEntry(entry.id).catch(() => undefined);
+              }}
+            >
+              Löschen<span className="visually-hidden">: {entry.summary}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="small">
+        <Link to={TOOLS_HISTORY_PATH}>Ganzer Verlauf</Link>
+      </p>
+    </details>
+  );
+}
+
 /** Ein einzelnes Tool. Unbekannte Kennungen führen zurück zur Übersicht. */
 export function ToolPage({ id }: { id: string }) {
   const tool = findTool(id);
   const [favorites, toggleFavorite] = useFavorites();
+  useEffect(() => {
+    if (tool) {
+      recordRecent(tool.id);
+    }
+  }, [tool]);
   const back = (
     <p className="back back-always">
       <Link to={TOOLS_PATH}>Zurück zu den IT-Tools</Link>
@@ -186,6 +253,7 @@ export function ToolPage({ id }: { id: string }) {
           onToggle={() => toggleFavorite(tool.id)}
         />
       </header>
+      <ToolHistory tool={tool} />
       <section className="panel tool-panel" aria-label={tool.name}>
         <Suspense fallback={<p role="status">Wird geladen …</p>}>
           <tool.component />

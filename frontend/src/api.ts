@@ -121,10 +121,16 @@ export function notifyTasksChanged(): void {
   window.dispatchEvent(new Event(TASKS_CHANGED));
 }
 
+/** quiet: Änderung betrifft keine Aufgaben (z. B. Favoriten); Zähler nicht neu laden. */
+export interface SendOptions {
+  quiet?: boolean;
+}
+
 async function sendJson<T>(
   method: "POST" | "PUT" | "PATCH" | "DELETE",
   url: string,
   body?: unknown,
+  options: SendOptions = {},
 ): Promise<T> {
   const response = await fetch(url, {
     method,
@@ -142,25 +148,27 @@ async function sendJson<T>(
     throw new ApiError(response.status, stepUp, await errorDetail(response));
   }
   const result = (await response.json()) as T;
-  notifyTasksChanged();
+  if (!options.quiet) {
+    notifyTasksChanged();
+  }
   return result;
 }
 
 /** Verändernde Anfrage mit JSON-Inhalt. */
-export function postJson<T>(url: string, body?: unknown): Promise<T> {
-  return sendJson("POST", url, body);
+export function postJson<T>(url: string, body?: unknown, options?: SendOptions): Promise<T> {
+  return sendJson("POST", url, body, options);
 }
 
-export function putJson<T>(url: string, body?: unknown): Promise<T> {
-  return sendJson("PUT", url, body);
+export function putJson<T>(url: string, body?: unknown, options?: SendOptions): Promise<T> {
+  return sendJson("PUT", url, body, options);
 }
 
 export function patchJson<T>(url: string, body?: unknown): Promise<T> {
   return sendJson("PATCH", url, body);
 }
 
-export function deleteJson<T>(url: string): Promise<T> {
-  return sendJson("DELETE", url);
+export function deleteJson<T>(url: string, options?: SendOptions): Promise<T> {
+  return sendJson("DELETE", url, undefined, options);
 }
 
 export interface Task {
