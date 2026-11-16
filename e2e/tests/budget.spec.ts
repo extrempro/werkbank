@@ -160,6 +160,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
       name: new RegExp(`Posten ${number}`),
     }),
   ).toBeVisible();
+  await expectNoA11yViolations(page);
   await page.getByLabel("Auswahl speichern unter", { exact: true }).fill(`Statistik ${number}`);
   await page.getByRole("button", { name: "Statistik speichern" }).click();
   await expect(page.getByText(`Die Statistik „Statistik ${number}“ ist gespeichert.`)).toBeVisible();
@@ -167,6 +168,10 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     "aria-pressed",
     "true",
   );
+  // Nach dem Speichern steht die Seite unten; oben kommen die gespeicherten Statistiken dazu.
+  // Ohne Zurückscrollen lägen deren Knöpfe teils unter der festen Kopfzeile, und axe meldet sie
+  // als verdeckt. Geprüft wird daher von oben.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
 
   await page.goto("/budget");
