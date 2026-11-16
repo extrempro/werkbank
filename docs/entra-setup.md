@@ -116,6 +116,7 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Budget Bearbeiter | `Budget.Editor` | IT-Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen |
 | Budgetverwalter | `Budget.Manager` | Wie Bearbeiter, dazu Rechnungen buchen und die Einstellungen festlegen |
 | Budget Leser | `Budget.Reader` | IT-Budget ansehen |
+| Monitoring Leser | `Monitoring.Reader` | Bereich IT-Monitoring ansehen (z. B. DNS-Abgleich mit NetBox) |
 
 Für alle Rollen gilt:
 - **Zulässige Mitgliedstypen:** Benutzer/Gruppen
@@ -149,6 +150,7 @@ Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wä
 | `GG-Werkbank-Tenant` | Tenant.Reader |
 | `GG-Werkbank-Budget-IT` | Budget.Editor |
 | `GG-Werkbank-Budget-Verwaltung` | Budget.Manager |
+| `GG-Werkbank-Monitoring` | Monitoring.Reader |
 | `GG-Werkbank-Budget-Leser` | Budget.Reader |
 
 Dann: Unternehmensanwendungen → Werkbank → **Benutzer und Gruppen → Benutzer/Gruppe hinzufügen** → Gruppe wählen → Rolle wählen → **Zuweisen**. Für jede Gruppe wiederholen.

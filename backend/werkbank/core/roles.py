@@ -19,6 +19,7 @@ class Role(StrEnum):
     BUDGET_EDITOR = "Budget.Editor"
     BUDGET_MANAGER = "Budget.Manager"
     BUDGET_READER = "Budget.Reader"
+    MONITORING_READER = "Monitoring.Reader"
 
 
 KNOWN_ROLES: frozenset[str] = frozenset(role.value for role in Role)
@@ -70,4 +71,8 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
         "Wie Bearbeiter, dazu Rechnungen buchen und die Einstellungen festlegen",
     ),
     Role.BUDGET_READER: ("Budget Leser", "IT-Budget ansehen"),
+    Role.MONITORING_READER: (
+        "Monitoring Leser",
+        "Bereich IT-Monitoring ansehen (z. B. DNS-Abgleich mit NetBox)",
+    ),
 }

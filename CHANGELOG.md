@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.42.0] – 2026-11-16
+
+Neuer Bereich IT-Monitoring mit dem DNS-Abgleich mit NetBox.
+
+### IT-Monitoring
+
+- Neuer Bereich **IT-Monitoring** mit der Rolle `Monitoring.Reader` (Admins sehen ihn immer)
+- **DNS-Abgleich mit NetBox** (`/monitoring/dns`): Auftrag `monitoring.dns_netbox` alle 4 Stunden; prüft jeden aktiven Eintrag aus NetBox (Plugin netbox-dns) im öffentlichen DNS über einen festen Resolver (DNS über HTTPS); Status in Ordnung, abweichend, fehlt öffentlich, Fehler, inaktiv; Normalisierung wie im IT-Tool (relative Namen, IPv6, TXT, CAA, SOA ohne Seriennummer, TTL optional); ausgenommen nicht aktive Zonen, Reverse-Zonen privater Adressen, extern delegierte Subdomains
+- Seite mit Kennzahlen, Verlauf der letzten 90 Tage, Ansichten Probleme / Neu seit dem letzten Lauf / Alle, Suche, Tabelle je Zone mit Link nach NetBox; „Jetzt prüfen“ für Admins
+- Glocke: neue Probleme gegenüber dem vorletzten Lauf und fehlgeschlagene Läufe
+- Verwaltung › Allgemein › NetBox: Adresse, API-Token (verschlüsselt), optional CA-Zertifikat (PEM), View, Resolver, TTL-Vergleich, Ein/Aus, „Verbindung prüfen“
+- DNS-Antworten liest jetzt auch der Server (Wire-Format nach RFC 1035)
+- Migration 0035: Tabellen `mon_dns_runs`, `mon_dns_rows`
+
+### Doku
+
+- Spec 8b und Screens, Entra-Einrichtung (Rolle und Gruppe), Datenschutz, ASVS, Handbuch
+
 ## [0.41.0] – 2026-11-16
 
 Benachrichtigungen zusätzlich per Mail und Teams, einstellbar im Konto.

@@ -8,6 +8,7 @@ import {
   type SmtpUpdate,
 } from "../api";
 import { CredentialWarnSettings } from "./CredentialWarnSettings";
+import { NetboxSettings } from "./NetboxSettings";
 import { TeamsSettings } from "./TeamsSettings";
 import { ToolsInternetSettings } from "./ToolsInternetSettings";
 
@@ -294,6 +295,7 @@ export function GeneralSettings({ settings, onChange }: GeneralSettingsProps) {
 
       {settings.teams && <TeamsSettings teams={settings.teams} onChange={onChange} />}
       <CredentialWarnSettings settings={settings} onChange={onChange} />
+      <NetboxSettings />
       <ToolsInternetSettings settings={settings} onChange={onChange} />
     </>
   );

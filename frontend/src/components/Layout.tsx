@@ -23,6 +23,7 @@ import {
   BUDGET_SETTINGS_PATH,
   CREDENTIALS_PATH,
   HEALTH_PATH,
+  MONITORING_DNS_PATH,
   LICENSES_PATH,
   NEWS_PATH,
   toolCategoryPath,
@@ -34,6 +35,7 @@ import { AuditPage } from "../pages/AuditPage";
 import { NewsPage } from "../pages/NewsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
 import { HandbookPage } from "../pages/HandbookPage";
+import { DnsCheckPage } from "../modules/monitoring/DnsCheckPage";
 import { chaptersFor, HANDBOOK_PATH } from "../handbook";
 import { NOTIFICATIONS_PATH } from "../notifications";
 import { NotificationBell } from "./NotificationBell";
@@ -296,6 +298,8 @@ export function Layout({ me }: LayoutProps) {
     page = <CredentialsPage />;
   } else if (path === HEALTH_PATH && current) {
     page = <HealthPage />;
+  } else if (path === MONITORING_DNS_PATH && current) {
+    page = <DnsCheckPage isAdmin={me.roles.includes("Werkbank.Admin")} />;
   } else if (path === BUDGET_PATH && current) {
     page = <BudgetOverviewPage roles={me.roles} />;
   } else if (path === BUDGET_ACCOUNTS_PATH && current) {

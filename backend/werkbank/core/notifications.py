@@ -129,6 +129,16 @@ KINDS: dict[str, KindInfo] = {
         "Prognose eines Postens übersteigt den Planwert",
         (Role.BUDGET_EDITOR, Role.BUDGET_MANAGER),
     ),
+    "monitoring.dns_abweichung": KindInfo(
+        "IT-Monitoring",
+        "DNS-Abgleich mit NetBox findet neue Abweichungen",
+        (Role.MONITORING_READER, Role.WERKBANK_ADMIN),
+    ),
+    "monitoring.dns_fehlgeschlagen": KindInfo(
+        "IT-Monitoring",
+        "DNS-Abgleich mit NetBox ist fehlgeschlagen",
+        (Role.MONITORING_READER, Role.WERKBANK_ADMIN),
+    ),
     "kern.auftrag_fehlgeschlagen": KindInfo(
         "Werkbank", "Ein Hintergrundauftrag ist fehlgeschlagen", (Role.WERKBANK_ADMIN,)
     ),

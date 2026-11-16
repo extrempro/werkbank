@@ -513,6 +513,21 @@ Kleine Werkzeuge für den Alltag in der IT (Rechner, Generatoren, Konverter), ü
 - **Was nie im Link steht:** Kennwörter, eingegebene Texte, Listen von Netzen, Regelwerke, MAC-Adressen, E-Mail-Header, die Tabellen von Netzplan und Nutzwertanalyse, die Inhalte von QR-Codes, Bilder, Zertifikate, Schlüssel und die Angaben eines CSR (Namen und SANs), abgefragte Domains, Namen und Adressen. Ein Verweis aus einem anderen Tool darf eine Domain mitgeben; das Tool übernimmt sie und nimmt sie sofort aus der Adresszeile. Der OpenSSL-Befehl im CSR-Tool setzt die Namen in einfache Anführungszeichen.
 - **Dateien aus den Tools:** Downloads entstehen im Browser über eine kurzlebige `blob:`-Adresse. Vorschaubilder werden als `data:`-Adresse angezeigt, weil die Sicherheitsrichtlinie (`img-src 'self' data:`) keine `blob:`-Bilder erlaubt. Texte, die aus einem Link in einen Befehl zum Kopieren gelangen (Port-Nachschlagewerk), werden auf harmlose Zeichen beschränkt.
 
+## 8b. Bereich IT-Monitoring
+
+Regelmäßige Prüfungen der IT. Zugriff: Rolle `Monitoring.Reader` und `Werkbank.Admin` (serverseitig geprüft).
+
+### DNS-Abgleich mit NetBox (`/monitoring/dns`)
+
+- Auftrag `monitoring.dns_netbox` alle 4 Stunden; Admins ziehen ihn mit „Jetzt prüfen“ vor.
+- Liest aus NetBox (Plugin netbox-dns) Zonen und Einträge, wahlweise einer View. Ausgenommen: nicht aktive Zonen, Reverse-Zonen privater Adressen, extern verwaltete Subdomains (NS-Delegation ohne eigene Zone; nur deren NS-Einträge werden geprüft). Geprüfte Typen: A, AAAA, CNAME, MX, TXT, SPF, CAA, NS, SRV, PTR, SOA; andere werden gezählt und genannt.
+- **Nur die Einträge aus NetBox:** Je Name und Typ eine Abfrage im öffentlichen DNS über einen der festen Resolver (DNS über HTTPS, wie die IT-Tools). Keine Suche nach Neuem (keine typischen Namen, kein crt.sh).
+- Status je Name und Typ: in Ordnung, abweichend (andere oder zusätzliche Werte; mit TTL-Vergleich auch öffentlich größere TTL; SOA ohne Seriennummer), fehlt öffentlich, Fehler, inaktiv (nur inaktiv in NetBox und öffentlich nicht vorhanden; öffentlich vorhanden gilt als abweichend). Vergleich mit Normalisierung (relative Namen zur Zone, IPv6-Schreibweise, TXT-Teilstrings, CAA).
+- Seite: Kennzahlen, Verlauf der letzten 90 Tage (je Tag der letzte Lauf), Ansichten „Probleme“, „Neu seit dem letzten Lauf“, „Alle“, Suche, Tabelle je Zone mit Werten aus NetBox und öffentlich, Hinweisen und Link in NetBox; Liste des nicht Geprüften.
+- Gespeichert: Läufe 90 Tage (Zahlen), Zeilen nur der letzten beiden erfolgreichen Läufe. Schlägt das Lesen von NetBox fehl, gilt der Lauf als fehlgeschlagen; das letzte Ergebnis bleibt sichtbar.
+- Glocke: neue Probleme gegenüber dem vorletzten Lauf (eine Benachrichtigung je Lauf) und ein fehlgeschlagener Lauf (`Monitoring.Reader`, `Werkbank.Admin`).
+- Verwaltung › Allgemein › NetBox: https-Adresse, API-Token (verschlüsselt, nie ausgegeben), optional CA-Zertifikat (PEM) für eine eigene PKI, View, Resolver, TTL-Vergleich, Ein/Aus, „Verbindung prüfen“ (Version, Plugin, Views, Zahl der Zonen). Der Server erreicht NetBox auch im internen Netz, aber nur diese eine eingetragene https-Adresse, ohne Weiterleitungen.
+
 ## 9. Datenmodell (Überblick)
 
 Kern:
@@ -587,6 +602,7 @@ Evergreen:
 | Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Benachrichtigungen je Art mit Glocke, Mail und Teams, Version. Später: Push an/aus, Hinweis zur Installation |
 | Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Verweis auf die Einstellungen im Konto. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
+| DNS-Abgleich mit NetBox | Monitoring.Reader, Admin | Kennzahlen, Verlauf 90 Tage, Ansichten Probleme/Neu/Alle, Suche, Tabelle je Zone, „Jetzt prüfen“ für Admins |
 | Handbuch | alle | Kapitel je Bereich nach Rollen, Suche im Handbuch, je Kapitel Inhaltsverzeichnis und Abschnitte mit Verweisen |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
 

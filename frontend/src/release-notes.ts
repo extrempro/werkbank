@@ -24,6 +24,24 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.42.0",
+    date: "2026-11-16",
+    summary: "Neu: der Bereich IT-Monitoring mit dem DNS-Abgleich mit NetBox.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Neu: der Bereich IT-Monitoring. Alle 4 Stunden prüft die Werkbank, ob die DNS-Einträge aus NetBox öffentlich genau so im DNS stehen, und zeigt Abweichungen, fehlende Einträge und den Verlauf der letzten 90 Tage.",
+          "Kommen neue Abweichungen dazu, meldet die Glocke das.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: ["Neu: Unter „Allgemein“ lässt sich NetBox anbinden und die Verbindung prüfen."],
+      },
+    ],
+  },
+  {
     version: "0.41.0",
     date: "2026-11-16",
     summary: "Benachrichtigungen jetzt auch per Mail und in Teams.",

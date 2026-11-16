@@ -14,6 +14,7 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Budget.Editor", "IT-Budget"],
   ["Budget.Reader", "IT-Budget"],
   ["Tools.User", "IT-Tools"],
+  ["Monitoring.Reader", "IT-Monitoring"],
 ];
 
 const ROLE_INFO: Record<string, { label: string; description: string }> = {
@@ -43,6 +44,10 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
     description: "Stellungnahme zu vorgelegten Vorgängen",
   },
   "Evergreen.GF": { label: "Evergreen Geschäftsführung", description: "Abnahme von Vorgängen" },
+  "Monitoring.Reader": {
+    label: "Monitoring Leser",
+    description: "Bereich IT-Monitoring ansehen (z. B. DNS-Abgleich mit NetBox)",
+  },
   "Tools.User": {
     label: "IT-Tools Nutzer",
     description: "Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter)",

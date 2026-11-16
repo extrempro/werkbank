@@ -19,6 +19,7 @@ const AUDITOR = "Werkbank.Auditor";
 const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
 const EVERGREEN_EDITORS = ["Evergreen.IT", "Evergreen.Team"];
 const TOOLS_USER = "Tools.User";
+const MONITORING_READER = "Monitoring.Reader";
 const TENANT_READER = "Tenant.Reader";
 const BUDGET_MANAGER = "Budget.Manager";
 const BUDGET_ROLES = ["Budget.Reader", "Budget.Editor", BUDGET_MANAGER];
@@ -37,6 +38,7 @@ export const BUDGET_ITEMS_PATH = "/budget/posten";
 export const BUDGET_INVOICES_PATH = "/budget/rechnungen";
 export const BUDGET_PLANNING_PATH = "/budget/planung";
 export const BUDGET_STATISTICS_PATH = "/budget/statistik";
+export const MONITORING_DNS_PATH = "/monitoring/dns";
 
 /** Seite einer Kategorie der IT-Tools. */
 export function toolCategoryPath(category: string): string {
@@ -179,6 +181,22 @@ export function areasFor(roles: readonly string[]): NavArea[] {
             label: CATEGORY_LABELS[category],
             icon: category,
           })),
+        },
+      ],
+    });
+  }
+  if (roles.includes(MONITORING_READER) || roles.includes(ADMIN)) {
+    areas.push({
+      id: "monitoring",
+      label: "IT-Monitoring",
+      icon: "monitoring",
+      home: MONITORING_DNS_PATH,
+      groups: [
+        {
+          title: null,
+          items: [
+            { path: MONITORING_DNS_PATH, label: "DNS-Abgleich mit NetBox", icon: "netzwerk" },
+          ],
         },
       ],
     });
