@@ -4276,3 +4276,99 @@ p.badges {
   padding: 0;
   list-style: none;
 }
+
+/* IT-Tools: Balken für Anteile */
+
+.tool-bar {
+  display: block;
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+}
+
+.tool-bar-bg {
+  fill: var(--farbe-neutral-flaeche);
+}
+
+.tool-bar-fill {
+  fill: var(--chart-1);
+}
+
+.tool-bar-ok {
+  fill: var(--chart-3);
+}
+
+.tool-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tool-ranking li {
+  display: grid;
+  grid-template-columns: 2rem minmax(6rem, 12rem) minmax(0, 1fr) 5rem;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+/* IT-Tools: bearbeitbare Tabellen und Netzplan */
+
+.tool-edit-table input {
+  width: 100%;
+  min-width: 6rem;
+}
+
+.tool-edit-table .tool-input-short {
+  min-width: 4rem;
+  max-width: 7rem;
+}
+
+.tool-netplan {
+  display: block;
+  max-width: none;
+}
+
+.np-text {
+  fill: var(--farbe-text);
+}
+
+.np-node {
+  fill: var(--farbe-flaeche);
+}
+
+.np-node-crit {
+  fill: var(--farbe-bad-flaeche, var(--farbe-flaeche));
+}
+
+.np-line,
+.np-edge {
+  stroke: var(--farbe-rand-stark);
+}
+
+.np-line-crit,
+.np-edge-crit {
+  stroke: var(--farbe-bad-text);
+}
+
+.np-head {
+  fill: var(--farbe-rand-stark);
+}
+
+.np-head-crit {
+  fill: var(--farbe-bad-text);
+}
+
+/* IT-Tools: Ablagefläche für Dateien */
+
+.tool-drop {
+  border-radius: 8px;
+}
+
+.tool-drop-active {
+  outline: 2px dashed var(--farbe-primaer);
+  outline-offset: 4px;
+}
