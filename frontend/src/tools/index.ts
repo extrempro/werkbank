@@ -29,7 +29,7 @@ export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   text: "Text",
   rechner: "Rechner",
   planung: "Planung",
-  zertifikate: "Zertifikate",
+  zertifikate: "Zertifikate und Kennwörter",
   generator: "Generatoren",
 };
 
@@ -853,6 +853,74 @@ export const TOOLS: readonly ToolDefinition[] = [
       "ecdsa",
     ],
     component: lazy(() => import("./csr/CsrTool")),
+  },
+  {
+    id: "dns-lookup",
+    name: "DNS Lookup",
+    category: "netzwerk",
+    description:
+      "DNS-Einträge über die Werkbank bei Cloudflare, Google oder Quad9 abfragen: mehrere Typen und Resolver im Vergleich, Export, Subdomains finden.",
+    tags: [
+      "dns",
+      "doh",
+      "resolver",
+      "mx",
+      "txt",
+      "cname",
+      "ptr",
+      "nslookup",
+      "dig",
+      "subdomain",
+      "crt.sh",
+    ],
+    component: lazy(() => import("./dns-lookup/DnsLookupTool")),
+  },
+  {
+    id: "mail-check",
+    name: "DNS-/Mail-Check",
+    category: "netzwerk",
+    description:
+      "Domain prüfen: MX, SPF mit der Grenze von 10 Lookups, DMARC, DKIM, MTA-STS, Nameserver, DNSSEC und CAA, mit Ampel und Erklärung.",
+    tags: [
+      "mail",
+      "e-mail",
+      "spf",
+      "dkim",
+      "dmarc",
+      "mx",
+      "mta-sts",
+      "dnssec",
+      "caa",
+      "zustellung",
+    ],
+    component: lazy(() => import("./mail-check/MailCheckTool")),
+  },
+  {
+    id: "rdap",
+    name: "RDAP (WHOIS)",
+    category: "netzwerk",
+    description:
+      "Wem gehört die Domain, das Netz oder das AS? Abfrage bei der zuständigen Registry: Registrar, Ablaufdatum, Status, Nameserver, Abuse-Kontakt.",
+    tags: ["whois", "rdap", "domain", "registrar", "ablauf", "abuse", "as", "asn", "ip"],
+    component: lazy(() => import("./rdap/RdapTool")),
+  },
+  {
+    id: "passwort-pruefen",
+    name: "Passwort prüfen",
+    category: "zertifikate",
+    description:
+      "Stärke eines Kennworts einschätzen (Muster, Wörter, Tastaturfolgen) und auf Wunsch prüfen, ob es in Datenlecks vorkommt, per k-Anonymität.",
+    tags: [
+      "passwort",
+      "kennwort",
+      "stärke",
+      "entropie",
+      "have i been pwned",
+      "hibp",
+      "datenleck",
+      "pwned",
+    ],
+    component: lazy(() => import("./password-check/PasswordCheckTool")),
   },
 ];
 

@@ -8,8 +8,11 @@ useDefault = true
 description = "Testmaterial der Zertifikats-Tools"
 # Private Testschlüssel, mit OpenSSL nur für die Tests erzeugt; sie schützen nichts.
 # Die Tests für PFX und APC-.p15 vergleichen gegen Referenzdateien, die genau diese Schlüssel brauchen.
+# Öffentliche DKIM-Testschlüssel (Wert p= eines DKIM-Eintrags) im Test des DNS-/Mail-Checks;
+# öffentliche Schlüssel sind kein Geheimnis.
 paths = [
   '''^frontend/src/tools/cert-decode/(pfx|apc)-fixtures\.ts$''',
+  '''^frontend/src/tools/mail-check/records\.test\.ts$''',
 ]
 # Name eines Formats im Code („ENCRYPTED PRIVATE KEY“ → pkcs8-encrypted), kein Geheimnis.
 regexes = [

@@ -81,10 +81,15 @@ export function SearchPage({ roles = [] }: { roles?: readonly string[] }) {
   const tooShort = query.length < MIN_LENGTH;
   const fromServer = !tooShort && state.status === "ready" && state.query === query ? state : null;
   const withTools = roles.includes("Tools.User");
-  const ready = fromServer
-    ? { ...fromServer, hits: [...(withTools ? toolHits(query) : []), ...fromServer.hits] }
-    : null;
-  const loading = !tooShort && !ready && state.status !== "error";
+  // Die Tools sucht der Browser selbst: Ihre Treffer stehen sofort da, auch wenn der Server
+  // noch sucht oder nicht antwortet.
+  const tools = !tooShort && withTools ? toolHits(query) : [];
+  const failed = !tooShort && state.status === "error";
+  const ready =
+    fromServer || failed || tools.length > 0
+      ? { query, hits: [...tools, ...(fromServer?.hits ?? [])] }
+      : null;
+  const loading = !tooShort && !fromServer && !failed;
 
   return (
     <div className="page">
@@ -117,10 +122,13 @@ export function SearchPage({ roles = [] }: { roles?: readonly string[] }) {
       </form>
 
       {loading && <p role="status">Wird gesucht …</p>}
-      {!tooShort && state.status === "error" && (
-        <p role="alert">Die Suche ist fehlgeschlagen. Bitte noch einmal versuchen.</p>
+      {failed && (
+        <p role="alert">
+          Die Suche in den Modulen ist fehlgeschlagen. Bitte noch einmal versuchen.
+          {withTools && " Die Treffer unter den IT-Tools stehen trotzdem da."}
+        </p>
       )}
-      {ready && ready.hits.length === 0 && (
+      {ready && !loading && ready.hits.length === 0 && (
         <p className="panel panel-empty" role="status">
           Keine Treffer für „{ready.query}“.
         </p>

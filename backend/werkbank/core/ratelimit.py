@@ -90,7 +90,7 @@ class RateLimiter:
 
 
 def default_rules(settings: Settings) -> list[RateLimitRule]:
-    """Regeln der Werkbank: Anmeldung, Exporte, übrige API."""
+    """Regeln der Werkbank: Anmeldung, Exporte, Abfragen der IT-Tools ins Internet, übrige API."""
     return [
         RateLimitRule(
             "anmeldung",
@@ -98,6 +98,9 @@ def default_rules(settings: Settings) -> list[RateLimitRule]:
             settings.rate_limit_login_per_minute,
         ),
         RateLimitRule("export", ("/api/audit/export.csv",), settings.rate_limit_export_per_minute),
+        RateLimitRule(
+            "werkzeuge-netz", ("/api/tools/net/",), settings.rate_limit_tools_net_per_minute
+        ),
         RateLimitRule("api", ("/api/",), settings.rate_limit_api_per_minute),
     ]
 

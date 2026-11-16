@@ -22,6 +22,8 @@ AUDIT_RETENTION_DEFAULT = 90
 AUDIT_RETENTION_MIN = 30
 AUDIT_RETENTION_MAX = 3650
 SMTP_KEY = "smtp"
+# Dürfen die IT-Tools über den Server ins Internet fragen (DNS, RDAP, Datenlecks, crt.sh)?
+TOOLS_INTERNET_KEY = "tools_internet"
 
 MIN_KEY_LENGTH = 32
 
@@ -51,6 +53,12 @@ def audit_retention_days(db: Session) -> int:
     if not isinstance(value, int) or isinstance(value, bool):
         return AUDIT_RETENTION_DEFAULT
     return min(max(value, AUDIT_RETENTION_MIN), AUDIT_RETENTION_MAX)
+
+
+def tools_internet_enabled(db: Session) -> bool:
+    """Abfragen der IT-Tools ins Internet; ohne Einstellung erlaubt."""
+    value = get_setting(db, TOOLS_INTERNET_KEY, True)
+    return value if isinstance(value, bool) else True
 
 
 def secret_key_available(settings: Settings) -> bool:

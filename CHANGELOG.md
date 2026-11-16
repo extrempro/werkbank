@@ -4,6 +4,33 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.37.0] – 2026-11-16
+
+IT-Tools: Abfragen ins Internet über den Werkbank-Server, vier weitere Tools, Tools in der Suche.
+
+### IT-Tools
+
+- **DNS Lookup:** mehrere Typen und Resolver (Cloudflare, Google, Quad9) im Vergleich, zusammengefasst oder nebeneinander, Export als Text, CSV und JSON, Subdomains finden (Zertifikats-Logs über crt.sh und typische Namen)
+- **DNS-/Mail-Check:** MX, SPF mit der Grenze von 10 Lookups und include-Baum, DMARC, DKIM, MTA-STS, Nameserver, DNSSEC, CAA mit Ampel und Erklärung
+- **RDAP (WHOIS):** Domain, IP-Adresse oder Netz, AS-Nummer bei der zuständigen Registry; Registrar, Ablauf, Status, Nameserver, Kontakte
+- **Passwort prüfen:** Stärke im Browser, auf Knopfdruck Abgleich mit Have I Been Pwned (k-Anonymität, nur fünf Zeichen des Hashs)
+- Die Abfragen stellt der Server (`/api/tools/net/…`, Rolle `Tools.User`): feste Ziele, nur https, keine internen Adressen, Zeitlimit und Höchstgröße, eigenes Rate-Limit (300 je Minute, `RATE_LIMIT_TOOLS_NET_PER_MINUTE`); DNS-Abfragen gehen gebündelt (bis 20 je Anfrage)
+- Abweichungen zur Toolbox: keine eigenen Resolver; abgefragte Namen stehen nicht in der Adresszeile (ein Verweis aus dem E-Mail-Header-Tool gibt die Domain mit, das Tool nimmt sie gleich wieder heraus)
+- Kategorie „Zertifikate“ heißt jetzt „Zertifikate und Kennwörter“
+
+### Verwaltung
+
+- Unter Allgemein lassen sich die Abfragen der IT-Tools ins Internet ausschalten (Vorgabe: an, mit Audit-Eintrag)
+
+### Suche
+
+- Die Seite „Suche“ zeigt passende IT-Tools sofort, auch während der Server noch sucht oder wenn seine Suche fehlschlägt
+
+### Doku
+
+- Spec 8a und Datenschutz (Empfänger) ergänzt
+- gitleaks nimmt den Test des DNS-/Mail-Checks aus: Er enthält nur öffentliche DKIM-Schlüssel
+
 ## [0.36.0] – 2026-11-16
 
 IT-Budget: Den Vertrag gibt der Budgetposten vor, nicht die Rechnungsposition.

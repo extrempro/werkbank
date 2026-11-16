@@ -21,6 +21,7 @@ from werkbank.core.app_settings import (
     AUDIT_RETENTION_MAX,
     AUDIT_RETENTION_MIN,
     SMTP_KEY,
+    TOOLS_INTERNET_KEY,
     WARN_DAYS_KEY,
     WARN_DAYS_MAX,
     WARN_DAYS_MIN,
@@ -30,6 +31,7 @@ from werkbank.core.app_settings import (
     get_setting,
     secret_key_available,
     set_setting,
+    tools_internet_enabled,
     valid_warn_days,
     warn_days,
 )
@@ -91,6 +93,8 @@ class SettingsOut(BaseModel):
     credential_warn_days: list[int]
     credential_warn_min: int
     credential_warn_max: int
+    # Dürfen die IT-Tools über den Server ins Internet fragen?
+    tools_internet: bool
 
 
 class SmtpIn(BaseModel):
@@ -174,6 +178,10 @@ class CredentialWarnIn(BaseModel):
     days: list[int] = Field(min_length=3, max_length=3)
 
 
+class ToolsInternetIn(BaseModel):
+    enabled: bool
+
+
 class TestResultOut(BaseModel):
     recipient: str
 
@@ -215,6 +223,7 @@ def _settings_out(db: DbDep, settings: SettingsDep) -> SettingsOut:
         credential_warn_days=list(warn_days(db)),
         credential_warn_min=WARN_DAYS_MIN,
         credential_warn_max=WARN_DAYS_MAX,
+        tools_internet=tools_internet_enabled(db),
     )
 
 
@@ -371,6 +380,30 @@ def update_credential_warn_days(
         object_id=WARN_DAYS_KEY,
         ip=client_ip(request),
         details={"vorher": before, "nachher": list(days)},
+    )
+    db.commit()
+    return _settings_out(db, settings)
+
+
+@router.put("/tools-internet")
+def update_tools_internet(
+    request: Request, body: ToolsInternetIn, user: AdminUser, db: DbDep, settings: SettingsDep
+) -> SettingsOut:
+    """Schaltet die Abfragen der IT-Tools ins Internet ein oder aus.
+
+    Betrifft DNS, RDAP, die Prüfung auf Datenlecks und crt.sh.
+    """
+    before = tools_internet_enabled(db)
+    set_setting(db, TOOLS_INTERNET_KEY, body.enabled, user.user_id)
+    write_audit(
+        db,
+        module=MODULE,
+        action="einstellungen.tools_internet_geaendert",
+        user_id=user.user_id,
+        object_type="einstellung",
+        object_id=TOOLS_INTERNET_KEY,
+        ip=client_ip(request),
+        details={"vorher": before, "nachher": body.enabled},
     )
     db.commit()
     return _settings_out(db, settings)
