@@ -64,7 +64,9 @@ describe("SearchPage", () => {
       "href",
       "/it-tools/dns-lookup",
     );
-    expect(await screen.findByRole("alert")).toHaveTextContent("IT-Tools und im Handbuch stehen trotzdem da");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "IT-Tools und im Handbuch stehen trotzdem da",
+    );
   });
 
   it("findet Abschnitte im Handbuch, die zu den Rollen passen", async () => {
