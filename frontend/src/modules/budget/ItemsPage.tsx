@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
-import { BUDGET_ACCOUNTS_PATH } from "../../navigation";
+import { BUDGET_ACCOUNTS_PATH, BUDGET_STATISTICS_PATH } from "../../navigation";
+import { useSearchParam } from "../../router";
 import {
   BUDGET_EDITOR_ROLES,
   deleteItem,
@@ -11,6 +12,10 @@ import {
   fetchAccounts,
   fetchBudgetOverview,
   fetchPartners,
+  fetchTags,
+  hasTag,
+  itemMatches,
+  parseTags,
   setYearStatus,
   rememberedYear,
   rememberYear,
@@ -25,6 +30,7 @@ import {
   type YearStatus,
   type Overview,
   type PlanEntry,
+  type TagCount,
 } from "./api";
 import { DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
 
@@ -37,23 +43,40 @@ interface FormProps {
   item: Item | null;
   accounts: Account[];
   partners: Partner[];
+  /** Schon vergebene Tags als Vorschläge. */
+  knownTags: TagCount[];
   /** Geschäftsjahr, für das beim Anlegen gleich ein Plan eingetragen werden kann; null: gesperrt. */
   planYear: { year: number; name: string } | null;
   onSaved: (item: Item) => void;
   onCancel: () => void;
 }
 
-function ItemForm({ item, accounts, partners, planYear, onSaved, onCancel }: FormProps) {
+function ItemForm({
+  item,
+  accounts,
+  partners,
+  knownTags,
+  planYear,
+  onSaved,
+  onCancel,
+}: FormProps) {
   const reveal = useRevealOnMount<HTMLElement>();
   const [accountId, setAccountId] = useState(item ? String(item.account_id) : "");
   const [name, setName] = useState(item?.name ?? "");
   const [partnerId, setPartnerId] = useState(item?.partner_id ? String(item.partner_id) : "");
   const [plan, setPlan] = useState("");
   const [note, setNote] = useState(item?.note ?? "");
+  const [tags, setTags] = useState(item ? item.tags.join(", ") : "");
   const [active, setActive] = useState(item?.active ?? true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const choices = accounts.filter((entry) => entry.active || entry.id === item?.account_id);
+  const parsed = parseTags(tags);
+  const chosen = typeof parsed === "string" ? [] : parsed;
+  // Vorschläge: vergebene Tags, die noch nicht im Feld stehen
+  const suggestions = knownTags.filter(
+    (entry) => !chosen.some((tag) => tag.toLowerCase() === entry.tag.toLowerCase()),
+  );
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -66,11 +89,17 @@ function ItemForm({ item, accounts, partners, planYear, onSaved, onCancel }: For
       setError("Der Planbetrag ist nicht lesbar. Bitte so eintragen: 15000,00");
       return;
     }
+    const tagList = parseTags(tags);
+    if (typeof tagList === "string") {
+      setError(tagList);
+      return;
+    }
     const update: ItemUpdate = {
       account_id: Number(accountId),
       name: name.trim(),
       partner_id: partnerId ? Number(partnerId) : null,
       note: note.trim(),
+      tags: tagList,
       active,
     };
     if (!item && planYear && planCents !== null) {
@@ -152,6 +181,33 @@ function ItemForm({ item, accounts, partners, planYear, onSaved, onCancel }: For
             onChange={(event) => setNote(event.target.value)}
           />
         </label>
+        <label>
+          Tags (freiwillig, mit Komma getrennt)
+          <input
+            type="text"
+            value={tags}
+            aria-describedby="posten-tags-hinweis"
+            onChange={(event) => setTags(event.target.value)}
+          />
+        </label>
+        <p id="posten-tags-hinweis" className="small budget-muted">
+          Zum Beispiel: Cloud, Lizenzen. Über Tags lassen sich Posten suchen und in der Statistik
+          zusammen auswerten.
+        </p>
+        {suggestions.length > 0 && (
+          <div className="chips" role="group" aria-label="Schon vergebene Tags übernehmen">
+            {suggestions.map((entry) => (
+              <button
+                key={entry.tag}
+                type="button"
+                className="chip budget-tag"
+                onClick={() => setTags([...chosen, entry.tag].join(", "))}
+              >
+                {entry.tag}
+              </button>
+            ))}
+          </div>
+        )}
         {item && (
           <label className="check-label">
             <input
@@ -189,6 +245,14 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [knownTags, setKnownTags] = useState<TagCount[]>([]);
+  // Suchtext aus der Adresse (Treffer der Suche oben führen mit dem Namen des Postens hierher)
+  const linked = useSearchParam("suche");
+  // Eigene Eingabe gilt, bis ein neuer Suchtext über die Adresse kommt.
+  const [typed, setTyped] = useState({ from: linked, text: linked });
+  const search = typed.from === linked ? typed.text : linked;
+  const setSearch = (text: string) => setTyped({ from: linked, text });
+  const [tagFilter, setTagFilter] = useState("");
   const [failed, setFailed] = useState(false);
   // Eingaben im Bearbeitungsmodus je Posten; null: es wird nicht bearbeitet.
   const [draft, setDraft] = useState<Record<number, string> | null>(null);
@@ -205,12 +269,15 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchBudgetOverview(year), fetchAccounts(), fetchPartners()])
-      .then(([result, list, firms]) => {
+    // Die Liste der Tags ist eine Zugabe für Filter und Vorschläge: Ohne sie bleibt die Seite nutzbar.
+    const tagList = fetchTags().catch((): TagCount[] => []);
+    Promise.all([fetchBudgetOverview(year), fetchAccounts(), fetchPartners(), tagList])
+      .then(([result, list, firms, tags]) => {
         if (active) {
           setOverview(result);
           setAccounts(list);
           setPartners(firms);
+          setKnownTags(tags);
           setFailed(false);
         }
       })
@@ -225,6 +292,19 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   }, [year, round]);
 
   const label = overview?.settings.year_label ?? "Geschäftsjahr";
+  const filtered = search.trim() !== "" || tagFilter !== "";
+  const rows = (overview?.items ?? []).filter(
+    (row) => itemMatches(row.item, search) && (tagFilter === "" || hasTag(row.item, tagFilter)),
+  );
+  const total = (pick: (row: (typeof rows)[number]) => number | null) =>
+    rows.reduce((sum, row) => sum + (pick(row) ?? 0), 0);
+  const sums = {
+    plan: total((row) => row.plan_cents),
+    committed: total((row) => row.committed_cents),
+    actual: total((row) => row.actual_cents),
+    forecast: total((row) => row.forecast_cents),
+    previous: total((row) => row.previous_cents),
+  };
   // Geplant wird nur, solange das Jahr ein Entwurf ist.
   const draftYear = overview?.year_status === "entwurf";
   const canPlan = canEdit && draftYear;
@@ -392,6 +472,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           item={editing}
           accounts={accounts}
           partners={partners}
+          knownTags={knownTags}
           planYear={draftYear ? { year: overview.year, name: overview.year_name } : null}
           onSaved={onItemSaved}
           onCancel={closeForm}
@@ -412,6 +493,56 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
       )}
       {overview && accounts.length > 0 && overview.items.length === 0 && (
         <p className="panel panel-empty">Es sind noch keine Budgetposten angelegt.</p>
+      )}
+      {overview && overview.items.length > 0 && (
+        <div className="budget-toolbar budget-filter settings-form">
+          <label>
+            Budgetposten suchen
+            <input
+              type="search"
+              value={search}
+              placeholder="Name, Konto, Partner oder Tag"
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+          {knownTags.length > 0 && (
+            <label className="narrow">
+              Tag
+              <select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}>
+                <option value="">alle</option>
+                {knownTags.map((entry) => (
+                  <option key={entry.tag} value={entry.tag}>
+                    {entry.tag} ({entry.items})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {filtered && (
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => {
+                setSearch("");
+                setTagFilter("");
+              }}
+            >
+              Filter aufheben
+            </button>
+          )}
+          {tagFilter !== "" && (
+            <Link to={`${BUDGET_STATISTICS_PATH}?tag=${encodeURIComponent(tagFilter)}`}>
+              Statistik zu „{tagFilter}“
+            </Link>
+          )}
+        </div>
+      )}
+      {overview && overview.items.length > 0 && (
+        <p role="status" className="small budget-muted">
+          {filtered
+            ? `${rows.length} von ${overview.items.length} Budgetposten`
+            : `${overview.items.length} Budgetposten`}
+        </p>
       )}
       {overview && overview.items.length > 0 && (
         <form onSubmit={onSave} noValidate>
@@ -451,7 +582,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                 </tr>
               </thead>
               <tbody>
-                {overview.items.map((row) => (
+                {rows.map((row) => (
                   <tr key={row.item.id}>
                     <td>
                       <span className="mono">{row.item.account_number}</span>
@@ -471,6 +602,26 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                             ? "1 Vertrag"
                             : `${row.contracts} Verträge`}
                       </span>
+                      {row.item.tags.length > 0 && (
+                        <span className="budget-tags">
+                          {row.item.tags.map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              className="chip budget-tag"
+                              aria-pressed={tagFilter.toLowerCase() === tag.toLowerCase()}
+                              aria-label={`Nach Tag ${tag} filtern`}
+                              onClick={() =>
+                                setTagFilter(
+                                  tagFilter.toLowerCase() === tag.toLowerCase() ? "" : tag,
+                                )
+                              }
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                        </span>
+                      )}
                     </th>
                     <td className="betrag">
                       {draft ? (
@@ -534,17 +685,15 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
               <tfoot>
                 <tr className="budget-summe">
                   <th scope="row" colSpan={2}>
-                    Summe
+                    {filtered ? "Summe der gezeigten Posten" : "Summe"}
                   </th>
-                  <td className="betrag">{formatEuro(overview.plan.total_cents)}</td>
-                  <td className="betrag">{formatEuro(overview.committed.total_cents)}</td>
-                  <td className="betrag">{formatEuro(overview.actual.total_cents)}</td>
-                  <td className="betrag">{formatEuro(overview.forecast.total_cents)}</td>
-                  <td className="betrag">
-                    {formatEuro(overview.plan.total_cents - overview.forecast.total_cents)}
-                  </td>
+                  <td className="betrag">{formatEuro(sums.plan)}</td>
+                  <td className="betrag">{formatEuro(sums.committed)}</td>
+                  <td className="betrag">{formatEuro(sums.actual)}</td>
+                  <td className="betrag">{formatEuro(sums.forecast)}</td>
+                  <td className="betrag">{formatEuro(sums.plan - sums.forecast)}</td>
                   <td className="betrag budget-muted" colSpan={columns - 7}>
-                    {formatEuro(overview.previous.total_cents)}
+                    {formatEuro(sums.previous)}
                   </td>
                 </tr>
               </tfoot>

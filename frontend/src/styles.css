@@ -4128,3 +4128,75 @@ p.badges {
   color: var(--farbe-bad-text);
   overflow-wrap: anywhere;
 }
+
+/* IT-Budget: Tags und Statistik */
+
+.budget-filter {
+  align-items: flex-end;
+  justify-content: flex-start;
+}
+
+.budget-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.budget-tag {
+  min-height: 24px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+}
+
+.budget-saved {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.budget-saved li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.budget-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+
+.budget-chart svg {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+}
+
+.budget-chart-grid {
+  stroke: var(--farbe-rand);
+  stroke-width: 1;
+}
+
+.budget-chart-axis,
+.budget-chart-label {
+  fill: var(--farbe-text-leise);
+  font-size: 11px;
+}
+
+.budget-chart-plan {
+  fill: var(--chart-2);
+}
+
+.budget-chart-actual {
+  fill: var(--chart-1);
+}
+
+.budget-dot-plan {
+  background: var(--chart-2);
+}

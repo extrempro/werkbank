@@ -1,4 +1,4 @@
-"""API des Moduls IT-Budget: Einstellungen, Konten, Plan je Geschäftsjahr und Übersicht."""
+"""API des Moduls IT-Budget: Konten, Posten, Plan, Verträge, Rechnungen und Statistik."""
 
 from datetime import date, datetime
 from typing import Annotated, Literal
@@ -40,6 +40,7 @@ from werkbank.modules.budget.models import (
     BudgetItem,
     BudgetPartner,
     BudgetPlan,
+    BudgetStatistic,
     BudgetYear,
 )
 from werkbank.modules.budget.settings import (
@@ -51,6 +52,12 @@ from werkbank.modules.budget.settings import (
     fiscal_year_of,
     fiscal_year_range,
     load_settings,
+)
+from werkbank.modules.budget.tags import (
+    MODE_ANY,
+    adopt_spelling,
+    clean_tags,
+    matches,
 )
 
 router = APIRouter(prefix="/api/budget")
@@ -159,6 +166,7 @@ class ItemOut(BaseModel):
     partner_id: int | None
     partner_name: str | None
     note: str
+    tags: list[str]
     active: bool
 
 
@@ -170,6 +178,7 @@ class ItemIn(BaseModel):
     plan_year: int | None = Field(default=None, ge=YEAR_MIN, le=YEAR_MAX)
     plan_cents: int | None = Field(default=None, ge=0, le=AMOUNT_MAX)
     note: str = Field(default="", max_length=500)
+    tags: list[str] = Field(default_factory=list, max_length=50)
     active: bool = True
 
     @field_validator("name", "note")
@@ -183,6 +192,11 @@ class ItemIn(BaseModel):
         if not value:
             raise ValueError("Darf nicht leer sein")
         return value
+
+    @field_validator("tags")
+    @classmethod
+    def tidy_tags(cls, value: list[str]) -> list[str]:
+        return clean_tags(value)
 
 
 class OverviewRow(BaseModel):
@@ -432,6 +446,7 @@ def item_out(
         partner_id=row.partner_id,
         partner_name=partner.name if partner else None,
         note=row.note,
+        tags=list(row.tags),
         active=row.active,
     )
 
@@ -643,6 +658,12 @@ def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
         )
 
 
+def _known_tags(db: DbDep, skip_id: int | None = None) -> list[str]:
+    """Alle vergebenen Tags in der Reihenfolge der Posten (ältester zuerst)."""
+    rows = db.execute(select(BudgetItem.id, BudgetItem.tags).order_by(BudgetItem.id)).all()
+    return [tag for item_id, tags in rows if item_id != skip_id for tag in tags]
+
+
 @router.get("/items")
 def list_items(user: Reader, db: DbDep) -> list[ItemOut]:
     accounts = {row.id: row for row in _accounts(db)}
@@ -661,6 +682,7 @@ def create_item(request: Request, body: ItemIn, user: Editor, db: DbDep) -> Item
         name=body.name,
         partner_id=body.partner_id,
         note=body.note,
+        tags=adopt_spelling(body.tags, _known_tags(db)),
         active=body.active,
     )
     db.add(row)
@@ -673,7 +695,7 @@ def create_item(request: Request, body: ItemIn, user: Editor, db: DbDep) -> Item
         object_type="posten",
         object_id=str(row.id),
         ip=client_ip(request),
-        details={"account_id": body.account_id, "name": body.name},
+        details={"account_id": body.account_id, "name": body.name, "tags": row.tags},
     )
     if body.plan_year is not None and body.plan_cents is not None:
         db.add(
@@ -707,11 +729,17 @@ def update_item(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
     _check_item(db, body, row.id)
-    before = {"account_id": row.account_id, "name": row.name, "active": row.active}
+    before = {
+        "account_id": row.account_id,
+        "name": row.name,
+        "active": row.active,
+        "tags": list(row.tags),
+    }
     row.account_id = body.account_id
     row.name = body.name
     row.partner_id = body.partner_id
     row.note = body.note
+    row.tags = adopt_spelling(body.tags, _known_tags(db, skip_id=row.id))
     row.active = body.active
     write_audit(
         db,
@@ -723,7 +751,12 @@ def update_item(
         ip=client_ip(request),
         details={
             "vorher": before,
-            "nachher": {"account_id": body.account_id, "name": body.name, "active": body.active},
+            "nachher": {
+                "account_id": body.account_id,
+                "name": body.name,
+                "active": body.active,
+                "tags": row.tags,
+            },
         },
     )
     db.commit()
@@ -1892,3 +1925,206 @@ def delete_document(
     db.commit()
     remove_document(settings.budget_documents_dir, old_key)
     return _invoice_rows(db, [row])[0]
+
+
+# --- Tags und Statistik ---
+
+StatisticId = Annotated[int, Path(ge=1)]
+# So viele Geschäftsjahre zeigt eine Statistik.
+STATISTIC_YEARS = 5
+
+
+class TagOut(BaseModel):
+    tag: str
+    # Anzahl der Budgetposten mit diesem Tag
+    items: int
+
+
+class StatisticQuery(BaseModel):
+    tags: list[str] = Field(min_length=1, max_length=50)
+    # any: einer der Tags reicht; all: alle Tags müssen am Posten stehen
+    mode: Literal["any", "all"] = MODE_ANY
+    # Erstes Geschäftsjahr des Zeitraums; ohne Angabe enden die fünf Jahre mit dem laufenden
+    start: int | None = Field(default=None, ge=YEAR_MIN, le=YEAR_MAX)
+
+    @field_validator("tags")
+    @classmethod
+    def tidy_tags(cls, value: list[str]) -> list[str]:
+        return clean_tags(value)
+
+
+class StatisticYear(BaseModel):
+    year: int
+    name: str
+    plan_cents: int
+    actual_cents: int
+
+
+class StatisticItem(BaseModel):
+    item: ItemOut
+    # Summen über den gezeigten Zeitraum
+    plan_cents: int
+    actual_cents: int
+
+
+class StatisticOut(BaseModel):
+    year_label: str
+    current_year: int
+    tags: list[str]
+    mode: str
+    years: list[StatisticYear]
+    items: list[StatisticItem]
+
+
+class SavedStatisticIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    tags: list[str] = Field(min_length=1, max_length=50)
+    mode: Literal["any", "all"] = MODE_ANY
+
+    @field_validator("name")
+    @classmethod
+    def plain(cls, value: str) -> str:
+        value = _single_line(value)
+        if not value:
+            raise ValueError("Darf nicht leer sein")
+        return value
+
+    @field_validator("tags")
+    @classmethod
+    def tidy_tags(cls, value: list[str]) -> list[str]:
+        return clean_tags(value)
+
+
+class SavedStatisticOut(BaseModel):
+    id: int
+    name: str
+    tags: list[str]
+    mode: str
+
+
+def saved_statistic_out(row: BudgetStatistic) -> SavedStatisticOut:
+    return SavedStatisticOut(id=row.id, name=row.name, tags=list(row.tags), mode=row.mode)
+
+
+@router.get("/tags")
+def list_tags(user: Reader, db: DbDep) -> list[TagOut]:
+    """Alle vergebenen Tags mit der Zahl ihrer Budgetposten, nach Name sortiert."""
+    spelling: dict[str, str] = {}
+    counts: dict[str, int] = {}
+    for tags in db.scalars(select(BudgetItem.tags).order_by(BudgetItem.id)).all():
+        for key in {tag.casefold(): tag for tag in tags}:
+            counts[key] = counts.get(key, 0) + 1
+        for tag in tags:
+            spelling.setdefault(tag.casefold(), tag)
+    return [TagOut(tag=spelling[key], items=counts[key]) for key in sorted(counts)]
+
+
+@router.post("/statistics/query")
+def query_statistic(body: StatisticQuery, user: Reader, db: DbDep) -> StatisticOut:
+    """Plan und Ist der Budgetposten mit den gewählten Tags über fünf Geschäftsjahre.
+
+    Liest nur; POST, damit die Tags nicht in der Adresse und in Protokollen stehen.
+    """
+    settings = load_settings(db)
+    current = fiscal_year_of(now_utc().date(), settings.start_month)
+    start = body.start if body.start is not None else current - STATISTIC_YEARS + 1
+    years = [year for year in range(start, start + STATISTIC_YEARS) if YEAR_MIN <= year <= YEAR_MAX]
+    accounts = {row.id: row for row in _accounts(db)}
+    chosen = [item for item in _items(db, accounts) if matches(item.tags, body.tags, body.mode)]
+    ids = [item.id for item in chosen]
+    plan: dict[int, dict[int, int]] = {}
+    actual: dict[int, dict[int, int]] = {}
+    if ids and years:
+        for entry in db.scalars(
+            select(BudgetPlan).where(BudgetPlan.item_id.in_(ids), BudgetPlan.fiscal_year.in_(years))
+        ).all():
+            plan.setdefault(entry.fiscal_year, {})[entry.item_id] = entry.amount_cents
+        first_day = fiscal_year_range(years[0], settings.start_month)[0]
+        last_day = fiscal_year_range(years[-1], settings.start_month)[1]
+        for invoice in db.scalars(
+            select(BudgetInvoice).where(
+                BudgetInvoice.item_id.in_(ids),
+                BudgetInvoice.status == STATUS_BOOKED,
+                BudgetInvoice.invoice_date.between(first_day, last_day),
+            )
+        ).all():
+            year = fiscal_year_of(invoice.invoice_date, settings.start_month)
+            by_item = actual.setdefault(year, {})
+            by_item[invoice.item_id] = by_item.get(invoice.item_id, 0) + invoice.gross_cents
+    partners = _partner_map(db)
+    return StatisticOut(
+        year_label=settings.year_label,
+        current_year=current,
+        tags=adopt_spelling(body.tags, _known_tags(db)),
+        mode=body.mode,
+        years=[
+            StatisticYear(
+                year=year,
+                name=fiscal_year_name(year, settings.start_month),
+                plan_cents=sum(plan.get(year, {}).values()),
+                actual_cents=sum(actual.get(year, {}).values()),
+            )
+            for year in years
+        ],
+        items=[
+            StatisticItem(
+                item=item_out(item, accounts, partners),
+                plan_cents=sum(plan.get(year, {}).get(item.id, 0) for year in years),
+                actual_cents=sum(actual.get(year, {}).get(item.id, 0) for year in years),
+            )
+            for item in chosen
+        ],
+    )
+
+
+@router.get("/statistics")
+def list_statistics(user: Reader, db: DbDep) -> list[SavedStatisticOut]:
+    rows = db.scalars(select(BudgetStatistic).order_by(func.lower(BudgetStatistic.name))).all()
+    return [saved_statistic_out(row) for row in rows]
+
+
+@router.post("/statistics", status_code=status.HTTP_201_CREATED)
+def save_statistic(
+    request: Request, body: SavedStatisticIn, user: Editor, db: DbDep
+) -> SavedStatisticOut:
+    """Speichert eine Auswahl von Tags unter einem Namen. Sichtbar für alle Rollen des Budgets."""
+    taken = db.scalars(
+        select(BudgetStatistic).where(func.lower(BudgetStatistic.name) == body.name.lower())
+    ).first()
+    if taken is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Eine Statistik mit diesem Namen gibt es schon.",
+        )
+    row = BudgetStatistic(
+        name=body.name,
+        tags=adopt_spelling(body.tags, _known_tags(db)),
+        mode=body.mode,
+        created_by=user.user_id,
+    )
+    db.add(row)
+    db.flush()
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.statistik_gespeichert",
+        user_id=user.user_id,
+        object_type="statistik",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"name": row.name, "tags": row.tags, "mode": row.mode},
+    )
+    db.commit()
+    return saved_statistic_out(row)
+
+
+@router.delete("/statistics/{statistic_id}")
+def delete_statistic(
+    request: Request, statistic_id: StatisticId, user: Editor, db: DbDep
+) -> dict[str, bool]:
+    row: BudgetStatistic | None = db.get(BudgetStatistic, statistic_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    name = row.name
+    db.delete(row)
+    return _deleted(db, request, user, "statistik", statistic_id, name)

@@ -52,6 +52,7 @@ const PATHS = {
   ],
   posten: ["M4 6h3", "M10 6h10", "M4 12h3", "M10 12h10", "M4 18h3", "M10 18h10"],
   rechnungen: ["M6 3h12v18l-3-2-3 2-3-2-3 2z", "M9 8h6", "M9 12h6", "M9 16h3"],
+  statistik: ["M4 20h16", "M7 20v-6", "M12 20V6", "M17 20v-9"],
   kalender: ["M4 6h16v14H4z", "M4 10h16", "M8 3v4", "M16 3v4", "M8 14h2", "M14 14h2"],
   vertraege: ["M6 3h9l4 4v14H6z", "M15 3v4h4", "M9 12h7", "M9 15h7", "M9 18h4"],
   partner: [

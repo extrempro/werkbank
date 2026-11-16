@@ -8,8 +8,12 @@ import {
   formatEuro,
   formatRate,
   grossCents,
+  hasTag,
+  itemMatches,
+  niceMax,
   parseEuro,
   parseRate,
+  parseTags,
   deadlineBadge,
   partnerRoles,
   share,
@@ -31,6 +35,7 @@ import { PartnerDetailPage } from "./PartnerDetailPage";
 import { PartnersPage } from "./PartnersPage";
 import { PlanningPage } from "./PlanningPage";
 import { DeleteButton } from "./shared";
+import { StatisticsPage } from "./StatisticsPage";
 
 afterEach(() => {
   cleanup();
@@ -72,6 +77,7 @@ const office: Item = {
   partner_id: null,
   partner_name: null,
   note: "",
+  tags: ["Lizenzen", "Cloud"],
   active: true,
 };
 const server: Item = {
@@ -84,6 +90,7 @@ const server: Item = {
   partner_id: null,
   partner_name: null,
   note: "",
+  tags: [],
   active: false,
 };
 
@@ -279,6 +286,7 @@ describe("Budgetposten", () => {
       name: "Sonstige Software",
       partner_id: null,
       note: "",
+      tags: [],
       active: true,
     });
 
@@ -996,6 +1004,7 @@ describe("Planung", () => {
       name: "Projekt Ablage",
       partner_id: 1,
       note: "",
+      tags: [],
       active: true,
       plan_year: 2026,
       plan_cents: 1_500_000,
@@ -1135,5 +1144,205 @@ describe("Belege", () => {
     expect(
       await screen.findByRole("button", { name: "Beleg von Rechnung RE-1 löschen" }),
     ).toBeVisible();
+  });
+});
+
+describe("Tags", () => {
+  it("liest die Eingabe als Liste ohne Doppelte und prüft Länge und Anzahl", () => {
+    expect(parseTags(" Cloud ,  Lizenzen ,cloud,, Microsoft  365 ")).toEqual([
+      "Cloud",
+      "Lizenzen",
+      "Microsoft 365",
+    ]);
+    expect(parseTags("")).toEqual([]);
+    expect(parseTags("x".repeat(31))).toMatch(/zu lang/);
+    expect(parseTags("a,b,c,d,e,f,g,h,i,j,k")).toMatch(/höchstens 10 Tags/);
+  });
+
+  it("findet Posten über Name, Konto und Tag", () => {
+    expect(itemMatches(office, "")).toBe(true);
+    expect(itemMatches(office, " cloud ")).toBe(true);
+    expect(itemMatches(office, "6815")).toBe(true);
+    expect(itemMatches(office, "Hardware")).toBe(false);
+    expect(hasTag(office, "LIZENZEN")).toBe(true);
+    expect(hasTag(server, "Cloud")).toBe(false);
+  });
+
+  it("rundet den Höchstwert der Achse auf", () => {
+    expect(niceMax(0)).toBe(1);
+    expect(niceMax(1_190_000)).toBe(2_000_000);
+    expect(niceMax(4_100)).toBe(5_000);
+    expect(niceMax(5_000)).toBe(5_000);
+    expect(niceMax(73)).toBe(100);
+  });
+
+  it("filtert die Budgetposten nach Tag und Suchtext", async () => {
+    stubFetch({
+      "GET /api/budget/overview": overview(),
+      "GET /api/budget/accounts": [hardware, software],
+      "GET /api/budget/partners": [partner],
+      "GET /api/budget/tags": [
+        { tag: "Cloud", items: 1 },
+        { tag: "Lizenzen", items: 1 },
+      ],
+    });
+    render(<ItemsPage roles={["Budget.Reader"]} />);
+    const table = within(await screen.findByRole("region", { name: "Budgetposten 2026/27" }));
+    expect(screen.getByText("2 Budgetposten")).toBeVisible();
+    fireEvent.click(table.getByRole("button", { name: "Nach Tag Cloud filtern" }));
+    expect(screen.getByText("1 von 2 Budgetposten")).toBeVisible();
+    expect(table.queryByRole("row", { name: /Server/ })).toBeNull();
+    expect(screen.getByLabelText("Tag")).toHaveValue("Cloud");
+    expect(plain(table.getByRole("row", { name: /^Summe der gezeigten/ }).textContent)).toContain(
+      "11.900,00 €",
+    );
+    expect(screen.getByRole("link", { name: "Statistik zu „Cloud“" })).toHaveAttribute(
+      "href",
+      "/budget/statistik?tag=Cloud",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Filter aufheben" }));
+    expect(table.getByRole("row", { name: /Server/ })).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Budgetposten suchen"), { target: { value: "hardw" } });
+    expect(table.queryByRole("row", { name: /Office-Lizenzen/ })).toBeNull();
+    expect(table.getByRole("row", { name: /Server/ })).toBeVisible();
+  });
+
+  it("speichert Tags am Budgetposten und schlägt vergebene vor", async () => {
+    const calls = stubFetch({
+      "GET /api/budget/overview": overview(),
+      "GET /api/budget/accounts": [hardware, software],
+      "GET /api/budget/partners": [partner],
+      "GET /api/budget/tags": [
+        { tag: "Cloud", items: 1 },
+        { tag: "Projekt", items: 2 },
+      ],
+      "PUT /api/budget/items/11": office,
+    });
+    render(<ItemsPage roles={["Budget.Editor"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Office-Lizenzen bearbeiten" }));
+    const field = screen.getByLabelText(/^Tags/);
+    expect(field).toHaveValue("Lizenzen, Cloud");
+    // Vorgeschlagen wird nur, was noch nicht im Feld steht.
+    const proposals = within(screen.getByRole("group", { name: "Schon vergebene Tags übernehmen" }));
+    expect(proposals.queryByRole("button", { name: "Cloud" })).toBeNull();
+    fireEvent.click(proposals.getByRole("button", { name: "Projekt" }));
+    expect(field).toHaveValue("Lizenzen, Cloud, Projekt");
+
+    fireEvent.change(field, { target: { value: "x".repeat(31) } });
+    fireEvent.click(screen.getByRole("button", { name: "Änderungen speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("zu lang");
+    fireEvent.change(field, { target: { value: "Lizenzen, Projekt, projekt" } });
+    fireEvent.click(screen.getByRole("button", { name: "Änderungen speichern" }));
+    await vi.waitFor(() =>
+      expect(calls.find((call) => call.method === "PUT")?.body).toMatchObject({
+        name: "Office-Lizenzen",
+        tags: ["Lizenzen", "Projekt"],
+      }),
+    );
+  });
+});
+
+describe("Statistik", () => {
+  const statistic = {
+    year_label: "Wirtschaftsjahr",
+    current_year: 2026,
+    tags: ["Cloud"],
+    mode: "any",
+    years: [
+      { year: 2025, name: "2025/26", plan_cents: 1_000_000, actual_cents: 1_250_000 },
+      { year: 2026, name: "2026/27", plan_cents: 1_190_000, actual_cents: 300_000 },
+    ],
+    items: [{ item: office, plan_cents: 2_190_000, actual_cents: 1_550_000 }],
+  };
+  const routes = {
+    "GET /api/budget/settings": settings,
+    "GET /api/budget/tags": [
+      { tag: "Cloud", items: 1 },
+      { tag: "Lizenzen", items: 1 },
+    ],
+    "GET /api/budget/statistics": [{ id: 3, name: "Alles Cloud", tags: ["cloud"], mode: "any" }],
+    "POST /api/budget/statistics/query": statistic,
+    "POST /api/budget/statistics": { id: 4, name: "Lizenzen genau", tags: [], mode: "all" },
+  };
+
+  it("erklärt den leeren Zustand", async () => {
+    stubFetch({ ...routes, "GET /api/budget/tags": [], "GET /api/budget/statistics": [] });
+    render(<StatisticsPage roles={["Budget.Reader"]} />);
+    expect(await screen.findByText(/Es sind noch keine Tags vergeben/)).toBeVisible();
+  });
+
+  it("wertet gewählte Tags aus und zeigt Plan und Ist je Jahr", async () => {
+    const calls = stubFetch(routes);
+    render(<StatisticsPage roles={["Budget.Reader"]} />);
+    expect(await screen.findByText("Bitte mindestens einen Tag wählen.")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Cloud (1)" }));
+    const years = within(
+      await screen.findByRole("region", { name: "Plan und Ist je Wirtschaftsjahr" }),
+    );
+    expect(calls.find((call) => call.url.endsWith("/query"))?.body).toEqual({
+      tags: ["Cloud"],
+      mode: "any",
+    });
+    const before = years.getByRole("row", { name: /^2025\/26/ });
+    expect(plain(before.textContent)).toContain("12.500,00 €");
+    expect(plain(before.textContent)).toContain("2.500,00 €");
+    expect(years.getByRole("row", { name: /^2026\/27/ })).toHaveTextContent("läuft");
+    expect(plain(years.getByRole("row", { name: /^Summe/ }).textContent)).toContain("21.900,00 €");
+    expect(
+      screen.getByRole("img", { name: /^Plan und Ist je Wirtschaftsjahr/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Budgetposten der Auswahl" })).getByRole("row", {
+        name: /Office-Lizenzen/,
+      }),
+    ).toHaveTextContent("Lizenzen, Cloud");
+    // Die Auswahl entspricht einer gespeicherten Statistik; Lesende speichern und löschen nichts.
+    expect(screen.getByRole("button", { name: "Alles Cloud" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.queryByRole("button", { name: "Statistik speichern" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /löschen/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ausblick: nächste fünf Jahre" }));
+    await vi.waitFor(() =>
+      expect(calls.filter((call) => call.url.endsWith("/query")).at(-1)?.body).toEqual({
+        tags: ["Cloud"],
+        mode: "any",
+        start: 2026,
+      }),
+    );
+  });
+
+  it("speichert eine Auswahl unter einem Namen und öffnet gespeicherte", async () => {
+    const calls = stubFetch(routes);
+    render(<StatisticsPage roles={["Budget.Editor"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Lizenzen (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cloud (1)" }));
+    fireEvent.click(screen.getByLabelText(/^Alle gewählten Tags müssen/));
+    await vi.waitFor(() =>
+      expect(calls.filter((call) => call.url.endsWith("/query")).at(-1)?.body).toEqual({
+        tags: ["Lizenzen", "Cloud"],
+        mode: "all",
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Statistik speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte einen Namen");
+    fireEvent.change(screen.getByLabelText("Auswahl speichern unter"), {
+      target: { value: " Lizenzen genau " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Statistik speichern" }));
+    expect(await screen.findByText("Die Statistik „Lizenzen genau“ ist gespeichert.")).toBeVisible();
+    expect(calls.find((call) => call.url === "/api/budget/statistics" && call.method === "POST")?.body)
+      .toEqual({ name: "Lizenzen genau", tags: ["Lizenzen", "Cloud"], mode: "all" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Alles Cloud" }));
+    await vi.waitFor(() =>
+      expect(calls.filter((call) => call.url.endsWith("/query")).at(-1)?.body).toEqual({
+        tags: ["cloud"],
+        mode: "any",
+      }),
+    );
   });
 });

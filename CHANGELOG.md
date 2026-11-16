@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.31.0] – 2026-11-16
+
+IT-Budget: Tags am Budgetposten und Statistik nach Tags.
+
+### IT-Budget
+
+- **Tags:** Jeder Budgetposten kann bis zu zehn Tags tragen. Im Formular werden schon vergebene Tags vorgeschlagen; ein vorhandener Tag behält seine Schreibweise
+- **Filtern und Suchen:** Die Seite Budgetposten hat einen Suchtext (Name, Konto, Partner, Tag) und einen Filter nach Tag; ein Klick auf einen Tag in der Liste filtert ebenfalls. Die Summe zeigt dann nur die gezeigten Posten. Die Suche oben findet Budgetposten über Name, Notiz und Tag
+- **Neue Seite „Statistik“:** Plan und Ist aller Budgetposten mit den gewählten Tags über fünf Geschäftsjahre, als Diagramm und Tabelle, im Rückblick oder im Ausblick. Vorgabe: einer der Tags reicht; mit einem Haken müssen alle Tags passen
+- **Gespeicherte Statistiken:** IT und Budgetverwalter speichern eine Auswahl unter einem Namen und löschen sie wieder; sichtbar sind sie für alle Rollen des Budgets. Speichern und Löschen stehen im Audit-Log
+- Migration 0026 (Spalte `budget_items.tags`, Tabelle `budget_statistics`)
+
 ## [0.30.1] – 2026-11-16
 
 M365-Konfiguration: keine Schein-Änderungen bei umsortierten Listen; Fehlertext je Quelle am Snapshot; Diagramme repariert.

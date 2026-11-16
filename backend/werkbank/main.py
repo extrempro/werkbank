@@ -15,6 +15,7 @@ from werkbank.core.search import router as search_router
 from werkbank.core.tasks import router as tasks_router
 from werkbank.db import database_ready
 from werkbank.modules.budget.api import router as budget_router
+from werkbank.modules.budget.search import budget_search
 from werkbank.modules.budget.tasks import budget_tasks
 from werkbank.modules.evergreen.api import router as evergreen_router
 from werkbank.modules.evergreen.search import evergreen_search
@@ -53,7 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         budget_tasks,
     ]
     # Module, die Treffer für die Suche liefern
-    app.state.search_providers = [m365_config_search, evergreen_search]
+    app.state.search_providers = [m365_config_search, evergreen_search, budget_search]
     # Reihenfolge: zuletzt hinzugefügt = äußerste Schicht. Sicherheits-Header immer setzen.
     app.add_middleware(OriginCheckMiddleware, allowed_origin=settings.public_origin)
     app.add_middleware(RateLimitMiddleware, rules=default_rules(settings))
