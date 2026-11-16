@@ -105,7 +105,7 @@ def test_admin_roles_lists_holders(migrated_db: None) -> None:
     login(["Evergreen.Betriebsrat"], "rollen-br", "Berta Rat")
     client = login(["Werkbank.Admin"], "rollen-admin", "Ada Admin")
     roles = {role["value"]: role for role in client.get("/api/admin/roles").json()}
-    assert len(roles) == 13
+    assert len(roles) == 14
     assert roles["Evergreen.Betriebsrat"]["label"] == "Evergreen Betriebsrat"
     holders = [holder["display_name"] for holder in roles["Evergreen.Betriebsrat"]["holders"]]
     assert "Berta Rat" in holders
