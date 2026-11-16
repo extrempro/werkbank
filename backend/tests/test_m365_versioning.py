@@ -15,6 +15,7 @@ from werkbank.modules.m365_config.models import (
 )
 from werkbank.modules.m365_config.normalize import (
     SettingValue,
+    canonical,
     normalize_object,
     setting_path,
     strip_ignored,
@@ -65,10 +66,39 @@ def test_normalize_object_one_setting_per_property() -> None:
     assert items[0].value == "enabled"
 
 
-def test_same_value_ignores_key_order_but_not_list_order() -> None:
+def test_same_value_ignores_key_order_and_order_of_plain_lists() -> None:
     assert same_value({"a": 1, "b": [1, 2]}, {"b": [1, 2], "a": 1})
-    assert not same_value([1, 2], [2, 1])
+    # Listen einfacher Werte sind Mengen: Die Quelle liefert sie in wechselnder Reihenfolge.
+    assert same_value([1, 2], [2, 1])
+    assert same_value({"ids": ["b", "a", "c"]}, {"ids": ["c", "b", "a"]})
+    assert not same_value(["a", "b"], ["a", "b", "c"])
+    assert not same_value(["a", "a"], ["a"])
+    # Listen mit Objekten behalten ihre Reihenfolge, dort kann sie etwas bedeuten.
+    assert not same_value([{"x": 1}, {"x": 2}], [{"x": 2}, {"x": 1}])
+    assert same_value([{"x": [2, 1]}], [{"x": [1, 2]}])
     assert not same_value(None, "null")
+
+
+def test_canonical_sorts_plain_lists_only() -> None:
+    assert canonical(["b", "a"]) == ["a", "b"]
+    assert canonical({"k": [3, 1, 2], "n": {"m": ["z", "y"]}}) == {
+        "k": [1, 2, 3],
+        "n": {"m": ["y", "z"]},
+    }
+    # Gemischte Arten lassen sich sortieren, ohne dass der Vergleich scheitert.
+    assert canonical([2, "a", True, 1]) == [True, 1, 2, "a"]
+    assert canonical([{"b": 1}, {"a": 1}]) == [{"b": 1}, {"a": 1}]
+    assert canonical([None, "a"]) == [None, "a"]
+    assert canonical([]) == []
+    stored = normalize_object(
+        workload="entra",
+        area="policy",
+        object_id="p1",
+        object_name=None,
+        properties={"ids": ["b", "a"]},
+        source="quelle",
+    )
+    assert stored[0].value == ["a", "b"]
 
 
 # --- mit Datenbank --------------------------------------------------------------------
@@ -85,6 +115,27 @@ def db(db_session: Session) -> Session:
 
 def changes(db: Session) -> list[CfgChange]:
     return list(db.scalars(select(CfgChange).order_by(CfgChange.id)).all())
+
+
+@pytest.mark.db
+def test_reordered_plain_list_is_no_change_even_against_unsorted_history(db: Session) -> None:
+    apply_snapshot(db, policy("p1", "Zustimmung", ids=["a", "b"]), {SOURCE: True})
+    # Ein früher unsortiert gespeicherter Stand, wie er vor dieser Änderung entstand.
+    version = db.scalars(select(CfgSettingVersion)).one()
+    version.value = ["b", "a"]
+    db.commit()
+    result = apply_snapshot(db, policy("p1", "Zustimmung", ids=["b", "a"]), {SOURCE: True})
+    assert result.changes == 0
+    assert changes(db) == []
+    result = apply_snapshot(
+        db,
+        policy("p1", "Zustimmung", ids=["a", "c"]),
+        {SOURCE: False},
+        {SOURCE: "Zugriff verweigert"},
+    )
+    snapshot = db.get(CfgSnapshot, result.snapshot_id)
+    assert snapshot is not None
+    assert snapshot.source_errors == {SOURCE: "Zugriff verweigert"}
 
 
 @pytest.mark.db

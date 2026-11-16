@@ -66,6 +66,11 @@ export function SnapshotsPage() {
                         <li key={source}>
                           <span className="mono">{sourceLabel(source)}</span>:{" "}
                           {ok ? "vollständig" : "Fehler"}
+                          {!ok && snapshot.source_errors?.[source] && (
+                            <span className="small snapshot-error">
+                              {snapshot.source_errors[source]}
+                            </span>
+                          )}
                         </li>
                       ))}
                     </ul>

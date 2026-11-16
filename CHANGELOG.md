@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.30.1] – 2026-11-16
+
+M365-Konfiguration: keine Schein-Änderungen bei umsortierten Listen; Fehlertext je Quelle am Snapshot.
+
+### M365-Konfiguration
+
+- **Behoben:** Eine Liste einfacher Werte (Texte, Zahlen), die die Quelle nur in anderer Reihenfolge liefert, galt als Änderung. Solche Listen werden jetzt wie Mengen behandelt: sortiert gespeichert und unabhängig von der Reihenfolge verglichen. Auch gegen früher unsortiert gespeicherte Stände entsteht keine Änderung mehr. Listen mit Objekten behalten ihre Reihenfolge
+- **Snapshots zeigen den Grund:** Meldet die Quelle für einen Ressourcentyp einen Fehler, steht ihr Fehlertext jetzt in der Snapshot-Liste unter „Fehler“. Für ältere Snapshots gibt es keinen Text
+- Migration 0025 (eine neue Spalte)
+
 ## [0.30.0] – 2026-11-16
 
 IT-Budget: PDF-Beleg an der Rechnung.

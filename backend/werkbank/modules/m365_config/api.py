@@ -62,6 +62,8 @@ class SnapshotOut(BaseModel):
     finished_at: datetime | None
     status: str
     source_status: dict[str, Any]
+    # Fehlertext der Quelle je nicht vollständig gelesenem Ressourcentyp
+    source_errors: dict[str, Any]
     change_count: int
     resource_count: int
 
@@ -239,6 +241,7 @@ def _snapshot_out(snapshot: CfgSnapshot) -> SnapshotOut:
         finished_at=snapshot.finished_at,
         status=snapshot.status,
         source_status=snapshot.source_status,
+        source_errors=snapshot.source_errors,
         change_count=snapshot.change_count,
         resource_count=snapshot.resource_count,
     )
