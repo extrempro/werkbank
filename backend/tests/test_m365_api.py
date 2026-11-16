@@ -361,10 +361,11 @@ def test_metadata_update_history_and_audit(db: Session) -> None:
     assert detail["meta_history"][0]["new_value"] is None
     assert detail["meta_history"][0]["user"] == "Rita Reviewer"
 
+    # Ohne Sortierung ist die Reihenfolge der Zeilen nicht festgelegt.
     audit = db.scalars(
-        select(AuditLog).where(
-            AuditLog.action == "metadaten.geaendert", AuditLog.object_id == str(setting_id)
-        )
+        select(AuditLog)
+        .where(AuditLog.action == "metadaten.geaendert", AuditLog.object_id == str(setting_id))
+        .order_by(AuditLog.id)
     ).all()
     assert [entry.details for entry in audit[-3:]] == [
         {"felder": ["beschreibung", "kritikalitaet", "learn_url"]},
