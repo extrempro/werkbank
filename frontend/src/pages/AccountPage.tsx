@@ -3,6 +3,7 @@ import { Avatar } from "../components/Avatar";
 import { Link } from "../components/Link";
 import { ThemeSwitch } from "../components/ThemeSwitch";
 import { NEWS_PATH } from "../navigation";
+import { HANDBOOK_PATH } from "../handbook";
 import { NOTIFICATIONS_PATH } from "../notifications";
 import { roleInfo } from "../user";
 
@@ -105,7 +106,10 @@ export function AccountPage({ me }: { me: Me }) {
           <p>
             Version <strong>{me.version ?? "unbekannt"}</strong>
           </p>
-          <Link to={NEWS_PATH}>Neuigkeiten ansehen</Link>
+          <p className="handbook-links">
+            <Link to={NEWS_PATH}>Neuigkeiten ansehen</Link>
+            <Link to={HANDBOOK_PATH}>Handbuch öffnen</Link>
+          </p>
         </div>
       </section>
     </div>

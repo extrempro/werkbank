@@ -67,6 +67,19 @@ describe("SearchPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("IT-Tools stehen trotzdem da");
   });
 
+  it("findet Abschnitte im Handbuch, die zu den Rollen passen", async () => {
+    window.history.replaceState(null, "", searchUrl("Kündigungstermin"));
+    stubFetch([]);
+    const { unmount } = render(<SearchPage roles={["Budget.Editor"]} />);
+    expect(await screen.findByRole("link", { name: "Verträge" })).toHaveAttribute(
+      "href",
+      "/handbuch/it-budget#vertraege",
+    );
+    unmount();
+    render(<SearchPage roles={["Evergreen.GF"]} />);
+    expect(await screen.findByText("Keine Treffer für „Kündigungstermin“.")).toBeVisible();
+  });
+
   it("sucht nach dem Begriff aus der Adresse und zeigt Treffer mit Modul", async () => {
     window.history.replaceState(null, "", searchUrl("MFA"));
     const urls = stubFetch(hits);

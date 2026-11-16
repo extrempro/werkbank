@@ -303,7 +303,14 @@ Standardregeln:
 
 Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) und Vorgänge (ID, Titel, Zusammenfassung). Ergebnisse gefiltert nach Berechtigung.
 
-- Stand: umgesetzt als `GET /api/search` mit einem Anbieter je Modul (`core/search.py`), Suchfeld in der Kopfzeile und Seite „Suche“. Gesucht wird in Einstellungen (Pfad, Name, Beschreibung, Begründung), erkannten Änderungen (geändert von, Kommentar) und Vorgängen (Nummer, Titel, Dienst, Zusammenfassung). Jeder Anbieter wendet dieselben Rechte an wie die Seiten seines Moduls. Abweichung: Im Wert einer Einstellung wird noch nicht gesucht. Die IT-Tools liegen im Browser; die Seite „Suche“ ergänzt passende Tools selbst, wenn die Person die Rolle `Tools.User` hat. Diese Treffer stehen sofort da, auch während der Server noch sucht oder wenn seine Suche fehlschlägt.
+- Stand: umgesetzt als `GET /api/search` mit einem Anbieter je Modul (`core/search.py`), Suchfeld in der Kopfzeile und Seite „Suche“. Gesucht wird in Einstellungen (Pfad, Name, Beschreibung, Begründung), erkannten Änderungen (geändert von, Kommentar) und Vorgängen (Nummer, Titel, Dienst, Zusammenfassung). Jeder Anbieter wendet dieselben Rechte an wie die Seiten seines Moduls. Abweichung: Im Wert einer Einstellung wird noch nicht gesucht. Die IT-Tools liegen im Browser; die Seite „Suche“ ergänzt passende Tools selbst, wenn die Person die Rolle `Tools.User` hat, und passende Abschnitte des Handbuchs (6.11). Diese Treffer stehen sofort da, auch während der Server noch sucht oder wenn seine Suche fehlschlägt.
+
+### 6.11 Handbuch
+
+- Seite „Handbuch“ (`/handbuch`) für alle, erreichbar über die Navigation (unten), die Seite „Konto“ und die Suche. Kapitel je Bereich (`/handbuch/<kapitel>`, Abschnitte als Sprungziel `#<abschnitt>`), mit Inhaltsverzeichnis, Anleitungen in Schritten, Begriffen, Hinweisen und Verweisen auf die Seiten der Werkbank.
+- Jede Person sieht die allgemeinen Kapitel und die ihrer Rollen; einzelne Abschnitte können auf Rollen beschränkt sein. `Werkbank.Admin` sieht alles. Ein Kapitel ohne passende Rolle gilt als nicht vorhanden.
+- Die Inhalte liegen als Daten in `frontend/src/handbook/content.ts` und werden nur als Text dargestellt. Die Suche im Handbuch und die Treffer auf der Seite „Suche“ ermittelt der Browser.
+- Nur Bedienung; Einrichtung und Betrieb stehen weiter in `docs/`.
 
 ---
 
@@ -575,6 +582,7 @@ Evergreen:
 | Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Link zu den Benachrichtigungen, Version. Später: Push an/aus, Hinweis zur Installation |
 | Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Arten ein- und ausschalten. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
+| Handbuch | alle | Kapitel je Bereich nach Rollen, Suche im Handbuch, je Kapitel Inhaltsverzeichnis und Abschnitte mit Verweisen |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
 
 Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz.

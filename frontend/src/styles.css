@@ -4820,3 +4820,116 @@ p.badges {
 .health-issue-link {
   margin: 0;
 }
+
+/* Handbuch */
+.handbook-chapters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.handbook-chapters > li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 20px;
+}
+
+.handbook-chapters h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.handbook-chapters p {
+  margin: 0;
+}
+
+.handbook-toc {
+  padding: 16px 20px;
+}
+
+.handbook-toc h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.handbook-toc ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.handbook-section {
+  scroll-margin-top: calc(var(--kopf-hoehe) + 16px);
+}
+
+.handbook-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 72ch;
+  line-height: 1.6;
+}
+
+.handbook-body p,
+.handbook-body ul,
+.handbook-body ol {
+  margin: 0;
+}
+
+.handbook-steps li + li,
+.handbook-body ul li + li {
+  margin-top: 4px;
+}
+
+.handbook-terms {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.handbook-terms > div {
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) 1fr;
+  gap: 12px;
+}
+
+.handbook-terms dt {
+  font-weight: 600;
+}
+
+.handbook-terms dd {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .handbook-terms > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+.handbook-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.handbook-hits {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  list-style: none;
+}
+
+.handbook-pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}

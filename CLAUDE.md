@@ -38,7 +38,7 @@ die jeder lesen darf: keine Hostnamen, IP-Adressen, Tenant-IDs, Zugangsdaten, Fi
 - Push- und Mail-Benachrichtigungen ohne fachliche Inhalte.
 - Barrierefreiheit (WCAG 2.2 AA) und Designrichtlinie einhalten.
 - Prüfen, ob die Änderung in der Anwendung zu bemerken ist. Wenn ja: Version anheben und Eintrag für die Seite „Neuigkeiten“ schreiben (siehe Konventionen).
-- **Handbuch:** Bei jeder Änderung an der Anwendung prüfen, ob das Handbuch angepasst werden muss, und es im selben Branch mit anpassen. Das Ergebnis der Prüfung in der Rückmeldung nennen („Handbuch angepasst“ oder „keine Anpassung nötig“). Das Handbuch entsteht zu einem späteren Zeitpunkt; bis dahin entfällt die Anpassung, die Regel gilt ab dem ersten Stand des Handbuchs.
+- **Handbuch:** Das Handbuch steht in der Anwendung unter „Handbuch“; die Inhalte liegen in `frontend/src/handbook/content.ts` (Kapitel und Abschnitte je Rolle, nur Text). Bei jeder Änderung an der Anwendung prüfen, ob das Handbuch angepasst werden muss, und es im selben Branch mit anpassen. Das Ergebnis der Prüfung in der Rückmeldung nennen („Handbuch angepasst“ oder „keine Anpassung nötig“). Sprache wie in den Neuigkeiten: einfach, „du“, keine Begriffe aus der Entwicklung, keine internen Namen.
 - Betroffene Nachweise in `docs/` aktualisieren (ASVS, WCAG, Datenschutz), wenn sich etwas ändert.
 
 ## Regelmäßige Prüfung
