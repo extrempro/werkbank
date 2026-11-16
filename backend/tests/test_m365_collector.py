@@ -16,6 +16,7 @@ from werkbank.modules.m365_config.collector import (
     collect,
     parse_snapshot,
     resources_used_this_month,
+    source_errors,
     source_status,
 )
 from werkbank.modules.m365_config.jobs import COLLECT
@@ -374,3 +375,14 @@ def test_partial_snapshot_keeps_settings_of_failed_type(db: Session) -> None:
     assert result.changes == 0
     named = db.scalars(select(CfgSetting).where(CfgSetting.source == f"utcm:{NL}")).all()
     assert named and all(setting.active for setting in named)
+
+
+def test_source_errors_carry_the_text_of_the_source() -> None:
+    job = {
+        "status": "partiallySuccessful",
+        "errorDetails": [f"{NL.upper()}: Zugriff verweigert", "allgemeiner Hinweis"],
+    }
+    assert source_errors([CA, NL], job) == {f"utcm:{NL}": f"{NL.upper()}: Zugriff verweigert"}
+    assert source_errors([CA, NL], {"status": "succeeded"}) == {}
+    long = {"errorDetails": [f"{CA} " + "x" * 2000]}
+    assert len(source_errors([CA], long)[f"utcm:{CA}"]) == 500

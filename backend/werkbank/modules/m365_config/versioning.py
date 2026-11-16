@@ -27,7 +27,7 @@ from werkbank.modules.m365_config.models import (
     ChangeKind,
     SnapshotStatus,
 )
-from werkbank.modules.m365_config.normalize import SettingValue
+from werkbank.modules.m365_config.normalize import SettingValue, canonical
 
 
 @dataclass(frozen=True)
@@ -45,14 +45,21 @@ class SnapshotResult:
 
 
 def same_value(left: Any, right: Any) -> bool:
-    """Vergleicht JSON-Werte unabhängig von der Reihenfolge der Schlüssel in Objekten."""
-    return json.dumps(left, sort_keys=True) == json.dumps(right, sort_keys=True)
+    """Vergleicht JSON-Werte unabhängig von der Reihenfolge der Schlüssel in Objekten.
+
+    Listen einfacher Werte gelten als Mengen: Auch früher unsortiert gespeicherte Stände
+    sind so gleich dem neuen, sortierten Stand.
+    """
+    return json.dumps(canonical(left), sort_keys=True) == json.dumps(
+        canonical(right), sort_keys=True
+    )
 
 
 def apply_snapshot(
     db: Session,
     items: Iterable[SettingValue],
     source_status: Mapping[str, bool],
+    source_errors: Mapping[str, str] | None = None,
     *,
     started_at: datetime | None = None,
     resource_count: int = 0,
@@ -77,6 +84,7 @@ def apply_snapshot(
         finished_at=now,
         status=status,
         source_status=dict(source_status),
+        source_errors=dict(source_errors or {}),
         resource_count=resource_count,
     )
     db.add(snapshot)

@@ -96,6 +96,17 @@ def source_status(requested: list[str], job: Mapping[str, Any]) -> dict[str, boo
     }
 
 
+def source_errors(requested: list[str], job: Mapping[str, Any]) -> dict[str, str]:
+    """Fehlertext je Ressourcentyp: die Fehlerangaben der Quelle, in denen der Typ vorkommt."""
+    details = [str(item) for item in job.get("errorDetails") or []]
+    errors: dict[str, str] = {}
+    for name in requested:
+        own = [detail for detail in details if name.lower() in detail.lower()]
+        if own:
+            errors[source_name(name)] = "; ".join(own)[:ERROR_LENGTH]
+    return errors
+
+
 def _first_text(*candidates: Any) -> str | None:
     """Erster Kandidat, der ein nicht leerer Text ist."""
     for candidate in candidates:
@@ -277,6 +288,7 @@ def collect(
         db,
         items,
         source_status(resources, job),
+        source_errors(resources, job),
         started_at=started_at,
         resource_count=resource_count,
     )

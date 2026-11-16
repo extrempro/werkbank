@@ -55,6 +55,10 @@ class CfgSnapshot(Base):
     source_status: Mapped[dict[str, Any]] = mapped_column(
         JSONB, default=dict, server_default=text("'{}'::jsonb")
     )
+    # Quelle -> Fehlertext der Quelle, wenn sie nicht vollständig gelesen wurde
+    source_errors: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
     change_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     # Anzahl gelesener Objekte (zählt gegen das Monatskontingent der Quelle)
     resource_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))

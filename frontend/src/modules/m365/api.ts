@@ -8,6 +8,8 @@ export interface Snapshot {
   finished_at: string | null;
   status: string;
   source_status: Record<string, boolean>;
+  /** Fehlertext der Quelle je nicht vollständig gelesenem Ressourcentyp. */
+  source_errors?: Record<string, string>;
   change_count: number;
   resource_count: number;
 }

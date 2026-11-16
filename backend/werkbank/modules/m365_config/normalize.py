@@ -57,6 +57,28 @@ def strip_ignored(value: Any, ignored: Collection[str]) -> Any:
     return value
 
 
+def _scalar(value: Any) -> bool:
+    return isinstance(value, str | int | float | bool)
+
+
+def canonical(value: Any) -> Any:
+    """Einheitliche Form eines Werts für Vergleich und Speicherung.
+
+    Listen, die nur einfache Werte enthalten (Texte, Zahlen, Wahrheitswerte), werden sortiert:
+    Die Quelle liefert sie in wechselnder Reihenfolge, gemeint ist eine Menge. Listen mit
+    Objekten bleiben, wie sie sind, weil dort die Reihenfolge etwas bedeuten kann.
+    """
+    if isinstance(value, Mapping):
+        return {key: canonical(item) for key, item in value.items()}
+    if isinstance(value, list):
+        items = [canonical(item) for item in value]
+        if items and all(_scalar(item) for item in items):
+            # Erst nach Art, dann nach Wert: Texte und Zahlen lassen sich nicht vergleichen.
+            return sorted(items, key=lambda item: (type(item).__name__, item))
+        return items
+    return value
+
+
 def normalize_object(
     *,
     workload: str,
@@ -81,7 +103,7 @@ def normalize_object(
             object_name=object_name,
             property=key,
             source=source,
-            value=strip_ignored(value, ignored),
+            value=canonical(strip_ignored(value, ignored)),
         )
         for key, value in properties.items()
         if key not in ignored

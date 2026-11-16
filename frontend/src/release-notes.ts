@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.30.1",
+    date: "2026-11-16",
+    summary: "M365: keine Schein-Änderungen mehr bei umsortierten Listen.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Behoben: Einstellungen, deren Werte nur in anderer Reihenfolge geliefert wurden, erscheinen nicht mehr als Änderung.",
+          "Die Snapshot-Liste zeigt jetzt den Fehlertext, wenn ein Bereich nicht gelesen werden konnte.",
+          "Behoben: Das Diagramm „Änderungen je Tag“ und die Verlaufsdiagramme bei Lizenzen und Benutzern werden wieder richtig dargestellt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.30.0",
     date: "2026-11-16",
     summary: "IT-Budget: Belege als PDF an der Rechnung.",
