@@ -142,7 +142,8 @@ class BudgetContract(Base):
 
 
 class BudgetContractItem(Base):
-    """Zuordnung eines Vertrags zu einem Budgetposten (ein Vertrag, mehrere Posten)."""
+    """Zuordnung eines Vertrags zu einem Budgetposten: Ein Vertrag kann mehrere Posten haben,
+    ein Posten höchstens einen Vertrag."""
 
     __tablename__ = "budget_contract_items"
 
@@ -150,7 +151,7 @@ class BudgetContractItem(Base):
         ForeignKey("budget_contracts.id", ondelete="CASCADE"), primary_key=True
     )
     item_id: Mapped[int] = mapped_column(
-        ForeignKey("budget_items.id"), primary_key=True, index=True
+        ForeignKey("budget_items.id"), primary_key=True, unique=True
     )
 
 
@@ -189,7 +190,8 @@ class BudgetInvoice(Base):
 
 
 class BudgetInvoiceLine(Base):
-    """Eine Position einer Rechnung: ein Betrag für genau einen Budgetposten."""
+    """Eine Position einer Rechnung: ein Betrag für genau einen Budgetposten.
+    Den Vertrag gibt der Budgetposten vor."""
 
     __tablename__ = "budget_invoice_lines"
 
@@ -200,7 +202,6 @@ class BudgetInvoiceLine(Base):
     # Reihenfolge auf der Rechnung, ab 0
     position: Mapped[int] = mapped_column(Integer)
     item_id: Mapped[int] = mapped_column(ForeignKey("budget_items.id"), index=True)
-    contract_id: Mapped[int | None] = mapped_column(ForeignKey("budget_contracts.id"), index=True)
     net_cents: Mapped[int] = mapped_column(BigInteger)
     tax_rate_bp: Mapped[int] = mapped_column(Integer)
     # Brutto: aus Netto und Steuersatz gerechnet oder um wenige Cent von Hand angepasst

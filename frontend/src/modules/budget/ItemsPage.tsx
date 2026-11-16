@@ -10,6 +10,7 @@ import {
   euroInput,
   fetchAccounts,
   fetchBudgetOverview,
+  fetchContracts,
   fetchTags,
   formatEuro,
   hasTag,
@@ -22,6 +23,7 @@ import {
   runtimeText,
   updateItem,
   type Account,
+  type Contract,
   type Item,
   type ItemStatus,
   type ItemUpdate,
@@ -70,6 +72,8 @@ interface FormProps {
   /** null: neuen Budgetposten anlegen. */
   item: Item | null;
   accounts: Account[];
+  /** Verträge zur Auswahl; ein Posten hat höchstens einen. */
+  contracts: Contract[];
   /** Die Liste der Tags, aus der der Posten wählt. */
   knownTags: TagCount[];
   /** Wählbare Geschäftsjahre, aufsteigend. */
@@ -84,6 +88,7 @@ interface FormProps {
 function ItemForm({
   item,
   accounts,
+  contracts,
   knownTags,
   years,
   defaultYear,
@@ -104,6 +109,7 @@ function ItemForm({
         : "bis",
   );
   const [end, setEnd] = useState(item?.end_year ? String(item.end_year) : "");
+  const [contractId, setContractId] = useState(item?.contract_id ? String(item.contract_id) : "");
   const [note, setNote] = useState(item?.note ?? "");
   const [tags, setTags] = useState<string[]>(item?.tags ?? []);
   const [active, setActive] = useState(item?.active ?? true);
@@ -155,6 +161,7 @@ function ItemForm({
       note: note.trim(),
       tags,
       active,
+      contract_id: contractId ? Number(contractId) : null,
     };
     setBusy(true);
     setError(null);
@@ -195,7 +202,21 @@ function ItemForm({
                 onChange={(event) => setName(event.target.value)}
               />
             </label>
+            <label>
+              Vertrag (freiwillig)
+              <select value={contractId} onChange={(event) => setContractId(event.target.value)}>
+                <option value="">Kein Vertrag</option>
+                {contracts.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.title} · {entry.partner_name}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
+          <p className="small budget-muted">
+            Ein Posten hat höchstens einen Vertrag. Rechnungen buchst du immer auf den Posten.
+          </p>
         </fieldset>
         <fieldset className="budget-fieldset">
           <legend>Kosten und Laufzeit</legend>
@@ -318,6 +339,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [knownTags, setKnownTags] = useState<TagCount[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   // Suchtext aus der Adresse (Treffer der Suche oben führen mit dem Namen des Postens hierher).
   // Eigene Eingabe gilt, bis ein neuer Suchtext über die Adresse kommt.
   const linked = useSearchParam("suche");
@@ -341,12 +363,19 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
     let active = true;
     // Die Tag-Liste ist eine Zugabe für Filter und Auswahl: Ohne sie bleibt die Seite nutzbar.
     const tagList = fetchTags().catch((): TagCount[] => []);
-    Promise.all([fetchBudgetOverview(year), fetchAccounts(), tagList])
-      .then(([result, list, tags]) => {
+    // Ebenso die Verträge für die Auswahl im Formular.
+    const contractList = fetchContracts()
+      .then((list) =>
+        [...list.entries].sort((left, right) => left.title.localeCompare(right.title, "de")),
+      )
+      .catch((): Contract[] => []);
+    Promise.all([fetchBudgetOverview(year), fetchAccounts(), tagList, contractList])
+      .then(([result, list, tags, contractEntries]) => {
         if (active) {
           setOverview(result);
           setAccounts(list);
           setKnownTags(tags);
+          setContracts(contractEntries);
           setFailed(false);
         }
       })
@@ -445,6 +474,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           key={editing ? `posten-${editing.id}` : `neu-${formRound}`}
           item={editing}
           accounts={accounts}
+          contracts={contracts}
           knownTags={knownTags}
           years={yearChoices}
           defaultYear={overview.year}
@@ -582,11 +612,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                     )}
                     <span className="small budget-muted tenant-part">
                       {runtimeText(row.item)}
-                      {row.contracts === 1
-                        ? " · 1 Vertrag"
-                        : row.contracts > 1
-                          ? ` · ${row.contracts} Verträge`
-                          : ""}
+                      {row.item.contract_title ? ` · Vertrag: ${row.item.contract_title}` : ""}
                     </span>
                     {row.item.tags.length > 0 && (
                       <span className="budget-tags">

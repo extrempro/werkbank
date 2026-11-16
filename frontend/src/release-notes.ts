@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.36.0",
+    date: "2026-11-16",
+    summary: "IT-Budget: Den Vertrag wählst du am Budgetposten.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Rechnungspositionen buchst du nur noch auf einen Budgetposten. Den Vertrag gibt der Posten vor; er steht an der Position zur Information.",
+          "Am Budgetposten wählst du jetzt den Vertrag. Ein Posten hat höchstens einen Vertrag; am Vertrag kannst du die Posten weiterhin zuordnen.",
+          "Einen Vertrag kannst du auch ohne Budgetposten anlegen.",
+          "Die Kündigungsfrist wählst du am Vertrag aus einer Liste bis 12 Monate.",
+          "Hat der Posten einen Vertrag, ist „Schließt den Budgetposten ab“ an der Position zuerst aus.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.35.0",
     date: "2026-11-16",
     summary: "IT-Tools: QR-Code, Bild-Konverter und Zertifikate.",

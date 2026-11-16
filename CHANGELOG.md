@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.36.0] – 2026-11-16
+
+IT-Budget: Den Vertrag gibt der Budgetposten vor, nicht die Rechnungsposition.
+
+### IT-Budget
+
+- Rechnungspositionen hängen nur noch am Budgetposten; die Vertragsauswahl an der Position entfällt. Angezeigt wird der Vertrag des Postens
+- Ein Budgetposten hat höchstens einen Vertrag. Er lässt sich am Posten wählen und weiterhin am Vertrag zuordnen; ein Posten mit anderem Vertrag ist am Vertrag nicht wählbar (Server: 409)
+- Verträge lassen sich ohne Budgetposten anlegen
+- „Schließt den Budgetposten ab“ ist vorbelegt aus, wenn der Posten einen Vertrag hat
+- Ein Vertrag lässt sich löschen, auch wenn Rechnungen auf seinen Posten liegen; die Posten bleiben ohne Vertrag
+- Kündigungsfrist am Vertrag als Auswahl: keine oder 0 bis 12 Monate (ein älterer, längerer Wert bleibt wählbar)
+- Migration 0031: Spalte `contract_id` der Rechnungspositionen entfällt (die bisherigen Einträge gehen verloren); je Posten bleibt höchstens die Zuordnung zum zuerst angelegten Vertrag, eindeutiger Schlüssel auf `budget_contract_items.item_id`
+
+### Behoben
+
+- Lint-Fehler in der SVG-Erkennung des Bild-Konverters (überflüssige Zuweisung)
+
 ## [0.35.0] – 2026-11-16
 
 IT-Tools: QR-Code, Bild-Konverter und Zertifikats-Tools aus der IT-Toolbox.

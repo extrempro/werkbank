@@ -89,6 +89,9 @@ export function ContractDetail({ contract, yearName }: { contract: Contract; yea
           </section>
           <section className="panel budget-section" aria-labelledby="vertrag-budget">
             <h2 id="vertrag-budget">Zuordnung zum Budget</h2>
+            {contract.items.length === 0 && (
+              <p className="budget-muted">Diesem Vertrag ist noch kein Budgetposten zugeordnet.</p>
+            )}
             <ul className="budget-list">
               {contract.items.map((item) => (
                 <li key={item.id}>
