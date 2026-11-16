@@ -72,7 +72,7 @@ def http_get(config: NetboxConfig, path: str, params: list[tuple[str, str]]) -> 
     try:
         response = httpx.get(
             url,
-            params=params,
+            params=httpx.QueryParams(params),
             headers={"Authorization": auth_header(config.token), "Accept": "application/json"},
             timeout=TIMEOUT_SECONDS,
             follow_redirects=False,

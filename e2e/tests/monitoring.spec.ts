@@ -7,7 +7,10 @@ test("IT-Monitoring zeigt den DNS-Abgleich und ist barrierefrei", async ({
   await loginAs(page, ["Monitoring.Reader"], "Mona Monitoring");
   await page.goto("/");
   await openNavigation(page);
-  await page.getByRole("link", { name: "IT-Monitoring" }).click();
+  await page
+    .getByRole("navigation", { name: "Hauptnavigation" })
+    .getByRole("link", { name: "IT-Monitoring" })
+    .click();
   await expect(page).toHaveURL(/\/monitoring\/dns$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "DNS-Abgleich mit NetBox" }),

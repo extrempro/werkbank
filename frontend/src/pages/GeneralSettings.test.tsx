@@ -29,7 +29,10 @@ function stubFetch(status = 200, body: unknown = settings) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
-      calls.push({ url, init });
+      // Nur Änderungen zählen; Lesezugriffe (z. B. der NetBox-Anbindung) nicht
+      if (init?.method) {
+        calls.push({ url, init });
+      }
       return new Response(JSON.stringify(body), { status });
     }),
   );

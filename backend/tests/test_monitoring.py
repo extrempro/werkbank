@@ -210,12 +210,12 @@ def test_netbox_url_token_and_paging() -> None:
         list_all(lambda c, p, q: {"oops": 1}, config, "x/")
 
 
-ZONES = [
+ZONES: list[dict[str, Any]] = [
     {"id": 1, "name": "example.com", "status": "active", "default_ttl": 3600},
     {"id": 2, "name": "168.192.in-addr.arpa", "status": "active"},
     {"id": 3, "name": "alt.example.org", "status": "deprecated"},
 ]
-RECORDS = [
+RECORDS: list[dict[str, Any]] = [
     {
         "id": 10,
         "zone": {"id": 1, "name": "example.com"},
