@@ -339,7 +339,9 @@ export function htmlToText(html: string): string {
   for (const element of Array.from(doc.querySelectorAll("br"))) {
     element.replaceWith("\n");
   }
-  for (const element of Array.from(doc.querySelectorAll("p, div, tr, li, h1, h2, h3, h4, h5, h6"))) {
+  for (const element of Array.from(
+    doc.querySelectorAll("p, div, tr, li, h1, h2, h3, h4, h5, h6"),
+  )) {
     element.append("\n");
   }
   return (doc.body.textContent ?? "").replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n");
