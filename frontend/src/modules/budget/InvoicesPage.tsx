@@ -127,9 +127,7 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
     (entry) => (entry.active && entry.is_invoicer) || entry.id === invoice?.invoicer_id,
   );
   const itemChoices = items.filter((entry) => entry.active || usedItems.has(entry.id));
-  const contractChoices = contracts.filter(
-    (entry) => entry.running || usedContracts.has(entry.id),
-  );
+  const contractChoices = contracts.filter((entry) => entry.running || usedContracts.has(entry.id));
 
   const change = (key: number, update: Partial<LineDraft>) =>
     setLines(lines.map((line) => (line.key === key ? { ...line, ...update } : line)));
@@ -417,7 +415,9 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
             {rest === 0 && " Das entspricht dem Rechnungsbetrag."}
             {rest !== null && rest > 0 && ` Noch nicht verteilt: ${formatEuro(rest)}.`}
             {rest !== null && rest < 0 && ` Zu viel verteilt: ${formatEuro(-rest)}.`}
-            {" Fürs Budget zählt das Brutto. Weicht eine Position um Cent ab, trage ihr Brutto ein (höchstens 1 Euro Abweichung)."}
+            {
+              " Fürs Budget zählt das Brutto. Weicht eine Position um Cent ab, trage ihr Brutto ein (höchstens 1 Euro Abweichung)."
+            }
           </p>
         </fieldset>
         <div className="actions">
