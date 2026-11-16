@@ -1044,7 +1044,6 @@ def test_multi_year_overview_and_export(db: Session) -> None:
             "amount_cents": 500_000,
             "start_year": year,
             "end_year": year + 2,
-            "tags": ["Lizenzen"],
         },
     ).json()
     post(
