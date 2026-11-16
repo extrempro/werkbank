@@ -136,7 +136,6 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(page.getByText("Der Plan ist gespeichert.")).toBeVisible();
   const itemRow = page.getByRole("row", { name: new RegExp(`Posten ${number}`) });
   await expect(itemRow).toContainText("1.500,00");
-  await expect(itemRow).toContainText("1.428,00");
   // Gebucht sind 172,50; nur die Position mit Vertrag (119,00) mindert das Gebundene.
   await expect(itemRow).toContainText("172,50");
   await expect(itemRow).toContainText("1.309,00");

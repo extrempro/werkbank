@@ -897,7 +897,9 @@ describe("Rechnungen", () => {
     const second = within(screen.getByRole("group", { name: "Position 2" }));
     fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Position 2: Bitte den Budgetposten");
-    fireEvent.change(second.getByLabelText("Budgetposten"), { target: { value: "12" } });
+    // Stillgelegte Posten stehen nicht zur Wahl; zwei Positionen dürfen denselben Posten haben.
+    expect(within(second.getByLabelText("Budgetposten")).queryByRole("option", { name: /Server/ })).toBeNull();
+    fireEvent.change(second.getByLabelText("Budgetposten"), { target: { value: "11" } });
     fireEvent.change(second.getByLabelText(/^Betrag netto/), { target: { value: "200,00" } });
     fireEvent.change(second.getByLabelText(/^Steuersatz/), { target: { value: "7" } });
     expect(plain(screen.getByText(/^Summe der Positionen/).textContent)).toContain(
@@ -935,7 +937,7 @@ describe("Rechnungen", () => {
           is_yearly: false,
         },
         {
-          item_id: 12,
+          item_id: 11,
           contract_id: null,
           net_cents: 20_000,
           tax_rate_bp: 700,
