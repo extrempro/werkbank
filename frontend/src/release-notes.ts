@@ -33,6 +33,7 @@ export const RELEASES: readonly Release[] = [
         entries: [
           "Behoben: Einstellungen, deren Werte nur in anderer Reihenfolge geliefert wurden, erscheinen nicht mehr als Änderung.",
           "Die Snapshot-Liste zeigt jetzt den Fehlertext, wenn ein Bereich nicht gelesen werden konnte.",
+          "Behoben: Das Diagramm „Änderungen je Tag“ und die Verlaufsdiagramme bei Lizenzen und Benutzern werden wieder richtig dargestellt.",
         ],
       },
     ],

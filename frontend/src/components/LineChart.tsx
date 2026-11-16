@@ -98,7 +98,7 @@ export function LineChart({ title, days, series }: LineChartProps) {
   );
   if (days.length === 0 || numbers.length === 0) {
     return (
-      <figure className="chart" ref={frame}>
+      <figure className="line-chart" ref={frame}>
         <p className="panel-empty">Noch kein Verlauf vorhanden.</p>
       </figure>
     );
@@ -152,7 +152,7 @@ export function LineChart({ title, days, series }: LineChartProps) {
   const activeDay = days[active] ?? "";
 
   return (
-    <figure className="chart" ref={frame}>
+    <figure className="line-chart" ref={frame}>
       <svg
         className="chart-plot"
         width={WIDTH}
