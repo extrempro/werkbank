@@ -88,6 +88,13 @@ describe("App", () => {
     tasks = [];
     act(() => notifyTasksChanged());
     await vi.waitFor(() => expect(link).toHaveAttribute("aria-label", "Meine Aufgaben"));
+
+    // Zurück in die App (z. B. am Handy): Die Zähler laden ebenfalls neu.
+    tasks = [{ module: "Tenant", title: "Secrets", subtitle: null, link: "/", count: 1 }];
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await vi.waitFor(() => expect(link).toHaveAttribute("aria-label", "Meine Aufgaben: 1 offen"));
   });
 
   it("zeigt in der Glocke die ungelesenen Benachrichtigungen", async () => {

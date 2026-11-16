@@ -32,6 +32,12 @@ SECURITY_HEADERS: dict[str, str] = {
 }
 
 
+# API, Anmeldung und Zustand: nie zwischenspeichern, weder im Browser noch in einem Proxy.
+# Antworten, die eine eigene Regel setzen (z. B. Profilbilder, Branding), behalten sie.
+NO_STORE_PREFIXES = ("/api/", "/auth/", "/health")
+NO_STORE = "no-store"
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Setzt die Sicherheits-Header auf jeder Antwort."""
 
@@ -41,4 +47,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)
+        if request.url.path.startswith(NO_STORE_PREFIXES):
+            response.headers.setdefault("Cache-Control", NO_STORE)
         return response
