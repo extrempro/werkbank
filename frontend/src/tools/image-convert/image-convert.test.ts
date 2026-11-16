@@ -31,7 +31,9 @@ describe("detectFormat", () => {
     expect(detectFormat(bytes("<html><svg></svg></html>"))).toBe("unknown");
     // viele Kommentare ohne SVG: schnell und ohne Treffer
     expect(detectFormat(bytes(`<!--${"--><!--".repeat(150)}`))).toBe("unknown");
-    expect(detectFormat(bytes('<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN">\n<svg>'))).toBe("svg");
+    expect(detectFormat(bytes('<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN">\n<svg>'))).toBe(
+      "svg",
+    );
     expect(detectFormat(bytes("Hallo"))).toBe("unknown");
   });
 });
