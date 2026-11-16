@@ -33,6 +33,8 @@ import { AdminPage } from "../pages/AdminPage";
 import { AuditPage } from "../pages/AuditPage";
 import { NewsPage } from "../pages/NewsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
+import { HandbookPage } from "../pages/HandbookPage";
+import { chaptersFor, HANDBOOK_PATH } from "../handbook";
 import { NOTIFICATIONS_PATH } from "../notifications";
 import { NotificationBell } from "./NotificationBell";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -232,6 +234,13 @@ export function Layout({ me }: LayoutProps) {
   const licenseMatch = /^\/m365\/lizenzen\/(\d{1,9})$/.exec(path);
   const licenseId = licenseMatch ? Number(licenseMatch[1]) : null;
 
+  const handbookMatch = /^\/handbuch(?:\/([a-z0-9-]{1,60}))?$/.exec(path);
+  const handbookChapter = handbookMatch ? (handbookMatch[1] ?? null) : null;
+  const handbookKnown =
+    handbookMatch !== null &&
+    (handbookChapter === null ||
+      chaptersFor(me.roles).some((chapter) => chapter.id === handbookChapter));
+
   let page: ReactNode;
   if (path === "/") {
     page = <StartPage me={me} tasks={tasks} />;
@@ -243,6 +252,10 @@ export function Layout({ me }: LayoutProps) {
     page = <NewsPage onSeen={onNewsSeen} />;
   } else if (path === NOTIFICATIONS_PATH) {
     page = <NotificationsPage />;
+  } else if (handbookKnown) {
+    page = (
+      <HandbookPage key={handbookChapter ?? ""} roles={me.roles} chapterId={handbookChapter} />
+    );
   } else if (path === "/audit" && current) {
     page = <AuditPage />;
   } else if (path === "/verwaltung" && current) {
@@ -457,6 +470,16 @@ export function Layout({ me }: LayoutProps) {
             ))}
           </div>
           <div className="nav-foot">
+            <a
+              className="nav-tool"
+              href={HANDBOOK_PATH}
+              title="Handbuch"
+              aria-current={path.startsWith(HANDBOOK_PATH) ? "page" : undefined}
+              onClick={(event) => onNavClick(event, HANDBOOK_PATH)}
+            >
+              <Icon name="handbuch" />
+              <span className="visually-hidden">Handbuch</span>
+            </a>
             <a
               className="nav-tool"
               href={NEWS_PATH}

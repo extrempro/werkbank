@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { searchAll, type SearchHit } from "../api";
 import { Link } from "../components/Link";
+import { chapterPath, searchHandbook } from "../handbook";
 import { TOOLS_PATH } from "../navigation";
 import { navigate, useSearchParam } from "../router";
 import { CATEGORY_LABELS, searchTools } from "../tools";
@@ -33,6 +34,17 @@ export function toolHits(query: string): SearchHit[] {
     title: tool.name,
     subtitle: CATEGORY_LABELS[tool.category],
     link: `${TOOLS_PATH}/${tool.id}`,
+  }));
+}
+
+/** Treffer im Handbuch, nur in den Kapiteln, die zu den Rollen passen. Sucht der Browser. */
+export function handbookHits(query: string, roles: readonly string[]): SearchHit[] {
+  return searchHandbook(query, roles, 5).map((hit) => ({
+    module: "Handbuch",
+    kind: "Abschnitt",
+    title: hit.section.title,
+    subtitle: hit.chapter.title,
+    link: chapterPath(hit.chapter.id, hit.section.id),
   }));
 }
 
@@ -84,10 +96,11 @@ export function SearchPage({ roles = [] }: { roles?: readonly string[] }) {
   // Die Tools sucht der Browser selbst: Ihre Treffer stehen sofort da, auch wenn der Server
   // noch sucht oder nicht antwortet.
   const tools = !tooShort && withTools ? toolHits(query) : [];
+  const handbook = tooShort ? [] : handbookHits(query, roles);
   const failed = !tooShort && state.status === "error";
   const ready =
-    fromServer || failed || tools.length > 0
-      ? { query, hits: [...tools, ...(fromServer?.hits ?? [])] }
+    fromServer || failed || tools.length > 0 || handbook.length > 0
+      ? { query, hits: [...tools, ...(fromServer?.hits ?? []), ...handbook] }
       : null;
   const loading = !tooShort && !fromServer && !failed;
 
@@ -97,7 +110,7 @@ export function SearchPage({ roles = [] }: { roles?: readonly string[] }) {
         <h1>Suche</h1>
         <p className="page-sub">
           Sucht in Einstellungen, Änderungen und Vorgängen, die du sehen darfst
-          {withTools && ", und in den IT-Tools"}.
+          {withTools && ", in den IT-Tools"} und im Handbuch.
         </p>
       </header>
 
@@ -125,7 +138,9 @@ export function SearchPage({ roles = [] }: { roles?: readonly string[] }) {
       {failed && (
         <p role="alert">
           Die Suche in den Modulen ist fehlgeschlagen. Bitte noch einmal versuchen.
-          {withTools && " Die Treffer unter den IT-Tools stehen trotzdem da."}
+          {withTools
+            ? " Die Treffer unter den IT-Tools und im Handbuch stehen trotzdem da."
+            : " Die Treffer im Handbuch stehen trotzdem da."}
         </p>
       )}
       {ready && !loading && ready.hits.length === 0 && (
