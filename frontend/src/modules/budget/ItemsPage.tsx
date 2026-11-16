@@ -231,7 +231,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
     setRound(round + 1);
   };
 
-  const columns = canEdit ? 7 : 6;
+  const columns = canEdit ? 9 : 8;
 
   return (
     <div className="page page-wide budget-page">
@@ -241,7 +241,8 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           <h1>Budgetposten</h1>
           <p className="page-sub">
             Wofür das Geld eines Kontos gedacht ist. Geplant wird je Posten; das Konto zeigt die
-            Summe. Alle Beträge sind brutto.
+            Summe. Prognose = Ist plus noch gebunden, Frei = Plan abzüglich Prognose. Alle Beträge
+            sind brutto.
           </p>
         </div>
         {overview && (
@@ -332,6 +333,12 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                     Durch Verträge gebunden
                   </th>
                   <th scope="col" className="betrag">
+                    Ist
+                  </th>
+                  <th scope="col" className="betrag">
+                    Prognose
+                  </th>
+                  <th scope="col" className="betrag">
                     Frei
                   </th>
                   <th scope="col" className="betrag">
@@ -379,16 +386,18 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                       )}
                     </td>
                     <td className="betrag">{formatEuro(row.committed_cents)}</td>
+                    <td className="betrag">{formatEuro(row.actual_cents)}</td>
+                    <td className="betrag">{formatEuro(row.forecast_cents)}</td>
                     <td
                       className={
-                        row.plan_cents !== null && row.committed_cents > row.plan_cents
+                        row.plan_cents !== null && row.forecast_cents > row.plan_cents
                           ? "betrag budget-bad"
                           : "betrag"
                       }
                     >
                       {row.plan_cents === null
                         ? "–"
-                        : formatEuro(row.plan_cents - row.committed_cents)}
+                        : formatEuro(row.plan_cents - row.forecast_cents)}
                     </td>
                     <td className="betrag budget-muted">{amount(row.previous_cents)}</td>
                     {canEdit && (
@@ -417,10 +426,12 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                   </th>
                   <td className="betrag">{formatEuro(overview.plan.total_cents)}</td>
                   <td className="betrag">{formatEuro(overview.committed.total_cents)}</td>
+                  <td className="betrag">{formatEuro(overview.actual.total_cents)}</td>
+                  <td className="betrag">{formatEuro(overview.forecast.total_cents)}</td>
                   <td className="betrag">
-                    {formatEuro(overview.plan.total_cents - overview.committed.total_cents)}
+                    {formatEuro(overview.plan.total_cents - overview.forecast.total_cents)}
                   </td>
-                  <td className="betrag budget-muted" colSpan={columns - 5}>
+                  <td className="betrag budget-muted" colSpan={columns - 7}>
                     {formatEuro(overview.previous.total_cents)}
                   </td>
                 </tr>

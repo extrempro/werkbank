@@ -4067,3 +4067,31 @@ p.badges {
   outline: 2px solid var(--farbe-primaer);
   outline-offset: 2px;
 }
+
+.budget-fill-forecast {
+  fill: var(--chart-1);
+  opacity: 0.35;
+}
+
+.budget-dot-forecast {
+  background: var(--chart-1);
+  opacity: 0.35;
+}
+
+.budget-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.budget-merge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.budget-toolbar-split {
+  align-items: center;
+  justify-content: space-between;
+}

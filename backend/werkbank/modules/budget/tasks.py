@@ -1,6 +1,6 @@
 """Aufgaben des Moduls IT-Budget für die Startseite."""
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
@@ -8,10 +8,11 @@ from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.core.tasks import TaskItem
 from werkbank.modules.budget.contracts import NOTICE_WARN_DAYS, is_running, notice_deadline
-from werkbank.modules.budget.models import BudgetContract
+from werkbank.modules.budget.models import BudgetContract, BudgetInvoice
 
 MODULE_LABEL = "IT-Budget"
 CONTRACTS_LINK = "/budget/vertraege"
+INVOICES_LINK = "/budget/rechnungen"
 
 
 def budget_tasks(db: Session, user: CurrentUser, settings: Settings) -> list[TaskItem]:
@@ -28,14 +29,30 @@ def budget_tasks(db: Session, user: CurrentUser, settings: Settings) -> list[Tas
             and 0 <= (deadline - today).days <= NOTICE_WARN_DAYS
         ):
             soon += 1
+    tasks = []
+    if user.has_any_role(Role.BUDGET_MANAGER):
+        waiting = db.scalar(
+            select(func.count()).select_from(BudgetInvoice).where(BudgetInvoice.status != "gebucht")
+        )
+        if waiting:
+            tasks.append(
+                TaskItem(
+                    module=MODULE_LABEL,
+                    title="Rechnungen prüfen und buchen",
+                    subtitle="Erst gebuchte Rechnungen zählen zum Ist",
+                    link=INVOICES_LINK,
+                    count=waiting,
+                )
+            )
     if not soon:
-        return []
+        return tasks
     return [
+        *tasks,
         TaskItem(
             module=MODULE_LABEL,
             title="Kündigungstermin von Verträgen steht an",
             subtitle=f"Termin in höchstens {NOTICE_WARN_DAYS} Tagen: verlängern oder kündigen",
             link=CONTRACTS_LINK,
             count=soon,
-        )
+        ),
     ]

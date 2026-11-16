@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { Link } from "../../components/Link";
+import { BUDGET_PARTNERS_PATH } from "../../navigation";
 import {
   BUDGET_EDITOR_ROLES,
   createPartner,
@@ -246,7 +248,9 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
             <tbody>
               {partners.map((partner) => (
                 <tr key={partner.id}>
-                  <th scope="row">{partner.name}</th>
+                  <th scope="row">
+                    <Link to={`${BUDGET_PARTNERS_PATH}/${partner.id}`}>{partner.name}</Link>
+                  </th>
                   <td>{partnerRoles(partner)}</td>
                   <td>{partner.customer_number || "–"}</td>
                   <td>{partner.note || "–"}</td>

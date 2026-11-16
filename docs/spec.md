@@ -452,9 +452,13 @@ Das Budget der IT nach Konten, je Geschäftsjahr. Alle Beträge sind brutto und 
 - **Verträge:** Bezeichnung, Vertragspartner, abweichender Rechnungssteller, Budgetposten (darüber das Konto), Betrag je Zahlung netto mit Steuersatz (das Brutto rechnet der Server, kaufmännisch gerundet; fürs Budget zählt das Brutto), Turnus (monatlich, vierteljährlich, halbjährlich, jährlich, einmalig), Beginn, Ende der Laufzeit, Verlängerung, Kündigungsfrist, Kündigungstag und Stand des Auftragsverarbeitungsvertrags (AVV). Ein Vertrag läuft auf genau einen Budgetposten.
 - **Gebunden:** Summe der Zahlungen eines Vertrags, die im Geschäftsjahr fällig werden. Die erste Zahlung zählt zum Beginn, die weiteren im Turnus. Ein Vertrag mit Verlängerung läuft weiter, bis er gekündigt ist. Übersicht und Budgetposten zeigen Plan, gebunden und frei (Plan abzüglich gebunden).
 - **Kündigungstermin:** Ende der Laufzeit abzüglich der Kündigungsfrist; ist er für die laufende Laufzeit verstrichen, gilt der Termin der nächsten. Die Übersicht listet Termine der nächsten 120 Tage; ab 60 Tagen vorher steht der Vertrag als Aufgabe auf der Startseite (für `Budget.Editor` und `Budget.Manager`).
+- **Rechnungen:** Rechnungssteller, Rechnungsnummer, interne Nummer, Rechnungsdatum, Budgetposten, optional Vertrag, Netto, Steuersatz, Brutto, Bezeichnung und die Kennzeichen „Projekt“ und „jährlich“. Eine Rechnung hat genau einen Budgetposten und einen Steuersatz. Das Brutto rechnet der Server; ein Brutto laut Rechnung darf höchstens 1 Euro davon abweichen. Das Rechnungsdatum bestimmt das Geschäftsjahr.
+- **Prüfung:** `Budget.Editor` erfasst mit dem Stand „zu prüfen“. `Budget.Manager` prüft und bucht; erfasst er selbst, ist die Rechnung sofort gebucht. Nur gebuchte Rechnungen zählen zum Ist. Gebuchte Rechnungen ändert und löscht nur der Budgetverwalter. Offene Rechnungen stehen ihm als Aufgabe auf der Startseite.
+- **Ist, gebunden, Prognose:** Ist = Summe der gebuchten Rechnungen (brutto) im Geschäftsjahr. Gebunden = erwartete Vertragskosten des Jahres abzüglich dessen, was zu dem Vertrag schon gebucht ist (nie unter null). Prognose = Ist plus gebunden. Frei = Plan abzüglich Prognose.
+- **Partner im Detail:** Verträge der Firma (als Vertragspartner oder Rechnungssteller), die betroffenen Budgetposten und ihre Rechnungen aus allen Jahren. `Budget.Manager` kann einen Partner mit einem anderen zusammenlegen: Verträge und Rechnungen wandern zum Ziel, der Quellpartner wird gelöscht (nicht umkehrbar, steht im Audit-Log).
 - **Oberfläche:** Alle Seiten haben denselben Kopf mit Kostenstelle und laufendem Geschäftsjahr. Das auf einer Seite gewählte Geschäftsjahr gilt für die anderen mit, bis die Werkbank neu lädt. Formulare öffnen sich über den Knopf „… anlegen“ oder „Bearbeiten“ oberhalb der Tabelle. Wer nur lesen darf, sieht einen Hinweis.
-- **Stand:** Einstellungen, Konten, Budgetposten, Plan, Partner, Verträge und Übersicht sind umgesetzt.
-- **Geplant:** Rechnungen mit Netto, Steuersatz, Brutto, Beleg als PDF und Prüfung durch den Budgetverwalter (dann auch Ist und Prognose); Auswertung über fünf Jahre; Excel-Export; Import.
+- **Stand:** Einstellungen, Konten, Budgetposten, Plan, Partner, Verträge, Rechnungen und Übersicht sind umgesetzt.
+- **Geplant:** Beleg als PDF an der Rechnung; Auswertung über fünf Jahre; Excel-Export; Import.
 
 ## 8a. Bereich IT-Tools
 
@@ -527,7 +531,8 @@ Evergreen:
 | IT-Budget › Übersicht | Budget.* | Kennzahlen, Budget nach Konten als Balken, Kündigungstermine der nächsten 120 Tage, Handlungsbedarf |
 | IT-Budget › Budgetposten | Budget.* (Posten ändern: Budget.Editor, Budget.Manager; Plan ändern: Budget.Manager) | Posten je Konto mit Plan, gebunden, frei und Vorjahr; Posten anlegen, ändern, stilllegen; Plan bearbeiten |
 | IT-Budget › Verträge | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Verträge mit Partnern, Jahreskosten, nächstem Kündigungstermin und AVV; anlegen, ändern, kündigen; Detail je Vertrag mit Vertragsdaten, Fristen und Zuordnung zum Budget |
-| IT-Budget › Partner | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Vertragspartner und Rechnungssteller; anlegen, ändern, stilllegen |
+| IT-Budget › Rechnungen | Budget.* (Erfassen: Budget.Editor, Budget.Manager; Buchen: Budget.Manager) | Rechnungen eines Geschäftsjahrs; erfassen, ändern, prüfen und buchen, löschen |
+| IT-Budget › Partner | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Vertragspartner und Rechnungssteller; anlegen, ändern, stilllegen; Detail je Firma mit Verträgen, Budgetposten und Rechnungen; zusammenlegen (Budget.Manager) |
 | IT-Budget › Konten | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Liste der Konten; anlegen, ändern, stilllegen |
 | IT-Budget › Einstellungen | Budget.Manager | Beginn und Bezeichnung des Geschäftsjahrs, Kostenstelle |
 | M365 › Snapshots | Config.* | Abrufe mit Status, Vergleich zweier Snapshots, JSON-Export |

@@ -32,19 +32,29 @@ function notices(overview: Overview, contracts: Contract[]): Notice[] {
   const found: Notice[] = [];
   for (const row of overview.rows) {
     const name = `${row.account.number} ${row.account.name}`;
-    if (row.plan_cents === null && row.committed_cents > 0) {
+    if (row.plan_cents === null && row.forecast_cents > 0) {
       found.push({
         kind: "Plan",
         tone: "todo",
-        text: `${name}: ${formatEuro(row.committed_cents)} aus Verträgen, aber kein Plan.`,
+        text: `${name}: ${formatEuro(row.forecast_cents)} Kosten, aber kein Plan.`,
       });
-    } else if (row.plan_cents !== null && row.committed_cents > row.plan_cents) {
+    } else if (row.plan_cents !== null && row.forecast_cents > row.plan_cents) {
       found.push({
         kind: "Budget",
         tone: "bad",
-        text: `${name}: Verträge binden ${formatEuro(row.committed_cents - row.plan_cents)} mehr als geplant.`,
+        text: `${name}: Prognose liegt ${formatEuro(row.forecast_cents - row.plan_cents)} über Plan.`,
       });
     }
+  }
+  if (overview.open_invoices > 0) {
+    found.push({
+      kind: "Rechnung",
+      tone: "todo",
+      text:
+        overview.open_invoices === 1
+          ? "1 Rechnung ist noch zu prüfen."
+          : `${overview.open_invoices} Rechnungen sind noch zu prüfen.`,
+    });
   }
   for (const contract of contracts) {
     if (contract.running && contract.dpa_status === "fehlt") {
@@ -58,8 +68,18 @@ function notices(overview: Overview, contracts: Contract[]): Notice[] {
   return found;
 }
 
-/** Balken „gebunden vom Plan“. Als SVG, weil die Breite ohne Inline-Style gesetzt wird. */
-function Bar({ percent, over, label }: { percent: number; over: boolean; label: string }) {
+/** Balken „Ist und Prognose vom Plan“. Als SVG, weil die Breite ohne Inline-Style gesetzt wird. */
+function Bar({
+  actual,
+  forecast,
+  over,
+  label,
+}: {
+  actual: number;
+  forecast: number;
+  over: boolean;
+  label: string;
+}) {
   return (
     <svg
       className="budget-track"
@@ -69,7 +89,12 @@ function Bar({ percent, over, label }: { percent: number; over: boolean; label: 
       aria-label={label}
     >
       <rect className="budget-track-bg" width="100" height="10" />
-      <rect className={over ? "budget-fill-over" : "budget-fill"} width={percent} height="10" />
+      <rect
+        className={over ? "budget-fill-over" : "budget-fill-forecast"}
+        width={forecast}
+        height="10"
+      />
+      <rect className="budget-fill" width={actual} height="10" />
     </svg>
   );
 }
@@ -128,8 +153,10 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
     )
     .sort((a, b) => (a.days_to_deadline ?? 0) - (b.days_to_deadline ?? 0));
   const attention = overview ? notices(overview, contracts) : [];
-  const free = overview ? overview.plan.total_cents - overview.committed.total_cents : 0;
-  const bars = overview?.rows.filter((row) => row.plan_cents !== null || row.committed_cents > 0);
+  const free = overview ? overview.plan.total_cents - overview.forecast.total_cents : 0;
+  const bars = overview?.rows.filter(
+    (row) => row.plan_cents !== null || row.forecast_cents > 0,
+  );
 
   return (
     <div className="page page-wide budget-page">
@@ -199,17 +226,22 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
               </dd>
             </div>
             <div className="panel budget-card">
-              <dt>Noch frei</dt>
-              <dd className="budget-card-value">{formatEuro(free)}</dd>
-              <dd className={free < 0 ? "budget-card-sub budget-bad" : "budget-card-sub budget-ok"}>
-                {free < 0 ? "mehr gebunden als geplant" : "Plan abzüglich gebunden"}
+              <dt>Ist bis heute</dt>
+              <dd className="budget-card-value">{formatEuro(overview.actual.total_cents)}</dd>
+              <dd className="budget-card-sub">
+                {share(overview.actual.total_cents, overview.plan.total_cents)} % des Plans
+                {overview.open_invoices > 0
+                  ? ` · ${overview.open_invoices} ${overview.open_invoices === 1 ? "Rechnung" : "Rechnungen"} zu prüfen`
+                  : ""}
               </dd>
             </div>
             <div className="panel budget-card">
-              <dt>Laufende Kosten / Investitionen</dt>
-              <dd className="budget-card-value">{formatEuro(overview.plan.running_cents)}</dd>
-              <dd className="budget-card-sub">
-                dazu {formatEuro(overview.plan.investment_cents)} Investitionen
+              <dt>Prognose Jahresende</dt>
+              <dd className="budget-card-value">{formatEuro(overview.forecast.total_cents)}</dd>
+              <dd className={free < 0 ? "budget-card-sub budget-bad" : "budget-card-sub budget-ok"}>
+                {free < 0
+                  ? `${formatEuro(-free)} über Plan`
+                  : `noch ${formatEuro(free)} verfügbar`}
               </dd>
             </div>
           </dl>
@@ -228,7 +260,11 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                     <ul className="budget-legend" aria-label="Legende">
                       <li>
                         <span className="budget-dot budget-dot-bound" aria-hidden="true" />
-                        gebunden
+                        Ist
+                      </li>
+                      <li>
+                        <span className="budget-dot budget-dot-forecast" aria-hidden="true" />
+                        Prognose
                       </li>
                       <li>
                         <span className="budget-dot budget-dot-over" aria-hidden="true" />
@@ -239,8 +275,9 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                   {bars && bars.length > 0 ? (
                     bars.map((row) => {
                       const plan = row.plan_cents ?? 0;
-                      const over = row.committed_cents > plan;
-                      const percent = share(row.committed_cents, plan);
+                      const over = row.forecast_cents > plan;
+                      const actual = share(row.actual_cents, plan);
+                      const forecast = share(row.forecast_cents, plan);
                       return (
                         <div className="budget-bar" key={row.account.id}>
                           <div className="budget-bar-head">
@@ -248,20 +285,21 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                               <strong>{row.account.number}</strong> {row.account.name}
                             </span>
                             <span className="betrag budget-muted">
-                              {formatEuro(row.committed_cents)} von {amount(row.plan_cents)}
+                              {formatEuro(row.forecast_cents)} von {amount(row.plan_cents)}
                             </span>
                           </div>
                           <Bar
-                            percent={percent}
+                            actual={actual}
+                            forecast={forecast}
                             over={over}
-                            label={`${row.account.name}: ${percent} % des Plans durch Verträge gebunden`}
+                            label={`${row.account.name}: Ist ${actual} %, Prognose ${forecast} % des Plans`}
                           />
                         </div>
                       );
                     })
                   ) : (
                     <p className="budget-muted">
-                      Für dieses Jahr ist noch nichts geplant und nichts gebunden.
+                      Für dieses Jahr ist noch nichts geplant, gebunden oder gebucht.
                     </p>
                   )}
                 </section>
@@ -319,8 +357,8 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
 
               <p className="small budget-muted">
                 Geplant wird je Budgetposten: <Link to={BUDGET_ITEMS_PATH}>Budgetposten</Link>.
-                Gebunden = was aus Verträgen in diesem {label} zu erwarten ist. Alle Beträge sind
-                brutto.
+                Ist = gebuchte Rechnungen. Gebunden = was aus Verträgen in diesem {label} noch zu
+                erwarten ist. Prognose = Ist plus gebunden. Alle Beträge sind brutto.
               </p>
             </>
           )}

@@ -22,6 +22,7 @@ from werkbank.modules.budget.contracts import (
 from werkbank.modules.budget.models import (
     BudgetAccount,
     BudgetContract,
+    BudgetInvoice,
     BudgetItem,
     BudgetPartner,
     BudgetPlan,
@@ -41,6 +42,7 @@ HEADERS = {"Origin": ORIGIN}
 @pytest.fixture
 def db(db_session: Session) -> Iterator[Session]:
     def clean() -> None:
+        db_session.execute(delete(BudgetInvoice))
         db_session.execute(delete(BudgetContract))
         db_session.execute(delete(BudgetPartner))
         db_session.execute(delete(BudgetPlan))
@@ -577,3 +579,237 @@ def test_contracts_bind_budget_and_raise_tasks(db: Session) -> None:
     assert {"budget.partner_angelegt", "budget.vertrag_angelegt", "budget.vertrag_geaendert"} <= (
         actions
     )
+
+
+# --- Rechnungen ---
+
+
+@pytest.mark.db
+def test_invoices_are_checked_and_booked(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "rechnung-verwalter")
+    editor = client_for(["Budget.Editor"], "rechnung-it")
+    reader = client_for(["Budget.Reader"], "rechnung-leser")
+    account = post(
+        manager, "/accounts", {"number": "6815", "name": "Software", "kind": "laufend"}
+    ).json()
+    item = post(manager, "/items", {"account_id": account["id"], "name": "Zeiterfassung"}).json()
+    partner = post(manager, "/partners", {"name": "Beispiel Software GmbH"}).json()
+    year = manager.get(f"{BASE}/settings").json()["current_year"]
+    contract = post(
+        manager,
+        "/contracts",
+        {
+            "title": "Wartung",
+            "partner_id": partner["id"],
+            "item_id": item["id"],
+            "starts_on": f"{year}-01-01",
+            "net_cents": 100_000,
+            "tax_rate_bp": 0,
+            "interval": "monatlich",
+        },
+    ).json()
+    put(
+        manager, f"/plans/{year}", {"entries": [{"item_id": item["id"], "amount_cents": 1_500_000}]}
+    )
+    body = {
+        "invoicer_id": partner["id"],
+        "number": "RE-1",
+        "internal_number": "re.26.0001",
+        "invoice_date": f"{year}-02-10",
+        "item_id": item["id"],
+        "contract_id": contract["id"],
+        "net_cents": 100_000,
+        "tax_rate_bp": 1900,
+        "description": "Wartung Februar",
+        "is_yearly": True,
+    }
+    assert post(reader, "/invoices", body).status_code == 403
+    assert (
+        client_for(["Tenant.Reader"], "rechnung-fremd").get(f"{BASE}/invoices").status_code == 403
+    )
+
+    # Die IT legt vor: Die Rechnung wartet auf die Prüfung und zählt noch nicht.
+    created = post(editor, "/invoices", body)
+    assert created.status_code == 201, created.text
+    first = created.json()
+    assert (first["status"], first["gross_cents"], first["booked_at"]) == (
+        "zu_pruefen",
+        119_000,
+        None,
+    )
+    assert (first["invoicer_name"], first["item_name"], first["contract_title"]) == (
+        "Beispiel Software GmbH",
+        "Zeiterfassung",
+        "Wartung",
+    )
+    assert first["created_by_name"]
+    overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
+    assert (overview["open_invoices"], overview["actual"]["total_cents"]) == (1, 0)
+    assert overview["committed"]["total_cents"] == 1_200_000
+
+    for bad in (
+        {**body, "invoicer_id": 999_999},
+        {**body, "item_id": 999_999},
+        {**body, "contract_id": 999_999},
+        {**body, "number": " "},
+        {**body, "gross_cents": 119_101},
+        {**body, "invoice_date": "1999-01-01"},
+        {**body, "tax_rate_bp": -1},
+    ):
+        assert post(editor, "/invoices", bad).status_code == 422, bad
+
+    # Solange sie offen ist, darf die IT ändern; buchen darf nur der Budgetverwalter.
+    url = f"/invoices/{first['id']}"
+    changed = put(editor, url, {**body, "gross_cents": 119_005}).json()
+    assert changed["gross_cents"] == 119_005
+    assert editor.post(f"{BASE}{url}/book", headers=HEADERS).status_code == 403
+    booked = manager.post(f"{BASE}{url}/book", headers=HEADERS)
+    assert booked.status_code == 200
+    assert (booked.json()["status"], bool(booked.json()["booked_by_name"])) == ("gebucht", True)
+    assert manager.post(f"{BASE}{url}/book", headers=HEADERS).status_code == 409
+    assert manager.post(f"{BASE}/invoices/999999/book", headers=HEADERS).status_code == 404
+
+    # Gebucht: zählt zum Ist und nicht mehr als gebunden; die Prognose ist Ist plus Rest.
+    overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
+    row = overview["items"][0]
+    assert (row["actual_cents"], row["committed_cents"], row["forecast_cents"]) == (
+        119_005,
+        1_200_000 - 119_005,
+        1_200_000,
+    )
+    assert overview["open_invoices"] == 0
+    assert overview["forecast"]["total_cents"] == 1_200_000
+    assert overview["rows"][0]["actual_cents"] == 119_005
+
+    # Gebuchtes ändert und löscht nur der Budgetverwalter.
+    assert put(editor, url, body).status_code == 403
+    assert editor.delete(f"{BASE}{url}", headers=HEADERS).status_code == 403
+    assert put(manager, url, {**body, "description": "Korrigiert"}).json()["status"] == "gebucht"
+
+    # Der Budgetverwalter bucht beim Erfassen sofort; ohne Vertrag erhöht das die Prognose.
+    direct = post(
+        manager, "/invoices", {**body, "number": "RE-2", "contract_id": None, "net_cents": 10_000}
+    ).json()
+    assert (direct["status"], direct["gross_cents"]) == ("gebucht", 11_900)
+    overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
+    assert overview["forecast"]["total_cents"] == 1_211_900
+
+    # Liste: neueste zuerst, nach Geschäftsjahr getrennt.
+    post(editor, "/invoices", {**body, "number": "RE-3", "invoice_date": f"{year}-03-01"})
+    listing = reader.get(f"{BASE}/invoices", params={"year": year}).json()
+    assert [entry["number"] for entry in listing["entries"]] == ["RE-3", "RE-2", "RE-1"]
+    assert reader.get(f"{BASE}/invoices", params={"year": year - 1}).json()["entries"] == []
+
+    # Aufgabe für den Budgetverwalter, nicht für die IT.
+    def waiting(client: Any) -> list[int]:
+        tasks: list[dict[str, Any]] = client.get("/api/tasks").json()["tasks"]
+        return [task["count"] for task in tasks if task["link"] == "/budget/rechnungen"]
+
+    assert waiting(manager) == [1]
+    assert waiting(editor) == []
+
+    open_id = listing["entries"][0]["id"]
+    assert editor.delete(f"{BASE}/invoices/{open_id}", headers=HEADERS).status_code == 200
+    assert manager.delete(f"{BASE}{url}", headers=HEADERS).status_code == 200
+    assert manager.delete(f"{BASE}{url}", headers=HEADERS).status_code == 404
+    db.expire_all()
+    actions = set(db.scalars(select(AuditLog.action).where(AuditLog.module == "budget")).all())
+    assert {
+        "budget.rechnung_erfasst",
+        "budget.rechnung_geaendert",
+        "budget.rechnung_gebucht",
+        "budget.rechnung_geloescht",
+    } <= actions
+
+
+@pytest.mark.db
+def test_partner_detail_and_merge(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "merge-verwalter")
+    editor = client_for(["Budget.Editor"], "merge-it")
+    reader = client_for(["Budget.Reader"], "merge-leser")
+    account = post(
+        manager, "/accounts", {"number": "6815", "name": "Software", "kind": "laufend"}
+    ).json()
+    item = post(manager, "/items", {"account_id": account["id"], "name": "Lizenzen"}).json()
+    right = post(manager, "/partners", {"name": "Beispiel Software GmbH"}).json()
+    typo = post(
+        manager,
+        "/partners",
+        {"name": "Beispiel Sofware", "is_contract_partner": False, "customer_number": "K-7"},
+    ).json()
+    vendor = post(manager, "/partners", {"name": "Beispiel Hersteller AG"}).json()
+    year = manager.get(f"{BASE}/settings").json()["current_year"]
+    base = {
+        "item_id": item["id"],
+        "starts_on": f"{year}-01-01",
+        "net_cents": 1_000,
+        "tax_rate_bp": 0,
+        "interval": "jaehrlich",
+    }
+    # Zwei Verträge: einer mit dem Tippfehler-Partner als abweichendem Rechnungssteller.
+    post(manager, "/contracts", {**base, "title": "A", "partner_id": right["id"]})
+    post(
+        manager,
+        "/contracts",
+        {**base, "title": "B", "partner_id": right["id"], "invoicer_id": typo["id"]},
+    )
+    post(
+        manager,
+        "/contracts",
+        {**base, "title": "C", "partner_id": vendor["id"], "invoicer_id": typo["id"]},
+    )
+    invoice = {
+        "invoicer_id": typo["id"],
+        "number": "RE-9",
+        "invoice_date": f"{year}-02-01",
+        "item_id": item["id"],
+        "net_cents": 500,
+        "tax_rate_bp": 0,
+    }
+    post(manager, "/invoices", invoice)
+
+    detail = reader.get(f"{BASE}/partners/{typo['id']}").json()
+    assert detail["partner"]["name"] == "Beispiel Sofware"
+    assert [entry["title"] for entry in detail["contracts"]] == ["B", "C"]
+    assert ([entry["number"] for entry in detail["invoices"]], detail["invoice_total"]) == (
+        ["RE-9"],
+        1,
+    )
+    assert reader.get(f"{BASE}/partners/999999").status_code == 404
+    assert (
+        client_for(["Tenant.Reader"], "merge-fremd")
+        .get(f"{BASE}/partners/{typo['id']}")
+        .status_code
+        == 403
+    )
+
+    merge = f"/partners/{typo['id']}/merge"
+    assert post(editor, merge, {"into_id": right["id"]}).status_code == 403
+    assert post(manager, merge, {"into_id": typo["id"]}).status_code == 422
+    assert post(manager, merge, {"into_id": 999_999}).status_code == 422
+    assert post(manager, "/partners/999999/merge", {"into_id": right["id"]}).status_code == 404
+
+    merged = post(manager, merge, {"into_id": right["id"]})
+    assert merged.status_code == 200, merged.text
+    data = merged.json()
+    assert (data["moved_contracts"], data["moved_invoices"]) == (2, 1)
+    # Das Ziel übernimmt die fehlende Kundennummer; der Quellpartner ist weg.
+    assert (data["partner"]["name"], data["partner"]["customer_number"]) == (
+        "Beispiel Software GmbH",
+        "K-7",
+    )
+    assert reader.get(f"{BASE}/partners/{typo['id']}").status_code == 404
+    contracts = {
+        entry["title"]: entry for entry in reader.get(f"{BASE}/contracts").json()["entries"]
+    }
+    # B: Rechnungssteller ist jetzt der Vertragspartner selbst, also keine Abweichung mehr.
+    assert contracts["B"]["invoicer_id"] is None
+    assert contracts["C"]["invoicer_name"] == "Beispiel Software GmbH"
+    detail = reader.get(f"{BASE}/partners/{right['id']}").json()
+    assert [entry["title"] for entry in detail["contracts"]] == ["A", "B", "C"]
+    assert detail["invoice_total"] == 1
+    db.expire_all()
+    entry = db.scalars(
+        select(AuditLog).where(AuditLog.action == "budget.partner_zusammengelegt")
+    ).first()
+    assert entry is not None

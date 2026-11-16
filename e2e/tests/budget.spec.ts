@@ -65,6 +65,36 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(page.getByText("Läuft unbefristet weiter.")).toBeVisible();
   await expectNoA11yViolations(page);
 
+  await page.goto("/budget/rechnungen");
+  await expect(page.getByRole("heading", { level: 1, name: "Rechnungen" })).toBeVisible();
+  await page.getByRole("button", { name: "Rechnung erfassen" }).click();
+  await page
+    .getByRole("combobox", { name: /^Rechnungssteller/ })
+    .selectOption({ label: `Beispiel Partner ${number}` });
+  await page.getByLabel("Rechnungsnummer", { exact: true }).fill(`RE-${number}`);
+  await page
+    .getByLabel("Rechnungsdatum", { exact: true })
+    .fill(`${new Date().getFullYear()}-02-01`);
+  await page
+    .getByRole("combobox", { name: /^Vertrag/ })
+    .selectOption({ label: `Wartung ${number} · Beispiel Partner ${number}` });
+  await page.getByRole("textbox", { name: /^Betrag netto/ }).fill("100,00");
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Rechnung speichern" }).click();
+  // Der Budgetverwalter bucht beim Erfassen sofort.
+  await expect(page.getByText(`Rechnung RE-${number} ist gespeichert und gebucht.`)).toBeVisible();
+  await expect(page.getByRole("row", { name: new RegExp(`RE-${number}`) })).toContainText("119,00");
+  await expectNoA11yViolations(page);
+
+  await page.goto("/budget/partner");
+  await page.getByRole("link", { name: `Beispiel Partner ${number}` }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: `Beispiel Partner ${number}` }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Verträge (1)" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Rechnungen (1)" })).toBeVisible();
+  await expectNoA11yViolations(page);
+
   await page.goto("/budget/posten");
   await page.getByRole("button", { name: "Plan bearbeiten" }).click();
   await page
@@ -76,6 +106,9 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   const itemRow = page.getByRole("row", { name: new RegExp(`Posten ${number}`) });
   await expect(itemRow).toContainText("1.500,00");
   await expect(itemRow).toContainText("1.428,00");
+  // Gebucht sind 119,00; gebunden bleibt der Rest, die Prognose bleibt gleich.
+  await expect(itemRow).toContainText("119,00");
+  await expect(itemRow).toContainText("1.309,00");
   await expect(itemRow).toContainText("72,00");
   await expectNoA11yViolations(page);
 
@@ -84,7 +117,9 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: /Kündigungstermine – nächste 120 Tage/ }),
   ).toBeVisible();
-  await expect(page.getByRole("img", { name: /Testkonto Wartung: \d+ % des Plans/ }).first()).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: /Testkonto Wartung: Ist \d+ %, Prognose \d+ % des Plans/ }).first(),
+  ).toBeVisible();
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/einstellungen");
@@ -108,11 +143,12 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Konto anlegen" })).toHaveCount(0);
   for (const [path, title] of [
     ["/budget/vertraege", "Verträge"],
+    ["/budget/rechnungen", "Rechnungen"],
     ["/budget/partner", "Partner"],
   ] as const) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
-    await expect(page.getByRole("button", { name: /anlegen$/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /(anlegen|erfassen)$/ })).toHaveCount(0);
   }
   await page.goto("/budget/einstellungen");
   await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
@@ -137,6 +173,7 @@ test("Ohne Budget-Rolle gibt es den Bereich und die Daten nicht", async ({ page 
     "/api/budget/settings",
     "/api/budget/items",
     "/api/budget/partners",
+    "/api/budget/invoices",
     "/api/budget/contracts",
   ]) {
     expect((await page.request.get(path)).status()).toBe(403);

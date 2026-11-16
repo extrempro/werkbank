@@ -1,6 +1,6 @@
 """API des Moduls IT-Budget: Einstellungen, Konten, Plan je Geschäftsjahr und Übersicht."""
 
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from werkbank.core.app_settings import set_setting
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, require_roles
+from werkbank.core.models import User
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.modules.budget.contracts import (
@@ -25,6 +26,7 @@ from werkbank.modules.budget.contracts import (
 from werkbank.modules.budget.models import (
     BudgetAccount,
     BudgetContract,
+    BudgetInvoice,
     BudgetItem,
     BudgetPartner,
     BudgetPlan,
@@ -45,6 +47,10 @@ router = APIRouter(prefix="/api/budget")
 MODULE = "budget"
 KIND_RUNNING = "laufend"
 KIND_INVESTMENT = "investition"
+STATUS_OPEN = "zu_pruefen"
+STATUS_BOOKED = "gebucht"
+# So weit darf ein von Hand eingetragenes Brutto vom gerechneten abweichen (in Cent).
+GROSS_TOLERANCE = 100
 # Obergrenze je Betrag: 10 Milliarden Euro in Cent
 AMOUNT_MAX = 1_000_000_000_000
 
@@ -164,8 +170,11 @@ class OverviewRow(BaseModel):
     # Geplanter Betrag brutto in Cent; None: für dieses Jahr ist nichts geplant
     plan_cents: int | None
     previous_cents: int | None
-    # Erwartete Kosten aus Verträgen in diesem Geschäftsjahr
+    # Was aus Verträgen in diesem Geschäftsjahr noch zu erwarten ist (ohne schon Gebuchtes)
     committed_cents: int
+    # Summe der gebuchten Rechnungen und die Prognose (Ist plus noch gebunden)
+    actual_cents: int
+    forecast_cents: int
 
 
 class ItemRow(BaseModel):
@@ -173,6 +182,8 @@ class ItemRow(BaseModel):
     plan_cents: int | None
     previous_cents: int | None
     committed_cents: int
+    actual_cents: int
+    forecast_cents: int
     # Zahl der Verträge, die auf diesem Posten laufen und in diesem Jahr Kosten haben
     contracts: int
 
@@ -200,6 +211,10 @@ class OverviewOut(BaseModel):
     plan: Totals
     previous: Totals
     committed: Totals
+    actual: Totals
+    forecast: Totals
+    # Rechnungen dieses Jahres, die noch auf die Prüfung warten
+    open_invoices: int
     # Zahl der Verträge, aus denen in diesem Jahr Kosten zu erwarten sind
     committed_contracts: int
 
@@ -400,10 +415,24 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
     first_day, last_day = fiscal_year_range(year, settings.start_month)
     committed: dict[int, int] = {}
     contracts: dict[int, int] = {}
+    actual: dict[int, int] = {}
+    paid: dict[int, int] = {}
+    open_invoices = 0
+    for invoice in db.scalars(
+        select(BudgetInvoice).where(BudgetInvoice.invoice_date.between(first_day, last_day))
+    ).all():
+        if invoice.status != STATUS_BOOKED:
+            open_invoices += 1
+            continue
+        actual[invoice.item_id] = actual.get(invoice.item_id, 0) + invoice.gross_cents
+        if invoice.contract_id is not None:
+            paid[invoice.contract_id] = paid.get(invoice.contract_id, 0) + invoice.gross_cents
     for contract in db.scalars(select(BudgetContract)).all():
         cents = expected_cents(contract, first_day, last_day)
         if cents:
-            committed[contract.item_id] = committed.get(contract.item_id, 0) + cents
+            # Was zu diesem Vertrag schon gebucht ist, zählt im Ist und nicht mehr als gebunden.
+            remaining = max(0, cents - paid.get(contract.id, 0))
+            committed[contract.item_id] = committed.get(contract.item_id, 0) + remaining
             contracts[contract.item_id] = contracts.get(contract.item_id, 0) + 1
     accounts = {row.id: row for row in _accounts(db)}
     items: list[ItemRow] = []
@@ -411,8 +440,10 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
         plan = plans.get(item.id)
         before = previous.get(item.id)
         bound = committed.get(item.id, 0)
-        # Stillgelegte Posten erscheinen nur, solange für sie etwas geplant oder gebunden ist.
-        if not item.active and plan is None and before is None and not bound:
+        spent = actual.get(item.id, 0)
+        # Stillgelegte Posten erscheinen nur, solange für sie etwas geplant, gebunden oder
+        # gebucht ist.
+        if not item.active and plan is None and before is None and not bound and not spent:
             continue
         items.append(
             ItemRow(
@@ -420,6 +451,8 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
                 plan_cents=plan,
                 previous_cents=before,
                 committed_cents=bound,
+                actual_cents=spent,
+                forecast_cents=spent + bound,
                 contracts=contracts.get(item.id, 0),
             )
         )
@@ -435,6 +468,8 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
                 plan_cents=_sum([entry.plan_cents for entry in own]),
                 previous_cents=_sum([entry.previous_cents for entry in own]),
                 committed_cents=sum(entry.committed_cents for entry in own),
+                actual_cents=sum(entry.actual_cents for entry in own),
+                forecast_cents=sum(entry.forecast_cents for entry in own),
             )
         )
     planned_years = set(db.scalars(select(BudgetPlan.fiscal_year).distinct()).all())
@@ -457,6 +492,9 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
         plan=_totals([(row.account.kind, row.plan_cents) for row in rows]),
         previous=_totals([(row.account.kind, row.previous_cents) for row in rows]),
         committed=_totals([(row.account.kind, row.committed_cents) for row in rows]),
+        actual=_totals([(row.account.kind, row.actual_cents) for row in rows]),
+        forecast=_totals([(row.account.kind, row.forecast_cents) for row in rows]),
+        open_invoices=open_invoices,
         committed_contracts=sum(contracts.values()),
     )
 
@@ -1032,3 +1070,429 @@ def update_contract(
     )
     db.commit()
     return _one_contract(db, row)
+
+
+# --- Rechnungen ---
+
+InvoiceId = Annotated[int, Path(ge=1)]
+
+
+class InvoiceOut(BaseModel):
+    id: int
+    invoicer_id: int
+    invoicer_name: str
+    number: str
+    internal_number: str
+    invoice_date: date
+    item_id: int
+    item_name: str
+    account_number: str
+    account_name: str
+    contract_id: int | None
+    contract_title: str | None
+    net_cents: int
+    tax_rate_bp: int
+    gross_cents: int
+    description: str
+    is_project: bool
+    is_yearly: bool
+    status: str
+    created_by_name: str | None
+    booked_by_name: str | None
+    booked_at: datetime | None
+
+
+class InvoiceListOut(BaseModel):
+    year: int
+    year_name: str
+    years: list[YearOut]
+    entries: list[InvoiceOut]
+
+
+class InvoiceIn(BaseModel):
+    invoicer_id: int = Field(ge=1)
+    number: str = Field(min_length=1, max_length=80)
+    internal_number: str = Field(default="", max_length=60)
+    invoice_date: date
+    item_id: int = Field(ge=1)
+    contract_id: int | None = Field(default=None, ge=1)
+    net_cents: int = Field(ge=0, le=AMOUNT_MAX)
+    tax_rate_bp: int = Field(default=1900, ge=0, le=10_000)
+    # None: Brutto aus Netto und Steuersatz rechnen. Sonst das Brutto laut Rechnung.
+    gross_cents: int | None = Field(default=None, ge=0, le=2 * AMOUNT_MAX)
+    description: str = Field(default="", max_length=200)
+    is_project: bool = False
+    is_yearly: bool = False
+
+    @field_validator("number", "internal_number", "description")
+    @classmethod
+    def plain(cls, value: str) -> str:
+        return _single_line(value)
+
+    @field_validator("number")
+    @classmethod
+    def not_empty(cls, value: str) -> str:
+        if not value:
+            raise ValueError("Darf nicht leer sein")
+        return value
+
+    @field_validator("invoice_date")
+    @classmethod
+    def in_range(cls, value: date) -> date:
+        if not DATE_MIN <= value <= DATE_MAX:
+            raise ValueError("Das Datum liegt außerhalb des erlaubten Bereichs")
+        return value
+
+
+def _invoice_rows(db: DbDep, rows: list[BudgetInvoice]) -> list[InvoiceOut]:
+    partners = {row.id: row for row in db.scalars(select(BudgetPartner)).all()}
+    accounts = {row.id: row for row in db.scalars(select(BudgetAccount)).all()}
+    items = {row.id: row for row in db.scalars(select(BudgetItem)).all()}
+    contracts = {row.id: row for row in db.scalars(select(BudgetContract)).all()}
+    user_ids = {uid for row in rows for uid in (row.created_by, row.booked_by) if uid is not None}
+    names: dict[object, str] = {}
+    if user_ids:
+        names = {
+            user.id: user.display_name
+            for user in db.scalars(select(User).where(User.id.in_(user_ids))).all()
+        }
+    out = []
+    for row in rows:
+        item = items.get(row.item_id)
+        account = accounts.get(item.account_id) if item else None
+        partner = partners.get(row.invoicer_id)
+        contract = contracts.get(row.contract_id) if row.contract_id is not None else None
+        out.append(
+            InvoiceOut(
+                id=row.id,
+                invoicer_id=row.invoicer_id,
+                invoicer_name=partner.name if partner else "",
+                number=row.number,
+                internal_number=row.internal_number,
+                invoice_date=row.invoice_date,
+                item_id=row.item_id,
+                item_name=item.name if item else "",
+                account_number=account.number if account else "",
+                account_name=account.name if account else "",
+                contract_id=row.contract_id,
+                contract_title=contract.title if contract else None,
+                net_cents=row.net_cents,
+                tax_rate_bp=row.tax_rate_bp,
+                gross_cents=row.gross_cents,
+                description=row.description,
+                is_project=row.is_project,
+                is_yearly=row.is_yearly,
+                status=row.status,
+                created_by_name=names.get(row.created_by),
+                booked_by_name=names.get(row.booked_by),
+                booked_at=row.booked_at,
+            )
+        )
+    return out
+
+
+def _invoice_gross(db: DbDep, body: InvoiceIn) -> int:
+    """Prüft die Bezüge der Rechnung und liefert ihr Brutto."""
+    problem: str | None = None
+    computed = gross_cents(body.net_cents, body.tax_rate_bp)
+    if db.get(BudgetPartner, body.invoicer_id) is None:
+        problem = "Den Rechnungssteller gibt es nicht."
+    elif db.get(BudgetItem, body.item_id) is None:
+        problem = "Den Budgetposten gibt es nicht."
+    elif body.contract_id is not None and db.get(BudgetContract, body.contract_id) is None:
+        problem = "Den Vertrag gibt es nicht."
+    elif body.gross_cents is not None and abs(body.gross_cents - computed) > GROSS_TOLERANCE:
+        problem = "Das Brutto weicht um mehr als 1 Euro vom gerechneten Betrag ab."
+    if problem:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=problem)
+    return computed if body.gross_cents is None else body.gross_cents
+
+
+def _apply_invoice(row: BudgetInvoice, body: InvoiceIn, gross: int) -> None:
+    row.invoicer_id = body.invoicer_id
+    row.number = body.number
+    row.internal_number = body.internal_number
+    row.invoice_date = body.invoice_date
+    row.item_id = body.item_id
+    row.contract_id = body.contract_id
+    row.net_cents = body.net_cents
+    row.tax_rate_bp = body.tax_rate_bp
+    row.gross_cents = gross
+    row.description = body.description
+    row.is_project = body.is_project
+    row.is_yearly = body.is_yearly
+
+
+def _invoice_details(row: BudgetInvoice) -> dict[str, object]:
+    return {
+        "number": row.number,
+        "invoicer_id": row.invoicer_id,
+        "item_id": row.item_id,
+        "contract_id": row.contract_id,
+        "invoice_date": row.invoice_date.isoformat(),
+        "gross_cents": row.gross_cents,
+        "status": row.status,
+    }
+
+
+def _own_invoice(db: DbDep, invoice_id: int, user: CurrentUser) -> BudgetInvoice:
+    """Die Rechnung, wenn die Person sie ändern darf: Gebuchtes ändert nur der Budgetverwalter."""
+    row: BudgetInvoice | None = db.get(BudgetInvoice, invoice_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    if row.status == STATUS_BOOKED and not user.has_any_role(Role.BUDGET_MANAGER):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Gebuchte Rechnungen ändert nur der Budgetverwalter.",
+        )
+    return row
+
+
+@router.get("/invoices")
+def list_invoices(user: Reader, db: DbDep, year: YearQuery = None) -> InvoiceListOut:
+    """Rechnungen eines Geschäftsjahrs (nach Rechnungsdatum), die neueste zuerst."""
+    settings = load_settings(db)
+    current = fiscal_year_of(now_utc().date(), settings.start_month)
+    if year is None:
+        year = current
+    first_day, last_day = fiscal_year_range(year, settings.start_month)
+    rows = list(
+        db.scalars(
+            select(BudgetInvoice)
+            .where(BudgetInvoice.invoice_date.between(first_day, last_day))
+            .order_by(BudgetInvoice.invoice_date.desc(), BudgetInvoice.id.desc())
+        ).all()
+    )
+    years = sorted({*range(current - 5, current + 2), year}, reverse=True)
+    return InvoiceListOut(
+        year=year,
+        year_name=fiscal_year_name(year, settings.start_month),
+        years=[
+            YearOut(year=entry, name=fiscal_year_name(entry, settings.start_month))
+            for entry in years
+            if YEAR_MIN <= entry <= YEAR_MAX
+        ],
+        entries=_invoice_rows(db, rows),
+    )
+
+
+@router.post("/invoices", status_code=status.HTTP_201_CREATED)
+def create_invoice(request: Request, body: InvoiceIn, user: Editor, db: DbDep) -> InvoiceOut:
+    """Erfasst eine Rechnung. Der Budgetverwalter bucht dabei sofort, alle anderen legen vor."""
+    gross = _invoice_gross(db, body)
+    row = BudgetInvoice(status=STATUS_OPEN, created_by=user.user_id)
+    _apply_invoice(row, body, gross)
+    if user.has_any_role(Role.BUDGET_MANAGER):
+        row.status = STATUS_BOOKED
+        row.booked_by = user.user_id
+        row.booked_at = now_utc()
+    db.add(row)
+    db.flush()
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.rechnung_erfasst",
+        user_id=user.user_id,
+        object_type="rechnung",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details=_invoice_details(row),
+    )
+    db.commit()
+    return _invoice_rows(db, [row])[0]
+
+
+@router.put("/invoices/{invoice_id}")
+def update_invoice(
+    request: Request, invoice_id: InvoiceId, body: InvoiceIn, user: Editor, db: DbDep
+) -> InvoiceOut:
+    row = _own_invoice(db, invoice_id, user)
+    gross = _invoice_gross(db, body)
+    before = _invoice_details(row)
+    _apply_invoice(row, body, gross)
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.rechnung_geaendert",
+        user_id=user.user_id,
+        object_type="rechnung",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"vorher": before, "nachher": _invoice_details(row)},
+    )
+    db.commit()
+    return _invoice_rows(db, [row])[0]
+
+
+@router.post("/invoices/{invoice_id}/book")
+def book_invoice(request: Request, invoice_id: InvoiceId, user: Manager, db: DbDep) -> InvoiceOut:
+    """Prüft und bucht eine Rechnung; erst danach zählt sie zum Ist."""
+    row: BudgetInvoice | None = db.get(BudgetInvoice, invoice_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    if row.status == STATUS_BOOKED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Die Rechnung ist schon gebucht."
+        )
+    row.status = STATUS_BOOKED
+    row.booked_by = user.user_id
+    row.booked_at = now_utc()
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.rechnung_gebucht",
+        user_id=user.user_id,
+        object_type="rechnung",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details=_invoice_details(row),
+    )
+    db.commit()
+    return _invoice_rows(db, [row])[0]
+
+
+@router.delete("/invoices/{invoice_id}")
+def delete_invoice(
+    request: Request, invoice_id: InvoiceId, user: Editor, db: DbDep
+) -> dict[str, bool]:
+    row = _own_invoice(db, invoice_id, user)
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.rechnung_geloescht",
+        user_id=user.user_id,
+        object_type="rechnung",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details=_invoice_details(row),
+    )
+    db.delete(row)
+    db.commit()
+    return {"deleted": True}
+
+
+# --- Partner: Detail und Zusammenlegen ---
+
+
+class PartnerDetailOut(BaseModel):
+    partner: PartnerOut
+    # Verträge, in denen die Firma Vertragspartner oder Rechnungssteller ist
+    contracts: list[ContractOut]
+    # Rechnungen der Firma aus allen Jahren, die neueste zuerst (höchstens 500)
+    invoices: list[InvoiceOut]
+    invoice_total: int
+
+
+class MergeIn(BaseModel):
+    # In diesen Partner geht der im Pfad genannte auf
+    into_id: int = Field(ge=1)
+
+
+class MergeOut(BaseModel):
+    partner: PartnerOut
+    moved_contracts: int
+    moved_invoices: int
+
+
+INVOICE_LIMIT = 500
+
+
+@router.get("/partners/{partner_id}")
+def partner_detail(partner_id: PartnerId, user: Reader, db: DbDep) -> PartnerDetailOut:
+    row: BudgetPartner | None = db.get(BudgetPartner, partner_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    partners, accounts, items, today, year_range, _ = _contract_context(db)
+    contracts = [
+        contract_out(entry, partners, accounts, items, today, year_range)
+        for entry in db.scalars(
+            select(BudgetContract).where(
+                (BudgetContract.partner_id == row.id) | (BudgetContract.invoicer_id == row.id)
+            )
+        ).all()
+    ]
+    contracts.sort(key=lambda entry: (not entry.running, entry.title.lower(), entry.id))
+    where = BudgetInvoice.invoicer_id == row.id
+    invoices = list(
+        db.scalars(
+            select(BudgetInvoice)
+            .where(where)
+            .order_by(BudgetInvoice.invoice_date.desc(), BudgetInvoice.id.desc())
+            .limit(INVOICE_LIMIT)
+        ).all()
+    )
+    total = db.scalar(select(func.count()).select_from(BudgetInvoice).where(where)) or 0
+    return PartnerDetailOut(
+        partner=partner_out(row),
+        contracts=contracts,
+        invoices=_invoice_rows(db, invoices),
+        invoice_total=total,
+    )
+
+
+@router.post("/partners/{partner_id}/merge")
+def merge_partner(
+    request: Request, partner_id: PartnerId, body: MergeIn, user: Manager, db: DbDep
+) -> MergeOut:
+    """Legt einen doppelt angelegten Partner mit einem anderen zusammen.
+
+    Verträge und Rechnungen wandern zum Ziel, der Partner aus dem Pfad wird gelöscht.
+    """
+    source: BudgetPartner | None = db.get(BudgetPartner, partner_id)
+    target: BudgetPartner | None = db.get(BudgetPartner, body.into_id)
+    if source is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    if target is None or target.id == source.id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Bitte einen anderen vorhandenen Partner als Ziel wählen.",
+        )
+    moved_contracts = 0
+    for contract in db.scalars(
+        select(BudgetContract).where(
+            (BudgetContract.partner_id == source.id) | (BudgetContract.invoicer_id == source.id)
+        )
+    ).all():
+        if contract.partner_id == source.id:
+            contract.partner_id = target.id
+        if contract.invoicer_id == source.id:
+            contract.invoicer_id = target.id
+        # Derselbe Partner als Rechnungssteller ist keine Abweichung mehr.
+        if contract.invoicer_id == contract.partner_id:
+            contract.invoicer_id = None
+        moved_contracts += 1
+    moved_invoices = 0
+    for invoice in db.scalars(
+        select(BudgetInvoice).where(BudgetInvoice.invoicer_id == source.id)
+    ).all():
+        invoice.invoicer_id = target.id
+        moved_invoices += 1
+    # Das Ziel übernimmt, was dem Quellpartner erlaubt war, und fehlende Angaben.
+    target.is_contract_partner = target.is_contract_partner or source.is_contract_partner
+    target.is_invoicer = target.is_invoicer or source.is_invoicer
+    target.active = target.active or source.active
+    if not target.customer_number:
+        target.customer_number = source.customer_number
+    if not target.note:
+        target.note = source.note
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.partner_zusammengelegt",
+        user_id=user.user_id,
+        object_type="partner",
+        object_id=str(target.id),
+        ip=client_ip(request),
+        details={
+            "quelle": {"id": source.id, "name": source.name},
+            "ziel": target.name,
+            "vertraege": moved_contracts,
+            "rechnungen": moved_invoices,
+        },
+    )
+    db.flush()
+    db.delete(source)
+    db.commit()
+    return MergeOut(
+        partner=partner_out(target), moved_contracts=moved_contracts, moved_invoices=moved_invoices
+    )

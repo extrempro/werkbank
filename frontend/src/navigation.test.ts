@@ -110,6 +110,7 @@ describe("areasFor", () => {
       "/budget",
       "/budget/posten",
       "/budget/vertraege",
+      "/budget/rechnungen",
       "/budget/partner",
       "/budget/konten",
     ];
