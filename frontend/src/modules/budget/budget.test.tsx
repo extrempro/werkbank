@@ -247,16 +247,25 @@ describe("Budgetposten", () => {
   });
 
   it("zeigt die Abweichung von der Erwartung mit Vorzeichen", async () => {
-    const base = overview();
+    const row = { previous_cents: null, committed_cents: 0, contracts: 0 };
     stubFetch({
       "GET /api/budget/overview": overview({
         items: [
-          { ...base.items[1], actual_cents: 1_290_000, forecast_cents: 1_290_000 },
           {
-            ...base.items[0],
-            status: "abgeschlossen",
+            ...row,
+            item: office,
+            expected_cents: 1_190_000,
+            actual_cents: 1_290_000,
+            forecast_cents: 1_290_000,
+            status: "rechnung",
+          },
+          {
+            ...row,
+            item: server,
+            expected_cents: 5_000_050,
             actual_cents: 4_000_000,
             forecast_cents: 4_000_000,
+            status: "abgeschlossen",
           },
         ],
       }),
