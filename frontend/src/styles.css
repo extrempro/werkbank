@@ -4372,3 +4372,107 @@ p.badges {
   outline: 2px dashed var(--farbe-primaer);
   outline-offset: 4px;
 }
+
+/* IT-Tools: Feld über die ganze Breite eines Rasters */
+
+.tool-wide {
+  grid-column: 1 / -1;
+}
+
+/* IT-Tools: QR-Code */
+
+.qr-layout {
+  align-items: start;
+}
+
+.qr-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  max-width: 22rem;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius);
+}
+
+.qr-preview svg {
+  width: 100%;
+  height: 100%;
+}
+
+.qr-preview .small {
+  color: #444444;
+  text-align: center;
+}
+
+@media (min-width: 64rem) {
+  .qr-preview-column {
+    position: sticky;
+    top: 16px;
+  }
+}
+
+/* IT-Tools: Bild-Konverter */
+
+.image-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius);
+}
+
+.image-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+
+.image-item + .image-item {
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.image-thumb {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  background: repeating-conic-gradient(#e2e2e2 0 25%, #ffffff 0 50%) 0 0 / 12px 12px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 4px;
+}
+
+.image-info {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* IT-Tools: Zertifikate */
+
+.cert-export {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.cert-export h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.cert-files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

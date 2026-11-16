@@ -16,6 +16,7 @@ export type ToolCategory =
   | "text"
   | "rechner"
   | "planung"
+  | "zertifikate"
   | "generator";
 
 export const CATEGORY_LABELS: Record<ToolCategory, string> = {
@@ -28,6 +29,7 @@ export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   text: "Text",
   rechner: "Rechner",
   planung: "Planung",
+  zertifikate: "Zertifikate",
   generator: "Generatoren",
 };
 
@@ -764,7 +766,96 @@ export const TOOLS: readonly ToolDefinition[] = [
     ],
     component: lazy(() => import("./utility-analysis/UtilityAnalysisTool")),
   },
+  {
+    id: "qr-code",
+    name: "QR-Code-Generator",
+    category: "generator",
+    description:
+      "QR-Codes für Text, Links, WLAN-Zugang, Kontakte (vCard), E-Mail, Telefon und SMS erzeugen, auf Wunsch mit Logo oder Kürzel in der Mitte, als SVG oder PNG.",
+    tags: ["qr", "barcode", "wlan", "wifi", "vcard", "kontakt", "link", "url", "logo", "kürzel"],
+    component: lazy(() => import("./qr-code/QrCodeTool")),
+  },
+  {
+    id: "bild-konverter",
+    name: "Bild-Konverter",
+    category: "konverter",
+    description:
+      "Bilder umwandeln und verkleinern: PNG, JPEG, WebP, SVG, GIF, BMP, AVIF in PNG, JPEG, WebP, ICO oder ein Favicon-Paket. Mehrere Dateien auf einmal.",
+    tags: [
+      "bild",
+      "image",
+      "konvertieren",
+      "png",
+      "jpg",
+      "jpeg",
+      "webp",
+      "svg",
+      "ico",
+      "favicon",
+      "avif",
+      "verkleinern",
+      "resize",
+      "komprimieren",
+    ],
+    component: lazy(() => import("./image-convert/ImageConvertTool")),
+  },
+  {
+    id: "zertifikate",
+    name: "Zertifikate anzeigen und umwandeln",
+    category: "zertifikate",
+    description:
+      "Zertifikate, Ketten, CSRs, Schlüssel und PFX lesen und umwandeln: PEM, DER, P7B und PFX, Schlüssel-Abgleich, Webserver-Paket, .p15 für APC-Managementkarten in USV und PDU.",
+    tags: [
+      "zertifikat",
+      "certificate",
+      "x509",
+      "pem",
+      "der",
+      "p7b",
+      "ssl",
+      "tls",
+      "san",
+      "fingerprint",
+      "kette",
+      "chain",
+      "pki",
+      "pfx",
+      "p12",
+      "pkcs12",
+      "schlüssel",
+      "fullchain",
+      "iis",
+      "nginx",
+      "apc",
+      "p15",
+      "usv",
+      "pdu",
+    ],
+    component: lazy(() => import("./cert-decode/CertDecodeTool")),
+  },
+  {
+    id: "csr",
+    name: "CSR erstellen",
+    category: "zertifikate",
+    description:
+      "Zertifikatsanforderung (CSR) mit privatem Schlüssel im Browser erzeugen, RSA oder ECDSA, mit alternativen Namen. Der Schlüssel verlässt den Browser nicht.",
+    tags: [
+      "csr",
+      "zertifikat",
+      "request",
+      "pkcs10",
+      "ssl",
+      "tls",
+      "san",
+      "schlüssel",
+      "openssl",
+      "rsa",
+      "ecdsa",
+    ],
+    component: lazy(() => import("./csr/CsrTool")),
+  },
 ];
+
 export function findTool(id: string): ToolDefinition | undefined {
   return TOOLS.find((tool) => tool.id === id);
 }

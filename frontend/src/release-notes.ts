@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.35.0",
+    date: "2026-11-16",
+    summary: "IT-Tools: QR-Code, Bild-Konverter und Zertifikate.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Neu: QR-Code-Generator für Links, Texte, WLAN-Zugang, Kontakte, E-Mail, Telefon und SMS. Auf Wunsch mit Kürzel oder Logo in der Mitte, als SVG oder PNG.",
+          "Neu: Bild-Konverter. Wandelt Bilder in PNG, JPEG, WebP, ICO oder ein Favicon-Paket um und verkleinert sie, auch viele auf einmal.",
+          "Neue Kategorie Zertifikate: Zertifikate, Ketten, Schlüssel und PFX-Dateien ansehen und umwandeln, und eine Zertifikatsanforderung (CSR) samt Schlüssel erstellen.",
+          "Alles bleibt in deinem Browser. Inhalte, Bilder, Schlüssel und Kennwörter stehen nie in der Adresszeile.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.34.0",
     date: "2026-11-16",
     summary: "IT-Tools: Planungs-Tools und E-Mail-Header.",
