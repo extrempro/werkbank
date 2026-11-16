@@ -3,8 +3,13 @@ import { expectNoA11yViolations, loginAs } from "./helpers";
 
 test("Glocke öffnet die Benachrichtigungen, Arten lassen sich ausschalten", async ({
   page,
-}) => {
-  await loginAs(page, ["Budget.Manager"], "Gerda Glocke");
+}, testInfo) => {
+  // Eigene Person je Gerät und Versuch: Die Einstellung wird gespeichert und gilt überall.
+  await loginAs(
+    page,
+    ["Budget.Manager"],
+    `Gerda Glocke ${testInfo.project.name} ${testInfo.retry}`,
+  );
   await page.goto("/");
   const bell = page.getByRole("button", { name: /^Benachrichtigungen/ });
   await expect(bell).toHaveAttribute("aria-expanded", "false");
@@ -41,6 +46,7 @@ test("Glocke öffnet die Benachrichtigungen, Arten lassen sich ausschalten", asy
   await expect(
     page.getByRole("status").filter({ hasText: "Gespeichert." }),
   ).toBeVisible();
+  await expect(kind).toBeEnabled();
   await page.reload();
   await expect(
     page.getByRole("checkbox", { name: "Rechnung wartet auf Prüfung" }),

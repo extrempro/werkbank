@@ -38,22 +38,24 @@ function NotificationSettings() {
     if (!kinds) {
       return;
     }
-    const disabled = kinds
-      .filter((entry) => (entry.kind === kind ? !enabled : !entry.enabled))
-      .map((entry) => entry.kind);
+    const before = kinds;
+    // Sofort anzeigen; schlägt das Speichern fehl, gilt wieder der alte Stand
+    const next = kinds.map((entry) => (entry.kind === kind ? { ...entry, enabled } : entry));
+    setKinds(next);
     setBusy(true);
     setMessage(null);
-    saveNotificationSettings(disabled)
+    saveNotificationSettings(next.filter((entry) => !entry.enabled).map((entry) => entry.kind))
       .then((result) => {
         setKinds(result.kinds);
         setMessage({ kind: "status", text: "Gespeichert." });
       })
-      .catch((error: unknown) =>
+      .catch((error: unknown) => {
+        setKinds(before);
         setMessage({
           kind: "alert",
           text: errorText(error, "Die Einstellung konnte nicht gespeichert werden."),
-        }),
-      )
+        });
+      })
       .finally(() => setBusy(false));
   };
 

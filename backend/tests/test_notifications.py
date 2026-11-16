@@ -35,7 +35,7 @@ def db(db_session: Session) -> Session:
 
 
 def user_id(db: Session, oid: str) -> uuid.UUID:
-    return db.scalars(select(User.id).where(User.entra_oid == oid)).one()
+    return db.scalars(select(User.id).where(User.entra_oid == f"test:{oid}")).one()
 
 
 def invoice(key: str, title: str = "Rechnung prüfen") -> Event:
