@@ -29,6 +29,9 @@ services:
       - settings_key
     ports:
       - "${BIND_IP:-127.0.0.1}:${BIND_PORT:-8080}:8000"
+    volumes:
+      # PDF-Belege des IT-Budgets; gehört in die Sicherung
+      - belege:/data/belege
     depends_on:
       db:
         condition: service_healthy
@@ -109,6 +112,7 @@ networks:
 
 volumes:
   db-data:
+  belege:
 
 # Alle Dateien müssen vorhanden sein, sonst startet Compose nicht (siehe deploy/README.md).
 # WERKBANK_SECRETS_DIR: Ordner auf dem Docker-Host, am besten ein absoluter Pfad außerhalb

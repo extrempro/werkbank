@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.30.0] – 2026-11-16
+
+IT-Budget: PDF-Beleg an der Rechnung.
+
+### IT-Budget
+
+- **Beleg hochladen:** An jede Rechnung lässt sich ein PDF hängen (höchstens 15 MB), ersetzen und wieder entfernen. Alle mit Budget-Rolle können den Beleg herunterladen
+- Gebuchte Rechnungen: Den Beleg ändert nur der Budgetverwalter
+- Die Dateien liegen in einem eigenen Volume unter zufälligen Namen, nicht in der Datenbank. Geprüft wird der Inhalt der Datei, nicht nur die Endung
+- Migration 0024 (drei neue Spalten)
+
+### Betrieb
+
+- **Neues Volume `belege`** in `deploy/docker-compose.yml`. Es entsteht beim nächsten Start von selbst und **gehört zusammen mit `db-data` in die Sicherung** (`deploy/README.md`)
+- Einen Virenscan der hochgeladenen Dateien gibt es nicht
+
 ## [0.29.0] – 2026-11-16
 
 IT-Budget: Planung über mehrere Jahre mit Entwurf und Freigabe.

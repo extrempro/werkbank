@@ -7,12 +7,16 @@ import {
   BUDGET_EDITOR_ROLES,
   BUDGET_MANAGER_ROLE,
   createInvoice,
+  deleteDocument,
   deleteInvoice,
+  DOCUMENT_MAX_MB,
+  documentUrl,
   euroInput,
   fetchContracts,
   fetchInvoices,
   fetchItems,
   fetchPartners,
+  fileSize,
   formatBudgetDay,
   formatEuro,
   formatRate,
@@ -23,13 +27,14 @@ import {
   rememberYear,
   STATUS_LABELS,
   updateInvoice,
+  uploadDocument,
   type Contract,
   type Invoice,
   type InvoiceList,
   type Item,
   type Partner,
 } from "./api";
-import { BudgetHead, ReadOnlyNote, useRevealOnMount } from "./shared";
+import { BudgetHead, DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
 
 interface FormProps {
   /** null: neue Rechnung erfassen. */
@@ -364,6 +369,20 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
       .catch((error: unknown) => fail(error, "Die Rechnung konnte nicht gelöscht werden."));
   };
 
+  const onUpload = (entry: Invoice, file: File | undefined) => {
+    if (!file) {
+      return;
+    }
+    if (file.size > DOCUMENT_MAX_MB * 1024 * 1024) {
+      setMessage({ kind: "alert", text: `Die Datei ist größer als ${DOCUMENT_MAX_MB} MB.` });
+      return;
+    }
+    setMessage(null);
+    uploadDocument(entry.id, file)
+      .then(() => done(`Der Beleg zu ${entry.number} ist gespeichert.`))
+      .catch((error: unknown) => fail(error, "Der Beleg konnte nicht gespeichert werden."));
+  };
+
   const entries = data?.list.entries ?? [];
   const open = entries.filter((entry) => entry.status !== "gebucht").length;
   // Gebuchtes ändert nur der Budgetverwalter.
@@ -484,6 +503,7 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
                   Brutto
                 </th>
                 <th scope="col">Status</th>
+                <th scope="col">Beleg</th>
                 {canEdit && <th scope="col">Aktion</th>}
               </tr>
             </thead>
@@ -535,6 +555,41 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
                       {entry.created_by_name ? `erfasst: ${entry.created_by_name}` : ""}
                       {entry.booked_by_name ? ` · geprüft: ${entry.booked_by_name}` : ""}
                     </span>
+                  </td>
+                  <td>
+                    {entry.doc_name ? (
+                      <>
+                        <a href={documentUrl(entry.id)} download={entry.doc_name}>
+                          {entry.doc_name}
+                        </a>
+                        <span className="small budget-muted tenant-part">
+                          PDF{entry.doc_size ? `, ${fileSize(entry.doc_size)}` : ""}
+                        </span>
+                        {mayChange(entry) && (
+                          <DeleteButton
+                            what={`Beleg von Rechnung ${entry.number}`}
+                            run={() => deleteDocument(entry.id)}
+                            onDeleted={() => done(`Der Beleg von ${entry.number} ist entfernt.`)}
+                          />
+                        )}
+                      </>
+                    ) : mayChange(entry) ? (
+                      <label className="button button-secondary budget-upload">
+                        Beleg hochladen
+                        <input
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          className="visually-hidden"
+                          aria-label={`Beleg zu Rechnung ${entry.number} hochladen (PDF)`}
+                          onChange={(event) => {
+                            onUpload(entry, event.target.files?.[0]);
+                            event.target.value = "";
+                          }}
+                        />
+                      </label>
+                    ) : (
+                      <span className="budget-muted">kein Beleg</span>
+                    )}
                   </td>
                   {canEdit && (
                     <td>

@@ -1,4 +1,4 @@
-import { deleteJson, getJson, postJson, putJson } from "../../api";
+import { ApiError, deleteJson, getJson, postJson, putJson } from "../../api";
 
 export type AccountKind = "laufend" | "investition";
 
@@ -448,6 +448,9 @@ export interface Invoice extends Omit<InvoiceUpdate, "gross_cents"> {
   created_by_name: string | null;
   booked_by_name: string | null;
   booked_at: string | null;
+  /** PDF-Beleg: Dateiname und Größe in Bytes; null: kein Beleg. */
+  doc_name: string | null;
+  doc_size: number | null;
 }
 
 export interface InvoiceList {
@@ -542,4 +545,50 @@ export function fetchPlanning(): Promise<Planning> {
 
 export function setYearStatus(year: number, status: YearStatus): Promise<PlanYear> {
   return putJson<PlanYear>(`/api/budget/years/${year}/status`, { status });
+}
+
+/** Höchstgröße eines Belegs in Megabyte (wie auf dem Server). */
+export const DOCUMENT_MAX_MB = 15;
+
+export function documentUrl(invoiceId: number): string {
+  return `/api/budget/invoices/${invoiceId}/document`;
+}
+
+/** Lädt einen PDF-Beleg hoch. Der Inhalt der Anfrage ist die Datei selbst. */
+export async function uploadDocument(invoiceId: number, file: File): Promise<Invoice> {
+  const response = await fetch(documentUrl(invoiceId), {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/pdf",
+      // Der Dateiname kann Umlaute enthalten; Kopfzeilen vertragen nur ASCII.
+      "X-Dateiname": encodeURIComponent(file.name),
+    },
+    body: file,
+  });
+  if (!response.ok) {
+    // Der Server nennt den Grund als JSON; fehlt er, bleibt es beim allgemeinen Fehlertext.
+    const detail = await response
+      .json()
+      .then((body: unknown) => {
+        const value = (body as { detail?: unknown } | null)?.detail;
+        return typeof value === "string" ? value : null;
+      })
+      .catch(() => null);
+    throw new ApiError(response.status, false, detail);
+  }
+  return (await response.json()) as Invoice;
+}
+
+export function deleteDocument(invoiceId: number): Promise<Invoice> {
+  return deleteJson<Invoice>(documentUrl(invoiceId));
+}
+
+/** Dateigröße in Worten, z. B. „340 KB“ oder „1,2 MB“. */
+export function fileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB`;
 }

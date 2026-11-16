@@ -139,3 +139,11 @@ Viele Docker-Verwaltungswerkzeuge können ein Projekt per Git-Sync aus einem Rep
 6. In **Entra** die Redirect-URI `${PUBLIC_URL}/auth/callback` eintragen.
 
 Die ganze Reihenfolge mit Prüfschritten steht in [`docs/inbetriebnahme.md`](../docs/inbetriebnahme.md).
+
+## Datensicherung
+
+Zwei Volumes enthalten Daten, die nicht wiederherstellbar sind, und gehören in die Sicherung:
+
+- `db-data`: die Datenbank.
+- `belege`: die PDF-Belege des IT-Budgets. Die Dateien liegen dort unter zufälligen Namen; welcher Beleg zu welcher Rechnung gehört, steht nur in der Datenbank. Beide Volumes deshalb zusammen sichern und zusammen zurückspielen.
+

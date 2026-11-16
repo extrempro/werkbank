@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountsPage } from "./AccountsPage";
 import {
   euroInput,
+  fileSize,
   formatBudgetDay,
   formatEuro,
   formatRate,
@@ -155,7 +156,9 @@ function stubFetch(routes: Record<string, unknown>) {
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       const method = init?.method ?? "GET";
-      calls.push({ url, method, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      // Nur JSON-Inhalte auslesen; ein hochgeladener Beleg ist eine Datei.
+      const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
+      calls.push({ url, method, body });
       const key = Object.keys(routes).find((route) => `${method} ${url}`.startsWith(route));
       return key
         ? new Response(JSON.stringify(routes[key]), { status: 200 })
@@ -746,6 +749,8 @@ function invoice(overrides: Partial<Invoice> = {}): Invoice {
     created_by_name: "Ida IT",
     booked_by_name: null,
     booked_at: null,
+    doc_name: null,
+    doc_size: null,
     ...overrides,
   };
 }
@@ -1068,5 +1073,67 @@ describe("Planung", () => {
     expect(saved.find((call) => call.url.endsWith("2027"))?.body).toEqual({
       entries: [{ item_id: 11, amount_cents: 650_000 }],
     });
+  });
+});
+
+describe("Belege", () => {
+  const routes = (entries: Invoice[]) => ({
+    "GET /api/budget/invoices": {
+      year: 2026,
+      year_name: "2026/27",
+      years: [{ year: 2026, name: "2026/27" }],
+      entries,
+    },
+    "GET /api/budget/partners": [partner],
+    "GET /api/budget/items": [office],
+    "GET /api/budget/contracts": {
+      current_year_name: "2026/27",
+      notice_warn_days: 60,
+      entries: [],
+    },
+  });
+
+  it("nennt Dateigrößen in Worten", () => {
+    expect(fileSize(300)).toBe("1 KB");
+    expect(fileSize(348_160)).toBe("340 KB");
+    expect(fileSize(1_258_291)).toBe("1,2 MB");
+  });
+
+  it("lädt einen Beleg hoch und lehnt zu große Dateien ab", async () => {
+    const calls = stubFetch({
+      ...routes([invoice()]),
+      "PUT /api/budget/invoices/1/document": invoice({ doc_name: "Rechnung März.pdf" }),
+    });
+    render(<InvoicesPage roles={["Budget.Editor"]} />);
+    const input = await screen.findByLabelText("Beleg zu Rechnung RE-1 hochladen (PDF)");
+    const big = new File(["x"], "gross.pdf", { type: "application/pdf" });
+    Object.defineProperty(big, "size", { value: 16 * 1024 * 1024 });
+    fireEvent.change(input, { target: { files: [big] } });
+    expect(screen.getByRole("alert")).toHaveTextContent("größer als 15 MB");
+    expect(calls.some((call) => call.method === "PUT")).toBe(false);
+
+    const file = new File(["%PDF-1.4"], "Rechnung März.pdf", { type: "application/pdf" });
+    fireEvent.change(input, { target: { files: [file] } });
+    expect(await screen.findByText("Der Beleg zu RE-1 ist gespeichert.")).toBeVisible();
+    const upload = vi.mocked(fetch).mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(upload?.[0]).toBe("/api/budget/invoices/1/document");
+    expect(new Headers(upload?.[1]?.headers).get("X-Dateiname")).toBe("Rechnung%20M%C3%A4rz.pdf");
+    expect(upload?.[1]?.body).toBe(file);
+  });
+
+  it("zeigt den Beleg als Download; Lesende können ihn nicht entfernen", async () => {
+    stubFetch(routes([invoice({ doc_name: "Rechnung.pdf", doc_size: 348_160 })]));
+    const { unmount } = render(<InvoicesPage roles={["Budget.Reader"]} />);
+    const link = await screen.findByRole("link", { name: "Rechnung.pdf" });
+    expect(link).toHaveAttribute("href", "/api/budget/invoices/1/document");
+    expect(link).toHaveAttribute("download", "Rechnung.pdf");
+    expect(screen.getByText("PDF, 340 KB")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Beleg von Rechnung RE-1 löschen/ })).toBeNull();
+    unmount();
+
+    render(<InvoicesPage roles={["Budget.Editor"]} />);
+    expect(
+      await screen.findByRole("button", { name: "Beleg von Rechnung RE-1 löschen" }),
+    ).toBeVisible();
   });
 });

@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.30.0",
+    date: "2026-11-16",
+    summary: "IT-Budget: Belege als PDF an der Rechnung.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Neu: An jede Rechnung lässt sich der Beleg als PDF hängen und von allen mit Budget-Rolle herunterladen.",
+          "Ein Beleg lässt sich ersetzen und wieder entfernen; bei gebuchten Rechnungen nur durch den Budgetverwalter.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.29.0",
     date: "2026-11-16",
     summary: "IT-Budget: mehrere Jahre im Voraus planen, mit Entwurf und Freigabe.",

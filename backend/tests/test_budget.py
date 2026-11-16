@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -19,6 +20,7 @@ from werkbank.modules.budget.contracts import (
     notice_deadline,
     term_end,
 )
+from werkbank.modules.budget.documents import clean_name, document_path, looks_like_pdf
 from werkbank.modules.budget.models import (
     BudgetAccount,
     BudgetContract,
@@ -1001,3 +1003,99 @@ def test_planning_with_release_and_proposals(db: Session) -> None:
     db.expire_all()
     actions = set(db.scalars(select(AuditLog.action).where(AuditLog.module == "budget")).all())
     assert {"budget.jahr_freigegeben", "budget.jahr_freigabe_aufgehoben"} <= actions
+
+
+# --- PDF-Beleg ---
+
+PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
+
+
+def test_document_names_and_keys_are_safe(tmp_path: Path) -> None:
+    assert clean_name("Rechnung%20M%C3%A4rz.pdf") == "Rechnung März.pdf"
+    assert clean_name("../../etc/passwd") == "passwd.pdf"
+    assert clean_name("C:\\Ablage\\re.PDF") == "re.PDF"
+    assert clean_name('a"b<c>.pdf') == "abc.pdf"
+    assert clean_name("  ") == "Beleg.pdf"
+    assert clean_name("x" * 300).endswith(".pdf")
+    assert len(clean_name("x" * 300)) == 200
+    assert looks_like_pdf(PDF) is True
+    assert looks_like_pdf(b"<html>") is False
+    assert document_path(tmp_path, "a" * 32) == tmp_path / ("a" * 32 + ".pdf")
+    for bad in ("../x", "A" * 32, "a" * 31, "a" * 32 + "/b"):
+        assert document_path(tmp_path, bad) is None
+
+
+@pytest.mark.db
+def test_invoice_documents(db: Session, tmp_path: Path) -> None:
+    config = {"budget_documents_dir": tmp_path, "budget_document_max_mb": 1}
+    manager = client_for(["Budget.Manager"], "beleg-verwalter", **config)
+    editor = client_for(["Budget.Editor"], "beleg-it", **config)
+    reader = client_for(["Budget.Reader"], "beleg-leser", **config)
+    account = post(
+        manager, "/accounts", {"number": "6815", "name": "Software", "kind": "laufend"}
+    ).json()
+    item = post(manager, "/items", {"account_id": account["id"], "name": "Lizenzen"}).json()
+    partner = post(manager, "/partners", {"name": "Beispiel Software GmbH"}).json()
+    year = manager.get(f"{BASE}/settings").json()["current_year"]
+    body = {
+        "invoicer_id": partner["id"],
+        "number": "RE-1",
+        "invoice_date": f"{year}-02-01",
+        "item_id": item["id"],
+        "net_cents": 1_000,
+    }
+    open_invoice = post(editor, "/invoices", body).json()
+    booked = post(manager, "/invoices", {**body, "number": "RE-2"}).json()
+    url = f"{BASE}/invoices/{open_invoice['id']}/document"
+
+    def upload(client: Any, target: str, data: bytes, **extra: str) -> Any:
+        headers = {**HEADERS, "Content-Type": "application/pdf", "X-Dateiname": "Rechnung%201.pdf"}
+        return client.put(target, content=data, headers={**headers, **extra})
+
+    assert reader.get(url).status_code == 404
+    assert upload(reader, url, PDF).status_code == 403
+    assert upload(editor, url, PDF, **{"Content-Type": "text/html"}).status_code == 415
+    assert upload(editor, url, b"<html>kein pdf</html>").status_code == 422
+    assert upload(editor, url, PDF + b"x" * (1024 * 1024)).status_code == 413
+    assert list(tmp_path.iterdir()) == []
+
+    saved = upload(editor, url, PDF)
+    assert saved.status_code == 200, saved.text
+    assert (saved.json()["doc_name"], saved.json()["doc_size"]) == ("Rechnung 1.pdf", len(PDF))
+    files = list(tmp_path.iterdir())
+    assert len(files) == 1
+    # Der Name in der Ablage ist zufällig und verrät nichts über die Rechnung.
+    assert files[0].suffix == ".pdf"
+    assert "Rechnung" not in files[0].name
+
+    # Lesende laden herunter; der Browser soll die Datei speichern, nicht anzeigen.
+    download = reader.get(url)
+    assert download.status_code == 200
+    assert download.content == PDF
+    assert download.headers["content-type"] == "application/pdf"
+    assert download.headers["content-disposition"].startswith("attachment")
+    assert download.headers["x-content-type-options"] == "nosniff"
+    assert client_for(["Tenant.Reader"], "beleg-fremd", **config).get(url).status_code == 403
+
+    # Ersetzen räumt die alte Datei weg.
+    upload(editor, url, PDF + b"%zweite Fassung")
+    assert len(list(tmp_path.iterdir())) == 1
+    assert reader.get(url).content.endswith(b"zweite Fassung")
+
+    # An gebuchten Rechnungen ändert nur der Budgetverwalter den Beleg.
+    booked_url = f"{BASE}/invoices/{booked['id']}/document"
+    assert upload(editor, booked_url, PDF).status_code == 403
+    assert upload(manager, booked_url, PDF).status_code == 200
+    assert editor.delete(booked_url, headers=HEADERS).status_code == 403
+    assert manager.delete(booked_url, headers=HEADERS).json()["doc_name"] is None
+    assert manager.delete(booked_url, headers=HEADERS).status_code == 404
+    assert len(list(tmp_path.iterdir())) == 1
+
+    # Mit der Rechnung verschwindet auch ihr Beleg.
+    assert (
+        editor.delete(f"{BASE}/invoices/{open_invoice['id']}", headers=HEADERS).status_code == 200
+    )
+    assert list(tmp_path.iterdir()) == []
+    db.expire_all()
+    actions = set(db.scalars(select(AuditLog.action).where(AuditLog.module == "budget")).all())
+    assert {"budget.beleg_hochgeladen", "budget.beleg_entfernt"} <= actions

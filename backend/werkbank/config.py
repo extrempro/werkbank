@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     # Verzeichnis mit dem Frontend-Build (im Docker-Image /app/static)
     static_dir: Path = Path("/app/static")
 
+    # Ablage der PDF-Belege des IT-Budgets (im Container ein eigenes Volume) und ihre
+    # Höchstgröße in Megabyte
+    budget_documents_dir: Path = Path("/data/belege")
+    budget_document_max_mb: int = 15
+
     # Test-Login ohne Entra. Nur in den Umgebungen "test" und "development" zulässig.
     enable_test_login: bool = False
 
