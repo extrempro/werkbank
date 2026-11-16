@@ -25,6 +25,7 @@ const BUDGET_MANAGER = "Budget.Manager";
 const BUDGET_ROLES = ["Budget.Reader", "Budget.Editor", BUDGET_MANAGER];
 
 export const TOOLS_PATH = "/it-tools";
+export const TOOLS_HISTORY_PATH = "/it-tools/verlauf";
 export const LICENSES_PATH = "/m365/lizenzen";
 export const USERS_PATH = "/m365/benutzer";
 export const CREDENTIALS_PATH = "/m365/zugangsdaten";
@@ -173,7 +174,13 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       home: TOOLS_PATH,
       groups: [
         // Ohne Überschrift: Der Bereich heißt schon so.
-        { title: null, items: [{ path: TOOLS_PATH, label: "Alle Tools", icon: "uebersicht" }] },
+        {
+          title: null,
+          items: [
+            { path: TOOLS_PATH, label: "Alle Tools", icon: "uebersicht" },
+            { path: TOOLS_HISTORY_PATH, label: "Verlauf", icon: "verlauf" },
+          ],
+        },
         {
           title: "Kategorien",
           items: categories.map((category) => ({

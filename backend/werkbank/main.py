@@ -30,6 +30,7 @@ from werkbank.modules.monitoring.admin import router as monitoring_admin_router
 from werkbank.modules.monitoring.api import router as monitoring_router
 from werkbank.modules.tenant.api import router as tenant_router
 from werkbank.modules.tenant.tasks import tenant_tasks
+from werkbank.modules.tools.account import router as tools_account_router
 from werkbank.modules.tools.api import router as tools_router
 from werkbank.security import SecurityHeadersMiddleware
 from werkbank.web import mount_frontend
@@ -76,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tenant_router)
     app.include_router(budget_router)
     app.include_router(tools_router)
+    app.include_router(tools_account_router)
     app.include_router(monitoring_router)
     app.include_router(monitoring_admin_router)
     app.include_router(evergreen_router)

@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.43.0] – 2026-11-16
+
+IT-Tools je Konto: Favoriten, zuletzt genutzte Tools und Verlauf der Einstellungen.
+
+### IT-Tools
+
+- Favoriten gelten fürs Konto statt nur im Browser; bisherige Favoriten aus dem Browser wandern beim ersten Laden mit
+- „Zuletzt genutzt“ oben in der Übersicht (die letzten sechs geöffneten Tools)
+- Verlauf: Einstellungen eines Tools (nur, was in der Adresszeile steht) werden nach zwei Sekunden ohne Änderung gespeichert; auf der Seite eines Tools „Zuletzt verwendete Einstellungen“, neue Seite **Verlauf** (`/it-tools/verlauf`) nach Tagen, Löschen je Eintrag oder alles, Schalter „Verlauf speichern“; höchstens 200 Einträge und 90 Tage je Person
+- API: `GET`/`PUT /api/tools/prefs`, `POST /api/tools/recent`, `GET`/`POST`/`DELETE /api/tools/history`, `DELETE /api/tools/history/{id}`
+- Migration 0036: Tabellen `tool_prefs`, `tool_history`
+
+### Kern
+
+- Verändernde Anfragen können „leise“ sein (`{ quiet: true }`) und laden dann Aufgaben und Glocke nicht neu
+
+### Doku
+
+- Spec 8a, Datenschutz, ASVS, Handbuch
+
 ## [0.42.0] – 2026-11-16
 
 Neuer Bereich IT-Monitoring mit dem DNS-Abgleich mit NetBox.

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { scheduleHistory } from "./account";
 
 /**
  * Einstellungen eines Tools in der Adresszeile, damit sich ein Link teilen lässt.
@@ -23,8 +24,13 @@ export function useToolParams<T extends Record<string, string>>(
 
   useEffect(() => {
     const update = () => setValues(read());
+    // Auch beim Öffnen eines Eintrags aus dem Verlauf (gleiche Seite, andere Einstellungen)
     window.addEventListener("popstate", update);
-    return () => window.removeEventListener("popstate", update);
+    window.addEventListener("werkbank:navigate", update);
+    return () => {
+      window.removeEventListener("popstate", update);
+      window.removeEventListener("werkbank:navigate", update);
+    };
     // Die Standardwerte eines Tools ändern sich nicht.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -40,6 +46,7 @@ export function useToolParams<T extends Record<string, string>>(
     const query = params.toString();
     window.history.replaceState(null, "", window.location.pathname + (query ? `?${query}` : ""));
     setValues(next);
+    scheduleHistory(window.location.pathname, Object.fromEntries(params));
   };
   return [values, change];
 }
