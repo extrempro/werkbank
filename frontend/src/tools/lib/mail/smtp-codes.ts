@@ -164,7 +164,7 @@ const basic: Record<string, string> = {
 };
 
 export function findSmtpCode(text: string): string | undefined {
-  return /(?:^|[\s:;'"(\[#])([245][0-5]\d)(?=[\s-])/.exec(text)?.[1];
+  return /(?:^|[\s:;'"([#])([245][0-5]\d)(?=[\s-])/.exec(text)?.[1];
 }
 
 export function explainSmtpCode(code: string | undefined): StatusInfo | undefined {
