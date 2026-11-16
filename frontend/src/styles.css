@@ -1645,6 +1645,139 @@ details summary {
   font-weight: 700;
 }
 
+/* Glocke: Benachrichtigungen in der Kopfzeile */
+.bell {
+  position: relative;
+}
+
+.bell .header-tasks {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.bell-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: var(--radius);
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.bell-panel[hidden] {
+  display: none;
+}
+
+.bell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--farbe-trenner);
+}
+
+.bell-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.bell-empty {
+  margin: 0;
+  padding: 16px;
+  color: var(--farbe-text-leise);
+}
+
+.bell-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bell-list li + li {
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.bell-list a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 44px;
+  padding: 10px 16px;
+  color: var(--farbe-text);
+  text-decoration: none;
+}
+
+.bell-list a:hover,
+.bell-list a:focus-visible {
+  background: var(--farbe-hover);
+}
+
+.bell-list .small {
+  color: var(--farbe-text-leise);
+}
+
+/* Ungelesen: Balken links und fette Schrift, nicht nur Farbe */
+.bell-unread a {
+  box-shadow: inset 3px 0 0 var(--farbe-primaer);
+}
+
+.bell-unread .bell-title {
+  font-weight: 600;
+}
+
+.bell-all {
+  display: block;
+  padding: 12px 16px;
+  border-top: 1px solid var(--farbe-trenner);
+  color: var(--farbe-link);
+  font-weight: 600;
+  text-align: center;
+}
+
+.bell-list-page a {
+  padding: 12px 20px;
+}
+
+.notify-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.notify-group legend {
+  margin-bottom: 4px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.notify-group .check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  /* Auf dem Handy über die ganze Breite unter der Kopfzeile */
+  .bell-panel {
+    position: fixed;
+    top: calc(var(--kopf-hoehe) + env(safe-area-inset-top) + 4px);
+    right: 12px;
+    left: 12px;
+    width: auto;
+  }
+}
+
 /* Schmale Handys: Der Name „Werkbank“ bleibt für Screenreader, damit die Kopfzeile in eine Zeile passt. */
 @media (max-width: 480px) {
   .brand-text {
@@ -4549,4 +4682,141 @@ p.badges {
 
 .health-post {
   white-space: pre-line;
+}
+
+/* Dienststatus: Zeitleiste der letzten Tage, Ausfalldauer, Störungen pro Monat */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 11rem) 1fr;
+  grid-template-areas:
+    "name cells"
+    ". sum";
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.timeline-name {
+  grid-area: name;
+  font-weight: 600;
+}
+
+.timeline-cells {
+  grid-area: cells;
+  display: flex;
+  gap: 1px;
+  height: 28px;
+}
+
+.timeline-cell {
+  flex: 1 1 0;
+  min-width: 1px;
+  border-radius: 2px;
+}
+
+.timeline-sum {
+  grid-area: sum;
+  color: var(--farbe-text-leise);
+}
+
+.timeline-ok {
+  background: var(--farbe-ok-flaeche);
+}
+
+.timeline-hinweis {
+  background: var(--farbe-warn-rand-stark);
+}
+
+.timeline-stoerung {
+  background: var(--farbe-bad-text);
+}
+
+.timeline-legend {
+  margin: 12px 0 0;
+}
+
+.timeline-key {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+
+.timeline-key:first-child {
+  margin-left: 0;
+}
+
+@media (max-width: 640px) {
+  .timeline-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "name"
+      "cells"
+      "sum";
+  }
+}
+
+.hbars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  list-style: none;
+}
+
+.hbar-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 11rem) 1fr minmax(9rem, auto);
+  align-items: center;
+  gap: 12px;
+}
+
+.hbar-track {
+  display: block;
+  height: 14px;
+}
+
+.hbar {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+  background: var(--farbe-balken);
+}
+
+.hbar-empty {
+  background: var(--farbe-rand);
+}
+
+.hbar-value {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .hbar-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+.chart-dense {
+  gap: 2px;
+}
+
+.chart-dense .chart-bar {
+  max-width: 18px;
+}
+
+.health-issue-link {
+  margin: 0;
 }

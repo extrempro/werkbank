@@ -14,6 +14,7 @@ from werkbank.core.sessions import now_utc
 from werkbank.modules.m365_config.utcm import UtcmClient
 from werkbank.modules.tenant.health import FETCH_HEALTH, fetch_health, read_posts
 from werkbank.modules.tenant.models import TenantServiceHealth, TenantServiceIssue
+from werkbank.modules.tenant.notifications import tenant_notifications
 from werkbank.worker.tasks import build_registry
 
 BASE = "/api/tenant"
@@ -192,8 +193,45 @@ def test_api_for_readers_only(db: Session) -> None:
     assert sum(entry["advisories"] for entry in exchange) == 1
     assert sum(entry["incident_hours"] for entry in exchange) == 3.0
 
+    # Monate: 36, der laufende zuletzt; nur Störungen zählen
+    months = sorted({entry["month"] for entry in data["months"]})
+    assert len(months) == 36
+    assert months[-1] == NOW.strftime("%Y-%m")
+    started = (NOW - timedelta(hours=3)).strftime("%Y-%m")
+    assert [
+        entry["incidents"]
+        for entry in data["months"]
+        if entry["service_id"] == "Exchange" and entry["month"] == started
+    ] == [1]
+    # Zeitleiste: 90 Tage je Dienst, Störung schlägt Hinweis
+    assert len(data["timeline_days"]) == 90
+    assert data["timeline_days"][-1] == NOW.date().isoformat()
+    line = next(entry for entry in data["timeline"] if entry["service_id"] == "Exchange")
+    assert len(line["days"]) == 90
+    assert line["days"][-1] == "stoerung"
+    advisory_day = data["timeline_days"].index((NOW - timedelta(days=5)).date().isoformat())
+    assert line["days"][advisory_day] == "hinweis"
+    assert line["days"][0] == "ok"
+    teams = next(entry for entry in data["timeline"] if entry["service_id"] == "microsoftteams")
+    assert set(teams["days"]) == {"ok"}
+
     detail = reader.get(f"{BASE}/health/issues/EX1001").json()
     assert detail["impact"] == "Nachrichten kommen verzögert an."
     assert [post["text"] for post in detail["posts"]] == ["Wir prüfen das."]
     assert reader.get(f"{BASE}/health/issues/XX0000").status_code == 404
     assert reader.get(f"{BASE}/health/issues/a%20b").status_code == 422
+
+
+@pytest.mark.db
+def test_incidents_notify_on_start_and_end(db: Session) -> None:
+    graph = HealthGraph()
+    fetch_health(db, graph.client(), now=NOW)
+    keys = {
+        event.key: event
+        for event in tenant_notifications(db, Settings(public_url=ORIGIN, environment="test"), NOW)
+        if event.kind == "tenant.stoerung"
+    }
+    # Nur Störungen, keine Hinweise; beendet erst mit isResolved
+    assert set(keys) == {"EX1001:begonnen", "ID2001:begonnen"}
+    assert keys["EX1001:begonnen"].link == "/m365/dienststatus#EX1001"
+    assert keys["ID2001:begonnen"].title.startswith("Störung bei Microsoft Entra:")

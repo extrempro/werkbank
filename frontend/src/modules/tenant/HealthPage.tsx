@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { formatDateTime } from "../../api";
+import { HealthCharts } from "./HealthCharts";
 import {
+  adminCenterUrl,
   fetchHealth,
   fetchIssue,
   HEALTH_LEVEL,
@@ -11,6 +13,12 @@ import {
   type ServiceIssue,
   type ServiceIssueDetail,
 } from "./api";
+
+/** Kennung einer Meldung aus der Adresse (…#EX123456); Unbrauchbares ergibt nichts. */
+function hashTarget(): string {
+  const raw = window.location.hash.slice(1);
+  return /^[A-Za-z0-9-]{1,32}$/.test(raw) ? raw : "";
+}
 
 const HOURS = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
 
@@ -24,7 +32,7 @@ function duration(issue: ServiceIssue): string {
 }
 
 /** Eine Störung oder ein Hinweis; aufgeklappt mit den Mitteilungen von Microsoft. */
-function IssueRow({ issue }: { issue: ServiceIssue }) {
+function IssueRow({ issue, initiallyOpen }: { issue: ServiceIssue; initiallyOpen: boolean }) {
   const [detail, setDetail] = useState<ServiceIssueDetail | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -36,8 +44,12 @@ function IssueRow({ issue }: { issue: ServiceIssue }) {
   };
 
   return (
-    <li>
-      <details className="budget-more" onToggle={(event) => event.currentTarget.open && load()}>
+    <li id={issue.issue_id}>
+      <details
+        className="budget-more"
+        open={initiallyOpen || undefined}
+        onToggle={(event) => event.currentTarget.open && load()}
+      >
         <summary>
           <span
             className={
@@ -64,6 +76,12 @@ function IssueRow({ issue }: { issue: ServiceIssue }) {
             </p>
           )}
           <p className="small">Zuletzt aktualisiert: {formatDateTime(issue.modified_at)}</p>
+          <p className="health-issue-link">
+            <a href={adminCenterUrl(issue.issue_id)} target="_blank" rel="noopener noreferrer">
+              {issue.issue_id} im Microsoft 365 Admin Center öffnen
+              <span className="visually-hidden"> (neues Fenster, Anmeldung nötig)</span>
+            </a>
+          </p>
           {failed && (
             <p role="alert" className="hint-box hint-bad">
               Die Mitteilungen konnten nicht geladen werden.
@@ -93,6 +111,8 @@ function IssueRow({ issue }: { issue: ServiceIssue }) {
 export function HealthPage() {
   const [health, setHealth] = useState<Health | null>(null);
   const [failed, setFailed] = useState(false);
+  // Aus einer Benachrichtigung: …/dienststatus#EX123456 öffnet genau diese Meldung
+  const [target, setTarget] = useState(hashTarget);
 
   useEffect(() => {
     let active = true;
@@ -107,10 +127,22 @@ export function HealthPage() {
           setFailed(true);
         }
       });
+    const onNavigate = () => setTarget(hashTarget());
+    window.addEventListener("hashchange", onNavigate);
+    window.addEventListener("werkbank:navigate", onNavigate);
     return () => {
       active = false;
+      window.removeEventListener("hashchange", onNavigate);
+      window.removeEventListener("werkbank:navigate", onNavigate);
     };
   }, []);
+
+  // Sobald die Meldung da ist: dorthin springen
+  useEffect(() => {
+    if (health && target) {
+      document.getElementById(target)?.scrollIntoView({ block: "start" });
+    }
+  }, [health, target]);
 
   const years = [...new Set(health?.stats.map((entry) => entry.year) ?? [])];
   const serviceNames = [
@@ -173,7 +205,11 @@ export function HealthPage() {
             ) : (
               <ul className="detail-body health-issues">
                 {health.open.map((issue) => (
-                  <IssueRow key={issue.issue_id} issue={issue} />
+                  <IssueRow
+                    key={`${issue.issue_id}-${target === issue.issue_id}`}
+                    issue={issue}
+                    initiallyOpen={target === issue.issue_id}
+                  />
                 ))}
               </ul>
             )}
@@ -189,15 +225,21 @@ export function HealthPage() {
             ) : (
               <ul className="detail-body health-issues">
                 {health.recent.map((issue) => (
-                  <IssueRow key={issue.issue_id} issue={issue} />
+                  <IssueRow
+                    key={`${issue.issue_id}-${target === issue.issue_id}`}
+                    issue={issue}
+                    initiallyOpen={target === issue.issue_id}
+                  />
                 ))}
               </ul>
             )}
           </section>
 
+          <HealthCharts health={health} />
+
           <section className="panel" aria-labelledby="health-auswertung">
             <div className="panel-head">
-              <h2 id="health-auswertung">Ausfälle je Dienst</h2>
+              <h2 id="health-auswertung">Ausfälle je Dienst und Jahr</h2>
               <span className="small">nach Jahr des Beginns</span>
             </div>
             <div className="table-wrap" tabIndex={0} role="region" aria-label="Ausfälle je Dienst">

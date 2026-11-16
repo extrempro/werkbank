@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.39.0] – 2026-11-16
+
+Benachrichtigungen mit Glocke in der Kopfzeile. Dienststatus mit Diagrammen und Links ins Admin Center.
+
+### Benachrichtigungen
+
+- Glocke in der Kopfzeile mit der Zahl der ungelesenen Benachrichtigungen und den neuesten zehn zum Aufklappen (Escape und Klick außerhalb schließen); neue Seite **Benachrichtigungen** mit den letzten 100 und den Einstellungen je Person (alle Arten an, einzeln abschaltbar); Link dazu auf der Seite „Konto“
+- 15 Arten aus M365-Konfiguration, Tenant (nur Störungen, nicht Hinweise), Evergreen, IT-Budget und Kern (siehe Spec 6.7); Empfänger nach Rollen der letzten Anmeldung, die API filtert zusätzlich nach den Rollen der Sitzung
+- Auftrag `kern.benachrichtigungen` alle fünf Minuten; jedes Ereignis wird einmal gemeldet, beim ersten Lauf einer Art gilt der Bestand als gemeldet; Aufbewahrung 90 Tage
+- API: `GET /api/notifications`, `POST /api/notifications/{id}/read`, `POST /api/notifications/read-all`, `GET`/`PUT /api/notifications/settings`
+- Migration 0033: Tabellen `notifications`, `notification_marks`, `notification_kinds`, `notification_mutes`
+
+### Microsoft 365 › Tenant
+
+- Dienststatus: Zeitleiste der letzten 90 Tage je Dienst, Ausfalldauer je Dienst und Jahr, Störungen pro Monat über drei Jahre (wählbar je Dienst); jede Meldung mit Link ins Microsoft 365 Admin Center; ein Link aus einer Benachrichtigung öffnet die Meldung direkt
+
+### Doku
+
+- Spec (6.7, 7a, Screens) und Datenschutz ergänzt
+
 ## [0.38.0] – 2026-11-16
 
 Microsoft 365: Dienststatus. Zähler in der Navigation bleiben aktuell.

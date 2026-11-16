@@ -32,6 +32,9 @@ import { AccountPage } from "../pages/AccountPage";
 import { AdminPage } from "../pages/AdminPage";
 import { AuditPage } from "../pages/AuditPage";
 import { NewsPage } from "../pages/NewsPage";
+import { NotificationsPage } from "../pages/NotificationsPage";
+import { NOTIFICATIONS_PATH } from "../notifications";
+import { NotificationBell } from "./NotificationBell";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { SEARCH_PATH, SearchPage, searchUrl } from "../pages/SearchPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
@@ -238,6 +241,8 @@ export function Layout({ me }: LayoutProps) {
     page = <SearchPage roles={me.roles} />;
   } else if (path === NEWS_PATH) {
     page = <NewsPage onSeen={onNewsSeen} />;
+  } else if (path === NOTIFICATIONS_PATH) {
+    page = <NotificationsPage />;
   } else if (path === "/audit" && current) {
     page = <AuditPage />;
   } else if (path === "/verwaltung" && current) {
@@ -349,6 +354,7 @@ export function Layout({ me }: LayoutProps) {
           />
         </form>
         <div className="user">
+          <NotificationBell path={path} />
           <a
             className="header-tasks"
             href="/"
