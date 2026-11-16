@@ -24,8 +24,7 @@ function moduleClass(module: string): string {
 }
 
 type State =
-  | { status: "idle" | "loading" | "error" }
-  | { status: "ready"; query: string; hits: SearchHit[] };
+  { status: "idle" | "loading" | "error" } | { status: "ready"; query: string; hits: SearchHit[] };
 
 /** Treffer unter den IT-Tools. Die Tools liegen im Browser, deshalb sucht nicht der Server. */
 export function toolHits(query: string): SearchHit[] {
