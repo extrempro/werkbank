@@ -226,7 +226,9 @@ def build_mail(
         mail_html(brand, digest, base_url, cid[1:-1] if cid else None), subtype="html"
     )
     if cid and brand.logo_png:
-        html_part = message.get_payload()[1]  # type: ignore[index]
+        html_part = message.get_body(("html",))
+        if not isinstance(html_part, EmailMessage):
+            return message
         html_part.add_related(brand.logo_png, maintype="image", subtype="png", cid=cid)
     return message
 
