@@ -1084,7 +1084,11 @@ describe("Belege", () => {
     },
     "GET /api/budget/partners": [partner],
     "GET /api/budget/items": [office],
-    "GET /api/budget/contracts": { current_year_name: "2026/27", notice_warn_days: 60, entries: [] },
+    "GET /api/budget/contracts": {
+      current_year_name: "2026/27",
+      notice_warn_days: 60,
+      entries: [],
+    },
   });
 
   it("nennt Dateigrößen in Worten", () => {
