@@ -4933,3 +4933,29 @@ p.badges {
   justify-content: space-between;
   gap: 16px;
 }
+
+/* Konto: Benachrichtigungen je Weg */
+.notify-table {
+  width: 100%;
+}
+
+.notify-table .notify-col {
+  width: 5rem;
+  text-align: center;
+}
+
+.notify-table .notify-label {
+  font-weight: 400;
+  text-align: left;
+}
+
+.notify-table .notify-module {
+  padding-top: 16px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.notify-table .check {
+  width: 24px;
+  height: 24px;
+}

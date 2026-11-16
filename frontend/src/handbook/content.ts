@@ -134,14 +134,29 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Auf der Seite „Benachrichtigungen“ stellst du unter „Was die Glocke meldet“ ein, welche Arten du bekommst. Anfangs sind alle eingeschaltet. Jede Änderung gilt sofort. Die Werkbank sieht alle fünf Minuten nach Neuem und bewahrt Benachrichtigungen 90 Tage auf.",
+            text: "„Alle anzeigen“ zeigt die Benachrichtigungen der letzten 90 Tage. Die Werkbank sieht alle fünf Minuten nach Neuem.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Öffne die Seite „Konto“ (Klick auf deinen Namen oben rechts).",
+              "Unter „Benachrichtigungen“ steht je Art, ob du sie in der Glocke, per Mail oder in Teams bekommst.",
+              "Hake an, was du möchtest. Jede Änderung gilt sofort.",
+            ],
+          },
+          {
+            kind: "text",
+            text: "Anfangs ist alles in der Glocke an, Mail und Teams sind aus. Per Mail und in Teams bekommst du höchstens alle 15 Minuten eine Sammelnachricht: wie viele Benachrichtigungen es in welchem Bereich gibt, mit einem Link in die Werkbank. Was genau passiert ist, steht nur in der Werkbank. Mitgeteilt wird nur, was nach dem Einschalten entsteht und was du noch nicht gelesen hast.",
           },
           {
             kind: "hint",
-            text: "Die Glocke kennt nur Arten, die zu deinen Rollen passen. Bekommst du eine neue Rolle, meldet sie ab deiner nächsten Anmeldung auch die neuen Arten.",
+            text: "Die Glocke kennt nur Arten, die zu deinen Rollen passen. Bekommst du eine neue Rolle, meldet sie ab deiner nächsten Anmeldung auch die neuen Arten. Schaltest du eine Art in der Glocke aus, gibt es dafür auch keine Mail und kein Teams. Mail und Teams lassen sich nur wählen, wenn die Verwaltung sie eingerichtet hat.",
           },
         ],
-        links: [{ to: "/benachrichtigungen", label: "Zu den Benachrichtigungen" }],
+        links: [
+          { to: "/benachrichtigungen", label: "Zu den Benachrichtigungen" },
+          { to: "/konto", label: "Zu den Einstellungen im Konto" },
+        ],
       },
       {
         id: "suche",
@@ -168,7 +183,7 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Ein Klick auf deinen Namen oben rechts öffnet die Seite „Konto“: deine Angaben aus Microsoft, deine Rollen mit kurzer Erklärung, Beginn und Ende der Sitzung, die Darstellung (automatisch, hell oder dunkel) und die Version der Werkbank.",
+            text: "Ein Klick auf deinen Namen oben rechts öffnet die Seite „Konto“: deine Angaben aus Microsoft, deine Rollen mit kurzer Erklärung, Beginn und Ende der Sitzung, die Darstellung (automatisch, hell oder dunkel), deine Benachrichtigungen (Glocke, Mail, Teams) und die Version der Werkbank.",
           },
           {
             kind: "text",
@@ -945,7 +960,14 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "terms",
             items: [
               ["Branding", "Name, Farbe, Logos und Favicon der Werkbank"],
-              ["Mailversand (SMTP)", "Server und Absender, mit Testmail an dich selbst"],
+              [
+                "Mailversand (SMTP)",
+                "Server und Absender, mit Testmail an dich selbst; darüber gehen auch die Benachrichtigungen per Mail",
+              ],
+              [
+                "Benachrichtigungen in Teams",
+                "Adresse des Workflows aus Power Automate, ein- und ausschalten, Testnachricht an dich selbst",
+              ],
               ["Audit-Log", "Aufbewahrung zwischen 30 und 3650 Tagen"],
               [
                 "Zertifikate und Secrets",
@@ -1006,7 +1028,11 @@ export const CHAPTERS: readonly Chapter[] = [
               ],
               [
                 "Die Glocke bleibt leer.",
-                "Die Werkbank meldet nur Neues ab dem Zeitpunkt, an dem sie die Art zum ersten Mal beobachtet. Prüfe außerdem, ob die Art auf der Seite „Benachrichtigungen“ eingeschaltet ist.",
+                "Die Werkbank meldet nur Neues ab dem Zeitpunkt, an dem sie die Art zum ersten Mal beobachtet. Prüfe außerdem im Konto, ob die Art eingeschaltet ist.",
+              ],
+              [
+                "Ich bekomme keine Mail oder keine Teams-Nachricht.",
+                "Prüfe im Konto, ob die Art per Mail bzw. Teams eingeschaltet ist. Mitgeteilt wird nur, was nach dem Einschalten entsteht, gesammelt höchstens alle 15 Minuten, und nur, solange du es nicht schon in der Werkbank gelesen hast.",
               ],
               [
                 "Eine Aktion wurde abgewiesen.",

@@ -24,6 +24,7 @@ AUDIT_RETENTION_MAX = 3650
 SMTP_KEY = "smtp"
 # Dürfen die IT-Tools über den Server ins Internet fragen (DNS, RDAP, Datenlecks, crt.sh)?
 TOOLS_INTERNET_KEY = "tools_internet"
+TEAMS_KEY = "teams_workflow"
 
 MIN_KEY_LENGTH = 32
 
