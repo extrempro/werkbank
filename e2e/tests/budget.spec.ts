@@ -122,6 +122,18 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   ).toBeVisible();
   await expectNoA11yViolations(page);
 
+  await page.goto("/budget/planung");
+  await expect(page.getByRole("heading", { level: 1, name: "Mehrjahresplanung" })).toBeVisible();
+  await expect(
+    page.getByRole("row", { name: new RegExp(`^Posten ${number}`) }),
+  ).toContainText("Verträge: 1.428,00");
+  await page.getByRole("button", { name: "Plan bearbeiten" }).click();
+  await page.getByRole("button", { name: "Leere Felder aus Verträgen füllen" }).click();
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Plan speichern" }).click();
+  await expect(page.getByText("Der Plan ist gespeichert.")).toBeVisible();
+  await expectNoA11yViolations(page);
+
   await page.goto("/budget/einstellungen");
   await expect(page.getByRole("heading", { level: 1, name: "Einstellungen" })).toBeVisible();
   await expect(page.getByLabel("Beginn des Geschäftsjahrs")).toBeVisible();
@@ -137,6 +149,7 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
   await page.goto("/budget/posten");
   await expect(page.getByRole("heading", { level: 1, name: "Budgetposten" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Plan bearbeiten" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Plan freigeben" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Budgetposten anlegen" })).toHaveCount(0);
   await page.goto("/budget/konten");
   await expect(page.getByRole("heading", { level: 1, name: "Konten" })).toBeVisible();
@@ -144,6 +157,7 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
   for (const [path, title] of [
     ["/budget/vertraege", "Verträge"],
     ["/budget/rechnungen", "Rechnungen"],
+    ["/budget/planung", "Mehrjahresplanung"],
     ["/budget/partner", "Partner"],
   ] as const) {
     await page.goto(path);
@@ -174,6 +188,7 @@ test("Ohne Budget-Rolle gibt es den Bereich und die Daten nicht", async ({ page 
     "/api/budget/items",
     "/api/budget/partners",
     "/api/budget/invoices",
+    "/api/budget/planning",
     "/api/budget/contracts",
   ]) {
     expect((await page.request.get(path)).status()).toBe(403);

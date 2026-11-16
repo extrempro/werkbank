@@ -86,6 +86,15 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
     }
   };
 
+  const pickItem = (value: string) => {
+    setItemId(value);
+    // Der Posten bringt seinen üblichen Partner mit, wenn noch keiner gewählt ist.
+    const chosen = items.find((entry) => String(entry.id) === value);
+    if (chosen?.partner_id && !invoicerId) {
+      setInvoicerId(String(chosen.partner_id));
+    }
+  };
+
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     const netCents = parseEuro(net);
@@ -191,7 +200,7 @@ function InvoiceForm({ invoice, partners, items, contracts, onSaved, onCancel }:
           </label>
           <label>
             Budgetposten
-            <select value={itemId} onChange={(event) => setItemId(event.target.value)}>
+            <select value={itemId} onChange={(event) => pickItem(event.target.value)}>
               <option value="">Bitte wählen</option>
               {itemChoices.map((entry) => (
                 <option key={entry.id} value={entry.id}>

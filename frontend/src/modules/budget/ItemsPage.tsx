@@ -10,6 +10,8 @@ import {
   euroInput,
   fetchAccounts,
   fetchBudgetOverview,
+  fetchPartners,
+  setYearStatus,
   rememberedYear,
   rememberYear,
   formatEuro,
@@ -18,6 +20,9 @@ import {
   updateItem,
   type Account,
   type Item,
+  type ItemUpdate,
+  type Partner,
+  type YearStatus,
   type Overview,
   type PlanEntry,
 } from "./api";
@@ -31,14 +36,19 @@ interface FormProps {
   /** null: neuen Budgetposten anlegen. */
   item: Item | null;
   accounts: Account[];
+  partners: Partner[];
+  /** Geschäftsjahr, für das beim Anlegen gleich ein Plan eingetragen werden kann; null: gesperrt. */
+  planYear: { year: number; name: string } | null;
   onSaved: (item: Item) => void;
   onCancel: () => void;
 }
 
-function ItemForm({ item, accounts, onSaved, onCancel }: FormProps) {
+function ItemForm({ item, accounts, partners, planYear, onSaved, onCancel }: FormProps) {
   const reveal = useRevealOnMount<HTMLElement>();
   const [accountId, setAccountId] = useState(item ? String(item.account_id) : "");
   const [name, setName] = useState(item?.name ?? "");
+  const [partnerId, setPartnerId] = useState(item?.partner_id ? String(item.partner_id) : "");
+  const [plan, setPlan] = useState("");
   const [note, setNote] = useState(item?.note ?? "");
   const [active, setActive] = useState(item?.active ?? true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +61,22 @@ function ItemForm({ item, accounts, onSaved, onCancel }: FormProps) {
       setError("Bitte Konto wählen und eine Bezeichnung eintragen.");
       return;
     }
-    const update = { account_id: Number(accountId), name: name.trim(), note: note.trim(), active };
+    const planCents = plan.trim() === "" ? null : parseEuro(plan);
+    if (plan.trim() !== "" && planCents === null) {
+      setError("Der Planbetrag ist nicht lesbar. Bitte so eintragen: 15000,00");
+      return;
+    }
+    const update: ItemUpdate = {
+      account_id: Number(accountId),
+      name: name.trim(),
+      partner_id: partnerId ? Number(partnerId) : null,
+      note: note.trim(),
+      active,
+    };
+    if (!item && planYear && planCents !== null) {
+      update.plan_year = planYear.year;
+      update.plan_cents = planCents;
+    }
     setBusy(true);
     setError(null);
     (item ? updateItem(item.id, update) : createItem(update))
@@ -91,6 +116,32 @@ function ItemForm({ item, accounts, onSaved, onCancel }: FormProps) {
               onChange={(event) => setName(event.target.value)}
             />
           </label>
+        </div>
+        <div className="tool-row">
+          <label>
+            Üblicher Partner (freiwillig)
+            <select value={partnerId} onChange={(event) => setPartnerId(event.target.value)}>
+              <option value="">ohne Vorgabe</option>
+              {partners
+                .filter((entry) => entry.active || entry.id === item?.partner_id)
+                .map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          {!item && planYear && (
+            <label className="narrow">
+              Plan {planYear.name} (brutto, Euro, freiwillig)
+              <input
+                type="text"
+                inputMode="decimal"
+                value={plan}
+                onChange={(event) => setPlan(event.target.value)}
+              />
+            </label>
+          )}
         </div>
         <label>
           Notiz (freiwillig)
@@ -132,11 +183,12 @@ function ItemForm({ item, accounts, onSaved, onCancel }: FormProps) {
 
 /** IT-Budget › Budgetposten: Posten je Konto mit Plan, gebunden und frei; hier wird geplant. */
 export function ItemsPage({ roles }: { roles: readonly string[] }) {
-  const canPlan = roles.includes(BUDGET_MANAGER_ROLE);
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
+  const canRelease = roles.includes(BUDGET_MANAGER_ROLE);
   const [year, setYear] = useState<number | null>(rememberedYear);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [failed, setFailed] = useState(false);
   // Eingaben im Bearbeitungsmodus je Posten; null: es wird nicht bearbeitet.
   const [draft, setDraft] = useState<Record<number, string> | null>(null);
@@ -153,11 +205,12 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchBudgetOverview(year), fetchAccounts()])
-      .then(([result, list]) => {
+    Promise.all([fetchBudgetOverview(year), fetchAccounts(), fetchPartners()])
+      .then(([result, list, firms]) => {
         if (active) {
           setOverview(result);
           setAccounts(list);
+          setPartners(firms);
           setFailed(false);
         }
       })
@@ -172,6 +225,34 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   }, [year, round]);
 
   const label = overview?.settings.year_label ?? "Geschäftsjahr";
+  // Geplant wird nur, solange das Jahr ein Entwurf ist.
+  const draftYear = overview?.year_status === "entwurf";
+  const canPlan = canEdit && draftYear;
+
+  const onRelease = (status: YearStatus) => {
+    if (!overview) {
+      return;
+    }
+    setBusy(true);
+    setYearStatus(overview.year, status)
+      .then(() => {
+        setMessage({
+          kind: "status",
+          text:
+            status === "freigegeben"
+              ? `Der Plan ${overview.year_name} ist freigegeben.`
+              : `Die Freigabe für ${overview.year_name} ist aufgehoben.`,
+        });
+        setRound(round + 1);
+      })
+      .catch((error: unknown) => {
+        setMessage({
+          kind: "alert",
+          text: errorText(error, "Der Stand konnte nicht geändert werden."),
+        });
+      })
+      .finally(() => setBusy(false));
+  };
 
   const startEdit = () => {
     if (!overview) {
@@ -270,6 +351,25 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
         )}
       </header>
       <ReadOnlyNote roles={roles} />
+      {overview && (
+        <div className="budget-toolbar budget-toolbar-split">
+          <p className="budget-badges">
+            <span className={draftYear ? "pill pill-todo" : "pill pill-ok"}>
+              Plan {overview.year_name}: {draftYear ? "Entwurf" : "freigegeben"}
+            </span>
+          </p>
+          {canRelease && !draft && (
+            <button
+              type="button"
+              className="button button-secondary"
+              disabled={busy}
+              onClick={() => onRelease(draftYear ? "freigegeben" : "entwurf")}
+            >
+              {draftYear ? "Plan freigeben" : "Freigabe aufheben"}
+            </button>
+          )}
+        </div>
+      )}
       {canEdit && overview && accounts.length > 0 && (
         <div className="budget-toolbar">
           <button
@@ -291,6 +391,8 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           key={editing ? `posten-${editing.id}` : `neu-${formRound}`}
           item={editing}
           accounts={accounts}
+          partners={partners}
+          planYear={draftYear ? { year: overview.year, name: overview.year_name } : null}
           onSaved={onItemSaved}
           onCancel={closeForm}
         />

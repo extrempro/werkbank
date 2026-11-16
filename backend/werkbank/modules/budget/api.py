@@ -31,6 +31,7 @@ from werkbank.modules.budget.models import (
     BudgetItem,
     BudgetPartner,
     BudgetPlan,
+    BudgetYear,
 )
 from werkbank.modules.budget.settings import (
     SETTINGS_KEY,
@@ -52,6 +53,10 @@ STATUS_OPEN = "zu_pruefen"
 STATUS_BOOKED = "gebucht"
 # So weit darf ein von Hand eingetragenes Brutto vom gerechneten abweichen (in Cent).
 GROSS_TOLERANCE = 100
+YEAR_DRAFT = "entwurf"
+YEAR_RELEASED = "freigegeben"
+# So viele Geschäftsjahre nach dem laufenden lassen sich planen.
+PLAN_AHEAD = 5
 # Obergrenze je Betrag: 10 Milliarden Euro in Cent
 AMOUNT_MAX = 1_000_000_000_000
 
@@ -141,6 +146,9 @@ class ItemOut(BaseModel):
     # Art des Kontos: laufend oder investition
     kind: str
     name: str
+    # Üblicher Partner des Postens (Vorgabe beim Erfassen einer Rechnung)
+    partner_id: int | None
+    partner_name: str | None
     note: str
     active: bool
 
@@ -148,6 +156,10 @@ class ItemOut(BaseModel):
 class ItemIn(BaseModel):
     account_id: int = Field(ge=1)
     name: str = Field(min_length=1, max_length=160)
+    partner_id: int | None = Field(default=None, ge=1)
+    # Nur beim Anlegen: Plan für dieses Geschäftsjahr gleich mit eintragen
+    plan_year: int | None = Field(default=None, ge=YEAR_MIN, le=YEAR_MAX)
+    plan_cents: int | None = Field(default=None, ge=0, le=AMOUNT_MAX)
     note: str = Field(default="", max_length=500)
     active: bool = True
 
@@ -207,6 +219,8 @@ class OverviewOut(BaseModel):
     first_day: date
     last_day: date
     years: list[YearOut]
+    # Stand der Planung dieses Jahres: entwurf oder freigegeben
+    year_status: str
     rows: list[OverviewRow]
     items: list[ItemRow]
     plan: Totals
@@ -378,8 +392,27 @@ def _plans(db: DbDep, year: int) -> dict[int, int]:
     return {row.item_id: row.amount_cents for row in rows}
 
 
-def item_out(row: BudgetItem, accounts: dict[int, BudgetAccount]) -> ItemOut:
+def _year_status(db: DbDep, year: int) -> str:
+    row: BudgetYear | None = db.get(BudgetYear, year)
+    return row.status if row is not None else YEAR_DRAFT
+
+
+def _require_draft(db: DbDep, year: int) -> None:
+    if _year_status(db, year) == YEAR_RELEASED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Der Plan dieses Geschäftsjahrs ist freigegeben und lässt sich nicht ändern. "
+            "Der Budgetverwalter kann die Freigabe aufheben.",
+        )
+
+
+def item_out(
+    row: BudgetItem,
+    accounts: dict[int, BudgetAccount],
+    partners: dict[int, BudgetPartner] | None = None,
+) -> ItemOut:
     account = accounts.get(row.account_id)
+    partner = (partners or {}).get(row.partner_id) if row.partner_id is not None else None
     return ItemOut(
         id=row.id,
         account_id=row.account_id,
@@ -387,9 +420,15 @@ def item_out(row: BudgetItem, accounts: dict[int, BudgetAccount]) -> ItemOut:
         account_name=account.name if account else "",
         kind=account.kind if account else KIND_RUNNING,
         name=row.name,
+        partner_id=row.partner_id,
+        partner_name=partner.name if partner else None,
         note=row.note,
         active=row.active,
     )
+
+
+def _partner_map(db: DbDep) -> dict[int, BudgetPartner]:
+    return {row.id: row for row in db.scalars(select(BudgetPartner)).all()}
 
 
 def _items(db: DbDep, accounts: dict[int, BudgetAccount]) -> list[BudgetItem]:
@@ -436,6 +475,7 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
             committed[contract.item_id] = committed.get(contract.item_id, 0) + remaining
             contracts[contract.item_id] = contracts.get(contract.item_id, 0) + 1
     accounts = {row.id: row for row in _accounts(db)}
+    partner_map = _partner_map(db)
     items: list[ItemRow] = []
     for item in _items(db, accounts):
         plan = plans.get(item.id)
@@ -448,7 +488,7 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
             continue
         items.append(
             ItemRow(
-                item=item_out(item, accounts),
+                item=item_out(item, accounts, partner_map),
                 plan_cents=plan,
                 previous_cents=before,
                 committed_cents=bound,
@@ -475,7 +515,8 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
         )
     planned_years = set(db.scalars(select(BudgetPlan.fiscal_year).distinct()).all())
     years = sorted(
-        {*planned_years, *range(out.current_year - 5, out.current_year + 2), year}, reverse=True
+        {*planned_years, *range(out.current_year - 5, out.current_year + PLAN_AHEAD + 1), year},
+        reverse=True,
     )
     return OverviewOut(
         settings=out,
@@ -488,6 +529,7 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
             for entry in years
             if YEAR_MIN <= entry <= YEAR_MAX
         ],
+        year_status=_year_status(db, year),
         rows=rows,
         items=items,
         plan=_totals([(row.account.kind, row.plan_cents) for row in rows]),
@@ -509,10 +551,12 @@ def overview(user: Reader, db: DbDep, year: YearQuery = None) -> OverviewOut:
 
 
 @router.put("/plans/{year}")
-def update_plan(
-    request: Request, year: Year, body: PlanIn, user: Manager, db: DbDep
-) -> OverviewOut:
-    """Legt den Plan für die genannten Budgetposten fest. Nicht genannte bleiben unverändert."""
+def update_plan(request: Request, year: Year, body: PlanIn, user: Editor, db: DbDep) -> OverviewOut:
+    """Legt den Plan für die genannten Budgetposten fest. Nicht genannte bleiben unverändert.
+
+    Geplant wird nur, solange das Geschäftsjahr ein Entwurf ist.
+    """
+    _require_draft(db, year)
     known = {row.id for row in db.scalars(select(BudgetItem)).all()}
     wanted = {entry.item_id: entry.amount_cents for entry in body.entries}
     if len(wanted) != len(body.entries) or not set(wanted) <= known:
@@ -573,6 +617,10 @@ def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Das Konto gibt es nicht."
         )
+    if body.partner_id is not None and db.get(BudgetPartner, body.partner_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Den Partner gibt es nicht."
+        )
     other = db.scalars(
         select(BudgetItem).where(
             BudgetItem.account_id == body.account_id,
@@ -589,13 +637,23 @@ def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
 @router.get("/items")
 def list_items(user: Reader, db: DbDep) -> list[ItemOut]:
     accounts = {row.id: row for row in _accounts(db)}
-    return [item_out(row, accounts) for row in _items(db, accounts)]
+    partners = _partner_map(db)
+    return [item_out(row, accounts, partners) for row in _items(db, accounts)]
 
 
 @router.post("/items", status_code=status.HTTP_201_CREATED)
 def create_item(request: Request, body: ItemIn, user: Editor, db: DbDep) -> ItemOut:
     _check_item(db, body, None)
-    row = BudgetItem(account_id=body.account_id, name=body.name, note=body.note, active=body.active)
+    wants_plan = body.plan_year is not None and body.plan_cents is not None
+    if wants_plan and body.plan_year is not None:
+        _require_draft(db, body.plan_year)
+    row = BudgetItem(
+        account_id=body.account_id,
+        name=body.name,
+        partner_id=body.partner_id,
+        note=body.note,
+        active=body.active,
+    )
     db.add(row)
     db.flush()
     write_audit(
@@ -608,8 +666,28 @@ def create_item(request: Request, body: ItemIn, user: Editor, db: DbDep) -> Item
         ip=client_ip(request),
         details={"account_id": body.account_id, "name": body.name},
     )
+    if body.plan_year is not None and body.plan_cents is not None:
+        db.add(
+            BudgetPlan(
+                item_id=row.id,
+                fiscal_year=body.plan_year,
+                amount_cents=body.plan_cents,
+                updated_by=user.user_id,
+                updated_at=now_utc(),
+            )
+        )
+        write_audit(
+            db,
+            module=MODULE,
+            action="budget.plan_geaendert",
+            user_id=user.user_id,
+            object_type="plan",
+            object_id=str(body.plan_year),
+            ip=client_ip(request),
+            details={"posten": {str(row.id): {"vorher": None, "nachher": body.plan_cents}}},
+        )
     db.commit()
-    return item_out(row, {entry.id: entry for entry in _accounts(db)})
+    return item_out(row, {entry.id: entry for entry in _accounts(db)}, _partner_map(db))
 
 
 @router.put("/items/{item_id}")
@@ -623,6 +701,7 @@ def update_item(
     before = {"account_id": row.account_id, "name": row.name, "active": row.active}
     row.account_id = body.account_id
     row.name = body.name
+    row.partner_id = body.partner_id
     row.note = body.note
     row.active = body.active
     write_audit(
@@ -639,7 +718,7 @@ def update_item(
         },
     )
     db.commit()
-    return item_out(row, {entry.id: entry for entry in _accounts(db)})
+    return item_out(row, {entry.id: entry for entry in _accounts(db)}, _partner_map(db))
 
 
 # --- Partner ---
@@ -1264,7 +1343,7 @@ def list_invoices(user: Reader, db: DbDep, year: YearQuery = None) -> InvoiceLis
             .order_by(BudgetInvoice.invoice_date.desc(), BudgetInvoice.id.desc())
         ).all()
     )
-    years = sorted({*range(current - 5, current + 2), year}, reverse=True)
+    years = sorted({*range(current - 5, current + PLAN_AHEAD + 1), year}, reverse=True)
     return InvoiceListOut(
         year=year,
         year_name=fiscal_year_name(year, settings.start_month),
@@ -1462,6 +1541,8 @@ def merge_partner(
         if contract.invoicer_id == contract.partner_id:
             contract.invoicer_id = None
         moved_contracts += 1
+    for item in db.scalars(select(BudgetItem).where(BudgetItem.partner_id == source.id)).all():
+        item.partner_id = target.id
     moved_invoices = 0
     for invoice in db.scalars(
         select(BudgetInvoice).where(BudgetInvoice.invoicer_id == source.id)
@@ -1578,11 +1659,113 @@ def delete_partner(
         (BudgetContract.partner_id == row.id) | (BudgetContract.invoicer_id == row.id),
     )
     invoices = _count(db, BudgetInvoice, BudgetInvoice.invoicer_id == row.id)
-    if contracts or invoices:
+    items = _count(db, BudgetItem, BudgetItem.partner_id == row.id)
+    if contracts or invoices or items:
         raise _blocked(
-            f"Der Partner hat noch {contracts} Vertrag/Verträge und {invoices} Rechnung(en). "
+            f"Der Partner hat noch {contracts} Vertrag/Verträge, {invoices} Rechnung(en) und "
+            f"{items} Budgetposten. "
             "Bitte erst diese umhängen oder löschen, den Partner zusammenlegen oder stilllegen."
         )
     name = row.name
     db.delete(row)
     return _deleted(db, request, user, "partner", partner_id, name)
+
+
+# --- Planung über mehrere Jahre ---
+
+
+class YearStatusIn(BaseModel):
+    status: Literal["entwurf", "freigegeben"]
+
+
+class PlanYearOut(BaseModel):
+    year: int
+    name: str
+    status: str
+
+
+class PlanningRow(BaseModel):
+    item: ItemOut
+    # Plan je Geschäftsjahr (Schlüssel: Jahr); fehlt ein Jahr, ist nichts geplant
+    plans: dict[int, int]
+    # Erwartete Vertragskosten je Geschäftsjahr als Vorschlag
+    proposals: dict[int, int]
+
+
+class PlanningOut(BaseModel):
+    year_label: str
+    years: list[PlanYearOut]
+    rows: list[PlanningRow]
+
+
+@router.put("/years/{year}/status")
+def set_year_status(
+    request: Request, year: Year, body: YearStatusIn, user: Manager, db: DbDep
+) -> PlanYearOut:
+    """Gibt den Plan eines Geschäftsjahrs frei oder hebt die Freigabe auf."""
+    row: BudgetYear | None = db.get(BudgetYear, year)
+    before = row.status if row is not None else YEAR_DRAFT
+    if row is None:
+        row = BudgetYear(fiscal_year=year, status=body.status)
+        db.add(row)
+    row.status = body.status
+    released = body.status == YEAR_RELEASED
+    row.released_at = now_utc() if released else None
+    row.released_by = user.user_id if released else None
+    if before != body.status:
+        write_audit(
+            db,
+            module=MODULE,
+            action="budget.jahr_freigegeben" if released else "budget.jahr_freigabe_aufgehoben",
+            user_id=user.user_id,
+            object_type="geschaeftsjahr",
+            object_id=str(year),
+            ip=client_ip(request),
+            details={"vorher": before, "nachher": body.status},
+        )
+    db.commit()
+    start_month = load_settings(db).start_month
+    return PlanYearOut(year=year, name=fiscal_year_name(year, start_month), status=body.status)
+
+
+@router.get("/planning")
+def planning(user: Reader, db: DbDep) -> PlanningOut:
+    """Plan aller Budgetposten für das laufende und die folgenden Geschäftsjahre."""
+    settings = load_settings(db)
+    current = fiscal_year_of(now_utc().date(), settings.start_month)
+    years = [year for year in range(current, current + PLAN_AHEAD + 1) if year <= YEAR_MAX]
+    plans: dict[int, dict[int, int]] = {}
+    for plan in db.scalars(select(BudgetPlan).where(BudgetPlan.fiscal_year.in_(years))).all():
+        plans.setdefault(plan.item_id, {})[plan.fiscal_year] = plan.amount_cents
+    proposals: dict[int, dict[int, int]] = {}
+    contracts = db.scalars(select(BudgetContract)).all()
+    for year in years:
+        first_day, last_day = fiscal_year_range(year, settings.start_month)
+        for contract in contracts:
+            cents = expected_cents(contract, first_day, last_day)
+            if cents:
+                by_year = proposals.setdefault(contract.item_id, {})
+                by_year[year] = by_year.get(year, 0) + cents
+    accounts = {row.id: row for row in _accounts(db)}
+    partners = _partner_map(db)
+    rows = [
+        PlanningRow(
+            item=item_out(item, accounts, partners),
+            plans=plans.get(item.id, {}),
+            proposals=proposals.get(item.id, {}),
+        )
+        for item in _items(db, accounts)
+        if item.active or item.id in plans or item.id in proposals
+    ]
+    return PlanningOut(
+        year_label=settings.year_label,
+        years=[
+            PlanYearOut(
+                year=year,
+                name=fiscal_year_name(year, settings.start_month),
+                status=_year_status(db, year),
+            )
+            for year in years
+        ],
+        rows=rows,
+    )
