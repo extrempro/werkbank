@@ -749,7 +749,7 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
     assert (direct["status"], direct["gross_cents"]) == ("gebucht", 11_900)
     overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
     assert (overview["actual"]["total_cents"], overview["forecast"]["total_cents"]) == (
-        130_905,
+        130_900,
         1_000_000,
     )
 

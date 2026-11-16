@@ -218,7 +218,7 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
   await loginAs(page, ["Budget.Reader"], "Lena Lesend");
   await page.goto("/budget");
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
-  await expect(page.getByText(/^Plan Geschäftsjahr/)).toBeVisible();
+  await expect(page.getByText(/^Erwartet Geschäftsjahr/)).toBeVisible();
   await expect(page.getByText(/Nur Lesezugriff/)).toBeVisible();
   await page.goto("/budget/posten");
   await expect(page.getByRole("heading", { level: 1, name: "Budgetposten" })).toBeVisible();
