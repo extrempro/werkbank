@@ -13,6 +13,7 @@ const BUDGET_READER = "Budget.Reader";
 const BUDGET_EDITOR = "Budget.Editor";
 const BUDGET_MANAGER = "Budget.Manager";
 const TOOLS = "Tools.User";
+const MONITORING = "Monitoring.Reader";
 
 /**
  * Das Handbuch der Werkbank. Bei jeder Änderung an der Anwendung prüfen, ob ein Kapitel
@@ -50,6 +51,7 @@ export const CHAPTERS: readonly Chapter[] = [
                 "Konten, Budgetposten, Verträge, Rechnungen und Partner je Geschäftsjahr",
               ],
               ["IT-Tools", "Rechner, Generatoren und Konverter für den IT-Alltag"],
+              ["IT-Monitoring", "regelmäßige Prüfungen, z. B. ob das DNS zu NetBox passt"],
             ],
           },
         ],
@@ -243,6 +245,7 @@ export const CHAPTERS: readonly Chapter[] = [
                 "zusätzlich Rechnungen buchen, Partner zusammenlegen, Einstellungen des Budgets",
               ],
               ["Tools.User", "den Bereich IT-Tools öffnen"],
+              ["Monitoring.Reader", "den Bereich IT-Monitoring ansehen"],
             ],
           },
         ],
@@ -921,6 +924,73 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "hint",
             text: "Die Verwaltung kann diese Abfragen ausschalten. Die Tools zeigen dann einen Hinweis.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "it-monitoring",
+    title: "IT-Monitoring",
+    summary: "Regelmäßige Prüfungen der IT, zum Beispiel der DNS-Abgleich mit NetBox.",
+    roles: [MONITORING],
+    sections: [
+      {
+        id: "dns-abgleich",
+        title: "DNS-Abgleich mit NetBox",
+        blocks: [
+          {
+            kind: "text",
+            text: "In NetBox sind die DNS-Einträge dokumentiert. Alle 4 Stunden prüft die Werkbank, ob jeder aktive Eintrag aus NetBox öffentlich genau so im DNS steht. Gesucht wird nichts Neues: Was im DNS steht, aber nicht in NetBox, fällt nur auf, wenn es denselben Namen und Typ betrifft.",
+          },
+          {
+            kind: "terms",
+            items: [
+              ["in Ordnung", "öffentlich steht genau, was in NetBox steht"],
+              [
+                "abweichend",
+                "öffentlich steht etwas anderes oder zusätzlich etwas; bei eingeschaltetem TTL-Vergleich auch eine größere TTL",
+              ],
+              ["fehlt öffentlich", "den Eintrag gibt es im öffentlichen DNS nicht"],
+              ["Fehler", "die öffentliche Abfrage ging nicht, z. B. keine Antwort des Resolvers"],
+              ["inaktiv", "in NetBox nicht aktiv; öffentlich wie erwartet nicht vorhanden"],
+            ],
+          },
+          {
+            kind: "list",
+            items: [
+              "Die Ansicht „Probleme“ zeigt abweichende, fehlende und fehlerhafte Einträge, „Neu seit dem letzten Lauf“ nur die, die beim letzten Lauf dazukamen, „Alle“ alles. Das Suchfeld filtert nach Name, Zone, Typ und Wert.",
+              "Abweichende Werte sind in den Spalten NetBox und Öffentlich markiert. „In NetBox öffnen“ führt zum Eintrag in NetBox.",
+              "Das Diagramm zeigt für die letzten 90 Tage je Tag den letzten Lauf.",
+              "Nicht geprüft werden Reverse-Zonen privater Adressen, nicht aktive Zonen und extern verwaltete Subdomains (in NetBox als NS-Delegation erfasst; nur deren NS-Einträge werden geprüft).",
+            ],
+          },
+          {
+            kind: "hint",
+            text: "Kommen beim Abgleich neue Probleme dazu oder schlägt er fehl, meldet die Glocke das. Ob du das auch per Mail oder in Teams bekommst, stellst du im Konto ein.",
+          },
+        ],
+        links: [{ to: "/monitoring/dns", label: "Zum DNS-Abgleich" }],
+      },
+      {
+        id: "einrichten",
+        title: "Einrichten",
+        roles: [ADMIN],
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Lege in NetBox einen API-Token mit Leserecht an.",
+              "Öffne Verwaltung › Einstellungen › Allgemein › NetBox (IT-Monitoring).",
+              "Trage die https-Adresse von NetBox und den Token ein. Stammt das Zertifikat von NetBox aus einer eigenen Zertifizierungsstelle, füge deren CA-Zertifikat im PEM-Format ein.",
+              "Speichere und wähle „Verbindung prüfen“. Danach kannst du eine View wählen; sonst gelten alle Views.",
+              "Wähle den öffentlichen Resolver, lege fest, ob die TTL verglichen wird, hake „DNS-Abgleich einschalten“ an und speichere.",
+              "Auf der Seite „DNS-Abgleich mit NetBox“ ziehst du mit „Jetzt prüfen“ den nächsten Lauf vor.",
+            ],
+          },
+          {
+            kind: "text",
+            text: "Den Bereich sehen Personen mit der Rolle Monitoring.Reader und alle Admins. Der Token liegt verschlüsselt in der Datenbank und wird nie angezeigt.",
           },
         ],
       },

@@ -25,6 +25,7 @@ SMTP_KEY = "smtp"
 # Dürfen die IT-Tools über den Server ins Internet fragen (DNS, RDAP, Datenlecks, crt.sh)?
 TOOLS_INTERNET_KEY = "tools_internet"
 TEAMS_KEY = "teams_workflow"
+NETBOX_KEY = "netbox"
 
 MIN_KEY_LENGTH = 32
 

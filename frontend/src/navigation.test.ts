@@ -42,8 +42,13 @@ describe("areasFor", () => {
 
   it("gibt Microsoft 365 und Evergreen je einen eigenen Bereich", () => {
     const areas = areasFor(all);
-    expect(areas.map((area) => area.label)).toEqual(["Werkbank", "Microsoft 365", "Evergreen"]);
-    expect(areas.map((area) => area.home)).toEqual(["/", "/m365", "/evergreen"]);
+    expect(areas.map((area) => area.label)).toEqual([
+      "Werkbank",
+      "Microsoft 365",
+      "Evergreen",
+      "IT-Monitoring",
+    ]);
+    expect(areas.map((area) => area.home)).toEqual(["/", "/m365", "/evergreen", "/monitoring/dns"]);
     const paths = (index: number) => allNavItems(areas[index]?.groups ?? []).map((i) => i.path);
     expect(paths(0)).toEqual(["/", "/suche", "/reports", "/audit", "/verwaltung"]);
     expect(paths(1).every((path) => path.startsWith("/m365"))).toBe(true);
@@ -57,6 +62,10 @@ describe("areasFor", () => {
     ]);
     expect(areasFor(["Config.Reader"]).map((area) => area.id)).toEqual(["werkbank", "m365"]);
     expect(areasFor(["Werkbank.Auditor"]).map((area) => area.id)).toEqual(["werkbank"]);
+    expect(areasFor(["Monitoring.Reader"]).map((area) => area.id)).toEqual([
+      "werkbank",
+      "monitoring",
+    ]);
   });
 
   it("ordnet jede Seite ihrem Bereich zu", () => {

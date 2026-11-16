@@ -91,6 +91,7 @@ const PATHS = {
     "M16.3 7.7l2.1-2.1",
   ],
   neuigkeiten: ["M4 10v4h3l7 4V6l-7 4z", "M18 9a4 4 0 0 1 0 6"],
+  monitoring: ["M3 12h4l3-8 4 16 3-8h4"],
   handbuch: [
     "M4 5a2 2 0 0 1 2-2h6v17H6a2 2 0 0 0-2 2z",
     "M20 5a2 2 0 0 0-2-2h-6v17h6a2 2 0 0 1 2 2z",

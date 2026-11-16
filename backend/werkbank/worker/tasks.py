@@ -26,6 +26,8 @@ from werkbank.modules.m365_config.ai_texts import GENERATE_AI_TEXTS, generate_ai
 from werkbank.modules.m365_config.jobs import COLLECT, collect_job
 from werkbank.modules.m365_config.notifications import m365_config_notifications
 from werkbank.modules.m365_config.secure_score import FETCH_SECURE_SCORE, fetch_secure_score_job
+from werkbank.modules.monitoring.dns_check import DNS_CHECK, DNS_CHECK_INTERVAL, dns_check_job
+from werkbank.modules.monitoring.notifications import monitoring_notifications
 from werkbank.modules.tenant.credentials import FETCH_CREDENTIALS, fetch_credentials_job
 from werkbank.modules.tenant.health import FETCH_HEALTH, fetch_health_job
 from werkbank.modules.tenant.inventory import FETCH_TENANT, fetch_inventory_job
@@ -106,12 +108,14 @@ NOTIFICATION_SOURCES = (
     tenant_notifications,
     evergreen_notifications,
     budget_notifications,
+    monitoring_notifications,
 )
 
 REGISTRY: dict[str, JobType] = {
     CLEANUP: JobType(handler=cleanup, interval=timedelta(hours=1)),
     NOTIFY: JobType(handler=make_notify_job(NOTIFICATION_SOURCES), interval=NOTIFY_INTERVAL),
     DELIVER: JobType(handler=deliver_job, interval=DELIVER_INTERVAL),
+    DNS_CHECK: JobType(handler=dns_check_job, interval=DNS_CHECK_INTERVAL),
     CHECK_IMPLEMENTATION: JobType(handler=check_implementation_job, interval=timedelta(hours=1)),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
 }
