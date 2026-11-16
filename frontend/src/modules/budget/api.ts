@@ -35,6 +35,8 @@ export interface AccountUpdate {
   active: boolean;
 }
 
+export type YearStatus = "entwurf" | "freigegeben";
+
 export interface OverviewRow {
   account: Account;
   /** Geplanter Betrag brutto in Cent; null: für dieses Jahr ist nichts geplant. */
@@ -56,6 +58,9 @@ export interface Item {
   account_name: string;
   kind: AccountKind;
   name: string;
+  /** Üblicher Partner des Postens; beim Erfassen einer Rechnung vorausgewählt. */
+  partner_id: number | null;
+  partner_name: string | null;
   note: string;
   active: boolean;
 }
@@ -63,6 +68,10 @@ export interface Item {
 export interface ItemUpdate {
   account_id: number;
   name: string;
+  partner_id: number | null;
+  /** Nur beim Anlegen: Plan für dieses Geschäftsjahr gleich mit eintragen. */
+  plan_year?: number;
+  plan_cents?: number;
   note: string;
   active: boolean;
 }
@@ -91,6 +100,7 @@ export interface Overview {
   first_day: string;
   last_day: string;
   years: { year: number; name: string }[];
+  year_status: YearStatus;
   /** Je Konto die Summen seiner Budgetposten. */
   rows: OverviewRow[];
   items: ItemRow[];
@@ -504,4 +514,32 @@ export function deleteItem(id: number): Deleted {
 
 export function deletePartner(id: number): Deleted {
   return deleteJson(`/api/budget/partners/${id}`);
+}
+
+export interface PlanYear {
+  year: number;
+  name: string;
+  status: YearStatus;
+}
+
+export interface PlanningRow {
+  item: Item;
+  /** Plan je Geschäftsjahr; fehlt ein Jahr, ist nichts geplant. */
+  plans: Record<string, number>;
+  /** Erwartete Vertragskosten je Geschäftsjahr als Vorschlag. */
+  proposals: Record<string, number>;
+}
+
+export interface Planning {
+  year_label: string;
+  years: PlanYear[];
+  rows: PlanningRow[];
+}
+
+export function fetchPlanning(): Promise<Planning> {
+  return getJson<Planning>("/api/budget/planning");
+}
+
+export function setYearStatus(year: number, status: YearStatus): Promise<PlanYear> {
+  return putJson<PlanYear>(`/api/budget/years/${year}/status`, { status });
 }

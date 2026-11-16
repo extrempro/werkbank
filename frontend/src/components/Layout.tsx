@@ -15,6 +15,7 @@ import {
   BUDGET_ACCOUNTS_PATH,
   BUDGET_CONTRACTS_PATH,
   BUDGET_INVOICES_PATH,
+  BUDGET_PLANNING_PATH,
   BUDGET_ITEMS_PATH,
   BUDGET_PARTNERS_PATH,
   BUDGET_PATH,
@@ -48,6 +49,7 @@ import { ContractsPage } from "../modules/budget/ContractsPage";
 import { InvoicesPage } from "../modules/budget/InvoicesPage";
 import { ItemsPage as BudgetItemsPage } from "../modules/budget/ItemsPage";
 import { PartnerDetailPage } from "../modules/budget/PartnerDetailPage";
+import { PlanningPage } from "../modules/budget/PlanningPage";
 import { PartnersPage } from "../modules/budget/PartnersPage";
 import { CredentialsPage } from "../modules/tenant/CredentialsPage";
 import { LicensesPage } from "../modules/tenant/LicensesPage";
@@ -253,6 +255,8 @@ export function Layout({ me }: LayoutProps) {
     page = <ContractsPage roles={me.roles} />;
   } else if (contractId !== null && items.some((item) => item.path === BUDGET_CONTRACTS_PATH)) {
     page = <ContractsPage key={contractId} roles={me.roles} selectedId={contractId} />;
+  } else if (path === BUDGET_PLANNING_PATH && current) {
+    page = <PlanningPage roles={me.roles} />;
   } else if (path === BUDGET_INVOICES_PATH && current) {
     page = <InvoicesPage roles={me.roles} />;
   } else if (partnerId !== null && items.some((item) => item.path === BUDGET_PARTNERS_PATH)) {

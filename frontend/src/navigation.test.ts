@@ -109,6 +109,7 @@ describe("areasFor", () => {
     const shared = [
       "/budget",
       "/budget/posten",
+      "/budget/planung",
       "/budget/vertraege",
       "/budget/rechnungen",
       "/budget/partner",

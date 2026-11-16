@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.29.0] – 2026-11-16
+
+IT-Budget: Planung über mehrere Jahre mit Entwurf und Freigabe.
+
+### IT-Budget
+
+- **Mehrjahresplanung:** neue Seite mit dem Plan aller Budgetposten für das laufende und die fünf folgenden Geschäftsjahre. Unter jedem Feld steht, was aus Verträgen zu erwarten ist; leere Felder lassen sich daraus füllen
+- **Entwurf und Freigabe:** Der Plan eines Geschäftsjahrs ist „Entwurf“ oder „freigegeben“. Freigeben und die Freigabe aufheben darf der Budgetverwalter. Ein freigegebener Plan lässt sich nicht ändern
+- **Die IT plant mit:** Im Entwurf tragen IT und Budgetverwalter den Plan ein. Bisher durfte das nur der Budgetverwalter
+- **Vorhaben anmelden:** Beim Anlegen eines Budgetpostens lassen sich gleich der Plan für das gewählte Jahr und ein üblicher Partner eintragen. Der Partner ist beim Erfassen einer Rechnung auf diesem Posten vorausgewählt
+- Die Jahreswahl reicht fünf Jahre voraus
+- Ein Partner, der an einem Budgetposten hängt, lässt sich nicht löschen; beim Zusammenlegen wandert die Zuordnung mit
+- Migration 0023 (eine neue Tabelle, eine neue Spalte). Vorhandene Jahre gelten als Entwurf
+
 ## [0.28.0] – 2026-11-16
 
 IT-Budget: Rechnungen mit Prüfung, Ist und Prognose; Partner im Detail und zusammenlegen.

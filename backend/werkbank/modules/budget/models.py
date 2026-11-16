@@ -45,9 +45,23 @@ class BudgetItem(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("budget_accounts.id"), index=True)
     name: Mapped[str] = mapped_column(String(160))
+    # Üblicher Partner dieses Postens; beim Erfassen einer Rechnung vorausgewählt
+    partner_id: Mapped[int | None] = mapped_column(ForeignKey("budget_partners.id"), index=True)
     note: Mapped[str] = mapped_column(String(500), default="", server_default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BudgetYear(Base):
+    """Stand der Planung eines Geschäftsjahrs. Ohne Zeile gilt das Jahr als Entwurf."""
+
+    __tablename__ = "budget_years"
+
+    fiscal_year: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # entwurf oder freigegeben
+    status: Mapped[str] = mapped_column(String(16))
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    released_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
 
 
 class BudgetPlan(Base):

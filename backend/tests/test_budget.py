@@ -26,6 +26,7 @@ from werkbank.modules.budget.models import (
     BudgetItem,
     BudgetPartner,
     BudgetPlan,
+    BudgetYear,
 )
 from werkbank.modules.budget.settings import (
     SETTINGS_KEY,
@@ -46,6 +47,7 @@ def db(db_session: Session) -> Iterator[Session]:
         db_session.execute(delete(BudgetContract))
         db_session.execute(delete(BudgetPartner))
         db_session.execute(delete(BudgetPlan))
+        db_session.execute(delete(BudgetYear))
         db_session.execute(delete(BudgetItem))
         db_session.execute(delete(BudgetAccount))
         db_session.execute(delete(AppSetting).where(AppSetting.key == SETTINGS_KEY))
@@ -226,9 +228,9 @@ def test_plan_and_overview(db: Session) -> None:
             ids[number] = account.json()["id"]
         ids[item] = post(manager, "/items", {"account_id": ids[number], "name": item}).json()["id"]
 
-    editor = client_for(["Budget.Editor"], "budget-it3")
+    outsider = client_for(["Budget.Reader"], "budget-nurlesen")
     entries = [{"item_id": ids["Office-Lizenzen"], "amount_cents": 1_190_000}]
-    assert put(editor, "/plans/2026", {"entries": entries}).status_code == 403
+    assert put(outsider, "/plans/2026", {"entries": entries}).status_code == 403
 
     put(
         manager,
@@ -878,3 +880,120 @@ def test_delete_only_without_dependencies(db: Session) -> None:
         "budget.posten_geloescht",
         "budget.partner_geloescht",
     } <= actions
+
+
+# --- Planung: Stand je Jahr, mehrere Jahre, Plan beim Anlegen ---
+
+
+@pytest.mark.db
+def test_planning_with_release_and_proposals(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "plan-verwalter")
+    editor = client_for(["Budget.Editor"], "plan-it")
+    reader = client_for(["Budget.Reader"], "plan-leser")
+    account = post(
+        manager, "/accounts", {"number": "6815", "name": "Software", "kind": "laufend"}
+    ).json()
+    partner = post(manager, "/partners", {"name": "Beispiel Software GmbH"}).json()
+    year = manager.get(f"{BASE}/settings").json()["current_year"]
+
+    # Die IT meldet ein Vorhaben an: Posten mit Partner und Plan für das nächste Jahr.
+    created = post(
+        editor,
+        "/items",
+        {
+            "account_id": account["id"],
+            "name": "Projekt Dokumentenablage",
+            "partner_id": partner["id"],
+            "plan_year": year + 1,
+            "plan_cents": 1_500_000,
+        },
+    )
+    assert created.status_code == 201, created.text
+    project = created.json()
+    assert (project["partner_id"], project["partner_name"]) == (
+        partner["id"],
+        "Beispiel Software GmbH",
+    )
+    assert (
+        post(
+            editor, "/items", {"account_id": account["id"], "name": "X", "partner_id": 999_999}
+        ).status_code
+        == 422
+    )
+    software = post(editor, "/items", {"account_id": account["id"], "name": "Zeiterfassung"}).json()
+    post(
+        manager,
+        "/contracts",
+        {
+            "title": "Wartung",
+            "partner_id": partner["id"],
+            "item_id": software["id"],
+            "starts_on": f"{year}-01-01",
+            "ends_on": f"{year + 2}-12-31",
+            "net_cents": 100_000,
+            "tax_rate_bp": 0,
+            "interval": "jaehrlich",
+        },
+    )
+
+    # Mehrjahres-Sicht: sechs Jahre, Plan des Projekts, Vorschläge bis zum Vertragsende.
+    data = reader.get(f"{BASE}/planning").json()
+    assert [entry["year"] for entry in data["years"]] == list(range(year, year + 6))
+    assert {entry["status"] for entry in data["years"]} == {"entwurf"}
+    rows = {row["item"]["name"]: row for row in data["rows"]}
+    assert rows["Projekt Dokumentenablage"]["plans"] == {str(year + 1): 1_500_000}
+    assert rows["Zeiterfassung"]["proposals"] == {
+        str(year): 100_000,
+        str(year + 1): 100_000,
+        str(year + 2): 100_000,
+    }
+    # Auch die Jahreswahl reicht fünf Jahre voraus.
+    listed = {entry["year"] for entry in reader.get(f"{BASE}/overview").json()["years"]}
+    assert {year - 5, year + 5} <= listed
+
+    # Im Entwurf plant auch die IT; freigeben darf nur der Budgetverwalter.
+    plan = {"entries": [{"item_id": software["id"], "amount_cents": 100_000}]}
+    assert put(editor, f"/plans/{year + 1}", plan).status_code == 200
+    release = {"status": "freigegeben"}
+    assert put(editor, f"/years/{year + 1}/status", release).status_code == 403
+    assert put(manager, f"/years/{year + 1}/status", {"status": "offen"}).status_code == 422
+    released = put(manager, f"/years/{year + 1}/status", release)
+    assert released.status_code == 200
+    assert released.json()["status"] == "freigegeben"
+    overview = reader.get(f"{BASE}/overview", params={"year": year + 1}).json()
+    assert (overview["year_status"], overview["plan"]["total_cents"]) == ("freigegeben", 1_600_000)
+
+    # Freigegeben: niemand ändert den Plan, auch nicht über einen neuen Posten.
+    assert put(editor, f"/plans/{year + 1}", plan).status_code == 409
+    assert put(manager, f"/plans/{year + 1}", plan).status_code == 409
+    late = {
+        "account_id": account["id"],
+        "name": "Nachzügler",
+        "plan_year": year + 1,
+        "plan_cents": 1,
+    }
+    assert post(editor, "/items", late).status_code == 409
+    assert put(editor, f"/plans/{year + 2}", plan).status_code == 200
+
+    # Nach dem Aufheben geht es wieder.
+    assert put(manager, f"/years/{year + 1}/status", {"status": "entwurf"}).status_code == 200
+    assert put(editor, f"/plans/{year + 1}", plan).status_code == 200
+
+    # Ein Partner an einem Posten lässt sich nicht löschen; beim Zusammenlegen wandert er mit.
+    other = post(manager, "/partners", {"name": "Beispiel Sofware"}).json()
+    put(
+        editor,
+        f"/items/{project['id']}",
+        {
+            "account_id": account["id"],
+            "name": "Projekt Dokumentenablage",
+            "partner_id": other["id"],
+        },
+    )
+    assert manager.delete(f"{BASE}/partners/{other['id']}", headers=HEADERS).status_code == 409
+    post(manager, f"/partners/{other['id']}/merge", {"into_id": partner["id"]})
+    items = {entry["name"]: entry for entry in reader.get(f"{BASE}/items").json()}
+    assert items["Projekt Dokumentenablage"]["partner_id"] == partner["id"]
+    db.expire_all()
+    actions = set(db.scalars(select(AuditLog.action).where(AuditLog.module == "budget")).all())
+    assert {"budget.jahr_freigegeben", "budget.jahr_freigabe_aufgehoben"} <= actions

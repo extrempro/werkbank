@@ -28,6 +28,7 @@ import { InvoicesPage } from "./InvoicesPage";
 import { ItemsPage } from "./ItemsPage";
 import { PartnerDetailPage } from "./PartnerDetailPage";
 import { PartnersPage } from "./PartnersPage";
+import { PlanningPage } from "./PlanningPage";
 import { DeleteButton } from "./shared";
 
 afterEach(() => {
@@ -67,6 +68,8 @@ const office: Item = {
   account_name: "Softwarewartung",
   kind: "laufend",
   name: "Office-Lizenzen",
+  partner_id: null,
+  partner_name: null,
   note: "",
   active: true,
 };
@@ -77,6 +80,8 @@ const server: Item = {
   account_name: "Hardware",
   kind: "investition",
   name: "Server",
+  partner_id: null,
+  partner_name: null,
   note: "",
   active: false,
 };
@@ -88,6 +93,7 @@ function overview(overrides: Partial<Overview> = {}): Overview {
     year_name: "2026/27",
     first_day: "2026-08-01",
     last_day: "2027-07-31",
+    year_status: "entwurf",
     years: [
       { year: 2027, name: "2027/28" },
       { year: 2026, name: "2026/27" },
@@ -190,6 +196,7 @@ describe("Budgetposten", () => {
     const calls = stubFetch({
       "GET /api/budget/overview": overview(),
       "GET /api/budget/accounts": [hardware, software],
+      "GET /api/budget/partners": [partner],
     });
     render(<ItemsPage roles={["Budget.Reader"]} />);
     const table = within(await screen.findByRole("region", { name: "Budgetposten 2026/27" }));
@@ -214,6 +221,7 @@ describe("Budgetposten", () => {
     const calls = stubFetch({
       "GET /api/budget/overview": overview(),
       "GET /api/budget/accounts": [hardware, software],
+      "GET /api/budget/partners": [partner],
       "PUT /api/budget/plans/2026": overview(),
     });
     render(<ItemsPage roles={["Budget.Manager"]} />);
@@ -246,6 +254,7 @@ describe("Budgetposten", () => {
     const calls = stubFetch({
       "GET /api/budget/overview": overview(),
       "GET /api/budget/accounts": [hardware, software],
+      "GET /api/budget/partners": [partner],
       "POST /api/budget/items": { ...office, id: 13, name: "Sonstige Software" },
       "PUT /api/budget/items/12": { ...server, active: true },
     });
@@ -265,6 +274,7 @@ describe("Budgetposten", () => {
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       account_id: 1,
       name: "Sonstige Software",
+      partner_id: null,
       note: "",
       active: true,
     });
@@ -320,6 +330,7 @@ describe("Konten", () => {
     const created: Account = { ...software, id: 3, number: "6820", name: "Telefonie" };
     const calls = stubFetch({
       "GET /api/budget/accounts": [hardware, software],
+      "GET /api/budget/partners": [partner],
       "POST /api/budget/accounts": created,
       "PUT /api/budget/accounts/2": { ...hardware, active: true },
     });
@@ -951,5 +962,111 @@ describe("Löschen", () => {
     expect(await screen.findByText("Beispiel Distribution AG ist gelöscht.")).toBeVisible();
     expect(calls.some((call) => call.method === "DELETE")).toBe(true);
     expect(screen.queryByRole("link", { name: "Beispiel Distribution AG" })).toBeNull();
+  });
+});
+
+describe("Planung", () => {
+  it("meldet ein Vorhaben mit Partner und Plan an und gibt das Jahr frei", async () => {
+    const calls = stubFetch({
+      "GET /api/budget/overview": overview(),
+      "GET /api/budget/accounts": [software],
+      "GET /api/budget/partners": [partner],
+      "POST /api/budget/items": { ...office, id: 14, name: "Projekt Ablage" },
+      "PUT /api/budget/years/2026/status": { year: 2026, name: "2026/27", status: "freigegeben" },
+    });
+    render(<ItemsPage roles={["Budget.Manager"]} />);
+    expect(await screen.findByText("Plan 2026/27: Entwurf")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Budgetposten anlegen" }));
+    fireEvent.change(screen.getByLabelText("Konto"), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "Projekt Ablage" } });
+    fireEvent.change(screen.getByLabelText(/^Üblicher Partner/), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText(/^Plan 2026\/27/), { target: { value: "viel" } });
+    fireEvent.click(screen.getByRole("button", { name: "Budgetposten speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Planbetrag ist nicht lesbar");
+    fireEvent.change(screen.getByLabelText(/^Plan 2026\/27/), { target: { value: "15.000,00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Budgetposten speichern" }));
+    expect(await screen.findByText("Projekt Ablage ist gespeichert.")).toBeVisible();
+    expect(calls.find((call) => call.method === "POST")?.body).toEqual({
+      account_id: 1,
+      name: "Projekt Ablage",
+      partner_id: 1,
+      note: "",
+      active: true,
+      plan_year: 2026,
+      plan_cents: 1_500_000,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Plan freigeben" }));
+    expect(await screen.findByText("Der Plan 2026/27 ist freigegeben.")).toBeVisible();
+    expect(calls.find((call) => call.method === "PUT")?.body).toEqual({ status: "freigegeben" });
+  });
+
+  it("sperrt den Plan eines freigegebenen Jahrs", async () => {
+    stubFetch({
+      "GET /api/budget/overview": overview({ year_status: "freigegeben" }),
+      "GET /api/budget/accounts": [software],
+      "GET /api/budget/partners": [partner],
+    });
+    render(<ItemsPage roles={["Budget.Manager"]} />);
+    expect(await screen.findByText("Plan 2026/27: freigegeben")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Plan bearbeiten" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Freigabe aufheben" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Budgetposten anlegen" }));
+    expect(screen.queryByLabelText(/^Plan 2026\/27/)).toBeNull();
+  });
+
+  it("plant mehrere Jahre und übernimmt Vorschläge aus Verträgen", async () => {
+    const planning = {
+      year_label: "Wirtschaftsjahr",
+      years: [
+        { year: 2026, name: "2026/27", status: "freigegeben" },
+        { year: 2027, name: "2027/28", status: "entwurf" },
+        { year: 2028, name: "2028/29", status: "entwurf" },
+      ],
+      rows: [
+        {
+          item: office,
+          plans: { "2026": 600_000, "2027": 600_000 },
+          proposals: { "2026": 600_000, "2027": 600_000, "2028": 300_000 },
+        },
+      ],
+    };
+    const calls = stubFetch({
+      "GET /api/budget/planning": planning,
+      "PUT /api/budget/plans/": overview(),
+    });
+    const { unmount } = render(<PlanningPage roles={["Budget.Reader"]} />);
+    const table = within(await screen.findByRole("region", { name: "Mehrjahresplanung" }));
+    expect(plain(table.getByRole("row", { name: /^Office-Lizenzen/ }).textContent)).toContain(
+      "Verträge: 3.000,00 €",
+    );
+    expect(plain(table.getByRole("row", { name: /^Summe Plan/ }).textContent)).toContain(
+      "6.000,00 €",
+    );
+    expect(screen.queryByRole("button", { name: "Plan bearbeiten" })).toBeNull();
+    unmount();
+
+    render(<PlanningPage roles={["Budget.Editor"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Plan bearbeiten" }));
+    // Das freigegebene Jahr hat kein Eingabefeld.
+    expect(screen.queryByRole("textbox", { name: /im 2026\/27/ })).toBeNull();
+    const next = screen.getByRole("textbox", { name: /Office-Lizenzen im 2027\/28/ });
+    const later = screen.getByRole("textbox", { name: /Office-Lizenzen im 2028\/29/ });
+    expect(next).toHaveValue("6000,00");
+    expect(later).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "Leere Felder aus Verträgen füllen" }));
+    expect(later).toHaveValue("3000,00");
+    expect(next).toHaveValue("6000,00");
+    fireEvent.change(next, { target: { value: "6.500,00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Plan speichern" }));
+    expect(await screen.findByText("Der Plan ist gespeichert.")).toBeVisible();
+    const saved = calls.filter((call) => call.method === "PUT");
+    expect(saved.map((call) => call.url).sort()).toEqual([
+      "/api/budget/plans/2027",
+      "/api/budget/plans/2028",
+    ]);
+    expect(saved.find((call) => call.url.endsWith("2027"))?.body).toEqual({
+      entries: [{ item_id: 11, amount_cents: 650_000 }],
+    });
   });
 });

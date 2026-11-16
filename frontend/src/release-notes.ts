@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.29.0",
+    date: "2026-11-16",
+    summary: "IT-Budget: mehrere Jahre im Voraus planen, mit Entwurf und Freigabe.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Neu: Die Seite „Mehrjahresplanung“ zeigt den Plan aller Budgetposten für sechs Jahre. Leere Felder lassen sich aus den Verträgen füllen.",
+          "Der Plan eines Jahrs ist Entwurf oder freigegeben. Im Entwurf planen IT und Budgetverwalter, nach der Freigabe ist der Plan gesperrt.",
+          "Beim Anlegen eines Budgetpostens lassen sich Plan und üblicher Partner gleich mit eintragen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.28.0",
     date: "2026-11-16",
     summary: "IT-Budget mit Rechnungen, Ist und Prognose.",
