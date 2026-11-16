@@ -34,7 +34,9 @@ export default function AmortizationTool() {
   const payback = result ? (withInterest ? result.dynamicYears : result.staticYears) : null;
   const inTime = payback !== null && payback <= years;
   const firstPositive = result
-    ? result.rows.findIndex((row) => (withInterest ? row.cumulativeDiscounted : row.cumulative) >= 0)
+    ? result.rows.findIndex(
+        (row) => (withInterest ? row.cumulativeDiscounted : row.cumulative) >= 0,
+      )
     : -1;
   const invest = num(params.invest);
   const total = result ? (withInterest ? result.npv : result.surplus) : 0;

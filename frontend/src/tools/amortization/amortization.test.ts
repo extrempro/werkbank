@@ -10,7 +10,13 @@ describe("amortization", () => {
     expect(r.roiPercent).toBe(100);
   });
   it("mit Zins dauert es länger", () => {
-    const r = amortization({ investment: 10000, returns: 5000, costs: 1000, interest: 10, years: 5 });
+    const r = amortization({
+      investment: 10000,
+      returns: 5000,
+      costs: 1000,
+      interest: 10,
+      years: 5,
+    });
     expect(r.staticYears).toBe(2.5);
     expect(Math.round(r.dynamicYears! * 100) / 100).toBe(3.02);
     expect(Math.round(r.npv)).toBe(5163);

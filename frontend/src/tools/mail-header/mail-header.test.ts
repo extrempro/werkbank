@@ -32,7 +32,9 @@ describe("parseHeaders", () => {
 
 describe("decodeEncodedWords", () => {
   it("dekodiert Base64 und Quoted-Printable", () => {
-    expect(decodeEncodedWords("=?UTF-8?B?TcO8bGxlciwgSsO8cmdlbg==?= <j@x.de>")).toBe("Müller, Jürgen <j@x.de>");
+    expect(decodeEncodedWords("=?UTF-8?B?TcO8bGxlciwgSsO8cmdlbg==?= <j@x.de>")).toBe(
+      "Müller, Jürgen <j@x.de>",
+    );
     expect(decodeEncodedWords("=?iso-8859-1?Q?Gr=FC=DFe_aus_der_IT?=")).toBe("Grüße aus der IT");
   });
 });
@@ -42,8 +44,16 @@ describe("analyzeHeaders", () => {
 
   it("ordnet die Hops chronologisch und berechnet Verzögerungen", () => {
     expect(a.hops).toHaveLength(3);
-    expect(a.hops[0]).toMatchObject({ from: "client.sender.example", fromIp: "198.51.100.7", by: "mail.sender.example" });
-    expect(a.hops[1]).toMatchObject({ from: "mail.sender.example", fromIp: "203.0.113.25", delaySeconds: 20 });
+    expect(a.hops[0]).toMatchObject({
+      from: "client.sender.example",
+      fromIp: "198.51.100.7",
+      by: "mail.sender.example",
+    });
+    expect(a.hops[1]).toMatchObject({
+      from: "mail.sender.example",
+      fromIp: "203.0.113.25",
+      delaySeconds: 20,
+    });
     expect(a.hops[2]!.delaySeconds).toBe(10);
     expect(a.totalSeconds).toBe(30);
   });
@@ -72,7 +82,9 @@ describe("analyzeHeaders", () => {
   });
 
   it("meldet fehlgeschlagene Prüfungen", () => {
-    const failed = analyzeHeaders("Authentication-Results: mx.example; spf=fail smtp.mailfrom=x.example; dmarc=fail\nFrom: a@x.example");
+    const failed = analyzeHeaders(
+      "Authentication-Results: mx.example; spf=fail smtp.mailfrom=x.example; dmarc=fail\nFrom: a@x.example",
+    );
     expect(failed.findings.filter((f) => f.level === "error")).toHaveLength(2);
   });
 

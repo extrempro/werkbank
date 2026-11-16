@@ -75,7 +75,8 @@ const microsoft: Record<string, string> = {
   "5.1.10": "Empfänger in der Ziel-Organisation nicht gefunden",
   "5.2.121": "Empfänger hat sein Stundenlimit für Nachrichten von diesem Absender erreicht",
   "5.2.122": "Empfänger hat sein Stundenlimit für eingehende Nachrichten erreicht",
-  "5.4.1": "Empfängeradresse abgelehnt: In der Ziel-Organisation (Microsoft 365) gibt es diese Adresse nicht",
+  "5.4.1":
+    "Empfängeradresse abgelehnt: In der Ziel-Organisation (Microsoft 365) gibt es diese Adresse nicht",
   "5.4.6": "Routing-Schleife (z. B. Weiterleitung oder Connector im Kreis)",
   "5.4.14": "Routing-Schleife (z. B. Weiterleitung oder Connector im Kreis)",
   "5.4.300": "Zustellzeit abgelaufen – der Server hat aufgegeben",
@@ -84,7 +85,8 @@ const microsoft: Record<string, string> = {
   "5.7.124": "Absender steht nicht auf der Liste der zugelassenen Absender der Gruppe",
   "5.7.133": "Gruppe nimmt nur Nachrichten von internen bzw. angemeldeten Absendern an",
   "5.7.134": "Postfach nimmt nur Nachrichten von internen bzw. angemeldeten Absendern an",
-  "5.7.135": "Öffentlicher Ordner nimmt nur Nachrichten von internen bzw. angemeldeten Absendern an",
+  "5.7.135":
+    "Öffentlicher Ordner nimmt nur Nachrichten von internen bzw. angemeldeten Absendern an",
   "5.7.136": "E-Mail-Benutzer nimmt nur Nachrichten von internen bzw. angemeldeten Absendern an",
   "5.7.501": "Zugriff verweigert: Spam erkannt, Absender gesperrt",
   "5.7.502": "Zugriff verweigert: Spam erkannt, Absender gesperrt",
@@ -108,15 +110,29 @@ export function explainStatus(code: string | undefined, diagnostic = ""): Status
   if (!m) return undefined;
   const [, cls, subj, det] = m as unknown as [string, string, string, string];
   const full = `${cls}.${subj}.${det}`;
-  const isMs = /outlook\.com|protection\.outlook|microsoft|exchange|RESOLVER\.|SMTPSEND|STOREDRV|ROUTING\./i.test(diagnostic);
-  let text = (cls === "5" || cls === "4") && microsoft[full] && (isMs || !generic[`${subj}.${det}`]) ? microsoft[full] : undefined;
+  const isMs =
+    /outlook\.com|protection\.outlook|microsoft|exchange|RESOLVER\.|SMTPSEND|STOREDRV|ROUTING\./i.test(
+      diagnostic,
+    );
+  let text =
+    (cls === "5" || cls === "4") && microsoft[full] && (isMs || !generic[`${subj}.${det}`])
+      ? microsoft[full]
+      : undefined;
   if (!text) {
     const n = Number(det);
-    if (cls === "5" && subj === "7" && n >= 606 && n <= 649) text = "Absende-IP ist bei Microsoft gesperrt (Entsperren über sender.office.com)";
-    else if (cls === "5" && subj === "7" && n >= 700 && n <= 749) text = "Zugriff für die Absender-Organisation (Tenant) gesperrt";
+    if (cls === "5" && subj === "7" && n >= 606 && n <= 649)
+      text = "Absende-IP ist bei Microsoft gesperrt (Entsperren über sender.office.com)";
+    else if (cls === "5" && subj === "7" && n >= 700 && n <= 749)
+      text = "Zugriff für die Absender-Organisation (Tenant) gesperrt";
   }
   text ??= generic[`${subj}.${det}`] ?? generic[`${subj}.0`] ?? generic["0.0"]!;
-  return { code: full, permanent: cls === "5" ? true : cls === "4" ? false : undefined, classText: classText[cls]!, text, microsoft: !!microsoft[full] && isMs };
+  return {
+    code: full,
+    permanent: cls === "5" ? true : cls === "4" ? false : undefined,
+    classText: classText[cls]!,
+    text,
+    microsoft: !!microsoft[full] && isMs,
+  };
 }
 
 /** erweiterten Statuscode aus einem Diagnosetext holen, z. B. „550 5.1.1 <x>: …“ oder „#5.1.1 smtp;550 …“ */
@@ -154,7 +170,13 @@ export function findSmtpCode(text: string): string | undefined {
 export function explainSmtpCode(code: string | undefined): StatusInfo | undefined {
   if (!code || !/^[245]\d\d$/.test(code)) return undefined;
   const cls = code[0]!;
-  return { code, permanent: cls === "5" ? true : cls === "4" ? false : undefined, classText: classText[cls]!, text: basic[code] ?? (cls === "4" ? "vorübergehender Fehler" : "dauerhafter Fehler"), microsoft: false };
+  return {
+    code,
+    permanent: cls === "5" ? true : cls === "4" ? false : undefined,
+    classText: classText[cls]!,
+    text: basic[code] ?? (cls === "4" ? "vorübergehender Fehler" : "dauerhafter Fehler"),
+    microsoft: false,
+  };
 }
 
 export interface Hint {
@@ -170,7 +192,11 @@ interface Rule {
   test: RegExp;
   title: string;
   text: string;
-  action?: (ctx: { senderDomain?: string; recipientDomain?: string; ip?: string }) => Hint["action"];
+  action?: (ctx: {
+    senderDomain?: string;
+    recipientDomain?: string;
+    ip?: string;
+  }) => Hint["action"];
 }
 
 const rules: Rule[] = [
@@ -191,21 +217,42 @@ const rules: Rule[] = [
     test: /\bDMARC\b|5\.7\.509|5\.7\.26\b|policy of reject|unauthenticated (?:e-?mail|sender)/i,
     title: "DMARC-Prüfung fehlgeschlagen",
     text: "Die Nachricht hat weder eine passende SPF- noch eine passende DKIM-Prüfung bestanden, und die Absender-Domain verlangt Ablehnung. SPF- und DKIM-Einträge sowie den Versandweg (z. B. externe Dienste, Weiterleitungen) prüfen.",
-    action: (c) => (c.senderDomain ? { label: `DNS-/Mail-Check für ${c.senderDomain}`, tool: "mail-check", search: { domain: c.senderDomain } } : undefined),
+    action: (c) =>
+      c.senderDomain
+        ? {
+            label: `DNS-/Mail-Check für ${c.senderDomain}`,
+            tool: "mail-check",
+            search: { domain: c.senderDomain },
+          }
+        : undefined,
   },
   {
     id: "spf",
     test: /\bSPF\b|5\.7\.2[34]\b|not designated as permitted sender|sender policy framework/i,
     title: "SPF-Prüfung fehlgeschlagen",
     text: "Der versendende Server steht nicht im SPF-Eintrag der Absender-Domain. Den sendenden Dienst bzw. die IP im SPF-Eintrag ergänzen.",
-    action: (c) => (c.senderDomain ? { label: `DNS-/Mail-Check für ${c.senderDomain}`, tool: "mail-check", search: { domain: c.senderDomain } } : undefined),
+    action: (c) =>
+      c.senderDomain
+        ? {
+            label: `DNS-/Mail-Check für ${c.senderDomain}`,
+            tool: "mail-check",
+            search: { domain: c.senderDomain },
+          }
+        : undefined,
   },
   {
     id: "dkim",
     test: /\bDKIM\b|5\.7\.2[0-2]\b/,
     title: "DKIM-Signatur fehlt oder ist ungültig",
     text: "DKIM-Signierung für die Absender-Domain einrichten bzw. prüfen, ob die Nachricht unterwegs verändert wurde (z. B. durch Signaturen oder Disclaimer nach dem Signieren).",
-    action: (c) => (c.senderDomain ? { label: `DNS-/Mail-Check für ${c.senderDomain}`, tool: "mail-check", search: { domain: c.senderDomain } } : undefined),
+    action: (c) =>
+      c.senderDomain
+        ? {
+            label: `DNS-/Mail-Check für ${c.senderDomain}`,
+            tool: "mail-check",
+            search: { domain: c.senderDomain },
+          }
+        : undefined,
   },
   {
     id: "ptr",
@@ -242,14 +289,28 @@ const rules: Rule[] = [
     test: /5\.1\.1\b|5\.1\.10\b|user unknown|unknown user|no such (?:user|mailbox|recipient)|does ?n[o']t exist|mailbox (?:unavailable|not found)|recipient not found|invalid recipient|unknown recipient|RecipNotFound|address rejected|unrouteable address|Benutzer unbekannt/i,
     title: "Empfängeradresse gibt es nicht",
     text: "Schreibweise prüfen. Stammt die Adresse aus der Outlook-Vorschlagsliste, kann ein veralteter Eintrag schuld sein – mit dem „X“ in der Vorschlagsliste entfernen und neu eingeben.",
-    action: (c) => (c.recipientDomain ? { label: `MX von ${c.recipientDomain} prüfen`, tool: "dns-lookup", search: { domain: c.recipientDomain, types: "MX" } } : undefined),
+    action: (c) =>
+      c.recipientDomain
+        ? {
+            label: `MX von ${c.recipientDomain} prüfen`,
+            tool: "dns-lookup",
+            search: { domain: c.recipientDomain, types: "MX" },
+          }
+        : undefined,
   },
   {
     id: "domain",
     test: /5\.1\.2\b|5\.4\.4\b|host (?:or domain name )?not found|domain (?:not found|does not exist)|NXDOMAIN|no (?:mx|mail exchanger)|name service error|host unknown|unrouteable mail domain|Null-MX|null MX/i,
     title: "Ziel-Domain nicht erreichbar",
     text: "Für die Domain des Empfängers gibt es keinen gültigen Mailserver (MX). Schreibweise der Domain prüfen.",
-    action: (c) => (c.recipientDomain ? { label: `MX von ${c.recipientDomain} prüfen`, tool: "dns-lookup", search: { domain: c.recipientDomain, types: "MX,A" } } : undefined),
+    action: (c) =>
+      c.recipientDomain
+        ? {
+            label: `MX von ${c.recipientDomain} prüfen`,
+            tool: "dns-lookup",
+            search: { domain: c.recipientDomain, types: "MX,A" },
+          }
+        : undefined,
   },
   {
     id: "full",
@@ -280,7 +341,14 @@ const rules: Rule[] = [
     test: /timed? ?out|connection refused|connection reset|lost connection|4\.4\.[12]\b|5\.4\.7\b|4\.4\.7\b|5\.4\.300\b|expired|retry time(?:out)? exceeded|could not be delivered within/i,
     title: "Zielserver nicht erreichbar",
     text: "Der Server des Empfängers hat über längere Zeit nicht geantwortet. Prüfen, ob die Domain korrekte MX-Einträge hat und Port 25 erreichbar ist – oder ob die Gegenseite eine Störung hat.",
-    action: (c) => (c.recipientDomain ? { label: `MX von ${c.recipientDomain} prüfen`, tool: "dns-lookup", search: { domain: c.recipientDomain, types: "MX" } } : undefined),
+    action: (c) =>
+      c.recipientDomain
+        ? {
+            label: `MX von ${c.recipientDomain} prüfen`,
+            tool: "dns-lookup",
+            search: { domain: c.recipientDomain, types: "MX" },
+          }
+        : undefined,
   },
   {
     id: "greylist",

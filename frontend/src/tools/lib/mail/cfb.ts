@@ -71,7 +71,8 @@ export function readCfb(bytes: Uint8Array): CfbEntry {
   fatSectors.forEach((s, i) => {
     const sd = sector(s);
     const sdv = new DataView(sd.buffer, sd.byteOffset, sd.byteLength);
-    for (let j = 0; j < sectorSize / 4; j++) fat[i * (sectorSize / 4) + j] = sdv.getUint32(j * 4, true);
+    for (let j = 0; j < sectorSize / 4; j++)
+      fat[i * (sectorSize / 4) + j] = sdv.getUint32(j * 4, true);
   });
 
   const chain = (start: number, table: Uint32Array, what: string): number[] => {
@@ -111,7 +112,8 @@ export function readCfb(bytes: Uint8Array): CfbEntry {
   for (let o = 0; o + 128 <= dir.length; o += 128) {
     const nameLen = ddv.getUint16(o + 64, true);
     let name = "";
-    for (let i = 0; i < Math.max(0, Math.min(nameLen, 64) / 2 - 1); i++) name += String.fromCharCode(ddv.getUint16(o + i * 2, true));
+    for (let i = 0; i < Math.max(0, Math.min(nameLen, 64) / 2 - 1); i++)
+      name += String.fromCharCode(ddv.getUint16(o + i * 2, true));
     raws.push({
       name,
       type: dir[o + 66]!,
@@ -145,7 +147,8 @@ export function readCfb(bytes: Uint8Array): CfbEntry {
       const out = new Uint8Array(sectors.length * miniSize);
       sectors.forEach((s, i) => {
         const off = s * miniSize;
-        if (off + miniSize > miniStream!.length) throw new CfbError("Mini-Sektor außerhalb des Mini-Streams");
+        if (off + miniSize > miniStream!.length)
+          throw new CfbError("Mini-Sektor außerhalb des Mini-Streams");
         out.set(miniStream!.subarray(off, off + miniSize), i * miniSize);
       });
       return out.subarray(0, r.size);
@@ -182,4 +185,5 @@ export function readCfb(bytes: Uint8Array): CfbEntry {
   return build(0);
 }
 
-export const child = (e: CfbEntry, name: string) => e.children.find((c) => c.name.toLowerCase() === name.toLowerCase());
+export const child = (e: CfbEntry, name: string) =>
+  e.children.find((c) => c.name.toLowerCase() === name.toLowerCase());

@@ -179,8 +179,8 @@ export default function NetplanTool() {
           </label>
         </div>
         <p className="small">
-          Mehrere Zeilen aus Excel (Nr., Vorgang, Dauer, Vorgänger) lassen sich direkt in die Tabelle
-          einfügen.
+          Mehrere Zeilen aus Excel (Nr., Vorgang, Dauer, Vorgänger) lassen sich direkt in die
+          Tabelle einfügen.
         </p>
       </ToolSection>
 
@@ -341,7 +341,13 @@ function Diagram({ nodes }: { nodes: Node[] }) {
           const { x, y } = place;
           const line = node.critical ? "np-line-crit" : "np-line";
           const cell = (cx: number, row: number, label: string, value: number) => (
-            <text x={x + cx} y={y + row * RH + 14} textAnchor="middle" fontSize="11" className="np-text">
+            <text
+              x={x + cx}
+              y={y + row * RH + 14}
+              textAnchor="middle"
+              fontSize="11"
+              className="np-text"
+            >
               <tspan fontSize="8.5" opacity="0.65">
                 {label}{" "}
               </tspan>
@@ -349,7 +355,13 @@ function Diagram({ nodes }: { nodes: Node[] }) {
             </text>
           );
           const divider = (dx: number, row: number) => (
-            <line x1={x + dx} y1={y + row * RH} x2={x + dx} y2={y + (row + 1) * RH} className={line} />
+            <line
+              x1={x + dx}
+              y1={y + row * RH}
+              x2={x + dx}
+              y2={y + (row + 1) * RH}
+              className={line}
+            />
           );
           return (
             <g key={node.id}>
@@ -364,7 +376,14 @@ function Diagram({ nodes }: { nodes: Node[] }) {
                 className={`${line} ${node.critical ? "np-node-crit" : "np-node"}`}
               />
               {[1, 2, 3].map((row) => (
-                <line key={row} x1={x} y1={y + row * RH} x2={x + W} y2={y + row * RH} className={line} />
+                <line
+                  key={row}
+                  x1={x}
+                  y1={y + row * RH}
+                  x2={x + W}
+                  y2={y + row * RH}
+                  className={line}
+                />
               ))}
               {divider(W / 2, 0)}
               {divider(30, 1)}

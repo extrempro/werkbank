@@ -666,7 +666,25 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "identitaet",
     description:
       "Zustellweg, Verzögerungen, SPF, DKIM, DMARC und Spamfilter aus E-Mail-Headern auslesen und Rückläufer (Unzustellbar, NDR) erklären. Auch .eml- und Outlook-.msg-Dateien.",
-    tags: ["mail", "e-mail", "header", "received", "spf", "dkim", "dmarc", "exchange", "outlook", "zustellung", "spam", "unzustellbar", "bounce", "ndr", "rückläufer", "msg", "eml"],
+    tags: [
+      "mail",
+      "e-mail",
+      "header",
+      "received",
+      "spf",
+      "dkim",
+      "dmarc",
+      "exchange",
+      "outlook",
+      "zustellung",
+      "spam",
+      "unzustellbar",
+      "bounce",
+      "ndr",
+      "rückläufer",
+      "msg",
+      "eml",
+    ],
     component: lazy(() => import("./mail-header/MailHeaderTool")),
   },
   {
@@ -675,7 +693,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "planung",
     description:
       "Wann hat sich eine Anschaffung bezahlt gemacht? Amortisationsdauer statisch und mit Kalkulationszins, Kapitalwert und Verlauf pro Jahr.",
-    tags: ["amortisationsrechnung", "investition", "roi", "payback", "wirtschaftlichkeit", "kapitalwert", "rentabilität", "anschaffung", "break even"],
+    tags: [
+      "amortisationsrechnung",
+      "investition",
+      "roi",
+      "payback",
+      "wirtschaftlichkeit",
+      "kapitalwert",
+      "rentabilität",
+      "anschaffung",
+      "break even",
+    ],
     component: lazy(() => import("./amortization/AmortizationTool")),
   },
   {
@@ -684,7 +712,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "planung",
     description:
       "Vollsicherung, inkrementell oder differenziell? Wochenplan mit Speicherbedarf, Sicherungsdauer und den Sicherungen, die für eine Wiederherstellung nötig sind.",
-    tags: ["backup", "datensicherung", "vollsicherung", "inkrementell", "differenziell", "restore", "wiederherstellung", "aufbewahrung", "backupfenster"],
+    tags: [
+      "backup",
+      "datensicherung",
+      "vollsicherung",
+      "inkrementell",
+      "differenziell",
+      "restore",
+      "wiederherstellung",
+      "aufbewahrung",
+      "backupfenster",
+    ],
     component: lazy(() => import("./backup-plan/BackupPlanTool")),
   },
   {
@@ -693,7 +731,18 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "planung",
     description:
       "Vorgänge mit Dauer und Vorgängern eintragen. Der Netzplan rechnet vorwärts und rückwärts und markiert den kritischen Pfad.",
-    tags: ["netzplantechnik", "projektplanung", "kritischer pfad", "puffer", "faz", "fez", "saz", "sez", "projektmanagement", "terminplanung"],
+    tags: [
+      "netzplantechnik",
+      "projektplanung",
+      "kritischer pfad",
+      "puffer",
+      "faz",
+      "fez",
+      "saz",
+      "sez",
+      "projektmanagement",
+      "terminplanung",
+    ],
     component: lazy(() => import("./netplan/NetplanTool")),
   },
   {
@@ -702,7 +751,17 @@ export const TOOLS: readonly ToolDefinition[] = [
     category: "planung",
     description:
       "Angebote oder Lösungen vergleichen: Kriterien gewichten, Alternativen bewerten. Das Tool rechnet Teilnutzwerte, Summe und Rangfolge.",
-    tags: ["entscheidung", "entscheidungsmatrix", "bewertung", "gewichtung", "kriterien", "angebotsvergleich", "scoring", "anbieter", "vergleich"],
+    tags: [
+      "entscheidung",
+      "entscheidungsmatrix",
+      "bewertung",
+      "gewichtung",
+      "kriterien",
+      "angebotsvergleich",
+      "scoring",
+      "anbieter",
+      "vergleich",
+    ],
     component: lazy(() => import("./utility-analysis/UtilityAnalysisTool")),
   },
 ];

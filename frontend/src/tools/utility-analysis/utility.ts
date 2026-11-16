@@ -18,9 +18,12 @@ const num = (s: string | undefined) => Number((s ?? "").replace("%", "").replace
 export function parseUtility(text: string): UtilityInput {
   const t = text.trim();
   if (!t) throw new Error("Tabelle ist leer.");
-  const rows = parseCsv(t, detectDelimiter(t)).map((r) => r.map((c) => c.trim())).filter((r) => r.some((c) => c));
+  const rows = parseCsv(t, detectDelimiter(t))
+    .map((r) => r.map((c) => c.trim()))
+    .filter((r) => r.some((c) => c));
   const [head, ...body] = rows;
-  if (!head || head.length < 3) throw new Error("Kopfzeile erwartet: Kriterium; Gewicht; Alternative 1; Alternative 2 …");
+  if (!head || head.length < 3)
+    throw new Error("Kopfzeile erwartet: Kriterium; Gewicht; Alternative 1; Alternative 2 …");
   const alternatives = head.slice(2).map((a, i) => a || `Alternative ${i + 1}`);
   if (!body.length) throw new Error("Mindestens ein Kriterium angeben.");
   const criteria = body.map((r, i) => {
@@ -29,7 +32,8 @@ export function parseUtility(text: string): UtilityInput {
     if (!(weight > 0)) throw new Error(`„${r[0]}“: Gewicht muss eine Zahl größer 0 sein.`);
     const scores = alternatives.map((a, j) => {
       const s = num(r[j + 2]);
-      if (r[j + 2] === undefined || r[j + 2] === "" || Number.isNaN(s)) throw new Error(`„${r[0]}“: Bewertung für „${a}“ fehlt.`);
+      if (r[j + 2] === undefined || r[j + 2] === "" || Number.isNaN(s))
+        throw new Error(`„${r[0]}“: Bewertung für „${a}“ fehlt.`);
       return s;
     });
     return { name: r[0], weight, scores };
@@ -55,5 +59,12 @@ export function utilityAnalysis(i: UtilityInput): UtilityResult {
   const parts = i.criteria.map((c, k) => c.scores.map((s) => (s * weights[k]!) / 100));
   const totals = i.alternatives.map((_, j) => parts.reduce((n, p) => n + p[j]!, 0));
   const ranks = totals.map((t) => 1 + totals.filter((o) => o > t + 1e-9).length);
-  return { weightSum, weights, parts, totals, ranks, best: ranks.flatMap((r, j) => (r === 1 ? [j] : [])) };
+  return {
+    weightSum,
+    weights,
+    parts,
+    totals,
+    ranks,
+    best: ranks.flatMap((r, j) => (r === 1 ? [j] : [])),
+  };
 }

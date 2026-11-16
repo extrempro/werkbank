@@ -26,13 +26,34 @@ export function writeCfb(rootChildren: CfbNode[]): Uint8Array {
     start: number;
     size: number;
   }
-  const entries: Entry[] = [{ node: { name: "Root Entry", children: rootChildren }, type: 5, left: FREE, right: FREE, child: FREE, start: END, size: 0 }];
+  const entries: Entry[] = [
+    {
+      node: { name: "Root Entry", children: rootChildren },
+      type: 5,
+      left: FREE,
+      right: FREE,
+      child: FREE,
+      start: END,
+      size: 0,
+    },
+  ];
   const add = (parent: number, kids: CfbNode[]) => {
-    const sorted = [...kids].sort((a, b) => a.name.length - b.name.length || a.name.toUpperCase().localeCompare(b.name.toUpperCase()));
+    const sorted = [...kids].sort(
+      (a, b) =>
+        a.name.length - b.name.length || a.name.toUpperCase().localeCompare(b.name.toUpperCase()),
+    );
     let prev = -1;
     for (const k of sorted) {
       const idx = entries.length;
-      entries.push({ node: k, type: k.children ? 1 : 2, left: FREE, right: FREE, child: FREE, start: END, size: k.data?.length ?? 0 });
+      entries.push({
+        node: k,
+        type: k.children ? 1 : 2,
+        left: FREE,
+        right: FREE,
+        child: FREE,
+        start: END,
+        size: k.data?.length ?? 0,
+      });
       if (prev < 0) entries[parent]!.child = idx;
       else entries[prev]!.right = idx;
       prev = idx;
@@ -143,8 +164,13 @@ function propStorage(props: MsgProp[], headerSize: number, extra: CfbNode[] = []
   const fdv = new DataView(fixed.buffer);
   let o = headerSize;
   for (const p of props) {
-    if (typeof p.value === "string") nodes.push({ name: `__substg1.0_${hex4(p.id)}001F`, data: utf16(p.value).subarray(0, p.value.length * 2) });
-    else if (p.value instanceof Uint8Array) nodes.push({ name: `__substg1.0_${hex4(p.id)}0102`, data: p.value });
+    if (typeof p.value === "string")
+      nodes.push({
+        name: `__substg1.0_${hex4(p.id)}001F`,
+        data: utf16(p.value).subarray(0, p.value.length * 2),
+      });
+    else if (p.value instanceof Uint8Array)
+      nodes.push({ name: `__substg1.0_${hex4(p.id)}0102`, data: p.value });
     else {
       fdv.setUint16(o, 0x0003, true);
       fdv.setUint16(o + 2, p.id, true);
@@ -165,11 +191,22 @@ export interface TestMsg {
 
 function messageNodes(m: TestMsg, headerSize: number): CfbNode[] {
   const children: CfbNode[] = [{ name: "__nameid_version1.0", children: [] }];
-  (m.recipients ?? []).forEach((r, i) => children.push({ name: `__recip_version1.0_#${i.toString(16).toUpperCase().padStart(8, "0")}`, children: propStorage(r, 8) }));
+  (m.recipients ?? []).forEach((r, i) =>
+    children.push({
+      name: `__recip_version1.0_#${i.toString(16).toUpperCase().padStart(8, "0")}`,
+      children: propStorage(r, 8),
+    }),
+  );
   (m.attachments ?? []).forEach((a, i) =>
     children.push({
       name: `__attach_version1.0_#${i.toString(16).toUpperCase().padStart(8, "0")}`,
-      children: propStorage(a.props, 8, a.embedded ? [{ name: "__substg1.0_3701000D", children: messageNodes(a.embedded, 24) }] : []),
+      children: propStorage(
+        a.props,
+        8,
+        a.embedded
+          ? [{ name: "__substg1.0_3701000D", children: messageNodes(a.embedded, 24) }]
+          : [],
+      ),
     }),
   );
   return propStorage(m.props, headerSize, children);

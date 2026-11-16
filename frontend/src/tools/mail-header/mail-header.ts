@@ -17,7 +17,16 @@ export interface Hop {
   raw: string;
 }
 
-export type AuthResult = "pass" | "fail" | "softfail" | "neutral" | "none" | "temperror" | "permerror" | "bestguesspass" | string;
+export type AuthResult =
+  | "pass"
+  | "fail"
+  | "softfail"
+  | "neutral"
+  | "none"
+  | "temperror"
+  | "permerror"
+  | "bestguesspass"
+  | string;
 
 export interface AuthCheck {
   method: string;
@@ -42,7 +51,10 @@ export interface HeaderAnalysis {
 
 /** Header einlesen: Zeilenumbrüche normalisieren, Fortsetzungszeilen zusammenfügen, beim Body aufhören. */
 export function parseHeaders(raw: string): Header[] {
-  const lines = raw.replace(/\r\n?/g, "\n").replace(/^\s*\n/, "").split("\n");
+  const lines = raw
+    .replace(/\r\n?/g, "\n")
+    .replace(/^\s*\n/, "")
+    .split("\n");
   const headers: Header[] = [];
   for (const line of lines) {
     if (line.trim() === "") {
@@ -71,33 +83,41 @@ export function getFirst(headers: Header[], name: string): string | undefined {
 
 /** RFC 2047: =?UTF-8?B?…?= / =?iso-8859-1?Q?…?= dekodieren */
 export function decodeEncodedWords(value: string): string {
-  return value.replace(/(\?=)\s+(=\?)/g, "$1$2").replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (match, charset: string, enc: string, text: string) => {
-    try {
-      let bytes: Uint8Array;
-      if (enc.toUpperCase() === "B") {
-        bytes = Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
-      } else {
-        const out: number[] = [];
-        const s = text.replace(/_/g, " ");
-        for (let i = 0; i < s.length; i++) {
-          if (s[i] === "=" && /^[0-9a-f]{2}$/i.test(s.slice(i + 1, i + 3))) {
-            out.push(parseInt(s.slice(i + 1, i + 3), 16));
-            i += 2;
+  return value
+    .replace(/(\?=)\s+(=\?)/g, "$1$2")
+    .replace(
+      /=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g,
+      (match, charset: string, enc: string, text: string) => {
+        try {
+          let bytes: Uint8Array;
+          if (enc.toUpperCase() === "B") {
+            bytes = Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
           } else {
-            out.push(s.charCodeAt(i));
+            const out: number[] = [];
+            const s = text.replace(/_/g, " ");
+            for (let i = 0; i < s.length; i++) {
+              if (s[i] === "=" && /^[0-9a-f]{2}$/i.test(s.slice(i + 1, i + 3))) {
+                out.push(parseInt(s.slice(i + 1, i + 3), 16));
+                i += 2;
+              } else {
+                out.push(s.charCodeAt(i));
+              }
+            }
+            bytes = Uint8Array.from(out);
           }
+          return new TextDecoder(charset.toLowerCase()).decode(bytes);
+        } catch {
+          return match;
         }
-        bytes = Uint8Array.from(out);
-      }
-      return new TextDecoder(charset.toLowerCase()).decode(bytes);
-    } catch {
-      return match;
-    }
-  });
+      },
+    );
 }
 
 export function parseMailDate(value: string): Date | null {
-  const cleaned = value.replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  const cleaned = value
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   const t = Date.parse(cleaned);
   return Number.isNaN(t) ? null : new Date(t);
 }
@@ -138,7 +158,10 @@ export function parseAuthResults(values: string[]): AuthCheck[] {
       const method = m[1]!.toLowerCase();
       if (checks.some((c) => c.method === method)) continue; // oberster (neuester) Eintrag zählt
       const details: Record<string, string> = {};
-      const rest = segment.trim().slice(m[0].length).replace(/\([^)]*\)/g, " ");
+      const rest = segment
+        .trim()
+        .slice(m[0].length)
+        .replace(/\([^)]*\)/g, " ");
       for (const kv of rest.matchAll(/([a-z][a-z0-9.-]*)=("[^"]*"|[^\s;]+)/gi)) {
         details[kv[1]!.toLowerCase()] = kv[2]!.replace(/^"|"$/g, "");
       }
@@ -171,7 +194,10 @@ const sfvLabels: Record<string, string> = {
 
 export function analyzeHeaders(raw: string): HeaderAnalysis {
   const headers = parseHeaders(raw);
-  if (headers.length === 0) throw new Error("Keine Header gefunden – bitte die vollständigen Kopfzeilen der E-Mail einfügen.");
+  if (headers.length === 0)
+    throw new Error(
+      "Keine Header gefunden – bitte die vollständigen Kopfzeilen der E-Mail einfügen.",
+    );
 
   const findings: Finding[] = [];
   const get = (n: string) => getFirst(headers, n);
@@ -187,15 +213,27 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
   }
   const dated = hops.filter((h) => h.date);
   const totalSeconds =
-    dated.length >= 2 ? Math.round((dated[dated.length - 1]!.date!.getTime() - dated[0]!.date!.getTime()) / 1000) : null;
+    dated.length >= 2
+      ? Math.round((dated[dated.length - 1]!.date!.getTime() - dated[0]!.date!.getTime()) / 1000)
+      : null;
 
-  if (hops.length === 0) findings.push({ level: "warn", message: "Keine Received-Header – vermutlich nicht die vollständigen Header." });
+  if (hops.length === 0)
+    findings.push({
+      level: "warn",
+      message: "Keine Received-Header – vermutlich nicht die vollständigen Header.",
+    });
   const slow = hops.filter((h) => (h.delaySeconds ?? 0) > 300);
   for (const h of slow) {
-    findings.push({ level: "warn", message: `Hop ${h.index} (${h.by ?? "?"}) hat ${formatDuration(h.delaySeconds!)} Verzögerung.` });
+    findings.push({
+      level: "warn",
+      message: `Hop ${h.index} (${h.by ?? "?"}) hat ${formatDuration(h.delaySeconds!)} Verzögerung.`,
+    });
   }
   if (hops.some((h) => (h.delaySeconds ?? 0) < -60)) {
-    findings.push({ level: "info", message: "Negative Verzögerung – die Uhren der beteiligten Server weichen voneinander ab." });
+    findings.push({
+      level: "info",
+      message: "Negative Verzögerung – die Uhren der beteiligten Server weichen voneinander ab.",
+    });
   }
 
   // Authentifizierung
@@ -207,12 +245,16 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
   }
   for (const a of auth) {
     if (["fail", "permerror"].includes(a.result)) {
-      findings.push({ level: "error", message: `${a.method.toUpperCase()} ist fehlgeschlagen (${a.result}).` });
+      findings.push({
+        level: "error",
+        message: `${a.method.toUpperCase()} ist fehlgeschlagen (${a.result}).`,
+      });
     } else if (["softfail", "temperror"].includes(a.result)) {
       findings.push({ level: "warn", message: `${a.method.toUpperCase()}: ${a.result}.` });
     }
   }
-  if (auth.length === 0) findings.push({ level: "info", message: "Keine Authentication-Results vorhanden." });
+  if (auth.length === 0)
+    findings.push({ level: "info", message: "Keine Authentication-Results vorhanden." });
 
   // Absender-Auffälligkeiten
   const from = get("From");
@@ -220,10 +262,16 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
   const replyDomain = domainOf(get("Reply-To"));
   const returnDomain = domainOf(get("Return-Path"));
   if (fromDomain && replyDomain && !sameOrgDomain(fromDomain, replyDomain)) {
-    findings.push({ level: "warn", message: `Reply-To (${replyDomain}) gehört nicht zur Absender-Domain (${fromDomain}) – Antworten gehen woanders hin.` });
+    findings.push({
+      level: "warn",
+      message: `Reply-To (${replyDomain}) gehört nicht zur Absender-Domain (${fromDomain}) – Antworten gehen woanders hin.`,
+    });
   }
   if (fromDomain && returnDomain && !sameOrgDomain(fromDomain, returnDomain)) {
-    findings.push({ level: "info", message: `Return-Path (${returnDomain}) weicht von der Absender-Domain (${fromDomain}) ab – bei Newslettern üblich, sonst prüfen.` });
+    findings.push({
+      level: "info",
+      message: `Return-Path (${returnDomain}) weicht von der Absender-Domain (${fromDomain}) ab – bei Newslettern üblich, sonst prüfen.`,
+    });
   }
 
   // Microsoft-Spamfilter
@@ -233,10 +281,21 @@ export function analyzeHeaders(raw: string): HeaderAnalysis {
   const ff = forefront ? parseKeyValueList(forefront) : {};
   const sclValue = scl ?? ff.SCL;
   if (sclValue !== undefined) {
-    spamInfo.push({ label: "SCL (Spam Confidence Level)", value: `${sclValue}${Number(sclValue) >= 5 ? " – als Spam eingestuft" : ""}` });
-    if (Number(sclValue) >= 5) findings.push({ level: "warn", message: `Microsoft hat die Nachricht als Spam eingestuft (SCL ${sclValue}).` });
+    spamInfo.push({
+      label: "SCL (Spam Confidence Level)",
+      value: `${sclValue}${Number(sclValue) >= 5 ? " – als Spam eingestuft" : ""}`,
+    });
+    if (Number(sclValue) >= 5)
+      findings.push({
+        level: "warn",
+        message: `Microsoft hat die Nachricht als Spam eingestuft (SCL ${sclValue}).`,
+      });
   }
-  if (ff.SFV) spamInfo.push({ label: "SFV (Filterurteil)", value: `${ff.SFV}${sfvLabels[ff.SFV] ? ` – ${sfvLabels[ff.SFV]}` : ""}` });
+  if (ff.SFV)
+    spamInfo.push({
+      label: "SFV (Filterurteil)",
+      value: `${ff.SFV}${sfvLabels[ff.SFV] ? ` – ${sfvLabels[ff.SFV]}` : ""}`,
+    });
   if (ff.CIP) spamInfo.push({ label: "CIP (verbindende IP)", value: ff.CIP });
   if (ff.CTRY) spamInfo.push({ label: "CTRY (Land)", value: ff.CTRY });
   if (ff.CAT) spamInfo.push({ label: "CAT (Kategorie)", value: ff.CAT });

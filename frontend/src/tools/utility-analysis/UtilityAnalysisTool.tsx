@@ -71,9 +71,7 @@ export default function UtilityAnalysisTool() {
             <Tile
               value={dec(result.weightSum)}
               label={
-                weightsComplete
-                  ? "Summe der Gewichte"
-                  : "Summe der Gewichte, auf 100 % umgerechnet"
+                weightsComplete ? "Summe der Gewichte" : "Summe der Gewichte, auf 100 % umgerechnet"
               }
               tone={weightsComplete ? "neutral" : "warn"}
             />
@@ -153,8 +151,8 @@ export default function UtilityAnalysisTool() {
             <p className="small">
               Gewichtet = Punkte × Gewicht. Der Nutzwert ist die Summe je Alternative. Liegen zwei
               Alternativen dicht beieinander, entscheidet schon eine kleine Änderung an Gewichten
-              oder Punkten; dann lohnt ein zweiter Blick auf die Annahmen. Muss-Kriterien gehören vor
-              die Nutzwertanalyse: Was sie nicht erfüllt, fällt raus.
+              oder Punkten; dann lohnt ein zweiter Blick auf die Annahmen. Muss-Kriterien gehören
+              vor die Nutzwertanalyse: Was sie nicht erfüllt, fällt raus.
             </p>
           </ToolSection>
         </>

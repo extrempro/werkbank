@@ -47,8 +47,10 @@ export interface BackupPlan {
 export function backupPlan(i: BackupInput): BackupPlan {
   if (!(i.data > 0)) throw new Error("Datenmenge fehlt.");
   if (!(i.change >= 0 && i.change <= 100)) throw new Error("Änderungsrate zwischen 0 und 100 %.");
-  if (!(i.daysPerWeek >= 1 && i.daysPerWeek <= 7)) throw new Error("Sicherungstage pro Woche: 1 bis 7.");
-  if (i.fullDay >= i.daysPerWeek) throw new Error("Am Tag der Vollsicherung wird laut Plan gar nicht gesichert.");
+  if (!(i.daysPerWeek >= 1 && i.daysPerWeek <= 7))
+    throw new Error("Sicherungstage pro Woche: 1 bis 7.");
+  if (i.fullDay >= i.daysPerWeek)
+    throw new Error("Am Tag der Vollsicherung wird laut Plan gar nicht gesichert.");
   if (!(i.weeks >= 1)) throw new Error("Aufbewahrung: mindestens 1 Woche.");
   if (!(i.savings >= 0 && i.savings < 100)) throw new Error("Einsparung zwischen 0 und 99 %.");
   const days: BackupDay[] = [];
@@ -69,17 +71,34 @@ export function backupPlan(i: BackupInput): BackupPlan {
     let size = i.data;
     if (i.strategy !== "full" && sinceFull !== 0) {
       type = i.strategy === "incremental" ? "inkrementell" : "differenziell";
-      size = Math.min(i.data, (i.data * i.change * (i.strategy === "incremental" ? sincePrev : sinceFull)) / 100);
+      size = Math.min(
+        i.data,
+        (i.data * i.change * (i.strategy === "incremental" ? sincePrev : sinceFull)) / 100,
+      );
     }
     const stored = size * (1 - i.savings / 100);
-    days.push({ day: d, type, size, stored, seconds: i.throughput > 0 ? size / (i.throughput * 1e6) : 0 });
+    days.push({
+      day: d,
+      type,
+      size,
+      stored,
+      seconds: i.throughput > 0 ? size / (i.throughput * 1e6) : 0,
+    });
   }
   const weekStored = days.reduce((n, d) => n + d.stored, 0);
-  return { days, weekStored, totalStored: weekStored * i.weeks, longestSeconds: Math.max(...days.map((d) => d.seconds)) };
+  return {
+    days,
+    weekStored,
+    totalStored: weekStored * i.weeks,
+    longestSeconds: Math.max(...days.map((d) => d.seconds)),
+  };
 }
 
 /** Welche Sicherungen braucht man, um den Stand nach der Sicherung an Tag `day` wiederherzustellen? */
-export function restoreChain(i: BackupInput, day: number): { day: number; type: BackupDay["type"] }[] {
+export function restoreChain(
+  i: BackupInput,
+  day: number,
+): { day: number; type: BackupDay["type"] }[] {
   const plan = backupPlan(i).days;
   if (plan[day]!.type === "–") throw new Error("An diesem Tag gibt es keine Sicherung.");
   const chain: { day: number; type: BackupDay["type"] }[] = [];

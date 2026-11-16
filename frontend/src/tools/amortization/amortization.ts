@@ -33,7 +33,8 @@ export interface AmortResult {
 
 export function amortization(i: AmortInput): AmortResult {
   if (!(i.investment > 0)) throw new Error("Investition fehlt.");
-  if (!(i.years >= 1 && i.years <= 100)) throw new Error("Nutzungsdauer zwischen 1 und 100 Jahren.");
+  if (!(i.years >= 1 && i.years <= 100))
+    throw new Error("Nutzungsdauer zwischen 1 und 100 Jahren.");
   const net = i.returns - i.costs;
   const q = 1 + i.interest / 100;
   const rows: AmortYear[] = [];
@@ -63,6 +64,9 @@ export function yearsText(y: number): string {
   const months = Math.round(y * 12);
   const yy = Math.floor(months / 12);
   const mm = months % 12;
-  const parts = [yy ? `${yy} ${yy === 1 ? "Jahr" : "Jahre"}` : "", mm ? `${mm} ${mm === 1 ? "Monat" : "Monate"}` : ""].filter(Boolean);
+  const parts = [
+    yy ? `${yy} ${yy === 1 ? "Jahr" : "Jahre"}` : "",
+    mm ? `${mm} ${mm === 1 ? "Monat" : "Monate"}` : "",
+  ].filter(Boolean);
   return parts.join(" ") || "sofort";
 }

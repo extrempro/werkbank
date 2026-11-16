@@ -29,7 +29,8 @@ export function decodeText(bytes: Uint8Array, charset = "utf-8"): string {
   const label = charset.trim().toLowerCase().replace(/^"|"$/g, "") || "utf-8";
   try {
     // „us-ascii“ ist in der Praxis oft doch UTF-8 oder Latin-1
-    if (label === "us-ascii" || label === "ascii") return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    if (label === "us-ascii" || label === "ascii")
+      return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     return new TextDecoder(label).decode(bytes);
   } catch {
     try {
@@ -40,7 +41,10 @@ export function decodeText(bytes: Uint8Array, charset = "utf-8"): string {
   }
 }
 
-function parseContentType(value: string | undefined): { type: string; params: Record<string, string> } {
+function parseContentType(value: string | undefined): {
+  type: string;
+  params: Record<string, string>;
+} {
   const v = value ?? "text/plain";
   const [type = "text/plain", ...rest] = v.split(";");
   const params: Record<string, string> = {};
@@ -61,12 +65,17 @@ function decodeTransfer(body: string, encoding: string | undefined): Uint8Array 
     }
   }
   if (enc === "quoted-printable") {
-    return fromBinary(body.replace(/=\r?\n/g, "").replace(/=([0-9A-Fa-f]{2})/g, (_, h: string) => String.fromCharCode(parseInt(h, 16))));
+    return fromBinary(
+      body
+        .replace(/=\r?\n/g, "")
+        .replace(/=([0-9A-Fa-f]{2})/g, (_, h: string) => String.fromCharCode(parseInt(h, 16))),
+    );
   }
   return fromBinary(body);
 }
 
-const header = (headers: Header[], name: string) => headers.find((h) => h.name.toLowerCase() === name)?.value;
+const header = (headers: Header[], name: string) =>
+  headers.find((h) => h.name.toLowerCase() === name)?.value;
 
 function parseBinary(src: string, depth: number): MimePart {
   const split = /\r?\n\r?\n/.exec(src);
@@ -76,7 +85,14 @@ function parseBinary(src: string, depth: number): MimePart {
   const headerText = decodeText(fromBinary(headerBin), "utf-8");
   const headers = parseHeaders(headerText);
   const { type, params } = parseContentType(header(headers, "content-type"));
-  const part: MimePart = { headers, headerText, contentType: type, params, body: new Uint8Array(0), parts: [] };
+  const part: MimePart = {
+    headers,
+    headerText,
+    contentType: type,
+    params,
+    body: new Uint8Array(0),
+    parts: [],
+  };
 
   if (type.startsWith("multipart/") && params.boundary && depth < 20) {
     const b = params.boundary.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

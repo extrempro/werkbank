@@ -16,7 +16,12 @@ export interface LoadedMail {
 function fromMime(root: MimePart, kind: LoadedMail["kind"]): LoadedMail {
   const bounce = bounceFromMime(root);
   const notes: string[] = [];
-  if (bounce && !root.parts.length && !root.body.length && !bounce.recipients.some((r) => r.address || r.status || r.diagnostic)) {
+  if (
+    bounce &&
+    !root.parts.length &&
+    !root.body.length &&
+    !bounce.recipients.some((r) => r.address || r.status || r.diagnostic)
+  ) {
     notes.push(
       "Das ist ein Rückläufer, eingefügt sind aber nur die Kopfzeilen. Für Empfänger, Fehlercode und Ursache bitte den vollständigen Quelltext einfügen (in Outlook: „Nachrichtenquelle anzeigen“) oder die Datei hierher ziehen.",
     );
@@ -43,6 +48,7 @@ export function loadFile(name: string, bytes: Uint8Array): LoadedMail {
     }
     return { headerText, bounce, notes, kind: "msg" };
   }
-  if (/\.msg$/i.test(name)) throw new Error("Die Datei endet auf .msg, ist aber keine Outlook-Nachricht.");
+  if (/\.msg$/i.test(name))
+    throw new Error("Die Datei endet auf .msg, ist aber keine Outlook-Nachricht.");
   return fromMime(parseMimeBytes(bytes), "eml");
 }

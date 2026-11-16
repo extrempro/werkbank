@@ -45,12 +45,27 @@ export function parseActivities(text: string): { activities: Activity[]; errors:
   return { activities, errors };
 }
 
-export function computePlan(acts: Activity[]): { nodes: Node[]; duration: number; criticalPath: string[] } {
+export function computePlan(acts: Activity[]): {
+  nodes: Node[];
+  duration: number;
+  criticalPath: string[];
+} {
   if (!acts.length) throw new Error("Keine Vorgänge angegeben.");
   const byId = new Map<string, Node>();
   for (const a of acts) {
     if (byId.has(a.id)) throw new Error(`Vorgang „${a.id}“ kommt doppelt vor.`);
-    byId.set(a.id, { ...a, faz: 0, fez: 0, saz: 0, sez: 0, gp: 0, fp: 0, critical: false, succs: [], rank: 0 });
+    byId.set(a.id, {
+      ...a,
+      faz: 0,
+      fez: 0,
+      saz: 0,
+      sez: 0,
+      gp: 0,
+      fp: 0,
+      critical: false,
+      succs: [],
+      rank: 0,
+    });
   }
   for (const n of byId.values()) {
     for (const p of n.preds) {
@@ -72,7 +87,10 @@ export function computePlan(acts: Activity[]): { nodes: Node[]; duration: number
       if (open.get(s) === 0) queue.push(s);
     }
   }
-  if (order.length !== byId.size) throw new Error(`Die Vorgänger bilden eine Schleife (betroffen: ${[...byId.keys()].filter((id) => !order.some((o) => o.id === id)).join(", ")}).`);
+  if (order.length !== byId.size)
+    throw new Error(
+      `Die Vorgänger bilden eine Schleife (betroffen: ${[...byId.keys()].filter((id) => !order.some((o) => o.id === id)).join(", ")}).`,
+    );
 
   for (const n of order) {
     n.faz = Math.max(0, ...n.preds.map((p) => byId.get(p)!.fez));
@@ -93,7 +111,9 @@ export function computePlan(acts: Activity[]): { nodes: Node[]; duration: number
   while (cur) {
     criticalPath.push(cur.id);
     const c: Node = cur;
-    cur = c.succs.map((s) => byId.get(s)!).find((s) => s.critical && Math.abs(s.faz - c.fez) < 1e-9);
+    cur = c.succs
+      .map((s) => byId.get(s)!)
+      .find((s) => s.critical && Math.abs(s.faz - c.fez) < 1e-9);
   }
   return { nodes: acts.map((a) => byId.get(a.id)!), duration, criticalPath };
 }
@@ -106,7 +126,8 @@ export interface Row {
   preds: string;
 }
 
-const isHeader = (p: string[]) => p.length >= 3 && p[2] !== "" && Number.isNaN(Number((p[2] ?? "").replace(",", ".")));
+const isHeader = (p: string[]) =>
+  p.length >= 3 && p[2] !== "" && Number.isNaN(Number((p[2] ?? "").replace(",", ".")));
 
 /** Text (aus URL oder Zwischenablage) → Tabellenzeilen; eine Kopfzeile wird übersprungen */
 export function parseRows(text: string): Row[] {
@@ -115,14 +136,20 @@ export function parseRows(text: string): Row[] {
     if (!line.trim() || line.trim().startsWith("#")) return;
     const p = line.split(/[;\t]/).map((x) => x.trim());
     if (idx === 0 && isHeader(p)) return;
-    rows.push({ id: p[0] ?? "", name: p[1] ?? "", duration: p[2] ?? "", preds: /^[-–—]$/.test(p[3] ?? "") ? "" : (p[3] ?? "") });
+    rows.push({
+      id: p[0] ?? "",
+      name: p[1] ?? "",
+      duration: p[2] ?? "",
+      preds: /^[-–—]$/.test(p[3] ?? "") ? "" : (p[3] ?? ""),
+    });
   });
   return rows;
 }
 
 const clean = (s: string) => s.replace(/[;\t\r\n]/g, " ");
 
-export const formatRows = (rows: Row[]): string => rows.map((r) => [r.id, r.name, r.duration, r.preds].map(clean).join("; ")).join("\n");
+export const formatRows = (rows: Row[]): string =>
+  rows.map((r) => [r.id, r.name, r.duration, r.preds].map(clean).join("; ")).join("\n");
 
 /** nächste freie Nummer: A, B, … Z, dann V27, V28 … */
 export function nextId(rows: Row[]): string {

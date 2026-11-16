@@ -18,10 +18,16 @@ describe("parseActivities", () => {
     expect(activities[3]!.preds).toEqual(["B", "C"]);
   });
   it("meldet kaputte Zeilen", () => {
-    expect(parseActivities("A; x; 1\nB; y; ; A\n; z; 2; ").errors).toEqual(["Zeile 2: Dauer fehlt oder ist keine Zahl.", "Zeile 3: Nr. fehlt."]);
+    expect(parseActivities("A; x; 1\nB; y; ; A\n; z; 2; ").errors).toEqual([
+      "Zeile 2: Dauer fehlt oder ist keine Zahl.",
+      "Zeile 3: Nr. fehlt.",
+    ]);
   });
   it("überspringt leere Tabellenzeilen", () => {
-    expect(parseActivities("A; x; 1; \n; ; ; ")).toEqual({ activities: [{ id: "A", name: "x", duration: 1, preds: [] }], errors: [] });
+    expect(parseActivities("A; x; 1; \n; ; ; ")).toEqual({
+      activities: [{ id: "A", name: "x", duration: 1, preds: [] }],
+      errors: [],
+    });
   });
 });
 
@@ -30,7 +36,15 @@ describe("computePlan", () => {
   const n = (id: string) => nodes.find((x) => x.id === id)!;
   it("Vorwärts- und Rückwärtsrechnung", () => {
     expect(duration).toBe(13);
-    expect(n("D")).toMatchObject({ faz: 8, fez: 12, saz: 8, sez: 12, gp: 0, fp: 0, critical: true });
+    expect(n("D")).toMatchObject({
+      faz: 8,
+      fez: 12,
+      saz: 8,
+      sez: 12,
+      gp: 0,
+      fp: 0,
+      critical: true,
+    });
     expect(n("C")).toMatchObject({ faz: 3, fez: 5, saz: 6, sez: 8, gp: 3, fp: 0, critical: false });
     expect(n("E")).toMatchObject({ faz: 5, fez: 6, saz: 11, sez: 12, gp: 6, fp: 6 });
   });
@@ -41,7 +55,9 @@ describe("computePlan", () => {
     expect(nodes.map((x) => x.rank)).toEqual([0, 1, 1, 2, 2, 3]);
   });
   it("erkennt Schleifen und unbekannte Vorgänger", () => {
-    expect(() => computePlan(parseActivities("A; a; 1; B\nB; b; 1; A").activities)).toThrow("Schleife");
+    expect(() => computePlan(parseActivities("A; a; 1; B\nB; b; 1; A").activities)).toThrow(
+      "Schleife",
+    );
     expect(() => computePlan(parseActivities("A; a; 1; X").activities)).toThrow("gibt es nicht");
     expect(() => computePlan(parseActivities("A; a; 1\nA; b; 1").activities)).toThrow("doppelt");
   });
@@ -59,10 +75,17 @@ describe("Tabellenzeilen", () => {
     expect(parseActivities(formatRows(again)).activities).toHaveLength(6);
   });
   it("liest Excel-Zeilen mit Tabulator", () => {
-    expect(parseRows("A\tx\t2\t\nB\ty\t1\tA")[1]).toEqual({ id: "B", name: "y", duration: "1", preds: "A" });
+    expect(parseRows("A\tx\t2\t\nB\ty\t1\tA")[1]).toEqual({
+      id: "B",
+      name: "y",
+      duration: "1",
+      preds: "A",
+    });
   });
   it("Semikolon im Namen zerstört die Zeile nicht", () => {
-    expect(parseRows(formatRows([{ id: "A", name: "a; b", duration: "1", preds: "" }]))[0]!.name).toBe("a  b");
+    expect(
+      parseRows(formatRows([{ id: "A", name: "a; b", duration: "1", preds: "" }]))[0]!.name,
+    ).toBe("a  b");
   });
   it("nächste freie Nummer", () => {
     expect(nextId(parseRows(text))).toBe("G");

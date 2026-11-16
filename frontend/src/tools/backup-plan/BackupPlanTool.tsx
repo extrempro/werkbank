@@ -48,7 +48,9 @@ export default function BackupPlanTool() {
   let error: string | null = null;
   try {
     if (!size) {
-      throw new Error("Bitte die Datenmenge mit Einheit angeben, zum Beispiel „2 TB“ oder „500 GB“.");
+      throw new Error(
+        "Bitte die Datenmenge mit Einheit angeben, zum Beispiel „2 TB“ oder „500 GB“.",
+      );
     }
     input = {
       data: size.bits / 8,
@@ -118,7 +120,9 @@ export default function BackupPlanTool() {
               <select value={days} onChange={(event) => setParams({ tage: event.target.value })}>
                 {[5, 6, 7].map((count) => (
                   <option key={count} value={count}>
-                    {count === 7 ? "täglich (Mo bis So)" : `${count} Tage (Mo bis ${weekdays[count - 1]})`}
+                    {count === 7
+                      ? "täglich (Mo bis So)"
+                      : `${count} Tage (Mo bis ${weekdays[count - 1]})`}
                   </option>
                 ))}
               </select>
@@ -241,10 +245,10 @@ export default function BackupPlanTool() {
                 ? `, bei ${params.durchsatz} MB/s mindestens ${durationText(chainSize / (speed * 1e6))}`
                 : ""}
               . Fehlt eine Sicherung der Kette oder ist sie defekt, lässt sich alles danach nicht
-              mehr wiederherstellen; deshalb Wiederherstellungen regelmäßig testen. Der Plan ist eine
-              Abschätzung: Mehrfach geänderte Dateien zählen bei differenziellen Sicherungen nur
-              einmal, der echte Bedarf liegt also eher darunter. Faustregel 3-2-1: drei Kopien, zwei
-              Medien, eine außer Haus.
+              mehr wiederherstellen; deshalb Wiederherstellungen regelmäßig testen. Der Plan ist
+              eine Abschätzung: Mehrfach geänderte Dateien zählen bei differenziellen Sicherungen
+              nur einmal, der echte Bedarf liegt also eher darunter. Faustregel 3-2-1: drei Kopien,
+              zwei Medien, eine außer Haus.
             </p>
           </ToolSection>
         </>

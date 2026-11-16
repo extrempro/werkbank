@@ -39,17 +39,24 @@ const clean = (v: string | undefined) => v?.replace(/\s+/g, " ").trim() || undef
 
 // ---------- Zustellbericht (message/delivery-status) ----------
 
-export function parseDeliveryStatus(text: string): { reportingMta?: string; arrivalDate?: string; recipients: BounceRecipient[] } {
+export function parseDeliveryStatus(text: string): {
+  reportingMta?: string;
+  arrivalDate?: string;
+  recipients: BounceRecipient[];
+} {
   const blocks = text
     .replace(/\r\n?/g, "\n")
     .split(/\n[ \t]*\n/)
     .map((b) => parseHeaders(b))
     .filter((h) => h.length);
-  const get = (h: ReturnType<typeof parseHeaders>, n: string) => h.find((x) => x.name.toLowerCase() === n)?.value;
+  const get = (h: ReturnType<typeof parseHeaders>, n: string) =>
+    h.find((x) => x.name.toLowerCase() === n)?.value;
   const first = blocks[0] ?? [];
-  const isRecipientBlock = (h: ReturnType<typeof parseHeaders>) => !!(get(h, "final-recipient") || get(h, "original-recipient"));
+  const isRecipientBlock = (h: ReturnType<typeof parseHeaders>) =>
+    !!(get(h, "final-recipient") || get(h, "original-recipient"));
   const recipients = blocks.filter(isRecipientBlock).map((h) => {
-    const final = stripType(get(h, "final-recipient")) ?? stripType(get(h, "original-recipient")) ?? "";
+    const final =
+      stripType(get(h, "final-recipient")) ?? stripType(get(h, "original-recipient")) ?? "";
     return {
       address: final.replace(/^<|>$/g, ""),
       originalRecipient: stripType(get(h, "original-recipient"))?.replace(/^<|>$/g, ""),
@@ -89,7 +96,11 @@ const ORIGINAL_MARKERS = [
 function splitOriginal(text: string): { human: string; original?: string } {
   for (const re of ORIGINAL_MARKERS) {
     const m = re.exec(text);
-    if (m) return { human: text.slice(0, m.index), original: text.slice(m.index + m[0].length).replace(/^\s*\n/, "") };
+    if (m)
+      return {
+        human: text.slice(0, m.index),
+        original: text.slice(m.index + m[0].length).replace(/^\s*\n/, ""),
+      };
   }
   return { human: text };
 }
@@ -97,7 +108,9 @@ function splitOriginal(text: string): { human: string; original?: string } {
 /** Empfänger und Fehlermeldungen aus einer Textmeldung (Postfix, Exim, qmail, Exchange …) */
 export function parseTextBounce(text: string, ignore: string[] = []): BounceRecipient[] {
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
-  const skip = (a: string) => /^(?:mailer-daemon|postmaster|noreply|no-reply|abuse)@/i.test(a) || ignore.some((i) => i.toLowerCase() === a.toLowerCase());
+  const skip = (a: string) =>
+    /^(?:mailer-daemon|postmaster|noreply|no-reply|abuse)@/i.test(a) ||
+    ignore.some((i) => i.toLowerCase() === a.toLowerCase());
   const found = new Map<string, BounceRecipient>();
   const recipientLine = [
     /^\s*<([^>\s]+@[^>\s]+)>\s*:?/, // Postfix: <user@x>: host … said: …
@@ -123,7 +136,10 @@ export function parseTextBounce(text: string, ignore: string[] = []): BounceReci
     }
     if (!addr || skip(addr)) continue;
     // Diagnose: der Rest der Zeile und folgende Zeilen; ohne SMTP-Antwort auch noch den nächsten Absatz
-    const rest = line.slice(line.indexOf(addr) + addr.length).replace(/^[>:\s]+/, "").replace(/^[.,;:\s]+$/, "");
+    const rest = line
+      .slice(line.indexOf(addr) + addr.length)
+      .replace(/^[>:\s]+/, "")
+      .replace(/^[.,;:\s]+$/, "");
     const block: string[] = rest ? [rest] : [];
     const hasCode = () => /\b[245]\d\d\b|\b[245]\.\d{1,3}\.\d{1,3}\b/.test(block.join(" "));
     let blanks = 0;
@@ -133,7 +149,11 @@ export function parseTextBounce(text: string, ignore: string[] = []): BounceReci
         if (block.length && (hasCode() || ++blanks > 1)) break;
         continue;
       }
-      if (recipientLine.slice(0, 3).some((re) => re.test(l)) || ORIGINAL_MARKERS.some((re) => re.test(l))) break;
+      if (
+        recipientLine.slice(0, 3).some((re) => re.test(l)) ||
+        ORIGINAL_MARKERS.some((re) => re.test(l))
+      )
+        break;
       block.push(l.trim());
     }
     const diag = compactSmtp(clean(block.join(" ")));
@@ -143,8 +163,14 @@ export function parseTextBounce(text: string, ignore: string[] = []): BounceReci
       found.set(addr.toLowerCase(), {
         address: addr,
         status,
-        diagnostic: diag && /\d{3}|error|fail|reject|denied|unknown|not|said|refused|timed? ?out|exceed/i.test(diag) ? diag : prev?.diagnostic,
-        remoteMta: /host\s+([\w.-]+\.[a-z]{2,})(?:\[[\d.:a-f]+\])?\s+said/i.exec(diag ?? "")?.[1] ?? prev?.remoteMta,
+        diagnostic:
+          diag &&
+          /\d{3}|error|fail|reject|denied|unknown|not|said|refused|timed? ?out|exceed/i.test(diag)
+            ? diag
+            : prev?.diagnostic,
+        remoteMta:
+          /host\s+([\w.-]+\.[a-z]{2,})(?:\[[\d.:a-f]+\])?\s+said/i.exec(diag ?? "")?.[1] ??
+          prev?.remoteMta,
         action: status?.startsWith("4") ? "delayed" : "failed",
       });
     }
@@ -154,20 +180,34 @@ export function parseTextBounce(text: string, ignore: string[] = []): BounceReci
 
 const BOUNCE_SUBJECT =
   /undeliver|unzustellbar|nicht zustellbar|delivery status notification|delivery (?:failure|failed|has failed|problem)|failure notice|returned mail|mail delivery (?:failed|subsystem|system)|returned to sender|non-?delivery|zustellung (?:ist )?fehlgeschlagen|rückläufer|warning: could not send|delayed mail|zustellung verzögert|message not delivered/i;
-const BOUNCE_FROM = /mailer-daemon|postmaster|mail delivery (?:system|subsystem)|microsoftexchange[0-9a-f]+@|mail ?administrator/i;
+const BOUNCE_FROM =
+  /mailer-daemon|postmaster|mail delivery (?:system|subsystem)|microsoftexchange[0-9a-f]+@|mail ?administrator/i;
 
 // ---------- aus MIME (.eml / eingefügter Quelltext) ----------
 
 export function bounceFromMime(root: MimePart): Bounce | null {
   const subject = getHeader(root.headers, "subject") ?? "";
   const from = getHeader(root.headers, "from") ?? "";
-  const reportType = root.contentType === "multipart/report" ? (root.params["report-type"] ?? "").toLowerCase() : "";
+  const reportType =
+    root.contentType === "multipart/report" ? (root.params["report-type"] ?? "").toLowerCase() : "";
   if (reportType && reportType !== "delivery-status") return null; // z. B. Missbrauchs-Berichte (ARF), Lesebestätigungen
   const parts = [...walkParts(root)];
-  const dsnPart = parts.find((p) => p.contentType === "message/delivery-status" || p.contentType === "message/global-delivery-status");
+  const dsnPart = parts.find(
+    (p) =>
+      p.contentType === "message/delivery-status" ||
+      p.contentType === "message/global-delivery-status",
+  );
   const textParts = parts.filter((p) => p.contentType === "text/plain" && !p.parts.length);
-  const firstText = textParts[0] ? textOf(textParts[0]) : root.contentType.startsWith("text/") ? textOf(root) : "";
-  const looksLikeBounce = !!dsnPart || BOUNCE_SUBJECT.test(subject) || BOUNCE_FROM.test(from) || /"notificationType"\s*:\s*"Bounce"/.test(firstText);
+  const firstText = textParts[0]
+    ? textOf(textParts[0])
+    : root.contentType.startsWith("text/")
+      ? textOf(root)
+      : "";
+  const looksLikeBounce =
+    !!dsnPart ||
+    BOUNCE_SUBJECT.test(subject) ||
+    BOUNCE_FROM.test(from) ||
+    /"notificationType"\s*:\s*"Bounce"/.test(firstText);
   if (!looksLikeBounce) return null;
   const htmlPart = !firstText ? parts.find((p) => p.contentType === "text/html") : undefined;
   const humanFull = firstText || (htmlPart ? htmlToText(textOf(htmlPart)) : "");
@@ -176,14 +216,25 @@ export function bounceFromMime(root: MimePart): Bounce | null {
   // Original-Nachricht: eingebettete Nachricht, nur Header oder Text hinter einer Markierung
   let original: Bounce["original"];
   const msgPart = parts.find((p) => p.message);
-  const hdrPart = parts.find((p) => p.contentType === "text/rfc822-headers" || p.contentType === "message/rfc822-headers" || p.contentType === "text/rfc822-header");
+  const hdrPart = parts.find(
+    (p) =>
+      p.contentType === "text/rfc822-headers" ||
+      p.contentType === "message/rfc822-headers" ||
+      p.contentType === "text/rfc822-header",
+  );
   if (msgPart?.message) original = { headers: msgPart.message.headerText, complete: true };
   else if (hdrPart) original = { headers: textOf(hdrPart), complete: false };
   else {
     // manche Server hängen die Original-Nachricht als weiteren Textteil an
-    const textOriginal = textParts.slice(1).map(textOf).find((t) => /^(?:Received|Return-Path|From|Message-ID|Date|Subject):/im.test(t.slice(0, 2000)));
+    const textOriginal = textParts
+      .slice(1)
+      .map(textOf)
+      .find((t) =>
+        /^(?:Received|Return-Path|From|Message-ID|Date|Subject):/im.test(t.slice(0, 2000)),
+      );
     const candidate = split.original ?? textOriginal;
-    if (candidate && parseHeaders(candidate).length >= 2) original = { headers: candidate.split(/\r?\n\r?\n/)[0]!, complete: false };
+    if (candidate && parseHeaders(candidate).length >= 2)
+      original = { headers: candidate.split(/\r?\n\r?\n/)[0]!, complete: false };
   }
 
   const humanText = split.human.trim().slice(0, 1500) || undefined;
@@ -207,7 +258,14 @@ export function bounceFromMime(root: MimePart): Bounce | null {
   if (!recipients.length) {
     // erkannt, aber ohne verwertbare Angaben: zumindest Code und Meldung zeigen
     const status = findStatus(split.human);
-    recipients = [{ address: "", status, diagnostic: compactSmtp(clean(diagnosticLine(split.human))), action: status?.startsWith("4") ? "delayed" : "failed" }];
+    recipients = [
+      {
+        address: "",
+        status,
+        diagnostic: compactSmtp(clean(diagnosticLine(split.human))),
+        action: status?.startsWith("4") ? "delayed" : "failed",
+      },
+    ];
   }
   return finish({ source: "text", recipients, humanText, original });
 }
@@ -234,7 +292,15 @@ function parseSesJson(text: string): BounceRecipient[] {
   if (start < 0 || !/"notificationType"\s*:\s*"Bounce"/.test(text)) return [];
   try {
     const j = JSON.parse(text.slice(start, text.lastIndexOf("}") + 1)) as {
-      bounce?: { bouncedRecipients?: { emailAddress: string; action?: string; status?: string; diagnosticCode?: string }[]; reportingMTA?: string };
+      bounce?: {
+        bouncedRecipients?: {
+          emailAddress: string;
+          action?: string;
+          status?: string;
+          diagnosticCode?: string;
+        }[];
+        reportingMTA?: string;
+      };
     };
     return (j.bounce?.bouncedRecipients ?? []).map((r) => ({
       address: r.emailAddress,
@@ -249,7 +315,10 @@ function parseSesJson(text: string): BounceRecipient[] {
 
 /** erste Zeile mit SMTP-Antwort, z. B. „550 5.1.1 User unknown“ */
 function diagnosticLine(text: string): string | undefined {
-  return text.split(/\r?\n/).find((l) => /\b[45]\d\d[ -]/.test(l) || /\b[45]\.\d{1,3}\.\d{1,3}\b/.test(l))?.trim();
+  return text
+    .split(/\r?\n/)
+    .find((l) => /\b[45]\d\d[ -]/.test(l) || /\b[45]\.\d{1,3}\.\d{1,3}\b/.test(l))
+    ?.trim();
 }
 
 function htmlToText(html: string): string {
@@ -266,7 +335,8 @@ function htmlToText(html: string): string {
 
 // ---------- aus Outlook (.msg) ----------
 
-export const isReportClass = (cls: string | undefined) => !!cls && /^REPORT\.IPM\..*\.(?:NDR|DR|Delayed\.DR|Relayed\.DR)$/i.test(cls);
+export const isReportClass = (cls: string | undefined) =>
+  !!cls && /^REPORT\.IPM\..*\.(?:NDR|DR|Delayed\.DR|Relayed\.DR)$/i.test(cls);
 
 export function bounceFromMsg(m: MsgMessage): Bounce | null {
   const cls = str(m.props, P.MESSAGE_CLASS);
@@ -291,16 +361,27 @@ export function bounceFromMsg(m: MsgMessage): Bounce | null {
 
   // 2. Outlook-NDR: Angaben je Empfänger in der Empfängerliste
   const ndrRecipients: BounceRecipient[] = m.recipients
-    .filter((r) => r.has(P.SUPPLEMENTARY_INFO) || r.has(P.NDR_DIAG_CODE) || r.has(P.NDR_STATUS_CODE))
+    .filter(
+      (r) => r.has(P.SUPPLEMENTARY_INFO) || r.has(P.NDR_DIAG_CODE) || r.has(P.NDR_STATUS_CODE),
+    )
     .map((r) => {
       const info = str(r, P.SUPPLEMENTARY_INFO);
-      const address = str(r, P.SMTP_ADDRESS) ?? (EMAIL.test(str(r, P.EMAIL_ADDRESS) ?? "") ? str(r, P.EMAIL_ADDRESS)! : (str(r, P.DISPLAY_NAME) ?? ""));
+      const address =
+        str(r, P.SMTP_ADDRESS) ??
+        (EMAIL.test(str(r, P.EMAIL_ADDRESS) ?? "")
+          ? str(r, P.EMAIL_ADDRESS)!
+          : (str(r, P.DISPLAY_NAME) ?? ""));
       const status = findStatus(info ?? "");
       return {
         address,
         status,
         // Outlook: „< #5.1.10 smtp;550 5.1.10 …>“ → „550 5.1.10 …“
-        diagnostic: clean(info?.replace(/^<\s*#?/, "").replace(/>\s*$/, "").replace(/^[245]\.\d{1,3}\.\d{1,3}\s+smtp;\s*/i, "")),
+        diagnostic: clean(
+          info
+            ?.replace(/^<\s*#?/, "")
+            .replace(/>\s*$/, "")
+            .replace(/^[245]\.\d{1,3}\.\d{1,3}\s+smtp;\s*/i, ""),
+        ),
         action: status?.startsWith("4") ? "delayed" : "failed",
         remoteMta: /\[([\w.-]+\.[a-z]{2,})\]/i.exec(info ?? "")?.[1],
       };
@@ -317,7 +398,10 @@ export function bounceFromMsg(m: MsgMessage): Bounce | null {
       r.diagnostic ??= t.diagnostic;
     }
     if (!r.status) {
-      const remote = /(?:Remote server returned|Der Remoteserver hat|Diagnostic information for administrators)[^\n]*\n?[^\n]*/i.exec(body)?.[0];
+      const remote =
+        /(?:Remote server returned|Der Remoteserver hat|Diagnostic information for administrators)[^\n]*\n?[^\n]*/i.exec(
+          body,
+        )?.[0];
       r.status = findStatus(remote ?? "") ?? findStatus(body);
       r.diagnostic ??= clean(remote);
     }
@@ -325,7 +409,14 @@ export function bounceFromMsg(m: MsgMessage): Bounce | null {
   if (!recipients.length) {
     const status = findStatus(body);
     if (!status) return null;
-    recipients = [{ address: "", status, diagnostic: clean(diagnosticLine(body)), action: status.startsWith("4") ? "delayed" : "failed" }];
+    recipients = [
+      {
+        address: "",
+        status,
+        diagnostic: clean(diagnosticLine(body)),
+        action: status.startsWith("4") ? "delayed" : "failed",
+      },
+    ];
   }
 
   // Original: eingebettete Nachricht oder angehängte .eml
@@ -333,7 +424,9 @@ export function bounceFromMsg(m: MsgMessage): Bounce | null {
   for (const a of m.attachments) {
     if (a.embedded) {
       const h = str(a.embedded.props, P.TRANSPORT_HEADERS);
-      original = h ? { headers: h, complete: true } : { headers: synthHeaders(a.embedded), complete: false };
+      original = h
+        ? { headers: h, complete: true }
+        : { headers: synthHeaders(a.embedded), complete: false };
       break;
     }
     if (a.data && (/message\/rfc822/i.test(a.mimeTag ?? "") || /\.eml$/i.test(a.filename ?? ""))) {
@@ -341,7 +434,8 @@ export function bounceFromMsg(m: MsgMessage): Bounce | null {
       break;
     }
   }
-  if (!original && split.original && parseHeaders(split.original).length >= 2) original = { headers: split.original.split(/\r?\n\r?\n/)[0]!, complete: false };
+  if (!original && split.original && parseHeaders(split.original).length >= 2)
+    original = { headers: split.original.split(/\r?\n\r?\n/)[0]!, complete: false };
 
   return finish({
     source: dsn ? "dsn" : "outlook",
@@ -367,7 +461,8 @@ function finish(b: Bounce): Bounce {
     r.status ??= findStatus(r.diagnostic ?? "");
     if (r.status && !/^[245]\.\d{1,3}\.\d{1,3}$/.test(r.status)) r.status = findStatus(r.status);
     r.smtpCode = findSmtpCode(r.diagnostic ?? "");
-    if (!r.action) r.action = r.status?.startsWith("4") || r.smtpCode?.startsWith("4") ? "delayed" : "failed";
+    if (!r.action)
+      r.action = r.status?.startsWith("4") || r.smtpCode?.startsWith("4") ? "delayed" : "failed";
   }
   return b;
 }
@@ -389,5 +484,9 @@ function synthHeaders(m: MsgMessage): string {
   return lines.join("\n");
 }
 
-export const domainOfAddress = (a: string | undefined) => a?.split("@")[1]?.toLowerCase().replace(/[>.]+$/, "");
+export const domainOfAddress = (a: string | undefined) =>
+  a
+    ?.split("@")[1]
+    ?.toLowerCase()
+    .replace(/[>.]+$/, "");
 export const firstEmail = (s: string | undefined) => (s ? EMAIL.exec(s)?.[0] : undefined);

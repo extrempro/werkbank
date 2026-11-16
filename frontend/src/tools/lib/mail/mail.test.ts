@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { bounceFromMime, bounceFromMsg, compactSmtp, parseDeliveryStatus, parseTextBounce } from "./bounce";
+import {
+  bounceFromMime,
+  bounceFromMsg,
+  compactSmtp,
+  parseDeliveryStatus,
+  parseTextBounce,
+} from "./bounce";
 import { readCfb } from "./cfb";
 import { writeMsg } from "./fixtures/write-msg";
 import { parseMimeText, textOf } from "./mime";
@@ -69,10 +75,16 @@ describe("MIME", () => {
     const root = parseMimeText(postfixDsn);
     expect(root.contentType).toBe("multipart/report");
     expect(root.parts.length).toBe(3);
-    expect(root.parts[2]!.message?.headers.find((h) => h.name === "Message-ID")?.value).toBe("<abc@firma.de>");
-    const qp = parseMimeText('Content-Type: text/plain; charset="iso-8859-1"\nContent-Transfer-Encoding: quoted-printable\n\nGr=FC=DFe =\nund mehr');
+    expect(root.parts[2]!.message?.headers.find((h) => h.name === "Message-ID")?.value).toBe(
+      "<abc@firma.de>",
+    );
+    const qp = parseMimeText(
+      'Content-Type: text/plain; charset="iso-8859-1"\nContent-Transfer-Encoding: quoted-printable\n\nGr=FC=DFe =\nund mehr',
+    );
     expect(textOf(qp)).toBe("Grüße und mehr");
-    const b64 = parseMimeText("Content-Type: text/plain; charset=utf-8\nContent-Transfer-Encoding: base64\n\nw4Rw\nZmVs\n");
+    const b64 = parseMimeText(
+      "Content-Type: text/plain; charset=utf-8\nContent-Transfer-Encoding: base64\n\nw4Rw\nZmVs\n",
+    );
     expect(textOf(b64)).toBe("Äpfel");
   });
 });
@@ -83,7 +95,12 @@ describe("Rückläufer", () => {
     expect(b.source).toBe("dsn");
     expect(b.reportingMta).toBe("mx.firma.de");
     expect(b.recipients).toHaveLength(1);
-    expect(b.recipients[0]).toMatchObject({ address: "max.muster@kunde.example", status: "5.4.1", action: "failed", remoteMta: "kunde-example.mail.protection.outlook.com" });
+    expect(b.recipients[0]).toMatchObject({
+      address: "max.muster@kunde.example",
+      status: "5.4.1",
+      action: "failed",
+      remoteMta: "kunde-example.mail.protection.outlook.com",
+    });
     expect(b.recipients[0]!.diagnostic).toContain("Recipient address rejected: Access denied.");
     expect(b.original?.complete).toBe(true);
     expect(b.original?.headers).toContain("Message-ID: <abc@firma.de>");
@@ -123,37 +140,65 @@ Subject: Test
 `;
     const r = parseTextBounce(text);
     expect(r.map((x) => x.address)).toEqual(["info@shop.example"]);
-    const b = bounceFromMime(parseMimeText(`From: Mail Delivery System <Mailer-Daemon@mx.firma.de>\nSubject: Mail delivery failed: returning message to sender\n\n${text}`))!;
-    expect(b.recipients[0]).toMatchObject({ address: "info@shop.example", status: "5.7.1", smtpCode: "550" });
+    const b = bounceFromMime(
+      parseMimeText(
+        `From: Mail Delivery System <Mailer-Daemon@mx.firma.de>\nSubject: Mail delivery failed: returning message to sender\n\n${text}`,
+      ),
+    )!;
+    expect(b.recipients[0]).toMatchObject({
+      address: "info@shop.example",
+      status: "5.7.1",
+      smtpCode: "550",
+    });
     expect(b.recipients[0]!.diagnostic).toContain("zen.spamhaus.org");
-    expect(hintsFor(b.recipients[0]!.status, b.recipients[0]!.diagnostic!, {})[0]!.id).toBe("blocklist");
+    expect(hintsFor(b.recipients[0]!.status, b.recipients[0]!.diagnostic!, {})[0]!.id).toBe(
+      "blocklist",
+    );
     expect(b.original?.headers).toContain("Subject: Test");
   });
 
   it("nur Kopfzeilen eines Rückläufers → Hinweis auf vollständigen Quelltext", () => {
-    const l = loadText("From: Microsoft Outlook <MicrosoftExchange329e71ec88ae4615bbc36ab6ce41109e@firma.de>\nTo: erika@firma.de\nSubject: Unzustellbar: Angebot\n");
+    const l = loadText(
+      "From: Microsoft Outlook <MicrosoftExchange329e71ec88ae4615bbc36ab6ce41109e@firma.de>\nTo: erika@firma.de\nSubject: Unzustellbar: Angebot\n",
+    );
     expect(l.bounce === null).toBe(false);
     expect(l.notes.join(" ")).toContain("nur die Kopfzeilen");
   });
 
   it("normale Mail ist kein Rückläufer, Missbrauchsberichte auch nicht", () => {
     expect(bounceFromMime(parseMimeText("From: a@b.de\nSubject: Hallo\n\nText"))).toBeNull();
-    expect(bounceFromMime(parseMimeText('From: x@y.de\nSubject: Report\nContent-Type: multipart/report; report-type=feedback-report; boundary="b"\n\n--b\n\nx\n--b--'))).toBeNull();
+    expect(
+      bounceFromMime(
+        parseMimeText(
+          'From: x@y.de\nSubject: Report\nContent-Type: multipart/report; report-type=feedback-report; boundary="b"\n\n--b\n\nx\n--b--',
+        ),
+      ),
+    ).toBeNull();
   });
 
   it("mehrzeilige SMTP-Antworten zusammenfassen", () => {
-    expect(compactSmtp("550-5.7.26 Unauthenticated email is not accepted 550-5.7.26 due to DMARC 550 5.7.26 policy")).toBe(
-      "550 5.7.26 Unauthenticated email is not accepted due to DMARC policy",
-    );
+    expect(
+      compactSmtp(
+        "550-5.7.26 Unauthenticated email is not accepted 550-5.7.26 due to DMARC 550 5.7.26 policy",
+      ),
+    ).toBe("550 5.7.26 Unauthenticated email is not accepted due to DMARC policy");
   });
 });
 
 describe("Statuscodes", () => {
   it("erklären, Microsoft-Varianten, einfache SMTP-Codes", () => {
-    expect(explainStatus("5.1.1")).toMatchObject({ permanent: true, text: "Postfach existiert nicht (Empfängeradresse unbekannt)" });
+    expect(explainStatus("5.1.1")).toMatchObject({
+      permanent: true,
+      text: "Postfach existiert nicht (Empfängeradresse unbekannt)",
+    });
     expect(explainStatus("4.2.2")?.permanent).toBe(false);
-    expect(explainStatus("5.4.1", "Recipient address rejected: Access denied. [x.prod.outlook.com]")?.text).toContain("Microsoft 365");
-    expect(explainStatus("5.7.620", "Access denied, banned sending IP")?.text).toContain("sender.office.com");
+    expect(
+      explainStatus("5.4.1", "Recipient address rejected: Access denied. [x.prod.outlook.com]")
+        ?.text,
+    ).toContain("Microsoft 365");
+    expect(explainStatus("5.7.620", "Access denied, banned sending IP")?.text).toContain(
+      "sender.office.com",
+    );
     expect(explainSmtpCode("552")?.text).toContain("zu groß");
     expect(findStatus("#< #5.1.10 smtp;550 5.1.10 RESOLVER.ADR.RecipientNotFound>")).toBe("5.1.10");
     expect(findStatus("IP 10.5.1.20 und Version 4.4.1.2")).toBeUndefined();
@@ -165,14 +210,22 @@ describe("Outlook (.msg)", () => {
     props: [
       { id: P.MESSAGE_CLASS, value: "REPORT.IPM.Note.NDR" },
       { id: P.SUBJECT, value: "Unzustellbar: Angebot für Sie" },
-      { id: P.BODY, value: "Ihre Nachricht konnte nicht an max.muster@kunde.example zugestellt werden.\r\n\r\nDiagnoseinformationen für Administratoren:\r\nRemote Server returned '550 5.1.10 RESOLVER.ADR.RecipientNotFound; Recipient not found by SMTP address lookup'" },
+      {
+        id: P.BODY,
+        value:
+          "Ihre Nachricht konnte nicht an max.muster@kunde.example zugestellt werden.\r\n\r\nDiagnoseinformationen für Administratoren:\r\nRemote Server returned '550 5.1.10 RESOLVER.ADR.RecipientNotFound; Recipient not found by SMTP address lookup'",
+      },
       { id: 0x3ffd, value: 65001 },
     ],
     recipients: [
       [
         { id: P.DISPLAY_NAME, value: "Max Muster" },
         { id: P.SMTP_ADDRESS, value: "max.muster@kunde.example" },
-        { id: P.SUPPLEMENTARY_INFO, value: "< #5.1.10 smtp;550 5.1.10 RESOLVER.ADR.RecipientNotFound; Recipient not found by SMTP address lookup>" },
+        {
+          id: P.SUPPLEMENTARY_INFO,
+          value:
+            "< #5.1.10 smtp;550 5.1.10 RESOLVER.ADR.RecipientNotFound; Recipient not found by SMTP address lookup>",
+        },
         { id: P.NDR_DIAG_CODE, value: 0 },
         { id: P.NDR_STATUS_CODE, value: 550 },
       ],
@@ -184,7 +237,11 @@ describe("Outlook (.msg)", () => {
           props: [
             { id: P.MESSAGE_CLASS, value: "IPM.Note" },
             { id: P.SUBJECT, value: "Angebot für Sie" },
-            { id: P.TRANSPORT_HEADERS, value: "From: Erika Mustermann <erika@firma.de>\r\nTo: max.muster@kunde.example\r\nSubject: Angebot\r\nMessage-ID: <x1@firma.de>\r\n" },
+            {
+              id: P.TRANSPORT_HEADERS,
+              value:
+                "From: Erika Mustermann <erika@firma.de>\r\nTo: max.muster@kunde.example\r\nSubject: Angebot\r\nMessage-ID: <x1@firma.de>\r\n",
+            },
           ],
         },
       },
@@ -202,9 +259,16 @@ describe("Outlook (.msg)", () => {
   it("Outlook-Unzustellbarkeitsbericht auswerten", () => {
     const b = bounceFromMsg(readMsg(ndr))!;
     expect(b.source).toBe("outlook");
-    expect(b.recipients[0]).toMatchObject({ address: "max.muster@kunde.example", status: "5.1.10", smtpCode: "550", action: "failed" });
+    expect(b.recipients[0]).toMatchObject({
+      address: "max.muster@kunde.example",
+      status: "5.1.10",
+      smtpCode: "550",
+      action: "failed",
+    });
     expect(b.original?.headers).toContain("Message-ID: <x1@firma.de>");
-    expect(b.recipients[0]!.diagnostic).toBe("550 5.1.10 RESOLVER.ADR.RecipientNotFound; Recipient not found by SMTP address lookup");
+    expect(b.recipients[0]!.diagnostic).toBe(
+      "550 5.1.10 RESOLVER.ADR.RecipientNotFound; Recipient not found by SMTP address lookup",
+    );
     const l = loadFile("Unzustellbar.msg", ndr);
     expect(l.kind).toBe("msg");
     expect(l.notes.join(" ")).toContain("keine Internetkopfzeilen");
@@ -214,6 +278,8 @@ describe("Outlook (.msg)", () => {
     const broken = ndr.slice();
     broken[48] = 0xff; // Verzeichnis-Startsektor ungültig
     expect(() => readMsg(broken)).toThrow();
-    expect(() => loadFile("x.msg", new TextEncoder().encode("kein msg"))).toThrow("keine Outlook-Nachricht");
+    expect(() => loadFile("x.msg", new TextEncoder().encode("kein msg"))).toThrow(
+      "keine Outlook-Nachricht",
+    );
   });
 });

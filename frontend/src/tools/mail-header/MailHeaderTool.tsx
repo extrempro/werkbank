@@ -27,7 +27,11 @@ const authTone = (result: AuthResult): Tone =>
         ? "todo"
         : "neutral";
 
-const FINDING_TONE: Record<Finding["level"], Tone> = { error: "bad", warn: "todo", info: "neutral" };
+const FINDING_TONE: Record<Finding["level"], Tone> = {
+  error: "bad",
+  warn: "todo",
+  info: "neutral",
+};
 const FINDING_LABEL: Record<Finding["level"], string> = {
   error: "Fehler",
   warn: "Warnung",
@@ -448,7 +452,9 @@ function HeaderAnalysis({ raw }: { raw: string }) {
       {analysis.hops.length > 0 && (
         <ToolSection
           title={`Zustellweg (${analysis.hops.length} Stationen${
-            analysis.totalSeconds !== null ? `, gesamt ${formatDuration(analysis.totalSeconds)}` : ""
+            analysis.totalSeconds !== null
+              ? `, gesamt ${formatDuration(analysis.totalSeconds)}`
+              : ""
           })`}
         >
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Zustellweg">
@@ -474,7 +480,9 @@ function HeaderAnalysis({ raw }: { raw: string }) {
                         "–"
                       ) : (
                         <span
-                          className={hop.delaySeconds > 300 ? "pill pill-todo" : "pill pill-neutral"}
+                          className={
+                            hop.delaySeconds > 300 ? "pill pill-todo" : "pill pill-neutral"
+                          }
                         >
                           {formatDuration(hop.delaySeconds)}
                         </span>

@@ -73,13 +73,23 @@ function codepageFromLcid(lcid: number | undefined): number | undefined {
   const map: Record<number, number> = {
     0x11: 932, // Japanisch
     0x12: 949, // Koreanisch
-    0x19: 1251, 0x22: 1251, 0x02: 1251, 0x1a: lcid === 0x0c1a ? 1251 : 1250, // Russisch, Ukrainisch, Bulgarisch, Serbisch/Kroatisch
-    0x05: 1250, 0x15: 1250, 0x0e: 1250, 0x1b: 1250, 0x24: 1250, 0x18: 1250, // Tschechisch, Polnisch, Ungarisch, Slowakisch, Slowenisch, Rumänisch
+    0x19: 1251,
+    0x22: 1251,
+    0x02: 1251,
+    0x1a: lcid === 0x0c1a ? 1251 : 1250, // Russisch, Ukrainisch, Bulgarisch, Serbisch/Kroatisch
+    0x05: 1250,
+    0x15: 1250,
+    0x0e: 1250,
+    0x1b: 1250,
+    0x24: 1250,
+    0x18: 1250, // Tschechisch, Polnisch, Ungarisch, Slowakisch, Slowenisch, Rumänisch
     0x08: 1253, // Griechisch
     0x1f: 1254, // Türkisch
     0x0d: 1255, // Hebräisch
     0x01: 1256, // Arabisch
-    0x25: 1257, 0x26: 1257, 0x27: 1257, // Baltisch
+    0x25: 1257,
+    0x26: 1257,
+    0x27: 1257, // Baltisch
     0x1e: 874, // Thai
   };
   if (primary === 0x04) return lcid === 0x0404 || lcid === 0x0c04 || lcid === 0x1404 ? 950 : 936; // Chinesisch
@@ -96,7 +106,11 @@ const decode = (bytes: Uint8Array, label: string) => {
 
 const FILETIME_EPOCH_DIFF = 11644473600000n;
 
-function readStorage(storage: CfbEntry, headerSize: number, inheritedCp?: number): Map<number, PropValue> {
+function readStorage(
+  storage: CfbEntry,
+  headerSize: number,
+  inheritedCp?: number,
+): Map<number, PropValue> {
   const props = new Map<number, PropValue>();
   const raw8: [number, Uint8Array][] = [];
   for (const c of storage.children) {
@@ -128,17 +142,29 @@ function readStorage(storage: CfbEntry, headerSize: number, inheritedCp?: number
   }
   // 8-Bit-Strings erst jetzt dekodieren – die Codepage steht im Properties-Stream; sonst aus der Sprache ableiten
   // (PR_INTERNET_CPID gilt nur für den MIME-Text, nicht für die ANSI-Werte der .msg)
-  const cp = (props.get(P.CODEPAGE) as number | undefined) ?? codepageFromLcid(props.get(P.LOCALE_ID) as number | undefined) ?? (inheritedCp ?? undefined);
+  const cp =
+    (props.get(P.CODEPAGE) as number | undefined) ??
+    codepageFromLcid(props.get(P.LOCALE_ID) as number | undefined) ??
+    inheritedCp ??
+    undefined;
   for (const [id, data] of raw8) props.set(id, decode(data, codepageLabel(cp)).replace(/\0+$/, ""));
   return props;
 }
 
-function readMessage(storage: CfbEntry, headerSize: number, depth: number, parentCp?: number): MsgMessage {
+function readMessage(
+  storage: CfbEntry,
+  headerSize: number,
+  depth: number,
+  parentCp?: number,
+): MsgMessage {
   if (depth > 10) throw new Error("Zu tief verschachtelte Nachrichten");
   const props = readStorage(storage, headerSize, parentCp);
   const recipients: Map<number, PropValue>[] = [];
   const attachments: MsgAttachment[] = [];
-  const cp = (props.get(P.CODEPAGE) as number | undefined) ?? codepageFromLcid(props.get(P.LOCALE_ID) as number | undefined) ?? parentCp;
+  const cp =
+    (props.get(P.CODEPAGE) as number | undefined) ??
+    codepageFromLcid(props.get(P.LOCALE_ID) as number | undefined) ??
+    parentCp;
   for (const c of storage.children) {
     if (c.type !== "storage") continue;
     if (/^__recip_version1\.0_#/i.test(c.name)) {
@@ -149,7 +175,10 @@ function readMessage(storage: CfbEntry, headerSize: number, depth: number, paren
         props: a,
         filename: (a.get(P.ATTACH_LONG_FILENAME) ?? a.get(P.ATTACH_FILENAME)) as string | undefined,
         mimeTag: a.get(P.ATTACH_MIME_TAG) as string | undefined,
-        data: a.get(P.ATTACH_DATA) instanceof Uint8Array ? (a.get(P.ATTACH_DATA) as Uint8Array) : undefined,
+        data:
+          a.get(P.ATTACH_DATA) instanceof Uint8Array
+            ? (a.get(P.ATTACH_DATA) as Uint8Array)
+            : undefined,
       };
       const emb = child(c, "__substg1.0_3701000D");
       if (emb && emb.type === "storage") {
