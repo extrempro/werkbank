@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.34.0",
+    date: "2026-11-16",
+    summary: "IT-Tools: Planungs-Tools und E-Mail-Header.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Neue Kategorie Planung mit Amortisation, Backup-Planer, Netzplan (kritischer Pfad) und Nutzwertanalyse.",
+          "Neu: E-Mail-Header und Rückläufer. Zeigt Zustellweg, Verzögerungen, SPF, DKIM und DMARC und erklärt Rückläufer. Du kannst auch .eml- und Outlook-.msg-Dateien öffnen; alles bleibt in deinem Browser.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.33.0",
     date: "2026-11-16",
     summary:

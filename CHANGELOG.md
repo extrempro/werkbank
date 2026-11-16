@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.34.0] – 2026-11-16
+
+IT-Tools: fünf weitere Tools aus der IT-Toolbox.
+
+### IT-Tools
+
+- **Amortisation:** Amortisationsdauer statisch und mit Kalkulationszins, Kapitalwert, Rendite und Verlauf je Jahr
+- **Backup-Planer:** Vollsicherung, inkrementell oder differenziell; Wochenplan mit Speicherbedarf, Sicherungsdauer und der Kette für eine Wiederherstellung
+- **Netzplan:** Vorgänge mit Dauer und Vorgängern, Vorwärts- und Rückwärtsrechnung, Puffer, kritischer Pfad als Diagramm und Tabelle; Zeilen aus Excel einfügbar
+- **Nutzwertanalyse:** Kriterien gewichten, Alternativen bewerten, Rangfolge mit Balken und Bewertungsmatrix
+- **E-Mail-Header und Rückläufer:** Zustellweg mit Verzögerungen, SPF/DKIM/DMARC, Spamfilter, Rückläufer mit Erklärung der Fehlercodes; auch .eml- und Outlook-.msg-Dateien. Alles bleibt im Browser
+- Neue Kategorie „Planung“
+- Tabellen von Netzplan und Nutzwertanalyse stehen anders als in der Toolbox nicht in der Adresszeile
+
 ## [0.33.0] – 2026-11-16
 
 IT-Budget: Budgetposten als Vorgang mit erwarteten Kosten, Laufzeit und Status; Verträge mehreren Posten zuordnen; Tag-Liste in den Einstellungen; Mehrjahresübersicht mit Excel-Export; Masken gegliedert.

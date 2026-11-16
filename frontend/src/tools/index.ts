@@ -16,7 +16,6 @@ export type ToolCategory =
   | "text"
   | "rechner"
   | "planung"
-  | "sicherheit"
   | "generator";
 
 export const CATEGORY_LABELS: Record<ToolCategory, string> = {
@@ -29,7 +28,6 @@ export const CATEGORY_LABELS: Record<ToolCategory, string> = {
   text: "Text",
   rechner: "Rechner",
   planung: "Planung",
-  sicherheit: "Zertifikate",
   generator: "Generatoren",
 };
 
