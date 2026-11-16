@@ -1,6 +1,7 @@
 /** Bildformate: Erkennung anhand der Dateisignatur, Bezeichnungen, Dateinamen. */
 
-export type InputFormat = "png" | "jpeg" | "gif" | "webp" | "bmp" | "ico" | "svg" | "avif" | "heic" | "tiff" | "unknown";
+export type InputFormat =
+  "png" | "jpeg" | "gif" | "webp" | "bmp" | "ico" | "svg" | "avif" | "heic" | "tiff" | "unknown";
 
 export type OutputFormat = "png" | "jpeg" | "webp" | "avif" | "ico" | "svg" | "favicon";
 
@@ -30,17 +31,68 @@ export interface OutputInfo {
 }
 
 export const outputInfo: Record<OutputFormat, OutputInfo> = {
-  png: { label: "PNG", extension: "png", mime: "image/png", lossy: false, alpha: true, hint: "verlustfrei, mit Transparenz – für Screenshots, Grafiken, Logos" },
-  jpeg: { label: "JPEG", extension: "jpg", mime: "image/jpeg", lossy: true, alpha: false, hint: "kleine Dateien für Fotos – ohne Transparenz" },
-  webp: { label: "WebP", extension: "webp", mime: "image/webp", lossy: true, alpha: true, hint: "modern, deutlich kleiner als JPEG/PNG, mit Transparenz" },
-  avif: { label: "AVIF", extension: "avif", mime: "image/avif", lossy: true, alpha: true, hint: "sehr kleine Dateien – Export nicht in jedem Browser verfügbar" },
-  ico: { label: "ICO", extension: "ico", mime: "image/x-icon", lossy: false, alpha: true, hint: "Windows-Symbol / Favicon mit mehreren Größen in einer Datei" },
-  svg: { label: "SVG (eingebettet)", extension: "svg", mime: "image/svg+xml", lossy: false, alpha: true, hint: "Rasterbild in einer SVG-Hülle – wird dadurch nicht zur Vektorgrafik" },
-  favicon: { label: "Favicon-Paket (ZIP)", extension: "zip", mime: "application/zip", lossy: false, alpha: true, hint: "favicon.ico, apple-touch-icon, Android-Symbole und HTML-Schnipsel" },
+  png: {
+    label: "PNG",
+    extension: "png",
+    mime: "image/png",
+    lossy: false,
+    alpha: true,
+    hint: "verlustfrei, mit Transparenz – für Screenshots, Grafiken, Logos",
+  },
+  jpeg: {
+    label: "JPEG",
+    extension: "jpg",
+    mime: "image/jpeg",
+    lossy: true,
+    alpha: false,
+    hint: "kleine Dateien für Fotos – ohne Transparenz",
+  },
+  webp: {
+    label: "WebP",
+    extension: "webp",
+    mime: "image/webp",
+    lossy: true,
+    alpha: true,
+    hint: "modern, deutlich kleiner als JPEG/PNG, mit Transparenz",
+  },
+  avif: {
+    label: "AVIF",
+    extension: "avif",
+    mime: "image/avif",
+    lossy: true,
+    alpha: true,
+    hint: "sehr kleine Dateien – Export nicht in jedem Browser verfügbar",
+  },
+  ico: {
+    label: "ICO",
+    extension: "ico",
+    mime: "image/x-icon",
+    lossy: false,
+    alpha: true,
+    hint: "Windows-Symbol / Favicon mit mehreren Größen in einer Datei",
+  },
+  svg: {
+    label: "SVG (eingebettet)",
+    extension: "svg",
+    mime: "image/svg+xml",
+    lossy: false,
+    alpha: true,
+    hint: "Rasterbild in einer SVG-Hülle – wird dadurch nicht zur Vektorgrafik",
+  },
+  favicon: {
+    label: "Favicon-Paket (ZIP)",
+    extension: "zip",
+    mime: "application/zip",
+    lossy: false,
+    alpha: true,
+    hint: "favicon.ico, apple-touch-icon, Android-Symbole und HTML-Schnipsel",
+  },
 };
 
-const startsWith = (b: Uint8Array, sig: number[], offset = 0) => sig.every((v, i) => b[offset + i] === v);
-const ascii = (b: Uint8Array, start: number, end: number) => String.fromCharCode(...b.subarray(start, end));
+const startsWith = (b: Uint8Array, sig: number[], offset = 0) =>
+  sig.every((v, i) => b[offset + i] === v);
+const ascii = (b: Uint8Array, start: number, end: number) =>
+  String.fromCharCode(...b.subarray(start, end));
 
 /** Erkennt das Format an den ersten Bytes (unabhängig von der Dateiendung). */
 export function detectFormat(bytes: Uint8Array): InputFormat {
@@ -49,16 +101,40 @@ export function detectFormat(bytes: Uint8Array): InputFormat {
   if (ascii(bytes, 0, 6) === "GIF87a" || ascii(bytes, 0, 6) === "GIF89a") return "gif";
   if (ascii(bytes, 0, 4) === "RIFF" && ascii(bytes, 8, 12) === "WEBP") return "webp";
   if (ascii(bytes, 0, 2) === "BM") return "bmp";
-  if (startsWith(bytes, [0x00, 0x00, 0x01, 0x00]) || startsWith(bytes, [0x00, 0x00, 0x02, 0x00])) return "ico";
-  if (startsWith(bytes, [0x49, 0x49, 0x2a, 0x00]) || startsWith(bytes, [0x4d, 0x4d, 0x00, 0x2a])) return "tiff";
+  if (startsWith(bytes, [0x00, 0x00, 0x01, 0x00]) || startsWith(bytes, [0x00, 0x00, 0x02, 0x00]))
+    return "ico";
+  if (startsWith(bytes, [0x49, 0x49, 0x2a, 0x00]) || startsWith(bytes, [0x4d, 0x4d, 0x00, 0x2a]))
+    return "tiff";
   if (ascii(bytes, 4, 8) === "ftyp") {
     const brands = ascii(bytes, 8, Math.min(bytes.length, 64));
     if (/avi[fs]/.test(brands)) return "avif";
     if (/hei[cxms]|hev[cx]|mif1|msf1/.test(brands)) return "heic";
   }
-  const head = new TextDecoder().decode(bytes.subarray(0, 1024)).replace(/^\uFEFF/, "").trimStart();
-  if (/^(<\?xml[^>]*>\s*)?(<!--[\s\S]*?-->\s*)*(<!DOCTYPE[^>]*>\s*)?<svg[\s>]/i.test(head)) return "svg";
+  const head = new TextDecoder()
+    .decode(bytes.subarray(0, 1024))
+    .replace(/^\uFEFF/, "")
+    .trimStart();
+  if (startsWithSvg(head)) return "svg";
   return "unknown";
+}
+
+/**
+ * Beginnt der Text mit einem SVG-Element? XML-Kopf, Kommentare und DOCTYPE davor werden
+ * übersprungen, ohne regulären Ausdruck, damit lange Eingaben nicht hängen.
+ */
+function startsWithSvg(text: string): boolean {
+  let rest = text;
+  for (let guard = 0; guard < 100; guard++) {
+    rest = rest.trimStart();
+    let end = -1;
+    if (rest.startsWith("<?xml")) end = rest.indexOf(">") + 1;
+    else if (rest.startsWith("<!--")) end = rest.indexOf("-->", 4) + 3;
+    else if (rest.slice(0, 9).toLowerCase() === "<!doctype") end = rest.indexOf(">") + 1;
+    else return /^<svg[\s>]/i.test(rest);
+    if (end <= 0) return false;
+    rest = rest.slice(end);
+  }
+  return false;
 }
 
 /** foto.heic → foto.webp; doppelte Namen bekommen -2, -3 … */

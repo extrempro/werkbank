@@ -78,7 +78,7 @@ describe("OpenSSL-Befehl", () => {
       serverAuth: true,
       clientAuth: false,
     });
-    expect(command).toContain("-subj '/O=O'\\''Beispiel $(id)/CN=www.example.com'");
+    expect(command).toContain(`-subj '/O=O'"'"'Beispiel $(id)/CN=www.example.com'`);
     expect(command).toContain("-addext 'subjectAltName=DNS:www.example.com'");
     expect(command).toContain("ec_paramgen_curve:P-256");
   });

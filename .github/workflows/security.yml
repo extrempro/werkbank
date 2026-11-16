@@ -57,4 +57,5 @@ jobs:
         run: >
           docker run --rm -v "$PWD:/repo" aquasec/trivy:latest
           fs --scanners vuln,misconfig,secret --severity HIGH,CRITICAL
+          --secret-config /repo/trivy-secret.yaml
           --exit-code 1 /repo

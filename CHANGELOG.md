@@ -24,6 +24,11 @@ IT-Tools: QR-Code, Bild-Konverter und Zertifikats-Tools aus der IT-Toolbox.
 - Testzertifikate neu erzeugt, mit `example.com` und Adressen aus dem Dokumentationsbereich
 - Browser-Test für QR-Code, Bild-Konverter, CSR und Zertifikate
 
+### Sicherheit
+
+- Erkennung von SVG ohne regulären Ausdruck über Kommentare (CodeQL: mögliches exponentielles Backtracking)
+- gitleaks und Trivy nehmen nur die zwei Dateien mit privaten Testschlüsseln der Zertifikats-Tools aus (`.gitleaks.toml`, `trivy-secret.yaml`), mit Begründung
+
 ## [0.34.0] – 2026-11-16
 
 IT-Tools: fünf weitere Tools aus der IT-Toolbox.

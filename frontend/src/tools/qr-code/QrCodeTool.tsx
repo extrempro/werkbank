@@ -549,7 +549,9 @@ export default function QrCodeTool() {
               </svg>
             ) : (
               <p className="small">
-                {error ? "Kein Code, siehe Hinweis." : "Inhalt eingeben, um den QR-Code zu erzeugen."}
+                {error
+                  ? "Kein Code, siehe Hinweis."
+                  : "Inhalt eingeben, um den QR-Code zu erzeugen."}
               </p>
             )}
           </div>
@@ -594,7 +596,9 @@ export default function QrCodeTool() {
                 </button>
               </div>
               {pngError && <ErrorBox>{pngError}</ErrorBox>}
-              <p className="small">SVG bleibt in jeder Größe scharf, ideal für Druck und Dokumente.</p>
+              <p className="small">
+                SVG bleibt in jeder Größe scharf, ideal für Druck und Dokumente.
+              </p>
             </>
           )}
 

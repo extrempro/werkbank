@@ -231,7 +231,8 @@ export function opensslCommand(o: CsrOptions): string {
     ? `-newkey rsa:${o.keyType.slice(3)}`
     : `-newkey ec -pkeyopt ec_paramgen_curve:${o.keyType === "p256" ? "P-256" : "P-384"}`;
   // In einfachen Anführungszeichen, damit die Shell nichts aus den Namen ausführt
-  const quote = (text: string) => `'${text.replace(/'/g, "'\\''")}'`;
+  // Innerhalb einfacher Anführungszeichen ist nur das Anführungszeichen selbst besonders.
+  const quote = (text: string) => `'${text.split("'").join(`'"'"'`)}'`;
   return `openssl req -new ${key} -nodes -keyout server.key -out server.csr -subj ${quote(subj)}${san ? ` -addext ${quote(`subjectAltName=${san}`)}` : ""}`;
 }
 
