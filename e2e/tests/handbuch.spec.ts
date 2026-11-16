@@ -1,21 +1,23 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs } from "./helpers";
+import { expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
 
 test("Handbuch zeigt passende Kapitel, führt zu Abschnitten und ist barrierefrei", async ({
   page,
 }) => {
   await loginAs(page, ["Evergreen.Team"], "Hanna Handbuch");
   await page.goto("/");
-  await page.getByRole("link", { name: "Handbuch" }).click();
+  await openNavigation(page);
+  await page.getByRole("link", { name: "Handbuch", exact: true }).click();
   await expect(page).toHaveURL(/\/handbuch$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Handbuch" }),
   ).toBeVisible();
+  const main = page.getByRole("main");
   await expect(
-    page.getByRole("link", { name: "Evergreen" }).first(),
+    main.getByRole("link", { name: "Evergreen", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "IT-Budget", exact: true }),
+    main.getByRole("link", { name: "IT-Budget", exact: true }),
   ).toHaveCount(0);
   await expectNoA11yViolations(page);
 
