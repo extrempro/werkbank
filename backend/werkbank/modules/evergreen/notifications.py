@@ -88,7 +88,8 @@ def evergreen_notifications(db: Session, settings: Settings, now: datetime) -> I
             .where(WorkflowEvent.instance_id.in_(instance_ids), WorkflowEvent.user_id.is_not(None))
             .distinct()
         ):
-            involved.setdefault(instance_id, set()).add(user_id)
+            if user_id is not None:
+                involved.setdefault(instance_id, set()).add(user_id)
         for event, item in recent:
             people = set(involved.get(event.instance_id, set()))
             if item.created_by is not None:
