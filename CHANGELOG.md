@@ -29,6 +29,7 @@ IT-Tools: Abfragen ins Internet über den Werkbank-Server, vier weitere Tools, T
 ### Doku
 
 - Spec 8a und Datenschutz (Empfänger) ergänzt
+- gitleaks nimmt den Test des DNS-/Mail-Checks aus: Er enthält nur öffentliche DKIM-Schlüssel
 
 ## [0.36.0] – 2026-11-16
 
