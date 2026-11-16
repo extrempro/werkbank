@@ -34,7 +34,9 @@ export function PlanningPage() {
   const label = data?.year_label ?? "Geschäftsjahr";
   // Die gezeigten Jahre gehören zur gewählten Sicht; bis die Antwort da ist, bleibt die alte.
   const years = data?.years ?? [];
-  const rangeName = years.length > 0 ? `${years[0].name} bis ${years[years.length - 1].name}` : "";
+  const first = years[0];
+  const last = years[years.length - 1];
+  const rangeName = first && last ? `${first.name} bis ${last.name}` : "";
 
   return (
     <div className="page page-wide budget-page">

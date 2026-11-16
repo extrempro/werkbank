@@ -71,7 +71,10 @@ def upgrade() -> None:
         sa.text("SELECT item_id, fiscal_year, amount_cents FROM budget_plans")
     ):
         plans.setdefault(item_id, {})[year] = amount
-    partners = dict(bind.execute(sa.text("SELECT id, name FROM budget_partners")).all())
+    partners: dict[int, str] = {
+        row_id: name
+        for row_id, name in bind.execute(sa.text("SELECT id, name FROM budget_partners"))
+    }
     items = bind.execute(sa.text("SELECT id, note, partner_id FROM budget_items")).all()
     for item_id, note, partner_id in items:
         planned = plans.get(item_id, {})
