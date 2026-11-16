@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     tenant_monitor_interval_hours: int = 24
     # Zertifikate und Secrets der Anwendungen (braucht Application.Read.All)
     tenant_credentials_enabled: bool = False
+    # Dienststatus von Microsoft 365 (braucht ServiceHealth.Read.All), Abstand in Minuten
+    tenant_health_enabled: bool = False
+    tenant_health_interval_minutes: int = 15
     # UTCM-Ressourcentypen, kommagetrennt
     collector_resources: str = (
         "microsoft.entra.conditionalaccesspolicy,"

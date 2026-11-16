@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.38.0] – 2026-11-16
+
+Microsoft 365: Dienststatus. Zähler in der Navigation bleiben aktuell.
+
+### Microsoft 365 › Tenant
+
+- Neue Seite **Dienststatus**: Ampel für Exchange Online, Microsoft Teams, SharePoint Online und Microsoft Entra, offene und in den letzten 30 Tagen beendete Störungen und Hinweise mit den Mitteilungen von Microsoft, „Ausfälle je Dienst“ je Jahr
+- Abruf über die Collector-App alle 15 Minuten (`TENANT_HEALTH_ENABLED`, `TENANT_HEALTH_INTERVAL_MINUTES`, Berechtigung `ServiceHealth.Read.All`); Mitteilungen als Text ohne HTML; Aufbewahrung drei Jahre
+- Migration 0032: Tabellen `tenant_service_health` und `tenant_service_issues`
+
+### Navigation
+
+- Die Zähler in Navigation und Kopfzeile laden die Aufgaben nach jeder Änderung, beim Zurückkehren ins Fenster und alle fünf Minuten neu; vorher blieben erledigte Aufgaben bis zum nächsten Seitenwechsel stehen
+
+### Doku
+
+- Spec, Einrichtung (Entra, `.env.example`) und Datenschutz ergänzt
+
 ## [0.37.0] – 2026-11-16
 
 IT-Tools: Abfragen ins Internet über den Werkbank-Server, vier weitere Tools, Tools in der Suche.

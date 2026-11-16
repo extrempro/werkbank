@@ -114,6 +114,13 @@ async function errorDetail(response: Response): Promise<string | null> {
   return null;
 }
 
+/** Ereignis nach jeder Änderung: Zähler in Navigation und Kopfzeile laden die Aufgaben neu. */
+export const TASKS_CHANGED = "werkbank:aufgaben-geaendert";
+
+export function notifyTasksChanged(): void {
+  window.dispatchEvent(new Event(TASKS_CHANGED));
+}
+
 async function sendJson<T>(
   method: "POST" | "PUT" | "PATCH" | "DELETE",
   url: string,
@@ -134,7 +141,9 @@ async function sendJson<T>(
     }
     throw new ApiError(response.status, stepUp, await errorDetail(response));
   }
-  return (await response.json()) as T;
+  const result = (await response.json()) as T;
+  notifyTasksChanged();
+  return result;
 }
 
 /** Verändernde Anfrage mit JSON-Inhalt. */
