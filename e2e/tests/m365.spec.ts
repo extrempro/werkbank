@@ -94,6 +94,10 @@ test("Tenant: Lizenzen und Benutzer erklären den leeren Zustand, nur mit der Ro
   ).toBeVisible();
   await expect(page.getByText(/ist in dieser Installation nicht eingeschaltet/)).toBeVisible();
   await expectNoA11yViolations(page);
+  await page.goto("/m365/dienststatus");
+  await expect(page.getByRole("heading", { level: 1, name: "Dienststatus" })).toBeVisible();
+  await expect(page.getByText(/ist in dieser Installation nicht eingeschaltet/)).toBeVisible();
+  await expectNoA11yViolations(page);
   // Die Konfiguration gehört nicht zu dieser Rolle.
   await page.goto("/m365/einstellungen");
   await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();

@@ -185,7 +185,7 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
 - Module melden Aufgaben über eine gemeinsame Schnittstelle: Titel, Untertitel, Modul, Fälligkeit, Ziel-Link, zuständige Rolle bzw. Person.
 - Beispiele: offene Änderung prüfen (Config.Reviewer), Evergreen-Schritt (zuständige Rolle), Konnektor-Fehler (Admin).
 - Zähler in der Kopfzeile und in der Navigation.
-- Stand: Die Aufgaben werden bei jeder Abfrage aus dem Stand der Module ermittelt (`/api/tasks`) und nicht gespeichert; der Zähler steht in der Navigation beim Eintrag „Start“. M365-Konfiguration meldet offene Änderungen und Abweichungen vom Soll-Wert (`Config.Reviewer`) sowie einen fehlgeschlagenen Abruf (`Werkbank.Admin`). Der Zähler steht auch in der Kopfzeile. Evergreen meldet je Rolle die Vorgänge, die in ihrem Schritt warten, und der IT neue Meldungen im Eingang. Eine Tabelle `tasks` für einzeln zugewiesene Aufgaben ist bisher nicht nötig und nicht umgesetzt.
+- Stand: Die Aufgaben werden bei jeder Abfrage aus dem Stand der Module ermittelt (`/api/tasks`) und nicht gespeichert; der Zähler steht in der Navigation beim Eintrag „Start“. M365-Konfiguration meldet offene Änderungen und Abweichungen vom Soll-Wert (`Config.Reviewer`) sowie einen fehlgeschlagenen Abruf (`Werkbank.Admin`). Der Zähler steht auch in der Kopfzeile. Die Zähler laden die Aufgaben bei jedem Seitenwechsel, nach jeder Änderung, wenn das Fenster wieder in den Vordergrund kommt, und alle fünf Minuten neu. Evergreen meldet je Rolle die Vorgänge, die in ihrem Schritt warten, und der IT neue Meldungen im Eingang. Eine Tabelle `tasks` für einzeln zugewiesene Aufgaben ist bisher nicht nötig und nicht umgesetzt.
 
 ### 6.3 Workflow-Engine
 
@@ -436,7 +436,8 @@ Offene Vorgänge je Schritt (Tagesordnungsvorlage BR), Beschlüsse im Zeitraum, 
 - **Diagramme:** Liniendiagramm mit einer Achse, höchstens drei Reihen in fester Farbfolge, Werte eines Tages per Zeiger oder Regler, dazu immer eine Tabelle.
 - **Stand:** Lizenzen (gekauft, zugewiesen, frei, Einheiten in Kulanzfrist oder gesperrt, nächster Stichtag der Abos, Testabo) und Benutzerzahlen (gesamt, Gäste, deaktiviert, mit Lizenz). Hinweise in der Liste: aufgebraucht, überbucht, Stichtag in höchstens 30 Tagen.
 - **Zertifikate und Secrets:** Der Abruf (`TENANT_CREDENTIALS_ENABLED`, Berechtigung `Application.Read.All`) liest App-Registrierungen und Unternehmensanwendungen mit SAML. Gespeichert werden Anwendung, Art, Bezeichnung, Beginn und Ablauf, nie der geheime Wert. Einstufung nach Restlaufzeit: Hinweis, Warnung, dringend, abgelaufen; der Vorlauf (Standard 60, 30 und 7 Tage) steht in der Verwaltung unter „Allgemein“. Ab dem Hinweis stehen die Einträge als Aufgabe auf der Startseite (Rolle `Tenant.Reader`). Eine Mail-Benachrichtigung gibt es noch nicht.
-- **Geplant:** Mail-Benachrichtigung zu ablaufenden Zertifikaten und Secrets; Dienststatus; Domains mit Abgleich der DNS-Einträge (Abfrage über den Resolver des Docker-Hosts); Nutzung der Dienste als Summen.
+- **Dienststatus:** Der Abruf (`TENANT_HEALTH_ENABLED`, Berechtigung `ServiceHealth.Read.All`, alle 15 Minuten) liest den Zustand von Exchange Online, Microsoft Teams, SharePoint Online und Microsoft Entra sowie deren Störungen und Hinweise samt Mitteilungen von Microsoft (als Text ohne HTML). Die Seite „Dienststatus“ zeigt je Dienst eine Ampel (Unterbrechung, eingeschränkt, in Ordnung; das Schwerste oben), offene und in den letzten 30 Tagen beendete Störungen und Hinweise sowie „Ausfälle je Dienst“ (Störungen, Stunden mit Störung und Hinweise je Jahr). Störungen und Hinweise bleiben drei Jahre. Aufgaben auf der Startseite gibt es dafür nicht.
+- **Geplant:** Mail-Benachrichtigung zu ablaufenden Zertifikaten und Secrets; Domains mit Abgleich der DNS-Einträge (Abfrage über den Resolver des Docker-Hosts); Nutzung der Dienste als Summen.
 
 ## 7b. Modul IT-Budget
 
@@ -536,6 +537,7 @@ Evergreen:
 | M365 › Lizenzen | Tenant.Reader | Liste der Lizenzen mit gekauft, zugewiesen, frei, Stichtag und Hinweisen; Detail mit Verlauf |
 | M365 › Benutzer | Tenant.Reader | Zahl der Konten (Mitglieder, Gäste, aktiv, deaktiviert, mit Lizenz) mit Verlauf |
 | M365 › Zertifikate und Secrets | Tenant.Reader | Zertifikate und Secrets der Anwendungen im Tenant mit Ablaufdatum, Restlaufzeit und Einstufung; Ansicht „Handlungsbedarf“ oder alle; zweite Ansicht als Waben mit Einzelheiten nach Auswahl |
+| M365 › Dienststatus | Tenant.Reader | Ampel je Dienst (Exchange Online, Teams, SharePoint Online, Entra), offene und kürzlich beendete Störungen und Hinweise mit den Mitteilungen von Microsoft, Ausfälle je Dienst und Jahr |
 | IT-Budget › Übersicht | Budget.* | Kennzahlen, Budget nach Konten als Balken, Kündigungstermine der nächsten 120 Tage, Handlungsbedarf |
 | IT-Budget › Budgetposten | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Posten eines Geschäftsjahrs mit Status, erwarteten Kosten, gebunden, Ist, Prognose, Abweichung und Vorjahr; Posten hinzufügen, ändern, stilllegen, löschen; Filter nach Suchtext, Status und Tag |
 | IT-Budget › Mehrjahresübersicht | Budget.* | Erwartete Kosten, Ist und Status je Budgetposten über fünf Geschäftsjahre, Ausblick oder Rückblick; Export als Excel-Datei |

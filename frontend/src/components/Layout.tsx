@@ -7,7 +7,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { fetchTasks, type Me, type Task } from "../api";
+import { fetchTasks, TASKS_CHANGED, type Me, type Task } from "../api";
 import {
   allNavItems,
   areaForPath,
@@ -22,6 +22,7 @@ import {
   BUDGET_PATH,
   BUDGET_SETTINGS_PATH,
   CREDENTIALS_PATH,
+  HEALTH_PATH,
   LICENSES_PATH,
   NEWS_PATH,
   toolCategoryPath,
@@ -54,6 +55,7 @@ import { PlanningPage } from "../modules/budget/PlanningPage";
 import { StatisticsPage } from "../modules/budget/StatisticsPage";
 import { PartnersPage } from "../modules/budget/PartnersPage";
 import { CredentialsPage } from "../modules/tenant/CredentialsPage";
+import { HealthPage } from "../modules/tenant/HealthPage";
 import { LicensesPage } from "../modules/tenant/LicensesPage";
 import { UsersPage } from "../modules/tenant/UsersPage";
 import { CATEGORY_LABELS, findTool, type ToolCategory } from "../tools";
@@ -84,6 +86,9 @@ interface LayoutProps {
   me: Me;
 }
 
+/** Abstand, in dem die Aufgaben für die Zähler nachgeladen werden. */
+const TASK_REFRESH_MS = 5 * 60 * 1000;
+
 export function Layout({ me }: LayoutProps) {
   const path = usePath();
   const branding = useBranding();
@@ -97,16 +102,35 @@ export function Layout({ me }: LayoutProps) {
   const onNewsSeen = useCallback(() => setNewsUnseen(false), []);
   const taskCount = (tasks ?? []).reduce((sum, task) => sum + task.count, 0);
 
-  // Aufgaben bei jedem Seitenwechsel neu laden, damit Zähler und Startseite aktuell sind.
+  // Aufgaben neu laden: bei jedem Seitenwechsel, nach jeder Änderung (z. B. Rechnung gebucht),
+  // wenn das Fenster wieder in den Vordergrund kommt und alle fünf Minuten. So stehen in der
+  // Navigation keine Zähler mehr, deren Aufgaben schon erledigt sind.
   useEffect(() => {
     let active = true;
-    fetchTasks().then((result) => {
-      if (active) {
-        setTasks(result);
+    let round = 0;
+    const reload = () => {
+      const mine = ++round;
+      fetchTasks().then((result) => {
+        // Nur die jüngste Antwort zählt; eine ältere kann den neuen Stand nicht überschreiben.
+        if (active && mine === round) {
+          setTasks(result);
+        }
+      });
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        reload();
       }
-    });
+    };
+    reload();
+    window.addEventListener(TASKS_CHANGED, reload);
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = window.setInterval(reload, TASK_REFRESH_MS);
     return () => {
       active = false;
+      window.removeEventListener(TASKS_CHANGED, reload);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(timer);
     };
   }, [path]);
   // Die Darstellung kann auch auf der Seite „Konto“ oder am Gerät wechseln.
@@ -247,6 +271,8 @@ export function Layout({ me }: LayoutProps) {
     page = <UsersPage />;
   } else if (path === CREDENTIALS_PATH && current) {
     page = <CredentialsPage />;
+  } else if (path === HEALTH_PATH && current) {
+    page = <HealthPage />;
   } else if (path === BUDGET_PATH && current) {
     page = <BudgetOverviewPage roles={me.roles} />;
   } else if (path === BUDGET_ACCOUNTS_PATH && current) {

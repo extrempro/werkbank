@@ -198,3 +198,109 @@ export const LEVEL_INFO: Record<
   hinweis: { text: "im Blick behalten", tone: "neutral" },
   ok: { text: "in Ordnung", tone: "ok" },
 };
+
+// --- Dienststatus ---
+
+export interface ServiceHealth {
+  service_id: string;
+  name: string;
+  /** Status laut Microsoft, z. B. „serviceOperational“ */
+  status: string;
+  open_incidents: number;
+  open_advisories: number;
+}
+
+export interface ServiceIssue {
+  issue_id: string;
+  service_id: string;
+  service_name: string;
+  title: string;
+  /** „incident“ (Störung) oder „advisory“ (Hinweis) */
+  classification: string;
+  status: string;
+  feature_group: string | null;
+  feature: string | null;
+  impact: string | null;
+  resolved: boolean;
+  start_at: string | null;
+  end_at: string | null;
+  modified_at: string | null;
+}
+
+export interface ServiceIssueDetail extends ServiceIssue {
+  posts: { at: string | null; type: string; text: string }[];
+}
+
+export interface OutageStat {
+  year: number;
+  service_id: string;
+  service_name: string;
+  incidents: number;
+  advisories: number;
+  incident_hours: number;
+}
+
+export interface Health {
+  enabled: boolean;
+  fetched_at: string | null;
+  services: ServiceHealth[];
+  open: ServiceIssue[];
+  recent: ServiceIssue[];
+  stats: OutageStat[];
+}
+
+export function fetchHealth(): Promise<Health> {
+  return getJson(`${BASE}/health`);
+}
+
+export function fetchIssue(id: string): Promise<ServiceIssueDetail> {
+  return getJson(`${BASE}/health/issues/${encodeURIComponent(id)}`);
+}
+
+/** Zustand eines Dienstes in drei Stufen. */
+export type HealthLevel = "ok" | "eingeschraenkt" | "stoerung";
+
+const STATUS_TEXT: Record<string, string> = {
+  serviceoperational: "In Ordnung",
+  investigating: "Wird untersucht",
+  restoringservice: "Wird wiederhergestellt",
+  verifyingservice: "Behebung wird geprüft",
+  servicerestored: "Wiederhergestellt",
+  postincidentreviewpublished: "Bericht veröffentlicht",
+  servicedegradation: "Eingeschränkt",
+  serviceinterruption: "Unterbrochen",
+  extendedrecovery: "Längere Wiederherstellung",
+  falsepositive: "Fehlalarm",
+  investigationsuspended: "Untersuchung ausgesetzt",
+  resolved: "Behoben",
+  mitigatedexternal: "Extern abgemildert",
+  mitigated: "Abgemildert",
+  resolvedexternal: "Extern behoben",
+  confirmed: "Bestätigt",
+  reported: "Gemeldet",
+};
+
+export function healthStatusText(status: string): string {
+  return STATUS_TEXT[status.toLowerCase()] ?? status;
+}
+
+export function healthLevel(status: string): HealthLevel {
+  const lowered = status.toLowerCase();
+  if (lowered.includes("interruption")) {
+    return "stoerung";
+  }
+  if (["serviceoperational", "servicerestored", "postincidentreviewpublished"].includes(lowered)) {
+    return "ok";
+  }
+  return "eingeschraenkt";
+}
+
+export const HEALTH_LEVEL: Record<HealthLevel, { label: string; pill: string; kpi: string }> = {
+  ok: { label: "In Ordnung", pill: "pill pill-ok", kpi: "kpi kpi-ok" },
+  eingeschraenkt: { label: "Eingeschränkt", pill: "pill pill-todo", kpi: "kpi kpi-warn" },
+  stoerung: { label: "Störung", pill: "pill pill-bad", kpi: "kpi kpi-bad" },
+};
+
+export function issueKind(classification: string): string {
+  return classification === "incident" ? "Störung" : "Hinweis";
+}

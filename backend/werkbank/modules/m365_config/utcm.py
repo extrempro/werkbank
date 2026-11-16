@@ -147,6 +147,18 @@ class UtcmClient:
             {"$filter": f"lastModifiedDateTime ge {moment}", "$top": "100"},
         )
 
+    def health_overviews(self) -> list[dict[str, Any]]:
+        """Aktueller Zustand je Dienst des Tenants (ServiceHealth.Read.All)."""
+        return self._pages(f"{GRAPH_URL}/admin/serviceAnnouncement/healthOverviews", {})
+
+    def health_issues(self, since: datetime | None) -> list[dict[str, Any]]:
+        """Störungen und Hinweise, seit einem Zeitpunkt geändert (ohne Zeitpunkt: alle)."""
+        params = {"$top": "100"}
+        if since is not None:
+            moment = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            params["$filter"] = f"lastModifiedDateTime ge {moment}"
+        return self._pages(f"{GRAPH_URL}/admin/serviceAnnouncement/issues", params)
+
     def secure_score_profiles(self) -> list[dict[str, Any]]:
         """Alle Controls von Microsoft Secure Score mit Titel und Hinweisen zur Umsetzung."""
         return self._pages(f"{GRAPH_URL}/security/secureScoreControlProfiles", {"$top": "200"})

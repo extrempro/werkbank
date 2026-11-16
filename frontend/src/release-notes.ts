@@ -24,6 +24,25 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.38.0",
+    date: "2026-11-16",
+    summary: "Microsoft 365: Dienststatus. Zähler in der Navigation bleiben aktuell.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Neu: Dienststatus. Zeigt, ob Exchange Online, Teams, SharePoint und Entra laufen, mit Störungen, Hinweisen und den Mitteilungen von Microsoft. Dazu eine Übersicht der Ausfälle je Dienst und Jahr.",
+        ],
+      },
+      {
+        area: "Navigation",
+        entries: [
+          "Die Zähler an der Navigation verschwinden jetzt, sobald eine Aufgabe erledigt ist, und nicht erst beim nächsten Seitenwechsel.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.37.0",
     date: "2026-11-16",
     summary: "IT-Tools: DNS, Mail-Check, RDAP und Passwort prüfen; Tools in der Suche.",

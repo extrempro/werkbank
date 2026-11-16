@@ -4523,3 +4523,30 @@ p.badges {
 .mail-records dd {
   margin: 0;
 }
+
+/* M365 › Tenant › Dienststatus */
+
+.health-issues {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  list-style: none;
+}
+
+.health-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.health-posts p {
+  margin: 0;
+}
+
+.health-post {
+  white-space: pre-line;
+}

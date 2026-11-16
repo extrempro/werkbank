@@ -27,6 +27,7 @@ export const TOOLS_PATH = "/it-tools";
 export const LICENSES_PATH = "/m365/lizenzen";
 export const USERS_PATH = "/m365/benutzer";
 export const CREDENTIALS_PATH = "/m365/zugangsdaten";
+export const HEALTH_PATH = "/m365/dienststatus";
 export const BUDGET_PATH = "/budget";
 export const BUDGET_ACCOUNTS_PATH = "/budget/konten";
 export const BUDGET_SETTINGS_PATH = "/budget/einstellungen";
@@ -110,6 +111,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
           { path: LICENSES_PATH, label: "Lizenzen", icon: "lizenzen" },
           { path: USERS_PATH, label: "Benutzer", icon: "benutzer" },
           { path: CREDENTIALS_PATH, label: "Zertifikate & Secrets", icon: "schluessel" },
+          { path: HEALTH_PATH, label: "Dienststatus", icon: "dienststatus" },
         ],
       });
     }

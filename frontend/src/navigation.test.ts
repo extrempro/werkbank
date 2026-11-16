@@ -79,6 +79,7 @@ describe("areasFor", () => {
       "Lizenzen",
       "Benutzer",
       "Zertifikate & Secrets",
+      "Dienststatus",
     ]);
     const both = areasFor(["Config.Reader", "Tenant.Reader"]).find((area) => area.id === "m365");
     expect(both?.home).toBe("/m365");

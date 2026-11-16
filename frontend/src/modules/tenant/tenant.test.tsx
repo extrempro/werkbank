@@ -9,6 +9,7 @@ import {
   type License,
 } from "./api";
 import { CredentialsPage } from "./CredentialsPage";
+import { HealthPage } from "./HealthPage";
 import { hexLayout, nameLines, shortRemaining } from "./honeycomb";
 import { LicensesPage } from "./LicensesPage";
 import { UsersPage } from "./UsersPage";
@@ -377,5 +378,90 @@ describe("Wabenansicht", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Liste" }));
     expect(screen.getByRole("region", { name: "Zertifikate und Secrets" })).toBeVisible();
+  });
+});
+
+describe("Dienststatus", () => {
+  const exchangeIssue = {
+    issue_id: "EX1001",
+    service_id: "Exchange",
+    service_name: "Exchange Online",
+    title: "Verzögerte Zustellung",
+    classification: "incident",
+    status: "serviceDegradation",
+    feature_group: "E-Mail und Kalender",
+    feature: "Zustellung",
+    impact: "Nachrichten kommen verzögert an.",
+    resolved: false,
+    start_at: "2026-11-16T09:00:00Z",
+    end_at: null,
+    modified_at: "2026-11-16T11:00:00Z",
+  };
+
+  it("zeigt Ampel, Störungen mit Mitteilungen und die Auswertung", async () => {
+    const urls = stubFetch({
+      "/api/tenant/health/issues/EX1001": {
+        ...exchangeIssue,
+        posts: [{ at: "2026-11-16T10:00:00Z", type: "regular", text: "Wir prüfen das." }],
+      },
+      "/api/tenant/health": {
+        enabled: true,
+        fetched_at: "2026-11-16T11:15:00Z",
+        services: [
+          {
+            service_id: "Exchange",
+            name: "Exchange Online",
+            status: "serviceDegradation",
+            open_incidents: 1,
+            open_advisories: 0,
+          },
+          {
+            service_id: "microsoftteams",
+            name: "Microsoft Teams",
+            status: "serviceOperational",
+            open_incidents: 0,
+            open_advisories: 0,
+          },
+        ],
+        open: [exchangeIssue],
+        recent: [],
+        stats: [
+          {
+            year: 2026,
+            service_id: "Exchange",
+            service_name: "Exchange Online",
+            incidents: 2,
+            advisories: 1,
+            incident_hours: 5.5,
+          },
+        ],
+      },
+    });
+    render(<HealthPage />);
+    expect(await screen.findByText("Eingeschränkt")).toBeVisible();
+    expect(screen.getAllByText("In Ordnung")).toHaveLength(2);
+    expect(screen.getByText(/Verzögerte Zustellung/)).toBeInTheDocument();
+    expect(screen.getByText(/2 Störungen, 5,5 Std\. · 1 Hinweise/)).toBeInTheDocument();
+    // Die Mitteilungen lädt erst das Aufklappen.
+    expect(urls.some((url) => url.includes("/issues/"))).toBe(false);
+    const details = screen.getByText(/Verzögerte Zustellung/).closest("details")!;
+    details.open = true;
+    fireEvent(details, new Event("toggle"));
+    expect(await screen.findByText("Wir prüfen das.")).toBeInTheDocument();
+  });
+
+  it("erklärt, wenn der Abruf aus ist", async () => {
+    stubFetch({
+      "/api/tenant/health": {
+        enabled: false,
+        fetched_at: null,
+        services: [],
+        open: [],
+        recent: [],
+        stats: [],
+      },
+    });
+    render(<HealthPage />);
+    expect(await screen.findByText(/nicht eingeschaltet/)).toBeVisible();
   });
 });

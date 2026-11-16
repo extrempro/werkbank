@@ -1,6 +1,6 @@
-"""API des Moduls Tenant: Lizenzen und Benutzerzahlen mit Verlauf."""
+"""API des Moduls Tenant: Lizenzen, Benutzerzahlen, Zugangsdaten und Dienststatus."""
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
@@ -12,10 +12,13 @@ from werkbank.core.deps import DbDep, SettingsDep, require_roles
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.modules.tenant.credentials import ATTENTION_LEVELS, days_left, level_for
+from werkbank.modules.tenant.health import SERVICES
 from werkbank.modules.tenant.models import (
     TenantCredential,
     TenantLicense,
     TenantLicenseSample,
+    TenantServiceHealth,
+    TenantServiceIssue,
     TenantUserSample,
 )
 from werkbank.modules.tenant.names import license_name
@@ -246,3 +249,198 @@ def list_credentials(user: Reader, db: DbDep, settings: SettingsDep) -> Credenti
         attention=sum(1 for entry in entries if entry.level in ATTENTION_LEVELS),
         entries=entries,
     )
+
+
+# --- Dienststatus ---
+
+IssueId = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,32}$")]
+RECENT_DAYS = 30
+STATS_YEARS = 3
+
+
+class ServiceOut(BaseModel):
+    service_id: str
+    name: str
+    status: str
+    open_incidents: int
+    open_advisories: int
+
+
+class IssueOut(BaseModel):
+    issue_id: str
+    service_id: str
+    service_name: str
+    title: str
+    # „incident“ (Störung) oder „advisory“ (Hinweis)
+    classification: str
+    status: str
+    feature_group: str | None
+    feature: str | None
+    impact: str | None
+    resolved: bool
+    start_at: datetime | None
+    end_at: datetime | None
+    modified_at: datetime | None
+
+
+class PostOut(BaseModel):
+    at: datetime | None
+    type: str
+    text: str
+
+
+class IssueDetailOut(IssueOut):
+    posts: list[PostOut]
+
+
+class OutageStat(BaseModel):
+    year: int
+    service_id: str
+    service_name: str
+    incidents: int
+    advisories: int
+    # Summe der Dauer aller Störungen in Stunden (laufende bis jetzt)
+    incident_hours: float
+
+
+class HealthOut(BaseModel):
+    # False: Der Abruf ist in dieser Installation nicht eingeschaltet.
+    enabled: bool
+    fetched_at: datetime | None
+    services: list[ServiceOut]
+    open: list[IssueOut]
+    # In den letzten 30 Tagen beendet
+    recent: list[IssueOut]
+    stats: list[OutageStat]
+
+
+def _issue_out(row: TenantServiceIssue) -> IssueOut:
+    return IssueOut(
+        issue_id=row.issue_id,
+        service_id=row.service_id,
+        service_name=SERVICES.get(row.service_id, row.service_name),
+        title=row.title,
+        classification=row.classification,
+        status=row.status,
+        feature_group=row.feature_group,
+        feature=row.feature,
+        impact=row.impact,
+        resolved=row.resolved,
+        start_at=row.start_at,
+        end_at=row.end_at,
+        modified_at=row.modified_at,
+    )
+
+
+def _status_rank(status_text: str) -> int:
+    """Schwere eines Dienstzustands: 0 Unterbrechung, 1 eingeschränkt, 2 in Ordnung."""
+    lowered = status_text.lower()
+    if "interruption" in lowered:
+        return 0
+    if lowered in ("serviceoperational", "servicerestored", "postincidentreviewpublished"):
+        return 2
+    return 1
+
+
+@router.get("/health")
+def service_health(user: Reader, db: DbDep, settings: SettingsDep) -> HealthOut:
+    """Zustand der beobachteten Dienste, offene und kürzlich beendete Störungen, Auswertung."""
+    now = now_utc()
+    issues = db.scalars(select(TenantServiceIssue)).all()
+    open_rows = [row for row in issues if not row.resolved]
+    recent_rows = [
+        row
+        for row in issues
+        if row.resolved
+        and (row.end_at or row.modified_at or now) >= now - timedelta(days=RECENT_DAYS)
+    ]
+    services = []
+    for row in db.scalars(select(TenantServiceHealth)).all():
+        mine = [issue for issue in open_rows if issue.service_id == row.service_id]
+        services.append(
+            ServiceOut(
+                service_id=row.service_id,
+                name=SERVICES.get(row.service_id, row.service_name),
+                status=row.status,
+                open_incidents=sum(1 for issue in mine if issue.classification == "incident"),
+                open_advisories=sum(1 for issue in mine if issue.classification != "incident"),
+            )
+        )
+    order = list(SERVICES)
+    services.sort(
+        key=lambda entry: (
+            _status_rank(entry.status),
+            order.index(entry.service_id) if entry.service_id in order else len(order),
+        )
+    )
+
+    def newest_first(rows: list[TenantServiceIssue]) -> list[IssueOut]:
+        rows.sort(
+            key=lambda row: row.start_at or row.modified_at or datetime.min.replace(tzinfo=UTC),
+            reverse=True,
+        )
+        return [_issue_out(row) for row in rows]
+
+    # Störungen offen vor Hinweisen, darin die neuesten zuerst
+    open_out = newest_first(open_rows)
+    open_out.sort(key=lambda entry: entry.classification != "incident")
+
+    stats: dict[tuple[int, str], OutageStat] = {}
+    first_year = now.year - STATS_YEARS + 1
+    for year in range(first_year, now.year + 1):
+        for service_id, name in SERVICES.items():
+            stats[(year, service_id)] = OutageStat(
+                year=year,
+                service_id=service_id,
+                service_name=name,
+                incidents=0,
+                advisories=0,
+                incident_hours=0.0,
+            )
+    for counted in issues:
+        if counted.start_at is None:
+            continue
+        entry = stats.get((counted.start_at.year, counted.service_id))
+        if entry is None:
+            continue
+        if counted.classification == "incident":
+            entry.incidents += 1
+            end = counted.end_at or (counted.modified_at if counted.resolved else None) or now
+            entry.incident_hours += max((end - counted.start_at).total_seconds(), 0) / 3600
+        else:
+            entry.advisories += 1
+    for entry in stats.values():
+        entry.incident_hours = round(entry.incident_hours, 1)
+
+    return HealthOut(
+        enabled=settings.tenant_health_enabled and settings.collector_configured,
+        fetched_at=db.scalar(select(func.max(TenantServiceHealth.fetched_at))),
+        services=services,
+        open=open_out,
+        recent=newest_first(recent_rows),
+        stats=sorted(
+            stats.values(),
+            key=lambda entry: (-entry.year, order.index(entry.service_id)),
+        ),
+    )
+
+
+@router.get("/health/issues/{issue_id}")
+def service_issue(user: Reader, db: DbDep, issue_id: IssueId) -> IssueDetailOut:
+    """Eine Störung oder ein Hinweis mit allen Mitteilungen von Microsoft."""
+    row = db.get(TenantServiceIssue, issue_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    posts = []
+    for post in row.posts or []:
+        if not isinstance(post, dict) or not isinstance(post.get("text"), str):
+            continue
+        at = post.get("at")
+        posts.append(
+            PostOut(
+                at=datetime.fromisoformat(at) if isinstance(at, str) else None,
+                type=str(post.get("type") or "regular"),
+                text=post["text"],
+            )
+        )
+    return IssueDetailOut(**_issue_out(row).model_dump(), posts=posts)

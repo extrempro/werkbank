@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AUTH_EVENT } from "./api";
+import { AUTH_EVENT, notifyTasksChanged } from "./api";
 import { App } from "./App";
 
 function mockFetch(status: number, body: unknown = {}) {
@@ -60,6 +60,34 @@ describe("App", () => {
       "/konto",
     );
     expect(screen.queryByText("M365-Konfiguration")).not.toBeInTheDocument();
+  });
+
+  it("lädt die Zähler nach einer Änderung neu", async () => {
+    let tasks = [
+      { module: "Evergreen", title: "Neue Meldungen", subtitle: null, link: "/", count: 2 },
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        url === "/api/tasks"
+          ? new Response(JSON.stringify({ tasks }), { status: 200 })
+          : new Response(
+              JSON.stringify({
+                display_name: "Erika Beispiel",
+                email: "erika@example.com",
+                roles: ["Evergreen.Team"],
+                authenticated_at: "2026-11-14T08:00:00Z",
+              }),
+              { status: 200 },
+            ),
+      ),
+    );
+    render(<App />);
+    const link = await screen.findByRole("link", { name: "Meine Aufgaben: 2 offen" });
+    // Die Aufgabe ist erledigt; nach der Änderung verschwindet der Zähler.
+    tasks = [];
+    act(() => notifyTasksChanged());
+    await vi.waitFor(() => expect(link).toHaveAttribute("aria-label", "Meine Aufgaben"));
   });
 
   it("zeigt bei Serverfehler einen Hinweis", async () => {
