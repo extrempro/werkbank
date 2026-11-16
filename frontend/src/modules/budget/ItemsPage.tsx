@@ -59,7 +59,9 @@ export function StatusPill({ status }: { status: ItemStatus | null | undefined }
   if (!status) {
     return <span className="budget-muted">–</span>;
   }
-  return <span className={`${STATUS_PILLS[status]} budget-pill`}>{ITEM_STATUS_LABELS[status]}</span>;
+  return (
+    <span className={`${STATUS_PILLS[status]} budget-pill`}>{ITEM_STATUS_LABELS[status]}</span>
+  );
 }
 
 type Runtime = "einmalig" | "bis" | "offen";
@@ -95,7 +97,11 @@ function ItemForm({
   const [cost, setCost] = useState(item ? euroInput(item.amount_cents) : "");
   const [start, setStart] = useState(String(item?.start_year ?? defaultYear));
   const [runtime, setRuntime] = useState<Runtime>(
-    !item || item.end_year === item.start_year ? "einmalig" : item.end_year === null ? "offen" : "bis",
+    !item || item.end_year === item.start_year
+      ? "einmalig"
+      : item.end_year === null
+        ? "offen"
+        : "bis",
   );
   const [end, setEnd] = useState(item?.end_year ? String(item.end_year) : "");
   const [note, setNote] = useState(item?.note ?? "");
@@ -163,9 +169,7 @@ function ItemForm({
   return (
     <section className="panel" aria-labelledby="posten-formular-titel" ref={reveal} tabIndex={-1}>
       <div className="panel-head">
-        <h2 id="posten-formular-titel">
-          {item ? `${item.name} bearbeiten` : "Posten hinzufügen"}
-        </h2>
+        <h2 id="posten-formular-titel">{item ? `${item.name} bearbeiten` : "Posten hinzufügen"}</h2>
       </div>
       <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
         <fieldset className="budget-fieldset">
@@ -472,9 +476,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
         </p>
       )}
       {overview && accounts.length > 0 && overview.items.length === 0 && (
-        <p className="panel panel-empty">
-          In {overview.year_name} läuft noch kein Budgetposten.
-        </p>
+        <p className="panel panel-empty">In {overview.year_name} läuft noch kein Budgetposten.</p>
       )}
       {overview && overview.items.length > 0 && (
         <div className="budget-toolbar budget-filter settings-form">

@@ -209,9 +209,9 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
               </dt>
               <dd className="budget-card-value">{formatEuro(expected)}</dd>
               <dd className="budget-card-sub">
-                Vorjahr {formatEuro(overview.previous.total_cents)} ·{" "}
-                {overview.statuses.open} offen, {overview.statuses.invoiced} mit Rechnung,{" "}
-                {overview.statuses.closed} abgeschlossen
+                Vorjahr {formatEuro(overview.previous.total_cents)} · {overview.statuses.open}{" "}
+                offen, {overview.statuses.invoiced} mit Rechnung, {overview.statuses.closed}{" "}
+                abgeschlossen
               </dd>
             </div>
             <div className="panel budget-card">
@@ -236,7 +236,9 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
             <div className="panel budget-card">
               <dt>Prognose Jahresende</dt>
               <dd className="budget-card-value">{formatEuro(overview.forecast.total_cents)}</dd>
-              <dd className={delta > 0 ? "budget-card-sub budget-bad" : "budget-card-sub budget-ok"}>
+              <dd
+                className={delta > 0 ? "budget-card-sub budget-bad" : "budget-card-sub budget-ok"}
+              >
                 {delta > 0
                   ? `${formatEuro(delta)} über der Erwartung`
                   : delta < 0
@@ -357,9 +359,9 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
 
               <p className="small budget-muted">
                 Erwartete Kosten stehen am <Link to={BUDGET_ITEMS_PATH}>Budgetposten</Link>. Ist =
-                gebuchte Rechnungen. Gebunden = was aus Verträgen in diesem {label} noch zu
-                erwarten ist. Prognose = bei abgeschlossenen Posten das Ist, sonst das Höhere aus
-                Erwartung und Ist plus gebunden. Alle Beträge sind brutto.
+                gebuchte Rechnungen. Gebunden = was aus Verträgen in diesem {label} noch zu erwarten
+                ist. Prognose = bei abgeschlossenen Posten das Ist, sonst das Höhere aus Erwartung
+                und Ist plus gebunden. Alle Beträge sind brutto.
               </p>
             </>
           )}

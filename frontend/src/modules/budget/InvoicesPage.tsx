@@ -159,9 +159,10 @@ function InvoiceForm({
   const [busy, setBusy] = useState(false);
   // Status der Budgetposten im Geschäftsjahr des Rechnungsdatums, für die Auswahl
   const fiscalYear = fiscalYearOf(date, startMonth) ?? listYear;
-  const [statuses, setStatuses] = useState<{ year: number; byItem: Map<number, ItemStatus | null> }>(
-    { year: 0, byItem: new Map() },
-  );
+  const [statuses, setStatuses] = useState<{
+    year: number;
+    byItem: Map<number, ItemStatus | null>;
+  }>({ year: 0, byItem: new Map() });
   useEffect(() => {
     let active = true;
     fetchItems(fiscalYear)
@@ -180,7 +181,9 @@ function InvoiceForm({
     };
   }, [fiscalYear]);
   const yearName =
-    startMonth === 1 ? String(fiscalYear) : `${fiscalYear}/${String((fiscalYear + 1) % 100).padStart(2, "0")}`;
+    startMonth === 1
+      ? String(fiscalYear)
+      : `${fiscalYear}/${String((fiscalYear + 1) % 100).padStart(2, "0")}`;
   const statusOf = (id: number): ItemStatus | null =>
     statuses.year === fiscalYear ? (statuses.byItem.get(id) ?? null) : null;
 

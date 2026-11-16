@@ -53,7 +53,8 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
   },
   "Budget.Editor": {
     label: "Budget Bearbeiter",
-    description: "IT-Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen",
+    description:
+      "IT-Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen",
   },
   "Budget.Manager": {
     label: "Budgetverwalter",

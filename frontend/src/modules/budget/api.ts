@@ -758,13 +758,9 @@ export function itemMatches(item: Item, search: string): boolean {
   if (needle === "") {
     return true;
   }
-  return [
-    item.name,
-    item.note,
-    item.account_number,
-    item.account_name,
-    ...item.tags,
-  ].some((text) => text.toLowerCase().includes(needle));
+  return [item.name, item.note, item.account_number, item.account_name, ...item.tags].some((text) =>
+    text.toLowerCase().includes(needle),
+  );
 }
 
 export function hasTag(item: Item, tag: string): boolean {

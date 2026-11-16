@@ -45,7 +45,9 @@ function barPath(x: number, base: number, height: number): string {
 
 /** Erwartet und Ist je Geschäftsjahr als Balkenpaare. Die Tabelle darunter zeigt dieselben Zahlen. */
 function TagChart({ years, label }: { years: StatisticYear[]; label: string }) {
-  const max = niceMax(Math.max(...years.flatMap((year) => [year.expected_cents, year.actual_cents])));
+  const max = niceMax(
+    Math.max(...years.flatMap((year) => [year.expected_cents, year.actual_cents])),
+  );
   const base = HEIGHT - BOTTOM;
   const plot = base - TOP;
   const slot = (WIDTH - 2 * LEFT) / Math.max(years.length, 1);

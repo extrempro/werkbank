@@ -151,173 +151,177 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
       <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
         <fieldset className="budget-fieldset">
           <legend>Vertrag und Partner</legend>
-        <div className="tool-row">
-          <label>
-            Bezeichnung
-            <input
-              type="text"
-              value={title}
-              maxLength={160}
-              onChange={(event) => setTitle(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Vertragsnummer (freiwillig)
-            <input
-              type="text"
-              value={number}
-              maxLength={60}
-              onChange={(event) => setNumber(event.target.value)}
-            />
-          </label>
-        </div>
-        <div className="tool-row">
-          <label>
-            Vertragspartner
-            <select value={partnerId} onChange={(event) => setPartnerId(event.target.value)}>
-              <option value="">Bitte wählen</option>
-              {partnerChoices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Rechnungssteller
-            <select value={invoicerId} onChange={(event) => setInvoicerId(event.target.value)}>
-              <option value="">wie Vertragspartner</option>
-              {invoicerChoices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="tool-row">
-          <label>
-            Budgetposten
-            <select value={itemId} onChange={(event) => setItemId(event.target.value)}>
-              <option value="">Bitte wählen</option>
-              {itemChoices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.account_number} {entry.account_name} · {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+          <div className="tool-row">
+            <label>
+              Bezeichnung
+              <input
+                type="text"
+                value={title}
+                maxLength={160}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+            </label>
+            <label className="narrow">
+              Vertragsnummer (freiwillig)
+              <input
+                type="text"
+                value={number}
+                maxLength={60}
+                onChange={(event) => setNumber(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="tool-row">
+            <label>
+              Vertragspartner
+              <select value={partnerId} onChange={(event) => setPartnerId(event.target.value)}>
+                <option value="">Bitte wählen</option>
+                {partnerChoices.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Rechnungssteller
+              <select value={invoicerId} onChange={(event) => setInvoicerId(event.target.value)}>
+                <option value="">wie Vertragspartner</option>
+                {invoicerChoices.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="tool-row">
+            <label>
+              Budgetposten
+              <select value={itemId} onChange={(event) => setItemId(event.target.value)}>
+                <option value="">Bitte wählen</option>
+                {itemChoices.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.account_number} {entry.account_name} · {entry.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </fieldset>
         <fieldset className="budget-fieldset">
           <legend>Kosten</legend>
-        <div className="tool-row">
-          <label className="narrow">
-            Betrag je Zahlung (netto, Euro)
-            <input
-              type="text"
-              inputMode="decimal"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Steuersatz (%)
-            <input
-              type="text"
-              inputMode="decimal"
-              value={rate}
-              onChange={(event) => setRate(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Turnus
-            <select
-              value={interval}
-              onChange={(event) => setInterval(event.target.value as ContractInterval)}
-            >
-              {(Object.keys(INTERVAL_LABELS) as ContractInterval[]).map((key) => (
-                <option key={key} value={key}>
-                  {INTERVAL_LABELS[key]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <p className="small" role="status">
-          {netPreview !== null && ratePreview !== null
-            ? `Brutto je Zahlung: ${formatEuro(grossCents(netPreview, ratePreview))}. Fürs Budget zählt das Brutto.`
-            : "Das Brutto rechnet die Werkbank aus Netto und Steuersatz. Fürs Budget zählt das Brutto."}
-        </p>
+          <div className="tool-row">
+            <label className="narrow">
+              Betrag je Zahlung (netto, Euro)
+              <input
+                type="text"
+                inputMode="decimal"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+              />
+            </label>
+            <label className="narrow">
+              Steuersatz (%)
+              <input
+                type="text"
+                inputMode="decimal"
+                value={rate}
+                onChange={(event) => setRate(event.target.value)}
+              />
+            </label>
+            <label className="narrow">
+              Turnus
+              <select
+                value={interval}
+                onChange={(event) => setInterval(event.target.value as ContractInterval)}
+              >
+                {(Object.keys(INTERVAL_LABELS) as ContractInterval[]).map((key) => (
+                  <option key={key} value={key}>
+                    {INTERVAL_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className="small" role="status">
+            {netPreview !== null && ratePreview !== null
+              ? `Brutto je Zahlung: ${formatEuro(grossCents(netPreview, ratePreview))}. Fürs Budget zählt das Brutto.`
+              : "Das Brutto rechnet die Werkbank aus Netto und Steuersatz. Fürs Budget zählt das Brutto."}
+          </p>
         </fieldset>
         <fieldset className="budget-fieldset">
           <legend>Laufzeit</legend>
-        <div className="tool-row">
-          <label className="narrow">
-            Beginn
-            <input
-              type="date"
-              value={startsOn}
-              onChange={(event) => setStartsOn(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Ende der Laufzeit (leer: unbefristet)
-            <input type="date" value={endsOn} onChange={(event) => setEndsOn(event.target.value)} />
-          </label>
-          <label className="narrow">
-            Verlängert sich um (Monate)
-            <input
-              type="text"
-              inputMode="numeric"
-              value={renewal}
-              onChange={(event) => setRenewal(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Kündigungsfrist (Monate)
-            <input
-              type="text"
-              inputMode="numeric"
-              value={notice}
-              onChange={(event) => setNotice(event.target.value)}
-            />
-          </label>
-        </div>
+          <div className="tool-row">
+            <label className="narrow">
+              Beginn
+              <input
+                type="date"
+                value={startsOn}
+                onChange={(event) => setStartsOn(event.target.value)}
+              />
+            </label>
+            <label className="narrow">
+              Ende der Laufzeit (leer: unbefristet)
+              <input
+                type="date"
+                value={endsOn}
+                onChange={(event) => setEndsOn(event.target.value)}
+              />
+            </label>
+            <label className="narrow">
+              Verlängert sich um (Monate)
+              <input
+                type="text"
+                inputMode="numeric"
+                value={renewal}
+                onChange={(event) => setRenewal(event.target.value)}
+              />
+            </label>
+            <label className="narrow">
+              Kündigungsfrist (Monate)
+              <input
+                type="text"
+                inputMode="numeric"
+                value={notice}
+                onChange={(event) => setNotice(event.target.value)}
+              />
+            </label>
+          </div>
         </fieldset>
         <details className="budget-more" open={contract !== null}>
           <summary>Weitere Angaben: AVV, Kündigung, Notiz</summary>
           <div className="budget-more-body">
-        <label className="narrow">
-          Auftragsverarbeitungsvertrag (AVV)
-          <select value={dpa} onChange={(event) => setDpa(event.target.value as DpaStatus)}>
-            {(Object.keys(DPA_LABELS) as DpaStatus[]).map((key) => (
-              <option key={key} value={key}>
-                {DPA_LABELS[key]}
-              </option>
-            ))}
-          </select>
-        </label>
-        {contract && (
-          <label className="narrow">
-            Gekündigt zum (leer: nicht gekündigt)
-            <input
-              type="date"
-              value={cancelledTo}
-              onChange={(event) => setCancelledTo(event.target.value)}
-            />
-          </label>
-        )}
-        <label>
-          Notiz (freiwillig)
-          <input
-            type="text"
-            value={note}
-            maxLength={500}
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </label>
-        </div>
+            <label className="narrow">
+              Auftragsverarbeitungsvertrag (AVV)
+              <select value={dpa} onChange={(event) => setDpa(event.target.value as DpaStatus)}>
+                {(Object.keys(DPA_LABELS) as DpaStatus[]).map((key) => (
+                  <option key={key} value={key}>
+                    {DPA_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {contract && (
+              <label className="narrow">
+                Gekündigt zum (leer: nicht gekündigt)
+                <input
+                  type="date"
+                  value={cancelledTo}
+                  onChange={(event) => setCancelledTo(event.target.value)}
+                />
+              </label>
+            )}
+            <label>
+              Notiz (freiwillig)
+              <input
+                type="text"
+                value={note}
+                maxLength={500}
+                onChange={(event) => setNote(event.target.value)}
+              />
+            </label>
+          </div>
         </details>
         <p className="small">
           Die erste Zahlung zählt zum Beginn, die weiteren im gewählten Turnus. Daraus rechnet die

@@ -252,7 +252,12 @@ describe("Budgetposten", () => {
       "GET /api/budget/overview": overview({
         items: [
           { ...base.items[1], actual_cents: 1_290_000, forecast_cents: 1_290_000 },
-          { ...base.items[0], status: "abgeschlossen", actual_cents: 4_000_000, forecast_cents: 4_000_000 },
+          {
+            ...base.items[0],
+            status: "abgeschlossen",
+            actual_cents: 4_000_000,
+            forecast_cents: 4_000_000,
+          },
         ],
       }),
       "GET /api/budget/accounts": [hardware, software],
@@ -582,9 +587,9 @@ describe("Übersicht nach dem Entwurf", () => {
     render(<BudgetOverviewPage roles={["Budget.Reader"]} />);
     expect(await screen.findByText("Durch Verträge gebunden", { selector: "dt" })).toBeVisible();
     expect(screen.getByText(/2 Verträge/)).toBeVisible();
-    expect(
-      plain(screen.getByText(/über der Erwartung$/, { selector: "dd" }).textContent),
-    ).toBe("2.190,00 € über der Erwartung");
+    expect(plain(screen.getByText(/über der Erwartung$/, { selector: "dd" }).textContent)).toBe(
+      "2.190,00 € über der Erwartung",
+    );
     expect(screen.getByText(/1 offen, 1 mit Rechnung, 0 abgeschlossen/)).toBeVisible();
     expect(
       screen.getByRole("img", { name: /Softwarewartung: Ist 0 %, Prognose 100 % der Erwartung/ }),

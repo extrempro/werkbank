@@ -26,7 +26,8 @@ export const RELEASES: readonly Release[] = [
   {
     version: "0.33.0",
     date: "2026-11-16",
-    summary: "IT-Budget: Budgetposten als Vorgang mit Status, Mehrjahresübersicht und Excel-Export.",
+    summary:
+      "IT-Budget: Budgetposten als Vorgang mit Status, Mehrjahresübersicht und Excel-Export.",
     sections: [
       {
         area: "IT-Budget",
