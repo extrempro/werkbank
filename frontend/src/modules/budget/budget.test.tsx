@@ -761,6 +761,10 @@ describe("Verträge", () => {
     fireEvent.change(screen.getByLabelText(/^Ende der Laufzeit/), {
       target: { value: "2026-12-31" },
     });
+    // Die Kündigungsfrist steht als Auswahl bis 12 Monate bereit.
+    expect(within(screen.getByLabelText(/^Kündigungsfrist/)).getAllByRole("option")).toHaveLength(
+      14,
+    );
     fireEvent.change(screen.getByLabelText(/^Kündigungsfrist/), { target: { value: "3" } });
     fireEvent.change(screen.getByLabelText(/^Auftragsverarbeitungsvertrag/), {
       target: { value: "fehlt" },

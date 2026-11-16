@@ -15,6 +15,7 @@ IT-Budget: Den Vertrag gibt der Budgetposten vor, nicht die Rechnungsposition.
 - Verträge lassen sich ohne Budgetposten anlegen
 - „Schließt den Budgetposten ab“ ist vorbelegt aus, wenn der Posten einen Vertrag hat
 - Ein Vertrag lässt sich löschen, auch wenn Rechnungen auf seinen Posten liegen; die Posten bleiben ohne Vertrag
+- Kündigungsfrist am Vertrag als Auswahl: keine oder 0 bis 12 Monate (ein älterer, längerer Wert bleibt wählbar)
 - Migration 0031: Spalte `contract_id` der Rechnungspositionen entfällt (die bisherigen Einträge gehen verloren); je Posten bleibt höchstens die Zuordnung zum zuerst angelegten Vertrag, eindeutiger Schlüssel auf `budget_contract_items.item_id`
 
 ### Behoben
