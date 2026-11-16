@@ -216,8 +216,7 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
               <dt>Offene Budgetposten</dt>
               <dd className="budget-card-value">{overview.statuses.open}</dd>
               <dd className="budget-card-sub">
-                {overview.statuses.invoiced} mit Rechnung · {overview.statuses.closed}{" "}
-                abgeschlossen
+                {overview.statuses.invoiced} mit Rechnung · {overview.statuses.closed} abgeschlossen
               </dd>
             </div>
             <div className="panel budget-card">

@@ -1363,8 +1363,9 @@ describe("Tag-Liste in den Einstellungen", () => {
     fireEvent.change(screen.getByLabelText("Neuer Tag"), { target: { value: " Projekt " } });
     fireEvent.click(screen.getByRole("button", { name: "Tag anlegen" }));
     expect(await screen.findByText("Der Tag „Projekt“ ist angelegt.")).toBeVisible();
-    expect(calls.find((call) => call.url === "/api/budget/tags" && call.method === "POST")?.body)
-      .toEqual({ name: "Projekt" });
+    expect(
+      calls.find((call) => call.url === "/api/budget/tags" && call.method === "POST")?.body,
+    ).toEqual({ name: "Projekt" });
 
     fireEvent.click(screen.getByRole("button", { name: "Tag Clod umbenennen" }));
     fireEvent.change(screen.getByLabelText("Neuer Name für Clod"), { target: { value: "Cloud" } });

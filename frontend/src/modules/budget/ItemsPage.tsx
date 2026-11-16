@@ -113,7 +113,9 @@ function ItemForm({
   const isChosen = (tag: string) => tags.some((entry) => entry.toLowerCase() === tag.toLowerCase());
   const toggleTag = (tag: string) =>
     setTags(
-      isChosen(tag) ? tags.filter((entry) => entry.toLowerCase() !== tag.toLowerCase()) : [...tags, tag],
+      isChosen(tag)
+        ? tags.filter((entry) => entry.toLowerCase() !== tag.toLowerCase())
+        : [...tags, tag],
     );
   // Ein Jahr außerhalb der Liste (z. B. ein alter Posten) bleibt wählbar.
   const yearChoices = [...years];

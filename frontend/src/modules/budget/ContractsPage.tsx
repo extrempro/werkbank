@@ -358,8 +358,8 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
           </div>
         </details>
         <p className="small">
-          Die erste Zahlung zählt zum Beginn, die weiteren im gewählten Turnus. Die
-          Kündigungsfrist zählt rückwärts vom Ende der Laufzeit.
+          Die erste Zahlung zählt zum Beginn, die weiteren im gewählten Turnus. Die Kündigungsfrist
+          zählt rückwärts vom Ende der Laufzeit.
         </p>
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>
