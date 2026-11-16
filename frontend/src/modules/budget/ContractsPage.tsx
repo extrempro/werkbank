@@ -93,6 +93,11 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
   );
   const toggleItem = (id: number) =>
     setItemIds(itemIds.includes(id) ? itemIds.filter((entry) => entry !== id) : [...itemIds, id]);
+  // Kündigungsfrist 0 bis 12 Monate; ein älterer, längerer Wert bleibt wählbar.
+  const noticeChoices = Array.from({ length: 13 }, (_, months) => months);
+  if (contract?.notice_months && contract.notice_months > 12) {
+    noticeChoices.push(contract.notice_months);
+  }
   const netPreview = parseEuro(amount);
   const ratePreview = parseRate(rate);
 
@@ -323,13 +328,15 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
               />
             </label>
             <label className="narrow">
-              Kündigungsfrist (Monate)
-              <input
-                type="text"
-                inputMode="numeric"
-                value={notice}
-                onChange={(event) => setNotice(event.target.value)}
-              />
+              Kündigungsfrist
+              <select value={notice} onChange={(event) => setNotice(event.target.value)}>
+                <option value="">keine</option>
+                {noticeChoices.map((months) => (
+                  <option key={months} value={months}>
+                    {months === 1 ? "1 Monat" : `${months} Monate`}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
         </fieldset>

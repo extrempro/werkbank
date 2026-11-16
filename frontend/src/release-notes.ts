@@ -34,6 +34,7 @@ export const RELEASES: readonly Release[] = [
           "Rechnungspositionen buchst du nur noch auf einen Budgetposten. Den Vertrag gibt der Posten vor; er steht an der Position zur Information.",
           "Am Budgetposten wählst du jetzt den Vertrag. Ein Posten hat höchstens einen Vertrag; am Vertrag kannst du die Posten weiterhin zuordnen.",
           "Einen Vertrag kannst du auch ohne Budgetposten anlegen.",
+          "Die Kündigungsfrist wählst du am Vertrag aus einer Liste bis 12 Monate.",
           "Hat der Posten einen Vertrag, ist „Schließt den Budgetposten ab“ an der Position zuerst aus.",
         ],
       },
