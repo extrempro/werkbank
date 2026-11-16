@@ -184,7 +184,8 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
     };
   }, [key, mode, ahead, currentYear]);
 
-  const isChosen = (tag: string) => chosen.some((entry) => entry.toLowerCase() === tag.toLowerCase());
+  const isChosen = (tag: string) =>
+    chosen.some((entry) => entry.toLowerCase() === tag.toLowerCase());
   const toggle = (tag: string) => {
     setMessage(null);
     setChosen(
@@ -455,9 +456,7 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
               </button>
             </form>
           )}
-          {openSaved && (
-            <p className="small budget-muted">Gespeichert als „{openSaved.name}“.</p>
-          )}
+          {openSaved && <p className="small budget-muted">Gespeichert als „{openSaved.name}“.</p>}
         </section>
       )}
       {message && (

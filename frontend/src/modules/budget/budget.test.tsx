@@ -1224,7 +1224,9 @@ describe("Tags", () => {
     const field = screen.getByLabelText(/^Tags/);
     expect(field).toHaveValue("Lizenzen, Cloud");
     // Vorgeschlagen wird nur, was noch nicht im Feld steht.
-    const proposals = within(screen.getByRole("group", { name: "Schon vergebene Tags übernehmen" }));
+    const proposals = within(
+      screen.getByRole("group", { name: "Schon vergebene Tags übernehmen" }),
+    );
     expect(proposals.queryByRole("button", { name: "Cloud" })).toBeNull();
     fireEvent.click(proposals.getByRole("button", { name: "Projekt" }));
     expect(field).toHaveValue("Lizenzen, Cloud, Projekt");
@@ -1333,9 +1335,12 @@ describe("Statistik", () => {
       target: { value: " Lizenzen genau " },
     });
     fireEvent.click(screen.getByRole("button", { name: "Statistik speichern" }));
-    expect(await screen.findByText("Die Statistik „Lizenzen genau“ ist gespeichert.")).toBeVisible();
-    expect(calls.find((call) => call.url === "/api/budget/statistics" && call.method === "POST")?.body)
-      .toEqual({ name: "Lizenzen genau", tags: ["Lizenzen", "Cloud"], mode: "all" });
+    expect(
+      await screen.findByText("Die Statistik „Lizenzen genau“ ist gespeichert."),
+    ).toBeVisible();
+    expect(
+      calls.find((call) => call.url === "/api/budget/statistics" && call.method === "POST")?.body,
+    ).toEqual({ name: "Lizenzen genau", tags: ["Lizenzen", "Cloud"], mode: "all" });
 
     fireEvent.click(screen.getByRole("button", { name: "Alles Cloud" }));
     await vi.waitFor(() =>

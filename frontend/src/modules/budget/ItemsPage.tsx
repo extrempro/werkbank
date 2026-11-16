@@ -51,15 +51,7 @@ interface FormProps {
   onCancel: () => void;
 }
 
-function ItemForm({
-  item,
-  accounts,
-  partners,
-  knownTags,
-  planYear,
-  onSaved,
-  onCancel,
-}: FormProps) {
+function ItemForm({ item, accounts, partners, knownTags, planYear, onSaved, onCancel }: FormProps) {
   const reveal = useRevealOnMount<HTMLElement>();
   const [accountId, setAccountId] = useState(item ? String(item.account_id) : "");
   const [name, setName] = useState(item?.name ?? "");

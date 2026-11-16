@@ -655,7 +655,11 @@ export function fetchStatistics(): Promise<SavedStatistic[]> {
   return getJson<SavedStatistic[]>("/api/budget/statistics");
 }
 
-export function saveStatistic(name: string, tags: string[], mode: TagMode): Promise<SavedStatistic> {
+export function saveStatistic(
+  name: string,
+  tags: string[],
+  mode: TagMode,
+): Promise<SavedStatistic> {
   return postJson<SavedStatistic>("/api/budget/statistics", { name, tags, mode });
 }
 
