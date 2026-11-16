@@ -89,22 +89,22 @@ export function ContractDetail({ contract, yearName }: { contract: Contract; yea
           </section>
           <section className="panel budget-section" aria-labelledby="vertrag-budget">
             <h2 id="vertrag-budget">Zuordnung zum Budget</h2>
-            <dl className="budget-facts">
-              <div>
-                <dt>Konto</dt>
-                <dd>
-                  {contract.account_number} {contract.account_name}
-                </dd>
-              </div>
-              <div>
-                <dt>Budgetposten</dt>
-                <dd>{contract.item_name}</dd>
-              </div>
-              <div>
-                <dt>Gebunden im {yearName}</dt>
-                <dd>{formatEuro(contract.current_year_cents)}</dd>
-              </div>
-            </dl>
+            <ul className="budget-list">
+              {contract.items.map((item) => (
+                <li key={item.id}>
+                  <span>
+                    {item.name}
+                    <span className="budget-muted budget-line">
+                      {item.account_number} {item.account_name}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="small budget-muted">
+              Zahlungen im {yearName}: {formatEuro(contract.current_year_cents)}. Ins Budget gehen
+              sie über die Rechnungen.
+            </p>
           </section>
         </div>
         <div className="budget-side">

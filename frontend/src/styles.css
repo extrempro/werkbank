@@ -4265,3 +4265,14 @@ p.badges {
   gap: 12px;
   padding: 0 16px 16px;
 }
+
+/* IT-Budget: Auswahl mehrerer Budgetposten am Vertrag */
+
+.budget-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

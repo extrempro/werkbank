@@ -31,6 +31,7 @@ from werkbank.modules.budget.models import (
     BudgetItem,
     BudgetPartner,
     BudgetStatistic,
+    BudgetTag,
 )
 from werkbank.modules.budget.settings import (
     SETTINGS_KEY,
@@ -52,6 +53,7 @@ def db(db_session: Session) -> Iterator[Session]:
         # Reihenfolge nach Abhängigkeiten: erst, was auf anderes verweist.
         for model in (
             BudgetStatistic,
+            BudgetTag,
             BudgetInvoice,
             BudgetContract,
             BudgetItem,
@@ -300,7 +302,6 @@ def test_expected_costs_and_overview(db: Session) -> None:
     }
     assert data["previous"]["total_cents"] == 1_190_000
     assert data["statuses"] == {"open": 3, "invoiced": 0, "closed": 0}
-    assert (data["committed"]["total_cents"], data["committed_contracts"]) == (0, 0)
     assert {2025, 2026} <= {entry["year"] for entry in data["years"]}
     later = reader.get(f"{BASE}/overview", params={"year": 2027}).json()
     assert {row["item"]["name"] for row in later["items"]} == {"Office-Lizenzen", "Mobilfunk"}
@@ -374,7 +375,6 @@ def contract(**values: Any) -> BudgetContract:
     data: dict[str, Any] = {
         "title": "Wartung",
         "partner_id": 1,
-        "item_id": 1,
         "starts_on": date(2026, 1, 31),
         "ends_on": None,
         "renewal_months": None,
@@ -498,7 +498,7 @@ def test_contracts_bind_budget_and_raise_tasks(db: Session) -> None:
     body = {
         "title": "Wartung Zeiterfassung",
         "partner_id": partner["id"],
-        "item_id": item["id"],
+        "item_ids": [item["id"]],
         "number": "V-1",
         "starts_on": f"{year}-01-01",
         "ends_on": (today + timedelta(days=100)).isoformat(),
@@ -514,11 +514,10 @@ def test_contracts_bind_budget_and_raise_tasks(db: Session) -> None:
     created = manager.post(f"{BASE}/contracts", json=body, headers=HEADERS)
     assert created.status_code == 201, created.text
     first = created.json()
-    assert (first["partner_name"], first["account_number"], first["item_name"]) == (
-        "Beispiel Software GmbH",
-        "6815",
-        "Zeiterfassung",
-    )
+    assert first["partner_name"] == "Beispiel Software GmbH"
+    assert [(entry["account_number"], entry["name"]) for entry in first["items"]] == [
+        ("6815", "Zeiterfassung")
+    ]
     assert first["running"] is True
     assert (first["invoicer_id"], first["dpa_status"]) == (None, "nicht_erforderlich")
     assert first["yearly_cents"] == 600_000
@@ -529,7 +528,8 @@ def test_contracts_bind_budget_and_raise_tasks(db: Session) -> None:
 
     for bad in (
         {**body, "partner_id": 999_999},
-        {**body, "item_id": 999_999},
+        {**body, "item_ids": [999_999]},
+        {**body, "item_ids": []},
         {**body, "ends_on": f"{year - 1}-01-01"},
         {**body, "cancelled_to": f"{year - 1}-01-01"},
         {**body, "ends_on": None},
@@ -548,7 +548,7 @@ def test_contracts_bind_budget_and_raise_tasks(db: Session) -> None:
         json={
             "title": "Einrichtung",
             "partner_id": partner["id"],
-            "item_id": item["id"],
+            "item_ids": [item["id"]],
             "starts_on": f"{year}-02-01",
             "net_cents": 100_000,
             "interval": "einmalig",
@@ -562,24 +562,15 @@ def test_contracts_bind_budget_and_raise_tasks(db: Session) -> None:
         "Einrichtung",
     ]
 
+    # Verträge binden kein Budget; der Posten zählt nur die zugeordneten laufenden Verträge.
     overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
-    row = overview["rows"][0]
-    assert row["committed_cents"] == 719_000
-    assert overview["committed"] == {
-        "running_cents": 719_000,
-        "investment_cents": 0,
-        "total_cents": 719_000,
-    }
+    assert "committed" not in overview
+    assert overview["items"][0]["contracts"] == 2
 
     def budget_tasks_of(client: Any) -> list[dict[str, Any]]:
         tasks: list[dict[str, Any]] = client.get("/api/tasks").json()["tasks"]
         return [task for task in tasks if task["module"] == "IT-Budget"]
 
-    assert overview["committed_contracts"] == 2
-    assert (overview["items"][0]["committed_cents"], overview["items"][0]["contracts"]) == (
-        719_000,
-        2,
-    )
     # Der einmalige Vertrag rechnet 19 % auf das Netto.
     single = listing["entries"][1]
     assert (single["net_cents"], single["tax_rate_bp"], single["amount_cents"]) == (
@@ -653,7 +644,7 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
         {
             "title": "Wartung",
             "partner_id": partner["id"],
-            "item_id": item["id"],
+            "item_ids": [item["id"]],
             "starts_on": f"{year}-01-01",
             "net_cents": 100_000,
             "tax_rate_bp": 0,
@@ -703,7 +694,6 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
     assert first["created_by_name"]
     overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
     assert (overview["open_invoices"], overview["actual"]["total_cents"]) == (1, 0)
-    assert overview["committed"]["total_cents"] == 1_200_000
 
     for bad in (
         {**body, "invoicer_id": 999_999},
@@ -727,16 +717,16 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
     assert manager.post(f"{BASE}{url}/book", headers=HEADERS).status_code == 409
     assert manager.post(f"{BASE}/invoices/999999/book", headers=HEADERS).status_code == 404
 
-    # Gebucht: zählt zum Ist und nicht mehr als gebunden; die Prognose ist Ist plus Rest.
+    # Gebucht: zählt zum Ist; die Prognose bleibt die Erwartung, solange das Ist darunter liegt.
     overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
     row = overview["items"][0]
-    assert (row["actual_cents"], row["committed_cents"], row["forecast_cents"]) == (
+    assert (row["actual_cents"], row["forecast_cents"], row["status"]) == (
         119_005,
-        1_200_000 - 119_005,
-        1_200_000,
+        1_000_000,
+        "rechnung",
     )
     assert overview["open_invoices"] == 0
-    assert overview["forecast"]["total_cents"] == 1_200_000
+    assert overview["forecast"]["total_cents"] == 1_000_000
     assert overview["rows"][0]["actual_cents"] == 119_005
 
     # Gebuchtes ändert und löscht nur der Budgetverwalter.
@@ -744,8 +734,7 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
     assert editor.delete(f"{BASE}{url}", headers=HEADERS).status_code == 403
     assert put(manager, url, {**body, "description": "Korrigiert"}).json()["status"] == "gebucht"
 
-    # Der Budgetverwalter bucht beim Erfassen sofort; ohne Vertrag erhöht das die Prognose.
-    # Die Rechnung schließt den Posten nicht ab, der Vertrag läuft weiter.
+    # Der Budgetverwalter bucht beim Erfassen sofort. Die Rechnung schließt den Posten nicht ab.
     direct = post(
         manager,
         "/invoices",
@@ -759,7 +748,10 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
     ).json()
     assert (direct["status"], direct["gross_cents"]) == ("gebucht", 11_900)
     overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
-    assert overview["forecast"]["total_cents"] == 1_211_900
+    assert (overview["actual"]["total_cents"], overview["forecast"]["total_cents"]) == (
+        130_905,
+        1_000_000,
+    )
 
     # Liste: neueste zuerst, nach Geschäftsjahr getrennt.
     post(editor, "/invoices", {**body, "number": "RE-3", "invoice_date": f"{year}-03-01"})
@@ -807,7 +799,7 @@ def test_partner_detail_and_merge(db: Session) -> None:
     vendor = post(manager, "/partners", {"name": "Beispiel Hersteller AG"}).json()
     year = manager.get(f"{BASE}/settings").json()["current_year"]
     base = {
-        "item_id": item["id"],
+        "item_ids": [item["id"]],
         "starts_on": f"{year}-01-01",
         "net_cents": 1_000,
         "tax_rate_bp": 0,
@@ -898,7 +890,7 @@ def test_delete_only_without_dependencies(db: Session) -> None:
         {
             "title": "Wartung",
             "partner_id": partner["id"],
-            "item_id": item["id"],
+            "item_ids": [item["id"]],
             "starts_on": f"{year}-01-01",
             "net_cents": 1_000,
             "interval": "jaehrlich",
@@ -1256,6 +1248,13 @@ def test_tags_statistics_and_search(db: Session) -> None:
     partner = post(manager, "/partners", {"name": "Beispiel Software GmbH"}).json()
     year = manager.get(f"{BASE}/settings").json()["current_year"]
 
+    # Tags kommen aus der Liste des Budgetverwalters.
+    for name in ("Cloud", "Lizenzen", "Projekt"):
+        assert post(editor, "/tags", {"name": name}).status_code == 403
+        assert post(manager, "/tags", {"name": name}).status_code == 201
+    assert post(manager, "/tags", {"name": " cloud "}).status_code == 409
+    assert post(manager, "/tags", {"name": "a,b"}).status_code == 422
+
     def item(name: str, tags: list[str]) -> Any:
         created = post(editor, "/items", {"account_id": account["id"], "name": name, "tags": tags})
         assert created.status_code == 201, created.text
@@ -1268,7 +1267,7 @@ def test_tags_statistics_and_search(db: Session) -> None:
     assert backup["tags"] == ["Cloud", "Projekt"]
     plain = item("Telefonie", [])
     assert plain["tags"] == []
-    for bad in (["a,b"], ["x" * 31], [""], [str(number) for number in range(11)]):
+    for bad in (["a,b"], ["x" * 31], [""], [str(number) for number in range(11)], ["Neu"]):
         body = {"account_id": account["id"], "name": "Ungültig", "tags": bad}
         assert post(editor, "/items", body).status_code == 422
 
@@ -1278,10 +1277,10 @@ def test_tags_statistics_and_search(db: Session) -> None:
         {"account_id": account["id"], "name": "Telefonie", "tags": ["lizenzen"]},
     )
     assert changed.json()["tags"] == ["Lizenzen"]
-    assert reader.get(f"{BASE}/tags").json() == [
-        {"tag": "Cloud", "items": 2},
-        {"tag": "Lizenzen", "items": 2},
-        {"tag": "Projekt", "items": 1},
+    assert [(entry["tag"], entry["items"]) for entry in reader.get(f"{BASE}/tags").json()] == [
+        ("Cloud", 2),
+        ("Lizenzen", 2),
+        ("Projekt", 1),
     ]
     assert stranger.get(f"{BASE}/tags").status_code == 403
     assert [entry["tags"] for entry in reader.get(f"{BASE}/items").json()] == [
@@ -1468,3 +1467,48 @@ def test_invoices_have_lines_for_several_items(db: Session) -> None:
     assert manager.delete(f"{BASE}/invoices/{invoice['id']}", headers=HEADERS).status_code == 200
     db.expire_all()
     assert db.scalars(select(BudgetInvoiceLine)).all() == []
+
+
+@pytest.mark.db
+def test_tag_list_rename_and_delete(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "tagliste-verwalter")
+    editor = client_for(["Budget.Editor"], "tagliste-it")
+    account = post(
+        manager, "/accounts", {"number": "6815", "name": "Software", "kind": "laufend"}
+    ).json()
+    tags = {
+        name: post(manager, "/tags", {"name": name}).json() for name in ("Clod", "Cloud", "Alt")
+    }
+    assert tags["Clod"]["items"] == 0
+    item = post(
+        editor,
+        "/items",
+        {"account_id": account["id"], "name": "Speicher", "tags": ["clod", "Alt"]},
+    ).json()
+    assert item["tags"] == ["Clod", "Alt"]
+    post(manager, "/statistics", {"name": "Nur Alt", "tags": ["Alt"]})
+    post(manager, "/statistics", {"name": "Clod", "tags": ["Clod", "Alt"]})
+
+    # Umbenennen ändert die Posten und Statistiken mit; auf einen vergebenen Namen nicht.
+    url = f"{BASE}/tags/{tags['Clod']['id']}"
+    assert editor.put(url, json={"name": "Wolke"}, headers=HEADERS).status_code == 403
+    assert manager.put(url, json={"name": "CLOUD"}, headers=HEADERS).status_code == 409
+    renamed = manager.put(url, json={"name": " Wolke "}, headers=HEADERS)
+    assert renamed.status_code == 200
+    assert (renamed.json()["tag"], renamed.json()["items"]) == ("Wolke", 1)
+    items = {entry["name"]: entry for entry in manager.get(f"{BASE}/items").json()}
+    assert items["Speicher"]["tags"] == ["Wolke", "Alt"]
+
+    # Löschen entfernt den Tag überall; eine Statistik ohne Tag fällt weg.
+    old = f"{BASE}/tags/{tags['Alt']['id']}"
+    assert editor.delete(old, headers=HEADERS).status_code == 403
+    assert manager.delete(old, headers=HEADERS).json() == {"deleted": True}
+    assert manager.delete(old, headers=HEADERS).status_code == 404
+    items = {entry["name"]: entry for entry in manager.get(f"{BASE}/items").json()}
+    assert items["Speicher"]["tags"] == ["Wolke"]
+    saved = {entry["name"]: entry["tags"] for entry in manager.get(f"{BASE}/statistics").json()}
+    assert saved == {"Clod": ["Wolke"]}
+    assert [entry["tag"] for entry in manager.get(f"{BASE}/tags").json()] == ["Cloud", "Wolke"]
+    db.expire_all()
+    actions = set(db.scalars(select(AuditLog.action).where(AuditLog.module == "budget")).all())
+    assert {"budget.tag_angelegt", "budget.tag_umbenannt", "budget.tag_geloescht"} <= actions

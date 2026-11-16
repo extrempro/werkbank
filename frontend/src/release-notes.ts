@@ -27,7 +27,7 @@ export const RELEASES: readonly Release[] = [
     version: "0.33.0",
     date: "2026-11-16",
     summary:
-      "IT-Budget: Budgetposten als Vorgang mit Status, Mehrjahresübersicht und Excel-Export.",
+      "IT-Budget: Budgetposten als Vorgang mit Status, Verträge für mehrere Posten, Tag-Liste, Mehrjahresübersicht und Excel-Export.",
     sections: [
       {
         area: "IT-Budget",
@@ -37,6 +37,8 @@ export const RELEASES: readonly Release[] = [
           "Jeder Budgetposten hat je Jahr einen Status: offen, Rechnung liegt vor oder abgeschlossen. Abgeschlossen ist er, sobald eine gebuchte Rechnungsposition mit dem Haken „Schließt den Budgetposten ab“ auf ihm liegt.",
           "Bei Positionen mit Vertrag ist der Haken aus, sonst an. Für Abschlagsrechnungen nimmst du ihn heraus.",
           "Statt „Frei“ steht jetzt die Abweichung der Prognose von den erwarteten Kosten. Bei abgeschlossenen Posten zählt nur noch das Ist.",
+          "Ein Vertrag lässt sich mehreren Budgetposten zuordnen. Verträge binden kein Budget mehr; ihre Kosten kommen über die Rechnungen ins Budget.",
+          "Tags pflegt der Budgetverwalter jetzt unter Einstellungen. Am Budgetposten wählst du sie aus dieser Liste aus.",
           "In der Rechnung findest du den Budgetposten über ein Suchfeld; die Auswahl ist nach Status sortiert.",
           "Die Mehrjahresplanung heißt jetzt Mehrjahresübersicht: erwartete Kosten, Ist und Status über fünf Jahre, als Ausblick oder Rückblick. Sie lässt sich als Excel-Datei herunterladen.",
           "Die Masken für Budgetposten, Rechnung und Vertrag sind in Abschnitte gegliedert; Seltenes steht unter „Weitere Angaben“.",

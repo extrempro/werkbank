@@ -10,12 +10,14 @@ import {
   deadlineBadge,
   DPA_LABELS,
   dpaTone,
+  contractItemsText,
   euroInput,
   fetchItems,
   fetchContracts,
   fetchPartners,
   formatBudgetDay,
   formatEuro,
+  itemMatches,
   formatRate,
   grossCents,
   INTERVAL_LABELS,
@@ -55,7 +57,8 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
   const reveal = useRevealOnMount<HTMLElement>();
   const [title, setTitle] = useState(contract?.title ?? "");
   const [partnerId, setPartnerId] = useState(contract ? String(contract.partner_id) : "");
-  const [itemId, setItemId] = useState(contract ? String(contract.item_id) : "");
+  const [itemIds, setItemIds] = useState<number[]>(contract?.items.map((entry) => entry.id) ?? []);
+  const [itemSearch, setItemSearch] = useState("");
   const [invoicerId, setInvoicerId] = useState(
     contract?.invoicer_id ? String(contract.invoicer_id) : "",
   );
@@ -82,7 +85,14 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
   const invoicerChoices = partners.filter(
     (entry) => (entry.active && entry.is_invoicer) || entry.id === contract?.invoicer_id,
   );
-  const itemChoices = items.filter((entry) => entry.active || entry.id === contract?.item_id);
+  // Aktive Posten und die schon zugeordneten; der Suchtext grenzt ein, Gewählte bleiben sichtbar.
+  const itemChoices = items.filter(
+    (entry) =>
+      (entry.active || itemIds.includes(entry.id)) &&
+      (itemIds.includes(entry.id) || itemMatches(entry, itemSearch)),
+  );
+  const toggleItem = (id: number) =>
+    setItemIds(itemIds.includes(id) ? itemIds.filter((entry) => entry !== id) : [...itemIds, id]);
   const netPreview = parseEuro(amount);
   const ratePreview = parseRate(rate);
 
@@ -95,8 +105,10 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
     let problem: string | null = null;
     if (!title.trim()) {
       problem = "Bitte eine Bezeichnung eintragen.";
-    } else if (!partnerId || !itemId) {
-      problem = "Bitte Vertragspartner und Budgetposten wählen.";
+    } else if (!partnerId) {
+      problem = "Bitte den Vertragspartner wählen.";
+    } else if (itemIds.length === 0) {
+      problem = "Bitte mindestens einen Budgetposten zuordnen.";
     } else if (cents === null) {
       problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 1000,00";
     } else if (taxRate === null) {
@@ -117,7 +129,7 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
     const update = {
       title: title.trim(),
       partner_id: Number(partnerId),
-      item_id: Number(itemId),
+      item_ids: itemIds,
       invoicer_id: invoicerId ? Number(invoicerId) : null,
       dpa_status: dpa,
       number: number.trim(),
@@ -195,19 +207,41 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
               </select>
             </label>
           </div>
-          <div className="tool-row">
-            <label>
-              Budgetposten
-              <select value={itemId} onChange={(event) => setItemId(event.target.value)}>
-                <option value="">Bitte wählen</option>
-                {itemChoices.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.account_number} {entry.account_name} · {entry.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+        </fieldset>
+        <fieldset className="budget-fieldset">
+          <legend>Budgetposten ({itemIds.length} zugeordnet)</legend>
+          <p className="small budget-muted">
+            Der Vertrag wird den Posten nur zugeordnet. Ins Budget gehen seine Kosten über die
+            Rechnungen.
+          </p>
+          <label className="narrow">
+            Budgetposten suchen
+            <input
+              type="search"
+              value={itemSearch}
+              placeholder="Name oder Konto"
+              onChange={(event) => setItemSearch(event.target.value)}
+            />
+          </label>
+          {itemChoices.length === 0 ? (
+            <p className="small budget-muted">Kein Budgetposten passt zur Suche.</p>
+          ) : (
+            <ul className="budget-choices">
+              {itemChoices.map((entry) => (
+                <li key={entry.id}>
+                  <label className="check-label">
+                    <input
+                      type="checkbox"
+                      className="check"
+                      checked={itemIds.includes(entry.id)}
+                      onChange={() => toggleItem(entry.id)}
+                    />
+                    {entry.account_number} · {entry.name}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
         </fieldset>
         <fieldset className="budget-fieldset">
           <legend>Kosten</legend>
@@ -324,9 +358,8 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
           </div>
         </details>
         <p className="small">
-          Die erste Zahlung zählt zum Beginn, die weiteren im gewählten Turnus. Daraus rechnet die
-          Werkbank, was im Geschäftsjahr gebunden ist. Die Kündigungsfrist zählt rückwärts vom Ende
-          der Laufzeit.
+          Die erste Zahlung zählt zum Beginn, die weiteren im gewählten Turnus. Die
+          Kündigungsfrist zählt rückwärts vom Ende der Laufzeit.
         </p>
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>
@@ -444,8 +477,9 @@ export function ContractsPage({
         title="Verträge"
         sub={
           <>
-            Verträge mit Laufzeit und Kündigungstermin. Ihre erwarteten Kosten zählen in der
-            Übersicht als „gebunden“. Alle Beträge sind brutto.
+            Verträge mit Laufzeit und Kündigungstermin, zugeordnet zu einem oder mehreren
+            Budgetposten. Ins Budget gehen ihre Kosten über die Rechnungen. Alle Beträge sind
+            brutto.
           </>
         }
       />
@@ -499,7 +533,7 @@ export function ContractsPage({
               {missingDpa} AVV fehlt
             </span>
             <span className="pill pill-neutral">
-              Gebunden {data.list.current_year_name}:{" "}
+              Zahlungen {data.list.current_year_name}:{" "}
               {formatEuro(all.reduce((sum, entry) => sum + entry.current_year_cents, 0))}
             </span>
           </p>
@@ -556,7 +590,7 @@ export function ContractsPage({
                             <span className="pill pill-neutral budget-pill">beendet</span>
                           )}
                           <span className="small budget-muted tenant-part">
-                            {entry.account_number} · {entry.item_name} · {termText(entry)}
+                            {contractItemsText(entry)} · {termText(entry)}
                             {entry.number ? ` · Nr. ${entry.number}` : ""}
                           </span>
                         </th>

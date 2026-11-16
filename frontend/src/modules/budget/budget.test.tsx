@@ -15,7 +15,6 @@ import {
   niceMax,
   parseEuro,
   parseRate,
-  parseTags,
   deadlineBadge,
   partnerRoles,
   share,
@@ -120,7 +119,6 @@ function overview(overrides: Partial<Overview> = {}): Overview {
         account: hardware,
         expected_cents: 5_000_050,
         previous_cents: null,
-        committed_cents: 0,
         actual_cents: 0,
         forecast_cents: 0,
       },
@@ -128,7 +126,6 @@ function overview(overrides: Partial<Overview> = {}): Overview {
         account: software,
         expected_cents: 1_190_000,
         previous_cents: 1_000_000,
-        committed_cents: 600_000,
         actual_cents: 0,
         forecast_cents: 600_000,
       },
@@ -138,7 +135,6 @@ function overview(overrides: Partial<Overview> = {}): Overview {
         item: server,
         expected_cents: 5_000_050,
         previous_cents: null,
-        committed_cents: 0,
         actual_cents: 0,
         forecast_cents: 5_000_050,
         status: "offen",
@@ -148,7 +144,6 @@ function overview(overrides: Partial<Overview> = {}): Overview {
         item: office,
         expected_cents: 1_190_000,
         previous_cents: 1_000_000,
-        committed_cents: 600_000,
         actual_cents: 0,
         forecast_cents: 1_190_000,
         status: "rechnung",
@@ -157,12 +152,10 @@ function overview(overrides: Partial<Overview> = {}): Overview {
     ],
     expected: { running_cents: 1_190_000, investment_cents: 5_000_050, total_cents: 6_190_050 },
     previous: { running_cents: 1_000_000, investment_cents: 0, total_cents: 1_000_000 },
-    committed: { running_cents: 600_000, investment_cents: 0, total_cents: 600_000 },
     actual: { running_cents: 0, investment_cents: 0, total_cents: 0 },
     forecast: { running_cents: 600_000, investment_cents: 0, total_cents: 600_000 },
     statuses: { open: 1, invoiced: 1, closed: 0 },
     open_invoices: 0,
-    committed_contracts: 1,
     ...overrides,
   };
 }
@@ -225,7 +218,6 @@ describe("Budgetposten", () => {
     expect(row).toHaveTextContent("ab 2025/26, bis auf Weiteres");
     expect(row).toHaveTextContent("1 Vertrag");
     expect(plain(row.textContent)).toContain("11.900,00 €");
-    expect(plain(row.textContent)).toContain("6.000,00 €");
     expect(plain(row.textContent)).toContain("10.000,00 €");
     const serverRow = table.getByRole("row", { name: /Server/ });
     expect(serverRow).toHaveTextContent("stillgelegt");
@@ -247,7 +239,7 @@ describe("Budgetposten", () => {
   });
 
   it("zeigt die Abweichung von der Erwartung mit Vorzeichen", async () => {
-    const row = { previous_cents: null, committed_cents: 0, contracts: 0 };
+    const row = { previous_cents: null, contracts: 0 };
     stubFetch({
       "GET /api/budget/overview": overview({
         items: [
@@ -357,11 +349,9 @@ describe("Übersicht", () => {
         expected: { running_cents: 0, investment_cents: 0, total_cents: 0 },
         items: [],
         statuses: { open: 0, invoiced: 0, closed: 0 },
-        committed: { running_cents: 0, investment_cents: 0, total_cents: 0 },
         actual: { running_cents: 0, investment_cents: 0, total_cents: 0 },
         forecast: { running_cents: 0, investment_cents: 0, total_cents: 0 },
         open_invoices: 0,
-        committed_contracts: 0,
       }),
     });
     render(<BudgetOverviewPage roles={["Budget.Editor"]} />);
@@ -431,6 +421,7 @@ describe("Einstellungen", () => {
   it("speichert Beginn, Bezeichnung und Kostenstelle", async () => {
     const calls = stubFetch({
       "GET /api/budget/settings": settings,
+      "GET /api/budget/tags": [],
       "PUT /api/budget/settings": { ...settings, start_month: 1, current_year_name: "2026" },
     });
     render(<BudgetSettingsPage />);
@@ -482,10 +473,9 @@ function contract(overrides: Partial<Contract> = {}): Contract {
     title: "Wartung Zeiterfassung",
     partner_id: 1,
     partner_name: "Beispiel Software GmbH",
-    item_id: 11,
-    item_name: "Office-Lizenzen",
-    account_number: "6815",
-    account_name: "Softwarewartung",
+    items: [
+      { id: 11, name: "Office-Lizenzen", account_number: "6815", account_name: "Softwarewartung" },
+    ],
     invoicer_id: null,
     invoicer_name: null,
     dpa_status: "vorhanden",
@@ -564,7 +554,6 @@ describe("Übersicht nach dem Entwurf", () => {
             account: hardware,
             expected_cents: null,
             previous_cents: null,
-            committed_cents: 119_000,
             actual_cents: 0,
             forecast_cents: 119_000,
           },
@@ -572,17 +561,14 @@ describe("Übersicht nach dem Entwurf", () => {
             account: software,
             expected_cents: 500_000,
             previous_cents: 1_000_000,
-            committed_cents: 600_000,
             actual_cents: 0,
             forecast_cents: 600_000,
           },
         ],
         expected: { running_cents: 500_000, investment_cents: 0, total_cents: 500_000 },
-        committed: { running_cents: 600_000, investment_cents: 119_000, total_cents: 719_000 },
         actual: { running_cents: 0, investment_cents: 0, total_cents: 0 },
         forecast: { running_cents: 600_000, investment_cents: 119_000, total_cents: 719_000 },
         open_invoices: 0,
-        committed_contracts: 2,
       }),
       "GET /api/budget/contracts": {
         current_year_name: "2026/27",
@@ -594,12 +580,11 @@ describe("Übersicht nach dem Entwurf", () => {
       },
     });
     render(<BudgetOverviewPage roles={["Budget.Reader"]} />);
-    expect(await screen.findByText("Durch Verträge gebunden", { selector: "dt" })).toBeVisible();
-    expect(screen.getByText(/2 Verträge/)).toBeVisible();
+    expect(await screen.findByText("Offene Budgetposten", { selector: "dt" })).toBeVisible();
+    expect(screen.getByText(/1 mit Rechnung · 0 abgeschlossen/)).toBeVisible();
     expect(plain(screen.getByText(/über der Erwartung$/, { selector: "dd" }).textContent)).toBe(
       "2.190,00 € über der Erwartung",
     );
-    expect(screen.getByText(/1 offen, 1 mit Rechnung, 0 abgeschlossen/)).toBeVisible();
     expect(
       screen.getByRole("img", { name: /Softwarewartung: Ist 0 %, Prognose 100 % der Erwartung/ }),
     ).toBeInTheDocument();
@@ -738,8 +723,16 @@ describe("Verträge", () => {
     fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "Neuer Vertrag" } });
     fireEvent.change(screen.getByLabelText("Vertragspartner"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("Rechnungssteller"), { target: { value: "2" } });
-    fireEvent.change(screen.getByLabelText("Budgetposten"), { target: { value: "11" } });
     fireEvent.change(screen.getByLabelText(/^Betrag je Zahlung/), { target: { value: "abc" } });
+    fireEvent.click(screen.getByRole("button", { name: "Vertrag speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("mindestens einen Budgetposten");
+    // Stillgelegte Posten stehen nicht zur Wahl; die Suche grenzt ein.
+    expect(screen.queryByLabelText("0420 · Server")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Budgetposten suchen"), { target: { value: "xyz" } });
+    expect(screen.getByText("Kein Budgetposten passt zur Suche.")).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Budgetposten suchen"), { target: { value: "office" } });
+    fireEvent.click(screen.getByLabelText("6815 · Office-Lizenzen"));
+    expect(screen.getByText("Budgetposten (1 zugeordnet)")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Vertrag speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Betrag ist nicht lesbar");
 
@@ -766,7 +759,7 @@ describe("Verträge", () => {
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       title: "Neuer Vertrag",
       partner_id: 1,
-      item_id: 11,
+      item_ids: [11],
       invoicer_id: 2,
       dpa_status: "fehlt",
       number: "",
@@ -1261,17 +1254,6 @@ describe("Belege", () => {
 });
 
 describe("Tags", () => {
-  it("liest die Eingabe als Liste ohne Doppelte und prüft Länge und Anzahl", () => {
-    expect(parseTags(" Cloud ,  Lizenzen ,cloud,, Microsoft  365 ")).toEqual([
-      "Cloud",
-      "Lizenzen",
-      "Microsoft 365",
-    ]);
-    expect(parseTags("")).toEqual([]);
-    expect(parseTags("x".repeat(31))).toMatch(/zu lang/);
-    expect(parseTags("a,b,c,d,e,f,g,h,i,j,k")).toMatch(/höchstens 10 Tags/);
-  });
-
   it("findet Posten über Name, Konto und Tag", () => {
     expect(itemMatches(office, "")).toBe(true);
     expect(itemMatches(office, " cloud ")).toBe(true);
@@ -1295,8 +1277,8 @@ describe("Tags", () => {
       "GET /api/budget/accounts": [hardware, software],
       "GET /api/budget/partners": [partner],
       "GET /api/budget/tags": [
-        { tag: "Cloud", items: 1 },
-        { tag: "Lizenzen", items: 1 },
+        { id: 1, tag: "Cloud", items: 1 },
+        { id: 2, tag: "Lizenzen", items: 1 },
       ],
     });
     render(<ItemsPage roles={["Budget.Reader"]} />);
@@ -1321,33 +1303,24 @@ describe("Tags", () => {
     expect(table.getByRole("row", { name: /Server/ })).toBeVisible();
   });
 
-  it("speichert Tags am Budgetposten und schlägt vergebene vor", async () => {
+  it("wählt Tags am Budgetposten aus der Liste", async () => {
     const calls = stubFetch({
       "GET /api/budget/overview": overview(),
       "GET /api/budget/accounts": [hardware, software],
-      "GET /api/budget/partners": [partner],
       "GET /api/budget/tags": [
-        { tag: "Cloud", items: 1 },
-        { tag: "Projekt", items: 2 },
+        { id: 1, tag: "Cloud", items: 1 },
+        { id: 2, tag: "Lizenzen", items: 1 },
+        { id: 3, tag: "Projekt", items: 2 },
       ],
       "PUT /api/budget/items/11": office,
     });
     render(<ItemsPage roles={["Budget.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Office-Lizenzen bearbeiten" }));
-    const field = screen.getByLabelText(/^Tags/);
-    expect(field).toHaveValue("Lizenzen, Cloud");
-    // Vorgeschlagen wird nur, was noch nicht im Feld steht.
-    const proposals = within(
-      screen.getByRole("group", { name: "Schon vergebene Tags übernehmen" }),
-    );
-    expect(proposals.queryByRole("button", { name: "Cloud" })).toBeNull();
-    fireEvent.click(proposals.getByRole("button", { name: "Projekt" }));
-    expect(field).toHaveValue("Lizenzen, Cloud, Projekt");
-
-    fireEvent.change(field, { target: { value: "x".repeat(31) } });
-    fireEvent.click(screen.getByRole("button", { name: "Änderungen speichern" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("zu lang");
-    fireEvent.change(field, { target: { value: "Lizenzen, Projekt, projekt" } });
+    const tags = within(screen.getByRole("group", { name: "Tags (freiwillig)" }));
+    expect(tags.getByRole("button", { name: "Cloud" })).toHaveAttribute("aria-pressed", "true");
+    expect(tags.getByRole("button", { name: "Projekt" })).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(tags.getByRole("button", { name: "Projekt" }));
+    fireEvent.click(tags.getByRole("button", { name: "Cloud" }));
     fireEvent.click(screen.getByRole("button", { name: "Änderungen speichern" }));
     await vi.waitFor(() =>
       expect(calls.find((call) => call.method === "PUT")?.body).toMatchObject({
@@ -1355,6 +1328,53 @@ describe("Tags", () => {
         tags: ["Lizenzen", "Projekt"],
       }),
     );
+  });
+
+  it("verweist auf die Einstellungen, solange es keine Tags gibt", async () => {
+    stubFetch({
+      "GET /api/budget/overview": overview(),
+      "GET /api/budget/accounts": [hardware, software],
+      "GET /api/budget/tags": [],
+    });
+    render(<ItemsPage roles={["Budget.Editor"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Posten hinzufügen" }));
+    expect(screen.getByText(/legt sie unter Einstellungen an/)).toBeInTheDocument();
+  });
+});
+
+describe("Tag-Liste in den Einstellungen", () => {
+  it("legt Tags an, benennt sie um und löscht sie", async () => {
+    const calls = stubFetch({
+      "GET /api/budget/settings": settings,
+      "GET /api/budget/tags": [
+        { id: 1, tag: "Clod", items: 2 },
+        { id: 2, tag: "Lizenzen", items: 0 },
+      ],
+      "POST /api/budget/tags": { id: 3, tag: "Projekt", items: 0 },
+      "PUT /api/budget/tags/1": { id: 1, tag: "Cloud", items: 2 },
+      "DELETE /api/budget/tags/2": { deleted: true },
+    });
+    render(<BudgetSettingsPage />);
+    const list = within(await screen.findByRole("list", { name: "Tags" }));
+    expect(list.getByText("2 Budgetposten")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Tag anlegen" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Namen für den Tag");
+    fireEvent.change(screen.getByLabelText("Neuer Tag"), { target: { value: " Projekt " } });
+    fireEvent.click(screen.getByRole("button", { name: "Tag anlegen" }));
+    expect(await screen.findByText("Der Tag „Projekt“ ist angelegt.")).toBeVisible();
+    expect(calls.find((call) => call.url === "/api/budget/tags" && call.method === "POST")?.body)
+      .toEqual({ name: "Projekt" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Tag Clod umbenennen" }));
+    fireEvent.change(screen.getByLabelText("Neuer Name für Clod"), { target: { value: "Cloud" } });
+    fireEvent.click(screen.getByRole("button", { name: "Umbenennen" }));
+    expect(await screen.findByText("Der Tag heißt jetzt „Cloud“.")).toBeVisible();
+    expect(calls.find((call) => call.method === "PUT")?.body).toEqual({ name: "Cloud" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Tag Lizenzen löschen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    expect(await screen.findByText("Der Tag „Lizenzen“ ist gelöscht.")).toBeVisible();
   });
 });
 
@@ -1373,8 +1393,8 @@ describe("Statistik", () => {
   const routes = {
     "GET /api/budget/settings": settings,
     "GET /api/budget/tags": [
-      { tag: "Cloud", items: 1 },
-      { tag: "Lizenzen", items: 1 },
+      { id: 1, tag: "Cloud", items: 1 },
+      { id: 2, tag: "Lizenzen", items: 1 },
     ],
     "GET /api/budget/statistics": [{ id: 3, name: "Alles Cloud", tags: ["cloud"], mode: "any" }],
     "POST /api/budget/statistics/query": statistic,

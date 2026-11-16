@@ -199,11 +199,14 @@ function InvoiceForm({
     setLines(lines.map((line) => (line.key === key ? { ...line, ...update } : line)));
 
   const pickContract = (line: LineDraft, value: string) => {
-    // Der Vertrag bringt seinen Budgetposten mit, wenn noch keiner gewählt ist.
+    // Ein Vertrag mit genau einem Posten bringt diesen mit, wenn noch keiner gewählt ist.
     const chosen = contracts.find((entry) => String(entry.id) === value);
     change(line.key, {
       contractId: value,
-      itemId: chosen && !line.itemId ? String(chosen.item_id) : line.itemId,
+      itemId:
+        chosen && !line.itemId && chosen.items.length === 1
+          ? String(chosen.items[0]?.id ?? "")
+          : line.itemId,
       // Laufende Vertragszahlungen schließen den Posten in der Regel nicht ab.
       closes: value === "",
     });

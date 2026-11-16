@@ -40,8 +40,8 @@ def item_status(item: BudgetItem, year: int, lines: YearLines | None) -> str | N
     return ITEM_OPEN if runs_in(item, year) else None
 
 
-def forecast(expected: int | None, actual: int, committed: int, closed: bool) -> int:
-    """Prognose: abgeschlossen das Ist, sonst das Höhere aus Erwartung und Ist plus Gebundenem."""
+def forecast(expected: int | None, actual: int, closed: bool) -> int:
+    """Prognose: abgeschlossen das Ist, sonst das Höhere aus erwarteten Kosten und Ist."""
     if closed:
         return actual
-    return max(expected or 0, actual + committed)
+    return max(expected or 0, actual)

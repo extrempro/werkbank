@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import ColumnElement, delete, func, select
 
 from werkbank.core.app_settings import set_setting
 from werkbank.core.audit import write_audit
@@ -36,6 +36,7 @@ from werkbank.modules.budget.documents import (
 from werkbank.modules.budget.models import (
     BudgetAccount,
     BudgetContract,
+    BudgetContractItem,
     BudgetInvoice,
     BudgetInvoiceLine,
     BudgetItem,
@@ -230,8 +231,6 @@ class OverviewRow(BaseModel):
     # Erwartete Kosten brutto in Cent; None: in diesem Jahr läuft kein Posten des Kontos
     expected_cents: int | None
     previous_cents: int | None
-    # Was aus Verträgen in diesem Geschäftsjahr noch zu erwarten ist (ohne schon Gebuchtes)
-    committed_cents: int
     # Summe der gebuchten Rechnungspositionen und die Prognose
     actual_cents: int
     forecast_cents: int
@@ -241,12 +240,11 @@ class ItemRow(BaseModel):
     item: ItemOut
     expected_cents: int | None
     previous_cents: int | None
-    committed_cents: int
     actual_cents: int
     forecast_cents: int
     # offen, rechnung (Rechnung liegt vor) oder abgeschlossen
     status: str | None
-    # Zahl der Verträge, die auf diesem Posten laufen und in diesem Jahr Kosten haben
+    # Zahl der laufenden Verträge, die diesem Posten zugeordnet sind
     contracts: int
 
 
@@ -278,15 +276,12 @@ class OverviewOut(BaseModel):
     items: list[ItemRow]
     expected: Totals
     previous: Totals
-    committed: Totals
     actual: Totals
     forecast: Totals
     # Budgetposten dieses Jahres nach Status
     statuses: StatusCounts
     # Rechnungen dieses Jahres, die noch auf die Prüfung warten
     open_invoices: int
-    # Zahl der Verträge, aus denen in diesem Jahr Kosten zu erwarten sind
-    committed_contracts: int
 
 
 def settings_out(settings: BudgetSettings) -> SettingsOut:
@@ -508,16 +503,14 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
     settings = load_settings(db)
     out = settings_out(settings)
     first_day, last_day = fiscal_year_range(year, settings.start_month)
-    lines, paid = _year_lines(db, [year], settings.start_month)
-    committed: dict[int, int] = {}
+    lines, _ = _year_lines(db, [year], settings.start_month)
+    today = now_utc().date()
     contracts: dict[int, int] = {}
+    linked = _contract_items(db)
     for contract in db.scalars(select(BudgetContract)).all():
-        cents = expected_cents(contract, first_day, last_day)
-        if cents:
-            # Was zu diesem Vertrag schon gebucht ist, zählt im Ist und nicht mehr als gebunden.
-            remaining = max(0, cents - paid.get((contract.id, year), 0))
-            committed[contract.item_id] = committed.get(contract.item_id, 0) + remaining
-            contracts[contract.item_id] = contracts.get(contract.item_id, 0) + 1
+        if is_running(contract, today):
+            for item_id in linked.get(contract.id, []):
+                contracts[item_id] = contracts.get(item_id, 0) + 1
     open_invoices = (
         db.scalar(
             select(func.count())
@@ -533,25 +526,23 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
     items: list[ItemRow] = []
     for item in _items(db, accounts):
         expected = expected_in(item, year)
-        bound = committed.get(item.id, 0)
         year_lines = lines.get((item.id, year))
         status_text = item_status(item, year, year_lines)
         spent = year_lines.actual_cents if year_lines else 0
         closed = status_text == ITEM_CLOSED
-        # Ein Posten erscheint, solange er läuft oder in dem Jahr Kosten oder Rechnungen hat;
-        # stillgelegte nur mit Kosten oder Rechnungen.
-        if status_text is None and not bound:
+        # Ein Posten erscheint, solange er läuft oder in dem Jahr Rechnungen hat;
+        # stillgelegte nur mit Rechnungen.
+        if status_text is None:
             continue
-        if not item.active and not spent and not bound and year_lines is None:
+        if not item.active and year_lines is None:
             continue
         items.append(
             ItemRow(
                 item=item_out(item, accounts, settings.start_month),
                 expected_cents=expected,
                 previous_cents=expected_in(item, year - 1),
-                committed_cents=0 if closed else bound,
                 actual_cents=spent,
-                forecast_cents=forecast(expected, spent, bound, closed),
+                forecast_cents=forecast(expected, spent, closed),
                 status=status_text,
                 contracts=contracts.get(item.id, 0),
             )
@@ -567,7 +558,6 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
                 account=account_out(account),
                 expected_cents=_sum([entry.expected_cents for entry in own]),
                 previous_cents=_sum([entry.previous_cents for entry in own]),
-                committed_cents=sum(entry.committed_cents for entry in own),
                 actual_cents=sum(entry.actual_cents for entry in own),
                 forecast_cents=sum(entry.forecast_cents for entry in own),
             )
@@ -593,7 +583,6 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
         items=items,
         expected=_totals([(row.account.kind, row.expected_cents) for row in rows]),
         previous=_totals([(row.account.kind, row.previous_cents) for row in rows]),
-        committed=_totals([(row.account.kind, row.committed_cents) for row in rows]),
         actual=_totals([(row.account.kind, row.actual_cents) for row in rows]),
         forecast=_totals([(row.account.kind, row.forecast_cents) for row in rows]),
         statuses=StatusCounts(
@@ -602,7 +591,6 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
             closed=states.count(ITEM_CLOSED),
         ),
         open_invoices=open_invoices,
-        committed_contracts=sum(contracts.values()),
     )
 
 
@@ -888,15 +876,20 @@ DATE_MIN = date(YEAR_MIN, 1, 1)
 DATE_MAX = date(YEAR_MAX, 12, 31)
 
 
+class ContractItemOut(BaseModel):
+    id: int
+    name: str
+    account_number: str
+    account_name: str
+
+
 class ContractOut(BaseModel):
     id: int
     title: str
     partner_id: int
     partner_name: str
-    item_id: int
-    item_name: str
-    account_number: str
-    account_name: str
+    # Zugeordnete Budgetposten
+    items: list[ContractItemOut]
     # Rechnungssteller, wenn er vom Vertragspartner abweicht
     invoicer_id: int | None
     invoicer_name: str | None
@@ -937,7 +930,8 @@ class ContractListOut(BaseModel):
 class ContractIn(BaseModel):
     title: str = Field(min_length=1, max_length=160)
     partner_id: int = Field(ge=1)
-    item_id: int = Field(ge=1)
+    # Zugeordnete Budgetposten, mindestens einer
+    item_ids: list[int] = Field(min_length=1, max_length=50)
     invoicer_id: int | None = Field(default=None, ge=1)
     dpa_status: Literal["vorhanden", "fehlt", "nicht_erforderlich"] = "nicht_erforderlich"
     number: str = Field(default="", max_length=60)
@@ -965,6 +959,13 @@ class ContractIn(BaseModel):
             raise ValueError("Darf nicht leer sein")
         return value
 
+    @field_validator("item_ids")
+    @classmethod
+    def distinct_items(cls, value: list[int]) -> list[int]:
+        if any(item_id < 1 for item_id in value):
+            raise ValueError("Ungültiger Budgetposten")
+        return list(dict.fromkeys(value))
+
     @field_validator("interval")
     @classmethod
     def known_interval(cls, value: str) -> str:
@@ -987,12 +988,26 @@ def contract_out(
     items: dict[int, BudgetItem],
     today: date,
     year_range: tuple[date, date],
+    item_ids: list[int],
 ) -> ContractOut:
     deadline = notice_deadline(row, today)
     days = (deadline - today).days if deadline is not None else None
     partner = partners.get(row.partner_id)
-    item = items.get(row.item_id)
-    account = accounts.get(item.account_id) if item else None
+    linked: list[ContractItemOut] = []
+    for item_id in item_ids:
+        item = items.get(item_id)
+        if item is None:
+            continue
+        account = accounts.get(item.account_id)
+        linked.append(
+            ContractItemOut(
+                id=item.id,
+                name=item.name,
+                account_number=account.number if account else "",
+                account_name=account.name if account else "",
+            )
+        )
+    linked.sort(key=lambda entry: (entry.account_number, entry.name.lower(), entry.id))
     invoicer = partners.get(row.invoicer_id) if row.invoicer_id is not None else None
     running = is_running(row, today)
     return ContractOut(
@@ -1000,10 +1015,7 @@ def contract_out(
         title=row.title,
         partner_id=row.partner_id,
         partner_name=partner.name if partner else "",
-        item_id=row.item_id,
-        item_name=item.name if item else "",
-        account_number=account.number if account else "",
-        account_name=account.name if account else "",
+        items=linked,
         invoicer_id=row.invoicer_id,
         invoicer_name=invoicer.name if invoicer else None,
         dpa_status=row.dpa_status,
@@ -1051,17 +1063,28 @@ def _contract_context(
     )
 
 
+def _contract_items(db: DbDep) -> dict[int, list[int]]:
+    """Zugeordnete Budgetposten je Vertrag."""
+    linked: dict[int, list[int]] = {}
+    for entry in db.scalars(select(BudgetContractItem)).all():
+        linked.setdefault(entry.contract_id, []).append(entry.item_id)
+    return linked
+
+
 def _one_contract(db: DbDep, row: BudgetContract) -> ContractOut:
     partners, accounts, items, today, year_range, _ = _contract_context(db)
-    return contract_out(row, partners, accounts, items, today, year_range)
+    linked = _contract_items(db).get(row.id, [])
+    return contract_out(row, partners, accounts, items, today, year_range, linked)
 
 
 def _check_contract(db: DbDep, body: ContractIn) -> None:
     problem: str | None = None
     if db.get(BudgetPartner, body.partner_id) is None:
         problem = "Den Partner gibt es nicht."
-    elif db.get(BudgetItem, body.item_id) is None:
-        problem = "Den Budgetposten gibt es nicht."
+    elif len(
+        db.scalars(select(BudgetItem.id).where(BudgetItem.id.in_(body.item_ids))).all()
+    ) != len(body.item_ids):
+        problem = "Einen der Budgetposten gibt es nicht."
     elif body.invoicer_id is not None and db.get(BudgetPartner, body.invoicer_id) is None:
         problem = "Den Rechnungssteller gibt es nicht."
     elif body.ends_on is not None and body.ends_on < body.starts_on:
@@ -1074,10 +1097,16 @@ def _check_contract(db: DbDep, body: ContractIn) -> None:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=problem)
 
 
+def _link_items(db: DbDep, contract_id: int, item_ids: list[int]) -> None:
+    """Ersetzt die zugeordneten Budgetposten eines Vertrags."""
+    db.execute(delete(BudgetContractItem).where(BudgetContractItem.contract_id == contract_id))
+    for item_id in item_ids:
+        db.add(BudgetContractItem(contract_id=contract_id, item_id=item_id))
+
+
 def _apply_contract(row: BudgetContract, body: ContractIn) -> None:
     row.title = body.title
     row.partner_id = body.partner_id
-    row.item_id = body.item_id
     # Derselbe Partner als Rechnungssteller ist keine Abweichung.
     row.invoicer_id = body.invoicer_id if body.invoicer_id != body.partner_id else None
     row.dpa_status = body.dpa_status
@@ -1098,7 +1127,7 @@ def _contract_details(body: ContractIn) -> dict[str, object]:
     return {
         "title": body.title,
         "partner_id": body.partner_id,
-        "item_id": body.item_id,
+        "item_ids": body.item_ids,
         "net_cents": body.net_cents,
         "tax_rate_bp": body.tax_rate_bp,
         "interval": body.interval,
@@ -1111,8 +1140,9 @@ def _contract_details(body: ContractIn) -> dict[str, object]:
 @router.get("/contracts")
 def list_contracts(user: Reader, db: DbDep) -> ContractListOut:
     partners, accounts, items, today, year_range, year_name = _contract_context(db)
+    linked = _contract_items(db)
     entries = [
-        contract_out(row, partners, accounts, items, today, year_range)
+        contract_out(row, partners, accounts, items, today, year_range, linked.get(row.id, []))
         for row in db.scalars(select(BudgetContract)).all()
     ]
     # Laufende zuerst, darin der nächste Kündigungstermin oben.
@@ -1136,6 +1166,8 @@ def create_contract(request: Request, body: ContractIn, user: Editor, db: DbDep)
     row = BudgetContract()
     _apply_contract(row, body)
     db.add(row)
+    db.flush()
+    _link_items(db, row.id, body.item_ids)
     db.flush()
     write_audit(
         db,
@@ -1161,12 +1193,15 @@ def update_contract(
     _check_contract(db, body)
     before = {
         "title": row.title,
+        "item_ids": _contract_items(db).get(row.id, []),
         "amount_cents": row.amount_cents,
         "interval": row.interval,
         "ends_on": row.ends_on.isoformat() if row.ends_on else None,
         "cancelled_to": row.cancelled_to.isoformat() if row.cancelled_to else None,
     }
     _apply_contract(row, body)
+    _link_items(db, row.id, body.item_ids)
+    db.flush()
     write_audit(
         db,
         module=MODULE,
@@ -1589,8 +1624,9 @@ def partner_detail(partner_id: PartnerId, user: Reader, db: DbDep) -> PartnerDet
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
     partners, accounts, items, today, year_range, _ = _contract_context(db)
+    linked = _contract_items(db)
     contracts = [
-        contract_out(entry, partners, accounts, items, today, year_range)
+        contract_out(entry, partners, accounts, items, today, year_range, linked.get(entry.id, []))
         for entry in db.scalars(
             select(BudgetContract).where(
                 (BudgetContract.partner_id == row.id) | (BudgetContract.invoicer_id == row.id)
@@ -1737,7 +1773,7 @@ def delete_item(request: Request, item_id: ItemId, user: Editor, db: DbDep) -> d
     row: BudgetItem | None = db.get(BudgetItem, item_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
-    contracts = _count(db, BudgetContract, BudgetContract.item_id == row.id)
+    contracts = _count(db, BudgetContractItem, BudgetContractItem.item_id == row.id)
     invoices = _count(db, BudgetInvoiceLine, BudgetInvoiceLine.item_id == row.id)
     if contracts or invoices:
         raise _blocked(

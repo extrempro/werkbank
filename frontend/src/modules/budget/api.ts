@@ -49,11 +49,9 @@ export interface OverviewRow {
   /** Erwartete Kosten brutto in Cent; null: in diesem Jahr läuft kein Posten des Kontos. */
   expected_cents: number | null;
   previous_cents: number | null;
-  /** Was aus Verträgen in diesem Geschäftsjahr noch zu erwarten ist (ohne schon Gebuchtes). */
-  committed_cents: number;
   /** Summe der gebuchten Rechnungspositionen. */
   actual_cents: number;
-  /** Abgeschlossen das Ist, sonst das Höhere aus Erwartung und Ist plus Gebundenem. */
+  /** Abgeschlossen das Ist, sonst das Höhere aus erwarteten Kosten und Ist. */
   forecast_cents: number;
 }
 
@@ -95,11 +93,10 @@ export interface ItemRow {
   item: Item;
   expected_cents: number | null;
   previous_cents: number | null;
-  committed_cents: number;
   actual_cents: number;
   forecast_cents: number;
   status: ItemStatus | null;
-  /** Zahl der Verträge auf diesem Posten mit Kosten in diesem Jahr. */
+  /** Zahl der laufenden Verträge, die dem Posten zugeordnet sind. */
   contracts: number;
 }
 
@@ -121,15 +118,12 @@ export interface Overview {
   items: ItemRow[];
   expected: Totals;
   previous: Totals;
-  committed: Totals;
   actual: Totals;
   forecast: Totals;
   /** Budgetposten dieses Jahres nach Status. */
   statuses: { open: number; invoiced: number; closed: number };
   /** Rechnungen dieses Jahres, die noch auf die Prüfung warten. */
   open_invoices: number;
-  /** Zahl der Verträge, aus denen in diesem Jahr Kosten zu erwarten sind. */
-  committed_contracts: number;
 }
 
 export const BUDGET_EDITOR_ROLES = ["Budget.Editor", "Budget.Manager"];
@@ -258,7 +252,8 @@ export type DpaStatus = "vorhanden" | "fehlt" | "nicht_erforderlich";
 export interface ContractUpdate {
   title: string;
   partner_id: number;
-  item_id: number;
+  /** Zugeordnete Budgetposten, mindestens einer. */
+  item_ids: number[];
   /** Rechnungssteller, wenn er vom Vertragspartner abweicht. */
   invoicer_id: number | null;
   dpa_status: DpaStatus;
@@ -276,12 +271,18 @@ export interface ContractUpdate {
   note: string;
 }
 
-export interface Contract extends ContractUpdate {
+export interface ContractItem {
   id: number;
-  partner_name: string;
-  item_name: string;
+  name: string;
   account_number: string;
   account_name: string;
+}
+
+export interface Contract extends Omit<ContractUpdate, "item_ids"> {
+  id: number;
+  partner_name: string;
+  /** Zugeordnete Budgetposten. */
+  items: ContractItem[];
   /** Betrag je Zahlung brutto. */
   amount_cents: number;
   invoicer_name: string | null;
@@ -292,8 +293,13 @@ export interface Contract extends ContractUpdate {
   notice_deadline: string | null;
   days_to_deadline: number | null;
   deadline_soon: boolean;
-  /** Erwartete Kosten im laufenden Geschäftsjahr. */
+  /** Zahlungen des Vertrags im laufenden Geschäftsjahr (nur zur Information). */
   current_year_cents: number;
+}
+
+/** Zugeordnete Budgetposten in Kurzform: „6815 · Lizenzen, 6820 · Telefonie“. */
+export function contractItemsText(contract: Contract): string {
+  return contract.items.map((item) => `${item.account_number} · ${item.name}`).join(", ");
 }
 
 export interface ContractList {
@@ -663,6 +669,7 @@ export const TAG_MAX_LENGTH = 30;
 export const TAGS_MAX = 10;
 
 export interface TagCount {
+  id: number;
   tag: string;
   /** Anzahl der Budgetposten mit diesem Tag. */
   items: number;
@@ -699,7 +706,22 @@ export function fetchTags(): Promise<TagCount[]> {
   return getJson<TagCount[]>("/api/budget/tags");
 }
 
-/** Plan und Ist der Posten mit diesen Tags über fünf Geschäftsjahre, ab `start` (sonst Rückblick). */
+/** Tag in die Liste aufnehmen (nur Budgetverwalter). */
+export function createTag(name: string): Promise<TagCount> {
+  return postJson<TagCount>("/api/budget/tags", { name });
+}
+
+/** Tag umbenennen, auch an allen Budgetposten und gespeicherten Statistiken. */
+export function renameTag(id: number, name: string): Promise<TagCount> {
+  return putJson<TagCount>(`/api/budget/tags/${id}`, { name });
+}
+
+/** Tag aus der Liste und von allen Budgetposten und Statistiken entfernen. */
+export function deleteTag(id: number): Deleted {
+  return deleteJson<{ deleted: boolean }>(`/api/budget/tags/${id}`);
+}
+
+/** Erwartete Kosten und Ist der Posten mit diesen Tags über fünf Geschäftsjahre, ab `start` (sonst Rückblick). */
 export function queryStatistic(
   tags: string[],
   mode: TagMode,
@@ -726,30 +748,6 @@ export function saveStatistic(
 
 export function deleteStatistic(id: number): Deleted {
   return deleteJson<{ deleted: boolean }>(`/api/budget/statistics/${id}`);
-}
-
-/**
- * Liest die Eingabe „Cloud, Lizenzen“ als Liste von Tags: ohne Rand, ohne Doppelte (Groß- und
- * Kleinschreibung zählt nicht). Fehlertext statt Liste, wenn ein Tag zu lang ist oder es zu viele sind.
- */
-export function parseTags(text: string): string[] | string {
-  const tags: string[] = [];
-  for (const part of text.split(",")) {
-    const tag = part.trim().replace(/\s+/g, " ");
-    if (tag === "") {
-      continue;
-    }
-    if (tag.length > TAG_MAX_LENGTH) {
-      return `Der Tag „${tag}“ ist zu lang. Erlaubt sind höchstens ${TAG_MAX_LENGTH} Zeichen.`;
-    }
-    if (!tags.some((entry) => entry.toLowerCase() === tag.toLowerCase())) {
-      tags.push(tag);
-    }
-  }
-  if (tags.length > TAGS_MAX) {
-    return `Es sind höchstens ${TAGS_MAX} Tags je Budgetposten möglich.`;
-  }
-  return tags;
 }
 
 /** Ob ein Budgetposten zum Suchtext passt: Name, Notiz, Konto oder Tag. */

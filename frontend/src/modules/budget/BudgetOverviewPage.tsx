@@ -209,18 +209,15 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
               </dt>
               <dd className="budget-card-value">{formatEuro(expected)}</dd>
               <dd className="budget-card-sub">
-                Vorjahr {formatEuro(overview.previous.total_cents)} · {overview.statuses.open}{" "}
-                offen, {overview.statuses.invoiced} mit Rechnung, {overview.statuses.closed}{" "}
-                abgeschlossen
+                Vorjahr {formatEuro(overview.previous.total_cents)}
               </dd>
             </div>
             <div className="panel budget-card">
-              <dt>Durch Verträge gebunden</dt>
-              <dd className="budget-card-value">{formatEuro(overview.committed.total_cents)}</dd>
+              <dt>Offene Budgetposten</dt>
+              <dd className="budget-card-value">{overview.statuses.open}</dd>
               <dd className="budget-card-sub">
-                {share(overview.committed.total_cents, expected)} % der Erwartung ·{" "}
-                {overview.committed_contracts}{" "}
-                {overview.committed_contracts === 1 ? "Vertrag" : "Verträge"}
+                {overview.statuses.invoiced} mit Rechnung · {overview.statuses.closed}{" "}
+                abgeschlossen
               </dd>
             </div>
             <div className="panel budget-card">
@@ -301,7 +298,7 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                     })
                   ) : (
                     <p className="budget-muted">
-                      Für dieses Jahr ist noch nichts erwartet, gebunden oder gebucht.
+                      Für dieses Jahr ist noch nichts erwartet oder gebucht.
                     </p>
                   )}
                 </section>
@@ -359,9 +356,9 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
 
               <p className="small budget-muted">
                 Erwartete Kosten stehen am <Link to={BUDGET_ITEMS_PATH}>Budgetposten</Link>. Ist =
-                gebuchte Rechnungen. Gebunden = was aus Verträgen in diesem {label} noch zu erwarten
-                ist. Prognose = bei abgeschlossenen Posten das Ist, sonst das Höhere aus Erwartung
-                und Ist plus gebunden. Alle Beträge sind brutto.
+                gebuchte Rechnungen. Prognose = bei abgeschlossenen Posten das Ist, sonst das Höhere
+                aus Erwartung und Ist. Verträge sind Posten nur zugeordnet; ins Budget gehen ihre
+                Kosten über die Rechnungen. Alle Beträge sind brutto.
               </p>
             </>
           )}

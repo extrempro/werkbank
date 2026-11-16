@@ -105,15 +105,14 @@ class BudgetPartner(Base):
 
 
 class BudgetContract(Base):
-    """Ein Vertrag, dessen Kosten auf ein Konto des Budgets laufen."""
+    """Ein Vertrag mit Partner, Kosten und Fristen. Er ist Budgetposten nur zugeordnet;
+    ins Budget gehen seine Kosten allein über die Rechnungspositionen."""
 
     __tablename__ = "budget_contracts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(160))
     partner_id: Mapped[int] = mapped_column(ForeignKey("budget_partners.id"), index=True)
-    # Budgetposten, auf den die Kosten laufen; über ihn ergibt sich das Konto
-    item_id: Mapped[int] = mapped_column(ForeignKey("budget_items.id"), index=True)
     # Rechnungssteller, wenn er vom Vertragspartner abweicht (z. B. ein Distributor)
     invoicer_id: Mapped[int | None] = mapped_column(ForeignKey("budget_partners.id"))
     # Auftragsverarbeitungsvertrag: vorhanden, fehlt oder nicht_erforderlich
@@ -140,6 +139,19 @@ class BudgetContract(Base):
     interval: Mapped[str] = mapped_column(String(20))
     note: Mapped[str] = mapped_column(String(500), default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BudgetContractItem(Base):
+    """Zuordnung eines Vertrags zu einem Budgetposten (ein Vertrag, mehrere Posten)."""
+
+    __tablename__ = "budget_contract_items"
+
+    contract_id: Mapped[int] = mapped_column(
+        ForeignKey("budget_contracts.id", ondelete="CASCADE"), primary_key=True
+    )
+    item_id: Mapped[int] = mapped_column(
+        ForeignKey("budget_items.id"), primary_key=True, index=True
+    )
 
 
 class BudgetInvoice(Base):

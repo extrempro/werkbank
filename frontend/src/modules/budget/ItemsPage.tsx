@@ -16,7 +16,7 @@ import {
   ITEM_STATUS_LABELS,
   itemMatches,
   parseEuro,
-  parseTags,
+  TAGS_MAX,
   rememberedYear,
   rememberYear,
   runtimeText,
@@ -70,7 +70,7 @@ interface FormProps {
   /** null: neuen Budgetposten anlegen. */
   item: Item | null;
   accounts: Account[];
-  /** Schon vergebene Tags als Vorschläge. */
+  /** Die Liste der Tags, aus der der Posten wählt. */
   knownTags: TagCount[];
   /** Wählbare Geschäftsjahre, aufsteigend. */
   years: { year: number; name: string }[];
@@ -105,17 +105,16 @@ function ItemForm({
   );
   const [end, setEnd] = useState(item?.end_year ? String(item.end_year) : "");
   const [note, setNote] = useState(item?.note ?? "");
-  const [tags, setTags] = useState(item ? item.tags.join(", ") : "");
+  const [tags, setTags] = useState<string[]>(item?.tags ?? []);
   const [active, setActive] = useState(item?.active ?? true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const choices = accounts.filter((entry) => entry.active || entry.id === item?.account_id);
-  const parsed = parseTags(tags);
-  const chosen = typeof parsed === "string" ? [] : parsed;
-  // Vorschläge: vergebene Tags, die noch nicht im Feld stehen
-  const suggestions = knownTags.filter(
-    (entry) => !chosen.some((tag) => tag.toLowerCase() === entry.tag.toLowerCase()),
-  );
+  const isChosen = (tag: string) => tags.some((entry) => entry.toLowerCase() === tag.toLowerCase());
+  const toggleTag = (tag: string) =>
+    setTags(
+      isChosen(tag) ? tags.filter((entry) => entry.toLowerCase() !== tag.toLowerCase()) : [...tags, tag],
+    );
   // Ein Jahr außerhalb der Liste (z. B. ein alter Posten) bleibt wählbar.
   const yearChoices = [...years];
   for (const value of [item?.start_year, item?.end_year]) {
@@ -131,7 +130,6 @@ function ItemForm({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     const costCents = parseEuro(cost);
-    const tagList = parseTags(tags);
     let problem: string | null = null;
     if (!accountId || !name.trim()) {
       problem = "Bitte Konto wählen und eine Bezeichnung eintragen.";
@@ -139,10 +137,10 @@ function ItemForm({
       problem = "Die erwarteten Kosten sind nicht lesbar. Bitte so eintragen: 15000,00";
     } else if (runtime === "bis" && (!end || Number(end) <= Number(start))) {
       problem = `Bitte wählen, bis zu welchem ${yearLabel} der Posten läuft.`;
-    } else if (typeof tagList === "string") {
-      problem = tagList;
+    } else if (tags.length > TAGS_MAX) {
+      problem = `Es sind höchstens ${TAGS_MAX} Tags je Budgetposten möglich.`;
     }
-    if (problem !== null || costCents === null || typeof tagList === "string") {
+    if (problem !== null || costCents === null) {
       setError(problem);
       return;
     }
@@ -153,7 +151,7 @@ function ItemForm({
       start_year: Number(start),
       end_year: runtime === "einmalig" ? Number(start) : runtime === "bis" ? Number(end) : null,
       note: note.trim(),
-      tags: tagList,
+      tags,
       active,
     };
     setBusy(true);
@@ -252,32 +250,24 @@ function ItemForm({
         <details className="budget-more" open={hasMore}>
           <summary>Weitere Angaben: Tags, Notiz{item ? ", stilllegen" : ""}</summary>
           <div className="budget-more-body">
-            <label>
-              Tags (freiwillig, mit Komma getrennt)
-              <input
-                type="text"
-                value={tags}
-                aria-describedby="posten-tags-hinweis"
-                onChange={(event) => setTags(event.target.value)}
-              />
-            </label>
-            <p id="posten-tags-hinweis" className="small budget-muted">
-              Zum Beispiel: Cloud, Lizenzen. Über Tags lassen sich Posten suchen und in der
-              Statistik zusammen auswerten.
-            </p>
-            {suggestions.length > 0 && (
-              <div className="chips" role="group" aria-label="Schon vergebene Tags übernehmen">
-                {suggestions.map((entry) => (
+            {knownTags.length > 0 ? (
+              <div className="chips" role="group" aria-label="Tags (freiwillig)">
+                {knownTags.map((entry) => (
                   <button
-                    key={entry.tag}
+                    key={entry.id}
                     type="button"
                     className="chip budget-tag"
-                    onClick={() => setTags([...chosen, entry.tag].join(", "))}
+                    aria-pressed={isChosen(entry.tag)}
+                    onClick={() => toggleTag(entry.tag)}
                   >
                     {entry.tag}
                   </button>
                 ))}
               </div>
+            ) : (
+              <p className="small budget-muted">
+                Es gibt noch keine Tags. Der Budgetverwalter legt sie unter Einstellungen an.
+              </p>
             )}
             <label>
               Notiz (freiwillig)
@@ -347,7 +337,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
 
   useEffect(() => {
     let active = true;
-    // Die Liste der Tags ist eine Zugabe für Filter und Vorschläge: Ohne sie bleibt die Seite nutzbar.
+    // Die Tag-Liste ist eine Zugabe für Filter und Auswahl: Ohne sie bleibt die Seite nutzbar.
     const tagList = fetchTags().catch((): TagCount[] => []);
     Promise.all([fetchBudgetOverview(year), fetchAccounts(), tagList])
       .then(([result, list, tags]) => {
@@ -380,7 +370,6 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
     rows.reduce((sum, row) => sum + (pick(row) ?? 0), 0);
   const sums = {
     expected: total((row) => row.expected_cents),
-    committed: total((row) => row.committed_cents),
     actual: total((row) => row.actual_cents),
     forecast: total((row) => row.forecast_cents),
     previous: total((row) => row.previous_cents),
@@ -395,7 +384,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
     setRound(round + 1);
   };
 
-  const columns = canEdit ? 10 : 9;
+  const columns = canEdit ? 9 : 8;
 
   return (
     <div className="page page-wide budget-page">
@@ -406,7 +395,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           <p className="page-sub">
             Jeder Posten ist ein Vorhaben mit erwarteten Kosten und Laufzeit. Er bleibt offen, bis
             eine Rechnung ihn abschließt. Prognose: abgeschlossen das Ist, sonst das Höhere aus
-            Erwartung und Ist plus Gebundenem. Alle Beträge sind brutto.
+            Erwartung und Ist. Alle Beträge sind brutto.
           </p>
         </div>
         {overview && (
@@ -563,9 +552,6 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                   Erwartet
                 </th>
                 <th scope="col" className="betrag">
-                  Durch Verträge gebunden
-                </th>
-                <th scope="col" className="betrag">
                   Ist
                 </th>
                 <th scope="col" className="betrag">
@@ -623,7 +609,6 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                     <StatusPill status={row.status} />
                   </td>
                   <td className="betrag">{amount(row.expected_cents)}</td>
-                  <td className="betrag">{formatEuro(row.committed_cents)}</td>
                   <td className="betrag">{formatEuro(row.actual_cents)}</td>
                   <td className="betrag">{formatEuro(row.forecast_cents)}</td>
                   <td className={deviationClass(row.expected_cents, row.forecast_cents)}>
@@ -663,13 +648,12 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                   {filtered ? "Summe der gezeigten Posten" : "Summe"}
                 </th>
                 <td className="betrag">{formatEuro(sums.expected)}</td>
-                <td className="betrag">{formatEuro(sums.committed)}</td>
                 <td className="betrag">{formatEuro(sums.actual)}</td>
                 <td className="betrag">{formatEuro(sums.forecast)}</td>
                 <td className={deviationClass(sums.expected, sums.forecast)}>
                   {deviation(sums.expected, sums.forecast)}
                 </td>
-                <td className="betrag budget-muted" colSpan={columns - 8}>
+                <td className="betrag budget-muted" colSpan={columns - 7}>
                   {formatEuro(sums.previous)}
                 </td>
               </tr>

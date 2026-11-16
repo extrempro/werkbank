@@ -18,6 +18,13 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("aktiv");
   await expectNoA11yViolations(page);
 
+  // Tags pflegt der Budgetverwalter in den Einstellungen.
+  await page.goto("/budget/einstellungen");
+  await page.getByLabel("Neuer Tag", { exact: true }).fill(`Tag ${number}`);
+  await page.getByRole("button", { name: "Tag anlegen" }).click();
+  await expect(page.getByText(`Der Tag „Tag ${number}“ ist angelegt.`)).toBeVisible();
+  await expectNoA11yViolations(page);
+
   await page.goto("/budget/posten");
   await expect(page.getByRole("heading", { level: 1, name: "Budgetposten" })).toBeVisible();
   await page.getByRole("button", { name: "Posten hinzufügen" }).click();
@@ -28,7 +35,10 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await page.getByRole("textbox", { name: /^Erwartete Kosten/ }).fill("1.500,00");
   // Tags stehen unter den weiteren Angaben.
   await page.getByText(/^Weitere Angaben/).click();
-  await page.getByRole("textbox", { name: /^Tags/ }).fill(`Tag ${number}, tag ${number}`);
+  await page
+    .getByRole("group", { name: "Tags (freiwillig)" })
+    .getByRole("button", { name: `Tag ${number}`, exact: true })
+    .click();
   await expectNoA11yViolations(page);
   await page.getByRole("button", { name: "Posten speichern" }).click();
   await expect(page.getByText(`Posten ${number} ist gespeichert.`)).toBeVisible();
@@ -49,9 +59,9 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await page
     .getByRole("combobox", { name: /^Vertragspartner/ })
     .selectOption({ label: `Beispiel Partner ${number}` });
-  await page
-    .getByRole("combobox", { name: /^Budgetposten/ })
-    .selectOption({ label: `${number} Testkonto Wartung · Posten ${number}` });
+  // Ein Vertrag lässt sich mehreren Posten zuordnen; hier einem.
+  await page.getByRole("searchbox", { name: "Budgetposten suchen" }).fill(`Posten ${number}`);
+  await page.getByLabel(`${number} · Posten ${number}`, { exact: true }).check();
   await page.getByRole("textbox", { name: /^Betrag je Zahlung/ }).fill("100,00");
   await expect(page.getByText(/^Brutto je Zahlung: 119,00/)).toBeVisible();
   await page.getByRole("combobox", { name: /^Turnus/ }).selectOption("monatlich");
@@ -135,13 +145,11 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
 
   await page.goto("/budget/posten");
   const itemRow = page.getByRole("row", { name: new RegExp(`Posten ${number}`) });
-  // Rechnung da, aber nichts schließt ab: Erwartung 1.500,00; gebucht 172,50; nur die Position
-  // mit Vertrag (119,00) mindert das Gebundene. Prognose ist das Höhere aus Erwartung und
-  // Ist plus Gebundenem (1.481,50), also 1.500,00.
+  // Rechnung da, aber nichts schließt ab: erwartet 1.500,00, gebucht 172,50. Die Prognose
+  // ist das Höhere aus Erwartung und Ist, also 1.500,00.
   await expect(itemRow).toContainText("Rechnung liegt vor");
   await expect(itemRow).toContainText("1.500,00");
   await expect(itemRow).toContainText("172,50");
-  await expect(itemRow).toContainText("1.309,00");
   await expectNoA11yViolations(page);
 
   // Tags: in der Liste filtern, dann über fünf Jahre auswerten und die Auswahl speichern.
