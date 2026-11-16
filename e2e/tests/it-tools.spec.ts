@@ -452,6 +452,8 @@ test("IT-Tools: QR-Code, Bild-Konverter und Zertifikate", async ({ page }) => {
   await page.getByRole("button", { name: "CSR und Schlüssel erzeugen" }).click();
   const csr = page.getByLabel("CSR (an die CA übergeben)", { exact: true });
   await expect(csr).toContainText("BEGIN CERTIFICATE REQUEST");
+  // Nach dem Klick ist die Seite gescrollt; die feste Kopfzeile verdeckt sonst Felder für die Prüfung.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
   await expect(page).toHaveURL(/\/it-tools\/csr$/);
   const csrText = (await csr.textContent()) ?? "";
