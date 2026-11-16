@@ -38,7 +38,11 @@ class BudgetAccount(Base):
 
 
 class BudgetItem(Base):
-    """Ein Budgetposten: wofür das Geld eines Kontos gedacht ist. Wird nur stillgelegt."""
+    """Ein Budgetposten: ein Vorhaben mit erwarteten Kosten je Geschäftsjahr und Laufzeit.
+
+    Der Status je Geschäftsjahr (offen, Rechnung liegt vor, abgeschlossen) ergibt sich aus den
+    Rechnungspositionen und wird nicht gespeichert.
+    """
 
     __tablename__ = "budget_items"
     __table_args__ = (UniqueConstraint("account_id", "name"),)
@@ -46,8 +50,11 @@ class BudgetItem(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("budget_accounts.id"), index=True)
     name: Mapped[str] = mapped_column(String(160))
-    # Üblicher Partner dieses Postens; beim Erfassen einer Rechnung vorausgewählt
-    partner_id: Mapped[int | None] = mapped_column(ForeignKey("budget_partners.id"), index=True)
+    # Erwartete Kosten je Geschäftsjahr (brutto, in Cent); gelten in jedem Jahr der Laufzeit
+    amount_cents: Mapped[int] = mapped_column(BigInteger, default=0, server_default=text("0"))
+    # Laufzeit in Geschäftsjahren (Kalenderjahr des Beginns). Ohne Ende: bis auf Weiteres.
+    start_year: Mapped[int] = mapped_column(Integer, index=True)
+    end_year: Mapped[int | None] = mapped_column(Integer)
     note: Mapped[str] = mapped_column(String(500), default="", server_default="")
     # Frei vergebene Schlagworte, über die sich Posten suchen und auswerten lassen
     tags: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
@@ -67,33 +74,6 @@ class BudgetStatistic(Base):
     mode: Mapped[str] = mapped_column(String(8))
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
-class BudgetYear(Base):
-    """Stand der Planung eines Geschäftsjahrs. Ohne Zeile gilt das Jahr als Entwurf."""
-
-    __tablename__ = "budget_years"
-
-    fiscal_year: Mapped[int] = mapped_column(Integer, primary_key=True)
-    # entwurf oder freigegeben
-    status: Mapped[str] = mapped_column(String(16))
-    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    released_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
-
-
-class BudgetPlan(Base):
-    """Geplanter Betrag (brutto, in Cent) eines Budgetpostens in einem Geschäftsjahr."""
-
-    __tablename__ = "budget_plans"
-
-    item_id: Mapped[int] = mapped_column(
-        ForeignKey("budget_items.id", ondelete="CASCADE"), primary_key=True
-    )
-    # Kalenderjahr, in dem das Geschäftsjahr beginnt
-    fiscal_year: Mapped[int] = mapped_column(Integer, primary_key=True)
-    amount_cents: Mapped[int] = mapped_column(BigInteger)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
 
 
 class BudgetPartner(Base):
@@ -206,3 +186,6 @@ class BudgetInvoiceLine(Base):
     description: Mapped[str] = mapped_column(String(200), default="", server_default="")
     is_project: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     is_yearly: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # Schließt den Budgetposten für das Geschäftsjahr der Rechnung ab, sobald sie gebucht ist.
+    # Abschlags- und Vertragsrechnungen lassen ihn offen.
+    closes_item: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
