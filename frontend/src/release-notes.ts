@@ -24,6 +24,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.37.0",
+    date: "2026-11-16",
+    summary: "IT-Tools: DNS, Mail-Check, RDAP und Passwort prüfen; Tools in der Suche.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Neu: DNS Lookup. Fragt Einträge bei Cloudflare, Google oder Quad9 ab, vergleicht die Antworten und findet Subdomains.",
+          "Neu: DNS-/Mail-Check. Prüft MX, SPF, DMARC, DKIM, MTA-STS, DNSSEC und CAA einer Domain und erklärt, was fehlt.",
+          "Neu: RDAP (WHOIS). Zeigt, wem eine Domain, ein Netz oder eine AS-Nummer gehört, mit Ablaufdatum und Abuse-Kontakt.",
+          "Neu: Passwort prüfen. Schätzt die Stärke und prüft auf Knopfdruck, ob das Kennwort in Datenlecks vorkommt. Das Kennwort selbst verlässt deinen Browser nie.",
+          "Diese Abfragen stellt die Werkbank für dich. Ein Admin kann sie in der Verwaltung ausschalten.",
+        ],
+      },
+      {
+        area: "Suche",
+        entries: ["Die Suche zeigt passende IT-Tools sofort an."],
+      },
+    ],
+  },
+  {
     version: "0.36.0",
     date: "2026-11-16",
     summary: "IT-Budget: Den Vertrag wählst du am Budgetposten.",

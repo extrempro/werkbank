@@ -52,3 +52,24 @@ export function clampInt(text: string, min: number, max: number, fallback: numbe
   }
   return Math.min(max, Math.max(min, value));
 }
+
+/** Wert, den ein Verweis aus einem anderen Tool mitgibt (z. B. eine Domain); nur lesen. */
+export function readParam(name: string): string {
+  return new URLSearchParams(window.location.search).get(name) ?? "";
+}
+
+/**
+ * Nimmt mitgegebene Werte wieder aus der Adresszeile, damit eingegebene Namen dort nicht stehen
+ * bleiben. Einstellungen des Tools bleiben.
+ */
+export function dropParams(names: string[]): void {
+  const params = new URLSearchParams(window.location.search);
+  if (!names.some((name) => params.has(name))) {
+    return;
+  }
+  for (const name of names) {
+    params.delete(name);
+  }
+  const query = params.toString();
+  window.history.replaceState(null, "", window.location.pathname + (query ? `?${query}` : ""));
+}

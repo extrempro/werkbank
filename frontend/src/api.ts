@@ -289,6 +289,8 @@ export interface AdminSettings {
   credential_warn_days?: number[];
   credential_warn_min?: number;
   credential_warn_max?: number;
+  /** Dürfen die IT-Tools über den Server ins Internet fragen? Fehlt bei älteren Servern. */
+  tools_internet?: boolean;
 }
 
 export interface SmtpUpdate {
@@ -320,6 +322,10 @@ export function saveAuditRetention(days: number): Promise<AdminSettings> {
 
 export function saveCredentialWarnDays(days: number[]): Promise<AdminSettings> {
   return putJson("/api/admin/settings/credential-warn-days", { days });
+}
+
+export function saveToolsInternet(enabled: boolean): Promise<AdminSettings> {
+  return putJson("/api/admin/settings/tools-internet", { enabled });
 }
 
 export function saveAiSettings(update: AiUpdate): Promise<AdminSettings> {

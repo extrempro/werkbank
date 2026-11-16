@@ -53,6 +53,20 @@ describe("SearchPage", () => {
     expect(screen.queryByRole("link", { name: "Subnetz-Rechner" })).toBeNull();
   });
 
+  it("zeigt Tools auch, wenn die Suche in den Modulen fehlschlägt", async () => {
+    window.history.replaceState(null, "", searchUrl("dns"));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 500 })),
+    );
+    render(<SearchPage roles={["Tools.User"]} />);
+    expect(await screen.findByRole("link", { name: "DNS Lookup" })).toHaveAttribute(
+      "href",
+      "/it-tools/dns-lookup",
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("IT-Tools stehen trotzdem da");
+  });
+
   it("sucht nach dem Begriff aus der Adresse und zeigt Treffer mit Modul", async () => {
     window.history.replaceState(null, "", searchUrl("MFA"));
     const urls = stubFetch(hits);

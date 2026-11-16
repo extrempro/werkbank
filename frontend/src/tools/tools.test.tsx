@@ -36,7 +36,7 @@ describe("Verzeichnis der IT-Tools", () => {
     expect(searchTools("").length).toBe(TOOLS.length);
     expect(searchTools("ipv6").map((tool) => tool.id)).toEqual(["subnetz", "mac-adressen"]);
     expect(searchTools("Generator zufall").map((tool) => tool.id)).toEqual(["uuid", "passwort"]);
-    expect(searchTools("netzwerk")).toHaveLength(6);
+    expect(searchTools("netzwerk")).toHaveLength(9);
     expect(searchTools("xyz-nichts")).toEqual([]);
   });
 

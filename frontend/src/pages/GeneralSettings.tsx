@@ -8,6 +8,7 @@ import {
   type SmtpUpdate,
 } from "../api";
 import { CredentialWarnSettings } from "./CredentialWarnSettings";
+import { ToolsInternetSettings } from "./ToolsInternetSettings";
 
 type Message = { kind: "status" | "alert"; text: string };
 
@@ -291,6 +292,7 @@ export function GeneralSettings({ settings, onChange }: GeneralSettingsProps) {
       </section>
 
       <CredentialWarnSettings settings={settings} onChange={onChange} />
+      <ToolsInternetSettings settings={settings} onChange={onChange} />
     </>
   );
 }

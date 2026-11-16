@@ -4476,3 +4476,50 @@ p.badges {
   padding: 0;
   list-style: none;
 }
+
+/* IT-Tools: DNS Lookup und DNS-/Mail-Check */
+
+.dns-cards,
+.mail-sections {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 64rem) {
+  .mail-sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.dns-records {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dns-record {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 0;
+}
+
+.dns-record + .dns-record {
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.dns-field + .dns-field {
+  margin-left: 12px;
+}
+
+.mail-records {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.mail-records dd {
+  margin: 0;
+}

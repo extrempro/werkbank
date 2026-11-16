@@ -158,7 +158,7 @@ export async function findSubdomains(args: {
   if (useCrtSh) {
     onProgress("Zertifikats-Logs (crt.sh) werden durchsucht – das kann bei großen Domains eine Minute dauern …");
     try {
-      for (const c of await fetchCrtSh(domain, signal)) add(c.name, "crtsh", { lastSeen: c.lastSeen, certWildcard: c.wildcard });
+      for (const c of await fetchCrtSh(domain)) add(c.name, "crtsh", { lastSeen: c.lastSeen, certWildcard: c.wildcard });
     } catch (e) {
       if (signal?.aborted) throw e;
       warnings.push(`Zertifikats-Logs: ${(e as Error).message}`);
@@ -177,7 +177,7 @@ export async function findSubdomains(args: {
   let wildcardKey: string | undefined;
   let wildcardInfo: string[] | undefined;
   try {
-    const probe = await resolveName(resolver, `toolbox-wildcard-test-${Math.random().toString(36).slice(2, 10)}.${domain}`, signal);
+    const probe = await resolveName(resolver, `werkbank-wildcard-test-${Math.random().toString(36).slice(2, 10)}.${domain}`, signal);
     if (probe.addresses.length || probe.cname) {
       wildcardKey = answerKey(probe.cname, probe.addresses);
       wildcardInfo = probe.cname ? [`CNAME ${probe.cname}`, ...probe.addresses] : probe.addresses;
@@ -205,7 +205,8 @@ export async function findSubdomains(args: {
       onProgress("Namen werden aufgelöst", ++done, names.length);
     }
   };
-  await Promise.all(Array.from({ length: Math.min(8, names.length) }, worker));
+  // Zehn Namen gleichzeitig: Je Name zwei Abfragen, die gebündelt zum Server gehen.
+  await Promise.all(Array.from({ length: Math.min(10, names.length) }, worker));
 
   const items = names
     .map((n) => found.get(n)!)

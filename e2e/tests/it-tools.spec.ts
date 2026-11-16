@@ -464,3 +464,35 @@ test("IT-Tools: QR-Code, Bild-Konverter und Zertifikate", async ({ page }) => {
   await expect(page.getByText("CN=www.example.com").first()).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test("IT-Tools: Abfragen über den Server und Suche", async ({ page }) => {
+  await loginAs(page, ["Tools.User"], "Tina Tools");
+
+  // Ohne Abfrage ins Internet: Stärke wird im Browser geschätzt, das Kennwort bleibt draußen.
+  await page.goto("/it-tools/passwort-pruefen");
+  await expect(page.getByRole("heading", { level: 1, name: "Passwort prüfen" })).toBeVisible();
+  await page.getByLabel("Kennwort", { exact: true }).fill("passwort1");
+  await expect(page.getByText("sehr schwach").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Jetzt prüfen" })).toBeVisible();
+  await expectNoA11yViolations(page);
+  await expect(page).toHaveURL(/\/it-tools\/passwort-pruefen$/);
+
+  await page.goto("/it-tools/dns-lookup");
+  await expect(page.getByRole("heading", { level: 1, name: "DNS Lookup" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Resolver" })).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/mail-check");
+  await expect(page.getByRole("heading", { level: 1, name: "DNS-/Mail-Check" })).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/rdap");
+  await page.getByRole("textbox", { name: /^Domain, IP-Adresse/ }).fill("kein domain");
+  await page.getByRole("button", { name: "Abfragen" }).click();
+  await expect(page.getByRole("alert")).toContainText("weder Domain noch IP-Adresse");
+  await expectNoA11yViolations(page);
+
+  // Die globale Suche findet die Tools.
+  await page.goto("/suche?q=dns");
+  await expect(page.getByRole("link", { name: "DNS Lookup" })).toBeVisible();
+});
