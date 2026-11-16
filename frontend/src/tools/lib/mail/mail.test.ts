@@ -3,6 +3,7 @@ import {
   bounceFromMime,
   bounceFromMsg,
   compactSmtp,
+  htmlToText,
   parseDeliveryStatus,
   parseTextBounce,
 } from "./bounce";
@@ -281,5 +282,18 @@ describe("Outlook (.msg)", () => {
     expect(() => loadFile("x.msg", new TextEncoder().encode("kein msg"))).toThrow(
       "keine Outlook-Nachricht",
     );
+  });
+});
+
+describe("Text aus dem HTML-Teil eines Rückläufers", () => {
+  it("liest nur Text und lässt Skripte weg", () => {
+    const text = htmlToText(
+      "<html><body><script>alert(1)</script><p>Delivery has failed.</p>" +
+        "<p>550 5.1.1 User unknown &lt;b&gt;<br>Zweite&nbsp;Zeile</p></body></html>",
+    );
+    expect(text).toContain("Delivery has failed.");
+    expect(text).toContain("550 5.1.1 User unknown <b>");
+    expect(text).toContain("Zweite Zeile");
+    expect(text).not.toContain("alert(1)");
   });
 });

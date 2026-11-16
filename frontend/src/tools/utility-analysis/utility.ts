@@ -12,7 +12,8 @@ export interface UtilityInput {
   criteria: Criterion[];
 }
 
-const num = (s: string | undefined) => Number((s ?? "").replace("%", "").replace(",", ".").trim());
+const num = (s: string | undefined) =>
+  Number((s ?? "").replace(/%/g, "").replace(/,/g, ".").trim());
 
 /** Tabelle: Kopfzeile „Kriterium; Gewicht; Alternative A; Alternative B …“, dann je Kriterium eine Zeile */
 export function parseUtility(text: string): UtilityInput {

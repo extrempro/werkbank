@@ -277,7 +277,7 @@ export function compactSmtp(s: string | undefined): string | undefined {
   if (!first) return s.replace(/\s\d{3}-(?=\S)/g, " ");
   let seen = false;
   return s
-    .replace(new RegExp(`\\b${first[1]}[- ]${first[2]!.replace(/\./g, "\\.")}\\s+`, "g"), (m) => {
+    .replace(new RegExp(`\\b${first[1]}[- ]${escapeRegExp(first[2]!)}\\s+`, "g"), (m) => {
       if (seen) return "";
       seen = true;
       return m.replace("-", " ");
@@ -321,16 +321,28 @@ function diagnosticLine(text: string): string | undefined {
     ?.trim();
 }
 
-function htmlToText(html: string): string {
-  return html
-    .replace(/<(?:script|style)[\s\S]*?<\/(?:script|style)>/gi, "")
-    .replace(/<br\s*\/?>|<\/(?:p|div|tr|li|h\d)>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
-    .replace(/\n{3,}/g, "\n\n");
+/** Sonderzeichen für einen regulären Ausdruck maskieren. */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Text aus dem HTML-Teil eines Rückläufers. Gelesen wird über den HTML-Parser des Browsers
+ * statt über reguläre Ausdrücke: Der Parser führt nichts aus, Skripte und Stile fallen weg,
+ * und das Ergebnis ist reiner Text (die Oberfläche zeigt ihn nie als HTML).
+ */
+export function htmlToText(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  for (const element of Array.from(doc.querySelectorAll("script, style, template, noscript"))) {
+    element.remove();
+  }
+  for (const element of Array.from(doc.querySelectorAll("br"))) {
+    element.replaceWith("\n");
+  }
+  for (const element of Array.from(doc.querySelectorAll("p, div, tr, li, h1, h2, h3, h4, h5, h6"))) {
+    element.append("\n");
+  }
+  return (doc.body.textContent ?? "").replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n");
 }
 
 // ---------- aus Outlook (.msg) ----------
