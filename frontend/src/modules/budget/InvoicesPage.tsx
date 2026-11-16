@@ -539,12 +539,7 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      fetchInvoices(year),
-      fetchPartners(),
-      fetchItems(),
-      fetchBudgetSettings(),
-    ])
+    Promise.all([fetchInvoices(year), fetchPartners(), fetchItems(), fetchBudgetSettings()])
       .then(([list, partners, items, settings]) => {
         if (active) {
           setData({

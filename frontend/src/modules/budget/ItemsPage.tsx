@@ -109,9 +109,7 @@ function ItemForm({
         : "bis",
   );
   const [end, setEnd] = useState(item?.end_year ? String(item.end_year) : "");
-  const [contractId, setContractId] = useState(
-    item?.contract_id ? String(item.contract_id) : "",
-  );
+  const [contractId, setContractId] = useState(item?.contract_id ? String(item.contract_id) : "");
   const [note, setNote] = useState(item?.note ?? "");
   const [tags, setTags] = useState<string[]>(item?.tags ?? []);
   const [active, setActive] = useState(item?.active ?? true);
