@@ -96,7 +96,7 @@ export async function getJson<T>(url: string): Promise<T> {
     if (response.status === 401) {
       reportAuthProblem("abgemeldet");
     }
-    throw new ApiError(response.status, stepUpRequired(response));
+    throw new ApiError(response.status, stepUpRequired(response), await errorDetail(response));
   }
   return (await response.json()) as T;
 }

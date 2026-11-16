@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     rate_limit_login_per_minute: int = 60
     rate_limit_api_per_minute: int = 600
     rate_limit_export_per_minute: int = 10
+    rate_limit_tools_net_per_minute: int = 120
 
     # Worker: Pause zwischen zwei Blicken in die Auftragsliste, wenn nichts zu tun ist
     worker_poll_seconds: int = 10
