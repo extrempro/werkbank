@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.35.0] – 2026-11-16
+
+IT-Tools: QR-Code, Bild-Konverter und Zertifikats-Tools aus der IT-Toolbox.
+
+### IT-Tools
+
+- **QR-Code-Generator:** Text, Link, WLAN, Kontakt (vCard), E-Mail, Telefon und SMS; Fehlerkorrektur, Rand, Farben, Kürzel oder Logo in der Mitte; Download als SVG oder PNG
+- **Bild-Konverter:** PNG, JPEG, WebP, GIF, BMP, SVG, ICO und AVIF in PNG, JPEG, WebP, AVIF, ICO, SVG oder ein Favicon-Paket; Größe ändern, Qualität, mehrere Dateien, ZIP, Einfügen aus der Zwischenablage
+- **Zertifikate anzeigen und umwandeln:** Zertifikate, Ketten, CSRs, Schlüssel und PFX lesen; Kette prüfen, Schlüssel zuordnen; Export als PEM, DER, Fullchain, P7B, PFX (modern oder kompatibel), Webserver-Paket und .p15 für APC-Netzwerkkarten
+- **CSR erstellen:** RSA oder ECDSA mit SANs, Schlüssel auf Wunsch verschlüsselt, passender OpenSSL-Befehl
+- Neue Kategorie „Zertifikate“
+- Anders als in der Toolbox stehen Inhalte des QR-Codes, das Kürzel und die Angaben des CSR nicht in der Adresszeile; die „zuletzt verwendeten Angaben“ des CSR-Tools (im Browser gespeichert) wurden nicht übernommen
+- Der OpenSSL-Befehl setzt die Namen in einfache Anführungszeichen, damit die Shell beim Einfügen nichts daraus ausführt
+- Vorschaubilder als `data:`-Adresse statt `blob:`, passend zur Sicherheitsrichtlinie
+
+### Tests
+
+- Testzertifikate neu erzeugt, mit `example.com` und Adressen aus dem Dokumentationsbereich
+- Browser-Test für QR-Code, Bild-Konverter, CSR und Zertifikate
+
 ## [0.34.0] – 2026-11-16
 
 IT-Tools: fünf weitere Tools aus der IT-Toolbox.

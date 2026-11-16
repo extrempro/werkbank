@@ -429,3 +429,36 @@ test("IT-Tools: Planung und E-Mail-Header", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /^Zustellweg \(2 Stationen/ })).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test("IT-Tools: QR-Code, Bild-Konverter und Zertifikate", async ({ page }) => {
+  await loginAs(page, ["Tools.User"], "Tina Tools");
+
+  await page.goto("/it-tools/qr-code");
+  await expect(page.getByRole("heading", { level: 1, name: "QR-Code-Generator" })).toBeVisible();
+  await page.getByRole("textbox", { name: /^Adresse/ }).fill("intranet.example.com/wiki");
+  await expect(page.getByRole("img", { name: /^QR-Code: Link/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "SVG herunterladen" })).toBeVisible();
+  await expectNoA11yViolations(page);
+  // Der Inhalt steht nicht in der Adresszeile.
+  await expect(page).toHaveURL(/\/it-tools\/qr-code$/);
+
+  await page.goto("/it-tools/bild-konverter");
+  await expect(page.getByRole("heading", { level: 1, name: "Bild-Konverter" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Zielformat" })).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/it-tools/csr");
+  await page.getByRole("textbox", { name: /^Common Name/ }).fill("www.example.com");
+  await page.getByRole("button", { name: "CSR und Schlüssel erzeugen" }).click();
+  const csr = page.getByLabel("CSR (an die CA übergeben)", { exact: true });
+  await expect(csr).toContainText("BEGIN CERTIFICATE REQUEST");
+  await expectNoA11yViolations(page);
+  await expect(page).toHaveURL(/\/it-tools\/csr$/);
+  const csrText = (await csr.textContent()) ?? "";
+
+  await page.goto("/it-tools/zertifikate");
+  await page.getByRole("textbox", { name: /^Zertifikat, Kette, CSR/ }).fill(csrText);
+  await expect(page.getByText("Zertifikatsanforderung (CSR)")).toBeVisible();
+  await expect(page.getByText("CN=www.example.com").first()).toBeVisible();
+  await expectNoA11yViolations(page);
+});
