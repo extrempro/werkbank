@@ -126,7 +126,7 @@ function startsWithSvg(text: string): boolean {
   let rest = text;
   for (let guard = 0; guard < 100; guard++) {
     rest = rest.trimStart();
-    let end = -1;
+    let end: number;
     if (rest.startsWith("<?xml")) end = rest.indexOf(">") + 1;
     else if (rest.startsWith("<!--")) end = rest.indexOf("-->", 4) + 3;
     else if (rest.slice(0, 9).toLowerCase() === "<!doctype") end = rest.indexOf(">") + 1;

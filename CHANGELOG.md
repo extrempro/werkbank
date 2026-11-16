@@ -17,6 +17,10 @@ IT-Budget: Den Vertrag gibt der Budgetposten vor, nicht die Rechnungsposition.
 - Ein Vertrag lässt sich löschen, auch wenn Rechnungen auf seinen Posten liegen; die Posten bleiben ohne Vertrag
 - Migration 0031: Spalte `contract_id` der Rechnungspositionen entfällt (die bisherigen Einträge gehen verloren); je Posten bleibt höchstens die Zuordnung zum zuerst angelegten Vertrag, eindeutiger Schlüssel auf `budget_contract_items.item_id`
 
+### Behoben
+
+- Lint-Fehler in der SVG-Erkennung des Bild-Konverters (überflüssige Zuweisung)
+
 ## [0.35.0] – 2026-11-16
 
 IT-Tools: QR-Code, Bild-Konverter und Zertifikats-Tools aus der IT-Toolbox.
