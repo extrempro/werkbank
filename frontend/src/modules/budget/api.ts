@@ -386,3 +386,14 @@ export function parseRate(text: string): number | null {
   const rate = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
   return rate <= 10_000 ? rate : null;
 }
+
+// Das zuletzt gewählte Geschäftsjahr gilt für alle Budget-Seiten, bis die Werkbank neu lädt.
+let chosenYear: number | null = null;
+
+export function rememberedYear(): number | null {
+  return chosenYear;
+}
+
+export function rememberYear(year: number): void {
+  chosenYear = year;
+}

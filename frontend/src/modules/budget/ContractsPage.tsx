@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { Link } from "../../components/Link";
+import { BUDGET_CONTRACTS_PATH } from "../../navigation";
 import {
   BUDGET_EDITOR_ROLES,
   createContract,
@@ -27,6 +29,8 @@ import {
   type Item,
   type Partner,
 } from "./api";
+import { ContractDetail } from "./ContractDetail";
+import { BudgetHead, ReadOnlyNote, useRevealOnMount } from "./shared";
 
 interface FormProps {
   /** null: neuen Vertrag anlegen. */
@@ -47,6 +51,7 @@ function wholeNumber(text: string): number | null {
 }
 
 function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProps) {
+  const reveal = useRevealOnMount<HTMLElement>();
   const [title, setTitle] = useState(contract?.title ?? "");
   const [partnerId, setPartnerId] = useState(contract ? String(contract.partner_id) : "");
   const [itemId, setItemId] = useState(contract ? String(contract.item_id) : "");
@@ -136,7 +141,7 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
   };
 
   return (
-    <section className="panel" aria-labelledby="vertrag-formular-titel">
+    <section className="panel" aria-labelledby="vertrag-formular-titel" ref={reveal} tabIndex={-1}>
       <div className="panel-head">
         <h2 id="vertrag-formular-titel">
           {contract ? `${contract.title} bearbeiten` : "Vertrag anlegen"}
@@ -306,13 +311,11 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
         </p>
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>
-            {contract ? "Änderungen speichern" : "Vertrag anlegen"}
+            {contract ? "Änderungen speichern" : "Vertrag speichern"}
           </button>
-          {contract && (
-            <button type="button" className="button button-secondary" onClick={onCancel}>
-              Abbrechen
-            </button>
-          )}
+          <button type="button" className="button button-secondary" onClick={onCancel}>
+            Abbrechen
+          </button>
         </div>
         {error && (
           <p role="alert" className="hint-box hint-bad">
@@ -333,13 +336,25 @@ interface Loaded {
 type View = "laufend" | "alle";
 
 /** IT-Budget › Verträge: Verträge mit Laufzeit, Kündigungstermin und Kosten im Jahr. */
-export function ContractsPage({ roles }: { roles: readonly string[] }) {
+export function ContractsPage({
+  roles,
+  selectedId,
+}: {
+  roles: readonly string[];
+  /** Gesetzt: statt der Liste wird dieser Vertrag gezeigt. */
+  selectedId?: number;
+}) {
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
   const [data, setData] = useState<Loaded | null>(null);
   const [failed, setFailed] = useState(false);
   const [view, setView] = useState<View>("laufend");
   const [editing, setEditing] = useState<Contract | null>(null);
   const [formRound, setFormRound] = useState(0);
+  const [formOpen, setFormOpen] = useState(false);
+  const closeForm = () => {
+    setEditing(null);
+    setFormOpen(false);
+  };
   const [status, setStatus] = useState<string | null>(null);
   // Nach dem Speichern neu laden: Reihenfolge und Termine rechnet der Server.
   const [round, setRound] = useState(0);
@@ -365,6 +380,7 @@ export function ContractsPage({ roles }: { roles: readonly string[] }) {
   const onSaved = (saved: Contract) => {
     setStatus(`${saved.title} ist gespeichert.`);
     setEditing(null);
+    setFormOpen(false);
     setFormRound(formRound + 1);
     setRound(round + 1);
   };
@@ -380,16 +396,67 @@ export function ContractsPage({ roles }: { roles: readonly string[] }) {
   ).length;
   const missingDpa = running.filter((entry) => entry.dpa_status === "fehlt").length;
 
+  if (selectedId !== undefined) {
+    const selected = all.find((entry) => entry.id === selectedId);
+    return (
+      <div className="page page-wide budget-page">
+        <BudgetHead title={selected?.title ?? "Vertrag"} />
+        {failed && (
+          <p role="alert" className="panel panel-empty">
+            Der Vertrag konnte nicht geladen werden.
+          </p>
+        )}
+        {!failed && !data && <p role="status">Wird geladen …</p>}
+        {data && !selected && (
+          <p className="panel panel-empty">
+            Diesen Vertrag gibt es nicht. <Link to={BUDGET_CONTRACTS_PATH}>Zu den Verträgen</Link>
+          </p>
+        )}
+        {data && selected && (
+          <ContractDetail contract={selected} yearName={data.list.current_year_name} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="page page-wide budget-page">
-      <header className="page-head">
-        <p className="module-label">IT-Budget</p>
-        <h1>Verträge</h1>
-        <p className="page-sub">
-          Verträge mit Laufzeit und Kündigungstermin. Ihre erwarteten Kosten zählen in der Übersicht
-          als „gebunden“. Alle Beträge sind brutto.
-        </p>
-      </header>
+      <BudgetHead
+        title="Verträge"
+        sub={
+          <>
+            Verträge mit Laufzeit und Kündigungstermin. Ihre erwarteten Kosten zählen in der
+            Übersicht als „gebunden“. Alle Beträge sind brutto.
+          </>
+        }
+      />
+      <ReadOnlyNote roles={roles} />
+      {canEdit && data && (
+        <div className="budget-toolbar">
+          <button
+            type="button"
+            className="button button-primary"
+            aria-expanded={formOpen || editing !== null}
+            onClick={() => {
+              setEditing(null);
+              setFormRound(formRound + 1);
+              setFormOpen(true);
+            }}
+          >
+            Vertrag anlegen
+          </button>
+        </div>
+      )}
+      {canEdit && data && (formOpen || editing) && (
+        <ContractForm
+          key={editing ? `vertrag-${editing.id}` : `neu-${formRound}`}
+          contract={editing}
+          partners={data.partners}
+          items={data.items}
+          onSaved={onSaved}
+          onCancel={closeForm}
+        />
+      )}
 
       {failed && (
         <p role="alert" className="panel panel-empty">
@@ -465,7 +532,7 @@ export function ContractsPage({ roles }: { roles: readonly string[] }) {
                     return (
                       <tr key={entry.id}>
                         <th scope="row">
-                          {entry.title}
+                          <Link to={`${BUDGET_CONTRACTS_PATH}/${entry.id}`}>{entry.title}</Link>
                           {!entry.running && (
                             <span className="pill pill-neutral budget-pill">beendet</span>
                           )}
@@ -537,16 +604,6 @@ export function ContractsPage({ roles }: { roles: readonly string[] }) {
         <p role="status" className="hint-box">
           {status}
         </p>
-      )}
-      {canEdit && data && (
-        <ContractForm
-          key={editing ? `vertrag-${editing.id}` : `neu-${formRound}`}
-          contract={editing}
-          partners={data.partners}
-          items={data.items}
-          onSaved={onSaved}
-          onCancel={() => setEditing(null)}
-        />
       )}
     </div>
   );

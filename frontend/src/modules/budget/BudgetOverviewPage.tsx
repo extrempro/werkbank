@@ -6,6 +6,8 @@ import {
   DEADLINE_WINDOW_DAYS,
   deadlineBadge,
   fetchBudgetOverview,
+  rememberedYear,
+  rememberYear,
   fetchContracts,
   formatBudgetDay,
   formatEuro,
@@ -13,6 +15,7 @@ import {
   type Contract,
   type Overview,
 } from "./api";
+import { ReadOnlyNote } from "./shared";
 
 function amount(cents: number | null): string {
   return cents === null ? "–" : formatEuro(cents);
@@ -74,7 +77,7 @@ function Bar({ percent, over, label }: { percent: number; over: boolean; label: 
 /** IT-Budget › Übersicht: Kennzahlen, Budget nach Konten, Fristen und Handlungsbedarf. */
 export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
-  const [year, setYear] = useState<number | null>(null);
+  const [year, setYear] = useState<number | null>(rememberedYear);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [failed, setFailed] = useState(false);
@@ -151,7 +154,10 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
               {label}
               <select
                 value={overview.year}
-                onChange={(event) => setYear(Number(event.target.value))}
+                onChange={(event) => {
+                  rememberYear(Number(event.target.value));
+                  setYear(Number(event.target.value));
+                }}
               >
                 {overview.years.map((entry) => (
                   <option key={entry.year} value={entry.year}>
@@ -163,6 +169,7 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
           </div>
         )}
       </header>
+      <ReadOnlyNote roles={roles} />
 
       {failed && (
         <p role="alert" className="panel panel-empty">
@@ -273,7 +280,9 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
                           return (
                             <li key={entry.id}>
                               <span>
-                                <Link to={BUDGET_CONTRACTS_PATH}>{entry.title}</Link>
+                                <Link to={`${BUDGET_CONTRACTS_PATH}/${entry.id}`}>
+                                  {entry.title}
+                                </Link>
                                 <span className="budget-muted budget-line">
                                   {entry.partner_name} · kündbar bis{" "}
                                   {entry.notice_deadline

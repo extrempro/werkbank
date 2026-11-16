@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { fetchBudgetSettings, MONTHS, saveBudgetSettings, type BudgetSettings } from "./api";
+import { BudgetHead } from "./shared";
 
 function SettingsForm({ initial }: { initial: BudgetSettings }) {
   const [settings, setSettings] = useState(initial);
@@ -131,11 +132,10 @@ export function BudgetSettingsPage() {
 
   return (
     <div className="page budget-page">
-      <header className="page-head">
-        <p className="module-label">IT-Budget</p>
-        <h1>Einstellungen</h1>
-        <p className="page-sub">Grundlagen des Budgets. Ändern darf sie der Budgetverwalter.</p>
-      </header>
+      <BudgetHead
+        title="Einstellungen"
+        sub="Grundlagen des Budgets. Ändern darf sie der Budgetverwalter."
+      />
       {failed && (
         <p role="alert" className="panel panel-empty">
           Die Einstellungen konnten nicht geladen werden.

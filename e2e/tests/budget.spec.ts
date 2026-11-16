@@ -10,32 +10,36 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
 
   await page.goto("/budget/konten");
   await expect(page.getByRole("heading", { level: 1, name: "Konten" })).toBeVisible();
+  await page.getByRole("button", { name: "Konto anlegen" }).click();
   await page.getByLabel("Kontonummer", { exact: true }).fill(number);
   await page.getByLabel("Bezeichnung", { exact: true }).fill("Testkonto Wartung");
-  await page.getByRole("button", { name: "Konto anlegen" }).click();
+  await page.getByRole("button", { name: "Konto speichern" }).click();
   await expect(page.getByText(`Konto ${number} ist gespeichert.`)).toBeVisible();
   await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("aktiv");
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/posten");
   await expect(page.getByRole("heading", { level: 1, name: "Budgetposten" })).toBeVisible();
+  await page.getByRole("button", { name: "Budgetposten anlegen" }).click();
   await page
     .getByRole("combobox", { name: /^Konto/ })
     .selectOption({ label: `${number} Testkonto Wartung` });
   await page.getByLabel("Bezeichnung", { exact: true }).fill(`Posten ${number}`);
-  await page.getByRole("button", { name: "Budgetposten anlegen" }).click();
+  await page.getByRole("button", { name: "Budgetposten speichern" }).click();
   await expect(page.getByText(`Posten ${number} ist gespeichert.`)).toBeVisible();
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/partner");
   await expect(page.getByRole("heading", { level: 1, name: "Partner" })).toBeVisible();
-  await page.getByLabel("Name der Firma", { exact: true }).fill(`Beispiel Partner ${number}`);
   await page.getByRole("button", { name: "Partner anlegen" }).click();
+  await page.getByLabel("Name der Firma", { exact: true }).fill(`Beispiel Partner ${number}`);
+  await page.getByRole("button", { name: "Partner speichern" }).click();
   await expect(page.getByText(`Beispiel Partner ${number} ist gespeichert.`)).toBeVisible();
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/vertraege");
   await expect(page.getByRole("heading", { level: 1, name: "Verträge" })).toBeVisible();
+  await page.getByRole("button", { name: "Vertrag anlegen" }).click();
   await page.getByLabel("Bezeichnung", { exact: true }).fill(`Wartung ${number}`);
   await page
     .getByRole("combobox", { name: /^Vertragspartner/ })
@@ -47,12 +51,18 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(page.getByText(/^Brutto je Zahlung: 119,00/)).toBeVisible();
   await page.getByRole("combobox", { name: /^Turnus/ }).selectOption("monatlich");
   await page.getByLabel("Beginn", { exact: true }).fill(`${new Date().getFullYear()}-01-01`);
-  await page.getByRole("button", { name: "Vertrag anlegen" }).click();
+  await page.getByRole("button", { name: "Vertrag speichern" }).click();
   await expect(page.getByText(`Wartung ${number} ist gespeichert.`)).toBeVisible();
   // Zwölf Monatszahlungen im laufenden Jahr, brutto mit 19 %
   await expect(page.getByRole("row", { name: new RegExp(`Wartung ${number}`) })).toContainText(
     "1.428,00",
   );
+  await expectNoA11yViolations(page);
+
+  await page.getByRole("link", { name: `Wartung ${number}` }).click();
+  await expect(page.getByRole("heading", { level: 1, name: `Wartung ${number}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vertragsdaten" })).toBeVisible();
+  await expect(page.getByText("Läuft unbefristet weiter.")).toBeVisible();
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/posten");
@@ -88,6 +98,7 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
   await page.goto("/budget");
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
   await expect(page.getByText(/^Plan Geschäftsjahr/)).toBeVisible();
+  await expect(page.getByText(/Nur Lesezugriff/)).toBeVisible();
   await page.goto("/budget/posten");
   await expect(page.getByRole("heading", { level: 1, name: "Budgetposten" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Plan bearbeiten" })).toHaveCount(0);
