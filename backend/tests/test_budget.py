@@ -354,9 +354,17 @@ def test_expected_costs_and_overview(db: Session) -> None:
     assert reader.get(f"{BASE}/overview", params={"year": 1999}).status_code == 422
 
     db.expire_all()
-    created = db.scalars(select(AuditLog).where(AuditLog.action == "budget.posten_angelegt")).all()
-    assert len(created) == 4
-    assert created[0].details is not None and "amount_cents" in created[0].details
+    changed_log = db.scalars(
+        select(AuditLog)
+        .where(
+            AuditLog.action == "budget.posten_geaendert",
+            AuditLog.object_id == str(ids["Server"]),
+        )
+        .order_by(AuditLog.id)
+    ).all()
+    assert changed_log[0].details is not None
+    assert changed_log[0].details["vorher"]["amount_cents"] == 5_000_050
+    assert changed_log[0].details["nachher"]["end_year"] == 2027
 
 
 # --- Partner und Verträge ---

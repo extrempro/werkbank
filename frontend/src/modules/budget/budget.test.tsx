@@ -227,10 +227,10 @@ describe("Budgetposten", () => {
     expect(plain(row.textContent)).toContain("11.900,00 €");
     expect(plain(row.textContent)).toContain("6.000,00 €");
     expect(plain(row.textContent)).toContain("10.000,00 €");
-    const server = table.getByRole("row", { name: /Server/ });
-    expect(server).toHaveTextContent("stillgelegt");
-    expect(server).toHaveTextContent("einmalig 2026/27");
-    expect(server).toHaveTextContent("offen");
+    const serverRow = table.getByRole("row", { name: /Server/ });
+    expect(serverRow).toHaveTextContent("stillgelegt");
+    expect(serverRow).toHaveTextContent("einmalig 2026/27");
+    expect(serverRow).toHaveTextContent("offen");
     expect(plain(table.getByRole("row", { name: /^Summe/ }).textContent)).toContain("61.900,50 €");
     // Lesende Rollen legen nichts an.
     expect(screen.queryByRole("button", { name: "Posten hinzufügen" })).toBeNull();
@@ -276,9 +276,9 @@ describe("Budgetposten", () => {
     expect(plain(table.getByRole("row", { name: /Office-Lizenzen/ }).textContent)).toContain(
       "+ 1.000,00 €",
     );
-    const server = table.getByRole("row", { name: /Server/ });
-    expect(server).toHaveTextContent("abgeschlossen");
-    expect(plain(server.textContent)).toContain("− 10.000,50 €");
+    const closed = table.getByRole("row", { name: /Server/ });
+    expect(closed).toHaveTextContent("abgeschlossen");
+    expect(plain(closed.textContent)).toContain("− 10.000,50 €");
   });
 
   it("fügt einen Posten als Vorgang hinzu und ändert einen", async () => {
