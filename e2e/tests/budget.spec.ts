@@ -25,6 +25,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .getByRole("combobox", { name: /^Konto/ })
     .selectOption({ label: `${number} Testkonto Wartung` });
   await page.getByLabel("Bezeichnung", { exact: true }).fill(`Posten ${number}`);
+  await page.getByRole("textbox", { name: /^Tags/ }).fill(`Tag ${number}, tag ${number}`);
   await page.getByRole("button", { name: "Budgetposten speichern" }).click();
   await expect(page.getByText(`Posten ${number} ist gespeichert.`)).toBeVisible();
   await expectNoA11yViolations(page);
@@ -127,6 +128,32 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(itemRow).toContainText("72,00");
   await expectNoA11yViolations(page);
 
+  // Tags: in der Liste filtern, dann über fünf Jahre auswerten und die Auswahl speichern.
+  await page.getByRole("button", { name: `Nach Tag Tag ${number} filtern` }).click();
+  await expect(page.getByText(/^1 von \d+ Budgetposten$/)).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.getByRole("link", { name: `Statistik zu „Tag ${number}“` }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Statistik" })).toBeVisible();
+  const yearRow = page
+    .getByRole("region", { name: "Plan und Ist je Geschäftsjahr" })
+    .getByRole("row", { name: new RegExp(`^${new Date().getFullYear()}`) });
+  await expect(yearRow).toContainText("1.500,00");
+  await expect(yearRow).toContainText("119,00");
+  await expect(page.getByRole("img", { name: /^Plan und Ist je Geschäftsjahr/ })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Budgetposten der Auswahl" }).getByRole("row", {
+      name: new RegExp(`Posten ${number}`),
+    }),
+  ).toBeVisible();
+  await page.getByLabel("Auswahl speichern unter", { exact: true }).fill(`Statistik ${number}`);
+  await page.getByRole("button", { name: "Statistik speichern" }).click();
+  await expect(page.getByText(`Die Statistik „Statistik ${number}“ ist gespeichert.`)).toBeVisible();
+  await expect(page.getByRole("button", { name: `Statistik ${number}`, exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expectNoA11yViolations(page);
+
   await page.goto("/budget");
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
   await expect(
@@ -173,6 +200,7 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
     ["/budget/vertraege", "Verträge"],
     ["/budget/rechnungen", "Rechnungen"],
     ["/budget/planung", "Mehrjahresplanung"],
+    ["/budget/statistik", "Statistik"],
     ["/budget/partner", "Partner"],
   ] as const) {
     await page.goto(path);
@@ -190,6 +218,10 @@ test("Lesende sehen das Budget, ändern aber nichts", async ({ page }) => {
   expect(
     (await page.request.put("/api/budget/plans/2026", { data: { entries: [] }, headers })).status(),
   ).toBe(403);
+  const statistic = { name: "Unerlaubt", tags: ["Cloud"], mode: "any" };
+  expect(
+    (await page.request.post("/api/budget/statistics", { data: statistic, headers })).status(),
+  ).toBe(403);
 });
 
 test("Ohne Budget-Rolle gibt es den Bereich und die Daten nicht", async ({ page }) => {
@@ -204,6 +236,8 @@ test("Ohne Budget-Rolle gibt es den Bereich und die Daten nicht", async ({ page 
     "/api/budget/partners",
     "/api/budget/invoices",
     "/api/budget/planning",
+    "/api/budget/tags",
+    "/api/budget/statistics",
     "/api/budget/contracts",
   ]) {
     expect((await page.request.get(path)).status()).toBe(403);

@@ -15,6 +15,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from werkbank.db import Base
@@ -48,7 +49,23 @@ class BudgetItem(Base):
     # Üblicher Partner dieses Postens; beim Erfassen einer Rechnung vorausgewählt
     partner_id: Mapped[int | None] = mapped_column(ForeignKey("budget_partners.id"), index=True)
     note: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    # Frei vergebene Schlagworte, über die sich Posten suchen und auswerten lassen
+    tags: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BudgetStatistic(Base):
+    """Eine gespeicherte Auswertung nach Tags. Für alle Rollen des Budgets sichtbar."""
+
+    __tablename__ = "budget_statistics"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), unique=True)
+    tags: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    # „any“: einer der Tags reicht; „all“: alle Tags müssen am Posten stehen
+    mode: Mapped[str] = mapped_column(String(8))
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

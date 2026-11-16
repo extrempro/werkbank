@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.31.0",
+    date: "2026-11-16",
+    summary: "IT-Budget: Tags am Budgetposten und eine Statistik nach Tags.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Budgetposten können Tags bekommen, zum Beispiel „Cloud“ oder „Lizenzen“. Schon vergebene Tags werden beim Eintragen vorgeschlagen.",
+          "Die Seite Budgetposten lässt sich durchsuchen und nach Tag filtern. Ein Klick auf einen Tag in der Liste filtert ebenfalls.",
+          "Die Suche oben findet jetzt auch Budgetposten, über ihren Namen und ihre Tags.",
+          "Neue Seite „Statistik“: Du wählst einen oder mehrere Tags und siehst Plan und Ist der passenden Posten über fünf Jahre, als Rückblick oder Ausblick.",
+          "Eine Auswahl von Tags lässt sich unter einem Namen speichern. Gespeicherte Statistiken sehen alle, die das Budget sehen dürfen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.30.1",
     date: "2026-11-16",
     summary: "M365: keine Schein-Änderungen mehr bei umsortierten Listen.",

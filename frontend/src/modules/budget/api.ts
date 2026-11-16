@@ -62,6 +62,8 @@ export interface Item {
   partner_id: number | null;
   partner_name: string | null;
   note: string;
+  /** Frei vergebene Schlagworte zum Suchen und Auswerten. */
+  tags: string[];
   active: boolean;
 }
 
@@ -73,6 +75,7 @@ export interface ItemUpdate {
   plan_year?: number;
   plan_cents?: number;
   note: string;
+  tags: string[];
   active: boolean;
 }
 
@@ -591,4 +594,129 @@ export function fileSize(bytes: number): string {
     return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   }
   return `${(bytes / (1024 * 1024)).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB`;
+}
+
+// --- Tags und Statistik ---
+
+export const TAG_MAX_LENGTH = 30;
+export const TAGS_MAX = 10;
+
+export interface TagCount {
+  tag: string;
+  /** Anzahl der Budgetposten mit diesem Tag. */
+  items: number;
+}
+
+/** any: einer der Tags reicht; all: alle Tags müssen am Posten stehen. */
+export type TagMode = "any" | "all";
+
+export interface StatisticYear {
+  year: number;
+  name: string;
+  plan_cents: number;
+  actual_cents: number;
+}
+
+export interface Statistic {
+  year_label: string;
+  current_year: number;
+  tags: string[];
+  mode: TagMode;
+  years: StatisticYear[];
+  /** Passende Budgetposten mit ihren Summen über den Zeitraum. */
+  items: { item: Item; plan_cents: number; actual_cents: number }[];
+}
+
+export interface SavedStatistic {
+  id: number;
+  name: string;
+  tags: string[];
+  mode: TagMode;
+}
+
+export function fetchTags(): Promise<TagCount[]> {
+  return getJson<TagCount[]>("/api/budget/tags");
+}
+
+/** Plan und Ist der Posten mit diesen Tags über fünf Geschäftsjahre, ab `start` (sonst Rückblick). */
+export function queryStatistic(
+  tags: string[],
+  mode: TagMode,
+  start: number | null,
+): Promise<Statistic> {
+  return postJson<Statistic>("/api/budget/statistics/query", {
+    tags,
+    mode,
+    ...(start === null ? {} : { start }),
+  });
+}
+
+export function fetchStatistics(): Promise<SavedStatistic[]> {
+  return getJson<SavedStatistic[]>("/api/budget/statistics");
+}
+
+export function saveStatistic(
+  name: string,
+  tags: string[],
+  mode: TagMode,
+): Promise<SavedStatistic> {
+  return postJson<SavedStatistic>("/api/budget/statistics", { name, tags, mode });
+}
+
+export function deleteStatistic(id: number): Deleted {
+  return deleteJson<{ deleted: boolean }>(`/api/budget/statistics/${id}`);
+}
+
+/**
+ * Liest die Eingabe „Cloud, Lizenzen“ als Liste von Tags: ohne Rand, ohne Doppelte (Groß- und
+ * Kleinschreibung zählt nicht). Fehlertext statt Liste, wenn ein Tag zu lang ist oder es zu viele sind.
+ */
+export function parseTags(text: string): string[] | string {
+  const tags: string[] = [];
+  for (const part of text.split(",")) {
+    const tag = part.trim().replace(/\s+/g, " ");
+    if (tag === "") {
+      continue;
+    }
+    if (tag.length > TAG_MAX_LENGTH) {
+      return `Der Tag „${tag}“ ist zu lang. Erlaubt sind höchstens ${TAG_MAX_LENGTH} Zeichen.`;
+    }
+    if (!tags.some((entry) => entry.toLowerCase() === tag.toLowerCase())) {
+      tags.push(tag);
+    }
+  }
+  if (tags.length > TAGS_MAX) {
+    return `Es sind höchstens ${TAGS_MAX} Tags je Budgetposten möglich.`;
+  }
+  return tags;
+}
+
+/** Ob ein Budgetposten zum Suchtext passt: Name, Notiz, Konto, Partner oder Tag. */
+export function itemMatches(item: Item, search: string): boolean {
+  const needle = search.trim().toLowerCase();
+  if (needle === "") {
+    return true;
+  }
+  return [
+    item.name,
+    item.note,
+    item.account_number,
+    item.account_name,
+    item.partner_name ?? "",
+    ...item.tags,
+  ].some((text) => text.toLowerCase().includes(needle));
+}
+
+export function hasTag(item: Item, tag: string): boolean {
+  return item.tags.some((entry) => entry.toLowerCase() === tag.toLowerCase());
+}
+
+/** Runder Höchstwert für die Achse eines Diagramms: 1, 2 oder 5 mal eine Zehnerpotenz. */
+export function niceMax(value: number): number {
+  if (value <= 0) {
+    return 1;
+  }
+  const power = 10 ** Math.floor(Math.log10(value));
+  const step = [1, 2, 5, 10].find((factor) => factor * power >= value) ?? 10;
+  return step * power;
 }

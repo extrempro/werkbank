@@ -28,6 +28,7 @@ from werkbank.modules.budget.models import (
     BudgetItem,
     BudgetPartner,
     BudgetPlan,
+    BudgetStatistic,
     BudgetYear,
 )
 from werkbank.modules.budget.settings import (
@@ -37,6 +38,7 @@ from werkbank.modules.budget.settings import (
     fiscal_year_range,
     load_settings,
 )
+from werkbank.modules.budget.tags import adopt_spelling, clean_tags, matches
 
 BASE = "/api/budget"
 HEADERS = {"Origin": ORIGIN}
@@ -47,6 +49,7 @@ def db(db_session: Session) -> Iterator[Session]:
     def clean() -> None:
         # Reihenfolge nach Abhängigkeiten: erst, was auf anderes verweist.
         for model in (
+            BudgetStatistic,
             BudgetInvoice,
             BudgetContract,
             BudgetPlan,
@@ -1099,3 +1102,173 @@ def test_invoice_documents(db: Session, tmp_path: Path) -> None:
     db.expire_all()
     actions = set(db.scalars(select(AuditLog.action).where(AuditLog.module == "budget")).all())
     assert {"budget.beleg_hochgeladen", "budget.beleg_entfernt"} <= actions
+
+
+def test_tags_are_cleaned_and_matched() -> None:
+    assert clean_tags(["  Cloud ", "cloud", "Microsoft   365"]) == ["Cloud", "Microsoft 365"]
+    assert adopt_spelling(["cloud", "Neu"], ["Cloud", "CLOUD", "Lizenzen"]) == ["Cloud", "Neu"]
+    for bad in (["  "], ["a,b"], ["x" * 31], ["a\nb"], [str(number) for number in range(11)]):
+        with pytest.raises(ValueError):
+            clean_tags(bad)
+    assert matches(["Cloud", "Lizenzen"], ["cloud"], "any")
+    assert matches(["Cloud"], ["cloud", "Projekt"], "any")
+    assert not matches(["Cloud"], ["cloud", "Projekt"], "all")
+    assert matches(["Cloud", "Projekt", "X"], ["cloud", "Projekt"], "all")
+    assert not matches(["Cloud"], [], "any")
+    assert not matches([], ["Cloud"], "any")
+
+
+@pytest.mark.db
+def test_tags_statistics_and_search(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "tags-verwalter")
+    editor = client_for(["Budget.Editor"], "tags-it")
+    reader = client_for(["Budget.Reader"], "tags-leser")
+    stranger = client_for(["Tenant.Reader"], "tags-fremd")
+    account = post(
+        manager, "/accounts", {"number": "6815", "name": "Software", "kind": "laufend"}
+    ).json()
+    partner = post(manager, "/partners", {"name": "Beispiel Software GmbH"}).json()
+    year = manager.get(f"{BASE}/settings").json()["current_year"]
+
+    def item(name: str, tags: list[str]) -> Any:
+        created = post(editor, "/items", {"account_id": account["id"], "name": name, "tags": tags})
+        assert created.status_code == 201, created.text
+        return created.json()
+
+    office = item("Office-Lizenzen", [" Cloud ", "Lizenzen", "cloud"])
+    assert office["tags"] == ["Cloud", "Lizenzen"]
+    # Ein schon vergebener Tag behält seine Schreibweise.
+    backup = item("Datensicherung", ["CLOUD", "Projekt"])
+    assert backup["tags"] == ["Cloud", "Projekt"]
+    plain = item("Telefonie", [])
+    assert plain["tags"] == []
+    for bad in (["a,b"], ["x" * 31], [""], [str(number) for number in range(11)]):
+        body = {"account_id": account["id"], "name": "Ungültig", "tags": bad}
+        assert post(editor, "/items", body).status_code == 422
+
+    changed = put(
+        editor,
+        f"/items/{plain['id']}",
+        {"account_id": account["id"], "name": "Telefonie", "tags": ["lizenzen"]},
+    )
+    assert changed.json()["tags"] == ["Lizenzen"]
+    assert reader.get(f"{BASE}/tags").json() == [
+        {"tag": "Cloud", "items": 2},
+        {"tag": "Lizenzen", "items": 2},
+        {"tag": "Projekt", "items": 1},
+    ]
+    assert stranger.get(f"{BASE}/tags").status_code == 403
+    assert [entry["tags"] for entry in reader.get(f"{BASE}/items").json()] == [
+        ["Cloud", "Projekt"],
+        ["Cloud", "Lizenzen"],
+        ["Lizenzen"],
+    ]
+
+    # Plan in zwei Jahren, eine gebuchte und eine offene Rechnung
+    put(
+        manager,
+        f"/plans/{year}",
+        {
+            "entries": [
+                {"item_id": office["id"], "amount_cents": 1_000_000},
+                {"item_id": backup["id"], "amount_cents": 500_000},
+                {"item_id": plain["id"], "amount_cents": 70_000},
+            ]
+        },
+    )
+    put(
+        manager,
+        f"/plans/{year + 1}",
+        {"entries": [{"item_id": office["id"], "amount_cents": 1_100_000}]},
+    )
+    invoice = {
+        "invoicer_id": partner["id"],
+        "number": "RE-1",
+        "invoice_date": f"{year}-02-10",
+        "item_id": office["id"],
+        "net_cents": 100_000,
+        "tax_rate_bp": 1900,
+        "description": "Lizenzen",
+    }
+    assert post(manager, "/invoices", invoice).status_code == 201
+    # Die Rechnung der IT wartet auf die Prüfung und zählt noch nicht zum Ist.
+    waiting = {**invoice, "number": "RE-2", "item_id": backup["id"]}
+    assert post(editor, "/invoices", waiting).status_code == 201
+
+    def query(body: dict[str, Any]) -> Any:
+        response = post(reader, "/statistics/query", body)
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    result = query({"tags": ["cloud"]})
+    assert (result["tags"], result["mode"], result["current_year"]) == (["Cloud"], "any", year)
+    assert [entry["year"] for entry in result["years"]] == list(range(year - 4, year + 1))
+    assert (result["years"][-1]["plan_cents"], result["years"][-1]["actual_cents"]) == (
+        1_500_000,
+        119_000,
+    )
+    assert result["years"][0]["plan_cents"] == 0
+    assert [
+        (row["item"]["name"], row["plan_cents"], row["actual_cents"]) for row in result["items"]
+    ] == [
+        ("Datensicherung", 500_000, 0),
+        ("Office-Lizenzen", 1_000_000, 119_000),
+    ]
+    # Einer der Tags reicht, oder alle müssen passen.
+    either = query({"tags": ["Projekt", "Lizenzen"], "mode": "any"})
+    assert len(either["items"]) == 3
+    assert either["years"][-1]["plan_cents"] == 1_570_000
+    both = query({"tags": ["Cloud", "Lizenzen"], "mode": "all"})
+    assert [row["item"]["name"] for row in both["items"]] == ["Office-Lizenzen"]
+    # Ausblick: ab dem laufenden Jahr
+    ahead = query({"tags": ["Cloud"], "start": year})
+    assert [entry["year"] for entry in ahead["years"]] == list(range(year, year + 5))
+    assert ahead["years"][1]["plan_cents"] == 1_100_000
+    assert query({"tags": ["Unbekannt"]})["items"] == []
+    assert post(reader, "/statistics/query", {"tags": []}).status_code == 422
+    assert post(reader, "/statistics/query", {"tags": ["a"], "mode": "x"}).status_code == 422
+    assert post(stranger, "/statistics/query", {"tags": ["Cloud"]}).status_code == 403
+
+    # Gespeicherte Statistiken: IT und Budgetverwalter legen an, alle Budget-Rollen sehen sie.
+    saved = {"name": " Cloud gesamt ", "tags": ["cloud"], "mode": "any"}
+    assert post(reader, "/statistics", saved).status_code == 403
+    created = post(editor, "/statistics", saved)
+    assert created.status_code == 201
+    assert created.json()["name"] == "Cloud gesamt"
+    assert created.json()["tags"] == ["Cloud"]
+    assert post(manager, "/statistics", {**saved, "name": "cloud GESAMT"}).status_code == 409
+    assert post(manager, "/statistics", {**saved, "name": " "}).status_code == 422
+    assert post(manager, "/statistics", {**saved, "tags": []}).status_code == 422
+    post(manager, "/statistics", {"name": "Beides", "tags": ["Cloud", "Lizenzen"], "mode": "all"})
+    assert [
+        (entry["name"], entry["mode"]) for entry in reader.get(f"{BASE}/statistics").json()
+    ] == [
+        ("Beides", "all"),
+        ("Cloud gesamt", "any"),
+    ]
+    assert stranger.get(f"{BASE}/statistics").status_code == 403
+    path = f"{BASE}/statistics/{created.json()['id']}"
+    assert reader.delete(path, headers=HEADERS).status_code == 403
+    assert editor.delete(path, headers=HEADERS).json() == {"deleted": True}
+    assert editor.delete(path, headers=HEADERS).status_code == 404
+    assert len(reader.get(f"{BASE}/statistics").json()) == 1
+
+    # Suche: Budgetposten über Name und Tag, nur mit einer Rolle des Budgets
+    def hits(client: Any, text: str) -> list[dict[str, Any]]:
+        response = client.get("/api/search", params={"q": text})
+        assert response.status_code == 200, response.text
+        found: list[dict[str, Any]] = response.json()["hits"]
+        return [hit for hit in found if hit["module"] == "IT-Budget"]
+
+    found = hits(reader, "projekt")
+    assert [(hit["kind"], hit["title"], hit["link"]) for hit in found] == [
+        ("Budgetposten", "Datensicherung", "/budget/posten?suche=Datensicherung")
+    ]
+    assert "Tags: Cloud, Projekt" in found[0]["subtitle"]
+    assert [hit["title"] for hit in hits(reader, "office")] == ["Office-Lizenzen"]
+    assert hits(reader, "%%") == []
+    assert hits(stranger, "projekt") == []
+
+    db.expire_all()
+    actions = set(db.scalars(select(AuditLog.action).where(AuditLog.module == "budget")).all())
+    assert {"budget.statistik_gespeichert", "budget.statistik_geloescht"} <= actions
