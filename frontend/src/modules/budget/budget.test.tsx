@@ -84,6 +84,8 @@ const office: Item = {
   note: "",
   tags: ["Lizenzen", "Cloud"],
   active: true,
+  contract_id: 1,
+  contract_title: "Wartung Zeiterfassung",
 };
 const server: Item = {
   id: 12,
@@ -216,7 +218,7 @@ describe("Budgetposten", () => {
     const row = table.getByRole("row", { name: /Office-Lizenzen/ });
     expect(row).toHaveTextContent("Rechnung liegt vor");
     expect(row).toHaveTextContent("ab 2025/26, bis auf Weiteres");
-    expect(row).toHaveTextContent("1 Vertrag");
+    expect(row).toHaveTextContent("Vertrag: Wartung Zeiterfassung");
     expect(plain(row.textContent)).toContain("11.900,00 €");
     expect(plain(row.textContent)).toContain("10.000,00 €");
     const serverRow = table.getByRole("row", { name: /Server/ });
@@ -279,6 +281,11 @@ describe("Budgetposten", () => {
       "GET /api/budget/accounts": [hardware, software],
       "POST /api/budget/items": { ...office, id: 13, name: "Zeiterfassung Lizenz" },
       "PUT /api/budget/items/12": { ...server, active: true },
+      "GET /api/budget/contracts": {
+        current_year_name: "2026/27",
+        notice_warn_days: 60,
+        entries: [contract()],
+      },
     });
     render(<ItemsPage roles={["Budget.Editor"]} />);
     await screen.findByRole("region", { name: "Budgetposten 2026/27" });
@@ -309,6 +316,8 @@ describe("Budgetposten", () => {
         .map((option) => option.textContent),
     ).toEqual(["Bitte wählen", "2027/28"]);
     fireEvent.change(screen.getByLabelText(/^Bis Wirtschaftsjahr/), { target: { value: "2027" } });
+    // Den Vertrag wählst du am Posten.
+    fireEvent.change(screen.getByLabelText(/^Vertrag/), { target: { value: "1" } });
     fireEvent.click(screen.getByRole("button", { name: "Posten speichern" }));
     expect(await screen.findByText("Zeiterfassung Lizenz ist gespeichert.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
@@ -320,6 +329,7 @@ describe("Budgetposten", () => {
       note: "",
       tags: [],
       active: true,
+      contract_id: 1,
     });
 
     // Bearbeiten: Laufzeit und Kosten sind vorbelegt, stilllegen steht unter weiteren Angaben.
@@ -336,6 +346,7 @@ describe("Budgetposten", () => {
         start_year: 2026,
         end_year: null,
         active: true,
+        contract_id: null,
       }),
     );
   });
@@ -724,15 +735,15 @@ describe("Verträge", () => {
     fireEvent.change(screen.getByLabelText("Vertragspartner"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("Rechnungssteller"), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText(/^Betrag je Zahlung/), { target: { value: "abc" } });
-    fireEvent.click(screen.getByRole("button", { name: "Vertrag speichern" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("mindestens einen Budgetposten");
     // Stillgelegte Posten stehen nicht zur Wahl; die Suche grenzt ein.
     expect(screen.queryByLabelText("0420 · Server")).toBeNull();
     fireEvent.change(screen.getByLabelText("Budgetposten suchen"), { target: { value: "xyz" } });
     expect(screen.getByText("Kein Budgetposten passt zur Suche.")).toBeVisible();
     fireEvent.change(screen.getByLabelText("Budgetposten suchen"), { target: { value: "office" } });
-    fireEvent.click(screen.getByLabelText("6815 · Office-Lizenzen"));
-    expect(screen.getByText("Budgetposten (1 zugeordnet)")).toBeVisible();
+    // Ein Posten mit einem anderen Vertrag ist nicht wählbar; ein Vertrag geht auch ohne Posten.
+    expect(screen.getByLabelText(/^6815 · Office-Lizenzen/)).toBeDisabled();
+    expect(screen.getByText("(Vertrag: Wartung Zeiterfassung)", { exact: false })).toBeVisible();
+    expect(screen.getByText("Budgetposten (0 zugeordnet, freiwillig)")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Vertrag speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Betrag ist nicht lesbar");
 
@@ -759,7 +770,7 @@ describe("Verträge", () => {
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       title: "Neuer Vertrag",
       partner_id: 1,
-      item_ids: [11],
+      item_ids: [],
       invoicer_id: 2,
       dpa_status: "fehlt",
       number: "",
@@ -921,9 +932,11 @@ describe("Rechnungen", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Bitte den Rechnungssteller wählen");
 
     fireEvent.change(screen.getByLabelText("Rechnungssteller"), { target: { value: "2" } });
-    // Der Vertrag bringt seinen Budgetposten mit.
-    fireEvent.change(screen.getByLabelText(/^Vertrag/), { target: { value: "1" } });
-    expect(screen.getByLabelText("Budgetposten")).toHaveValue("11");
+    // Rechnungen hängen nur am Posten; dessen Vertrag wird angezeigt und lässt den Posten offen.
+    expect(screen.queryByLabelText(/^Vertrag/)).toBeNull();
+    fireEvent.change(screen.getByLabelText("Budgetposten"), { target: { value: "11" } });
+    expect(screen.getByText("Vertrag des Postens: Wartung Zeiterfassung")).toBeVisible();
+    expect(screen.getByLabelText(/Schließt den Budgetposten/)).not.toBeChecked();
     fireEvent.change(screen.getByLabelText("Rechnungsnummer"), { target: { value: " RE-3 " } });
     fireEvent.change(screen.getByLabelText("Rechnungsdatum"), { target: { value: "2026-11-02" } });
     fireEvent.change(screen.getByLabelText(/^Betrag netto/), { target: { value: "1.000,00" } });
@@ -975,7 +988,6 @@ describe("Rechnungen", () => {
       lines: [
         {
           item_id: 11,
-          contract_id: 1,
           net_cents: 100_000,
           tax_rate_bp: 1900,
           gross_cents: 119_002,
@@ -986,14 +998,13 @@ describe("Rechnungen", () => {
         },
         {
           item_id: 11,
-          contract_id: null,
           net_cents: 20_000,
           tax_rate_bp: 700,
           gross_cents: null,
           description: "",
           is_project: false,
           is_yearly: false,
-          closes_item: true,
+          closes_item: false,
         },
       ],
       total_gross_cents: 140_402,

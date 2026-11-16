@@ -76,6 +76,9 @@ export interface Item {
   active: boolean;
   /** Nur wenn mit Geschäftsjahr abgefragt: Status in diesem Jahr. */
   status?: ItemStatus | null;
+  /** Zugeordneter Vertrag; ein Posten hat höchstens einen. */
+  contract_id?: number | null;
+  contract_title?: string | null;
 }
 
 export interface ItemUpdate {
@@ -87,6 +90,8 @@ export interface ItemUpdate {
   note: string;
   tags: string[];
   active: boolean;
+  /** Zugeordneter Vertrag; null: keiner. */
+  contract_id: number | null;
 }
 
 export interface ItemRow {
@@ -252,7 +257,7 @@ export type DpaStatus = "vorhanden" | "fehlt" | "nicht_erforderlich";
 export interface ContractUpdate {
   title: string;
   partner_id: number;
-  /** Zugeordnete Budgetposten, mindestens einer. */
+  /** Zugeordnete Budgetposten; ein Vertrag geht auch ohne. Ein Posten hat höchstens einen Vertrag. */
   item_ids: number[];
   /** Rechnungssteller, wenn er vom Vertragspartner abweicht. */
   invoicer_id: number | null;
@@ -299,6 +304,9 @@ export interface Contract extends Omit<ContractUpdate, "item_ids"> {
 
 /** Zugeordnete Budgetposten in Kurzform: „6815 · Lizenzen, 6820 · Telefonie“. */
 export function contractItemsText(contract: Contract): string {
+  if (contract.items.length === 0) {
+    return "ohne Budgetposten";
+  }
   return contract.items.map((item) => `${item.account_number} · ${item.name}`).join(", ");
 }
 
@@ -440,7 +448,6 @@ export type InvoiceStatus = "zu_pruefen" | "gebucht";
 /** Eine Position einer Rechnung: ein Betrag für genau einen Budgetposten. */
 export interface InvoiceLineUpdate {
   item_id: number;
-  contract_id: number | null;
   net_cents: number;
   tax_rate_bp: number;
   /** null: Brutto aus Netto und Steuersatz rechnen; sonst das Brutto laut Rechnung. */
@@ -458,6 +465,8 @@ export interface InvoiceLine extends Omit<InvoiceLineUpdate, "gross_cents"> {
   item_name: string;
   account_number: string;
   account_name: string;
+  /** Vertrag des Budgetpostens, wie er jetzt zugeordnet ist. */
+  contract_id: number | null;
   contract_title: string | null;
 }
 

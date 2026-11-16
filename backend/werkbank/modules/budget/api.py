@@ -185,6 +185,9 @@ class ItemOut(BaseModel):
     active: bool
     # Nur mit Angabe eines Geschäftsjahrs: offen, rechnung, abgeschlossen oder None
     status: str | None = None
+    # Zugeordneter Vertrag (höchstens einer)
+    contract_id: int | None = None
+    contract_title: str | None = None
 
 
 class ItemIn(BaseModel):
@@ -198,6 +201,8 @@ class ItemIn(BaseModel):
     note: str = Field(default="", max_length=500)
     tags: list[str] = Field(default_factory=list, max_length=50)
     active: bool = True
+    # Zugeordneter Vertrag; None: keiner. Ohne Angabe bleibt die Zuordnung beim Ändern.
+    contract_id: int | None = Field(default=None, ge=1)
 
     @field_validator("name", "note")
     @classmethod
@@ -432,6 +437,7 @@ def item_out(
     accounts: dict[int, BudgetAccount],
     start_month: int,
     status_text: str | None = None,
+    contract: BudgetContract | None = None,
 ) -> ItemOut:
     account = accounts.get(row.account_id)
     return ItemOut(
@@ -452,17 +458,16 @@ def item_out(
         tags=list(row.tags),
         active=row.active,
         status=status_text,
+        contract_id=contract.id if contract else None,
+        contract_title=contract.title if contract else None,
     )
 
 
-def _year_lines(
-    db: DbDep, years: list[int], start_month: int
-) -> tuple[dict[tuple[int, int], YearLines], dict[tuple[int, int], int]]:
-    """Rechnungspositionen der Jahre je (Posten, Jahr) und je (Vertrag, Jahr) gebucht."""
+def _year_lines(db: DbDep, years: list[int], start_month: int) -> dict[tuple[int, int], YearLines]:
+    """Rechnungspositionen der Jahre je (Posten, Jahr)."""
     by_item: dict[tuple[int, int], YearLines] = {}
-    paid: dict[tuple[int, int], int] = {}
     if not years:
-        return by_item, paid
+        return by_item
     first_day = fiscal_year_range(min(years), start_month)[0]
     last_day = fiscal_year_range(max(years), start_month)[1]
     rows = db.execute(
@@ -477,10 +482,7 @@ def _year_lines(
         if invoice_status == STATUS_BOOKED:
             entry.actual_cents += line.gross_cents
             entry.closed = entry.closed or line.closes_item
-            if line.contract_id is not None:
-                key = (line.contract_id, year)
-                paid[key] = paid.get(key, 0) + line.gross_cents
-    return by_item, paid
+    return by_item
 
 
 def _items(db: DbDep, accounts: dict[int, BudgetAccount]) -> list[BudgetItem]:
@@ -493,6 +495,16 @@ def _items(db: DbDep, accounts: dict[int, BudgetAccount]) -> list[BudgetItem]:
     return sorted(db.scalars(select(BudgetItem)).all(), key=key)
 
 
+def _item_contracts(db: DbDep) -> dict[int, BudgetContract]:
+    """Der zugeordnete Vertrag je Budgetposten."""
+    rows = db.execute(
+        select(BudgetContractItem.item_id, BudgetContract).join(
+            BudgetContract, BudgetContract.id == BudgetContractItem.contract_id
+        )
+    ).all()
+    return {item_id: contract for item_id, contract in rows}
+
+
 def _sum(values: list[int | None]) -> int | None:
     """Summe der vorhandenen Werte; None, wenn keiner vorhanden ist."""
     known = [value for value in values if value is not None]
@@ -503,7 +515,7 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
     settings = load_settings(db)
     out = settings_out(settings)
     first_day, last_day = fiscal_year_range(year, settings.start_month)
-    lines, _ = _year_lines(db, [year], settings.start_month)
+    lines = _year_lines(db, [year], settings.start_month)
     today = now_utc().date()
     contracts: dict[int, int] = {}
     linked = _contract_items(db)
@@ -523,6 +535,7 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
         or 0
     )
     accounts = {row.id: row for row in _accounts(db)}
+    item_contracts = _item_contracts(db)
     items: list[ItemRow] = []
     for item in _items(db, accounts):
         expected = expected_in(item, year)
@@ -538,7 +551,9 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
             continue
         items.append(
             ItemRow(
-                item=item_out(item, accounts, settings.start_month),
+                item=item_out(
+                    item, accounts, settings.start_month, contract=item_contracts.get(item.id)
+                ),
                 expected_cents=expected,
                 previous_cents=expected_in(item, year - 1),
                 actual_cents=spent,
@@ -611,6 +626,10 @@ def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Das Konto gibt es nicht."
         )
+    if body.contract_id is not None and db.get(BudgetContract, body.contract_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Den Vertrag gibt es nicht."
+        )
     other = db.scalars(
         select(BudgetItem).where(
             BudgetItem.account_id == body.account_id,
@@ -648,13 +667,46 @@ def list_items(user: Reader, db: DbDep, year: YearQuery = None) -> list[ItemOut]
     start_month = load_settings(db).start_month
     accounts = {row.id: row for row in _accounts(db)}
     rows = _items(db, accounts)
+    contracts = _item_contracts(db)
     if year is None:
-        return [item_out(row, accounts, start_month) for row in rows]
-    lines, _ = _year_lines(db, [year], start_month)
+        return [
+            item_out(row, accounts, start_month, contract=contracts.get(row.id)) for row in rows
+        ]
+    lines = _year_lines(db, [year], start_month)
     return [
-        item_out(row, accounts, start_month, item_status(row, year, lines.get((row.id, year))))
+        item_out(
+            row,
+            accounts,
+            start_month,
+            item_status(row, year, lines.get((row.id, year))),
+            contracts.get(row.id),
+        )
         for row in rows
     ]
+
+
+def _set_item_contract(db: DbDep, item_id: int, contract_id: int | None) -> None:
+    """Ordnet dem Budgetposten einen Vertrag zu oder löst die Zuordnung (None)."""
+    db.execute(delete(BudgetContractItem).where(BudgetContractItem.item_id == item_id))
+    if contract_id is not None:
+        db.add(BudgetContractItem(contract_id=contract_id, item_id=item_id))
+    db.flush()
+
+
+def _item_contract_id(db: DbDep, item_id: int) -> int | None:
+    return db.scalar(
+        select(BudgetContractItem.contract_id).where(BudgetContractItem.item_id == item_id)
+    )
+
+
+def _one_item(db: DbDep, row: BudgetItem) -> ItemOut:
+    contract_id = _item_contract_id(db, row.id)
+    return item_out(
+        row,
+        {entry.id: entry for entry in _accounts(db)},
+        load_settings(db).start_month,
+        contract=db.get(BudgetContract, contract_id) if contract_id is not None else None,
+    )
 
 
 def _item_details(row: BudgetItem) -> dict[str, object]:
@@ -695,6 +747,7 @@ def create_item(request: Request, body: ItemIn, user: Editor, db: DbDep) -> Item
     _apply_item(db, row, body)
     db.add(row)
     db.flush()
+    _set_item_contract(db, row.id, body.contract_id)
     write_audit(
         db,
         module=MODULE,
@@ -703,12 +756,10 @@ def create_item(request: Request, body: ItemIn, user: Editor, db: DbDep) -> Item
         object_type="posten",
         object_id=str(row.id),
         ip=client_ip(request),
-        details=_item_details(row),
+        details={**_item_details(row), "contract_id": body.contract_id},
     )
     db.commit()
-    return item_out(
-        row, {entry.id: entry for entry in _accounts(db)}, load_settings(db).start_month
-    )
+    return _one_item(db, row)
 
 
 @router.put("/items/{item_id}")
@@ -719,9 +770,11 @@ def update_item(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
     _check_item(db, body, row.id)
-    before = _item_details(row)
+    before = {**_item_details(row), "contract_id": _item_contract_id(db, row.id)}
     _apply_item(db, row, body)
     row.tags = _listed_tags(db, body.tags)
+    if "contract_id" in body.model_fields_set:
+        _set_item_contract(db, row.id, body.contract_id)
     write_audit(
         db,
         module=MODULE,
@@ -730,12 +783,13 @@ def update_item(
         object_type="posten",
         object_id=str(row.id),
         ip=client_ip(request),
-        details={"vorher": before, "nachher": _item_details(row)},
+        details={
+            "vorher": before,
+            "nachher": {**_item_details(row), "contract_id": _item_contract_id(db, row.id)},
+        },
     )
     db.commit()
-    return item_out(
-        row, {entry.id: entry for entry in _accounts(db)}, load_settings(db).start_month
-    )
+    return _one_item(db, row)
 
 
 # --- Partner ---
@@ -930,8 +984,8 @@ class ContractListOut(BaseModel):
 class ContractIn(BaseModel):
     title: str = Field(min_length=1, max_length=160)
     partner_id: int = Field(ge=1)
-    # Zugeordnete Budgetposten, mindestens einer
-    item_ids: list[int] = Field(min_length=1, max_length=50)
+    # Zugeordnete Budgetposten; ein Vertrag kann auch ohne Posten bestehen.
+    item_ids: list[int] = Field(default_factory=list, max_length=50)
     invoicer_id: int | None = Field(default=None, ge=1)
     dpa_status: Literal["vorhanden", "fehlt", "nicht_erforderlich"] = "nicht_erforderlich"
     number: str = Field(default="", max_length=60)
@@ -1077,7 +1131,7 @@ def _one_contract(db: DbDep, row: BudgetContract) -> ContractOut:
     return contract_out(row, partners, accounts, items, today, year_range, linked)
 
 
-def _check_contract(db: DbDep, body: ContractIn) -> None:
+def _check_contract(db: DbDep, body: ContractIn, own_id: int | None) -> None:
     problem: str | None = None
     if db.get(BudgetPartner, body.partner_id) is None:
         problem = "Den Partner gibt es nicht."
@@ -1095,6 +1149,19 @@ def _check_contract(db: DbDep, body: ContractIn) -> None:
         problem = "Eine Verlängerung gibt es nur bei einem Ende der Laufzeit."
     if problem:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=problem)
+    # Ein Budgetposten hat höchstens einen Vertrag.
+    taken = db.execute(
+        select(BudgetItem.name, BudgetContract.title)
+        .join(BudgetContractItem, BudgetContractItem.item_id == BudgetItem.id)
+        .join(BudgetContract, BudgetContract.id == BudgetContractItem.contract_id)
+        .where(BudgetItem.id.in_(body.item_ids), BudgetContract.id != (own_id or 0))
+    ).first()
+    if taken is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Der Budgetposten „{taken[0]}“ gehört schon zum Vertrag „{taken[1]}“. "
+            "Ein Budgetposten hat höchstens einen Vertrag.",
+        )
 
 
 def _link_items(db: DbDep, contract_id: int, item_ids: list[int]) -> None:
@@ -1162,7 +1229,7 @@ def list_contracts(user: Reader, db: DbDep) -> ContractListOut:
 
 @router.post("/contracts", status_code=status.HTTP_201_CREATED)
 def create_contract(request: Request, body: ContractIn, user: Editor, db: DbDep) -> ContractOut:
-    _check_contract(db, body)
+    _check_contract(db, body, None)
     row = BudgetContract()
     _apply_contract(row, body)
     db.add(row)
@@ -1190,7 +1257,7 @@ def update_contract(
     row: BudgetContract | None = db.get(BudgetContract, contract_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
-    _check_contract(db, body)
+    _check_contract(db, body, row.id)
     before = {
         "title": row.title,
         "item_ids": _contract_items(db).get(row.id, []),
@@ -1227,6 +1294,7 @@ class InvoiceLineOut(BaseModel):
     item_name: str
     account_number: str
     account_name: str
+    # Vertrag des Budgetpostens, wie er jetzt zugeordnet ist
     contract_id: int | None
     contract_title: str | None
     net_cents: int
@@ -1270,7 +1338,6 @@ LINES_MAX = 50
 
 class InvoiceLineIn(BaseModel):
     item_id: int = Field(ge=1)
-    contract_id: int | None = Field(default=None, ge=1)
     net_cents: int = Field(ge=0, le=AMOUNT_MAX)
     tax_rate_bp: int = Field(default=1900, ge=0, le=10_000)
     # None: Brutto aus Netto und Steuersatz rechnen. Sonst das Brutto laut Rechnung.
@@ -1279,7 +1346,7 @@ class InvoiceLineIn(BaseModel):
     is_project: bool = False
     is_yearly: bool = False
     # Schließt den Budgetposten für das Geschäftsjahr der Rechnung ab, sobald sie gebucht ist.
-    # Ohne Angabe: ja, außer die Position gehört zu einem Vertrag (laufende Zahlungen).
+    # Ohne Angabe: ja, außer der Budgetposten hat einen Vertrag (laufende Zahlungen).
     closes_item: bool | None = None
 
     @field_validator("description")
@@ -1322,7 +1389,7 @@ def _invoice_rows(db: DbDep, rows: list[BudgetInvoice]) -> list[InvoiceOut]:
     partners = {row.id: row for row in db.scalars(select(BudgetPartner)).all()}
     accounts = {row.id: row for row in db.scalars(select(BudgetAccount)).all()}
     items = {row.id: row for row in db.scalars(select(BudgetItem)).all()}
-    contracts = {row.id: row for row in db.scalars(select(BudgetContract)).all()}
+    contracts = _item_contracts(db)
     user_ids = {uid for row in rows for uid in (row.created_by, row.booked_by) if uid is not None}
     names: dict[object, str] = {}
     if user_ids:
@@ -1334,14 +1401,14 @@ def _invoice_rows(db: DbDep, rows: list[BudgetInvoice]) -> list[InvoiceOut]:
     def line_out(line: BudgetInvoiceLine) -> InvoiceLineOut:
         item = items.get(line.item_id)
         account = accounts.get(item.account_id) if item else None
-        contract = contracts.get(line.contract_id) if line.contract_id is not None else None
+        contract = contracts.get(line.item_id)
         return InvoiceLineOut(
             id=line.id,
             item_id=line.item_id,
             item_name=item.name if item else "",
             account_number=account.number if account else "",
             account_name=account.name if account else "",
-            contract_id=line.contract_id,
+            contract_id=contract.id if contract else None,
             contract_title=contract.title if contract else None,
             net_cents=line.net_cents,
             tax_rate_bp=line.tax_rate_bp,
@@ -1390,8 +1457,6 @@ def _invoice_gross(db: DbDep, body: InvoiceIn) -> list[int]:
         computed = gross_cents(line.net_cents, line.tax_rate_bp)
         if db.get(BudgetItem, line.item_id) is None:
             problem = "Den Budgetposten gibt es nicht."
-        elif line.contract_id is not None and db.get(BudgetContract, line.contract_id) is None:
-            problem = "Den Vertrag gibt es nicht."
         elif line.gross_cents is not None and abs(line.gross_cents - computed) > GROSS_TOLERANCE:
             problem = "Das Brutto weicht um mehr als 1 Euro vom gerechneten Betrag ab."
         if problem:
@@ -1409,7 +1474,8 @@ def _invoice_gross(db: DbDep, body: InvoiceIn) -> list[int]:
     return gross
 
 
-def _apply_invoice(row: BudgetInvoice, body: InvoiceIn, gross: list[int]) -> None:
+def _apply_invoice(db: DbDep, row: BudgetInvoice, body: InvoiceIn, gross: list[int]) -> None:
+    with_contract = set(_item_contracts(db))
     row.invoicer_id = body.invoicer_id
     row.number = body.number
     row.internal_number = body.internal_number
@@ -1420,7 +1486,6 @@ def _apply_invoice(row: BudgetInvoice, body: InvoiceIn, gross: list[int]) -> Non
         BudgetInvoiceLine(
             position=position,
             item_id=line.item_id,
-            contract_id=line.contract_id,
             net_cents=line.net_cents,
             tax_rate_bp=line.tax_rate_bp,
             gross_cents=gross[position],
@@ -1428,7 +1493,9 @@ def _apply_invoice(row: BudgetInvoice, body: InvoiceIn, gross: list[int]) -> Non
             is_project=line.is_project,
             is_yearly=line.is_yearly,
             closes_item=(
-                line.closes_item if line.closes_item is not None else line.contract_id is None
+                line.closes_item
+                if line.closes_item is not None
+                else line.item_id not in with_contract
             ),
         )
         for position, line in enumerate(body.lines)
@@ -1445,7 +1512,6 @@ def _invoice_details(row: BudgetInvoice) -> dict[str, object]:
         "positionen": [
             {
                 "item_id": line.item_id,
-                "contract_id": line.contract_id,
                 "gross_cents": line.gross_cents,
             }
             for line in row.lines
@@ -1499,7 +1565,7 @@ def create_invoice(request: Request, body: InvoiceIn, user: Editor, db: DbDep) -
     """Erfasst eine Rechnung. Der Budgetverwalter bucht dabei sofort, alle anderen legen vor."""
     gross = _invoice_gross(db, body)
     row = BudgetInvoice(status=STATUS_OPEN, created_by=user.user_id)
-    _apply_invoice(row, body, gross)
+    _apply_invoice(db, row, body, gross)
     if user.has_any_role(Role.BUDGET_MANAGER):
         row.status = STATUS_BOOKED
         row.booked_by = user.user_id
@@ -1527,7 +1593,7 @@ def update_invoice(
     row = _own_invoice(db, invoice_id, user)
     gross = _invoice_gross(db, body)
     before = _invoice_details(row)
-    _apply_invoice(row, body, gross)
+    _apply_invoice(db, row, body, gross)
     write_audit(
         db,
         module=MODULE,
@@ -1752,16 +1818,11 @@ def _blocked(detail: str) -> HTTPException:
 def delete_contract(
     request: Request, contract_id: ContractId, user: Editor, db: DbDep
 ) -> dict[str, bool]:
-    """Löscht einen Vertrag, solange keine Rechnung an ihm hängt."""
+    """Löscht einen Vertrag. Seine Budgetposten bleiben und haben danach keinen Vertrag."""
     row: BudgetContract | None = db.get(BudgetContract, contract_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
-    invoices = _count(db, BudgetInvoiceLine, BudgetInvoiceLine.contract_id == row.id)
-    if invoices:
-        raise _blocked(
-            f"Am Vertrag hängen noch {invoices} Rechnungsposition(en). "
-            "Bitte erst diese umhängen oder löschen."
-        )
+    db.execute(delete(BudgetContractItem).where(BudgetContractItem.contract_id == row.id))
     title = row.title
     db.delete(row)
     return _deleted(db, request, user, "vertrag", contract_id, title)
@@ -1848,7 +1909,7 @@ def _planning(db: DbDep, start: int | None) -> PlanningOut:
     current = fiscal_year_of(now_utc().date(), settings.start_month)
     first = current if start is None else start
     years = [year for year in range(first, first + WINDOW_YEARS) if year <= YEAR_MAX]
-    lines, _ = _year_lines(db, years, settings.start_month)
+    lines = _year_lines(db, years, settings.start_month)
     accounts = {row.id: row for row in _accounts(db)}
     rows: list[PlanningRow] = []
     for item in _items(db, accounts):

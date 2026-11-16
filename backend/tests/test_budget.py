@@ -178,7 +178,6 @@ def test_accounts_are_managed_by_editors(db: Session) -> None:
 
 LINE_KEYS = (
     "item_id",
-    "contract_id",
     "net_cents",
     "tax_rate_bp",
     "gross_cents",
@@ -529,7 +528,6 @@ def test_contracts_bind_budget_and_raise_tasks(db: Session) -> None:
     for bad in (
         {**body, "partner_id": 999_999},
         {**body, "item_ids": [999_999]},
-        {**body, "item_ids": []},
         {**body, "ends_on": f"{year - 1}-01-01"},
         {**body, "cancelled_to": f"{year - 1}-01-01"},
         {**body, "ends_on": None},
@@ -542,19 +540,24 @@ def test_contracts_bind_budget_and_raise_tasks(db: Session) -> None:
         response = manager.post(f"{BASE}/contracts", json=bad, headers=HEADERS)
         assert response.status_code == 422, bad
 
-    # Ein zweiter, einmaliger Vertrag ohne Termin steht hinter dem mit Termin.
-    manager.post(
-        f"{BASE}/contracts",
-        json={
-            "title": "Einrichtung",
-            "partner_id": partner["id"],
-            "item_ids": [item["id"]],
-            "starts_on": f"{year}-02-01",
-            "net_cents": 100_000,
-            "interval": "einmalig",
-        },
-        headers=HEADERS,
+    # Ein Budgetposten hat höchstens einen Vertrag.
+    second = {
+        "title": "Einrichtung",
+        "partner_id": partner["id"],
+        "item_ids": [item["id"]],
+        "starts_on": f"{year}-02-01",
+        "net_cents": 100_000,
+        "interval": "einmalig",
+    }
+    taken = manager.post(f"{BASE}/contracts", json=second, headers=HEADERS)
+    assert taken.status_code == 409
+    assert "Zeiterfassung" in taken.json()["detail"]
+    # Ein zweiter, einmaliger Vertrag ohne Posten und ohne Termin steht hinter dem mit Termin.
+    created_second = manager.post(
+        f"{BASE}/contracts", json={**second, "item_ids": []}, headers=HEADERS
     )
+    assert created_second.status_code == 201, created_second.text
+    assert created_second.json()["items"] == []
     listing = reader.get(f"{BASE}/contracts").json()
     assert listing["notice_warn_days"] == 60
     assert [entry["title"] for entry in listing["entries"]] == [
@@ -565,7 +568,31 @@ def test_contracts_bind_budget_and_raise_tasks(db: Session) -> None:
     # Verträge binden kein Budget; der Posten zählt nur die zugeordneten laufenden Verträge.
     overview = reader.get(f"{BASE}/overview", params={"year": year}).json()
     assert "committed" not in overview
-    assert overview["items"][0]["contracts"] == 2
+    assert overview["items"][0]["contracts"] == 1
+
+    # Am Posten lässt sich der Vertrag wählen; das ersetzt seine bisherige Zuordnung.
+    item_url = f"{BASE}/items/{item['id']}"
+    item_body = {"account_id": account["id"], "name": "Zeiterfassung"}
+    second_id = created_second.json()["id"]
+    moved = manager.put(item_url, json={**item_body, "contract_id": second_id}, headers=HEADERS)
+    assert (moved.json()["contract_id"], moved.json()["contract_title"]) == (
+        second_id,
+        "Einrichtung",
+    )
+    titles = {
+        entry["title"]: [linked["id"] for linked in entry["items"]]
+        for entry in reader.get(f"{BASE}/contracts").json()["entries"]
+    }
+    assert titles == {"Wartung Zeiterfassung": [], "Einrichtung": [item["id"]]}
+    # Ohne Angabe bleibt die Zuordnung, None löst sie, ein unbekannter Vertrag geht nicht.
+    kept = manager.put(item_url, json=item_body, headers=HEADERS).json()
+    assert kept["contract_id"] == second_id
+    bad = manager.put(item_url, json={**item_body, "contract_id": 999_999}, headers=HEADERS)
+    assert bad.status_code == 422
+    loose = manager.put(item_url, json={**item_body, "contract_id": None}, headers=HEADERS)
+    assert loose.json()["contract_id"] is None
+    back = manager.put(item_url, json={**item_body, "contract_id": first["id"]}, headers=HEADERS)
+    assert back.json()["contract_title"] == "Wartung Zeiterfassung"
 
     def budget_tasks_of(client: Any) -> list[dict[str, Any]]:
         tasks: list[dict[str, Any]] = client.get("/api/tasks").json()["tasks"]
@@ -638,7 +665,7 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
     item = post(manager, "/items", {"account_id": account["id"], "name": "Zeiterfassung"}).json()
     partner = post(manager, "/partners", {"name": "Beispiel Software GmbH"}).json()
     year = manager.get(f"{BASE}/settings").json()["current_year"]
-    contract = post(
+    post(
         manager,
         "/contracts",
         {
@@ -662,7 +689,6 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
         "internal_number": "re.26.0001",
         "invoice_date": f"{year}-02-10",
         "item_id": item["id"],
-        "contract_id": contract["id"],
         "net_cents": 100_000,
         "tax_rate_bp": 1900,
         "description": "Wartung Februar",
@@ -683,7 +709,7 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
         None,
     )
     line = first["lines"][0]
-    # Mit Vertrag schließt eine Position den Posten ohne Angabe nicht ab.
+    # Hat der Posten einen Vertrag, schließt eine Position ihn ohne Angabe nicht ab.
     assert line["closes_item"] is False
     assert (first["invoicer_name"], line["item_name"], line["contract_title"]) == (
         "Beispiel Software GmbH",
@@ -698,7 +724,6 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
     for bad in (
         {**body, "invoicer_id": 999_999},
         {**body, "item_id": 999_999},
-        {**body, "contract_id": 999_999},
         {**body, "number": " "},
         {**body, "gross_cents": 119_101},
         {**body, "invoice_date": "1999-01-01"},
@@ -741,7 +766,6 @@ def test_invoices_are_checked_and_booked(db: Session) -> None:
         {
             **body,
             "number": "RE-2",
-            "contract_id": None,
             "net_cents": 10_000,
             "closes_item": False,
         },
@@ -799,14 +823,17 @@ def test_partner_detail_and_merge(db: Session) -> None:
     vendor = post(manager, "/partners", {"name": "Beispiel Hersteller AG"}).json()
     year = manager.get(f"{BASE}/settings").json()["current_year"]
     base = {
-        "item_ids": [item["id"]],
         "starts_on": f"{year}-01-01",
         "net_cents": 1_000,
         "tax_rate_bp": 0,
         "interval": "jaehrlich",
     }
     # Zwei Verträge: einer mit dem Tippfehler-Partner als abweichendem Rechnungssteller.
-    post(manager, "/contracts", {**base, "title": "A", "partner_id": right["id"]})
+    post(
+        manager,
+        "/contracts",
+        {**base, "title": "A", "partner_id": right["id"], "item_ids": [item["id"]]},
+    )
     post(
         manager,
         "/contracts",
@@ -904,7 +931,6 @@ def test_delete_only_without_dependencies(db: Session) -> None:
             "number": "RE-1",
             "invoice_date": f"{year}-02-01",
             "item_id": item["id"],
-            "contract_id": contract["id"],
             "net_cents": 1_000,
         },
     ).json()
@@ -918,15 +944,18 @@ def test_delete_only_without_dependencies(db: Session) -> None:
         f"/items/{item['id']}",
         f"/partners/{partner['id']}",
     ]
-    # Lesende löschen nichts; mit Abhängigkeiten geht es für niemanden.
+    # Lesende löschen nichts; Posten und Partner mit Abhängigkeiten auch sonst niemand.
     assert [delete(reader, path) for path in paths] == [403, 403, 403]
-    assert [delete(manager, path) for path in paths] == [409, 409, 409]
+    assert [delete(manager, path) for path in paths[1:]] == [409, 409]
 
-    # Ohne die Rechnung fällt der Vertrag, danach Posten und Partner.
+    # Ohne die Rechnung hängt am Posten noch der Vertrag, am Partner ebenso.
     assert delete(manager, f"/invoices/{invoice['id']}") == 200
-    assert delete(manager, paths[1]) == 409
-    assert delete(manager, paths[2]) == 409
-    assert [delete(manager, path) for path in paths] == [200, 200, 200]
+    assert [delete(manager, path) for path in paths[1:]] == [409, 409]
+    # Der Vertrag lässt sich löschen; der Posten bleibt und hat danach keinen Vertrag.
+    assert delete(manager, paths[0]) == 200
+    items = manager.get(f"{BASE}/items").json()
+    assert [(entry["id"], entry["contract_id"]) for entry in items] == [(item["id"], None)]
+    assert [delete(manager, path) for path in paths[1:]] == [200, 200]
     assert [delete(manager, path) for path in paths] == [404, 404, 404]
     assert manager.get(f"{BASE}/overview", params={"year": year}).json()["items"] == []
     db.expire_all()

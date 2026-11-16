@@ -12,7 +12,6 @@ import {
   DOCUMENT_MAX_MB,
   documentUrl,
   euroInput,
-  fetchContracts,
   fetchInvoices,
   fetchBudgetSettings,
   fetchItems,
@@ -31,7 +30,6 @@ import {
   STATUS_LABELS,
   updateInvoice,
   uploadDocument,
-  type Contract,
   INVOICE_LINES_MAX,
   type Invoice,
   type InvoiceLine,
@@ -49,7 +47,6 @@ interface FormProps {
   invoice: Invoice | null;
   partners: Partner[];
   items: Item[];
-  contracts: Contract[];
   /** Monat, mit dem das Geschäftsjahr beginnt, und das gerade gezeigte Jahr als Vorgabe. */
   startMonth: number;
   listYear: number;
@@ -61,7 +58,6 @@ interface FormProps {
 interface LineDraft {
   key: number;
   itemId: string;
-  contractId: string;
   net: string;
   rate: string;
   /** Leer: Brutto wird gerechnet. Gefüllt: Brutto laut Rechnung. */
@@ -79,7 +75,6 @@ function emptyLine(key: number): LineDraft {
   return {
     key,
     itemId: "",
-    contractId: "",
     net: "",
     rate: "19",
     gross: "",
@@ -95,7 +90,6 @@ function draftOf(line: InvoiceLine, key: number): LineDraft {
   return {
     key,
     itemId: String(line.item_id),
-    contractId: line.contract_id ? String(line.contract_id) : "",
     net: euroInput(line.net_cents),
     rate: (line.tax_rate_bp / 100).toLocaleString("de-DE"),
     gross:
@@ -138,7 +132,6 @@ function InvoiceForm({
   invoice,
   partners,
   items,
-  contracts,
   startMonth,
   listYear,
   onSaved,
@@ -188,28 +181,18 @@ function InvoiceForm({
     statuses.year === fiscalYear ? (statuses.byItem.get(id) ?? null) : null;
 
   const usedItems = new Set(invoice?.lines.map((line) => line.item_id));
-  const usedContracts = new Set(invoice?.lines.map((line) => line.contract_id));
   const partnerChoices = partners.filter(
     (entry) => (entry.active && entry.is_invoicer) || entry.id === invoice?.invoicer_id,
   );
   const itemChoices = items.filter((entry) => entry.active || usedItems.has(entry.id));
-  const contractChoices = contracts.filter((entry) => entry.running || usedContracts.has(entry.id));
 
   const change = (key: number, update: Partial<LineDraft>) =>
     setLines(lines.map((line) => (line.key === key ? { ...line, ...update } : line)));
 
-  const pickContract = (line: LineDraft, value: string) => {
-    // Ein Vertrag mit genau einem Posten bringt diesen mit, wenn noch keiner gewählt ist.
-    const chosen = contracts.find((entry) => String(entry.id) === value);
-    change(line.key, {
-      contractId: value,
-      itemId:
-        chosen && !line.itemId && chosen.items.length === 1
-          ? String(chosen.items[0]?.id ?? "")
-          : line.itemId,
-      // Laufende Vertragszahlungen schließen den Posten in der Regel nicht ab.
-      closes: value === "",
-    });
+  const itemById = (value: string) => items.find((entry) => String(entry.id) === value);
+  const pickItem = (line: LineDraft, value: string) => {
+    // Hat der Posten einen Vertrag (laufende Zahlungen), schließt die Position ihn nicht ab.
+    change(line.key, { itemId: value, closes: !itemById(value)?.contract_id });
   };
 
   const sums = lines.map(lineGross);
@@ -255,7 +238,6 @@ function InvoiceForm({
       } else {
         parsed.push({
           item_id: Number(line.itemId),
-          contract_id: line.contractId ? Number(line.contractId) : null,
           net_cents: netCents,
           tax_rate_bp: taxRate,
           gross_cents: grossValue,
@@ -361,7 +343,7 @@ function InvoiceForm({
                   Budgetposten
                   <select
                     value={line.itemId}
-                    onChange={(event) => change(line.key, { itemId: event.target.value })}
+                    onChange={(event) => pickItem(line, event.target.value)}
                   >
                     <option value="">Bitte wählen</option>
                     {STATUS_ORDER.map((group) => {
@@ -386,21 +368,12 @@ function InvoiceForm({
                     })}
                   </select>
                 </label>
-                <label>
-                  Vertrag (freiwillig)
-                  <select
-                    value={line.contractId}
-                    onChange={(event) => pickContract(line, event.target.value)}
-                  >
-                    <option value="">ohne Vertrag</option>
-                    {contractChoices.map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        {entry.title} · {entry.partner_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
               </div>
+              {itemById(line.itemId)?.contract_title && (
+                <p className="small budget-muted">
+                  Vertrag des Postens: {itemById(line.itemId)?.contract_title}
+                </p>
+              )}
               <div className="tool-row">
                 <label className="narrow">
                   Betrag netto (Euro)
@@ -546,7 +519,6 @@ interface Loaded {
   list: InvoiceList;
   partners: Partner[];
   items: Item[];
-  contracts: Contract[];
   startMonth: number;
 }
 
@@ -571,16 +543,14 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
       fetchInvoices(year),
       fetchPartners(),
       fetchItems(),
-      fetchContracts(),
       fetchBudgetSettings(),
     ])
-      .then(([list, partners, items, contracts, settings]) => {
+      .then(([list, partners, items, settings]) => {
         if (active) {
           setData({
             list,
             partners,
             items,
-            contracts: contracts.entries,
             startMonth: settings.start_month,
           });
           setFailed(false);
@@ -721,7 +691,6 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
           invoice={editing}
           partners={data.partners}
           items={data.items}
-          contracts={data.contracts}
           startMonth={data.startMonth}
           listYear={data.list.year}
           onSaved={onSaved}

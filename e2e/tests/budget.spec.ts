@@ -90,21 +90,21 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await page
     .getByLabel("Rechnungsdatum", { exact: true })
     .fill(`${new Date().getFullYear()}-02-01`);
-  await page
-    .getByRole("combobox", { name: /^Vertrag/ })
-    .selectOption({ label: `Wartung ${number} · Beispiel Partner ${number}` });
+  // Die Position hängt am Budgetposten; den Vertrag gibt der Posten vor.
+  await page.getByRole("searchbox", { name: "Budgetposten suchen" }).fill(`Posten ${number}`);
+  await page.getByRole("combobox", { name: /^Budgetposten/ }).selectOption({ index: 1 });
+  await expect(page.getByText(`Vertrag des Postens: Wartung ${number}`)).toBeVisible();
   await page.getByRole("textbox", { name: /^Betrag netto/ }).fill("100,00");
-  // Mit Vertrag schließt die Position den Posten nicht ab.
+  // Hat der Posten einen Vertrag, schließt die Position ihn nicht ab.
   await expect(page.getByLabel("Schließt den Budgetposten ab")).not.toBeChecked();
-  // Zweite Position ohne Vertrag und mit anderem Steuersatz auf denselben Budgetposten;
-  // als Abschlag schließt auch sie den Posten nicht ab.
+  // Zweite Position mit anderem Steuersatz auf denselben Budgetposten.
   await page.getByRole("button", { name: "Position hinzufügen" }).click();
   const second = page.getByRole("group", { name: "Position 2" });
   await second.getByRole("searchbox", { name: "Budgetposten suchen" }).fill(`Posten ${number}`);
   await second.getByRole("combobox", { name: /^Budgetposten/ }).selectOption({ index: 1 });
   await second.getByRole("textbox", { name: /^Betrag netto/ }).fill("50,00");
   await second.getByRole("textbox", { name: /^Steuersatz/ }).fill("7");
-  await second.getByLabel("Schließt den Budgetposten ab").uncheck();
+  await expect(second.getByLabel("Schließt den Budgetposten ab")).not.toBeChecked();
   await page.getByRole("textbox", { name: /^Rechnungsbetrag laut Beleg/ }).fill("170,00");
   await page.getByRole("button", { name: "Rechnung speichern" }).click();
   await expect(page.getByRole("alert")).toContainText("mehr als der Rechnungsbetrag");

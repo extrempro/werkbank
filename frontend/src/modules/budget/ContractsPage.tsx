@@ -107,8 +107,6 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
       problem = "Bitte eine Bezeichnung eintragen.";
     } else if (!partnerId) {
       problem = "Bitte den Vertragspartner wählen.";
-    } else if (itemIds.length === 0) {
-      problem = "Bitte mindestens einen Budgetposten zuordnen.";
     } else if (cents === null) {
       problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 1000,00";
     } else if (taxRate === null) {
@@ -209,10 +207,11 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
           </div>
         </fieldset>
         <fieldset className="budget-fieldset">
-          <legend>Budgetposten ({itemIds.length} zugeordnet)</legend>
+          <legend>Budgetposten ({itemIds.length} zugeordnet, freiwillig)</legend>
           <p className="small budget-muted">
             Der Vertrag wird den Posten nur zugeordnet. Ins Budget gehen seine Kosten über die
-            Rechnungen.
+            Rechnungen auf diese Posten. Ein Posten hat höchstens einen Vertrag; den Vertrag kannst
+            du auch am Posten wählen.
           </p>
           <label className="narrow">
             Budgetposten suchen
@@ -227,19 +226,30 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
             <p className="small budget-muted">Kein Budgetposten passt zur Suche.</p>
           ) : (
             <ul className="budget-choices">
-              {itemChoices.map((entry) => (
-                <li key={entry.id}>
-                  <label className="check-label">
-                    <input
-                      type="checkbox"
-                      className="check"
-                      checked={itemIds.includes(entry.id)}
-                      onChange={() => toggleItem(entry.id)}
-                    />
-                    {entry.account_number} · {entry.name}
-                  </label>
-                </li>
-              ))}
+              {itemChoices.map((entry) => {
+                // Ein Posten mit einem anderen Vertrag ist hier nicht wählbar.
+                const other =
+                  entry.contract_id && entry.contract_id !== contract?.id
+                    ? entry.contract_title
+                    : null;
+                return (
+                  <li key={entry.id}>
+                    <label className="check-label">
+                      <input
+                        type="checkbox"
+                        className="check"
+                        checked={itemIds.includes(entry.id)}
+                        disabled={other !== null && !itemIds.includes(entry.id)}
+                        onChange={() => toggleItem(entry.id)}
+                      />
+                      {entry.account_number} · {entry.name}
+                      {other !== null && (
+                        <span className="small budget-muted"> (Vertrag: {other})</span>
+                      )}
+                    </label>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </fieldset>
