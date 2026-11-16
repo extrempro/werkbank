@@ -898,7 +898,9 @@ describe("Rechnungen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Rechnung speichern" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Position 2: Bitte den Budgetposten");
     // Stillgelegte Posten stehen nicht zur Wahl; zwei Positionen dürfen denselben Posten haben.
-    expect(within(second.getByLabelText("Budgetposten")).queryByRole("option", { name: /Server/ })).toBeNull();
+    expect(
+      within(second.getByLabelText("Budgetposten")).queryByRole("option", { name: /Server/ }),
+    ).toBeNull();
     fireEvent.change(second.getByLabelText("Budgetposten"), { target: { value: "11" } });
     fireEvent.change(second.getByLabelText(/^Betrag netto/), { target: { value: "200,00" } });
     fireEvent.change(second.getByLabelText(/^Steuersatz/), { target: { value: "7" } });
