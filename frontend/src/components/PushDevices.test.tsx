@@ -44,7 +44,7 @@ describe("PushDevices", () => {
     expect(await screen.findByText("Android")).toBeVisible();
     // jsdom kann kein Push: Hinweis statt Knopf
     expect(screen.getByText(/kann keine Push-Nachrichten empfangen/)).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Entfernen – Android" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Entfernen/ }));
     expect(await screen.findByText("Das Gerät ist entfernt.")).toBeVisible();
     expect(calls.some((call) => call.method === "DELETE" && call.url.endsWith("/3"))).toBe(true);
   });
