@@ -261,11 +261,13 @@ Standardregeln:
 |---|---|
 | Mail (über den SMTP-Server aus der Verwaltung) | kurzer Hinweis mit Link, **ohne** fachliche Inhalte |
 | Teams-Kanal (IT) | kritische Änderungen und Konnektor-Fehler |
-| Web Push | nur „Neue Aufgabe in der Werkbank“ bzw. „Frist in X Tagen“, **keine Inhalte** |
+| Web Push | Name aus dem Branding, Bereich und Anzahl (z. B. „IT-Budget: 2 neue Benachrichtigungen“), **keine fachlichen Inhalte**; Tippen öffnet „Benachrichtigungen“ |
 
 - Push ist pro Person per Opt-in zu aktivieren und jederzeit abschaltbar.
 - Erinnerungen bei Evergreen-Fristen: 14, 7 und 3 Tage vor Rollout, sofern der Vorgang noch offen ist.
-- Stand: Umgesetzt sind die **Glocke** in der Kopfzeile und **Mail und Teams** (siehe unten). Push folgt.
+- Stand: Umgesetzt sind die **Glocke** in der Kopfzeile, **Mail und Teams** und **Push** (siehe unten).
+
+**Push (umgesetzt):** Die Verwaltung schaltet Push unter Verwaltung › Mail & Teams ein; beim ersten Einschalten erzeugt der Server ein VAPID-Schlüsselpaar (P-256), der private Teil liegt mit `settings_key` verschlüsselt in der Datenbank (`app_settings`, Schlüssel `push`), nie im Repository und nie in einer Antwort. Jede Person schaltet Push im Konto je Gerät ein (Erlaubnis des Browsers, Abo beim Push-Dienst; höchstens 10 Geräte) und wählt je Art die Spalte „Push“ (Vorgabe: aus). Ein Auftrag (`kern.push_versand`, alle 2 Minuten) schickt je Person eine Sammelnachricht an alle ihre Geräte, nur für ungelesene Benachrichtigungen der eingeschalteten Arten, die nach dem Einschalten und in den letzten 24 Stunden entstanden sind. Inhalt: Titel = Name aus dem Branding, Text = Bereich und Anzahl, Ziel immer `/benachrichtigungen`. Verschlüsselt nach RFC 8291 (aes128gcm), signiert nach RFC 8292 (VAPID, `sub` = `PUBLIC_URL`), TTL 24 Stunden, ohne Zusatzpaket (`core/webpush.py`). Der Server schickt nur an bekannte Push-Dienste (`fcm.googleapis.com`, `*.push.apple.com`, `*.push.services.mozilla.com`, `*.notify.windows.com`); abgelaufene Abos (404/410) löscht er. Audit-Log: `einstellungen.push_geaendert`, `konto.push_geraet_angemeldet`, `konto.push_geraet_abgemeldet`.
 
 **Mail und Teams (umgesetzt):** Ein Auftrag (`kern.benachrichtigungen_versand`, alle 15 Minuten) fasst je Person und Kanal die neuen, ungelesenen Benachrichtigungen der eingeschalteten Arten zusammen und schickt höchstens eine Nachricht: Name aus dem Branding, Anrede mit „du“, Zahl der Benachrichtigungen je Bereich, Link auf „Benachrichtigungen“ und auf das Konto, **keine fachlichen Inhalte** (keine Titel). Jede Person stellt je Art Glocke, Mail und Teams im Konto ein; Mail und Teams sind anfangs aus, mitgeteilt wird nur, was nach dem Einschalten entsteht. Ohne Glocke gibt es auch keine Mail und kein Teams. Ohne Mailadresse in Entra weder Mail noch Teams. Fehlgeschlagene Sendungen werden beim nächsten Lauf wiederholt, nach 24 Stunden verfallen sie.
 
@@ -619,7 +621,7 @@ Evergreen:
 | Reports | später, für Evergreen (8.7) | Berichtsvorlagen, Download, geplanter Versand. Noch nicht gebaut; ohne Eintrag in der Navigation |
 | Verwaltung (eigener Bereich in der Navigation) | Admin (mit Step-up) | Seiten **Allgemein** (Branding, Aufbewahrung des Audit-Logs, Vorlauf für ablaufende Zertifikate und Secrets), **Rollen** (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), **Mail & Teams** (SMTP-Server, Teams), **Verbindungen** (KI-Texte, NetBox, Abfragen ins Internet) und **Audit-Log**. Später: Module, Kommentarregeln |
 | Verwaltung › Audit-Log | Admin (Werkbank.Auditor liest das Audit-Log nur über die Schnittstelle) | Filterbare Tabelle, Export |
-| Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Benachrichtigungen je Art mit Glocke, Mail und Teams, Version. Später: Push an/aus, Hinweis zur Installation |
+| Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Benachrichtigungen je Art mit Glocke, Mail, Teams und Push, Push je Gerät ein und aus mit Liste der Geräte und Testnachricht, auf iPhone/iPad Hinweis zur Installation, Version |
 | Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Verweis auf die Einstellungen im Konto. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
 | IT-Projekte › Alle Projekte | Projekte.* (Anlegen: Projekte.Editor) | Liste mit Status, veranschlagt, geplant, Ist, offenen Punkten, letztem Jour Fixe; Filter, Suche, neues Projekt |
@@ -643,7 +645,7 @@ Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz
   - Versionierte Caches, alte Caches werden beim Aktivieren gelöscht.
   - Update: neue Version wird erkannt, die Oberfläche zeigt „Neue Version verfügbar – neu laden“. Kein unbemerkter Wechsel mitten in einer Eingabe. Ein offenes Fenster fragt von selbst nach (alle 30 Minuten, beim Zurückkehren ins Fenster und wenn das Netz zurückkommt), weil der Browser sonst nur beim Laden einer Seite prüft.
   - Session- und Fachdaten liegen nie im Cache. Deshalb muss beim Abmelden nichts aus dem Cache gelöscht werden.
-- **Web Push** mit VAPID. Schlüssel als Docker-Secret. Inhalte siehe 6.7.
+- **Web Push** mit VAPID. Den Schlüssel erzeugt der Server beim Einschalten in der Verwaltung und speichert ihn verschlüsselt in der Datenbank (wie die übrigen Geheimnisse aus der Verwaltung). Inhalte und Ablauf siehe 6.7. Der Service Worker zeigt die Nachricht an und öffnet beim Tippen nur Pfade der Werkbank.
 - **iOS**:
   - Push nur für zum Home-Bildschirm hinzugefügte App. Die App zeigt einen Installationshinweis.
   - Safe-Area-Abstände, `dvh` statt `100vh`, Eingabefelder mit mindestens 16 px Schrift.
@@ -805,7 +807,7 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e), dazu Baumansicht, KI-Texte und Empfehlungen aus Secure Score. Später: Snapshot-Vergleich und -Export, Benachrichtigung bei Abweichung |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e). Offen: Anhänge (z. B. BR-Sitzungsprotokoll), Erinnerungen und Benachrichtigungen (Phase 4), KI-Vorschlag für die Zusammenfassung |
 | – | Oberfläche nach dem Entwurf, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen | ✅ umgesetzt, mit Handbuch und letzten Aktivitäten auf der Startseite |
-| 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Benachrichtigungen, Push | Vollumfang v1 | 🔄 teilweise: Exchange und Benachrichtigungen (Glocke, Mail, Teams) umgesetzt. Offen: Teams, Intune, SharePoint, Push |
+| 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Benachrichtigungen, Push | Vollumfang v1 | 🔄 weitgehend: Exchange, Teams, Intune und SharePoint (Konfiguration), Benachrichtigungen (Glocke, Mail, Teams, Push) umgesetzt |
 | 5 | weitere Module nach Bedarf | – | offen |
 
 ---

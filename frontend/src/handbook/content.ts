@@ -147,13 +147,14 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "steps",
             items: [
               "Öffne die Seite „Konto“ (Klick auf deinen Namen oben rechts).",
-              "Unter „Benachrichtigungen“ steht je Art, ob du sie in der Glocke, per Mail oder in Teams bekommst.",
+              "Unter „Benachrichtigungen“ steht je Art, ob du sie in der Glocke, per Mail, in Teams oder als Push bekommst.",
+              "Für Push: zuerst „Push auf diesem Gerät einschalten“ und die Mitteilungen erlauben, dann je Art die Spalte „Push“ anhaken. Auf iPhone und iPad geht das nur in der Werkbank-App vom Home-Bildschirm (Safari › Teilen › „Zum Home-Bildschirm“).",
               "Hake an, was du möchtest. Jede Änderung gilt sofort.",
             ],
           },
           {
             kind: "text",
-            text: "Anfangs ist alles in der Glocke an, Mail und Teams sind aus. Per Mail und in Teams bekommst du höchstens alle 15 Minuten eine Sammelnachricht: wie viele Benachrichtigungen es in welchem Bereich gibt, mit einem Link in die Werkbank. Was genau passiert ist, steht nur in der Werkbank. Mitgeteilt wird nur, was nach dem Einschalten entsteht und was du noch nicht gelesen hast.",
+            text: "Push kommt nach wenigen Minuten auf alle deine angemeldeten Geräte und nennt nur Bereich und Anzahl, zum Beispiel „IT-Budget: 2 neue Benachrichtigungen“. Ein Tippen öffnet die Benachrichtigungen. Geräte und eine Testnachricht findest du ebenfalls im Konto. Anfangs ist alles in der Glocke an, Mail, Teams und Push sind aus. Per Mail und in Teams bekommst du höchstens alle 15 Minuten eine Sammelnachricht: wie viele Benachrichtigungen es in welchem Bereich gibt, mit einem Link in die Werkbank. Was genau passiert ist, steht nur in der Werkbank. Mitgeteilt wird nur, was nach dem Einschalten entsteht und was du noch nicht gelesen hast.",
           },
           {
             kind: "hint",
@@ -1228,7 +1229,7 @@ export const CHAPTERS: readonly Chapter[] = [
               ["Rollen", "welche Rollen es gibt und wer sie hat (siehe unten)"],
               [
                 "Mail & Teams",
-                "SMTP-Server und Absender mit Testmail an dich selbst; Benachrichtigungen in Teams über einen Workflow aus Power Automate mit Testnachricht",
+                "SMTP-Server und Absender mit Testmail an dich selbst; Benachrichtigungen in Teams über einen Workflow aus Power Automate mit Testnachricht; Push aufs Handy ein- und ausschalten",
               ],
               [
                 "Verbindungen",
@@ -1289,6 +1290,10 @@ export const CHAPTERS: readonly Chapter[] = [
               [
                 "Die Glocke bleibt leer.",
                 "Die Werkbank meldet nur Neues ab dem Zeitpunkt, an dem sie die Art zum ersten Mal beobachtet. Prüfe außerdem im Konto, ob die Art eingeschaltet ist.",
+              ],
+              [
+                "Push kommt nicht an.",
+                "Prüfe im Konto, ob Push auf dem Gerät eingeschaltet ist und die Art die Spalte „Push“ hat, und schicke eine Testnachricht. Auf dem Handy muss die Werkbank Mitteilungen senden dürfen (Einstellungen des Geräts); auf dem iPhone geht Push nur in der App vom Home-Bildschirm.",
               ],
               [
                 "Ich bekomme keine Mail oder keine Teams-Nachricht.",

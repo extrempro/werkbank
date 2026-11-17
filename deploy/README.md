@@ -7,7 +7,7 @@ Aufbau:
 | Dienst | Aufgabe | Netzwerk |
 |---|---|---|
 | `web` | API und Oberfläche (PWA), fertiges Image aus der GitHub-Registry (`ghcr.io/extrempro/werkbank`) | gebunden an `${BIND_IP}:${BIND_PORT}` |
-| `worker` | Hintergrundaufträge: Aufräumen abgelaufener Sitzungen, Abruf der Tenant-Einstellungen, Nachrichtencenter, Prüfung der Umsetzung in Evergreen; später Erinnerungen, Reports, Push. Gleiches Image wie `web`, startet nach `web` (das die Datenbank migriert) | kein Port nach außen; ausgehend für Microsoft Graph |
+| `worker` | Hintergrundaufträge: Aufräumen abgelaufener Sitzungen, Abruf der Tenant-Einstellungen, Nachrichtencenter, Prüfung der Umsetzung in Evergreen; Versand von Mail, Teams und Push; später Erinnerungen. Gleiches Image wie `web`, startet nach `web` (das die Datenbank migriert) | kein Port nach außen; ausgehend für Microsoft Graph und, wenn Push eingeschaltet ist, HTTPS zu den Push-Diensten (`fcm.googleapis.com`, `*.push.apple.com`, `*.push.services.mozilla.com`, `*.notify.windows.com`) |
 | `pwsh` (geplant) | PowerShell-Jobs (Exchange Online, Teams) | nur intern |
 | `db` | PostgreSQL | nur intern (Docker-Netz ohne Außenzugang) |
 

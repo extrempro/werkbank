@@ -206,9 +206,10 @@ class Notification(Base):
         DateTime(timezone=True), server_default=func.now(), index=True
     )
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Zuletzt per Mail bzw. Teams mitgeteilt (gesammelt, ohne fachlichen Inhalt)
+    # Zuletzt per Mail, Teams bzw. Push mitgeteilt (gesammelt, ohne fachlichen Inhalt)
     mailed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     teams_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class NotificationMark(Base):
@@ -244,15 +245,34 @@ class NotificationMute(Base):
     kind: Mapped[str] = mapped_column(String(64), primary_key=True)
 
 
+class PushSubscription(Base):
+    """Ein Gerät (Browser), das Push-Nachrichten bekommt. Je Person beliebig viele."""
+
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # Adresse beim Push-Dienst; nur bekannte Dienste (core/webpush.py)
+    endpoint: Mapped[str] = mapped_column(String(1000), unique=True)
+    p256dh: Mapped[str] = mapped_column(String(200))
+    auth: Mapped[str] = mapped_column(String(100))
+    # Kurze Angabe zum Gerät aus dem Browser, z. B. „iPhone“ (zum Wiedererkennen im Konto)
+    label: Mapped[str] = mapped_column(String(60), default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class NotificationChannel(Base):
-    """Art, die eine Person zusätzlich per Mail oder Teams bekommt (Vorgabe: aus)."""
+    """Art, die eine Person zusätzlich per Mail, Teams oder Push bekommt (Vorgabe: aus)."""
 
     __tablename__ = "notification_channels"
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
-    # „mail“ oder „teams“
+    # „mail“, „teams“ oder „push“
     channel: Mapped[str] = mapped_column(String(16), primary_key=True)
     kind: Mapped[str] = mapped_column(String(64), primary_key=True)
     # Ab hier wird mitgeteilt; ältere Benachrichtigungen nicht

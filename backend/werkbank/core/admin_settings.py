@@ -5,6 +5,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import func, select
 
 from werkbank.core.ai import (
     AI_KEY,
@@ -20,6 +21,7 @@ from werkbank.core.app_settings import (
     AUDIT_RETENTION_KEY,
     AUDIT_RETENTION_MAX,
     AUDIT_RETENTION_MIN,
+    PUSH_KEY,
     SMTP_KEY,
     TEAMS_KEY,
     TOOLS_INTERNET_KEY,
@@ -39,6 +41,7 @@ from werkbank.core.app_settings import (
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, SettingsDep, require_recent_login
 from werkbank.core.mail import MailError, MailSenderDep, load_smtp_config
+from werkbank.core.models import PushSubscription
 from werkbank.core.notify_channels import (
     TeamsError,
     TeamsSenderDep,
@@ -48,6 +51,7 @@ from werkbank.core.notify_channels import (
     teams_payload,
     valid_workflow_url,
 )
+from werkbank.core.push import enable_push, stored_push
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser
 
@@ -106,9 +110,23 @@ class TeamsIn(BaseModel):
     url: str | None = Field(default=None, max_length=2000)
 
 
+class PushOut(BaseModel):
+    enabled: bool
+    # Ein Schlüsselpaar ist vorhanden (der private Teil wird nie ausgegeben)
+    key_set: bool
+    key_storage_available: bool
+    # Zahl der angemeldeten Geräte über alle Personen
+    devices: int
+
+
+class PushIn(BaseModel):
+    enabled: bool
+
+
 class SettingsOut(BaseModel):
     smtp: SmtpOut
     teams: TeamsOut
+    push: PushOut
     ai: AiOut
     audit_retention_days: int
     audit_retention_min: int
@@ -246,10 +264,21 @@ def _teams_out(stored: Any, key_available: bool) -> TeamsOut:
     )
 
 
+def _push_out(db: DbDep, key_available: bool) -> PushOut:
+    data = stored_push(db)
+    return PushOut(
+        enabled=data.get("enabled") is True,
+        key_set=bool(data.get("private_key_encrypted")),
+        key_storage_available=key_available,
+        devices=db.scalar(select(func.count()).select_from(PushSubscription)) or 0,
+    )
+
+
 def _settings_out(db: DbDep, settings: SettingsDep) -> SettingsOut:
     return SettingsOut(
         smtp=_smtp_out(get_setting(db, SMTP_KEY), secret_key_available(settings)),
         teams=_teams_out(get_setting(db, TEAMS_KEY), secret_key_available(settings)),
+        push=_push_out(db, secret_key_available(settings)),
         ai=_ai_out(stored_ai(db), secret_key_available(settings)),
         audit_retention_days=audit_retention_days(db),
         audit_retention_min=AUDIT_RETENTION_MIN,
@@ -410,6 +439,33 @@ def update_teams(
         object_id=TEAMS_KEY,
         ip=client_ip(request),
         details={"eingeschaltet": body.enabled, "adresse_geaendert": url_changed},
+    )
+    db.commit()
+    return _settings_out(db, settings)
+
+
+@router.put("/push")
+def update_push(
+    request: Request, body: PushIn, user: AdminUser, db: DbDep, settings: SettingsDep
+) -> SettingsOut:
+    """Schaltet Push ein oder aus. Beim ersten Einschalten entsteht das Schlüsselpaar."""
+    try:
+        enable_push(db, settings, body.enabled, user.user_id)
+    except SecretKeyMissingError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Auf dem Server fehlt die Schlüsseldatei (settings_key). "
+            "Ohne sie kann der Push-Schlüssel nicht gespeichert werden.",
+        ) from error
+    write_audit(
+        db,
+        module=MODULE,
+        action="einstellungen.push_geaendert",
+        user_id=user.user_id,
+        object_type="einstellung",
+        object_id=PUSH_KEY,
+        ip=client_ip(request),
+        details={"eingeschaltet": body.enabled},
     )
     db.commit()
     return _settings_out(db, settings)

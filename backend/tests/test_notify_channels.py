@@ -264,7 +264,7 @@ def test_settings_per_channel(db: Session, tmp_path: Path) -> None:
     client = client_for(make_app(settings))
     login_as(client, ["Budget.Manager"], oid="kanal-einstellungen")
     data = client.get("/api/notifications/settings").json()
-    assert data["channels"] == {"mail": True, "teams": True, "has_email": True}
+    assert data["channels"] == {"mail": True, "teams": True, "push": False, "has_email": True}
     assert not any(entry["mail"] or entry["teams"] for entry in data["kinds"])
 
     saved = client.put(

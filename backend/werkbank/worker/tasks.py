@@ -13,6 +13,7 @@ from werkbank.core.audit import write_audit
 from werkbank.core.models import AuditLog, AuthFlow, Job, JobStatus, UserSession
 from werkbank.core.notifications import NOTIFY, NOTIFY_INTERVAL, Event, make_notify_job
 from werkbank.core.notify_channels import DELIVER, DELIVER_INTERVAL, deliver_job
+from werkbank.core.push import PUSH_DELIVER, PUSH_DELIVER_INTERVAL, push_job
 from werkbank.core.sessions import now_utc
 from werkbank.modules.budget.notifications import budget_notifications
 from werkbank.modules.evergreen.jobs import (
@@ -115,6 +116,7 @@ REGISTRY: dict[str, JobType] = {
     CLEANUP: JobType(handler=cleanup, interval=timedelta(hours=1)),
     NOTIFY: JobType(handler=make_notify_job(NOTIFICATION_SOURCES), interval=NOTIFY_INTERVAL),
     DELIVER: JobType(handler=deliver_job, interval=DELIVER_INTERVAL),
+    PUSH_DELIVER: JobType(handler=push_job, interval=PUSH_DELIVER_INTERVAL),
     DNS_CHECK: JobType(handler=dns_check_job, interval=DNS_CHECK_INTERVAL),
     CHECK_IMPLEMENTATION: JobType(handler=check_implementation_job, interval=timedelta(hours=1)),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),

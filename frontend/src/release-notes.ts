@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.54.0",
+    date: "2026-11-17",
+    summary: "Neu: Push aufs Handy für deine Benachrichtigungen.",
+    sections: [
+      {
+        area: "Werkbank",
+        entries: [
+          "Push: Im Konto schaltest du Push je Gerät ein und wählst je Art, wofür. Die Nachricht nennt nur Bereich und Anzahl; ein Tippen öffnet die Benachrichtigungen.",
+          "Auf iPhone und iPad geht Push nur, wenn die Werkbank als App auf dem Home-Bildschirm liegt.",
+          "Für Admins: Push wird unter Verwaltung › Mail & Teams eingeschaltet.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.53.0",
     date: "2026-11-17",
     summary: "Microsoft 365: Intune-Richtlinien lassen sich jetzt mit überwachen.",

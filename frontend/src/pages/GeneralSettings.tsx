@@ -9,6 +9,7 @@ import {
 } from "../api";
 import { CredentialWarnSettings } from "./CredentialWarnSettings";
 import { NetboxSettings } from "./NetboxSettings";
+import { PushSettings } from "./PushSettings";
 import { TeamsSettings } from "./TeamsSettings";
 import { ToolsInternetSettings } from "./ToolsInternetSettings";
 
@@ -21,9 +22,24 @@ const SECURITY_OPTIONS = [
 ];
 
 /** Teile, die eine Seite der Verwaltung zeigt. */
-export type SettingsPart = "smtp" | "aufbewahrung" | "teams" | "ablauf" | "netbox" | "internet";
+export type SettingsPart =
+  | "smtp"
+  | "aufbewahrung"
+  | "teams"
+  | "push"
+  | "ablauf"
+  | "netbox"
+  | "internet";
 
-const ALL_PARTS: SettingsPart[] = ["smtp", "aufbewahrung", "teams", "ablauf", "netbox", "internet"];
+const ALL_PARTS: SettingsPart[] = [
+  "smtp",
+  "aufbewahrung",
+  "teams",
+  "push",
+  "ablauf",
+  "netbox",
+  "internet",
+];
 
 interface GeneralSettingsProps {
   settings: AdminSettings;
@@ -306,6 +322,9 @@ export function GeneralSettings({ settings, onChange, parts = ALL_PARTS }: Gener
 
       {parts.includes("teams") && settings.teams && (
         <TeamsSettings teams={settings.teams} onChange={onChange} />
+      )}
+      {parts.includes("push") && settings.push && (
+        <PushSettings push={settings.push} onChange={onChange} />
       )}
       {parts.includes("ablauf") && (
         <CredentialWarnSettings settings={settings} onChange={onChange} />

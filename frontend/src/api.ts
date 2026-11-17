@@ -345,6 +345,8 @@ export interface AdminSettings {
   smtp: SmtpSettings;
   /** Fehlt bei älteren Servern. */
   teams?: TeamsSettings;
+  /** Push aufs Handy. Fehlt bei älteren Servern. */
+  push?: PushAdminSettings;
   /** Fehlt bei älteren Servern. */
   ai?: AiSettings;
   audit_retention_days: number;
@@ -379,6 +381,19 @@ export function saveSmtpSettings(update: SmtpUpdate): Promise<AdminSettings> {
 
 export function sendTestMail(): Promise<{ recipient: string }> {
   return postJson("/api/admin/settings/smtp/test");
+}
+
+export interface PushAdminSettings {
+  enabled: boolean;
+  /** Ein Schlüsselpaar ist vorhanden (der private Teil wird nie ausgegeben). */
+  key_set: boolean;
+  key_storage_available: boolean;
+  /** Angemeldete Geräte über alle Personen */
+  devices: number;
+}
+
+export function savePushSettings(enabled: boolean): Promise<AdminSettings> {
+  return putJson("/api/admin/settings/push", { enabled });
 }
 
 export function saveTeamsSettings(update: TeamsUpdate): Promise<AdminSettings> {

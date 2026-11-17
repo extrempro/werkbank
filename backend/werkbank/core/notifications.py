@@ -24,7 +24,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
-from werkbank.core.app_settings import SMTP_KEY, TEAMS_KEY, get_setting
+from werkbank.core.app_settings import PUSH_KEY, SMTP_KEY, TEAMS_KEY, get_setting
 from werkbank.core.deps import CurrentUserDep, DbDep
 from werkbank.core.models import (
     Notification,
@@ -324,12 +324,14 @@ class KindOut(BaseModel):
     enabled: bool
     mail: bool
     teams: bool
+    push: bool
 
 
 class ChannelsOut(BaseModel):
     # In der Verwaltung eingerichtet
     mail: bool
     teams: bool
+    push: bool
     # Ohne Mailadresse im Konto gehen weder Mail noch Teams
     has_email: bool
 
@@ -345,6 +347,7 @@ class SettingsIn(BaseModel):
     # Arten zusätzlich per Mail bzw. Teams; None: unverändert
     mail: list[str] | None = Field(default=None, max_length=100)
     teams: list[str] | None = Field(default=None, max_length=100)
+    push: list[str] | None = Field(default=None, max_length=100)
 
 
 @router.get("")
@@ -427,7 +430,11 @@ def _channel_kinds(db: Session, user_id: uuid.UUID, channel: str) -> set[str]:
 def _channels(db: Session, user: CurrentUser) -> ChannelsOut:
     smtp: Any = get_setting(db, SMTP_KEY)
     teams: Any = get_setting(db, TEAMS_KEY)
+    push: Any = get_setting(db, PUSH_KEY)
     return ChannelsOut(
+        push=isinstance(push, dict)
+        and push.get("enabled") is True
+        and bool(push.get("public_key")),
         mail=isinstance(smtp, dict) and bool(smtp.get("host")) and bool(smtp.get("sender_address")),
         teams=isinstance(teams, dict)
         and teams.get("enabled") is True
@@ -444,6 +451,7 @@ def get_settings(user: CurrentUserDep, db: DbDep) -> SettingsOut:
     )
     mail = _channel_kinds(db, user.user_id, "mail")
     teams = _channel_kinds(db, user.user_id, "teams")
+    push = _channel_kinds(db, user.user_id, "push")
     return SettingsOut(
         kinds=[
             KindOut(
@@ -453,6 +461,7 @@ def get_settings(user: CurrentUserDep, db: DbDep) -> SettingsOut:
                 enabled=kind not in muted,
                 mail=kind in mail,
                 teams=kind in teams,
+                push=kind in push,
             )
             for kind in _allowed_kinds(user)
         ],
@@ -478,8 +487,8 @@ def _save_channel(
 
 @router.put("/settings")
 def put_settings(body: SettingsIn, user: CurrentUserDep, db: DbDep) -> SettingsOut:
-    """Speichert Glocke, Mail und Teams je Art. Nur Arten, die die Person sieht, ändern sich."""
-    named = [*body.disabled, *(body.mail or []), *(body.teams or [])]
+    """Speichert Glocke, Mail, Teams und Push je Art; nur Arten, die die Person sieht."""
+    named = [*body.disabled, *(body.mail or []), *(body.teams or []), *(body.push or [])]
     if any(kind not in KINDS for kind in named):
         raise HTTPException(status_code=422, detail="Unbekannte Art einer Benachrichtigung")
     allowed = set(_allowed_kinds(user))
@@ -500,5 +509,7 @@ def put_settings(body: SettingsIn, user: CurrentUserDep, db: DbDep) -> SettingsO
         _save_channel(db, user, "mail", {k for k in body.mail if k in allowed} - wanted, allowed)
     if body.teams is not None:
         _save_channel(db, user, "teams", {k for k in body.teams if k in allowed} - wanted, allowed)
+    if body.push is not None:
+        _save_channel(db, user, "push", {k for k in body.push if k in allowed} - wanted, allowed)
     db.commit()
     return get_settings(user, db)
