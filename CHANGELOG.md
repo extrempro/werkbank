@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.51.0] – 2026-11-17
+
+Dienststatus ohne doppelten Kalender.
+
+### Microsoft 365
+
+- Dienststatus: Der Kalender je Dienst steht nur noch im Würfel der Kachel (jetzt mit Legende); der Abschnitt unten heißt „Meldungen der letzten 90 Tage“ und enthält nur noch die Liste
+
+### CI
+
+- `npm audit` blockiert nur noch bei Lücken in Paketen der ausgelieferten App (`--omit=dev`); Treffer in Entwicklungs- und Testwerkzeugen erscheinen als Warnung. Anlass: eine neue Lücke in `picomatch` (nur in Vite, Vitest und ESLint) ohne korrigierte Version
+
+### Doku
+
+- Spec, ASVS, Handbuch (Dienststatus)
+
 ## [0.50.0] – 2026-11-17
 
 DNS-Abgleich mit Filtern je Stand und aufgeräumtem Layout.

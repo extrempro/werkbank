@@ -162,6 +162,11 @@ export function ServiceCube({ name, days, levels }: { name: string } & CalendarP
             </span>
             <CalendarGrid days={days} levels={levels} />
             <span className="small">{calendarSummary(levels)}</span>
+            <span className="small health-cube-legend" aria-hidden="true">
+              <span className="health-cal-key health-cal-stoerung" /> Störung{" "}
+              <span className="health-cal-key health-cal-hinweis" /> Hinweis{" "}
+              <span className="health-cal-key health-cal-ok" /> keine Meldung
+            </span>
             <CalendarText days={days} levels={levels} />
           </>
         )}

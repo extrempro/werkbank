@@ -1,13 +1,5 @@
 import { useState } from "react";
-import {
-  adminCenterUrl,
-  issueDuration,
-  issueKind,
-  calendarSummary,
-  monthlyIncidents,
-  type Health,
-} from "./api";
-import { CalendarGrid, CalendarText } from "./HealthCalendar";
+import { adminCenterUrl, issueDuration, issueKind, monthlyIncidents, type Health } from "./api";
 
 const HOURS = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
 const longDay = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeZone: "UTC" });
@@ -30,7 +22,7 @@ function month(key: string): Date {
   return new Date(`${key}-01T00:00:00Z`);
 }
 
-/** Je Dienst ein Kalender über 90 Tage (Wochen als Spalten), darunter die Meldungen. */
+/** Alle Meldungen der letzten Tage; den Kalender je Dienst zeigt der Würfel in der Kachel. */
 function Timeline({ health }: { health: Health }) {
   const days = health.timeline_days;
   if (days.length === 0) {
@@ -41,31 +33,12 @@ function Timeline({ health }: { health: Health }) {
   return (
     <section className="panel" aria-labelledby="health-zeitleiste">
       <div className="panel-head">
-        <h2 id="health-zeitleiste">Letzte {days.length} Tage</h2>
+        <h2 id="health-zeitleiste">Meldungen der letzten {days.length} Tage</h2>
         <span className="small">
           {longDay.format(day(first))} bis {longDay.format(day(last))}
         </span>
       </div>
       <div className="detail-body">
-        <ul className="health-cal">
-          {health.timeline.map((line, lineIndex) => {
-            return (
-              <li key={line.service_id} className="health-cal-row">
-                <span className="health-cal-name">{line.service_name}</span>
-                <CalendarGrid days={days} levels={line.days} showMonths={lineIndex === 0} />
-                <span className="health-cal-sum">{calendarSummary(line.days)}</span>
-                <CalendarText days={days} levels={line.days} />
-              </li>
-            );
-          })}
-        </ul>
-        <p className="small health-cal-legend">
-          <span className="health-cal-key health-cal-stoerung" aria-hidden="true" /> Störung{" "}
-          <span className="health-cal-key health-cal-hinweis" aria-hidden="true" /> Hinweis{" "}
-          <span className="health-cal-key health-cal-ok" aria-hidden="true" /> keine Meldung ·
-          Spalten sind Wochen (Montag oben), Tage in UTC, die schwerste Meldung des Tages zählt.
-        </p>
-        <h3 className="health-window-title">Meldungen in diesem Zeitraum</h3>
         {health.timeline_issues.length === 0 ? (
           <p className="small">Keine.</p>
         ) : (

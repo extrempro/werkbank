@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.51.0",
+    date: "2026-11-17",
+    summary: "Dienststatus: Der 90-Tage-Kalender steht nur noch im Würfel der Kachel.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Dienststatus: Die Punkte-Übersicht der letzten 90 Tage unten ist weg; den Kalender zeigt der Würfel in jeder Kachel, jetzt mit Legende. Unten bleibt die Liste der Meldungen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.50.0",
     date: "2026-11-17",
     summary: "DNS-Abgleich: Filter je Stand und ein aufgeräumtes Layout.",
