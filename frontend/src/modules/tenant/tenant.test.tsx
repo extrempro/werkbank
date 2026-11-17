@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   adminCenterUrl,
+  issueDuration,
   credentialKind,
   daysUntil,
   licenseNotes,
@@ -9,6 +10,8 @@ import {
   remainingText,
   type Credential,
   type License,
+  type ServiceIssue,
+  weekColumns,
 } from "./api";
 import { CredentialsPage } from "./CredentialsPage";
 import { HealthPage } from "./HealthPage";
@@ -414,15 +417,25 @@ describe("Dienststatus", () => {
             service_id: "Exchange",
             name: "Exchange Online",
             status: "serviceDegradation",
+            level: "stoerung",
             open_incidents: 1,
             open_advisories: 0,
+            reasons: [
+              {
+                issue_id: "EX1001",
+                title: "Verzögerte Zustellung",
+                classification: "incident",
+              },
+            ],
           },
           {
             service_id: "microsoftteams",
             name: "Microsoft Teams",
             status: "serviceOperational",
+            level: "ok",
             open_incidents: 0,
             open_advisories: 0,
+            reasons: [],
           },
         ],
         open: [exchangeIssue],
@@ -456,21 +469,26 @@ describe("Dienststatus", () => {
             days: ["ok", "ok", "ok"],
           },
         ],
+        timeline_issues: [exchangeIssue],
       },
     });
     render(<HealthPage />);
-    expect(await screen.findByText("Eingeschränkt")).toBeVisible();
-    expect(screen.getAllByText("In Ordnung")).toHaveLength(2);
-    expect(screen.getByText(/Verzögerte Zustellung/)).toBeInTheDocument();
+    // Die Kachel nennt den Grund und springt zur Meldung.
+    const reason = await screen.findByRole("link", { name: "Verzögerte Zustellung" });
+    expect(reason).toHaveAttribute("href", "#EX1001");
+    expect(reason.closest(".kpi")).toHaveTextContent(/Störung/);
+    expect(reason.closest(".kpi")).toHaveTextContent(/Microsoft: /);
+    expect(screen.getAllByText("In Ordnung")).toHaveLength(1);
+    expect(screen.getByText("Microsoft: In Ordnung")).toBeInTheDocument();
     expect(screen.getByText(/2 Störungen, 5,5 Std\. · 1 Hinweise/)).toBeInTheDocument();
     // Die Mitteilungen lädt erst das Aufklappen.
     expect(urls.some((url) => url.includes("/issues/"))).toBe(false);
-    const details = screen.getByText(/Verzögerte Zustellung/).closest("details")!;
+    const details = document.getElementById("EX1001")!.querySelector("details")!;
     details.open = true;
     fireEvent(details, new Event("toggle"));
     expect(await screen.findByText("Wir prüfen das.")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /EX1001 im Microsoft 365 Admin Center öffnen/ }),
+      screen.getAllByRole("link", { name: /EX1001 im Microsoft 365 Admin Center öffnen/ })[0],
     ).toHaveAttribute(
       "href",
       "https://admin.microsoft.com/Adminportal/Home#/servicehealth/:/alerts/EX1001",
@@ -480,6 +498,13 @@ describe("Dienststatus", () => {
     expect(screen.getByText("1 Tag Störung, 1 Tag Hinweis")).toBeInTheDocument();
     expect(screen.getByText("ohne Meldung")).toBeInTheDocument();
     expect(screen.getByText(/14\.11\. Hinweis; 16\.11\. Störung/)).toBeInTheDocument();
+    // Liste der Meldungen im Zeitraum
+    const issueList = within(
+      screen.getByRole("heading", { name: "Meldungen in diesem Zeitraum" })
+        .nextElementSibling as HTMLElement,
+    );
+    expect(issueList.getByText("Exchange Online")).toBeInTheDocument();
+    expect(issueList.getByText(/läuft/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "2026" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("letzte 2 Monate · 4 insgesamt")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Microsoft Teams" }));
@@ -498,10 +523,42 @@ describe("Dienststatus", () => {
         months: [],
         timeline_days: [],
         timeline: [],
+        timeline_issues: [],
       },
     });
     render(<HealthPage />);
     expect(await screen.findByText(/nicht eingeschaltet/)).toBeVisible();
+  });
+});
+
+describe("Kalender und Dauer", () => {
+  it("legt Tage in Wochen-Spalten mit Montag oben", () => {
+    // 2026-11-14 ist ein Samstag: fünf leere Felder davor
+    const columns = weekColumns(["2026-11-14", "2026-11-15", "2026-11-16"]);
+    expect(columns).toEqual([[null, null, null, null, null, 0, 1], [2]]);
+    expect(weekColumns([])).toEqual([]);
+  });
+
+  it("gibt die Dauer in Stunden oder Tagen an", () => {
+    const base = { issue_id: "X", service_id: "s", service_name: "S", title: "t" };
+    const issue = (start: string, end: string | null) =>
+      ({
+        ...base,
+        classification: "incident",
+        status: "serviceRestored",
+        feature_group: "",
+        feature: "",
+        impact: "",
+        resolved: end !== null,
+        start_at: start,
+        end_at: end,
+        modified_at: start,
+      }) as ServiceIssue;
+    expect(issueDuration(issue("2026-11-16T09:00:00Z", "2026-11-16T12:30:00Z"))).toBe("3,5 Std.");
+    expect(issueDuration(issue("2026-11-10T00:00:00Z", "2026-11-13T00:00:00Z"))).toBe("3 Tage");
+    expect(
+      issueDuration(issue("2026-11-16T09:00:00Z", null), new Date("2026-11-16T10:00:00Z")),
+    ).toBe("1 Std.");
   });
 });
 

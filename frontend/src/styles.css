@@ -843,6 +843,24 @@ a {
 
   .app-nav.open {
     display: flex;
+    /* Nichts im offenen Menü darf die Seite breiter machen als den Bildschirm. */
+    overflow-x: hidden;
+  }
+
+  /* Ist es eng, kürzt sich der Name; „Abmelden“ bleibt ganz sichtbar. */
+  .brand,
+  .brand-text {
+    min-width: 0;
+  }
+
+  .brand-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .user {
+    flex-shrink: 0;
   }
 
   /* Im aufgeklappten Menü gibt es nichts einzuklappen. */
@@ -2138,9 +2156,13 @@ details summary {
 }
 
 @media (min-width: 1100px) {
+  /* Höher als das Fenster: eigener Scrollbereich, sonst wäre das Ende nie erreichbar. */
   .split-detail {
     position: sticky;
     top: calc(var(--kopf-hoehe) + 16px);
+    max-height: calc(100dvh - var(--kopf-hoehe) - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
 
@@ -2549,6 +2571,8 @@ details summary {
 .split-wide {
   flex: 999 1 520px;
   position: static;
+  max-height: none;
+  overflow-y: visible;
 }
 
 /* Ist ein Vorgang geöffnet, zeigen schmale Bildschirme nur ihn; „Zurück“ führt zur Liste. */
@@ -4687,85 +4711,136 @@ p.badges {
   white-space: pre-line;
 }
 
-/* Dienststatus: Zeitleiste der letzten Tage, Ausfalldauer, Störungen pro Monat */
-.timeline {
+/* Dienststatus: Kalender der letzten Tage, Ausfalldauer, Störungen pro Monat */
+.health-cal {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.timeline-row {
+.health-cal-row {
   display: grid;
-  grid-template-columns: minmax(8rem, 11rem) 1fr;
-  grid-template-areas:
-    "name cells"
-    ". sum";
-  align-items: center;
-  gap: 4px 12px;
+  grid-template-columns: minmax(8rem, 11rem) auto 1fr;
+  align-items: start;
+  gap: 4px 16px;
 }
 
-.timeline-name {
-  grid-area: name;
+.health-cal-name {
   font-weight: 600;
 }
 
-.timeline-cells {
-  grid-area: cells;
+.health-cal-body {
   display: flex;
-  gap: 1px;
-  height: 28px;
+  flex-direction: column;
+  gap: 4px;
+  overflow-x: auto;
 }
 
-.timeline-cell {
-  flex: 1 1 0;
-  min-width: 1px;
-  border-radius: 2px;
+.health-cal-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 16px);
+  grid-auto-columns: 16px;
+  gap: 3px;
 }
 
-.timeline-sum {
-  grid-area: sum;
+.health-cal-months {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 16px;
+  gap: 3px;
+  font-size: 0.75rem;
   color: var(--farbe-text-leise);
+  white-space: nowrap;
 }
 
-.timeline-ok {
+.health-cal-cell {
+  border-radius: 3px;
+}
+
+.health-cal-leer {
+  background: transparent;
+}
+
+.health-cal-ok {
   background: var(--farbe-ok-flaeche);
+  border: 1px solid var(--farbe-rand);
 }
 
-.timeline-hinweis {
+.health-cal-hinweis {
   background: var(--farbe-warn-rand-stark);
 }
 
-.timeline-stoerung {
+.health-cal-stoerung {
   background: var(--farbe-bad-text);
 }
 
-.timeline-legend {
+.health-cal-sum {
+  color: var(--farbe-text-leise);
+  font-size: 0.875rem;
+}
+
+.health-cal-legend {
   margin: 12px 0 0;
 }
 
-.timeline-key {
+.health-cal-key {
   display: inline-block;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   margin-left: 8px;
-  border-radius: 2px;
-  vertical-align: -1px;
+  border-radius: 3px;
+  vertical-align: -2px;
 }
 
-.timeline-key:first-child {
+.health-cal-key:first-child {
   margin-left: 0;
 }
 
+.health-window-title {
+  margin: 20px 0 8px;
+  font-size: 1rem;
+}
+
+.health-window {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.health-window li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--farbe-trenner);
+}
+
+.health-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+
+.health-reasons a {
+  color: inherit;
+  font-weight: 600;
+}
+
 @media (max-width: 640px) {
-  .timeline-row {
+  .health-cal-row {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "name"
-      "cells"
-      "sum";
   }
 }
 

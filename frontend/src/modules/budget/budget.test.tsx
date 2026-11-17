@@ -1365,7 +1365,24 @@ describe("Tags", () => {
     });
     render(<ItemsPage roles={["Budget.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Posten hinzufügen" }));
-    expect(screen.getByText(/legt sie unter Einstellungen an/)).toBeInTheDocument();
+    // Tags stehen sichtbar im Formular, nicht unter „Weitere Angaben“.
+    expect(screen.getByText(/legt sie unter Einstellungen an/)).toBeVisible();
+    expect(screen.queryByRole("link", { name: /Tags verwalten/ })).not.toBeInTheDocument();
+  });
+
+  it("zeigt dem Budgetverwalter den Weg zur Tag-Liste", async () => {
+    stubFetch({
+      "GET /api/budget/overview": overview(),
+      "GET /api/budget/accounts": [hardware, software],
+      "GET /api/budget/tags": [],
+    });
+    render(<ItemsPage roles={["Budget.Manager"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Posten hinzufügen" }));
+    expect(screen.getByText(/Lege sie zuerst an/)).toBeVisible();
+    expect(screen.getByRole("link", { name: /Tags verwalten/ })).toHaveAttribute(
+      "href",
+      "/budget/einstellungen",
+    );
   });
 });
 

@@ -33,15 +33,17 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .selectOption({ label: `${number} Testkonto Wartung` });
   await page.getByLabel("Bezeichnung", { exact: true }).fill(`Posten ${number}`);
   await page.getByRole("textbox", { name: /^Erwartete Kosten/ }).fill("1.500,00");
-  // Tags stehen unter den weiteren Angaben.
-  await page.getByText(/^Weitere Angaben/).click();
+  // Tags stehen sichtbar im Formular.
   await page
     .getByRole("group", { name: "Tags (freiwillig)" })
     .getByRole("button", { name: `Tag ${number}`, exact: true })
     .click();
+  // Das Formular ist länger; nach dem Scrollen läge „Posten hinzufügen“ unter der festen Kopfzeile.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
   await page.getByRole("button", { name: "Posten speichern" }).click();
   await expect(page.getByText(`Posten ${number} ist gespeichert.`)).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/partner");

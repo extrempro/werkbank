@@ -474,15 +474,15 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Der Dienststatus zeigt, ob Exchange Online, Microsoft Teams, SharePoint Online und Microsoft Entra laufen: in Ordnung, eingeschränkt oder unterbrochen. Die Werkbank fragt alle 15 Minuten bei Microsoft nach.",
+            text: "Der Dienststatus zeigt, ob Exchange Online, Microsoft Teams, SharePoint Online und Microsoft Entra laufen. Jede Kachel sagt „Störung“, „Hinweis“ oder „In Ordnung“, je nachdem, ob gerade eine Störung oder nur ein Hinweis offen ist, und nennt darunter die offenen Meldungen. Ein Klick darauf springt zur Meldung mit den Mitteilungen von Microsoft. Klein steht dabei, was Microsoft selbst als Zustand angibt. Die Werkbank fragt alle 15 Minuten bei Microsoft nach.",
           },
           {
             kind: "list",
             items: [
               "Offene Störungen und Hinweise stehen oben, darunter die in den letzten 30 Tagen beendeten. Aufgeklappt zeigt jeder Eintrag die Mitteilungen von Microsoft.",
               "Jeder Eintrag lässt sich im Microsoft 365 Admin Center öffnen. Dafür brauchst du dort eine Anmeldung.",
-              "Die Zeitleiste zeigt die letzten 90 Tage je Dienst: Tage mit Störung, mit Hinweis oder ohne Meldung.",
-              "„Ausfalldauer je Dienst“ zeigt die Stunden mit Störung je Jahr, „Störungen pro Monat“ die Zahl der Störungen über drei Jahre, wählbar je Dienst.",
+              "„Letzte 90 Tage“ zeigt je Dienst einen Kalender: jede Spalte eine Woche, Montag oben, jedes Feld ein Tag mit Störung, mit Hinweis oder ohne Meldung. Darunter stehen alle Meldungen dieses Zeitraums mit Datum und Dauer.",
+              "„Ausfalldauer je Dienst“ zeigt die Stunden mit Störung je Jahr (gleichzeitige Störungen zählen einmal, Fehlalarme gar nicht), „Störungen pro Monat“ die Zahl der Störungen über drei Jahre, wählbar je Dienst.",
             ],
           },
           {
@@ -744,7 +744,7 @@ export const CHAPTERS: readonly Chapter[] = [
               "Wähle „Posten hinzufügen“.",
               "Wähle das Konto, gib eine Bezeichnung und die erwarteten Kosten je Geschäftsjahr (brutto) ein.",
               "Lege die Laufzeit fest: einmalig, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres.",
-              "Optional: Vertrag und IT-Projekt wählen; unter „Weitere Angaben“ Tags und Notiz.",
+              "Optional: Vertrag, IT-Projekt und Tags wählen; unter „Weitere Angaben“ die Notiz. Tags legt der Budgetverwalter unter Einstellungen › Tags an.",
               "Speichere.",
             ],
           },
