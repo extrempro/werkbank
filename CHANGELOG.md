@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.53.0] – 2026-11-17
+
+Microsoft 365: Intune in der Konfiguration.
+
+### Microsoft 365
+
+- **Intune:** Anleitung und Auswahl der Typen für UTCM (`COLLECTOR_RESOURCES`) in fünf Gruppen: Compliance, Konfigurationsprofile, Endpunktsicherheit, App-Schutz und App-Konfiguration, Registrierung (inkl. Autopilot); verständliche Namen dieser Bereiche im Baum
+
+### Doku
+
+- Einrichtung (`docs/entra-setup.md` 4.6 Intune, Grenzen jetzt 4.7), `.env.example`, Spec 7.1, Datenschutz
+
 ## [0.52.0] – 2026-11-17
 
 Microsoft 365: Teams und SharePoint in der Konfiguration.

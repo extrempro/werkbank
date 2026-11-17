@@ -18,6 +18,15 @@ describe("areaLabel", () => {
     expect(workloadLabel("sharepoint")).toBe("SharePoint");
   });
 
+  it("kennt die Bereiche von Intune", () => {
+    expect(areaLabel("deviceCompliancePolicyWindows10")).toBe("Compliance: Windows");
+    expect(areaLabel("appprotectionpolicyios")).toBe("App-Schutz: iOS/iPadOS");
+    expect(areaLabel("windowsautopilotdeploymentprofileazureadjoined")).toBe(
+      "Autopilot: Entra-Join",
+    );
+    expect(workloadLabel("intune")).toBe("Intune");
+  });
+
   it("zeigt unbekannte Bereiche mit ihrem technischen Namen", () => {
     expect(areaLabel("irgendeinneuertyp")).toBe("irgendeinneuertyp");
   });
