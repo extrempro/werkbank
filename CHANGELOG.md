@@ -4,6 +4,34 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.45.0] – 2026-11-17
+
+Import aus Excel im IT-Budget; neues Symbol der Werkbank.
+
+### IT-Budget
+
+- Neuer Unterbereich **Import** (`/budget/import`, nur `Budget.Manager`): je Excel-Datei ein Vorgang (Entwurf → in Arbeit → abgeschlossen), Zeilen einzeln übernehmen oder überspringen
+- Lesen von .xlsx ohne Zusatzpaket (`xlsx_read.py`): erstes sichtbares Blatt, geteilte und eingebettete Texte, Zahlen, Datumsformate, gespeicherte Werte von Formeln; Grenzen für Archiv, Größe, Zeilen und Spalten; XML mit DOCTYPE/ENTITY wird abgelehnt
+- Erkennung des bisherigen Aufbaus (`excel_import.py`): Geschäftsjahr aus der Überschrift, Kopfzeile, Kontospalten mit Nummer darüber, „Jährlich“, Konten mit Budget unter der Tabelle; Kostenstelle und „Projekte“ werden ignoriert; Hinweise je Zeile
+- Start: Geschäftsjahr, Steuersatz als Vorgabe, Art neuer Konten; fehlende Konten und je Konto ein einmaliger Posten „Allgemein <Geschäftsjahr>“ mit dem Budget aus der Datei
+- Zeile übernehmen: Partner (gleich, ähnlich ohne Rechtsform, je Firma entschieden, neu oder frei gewählt), gebuchte Rechnung mit einer Position, Netto aus Brutto, schließt den Posten nicht ab; doppelte Rechnungsnummer je Partner wird abgelehnt
+- Vorschläge für die Planung: übernommene Zeilen mit „Jährlich“ als Budgetposten ab dem folgenden Geschäftsjahr
+- Aufgabe auf der Startseite für offene Vorgänge; Audit-Log `budget.import_…`
+- API: `GET`/`POST /api/budget/imports`, `GET`/`DELETE /api/budget/imports/{id}`, `POST …/{id}/start`, `POST …/{id}/rows/{row}/take|skip|reopen`, `POST …/{id}/plan`
+- Migration 0038: Tabellen `budget_imports`, `budget_import_rows`
+
+### Werkbank
+
+- Neues Standard-Favicon und neue App-Icons (Werkbank von vorn mit Schraubenschlüssel und Hammer) und dasselbe Zeichen links oben in der Kopfzeile, solange kein eigenes Logo hinterlegt ist; ein eigenes Favicon oder Logo aus dem Branding hat weiter Vorrang
+
+### Behoben
+
+- Breite Tabellen machten die Seite auf Handy und Tablet breiter als den Bildschirm, wenn Text nur für Screenreader am rechten Rand der Tabelle stand; Tabellen halten ihn jetzt in ihrem Scrollbereich
+
+### Doku
+
+- Spec 7b, ASVS, Handbuch (IT-Budget › Import aus Excel)
+
 ## [0.44.0] – 2026-11-17
 
 Neuer Bereich IT-Projekte; Rollen je Person in der Verwaltung.

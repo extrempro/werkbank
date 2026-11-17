@@ -16,6 +16,7 @@ from werkbank.core.search import router as search_router
 from werkbank.core.tasks import router as tasks_router
 from werkbank.db import database_ready
 from werkbank.modules.budget.api import router as budget_router
+from werkbank.modules.budget.imports import router as budget_imports_router
 from werkbank.modules.budget.search import budget_search
 from werkbank.modules.budget.tasks import budget_tasks
 from werkbank.modules.evergreen.api import router as evergreen_router
@@ -83,6 +84,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(recommendations_router)
     app.include_router(tenant_router)
     app.include_router(budget_router)
+    app.include_router(budget_imports_router)
     app.include_router(projects_router)
     app.include_router(tools_router)
     app.include_router(tools_account_router)

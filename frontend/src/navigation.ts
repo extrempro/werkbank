@@ -34,6 +34,7 @@ export const HEALTH_PATH = "/m365/dienststatus";
 export const BUDGET_PATH = "/budget";
 export const BUDGET_ACCOUNTS_PATH = "/budget/konten";
 export const BUDGET_SETTINGS_PATH = "/budget/einstellungen";
+export const BUDGET_IMPORT_PATH = "/budget/import";
 export const BUDGET_CONTRACTS_PATH = "/budget/vertraege";
 export const BUDGET_PARTNERS_PATH = "/budget/partner";
 export const BUDGET_ITEMS_PATH = "/budget/posten";
@@ -154,6 +155,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       { path: BUDGET_ACCOUNTS_PATH, label: "Konten", icon: "konten" },
     ];
     if (roles.includes(BUDGET_MANAGER)) {
+      items.push({ path: BUDGET_IMPORT_PATH, label: "Import", icon: "import" });
       items.push({ path: BUDGET_SETTINGS_PATH, label: "Einstellungen", icon: "einstellungen" });
     }
     areas.push({

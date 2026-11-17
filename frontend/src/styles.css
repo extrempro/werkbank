@@ -932,6 +932,9 @@ a {
 /* Tabellen */
 
 .table-wrap {
+  /* Hält auch absolut gesetzte Teile (z. B. Text nur für Screenreader) im Scrollbereich;
+     sonst wird die Seite auf dem Handy breiter als der Bildschirm. */
+  position: relative;
   overflow-x: auto;
   background: var(--farbe-flaeche);
   border: 1px solid var(--farbe-rand);
@@ -5398,4 +5401,104 @@ p.badges {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+
+/* IT-Budget: Import aus Excel */
+
+.import-kind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.import-progress {
+  display: flex;
+  gap: 2px;
+  width: 120px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--farbe-neutral-flaeche);
+}
+
+.import-progress-wide {
+  width: 100%;
+}
+
+.import-progress-taken {
+  background: var(--farbe-primaer);
+}
+
+.import-progress-skipped {
+  background: var(--farbe-rand-stark);
+}
+
+.import-stand {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.import-split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.import-aside {
+  display: flex;
+  flex: 1 1 260px;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 340px;
+}
+
+.import-main {
+  flex: 999 1 560px;
+  min-width: 0;
+}
+
+.import-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 70vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.import-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.import-row:hover {
+  background: var(--farbe-hover);
+}
+
+.import-row-on {
+  border-color: var(--farbe-primaer);
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+.import-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 8px;
 }

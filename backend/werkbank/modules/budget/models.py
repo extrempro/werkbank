@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -219,3 +220,67 @@ class BudgetInvoiceLine(Base):
     # Schließt den Budgetposten für das Geschäftsjahr der Rechnung ab, sobald sie gebucht ist.
     # Abschlags- und Vertragsrechnungen lassen ihn offen.
     closes_item: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+
+
+class BudgetImport(Base):
+    """Ein Import aus einer Excel-Datei: ein Vorgang, dessen Zeilen einzeln abgearbeitet werden.
+
+    entwurf: hochgeladen, noch nicht bestätigt; offen: Zeilen werden abgearbeitet;
+    abgeschlossen: keine offene Zeile mehr. Die Datei selbst wird nicht gespeichert.
+    """
+
+    __tablename__ = "budget_imports"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    file_name: Mapped[str] = mapped_column(String(200))
+    # Geschäftsjahr (Kalenderjahr des Beginns) und Vorgabe für den Steuersatz der Zeilen
+    year: Mapped[int] = mapped_column(Integer)
+    tax_rate_bp: Mapped[int] = mapped_column(Integer, default=1900, server_default="1900")
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    # Konten aus der Datei: [{number, name, budget_cents, account_id, created, item_id}]
+    accounts: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    # Entscheidung je Firma (kleingeschrieben) → Partner-ID; gilt für alle Zeilen der Firma
+    partners: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
+    skipped_rows: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BudgetImportRow(Base):
+    """Eine Zeile eines Imports. offen, uebernommen (mit Rechnung) oder uebersprungen."""
+
+    __tablename__ = "budget_import_rows"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    import_id: Mapped[int] = mapped_column(
+        ForeignKey("budget_imports.id", ondelete="CASCADE"), index=True
+    )
+    # Zeile in der Excel-Datei
+    row_number: Mapped[int] = mapped_column(Integer)
+    invoice_date: Mapped[date | None] = mapped_column(Date)
+    number: Mapped[str] = mapped_column(String(80), default="", server_default="")
+    internal_number: Mapped[str] = mapped_column(String(60), default="", server_default="")
+    firm: Mapped[str] = mapped_column(String(160), default="", server_default="")
+    description: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    gross_cents: Mapped[int] = mapped_column(BigInteger)
+    account_number: Mapped[str | None] = mapped_column(String(20))
+    yearly: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    hints: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    status: Mapped[str] = mapped_column(String(16), default="offen", server_default="offen")
+    invoice_id: Mapped[int | None] = mapped_column(
+        ForeignKey("budget_invoices.id", ondelete="SET NULL")
+    )
+    # Budgetposten, der aus einer Zeile mit „Jährlich“ für die Planung angelegt wurde
+    planned_item_id: Mapped[int | None] = mapped_column(
+        ForeignKey("budget_items.id", ondelete="SET NULL")
+    )
+    done_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -13,6 +13,7 @@ import {
   areaForPath,
   areasFor,
   BUDGET_ACCOUNTS_PATH,
+  BUDGET_IMPORT_PATH,
   BUDGET_CONTRACTS_PATH,
   BUDGET_INVOICES_PATH,
   BUDGET_PLANNING_PATH,
@@ -59,6 +60,8 @@ import { hasUnseenRelease } from "../release-notes";
 import { AccountsPage } from "../modules/budget/AccountsPage";
 import { BudgetOverviewPage } from "../modules/budget/BudgetOverviewPage";
 import { BudgetSettingsPage } from "../modules/budget/BudgetSettingsPage";
+import { ImportDetailPage } from "../modules/budget/ImportDetailPage";
+import { ImportsPage } from "../modules/budget/ImportsPage";
 import { ContractsPage } from "../modules/budget/ContractsPage";
 import { InvoicesPage } from "../modules/budget/InvoicesPage";
 import { ItemsPage as BudgetItemsPage } from "../modules/budget/ItemsPage";
@@ -242,6 +245,8 @@ export function Layout({ me }: LayoutProps) {
   const partnerMatch = /^\/budget\/partner\/(\d{1,9})$/.exec(path);
   const partnerId = partnerMatch ? Number(partnerMatch[1]) : null;
   const contractMatch = /^\/budget\/vertraege\/(\d{1,9})$/.exec(path);
+  const importMatch = /^\/budget\/import\/(\d{1,9})$/.exec(path);
+  const importId = importMatch ? Number(importMatch[1]) : null;
   const contractId = contractMatch ? Number(contractMatch[1]) : null;
 
   const projectRoute = parseProjectPath(path);
@@ -339,6 +344,10 @@ export function Layout({ me }: LayoutProps) {
     page = <PartnerDetailPage key={partnerId} roles={me.roles} partnerId={partnerId} />;
   } else if (path === BUDGET_PARTNERS_PATH && current) {
     page = <PartnersPage roles={me.roles} />;
+  } else if (path === BUDGET_IMPORT_PATH && current) {
+    page = <ImportsPage />;
+  } else if (importId !== null && items.some((item) => item.path === BUDGET_IMPORT_PATH)) {
+    page = <ImportDetailPage key={importId} importId={importId} />;
   } else if (path === BUDGET_SETTINGS_PATH && current) {
     page = <BudgetSettingsPage />;
   } else if (path === TOOLS_HISTORY_PATH && current) {
