@@ -17,6 +17,7 @@ import { CredentialsPage } from "./CredentialsPage";
 import { HealthPage } from "./HealthPage";
 import { hexLayout, nameLines, shortRemaining } from "./honeycomb";
 import { LicensesPage } from "./LicensesPage";
+import { UsagePage } from "./UsagePage";
 import { UsersPage } from "./UsersPage";
 
 afterEach(() => {
@@ -203,6 +204,63 @@ describe("UsersPage", () => {
     });
     render(<UsersPage />);
     expect(await screen.findByText(/noch keine Benutzerzahlen gelesen/)).toBeVisible();
+  });
+});
+
+describe("UsagePage", () => {
+  const usage = {
+    enabled: true,
+    days: 30,
+    fetched_at: "2026-11-17T06:00:00Z",
+    report_date: "2026-11-15",
+    services: [
+      { service: "exchange", name: "Exchange", active: 90, inactive: 10 },
+      { service: "onedrive", name: "OneDrive", active: 0, inactive: 0 },
+      { service: "sharepoint", name: "SharePoint", active: 40, inactive: 60 },
+      { service: "teams", name: "Teams", active: 75, inactive: 25 },
+      { service: "vivaengage", name: "Viva Engage", active: null, inactive: null },
+    ],
+    history: [
+      { day: "2026-11-14", values: { exchange: 80, teams: 60 } },
+      { day: "2026-11-15", values: { exchange: 82, teams: 61 } },
+    ],
+  };
+
+  it("zeigt aktiv und inaktiv je Dienst und den Verlauf je Dienst", async () => {
+    const urls = stubFetch({ "/api/tenant/usage": usage });
+    render(<UsagePage />);
+    expect(await screen.findByText("Exchange", { selector: "dt" })).toBeVisible();
+    const exchange = screen.getByText("Exchange", { selector: "dt" }).parentElement;
+    expect(exchange).toHaveTextContent("90");
+    expect(exchange).toHaveTextContent("10 inaktiv · 90 % aktiv");
+    expect(screen.getByText("OneDrive", { selector: "dt" }).parentElement).toHaveTextContent(
+      "keine Benutzer",
+    );
+    expect(screen.getByText("Viva Engage", { selector: "dt" }).parentElement).toHaveTextContent(
+      "keine Daten",
+    );
+    expect(screen.getByRole("img", { name: /^Aktive Benutzer je Tag: Exchange/ })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Teams" }));
+    expect(screen.getByRole("img", { name: /^Aktive Benutzer je Tag: Teams/ })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "90 Tage" }));
+    await vi.waitFor(() => expect(urls).toContain("/api/tenant/usage?days=90"));
+  });
+
+  it("erklärt, wenn der Abruf nicht eingeschaltet ist", async () => {
+    stubFetch({
+      "/api/tenant/usage": {
+        ...usage,
+        enabled: false,
+        fetched_at: null,
+        report_date: null,
+        services: usage.services.map((entry) => ({ ...entry, active: null, inactive: null })),
+        history: [],
+      },
+    });
+    render(<UsagePage />);
+    expect(
+      await screen.findByText(/Abruf der Nutzung ist in dieser Installation nicht/),
+    ).toBeVisible();
   });
 });
 

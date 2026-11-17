@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.56.0",
+    date: "2026-11-17",
+    summary: "Neu: Nutzung der Microsoft-365-Dienste.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Nutzung: Unter Tenant siehst du, wie viele Benutzer Exchange, OneDrive, SharePoint, Teams und Viva Engage in den letzten 7, 30, 90 oder 180 Tagen genutzt haben, und den Verlauf je Dienst.",
+          "Die Werkbank liest dafür nur Summen, nie, wer etwas genutzt hat.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.55.0",
     date: "2026-11-17",
     summary: "Neu: Snapshots vergleichen und als JSON oder CSV exportieren.",

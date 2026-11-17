@@ -4,13 +4,15 @@ import { PERIODS } from "./api";
 export function PeriodSelect({
   days,
   onChange,
+  periods = PERIODS,
 }: {
   days: number;
   onChange: (days: number) => void;
+  periods?: { days: number; label: string }[];
 }) {
   return (
     <div className="chips" role="group" aria-label="Zeitraum">
-      {PERIODS.map((period) => (
+      {periods.map((period) => (
         <button
           type="button"
           key={period.days}

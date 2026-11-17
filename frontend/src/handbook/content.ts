@@ -235,7 +235,10 @@ export const CHAPTERS: readonly Chapter[] = [
               ["Werkbank.Admin", "Verwaltung der Werkbank und das vollständige Audit-Log"],
               ["Config.Reader", "Einstellungen, Änderungen und Snapshots des Tenants ansehen"],
               ["Config.Reviewer", "zusätzlich Änderungen bewerten, Angaben und Soll-Werte pflegen"],
-              ["Tenant.Reader", "Lizenzen, Benutzerzahlen, Zertifikate und Dienststatus ansehen"],
+              [
+                "Tenant.Reader",
+                "Lizenzen, Benutzerzahlen, Zertifikate, Dienststatus und Nutzung ansehen",
+              ],
               ["Evergreen.IT", "Vorgänge bewerten und umsetzen, andere Schritte vertreten"],
               [
                 "Evergreen.Team",
@@ -503,6 +506,21 @@ export const CHAPTERS: readonly Chapter[] = [
           },
         ],
         links: [{ to: "/m365/dienststatus", label: "Zum Dienststatus" }],
+      },
+      {
+        id: "nutzung",
+        title: "Nutzung",
+        blocks: [
+          {
+            kind: "text",
+            text: "Die Seite „Nutzung“ zeigt, wie viele Benutzer Exchange, OneDrive, SharePoint, Teams und Viva Engage im gewählten Zeitraum (7, 30, 90 oder 180 Tage) genutzt haben. Inaktiv heißt: Die Person hat eine Lizenz für den Dienst, war im Zeitraum aber nicht aktiv. Darunter steht der Verlauf der aktiven Benutzer je Tag; über die Schalter wählst du den Dienst, die Werte stehen auch als Tabelle darunter.",
+          },
+          {
+            kind: "hint",
+            text: "Die Zahlen stammen aus den Nutzungsberichten von Microsoft und hängen etwa zwei Tage hinterher. Die Werkbank liest nur Summen, nie, wer etwas genutzt hat.",
+          },
+        ],
+        links: [{ to: "/m365/nutzung", label: "Zur Nutzung" }],
       },
     ],
   },
