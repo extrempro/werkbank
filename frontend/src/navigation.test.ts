@@ -9,8 +9,14 @@ describe("navigationFor", () => {
 
   it("zeigt dem Admin die Verwaltung und das Audit-Log", () => {
     const labels = allNavItems(navigationFor(["Werkbank.Admin"])).map((item) => item.label);
-    expect(labels).toContain("Einstellungen");
+    expect(labels).toContain("Allgemein");
+    expect(labels).toContain("Rollen");
     expect(labels).toContain("Audit-Log");
+  });
+
+  it("zeigt Auditoren kein Audit-Log in der Navigation", () => {
+    const labels = allNavItems(navigationFor(["Werkbank.Auditor"])).map((item) => item.label);
+    expect(labels).not.toContain("Audit-Log");
   });
 
   it("zeigt Lesern der Konfiguration kein Audit-Log", () => {
