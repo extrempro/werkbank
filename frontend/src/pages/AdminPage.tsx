@@ -104,7 +104,11 @@ export function AdminPage({ section = "allgemein" }: { section?: AdminSection })
       )}
       {ready && section === "mail-teams" && (
         <div className="admin-section">
-          <GeneralSettings settings={general} onChange={setGeneral} parts={["smtp", "teams"]} />
+          <GeneralSettings
+            settings={general}
+            onChange={setGeneral}
+            parts={["smtp", "teams", "push"]}
+          />
         </div>
       )}
       {ready && section === "verbindungen" && (

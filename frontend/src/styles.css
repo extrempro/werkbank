@@ -5960,3 +5960,38 @@ p.badges {
 .dns-note {
   margin: 0 0 4px;
 }
+
+/* Konto: Push auf den eigenen Geräten */
+
+.push-devices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+}
+
+.push-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.push-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.push-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--farbe-trenner);
+}

@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.54.0] – 2026-11-17
+
+Push aufs Handy.
+
+### Werkbank
+
+- **Push:** Die Verwaltung schaltet Push unter Verwaltung › Mail & Teams ein; dabei entsteht ein VAPID-Schlüsselpaar, der private Teil liegt verschlüsselt in der Datenbank
+- Konto: „Push auf diesem Gerät einschalten“ (Erlaubnis des Browsers), Liste der Geräte mit Entfernen, Testnachricht; je Art die neue Spalte „Push“ (Vorgabe: aus); auf iPhone/iPad Hinweis, dass Push nur in der App vom Home-Bildschirm geht
+- Versand alle 2 Minuten als Sammelnachricht je Person an alle ihre Geräte: Name, Bereich und Anzahl, nie fachliche Inhalte; Tippen öffnet „Benachrichtigungen“; verschlüsselt nach RFC 8291 und signiert nach RFC 8292, ohne Zusatzpaket; nur an bekannte Push-Dienste, abgelaufene Abos werden gelöscht
+- API: `GET /api/notifications/push`, `POST …/push/subscriptions`, `POST …/push/subscriptions/remove`, `DELETE …/push/subscriptions/{id}`, `POST …/push/test`, `PUT /api/admin/settings/push`; Einstellungen je Art mit `push`
+- Migration 0039: Tabelle `push_subscriptions`, Spalte `notifications.pushed_at`
+
+### Doku
+
+- Spec 6.7 und 11, Datenschutz, Betrieb (ausgehende Verbindungen), Handbuch (Konto, Verwaltung, Hilfe)
+
 ## [0.53.0] – 2026-11-17
 
 Microsoft 365: Intune in der Konfiguration.

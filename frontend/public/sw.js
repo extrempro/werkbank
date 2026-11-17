@@ -85,3 +85,47 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// Push aufs Handy (docs/spec.md, Kapitel 11): Der Inhalt nennt nur Bereich und Anzahl.
+// Ein Tippen öffnet die angegebene Seite der Werkbank, nie eine fremde Adresse.
+function samePath(value) {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
+    ? value
+    : "/benachrichtigungen";
+}
+
+self.addEventListener("push", (event) => {
+  let data;
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+  const title = typeof data.title === "string" && data.title ? data.title : "Werkbank";
+  const body = typeof data.body === "string" && data.body ? data.body : "Neue Benachrichtigung";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: typeof data.tag === "string" ? data.tag : "werkbank",
+      data: { url: samePath(data.url) },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(samePath(event.notification.data?.url), self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      for (const client of windows) {
+        if (new URL(client.url).origin === self.location.origin && "focus" in client) {
+          client.navigate(target);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
+});

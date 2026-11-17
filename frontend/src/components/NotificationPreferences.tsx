@@ -9,11 +9,13 @@ import {
   type NotificationChannels,
   type NotificationKind,
 } from "../notifications";
+import { PushDevices } from "./PushDevices";
 
 const COLUMNS: { channel: Channel; label: string }[] = [
   { channel: "enabled", label: "Glocke" },
   { channel: "mail", label: "Mail" },
   { channel: "teams", label: "Teams" },
+  { channel: "push", label: "Push" },
 ];
 
 /** Konto: welche Benachrichtigungen die Person auf welchem Weg bekommt. Speichert sofort. */
@@ -43,6 +45,10 @@ export function NotificationPreferences() {
   const available = (channel: Channel): boolean => {
     if (channel === "enabled") {
       return true;
+    }
+    // Push braucht keine Mailadresse, nur ein angemeldetes Gerät
+    if (channel === "push") {
+      return Boolean(channels?.push);
     }
     return Boolean(channels?.has_email && channels[channel]);
   };
@@ -83,7 +89,9 @@ export function NotificationPreferences() {
         <p>
           Die Glocke oben meldet, was sich in deinen Bereichen getan hat. Per Mail und in Teams
           bekommst du höchstens alle 15 Minuten eine Sammelnachricht mit der Zahl der neuen
-          Benachrichtigungen und einem Link, ohne Inhalte. Mail und Teams sind anfangs aus.
+          Benachrichtigungen und einem Link, ohne Inhalte. Push kommt nach wenigen Minuten auf deine
+          angemeldeten Geräte und nennt nur Bereich und Anzahl. Mail, Teams und Push sind anfangs
+          aus.
         </p>
         {failed && (
           <p role="alert" className="hint-box hint-bad">
@@ -107,6 +115,7 @@ export function NotificationPreferences() {
                 : "Teams hat die Verwaltung noch nicht eingerichtet."}
           </p>
         )}
+        {channels?.push && <PushDevices />}
         {kinds && kinds.length > 0 && (
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Benachrichtigungen">
             <table className="notify-table">

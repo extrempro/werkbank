@@ -172,6 +172,29 @@ test("Zu große Bilder passt die Werkbank beim Hochladen selbst an", async ({ pa
   await expect(page.getByText("Favicon: entfernt.")).toBeVisible();
 });
 
+test("Admin schaltet Push ein, das Konto zeigt Geräte und die Spalte Push", async ({ page }) => {
+  await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
+  await page.goto("/verwaltung/mail-teams");
+  await expect(page.getByRole("heading", { level: 3, name: "Push aufs Handy" })).toBeVisible();
+  await page.getByRole("button", { name: "Push einschalten" }).click();
+  await expect(page.getByText(/Push ist eingeschaltet/)).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  const stored = await (await page.request.get("/api/admin/settings")).text();
+  expect(stored).not.toContain("PRIVATE KEY");
+
+  await page.goto("/konto");
+  await expect(page.getByRole("heading", { name: "Push auf deinen Geräten" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Push" })).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expectNoA11yViolations(page);
+
+  // Wieder aus, damit die übrigen Tests den gewohnten Stand vorfinden.
+  await page.goto("/verwaltung/mail-teams");
+  await page.getByRole("button", { name: "Push ausschalten" }).click();
+  await expect(page.getByText(/Push ist ausgeschaltet/)).toBeVisible();
+});
+
 test("Verwaltung ist ein eigener Bereich mit Unterseiten", async ({ page }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
   await page.goto("/");
