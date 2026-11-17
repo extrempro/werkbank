@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.50.0] – 2026-11-17
+
+DNS-Abgleich mit Filtern je Stand und aufgeräumtem Layout.
+
+### IT-Monitoring
+
+- DNS-Abgleich: Die Kacheln oben (Geprüft, In Ordnung, Abweichend, Fehlt öffentlich, Fehler bei der Abfrage, Neu) filtern per Klick die Einträge
+- Filter über der Liste: Probleme, Abweichend, Fehlt öffentlich, Fehler, In Ordnung, Neu, Alle, jeweils mit Anzahl; auch über die Adresse (`?ansicht=abweichend` usw.)
+- Layout: Suchfeld wie im Rest der Werkbank, je Zone eine Überschrift mit Anzahl statt einer Tabellenüberschrift in der Mitte, Werte ohne Aufzählungspunkte, abweichende Werte markiert, Spalten oben ausgerichtet
+
+### Doku
+
+- Spec (Seitenübersicht), Handbuch (DNS-Abgleich)
+
 ## [0.49.0] – 2026-11-17
 
 Dienststatus übersichtlicher; Zertifikate ohne Handlungsbedarf gleich als Waben.

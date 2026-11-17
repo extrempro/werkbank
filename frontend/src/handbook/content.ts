@@ -1151,7 +1151,7 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "list",
             items: [
-              "Die Ansicht „Probleme“ zeigt abweichende, fehlende und fehlerhafte Einträge, „Neu seit dem letzten Lauf“ nur die, die beim letzten Lauf dazukamen, „Alle“ alles. Das Suchfeld filtert nach Name, Zone, Typ und Wert.",
+              "Die Filter über der Liste: „Probleme“ zeigt abweichende, fehlende und fehlerhafte Einträge, „Abweichend“, „Fehlt öffentlich“, „Fehler“ und „In Ordnung“ je einen Stand, „Neu“ nur die, die beim letzten Lauf dazukamen, „Alle“ alles. Ein Klick auf eine Kachel oben filtert genauso. Das Suchfeld filtert nach Name, Zone, Typ und Wert.",
               "Abweichende Werte sind in den Spalten NetBox und Öffentlich markiert. „In NetBox öffnen“ führt zum Eintrag in NetBox.",
               "Das Diagramm zeigt für die letzten 90 Tage je Tag den letzten Lauf.",
               "Nicht geprüft werden Reverse-Zonen privater Adressen, nicht aktive Zonen und extern verwaltete Subdomains (in NetBox als NS-Delegation erfasst; nur deren NS-Einträge werden geprüft).",

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { dailyHistory, filterRows, groupByZone, viewFromSearch, type DnsRow } from "./api";
+import {
+  dailyHistory,
+  filterRows,
+  groupByZone,
+  viewCounts,
+  viewFromSearch,
+  type DnsRow,
+} from "./api";
 
 function row(fqdn: string, status: DnsRow["status"], extra: Partial<DnsRow> = {}): DnsRow {
   return {
@@ -34,6 +41,12 @@ describe("DNS-Abgleich", () => {
       "alt.example.org",
     ]);
     expect(filterRows(rows, "neu", "").map((r) => r.fqdn)).toEqual(["mail.example.com"]);
+    expect(filterRows(rows, "ok", "").every((r) => r.status === "ok")).toBe(true);
+    const counts = viewCounts(rows);
+    expect(counts.alle).toBe(rows.length);
+    expect(counts.ok + counts.abweichend + counts.fehlt + counts.fehler).toBeLessThanOrEqual(
+      rows.length,
+    );
     expect(filterRows(rows, "alle", "example.org").length).toBe(2);
     expect(filterRows(rows, "alle", "192.0.2.1 www").map((r) => r.fqdn)).toEqual([
       "www.example.com",
@@ -64,6 +77,7 @@ describe("DNS-Abgleich", () => {
     expect(viewFromSearch("?ansicht=neu")).toBe("neu");
     expect(viewFromSearch("?ansicht=alle")).toBe("alle");
     expect(viewFromSearch("?ansicht=quatsch")).toBe("probleme");
+    expect(viewFromSearch("?ansicht=abweichend")).toBe("abweichend");
     expect(viewFromSearch("")).toBe("probleme");
   });
 });

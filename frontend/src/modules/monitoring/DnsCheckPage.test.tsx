@@ -82,17 +82,49 @@ describe("DnsCheckPage", () => {
     expect(screen.getByText("kunde.example.com")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Jetzt prüfen" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Alle" }));
+    fireEvent.click(screen.getByRole("button", { name: "Alle (2)" }));
     expect(screen.getByText("www.example.com")).toBeVisible();
+  });
+
+  it("filtert über die Kacheln und die Filter nach Status", async () => {
+    stubFetch(overview);
+    render(<DnsCheckPage isAdmin={false} />);
+    const ok = await screen.findByRole("button", { name: /^In Ordnung 1$/ });
+    fireEvent.click(ok);
+    expect(ok).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "In Ordnung (1)" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("www.example.com")).toBeVisible();
+    expect(screen.queryByText("mail.example.com")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Abweichend (1)" }));
+    expect(screen.getByText("mail.example.com")).toBeVisible();
+    expect(screen.queryByText("www.example.com")).toBeNull();
+    expect(screen.getByRole("button", { name: /^Abweichend 1$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Fehler (0)" }));
+    expect(screen.getByText("Keine Einträge für diese Auswahl.")).toBeVisible();
+    // Zone als Überschrift über ihrer Tabelle
+    fireEvent.click(screen.getByRole("button", { name: /^Geprüft 2/ }));
+    expect(screen.getByRole("heading", { level: 3, name: "example.com 2 Einträge" })).toBeVisible();
   });
 
   it("öffnet aus der Benachrichtigung die neuen Probleme und lässt Admins vorziehen", async () => {
     window.history.replaceState(null, "", "/monitoring/dns?ansicht=neu");
     stubFetch(overview);
     render(<DnsCheckPage isAdmin />);
-    expect(
-      await screen.findByRole("button", { name: "Neu seit dem letzten Lauf" }),
-    ).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByRole("button", { name: "Neu (1)" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: /^Neu seit dem letzten Lauf 1$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(screen.getByRole("button", { name: "Jetzt prüfen" })).toBeVisible();
   });
 

@@ -69,7 +69,10 @@ export const STATUS_LABELS: Record<DnsStatus, string> = {
   fehler: "Fehler",
 };
 
-export type DnsView = "probleme" | "neu" | "alle";
+/** Ansicht der Einträge: Gruppen oder ein einzelner Status. */
+export type DnsView = "probleme" | "neu" | "alle" | "ok" | "abweichend" | "fehlt" | "fehler";
+
+const STATUS_VIEWS: readonly DnsView[] = ["ok", "abweichend", "fehlt", "fehler"];
 
 /** Zeilen für die gewählte Ansicht und den Suchtext (Name, Zone, Typ, Werte). */
 export function filterRows(rows: DnsRow[], view: DnsView, query: string): DnsRow[] {
@@ -79,6 +82,9 @@ export function filterRows(rows: DnsRow[], view: DnsView, query: string): DnsRow
       return false;
     }
     if (view === "neu" && !row.new) {
+      return false;
+    }
+    if (STATUS_VIEWS.includes(view) && row.status !== view) {
       return false;
     }
     const text = [row.fqdn, row.zone, row.type, ...row.netbox, ...row.public]
@@ -115,7 +121,8 @@ export function dailyHistory(
 /** Ansicht aus der Adresse (…?ansicht=neu); sonst Probleme. */
 export function viewFromSearch(search: string): DnsView {
   const value = new URLSearchParams(search).get("ansicht");
-  return value === "neu" || value === "alle" ? value : "probleme";
+  const views: readonly string[] = ["neu", "alle", ...STATUS_VIEWS];
+  return value && views.includes(value) ? (value as DnsView) : "probleme";
 }
 
 // --- Verwaltung ---
@@ -161,4 +168,18 @@ export function saveNetboxSettings(update: NetboxUpdate): Promise<NetboxSettings
 
 export function testNetbox(): Promise<NetboxTest> {
   return postJson("/api/admin/settings/netbox/test");
+}
+
+/** Anzahl der Zeilen je Ansicht, für die Filter. */
+export function viewCounts(rows: DnsRow[]): Record<DnsView, number> {
+  const count = (test: (row: DnsRow) => boolean) => rows.filter(test).length;
+  return {
+    probleme: count((row) => PROBLEM_STATUSES.includes(row.status)),
+    neu: count((row) => row.new),
+    alle: rows.length,
+    ok: count((row) => row.status === "ok"),
+    abweichend: count((row) => row.status === "abweichend"),
+    fehlt: count((row) => row.status === "fehlt"),
+    fehler: count((row) => row.status === "fehler"),
+  };
 }
