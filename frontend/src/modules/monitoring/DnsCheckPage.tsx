@@ -331,7 +331,7 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
           {groupByZone(shown).map(([zone, rows]) => (
             <div key={zone} className="dns-zone">
               <h3 className="dns-zone-title">
-                <code>{zone}</code>
+                <code>{zone}</code>{" "}
                 <span className="small">
                   {numbers.format(rows.length)} {rows.length === 1 ? "Eintrag" : "Einträge"}
                 </span>
