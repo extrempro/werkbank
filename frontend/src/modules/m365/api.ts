@@ -459,6 +459,42 @@ const AREA_LABELS: Record<string, string> = {
   appsetuppolicy: "App-Einrichtung",
   updatemanagementpolicy: "Updates",
   upgradeconfiguration: "Upgrade",
+  // Intune: Compliance
+  devicecompliancepolicywindows10: "Compliance: Windows",
+  devicecompliancepolicyios: "Compliance: iOS/iPadOS",
+  devicecompliancepolicymacos: "Compliance: macOS",
+  devicecompliancepolicyandroid: "Compliance: Android (Geräteadministrator)",
+  devicecompliancepolicyandroiddeviceowner:
+    "Compliance: Android Enterprise (vollständig verwaltet)",
+  devicecompliancepolicyandroidworkprofile: "Compliance: Android Enterprise (Arbeitsprofil)",
+  // Intune: Konfigurationsprofile
+  deviceconfigurationpolicywindows10: "Konfiguration: Windows (Geräteeinschränkungen)",
+  deviceconfigurationpolicyios: "Konfiguration: iOS/iPadOS",
+  deviceconfigurationpolicymacos: "Konfiguration: macOS",
+  deviceconfigurationpolicyandroidworkprofile: "Konfiguration: Android (Arbeitsprofil)",
+  deviceconfigurationpolicyandroiddeviceowner: "Konfiguration: Android (vollständig verwaltet)",
+  deviceconfigurationendpointprotectionpolicywindows10: "Konfiguration: Endpunktschutz (Windows)",
+  deviceconfigurationidentityprotectionpolicywindows10: "Konfiguration: Identitätsschutz (Windows)",
+  settingcatalogcustompolicywindows10: "Einstellungskatalog (Windows)",
+  windowsupdateforbusinessringupdateprofilewindows10: "Windows Update: Updateringe",
+  windowsupdateforbusinessfeatureupdateprofilewindows10: "Windows Update: Funktionsupdates",
+  // Intune: Endpunktsicherheit
+  antiviruspolicywindows10settingcatalog: "Endpunktsicherheit: Antivirus",
+  accountprotectionpolicy: "Endpunktsicherheit: Kontoschutz",
+  endpointdetectionandresponsepolicywindows10: "Endpunktsicherheit: EDR",
+  settingcatalogasrrulespolicywindows10:
+    "Endpunktsicherheit: Regeln zur Verringerung der Angriffsfläche",
+  exploitprotectionpolicywindows10settingcatalog: "Endpunktsicherheit: Exploit-Schutz",
+  // Intune: Apps
+  appprotectionpolicyios: "App-Schutz: iOS/iPadOS",
+  appprotectionpolicyandroid: "App-Schutz: Android",
+  appconfigurationpolicy: "App-Konfiguration",
+  // Intune: Registrierung
+  deviceenrollmentplatformrestriction: "Registrierung: Plattformbeschränkungen",
+  deviceenrollmentlimitrestriction: "Registrierung: Gerätelimit",
+  deviceenrollmentstatuspagewindows10: "Registrierung: Statusseite (Windows)",
+  windowsautopilotdeploymentprofileazureadjoined: "Autopilot: Entra-Join",
+  windowsautopilotdeploymentprofileazureadhybridjoined: "Autopilot: Hybrid-Join",
   // SharePoint und OneDrive (eigener Abruf über Microsoft Graph)
   tenantsettings: "Mandanteneinstellungen",
 };

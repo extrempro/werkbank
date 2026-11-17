@@ -306,7 +306,7 @@ Die Rolle „Globaler Leser“ ist weitreichend (Lesen im ganzen Tenant). Wer si
 
 Hinweise:
 
-- **Schrittweise vorgehen:** erst wenige Typen eintragen, einen Abruf abwarten und in der Übersicht prüfen, wie viele Objekte gelesen wurden. Jedes Objekt zählt gegen das Monatskontingent (4.6).
+- **Schrittweise vorgehen:** erst wenige Typen eintragen, einen Abruf abwarten und in der Übersicht prüfen, wie viele Objekte gelesen wurden. Jedes Objekt zählt gegen das Monatskontingent (4.7).
 - **Nicht eintragen:** Typen je Postfach oder Gruppe (z. B. `mailboxsettings`, `mailboxpermission`, `sharedmailbox`, `distributiongroup`). Das sind keine Tenant-Einstellungen, sie enthalten Personendaten und verbrauchen das Kontingent.
 - **„Geändert von“** bleibt bei Exchange leer: Wer etwas geändert hat, steht nicht im Entra-Audit-Log.
 - **Personenbezug:** Regeln und Richtlinien können Adressen und Namen enthalten (z. B. Bedingungen einer Transportregel). Sie stehen dann als Wert in der Werkbank (`docs/datenschutz.md`).
@@ -349,7 +349,42 @@ UTCM kann SharePoint nicht lesen. Die Werkbank liest deshalb die **Mandanteneins
 
 Die Einstellungen erscheinen unter „SharePoint › Mandanteneinstellungen“ als ein Objekt „SharePoint und OneDrive“. Sie zählen nicht gegen das Kontingent von UTCM. Schlägt das Lesen fehl (z. B. ohne Berechtigung), gilt der Abruf als teilweise erfolgreich; der bisherige Stand bleibt erhalten. Microsoft liefert über Graph nur einen Teil der Einstellungen aus dem SharePoint Admin Center. „Geändert von“ bleibt leer.
 
-### 4.6 Grenzen von UTCM
+### 4.6 Intune dazunehmen (freiwillig)
+
+UTCM liest auch Richtlinien aus Intune ([Liste der Intune-Typen](https://learn.microsoft.com/graph/utcm-intune-resources)). Die Werkbank ist für Richtlinien und Profile gedacht, nicht für einzelne Geräte, Personen oder Apps im Bestand.
+
+**1. Rechte für den Dienstprinzipal von UTCM.** Laut Microsoft braucht er je nach Typ diese Graph-Anwendungsberechtigungen, alle nur lesend: `DeviceManagementConfiguration.Read.All` (Compliance, Konfiguration, Endpunktsicherheit), `DeviceManagementApps.Read.All` (App-Schutz, App-Konfiguration), `DeviceManagementServiceConfig.Read.All` (Registrierung, Autopilot) und `Group.Read.All` (Zuweisungen an Gruppen).
+
+```powershell
+$tcm = Get-MgServicePrincipal -Filter "AppId eq '03b07b79-c5bc-4b5e-9bfa-13acf4a99998'"
+$graph = Get-MgServicePrincipal -Filter "AppId eq '00000003-0000-0000-c000-000000000000'"
+foreach ($name in 'DeviceManagementConfiguration.Read.All', 'DeviceManagementApps.Read.All',
+                  'DeviceManagementServiceConfig.Read.All', 'Group.Read.All') {
+    $role = $graph.AppRoles | Where-Object { $_.Value -eq $name }
+    New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $tcm.Id -BodyParameter @{
+        AppRoleId = $role.Id; ResourceId = $graph.Id; PrincipalId = $tcm.Id
+    }
+}
+```
+
+**2. Typen in `COLLECTOR_RESOURCES` ergänzen** (kommagetrennt, alle mit dem Präfix `microsoft.intune.`), danach die Werkbank neu starten:
+
+| Gruppe | Ressourcentypen |
+|---|---|
+| Compliance | `devicecompliancepolicywindows10`, `devicecompliancepolicyios`, `devicecompliancepolicymacos`, `devicecompliancepolicyandroid`, `devicecompliancepolicyandroiddeviceowner`, `devicecompliancepolicyandroidworkprofile` |
+| Konfigurationsprofile | `deviceconfigurationpolicywindows10`, `deviceconfigurationpolicyios`, `deviceconfigurationpolicymacos`, `deviceconfigurationpolicyandroidworkprofile`, `deviceconfigurationpolicyandroiddeviceowner`, `deviceconfigurationendpointprotectionpolicywindows10`, `deviceconfigurationidentityprotectionpolicywindows10`, `settingcatalogcustompolicywindows10`, `windowsupdateforbusinessringupdateprofilewindows10`, `windowsupdateforbusinessfeatureupdateprofilewindows10` |
+| Endpunktsicherheit | `antiviruspolicywindows10settingcatalog`, `accountprotectionpolicy`, `endpointdetectionandresponsepolicywindows10`, `settingcatalogasrrulespolicywindows10`, `exploitprotectionpolicywindows10settingcatalog` |
+| App-Schutz und App-Konfiguration | `appprotectionpolicyios`, `appprotectionpolicyandroid`, `appconfigurationpolicy` |
+| Registrierung | `deviceenrollmentplatformrestriction`, `deviceenrollmentlimitrestriction`, `deviceenrollmentstatuspagewindows10`, `windowsautopilotdeploymentprofileazureadjoined`, `windowsautopilotdeploymentprofileazureadhybridjoined` |
+
+Hinweise:
+
+- **Kontingent:** Intune hat oft viele Profile; jedes zählt als Objekt (4.7). Erst eine Gruppe eintragen und nach einem Abruf in der Übersicht nachsehen, wie viele Objekte gelesen wurden.
+- **BitLocker und Firewall** stehen bei Windows im Profil „Endpunktschutz“ (`deviceconfigurationendpointprotectionpolicywindows10`); eigene Typen dafür nennt Microsoft für UTCM nicht.
+- **Nicht eintragen:** Gerätebereinigung, Rollen und Rollenzuweisungen, Wi-Fi-, VPN- und Zertifikatsprofile sowie Kiosk-Profile. Sie enthalten Netzwerk- und Zertifikatsangaben oder gehören nicht zu den Richtlinien, die die Werkbank überwacht.
+- Zuweisungen nennen Gruppen über ihre ID. Wie bei Exchange gilt: der erste Abruf ist der Ausgangsstand, „Geändert von“ bleibt leer.
+
+### 4.7 Grenzen von UTCM
 
 - höchstens **20.000 gelesene Objekte pro Monat** (jede Richtlinie zählt als ein Objekt); deshalb ruft die Werkbank standardmäßig einmal täglich ab
 - Snapshots werden von Microsoft höchstens 7 Tage aufbewahrt; den Verlauf hält die Werkbank selbst
@@ -386,5 +421,5 @@ Dateien im Secrets-Ordner (Schritt für Schritt: [`deploy/README.md`](../deploy/
 - [ ] CA-Richtlinie `CA-Werkbank-MFA` im Modus „Nur Bericht“ (2)
 - [ ] App-Registrierung „Werkbank Collector“ mit Zertifikat, Berechtigungen und Administratorzustimmung (4.1)
 - [ ] Dienstprinzipale von UTCM angelegt, Leserechte vergeben (4.2)
-- [ ] Freiwillig: Exchange (4.3), Teams (4.4), SharePoint und OneDrive (4.5)
+- [ ] Freiwillig: Exchange (4.3), Teams (4.4), SharePoint und OneDrive (4.5), Intune (4.6)
 - [ ] Werte in den Umgebungsvariablen und Dateien im Secrets-Ordner auf dem Server (5)

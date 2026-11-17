@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.53.0",
+    date: "2026-11-17",
+    summary: "Microsoft 365: Intune-Richtlinien lassen sich jetzt mit überwachen.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Intune: Compliance-Richtlinien, Konfigurationsprofile, Endpunktsicherheit, App-Schutz und Registrierung erscheinen mit verständlichen Namen unter Einstellungen › Intune, sobald die Verwaltung sie im Abruf einträgt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.52.0",
     date: "2026-11-17",
     summary:
