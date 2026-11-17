@@ -23,13 +23,7 @@ const SECURITY_OPTIONS = [
 
 /** Teile, die eine Seite der Verwaltung zeigt. */
 export type SettingsPart =
-  | "smtp"
-  | "aufbewahrung"
-  | "teams"
-  | "push"
-  | "ablauf"
-  | "netbox"
-  | "internet";
+  "smtp" | "aufbewahrung" | "teams" | "push" | "ablauf" | "netbox" | "internet";
 
 const ALL_PARTS: SettingsPart[] = [
   "smtp",
