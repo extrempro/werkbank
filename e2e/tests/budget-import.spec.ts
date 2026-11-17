@@ -4,6 +4,7 @@ import { expectNoA11yViolations, loginAs } from "./helpers";
 test("Budgetverwalter importiert eine Excel-Datei Zeile für Zeile", async ({
   page,
 }, testInfo) => {
+  test.skip(testInfo.project.name === "handy", "Versuch: Einfluss auf budget.spec");
   // Eigene Person je Lauf: Entwürfe gehören der Person, die sie hochlädt.
   await loginAs(
     page,
