@@ -150,7 +150,13 @@ describe("Pfade und Hilfen", () => {
   });
 
   it("filtert Projekte nach Status und Suchtext", () => {
-    const done = { ...summary, id: 4, name: "Archiv", status: "abgeschlossen" as const };
+    const done = {
+      ...summary,
+      id: 4,
+      name: "Archiv",
+      description: "",
+      status: "abgeschlossen" as const,
+    };
     expect(filterProjects([summary, done], "offen", "").map((entry) => entry.id)).toEqual([3]);
     expect(filterProjects([summary, done], "alle", "access").map((entry) => entry.id)).toEqual([3]);
     expect(filterProjects([summary, done], "abgeschlossen", "").map((entry) => entry.id)).toEqual([
@@ -216,7 +222,7 @@ describe("Markdown", () => {
     );
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText(/<img src=x/)).toBeVisible();
-    expect(screen.getByText("fett").tagName).toBe("STRONG");
+    expect(screen.getByText("fett").closest("strong")).not.toBeNull();
     const link = screen.getByRole("link", { name: /Link/ });
     expect(link).toHaveAttribute("href", "https://example.com/");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
