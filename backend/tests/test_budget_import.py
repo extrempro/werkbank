@@ -323,7 +323,8 @@ def test_import_flow(db: Session) -> None:
     assert other.get(f"{BASE}/{detail['id']}").status_code == 404
     assert other.get(BASE).json() == []
     take = f"{BASE}/{detail['id']}/rows/{rows[0]['id']}/take"
-    assert manager.post(take, json=take_body(rows[0]), headers=HEADERS).status_code == 409
+    draft_take = take_body(rows[0], item_id=1)
+    assert manager.post(take, json=draft_take, headers=HEADERS).status_code == 409
 
     started = manager.post(
         f"{BASE}/{detail['id']}/start",
