@@ -4955,6 +4955,10 @@ p.badges {
   display: none;
 }
 
+.health-cube-legend {
+  margin: 0;
+}
+
 .health-cube-title {
   font-size: 0.875rem;
   font-weight: 600;
@@ -4988,27 +4992,7 @@ p.badges {
   white-space: pre-line;
 }
 
-/* Dienststatus: Kalender der letzten Tage, Ausfalldauer, Störungen pro Monat */
-.health-cal {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.health-cal-row {
-  display: grid;
-  grid-template-columns: minmax(8rem, 11rem) auto 1fr;
-  align-items: start;
-  gap: 4px 16px;
-}
-
-.health-cal-name {
-  font-weight: 600;
-}
-
+/* Dienststatus: Kalender im Würfel der Kachel, Ausfalldauer, Störungen pro Monat */
 .health-cal-body {
   display: flex;
   flex-direction: column;
@@ -5055,15 +5039,6 @@ p.badges {
   background: var(--farbe-bad-text);
 }
 
-.health-cal-sum {
-  color: var(--farbe-text-leise);
-  font-size: 0.875rem;
-}
-
-.health-cal-legend {
-  margin: 12px 0 0;
-}
-
 .health-cal-key {
   display: inline-block;
   width: 14px;
@@ -5075,11 +5050,6 @@ p.badges {
 
 .health-cal-key:first-child {
   margin-left: 0;
-}
-
-.health-window-title {
-  margin: 20px 0 8px;
-  font-size: 1rem;
 }
 
 .health-window {
@@ -5113,12 +5083,6 @@ p.badges {
 .health-reasons a {
   color: inherit;
   font-weight: 600;
-}
-
-@media (max-width: 640px) {
-  .health-cal-row {
-    grid-template-columns: 1fr;
-  }
 }
 
 .hbars {

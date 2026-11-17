@@ -500,14 +500,14 @@ describe("Dienststatus", () => {
       "https://admin.microsoft.com/Adminportal/Home#/servicehealth/:/alerts/EX1001",
     );
 
-    // Zeitleiste, Ausfalldauer und Monate
-    expect(screen.getByText("1 Tag Störung, 1 Tag Hinweis")).toBeInTheDocument();
-    expect(screen.getByText("ohne Meldung")).toBeInTheDocument();
-    expect(screen.getByText(/14\.11\. Hinweis; 16\.11\. Störung/)).toBeInTheDocument();
-    // Liste der Meldungen im Zeitraum
+    // Meldungen der letzten Tage, ohne Kalender (den zeigt der Würfel in der Kachel)
+    expect(screen.queryByText("ohne Meldung")).toBeNull();
+    expect(document.querySelector(".health-cal-row")).toBeNull();
     const issueList = within(
-      screen.getByRole("heading", { name: "Meldungen in diesem Zeitraum" })
-        .nextElementSibling as HTMLElement,
+      screen
+        .getByRole("heading", { name: "Meldungen der letzten 3 Tage" })
+        .closest("section")!
+        .querySelector(".health-window") as HTMLElement,
     );
     expect(issueList.getByText("Exchange Online")).toBeInTheDocument();
     expect(issueList.getByText(/läuft/)).toBeInTheDocument();
