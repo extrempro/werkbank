@@ -329,7 +329,7 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 | Quelle | Inhalt |
 |---|---|
 | UTCM (Microsoft Graph v1.0, Snapshots) | breite Abdeckung über Entra, Exchange, Intune, Teams, Security & Compliance |
-| Microsoft Graph (v1.0/beta) | Ergänzung für nicht abgedeckte Bereiche, Entra-Audit-Logs („wer hat geändert“) |
+| Microsoft Graph (v1.0/beta) | Ergänzung für nicht abgedeckte Bereiche (SharePoint- und OneDrive-Mandanteneinstellungen), Entra-Audit-Logs („wer hat geändert“) |
 | Exchange Online PowerShell | Org-, Transport-, Anti-Spam-Konfiguration u. a. |
 | Teams PowerShell | Richtlinien, die nicht über Graph verfügbar sind |
 
@@ -339,6 +339,8 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 - **Grenzen von UTCM:** höchstens 20.000 gelesene Objekte pro Tenant und Monat, höchstens 12 sichtbare Snapshot-Aufträge. Die Werkbank zählt die gelesenen Objekte je Abruf, warnt ab 80 % und ruft bei ausgeschöpftem Kontingent nicht mehr ab. Eigene, abgeschlossene Snapshot-Aufträge entfernt sie wieder.
 - **Berechtigungen:** Die Collector-App braucht `ConfigurationMonitoring.ReadWrite.All` (Schreibrecht nur auf die Snapshot-Aufträge von UTCM, nicht auf Einstellungen des Tenants) und `AuditLog.Read.All` für „Geändert von“. Die eigentlichen Leserechte erhält der Dienstprinzipal „Tenant Configuration Management“ von Microsoft (für Conditional Access neben `Policy.Read.All` auch Leserechte auf Benutzer, Gruppen, Rollen und Anwendungen, weil UTCM Namen statt Kennungen ausgibt). Einrichtung: [`docs/entra-setup.md`](entra-setup.md), Abschnitt 4.
 - **Erster Umfang:** Entra (Conditional-Access-Richtlinien, benannte Standorte, Autorisierungsrichtlinie). Weitere Typen über `COLLECTOR_RESOURCES`.
+- **Microsoft Teams:** über UTCM wie Exchange (`docs/entra-setup.md` 4.4). Vorgesehen sind die organisationsweiten Richtlinien (externer Zugriff, Gäste, Client, Besprechungen, Chat, Kanäle, Veranstaltungen, Dateien, Anrufe, Apps, Updates), nicht Typen je Person oder Team und nicht die Telefonie im Detail.
+- **SharePoint und OneDrive:** UTCM kann SharePoint nicht lesen. Mit `COLLECTOR_SHAREPOINT_ENABLED` liest der Abruf zusätzlich `GET /admin/sharepoint/settings` über Microsoft Graph (Berechtigung `SharePointTenantSettings.Read.All` der Collector-App, `docs/entra-setup.md` 4.5). Quelle `graph:sharepoint`, ein Objekt „SharePoint und OneDrive“ im Bereich `tenantsettings`; zählt nicht gegen das Kontingent von UTCM. Schlägt das Lesen fehl, ist der Abruf teilweise erfolgreich und nichts gilt als entfernt.
 - **Exchange Online:** über UTCM möglich, sobald der Dienstprinzipal von UTCM die Leserechte hat und die Typen in `COLLECTOR_RESOURCES` stehen (`docs/entra-setup.md` 4.3). Vorgesehen sind die organisationsweiten Einstellungen (Organisation, Transport, Schutz, Zugriff), nicht Objekte je Postfach oder Gruppe. Exchange-Objekte werden über ihre Kennung (`Identity`) adressiert. „Geändert von“ bleibt bei Exchange leer. Ein PowerShell-Container ist dafür nicht nötig.
 
 ### 7.2 Normalisierung

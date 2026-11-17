@@ -220,6 +220,7 @@ Der Collector liest die Einstellungen des Tenants über **Unified Tenant Configu
 | `SecurityEvents.Read.All` | Freiwillig: Empfehlungen aus Microsoft Secure Score lesen (Seite „Empfehlungen“). Erst danach in der `.env` `SECURE_SCORE_ENABLED=true` setzen; ohne die Berechtigung schlägt der Abruf fehl. |
 | `Organization.Read.All` und `User.Read.All` | Freiwillig: Lizenzen und Benutzerzahlen lesen (Seiten „Lizenzen“ und „Benutzer“). Gelesen werden gekaufte und zugewiesene Lizenzen, die Abos mit ihrem Stichtag und die **Zahl** der Konten; Namen von Personen ruft die Werkbank nicht ab. `User.Read.All` erlaubt bei Microsoft grundsätzlich das Lesen aller Benutzerprofile, eine engere Berechtigung für die reine Anzahl gibt es nicht. Erst danach in der `.env` `TENANT_MONITOR_ENABLED=true` setzen; ohne die Berechtigungen schlägt der Abruf fehl. |
 | `Application.Read.All` | Freiwillig: Zertifikate und Secrets der Anwendungen lesen (Seite „Zertifikate und Secrets“). Gelesen werden Bezeichnung und Ablaufdatum von App-Registrierungen und die Signaturzertifikate von Unternehmensanwendungen mit SAML. Den geheimen Wert eines Secrets liefert Microsoft nicht aus, die Werkbank speichert ihn nie. Erst danach in der `.env` `TENANT_CREDENTIALS_ENABLED=true` setzen; ohne die Berechtigung schlägt der Abruf fehl. |
+| `SharePointTenantSettings.Read.All` | Freiwillig: Mandanteneinstellungen von SharePoint und OneDrive lesen (Freigabe nach außen, Gastzugriff, Synchronisierung u. a., siehe 4.5). Nur lesen; die Werkbank ändert nichts. Erst danach in der `.env` `COLLECTOR_SHAREPOINT_ENABLED=true` setzen; ohne die Berechtigung bleibt der Teil SharePoint im Abruf unvollständig. |
 | `ServiceHealth.Read.All` | Freiwillig: Dienststatus von Exchange Online, Microsoft Teams, SharePoint Online und Microsoft Entra mit Störungen und Hinweisen lesen (Seite „Dienststatus“). Die Meldungen enthalten keine Personendaten. Erst danach in der `.env` `TENANT_HEALTH_ENABLED=true` setzen; ohne die Berechtigung schlägt der Abruf fehl. Abstand: `TENANT_HEALTH_INTERVAL_MINUTES` (Standard 15, mindestens 5). |
 
 ### 4.2 Dienstprinzipal von UTCM einrichten
@@ -305,13 +306,50 @@ Die Rolle „Globaler Leser“ ist weitreichend (Lesen im ganzen Tenant). Wer si
 
 Hinweise:
 
-- **Schrittweise vorgehen:** erst wenige Typen eintragen, einen Abruf abwarten und in der Übersicht prüfen, wie viele Objekte gelesen wurden. Jedes Objekt zählt gegen das Monatskontingent (4.4).
+- **Schrittweise vorgehen:** erst wenige Typen eintragen, einen Abruf abwarten und in der Übersicht prüfen, wie viele Objekte gelesen wurden. Jedes Objekt zählt gegen das Monatskontingent (4.6).
 - **Nicht eintragen:** Typen je Postfach oder Gruppe (z. B. `mailboxsettings`, `mailboxpermission`, `sharedmailbox`, `distributiongroup`). Das sind keine Tenant-Einstellungen, sie enthalten Personendaten und verbrauchen das Kontingent.
 - **„Geändert von“** bleibt bei Exchange leer: Wer etwas geändert hat, steht nicht im Entra-Audit-Log.
 - **Personenbezug:** Regeln und Richtlinien können Adressen und Namen enthalten (z. B. Bedingungen einer Transportregel). Sie stehen dann als Wert in der Werkbank (`docs/datenschutz.md`).
 - Der erste erfolgreiche Abruf eines neuen Typs ist dessen Ausgangsstand: Die Einstellungen erscheinen, ohne dass Änderungen gemeldet werden. Änderungen erkennt die Werkbank ab dem zweiten Abruf.
 
-### 4.4 Grenzen von UTCM
+### 4.4 Microsoft Teams dazunehmen (freiwillig)
+
+UTCM liest auch die Einstellungen von Microsoft Teams ([Liste der Teams-Typen](https://learn.microsoft.com/en-us/graph/utcm-teams-resources)). Die Werkbank ist für die **organisationsweiten Richtlinien** gedacht, nicht für einzelne Teams, Personen, Telefonnummern oder Warteschleifen.
+
+**1. Rechte für den Dienstprinzipal von UTCM.** Laut Microsoft genügen zum Lesen die Entra-Rolle „Globaler Leser“ und die Graph-Berechtigung `Organization.Read.All`. Wer Exchange nach 4.3 eingerichtet hat, hat „Globaler Leser“ schon vergeben.
+
+```powershell
+$tcm = Get-MgServicePrincipal -Filter "AppId eq '03b07b79-c5bc-4b5e-9bfa-13acf4a99998'"
+$graph = Get-MgServicePrincipal -Filter "AppId eq '00000003-0000-0000-c000-000000000000'"
+$role = $graph.AppRoles | Where-Object { $_.Value -eq 'Organization.Read.All' }
+New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $tcm.Id -BodyParameter @{
+    AppRoleId = $role.Id; ResourceId = $graph.Id; PrincipalId = $tcm.Id
+}
+```
+
+**2. Typen in `COLLECTOR_RESOURCES` ergänzen** (kommagetrennt), danach die Werkbank neu starten:
+
+| Gruppe | Ressourcentypen |
+|---|---|
+| Zugriff und Gäste | `microsoft.teams.federationconfiguration`, `microsoft.teams.guestmeetingconfiguration`, `microsoft.teams.guestmessagingconfiguration`, `microsoft.teams.guestcallingconfiguration`, `microsoft.teams.clientconfiguration` |
+| Besprechungen, Chat und Anrufe | `microsoft.teams.meetingpolicy`, `microsoft.teams.meetingconfiguration`, `microsoft.teams.messagingpolicy`, `microsoft.teams.channelspolicy`, `microsoft.teams.eventspolicy`, `microsoft.teams.filespolicy`, `microsoft.teams.callingpolicy` |
+| Apps und Updates | `microsoft.teams.apppermissionpolicy`, `microsoft.teams.appsetuppolicy`, `microsoft.teams.updatemanagementpolicy`, `microsoft.teams.upgradeconfiguration` |
+
+Hinweise:
+
+- **Nicht eintragen:** Typen je Person oder Team (`user`, `userpolicyassignment`, `grouppolicyassignment`, `usercallingsettings`, `onlinevoiceuser`, `onlinevoicemailusersettings`) und die Telefonie im Detail (Warteschleifen, Wählpläne, Sprachrouten, Netzwerkstandorte). Sie enthalten Personendaten oder Rufnummern und verbrauchen das Kontingent.
+- Wie bei Exchange: schrittweise eintragen, der erste Abruf ist der Ausgangsstand, „Geändert von“ bleibt leer.
+
+### 4.5 SharePoint und OneDrive dazunehmen (freiwillig)
+
+UTCM kann SharePoint nicht lesen. Die Werkbank liest deshalb die **Mandanteneinstellungen von SharePoint und OneDrive** selbst über Microsoft Graph (`GET /admin/sharepoint/settings`), im selben Abruf wie UTCM. Dazu gehören u. a. die Freigabe nach außen (`sharingCapability`), erlaubte und gesperrte Domänen, Synchronisierung, Loop und die Aufbewahrung von OneDrive gelöschter Personen.
+
+1. Der Collector-App die Anwendungsberechtigung `SharePointTenantSettings.Read.All` geben (Tabelle in 4.1) und zustimmen.
+2. In der `.env` `COLLECTOR_SHAREPOINT_ENABLED=true` setzen und die Werkbank neu starten.
+
+Die Einstellungen erscheinen unter „SharePoint › Mandanteneinstellungen“ als ein Objekt „SharePoint und OneDrive“. Sie zählen nicht gegen das Kontingent von UTCM. Schlägt das Lesen fehl (z. B. ohne Berechtigung), gilt der Abruf als teilweise erfolgreich; der bisherige Stand bleibt erhalten. Microsoft liefert über Graph nur einen Teil der Einstellungen aus dem SharePoint Admin Center. „Geändert von“ bleibt leer.
+
+### 4.6 Grenzen von UTCM
 
 - höchstens **20.000 gelesene Objekte pro Monat** (jede Richtlinie zählt als ein Objekt); deshalb ruft die Werkbank standardmäßig einmal täglich ab
 - Snapshots werden von Microsoft höchstens 7 Tage aufbewahrt; den Verlauf hält die Werkbank selbst
@@ -348,4 +386,5 @@ Dateien im Secrets-Ordner (Schritt für Schritt: [`deploy/README.md`](../deploy/
 - [ ] CA-Richtlinie `CA-Werkbank-MFA` im Modus „Nur Bericht“ (2)
 - [ ] App-Registrierung „Werkbank Collector“ mit Zertifikat, Berechtigungen und Administratorzustimmung (4.1)
 - [ ] Dienstprinzipale von UTCM angelegt, Leserechte vergeben (4.2)
+- [ ] Freiwillig: Exchange (4.3), Teams (4.4), SharePoint und OneDrive (4.5)
 - [ ] Werte in den Umgebungsvariablen und Dateien im Secrets-Ordner auf dem Server (5)
