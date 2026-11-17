@@ -80,6 +80,41 @@ export function fetchUsers(days: number): Promise<Users> {
   return getJson(`${BASE}/users?days=${days}`);
 }
 
+/** Zeiträume der Nutzungsberichte von Microsoft. */
+export const USAGE_PERIODS: { days: number; label: string }[] = [
+  { days: 7, label: "7 Tage" },
+  { days: 30, label: "30 Tage" },
+  { days: 90, label: "90 Tage" },
+  { days: 180, label: "180 Tage" },
+];
+
+export interface ServiceUsage {
+  service: string;
+  name: string;
+  active: number | null;
+  inactive: number | null;
+}
+
+export interface UsageDay {
+  day: string;
+  /** Dienst -> aktive Benutzer an diesem Tag. */
+  values: Record<string, number>;
+}
+
+export interface Usage {
+  enabled: boolean;
+  days: number;
+  fetched_at: string | null;
+  /** Stand der Berichte bei Microsoft (JJJJ-MM-TT). */
+  report_date: string | null;
+  services: ServiceUsage[];
+  history: UsageDay[];
+}
+
+export function fetchUsage(days: number): Promise<Usage> {
+  return getJson(`${BASE}/usage?days=${days}`);
+}
+
 const numberFormat = new Intl.NumberFormat("de-DE");
 
 export function formatCount(value: number): string {

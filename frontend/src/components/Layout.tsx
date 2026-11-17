@@ -36,6 +36,7 @@ import {
   toolCategoryPath,
   TOOLS_HISTORY_PATH,
   USERS_PATH,
+  USAGE_PATH,
 } from "../navigation";
 import { AccountPage } from "../pages/AccountPage";
 import { AdminPage } from "../pages/AdminPage";
@@ -77,6 +78,7 @@ import { PartnersPage } from "../modules/budget/PartnersPage";
 import { CredentialsPage } from "../modules/tenant/CredentialsPage";
 import { HealthPage } from "../modules/tenant/HealthPage";
 import { LicensesPage } from "../modules/tenant/LicensesPage";
+import { UsagePage } from "../modules/tenant/UsagePage";
 import { UsersPage } from "../modules/tenant/UsersPage";
 import { CATEGORY_LABELS, findTool, type ToolCategory } from "../tools";
 import { ToolPage, TOOLS_PATH, ToolsOverviewPage } from "../tools/ToolsPage";
@@ -322,6 +324,8 @@ export function Layout({ me }: LayoutProps) {
     page = <CredentialsPage />;
   } else if (path === HEALTH_PATH && current) {
     page = <HealthPage />;
+  } else if (path === USAGE_PATH && current) {
+    page = <UsagePage />;
   } else if (path === PROJECTS_PATH && current) {
     page = <ProjectsPage roles={me.roles} />;
   } else if (projectRoute !== null && items.some((item) => item.path === PROJECTS_PATH)) {

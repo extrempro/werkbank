@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     # Dienststatus von Microsoft 365 (braucht ServiceHealth.Read.All), Abstand in Minuten
     tenant_health_enabled: bool = False
     tenant_health_interval_minutes: int = 15
+    # Nutzung der Dienste als Summen (braucht Reports.Read.All), alle 12 Stunden
+    tenant_usage_enabled: bool = False
     # UTCM-Ressourcentypen, kommagetrennt
     collector_resources: str = (
         "microsoft.entra.conditionalaccesspolicy,"

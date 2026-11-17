@@ -39,6 +39,22 @@ def check_graph_url(url: str) -> str:
     return url
 
 
+# Nutzungsberichte (Reports.Read.All): nur Summen je Dienst, keine Personen
+USAGE_REPORTS = frozenset({"getOffice365ServicesUserCounts", "getOffice365ActiveUserCounts"})
+USAGE_PERIODS = frozenset({"D7", "D30", "D90", "D180"})
+REPORT_HOST = "reports.office.com"
+REPORT_MAX_BYTES = 2_000_000
+
+
+def check_report_url(url: str) -> str:
+    """Download-Adresse eines Berichts: nur HTTPS bei reports.office.com (oder Unterdomäne)."""
+    parts = urlsplit(url)
+    host = parts.hostname or ""
+    if parts.scheme != "https" or not (host == REPORT_HOST or host.endswith("." + REPORT_HOST)):
+        raise UtcmError("Unerwartete Download-Adresse des Berichts")
+    return url
+
+
 def graph_token_provider(settings: Settings) -> Callable[[], str]:
     """Liefert eine Funktion, die ein Zugriffstoken der Collector-App holt (MSAL cacht es)."""
     import msal
@@ -142,6 +158,26 @@ class UtcmClient:
     def download(self, location: str) -> dict[str, Any]:
         """Lädt den fertigen Snapshot von der Adresse aus dem Auftrag."""
         return self._json("GET", location)
+
+    def report_csv(self, report: str, period: str) -> str:
+        """Nutzungsbericht als CSV (nur Summen). Graph leitet auf eine vorab angemeldete
+        Download-Adresse um; die wird ohne Token und nur bei Microsoft abgerufen."""
+        if report not in USAGE_REPORTS or period not in USAGE_PERIODS:
+            raise UtcmError("Unbekannter Nutzungsbericht")
+        response = self._request("GET", f"{GRAPH_URL}/reports/{report}(period='{period}')")
+        if response.status_code in (301, 302, 303, 307, 308):
+            location = check_report_url(response.headers.get("location", ""))
+            try:
+                response = self._http.get(location)
+            except httpx.HTTPError as exc:
+                raise UtcmError(f"Bericht nicht erreichbar: {type(exc).__name__}") from exc
+            if response.status_code >= 400:
+                raise UtcmError(f"Download des Berichts antwortet mit {response.status_code}")
+        elif response.status_code != 200:
+            raise UtcmError(f"Unerwartete Antwort auf den Bericht: {response.status_code}")
+        if len(response.content) > REPORT_MAX_BYTES:
+            raise UtcmError("Bericht ist unerwartet groß")
+        return response.content.decode("utf-8-sig", errors="replace")
 
     def service_messages(self, since: datetime) -> list[dict[str, Any]]:
         """Meldungen des Nachrichtencenters, die seit einem Zeitpunkt geändert wurden."""

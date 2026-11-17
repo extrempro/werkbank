@@ -33,6 +33,7 @@ from werkbank.modules.tenant.credentials import FETCH_CREDENTIALS, fetch_credent
 from werkbank.modules.tenant.health import FETCH_HEALTH, fetch_health_job
 from werkbank.modules.tenant.inventory import FETCH_TENANT, fetch_inventory_job
 from werkbank.modules.tenant.notifications import tenant_notifications
+from werkbank.modules.tenant.usage import FETCH_USAGE, USAGE_INTERVAL, fetch_usage_job
 from werkbank.worker.jobs import JobType
 
 CLEANUP = "kern.aufraeumen"
@@ -154,4 +155,6 @@ def build_registry(settings: Settings) -> dict[str, JobType]:
                 handler=fetch_health_job,
                 interval=timedelta(minutes=max(settings.tenant_health_interval_minutes, 5)),
             )
+        if settings.tenant_usage_enabled:
+            registry[FETCH_USAGE] = JobType(handler=fetch_usage_job, interval=USAGE_INTERVAL)
     return registry

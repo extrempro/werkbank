@@ -1,3 +1,3 @@
 """Werkbank - Open-Source-Plattform für IT-Abteilungen."""
 
-__version__ = "0.55.0"
+__version__ = "0.56.0"

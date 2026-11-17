@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.56.0] – 2026-11-17
+
+Microsoft 365: Nutzung der Dienste.
+
+### Microsoft 365
+
+- **Nutzung (neue Seite unter Tenant):** aktive und inaktive Benutzer je Dienst (Exchange, OneDrive, SharePoint, Teams, Viva Engage) für 7, 30, 90 oder 180 Tage, Verlauf der aktiven Benutzer je Tag und Dienst (auch als Tabelle); Rolle `Tenant.Reader`
+- Abruf über die Collector-App alle 12 Stunden (`TENANT_USAGE_ENABLED`, Berechtigung `Reports.Read.All`): nur die Berichte mit Summen (`getOffice365ServicesUserCounts`, `getOffice365ActiveUserCounts`), nie Berichte je Person; Download von `reports.office.com` ohne Token, andere Adressen werden abgelehnt; Tageswerte bleiben drei Jahre
+- API: `GET /api/tenant/usage?days=7|30|90|180`
+- Migration 0040: Tabellen `tenant_usage_periods` und `tenant_usage_days`
+
+### Doku
+
+- Spec 4 und 7a, Seitenübersicht; Entra-Einrichtung 4.1 (`Reports.Read.All`), Inbetriebnahme (ausgehend `reports.office.com`), Datenschutz, `.env.example`, Handbuch (Nutzung, Rollen)
+
 ## [0.55.0] – 2026-11-17
 
 Microsoft 365: Snapshots vergleichen und exportieren; Rolle Werkbank.Auditor entfällt.

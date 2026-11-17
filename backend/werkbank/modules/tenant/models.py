@@ -145,3 +145,28 @@ class TenantServiceIssue(Base):
         JSONB, default=list, server_default=text("'[]'::jsonb")
     )
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TenantUsagePeriod(Base):
+    """Aktive und inaktive Benutzer eines Dienstes über einen Zeitraum (nur Summen)."""
+
+    __tablename__ = "tenant_usage_periods"
+
+    # Zeitraum in Tagen (7, 30, 90, 180)
+    days: Mapped[int] = mapped_column(Integer, primary_key=True)
+    service: Mapped[str] = mapped_column(String(32), primary_key=True)
+    active: Mapped[int] = mapped_column(Integer, default=0)
+    inactive: Mapped[int] = mapped_column(Integer, default=0)
+    # Stand des Berichts bei Microsoft (meist zwei Tage zurück)
+    report_date: Mapped[date | None] = mapped_column(Date)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TenantUsageDay(Base):
+    """Aktive Benutzer eines Dienstes an einem Tag (nur Summen)."""
+
+    __tablename__ = "tenant_usage_days"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    service: Mapped[str] = mapped_column(String(32), primary_key=True)
+    active: Mapped[int] = mapped_column(Integer, default=0)

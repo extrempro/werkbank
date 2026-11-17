@@ -35,6 +35,7 @@ from werkbank.modules.projects.api import router as projects_router
 from werkbank.modules.projects.search import projects_search
 from werkbank.modules.tenant.api import router as tenant_router
 from werkbank.modules.tenant.tasks import tenant_tasks
+from werkbank.modules.tenant.usage_api import router as tenant_usage_router
 from werkbank.modules.tools.account import router as tools_account_router
 from werkbank.modules.tools.api import router as tools_router
 from werkbank.security import SecurityHeadersMiddleware
@@ -87,6 +88,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(m365_config_router)
     app.include_router(recommendations_router)
     app.include_router(tenant_router)
+    app.include_router(tenant_usage_router)
     app.include_router(budget_router)
     app.include_router(budget_imports_router)
     app.include_router(projects_router)
