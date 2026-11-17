@@ -478,7 +478,8 @@ describe("Dienststatus", () => {
     expect(reason).toHaveAttribute("href", "#EX1001");
     expect(reason.closest(".kpi")).toHaveTextContent(/Störung/);
     expect(reason.closest(".kpi")).toHaveTextContent(/Microsoft: /);
-    expect(screen.getAllByText("In Ordnung")).toHaveLength(2);
+    expect(screen.getAllByText("In Ordnung")).toHaveLength(1);
+    expect(screen.getByText("Microsoft: In Ordnung")).toBeInTheDocument();
     expect(screen.getByText(/2 Störungen, 5,5 Std\. · 1 Hinweise/)).toBeInTheDocument();
     // Die Mitteilungen lädt erst das Aufklappen.
     expect(urls.some((url) => url.includes("/issues/"))).toBe(false);
