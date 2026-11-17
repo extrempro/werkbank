@@ -17,7 +17,8 @@ test("Admin sieht alle Bereiche", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ })).toBeVisible();
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
   await openNavigation(page);
-  await expect(nav.getByRole("link", { name: "Audit-Log" })).toBeVisible();
+  // Audit-Log und Einstellungen stehen im eigenen Bereich „Verwaltung“.
+  await expect(nav.getByRole("link", { name: /^Verwaltung/ })).toBeVisible();
   await nav.getByRole("link", { name: /^Microsoft 365/ }).click();
   await openNavigation(page);
   await expect(nav.getByRole("link", { name: "Änderungen" })).toBeVisible();
