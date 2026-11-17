@@ -22,7 +22,7 @@ Import aus Excel im IT-Budget; neues Symbol der Werkbank.
 
 ### Werkbank
 
-- Neues Standard-Favicon und neue App-Icons (Werkbank von vorn mit Schraubenschlüssel und Hammer); ein eigenes Favicon aus dem Branding hat weiter Vorrang
+- Neues Standard-Favicon und neue App-Icons (Werkbank von vorn mit Schraubenschlüssel und Hammer) und dasselbe Zeichen links oben in der Kopfzeile, solange kein eigenes Logo hinterlegt ist; ein eigenes Favicon oder Logo aus dem Branding hat weiter Vorrang
 
 ### Behoben
 

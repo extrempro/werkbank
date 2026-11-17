@@ -41,7 +41,7 @@ export const RELEASES: readonly Release[] = [
       {
         area: "Werkbank",
         entries: [
-          "Neues Symbol im Browser-Tab und auf dem Startbildschirm: eine Werkbank mit Schraubenschlüssel und Hammer. Auf dem Handy erscheint es, wenn du die App neu hinzufügst.",
+          "Neues Symbol im Browser-Tab, auf dem Startbildschirm und links oben in der Kopfzeile: eine Werkbank mit Schraubenschlüssel und Hammer. Auf dem Handy erscheint es, wenn du die App neu hinzufügst.",
           "Behoben: Breite Tabellen machten Seiten auf Handy und Tablet manchmal breiter als den Bildschirm.",
         ],
       },
