@@ -45,6 +45,12 @@ export const RELEASES: readonly Release[] = [
           "Die Tags stehen im Formular des Budgetpostens jetzt sichtbar. Als Budgetverwalter findest du dort den Weg zu Einstellungen › Tags.",
         ],
       },
+      {
+        area: "Werkbank",
+        entries: [
+          "Behoben: Auf dem Handy passte „Abmelden“ bei offenem Menü nicht ganz auf den Bildschirm.",
+        ],
+      },
     ],
   },
   {

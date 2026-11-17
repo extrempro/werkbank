@@ -23,6 +23,7 @@ Dienststatus mit Gründen und lesbarem Kalender; Tags am Budgetposten sichtbar.
 
 - Ausfalldauer: Gleichzeitige Störungen eines Dienstes zählen nur einmal, Fehlalarme gar nicht mehr (auch nicht in Zahlen, Kalender und Monaten); Störungen über den Jahreswechsel werden auf beide Jahre verteilt
 - Microsoft 365 › Änderungen: Die Detailansicht neben der Liste lässt sich auf großen Bildschirmen bis zum Ende scrollen
+- Handy: Mit offenem Menü passte „Abmelden“ oben rechts nicht ganz auf den Bildschirm; der Name in der Kopfzeile kürzt sich bei Platzmangel, das Menü macht die Seite nicht mehr breiter
 
 ### Doku
 

@@ -843,6 +843,24 @@ a {
 
   .app-nav.open {
     display: flex;
+    /* Nichts im offenen Menü darf die Seite breiter machen als den Bildschirm. */
+    overflow-x: hidden;
+  }
+
+  /* Ist es eng, kürzt sich der Name; „Abmelden“ bleibt ganz sichtbar. */
+  .brand,
+  .brand-text {
+    min-width: 0;
+  }
+
+  .brand-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .user {
+    flex-shrink: 0;
   }
 
   /* Im aufgeklappten Menü gibt es nichts einzuklappen. */
