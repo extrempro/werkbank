@@ -161,19 +161,19 @@ def parse_sheet(cells: Sheet) -> ParsedFile:
 
     title = ""
     year: int | None = None
-    for (row, _col), cell in sorted(cells.items()):
+    for (row, _col), title_cell in sorted(cells.items()):
         if row >= header:
             break
-        match = YEAR_PATTERN.search(text_of(cell))
+        match = YEAR_PATTERN.search(text_of(title_cell))
         if match and int(match[2]) == int(match[1]) + 1:
-            title, year = text_of(cell), int(match[1])
+            title, year = text_of(title_cell), int(match[1])
             break
     if year is None and "date" in columns:
         match = DAY_PATTERN.search(text_of(cells.get((header, columns["date"]))))
         if match:
             year = int(match[3])
 
-    def cell(row: int, key: str) -> Cell | None:
+    def value_at(row: int, key: str) -> Cell | None:
         col = columns.get(key)
         return cells.get((row, col)) if col is not None else None
 
@@ -185,17 +185,17 @@ def parse_sheet(cells: Sheet) -> ParsedFile:
         first = " ".join(text_of(cells.get((row, col))) for col in range(1, 4)).casefold()
         if "summe" in first:
             break
-        gross = cents_of(cell(row, "gross"))
-        firm = text_of(cell(row, "firm"))
-        description = text_of(cell(row, "description"))
+        gross = cents_of(value_at(row, "gross"))
+        firm = text_of(value_at(row, "firm"))
+        description = text_of(value_at(row, "description"))
         if gross is None or gross == 0:
             if firm or description:
                 skipped += 1
             row += 1
             continue
-        internal = text_of(cell(row, "internal"))
+        internal = text_of(value_at(row, "internal"))
         internal = "" if _placeholder(internal) else internal
-        number = text_of(cell(row, "number"))
+        number = text_of(value_at(row, "number"))
         number = "" if _placeholder(number) else number
         filled = [
             number_and_name[0]
@@ -204,10 +204,10 @@ def parse_sheet(cells: Sheet) -> ParsedFile:
             and not value.empty
             and not (isinstance(value.value, float) and value.value == 0)
         ]
-        yearly_text = text_of(cell(row, "yearly")).casefold()
+        yearly_text = text_of(value_at(row, "yearly")).casefold()
         parsed = ParsedRow(
             row_number=row,
-            invoice_date=date_of(cell(row, "date")),
+            invoice_date=date_of(value_at(row, "date")),
             number=number[:80],
             internal_number=internal[:60],
             firm=firm[:160],
