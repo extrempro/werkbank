@@ -96,11 +96,14 @@ describe("SnapshotsPage", () => {
     });
     expect(urls).toContain("/api/m365-config/snapshots/compare?from=1&to=3");
     expect(screen.getByText(/1 neu, 1 geändert, 0 entfernt/)).toBeTruthy();
-    const rows = within(result).getAllByRole("row");
-    expect(rows).toHaveLength(3);
-    expect(within(rows[1]).getByText("Geändert")).toBeTruthy();
-    expect(within(rows[1]).getByText("enabled")).toBeTruthy();
-    expect(within(rows[1]).getByText("disabled")).toBeTruthy();
-    expect(within(rows[2]).getByText("Neu")).toBeTruthy();
+    const [, changed, added, ...rest] = within(result).getAllByRole("row");
+    expect(rest).toHaveLength(0);
+    if (!changed || !added) {
+      throw new Error("Zeilen fehlen");
+    }
+    expect(within(changed).getByText("Geändert")).toBeTruthy();
+    expect(within(changed).getByText("enabled")).toBeTruthy();
+    expect(within(changed).getByText("disabled")).toBeTruthy();
+    expect(within(added).getByText("Neu")).toBeTruthy();
   });
 });
