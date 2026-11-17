@@ -67,4 +67,20 @@ describe("Benachrichtigungen", () => {
     const off = toggleChannel(mailed, "a", "enabled", false);
     expect(off[0]).toMatchObject({ enabled: false, mail: false, teams: false, push: false });
   });
+
+  it("schaltet Push um; ohne Glocke auch kein Push", () => {
+    const kinds = [
+      { kind: "a", module: "M", label: "A", enabled: true, mail: false, teams: false, push: false },
+    ];
+    const pushed = toggleChannel(kinds, "a", "push", true);
+    expect(pushed[0]).toMatchObject({ push: true });
+    expect(toggleChannel(pushed, "a", "enabled", false)[0]).toMatchObject({ push: false });
+  });
+
+  it("nennt das Gerät nur grob", () => {
+    expect(deviceLabel("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)")).toBe("iPhone");
+    expect(deviceLabel("Mozilla/5.0 (Linux; Android 15; Pixel 9)")).toBe("Android");
+    expect(deviceLabel("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")).toBe("Windows");
+    expect(deviceLabel("irgendwas")).toBe("Browser");
+  });
 });
