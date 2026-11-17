@@ -105,10 +105,11 @@ describe("ChangesPage", () => {
     expect(entra.getAllByRole("listitem")).toHaveLength(1);
 
     // Alle eines Bereichs auswählen
-    fireEvent.click(
-      screen.getByRole("button", { name: "Alle auswählen in Exchange › Transportregeln" }),
-    );
+    const exchangeHead = screen.getByRole("heading", { name: "Exchange › Transportregeln" })
+      .parentElement as HTMLElement;
+    fireEvent.click(within(exchangeHead).getByRole("button", { name: /^Alle auswählen/ }));
     expect(screen.getByText("1 ausgewählt")).toBeVisible();
+    expect(within(exchangeHead).getByRole("button", { name: /^Auswahl aufheben/ })).toBeVisible();
 
     const select = screen.getByRole("combobox", { name: "Dienst und Bereich" });
     expect(within(select).getByRole("option", { name: "Bedingter Zugriff (3)" })).toBeVisible();
