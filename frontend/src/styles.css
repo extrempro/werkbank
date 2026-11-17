@@ -2032,6 +2032,52 @@ details summary {
   border-top: 0;
 }
 
+/* Änderungen nach Dienst und Bereich */
+
+.change-section + .change-section {
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.change-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 12px 18px 6px;
+  background: var(--farbe-grund);
+}
+
+.change-section-head h2 {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.change-section-head .button-link {
+  margin-left: auto;
+}
+
+.changes-place {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 28rem;
+  margin: 12px 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.changes-place select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
 .row-main {
   flex: 1 1 auto;
   min-width: 0;
@@ -3105,6 +3151,85 @@ p.badges {
 
 .tree .load-more {
   margin: 8px 16px 16px;
+}
+
+/* Baum der Einstellungen: Dienst › Bereich › Objekt › Eigenschaft */
+
+.tree-root {
+  padding: 8px;
+}
+
+.tree-node > ul {
+  margin: 0 0 4px 14px;
+  padding-left: 8px;
+  border-left: 1px solid var(--farbe-trenner);
+}
+
+.tree-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px 6px 28px;
+  position: relative;
+  border-radius: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.tree-summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Pfeil: zeigt nach rechts, aufgeklappt nach unten */
+.tree-summary::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-60%) rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+.tree-node[open] > .tree-summary::before {
+  transform: translateY(-75%) rotate(45deg);
+}
+
+.tree-summary:hover {
+  background: var(--farbe-hover);
+}
+
+.tree-summary:focus-visible {
+  outline: 3px solid var(--farbe-akzent);
+  outline-offset: -3px;
+}
+
+.tree-level-1 > .tree-summary .tree-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.tree-level-2 > .tree-summary .tree-name {
+  font-weight: 600;
+}
+
+.tree-note {
+  margin: 4px 10px 8px 28px;
+}
+
+.tree-more {
+  margin: 4px 0 8px 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-summary::before {
+    transition: none;
+  }
 }
 
 /* KI-Text in der Einstellung: klar als solcher gekennzeichnet */

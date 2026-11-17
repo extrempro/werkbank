@@ -301,7 +301,7 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Die Seite „Einstellungen“ zeigt alle überwachten Einstellungen als Baum nach Dienst und Bereich. Ein Filter zeigt nur Abweichungen vom Soll-Wert. Ein Klick öffnet die Einzelheiten daneben:",
+            text: "Die Seite „Einstellungen“ zeigt alle überwachten Einstellungen als Baum: Dienst (z. B. Entra), darin die Bereiche (z. B. Bedingter Zugriff), darin die Objekte (z. B. eine Richtlinie). Erst ein aufgeklapptes Objekt zeigt seine Eigenschaften mit kurzem Wert. Neben jedem Knoten stehen offene Änderungen und Abweichungen vom Soll-Wert, so siehst du schon zugeklappt, wo etwas zu tun ist. Bei Suche oder „Nur Abweichungen“ sind Dienste und Bereiche gleich aufgeklappt. Ein Klick auf eine Eigenschaft öffnet die Einzelheiten daneben:",
           },
           {
             kind: "list",
@@ -340,12 +340,12 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Die Seite „Änderungen“ listet erkannte Änderungen mit Art (neu, geändert, entfernt), Zeitpunkt und, wenn bekannt, wer geändert hat. Ein Klick zeigt vorher und nachher. Filter: offen, ungewollt, gewollt, alle.",
+            text: "Die Seite „Änderungen“ listet erkannte Änderungen mit Art (neu, geändert, entfernt), Zeitpunkt und, wenn bekannt, wer geändert hat. Ein Klick zeigt vorher und nachher. Filter: offen, ungewollt, gewollt, alle. Die Liste ist nach Dienst und Bereich gegliedert, der Bereich mit der neuesten Änderung oben. Über „Dienst und Bereich“ zeigst du nur einen Dienst oder einen Bereich.",
           },
           {
             kind: "steps",
             items: [
-              "Wähle eine oder mehrere Änderungen aus.",
+              "Wähle eine oder mehrere Änderungen aus. „Alle auswählen“ an einem Bereich wählt alle geladenen Änderungen darin.",
               "Unter „Auswahl bewerten“ wählst du „gewollt“ oder „ungewollt“ und schreibst bei Bedarf einen Kommentar.",
               "Bestätige. Alle gewählten Änderungen bekommen dieselbe Bewertung und denselben Kommentar.",
             ],

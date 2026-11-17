@@ -109,6 +109,8 @@ export interface Change {
   setting_id: number;
   path: string;
   workload: string;
+  /** Bereich (Ressourcentyp), z. B. „conditionalAccessPolicy“ */
+  area: string;
   object_name: string | null;
   property: string;
   criticality: string | null;
@@ -161,11 +163,9 @@ export function fetchSnapshots(): Promise<Snapshot[]> {
   return getJson(`${BASE}/snapshots`);
 }
 
-export function fetchSettings(
-  filter: SettingFilter,
-  offset: number,
-): Promise<{ entries: Setting[]; has_more: boolean }> {
-  const params = new URLSearchParams({ offset: String(offset), limit: "200" });
+/** Filter als Parameter; gilt für Liste und Baum. */
+function settingParams(filter: SettingFilter): URLSearchParams {
+  const params = new URLSearchParams();
   if (filter.search) {
     params.set("search", filter.search);
   }
@@ -178,7 +178,54 @@ export function fetchSettings(
   if (filter.onlyDeviating) {
     params.set("only_deviating", "true");
   }
+  return params;
+}
+
+export function fetchSettings(
+  filter: SettingFilter,
+  offset: number,
+  place?: { area: string; objectId: string },
+): Promise<{ entries: Setting[]; has_more: boolean }> {
+  const params = settingParams(filter);
+  params.set("offset", String(offset));
+  params.set("limit", "200");
+  if (place) {
+    params.set("area", place.area);
+    params.set("object_id", place.objectId);
+  }
   return getJson(`${BASE}/settings?${params.toString()}`);
+}
+
+interface TreeCounts {
+  settings: number;
+  open_changes: number;
+  deviating: number;
+}
+
+export interface TreeObject extends TreeCounts {
+  object_id: string;
+  object_name: string | null;
+  /** Mindestens eine Einstellung ist noch im Tenant */
+  active: boolean;
+}
+
+export interface TreeArea extends TreeCounts {
+  area: string;
+  objects: TreeObject[];
+}
+
+export interface TreeWorkload extends TreeCounts {
+  workload: string;
+  areas: TreeArea[];
+}
+
+export interface SettingTree extends TreeCounts {
+  workloads: TreeWorkload[];
+}
+
+/** Dienst › Bereich › Objekt mit Zählern; Eigenschaften lädt fetchSettings je Objekt. */
+export function fetchSettingTree(filter: SettingFilter): Promise<SettingTree> {
+  return getJson(`${BASE}/settings/tree?${settingParams(filter).toString()}`);
 }
 
 export function fetchSetting(id: number): Promise<SettingDetail> {
@@ -204,16 +251,35 @@ export interface ChangeCounts {
   ungewollt: number;
 }
 
+export interface ChangeGroup {
+  workload: string;
+  area: string;
+  count: number;
+}
+
 export interface ChangeList {
   entries: Change[];
   has_more: boolean;
   counts?: ChangeCounts;
+  /** Änderungen je Dienst und Bereich (mit dem Status-Filter) */
+  groups?: ChangeGroup[];
 }
 
-export function fetchChanges(status: string, offset: number, limit = 50): Promise<ChangeList> {
+export function fetchChanges(
+  status: string,
+  offset: number,
+  limit = 50,
+  place: { workload?: string; area?: string } = {},
+): Promise<ChangeList> {
   const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
   if (status) {
     params.set("status", status);
+  }
+  if (place.workload) {
+    params.set("workload", place.workload);
+  }
+  if (place.area) {
+    params.set("area", place.area);
   }
   return getJson(`${BASE}/changes?${params.toString()}`);
 }

@@ -176,6 +176,64 @@ def test_settings_list_search_and_detail(db: Session) -> None:
 
 
 @pytest.mark.db
+def test_settings_tree_and_object_filter(db: Session) -> None:
+    client = client_for(["Config.Reader"], "m365-leser")
+    tree = client.get(f"{BASE}/settings/tree").json()
+    assert [entry["workload"] for entry in tree["workloads"]] == ["entra"]
+    area = tree["workloads"][0]["areas"][0]
+    assert area["area"] == "conditionalAccessPolicy"
+    assert [entry["object_name"] for entry in area["objects"]] == ["MFA für alle", "Neu 100%"]
+    # Zähler: zwei offene Änderungen an aktiven Einstellungen (geändert und neu)
+    assert tree["settings"] == area["settings"] == 2
+    assert tree["open_changes"] == tree["workloads"][0]["open_changes"] == 2
+    assert tree["deviating"] == 0
+    assert all(entry["active"] for entry in area["objects"])
+
+    # Mit entfernten: das entfernte Objekt erscheint, aber nicht als aktiv
+    with_removed = client.get(f"{BASE}/settings/tree", params={"include_removed": "true"}).json()
+    objects = with_removed["workloads"][0]["areas"][0]["objects"]
+    assert [(entry["object_name"], entry["active"]) for entry in objects] == [
+        ("Alt", False),
+        ("MFA für alle", True),
+        ("Neu 100%", True),
+    ]
+    assert with_removed["open_changes"] == 3
+    # Suche und Dienst wirken wie in der Liste
+    assert client.get(f"{BASE}/settings/tree", params={"search": "100%"}).json()["settings"] == 1
+    assert client.get(f"{BASE}/settings/tree", params={"workload": "exchange"}).json() == {
+        "settings": 0,
+        "open_changes": 0,
+        "deviating": 0,
+        "workloads": [],
+    }
+
+    # Die Eigenschaften eines Objekts
+    one = client.get(
+        f"{BASE}/settings", params={"area": "conditionalAccessPolicy", "object_id": "p1"}
+    ).json()
+    assert [entry["object_name"] for entry in one["entries"]] == ["MFA für alle"]
+    assert client.get(f"{BASE}/settings", params={"area": "transportRule"}).json()["entries"] == []
+
+
+@pytest.mark.db
+def test_changes_by_workload_and_area(db: Session) -> None:
+    client = client_for(["Config.Reader"], "m365-leser")
+    data = client.get(f"{BASE}/changes").json()
+    assert data["groups"] == [{"workload": "entra", "area": "conditionalAccessPolicy", "count": 3}]
+    assert {entry["area"] for entry in data["entries"]} == {"conditionalAccessPolicy"}
+    other = client.get(f"{BASE}/changes", params={"workload": "exchange"}).json()
+    assert other["entries"] == []
+    # Zähler folgen Dienst und Bereich, die Gruppen bleiben für die Auswahl
+    assert other["counts"] == {"alle": 0, "offen": 0, "gewollt": 0, "ungewollt": 0}
+    assert len(other["groups"]) == 1
+    same = client.get(
+        f"{BASE}/changes", params={"workload": "entra", "area": "conditionalAccessPolicy"}
+    ).json()
+    assert len(same["entries"]) == 3
+    assert client.get(f"{BASE}/changes", params={"status": "gewollt"}).json()["groups"] == []
+
+
+@pytest.mark.db
 def test_changes_list_and_filter(db: Session) -> None:
     client = client_for(["Config.Reader"], "m365-leser")
     data = client.get(f"{BASE}/changes").json()

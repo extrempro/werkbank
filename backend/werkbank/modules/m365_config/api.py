@@ -1,6 +1,7 @@
 """API des Moduls M365-Konfiguration: Einstellungen, Verlauf, Änderungen, Abrufe (spec.md 7)."""
 
 import json
+from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from functools import lru_cache
 from typing import Annotated, Any, Literal
@@ -48,6 +49,8 @@ Reviewer = Annotated[CurrentUser, Depends(require_roles(Role.CONFIG_REVIEWER))]
 Admin = Annotated[CurrentUser, Depends(require_roles(Role.WERKBANK_ADMIN))]
 
 Limit = Annotated[int, Query(ge=1, le=200)]
+Search = Annotated[str | None, Query(max_length=200)]
+Workload = Annotated[str | None, Query(max_length=64)]
 Offset = Annotated[int, Query(ge=0, le=1_000_000)]
 
 COMMENT_MAX_LENGTH = 2000
@@ -156,6 +159,35 @@ class SettingListOut(BaseModel):
     has_more: bool
 
 
+class TreeCounts(BaseModel):
+    settings: int
+    # noch nicht bewertete Änderungen
+    open_changes: int
+    # Abweichungen vom Soll-Wert
+    deviating: int
+
+
+class TreeObjectOut(TreeCounts):
+    object_id: str
+    object_name: str | None
+    # Mindestens eine Einstellung des Objekts ist noch im Tenant
+    active: bool
+
+
+class TreeAreaOut(TreeCounts):
+    area: str
+    objects: list[TreeObjectOut]
+
+
+class TreeWorkloadOut(TreeCounts):
+    workload: str
+    areas: list[TreeAreaOut]
+
+
+class SettingTreeOut(TreeCounts):
+    workloads: list[TreeWorkloadOut]
+
+
 class VersionOut(BaseModel):
     id: int
     value: Any
@@ -168,6 +200,7 @@ class ChangeOut(BaseModel):
     setting_id: int
     path: str
     workload: str
+    area: str
     object_name: str | None
     property: str
     criticality: str | None
@@ -190,10 +223,18 @@ class ChangeCountsOut(BaseModel):
     ungewollt: int
 
 
+class ChangeGroupOut(BaseModel):
+    workload: str
+    area: str
+    count: int
+
+
 class ChangeListOut(BaseModel):
     entries: list[ChangeOut]
     has_more: bool
     counts: ChangeCountsOut
+    # Änderungen je Dienst und Bereich (mit dem Status-Filter), für Auswahl und Überschriften
+    groups: list[ChangeGroupOut]
 
 
 class AiTextOut(BaseModel):
@@ -317,6 +358,7 @@ def _change_out(
         setting_id=setting.id,
         path=setting.path,
         workload=setting.workload,
+        area=setting.area,
         object_name=setting.object_name,
         property=setting.property,
         criticality=meta.criticality if meta else None,
@@ -478,8 +520,10 @@ def list_snapshots(user: Reader, db: DbDep, limit: Limit = 50) -> list[SnapshotO
 def list_settings(
     user: Reader,
     db: DbDep,
-    search: Annotated[str | None, Query(max_length=200)] = None,
-    workload: Annotated[str | None, Query(max_length=64)] = None,
+    search: Search = None,
+    workload: Workload = None,
+    area: Annotated[str | None, Query(max_length=128)] = None,
+    object_id: Annotated[str | None, Query(max_length=256)] = None,
     include_removed: bool = False,
     only_deviating: bool = False,
     limit: Limit = 50,
@@ -492,6 +536,99 @@ def list_settings(
         .outerjoin(CfgSettingMeta, CfgSettingMeta.setting_id == CfgSetting.id)
         .outerjoin(CfgAiText, AI_TEXT_JOIN)
     )
+    query = _filter_settings(query, search, workload, include_removed, only_deviating)
+    if area:
+        query = query.where(CfgSetting.area == area)
+    if object_id:
+        query = query.where(CfgSetting.object_id == object_id)
+    rows = db.execute(query.order_by(CfgSetting.path).limit(limit + 1).offset(offset)).all()
+    page = rows[:limit]
+    open_counts = _open_change_counts(db, [row[0].id for row in page])
+    entries = [
+        _setting_out(row[0], row[1], row[2], open_counts.get(row[0].id, 0), row[3]) for row in page
+    ]
+    return SettingListOut(entries=entries, has_more=len(rows) > limit)
+
+
+@router.get("/settings/tree")
+def settings_tree(
+    user: Reader,
+    db: DbDep,
+    search: Search = None,
+    workload: Workload = None,
+    include_removed: bool = False,
+    only_deviating: bool = False,
+) -> SettingTreeOut:
+    """Dienst, Bereich und Objekt mit Zählern; die Eigenschaften lädt /settings je Objekt."""
+    open_counts = (
+        select(CfgChange.setting_id, func.count().label("open"))
+        .where(CfgChange.status == ChangeStatus.OPEN)
+        .group_by(CfgChange.setting_id)
+        .subquery()
+    )
+    query = (
+        select(
+            CfgSetting.workload,
+            CfgSetting.area,
+            CfgSetting.object_id,
+            func.max(CfgSetting.object_name),
+            func.count(),
+            func.coalesce(func.sum(open_counts.c.open), 0),
+            func.count().filter(DEVIATION),
+            func.bool_or(CfgSetting.active),
+        )
+        .outerjoin(CfgSettingVersion, CURRENT_VERSION)
+        .outerjoin(CfgSettingMeta, CfgSettingMeta.setting_id == CfgSetting.id)
+        .outerjoin(open_counts, open_counts.c.setting_id == CfgSetting.id)
+        .group_by(CfgSetting.workload, CfgSetting.area, CfgSetting.object_id)
+        .order_by(CfgSetting.workload, CfgSetting.area, CfgSetting.object_id)
+    )
+    query = _filter_settings(query, search, workload, include_removed, only_deviating)
+    workloads: dict[str, dict[str, list[TreeObjectOut]]] = {}
+    for row in db.execute(query):
+        objects = workloads.setdefault(row[0], {}).setdefault(row[1], [])
+        objects.append(
+            TreeObjectOut(
+                object_id=row[2],
+                object_name=row[3],
+                settings=int(row[4]),
+                open_changes=int(row[5]),
+                deviating=int(row[6]),
+                active=bool(row[7]),
+            )
+        )
+    tree = []
+    for workload_name, areas in workloads.items():
+        area_entries = [
+            TreeAreaOut(
+                area=area_name,
+                objects=sorted(objects, key=lambda entry: (entry.object_name or "").lower()),
+                **_sum_counts(objects),
+            )
+            for area_name, objects in areas.items()
+        ]
+        tree.append(
+            TreeWorkloadOut(workload=workload_name, areas=area_entries, **_sum_counts(area_entries))
+        )
+    return SettingTreeOut(workloads=tree, **_sum_counts(tree))
+
+
+def _sum_counts(entries: Sequence[TreeCounts]) -> dict[str, int]:
+    return {
+        "settings": sum(entry.settings for entry in entries),
+        "open_changes": sum(entry.open_changes for entry in entries),
+        "deviating": sum(entry.deviating for entry in entries),
+    }
+
+
+def _filter_settings(
+    query: Any,
+    search: str | None,
+    workload: str | None,
+    include_removed: bool,
+    only_deviating: bool,
+) -> Any:
+    """Gemeinsame Filter für Liste und Baum der Einstellungen."""
     if only_deviating:
         query = query.where(DEVIATION)
     if not include_removed:
@@ -505,13 +642,7 @@ def list_settings(
                 CfgSetting.object_name.icontains(search, autoescape=True),
             )
         )
-    rows = db.execute(query.order_by(CfgSetting.path).limit(limit + 1).offset(offset)).all()
-    page = rows[:limit]
-    open_counts = _open_change_counts(db, [row[0].id for row in page])
-    entries = [
-        _setting_out(row[0], row[1], row[2], open_counts.get(row[0].id, 0), row[3]) for row in page
-    ]
-    return SettingListOut(entries=entries, has_more=len(rows) > limit)
+    return query
 
 
 def _open_change_counts(db: DbDep, setting_ids: list[int]) -> dict[int, int]:
@@ -629,26 +760,56 @@ def list_changes(
     status_filter: Annotated[
         Literal["offen", "gewollt", "ungewollt"] | None, Query(alias="status")
     ] = None,
+    workload: Workload = None,
+    area: Annotated[str | None, Query(max_length=128)] = None,
     limit: Limit = 50,
     offset: Offset = 0,
 ) -> ChangeListOut:
-    """Erkannte Änderungen, neueste zuerst."""
-    query = _changes_query()
+    """Erkannte Änderungen, neueste zuerst; filterbar nach Status, Dienst und Bereich."""
+
+    def by_place(query: Any) -> Any:
+        if workload:
+            query = query.where(CfgSetting.workload == workload)
+        if area:
+            query = query.where(CfgSetting.area == area)
+        return query
+
+    query = by_place(_changes_query())
     if status_filter:
         query = query.where(CfgChange.status == status_filter)
     rows = db.execute(query.order_by(CfgChange.id.desc()).limit(limit + 1).offset(offset)).all()
     entries = [_change_out(row[0], row[1], row[2], row[3]) for row in rows[:limit]]
+    # Zähler je Status gelten für Dienst und Bereich, aber unabhängig vom Status-Filter.
     per_status = {
         str(row[0]): int(row[1])
-        for row in db.execute(select(CfgChange.status, func.count()).group_by(CfgChange.status))
+        for row in db.execute(
+            by_place(
+                select(CfgChange.status, func.count()).join(
+                    CfgSetting, CfgSetting.id == CfgChange.setting_id
+                )
+            ).group_by(CfgChange.status)
+        )
     }
+    # Gruppen gelten für den Status, aber unabhängig von Dienst und Bereich.
+    group_query = (
+        select(CfgSetting.workload, CfgSetting.area, func.count())
+        .join(CfgChange, CfgChange.setting_id == CfgSetting.id)
+        .group_by(CfgSetting.workload, CfgSetting.area)
+        .order_by(CfgSetting.workload, CfgSetting.area)
+    )
+    if status_filter:
+        group_query = group_query.where(CfgChange.status == status_filter)
+    groups = [
+        ChangeGroupOut(workload=row[0], area=row[1], count=int(row[2]))
+        for row in db.execute(group_query)
+    ]
     counts = ChangeCountsOut(
         alle=sum(per_status.values()),
         offen=per_status.get(ChangeStatus.OPEN, 0),
         gewollt=per_status.get(ChangeStatus.INTENDED, 0),
         ungewollt=per_status.get(ChangeStatus.UNINTENDED, 0),
     )
-    return ChangeListOut(entries=entries, has_more=len(rows) > limit, counts=counts)
+    return ChangeListOut(entries=entries, has_more=len(rows) > limit, counts=counts, groups=groups)
 
 
 @router.post("/changes/review")

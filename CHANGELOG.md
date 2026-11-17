@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.47.0] – 2026-11-17
+
+Einstellungen und Änderungen in Microsoft 365 übersichtlicher gegliedert.
+
+### Microsoft 365
+
+- Einstellungen als aufklappbarer Baum Dienst › Bereich › Objekt › Eigenschaft statt einer Zeile je Eigenschaft; je Knoten Zähler für offene Änderungen und Abweichungen, je Objekt die Zahl der Eigenschaften und „entfernt“; Eigenschaften mit kurzem Wert, erst beim Aufklappen geladen; bei Suche oder „Nur Abweichungen“ sind Dienste und Bereiche offen; eine direkt geöffnete Einstellung klappt ihren Weg auf
+- Änderungen nach Dienst › Bereich gegliedert (Bereich mit der neuesten Änderung zuerst), Auswahl „Dienst und Bereich“ mit Anzahl, „Alle auswählen“ je Bereich; die Zähler der Status-Filter gelten für den gewählten Dienst und Bereich
+- API: `GET /api/m365-config/settings/tree`; `GET …/settings` mit `area` und `object_id`; `GET …/changes` mit `workload` und `area`, Antwort mit `groups`, Änderungen mit `area`
+
+### Doku
+
+- Spec (Seitenübersicht M365), Handbuch (Einstellungen, Änderungen bewerten)
+
 ## [0.46.0] – 2026-11-17
 
 Dienststatus mit Gründen und lesbarem Kalender; Tags am Budgetposten sichtbar.

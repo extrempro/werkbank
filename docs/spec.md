@@ -594,8 +594,8 @@ Evergreen:
 | Login | alle | App-Name, „Mit Microsoft anmelden“, Datenschutzhinweis |
 | Start / Meine Aufgaben | alle | Aufgaben aus allen Modulen, Modul-Kacheln, letzte Aktivitäten (gefiltert nach Rolle) |
 | M365 › Übersicht | Config.* | Kennzahlen, Änderungen pro Tag, letzte Änderungen, Collector-Hinweise |
-| M365 › Änderungen | Config.* | Liste mit Filtern, Detailbereich mit Vorher/Nachher, Audit-Eintrag, Beschreibung, Bewertung mit Kommentarregeln |
-| M365 › Einstellungen | Config.* | Baum nach Workload, Detail: Wert, gültig seit, Kritikalität, Empfehlung, Soll-Wert/BR-Beschluss, Beschreibung, Begründung, Microsoft-Schema, Verlauf |
+| M365 › Änderungen | Config.* | Liste mit Filtern (Status, Dienst und Bereich), gegliedert nach Dienst › Bereich (Bereich mit der neuesten Änderung zuerst, „Alle auswählen“ je Bereich), Detailbereich mit Vorher/Nachher, Audit-Eintrag, Beschreibung, Bewertung mit Kommentarregeln |
+| M365 › Einstellungen | Config.* | Baum Dienst › Bereich › Objekt › Eigenschaft (aufklappbar, Zähler für offene Änderungen und Abweichungen je Knoten, Eigenschaften erst beim Aufklappen eines Objekts geladen; `GET /api/m365-config/settings/tree`, `GET …/settings?area=&object_id=`), Detail: Wert, gültig seit, Kritikalität, Empfehlung, Soll-Wert/BR-Beschluss, Beschreibung, Begründung, Microsoft-Schema, Verlauf |
 | M365 › Empfehlungen | Config.* (Zuordnen: Config.Reviewer) | Empfehlungen aus Microsoft Secure Score: Liste mit Stand und Punkten (offen, erfüllt, alle), Detail mit Statustext, Umsetzung laut Microsoft und zugeordneten Einstellungen |
 | IT-Tools | Tools.User | Übersicht aller Tools mit Suche und Favoriten, eine Seite je Kategorie (in der Navigation), je Tool eine eigene Seite |
 | M365 › Lizenzen | Tenant.Reader | Liste der Lizenzen mit gekauft, zugewiesen, frei, Stichtag und Hinweisen; Detail mit Verlauf |
