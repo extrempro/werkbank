@@ -725,7 +725,7 @@ Handy (ab 360 px), Tablet, Desktop. Aktuelle Versionen von Edge, Chrome, Firefox
 | Container-Scan | jeder PR, wöchentlich | Trivy |
 | Statische Analyse | jeder PR, wöchentlich | CodeQL (Python, JavaScript/TypeScript), Semgrep (inkl. XSS-Regeln) |
 | Secrets | jeder Push, wöchentlich | gitleaks |
-| Abhängigkeiten | wöchentlich und jeder PR | Dependabot (wöchentlich), pip-audit und npm audit (jeder PR). Eine automatische Prüfung auf ungenutzte Pakete gibt es noch nicht |
+| Abhängigkeiten | wöchentlich und jeder PR | Dependabot (wöchentlich), pip-audit und npm audit (jeder PR). Blockierend für npm sind die Pakete der ausgelieferten App (`--omit=dev`); Treffer in Entwicklungs- und Testwerkzeugen erscheinen als Warnung, weil sie nicht ausgeliefert werden und Lücken dort teils noch keine Korrektur haben (entschieden November 2026). Eine automatische Prüfung auf ungenutzte Pakete gibt es noch nicht |
 | Service Worker | jeder PR | Playwright-Test: Offline-Seite, keine API-Daten im Cache. Der Test für den Wechsel von alter zu neuer Version mit Update-Hinweis fehlt noch |
 | Release | Merge auf `main` | `release.yml`: Tag und GitHub Release, wenn die Version neu ist |
 | Formatierung und Lockfiles | Push auf Feature-Branches | `lockfile.yml`: Prettier und Lockfiles, Korrektur als Commit |
