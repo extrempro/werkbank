@@ -285,7 +285,13 @@ describe("Zertifikate und Secrets", () => {
       },
     });
     const { unmount } = render(<CredentialsPage />);
-    expect(await screen.findByText(/Kein Handlungsbedarf/)).toBeVisible();
+    // Ohne Handlungsbedarf öffnet die Seite mit den Waben.
+    expect(await screen.findByRole("button", { name: "Waben" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Liste" }));
+    expect(screen.getByText(/Kein Handlungsbedarf/)).toBeVisible();
     unmount();
     stubFetch({
       "/api/tenant/credentials": {
@@ -509,6 +515,68 @@ describe("Dienststatus", () => {
     expect(screen.getByText("letzte 2 Monate · 4 insgesamt")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Microsoft Teams" }));
     expect(screen.getByText("letzte 2 Monate · 2 insgesamt")).toBeInTheDocument();
+
+    // Würfel in der Kachel: Antippen zeigt die letzten Tage des Dienstes, Escape schließt.
+    const cube = screen.getByRole("button", { name: "Letzte 3 Tage für Exchange Online anzeigen" });
+    expect(cube).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(cube);
+    expect(cube).toHaveAttribute("aria-expanded", "true");
+    const panel = document.getElementById(cube.getAttribute("aria-controls") ?? "")!;
+    expect(panel).toHaveTextContent("Exchange Online: letzte 3 Tage");
+    expect(panel).toHaveTextContent("1 Tag Störung, 1 Tag Hinweis");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(cube).toHaveAttribute("aria-expanded", "false");
+    expect(panel).toBeEmptyDOMElement();
+  });
+
+  it("zeigt von den beendeten Meldungen zuerst fünf", async () => {
+    const recent = Array.from({ length: 7 }, (_, index) => ({
+      ...exchangeIssue,
+      issue_id: `EX20${index}`,
+      title: `Beendet ${index + 1}`,
+      status: "serviceRestored",
+      resolved: true,
+      end_at: "2026-11-16T10:00:00Z",
+    }));
+    stubFetch({
+      "/api/tenant/health": {
+        enabled: true,
+        fetched_at: "2026-11-16T11:15:00Z",
+        services: [
+          {
+            service_id: "Exchange",
+            name: "Exchange Online",
+            status: "serviceOperational",
+            level: "ok",
+            open_incidents: 0,
+            open_advisories: 0,
+            reasons: [],
+          },
+        ],
+        open: [],
+        recent,
+        stats: [],
+        months: [],
+        timeline_days: [],
+        timeline: [],
+        timeline_issues: [],
+      },
+    });
+    render(<HealthPage />);
+    const section = within(
+      (await screen.findByRole("heading", { name: "In den letzten 30 Tagen beendet" })).closest(
+        "section",
+      )!,
+    );
+    expect(section.getAllByText(/^Beendet \d$/)).toHaveLength(5);
+    const more = section.getByRole("button", { name: "Alle 7 anzeigen" });
+    fireEvent.click(more);
+    expect(section.getAllByText(/^Beendet \d$/)).toHaveLength(7);
+    expect(more).toHaveTextContent("Nur die letzten 5 anzeigen");
+    // Die Meldung hat eine klare Gliederung: Art, Dienst, Status; Titel; Kennung, Zeitraum, Dauer
+    const row = document.getElementById("EX200")!;
+    expect(row.querySelector(".health-issue-status")).toHaveTextContent("Wiederhergestellt");
+    expect(row.querySelector(".health-issue-meta")).toHaveTextContent("EX200");
   });
 
   it("erklärt, wenn der Abruf aus ist", async () => {

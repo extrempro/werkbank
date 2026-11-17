@@ -3,18 +3,13 @@ import {
   adminCenterUrl,
   issueDuration,
   issueKind,
+  calendarSummary,
   monthlyIncidents,
-  weekColumns,
-  type DayLevel,
   type Health,
 } from "./api";
+import { CalendarGrid, CalendarText } from "./HealthCalendar";
 
 const HOURS = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
-const dayFormat = new Intl.DateTimeFormat("de-DE", {
-  day: "2-digit",
-  month: "2-digit",
-  timeZone: "UTC",
-});
 const longDay = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeZone: "UTC" });
 const monthShort = new Intl.DateTimeFormat("de-DE", {
   month: "2-digit",
@@ -27,12 +22,6 @@ const monthLong = new Intl.DateTimeFormat("de-DE", {
   timeZone: "UTC",
 });
 
-const LEVEL_TEXT: Record<DayLevel, string> = {
-  ok: "keine Meldung",
-  hinweis: "Hinweis",
-  stoerung: "Störung",
-};
-
 function day(iso: string): Date {
   return new Date(`${iso}T00:00:00Z`);
 }
@@ -40,8 +29,6 @@ function day(iso: string): Date {
 function month(key: string): Date {
   return new Date(`${key}-01T00:00:00Z`);
 }
-
-const monthName = new Intl.DateTimeFormat("de-DE", { month: "short", timeZone: "UTC" });
 
 /** Je Dienst ein Kalender über 90 Tage (Wochen als Spalten), darunter die Meldungen. */
 function Timeline({ health }: { health: Health }) {
@@ -51,15 +38,6 @@ function Timeline({ health }: { health: Health }) {
   }
   const first = days[0] ?? "";
   const last = days[days.length - 1] ?? "";
-  const columns = weekColumns(days);
-  // Monatsname über der ersten Spalte, in der ein neuer Monat beginnt
-  const monthKeys = columns.map((column) => {
-    const index = column.find((entry) => entry !== null);
-    return index !== null && index !== undefined ? (days[index] ?? "").slice(0, 7) : "";
-  });
-  const months = monthKeys.map((key, index) =>
-    key && key !== monthKeys[index - 1] ? monthName.format(day(`${key}-01`)) : "",
-  );
   return (
     <section className="panel" aria-labelledby="health-zeitleiste">
       <div className="panel-head">
@@ -71,64 +49,12 @@ function Timeline({ health }: { health: Health }) {
       <div className="detail-body">
         <ul className="health-cal">
           {health.timeline.map((line, lineIndex) => {
-            const incidents = line.days.filter((level) => level === "stoerung").length;
-            const advisories = line.days.filter((level) => level === "hinweis").length;
             return (
               <li key={line.service_id} className="health-cal-row">
                 <span className="health-cal-name">{line.service_name}</span>
-                <span className="health-cal-body" aria-hidden="true">
-                  {lineIndex === 0 && (
-                    <span className="health-cal-months">
-                      {months.map((label, index) => (
-                        <span key={index}>{label}</span>
-                      ))}
-                    </span>
-                  )}
-                  <span className="health-cal-grid">
-                    {columns.flatMap((column, columnIndex) =>
-                      Array.from({ length: 7 }, (_, row) => {
-                        const index = column[row];
-                        if (index === null || index === undefined) {
-                          return (
-                            <span
-                              key={`${columnIndex}-${row}`}
-                              className="health-cal-cell health-cal-leer"
-                            />
-                          );
-                        }
-                        const level = line.days[index] ?? "ok";
-                        return (
-                          <span
-                            key={`${columnIndex}-${row}`}
-                            className={`health-cal-cell health-cal-${level}`}
-                            title={`${longDay.format(day(days[index] ?? first))}: ${LEVEL_TEXT[level]}`}
-                          />
-                        );
-                      }),
-                    )}
-                  </span>
-                </span>
-                <span className="health-cal-sum">
-                  {incidents === 0 && advisories === 0
-                    ? "ohne Meldung"
-                    : [
-                        incidents > 0 && `${incidents} ${incidents === 1 ? "Tag" : "Tage"} Störung`,
-                        advisories > 0 &&
-                          `${advisories} ${advisories === 1 ? "Tag" : "Tage"} Hinweis`,
-                      ]
-                        .filter(Boolean)
-                        .join(", ")}
-                </span>
-                <span className="visually-hidden">
-                  {line.days
-                    .map((level, index) =>
-                      level === "ok"
-                        ? null
-                        : `${dayFormat.format(day(days[index] ?? first))} ${LEVEL_TEXT[level]}`,
-                    )
-                    .filter(Boolean)
-                    .join("; ")}
-                </span>
+                <CalendarGrid days={days} levels={line.days} showMonths={lineIndex === 0} />
+                <span className="health-cal-sum">{calendarSummary(line.days)}</span>
+                <CalendarText days={days} levels={line.days} />
               </li>
             );
           })}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { formatDateTime } from "../../api";
 import { HealthCharts } from "./HealthCharts";
+import { ServiceCube } from "./HealthCalendar";
 import {
   adminCenterUrl,
   fetchHealth,
@@ -22,6 +23,21 @@ function hashTarget(): string {
 
 const HOURS = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
 
+/** So viele beendete Meldungen stehen zuerst da; der Rest mit „Alle anzeigen“. */
+export const RECENT_SHOWN = 5;
+
+// Kurz: „13.11., 20:05“ (Zeitzone des Browsers)
+const shortDateTime = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+function shortTime(iso: string | null): string {
+  return iso ? shortDateTime.format(new Date(iso)) : "–";
+}
+
 /** Eine Störung oder ein Hinweis; aufgeklappt mit den Mitteilungen von Microsoft. */
 function IssueRow({ issue, initiallyOpen }: { issue: ServiceIssue; initiallyOpen: boolean }) {
   const [detail, setDetail] = useState<ServiceIssueDetail | null>(null);
@@ -42,21 +58,28 @@ function IssueRow({ issue, initiallyOpen }: { issue: ServiceIssue; initiallyOpen
         onToggle={(event) => event.currentTarget.open && load()}
       >
         <summary>
-          <span
-            className={
-              issue.classification === "incident" && !issue.resolved
-                ? "pill pill-bad"
-                : "pill pill-neutral"
-            }
-          >
-            {issueKind(issue.classification)}
-          </span>{" "}
-          <strong>{issue.service_name}</strong> · {issue.title}
-          <span className="small">
-            {" "}
-            · {issue.issue_id} · seit {formatDateTime(issue.start_at)}
-            {issue.end_at && ` bis ${formatDateTime(issue.end_at)}`} · {issueDuration(issue)} ·{" "}
-            {healthStatusText(issue.status)}
+          <span className="health-issue">
+            <span className="health-issue-head">
+              <span
+                className={
+                  issue.classification === "incident" && !issue.resolved
+                    ? "pill pill-bad"
+                    : "pill pill-neutral"
+                }
+              >
+                {issueKind(issue.classification)}
+              </span>
+              <span className="health-issue-service">{issue.service_name}</span>
+              <span className="health-issue-status small">{healthStatusText(issue.status)}</span>
+            </span>
+            <span className="health-issue-title">{issue.title}</span>
+            <span className="health-issue-meta small">
+              <span className="mono">{issue.issue_id}</span>
+              <span>
+                {shortTime(issue.start_at)} bis {issue.end_at ? shortTime(issue.end_at) : "jetzt"}
+              </span>
+              <span>{issueDuration(issue)}</span>
+            </span>
           </span>
         </summary>
         <div className="budget-more-body">
@@ -104,6 +127,7 @@ export function HealthPage() {
   const [failed, setFailed] = useState(false);
   // Aus einer Benachrichtigung: …/dienststatus#EX123456 öffnet genau diese Meldung
   const [target, setTarget] = useState(hashTarget);
+  const [allRecent, setAllRecent] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -135,6 +159,12 @@ export function HealthPage() {
     }
   }, [health, target]);
 
+  // Eine Meldung aus der Adresse bleibt sichtbar, auch wenn sie weiter hinten steht.
+  const targetIndex = health?.recent.findIndex((issue) => issue.issue_id === target) ?? -1;
+  const shownRecent =
+    allRecent || targetIndex >= RECENT_SHOWN
+      ? (health?.recent ?? [])
+      : (health?.recent.slice(0, RECENT_SHOWN) ?? []);
   const years = [...new Set(health?.stats.map((entry) => entry.year) ?? [])];
   const serviceNames = [
     ...new Map(health?.stats.map((entry) => [entry.service_id, entry.service_name])).entries(),
@@ -172,7 +202,17 @@ export function HealthPage() {
               const level = HEALTH_LEVEL[service.level];
               return (
                 <div key={service.service_id} className={level.kpi}>
-                  <dt>{service.name}</dt>
+                  <dt>
+                    {service.name}
+                    <ServiceCube
+                      name={service.name}
+                      days={health.timeline_days}
+                      levels={
+                        health.timeline.find((line) => line.service_id === service.service_id)
+                          ?.days ?? []
+                      }
+                    />
+                  </dt>
                   <dd className="kpi-number">{level.label}</dd>
                   <dd className="small">
                     Microsoft: {healthStatusText(service.status)}
@@ -229,15 +269,29 @@ export function HealthPage() {
             {health.recent.length === 0 ? (
               <p className="detail-body">Keine.</p>
             ) : (
-              <ul className="detail-body health-issues">
-                {health.recent.map((issue) => (
-                  <IssueRow
-                    key={`${issue.issue_id}-${target === issue.issue_id}`}
-                    issue={issue}
-                    initiallyOpen={target === issue.issue_id}
-                  />
-                ))}
-              </ul>
+              <div className="detail-body">
+                <ul className="health-issues">
+                  {shownRecent.map((issue) => (
+                    <IssueRow
+                      key={`${issue.issue_id}-${target === issue.issue_id}`}
+                      issue={issue}
+                      initiallyOpen={target === issue.issue_id}
+                    />
+                  ))}
+                </ul>
+                {health.recent.length > RECENT_SHOWN && (
+                  <button
+                    type="button"
+                    className="button button-secondary health-more"
+                    aria-expanded={shownRecent.length > RECENT_SHOWN}
+                    onClick={() => setAllRecent(shownRecent.length <= RECENT_SHOWN)}
+                  >
+                    {shownRecent.length > RECENT_SHOWN
+                      ? `Nur die letzten ${RECENT_SHOWN} anzeigen`
+                      : `Alle ${health.recent.length} anzeigen`}
+                  </button>
+                )}
+              </div>
             )}
           </section>
 
