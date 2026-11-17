@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AUTH_EVENT, notifyTasksChanged } from "./api";
 import { App } from "./App";
@@ -133,8 +133,10 @@ describe("App", () => {
     expect(bell).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(bell);
     expect(bell).toHaveAttribute("aria-expanded", "true");
+    // Dieselbe Meldung steht auch unter „Letzte Aktivitäten“ auf der Startseite.
+    const popup = document.getElementById(bell.getAttribute("aria-controls") ?? "") as HTMLElement;
     expect(
-      screen.getByRole("link", { name: /Rechnung R-1 von Beispiel GmbH prüfen/ }),
+      within(popup).getByRole("link", { name: /Rechnung R-1 von Beispiel GmbH prüfen/ }),
     ).toHaveAttribute("href", "/budget/rechnungen");
     fireEvent.keyDown(document, { key: "Escape" });
     expect(bell).toHaveAttribute("aria-expanded", "false");

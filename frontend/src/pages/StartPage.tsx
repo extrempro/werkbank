@@ -2,6 +2,7 @@ import type { Me, Task } from "../api";
 import { Link } from "../components/Link";
 import { greeting } from "../user";
 import { ModuleTiles } from "./ModuleTiles";
+import { RecentActivity } from "./RecentActivity";
 
 interface StartPageProps {
   me: Me;
@@ -79,6 +80,7 @@ export function StartPage({ me, tasks, now = new Date() }: StartPageProps) {
           )}
         </section>
         <ModuleTiles roles={me.roles} />
+        <RecentActivity />
       </div>
     </div>
   );

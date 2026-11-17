@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { BASE_URL, expectNoA11yViolations, loginAs } from "./helpers";
+import { BASE_URL, expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
 
 test("Admin sieht das Audit-Log mit der eigenen Anmeldung", async ({ page }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
@@ -11,7 +11,7 @@ test("Admin sieht das Audit-Log mit der eigenen Anmeldung", async ({ page }) => 
 });
 
 test("Audit-Log lässt sich nach Modul filtern", async ({ page }) => {
-  await loginAs(page, ["Werkbank.Auditor"], "Udo Auditor");
+  await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
   await page.goto("/audit");
   await page.getByLabel("Modul").selectOption("kern");
   await page.getByLabel("Aktion enthält").fill("anmeldung");
@@ -25,8 +25,8 @@ test("Audit-Log lässt sich nach Modul filtern", async ({ page }) => {
 
 test("Admin sieht die Rollen in der Verwaltung", async ({ page }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
-  await page.goto("/verwaltung");
-  await expect(page.getByRole("heading", { level: 2, name: "Rollen" })).toBeVisible();
+  await page.goto("/verwaltung/rollen");
+  await expect(page.getByRole("heading", { level: 1, name: "Rollen" })).toBeVisible();
   await expect(page.getByText("Evergreen Betriebsrat", { exact: true })).toBeVisible();
   await expect(page.getByRole("cell", { name: /Ada Admin/ }).first()).toBeVisible();
   await expectNoA11yViolations(page);
@@ -36,8 +36,8 @@ test("Admin pflegt SMTP-Server und Aufbewahrungsfrist, das Passwort bleibt verbo
   page,
 }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
-  await page.goto("/verwaltung");
-  await expect(page.getByRole("heading", { level: 2, name: "Allgemein" })).toBeVisible();
+  await page.goto("/verwaltung/mail-teams");
+  await expect(page.getByRole("heading", { level: 1, name: "Mail & Teams" })).toBeVisible();
   await page.getByLabel("Server", { exact: true }).fill("smtp.example.com");
   await page.getByLabel("Port", { exact: true }).fill("587");
   await page.getByLabel("Absenderadresse", { exact: true }).fill("werkbank@example.com");
@@ -55,12 +55,17 @@ test("Admin pflegt SMTP-Server und Aufbewahrungsfrist, das Passwort bleibt verbo
   expect(text).not.toContain("e2e-geheim-4711");
   expect(JSON.parse(text).smtp.password_set).toBe(true);
 
+  await page.reload();
+  await expect(page.getByLabel("Server", { exact: true })).toHaveValue("smtp.example.com");
+
+  // Die Aufbewahrung steht unter „Allgemein“.
+  await page.goto("/verwaltung");
+  await expect(page.getByRole("heading", { level: 1, name: "Allgemein" })).toBeVisible();
   await page.getByLabel("Einträge löschen nach (Tage)").fill("120");
   await page.getByRole("button", { name: "Aufbewahrung speichern" }).click();
   await expect(page.getByText("Die Aufbewahrungsfrist ist gespeichert.")).toBeVisible();
   await page.reload();
   await expect(page.getByLabel("Einträge löschen nach (Tage)")).toHaveValue("120");
-  await expect(page.getByLabel("Server", { exact: true })).toHaveValue("smtp.example.com");
 });
 
 test("Admin stellt Logo und Akzentfarbe ein und nimmt beides wieder zurück", async ({ page }) => {
@@ -103,7 +108,7 @@ test("Admin stellt Logo und Akzentfarbe ein und nimmt beides wieder zurück", as
 
 test("Admin trägt einen KI-Anbieter ein, der Schlüssel bleibt verborgen", async ({ page }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
-  await page.goto("/verwaltung");
+  await page.goto("/verwaltung/verbindungen");
   await expect(page.getByRole("heading", { level: 3, name: "KI-Texte" })).toBeVisible();
   // Ausgeschaltet lassen: Der Test soll keinen Anbieter ansprechen, außer beim Verbindungstest.
   await page.getByLabel("KI-Texte einschalten").uncheck();
@@ -165,6 +170,31 @@ test("Zu große Bilder passt die Werkbank beim Hochladen selbst an", async ({ pa
   await expect(page.getByText("Logo für hellen Hintergrund: entfernt.")).toBeVisible();
   await page.getByRole("button", { name: "Entfernen – Favicon" }).click();
   await expect(page.getByText("Favicon: entfernt.")).toBeVisible();
+});
+
+test("Verwaltung ist ein eigener Bereich mit Unterseiten", async ({ page }) => {
+  await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
+  await page.goto("/");
+  await openNavigation(page);
+  const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
+  await nav.getByRole("link", { name: /^Verwaltung/ }).click();
+  await expect(page).toHaveURL(/\/verwaltung$/);
+  await openNavigation(page);
+  for (const label of ["Allgemein", "Rollen", "Mail & Teams", "Verbindungen", "Audit-Log"]) {
+    await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
+  }
+  await nav.getByRole("link", { name: "Audit-Log", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Audit-Log" })).toBeVisible();
+});
+
+test("Ohne Admin-Rolle gibt es Audit-Log und Verwaltung nicht in der Oberfläche", async ({
+  page,
+}) => {
+  await loginAs(page, ["Werkbank.Auditor"], "Udo Auditor");
+  for (const path of ["/audit", "/verwaltung", "/verwaltung/rollen"]) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
+  }
 });
 
 test("Betriebsrat kommt nicht an Audit-Log und Verwaltung", async ({ page }) => {

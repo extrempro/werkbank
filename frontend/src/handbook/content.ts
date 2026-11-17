@@ -1,7 +1,6 @@
 import type { Chapter } from "./types";
 
 const ADMIN = "Werkbank.Admin";
-const AUDITOR = "Werkbank.Auditor";
 const CONFIG_READER = "Config.Reader";
 const CONFIG_REVIEWER = "Config.Reviewer";
 const EV_IT = "Evergreen.IT";
@@ -39,7 +38,7 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "terms",
             items: [
-              ["Werkbank", "Startseite, Suche, Reports, Audit-Log und Verwaltung"],
+              ["Werkbank", "Startseite und Suche"],
               [
                 "Microsoft 365",
                 "Einstellungen des Tenants, Lizenzen, Benutzerzahlen, Zertifikate und Dienststatus",
@@ -76,7 +75,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Die Sitzung endet nach 30 Minuten ohne Aktivität und spätestens nach 8 Stunden. Dann zeigt die Werkbank einen Hinweis und du meldest dich neu an. Mit „Abmelden“ oben rechts beendest du die Sitzung sofort.",
+            text: "Die Sitzung endet nach 30 Minuten ohne Aktivität und spätestens nach 8 Stunden. Dann zeigt die Werkbank einen Hinweis und du meldest dich neu an. Mit „Abmelden“ oben rechts, auf dem Handy unten im Menü, beendest du die Sitzung sofort.",
           },
           {
             kind: "hint",
@@ -115,6 +114,10 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "text",
             text: "Aufgaben werden nicht abgehakt. Sie verschwinden von selbst, sobald die Sache erledigt ist. Die Zähler laden bei jedem Seitenwechsel, nach jeder Änderung und alle fünf Minuten neu.",
+          },
+          {
+            kind: "text",
+            text: "„Letzte Aktivitäten“ zeigt die acht neuesten Meldungen der Glocke, gelesen oder nicht, zum Beispiel neue Änderungen, Vorgänge oder Störungen. Ein Klick öffnet die passende Seite und markiert die Meldung als gelesen. Welche Arten du bekommst, stellst du im Konto unter Benachrichtigungen ein.",
           },
         ],
         links: [{ to: "/", label: "Zur Startseite" }],
@@ -229,7 +232,10 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "terms",
             items: [
               ["Werkbank.Admin", "Verwaltung der Werkbank und das vollständige Audit-Log"],
-              ["Werkbank.Auditor", "Audit-Log und Reports lesen"],
+              [
+                "Werkbank.Auditor",
+                "Audit-Log über die Schnittstelle lesen (die Seite sehen nur Admins)",
+              ],
               ["Config.Reader", "Einstellungen, Änderungen und Snapshots des Tenants ansehen"],
               ["Config.Reviewer", "zusätzlich Änderungen bewerten, Angaben und Soll-Werte pflegen"],
               ["Tenant.Reader", "Lizenzen, Benutzerzahlen, Zertifikate und Dienststatus ansehen"],
@@ -1185,7 +1191,7 @@ export const CHAPTERS: readonly Chapter[] = [
     id: "verwaltung",
     title: "Verwaltung und Audit-Log",
     summary: "Einstellungen der Werkbank, Rollen und das Protokoll aller Aktionen.",
-    roles: [ADMIN, AUDITOR],
+    roles: [ADMIN],
     sections: [
       {
         id: "audit",
@@ -1209,32 +1215,30 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "„Einstellungen“ unter Verwaltung verlangt eine frische Anmeldung (siehe „Anmelden und abmelden“). Unter „Allgemein“ stehen:",
+            text: "Die Verwaltung ist ein eigener Bereich in der Navigation, nur für Admins. Sie verlangt eine frische Anmeldung (siehe „Anmelden und abmelden“). Die Einstellungen verteilen sich auf diese Seiten:",
           },
           {
             kind: "terms",
             items: [
-              ["Branding", "Name, Farbe, Logos und Favicon der Werkbank"],
               [
-                "Mailversand (SMTP)",
-                "Server und Absender, mit Testmail an dich selbst; darüber gehen auch die Benachrichtigungen per Mail",
+                "Allgemein",
+                "Branding (Name, Farbe, Logos, Favicon), Aufbewahrung des Audit-Logs (30 bis 3650 Tage), ab wie vielen Tagen Zertifikate und Secrets als Hinweis, Warnung und dringend gelten",
+              ],
+              ["Rollen", "welche Rollen es gibt und wer sie hat (siehe unten)"],
+              [
+                "Mail & Teams",
+                "SMTP-Server und Absender mit Testmail an dich selbst; Benachrichtigungen in Teams über einen Workflow aus Power Automate mit Testnachricht",
               ],
               [
-                "Benachrichtigungen in Teams",
-                "Adresse des Workflows aus Power Automate, ein- und ausschalten, Testnachricht an dich selbst",
+                "Verbindungen",
+                "KI-Texte (Anbieter, Modell, Höchstzahl je Stunde; Vorgabe: aus), NetBox für den DNS-Abgleich, Abfragen der IT-Tools ins Internet (Vorgabe: erlaubt)",
               ],
-              ["Audit-Log", "Aufbewahrung zwischen 30 und 3650 Tagen"],
-              [
-                "Zertifikate und Secrets",
-                "ab wie vielen Tagen Hinweis, Warnung und dringend gelten",
-              ],
-              ["KI-Texte", "Anbieter, Modell und Höchstzahl je Stunde; Vorgabe: aus"],
-              ["IT-Tools: Abfragen ins Internet", "erlaubt oder ausgeschaltet; Vorgabe: erlaubt"],
+              ["Audit-Log", "das Protokoll aller Aktionen (siehe oben)"],
             ],
           },
           {
             kind: "text",
-            text: "Unter „Rollen“ steht, welche Rollen es gibt und wer sie bei der letzten Anmeldung hatte. „Nach Person“ zeigt dieselbe Information je Person: wer sich angemeldet hat und mit welchen Rollen; mit der Suche findest du Personen und Rollen, „Nur Personen ohne Rolle“ zeigt, wer sich angemeldet hat, aber nichts sieht. Wer sich noch nie angemeldet hat, steht dort nicht. Vergeben werden Rollen in Microsoft Entra, nicht in der Werkbank.",
+            text: "Auf der Seite „Rollen“ steht, welche Rollen es gibt und wer sie bei der letzten Anmeldung hatte. „Nach Person“ zeigt dieselbe Information je Person: wer sich angemeldet hat und mit welchen Rollen; mit der Suche findest du Personen und Rollen, „Nur Personen ohne Rolle“ zeigt, wer sich angemeldet hat, aber nichts sieht. Wer sich noch nie angemeldet hat, steht dort nicht. Vergeben werden Rollen in Microsoft Entra, nicht in der Werkbank.",
           },
           {
             kind: "hint",

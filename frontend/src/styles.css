@@ -651,6 +651,12 @@ a {
   margin-left: auto;
 }
 
+/* „Abmelden“ im Menü gibt es nur auf dem Handy (siehe dort). */
+.nav-logout {
+  display: none;
+  margin: 0;
+}
+
 .nav-dot {
   position: absolute;
   top: 8px;
@@ -847,8 +853,22 @@ a {
     overflow-x: hidden;
   }
 
-  /* Ist es eng, kürzt sich der Name; „Abmelden“ bleibt ganz sichtbar. */
-  .brand,
+  /* „Abmelden“ steht auf dem Handy unten im Menü, damit Logo und Name Platz haben. */
+  .header-logout {
+    display: none;
+  }
+
+  .nav-logout {
+    display: block;
+    flex: 1 1 100%;
+    margin-bottom: 4px;
+  }
+
+  .nav-logout .button {
+    width: 100%;
+  }
+
+  /* Wird es trotzdem eng, kürzt sich der Name statt unter die Glocke zu rutschen. */
   .brand-text {
     min-width: 0;
   }
@@ -1354,6 +1374,11 @@ section + section {
 }
 
 .start-tasks {
+  flex: 999 1 520px;
+  min-width: 0;
+}
+
+.start-activity {
   flex: 999 1 520px;
   min-width: 0;
 }

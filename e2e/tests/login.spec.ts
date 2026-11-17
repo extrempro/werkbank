@@ -17,7 +17,8 @@ test("Admin sieht alle Bereiche", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ })).toBeVisible();
   const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
   await openNavigation(page);
-  await expect(nav.getByRole("link", { name: "Audit-Log" })).toBeVisible();
+  // Audit-Log und Einstellungen stehen im eigenen Bereich „Verwaltung“.
+  await expect(nav.getByRole("link", { name: /^Verwaltung/ })).toBeVisible();
   await nav.getByRole("link", { name: /^Microsoft 365/ }).click();
   await openNavigation(page);
   await expect(nav.getByRole("link", { name: "Änderungen" })).toBeVisible();
@@ -43,6 +44,8 @@ test("Betriebsrat sieht nur Start und Evergreen", async ({ page }) => {
 test("Abmelden führt zur Login-Seite", async ({ page }) => {
   await loginAs(page, ["Config.Reader"], "Lea Leser");
   await page.goto("/");
+  // Auf dem Handy steht „Abmelden“ im Menü.
+  await openNavigation(page);
   await page.getByRole("button", { name: "Abmelden" }).click();
   await expect(page.getByRole("link", { name: "Mit Microsoft anmelden" })).toBeVisible();
 });
@@ -58,7 +61,7 @@ test("Abgelaufene Sitzung: Die Anmeldeseite erscheint mit Hinweis und Rückweg",
 }) => {
   await loginAs(page, ["Config.Reader"], "Lea Leser");
   await page.goto("/m365/snapshots");
-  await expect(page.getByRole("button", { name: "Abmelden" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Benachrichtigungen/ })).toBeVisible();
   // Sitzung endet, während die Seite offen ist.
   await context.clearCookies();
   await openNavigation(page);

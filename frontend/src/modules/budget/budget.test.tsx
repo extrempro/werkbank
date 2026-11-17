@@ -1384,6 +1384,28 @@ describe("Tags", () => {
       "/budget/einstellungen",
     );
   });
+
+  it("fragt vor dem Wechsel zu den Tags nach, wenn schon etwas eingetragen ist", async () => {
+    stubFetch({
+      "GET /api/budget/overview": overview(),
+      "GET /api/budget/accounts": [hardware, software],
+      "GET /api/budget/tags": [],
+    });
+    render(<ItemsPage roles={["Budget.Manager"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Posten hinzufügen" }));
+    fireEvent.change(screen.getByLabelText("Bezeichnung", { exact: true }), {
+      target: { value: "Neuer Posten" },
+    });
+    fireEvent.click(screen.getByRole("link", { name: /Tags verwalten/ }));
+    expect(screen.getByRole("alert")).toHaveTextContent("geht das verloren");
+    expect(window.location.pathname).not.toBe("/budget/einstellungen");
+    fireEvent.click(screen.getByRole("button", { name: "Hierbleiben" }));
+    expect(screen.getByLabelText("Bezeichnung", { exact: true })).toHaveValue("Neuer Posten");
+    fireEvent.click(screen.getByRole("link", { name: /Tags verwalten/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Trotzdem zu den Tags" }));
+    expect(window.location.pathname).toBe("/budget/einstellungen");
+    window.history.replaceState(null, "", "/");
+  });
 });
 
 describe("Tag-Liste in den Einstellungen", () => {
