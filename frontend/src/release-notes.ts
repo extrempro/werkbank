@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.52.0",
+    date: "2026-11-17",
+    summary:
+      "Microsoft 365: Einstellungen von Teams und SharePoint lassen sich jetzt mit überwachen.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "SharePoint und OneDrive: Die Mandanteneinstellungen, etwa die Freigabe nach außen, stehen unter Einstellungen › SharePoint, sobald die Verwaltung den Abruf einschaltet.",
+          "Teams: Die organisationsweiten Richtlinien für Besprechungen, Chat, Gäste, externen Zugriff und Apps erscheinen mit verständlichen Namen, sobald sie im Abruf eingetragen sind.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.51.0",
     date: "2026-11-17",
     summary: "Dienststatus: Der 90-Tage-Kalender steht nur noch im Würfel der Kachel.",

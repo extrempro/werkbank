@@ -12,6 +12,7 @@ from werkbank.core.models import AuditLog
 from werkbank.core.sessions import now_utc
 from werkbank.modules.m365_config.collector import (
     MONTHLY_RESOURCE_LIMIT,
+    SHAREPOINT_SOURCE,
     CollectorError,
     collect,
     parse_snapshot,
@@ -72,8 +73,10 @@ class FakeGraph:
         audits: list[dict[str, Any]] | None = None,
         old_jobs: list[dict[str, Any]] | None = None,
         polls_until_done: int = 1,
+        sharepoint: dict[str, Any] | None = None,
     ) -> None:
         self.resources = resources
+        self.sharepoint = sharepoint
         self.status = status
         self.error_details = error_details or []
         self.audits = audits or []
@@ -110,6 +113,10 @@ class FakeGraph:
             return httpx.Response(204)
         if request.method == "GET" and "/configurationSnapshots(" in path:
             return httpx.Response(200, json={"id": JOB_ID, "resources": self.resources})
+        if request.method == "GET" and path.endswith("/admin/sharepoint/settings"):
+            if self.sharepoint is None:
+                return httpx.Response(403, json={"error": {"message": "Keine Berechtigung"}})
+            return httpx.Response(200, json=self.sharepoint)
         if request.method == "GET" and path.endswith("/auditLogs/directoryAudits"):
             return httpx.Response(200, json={"value": self.audits})
         return httpx.Response(404, json={"error": {"message": f"unbekannt: {path}"}})
@@ -386,3 +393,73 @@ def test_source_errors_carry_the_text_of_the_source() -> None:
     assert source_errors([CA, NL], {"status": "succeeded"}) == {}
     long = {"errorDetails": [f"{CA} " + "x" * 2000]}
     assert len(source_errors([CA], long)[f"utcm:{CA}"]) == 500
+
+
+SHAREPOINT = {
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#admin/sharepoint/settings",
+    "id": "ignorieren",
+    "sharingCapability": "externalUserSharingOnly",
+    "sharingAllowedDomainList": ["example.com"],
+    "isLoopEnabled": True,
+}
+
+
+@pytest.mark.db
+def test_collect_reads_sharepoint_when_enabled(db: Session) -> None:
+    settings = SETTINGS.model_copy(update={"collector_sharepoint_enabled": True})
+    result = collect(
+        db,
+        settings,
+        FakeGraph([ca_policy("enabled")], sharepoint=SHAREPOINT).client(),
+        sleep=no_sleep,
+    )
+    assert result.status == SnapshotStatus.OK
+    rows = db.scalars(select(CfgSetting).where(CfgSetting.workload == "sharepoint")).all()
+    assert {row.property for row in rows} == {
+        "sharingCapability",
+        "sharingAllowedDomainList",
+        "isLoopEnabled",
+    }
+    assert {(row.area, row.object_id, row.object_name, row.source) for row in rows} == {
+        ("tenantsettings", "tenant", "SharePoint und OneDrive", SHAREPOINT_SOURCE)
+    }
+    # Zählt nicht gegen das Kontingent von UTCM
+    snapshot = db.get(CfgSnapshot, result.snapshot_id)
+    assert snapshot is not None and snapshot.resource_count == 1
+
+    # Eine Änderung in SharePoint wird erkannt
+    changed = {**SHAREPOINT, "sharingCapability": "disabled"}
+    second = collect(
+        db,
+        settings,
+        FakeGraph([ca_policy("enabled")], sharepoint=changed).client(),
+        sleep=no_sleep,
+    )
+    assert second.changes == 1
+
+
+@pytest.mark.db
+def test_sharepoint_failure_keeps_settings_and_marks_partial(db: Session) -> None:
+    settings = SETTINGS.model_copy(update={"collector_sharepoint_enabled": True})
+    collect(
+        db,
+        settings,
+        FakeGraph([ca_policy("enabled")], sharepoint=SHAREPOINT).client(),
+        sleep=no_sleep,
+    )
+    result = collect(db, settings, FakeGraph([ca_policy("enabled")]).client(), sleep=no_sleep)
+    assert result.status == SnapshotStatus.PARTIAL
+    snapshot = db.get(CfgSnapshot, result.snapshot_id)
+    assert snapshot is not None
+    assert snapshot.source_status[SHAREPOINT_SOURCE] is False
+    assert "Keine Berechtigung" in snapshot.source_errors[SHAREPOINT_SOURCE]
+    # Nichts wird als entfernt erkannt
+    rows = db.scalars(select(CfgSetting).where(CfgSetting.workload == "sharepoint")).all()
+    assert rows and all(row.active for row in rows)
+
+
+@pytest.mark.db
+def test_sharepoint_is_not_read_when_disabled(db: Session) -> None:
+    graph = FakeGraph([ca_policy("enabled")], sharepoint=SHAREPOINT)
+    collect(db, SETTINGS, graph.client(), sleep=no_sleep)
+    assert db.scalars(select(CfgSetting).where(CfgSetting.workload == "sharepoint")).all() == []

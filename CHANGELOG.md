@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.52.0] – 2026-11-17
+
+Microsoft 365: Teams und SharePoint in der Konfiguration.
+
+### Microsoft 365
+
+- **SharePoint und OneDrive:** Der Abruf liest mit `COLLECTOR_SHAREPOINT_ENABLED=true` zusätzlich die Mandanteneinstellungen über Microsoft Graph (`/admin/sharepoint/settings`, Berechtigung `SharePointTenantSettings.Read.All`); Quelle `graph:sharepoint`, ein Objekt „SharePoint und OneDrive“ unter SharePoint › Mandanteneinstellungen; zählt nicht gegen das Kontingent von UTCM; schlägt es fehl, ist der Abruf teilweise erfolgreich und nichts gilt als entfernt
+- **Teams:** Anleitung und Auswahl der organisationsweiten Richtlinien für UTCM (`COLLECTOR_RESOURCES`), verständliche Namen der Teams-Bereiche im Baum
+- Snapshots: Die Quelle SharePoint heißt „SharePoint und OneDrive (Graph)“
+
+### Doku
+
+- Einrichtung (`docs/entra-setup.md` 4.4 Teams, 4.5 SharePoint und OneDrive, 4.6 Grenzen), `.env.example`, Spec 7.1, Datenschutz, Handbuch
+
 ## [0.51.0] – 2026-11-17
 
 Dienststatus ohne doppelten Kalender.

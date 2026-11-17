@@ -135,6 +135,10 @@ class UtcmClient:
     def delete_job(self, job_id: str) -> None:
         self._request("DELETE", self._job_url(job_id))
 
+    def sharepoint_settings(self) -> dict[str, Any]:
+        """Mandanteneinstellungen von SharePoint und OneDrive (nur lesen)."""
+        return self._json("GET", f"{GRAPH_URL}/admin/sharepoint/settings")
+
     def download(self, location: str) -> dict[str, Any]:
         """Lädt den fertigen Snapshot von der Adresse aus dem Auftrag."""
         return self._json("GET", location)

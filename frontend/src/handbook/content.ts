@@ -307,7 +307,7 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Die Seite „Einstellungen“ zeigt alle überwachten Einstellungen als Baum: Dienst (z. B. Entra), darin die Bereiche (z. B. Bedingter Zugriff), darin die Objekte (z. B. eine Richtlinie). Erst ein aufgeklapptes Objekt zeigt seine Eigenschaften mit kurzem Wert. Neben jedem Knoten stehen offene Änderungen und Abweichungen vom Soll-Wert, so siehst du schon zugeklappt, wo etwas zu tun ist. Bei Suche oder „Nur Abweichungen“ sind Dienste und Bereiche gleich aufgeklappt. Ein Klick auf eine Eigenschaft öffnet die Einzelheiten daneben:",
+            text: "Die Seite „Einstellungen“ zeigt alle überwachten Einstellungen als Baum: Dienst (Entra, Exchange, Teams, SharePoint, je nachdem, was die Einrichtung abruft), darin die Bereiche (z. B. Bedingter Zugriff), darin die Objekte (z. B. eine Richtlinie). Erst ein aufgeklapptes Objekt zeigt seine Eigenschaften mit kurzem Wert. Neben jedem Knoten stehen offene Änderungen und Abweichungen vom Soll-Wert, so siehst du schon zugeklappt, wo etwas zu tun ist. Bei Suche oder „Nur Abweichungen“ sind Dienste und Bereiche gleich aufgeklappt. Ein Klick auf eine Eigenschaft öffnet die Einzelheiten daneben:",
           },
           {
             kind: "list",

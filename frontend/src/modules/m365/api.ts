@@ -440,6 +440,27 @@ const AREA_LABELS: Record<string, string> = {
   mobiledevicemailboxpolicy: "Mobilgeräte",
   sharingpolicy: "Freigaberichtlinien",
   authenticationpolicy: "Authentifizierungsrichtlinien",
+  // Teams: Zugriff und Gäste
+  federationconfiguration: "Externer Zugriff",
+  guestmeetingconfiguration: "Gäste: Besprechungen",
+  guestmessagingconfiguration: "Gäste: Chat",
+  guestcallingconfiguration: "Gäste: Anrufe",
+  clientconfiguration: "Teams-Client",
+  // Teams: Besprechungen, Chat und Anrufe
+  meetingpolicy: "Besprechungsrichtlinien",
+  meetingconfiguration: "Besprechungen (Organisation)",
+  messagingpolicy: "Chat-Richtlinien",
+  channelspolicy: "Teams und Kanäle",
+  eventspolicy: "Veranstaltungen",
+  filespolicy: "Dateien",
+  callingpolicy: "Anrufrichtlinien",
+  // Teams: Apps und Updates
+  apppermissionpolicy: "App-Berechtigungen",
+  appsetuppolicy: "App-Einrichtung",
+  updatemanagementpolicy: "Updates",
+  upgradeconfiguration: "Upgrade",
+  // SharePoint und OneDrive (eigener Abruf über Microsoft Graph)
+  tenantsettings: "Mandanteneinstellungen",
 };
 
 /** Name eines Bereichs; unbekannte Bereiche erscheinen mit ihrem technischen Namen. */

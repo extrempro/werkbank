@@ -30,6 +30,12 @@ logger = logging.getLogger(__name__)
 
 MODULE = "m365_config"
 SOURCE_PREFIX = "utcm:"
+# SharePoint liest die Werkbank selbst über Microsoft Graph, nicht über UTCM
+SHAREPOINT_SOURCE = "graph:sharepoint"
+SHAREPOINT_WORKLOAD = "sharepoint"
+SHAREPOINT_AREA = "tenantsettings"
+SHAREPOINT_OBJECT = "tenant"
+SHAREPOINT_NAME = "SharePoint und OneDrive"
 # Namen der Snapshot-Aufträge der Werkbank in UTCM (nur diese räumt sie auch wieder weg)
 JOB_NAME_PREFIX = "Werkbank "
 # UTCM liest höchstens so viele Objekte pro Tenant und Monat
@@ -170,6 +176,23 @@ def parse_snapshot(document: Mapping[str, Any]) -> tuple[list[SettingValue], int
     return items, count
 
 
+def parse_sharepoint(document: Mapping[str, Any]) -> list[SettingValue]:
+    """Mandanteneinstellungen von SharePoint und OneDrive als ein Objekt mit Eigenschaften."""
+    properties = {
+        key: value
+        for key, value in document.items()
+        if isinstance(key, str) and not key.startswith("@") and key != "id"
+    }
+    return normalize_object(
+        workload=SHAREPOINT_WORKLOAD,
+        area=SHAREPOINT_AREA,
+        object_id=SHAREPOINT_OBJECT,
+        object_name=SHAREPOINT_NAME,
+        properties=properties,
+        source=SHAREPOINT_SOURCE,
+    )
+
+
 def _initiator(audit: Mapping[str, Any]) -> str | None:
     """Wer eine Änderung laut Entra-Audit-Log ausgelöst hat (Konto oder Anwendung)."""
     initiated_by = audit.get("initiatedBy")
@@ -226,8 +249,8 @@ def _remove_own_jobs(client: UtcmClient) -> None:
             client.delete_job(str(job_id))
 
 
-def _record_failure(db: Session, resources: list[str], started_at: datetime) -> None:
-    apply_snapshot(db, [], {source_name(name): False for name in resources}, started_at=started_at)
+def _record_failure(db: Session, sources: list[str], started_at: datetime) -> None:
+    apply_snapshot(db, [], {name: False for name in sources}, started_at=started_at)
     db.commit()
 
 
@@ -278,17 +301,31 @@ def collect(
         document = client.download(location)
     except (UtcmError, CollectorError) as exc:
         db.rollback()
-        _record_failure(db, resources, started_at)
+        sources = [source_name(name) for name in resources]
+        if settings.collector_sharepoint_enabled:
+            sources.append(SHAREPOINT_SOURCE)
+        _record_failure(db, sources, started_at)
         if isinstance(exc, CollectorError):
             raise
         raise CollectorError(str(exc)[:ERROR_LENGTH]) from exc
 
     items, resource_count = parse_snapshot(document)
+    status = source_status(resources, job)
+    errors = source_errors(resources, job)
+    if settings.collector_sharepoint_enabled:
+        # Zählt nicht gegen das Kontingent von UTCM. Schlägt es fehl, bleibt der Bestand stehen.
+        try:
+            items.extend(parse_sharepoint(client.sharepoint_settings()))
+            status[SHAREPOINT_SOURCE] = True
+        except UtcmError as exc:
+            logger.warning("SharePoint-Einstellungen konnten nicht gelesen werden: %s", exc)
+            status[SHAREPOINT_SOURCE] = False
+            errors[SHAREPOINT_SOURCE] = str(exc)[:ERROR_LENGTH]
     result = apply_snapshot(
         db,
         items,
-        source_status(resources, job),
-        source_errors(resources, job),
+        status,
+        errors,
         started_at=started_at,
         resource_count=resource_count,
     )

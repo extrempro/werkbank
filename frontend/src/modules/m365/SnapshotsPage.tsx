@@ -3,6 +3,9 @@ import { formatDateTime } from "../../api";
 import { fetchSnapshots, snapshotLabel, type Snapshot } from "./api";
 
 function sourceLabel(source: string): string {
+  if (source === "graph:sharepoint") {
+    return "SharePoint und OneDrive (Graph)";
+  }
   return source.replace(/^utcm:/, "");
 }
 
