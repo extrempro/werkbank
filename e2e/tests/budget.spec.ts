@@ -38,9 +38,12 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .getByRole("group", { name: "Tags (freiwillig)" })
     .getByRole("button", { name: `Tag ${number}`, exact: true })
     .click();
+  // Das Formular ist länger; nach dem Scrollen läge „Posten hinzufügen“ unter der festen Kopfzeile.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
   await page.getByRole("button", { name: "Posten speichern" }).click();
   await expect(page.getByText(`Posten ${number} ist gespeichert.`)).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/partner");

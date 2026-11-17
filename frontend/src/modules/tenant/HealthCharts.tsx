@@ -53,14 +53,13 @@ function Timeline({ health }: { health: Health }) {
   const last = days[days.length - 1] ?? "";
   const columns = weekColumns(days);
   // Monatsname über der ersten Spalte, in der ein neuer Monat beginnt
-  let previous = "";
-  const months = columns.map((column) => {
+  const monthKeys = columns.map((column) => {
     const index = column.find((entry) => entry !== null);
-    const key = index !== null && index !== undefined ? (days[index] ?? "").slice(0, 7) : "";
-    const label = key && key !== previous ? monthName.format(day(`${key}-01`)) : "";
-    previous = key || previous;
-    return label;
+    return index !== null && index !== undefined ? (days[index] ?? "").slice(0, 7) : "";
   });
+  const months = monthKeys.map((key, index) =>
+    key && key !== monthKeys[index - 1] ? monthName.format(day(`${key}-01`)) : "",
+  );
   return (
     <section className="panel" aria-labelledby="health-zeitleiste">
       <div className="panel-head">

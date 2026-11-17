@@ -391,16 +391,16 @@ def _month_keys(today: date, count: int) -> list[str]:
 def _months(issues: list[TenantServiceIssue], today: date) -> list[MonthStat]:
     """Störungen je Monat des Beginns und Dienst."""
     keys = _month_keys(today, MONTHS)
-    counts = {(key, service_id): 0 for key in keys for service_id in SERVICES}
+    totals = {(key, service_id): 0 for key in keys for service_id in SERVICES}
     for row in issues:
         if row.classification != "incident" or row.start_at is None or not counts(row):
             continue
         key = (row.start_at.strftime("%Y-%m"), row.service_id)
-        if key in counts:
-            counts[key] += 1
+        if key in totals:
+            totals[key] += 1
     return [
         MonthStat(month=month, service_id=service_id, incidents=count)
-        for (month, service_id), count in counts.items()
+        for (month, service_id), count in totals.items()
     ]
 
 
