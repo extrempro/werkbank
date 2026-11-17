@@ -181,7 +181,7 @@ export function SnapshotsPage() {
       {status === "ready" && <SnapshotCompare snapshots={snapshots} />}
       {snapshots.length > 0 && (
         <section aria-labelledby="snapshot-list">
-          <h2 id="snapshot-list">Abrufe</h2>
+          <h2 id="snapshot-list">Alle Abrufe</h2>
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Abrufe">
             <table>
               <caption className="visually-hidden">Abrufe, neueste zuerst</caption>
