@@ -201,13 +201,24 @@ export const LEVEL_INFO: Record<
 
 // --- Dienststatus ---
 
+export interface ServiceReason {
+  issue_id: string;
+  title: string;
+  /** „incident“ (Störung) oder „advisory“ (Hinweis) */
+  classification: string;
+}
+
 export interface ServiceHealth {
   service_id: string;
   name: string;
-  /** Status laut Microsoft, z. B. „serviceOperational“ */
+  /** Status laut Übersicht von Microsoft, z. B. „serviceDegradation“ (nur zur Information) */
   status: string;
+  /** Aus den offenen Meldungen: offene Störung, nur Hinweise oder nichts */
+  level: HealthLevel;
   open_incidents: number;
   open_advisories: number;
+  /** Die offenen Meldungen des Dienstes, Störungen zuerst */
+  reasons: ServiceReason[];
 }
 
 export interface ServiceIssue {
@@ -268,6 +279,8 @@ export interface Health {
   /** Tage als JJJJ-MM-TT, ältester zuerst */
   timeline_days: string[];
   timeline: ServiceTimeline[];
+  /** Meldungen, die in diesen Tagen liefen, neueste zuerst */
+  timeline_issues: ServiceIssue[];
 }
 
 /** Die Meldung im Microsoft 365 Admin Center (dort ist eine Anmeldung nötig). */
@@ -299,8 +312,8 @@ export function fetchIssue(id: string): Promise<ServiceIssueDetail> {
   return getJson(`${BASE}/health/issues/${encodeURIComponent(id)}`);
 }
 
-/** Zustand eines Dienstes in drei Stufen. */
-export type HealthLevel = "ok" | "eingeschraenkt" | "stoerung";
+/** Zustand eines Dienstes in drei Stufen, aus den offenen Meldungen. */
+export type HealthLevel = "ok" | "hinweis" | "stoerung";
 
 const STATUS_TEXT: Record<string, string> = {
   serviceoperational: "In Ordnung",
@@ -326,23 +339,44 @@ export function healthStatusText(status: string): string {
   return STATUS_TEXT[status.toLowerCase()] ?? status;
 }
 
-export function healthLevel(status: string): HealthLevel {
-  const lowered = status.toLowerCase();
-  if (lowered.includes("interruption")) {
-    return "stoerung";
-  }
-  if (["serviceoperational", "servicerestored", "postincidentreviewpublished"].includes(lowered)) {
-    return "ok";
-  }
-  return "eingeschraenkt";
-}
-
 export const HEALTH_LEVEL: Record<HealthLevel, { label: string; pill: string; kpi: string }> = {
   ok: { label: "In Ordnung", pill: "pill pill-ok", kpi: "kpi kpi-ok" },
-  eingeschraenkt: { label: "Eingeschränkt", pill: "pill pill-todo", kpi: "kpi kpi-warn" },
+  hinweis: { label: "Hinweis", pill: "pill pill-todo", kpi: "kpi kpi-warn" },
   stoerung: { label: "Störung", pill: "pill pill-bad", kpi: "kpi kpi-bad" },
 };
 
 export function issueKind(classification: string): string {
   return classification === "incident" ? "Störung" : "Hinweis";
+}
+
+const DURATION_HOURS = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
+
+/** Dauer einer Meldung, z. B. „3,5 Std.“ oder „2 Tage“; laufende bis jetzt. */
+export function issueDuration(issue: ServiceIssue, now: Date = new Date()): string {
+  if (!issue.start_at) {
+    return "–";
+  }
+  const end = issue.end_at ? new Date(issue.end_at) : now;
+  const hours = Math.max(end.getTime() - new Date(issue.start_at).getTime(), 0) / 3_600_000;
+  return hours < 48
+    ? `${DURATION_HOURS.format(hours)} Std.`
+    : `${DURATION_HOURS.format(hours / 24)} Tage`;
+}
+
+/** Tage (ISO, UTC) in Wochen-Spalten mit Montag oben; Lücken vor dem ersten Tag sind null. */
+export function weekColumns(days: string[]): (number | null)[][] {
+  if (days.length === 0) {
+    return [];
+  }
+  // getUTCDay zählt ab Sonntag (0)
+  const offset = (new Date(`${days[0] ?? ""}T00:00:00Z`).getUTCDay() + 6) % 7;
+  const cells: (number | null)[] = [
+    ...Array.from({ length: offset }, () => null),
+    ...days.map((_, index) => index),
+  ];
+  const columns: (number | null)[][] = [];
+  for (let start = 0; start < cells.length; start += 7) {
+    columns.push(cells.slice(start, start + 7));
+  }
+  return columns;
 }

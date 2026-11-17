@@ -1,6 +1,6 @@
 """Tenant: Dienststatus von Microsoft 365 (Abruf, Aufbewahrung, API)."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -12,6 +12,7 @@ from tests.test_m365_api import ORIGIN, client_for
 from werkbank.config import Settings
 from werkbank.core.sessions import now_utc
 from werkbank.modules.m365_config.utcm import UtcmClient
+from werkbank.modules.tenant.api import incident_hours_by_year, is_open
 from werkbank.modules.tenant.health import FETCH_HEALTH, fetch_health, read_posts
 from werkbank.modules.tenant.models import TenantServiceHealth, TenantServiceIssue
 from werkbank.modules.tenant.notifications import tenant_notifications
@@ -184,6 +185,16 @@ def test_api_for_readers_only(db: Session) -> None:
     ]
     assert data["services"][0]["name"] == "Microsoft Entra"
     assert data["services"][1]["open_incidents"] == 1
+    # Der Zustand der Kachel kommt aus den offenen Meldungen, mit dem Grund dazu
+    assert [entry["level"] for entry in data["services"]] == ["stoerung", "stoerung", "ok", "ok"]
+    assert data["services"][1]["reasons"] == [
+        {"issue_id": "EX1001", "title": "Störung EX1001", "classification": "incident"}
+    ]
+    assert {entry["issue_id"] for entry in data["timeline_issues"]} == {
+        "EX1001",
+        "EX0900",
+        "ID2001",
+    }
     assert {entry["issue_id"] for entry in data["open"]} == {"EX1001", "ID2001"}
     # Vor vier Tagen beendet: unter „kürzlich beendet“
     assert [entry["issue_id"] for entry in data["recent"]] == ["EX0900"]
@@ -235,3 +246,55 @@ def test_incidents_notify_on_start_and_end(db: Session) -> None:
     assert set(keys) == {"EX1001:begonnen", "ID2001:begonnen"}
     assert keys["EX1001:begonnen"].link == "/m365/dienststatus#EX1001"
     assert keys["ID2001:begonnen"].title.startswith("Störung bei Microsoft Entra:")
+
+
+def row(
+    service: str,
+    start: datetime,
+    end: datetime | None,
+    *,
+    classification: str = "incident",
+    status: str = "serviceRestored",
+    resolved: bool = True,
+) -> TenantServiceIssue:
+    return TenantServiceIssue(
+        issue_id=f"X{start.timestamp():.0f}",
+        service_id=service,
+        service_name=service,
+        title="t",
+        classification=classification,
+        status=status,
+        resolved=resolved,
+        start_at=start,
+        end_at=end,
+        modified_at=end,
+    )
+
+
+def test_incident_hours_merge_overlaps_and_skip_false_alarms() -> None:
+    base = datetime(2026, 3, 1, 8, tzinfo=UTC)
+    issues = [
+        # 8 bis 12 Uhr und 10 bis 14 Uhr überlappen: zusammen 6 Stunden, nicht 8
+        row("Exchange", base, base + timedelta(hours=4)),
+        row("Exchange", base + timedelta(hours=2), base + timedelta(hours=6)),
+        # Fehlalarm und Hinweis zählen nicht
+        row("Exchange", base, base + timedelta(hours=50), status="falsePositive"),
+        row("Exchange", base, base + timedelta(hours=50), classification="advisory"),
+        # Über den Jahreswechsel: anteilig
+        row(
+            "SharePoint",
+            datetime(2025, 12, 31, 22, tzinfo=UTC),
+            datetime(2026, 1, 1, 3, tzinfo=UTC),
+        ),
+    ]
+    hours = incident_hours_by_year(issues, base + timedelta(days=1))
+    assert hours[(2026, "Exchange")] == 6.0
+    assert hours[(2025, "SharePoint")] == 2.0
+    assert hours[(2026, "SharePoint")] == 3.0
+    # Ohne Ende und nicht als behoben markiert: läuft bis jetzt
+    running = row("Exchange", base, None, status="serviceDegradation", resolved=False)
+    assert incident_hours_by_year([running], base + timedelta(hours=5))[(2026, "Exchange")] == 5.0
+    assert is_open(running) is True
+    # Microsoft meldet „wiederhergestellt“, setzt „isResolved“ aber noch nicht: nicht mehr offen
+    restored = row("Exchange", base, None, status="serviceRestored", resolved=False)
+    assert is_open(restored) is False

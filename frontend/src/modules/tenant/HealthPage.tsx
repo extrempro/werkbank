@@ -6,8 +6,8 @@ import {
   fetchHealth,
   fetchIssue,
   HEALTH_LEVEL,
-  healthLevel,
   healthStatusText,
+  issueDuration,
   issueKind,
   type Health,
   type ServiceIssue,
@@ -21,15 +21,6 @@ function hashTarget(): string {
 }
 
 const HOURS = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
-
-function duration(issue: ServiceIssue): string {
-  if (!issue.start_at) {
-    return "–";
-  }
-  const end = issue.end_at ? new Date(issue.end_at) : new Date();
-  const hours = Math.max(end.getTime() - new Date(issue.start_at).getTime(), 0) / 3_600_000;
-  return hours < 48 ? `${HOURS.format(hours)} Std.` : `${HOURS.format(hours / 24)} Tage`;
-}
 
 /** Eine Störung oder ein Hinweis; aufgeklappt mit den Mitteilungen von Microsoft. */
 function IssueRow({ issue, initiallyOpen }: { issue: ServiceIssue; initiallyOpen: boolean }) {
@@ -64,7 +55,7 @@ function IssueRow({ issue, initiallyOpen }: { issue: ServiceIssue; initiallyOpen
           <span className="small">
             {" "}
             · {issue.issue_id} · seit {formatDateTime(issue.start_at)}
-            {issue.end_at && ` bis ${formatDateTime(issue.end_at)}`} · {duration(issue)} ·{" "}
+            {issue.end_at && ` bis ${formatDateTime(issue.end_at)}`} · {issueDuration(issue)} ·{" "}
             {healthStatusText(issue.status)}
           </span>
         </summary>
@@ -178,18 +169,33 @@ export function HealthPage() {
         <>
           <dl className="kpis">
             {health.services.map((service) => {
-              const level = HEALTH_LEVEL[healthLevel(service.status)];
+              const level = HEALTH_LEVEL[service.level];
               return (
                 <div key={service.service_id} className={level.kpi}>
                   <dt>{service.name}</dt>
                   <dd className="kpi-number">{level.label}</dd>
                   <dd className="small">
-                    {healthStatusText(service.status)}
+                    Microsoft: {healthStatusText(service.status)}
                     {service.open_incidents > 0 &&
                       ` · ${service.open_incidents} ${service.open_incidents === 1 ? "Störung" : "Störungen"}`}
                     {service.open_advisories > 0 &&
                       ` · ${service.open_advisories} ${service.open_advisories === 1 ? "Hinweis" : "Hinweise"}`}
                   </dd>
+                  {service.reasons.length > 0 && (
+                    <dd>
+                      <ul className="health-reasons">
+                        {service.reasons.map((reason) => (
+                          <li key={reason.issue_id}>
+                            <a href={`#${reason.issue_id}`}>{reason.title}</a>
+                            <span className="small">
+                              {" "}
+                              · {reason.classification === "incident" ? "Störung" : "Hinweis"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </dd>
+                  )}
                 </div>
               );
             })}

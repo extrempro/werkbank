@@ -259,14 +259,50 @@ STATS_YEARS = 3
 # Zeitleiste: Tage bis heute; Monatsauswertung: Monate bis zum laufenden
 TIMELINE_DAYS = 90
 MONTHS = 36
+# Status, mit denen eine Meldung beendet ist, auch wenn Microsoft „isResolved“ noch nicht setzt
+CLOSED_STATUSES = frozenset(
+    {
+        "servicerestored",
+        "postincidentreviewpublished",
+        "falsepositive",
+        "resolved",
+        "resolvedexternal",
+        "mitigated",
+        "mitigatedexternal",
+        "investigationsuspended",
+    }
+)
+FALSE_POSITIVE = "falsepositive"
+
+
+def is_open(row: TenantServiceIssue) -> bool:
+    """Ob eine Meldung noch läuft."""
+    return not row.resolved and row.status.lower() not in CLOSED_STATUSES
+
+
+def counts(row: TenantServiceIssue) -> bool:
+    """Fehlalarme zählen in keiner Auswertung."""
+    return row.status.lower() != FALSE_POSITIVE
+
+
+class ReasonOut(BaseModel):
+    issue_id: str
+    title: str
+    # „incident“ (Störung) oder „advisory“ (Hinweis)
+    classification: str
 
 
 class ServiceOut(BaseModel):
     service_id: str
     name: str
+    # Status laut Übersicht von Microsoft (nur zur Information)
     status: str
+    # Aus den offenen Meldungen: stoerung (offene Störung), hinweis (nur Hinweise) oder ok
+    level: str
     open_incidents: int
     open_advisories: int
+    # Die offenen Meldungen des Dienstes, Störungen zuerst: der Grund für den Zustand
+    reasons: list[ReasonOut]
 
 
 class IssueOut(BaseModel):
@@ -333,6 +369,8 @@ class HealthOut(BaseModel):
     # Tage als JJJJ-MM-TT, ältester zuerst; passend zu ServiceTimeline.days
     timeline_days: list[str]
     timeline: list[ServiceTimeline]
+    # Alle Meldungen, die in diesen Tagen liefen, neueste zuerst (ohne Fehlalarme)
+    timeline_issues: list["IssueOut"]
 
 
 def _issue_end(row: TenantServiceIssue, now: datetime) -> datetime:
@@ -355,7 +393,7 @@ def _months(issues: list[TenantServiceIssue], today: date) -> list[MonthStat]:
     keys = _month_keys(today, MONTHS)
     counts = {(key, service_id): 0 for key in keys for service_id in SERVICES}
     for row in issues:
-        if row.classification != "incident" or row.start_at is None:
+        if row.classification != "incident" or row.start_at is None or not counts(row):
             continue
         key = (row.start_at.strftime("%Y-%m"), row.service_id)
         if key in counts:
@@ -376,7 +414,7 @@ def _timeline(
     rank = {"ok": 0, "hinweis": 1, "stoerung": 2}
     levels = {service_id: ["ok"] * TIMELINE_DAYS for service_id in SERVICES}
     for row in issues:
-        if row.start_at is None or row.service_id not in levels:
+        if row.start_at is None or row.service_id not in levels or not counts(row):
             continue
         level = "stoerung" if row.classification == "incident" else "hinweis"
         start = max(row.start_at.astimezone(UTC).date(), first)
@@ -414,14 +452,52 @@ def _issue_out(row: TenantServiceIssue) -> IssueOut:
     )
 
 
-def _status_rank(status_text: str) -> int:
-    """Schwere eines Dienstzustands: 0 Unterbrechung, 1 eingeschränkt, 2 in Ordnung."""
-    lowered = status_text.lower()
-    if "interruption" in lowered:
-        return 0
-    if lowered in ("serviceoperational", "servicerestored", "postincidentreviewpublished"):
-        return 2
-    return 1
+def incident_hours_by_year(
+    issues: list[TenantServiceIssue], now: datetime
+) -> dict[tuple[int, str], float]:
+    """Stunden mit Störung je (Jahr, Dienst).
+
+    Gleichzeitig laufende Störungen eines Dienstes zählen nur einmal (Zeiträume werden
+    zusammengelegt); eine Störung über den Jahreswechsel zählt anteilig in beiden Jahren.
+    Fehlalarme zählen nicht.
+    """
+    spans: dict[str, list[tuple[datetime, datetime]]] = {}
+    for row in issues:
+        if row.classification != "incident" or row.start_at is None or not counts(row):
+            continue
+        end = _issue_end(row, now)
+        if end > row.start_at:
+            spans.setdefault(row.service_id, []).append((row.start_at, end))
+    hours: dict[tuple[int, str], float] = {}
+    for service_id, entries in spans.items():
+        merged: list[list[datetime]] = []
+        for start, end in sorted(entries):
+            if merged and start <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], end)
+            else:
+                merged.append([start, end])
+        for start, end in merged:
+            cursor = start
+            while cursor < end:
+                boundary = datetime(cursor.year + 1, 1, 1, tzinfo=UTC)
+                piece_end = min(end, boundary)
+                key = (cursor.year, service_id)
+                hours[key] = hours.get(key, 0.0) + (piece_end - cursor).total_seconds() / 3600
+                cursor = piece_end
+    return hours
+
+
+def _level(open_rows: list[TenantServiceIssue]) -> str:
+    if any(row.classification == "incident" for row in open_rows):
+        return "stoerung"
+    return "hinweis" if open_rows else "ok"
+
+
+def _status_rank(level: str, status_text: str) -> int:
+    """Reihenfolge der Kacheln: Unterbrechung, Störung, Hinweis, in Ordnung."""
+    if level == "stoerung":
+        return 0 if "interruption" in status_text.lower() else 1
+    return 2 if level == "hinweis" else 3
 
 
 @router.get("/health")
@@ -429,29 +505,44 @@ def service_health(user: Reader, db: DbDep, settings: SettingsDep) -> HealthOut:
     """Zustand der beobachteten Dienste, offene und kürzlich beendete Störungen, Auswertung."""
     now = now_utc()
     issues = db.scalars(select(TenantServiceIssue)).all()
-    open_rows = [row for row in issues if not row.resolved]
+    open_rows = [row for row in issues if is_open(row)]
     recent_rows = [
         row
         for row in issues
-        if row.resolved
+        if not is_open(row)
         and (row.end_at or row.modified_at or now) >= now - timedelta(days=RECENT_DAYS)
     ]
     services = []
     for row in db.scalars(select(TenantServiceHealth)).all():
-        mine = [issue for issue in open_rows if issue.service_id == row.service_id]
+        mine = sorted(
+            (issue for issue in open_rows if issue.service_id == row.service_id),
+            key=lambda issue: (
+                issue.classification != "incident",
+                -(issue.start_at or now).timestamp(),
+            ),
+        )
         services.append(
             ServiceOut(
                 service_id=row.service_id,
                 name=SERVICES.get(row.service_id, row.service_name),
                 status=row.status,
+                level=_level(mine),
                 open_incidents=sum(1 for issue in mine if issue.classification == "incident"),
                 open_advisories=sum(1 for issue in mine if issue.classification != "incident"),
+                reasons=[
+                    ReasonOut(
+                        issue_id=issue.issue_id,
+                        title=issue.title,
+                        classification=issue.classification,
+                    )
+                    for issue in mine
+                ],
             )
         )
     order = list(SERVICES)
     services.sort(
         key=lambda entry: (
-            _status_rank(entry.status),
+            _status_rank(entry.level, entry.status),
             order.index(entry.service_id) if entry.service_id in order else len(order),
         )
     )
@@ -480,21 +571,29 @@ def service_health(user: Reader, db: DbDep, settings: SettingsDep) -> HealthOut:
                 incident_hours=0.0,
             )
     for counted in issues:
-        if counted.start_at is None:
+        if counted.start_at is None or not counts(counted):
             continue
         entry = stats.get((counted.start_at.year, counted.service_id))
         if entry is None:
             continue
         if counted.classification == "incident":
             entry.incidents += 1
-            end = _issue_end(counted, now)
-            entry.incident_hours += max((end - counted.start_at).total_seconds(), 0) / 3600
         else:
             entry.advisories += 1
-    for entry in stats.values():
-        entry.incident_hours = round(entry.incident_hours, 1)
+    for key, value in incident_hours_by_year(list(issues), now).items():
+        if key in stats:
+            stats[key].incident_hours = round(value, 1)
 
     timeline_days, timeline = _timeline(list(issues), now)
+    window_start = now - timedelta(days=TIMELINE_DAYS)
+    in_window = [
+        row
+        for row in issues
+        if row.start_at is not None
+        and counts(row)
+        and row.service_id in SERVICES
+        and _issue_end(row, now) >= window_start
+    ]
     return HealthOut(
         enabled=settings.tenant_health_enabled and settings.collector_configured,
         fetched_at=db.scalar(select(func.max(TenantServiceHealth.fetched_at))),
@@ -508,6 +607,7 @@ def service_health(user: Reader, db: DbDep, settings: SettingsDep) -> HealthOut:
         months=_months(list(issues), now.date()),
         timeline_days=timeline_days,
         timeline=timeline,
+        timeline_issues=newest_first(in_window),
     )
 
 

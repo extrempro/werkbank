@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { monthlyIncidents, type DayLevel, type Health } from "./api";
+import {
+  adminCenterUrl,
+  issueDuration,
+  issueKind,
+  monthlyIncidents,
+  weekColumns,
+  type DayLevel,
+  type Health,
+} from "./api";
 
 const HOURS = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
 const dayFormat = new Intl.DateTimeFormat("de-DE", {
@@ -33,7 +41,9 @@ function month(key: string): Date {
   return new Date(`${key}-01T00:00:00Z`);
 }
 
-/** Je Dienst ein Streifen über 90 Tage: Tage mit Störung oder Hinweis sind markiert. */
+const monthName = new Intl.DateTimeFormat("de-DE", { month: "short", timeZone: "UTC" });
+
+/** Je Dienst ein Kalender über 90 Tage (Wochen als Spalten), darunter die Meldungen. */
 function Timeline({ health }: { health: Health }) {
   const days = health.timeline_days;
   if (days.length === 0) {
@@ -41,6 +51,16 @@ function Timeline({ health }: { health: Health }) {
   }
   const first = days[0] ?? "";
   const last = days[days.length - 1] ?? "";
+  const columns = weekColumns(days);
+  // Monatsname über der ersten Spalte, in der ein neuer Monat beginnt
+  let previous = "";
+  const months = columns.map((column) => {
+    const index = column.find((entry) => entry !== null);
+    const key = index !== null && index !== undefined ? (days[index] ?? "").slice(0, 7) : "";
+    const label = key && key !== previous ? monthName.format(day(`${key}-01`)) : "";
+    previous = key || previous;
+    return label;
+  });
   return (
     <section className="panel" aria-labelledby="health-zeitleiste">
       <div className="panel-head">
@@ -50,23 +70,46 @@ function Timeline({ health }: { health: Health }) {
         </span>
       </div>
       <div className="detail-body">
-        <ul className="timeline">
-          {health.timeline.map((line) => {
+        <ul className="health-cal">
+          {health.timeline.map((line, lineIndex) => {
             const incidents = line.days.filter((level) => level === "stoerung").length;
             const advisories = line.days.filter((level) => level === "hinweis").length;
             return (
-              <li key={line.service_id} className="timeline-row">
-                <span className="timeline-name">{line.service_name}</span>
-                <span className="timeline-cells" aria-hidden="true">
-                  {line.days.map((level, index) => (
-                    <span
-                      key={days[index] ?? index}
-                      className={`timeline-cell timeline-${level}`}
-                      title={`${longDay.format(day(days[index] ?? first))}: ${LEVEL_TEXT[level]}`}
-                    />
-                  ))}
+              <li key={line.service_id} className="health-cal-row">
+                <span className="health-cal-name">{line.service_name}</span>
+                <span className="health-cal-body" aria-hidden="true">
+                  {lineIndex === 0 && (
+                    <span className="health-cal-months">
+                      {months.map((label, index) => (
+                        <span key={index}>{label}</span>
+                      ))}
+                    </span>
+                  )}
+                  <span className="health-cal-grid">
+                    {columns.flatMap((column, columnIndex) =>
+                      Array.from({ length: 7 }, (_, row) => {
+                        const index = column[row];
+                        if (index === null || index === undefined) {
+                          return (
+                            <span
+                              key={`${columnIndex}-${row}`}
+                              className="health-cal-cell health-cal-leer"
+                            />
+                          );
+                        }
+                        const level = line.days[index] ?? "ok";
+                        return (
+                          <span
+                            key={`${columnIndex}-${row}`}
+                            className={`health-cal-cell health-cal-${level}`}
+                            title={`${longDay.format(day(days[index] ?? first))}: ${LEVEL_TEXT[level]}`}
+                          />
+                        );
+                      }),
+                    )}
+                  </span>
                 </span>
-                <span className="small timeline-sum">
+                <span className="health-cal-sum">
                   {incidents === 0 && advisories === 0
                     ? "ohne Meldung"
                     : [
@@ -91,12 +134,50 @@ function Timeline({ health }: { health: Health }) {
             );
           })}
         </ul>
-        <p className="small timeline-legend">
-          <span className="timeline-key timeline-stoerung" aria-hidden="true" /> Störung{" "}
-          <span className="timeline-key timeline-hinweis" aria-hidden="true" /> Hinweis{" "}
-          <span className="timeline-key timeline-ok" aria-hidden="true" /> keine Meldung · Tage in
-          UTC, die schwerste Meldung des Tages zählt.
+        <p className="small health-cal-legend">
+          <span className="health-cal-key health-cal-stoerung" aria-hidden="true" /> Störung{" "}
+          <span className="health-cal-key health-cal-hinweis" aria-hidden="true" /> Hinweis{" "}
+          <span className="health-cal-key health-cal-ok" aria-hidden="true" /> keine Meldung ·
+          Spalten sind Wochen (Montag oben), Tage in UTC, die schwerste Meldung des Tages zählt.
         </p>
+        <h3 className="health-window-title">Meldungen in diesem Zeitraum</h3>
+        {health.timeline_issues.length === 0 ? (
+          <p className="small">Keine.</p>
+        ) : (
+          <ul className="health-window">
+            {health.timeline_issues.map((issue) => (
+              <li key={issue.issue_id}>
+                <span
+                  className={
+                    issue.classification === "incident" ? "pill pill-bad" : "pill pill-neutral"
+                  }
+                >
+                  {issueKind(issue.classification)}
+                </span>
+                <strong>{issue.service_name}</strong>
+                <span>{issue.title}</span>
+                <span className="small">
+                  {issue.start_at ? longDay.format(new Date(issue.start_at)) : "–"}
+                  {issue.end_at
+                    ? ` bis ${longDay.format(new Date(issue.end_at))}`
+                    : " · läuft"} · {issueDuration(issue)}
+                </span>
+                <a
+                  className="small"
+                  href={adminCenterUrl(issue.issue_id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {issue.issue_id}
+                  <span className="visually-hidden">
+                    {" "}
+                    im Microsoft 365 Admin Center öffnen (neues Fenster)
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );

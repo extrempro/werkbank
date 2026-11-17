@@ -33,8 +33,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .selectOption({ label: `${number} Testkonto Wartung` });
   await page.getByLabel("Bezeichnung", { exact: true }).fill(`Posten ${number}`);
   await page.getByRole("textbox", { name: /^Erwartete Kosten/ }).fill("1.500,00");
-  // Tags stehen unter den weiteren Angaben.
-  await page.getByText(/^Weitere Angaben/).click();
+  // Tags stehen sichtbar im Formular.
   await page
     .getByRole("group", { name: "Tags (freiwillig)" })
     .getByRole("button", { name: `Tag ${number}`, exact: true })

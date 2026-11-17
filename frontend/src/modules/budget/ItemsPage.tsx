@@ -1,10 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
-import { BUDGET_ACCOUNTS_PATH, BUDGET_STATISTICS_PATH } from "../../navigation";
+import {
+  BUDGET_ACCOUNTS_PATH,
+  BUDGET_SETTINGS_PATH,
+  BUDGET_STATISTICS_PATH,
+} from "../../navigation";
 import { useSearchParam } from "../../router";
 import {
   BUDGET_EDITOR_ROLES,
+  BUDGET_MANAGER_ROLE,
   createItem,
   deleteItem,
   euroInput,
@@ -79,6 +84,8 @@ interface FormProps {
   projects: ProjectChoice[];
   /** Die Liste der Tags, aus der der Posten wählt. */
   knownTags: TagCount[];
+  /** Darf die Liste der Tags pflegen (Budgetverwalter): zeigt den Weg dorthin. */
+  canManageTags: boolean;
   /** Wählbare Geschäftsjahre, aufsteigend. */
   years: { year: number; name: string }[];
   /** Vorgabe für den Beginn eines neuen Postens: das gerade gezeigte Geschäftsjahr. */
@@ -94,6 +101,7 @@ function ItemForm({
   contracts,
   projects,
   knownTags,
+  canManageTags,
   years,
   defaultYear,
   yearLabel,
@@ -142,7 +150,7 @@ function ItemForm({
   yearChoices.sort((left, right) => left.year - right.year);
   const endChoices = yearChoices.filter((entry) => entry.year > Number(start));
   // Weitere Angaben stehen offen, wenn sie schon etwas enthalten.
-  const hasMore = Boolean(item && (item.note || item.tags.length > 0 || !item.active));
+  const hasMore = Boolean(item && (item.note || !item.active));
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -298,28 +306,39 @@ function ItemForm({
             bis eine Rechnung ihn abschließt.
           </p>
         </fieldset>
+        <fieldset className="budget-fieldset">
+          <legend>Tags (freiwillig)</legend>
+          {knownTags.length > 0 ? (
+            <div className="chips">
+              {knownTags.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className="chip budget-tag"
+                  aria-pressed={isChosen(entry.tag)}
+                  onClick={() => toggleTag(entry.tag)}
+                >
+                  {entry.tag}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="small budget-muted">
+              Es gibt noch keine Tags.{" "}
+              {canManageTags
+                ? "Lege sie zuerst an, dann kannst du sie hier wählen."
+                : "Der Budgetverwalter legt sie unter Einstellungen an."}
+            </p>
+          )}
+          {canManageTags && (
+            <p className="small">
+              <Link to={BUDGET_SETTINGS_PATH}>Tags verwalten unter Einstellungen › Tags</Link>
+            </p>
+          )}
+        </fieldset>
         <details className="budget-more" open={hasMore}>
-          <summary>Weitere Angaben: Tags, Notiz{item ? ", stilllegen" : ""}</summary>
+          <summary>Weitere Angaben: Notiz{item ? ", stilllegen" : ""}</summary>
           <div className="budget-more-body">
-            {knownTags.length > 0 ? (
-              <div className="chips" role="group" aria-label="Tags (freiwillig)">
-                {knownTags.map((entry) => (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    className="chip budget-tag"
-                    aria-pressed={isChosen(entry.tag)}
-                    onClick={() => toggleTag(entry.tag)}
-                  >
-                    {entry.tag}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="small budget-muted">
-                Es gibt noch keine Tags. Der Budgetverwalter legt sie unter Einstellungen an.
-              </p>
-            )}
             <label>
               Notiz (freiwillig)
               <input
@@ -513,6 +532,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           contracts={contracts}
           projects={projects}
           knownTags={knownTags}
+          canManageTags={roles.includes(BUDGET_MANAGER_ROLE)}
           years={yearChoices}
           defaultYear={overview.year}
           yearLabel={label}

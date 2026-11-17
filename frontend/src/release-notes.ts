@@ -24,6 +24,30 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.46.0",
+    date: "2026-11-17",
+    summary:
+      "Dienststatus: der Grund steht in der Kachel, die letzten 90 Tage als lesbarer Kalender. Tags am Budgetposten sind sichtbar.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Dienststatus: Jede Kachel nennt die offenen Störungen und Hinweise. Ein Klick springt zur Meldung mit den Mitteilungen von Microsoft.",
+          "Die Kachel richtet sich jetzt nach den offenen Meldungen. Bereits behobene Meldungen machen einen Dienst nicht mehr gelb.",
+          "„Letzte 90 Tage“ ist ein Kalender mit größeren Feldern, darunter alle Meldungen des Zeitraums mit Dauer.",
+          "Behoben: Die Stunden mit Störung waren zu hoch, weil gleichzeitige Störungen doppelt und Fehlalarme mitzählten.",
+          "Behoben: Unter „Änderungen“ ließ sich die Detailansicht auf großen Bildschirmen nicht bis zum Ende scrollen.",
+        ],
+      },
+      {
+        area: "IT-Budget",
+        entries: [
+          "Die Tags stehen im Formular des Budgetpostens jetzt sichtbar. Als Budgetverwalter findest du dort den Weg zu Einstellungen › Tags.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.45.0",
     date: "2026-11-17",
     summary:

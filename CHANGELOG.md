@@ -4,6 +4,30 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.46.0] – 2026-11-17
+
+Dienststatus mit Gründen und lesbarem Kalender; Tags am Budgetposten sichtbar.
+
+### Microsoft 365
+
+- Dienststatus: Die Kachel richtet sich nach den offenen Meldungen (Störung, Hinweis, in Ordnung) statt nach dem Übersichtsstatus von Microsoft und nennt sie als Grund mit Sprung zur Meldung; der Status laut Microsoft steht klein dabei
+- Offen ist eine Meldung, solange ihr Status nicht behoben, beendet, Fehlalarm oder ausgesetzt ist; unbekannte Status gelten nicht mehr als Einschränkung
+- „Letzte 90 Tage“ als Kalender mit größeren Feldern (Wochen als Spalten, Montag oben, Monatsnamen) und darunter die Liste der Meldungen des Zeitraums mit Dauer
+- API: `services[].level`, `services[].reasons`, `timeline_issues`
+
+### IT-Budget
+
+- Tags stehen im Formular des Budgetpostens sichtbar statt unter „Weitere Angaben“; der Budgetverwalter sieht den Weg zu Einstellungen › Tags
+
+### Behoben
+
+- Ausfalldauer: Gleichzeitige Störungen eines Dienstes zählen nur einmal, Fehlalarme gar nicht mehr (auch nicht in Zahlen, Kalender und Monaten); Störungen über den Jahreswechsel werden auf beide Jahre verteilt
+- Microsoft 365 › Änderungen: Die Detailansicht neben der Liste lässt sich auf großen Bildschirmen bis zum Ende scrollen
+
+### Doku
+
+- Spec (Dienststatus), Handbuch (Dienststatus, Budgetposten)
+
 ## [0.45.0] – 2026-11-17
 
 Import aus Excel im IT-Budget; neues Symbol der Werkbank.
