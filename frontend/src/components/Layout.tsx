@@ -24,6 +24,7 @@ import {
   CREDENTIALS_PATH,
   HEALTH_PATH,
   MONITORING_DNS_PATH,
+  PROJECTS_PATH,
   LICENSES_PATH,
   NEWS_PATH,
   toolCategoryPath,
@@ -37,6 +38,9 @@ import { NewsPage } from "../pages/NewsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
 import { HandbookPage } from "../pages/HandbookPage";
 import { DnsCheckPage } from "../modules/monitoring/DnsCheckPage";
+import { parseProjectPath } from "../modules/projects/api";
+import { ProjectPage } from "../modules/projects/ProjectPage";
+import { ProjectsPage } from "../modules/projects/ProjectsPage";
 import { chaptersFor, HANDBOOK_PATH } from "../handbook";
 import { NOTIFICATIONS_PATH } from "../notifications";
 import { NotificationBell } from "./NotificationBell";
@@ -240,6 +244,8 @@ export function Layout({ me }: LayoutProps) {
   const contractMatch = /^\/budget\/vertraege\/(\d{1,9})$/.exec(path);
   const contractId = contractMatch ? Number(contractMatch[1]) : null;
 
+  const projectRoute = parseProjectPath(path);
+
   const licenseMatch = /^\/m365\/lizenzen\/(\d{1,9})$/.exec(path);
   const licenseId = licenseMatch ? Number(licenseMatch[1]) : null;
 
@@ -300,6 +306,17 @@ export function Layout({ me }: LayoutProps) {
     page = <CredentialsPage />;
   } else if (path === HEALTH_PATH && current) {
     page = <HealthPage />;
+  } else if (path === PROJECTS_PATH && current) {
+    page = <ProjectsPage roles={me.roles} />;
+  } else if (projectRoute !== null && items.some((item) => item.path === PROJECTS_PATH)) {
+    page = (
+      <ProjectPage
+        key={projectRoute.id}
+        projectId={projectRoute.id}
+        tab={projectRoute.tab}
+        roles={me.roles}
+      />
+    );
   } else if (path === MONITORING_DNS_PATH && current) {
     page = <DnsCheckPage isAdmin={me.roles.includes("Werkbank.Admin")} />;
   } else if (path === BUDGET_PATH && current) {

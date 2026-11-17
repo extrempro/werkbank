@@ -4,6 +4,36 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.44.0] – 2026-11-17
+
+Neuer Bereich IT-Projekte; Rollen je Person in der Verwaltung.
+
+### IT-Projekte
+
+- Neuer Bereich **IT-Projekte** (`/projekte`) mit den Rollen `Projekte.Reader` (lesen) und `Projekte.Editor` (anlegen und pflegen)
+- Projektliste mit Status, veranschlagt, geplant, Ist, offenen Punkten und letztem Jour Fixe; Filter nach Status, Suche
+- Projekt mit den Reitern Übersicht, Budget, Jour Fixe, Aufgaben und Einstellungen (`/projekte/{id}/…`)
+- Budget: veranschlagtes Budget (brutto) im Projekt; geplant und Ist aus den Budgetposten des IT-Budgets mit diesem Projekt (geplant = Prognose minus gebuchtes Ist je Geschäftsjahr der Laufzeit, Posten ohne Ende bis zum laufenden Geschäftsjahr, stillgelegte Posten planen nichts mehr); Summen je Geschäftsjahr; Hinweis bei Überschreitung
+- Jour Fixe: Einträge mit Datum, Titel und Protokoll in Markdown (Überschriften, Listen, Checklisten, Zitate, fett, kursiv, Code, nur https-Links); Darstellung ohne HTML, eigener kleiner Parser ohne neue Abhängigkeit; Leiste zum Formatieren und Vorschau; bis 10 PDF-Anhänge je Eintrag mit je bis 20 MB (Prüfung auf echtes PDF, Ablage unter zufälligem Namen, Download nur als Anhang)
+- Aufgaben: grobe Liste mit Text, zuständig (Freitext) und Datum, abhaken, löschen
+- Einstellungen: Name, Beschreibung, Status, Laufzeit, veranschlagtes Budget mit Freigabedatum und Notiz, interne und externe Ansprechpartner als Freitext (keine Abfrage aus Entra), Links (nur https) mit Reihenfolge; Projekt löschen (Budgetposten bleiben und verlieren nur die Zuordnung)
+- Suche findet Projekte nach Name und Beschreibung
+- API: `GET`/`POST /api/projects`, `GET /api/projects/choices`, `GET`/`PUT`/`DELETE /api/projects/{id}`, `GET /api/projects/{id}/budget`, Aufgaben unter `/api/projects/{id}/tasks`, Jour Fixe unter `/api/projects/{id}/meetings` mit Anhängen unter `…/files`
+- Neue Einstellungen `PROJECT_DOCUMENTS_DIR` (Vorgabe `/data/belege/projekte`, im vorhandenen Volume der Belege) und `PROJECT_DOCUMENT_MAX_MB` (Vorgabe 20)
+- Migration 0037: Tabellen `projects`, `project_people`, `project_links`, `project_tasks`, `project_meetings`, `project_meeting_files`; Spalte `budget_items.project_id`
+
+### IT-Budget
+
+- Budgetposten haben das Feld **Projekt** (höchstens eins; abgeschlossene Projekte nur, wenn der Posten schon dazugehört); Filter „Projekt“ in der Liste der Budgetposten, Link zum Projekt für Personen mit Projekt-Rolle
+
+### Verwaltung
+
+- Rollen: neue Ansicht **Nach Person** mit allen Rollen der letzten Anmeldung je Person, Suche und Filter „Nur Personen ohne Rolle“; API `GET /api/admin/people` (nur Admin)
+
+### Doku
+
+- Spec, Entra-Einrichtung (neue App-Rollen), Datenschutz, ASVS, Betrieb, Handbuch
+
 ## [0.43.0] – 2026-11-16
 
 IT-Tools je Konto: Favoriten, zuletzt genutzte Tools und Verlauf der Einstellungen.

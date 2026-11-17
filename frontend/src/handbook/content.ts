@@ -14,6 +14,8 @@ const BUDGET_EDITOR = "Budget.Editor";
 const BUDGET_MANAGER = "Budget.Manager";
 const TOOLS = "Tools.User";
 const MONITORING = "Monitoring.Reader";
+const PROJECTS_READER = "Projekte.Reader";
+const PROJECTS_EDITOR = "Projekte.Editor";
 
 /**
  * Das Handbuch der Werkbank. Bei jeder Änderung an der Anwendung prüfen, ob ein Kapitel
@@ -90,7 +92,7 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "list",
             items: [
               "Kopfzeile: Name der Werkbank, Suchfeld, Glocke für Benachrichtigungen, „Meine Aufgaben“, dein Konto und „Abmelden“.",
-              "Bereiche: Oben in der Navigation wechselst du zwischen Werkbank, Microsoft 365, Evergreen, IT-Budget und IT-Tools. Darunter stehen nur die Seiten des gewählten Bereichs.",
+              "Bereiche: Oben in der Navigation wechselst du zwischen Werkbank, Microsoft 365, Evergreen, IT-Budget, IT-Projekte, IT-Tools und IT-Monitoring. Darunter stehen nur die Seiten des gewählten Bereichs.",
               "Zähler an der Navigation zeigen, wie viele Aufgaben auf einer Seite oder in einem Bereich warten.",
               "Unten in der Navigation stehen vier Knöpfe: Handbuch, Neuigkeiten, hell oder dunkel und „Navigation einklappen“. Eingeklappt bleiben nur die Symbole; die Wahl merkt sich dein Browser.",
               "Auf dem Handy öffnet der Knopf „Menü“ oben links die Navigation.",
@@ -246,6 +248,11 @@ export const CHAPTERS: readonly Chapter[] = [
               ],
               ["Tools.User", "den Bereich IT-Tools öffnen"],
               ["Monitoring.Reader", "den Bereich IT-Monitoring ansehen"],
+              ["Projekte.Reader", "die IT-Projekte ansehen"],
+              [
+                "Projekte.Editor",
+                "IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe und Aufgaben",
+              ],
             ],
           },
         ],
@@ -737,13 +744,17 @@ export const CHAPTERS: readonly Chapter[] = [
               "Wähle „Posten hinzufügen“.",
               "Wähle das Konto, gib eine Bezeichnung und die erwarteten Kosten je Geschäftsjahr (brutto) ein.",
               "Lege die Laufzeit fest: einmalig, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres.",
-              "Optional: Vertrag wählen; unter „Weitere Angaben“ Tags und Notiz.",
+              "Optional: Vertrag und IT-Projekt wählen; unter „Weitere Angaben“ Tags und Notiz.",
               "Speichere.",
             ],
           },
           {
             kind: "text",
             text: "Nicht mehr gebrauchte Posten legst du still. Löschen geht nur, solange kein Vertrag zugeordnet ist und keine Rechnungsposition auf dem Posten liegt.",
+          },
+          {
+            kind: "text",
+            text: "Gehört ein Posten zu einem IT-Projekt, wähle das Projekt im Feld „Projekt“. Seine erwarteten Kosten und Rechnungen zählen dann im Projekt unter Budget mit. Ein Posten gehört höchstens zu einem Projekt; abgeschlossene Projekte stehen nicht mehr zur Wahl. Über den Filter „Projekt“ siehst du alle Posten eines Projekts.",
           },
         ],
         links: [{ to: "/budget/posten", label: "Zu den Budgetposten" }],
@@ -949,6 +960,125 @@ export const CHAPTERS: readonly Chapter[] = [
     ],
   },
   {
+    id: "it-projekte",
+    title: "IT-Projekte",
+    summary: "Projekte mit Budget, Ansprechpartnern, Links, Jour-Fixe-Protokollen und Aufgaben.",
+    roles: [PROJECTS_READER, PROJECTS_EDITOR],
+    sections: [
+      {
+        id: "ueberblick",
+        title: "Projekte im Überblick",
+        blocks: [
+          {
+            kind: "text",
+            text: "Unter „Alle Projekte“ stehen alle IT-Projekte mit Status, veranschlagtem Budget, geplanten und tatsächlichen Kosten, offenen Punkten und dem letzten Jour Fixe. Vorgabe ist die Ansicht „Laufend und geplant“; abgeschlossene Projekte findest du unter „Abgeschlossen“ oder „Alle“.",
+          },
+          {
+            kind: "text",
+            text: "Ein Projekt hat die Reiter Übersicht, Budget, Jour Fixe, Aufgaben und Einstellungen. Die Übersicht zeigt das Budget, die offenen Punkte, die wichtigen Links, die internen und externen Ansprechpartner und den letzten Jour Fixe.",
+          },
+        ],
+        links: [{ to: "/projekte", label: "Zu den Projekten" }],
+      },
+      {
+        id: "budget",
+        title: "Budget eines Projekts",
+        blocks: [
+          {
+            kind: "terms",
+            items: [
+              ["Veranschlagt", "der Rahmen, den du in den Einstellungen des Projekts einträgst"],
+              [
+                "Geplant",
+                "erwartete Kosten der zugeordneten Budgetposten, für die noch keine gebuchte Rechnung da ist; Rechnungen „zu prüfen“ zählen noch als geplant",
+              ],
+              ["Ist", "die gebuchten Rechnungen auf diesen Budgetposten"],
+              ["Verbleibend", "veranschlagt minus geplant minus Ist"],
+            ],
+          },
+          {
+            kind: "text",
+            text: "Die Kosten kommen aus dem IT-Budget: Dort wählst du beim Budgetposten das Projekt aus. Läuft ein Posten über mehrere Geschäftsjahre, zählt jedes Jahr der Laufzeit mit, bei „bis auf Weiteres“ bis zum laufenden Geschäftsjahr. Der Reiter Budget listet die Posten und die Summen je Geschäftsjahr. Alle Beträge sind brutto.",
+          },
+          {
+            kind: "hint",
+            text: "Liegen geplant und Ist zusammen über dem veranschlagten Budget, weist der Reiter Budget darauf hin.",
+          },
+        ],
+      },
+      {
+        id: "jour-fixe",
+        title: "Jour Fixe",
+        blocks: [
+          {
+            kind: "text",
+            text: "Jeder Jour Fixe ist ein Eintrag mit Datum, Titel und Protokoll. Links stehen die Einträge, der neueste oben; rechts das gewählte Protokoll mit seinen Anhängen.",
+          },
+        ],
+      },
+      {
+        id: "jour-fixe-schreiben",
+        title: "Jour Fixe eintragen",
+        roles: [PROJECTS_EDITOR],
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Wähle „Neuer Eintrag“.",
+              "Trage Datum und Titel ein und schreibe das Protokoll.",
+              "Mit „Vorschau“ siehst du, wie es aussieht; mit „Bearbeiten“ schreibst du weiter.",
+              "Speichere. Danach kannst du über „Bearbeiten“ PDF-Dateien anhängen.",
+            ],
+          },
+          {
+            kind: "terms",
+            items: [
+              ["# Überschrift", "eine Überschrift; ## und ### für kleinere"],
+              ["- Punkt", "eine Liste; 1. für eine nummerierte"],
+              ["- [ ] Punkt", "ein Punkt zum Abhaken; - [x] für erledigt"],
+              ["**fett** und *kursiv*", "hervorgehobener Text"],
+              ["[Text](Adresse)", "ein Link; nur Adressen mit https"],
+            ],
+          },
+          {
+            kind: "text",
+            text: "Die Leiste über dem Textfeld setzt diese Zeichen für dich um den markierten Text. Je Eintrag gehen bis zu 10 PDF-Dateien mit je bis zu 20 MB. Anhänge lädt man herunter, sie öffnen sich nicht im Browser.",
+          },
+        ],
+      },
+      {
+        id: "aufgaben",
+        title: "Aufgaben",
+        blocks: [
+          {
+            kind: "text",
+            text: "Die Aufgabenliste dient nur der groben Orientierung; die eigentlichen Aufgaben laufen meist in anderen Werkzeugen. Eine Aufgabe hat einen Text und auf Wunsch eine zuständige Person und ein Datum. Offene stehen oben, die mit dem frühesten Datum zuerst. Mit dem Haken markierst du eine Aufgabe als erledigt; „Alle“ zeigt auch die erledigten.",
+          },
+        ],
+      },
+      {
+        id: "einstellungen",
+        title: "Einstellungen eines Projekts",
+        roles: [PROJECTS_EDITOR],
+        blocks: [
+          {
+            kind: "list",
+            items: [
+              "Allgemein: Name, Kurzbeschreibung, Status (geplant, aktiv, pausiert, abgeschlossen) und Laufzeit.",
+              "Veranschlagtes Budget: Betrag brutto, wann es freigegeben wurde und eine Notiz.",
+              "Rollen und Ansprechpartner: interne und externe Personen mit Rolle im Projekt, Firma oder Abteilung und Kontakt. Die Werkbank fragt dafür nichts aus Microsoft Entra ab.",
+              "Links: beliebig viele wichtige Seiten, zum Beispiel die Projektablage. Erlaubt sind nur Adressen mit https. Mit „Nach oben“ legst du die Reihenfolge fest.",
+            ],
+          },
+          {
+            kind: "text",
+            text: "Ein neues Projekt legst du unter „Alle Projekte“ mit „Neues Projekt“ an; danach öffnen sich seine Einstellungen. Beendete Projekte setzt du auf „abgeschlossen“: Sie bleiben lesbar, im IT-Budget lassen sich ihnen keine Posten mehr zuordnen. „Projekt löschen“ entfernt das Projekt mit Jour Fixe, Anhängen und Aufgaben; die Budgetposten bleiben im IT-Budget und verlieren nur die Zuordnung.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: "it-monitoring",
     title: "IT-Monitoring",
     summary: "Regelmäßige Prüfungen der IT, zum Beispiel der DNS-Abgleich mit NetBox.",
@@ -1068,7 +1198,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Unter „Rollen“ steht, welche Rollen es gibt und wer sie bei der letzten Anmeldung hatte. Vergeben werden Rollen in Microsoft Entra, nicht in der Werkbank.",
+            text: "Unter „Rollen“ steht, welche Rollen es gibt und wer sie bei der letzten Anmeldung hatte. „Nach Person“ zeigt dieselbe Information je Person: wer sich angemeldet hat und mit welchen Rollen; mit der Suche findest du Personen und Rollen, „Nur Personen ohne Rolle“ zeigt, wer sich angemeldet hat, aber nichts sieht. Wer sich noch nie angemeldet hat, steht dort nicht. Vergeben werden Rollen in Microsoft Entra, nicht in der Werkbank.",
           },
           {
             kind: "hint",

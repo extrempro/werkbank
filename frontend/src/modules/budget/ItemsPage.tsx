@@ -31,6 +31,7 @@ import {
   type TagCount,
 } from "./api";
 import { DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
+import { fetchProjectChoices, projectPath, type ProjectChoice } from "../projects/api";
 
 function amount(cents: number | null): string {
   return cents === null ? "–" : formatEuro(cents);
@@ -74,6 +75,8 @@ interface FormProps {
   accounts: Account[];
   /** Verträge zur Auswahl; ein Posten hat höchstens einen. */
   contracts: Contract[];
+  /** IT-Projekte zur Auswahl; ein Posten gehört höchstens zu einem. */
+  projects: ProjectChoice[];
   /** Die Liste der Tags, aus der der Posten wählt. */
   knownTags: TagCount[];
   /** Wählbare Geschäftsjahre, aufsteigend. */
@@ -89,6 +92,7 @@ function ItemForm({
   item,
   accounts,
   contracts,
+  projects,
   knownTags,
   years,
   defaultYear,
@@ -110,6 +114,11 @@ function ItemForm({
   );
   const [end, setEnd] = useState(item?.end_year ? String(item.end_year) : "");
   const [contractId, setContractId] = useState(item?.contract_id ? String(item.contract_id) : "");
+  const [projectId, setProjectId] = useState(item?.project_id ? String(item.project_id) : "");
+  // Abgeschlossene Projekte stehen nur zur Wahl, wenn der Posten schon dazugehört.
+  const projectChoices = projects.filter(
+    (entry) => entry.status !== "abgeschlossen" || entry.id === item?.project_id,
+  );
   const [note, setNote] = useState(item?.note ?? "");
   const [tags, setTags] = useState<string[]>(item?.tags ?? []);
   const [active, setActive] = useState(item?.active ?? true);
@@ -162,6 +171,7 @@ function ItemForm({
       tags,
       active,
       contract_id: contractId ? Number(contractId) : null,
+      project_id: projectId ? Number(projectId) : null,
     };
     setBusy(true);
     setError(null);
@@ -214,8 +224,26 @@ function ItemForm({
               </select>
             </label>
           </div>
+          {projectChoices.length > 0 && (
+            <div className="tool-row">
+              <label>
+                Projekt (freiwillig)
+                <select value={projectId} onChange={(event) => setProjectId(event.target.value)}>
+                  <option value="">Kein Projekt</option>
+                  {projectChoices.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}
+                      {entry.status === "abgeschlossen" ? " (abgeschlossen)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
           <p className="small budget-muted">
             Ein Posten hat höchstens einen Vertrag. Rechnungen buchst du immer auf den Posten.
+            {projectChoices.length > 0 &&
+              " Gehört der Posten zu einem IT-Projekt, zählen seine Kosten dort mit."}
           </p>
         </fieldset>
         <fieldset className="budget-fieldset">
@@ -335,11 +363,14 @@ function ItemForm({
 /** IT-Budget › Budgetposten: Vorhaben mit erwarteten Kosten, Status, Ist und Prognose. */
 export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
+  const canOpenProjects = roles.includes("Projekte.Reader") || roles.includes("Projekte.Editor");
   const [year, setYear] = useState<number | null>(rememberedYear);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [knownTags, setKnownTags] = useState<TagCount[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [projects, setProjects] = useState<ProjectChoice[]>([]);
+  const [projectFilter, setProjectFilter] = useState("");
   // Suchtext aus der Adresse (Treffer der Suche oben führen mit dem Namen des Postens hierher).
   // Eigene Eingabe gilt, bis ein neuer Suchtext über die Adresse kommt.
   const linked = useSearchParam("suche");
@@ -369,13 +400,16 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
         [...list.entries].sort((left, right) => left.title.localeCompare(right.title, "de")),
       )
       .catch((): Contract[] => []);
-    Promise.all([fetchBudgetOverview(year), fetchAccounts(), tagList, contractList])
-      .then(([result, list, tags, contractEntries]) => {
+    // Ebenso die IT-Projekte für Auswahl und Filter.
+    const projectList = fetchProjectChoices().catch((): ProjectChoice[] => []);
+    Promise.all([fetchBudgetOverview(year), fetchAccounts(), tagList, contractList, projectList])
+      .then(([result, list, tags, contractEntries, projectEntries]) => {
         if (active) {
           setOverview(result);
           setAccounts(list);
           setKnownTags(tags);
           setContracts(contractEntries);
+          setProjects(projectEntries);
           setFailed(false);
         }
       })
@@ -390,12 +424,14 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   }, [year, round]);
 
   const label = overview?.settings.year_label ?? "Geschäftsjahr";
-  const filtered = search.trim() !== "" || tagFilter !== "" || statusFilter !== "";
+  const filtered =
+    search.trim() !== "" || tagFilter !== "" || statusFilter !== "" || projectFilter !== "";
   const rows = (overview?.items ?? []).filter(
     (row) =>
       itemMatches(row.item, search) &&
       (tagFilter === "" || hasTag(row.item, tagFilter)) &&
-      (statusFilter === "" || row.status === statusFilter),
+      (statusFilter === "" || row.status === statusFilter) &&
+      (projectFilter === "" || String(row.item.project_id ?? "") === projectFilter),
   );
   const total = (pick: (row: (typeof rows)[number]) => number | null) =>
     rows.reduce((sum, row) => sum + (pick(row) ?? 0), 0);
@@ -475,6 +511,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           item={editing}
           accounts={accounts}
           contracts={contracts}
+          projects={projects}
           knownTags={knownTags}
           years={yearChoices}
           defaultYear={overview.year}
@@ -537,6 +574,22 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
               </select>
             </label>
           )}
+          {projects.length > 0 && (
+            <label className="narrow">
+              Projekt
+              <select
+                value={projectFilter}
+                onChange={(event) => setProjectFilter(event.target.value)}
+              >
+                <option value="">alle</option>
+                {projects.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {filtered && (
             <button
               type="button"
@@ -545,6 +598,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                 setSearch("");
                 setTagFilter("");
                 setStatusFilter("");
+                setProjectFilter("");
               }}
             >
               Filter aufheben
@@ -614,6 +668,16 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                       {runtimeText(row.item)}
                       {row.item.contract_title ? ` · Vertrag: ${row.item.contract_title}` : ""}
                     </span>
+                    {row.item.project_id && row.item.project_name && (
+                      <span className="small budget-muted tenant-part">
+                        Projekt:{" "}
+                        {canOpenProjects ? (
+                          <Link to={projectPath(row.item.project_id)}>{row.item.project_name}</Link>
+                        ) : (
+                          row.item.project_name
+                        )}
+                      </span>
+                    )}
                     {row.item.tags.length > 0 && (
                       <span className="budget-tags">
                         {row.item.tags.map((tag) => (

@@ -15,6 +15,8 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Budget.Reader", "IT-Budget"],
   ["Tools.User", "IT-Tools"],
   ["Monitoring.Reader", "IT-Monitoring"],
+  ["Projekte.Editor", "IT-Projekte"],
+  ["Projekte.Reader", "IT-Projekte"],
 ];
 
 const ROLE_INFO: Record<string, { label: string; description: string }> = {
@@ -66,6 +68,15 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
     description: "Wie Bearbeiter, dazu Rechnungen buchen und die Einstellungen festlegen",
   },
   "Budget.Reader": { label: "Budget Leser", description: "IT-Budget ansehen" },
+  "Projekte.Reader": {
+    label: "Projekte Leser",
+    description: "IT-Projekte ansehen: Übersicht, Budget, Jour Fixe und Aufgaben",
+  },
+  "Projekte.Editor": {
+    label: "Projekte Bearbeiter",
+    description:
+      "IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe mit Anhängen und Aufgaben",
+  },
 };
 
 /** Name und Beschreibung einer App-Rolle (wie in der Verwaltung). */

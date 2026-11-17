@@ -286,6 +286,10 @@ describe("Budgetposten", () => {
         notice_warn_days: 60,
         entries: [contract()],
       },
+      "GET /api/projects/choices": [
+        { id: 3, name: "WLAN-Erneuerung", status: "aktiv" },
+        { id: 4, name: "Altes Projekt", status: "abgeschlossen" },
+      ],
     });
     render(<ItemsPage roles={["Budget.Editor"]} />);
     await screen.findByRole("region", { name: "Budgetposten 2026/27" });
@@ -318,6 +322,13 @@ describe("Budgetposten", () => {
     fireEvent.change(screen.getByLabelText(/^Bis Wirtschaftsjahr/), { target: { value: "2027" } });
     // Den Vertrag wählst du am Posten.
     fireEvent.change(screen.getByLabelText(/^Vertrag/), { target: { value: "1" } });
+    // Abgeschlossene Projekte stehen bei einem neuen Posten nicht zur Wahl.
+    expect(
+      within(screen.getByLabelText(/^Projekt \(/))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Kein Projekt", "WLAN-Erneuerung"]);
+    fireEvent.change(screen.getByLabelText(/^Projekt \(/), { target: { value: "3" } });
     fireEvent.click(screen.getByRole("button", { name: "Posten speichern" }));
     expect(await screen.findByText("Zeiterfassung Lizenz ist gespeichert.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
@@ -330,6 +341,7 @@ describe("Budgetposten", () => {
       tags: [],
       active: true,
       contract_id: 1,
+      project_id: 3,
     });
 
     // Bearbeiten: Laufzeit und Kosten sind vorbelegt, stilllegen steht unter weiteren Angaben.

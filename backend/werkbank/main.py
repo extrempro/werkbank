@@ -28,6 +28,8 @@ from werkbank.modules.m365_config.search import m365_config_search
 from werkbank.modules.m365_config.tasks import m365_config_tasks
 from werkbank.modules.monitoring.admin import router as monitoring_admin_router
 from werkbank.modules.monitoring.api import router as monitoring_router
+from werkbank.modules.projects.api import router as projects_router
+from werkbank.modules.projects.search import projects_search
 from werkbank.modules.tenant.api import router as tenant_router
 from werkbank.modules.tenant.tasks import tenant_tasks
 from werkbank.modules.tools.account import router as tools_account_router
@@ -59,7 +61,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         budget_tasks,
     ]
     # Module, die Treffer für die Suche liefern
-    app.state.search_providers = [m365_config_search, evergreen_search, budget_search]
+    app.state.search_providers = [
+        m365_config_search,
+        evergreen_search,
+        budget_search,
+        projects_search,
+    ]
     # Reihenfolge: zuletzt hinzugefügt = äußerste Schicht. Sicherheits-Header immer setzen.
     app.add_middleware(OriginCheckMiddleware, allowed_origin=settings.public_origin)
     app.add_middleware(RateLimitMiddleware, rules=default_rules(settings))
@@ -76,6 +83,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(recommendations_router)
     app.include_router(tenant_router)
     app.include_router(budget_router)
+    app.include_router(projects_router)
     app.include_router(tools_router)
     app.include_router(tools_account_router)
     app.include_router(monitoring_router)

@@ -79,6 +79,9 @@ export interface Item {
   /** Zugeordneter Vertrag; ein Posten hat höchstens einen. */
   contract_id?: number | null;
   contract_title?: string | null;
+  /** IT-Projekt, zu dem der Posten gehört; höchstens eins. */
+  project_id?: number | null;
+  project_name?: string | null;
 }
 
 export interface ItemUpdate {
@@ -92,6 +95,8 @@ export interface ItemUpdate {
   active: boolean;
   /** Zugeordneter Vertrag; null: keiner. */
   contract_id: number | null;
+  /** IT-Projekt; null: keins. */
+  project_id: number | null;
 }
 
 export interface ItemRow {

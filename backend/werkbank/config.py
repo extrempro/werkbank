@@ -91,6 +91,10 @@ class Settings(BaseSettings):
     # Höchstgröße in Megabyte
     budget_documents_dir: Path = Path("/data/belege")
     budget_document_max_mb: int = 15
+    # Ablage der PDF-Anhänge im Jour Fixe der IT-Projekte (Unterordner im selben Volume) und
+    # ihre Höchstgröße in Megabyte
+    project_documents_dir: Path = Path("/data/belege/projekte")
+    project_document_max_mb: int = 20
 
     # Test-Login ohne Entra. Nur in den Umgebungen "test" und "development" zulässig.
     enable_test_login: bool = False
