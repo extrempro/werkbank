@@ -24,6 +24,10 @@ Import aus Excel im IT-Budget; neues Symbol der Werkbank.
 
 - Neues Standard-Favicon und neue App-Icons (Werkbank von vorn mit Schraubenschlüssel und Hammer); ein eigenes Favicon aus dem Branding hat weiter Vorrang
 
+### Behoben
+
+- Breite Tabellen machten die Seite auf Handy und Tablet breiter als den Bildschirm, wenn Text nur für Screenreader am rechten Rand der Tabelle stand; Tabellen halten ihn jetzt in ihrem Scrollbereich
+
 ### Doku
 
 - Spec 7b, ASVS, Handbuch (IT-Budget › Import aus Excel)

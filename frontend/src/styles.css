@@ -932,6 +932,9 @@ a {
 /* Tabellen */
 
 .table-wrap {
+  /* Hält auch absolut gesetzte Teile (z. B. Text nur für Screenreader) im Scrollbereich;
+     sonst wird die Seite auf dem Handy breiter als der Bildschirm. */
+  position: relative;
   overflow-x: auto;
   background: var(--farbe-flaeche);
   border: 1px solid var(--farbe-rand);
