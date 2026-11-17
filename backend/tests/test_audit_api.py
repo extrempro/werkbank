@@ -105,12 +105,27 @@ def test_admin_roles_lists_holders(migrated_db: None) -> None:
     login(["Evergreen.Betriebsrat"], "rollen-br", "Berta Rat")
     client = login(["Werkbank.Admin"], "rollen-admin", "Ada Admin")
     roles = {role["value"]: role for role in client.get("/api/admin/roles").json()}
-    assert len(roles) == 14
+    assert len(roles) == 16
     assert roles["Evergreen.Betriebsrat"]["label"] == "Evergreen Betriebsrat"
     holders = [holder["display_name"] for holder in roles["Evergreen.Betriebsrat"]["holders"]]
     assert "Berta Rat" in holders
     admins = [holder["display_name"] for holder in roles["Werkbank.Admin"]["holders"]]
     assert "Ada Admin" in admins
+
+
+@pytest.mark.db
+def test_admin_people_lists_roles_per_person(migrated_db: None) -> None:
+    login(["Projekte.Reader", "Budget.Reader"], "personen-pia", "Pia Projekt")
+    reader = login(["Budget.Reader"], "personen-leser", "Lea Leser")
+    assert reader.get("/api/admin/people").status_code == 403
+    client = login(["Werkbank.Admin"], "personen-admin", "Adam Personen")
+    people = {person["display_name"]: person for person in client.get("/api/admin/people").json()}
+    pia = people["Pia Projekt"]
+    # Reihenfolge wie in der Rollenliste, mit Anzeigenamen
+    assert [role["value"] for role in pia["roles"]] == ["Budget.Reader", "Projekte.Reader"]
+    assert [role["label"] for role in pia["roles"]] == ["Budget Leser", "Projekte Leser"]
+    assert pia["last_login_at"] is not None
+    assert [role["value"] for role in people["Adam Personen"]["roles"]] == ["Werkbank.Admin"]
 
 
 @pytest.mark.db

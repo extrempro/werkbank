@@ -24,6 +24,34 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.44.0",
+    date: "2026-11-17",
+    summary: "Neu: der Bereich IT-Projekte mit Budget, Jour Fixe und Aufgaben.",
+    sections: [
+      {
+        area: "IT-Projekte",
+        entries: [
+          "Neu: der Bereich IT-Projekte. Jedes Projekt hat eine Übersicht mit Budget, offenen Punkten, internen und externen Ansprechpartnern, wichtigen Links und dem letzten Jour Fixe.",
+          "Budget: Du trägst das veranschlagte Budget im Projekt ein. Geplante Kosten und Rechnungen kommen aus dem IT-Budget, sobald dort beim Budgetposten das Projekt ausgewählt ist.",
+          "Jour Fixe: Einträge mit Datum und Protokoll, mit einer Leiste für Überschriften, Listen, Punkte zum Abhaken und Links, mit Vorschau und PDF-Anhängen.",
+          "Aufgaben: eine einfache Liste zur groben Orientierung, mit zuständiger Person und Datum.",
+        ],
+      },
+      {
+        area: "IT-Budget",
+        entries: [
+          "Beim Budgetposten wählst du jetzt das IT-Projekt, zu dem er gehört. In der Liste der Budgetposten filterst du nach Projekt.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter „Rollen“ zeigt die neue Ansicht „Nach Person“, wer sich angemeldet hat und mit welchen Rollen, mit Suche und dem Filter „Nur Personen ohne Rolle“.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.43.0",
     date: "2026-11-16",
     summary: "IT-Tools: Favoriten auf jedem Gerät, zuletzt genutzte Tools und ein Verlauf.",

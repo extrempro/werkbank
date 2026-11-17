@@ -70,6 +70,7 @@ from werkbank.modules.budget.tags import (
     matches,
 )
 from werkbank.modules.budget.xlsx import XLSX_TYPE, Cell, Money, Sheet, workbook
+from werkbank.modules.projects.models import Project
 
 router = APIRouter(prefix="/api/budget")
 
@@ -188,6 +189,9 @@ class ItemOut(BaseModel):
     # Zugeordneter Vertrag (höchstens einer)
     contract_id: int | None = None
     contract_title: str | None = None
+    # IT-Projekt, zu dem der Posten gehört (höchstens eins)
+    project_id: int | None = None
+    project_name: str | None = None
 
 
 class ItemIn(BaseModel):
@@ -203,6 +207,8 @@ class ItemIn(BaseModel):
     active: bool = True
     # Zugeordneter Vertrag; None: keiner. Ohne Angabe bleibt die Zuordnung beim Ändern.
     contract_id: int | None = Field(default=None, ge=1)
+    # IT-Projekt; None: keins. Ohne Angabe bleibt die Zuordnung beim Ändern.
+    project_id: int | None = Field(default=None, ge=1)
 
     @field_validator("name", "note")
     @classmethod
@@ -438,6 +444,7 @@ def item_out(
     start_month: int,
     status_text: str | None = None,
     contract: BudgetContract | None = None,
+    projects: dict[int, str] | None = None,
 ) -> ItemOut:
     account = accounts.get(row.account_id)
     return ItemOut(
@@ -460,6 +467,12 @@ def item_out(
         status=status_text,
         contract_id=contract.id if contract else None,
         contract_title=contract.title if contract else None,
+        project_id=row.project_id,
+        project_name=(
+            projects.get(row.project_id)
+            if projects is not None and row.project_id is not None
+            else None
+        ),
     )
 
 
@@ -505,6 +518,11 @@ def _item_contracts(db: DbDep) -> dict[int, BudgetContract]:
     return {item_id: contract for item_id, contract in rows}
 
 
+def _project_names(db: DbDep) -> dict[int, str]:
+    """Name je IT-Projekt, für die Anzeige am Budgetposten."""
+    return {row.id: row.name for row in db.scalars(select(Project)).all()}
+
+
 def _sum(values: list[int | None]) -> int | None:
     """Summe der vorhandenen Werte; None, wenn keiner vorhanden ist."""
     known = [value for value in values if value is not None]
@@ -536,6 +554,7 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
     )
     accounts = {row.id: row for row in _accounts(db)}
     item_contracts = _item_contracts(db)
+    projects = _project_names(db)
     items: list[ItemRow] = []
     for item in _items(db, accounts):
         expected = expected_in(item, year)
@@ -552,7 +571,11 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
         items.append(
             ItemRow(
                 item=item_out(
-                    item, accounts, settings.start_month, contract=item_contracts.get(item.id)
+                    item,
+                    accounts,
+                    settings.start_month,
+                    contract=item_contracts.get(item.id),
+                    projects=projects,
                 ),
                 expected_cents=expected,
                 previous_cents=expected_in(item, year - 1),
@@ -630,6 +653,7 @@ def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Den Vertrag gibt es nicht."
         )
+    _check_project(db, body, own_id)
     other = db.scalars(
         select(BudgetItem).where(
             BudgetItem.account_id == body.account_id,
@@ -640,6 +664,23 @@ def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Diesen Budgetposten gibt es in dem Konto schon.",
+        )
+
+
+def _check_project(db: DbDep, body: ItemIn, own_id: int | None) -> None:
+    """Das Projekt muss es geben; ein abgeschlossenes nur, wenn der Posten schon dazugehört."""
+    if body.project_id is None:
+        return
+    project: Project | None = db.get(Project, body.project_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Das Projekt gibt es nicht."
+        )
+    current = db.get(BudgetItem, own_id) if own_id is not None else None
+    if project.status == "abgeschlossen" and (current is None or current.project_id != project.id):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Das Projekt ist abgeschlossen. Ihm lassen sich keine Posten mehr zuordnen.",
         )
 
 
@@ -668,9 +709,11 @@ def list_items(user: Reader, db: DbDep, year: YearQuery = None) -> list[ItemOut]
     accounts = {row.id: row for row in _accounts(db)}
     rows = _items(db, accounts)
     contracts = _item_contracts(db)
+    projects = _project_names(db)
     if year is None:
         return [
-            item_out(row, accounts, start_month, contract=contracts.get(row.id)) for row in rows
+            item_out(row, accounts, start_month, contract=contracts.get(row.id), projects=projects)
+            for row in rows
         ]
     lines = _year_lines(db, [year], start_month)
     return [
@@ -680,6 +723,7 @@ def list_items(user: Reader, db: DbDep, year: YearQuery = None) -> list[ItemOut]
             start_month,
             item_status(row, year, lines.get((row.id, year))),
             contracts.get(row.id),
+            projects,
         )
         for row in rows
     ]
@@ -706,6 +750,7 @@ def _one_item(db: DbDep, row: BudgetItem) -> ItemOut:
         {entry.id: entry for entry in _accounts(db)},
         load_settings(db).start_month,
         contract=db.get(BudgetContract, contract_id) if contract_id is not None else None,
+        projects=_project_names(db),
     )
 
 
@@ -718,6 +763,7 @@ def _item_details(row: BudgetItem) -> dict[str, object]:
         "end_year": row.end_year,
         "active": row.active,
         "tags": list(row.tags),
+        "project_id": row.project_id,
     }
 
 
@@ -743,7 +789,7 @@ def _apply_item(db: DbDep, row: BudgetItem, body: ItemIn) -> None:
 def create_item(request: Request, body: ItemIn, user: Editor, db: DbDep) -> ItemOut:
     """Legt einen Budgetposten an: Konto, Bezeichnung, erwartete Kosten und Laufzeit."""
     _check_item(db, body, None)
-    row = BudgetItem(tags=_listed_tags(db, body.tags))
+    row = BudgetItem(tags=_listed_tags(db, body.tags), project_id=body.project_id)
     _apply_item(db, row, body)
     db.add(row)
     db.flush()
@@ -773,6 +819,8 @@ def update_item(
     before = {**_item_details(row), "contract_id": _item_contract_id(db, row.id)}
     _apply_item(db, row, body)
     row.tags = _listed_tags(db, body.tags)
+    if "project_id" in body.model_fields_set:
+        row.project_id = body.project_id
     if "contract_id" in body.model_fields_set:
         _set_item_contract(db, row.id, body.contract_id)
     write_audit(

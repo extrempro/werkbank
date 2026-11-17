@@ -66,6 +66,16 @@ describe("areasFor", () => {
       "werkbank",
       "monitoring",
     ]);
+    expect(areasFor(["Projekte.Reader"]).map((area) => area.id)).toEqual(["werkbank", "projekte"]);
+    expect(areasFor(["Budget.Reader"]).map((area) => area.id)).not.toContain("projekte");
+  });
+
+  it("ordnet die Seiten eines Projekts dem Bereich IT-Projekte zu", () => {
+    const areas = areasFor(["Projekte.Editor"]);
+    const id = (path: string) => areaForPath(areas, path)?.id;
+    expect(id("/projekte")).toBe("projekte");
+    expect(id("/projekte/12")).toBe("projekte");
+    expect(id("/projekte/12/jour-fixe")).toBe("projekte");
   });
 
   it("ordnet jede Seite ihrem Bereich zu", () => {

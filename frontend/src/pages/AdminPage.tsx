@@ -12,10 +12,12 @@ import {
 import { AiSettings } from "./AiSettings";
 import { BrandingSettings } from "./BrandingSettings";
 import { GeneralSettings } from "./GeneralSettings";
+import { PeopleRoles } from "./PeopleRoles";
 
 export function AdminPage() {
   const [roles, setRoles] = useState<RoleInfo[] | null>(null);
   const [general, setGeneral] = useState<AdminSettings | null>(null);
+  const [view, setView] = useState<"rolle" | "person">("rolle");
   const [status, setStatus] = useState<"loading" | "ready" | "stepup" | "forbidden" | "error">(
     "loading",
   );
@@ -75,8 +77,29 @@ export function AdminPage() {
         <p className="note">
           Rollen werden in Microsoft Entra ID vergeben (App-Rollen der Unternehmensanwendung
           „Werkbank“). Diese Übersicht zeigt, wer eine Rolle bei der letzten Anmeldung hatte, und
-          dient nur zur Information.
+          dient nur zur Information. Wer sich noch nie angemeldet hat, steht hier nicht.
         </p>
+        {status === "ready" && (
+          <div className="chips" role="group" aria-label="Ansicht der Rollen">
+            <button
+              type="button"
+              className="chip chip-filter"
+              aria-pressed={view === "rolle"}
+              onClick={() => setView("rolle")}
+            >
+              Nach Rolle
+            </button>
+            <button
+              type="button"
+              className="chip chip-filter"
+              aria-pressed={view === "person"}
+              onClick={() => setView("person")}
+            >
+              Nach Person
+            </button>
+          </div>
+        )}
+        {status === "ready" && view === "person" && <PeopleRoles />}
         {status === "loading" && <p role="status">Wird geladen …</p>}
         {status === "stepup" && (
           <div role="status">
@@ -93,7 +116,7 @@ export function AdminPage() {
         )}
         {status === "forbidden" && <p>Keine Berechtigung. Die Verwaltung sehen nur Admins.</p>}
         {status === "error" && <p role="alert">Die Rollen konnten nicht geladen werden.</p>}
-        {status === "ready" && roles && (
+        {status === "ready" && view === "rolle" && roles && (
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Rollen">
             <table>
               <caption className="visually-hidden">App-Rollen und Personen</caption>

@@ -97,6 +97,9 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Budget.Editor` | IT-Budget | Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen |
 | `Budget.Manager` | IT-Budget | wie `Budget.Editor`, dazu Rechnungen buchen, Partner zusammenlegen und die Einstellungen des Budgets festlegen |
 | `Budget.Reader` | IT-Budget | Budget ansehen (z. B. Geschäftsführung, Controlling) |
+| `Monitoring.Reader` | IT-Monitoring | Bereich IT-Monitoring ansehen |
+| `Projekte.Reader` | IT-Projekte | Projekte ansehen: Übersicht, Budget, Jour Fixe mit Anhängen, Aufgaben |
+| `Projekte.Editor` | IT-Projekte | Projekte anlegen, ändern und löschen; Jour Fixe, Anhänge und Aufgaben pflegen |
 
 Sichtbarkeit:
 
@@ -478,7 +481,7 @@ Das Budget der IT nach Konten, je Geschäftsjahr. Alle Beträge sind brutto und 
 - **Zugriff:** `Budget.Reader` liest, `Budget.Editor` pflegt zusätzlich Konten, Budgetposten, Verträge, Partner und Rechnungen, `Budget.Manager` bucht außerdem Rechnungen und legt die Einstellungen fest. Eigener Bereich „IT-Budget“ in der Navigation.
 - **Einstellungen:** Beginn des Geschäftsjahrs (erster Tag eines Monats, Dauer immer zwölf Monate), Bezeichnung des Geschäftsjahrs in der Oberfläche und eine Kostenstelle. Ein Geschäftsjahr wird intern nach dem Kalenderjahr benannt, in dem es beginnt, und als „2026“ oder „2026/27“ angezeigt. Dazu die Liste der Tags (siehe Tags).
 - **Konten:** Kontonummer (eindeutig), Bezeichnung, Art (laufende Kosten oder Investition), Notiz. Konten werden nicht gelöscht, sondern stillgelegt; stillgelegte Konten erscheinen in der Übersicht nur, solange für sie im gewählten Jahr oder im Vorjahr etwas geplant ist.
-- **Budgetposten:** Ein Budgetposten ist ein Vorhaben unter einem Konto, z. B. ein Projekt oder eine Software. Er wird als ein Vorgang angelegt („Posten hinzufügen“): Konto, Bezeichnung (je Konto eindeutig), erwartete Kosten je Geschäftsjahr (brutto) und Laufzeit (einmalig, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres, ab einem Geschäftsjahr). Die erwarteten Kosten gelten in jedem Jahr der Laufzeit; sie sind der Plan. Optional ein Vertrag; ein Posten hat höchstens einen. Tags, Notiz und Stilllegen stehen unter „Weitere Angaben“. Einen Partner hat der Posten nicht; der Partner steht an der Rechnung.
+- **Budgetposten:** Ein Budgetposten ist ein Vorhaben unter einem Konto, z. B. ein Projekt oder eine Software. Er wird als ein Vorgang angelegt („Posten hinzufügen“): Konto, Bezeichnung (je Konto eindeutig), erwartete Kosten je Geschäftsjahr (brutto) und Laufzeit (einmalig, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres, ab einem Geschäftsjahr). Die erwarteten Kosten gelten in jedem Jahr der Laufzeit; sie sind der Plan. Optional ein Vertrag; ein Posten hat höchstens einen. Optional ein IT-Projekt (Kapitel 8c); ein Posten gehört höchstens zu einem, abgeschlossene Projekte sind nur wählbar, wenn der Posten schon dazugehört. Tags, Notiz und Stilllegen stehen unter „Weitere Angaben“. Einen Partner hat der Posten nicht; der Partner steht an der Rechnung.
 - **Status je Geschäftsjahr:** Ein Posten ist in jedem Jahr seiner Laufzeit „offen“; sobald eine Rechnungsposition auf ihm liegt „Rechnung liegt vor“; „abgeschlossen“, sobald eine gebuchte Position mit dem Kennzeichen „schließt den Posten ab“ auf ihm liegt. Das Geschäftsjahr bestimmt das Rechnungsdatum. Der Status wird nicht gespeichert, sondern aus den Positionen gerechnet.
 - **Mehrjahresübersicht:** Erwartete Kosten, Ist und Status aller Budgetposten über fünf Geschäftsjahre, als Ausblick (ab dem laufenden) oder Rückblick (bis zum laufenden). Eingegeben wird hier nichts; die Zahlen ergeben sich aus Laufzeit und Rechnungen.
 - **Excel-Export:** Die Mehrjahresübersicht lässt sich als Excel-Datei herunterladen: ein Blatt mit erwarteten Kosten, Ist und Status je Posten und Jahr, ein Blatt mit allen Rechnungspositionen des Zeitraums. Texte stehen als Text in den Zellen, nie als Formel. Die Datei schreibt die Werkbank ohne Zusatzpaket.
@@ -527,6 +530,20 @@ Regelmäßige Prüfungen der IT. Zugriff: Rolle `Monitoring.Reader` und `Werkban
 - Gespeichert: Läufe 90 Tage (Zahlen), Zeilen nur der letzten beiden erfolgreichen Läufe. Schlägt das Lesen von NetBox fehl, gilt der Lauf als fehlgeschlagen; das letzte Ergebnis bleibt sichtbar.
 - Glocke: neue Probleme gegenüber dem vorletzten Lauf (eine Benachrichtigung je Lauf) und ein fehlgeschlagener Lauf (`Monitoring.Reader`, `Werkbank.Admin`).
 - Verwaltung › Allgemein › NetBox: https-Adresse, API-Token (verschlüsselt, nie ausgegeben), optional CA-Zertifikat (PEM) für eine eigene PKI, View, Resolver, TTL-Vergleich, Ein/Aus, „Verbindung prüfen“ (Version, Plugin, Views, Zahl der Zonen). Der Server erreicht NetBox auch im internen Netz, aber nur diese eine eingetragene https-Adresse, ohne Weiterleitungen.
+
+## 8c. Bereich IT-Projekte
+
+Projekte der IT mit Budget, Ansprechpartnern, Links, Jour-Fixe-Protokollen und einer groben Aufgabenliste. Zugriff: `Projekte.Reader` liest, `Projekte.Editor` pflegt (serverseitig geprüft). Eigener Bereich „IT-Projekte“ in der Navigation (`/projekte`, ein Projekt unter `/projekte/{id}` mit den Reitern Übersicht, Budget, Jour Fixe, Aufgaben, Einstellungen).
+
+- **Projekt:** Name (eindeutig), Kurzbeschreibung, Status (geplant, aktiv, pausiert, abgeschlossen), Beginn und Ende, veranschlagtes Budget (brutto) mit Freigabedatum und Notiz. Abgeschlossene Projekte bleiben lesbar; im IT-Budget lassen sich ihnen keine neuen Posten zuordnen.
+- **Rollen und Ansprechpartner:** interne und externe Personen als Freitext (Name, Rolle im Projekt, Firma oder Abteilung, Kontakt). Bewusst keine Abfrage aus Entra; die Werkbank liest dafür keine Namen aus dem Verzeichnis.
+- **Links:** beliebig viele (bis 30) mit Bezeichnung, nur vollständige https-Adressen ohne Zugangsdaten, Reihenfolge frei.
+- **Budget:** Die Kosten kommen aus dem IT-Budget (Kapitel 7b) über das Feld „Projekt“ am Budgetposten. Je Posten und Geschäftsjahr der Laufzeit (ohne Ende: bis zum laufenden Geschäftsjahr) und je Jahr mit Rechnungen: **Ist** = gebuchte Rechnungspositionen, **geplant** = Prognose minus Ist (abgeschlossen: 0; Rechnungen „zu prüfen“ zählen damit noch als geplant); stillgelegte Posten planen nichts mehr. **Verbleibend** = veranschlagt − geplant − Ist. Der Reiter Budget zeigt die Posten und die Summen je Geschäftsjahr und weist auf eine Überschreitung hin. Die Zahlen sehen alle Rollen des Projekts, auch ohne Rolle im IT-Budget.
+- **Jour Fixe:** Einträge mit Datum, Titel und Protokoll in Markdown (bis 50.000 Zeichen): Überschriften, Listen, Checklisten, Zitate, Trennlinie, fett, kursiv, Code, Links nur mit https. Die Oberfläche zerlegt den Text selbst und stellt ihn als Text dar, nie als HTML; eine Leiste setzt die Zeichen um die Auswahl, mit Vorschau. Je Eintrag bis 10 PDF-Anhänge mit je bis 20 MB (`PROJECT_DOCUMENT_MAX_MB`; geprüft wird der Dateianfang), abgelegt wie die Belege des Budgets unter zufälligem Namen (`PROJECT_DOCUMENTS_DIR`, Vorgabe `/data/belege/projekte` im Volume der Belege), Download immer als Anhang. Kein Virenscan.
+- **Aufgaben:** grobe Liste zur Orientierung (Text, zuständig als Freitext, Datum, erledigt); die eigentlichen Aufgaben laufen in anderen Werkzeugen. Keine Aufgaben auf der Startseite, keine Benachrichtigungen.
+- **Löschen:** Ein Projekt wird mit Ansprechpartnern, Links, Aufgaben, Jour Fixe und Anhängen gelöscht; Budgetposten bleiben und verlieren nur die Zuordnung.
+- **Suche:** Projekte nach Name und Beschreibung (nur mit Projekt-Rolle).
+- **Audit:** Anlegen, Ändern und Löschen von Projekten, Aufgaben, Jour-Fixe-Einträgen und Anhängen (Modul `projekte`), ohne Namen von Personen.
 
 ## 9. Datenmodell (Überblick)
 
@@ -598,10 +615,12 @@ Evergreen:
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
 | Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |
 | Audit-Log | Admin, Auditor | Filterbare Tabelle, Export |
-| Verwaltung | Admin (mit Step-up) | Bereiche Allgemein (Branding, Mailversand, Aufbewahrung des Audit-Logs, KI-Texte), Module, Rollen, Konnektoren, Kommentarregeln, Benachrichtigungen |
+| Verwaltung | Admin (mit Step-up) | Bereiche Allgemein (Branding, Mailversand, Aufbewahrung des Audit-Logs, KI-Texte), Module, Rollen (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), Konnektoren, Kommentarregeln, Benachrichtigungen |
 | Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Benachrichtigungen je Art mit Glocke, Mail und Teams, Version. Später: Push an/aus, Hinweis zur Installation |
 | Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Verweis auf die Einstellungen im Konto. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
+| IT-Projekte › Alle Projekte | Projekte.* (Anlegen: Projekte.Editor) | Liste mit Status, veranschlagt, geplant, Ist, offenen Punkten, letztem Jour Fixe; Filter, Suche, neues Projekt |
+| IT-Projekte › Projekt | Projekte.* (Einstellungen und Ändern: Projekte.Editor) | Reiter Übersicht, Budget, Jour Fixe (Markdown mit Leiste und Vorschau, PDF-Anhänge), Aufgaben, Einstellungen |
 | DNS-Abgleich mit NetBox | Monitoring.Reader, Admin | Kennzahlen, Verlauf 90 Tage, Ansichten Probleme/Neu/Alle, Suche, Tabelle je Zone, „Jetzt prüfen“ für Admins |
 | Handbuch | alle | Kapitel je Bereich nach Rollen, Suche im Handbuch, je Kapitel Inhaltsverzeichnis und Abschnitte mit Verweisen |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |

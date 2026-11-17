@@ -20,6 +20,8 @@ class Role(StrEnum):
     BUDGET_MANAGER = "Budget.Manager"
     BUDGET_READER = "Budget.Reader"
     MONITORING_READER = "Monitoring.Reader"
+    PROJECTS_READER = "Projekte.Reader"
+    PROJECTS_EDITOR = "Projekte.Editor"
 
 
 KNOWN_ROLES: frozenset[str] = frozenset(role.value for role in Role)
@@ -74,5 +76,13 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
     Role.MONITORING_READER: (
         "Monitoring Leser",
         "Bereich IT-Monitoring ansehen (z. B. DNS-Abgleich mit NetBox)",
+    ),
+    Role.PROJECTS_READER: (
+        "Projekte Leser",
+        "IT-Projekte ansehen: Übersicht, Budget, Jour Fixe und Aufgaben",
+    ),
+    Role.PROJECTS_EDITOR: (
+        "Projekte Bearbeiter",
+        "IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe mit Anhängen und Aufgaben",
     ),
 }

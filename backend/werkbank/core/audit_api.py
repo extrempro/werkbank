@@ -210,3 +210,39 @@ def list_roles(user: AdminUser, db: DbDep) -> list[RoleOut]:
             RoleOut(value=role.value, label=label, description=description, holders=holders)
         )
     return result
+
+
+class PersonRoleOut(BaseModel):
+    value: str
+    label: str
+
+
+class PersonOut(BaseModel):
+    avatar_url: str | None
+    display_name: str
+    email: str | None
+    last_login_at: datetime | None
+    # Rollen bei der letzten Anmeldung; maßgeblich ist Entra
+    roles: list[PersonRoleOut]
+
+
+@router.get("/admin/people")
+def list_people(user: AdminUser, db: DbDep) -> list[PersonOut]:
+    """Alle Personen, die sich je angemeldet haben, mit ihren Rollen der letzten Anmeldung."""
+    people = db.scalars(select(User).order_by(User.display_name, User.id)).all()
+    etags = avatar_etags(db, [person.id for person in people])
+    order = list(Role)
+    return [
+        PersonOut(
+            avatar_url=avatar_url(person.id, etags.get(person.id)),
+            display_name=person.display_name,
+            email=person.email,
+            last_login_at=person.last_login_at,
+            roles=[
+                PersonRoleOut(value=role.value, label=ROLE_INFO[role][0])
+                for role in order
+                if role.value in (person.last_roles or [])
+            ],
+        )
+        for person in people
+    ]

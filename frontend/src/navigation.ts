@@ -20,6 +20,7 @@ const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
 const EVERGREEN_EDITORS = ["Evergreen.IT", "Evergreen.Team"];
 const TOOLS_USER = "Tools.User";
 const MONITORING_READER = "Monitoring.Reader";
+const PROJECT_ROLES = ["Projekte.Reader", "Projekte.Editor"];
 const TENANT_READER = "Tenant.Reader";
 const BUDGET_MANAGER = "Budget.Manager";
 const BUDGET_ROLES = ["Budget.Reader", "Budget.Editor", BUDGET_MANAGER];
@@ -40,6 +41,7 @@ export const BUDGET_INVOICES_PATH = "/budget/rechnungen";
 export const BUDGET_PLANNING_PATH = "/budget/planung";
 export const BUDGET_STATISTICS_PATH = "/budget/statistik";
 export const MONITORING_DNS_PATH = "/monitoring/dns";
+export const PROJECTS_PATH = "/projekte";
 
 /** Seite einer Kategorie der IT-Tools. */
 export function toolCategoryPath(category: string): string {
@@ -188,6 +190,21 @@ export function areasFor(roles: readonly string[]): NavArea[] {
             label: CATEGORY_LABELS[category],
             icon: category,
           })),
+        },
+      ],
+    });
+  }
+  if (hasAny(roles, PROJECT_ROLES)) {
+    areas.push({
+      id: "projekte",
+      label: "IT-Projekte",
+      icon: "projekte",
+      home: PROJECTS_PATH,
+      // Ohne Überschrift: Der Bereich heißt schon so. Die Projekte selbst stehen auf der Seite.
+      groups: [
+        {
+          title: null,
+          items: [{ path: PROJECTS_PATH, label: "Alle Projekte", icon: "uebersicht" }],
         },
       ],
     });

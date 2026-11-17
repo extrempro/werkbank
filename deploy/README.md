@@ -145,5 +145,5 @@ Die ganze Reihenfolge mit Prüfschritten steht in [`docs/inbetriebnahme.md`](../
 Zwei Volumes enthalten Daten, die nicht wiederherstellbar sind, und gehören in die Sicherung:
 
 - `db-data`: die Datenbank.
-- `belege`: die PDF-Belege des IT-Budgets. Die Dateien liegen dort unter zufälligen Namen; welcher Beleg zu welcher Rechnung gehört, steht nur in der Datenbank. Beide Volumes deshalb zusammen sichern und zusammen zurückspielen.
+- `belege`: die PDF-Belege des IT-Budgets und, im Unterordner `projekte`, die PDF-Anhänge aus dem Jour Fixe der IT-Projekte. Die Dateien liegen dort unter zufälligen Namen; welcher Beleg zu welcher Rechnung bzw. welcher Anhang zu welchem Eintrag gehört, steht nur in der Datenbank. Beide Volumes deshalb zusammen sichern und zusammen zurückspielen.
 

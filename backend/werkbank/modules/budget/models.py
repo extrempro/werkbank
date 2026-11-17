@@ -20,6 +20,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from werkbank.db import Base
 
+# Budgetposten verweisen auf Projekte; die Tabelle muss mit registriert sein.
+from werkbank.modules.projects import models as _projects_models  # noqa: F401
+
 
 class BudgetAccount(Base):
     """Ein Konto des IT-Budgets. Konten werden nicht gelöscht, nur stillgelegt."""
@@ -59,6 +62,10 @@ class BudgetItem(Base):
     # Frei vergebene Schlagworte, über die sich Posten suchen und auswerten lassen
     tags: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    # IT-Projekt, zu dem der Posten gehört (höchstens eins); seine Kosten zählen dort mit
+    project_id: Mapped[int | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
