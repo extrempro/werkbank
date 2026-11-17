@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.49.0",
+    date: "2026-11-17",
+    summary: "Dienststatus mit 90-Tage-Würfel in jeder Kachel und klarer gegliederten Meldungen.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Dienststatus: Das Würfel-Symbol in jeder Kachel zeigt die letzten 90 Tage des Dienstes, mit der Maus beim Darüberfahren, auf dem Handy durch Antippen.",
+          "Die Meldungen sind klarer gegliedert: Art, Dienst und Stand oben, darunter Titel, Zeitraum und Dauer.",
+          "Von den beendeten Meldungen stehen zuerst die fünf neuesten; „Alle anzeigen“ zeigt den Rest.",
+          "Zertifikate und Secrets: Gibt es keinen Handlungsbedarf, öffnet die Seite gleich mit den Waben.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.48.0",
     date: "2026-11-17",
     summary:

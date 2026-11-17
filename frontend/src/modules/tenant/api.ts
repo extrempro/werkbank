@@ -380,3 +380,18 @@ export function weekColumns(days: string[]): (number | null)[][] {
   }
   return columns;
 }
+
+/** „1 Tag Störung, 2 Tage Hinweis“ oder „ohne Meldung“ für einen Kalender. */
+export function calendarSummary(levels: readonly DayLevel[]): string {
+  const incidents = levels.filter((level) => level === "stoerung").length;
+  const advisories = levels.filter((level) => level === "hinweis").length;
+  if (incidents === 0 && advisories === 0) {
+    return "ohne Meldung";
+  }
+  return [
+    incidents > 0 && `${incidents} ${incidents === 1 ? "Tag" : "Tage"} Störung`,
+    advisories > 0 && `${advisories} ${advisories === 1 ? "Tag" : "Tage"} Hinweis`,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}

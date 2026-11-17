@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.49.0] – 2026-11-17
+
+Dienststatus übersichtlicher; Zertifikate ohne Handlungsbedarf gleich als Waben.
+
+### Microsoft 365
+
+- Dienststatus: Jede Kachel hat ein Würfel-Symbol, das den Kalender der letzten 90 Tage dieses Dienstes zeigt (Maus: beim Darüberfahren; Tastatur und Handy: Antippen, Escape schließt)
+- Dienststatus: Meldungen gegliedert in Art, Dienst und Stand, darunter Titel, dann Kennung, Zeitraum ohne Sekunden und Dauer
+- Dienststatus: Von den in den letzten 30 Tagen beendeten Meldungen stehen zuerst die fünf neuesten, „Alle anzeigen“ zeigt den Rest; eine Meldung aus einem Link bleibt sichtbar
+- Zertifikate und Secrets: Ohne Handlungsbedarf öffnet die Seite mit der Wabenansicht
+
+### Doku
+
+- Handbuch (Dienststatus, Zertifikate und Secrets)
+
 ## [0.48.0] – 2026-11-17
 
 Verwaltung als eigener Bereich; letzte Aktivitäten auf der Startseite.

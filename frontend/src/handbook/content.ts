@@ -469,7 +469,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Die Grenzen (Vorgabe 60, 30 und 7 Tage) legt die Verwaltung fest. Die Liste zeigt „Handlungsbedarf“ oder „Alle“. Die Ansicht „Waben“ zeigt alles auf einen Blick; ein Klick auf eine Wabe zeigt die Einzelheiten.",
+            text: "Die Grenzen (Vorgabe 60, 30 und 7 Tage) legt die Verwaltung fest. Die Liste zeigt „Handlungsbedarf“ oder „Alle“. Die Ansicht „Waben“ zeigt alles auf einen Blick; ein Klick auf eine Wabe zeigt die Einzelheiten. Gibt es keinen Handlungsbedarf, öffnet die Seite gleich mit den Waben.",
           },
         ],
         links: [{ to: "/m365/zugangsdaten", label: "Zu den Zertifikaten und Secrets" }],
@@ -485,7 +485,8 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "list",
             items: [
-              "Offene Störungen und Hinweise stehen oben, darunter die in den letzten 30 Tagen beendeten. Aufgeklappt zeigt jeder Eintrag die Mitteilungen von Microsoft.",
+              "Offene Störungen und Hinweise stehen oben, darunter die in den letzten 30 Tagen beendeten: zuerst die fünf neuesten, „Alle anzeigen“ zeigt den Rest. Jeder Eintrag nennt Art, Dienst und Stand, darunter den Titel und Kennung, Zeitraum und Dauer. Aufgeklappt zeigt er die Mitteilungen von Microsoft.",
+              "Das kleine Würfel-Symbol in der Kachel eines Dienstes zeigt dessen letzte 90 Tage als Kalender: mit der Maus beim Darüberfahren, auf dem Handy durch Antippen.",
               "Jeder Eintrag lässt sich im Microsoft 365 Admin Center öffnen. Dafür brauchst du dort eine Anmeldung.",
               "„Letzte 90 Tage“ zeigt je Dienst einen Kalender: jede Spalte eine Woche, Montag oben, jedes Feld ein Tag mit Störung, mit Hinweis oder ohne Meldung. Darunter stehen alle Meldungen dieses Zeitraums mit Datum und Dauer.",
               "„Ausfalldauer je Dienst“ zeigt die Stunden mit Störung je Jahr (gleichzeitige Störungen zählen einmal, Fehlalarme gar nicht), „Störungen pro Monat“ die Zahl der Störungen über drei Jahre, wählbar je Dienst.",

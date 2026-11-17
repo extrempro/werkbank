@@ -27,6 +27,10 @@ export function CredentialsPage() {
       .then((result) => {
         if (active) {
           setList(result);
+          // Ohne Handlungsbedarf ist die Liste leer; die Waben zeigen dann den Überblick.
+          if (result.attention === 0 && result.entries.length > 0) {
+            setDisplay("waben");
+          }
         }
       })
       .catch(() => {
