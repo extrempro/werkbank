@@ -27,6 +27,7 @@ from werkbank.modules.evergreen.workflow import evergreen_workflow
 from werkbank.modules.m365_config.api import router as m365_config_router
 from werkbank.modules.m365_config.recommendations_api import router as recommendations_router
 from werkbank.modules.m365_config.search import m365_config_search
+from werkbank.modules.m365_config.snapshots_api import router as m365_snapshots_router
 from werkbank.modules.m365_config.tasks import m365_config_tasks
 from werkbank.modules.monitoring.admin import router as monitoring_admin_router
 from werkbank.modules.monitoring.api import router as monitoring_router
@@ -82,6 +83,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tasks_router)
     app.include_router(push_router)
     app.include_router(notifications_router)
+    app.include_router(m365_snapshots_router)
     app.include_router(m365_config_router)
     app.include_router(recommendations_router)
     app.include_router(tenant_router)

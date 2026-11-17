@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.55.0] – 2026-11-17
+
+Microsoft 365: Snapshots vergleichen und exportieren; Rolle Werkbank.Auditor entfällt.
+
+### Microsoft 365
+
+- **Snapshots vergleichen:** zwei Abrufe wählen (Vorgabe: vorletzter und letzter), Liste aller neuen, geänderten und entfernten Einstellungen mit Wert vorher und nachher; der ältere Abruf ist immer „vorher“, fehlgeschlagene Abrufe sind nicht wählbar; höchstens 2.000 Zeilen, der Rest steht im Export
+- **Snapshots exportieren:** Stand eines Abrufs als JSON oder CSV (Semikolon, UTF-8 mit BOM, Schutz vor Formel-Injektion); Download ohne Cache, jeder Export im Audit-Log (`snapshot.export`)
+- API: `GET /api/m365-config/snapshots/compare?from=&to=`, `GET /api/m365-config/snapshots/{id}/export.json`, `GET …/export.csv` (Config.Reader oder Config.Reviewer)
+
+### Werkbank
+
+- **Rolle `Werkbank.Auditor` entfällt:** Audit-Log und Rollenübersicht sehen nur noch Admins; wer die Rolle in Entra noch hat, verliert den Zugriff aufs Audit-Log
+
+### Doku
+
+- Spec: offene Punkte bereinigt (MFA und Datenschutz regelt der Betreiber außerhalb der Werkbank), Snapshots, Stand der Umsetzung; Entra-Einrichtung und ASVS ohne Auditor-Rolle; Handbuch (Snapshots, Rollen)
+
 ## [0.54.0] – 2026-11-17
 
 Push aufs Handy.

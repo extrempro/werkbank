@@ -66,7 +66,7 @@ def test_audit_forbidden_for_other_roles(migrated_db: None) -> None:
 def test_audit_list_and_filter(migrated_db: None, db_session: Session) -> None:
     write_audit(db_session, module="evergreen", action="vorgang.test", note="x")
     db_session.commit()
-    client = login(["Werkbank.Auditor"], "audit-auditor", "Udo Auditor")
+    client = login(["Werkbank.Admin"], "audit-auditor", "Ada Admin")
 
     everything = client.get("/api/audit").json()
     actions = [entry["action"] for entry in everything["entries"]]
@@ -132,7 +132,7 @@ def test_admin_people_lists_roles_per_person(migrated_db: None) -> None:
 def test_audit_shows_truncated_origin(migrated_db: None, db_session: Session) -> None:
     write_audit(db_session, module="kern", action="test.herkunft", ip="203.0.113.77")
     db_session.commit()
-    client = login(["Werkbank.Auditor"], "audit-herkunft")
+    client = login(["Werkbank.Admin"], "audit-herkunft")
     entries = client.get("/api/audit", params={"action": "test.herkunft"}).json()["entries"]
     assert entries[0]["origin"] == "203.0.113.0/24"
     export = client.get("/api/audit/export.csv", params={"action": "test.herkunft"})

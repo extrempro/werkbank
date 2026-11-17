@@ -8,7 +8,7 @@
 | Lizenz | MIT (Open Source) |
 
 > Dieses Dokument beschreibt **was** die Werkbank kann (Funktionen, Datenmodell, Screens) und **unter welchen Bedingungen** sie betrieben wird. Wie einzelne Teile programmiert werden, steht im Code und in den Architektur-Notizen unter `docs/`.
-> Offene Entscheidungen sind mit **[OFFEN]** markiert und in Kapitel 16 gesammelt.
+> Entscheidungen sind in Kapitel 16 gesammelt.
 
 ---
 
@@ -85,7 +85,6 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | App-Rolle | Modul | Darf |
 |---|---|---|
 | `Werkbank.Admin` | Kern | Verwaltung: Module, Konnektoren, Kommentarregeln, Benachrichtigungsregeln, Audit-Log vollständig |
-| `Werkbank.Auditor` | Kern | Audit-Log über die Schnittstelle lesen (die Seite sehen nur Admins) |
 | `Config.Reader` | M365-Konfiguration | Einstellungen, Verlauf, Änderungen, Snapshots ansehen und exportieren |
 | `Config.Reviewer` | M365-Konfiguration | zusätzlich Änderungen bewerten, Beschreibungen und Begründungen pflegen, Soll-Werte setzen |
 | `Evergreen.IT` | Evergreen | technische Bewertung (Schritt 1), Umsetzung (Schritt 6), Schritte 2–3 vertretungsweise, BR-Beschluss im Auftrag erfassen |
@@ -180,7 +179,6 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
   - Voraussetzung: Entra ID P1 für alle Werkbank-Nutzer.
 - Login-Seite: Name der App, Button „Mit Microsoft anmelden“, Hinweis auf Datenschutz. Ohne Anmeldung ist außer Login-Seite, Offline-Seite und statischen Dateien nichts erreichbar.
 - Auf iOS als installierte PWA: Redirect statt Popup.
-- **[OFFEN]** Rückfrage „Login bauen“ – siehe Kapitel 16.
 
 ### 6.2 Aufgabenliste („Meine Aufgaben“)
 
@@ -306,7 +304,7 @@ Standardregeln:
 - Vorschläge für verständliche Beschreibungen von Einstellungen und Evergreen-Vorgängen.
 - Übergeben werden nur technische Metadaten (Name, Schema-Text, Wert, Microsoft-Ankündigung), **keine personenbezogenen Daten**.
 - Ergebnis gekennzeichnet als „KI-generiert, ungeprüft“, bis eine berechtigte Person es übernimmt.
-- Abschaltbar in der Verwaltung. **[OFFEN]** Anbieter, Vertrag (AVV) und Freigabe durch Datenschutz.
+- Abschaltbar in der Verwaltung. Anbieter, Vertrag (AVV) und Freigabe durch den Datenschutz klärt der Betreiber außerhalb der Werkbank.
 - Stand: umgesetzt für Einstellungen der M365-Konfiguration. Anbieter (OpenAI-kompatible Adresse, Modell, Schlüssel) und Höchstzahl je Stunde stehen in der Verwaltung, Standard ist ausgeschaltet. Abweichung zum Schutz der Daten: Übergeben werden nur Dienst, Bereich und Name der Eigenschaft, **nicht** der Wert und nicht der Name des Objekts (beides kann Personen- oder Firmennamen enthalten). Ein Text gilt deshalb für alle Einstellungen derselben Art (`cfg_ai_texts`). Der Worker erzeugt die Texte stündlich für Einstellungen ohne eigene Beschreibung; Reviewer geben frei oder verwerfen. Noch offen: Vorschläge für Evergreen-Vorgänge.
 
 ### 6.10 Suche
@@ -475,9 +473,9 @@ Offene Vorgänge je Schritt (Tagesordnungsvorlage BR), Beschlüsse im Zeitraum, 
 - **Verlauf:** Je Tag ein Eintrag (der letzte Abruf des Tages gilt). Aufbewahrung: drei Jahre, danach löscht der Abruf alte Einträge.
 - **Diagramme:** Liniendiagramm mit einer Achse, höchstens drei Reihen in fester Farbfolge, Werte eines Tages per Zeiger oder Regler, dazu immer eine Tabelle.
 - **Stand:** Lizenzen (gekauft, zugewiesen, frei, Einheiten in Kulanzfrist oder gesperrt, nächster Stichtag der Abos, Testabo) und Benutzerzahlen (gesamt, Gäste, deaktiviert, mit Lizenz). Hinweise in der Liste: aufgebraucht, überbucht, Stichtag in höchstens 30 Tagen.
-- **Zertifikate und Secrets:** Der Abruf (`TENANT_CREDENTIALS_ENABLED`, Berechtigung `Application.Read.All`) liest App-Registrierungen und Unternehmensanwendungen mit SAML. Gespeichert werden Anwendung, Art, Bezeichnung, Beginn und Ablauf, nie der geheime Wert. Einstufung nach Restlaufzeit: Hinweis, Warnung, dringend, abgelaufen; der Vorlauf (Standard 60, 30 und 7 Tage) steht in der Verwaltung unter „Allgemein“. Ab dem Hinweis stehen die Einträge als Aufgabe auf der Startseite (Rolle `Tenant.Reader`). Eine Mail-Benachrichtigung gibt es noch nicht.
+- **Zertifikate und Secrets:** Der Abruf (`TENANT_CREDENTIALS_ENABLED`, Berechtigung `Application.Read.All`) liest App-Registrierungen und Unternehmensanwendungen mit SAML. Gespeichert werden Anwendung, Art, Bezeichnung, Beginn und Ablauf, nie der geheime Wert. Einstufung nach Restlaufzeit: Hinweis, Warnung, dringend, abgelaufen; der Vorlauf (Standard 60, 30 und 7 Tage) steht in der Verwaltung unter „Allgemein“. Ab dem Hinweis stehen die Einträge als Aufgabe auf der Startseite (Rolle `Tenant.Reader`); die Glocke meldet sie (Art `tenant.zugangsdaten`), per Mail, Teams oder Push, sobald die Person den Weg im Konto einschaltet (6.7).
 - **Dienststatus:** Der Abruf (`TENANT_HEALTH_ENABLED`, Berechtigung `ServiceHealth.Read.All`, alle 15 Minuten) liest den Zustand von Exchange Online, Microsoft Teams, SharePoint Online und Microsoft Entra sowie deren Störungen und Hinweise samt Mitteilungen von Microsoft (als Text ohne HTML). Die Seite „Dienststatus“ zeigt je Dienst eine Ampel aus den offenen Meldungen (Störung, Hinweis, in Ordnung; offen ist eine Meldung, solange Microsoft sie nicht als behoben, beendet oder Fehlalarm führt; das Schwerste oben) mit den offenen Meldungen als Grund und Sprung dorthin; den Zustand laut Microsoft nur klein dazu, offene und in den letzten 30 Tagen beendete Störungen und Hinweise sowie „Ausfälle je Dienst“ (Störungen, Stunden mit Störung und Hinweise je Jahr; Stunden als Vereinigung der Zeiträume je Dienst, Fehlalarme zählen nirgends). Diagramme: Kalender der letzten 90 Tage je Dienst im Würfel der Kachel (Wochen als Spalten, Montag oben; Tag mit Störung, Hinweis oder ohne Meldung; Tage in UTC), dazu die Liste der Meldungen des Zeitraums (Art, Dienst, Titel, Zeitraum, Dauer), Ausfalldauer je Dienst als waagerechte Balken je Jahr, Störungen pro Monat über 36 Monate, wählbar je Dienst; dazu immer Text oder Tabelle. Jede Meldung verlinkt auf dieselbe Meldung im Microsoft 365 Admin Center (Anmeldung dort nötig). Störungen und Hinweise bleiben drei Jahre. Aufgaben auf der Startseite gibt es dafür nicht; Beginn und Ende einer Störung meldet die Glocke (6.7).
-- **Geplant:** Mail-Benachrichtigung (die Glocke meldet es bereits, 6.7) zu ablaufenden Zertifikaten und Secrets; Nutzung der Dienste als Summen.
+- **Geplant:** Nutzung der Dienste als Summen.
 
 ## 7b. Modul IT-Budget
 
@@ -616,11 +614,11 @@ Evergreen:
 | IT-Budget › Partner | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Vertragspartner und Rechnungssteller; anlegen, ändern, stilllegen; Detail je Firma mit Verträgen, Budgetposten und Rechnungen; zusammenlegen (Budget.Manager) |
 | IT-Budget › Konten | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Liste der Konten; anlegen, ändern, stilllegen |
 | IT-Budget › Einstellungen | Budget.Manager | Beginn und Bezeichnung des Geschäftsjahrs, Kostenstelle; Liste der Tags anlegen, umbenennen, löschen |
-| M365 › Snapshots | Config.* | Abrufe mit Status, Vergleich zweier Snapshots, JSON-Export |
+| M365 › Snapshots | Config.* | Abrufe mit Status; Vergleich zweier Abrufe (neu, geändert, entfernt mit Vorher/Nachher); Stand eines Abrufs als JSON und CSV |
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
 | Reports | später, für Evergreen (8.7) | Berichtsvorlagen, Download, geplanter Versand. Noch nicht gebaut; ohne Eintrag in der Navigation |
 | Verwaltung (eigener Bereich in der Navigation) | Admin (mit Step-up) | Seiten **Allgemein** (Branding, Aufbewahrung des Audit-Logs, Vorlauf für ablaufende Zertifikate und Secrets), **Rollen** (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), **Mail & Teams** (SMTP-Server, Teams), **Verbindungen** (KI-Texte, NetBox, Abfragen ins Internet) und **Audit-Log**. Später: Module, Kommentarregeln |
-| Verwaltung › Audit-Log | Admin (Werkbank.Auditor liest das Audit-Log nur über die Schnittstelle) | Filterbare Tabelle, Export |
+| Verwaltung › Audit-Log | Admin | Filterbare Tabelle, Export |
 | Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Benachrichtigungen je Art mit Glocke, Mail, Teams und Push, Push je Gerät ein und aus mit Liste der Geräte und Testnachricht, auf iPhone/iPad Hinweis zur Installation, Version |
 | Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Verweis auf die Einstellungen im Konto. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
@@ -632,7 +630,7 @@ Evergreen:
 
 Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz.
 
-**Stand der Umsetzung (Version 0.48):** Alle Seiten der Tabelle sind nach dem Entwurf gebaut, auch das Handbuch. Noch nicht vorhanden: Reports für Evergreen, Vergleich und Export der Snapshots, Kennzeichen „Mitbestimmung“ und PDF der BR-Vorlage in Evergreen, Push.
+**Stand der Umsetzung (Version 0.55):** Alle Seiten der Tabelle sind nach dem Entwurf gebaut, auch das Handbuch, Push und Vergleich und Export der Snapshots. Noch nicht vorhanden: Reports für Evergreen, Kennzeichen „Mitbestimmung“ und PDF der BR-Vorlage in Evergreen.
 
 ---
 
@@ -677,13 +675,13 @@ Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz
 - Dokumentation in `docs/datenschutz.md`:
   - verarbeitete Daten
   - Zweck
-  - Rechtsgrundlage (**[OFFEN]** mit Datenschutzbeauftragtem)
+  - Rechtsgrundlage (klärt der Betreiber mit seinem Datenschutzbeauftragten)
   - Speicherfristen
   - Empfänger (Microsoft, Push-Dienste)
   - TOMs
   - Löschkonzept
 - Datensparsamkeit: IP-Adressen im Audit-Log gekürzt, Push und Mail ohne Inhalte, keine Tracking- oder Analyse-Dienste.
-- **Hinweis:** Die Werkbank protokolliert Handlungen von Beschäftigten (Audit-Log, Bewertungen). Sie ist daher voraussichtlich selbst mitbestimmungspflichtig und sollte als erster Evergreen-Vorgang behandelt werden. **[OFFEN]**
+- **Hinweis:** Die Werkbank protokolliert Handlungen von Beschäftigten (Audit-Log, Bewertungen). Sie ist daher voraussichtlich selbst mitbestimmungspflichtig; die Beteiligung des Betriebsrats klärt der Betreiber außerhalb der Werkbank.
 
 ### 12.3 Barrierefreiheit – WCAG 2.2 AA
 
@@ -804,7 +802,7 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 |---|---|---|---|
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen |
-| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e), dazu Baumansicht, KI-Texte und Empfehlungen aus Secure Score. Später: Snapshot-Vergleich und -Export, Benachrichtigung bei Abweichung |
+| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e), dazu Baumansicht, KI-Texte und Empfehlungen aus Secure Score. dazu Benachrichtigung bei Abweichung vom Soll und (0.55) Snapshot-Vergleich und -Export |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e). Offen: Anhänge (z. B. BR-Sitzungsprotokoll), Erinnerungen und Benachrichtigungen (Phase 4), KI-Vorschlag für die Zusammenfassung |
 | – | Oberfläche nach dem Entwurf, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen | ✅ umgesetzt, mit Handbuch und letzten Aktivitäten auf der Startseite |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Benachrichtigungen, Push | Vollumfang v1 | 🔄 weitgehend: Exchange, Teams, Intune und SharePoint (Konfiguration), Benachrichtigungen (Glocke, Mail, Teams, Push) umgesetzt |
@@ -817,13 +815,13 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | # | Thema | Frage |
 |---|---|---|
 | 1 | Login | Entra-Login über eigene Login-Seite der Werkbank – entschieden |
-| 2 | MFA | Entschieden: eigene CA-Richtlinie „MFA für Werkbank“. Offen: Lizenz P1 für alle Nutzer prüfen, MFA-Registrierung für BR/GF vorbereiten |
+| 2 | MFA | Entschieden: eigene CA-Richtlinie „MFA für Werkbank“. Lizenzen und MFA-Registrierung regelt der Betreiber im Tenant, nicht Teil der Werkbank |
 | 3 | Verwaltung | Entschieden: Step-up-Anmeldung genügt, keine zusätzliche Beschränkung auf das interne Netz |
 | 4 | Audit-Log | Entschieden: Aufbewahrung 90 Tage, in der Verwaltung einstellbar (30 bis 3650 Tage) |
 | 5 | Anhänge | Entschieden: kein Virenscan (6.5) |
 | 6 | KI-Texte | Entschieden: Anbieter frei einstellbar (OpenAI-kompatible Adresse, Modell und Schlüssel in der Verwaltung; der Schlüssel liegt verschlüsselt in der Datenbank). Texte entstehen automatisch und bleiben „ungeprüft“ bis zur Freigabe. Offen: AVV und Freigabe Datenschutz je nach gewähltem Anbieter |
 | 7 | Benchmarks | Entschieden: Empfehlungen aus Microsoft Secure Score (eigene Seite, Zuordnung zu Einstellungen von Hand, später ergänzt um eine mitgelieferte Zuordnung); CIS-Benchmarks werden wegen der Lizenz nicht mitgeliefert |
-| 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit DSB, BR-Beteiligung für die Werkbank selbst |
+| 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit dem DSB und Beteiligung des BR klärt der Betreiber; nicht Teil der Werkbank. Die Werkbank liefert dafür `docs/datenschutz.md` |
 | 9 | Hostname | Erledigt: Der öffentliche Hostname ist Konfiguration (`PUBLIC_URL`) und steht nicht im Repository |
 | 14 | Anrede | Entschieden: überall „du“ (`design.md`, Kapitel 7) |
 | 15 | Handbuch | Entsteht nach Abschluss der Oberfläche; ab dann bei jeder Änderung mitpflegen (`CLAUDE.md`) |

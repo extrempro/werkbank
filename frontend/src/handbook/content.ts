@@ -233,10 +233,6 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "terms",
             items: [
               ["Werkbank.Admin", "Verwaltung der Werkbank und das vollständige Audit-Log"],
-              [
-                "Werkbank.Auditor",
-                "Audit-Log über die Schnittstelle lesen (die Seite sehen nur Admins)",
-              ],
               ["Config.Reader", "Einstellungen, Änderungen und Snapshots des Tenants ansehen"],
               ["Config.Reviewer", "zusätzlich Änderungen bewerten, Angaben und Soll-Werte pflegen"],
               ["Tenant.Reader", "Lizenzen, Benutzerzahlen, Zertifikate und Dienststatus ansehen"],
@@ -413,6 +409,14 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "text",
             text: "Jeder Abruf ist ein Snapshot mit Zeitpunkt, Status und Zahl der Änderungen. Schlägt ein Abruf fehl, zeigt die Liste den Fehler, und die Verwaltung bekommt eine Aufgabe. Fehlt dabei eine Quelle, gelten ihre Einstellungen nicht als entfernt.",
+          },
+          {
+            kind: "text",
+            text: "Unter „Zwei Abrufe vergleichen“ wählst du einen Abruf für vorher und einen für nachher. Die Liste zeigt jede Einstellung, die neu ist, sich geändert hat oder weggefallen ist, mit dem Wert vorher und nachher. Der ältere Abruf gilt immer als vorher. Fehlgeschlagene Abrufe haben keinen eigenen Stand und stehen nicht zur Auswahl.",
+          },
+          {
+            kind: "text",
+            text: "Über JSON oder CSV in der Spalte Export lädst du den Stand eines Abrufs herunter: alle Einstellungen mit dem Wert, der damals galt. Die CSV öffnet sich direkt in Excel. Jeder Export steht im Audit-Log.",
           },
         ],
         links: [{ to: "/m365/snapshots", label: "Zu den Snapshots" }],

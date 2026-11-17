@@ -14,11 +14,6 @@ describe("navigationFor", () => {
     expect(labels).toContain("Audit-Log");
   });
 
-  it("zeigt Auditoren kein Audit-Log in der Navigation", () => {
-    const labels = allNavItems(navigationFor(["Werkbank.Auditor"])).map((item) => item.label);
-    expect(labels).not.toContain("Audit-Log");
-  });
-
   it("zeigt Lesern der Konfiguration kein Audit-Log", () => {
     const labels = allNavItems(navigationFor(["Config.Reader"])).map((item) => item.label);
     expect(labels).toContain("Änderungen");
@@ -81,7 +76,6 @@ describe("areasFor", () => {
       "evergreen",
     ]);
     expect(areasFor(["Config.Reader"]).map((area) => area.id)).toEqual(["werkbank", "m365"]);
-    expect(areasFor(["Werkbank.Auditor"]).map((area) => area.id)).toEqual(["werkbank"]);
     expect(areasFor(["Monitoring.Reader"]).map((area) => area.id)).toEqual([
       "werkbank",
       "monitoring",

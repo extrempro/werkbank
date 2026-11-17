@@ -163,6 +163,40 @@ export function fetchSnapshots(): Promise<Snapshot[]> {
   return getJson(`${BASE}/snapshots`);
 }
 
+export type DifferenceKind = "neu" | "geaendert" | "entfernt";
+
+export interface SnapshotDifference {
+  path: string;
+  workload: string;
+  area: string;
+  object_name: string | null;
+  property: string;
+  kind: DifferenceKind;
+  old_value: unknown;
+  new_value: unknown;
+}
+
+export interface SnapshotComparison {
+  from_id: number;
+  to_id: number;
+  from_at: string;
+  to_at: string;
+  total: number;
+  counts: Record<DifferenceKind, number>;
+  differences: SnapshotDifference[];
+  truncated: boolean;
+}
+
+/** Unterschiede zwischen zwei Abrufen; der ältere gilt immer als „vorher“. */
+export function compareSnapshots(from: number, to: number): Promise<SnapshotComparison> {
+  const params = new URLSearchParams({ from: String(from), to: String(to) });
+  return getJson(`${BASE}/snapshots/compare?${params.toString()}`);
+}
+
+export function snapshotExportUrl(id: number, format: "json" | "csv"): string {
+  return `${BASE}/snapshots/${id}/export.${format}`;
+}
+
 /** Filter als Parameter; gilt für Liste und Baum. */
 function settingParams(filter: SettingFilter): URLSearchParams {
   const params = new URLSearchParams();

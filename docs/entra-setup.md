@@ -104,7 +104,6 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Anzeigename | Wert | Beschreibung |
 |---|---|---|
 | Werkbank Admin | `Werkbank.Admin` | Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log |
-| Werkbank Auditor | `Werkbank.Auditor` | Audit-Log über die Schnittstelle lesen (die Seite sehen nur Admins) |
 | Konfiguration Leser | `Config.Reader` | M365-Konfiguration ansehen und exportieren |
 | Konfiguration Prüfer | `Config.Reviewer` | Änderungen bewerten, Beschreibungen und Soll-Werte pflegen |
 | Evergreen IT | `Evergreen.IT` | Technische Bewertung und Umsetzung von Evergreen-Vorgängen |
@@ -141,7 +140,6 @@ Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wä
 | Gruppe | Rolle |
 |---|---|
 | `GG-Werkbank-Admin` | Werkbank.Admin |
-| `GG-Werkbank-Auditor` | Werkbank.Auditor |
 | `GG-Werkbank-Config-Reader` | Config.Reader |
 | `GG-Werkbank-Config-Reviewer` | Config.Reviewer |
 | `GG-Werkbank-Evergreen-IT` | Evergreen.IT |
