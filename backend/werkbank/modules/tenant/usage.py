@@ -128,11 +128,11 @@ def fetch_usage(db: Session, client: UtcmClient, now: datetime | None = None) ->
     stored = 0
     for day, values in daily.items():
         for service, active in values.items():
-            row = db.get(TenantUsageDay, (day, service))
-            if row is None:
-                row = TenantUsageDay(day=day, service=service)
-                db.add(row)
-            row.active = active
+            sample = db.get(TenantUsageDay, (day, service))
+            if sample is None:
+                sample = TenantUsageDay(day=day, service=service)
+                db.add(sample)
+            sample.active = active
             stored += 1
 
     limit = moment.date() - timedelta(days=RETENTION_DAYS)
