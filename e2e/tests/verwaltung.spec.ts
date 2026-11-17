@@ -213,7 +213,7 @@ test("Verwaltung ist ein eigener Bereich mit Unterseiten", async ({ page }) => {
 test("Ohne Admin-Rolle gibt es Audit-Log und Verwaltung nicht in der Oberfläche", async ({
   page,
 }) => {
-  await loginAs(page, ["Werkbank.Auditor"], "Udo Auditor");
+  await loginAs(page, ["Config.Reviewer"], "Rita Reviewer");
   for (const path of ["/audit", "/verwaltung", "/verwaltung/rollen"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();

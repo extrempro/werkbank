@@ -7,7 +7,6 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Evergreen.Team", "Evergreen-Team"],
   ["Evergreen.Betriebsrat", "Betriebsrat"],
   ["Evergreen.GF", "Geschäftsführung"],
-  ["Werkbank.Auditor", "Revision"],
   ["Config.Reader", "Lesezugriff"],
   ["Budget.Manager", "Budgetverwaltung"],
   ["Tenant.Reader", "Tenant"],
@@ -23,10 +22,6 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
   "Werkbank.Admin": {
     label: "Werkbank Admin",
     description: "Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log",
-  },
-  "Werkbank.Auditor": {
-    label: "Werkbank Auditor",
-    description: "Audit-Log über die Schnittstelle lesen (die Seite sehen nur Admins)",
   },
   "Config.Reader": {
     label: "Konfiguration Leser",

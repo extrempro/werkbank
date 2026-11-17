@@ -84,7 +84,7 @@ def test_api_requires_login() -> None:
 
 @pytest.mark.db
 def test_other_roles_are_forbidden(db: Session) -> None:
-    client = client_for(["Evergreen.Betriebsrat", "Werkbank.Auditor"], "m365-fremd")
+    client = client_for(["Evergreen.Betriebsrat", "Tools.User"], "m365-fremd")
     for path in ("overview", "settings", "changes", "snapshots", "settings/1"):
         assert client.get(f"{BASE}/{path}").status_code == 403
 
@@ -548,3 +548,75 @@ def test_failed_collect_is_a_task_for_admins(db: Session) -> None:
     ]
     # ohne eingerichteten Abruf keine Meldung
     assert client_for(["Werkbank.Admin"], "m365-admin").get("/api/tasks").json()["tasks"] == []
+
+
+def snapshot_ids(db: Session) -> list[int]:
+    return list(db.scalars(select(CfgSnapshot.id).order_by(CfgSnapshot.started_at)))
+
+
+def test_compare_snapshots(db: Session) -> None:
+    first, second = snapshot_ids(db)
+    client = client_for(["Config.Reader"], "oid-compare")
+    # Reihenfolge der Parameter egal: der ältere Abruf ist immer "vorher"
+    response = client.get(f"{BASE}/snapshots/compare", params={"from": second, "to": first})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert (body["from_id"], body["to_id"]) == (first, second)
+    by_object = {(item["object_name"], item["property"]): item for item in body["differences"]}
+    changed = by_object[("MFA für alle", "state")]
+    assert changed["kind"] == "geaendert"
+    assert (changed["old_value"], changed["new_value"]) == ("enabled", "disabled")
+    assert by_object[("Alt", "state")]["kind"] == "entfernt"
+    assert by_object[("Alt", "state")]["new_value"] is None
+    assert by_object[("Neu 100%", "state")]["kind"] == "neu"
+    assert body["counts"]["geaendert"] >= 1
+    assert body["total"] == sum(body["counts"].values())
+    assert not body["truncated"]
+    # Gleicher Abruf: keine Unterschiede
+    same = client.get(f"{BASE}/snapshots/compare", params={"from": first, "to": first}).json()
+    assert same["total"] == 0
+
+
+def test_compare_unknown_snapshot(db: Session) -> None:
+    first, _ = snapshot_ids(db)
+    client = client_for(["Config.Reader"], "oid-compare-404")
+    response = client.get(f"{BASE}/snapshots/compare", params={"from": first, "to": 999_999})
+    assert response.status_code == 404
+
+
+def test_snapshot_export_json_and_csv(db: Session) -> None:
+    first, second = snapshot_ids(db)
+    client = client_for(["Config.Reader"], "oid-export")
+    response = client.get(f"{BASE}/snapshots/{first}/export.json")
+    assert response.status_code == 200, response.text
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["content-disposition"].startswith("attachment;")
+    document = response.json()
+    names = {item["objekt"] for item in document["einstellungen"]}
+    assert names == {"MFA für alle", "Alt"}
+    state = next(
+        item
+        for item in document["einstellungen"]
+        if item["objekt"] == "MFA für alle" and item["eigenschaft"] == "state"
+    )
+    assert state["wert"] == "enabled"
+
+    response = client.get(f"{BASE}/snapshots/{second}/export.csv")
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("text/csv")
+    text = response.content.decode("utf-8")
+    assert text.startswith("﻿Dienst;Bereich;Objekt")
+    assert "Neu 100%" in text
+    assert "Alt;" not in text
+    actions = db.scalars(select(AuditLog.details).where(AuditLog.action == "snapshot.export")).all()
+    assert sorted(item["format"] for item in actions) == ["csv", "json"]
+
+
+def test_snapshot_export_needs_config_role(db: Session) -> None:
+    first, _ = snapshot_ids(db)
+    client = client_for(["Tenant.Reader"], "oid-export-403")
+    assert client.get(f"{BASE}/snapshots/{first}/export.csv").status_code == 403
+    assert (
+        client.get(f"{BASE}/snapshots/compare", params={"from": first, "to": first}).status_code
+        == 403
+    )

@@ -24,6 +24,24 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.55.0",
+    date: "2026-11-17",
+    summary: "Neu: Snapshots vergleichen und als JSON oder CSV exportieren.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Snapshots: Wähle zwei Abrufe und sieh, welche Einstellungen neu sind, sich geändert haben oder weggefallen sind, jeweils mit Wert vorher und nachher.",
+          "Den Stand eines Abrufs lädst du als JSON oder CSV herunter.",
+        ],
+      },
+      {
+        area: "Werkbank",
+        entries: ["Die Rolle Werkbank.Auditor gibt es nicht mehr. Das Audit-Log sehen nur Admins."],
+      },
+    ],
+  },
+  {
     version: "0.54.0",
     date: "2026-11-17",
     summary: "Neu: Push aufs Handy für deine Benachrichtigungen.",

@@ -19,9 +19,7 @@ from werkbank.core.sessions import CurrentUser
 
 router = APIRouter(prefix="/api")
 
-AuditReader = Annotated[
-    CurrentUser, Depends(require_roles(Role.WERKBANK_ADMIN, Role.WERKBANK_AUDITOR))
-]
+AuditReader = Annotated[CurrentUser, Depends(require_roles(Role.WERKBANK_ADMIN))]
 # Verwaltung: nur Admin und nur kurz nach einer Anmeldung (Step-up)
 AdminUser = Annotated[CurrentUser, Depends(require_recent_login(Role.WERKBANK_ADMIN))]
 
@@ -93,7 +91,7 @@ def list_audit(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
 ) -> AuditListOut:
-    """Audit-Einträge seitenweise (nur Admin und Auditor)."""
+    """Audit-Einträge seitenweise (nur Admin)."""
     rows = db.execute(_query(module, action, since, until).limit(limit + 1).offset(offset)).all()
     entries = [_to_out(entry, name) for entry, name in rows[:limit]]
     return AuditListOut(entries=entries, has_more=len(rows) > limit)

@@ -7,7 +7,6 @@ class Role(StrEnum):
     """Bekannte App-Rollen."""
 
     WERKBANK_ADMIN = "Werkbank.Admin"
-    WERKBANK_AUDITOR = "Werkbank.Auditor"
     CONFIG_READER = "Config.Reader"
     CONFIG_REVIEWER = "Config.Reviewer"
     EVERGREEN_IT = "Evergreen.IT"
@@ -39,10 +38,6 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
     Role.WERKBANK_ADMIN: (
         "Werkbank Admin",
         "Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log",
-    ),
-    Role.WERKBANK_AUDITOR: (
-        "Werkbank Auditor",
-        "Audit-Log über die Schnittstelle lesen (die Seite sehen nur Admins)",
     ),
     Role.CONFIG_READER: ("Konfiguration Leser", "M365-Konfiguration ansehen und exportieren"),
     Role.CONFIG_REVIEWER: (

@@ -58,7 +58,7 @@ export function AuditPage() {
     return (
       <>
         <h1>Audit-Log</h1>
-        <p>Keine Berechtigung. Das Audit-Log sehen nur Admins und Auditoren.</p>
+        <p>Keine Berechtigung. Das Audit-Log sehen nur Admins.</p>
       </>
     );
   }
