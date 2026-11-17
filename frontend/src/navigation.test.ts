@@ -138,7 +138,11 @@ describe("areasFor", () => {
     ];
     expect(paths(["Budget.Reader"])).toEqual(shared);
     expect(paths(["Budget.Editor"])).toEqual(shared);
-    expect(paths(["Budget.Manager"])).toEqual([...shared, "/budget/einstellungen"]);
+    expect(paths(["Budget.Manager"])).toEqual([
+      ...shared,
+      "/budget/import",
+      "/budget/einstellungen",
+    ]);
     expect(paths(["Tenant.Reader"])).toEqual([]);
     const areas = areasFor(["Budget.Manager"]);
     expect(areaForPath(areas, "/budget/konten")?.id).toBe("budget");

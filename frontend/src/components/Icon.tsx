@@ -93,6 +93,7 @@ const PATHS = {
   neuigkeiten: ["M4 10v4h3l7 4V6l-7 4z", "M18 9a4 4 0 0 1 0 6"],
   verlauf: ["M12 7v5l3 2", "M3 12a9 9 0 1 0 3-6.7", "M3 4v4h4"],
   monitoring: ["M3 12h4l3-8 4 16 3-8h4"],
+  import: ["M12 4v11", "M7 10l5 5 5-5", "M4 20h16"],
   projekte: ["M3 8h18v12H3z", "M8 8V5h8v3", "M3 13h18"],
   handbuch: [
     "M4 5a2 2 0 0 1 2-2h6v17H6a2 2 0 0 0-2 2z",

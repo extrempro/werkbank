@@ -24,6 +24,29 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.45.0",
+    date: "2026-11-17",
+    summary:
+      "IT-Budget: alte Budgetdateien aus Excel Zeile für Zeile übernehmen. Dazu ein neues Symbol.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Neu für den Budgetverwalter: der Import aus Excel. Jede Datei wird ein Vorgang, jede Zeile prüfst du einzeln: Partner, Datum, Nummern, Konto, Betrag und Steuersatz. Danach übernimmst du sie als gebuchte Rechnung oder überspringst sie.",
+          "Fehlende Konten legt der Import an, dazu je Konto einen Posten „Allgemein“ mit dem Budget aus der Datei.",
+          "Zeilen mit „Jährlich“ werden auf Wunsch Budgetposten für das folgende Geschäftsjahr.",
+          "Offene Vorgänge stehen als Aufgabe auf deiner Startseite.",
+        ],
+      },
+      {
+        area: "Werkbank",
+        entries: [
+          "Neues Symbol im Browser-Tab und auf dem Startbildschirm: eine Werkbank mit Schraubenschlüssel und Hammer. Auf dem Handy erscheint es, wenn du die App neu hinzufügst.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.44.0",
     date: "2026-11-17",
     summary: "Neu: der Bereich IT-Projekte mit Budget, Jour Fixe und Aufgaben.",

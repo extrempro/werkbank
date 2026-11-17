@@ -8,11 +8,12 @@ from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.core.tasks import TaskItem
 from werkbank.modules.budget.contracts import NOTICE_WARN_DAYS, is_running, notice_deadline
-from werkbank.modules.budget.models import BudgetContract, BudgetInvoice
+from werkbank.modules.budget.models import BudgetContract, BudgetImport, BudgetInvoice
 
 MODULE_LABEL = "IT-Budget"
 CONTRACTS_LINK = "/budget/vertraege"
 INVOICES_LINK = "/budget/rechnungen"
+IMPORT_LINK = "/budget/import"
 
 
 def budget_tasks(db: Session, user: CurrentUser, settings: Settings) -> list[TaskItem]:
@@ -34,6 +35,19 @@ def budget_tasks(db: Session, user: CurrentUser, settings: Settings) -> list[Tas
         waiting = db.scalar(
             select(func.count()).select_from(BudgetInvoice).where(BudgetInvoice.status != "gebucht")
         )
+        imports = db.scalar(
+            select(func.count()).select_from(BudgetImport).where(BudgetImport.status == "offen")
+        )
+        if imports:
+            tasks.append(
+                TaskItem(
+                    module=MODULE_LABEL,
+                    title="Import aus Excel abarbeiten",
+                    subtitle="Offene Zeilen übernehmen oder überspringen",
+                    link=IMPORT_LINK,
+                    count=imports,
+                )
+            )
         if waiting:
             tasks.append(
                 TaskItem(

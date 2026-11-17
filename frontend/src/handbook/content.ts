@@ -813,6 +813,42 @@ export const CHAPTERS: readonly Chapter[] = [
         ],
       },
       {
+        id: "import",
+        title: "Import aus Excel",
+        roles: [BUDGET_MANAGER],
+        blocks: [
+          {
+            kind: "text",
+            text: "Unter „Import“ übernimmst du die bisherigen Budgetdateien aus Excel. Jede Datei wird ein Vorgang, und jede Zeile prüfst du einzeln. Du kannst einen Vorgang jederzeit unterbrechen; offene Vorgänge stehen als Aufgabe auf deiner Startseite.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Wähle die Excel-Datei aus. Gelesen wird das erste Blatt; die Datei selbst wird nicht gespeichert.",
+              "Prüfe, was erkannt wurde: Geschäftsjahr, Steuersatz als Vorgabe (die Beträge in der Datei sind brutto) und die Konten. Für neue Konten wählst du, ob es laufende Kosten oder eine Investition sind.",
+              "Wähle „Vorgang anlegen und Zeilen abarbeiten“. Fehlende Konten werden angelegt, und je Konto entsteht ein Posten „Allgemein“ für das Geschäftsjahr mit dem Budget aus der Datei.",
+              "Prüfe jede Zeile: den Rechnungssteller (vorhandener, ähnlicher oder neuer Partner), Datum, Nummern, Konto, Budgetposten, Betrag und Steuersatz.",
+              "Wähle „Übernehmen und weiter“ oder „Überspringen“. Übernommene Zeilen werden gebuchte Rechnungen; übersprungene kannst du mit „Zurück auf offen“ wieder öffnen.",
+            ],
+          },
+          {
+            kind: "list",
+            items: [
+              "Was du bei einer Firma als Partner wählst, schlägt die Werkbank für alle weiteren Zeilen dieser Firma vor.",
+              "Hinweise an einer Zeile zeigen zum Beispiel ein Datum außerhalb des Geschäftsjahrs, eine fehlende Rechnungsnummer (dann wird die interne Nummer vorgeschlagen) oder ein fehlendes Konto. Der Filter „Mit Hinweis“ zeigt nur diese Zeilen.",
+              "Gibt es dieselbe Rechnungsnummer beim selben Partner schon, übernimmt der Import die Zeile nicht doppelt.",
+              "Zeilen mit „Jährlich“ stehen nach dem Übernehmen unter „Vorschläge für die Planung“. Ausgewählte werden Budgetposten ab dem folgenden Geschäftsjahr.",
+              "Die Spalten Kostenstelle und Projekte werden nicht übernommen.",
+            ],
+          },
+          {
+            kind: "hint",
+            text: "Einen Vorgang zu löschen entfernt nur den Vorgang. Übernommene Rechnungen, neue Konten, Partner und Budgetposten bleiben.",
+          },
+        ],
+        links: [{ to: "/budget/import", label: "Zum Import" }],
+      },
+      {
         id: "partner",
         title: "Partner",
         blocks: [
