@@ -1358,6 +1358,11 @@ section + section {
   min-width: 0;
 }
 
+.start-activity {
+  flex: 999 1 520px;
+  min-width: 0;
+}
+
 .panel {
   background: var(--farbe-flaeche);
   border: 1px solid var(--farbe-rand);

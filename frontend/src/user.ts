@@ -24,7 +24,10 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
     label: "Werkbank Admin",
     description: "Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log",
   },
-  "Werkbank.Auditor": { label: "Werkbank Auditor", description: "Audit-Log und Reports lesen" },
+  "Werkbank.Auditor": {
+    label: "Werkbank Auditor",
+    description: "Audit-Log über die Schnittstelle lesen (die Seite sehen nur Admins)",
+  },
   "Config.Reader": {
     label: "Konfiguration Leser",
     description: "M365-Konfiguration ansehen und exportieren",

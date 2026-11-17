@@ -11,7 +11,12 @@ import { fetchTasks, TASKS_CHANGED, type Me, type Task } from "../api";
 import {
   allNavItems,
   areaForPath,
+  ADMIN_CONNECTIONS_PATH,
+  ADMIN_MAIL_PATH,
+  ADMIN_PATH,
+  ADMIN_ROLES_PATH,
   areasFor,
+  AUDIT_PATH,
   BUDGET_ACCOUNTS_PATH,
   BUDGET_IMPORT_PATH,
   BUDGET_CONTRACTS_PATH,
@@ -276,10 +281,16 @@ export function Layout({ me }: LayoutProps) {
     page = (
       <HandbookPage key={handbookChapter ?? ""} roles={me.roles} chapterId={handbookChapter} />
     );
-  } else if (path === "/audit" && current) {
+  } else if (path === AUDIT_PATH && current) {
     page = <AuditPage />;
-  } else if (path === "/verwaltung" && current) {
-    page = <AdminPage />;
+  } else if (path === ADMIN_PATH && current) {
+    page = <AdminPage key="allgemein" section="allgemein" />;
+  } else if (path === ADMIN_ROLES_PATH && current) {
+    page = <AdminPage key="rollen" section="rollen" />;
+  } else if (path === ADMIN_MAIL_PATH && current) {
+    page = <AdminPage key="mail-teams" section="mail-teams" />;
+  } else if (path === ADMIN_CONNECTIONS_PATH && current) {
+    page = <AdminPage key="verbindungen" section="verbindungen" />;
   } else if (path === "/m365" && current) {
     page = <OverviewPage me={me} />;
   } else if (path === "/m365/aenderungen" && current) {

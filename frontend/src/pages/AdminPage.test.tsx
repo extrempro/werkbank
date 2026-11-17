@@ -24,7 +24,8 @@ describe("AdminPage", () => {
       "fetch",
       vi.fn(async () => new Response(JSON.stringify(roles), { status: 200 })),
     );
-    render(<AdminPage />);
+    render(<AdminPage section="rollen" />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Rollen" })).toBeVisible();
     expect(await screen.findByText("Werkbank Admin")).toBeVisible();
     expect(screen.getByText(/Ada Admin/)).toBeVisible();
   });
@@ -44,6 +45,13 @@ describe("AdminPage", () => {
     const link = await screen.findByRole("link", { name: "Erneut anmelden" });
     expect(link).toHaveAttribute("href", "/auth/login?step_up=true&return_to=%2Fverwaltung");
     expect(screen.queryByText(/Keine Berechtigung/)).toBeNull();
+    cleanup();
+    // Nach der Anmeldung geht es zurück auf dieselbe Seite der Verwaltung.
+    render(<AdminPage section="mail-teams" />);
+    expect(await screen.findByRole("link", { name: "Erneut anmelden" })).toHaveAttribute(
+      "href",
+      "/auth/login?step_up=true&return_to=%2Fverwaltung%2Fmail-teams",
+    );
   });
 
   it("meldet fehlende Berechtigung ohne Hinweis auf erneute Anmeldung", async () => {
@@ -77,7 +85,7 @@ describe("AdminPage", () => {
           : new Response(JSON.stringify([]), { status: 200 }),
       ),
     );
-    render(<AdminPage />);
+    render(<AdminPage section="rollen" />);
     fireEvent.click(await screen.findByRole("button", { name: "Nach Person" }));
     const table = within(await screen.findByRole("region", { name: "Personen und Rollen" }));
     const pia = table.getByRole("row", { name: /Pia Projekt/ });

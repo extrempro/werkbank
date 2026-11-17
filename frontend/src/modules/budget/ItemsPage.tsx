@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import {
@@ -6,7 +6,7 @@ import {
   BUDGET_SETTINGS_PATH,
   BUDGET_STATISTICS_PATH,
 } from "../../navigation";
-import { useSearchParam } from "../../router";
+import { navigate, useSearchParam } from "../../router";
 import {
   BUDGET_EDITOR_ROLES,
   BUDGET_MANAGER_ROLE,
@@ -132,14 +132,31 @@ function ItemForm({
   const [active, setActive] = useState(item?.active ?? true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Etwas eingetragen oder gewählt: Vor dem Wechsel zu den Tags wird nachgefragt.
+  const [touched, setTouched] = useState(false);
+  const [leaveAsked, setLeaveAsked] = useState(false);
   const choices = accounts.filter((entry) => entry.active || entry.id === item?.account_id);
   const isChosen = (tag: string) => tags.some((entry) => entry.toLowerCase() === tag.toLowerCase());
-  const toggleTag = (tag: string) =>
+  const toggleTag = (tag: string) => {
+    setTouched(true);
     setTags(
       isChosen(tag)
         ? tags.filter((entry) => entry.toLowerCase() !== tag.toLowerCase())
         : [...tags, tag],
     );
+  };
+
+  const onManageTags = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    if (touched) {
+      setLeaveAsked(true);
+    } else {
+      navigate(BUDGET_SETTINGS_PATH);
+    }
+  };
   // Ein Jahr außerhalb der Liste (z. B. ein alter Posten) bleibt wählbar.
   const yearChoices = [...years];
   for (const value of [item?.start_year, item?.end_year]) {
@@ -196,7 +213,12 @@ function ItemForm({
       <div className="panel-head">
         <h2 id="posten-formular-titel">{item ? `${item.name} bearbeiten` : "Posten hinzufügen"}</h2>
       </div>
-      <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
+      <form
+        className="detail-body settings-form"
+        onSubmit={onSubmit}
+        onChange={() => setTouched(true)}
+        noValidate
+      >
         <fieldset className="budget-fieldset">
           <legend>Was</legend>
           <div className="tool-row">
@@ -330,10 +352,36 @@ function ItemForm({
                 : "Der Budgetverwalter legt sie unter Einstellungen an."}
             </p>
           )}
-          {canManageTags && (
+          {canManageTags && !leaveAsked && (
             <p className="small">
-              <Link to={BUDGET_SETTINGS_PATH}>Tags verwalten unter Einstellungen › Tags</Link>
+              <a href={BUDGET_SETTINGS_PATH} onClick={onManageTags}>
+                Tags verwalten unter Einstellungen › Tags
+              </a>
             </p>
+          )}
+          {canManageTags && leaveAsked && (
+            <div className="hint-box" role="alert">
+              <p>
+                Du hast in diesem Formular schon etwas eingetragen. Beim Wechsel zu den Tags geht
+                das verloren, weil der Budgetposten noch nicht gespeichert ist.
+              </p>
+              <div className="actions">
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => navigate(BUDGET_SETTINGS_PATH)}
+                >
+                  Trotzdem zu den Tags
+                </button>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={() => setLeaveAsked(false)}
+                >
+                  Hierbleiben
+                </button>
+              </div>
+            </div>
           )}
         </fieldset>
         <details className="budget-more" open={hasMore}>

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Me } from "../api";
 import { StartPage } from "./StartPage";
@@ -55,6 +55,51 @@ describe("StartPage", () => {
       screen.getByRole("link", { name: "Abruf aus dem Tenant ist fehlgeschlagen" }),
     ).toBeVisible();
     expect(screen.queryByText("Keine offenen Aufgaben.")).toBeNull();
+  });
+
+  it("zeigt die letzten Aktivitäten aus der Glocke", async () => {
+    mockApi({
+      "/api/notifications": {
+        unread: 1,
+        entries: [
+          {
+            id: 5,
+            kind: "m365.aenderung",
+            module: "Microsoft 365",
+            title: "3 neue Änderungen",
+            link: "/m365/aenderungen",
+            created_at: "2026-11-14T08:00:00Z",
+            read: false,
+          },
+          {
+            id: 4,
+            kind: "budget.rechnung",
+            module: "IT-Budget",
+            title: "Rechnung fällig",
+            link: "https://example.com/fremd",
+            created_at: "2026-11-13T08:00:00Z",
+            read: true,
+          },
+        ],
+      },
+    });
+    render(<StartPage me={me} tasks={[]} />);
+    const panel = await screen.findByRole("region", { name: "Letzte Aktivitäten" });
+    const first = await within(panel).findByRole("link", { name: /3 neue Änderungen/ });
+    expect(first).toHaveAttribute("href", "/m365/aenderungen");
+    expect(first).toHaveTextContent("Ungelesen:");
+    // Fremde Ziele führen nie aus der Werkbank heraus.
+    expect(within(panel).getByRole("link", { name: /Rechnung fällig/ })).toHaveAttribute(
+      "href",
+      "/benachrichtigungen",
+    );
+    expect(within(panel).getByRole("link", { name: "Alle Benachrichtigungen" })).toBeVisible();
+  });
+
+  it("sagt, wenn es noch keine Aktivitäten gibt", async () => {
+    mockApi({ "/api/notifications": { unread: 0, entries: [] } });
+    render(<StartPage me={me} tasks={[]} />);
+    expect(await screen.findByText("Noch nichts Neues aus deinen Bereichen.")).toBeVisible();
   });
 
   it("zeigt den leeren Zustand und den Ladezustand", () => {

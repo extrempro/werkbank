@@ -15,7 +15,6 @@ export interface NavGroup {
 export const NEWS_PATH = "/neuigkeiten";
 
 const ADMIN = "Werkbank.Admin";
-const AUDITOR = "Werkbank.Auditor";
 const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
 const EVERGREEN_EDITORS = ["Evergreen.IT", "Evergreen.Team"];
 const TOOLS_USER = "Tools.User";
@@ -43,6 +42,11 @@ export const BUDGET_PLANNING_PATH = "/budget/planung";
 export const BUDGET_STATISTICS_PATH = "/budget/statistik";
 export const MONITORING_DNS_PATH = "/monitoring/dns";
 export const PROJECTS_PATH = "/projekte";
+export const ADMIN_PATH = "/verwaltung";
+export const ADMIN_ROLES_PATH = "/verwaltung/rollen";
+export const ADMIN_MAIL_PATH = "/verwaltung/mail-teams";
+export const ADMIN_CONNECTIONS_PATH = "/verwaltung/verbindungen";
+export const AUDIT_PATH = "/audit";
 
 /** Seite einer Kategorie der IT-Tools. */
 export function toolCategoryPath(category: string): string {
@@ -79,19 +83,6 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       ],
     },
   ];
-  if (hasAny(roles, [ADMIN, AUDITOR, ...CONFIG_ROLES])) {
-    const items: NavItem[] = [{ path: "/reports", label: "Reports", icon: "reports" }];
-    if (hasAny(roles, [ADMIN, AUDITOR])) {
-      items.push({ path: "/audit", label: "Audit-Log", icon: "audit" });
-    }
-    general.push({ title: "Allgemein", items });
-  }
-  if (roles.includes(ADMIN)) {
-    general.push({
-      title: "Verwaltung",
-      items: [{ path: "/verwaltung", label: "Einstellungen", icon: "verwaltung" }],
-    });
-  }
 
   const areas: NavArea[] = [
     { id: "werkbank", label: "Werkbank", icon: "start", home: "/", groups: general },
@@ -222,6 +213,27 @@ export function areasFor(roles: readonly string[]): NavArea[] {
           title: null,
           items: [
             { path: MONITORING_DNS_PATH, label: "DNS-Abgleich mit NetBox", icon: "netzwerk" },
+          ],
+        },
+      ],
+    });
+  }
+  if (roles.includes(ADMIN)) {
+    areas.push({
+      id: "verwaltung",
+      label: "Verwaltung",
+      icon: "verwaltung",
+      home: ADMIN_PATH,
+      // Ohne Überschrift: Der Bereich heißt schon so.
+      groups: [
+        {
+          title: null,
+          items: [
+            { path: ADMIN_PATH, label: "Allgemein", icon: "einstellungen" },
+            { path: ADMIN_ROLES_PATH, label: "Rollen", icon: "benutzer" },
+            { path: ADMIN_MAIL_PATH, label: "Mail & Teams", icon: "eingang" },
+            { path: ADMIN_CONNECTIONS_PATH, label: "Verbindungen", icon: "netzwerk" },
+            { path: AUDIT_PATH, label: "Audit-Log", icon: "audit" },
           ],
         },
       ],

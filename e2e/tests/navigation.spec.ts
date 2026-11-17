@@ -47,7 +47,9 @@ test("Bereiche: Die Navigation zeigt nur die Seiten des gewählten Bereichs", as
   const general = nav.getByRole("link", { name: "Werkbank", exact: true });
   const m365 = nav.getByRole("link", { name: /^Microsoft 365/ });
   await expect(general).toHaveAttribute("aria-current", "true");
-  await expect(nav.getByRole("link", { name: "Audit-Log" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Suche", exact: true })).toBeVisible();
+  // Audit-Log und Einstellungen stehen im eigenen Bereich „Verwaltung“.
+  await expect(nav.getByRole("link", { name: "Audit-Log" })).toHaveCount(0);
   await expect(nav.getByRole("link", { name: "Änderungen" })).toHaveCount(0);
 
   await m365.click();

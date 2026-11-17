@@ -171,8 +171,8 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
           Der Abgleich ist nicht eingerichtet oder ausgeschaltet.{" "}
           {isAdmin ? (
             <>
-              Adresse und Token von NetBox trägst du unter <Link to="/verwaltung">Verwaltung</Link>{" "}
-              ein.
+              Adresse und Token von NetBox trägst du unter{" "}
+              <Link to="/verwaltung/verbindungen">Verwaltung › Verbindungen</Link> ein.
             </>
           ) : (
             "Die Verwaltung richtet ihn ein."

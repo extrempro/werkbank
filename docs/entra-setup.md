@@ -104,7 +104,7 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Anzeigename | Wert | Beschreibung |
 |---|---|---|
 | Werkbank Admin | `Werkbank.Admin` | Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log |
-| Werkbank Auditor | `Werkbank.Auditor` | Audit-Log und Reports lesen |
+| Werkbank Auditor | `Werkbank.Auditor` | Audit-Log über die Schnittstelle lesen (die Seite sehen nur Admins) |
 | Konfiguration Leser | `Config.Reader` | M365-Konfiguration ansehen und exportieren |
 | Konfiguration Prüfer | `Config.Reviewer` | Änderungen bewerten, Beschreibungen und Soll-Werte pflegen |
 | Evergreen IT | `Evergreen.IT` | Technische Bewertung und Umsetzung von Evergreen-Vorgängen |

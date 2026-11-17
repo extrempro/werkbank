@@ -85,7 +85,7 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | App-Rolle | Modul | Darf |
 |---|---|---|
 | `Werkbank.Admin` | Kern | Verwaltung: Module, Konnektoren, Kommentarregeln, Benachrichtigungsregeln, Audit-Log vollständig |
-| `Werkbank.Auditor` | Kern | Audit-Log und Reports lesen |
+| `Werkbank.Auditor` | Kern | Audit-Log über die Schnittstelle lesen (die Seite sehen nur Admins) |
 | `Config.Reader` | M365-Konfiguration | Einstellungen, Verlauf, Änderungen, Snapshots ansehen und exportieren |
 | `Config.Reviewer` | M365-Konfiguration | zusätzlich Änderungen bewerten, Beschreibungen und Begründungen pflegen, Soll-Werte setzen |
 | `Evergreen.IT` | Evergreen | technische Bewertung (Schritt 1), Umsetzung (Schritt 6), Schritte 2–3 vertretungsweise, BR-Beschluss im Auftrag erfassen |
@@ -246,7 +246,7 @@ Standardregeln:
 
 - Erlaubt: PDF, PNG, JPG. Max. 10 MB je Datei. Die Prüfung erfolgt über den tatsächlichen Dateiinhalt, nicht nur über die Endung.
 - Speicherung in einem eigenen Docker-Volume, Metadaten in der Datenbank. Download nur mit Berechtigung auf das zugehörige Objekt.
-- **[OFFEN]** Virenscan (z. B. ClamAV-Container)?
+- Kein Virenscan (entschieden): Geprüft werden Dateiart über den Inhalt und Größe; Dateien werden nie ausgeführt und nur als Download ausgeliefert.
 
 ### 6.6 Audit-Log
 
@@ -297,7 +297,7 @@ Standardregeln:
 
 - Erzeugung als PDF und CSV im Worker.
 - Geplanter Versand per Mail mit Link, kein Anhang mit Inhalten. Abruf nach Anmeldung.
-- Vorlagen liefern die Module (Kapitel 7.7, 8.7).
+- Vorlagen liefern die Module (Kapitel 8.7; für die M365-Konfiguration entfällt das, 7.7).
 
 ### 6.9 Beschreibungstexte mit KI (optional)
 
@@ -385,7 +385,7 @@ Alle Metadaten haben einen eigenen Verlauf (je geändertem Feld ein Eintrag mit 
 
 ### 7.7 Reports
 
-Wochenbericht, Monatsbericht, Änderungen im Zeitraum, Abweichungen von Soll-Werten.
+Entfällt (entschieden im November 2026): Für die M365-Konfiguration gibt es keine Reports. Übersicht, Änderungen mit Filtern und Snapshots decken den Bedarf.
 
 ---
 
@@ -472,7 +472,7 @@ Offene Vorgänge je Schritt (Tagesordnungsvorlage BR), Beschlüsse im Zeitraum, 
 - **Stand:** Lizenzen (gekauft, zugewiesen, frei, Einheiten in Kulanzfrist oder gesperrt, nächster Stichtag der Abos, Testabo) und Benutzerzahlen (gesamt, Gäste, deaktiviert, mit Lizenz). Hinweise in der Liste: aufgebraucht, überbucht, Stichtag in höchstens 30 Tagen.
 - **Zertifikate und Secrets:** Der Abruf (`TENANT_CREDENTIALS_ENABLED`, Berechtigung `Application.Read.All`) liest App-Registrierungen und Unternehmensanwendungen mit SAML. Gespeichert werden Anwendung, Art, Bezeichnung, Beginn und Ablauf, nie der geheime Wert. Einstufung nach Restlaufzeit: Hinweis, Warnung, dringend, abgelaufen; der Vorlauf (Standard 60, 30 und 7 Tage) steht in der Verwaltung unter „Allgemein“. Ab dem Hinweis stehen die Einträge als Aufgabe auf der Startseite (Rolle `Tenant.Reader`). Eine Mail-Benachrichtigung gibt es noch nicht.
 - **Dienststatus:** Der Abruf (`TENANT_HEALTH_ENABLED`, Berechtigung `ServiceHealth.Read.All`, alle 15 Minuten) liest den Zustand von Exchange Online, Microsoft Teams, SharePoint Online und Microsoft Entra sowie deren Störungen und Hinweise samt Mitteilungen von Microsoft (als Text ohne HTML). Die Seite „Dienststatus“ zeigt je Dienst eine Ampel aus den offenen Meldungen (Störung, Hinweis, in Ordnung; offen ist eine Meldung, solange Microsoft sie nicht als behoben, beendet oder Fehlalarm führt; das Schwerste oben) mit den offenen Meldungen als Grund und Sprung dorthin; den Zustand laut Microsoft nur klein dazu, offene und in den letzten 30 Tagen beendete Störungen und Hinweise sowie „Ausfälle je Dienst“ (Störungen, Stunden mit Störung und Hinweise je Jahr; Stunden als Vereinigung der Zeiträume je Dienst, Fehlalarme zählen nirgends). Diagramme: Kalender der letzten 90 Tage je Dienst (Wochen als Spalten, Montag oben; Tag mit Störung, Hinweis oder ohne Meldung; Tage in UTC) mit Liste der Meldungen des Zeitraums (Art, Dienst, Titel, Zeitraum, Dauer), Ausfalldauer je Dienst als waagerechte Balken je Jahr, Störungen pro Monat über 36 Monate, wählbar je Dienst; dazu immer Text oder Tabelle. Jede Meldung verlinkt auf dieselbe Meldung im Microsoft 365 Admin Center (Anmeldung dort nötig). Störungen und Hinweise bleiben drei Jahre. Aufgaben auf der Startseite gibt es dafür nicht; Beginn und Ende einer Störung meldet die Glocke (6.7).
-- **Geplant:** Mail-Benachrichtigung (die Glocke meldet es bereits, 6.7) zu ablaufenden Zertifikaten und Secrets; Domains mit Abgleich der DNS-Einträge (Abfrage über den Resolver des Docker-Hosts); Nutzung der Dienste als Summen.
+- **Geplant:** Mail-Benachrichtigung (die Glocke meldet es bereits, 6.7) zu ablaufenden Zertifikaten und Secrets; Nutzung der Dienste als Summen.
 
 ## 7b. Modul IT-Budget
 
@@ -592,7 +592,7 @@ Evergreen:
 | Screen | Rollen | Inhalt |
 |---|---|---|
 | Login | alle | App-Name, „Mit Microsoft anmelden“, Datenschutzhinweis |
-| Start / Meine Aufgaben | alle | Aufgaben aus allen Modulen, Modul-Kacheln, letzte Aktivitäten (gefiltert nach Rolle) |
+| Start / Meine Aufgaben | alle | Aufgaben aus allen Modulen, Modul-Kacheln, letzte Aktivitäten (die neuesten acht Meldungen der Glocke, gelesen oder nicht, damit nach Rolle und eigener Einstellung gefiltert; Verweis auf alle Benachrichtigungen) |
 | M365 › Übersicht | Config.* | Kennzahlen, Änderungen pro Tag, letzte Änderungen, Collector-Hinweise |
 | M365 › Änderungen | Config.* | Liste mit Filtern (Status, Dienst und Bereich), gegliedert nach Dienst › Bereich (Bereich mit der neuesten Änderung zuerst, „Alle auswählen“ je Bereich), Detailbereich mit Vorher/Nachher, Audit-Eintrag, Beschreibung, Bewertung mit Kommentarregeln |
 | M365 › Einstellungen | Config.* | Baum Dienst › Bereich › Objekt › Eigenschaft (aufklappbar, Zähler für offene Änderungen und Abweichungen je Knoten, Eigenschaften erst beim Aufklappen eines Objekts geladen; `GET /api/m365-config/settings/tree`, `GET …/settings?area=&object_id=`), Detail: Wert, gültig seit, Kritikalität, Empfehlung, Soll-Wert/BR-Beschluss, Beschreibung, Begründung, Microsoft-Schema, Verlauf |
@@ -613,9 +613,9 @@ Evergreen:
 | IT-Budget › Einstellungen | Budget.Manager | Beginn und Bezeichnung des Geschäftsjahrs, Kostenstelle; Liste der Tags anlegen, umbenennen, löschen |
 | M365 › Snapshots | Config.* | Abrufe mit Status, Vergleich zweier Snapshots, JSON-Export |
 | Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
-| Reports | IT-Rollen, Auditor | Berichtsvorlagen, Download, geplanter Versand |
-| Audit-Log | Admin, Auditor | Filterbare Tabelle, Export |
-| Verwaltung | Admin (mit Step-up) | Bereiche Allgemein (Branding, Mailversand, Aufbewahrung des Audit-Logs, KI-Texte), Module, Rollen (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), Konnektoren, Kommentarregeln, Benachrichtigungen |
+| Reports | später, für Evergreen (8.7) | Berichtsvorlagen, Download, geplanter Versand. Noch nicht gebaut; ohne Eintrag in der Navigation |
+| Verwaltung (eigener Bereich in der Navigation) | Admin (mit Step-up) | Seiten **Allgemein** (Branding, Aufbewahrung des Audit-Logs, Vorlauf für ablaufende Zertifikate und Secrets), **Rollen** (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), **Mail & Teams** (SMTP-Server, Teams), **Verbindungen** (KI-Texte, NetBox, Abfragen ins Internet) und **Audit-Log**. Später: Module, Kommentarregeln |
+| Verwaltung › Audit-Log | Admin (Werkbank.Auditor liest das Audit-Log nur über die Schnittstelle) | Filterbare Tabelle, Export |
 | Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel), Benachrichtigungen je Art mit Glocke, Mail und Teams, Version. Später: Push an/aus, Hinweis zur Installation |
 | Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Verweis auf die Einstellungen im Konto. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
@@ -627,7 +627,7 @@ Evergreen:
 
 Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz.
 
-**Stand der Umsetzung (Version 0.5):** Nach dem Entwurf gebaut sind Kopfzeile mit Suche, Navigation, Startseite (ohne „letzte Aktivitäten“), M365 › Übersicht, Änderungen, Einstellungen (Baum nach Workload mit Detail daneben), Evergreen › Vorgänge (ohne Kennzeichen „Mitbestimmung“, ohne PDF der BR-Vorlage, geplante Umsetzung noch im ersten Aufbau) sowie Konto und Neuigkeiten. Noch im ersten Aufbau: Evergreen › Eingang, Snapshots (ohne Vergleich und Export), Audit-Log, Verwaltung (Bereiche Allgemein und Rollen). Noch nicht vorhanden: Reports (Platzhalter), Empfehlungen und Microsoft-Schema je Einstellung, KI-Texte.
+**Stand der Umsetzung (Version 0.48):** Alle Seiten der Tabelle sind nach dem Entwurf gebaut, auch das Handbuch. Noch nicht vorhanden: Reports für Evergreen, Vergleich und Export der Snapshots, Kennzeichen „Mitbestimmung“ und PDF der BR-Vorlage in Evergreen, Push.
 
 ---
 
@@ -799,10 +799,10 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 |---|---|---|---|
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen |
-| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e). Später: Baumansicht, Snapshot-Vergleich und -Export, KI-Vorschläge, Benchmarks, Benachrichtigung bei Abweichung (Phase 4) |
+| 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e), dazu Baumansicht, KI-Texte und Empfehlungen aus Secure Score. Später: Snapshot-Vergleich und -Export, Benachrichtigung bei Abweichung |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e). Offen: Anhänge (z. B. BR-Sitzungsprotokoll), Erinnerungen und Benachrichtigungen (Phase 4), KI-Vorschlag für die Zusammenfassung |
-| – | Oberfläche nach dem Entwurf, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen, Versionen 0.1 bis 0.5 | 🔄 in Arbeit: Kopfzeile mit Suche, Navigation, Start, M365-Konfiguration und Evergreen sind umgestellt. Offen: letzte Aktivitäten, übrige Seiten; danach Handbuch |
-| 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Reports, Benachrichtigungen, Push | Vollumfang v1 | offen |
+| – | Oberfläche nach dem Entwurf, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen | ✅ umgesetzt, mit Handbuch und letzten Aktivitäten auf der Startseite |
+| 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Benachrichtigungen, Push | Vollumfang v1 | 🔄 teilweise: Exchange und Benachrichtigungen (Glocke, Mail, Teams) umgesetzt. Offen: Teams, Intune, SharePoint, Push |
 | 5 | weitere Module nach Bedarf | – | offen |
 
 ---
@@ -813,9 +813,9 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 |---|---|---|
 | 1 | Login | Entra-Login über eigene Login-Seite der Werkbank – entschieden |
 | 2 | MFA | Entschieden: eigene CA-Richtlinie „MFA für Werkbank“. Offen: Lizenz P1 für alle Nutzer prüfen, MFA-Registrierung für BR/GF vorbereiten |
-| 3 | Verwaltung | Nur Step-up-Anmeldung oder zusätzlich nur aus dem internen Netz erreichbar? |
+| 3 | Verwaltung | Entschieden: Step-up-Anmeldung genügt, keine zusätzliche Beschränkung auf das interne Netz |
 | 4 | Audit-Log | Entschieden: Aufbewahrung 90 Tage, in der Verwaltung einstellbar (30 bis 3650 Tage) |
-| 5 | Anhänge | Virenscan ja/nein |
+| 5 | Anhänge | Entschieden: kein Virenscan (6.5) |
 | 6 | KI-Texte | Entschieden: Anbieter frei einstellbar (OpenAI-kompatible Adresse, Modell und Schlüssel in der Verwaltung; der Schlüssel liegt verschlüsselt in der Datenbank). Texte entstehen automatisch und bleiben „ungeprüft“ bis zur Freigabe. Offen: AVV und Freigabe Datenschutz je nach gewähltem Anbieter |
 | 7 | Benchmarks | Entschieden: Empfehlungen aus Microsoft Secure Score (eigene Seite, Zuordnung zu Einstellungen von Hand, später ergänzt um eine mitgelieferte Zuordnung); CIS-Benchmarks werden wegen der Lizenz nicht mitgeliefert |
 | 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit DSB, BR-Beteiligung für die Werkbank selbst |

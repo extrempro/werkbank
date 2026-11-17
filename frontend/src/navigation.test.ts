@@ -47,10 +47,24 @@ describe("areasFor", () => {
       "Microsoft 365",
       "Evergreen",
       "IT-Monitoring",
+      "Verwaltung",
     ]);
-    expect(areas.map((area) => area.home)).toEqual(["/", "/m365", "/evergreen", "/monitoring/dns"]);
+    expect(areas.map((area) => area.home)).toEqual([
+      "/",
+      "/m365",
+      "/evergreen",
+      "/monitoring/dns",
+      "/verwaltung",
+    ]);
     const paths = (index: number) => allNavItems(areas[index]?.groups ?? []).map((i) => i.path);
-    expect(paths(0)).toEqual(["/", "/suche", "/reports", "/audit", "/verwaltung"]);
+    expect(paths(0)).toEqual(["/", "/suche"]);
+    expect(paths(4)).toEqual([
+      "/verwaltung",
+      "/verwaltung/rollen",
+      "/verwaltung/mail-teams",
+      "/verwaltung/verbindungen",
+      "/audit",
+    ]);
     expect(paths(1).every((path) => path.startsWith("/m365"))).toBe(true);
     expect(paths(2)).toEqual(["/evergreen", "/evergreen/eingang"]);
   });
@@ -86,7 +100,9 @@ describe("areasFor", () => {
     expect(id("/m365/einstellungen/12")).toBe("m365");
     expect(id("/m365/empfehlungen")).toBe("m365");
     expect(id("/evergreen/7")).toBe("evergreen");
-    expect(id("/verwaltung")).toBe("werkbank");
+    expect(id("/verwaltung")).toBe("verwaltung");
+    expect(id("/verwaltung/rollen")).toBe("verwaltung");
+    expect(id("/audit")).toBe("verwaltung");
   });
 
   it("zeigt Lizenzen und Benutzer nur mit der Rolle für den Tenant", () => {

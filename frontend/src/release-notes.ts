@@ -24,6 +24,28 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.48.0",
+    date: "2026-11-17",
+    summary:
+      "Die Verwaltung ist ein eigener Bereich; auf der Startseite stehen die letzten Aktivitäten.",
+    sections: [
+      {
+        area: "Werkbank",
+        entries: [
+          "Neu für Admins: der Bereich „Verwaltung“ mit den Seiten Allgemein, Rollen, Mail & Teams, Verbindungen und Audit-Log statt einer langen Seite.",
+          "Die Startseite zeigt unter „Letzte Aktivitäten“ die neuesten Meldungen der Glocke.",
+          "Der leere Eintrag „Reports“ ist aus der Navigation verschwunden.",
+        ],
+      },
+      {
+        area: "IT-Budget",
+        entries: [
+          "Wenn du im Budgetposten schon etwas eingetragen hast, fragt „Tags verwalten“ jetzt nach, bevor die Eingaben verloren gehen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.47.0",
     date: "2026-11-17",
     summary:

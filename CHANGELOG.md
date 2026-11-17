@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.48.0] – 2026-11-17
+
+Verwaltung als eigener Bereich; letzte Aktivitäten auf der Startseite.
+
+### Werkbank
+
+- **Verwaltung** ist ein eigener Bereich in der Navigation (nur `Werkbank.Admin`) mit den Seiten Allgemein (`/verwaltung`: Branding, Aufbewahrung des Audit-Logs, Vorlauf für Zertifikate und Secrets), Rollen (`/verwaltung/rollen`), Mail & Teams (`/verwaltung/mail-teams`), Verbindungen (`/verwaltung/verbindungen`: KI-Texte, NetBox, Abfragen ins Internet) und Audit-Log (`/audit`); nach der erneuten Anmeldung geht es zurück auf dieselbe Seite
+- Der Bereich „Werkbank“ enthält nur noch Start und Suche; der leere Platzhalter „Reports“ ist entfernt
+- `Werkbank.Auditor` sieht das Audit-Log nicht mehr in der Oberfläche, die Schnittstelle `/api/audit` bleibt für die Rolle lesbar
+- Startseite: „Letzte Aktivitäten“ mit den acht neuesten Meldungen der Glocke, gelesen oder nicht; ein Klick öffnet die Seite und markiert die Meldung als gelesen
+
+### IT-Budget
+
+- Budgetposten: Ist im Formular schon etwas eingetragen, fragt „Tags verwalten“ vor dem Wechsel nach, statt die Eingaben stillschweigend zu verwerfen
+
+### Doku
+
+- Spec: Reports für die M365-Konfiguration entfallen, kein Virenscan, Domains aus der Planung genommen, Verwaltung ohne Beschränkung auf das interne Netz (Step-up genügt), Seitenübersicht und Stand der Umsetzung aktualisiert
+- Handbuch: Überblick, Startseite, Verwaltung und Audit-Log
+
 ## [0.47.0] – 2026-11-17
 
 Einstellungen und Änderungen in Microsoft 365 übersichtlicher gegliedert.

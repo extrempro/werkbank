@@ -40,7 +40,10 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
         "Werkbank Admin",
         "Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log",
     ),
-    Role.WERKBANK_AUDITOR: ("Werkbank Auditor", "Audit-Log und Reports lesen"),
+    Role.WERKBANK_AUDITOR: (
+        "Werkbank Auditor",
+        "Audit-Log über die Schnittstelle lesen (die Seite sehen nur Admins)",
+    ),
     Role.CONFIG_READER: ("Konfiguration Leser", "M365-Konfiguration ansehen und exportieren"),
     Role.CONFIG_REVIEWER: (
         "Konfiguration Prüfer",
