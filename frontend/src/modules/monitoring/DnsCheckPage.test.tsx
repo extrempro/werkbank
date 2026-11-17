@@ -110,9 +110,7 @@ describe("DnsCheckPage", () => {
     expect(screen.getByText("Keine Einträge für diese Auswahl.")).toBeVisible();
     // Zone als Überschrift über ihrer Tabelle
     fireEvent.click(screen.getByRole("button", { name: /^Geprüft 2/ }));
-    expect(screen.getByRole("heading", { level: 3, name: /example\.com/ })).toHaveTextContent(
-      "2 Einträge",
-    );
+    expect(screen.getByRole("heading", { level: 3, name: "example.com 2 Einträge" })).toBeVisible();
   });
 
   it("öffnet aus der Benachrichtigung die neuen Probleme und lässt Admins vorziehen", async () => {
