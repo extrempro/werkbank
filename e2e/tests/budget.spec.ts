@@ -98,6 +98,18 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   // Hat der Posten einen Vertrag, schließt die Position ihn nicht ab.
   await expect(page.getByLabel("Schließt den Budgetposten ab")).not.toBeChecked();
   // Zweite Position mit anderem Steuersatz auf denselben Budgetposten.
+  const info = await page.evaluate(() => {
+    const button = [...document.querySelectorAll("button")].find((b) => b.textContent === "Position hinzufügen");
+    const rect = button?.getBoundingClientRect();
+    const hit = rect ? document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) : null;
+    const wide = [...document.querySelectorAll("*")]
+      .filter((el) => el.getBoundingClientRect().width > window.innerWidth + 1)
+      .slice(0, 8)
+      .map((el) => `${el.tagName}.${el.className} w=${Math.round(el.getBoundingClientRect().width)}`);
+    const selects = [...document.querySelectorAll("select")].map((s) => `${Math.round(s.getBoundingClientRect().width)}:${s.options.length}:${[...s.options].map((o) => o.text).sort((a, c) => c.length - a.length)[0]}`);
+    return { rect, hit: hit ? `${hit.tagName}.${hit.className}` : null, iw: window.innerWidth, sw: document.documentElement.scrollWidth, wide, selects };
+  });
+  console.log("DEBUG", JSON.stringify(info));
   await page.getByRole("button", { name: "Position hinzufügen" }).click();
   const second = page.getByRole("group", { name: "Position 2" });
   await second.getByRole("searchbox", { name: "Budgetposten suchen" }).fill(`Posten ${number}`);
