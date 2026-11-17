@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.50.0",
+    date: "2026-11-17",
+    summary: "DNS-Abgleich: Filter je Stand und ein aufgeräumtes Layout.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "DNS-Abgleich: Ein Klick auf eine Kachel oben, etwa „Abweichend“, zeigt nur diese Einträge.",
+          "Über der Liste gibt es Filter für jeden Stand mit Anzahl.",
+          "Suchfeld, Zonen und Werte sind übersichtlicher angeordnet; abweichende Werte sind markiert.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.49.0",
     date: "2026-11-17",
     summary: "Dienststatus mit 90-Tage-Würfel in jeder Kachel und klarer gegliederten Meldungen.",

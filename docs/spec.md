@@ -621,7 +621,7 @@ Evergreen:
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
 | IT-Projekte › Alle Projekte | Projekte.* (Anlegen: Projekte.Editor) | Liste mit Status, veranschlagt, geplant, Ist, offenen Punkten, letztem Jour Fixe; Filter, Suche, neues Projekt |
 | IT-Projekte › Projekt | Projekte.* (Einstellungen und Ändern: Projekte.Editor) | Reiter Übersicht, Budget, Jour Fixe (Markdown mit Leiste und Vorschau, PDF-Anhänge), Aufgaben, Einstellungen |
-| DNS-Abgleich mit NetBox | Monitoring.Reader, Admin | Kennzahlen, Verlauf 90 Tage, Ansichten Probleme/Neu/Alle, Suche, Tabelle je Zone, „Jetzt prüfen“ für Admins |
+| DNS-Abgleich mit NetBox | Monitoring.Reader, Admin | Kennzahlen, Verlauf 90 Tage, Kacheln je Stand als Filter, Filter Probleme/Abweichend/Fehlt öffentlich/Fehler/In Ordnung/Neu/Alle mit Anzahl, Suche, Tabelle je Zone mit der Zone als Überschrift, „Jetzt prüfen“ für Admins |
 | Handbuch | alle | Kapitel je Bereich nach Rollen, Suche im Handbuch, je Kapitel Inhaltsverzeichnis und Abschnitte mit Verweisen |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
 

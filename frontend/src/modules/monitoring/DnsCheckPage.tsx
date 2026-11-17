@@ -9,6 +9,7 @@ import {
   groupByZone,
   runDnsCheckNow,
   STATUS_LABELS,
+  viewCounts,
   viewFromSearch,
   type DnsOverview,
   type DnsRow,
@@ -28,8 +29,22 @@ const PILL: Record<DnsStatus, string> = {
 
 const VIEWS: { id: DnsView; label: string }[] = [
   { id: "probleme", label: "Probleme" },
-  { id: "neu", label: "Neu seit dem letzten Lauf" },
+  { id: "abweichend", label: "Abweichend" },
+  { id: "fehlt", label: "Fehlt öffentlich" },
+  { id: "fehler", label: "Fehler" },
+  { id: "ok", label: "In Ordnung" },
+  { id: "neu", label: "Neu" },
   { id: "alle", label: "Alle" },
+];
+
+/** Kacheln oben; ein Klick filtert die Einträge darunter. */
+const TILES: { id: DnsView; label: string; warn: boolean }[] = [
+  { id: "alle", label: "Geprüft", warn: false },
+  { id: "ok", label: "In Ordnung", warn: false },
+  { id: "abweichend", label: "Abweichend", warn: true },
+  { id: "fehlt", label: "Fehlt öffentlich", warn: true },
+  { id: "fehler", label: "Fehler bei der Abfrage", warn: false },
+  { id: "neu", label: "Neu seit dem letzten Lauf", warn: true },
 ];
 
 function Values({ values, marked }: { values: string[]; marked: string[] }) {
@@ -157,9 +172,12 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
 
   const run = data.result_run;
   const last = data.last_run;
-  const counts = run?.counts ?? {};
+  const counts = viewCounts(data.rows);
   const shown = filterRows(data.rows, view, query);
-  const newCount = data.rows.filter((row) => row.new).length;
+  const pick = (next: DnsView) => {
+    setView(next);
+    document.getElementById("dns-eintraege")?.scrollIntoView?.({ block: "start" });
+  };
   const days = dailyHistory(data.history);
 
   return (
@@ -216,53 +234,31 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
       )}
 
       {run && (
-        <dl className="kpis">
-          <div className="kpi">
-            <dt>Geprüft</dt>
-            <dd>
-              <span className="kpi-number">{numbers.format(data.rows.length)}</span>
-              <span className="small">
-                Namen und Typen in {numbers.format(run.zones)} {run.zones === 1 ? "Zone" : "Zonen"}
+        <div className="kpis dns-kpis" role="group" aria-label="Einträge nach Status filtern">
+          {TILES.map((tile) => (
+            <button
+              key={tile.id}
+              type="button"
+              className="kpi kpi-button"
+              aria-pressed={view === tile.id}
+              onClick={() => pick(tile.id)}
+            >
+              <span className="kpi-label">{tile.label}</span>{" "}
+              <span
+                className={tile.warn && counts[tile.id] > 0 ? "kpi-number kpi-todo" : "kpi-number"}
+              >
+                {numbers.format(counts[tile.id])}
               </span>
-            </dd>
-          </div>
-          <div className="kpi">
-            <dt>In Ordnung</dt>
-            <dd>
-              <span className="kpi-number">{numbers.format(counts.ok ?? 0)}</span>
-            </dd>
-          </div>
-          <div className="kpi">
-            <dt>Abweichend</dt>
-            <dd>
-              <span className={(counts.abweichend ?? 0) > 0 ? "kpi-number kpi-todo" : "kpi-number"}>
-                {numbers.format(counts.abweichend ?? 0)}
-              </span>
-            </dd>
-          </div>
-          <div className="kpi">
-            <dt>Fehlt öffentlich</dt>
-            <dd>
-              <span className={(counts.fehlt ?? 0) > 0 ? "kpi-number kpi-todo" : "kpi-number"}>
-                {numbers.format(counts.fehlt ?? 0)}
-              </span>
-            </dd>
-          </div>
-          <div className="kpi">
-            <dt>Fehler bei der Abfrage</dt>
-            <dd>
-              <span className="kpi-number">{numbers.format(counts.fehler ?? 0)}</span>
-            </dd>
-          </div>
-          <div className="kpi">
-            <dt>Neu seit dem letzten Lauf</dt>
-            <dd>
-              <span className={newCount > 0 ? "kpi-number kpi-todo" : "kpi-number"}>
-                {numbers.format(newCount)}
-              </span>
-            </dd>
-          </div>
-        </dl>
+              {tile.id === "alle" && " "}
+              {tile.id === "alle" && (
+                <span className="small">
+                  Namen und Typen in {numbers.format(run.zones)}{" "}
+                  {run.zones === 1 ? "Zone" : "Zonen"}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       )}
 
       {days.length > 1 && (
@@ -299,7 +295,9 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
         <section className="panel" aria-labelledby="dns-eintraege">
           <div className="panel-head">
             <h2 id="dns-eintraege">Einträge</h2>
-            <div className="chips" role="group" aria-label="Ansicht">
+          </div>
+          <div className="detail-body">
+            <div className="chips" role="group" aria-label="Einträge filtern">
               {VIEWS.map((entry) => (
                 <button
                   key={entry.id}
@@ -308,14 +306,12 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
                   aria-pressed={view === entry.id}
                   onClick={() => setView(entry.id)}
                 >
-                  {entry.label}
+                  {entry.label} ({numbers.format(counts[entry.id])})
                 </button>
               ))}
             </div>
-          </div>
-          <div className="detail-body">
             <label className="dns-search">
-              Suchen
+              Suchen in Name, Zone, Typ und Werten
               <input
                 type="search"
                 value={query}
@@ -333,25 +329,33 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
             </p>
           </div>
           {groupByZone(shown).map(([zone, rows]) => (
-            <div key={zone} className="table-wrap" tabIndex={0} role="region" aria-label={zone}>
-              <table className="dns-table">
-                <caption>{zone}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Typ</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">NetBox</th>
-                    <th scope="col">Öffentlich</th>
-                    <th scope="col">Hinweise</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <RowView key={row.key} row={row} />
-                  ))}
-                </tbody>
-              </table>
+            <div key={zone} className="dns-zone">
+              <h3 className="dns-zone-title">
+                <code>{zone}</code>
+                <span className="small">
+                  {numbers.format(rows.length)} {rows.length === 1 ? "Eintrag" : "Einträge"}
+                </span>
+              </h3>
+              <div className="table-wrap" tabIndex={0} role="region" aria-label={zone}>
+                <table className="dns-table">
+                  <caption className="visually-hidden">{zone}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Name</th>
+                      <th scope="col">Typ</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">NetBox</th>
+                      <th scope="col">Öffentlich</th>
+                      <th scope="col">Hinweise</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <RowView key={row.key} row={row} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ))}
         </section>

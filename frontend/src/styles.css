@@ -5854,3 +5854,146 @@ p.badges {
   justify-content: space-between;
   gap: 4px 8px;
 }
+
+/* IT-Monitoring › DNS-Abgleich */
+
+.dns-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.dns-meta p {
+  margin: 0;
+}
+
+.dns-kpis {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+/* Kachel als Filter: ganze Fläche klickbar, gewählte deutlich markiert */
+.kpi-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  color: var(--farbe-text);
+  cursor: pointer;
+}
+
+.kpi-button:hover {
+  border-color: var(--farbe-rand-stark);
+}
+
+.kpi-button[aria-pressed="true"] {
+  border-color: var(--farbe-primaer);
+  box-shadow: inset 0 0 0 1px var(--farbe-primaer);
+}
+
+.kpi-button:focus-visible {
+  outline: 3px solid var(--farbe-akzent);
+  outline-offset: 2px;
+}
+
+.kpi-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+}
+
+.dns-search {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 28rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.dns-search input {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.dns-zone + .dns-zone {
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.dns-zone-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 14px 18px 8px;
+  font-size: 0.9375rem;
+}
+
+.dns-zone .table-wrap {
+  border: 0;
+  border-radius: 0;
+}
+
+.dns-table th:nth-child(1) {
+  width: 24%;
+}
+
+.dns-table th:nth-child(2) {
+  width: 6%;
+}
+
+.dns-table th:nth-child(3) {
+  width: 12%;
+}
+
+.dns-table tbody th {
+  background: none;
+  font-weight: 500;
+  vertical-align: top;
+}
+
+.dns-table td {
+  vertical-align: top;
+}
+
+.dns-name code,
+.dns-values code {
+  overflow-wrap: anywhere;
+}
+
+.dns-new {
+  margin-left: 6px;
+}
+
+.dns-values {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dns-marked code {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--farbe-bad-flaeche);
+  color: var(--farbe-bad-text);
+}
+
+.dns-note {
+  margin: 0 0 4px;
+}
+
