@@ -23,7 +23,7 @@ export async function expectNoA11yViolations(page: Page) {
 /** Öffnet auf kleinen Bildschirmen das Menü, damit die Navigation sichtbar ist. */
 export async function openNavigation(page: Page) {
   // Erst warten, bis die Oberfläche nach der Anmeldung geladen ist.
-  await page.getByRole("button", { name: "Abmelden" }).first().waitFor();
+  await page.getByRole("button", { name: /^Benachrichtigungen/ }).waitFor();
   const toggle = page.getByRole("button", { name: "Menü" });
   if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) === "false") {
     await toggle.click();

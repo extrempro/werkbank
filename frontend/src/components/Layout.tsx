@@ -457,7 +457,8 @@ export function Layout({ me }: LayoutProps) {
             </span>
             <span className="visually-hidden"> – Konto öffnen</span>
           </a>
-          <form method="post" action="/auth/logout">
+          {/* Auf dem Handy steht „Abmelden“ im Menü, hier fehlt der Platz. */}
+          <form method="post" action="/auth/logout" className="header-logout">
             <button type="submit" className="button button-quiet">
               Abmelden
             </button>
@@ -520,6 +521,12 @@ export function Layout({ me }: LayoutProps) {
             ))}
           </div>
           <div className="nav-foot">
+            {/* Nur auf dem Handy sichtbar; dort fehlt „Abmelden“ in der Kopfzeile. */}
+            <form method="post" action="/auth/logout" className="nav-logout">
+              <button type="submit" className="button button-secondary">
+                Abmelden
+              </button>
+            </form>
             <a
               className="nav-tool"
               href={HANDBOOK_PATH}

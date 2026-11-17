@@ -75,7 +75,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Die Sitzung endet nach 30 Minuten ohne Aktivität und spätestens nach 8 Stunden. Dann zeigt die Werkbank einen Hinweis und du meldest dich neu an. Mit „Abmelden“ oben rechts beendest du die Sitzung sofort.",
+            text: "Die Sitzung endet nach 30 Minuten ohne Aktivität und spätestens nach 8 Stunden. Dann zeigt die Werkbank einen Hinweis und du meldest dich neu an. Mit „Abmelden“ oben rechts, auf dem Handy unten im Menü, beendest du die Sitzung sofort.",
           },
           {
             kind: "hint",

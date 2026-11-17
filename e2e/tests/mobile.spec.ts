@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { loginAs } from "./helpers";
+import { expectNoA11yViolations, loginAs } from "./helpers";
 
 test("Handy: Navigation über den Menü-Button", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "handy", "nur Handy");
@@ -18,7 +18,9 @@ test("Handy: Navigation über den Menü-Button", async ({ page }, testInfo) => {
   await expect(page).toHaveURL(/\/evergreen$/);
 });
 
-test("Handy: Mit offenem Menü bleibt „Abmelden“ ganz sichtbar", async ({ page }, testInfo) => {
+test("Handy: Logo frei, „Abmelden“ im Menü und nichts breiter als der Bildschirm", async ({
+  page,
+}, testInfo) => {
   test.skip(testInfo.project.name !== "handy", "nur Handy");
   // Viele Rollen: alle Bereiche und Zähler in der Navigation
   await loginAs(
@@ -35,15 +37,28 @@ test("Handy: Mit offenem Menü bleibt „Abmelden“ ganz sichtbar", async ({ pa
     "Maximiliane Mustermann-Beispiel",
   );
   await page.goto("/");
+  const viewport = page.viewportSize()!;
+  // Das Logo liegt ganz links von der Glocke, nichts schiebt sich darüber.
+  const brand = await page.locator(".app-header .brand-mark").boundingBox();
+  const bell = await page.getByRole("button", { name: /^Benachrichtigungen/ }).boundingBox();
+  expect(brand).not.toBeNull();
+  expect(bell).not.toBeNull();
+  expect(brand!.x + brand!.width).toBeLessThanOrEqual(bell!.x);
+  // In der Kopfzeile gibt es kein „Abmelden“ ...
+  await expect(page.getByRole("button", { name: "Abmelden" })).toHaveCount(0);
+
+  // ... dafür im Menü.
   const toggle = page.getByRole("button", { name: "Menü" });
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
-  const viewport = page.viewportSize()!;
-  const logout = await page.getByRole("button", { name: "Abmelden" }).boundingBox();
-  expect(logout).not.toBeNull();
-  expect(logout!.x).toBeGreaterThanOrEqual(0);
-  expect(logout!.x + logout!.width).toBeLessThanOrEqual(viewport.width);
-  // Nichts in der Navigation macht die Seite breiter als den Bildschirm.
+  const logout = page
+    .getByRole("navigation", { name: "Hauptnavigation" })
+    .getByRole("button", { name: "Abmelden" });
+  await expect(logout).toBeVisible();
+  const box = await logout.boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(scrollWidth).toBeLessThanOrEqual(viewport.width);
+  await expectNoA11yViolations(page);
 });

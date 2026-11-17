@@ -35,6 +35,7 @@ export const RELEASES: readonly Release[] = [
           "Neu für Admins: der Bereich „Verwaltung“ mit den Seiten Allgemein, Rollen, Mail & Teams, Verbindungen und Audit-Log statt einer langen Seite.",
           "Die Startseite zeigt unter „Letzte Aktivitäten“ die neuesten Meldungen der Glocke.",
           "Der leere Eintrag „Reports“ ist aus der Navigation verschwunden.",
+          "Auf dem Handy steht „Abmelden“ jetzt unten im Menü. So bleibt oben Platz für das Logo, das zuletzt unter Glocke und Aufgaben gerutscht war.",
         ],
       },
       {
