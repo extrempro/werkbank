@@ -4,6 +4,7 @@ import { Placeholder } from "../../components/Placeholder";
 import { navigate } from "../../router";
 import { createItemFromChange } from "../evergreen/api";
 import {
+  areaLabel,
   fetchChanges,
   kindLabel,
   reviewChanges,
@@ -13,6 +14,7 @@ import {
   workloadLabel,
   type Change,
   type ChangeCounts,
+  type ChangeGroup,
   type ReviewStatus,
 } from "./api";
 import { ChangeDetail } from "./ChangeDetail";
@@ -30,8 +32,70 @@ const FILTERS: { value: "" | ReviewStatus; label: string; key: keyof ChangeCount
 
 type Message = { kind: "status" | "alert"; text: string };
 
+interface Place {
+  workload: string;
+  area: string;
+}
+
+const ALL: Place = { workload: "", area: "" };
+
+/** Wert in der Auswahl „Dienst und Bereich“: „entra“ oder „entra|conditionalAccessPolicy“. */
+function placeValue(place: Place): string {
+  return place.area ? `${place.workload}|${place.area}` : place.workload;
+}
+
+function parsePlace(value: string): Place {
+  const [workload = "", area = ""] = value.split("|");
+  return { workload, area };
+}
+
+function placeTitle(workload: string, area: string): string {
+  return `${workloadLabel(workload)} › ${areaLabel(area)}`;
+}
+
+function plural(count: number): string {
+  return `${count} ${count === 1 ? "Änderung" : "Änderungen"}`;
+}
+
+interface Section {
+  key: string;
+  workload: string;
+  area: string;
+  entries: Change[];
+}
+
+/** Geladene Änderungen nach Dienst und Bereich; der Bereich mit der neuesten Änderung zuerst. */
+function sections(entries: Change[]): Section[] {
+  const result: Section[] = [];
+  for (const entry of entries) {
+    const key = `${entry.workload}|${entry.area}`;
+    const section = result.find((item) => item.key === key);
+    if (section) {
+      section.entries.push(entry);
+    } else {
+      result.push({ key, workload: entry.workload, area: entry.area, entries: [entry] });
+    }
+  }
+  return result;
+}
+
+/** Dienste mit ihren Bereichen für die Auswahl, alphabetisch nach Anzeigenamen. */
+function placeOptions(groups: ChangeGroup[]): { workload: string; areas: ChangeGroup[] }[] {
+  const workloads = [...new Set(groups.map((group) => group.workload))].sort((a, b) =>
+    workloadLabel(a).localeCompare(workloadLabel(b)),
+  );
+  return workloads.map((workload) => ({
+    workload,
+    areas: groups
+      .filter((group) => group.workload === workload)
+      .sort((a, b) => areaLabel(a.area).localeCompare(areaLabel(b.area))),
+  }));
+}
+
 export function ChangesPage({ me }: ChangesPageProps) {
   const [filter, setFilter] = useState<string>("offen");
+  const [place, setPlace] = useState<Place>(ALL);
+  const [groups, setGroups] = useState<ChangeGroup[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
   const [entries, setEntries] = useState<Change[]>([]);
   const [counts, setCounts] = useState<ChangeCounts | null>(null);
@@ -48,12 +112,13 @@ export function ChangesPage({ me }: ChangesPageProps) {
 
   useEffect(() => {
     let active = true;
-    fetchChanges(filter, 0)
+    fetchChanges(filter, 0, 50, place)
       .then((page) => {
         if (active) {
           setEntries(page.entries);
           setHasMore(page.has_more);
           setCounts(page.counts ?? null);
+          setGroups(page.groups ?? []);
           setStatus("ready");
         }
       })
@@ -65,10 +130,10 @@ export function ChangesPage({ me }: ChangesPageProps) {
     return () => {
       active = false;
     };
-  }, [filter, reloadKey]);
+  }, [filter, place, reloadKey]);
 
   const loadMore = () => {
-    fetchChanges(filter, entries.length)
+    fetchChanges(filter, entries.length, 50, place)
       .then((page) => {
         setEntries((previous) => [...previous, ...page.entries]);
         setHasMore(page.has_more);
@@ -87,6 +152,23 @@ export function ChangesPage({ me }: ChangesPageProps) {
     setCurrent(null);
     setMessage(null);
     setFilter(value);
+  };
+
+  const pickPlace = (value: string) => {
+    setStatus("loading");
+    setSelected([]);
+    setCurrent(null);
+    setMessage(null);
+    setPlace(parsePlace(value));
+  };
+
+  /** Wählt alle geladenen Änderungen eines Bereichs aus oder hebt die Auswahl auf. */
+  const toggleSection = (section: Section) => {
+    const ids = section.entries.map((entry) => entry.id);
+    const all = ids.every((id) => selected.includes(id));
+    setSelected((list) =>
+      all ? list.filter((id) => !ids.includes(id)) : [...new Set([...list, ...ids])],
+    );
   };
 
   const open = (id: number) => {
@@ -183,6 +265,41 @@ export function ChangesPage({ me }: ChangesPageProps) {
         ))}
       </div>
 
+      {(groups.length > 0 || place.workload) && (
+        <label className="changes-place">
+          Dienst und Bereich
+          <select value={placeValue(place)} onChange={(event) => pickPlace(event.target.value)}>
+            <option value="">Alle</option>
+            {placeOptions(groups).map((option) => (
+              <optgroup key={option.workload} label={workloadLabel(option.workload)}>
+                <option value={option.workload}>
+                  {workloadLabel(option.workload)}: alle Bereiche (
+                  {option.areas.reduce((sum, group) => sum + group.count, 0)})
+                </option>
+                {option.areas.map((group) => (
+                  <option key={group.area} value={`${group.workload}|${group.area}`}>
+                    {areaLabel(group.area)} ({group.count})
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+            {/* Gewählt, aber im aktuellen Status ohne Änderungen: bleibt sichtbar */}
+            {place.workload &&
+              !groups.some(
+                (group) =>
+                  group.workload === place.workload && (!place.area || group.area === place.area),
+              ) && (
+                <option value={placeValue(place)}>
+                  {place.area
+                    ? placeTitle(place.workload, place.area)
+                    : workloadLabel(place.workload)}{" "}
+                  (0)
+                </option>
+              )}
+          </select>
+        </label>
+      )}
+
       {message && (
         <p role={message.kind} className={message.kind === "alert" ? "hint-box hint-bad" : ""}>
           {message.text}
@@ -199,37 +316,73 @@ export function ChangesPage({ me }: ChangesPageProps) {
         <div className="split">
           <div className="split-list">
             <section className="panel" aria-label="Änderungen">
-              <ul className="rows change-rows">
-                {entries.map((entry) => (
-                  <li key={entry.id} className={entry.id === current ? "row-current" : undefined}>
-                    {canReview && (
-                      <input
-                        type="checkbox"
-                        className="check"
-                        checked={selected.includes(entry.id)}
-                        onChange={() => toggle(entry.id)}
-                        aria-label={`${settingTitle(entry)} auswählen`}
-                      />
-                    )}
-                    <span className="row-main">
-                      <button
-                        type="button"
-                        className="row-title row-button"
-                        aria-current={entry.id === current ? "true" : undefined}
-                        onClick={() => open(entry.id)}
-                      >
-                        {settingTitle(entry)}
-                      </button>
+              {sections(entries).map((section) => {
+                const total = groups.find(
+                  (group) => group.workload === section.workload && group.area === section.area,
+                )?.count;
+                const titleId = `bereich-${section.key.replace(/[^A-Za-z0-9-]/g, "-")}`;
+                const allSelected = section.entries.every((entry) => selected.includes(entry.id));
+                return (
+                  <div key={section.key} className="change-section">
+                    <div className="change-section-head">
+                      <h2 id={titleId}>{placeTitle(section.workload, section.area)}</h2>
                       <span className="small">
-                        <span className="module-tag">{workloadLabel(entry.workload)}</span>{" "}
-                        {kindLabel(entry.kind)} · {formatDateTime(entry.detected_at)} · von{" "}
-                        {entry.changed_by ?? "unbekannt"}
+                        {total !== undefined && total > section.entries.length
+                          ? `${section.entries.length} von ${total} geladen`
+                          : plural(section.entries.length)}
                       </span>
-                    </span>
-                    <span className={statusClass(entry.status)}>{statusLabel(entry.status)}</span>
-                  </li>
-                ))}
-              </ul>
+                      {canReview && (
+                        <button
+                          type="button"
+                          className="button button-link"
+                          onClick={() => toggleSection(section)}
+                        >
+                          {allSelected ? "Auswahl aufheben" : "Alle auswählen"}
+                          <span className="visually-hidden">
+                            {" "}
+                            in {placeTitle(section.workload, section.area)}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                    <ul className="rows change-rows" aria-labelledby={titleId}>
+                      {section.entries.map((entry) => (
+                        <li
+                          key={entry.id}
+                          className={entry.id === current ? "row-current" : undefined}
+                        >
+                          {canReview && (
+                            <input
+                              type="checkbox"
+                              className="check"
+                              checked={selected.includes(entry.id)}
+                              onChange={() => toggle(entry.id)}
+                              aria-label={`${settingTitle(entry)} auswählen`}
+                            />
+                          )}
+                          <span className="row-main">
+                            <button
+                              type="button"
+                              className="row-title row-button"
+                              aria-current={entry.id === current ? "true" : undefined}
+                              onClick={() => open(entry.id)}
+                            >
+                              {settingTitle(entry)}
+                            </button>
+                            <span className="small">
+                              {kindLabel(entry.kind)} · {formatDateTime(entry.detected_at)} · von{" "}
+                              {entry.changed_by ?? "unbekannt"}
+                            </span>
+                          </span>
+                          <span className={statusClass(entry.status)}>
+                            {statusLabel(entry.status)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
             </section>
             {hasMore && (
               <button

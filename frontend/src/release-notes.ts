@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.47.0",
+    date: "2026-11-17",
+    summary:
+      "Microsoft 365: Einstellungen als Baum nach Dienst, Bereich und Objekt; Änderungen nach Bereich gegliedert.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Einstellungen: Statt einer langen Liste aller Eigenschaften gibt es einen Baum. Dienst, Bereich und Objekt klappst du auf; erst im Objekt stehen die Eigenschaften mit ihrem Wert.",
+          "An jedem Dienst, Bereich und Objekt siehst du, wie viele Änderungen offen sind und wie viele Werte vom Soll-Wert abweichen.",
+          "Änderungen: Die Liste ist nach Dienst und Bereich gegliedert. Über „Dienst und Bereich“ zeigst du nur einen davon, mit „Alle auswählen“ bewertest du einen Bereich auf einmal.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.46.0",
     date: "2026-11-17",
     summary:

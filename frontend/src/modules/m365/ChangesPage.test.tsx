@@ -13,6 +13,7 @@ const change = {
   setting_id: 3,
   path: "entra/conditionalaccesspolicy/p1/State",
   workload: "entra",
+  area: "conditionalAccessPolicy",
   object_name: "MFA für alle",
   property: "State",
   criticality: "hoch",
@@ -42,7 +43,21 @@ function stubFetch() {
         return new Response(JSON.stringify({ updated: 1 }), { status: 200 });
       }
       const counts = { alle: 4, offen: 1, gewollt: 2, ungewollt: 1 };
-      return new Response(JSON.stringify({ entries: [change], has_more: false, counts }), {
+      const groups = [
+        { workload: "entra", area: "conditionalAccessPolicy", count: 3 },
+        { workload: "exchange", area: "transportRule", count: 1 },
+      ];
+      const transport = {
+        ...change,
+        id: 8,
+        setting_id: 4,
+        workload: "exchange",
+        area: "transportRule",
+        object_name: "Externe Kennzeichnung",
+        property: "Mode",
+      };
+      const entries = url.includes("workload=exchange") ? [transport] : [change, transport];
+      return new Response(JSON.stringify({ entries, has_more: false, counts, groups }), {
         status: 200,
       });
     }),
@@ -74,6 +89,45 @@ describe("ChangesPage", () => {
     expect(
       within(detail).getByRole("link", { name: "Einstellung und Verlauf öffnen →" }),
     ).toHaveAttribute("href", "/m365/einstellungen/3");
+  });
+
+  it("gliedert nach Dienst und Bereich und filtert danach", async () => {
+    const calls = stubFetch();
+    render(<ChangesPage me={me(["Config.Reviewer"])} />);
+    await screen.findByRole("button", { name: "MFA für alle – State" });
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((node) => node.textContent);
+    expect(headings.slice(0, 2)).toEqual([
+      "Entra › Bedingter Zugriff",
+      "Exchange › Transportregeln",
+    ]);
+    expect(screen.getByText("1 von 3 geladen")).toBeVisible();
+    const entra = within(screen.getByRole("list", { name: "Entra › Bedingter Zugriff" }));
+    expect(entra.getAllByRole("listitem")).toHaveLength(1);
+
+    // Alle eines Bereichs auswählen
+    const exchangeHead = screen.getByRole("heading", { name: "Exchange › Transportregeln" })
+      .parentElement as HTMLElement;
+    fireEvent.click(within(exchangeHead).getByRole("button", { name: /^Alle auswählen/ }));
+    expect(screen.getByText("1 ausgewählt")).toBeVisible();
+    expect(within(exchangeHead).getByRole("button", { name: /^Auswahl aufheben/ })).toBeVisible();
+
+    const select = screen.getByRole("combobox", { name: "Dienst und Bereich" });
+    expect(within(select).getByRole("option", { name: "Bedingter Zugriff (3)" })).toBeVisible();
+    fireEvent.change(select, { target: { value: "exchange|transportRule" } });
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (call) =>
+            call.url.includes("workload=exchange") && call.url.includes("area=transportRule"),
+        ),
+      ).toBe(true);
+    });
+    expect(
+      await screen.findByRole("button", { name: "Externe Kennzeichnung – Mode" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "MFA für alle – State" })).toBeNull();
+    // Die Auswahl gilt nur für den bisherigen Filter.
+    expect(screen.getByText("0 ausgewählt")).toBeVisible();
   });
 
   it("lädt beim Wechsel des Filters neu", async () => {
