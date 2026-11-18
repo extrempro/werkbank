@@ -111,7 +111,7 @@ describe("AiSettings", () => {
     expect(screen.getByLabelText("Adresse der Schnittstelle")).toHaveValue(
       "https://api.anthropic.com/v1",
     );
-    expect(screen.getByText(/Mitdenken ist für die kurzen Texte ausgeschaltet/)).toBeVisible();
+    expect(screen.getByText(/denkt das Modell nur wenig mit/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "KI-Einstellungen speichern" }));
     expect(await screen.findByText("Die KI-Einstellungen sind gespeichert.")).toBeVisible();
     const body = JSON.parse(String(calls[0]?.init?.body));
