@@ -130,7 +130,7 @@ def test_complete_reports_errors_without_details(status: int, fragment: str) -> 
     assert ZUGANG not in str(caught.value)
 
 
-def test_complete_anthropic_uses_messages_without_thinking() -> None:
+def test_complete_anthropic_uses_messages_with_low_effort() -> None:
     seen: dict[str, Any] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -155,7 +155,9 @@ def test_complete_anthropic_uses_messages_without_thinking() -> None:
     body = seen["body"]
     assert body["system"] == "System"
     assert body["messages"] == [{"role": "user", "content": "Frage"}]
-    assert body["thinking"] == {"type": "disabled"}
+    assert body["thinking"] == {"type": "adaptive"}
+    assert body["output_config"] == {"effort": "low"}
+    assert body["max_tokens"] == 4000
     assert "temperature" not in body
 
     with pytest.raises(AiError, match="keinen Text"):

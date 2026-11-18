@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.59.1",
+    date: "2026-11-18",
+    summary: "Korrektur: KI-Texte mit Anthropic funktionieren mit neueren Claude-Modellen.",
+    sections: [
+      {
+        area: "Werkbank",
+        entries: [
+          "KI-Texte: Der Verbindungstest mit Anthropic scheiterte bei neueren Claude-Modellen. Das ist behoben.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.59.0",
     date: "2026-11-18",
     summary: "KI-Texte: Anthropic lässt sich direkt anbinden.",

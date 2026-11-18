@@ -174,7 +174,7 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
         </div>
         <p className="small" id={urlHint}>
           {provider === "anthropic"
-            ? `Schnittstelle von Anthropic (Messages-API), Adresse ${ANTHROPIC_URL}. Mitdenken ist für die kurzen Texte ausgeschaltet.`
+            ? `Schnittstelle von Anthropic (Messages-API), Adresse ${ANTHROPIC_URL}. Für die kurzen Texte denkt das Modell nur wenig mit (geringer Aufwand).`
             : "Jeder Anbieter mit OpenAI-kompatibler Schnittstelle, auch ein eigener Dienst im internen Netz. Die Adresse endet meist auf /v1."}
         </p>
         <p className="small" id={keyHint}>

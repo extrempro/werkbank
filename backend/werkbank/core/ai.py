@@ -29,6 +29,9 @@ AI_RATE_MAX = 500
 AiProvider = Literal["openai", "anthropic"]
 AI_PROVIDERS: tuple[AiProvider, ...] = ("openai", "anthropic")
 ANTHROPIC_VERSION = "2023-06-01"
+# Bei Anthropic zählt das Mitdenken mit in max_tokens; der Text selbst bleibt kurz
+# (AI_TEXT_MAX_LENGTH), das Budget lässt dem Modell Platz zum Denken.
+ANTHROPIC_MAX_TOKENS = 4000
 # Höchstlänge der Fehlermeldung des Anbieters in der Anzeige
 PROVIDER_ERROR_LENGTH = 200
 
@@ -178,14 +181,17 @@ def _anthropic(
     }
     if config.api_key:
         headers["x-api-key"] = config.api_key
-    # Kurze Beschreibungen: Mitdenken aus, damit das Budget für den Text bleibt. Keine
-    # temperature, die verträgt sich nicht mit jedem Modell.
+    # Kurze Beschreibungen: Neuere Modelle lassen das Mitdenken nicht abschalten
+    # („thinking.type.disabled is not supported“). Deshalb adaptiv mit geringem Aufwand, damit
+    # einfache Fragen meist ohne langes Denken beantwortet werden. Keine temperature, die
+    # verträgt sich nicht mit dem Mitdenken.
     body = {
         "model": config.model,
         "system": system,
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": AI_MAX_TOKENS,
-        "thinking": {"type": "disabled"},
+        "max_tokens": ANTHROPIC_MAX_TOKENS,
+        "thinking": {"type": "adaptive"},
+        "output_config": {"effort": "low"},
     }
     data = _request(config, "/messages", headers, body, transport)
     blocks = data.get("content") if isinstance(data, dict) else None

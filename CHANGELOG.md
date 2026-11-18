@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.59.1] – 2026-11-18
+
+KI-Texte mit Anthropic: Verbindungstest schlug fehl.
+
+### Werkbank
+
+- **Anthropic:** Neuere Modelle lassen das Mitdenken nicht abschalten (400: „thinking.type.disabled is not supported for this model“). Die Werkbank schickt jetzt adaptives Mitdenken mit geringem Aufwand (`thinking: adaptive`, `output_config.effort: low`) und erlaubt 4.000 Tokens, damit Denken und der kurze Text Platz haben; der Text bleibt auf 1.500 Zeichen begrenzt
+- Spec und Hinweis in der Verwaltung angepasst
+
 ## [0.59.0] – 2026-11-18
 
 KI-Texte: Anthropic direkt anbinden.
