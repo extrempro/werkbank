@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.57.0",
+    date: "2026-11-18",
+    summary: "Diagramme zeigen jetzt auch kleine Änderungen.",
+    sections: [
+      {
+        area: "Werkbank",
+        entries: [
+          "Verläufe bei Lizenzen, Benutzern, Nutzung und DNS-Abgleich: Jede Linie hat ihr eigenes Feld mit eigener Achse. Kleine Änderungen sind damit zu sehen statt einer geraden Linie.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.56.0",
     date: "2026-11-17",
     summary: "Neu: Nutzung der Microsoft-365-Dienste.",

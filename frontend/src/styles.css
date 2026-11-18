@@ -3708,6 +3708,11 @@ p.badges {
   font-size: 14px;
 }
 
+.chart-panel-title {
+  fill: var(--farbe-text);
+  font-weight: 600;
+}
+
 .chart-cursor {
   stroke: var(--farbe-rand-kontrast);
   stroke-width: 1;

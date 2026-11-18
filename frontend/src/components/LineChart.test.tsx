@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { axisTicks, formatDay, LineChart, niceStep } from "./LineChart";
+import { axisTicks, formatDay, LineChart, niceStep, seriesTicks } from "./LineChart";
 
 afterEach(cleanup);
 
@@ -16,6 +16,17 @@ describe("Achse des Liniendiagramms", () => {
     expect(axisTicks(48, 50)).toEqual([48, 49, 50]);
     expect(axisTicks(20, 20)).toEqual([20, 21]);
     expect(axisTicks(95, 132)).toEqual([90, 100, 110, 120, 130, 140]);
+  });
+
+  it("legt die Achse einer Reihe eng um ihre Werte", () => {
+    // Kleine Änderung bei großen Zahlen: Achse nicht ab null, sondern um die Werte
+    expect(seriesTicks([812, 815, 818])).toEqual([812, 814, 816, 818]);
+    // Gleiche Werte oder Änderung um 1: mindestens vier Einheiten Bereich
+    expect(seriesTicks([500, 500])).toEqual([498, 500, 502]);
+    expect(seriesTicks([500, 501])).toEqual([498, 500, 502, 504]);
+    // Kleine Zahlen gehen nicht unter null
+    expect(seriesTicks([0, 1])).toEqual([0, 2, 4]);
+    expect(seriesTicks([])).toEqual([0, 1]);
   });
 
   it("schreibt Tage deutsch", () => {
@@ -55,6 +66,28 @@ describe("LineChart", () => {
       "01.11.2026",
     ]);
     expect(table.getByRole("row", { name: /^02.11.2026/ })).toHaveTextContent("50–");
+  });
+
+  it("zeichnet jede Reihe in ein eigenes Feld mit eigener Achse", () => {
+    const { container } = render(
+      <LineChart
+        title="Benutzer"
+        days={days}
+        series={[
+          { id: "mitglieder", label: "Mitglieder", values: [812, 815, 818] },
+          { id: "gaeste", label: "Gäste", values: [40, 41, 43] },
+        ]}
+      />,
+    );
+    expect(container.querySelectorAll(".chart-panel-title")).toHaveLength(2);
+    const labels = [...container.querySelectorAll("text.chart-axis")].map((n) => n.textContent);
+    expect(labels).toContain("812");
+    expect(labels).toContain("40");
+    expect(labels).not.toContain("0");
+    // Die Linie der Mitglieder steigt sichtbar: erster und letzter Punkt liegen weit auseinander.
+    const line = container.querySelector(".chart-line-1")?.getAttribute("d") ?? "";
+    const ys = [...line.matchAll(/[ML][\d.]+ ([\d.]+)/g)].map((match) => Number(match[1]));
+    expect((ys[0] ?? 0) - (ys[ys.length - 1] ?? 0)).toBeGreaterThan(50);
   });
 
   it("kommt mit einem einzelnen Tag und mit leeren Daten zurecht", () => {
