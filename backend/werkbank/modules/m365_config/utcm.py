@@ -42,16 +42,29 @@ def check_graph_url(url: str) -> str:
 # Nutzungsberichte (Reports.Read.All): nur Summen je Dienst, keine Personen
 USAGE_REPORTS = frozenset({"getOffice365ServicesUserCounts", "getOffice365ActiveUserCounts"})
 USAGE_PERIODS = frozenset({"D7", "D30", "D90", "D180"})
-REPORT_HOST = "reports.office.com"
+# Download-Adressen der Berichte: Microsoft nennt reports.office.com, vergibt aber auch
+# regionale Hosts (z. B. reportsXYZ.office.com). Erlaubt: ein Label, das mit „reports“ beginnt,
+# direkt vor office.com, optional mit Unterdomänen davor.
+_REPORT_HOST = re.compile(r"^(?:[a-z0-9-]+\.)*reports[a-z0-9-]*\.office\.com$")
 REPORT_MAX_BYTES = 2_000_000
 
 
 def check_report_url(url: str) -> str:
-    """Download-Adresse eines Berichts: nur HTTPS bei reports.office.com (oder Unterdomäne)."""
+    """Download-Adresse eines Berichts: nur HTTPS ohne eigenen Port bei reports*.office.com.
+
+    Die Fehlermeldung nennt nur den Host, nie den Pfad: Der enthält den Download-Schlüssel.
+    """
     parts = urlsplit(url)
-    host = parts.hostname or ""
-    if parts.scheme != "https" or not (host == REPORT_HOST or host.endswith("." + REPORT_HOST)):
-        raise UtcmError("Unerwartete Download-Adresse des Berichts")
+    host = (parts.hostname or "").lower()
+    try:
+        port = parts.port
+    except ValueError:
+        port = -1
+    if parts.scheme != "https" or port is not None or not _REPORT_HOST.match(host):
+        shown = host[:100] if host else "ohne Host"
+        raise UtcmError(
+            f"Unerwartete Download-Adresse des Berichts ({parts.scheme or '-'}://{shown})"
+        )
     return url
 
 

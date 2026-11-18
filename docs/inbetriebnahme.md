@@ -21,7 +21,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 
 - [ ] Der Reverse Proxy erreicht den Host (gleicher Host oder internes Netz bzw. VPN); die Adresse des Hosts in diesem Netz ist bekannt
 - [ ] Secrets liegen in `/opt/werkbank/secrets` (sechs Dateien, siehe [`deploy/README.md`](../deploy/README.md))
-- [ ] Ausgehend erreichbar: `login.microsoftonline.com`, `graph.microsoft.com`, `ghcr.io` (Image holen); mit `TENANT_USAGE_ENABLED` auch `reports.office.com`
+- [ ] Ausgehend erreichbar: `login.microsoftonline.com`, `graph.microsoft.com`, `ghcr.io` (Image holen); mit `TENANT_USAGE_ENABLED` auch `reports*.office.com` (z. B. `reports.office.com` oder regionale Hosts)
 
 ## 3. Projekt anlegen (Compose oder Git-Sync)
 

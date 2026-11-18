@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.57.1] – 2026-11-18
+
+Microsoft 365: Abruf der Nutzung schlug fehl.
+
+### Microsoft 365
+
+- **Nutzung:** Microsoft liefert die Berichte je nach Tenant von einem regionalen Host statt von `reports.office.com`; die Werkbank lehnte diese Adresse ab („Unerwartete Download-Adresse des Berichts“). Erlaubt sind jetzt alle Hosts `reports*.office.com` (auch mit Unterdomänen), weiterhin nur HTTPS, ohne eigenen Port und ohne Token
+- Die Fehlermeldung nennt den abgelehnten Host (nie den Pfad mit dem Download-Schlüssel)
+- Doku: Spec, Entra-Einrichtung, Inbetriebnahme, Datenschutz
+
 ## [0.57.0] – 2026-11-18
 
 Diagramme: kleine Änderungen werden sichtbar.
