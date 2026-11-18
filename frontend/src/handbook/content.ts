@@ -442,7 +442,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Ein Klick öffnet den Verlauf als Diagramm. Wähle den Zeitraum über die Knöpfe darüber; die Werte eines Tages zeigt der Zeiger oder der Regler, alle Werte stehen auch in einer Tabelle. Die Werkbank speichert je Tag einen Stand und bewahrt ihn drei Jahre auf.",
+            text: "Ein Klick öffnet den Verlauf als Diagramm. Jede Linie hat ihr eigenes Feld mit eigener Achse, die eng um ihre Werte liegt; so sind auch kleine Änderungen zu sehen. Achte deshalb auf die Zahlen an der Achse. Wähle den Zeitraum über die Knöpfe darüber; die Werte eines Tages zeigt der Zeiger oder der Regler, alle Werte stehen auch in einer Tabelle. Die Werkbank speichert je Tag einen Stand und bewahrt ihn drei Jahre auf.",
           },
         ],
         links: [{ to: "/m365/lizenzen", label: "Zu den Lizenzen" }],

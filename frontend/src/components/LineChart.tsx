@@ -12,7 +12,10 @@ interface LineChartProps {
   title: string;
   /** Tage als JJJJ-MM-TT, aufsteigend. */
   days: string[];
-  /** Höchstens drei Reihen; die Farbe hängt an der Position und bleibt damit fest. */
+  /**
+   * Höchstens drei Reihen; die Farbe hängt an der Position und bleibt damit fest. Mehrere
+   * Reihen stehen untereinander, jede mit eigener Achse.
+   */
   series: ChartSeries[];
 }
 
@@ -21,12 +24,18 @@ interface LineChartProps {
 const DEFAULT_WIDTH = 640;
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 1400;
-const HEIGHT = 300;
-const LEFT = 56;
+const LEFT = 64;
 const RIGHT = 20;
-const TOP = 16;
 const BOTTOM = 34;
-const PLOT_HEIGHT = HEIGHT - TOP - BOTTOM;
+// Eine Reihe: ein hohes Feld. Mehrere Reihen: je Reihe ein eigenes Feld mit eigener Achse
+// (kleine Vielfache), damit kleine Änderungen nicht neben großen Zahlen verschwinden.
+const SINGLE_PLOT_HEIGHT = 250;
+const MULTI_PLOT_HEIGHT = 110;
+// Platz über jedem Feld für den Namen der Reihe (bei einer Reihe nur Rand)
+const SINGLE_TOP = 16;
+const MULTI_TOP = 30;
+// Kleinster gezeigter Wertebereich: Eine Änderung um 1 füllt nicht das ganze Feld.
+const MIN_SPAN = 4;
 const DAY_MS = 86_400_000;
 
 const dayFormat = new Intl.DateTimeFormat("de-DE", {
@@ -52,8 +61,8 @@ export function niceStep(span: number, target = 4): number {
 }
 
 /** Achsenwerte, die alle Daten einschließen. */
-export function axisTicks(min: number, max: number): number[] {
-  const step = niceStep(max - min);
+export function axisTicks(min: number, max: number, target = 4): number[] {
+  const step = niceStep(max - min, target);
   const low = Math.floor(min / step) * step;
   let high = Math.ceil(max / step) * step;
   if (high === low) {
@@ -67,7 +76,30 @@ export function axisTicks(min: number, max: number): number[] {
 }
 
 /**
- * Liniendiagramm für einen Verlauf über Tage. Alle Reihen teilen sich eine Achse.
+ * Achse für eine Reihe: eng um ihre eigenen Werte, damit Änderungen sichtbar werden, aber
+ * mindestens MIN_SPAN breit und nicht unter null, wenn alle Werte positiv sind.
+ */
+export function seriesTicks(values: number[], target = 3): number[] {
+  if (values.length === 0) {
+    return [0, 1];
+  }
+  let low = Math.min(...values);
+  let high = Math.max(...values);
+  if (high - low < MIN_SPAN) {
+    const extra = (MIN_SPAN - (high - low)) / 2;
+    low -= extra;
+    high += extra;
+    if (low < 0 && Math.min(...values) >= 0) {
+      high -= low;
+      low = 0;
+    }
+  }
+  return axisTicks(low, high, target);
+}
+
+/**
+ * Liniendiagramm für einen Verlauf über Tage. Jede Reihe hat ihre eigene, enge Achse, damit
+ * auch kleine Änderungen sichtbar sind; mehrere Reihen stehen untereinander.
  * Die Werte eines Tages stehen unter dem Diagramm (Zeiger, Regler oder Tabelle),
  * die Farbe ist nie die einzige Unterscheidung.
  */
@@ -113,12 +145,24 @@ export function LineChart({ title, days, series }: LineChartProps) {
     days.length === 1
       ? LEFT + PLOT_WIDTH / 2
       : LEFT + (((times[index] ?? start) - start) / span) * PLOT_WIDTH;
-  const ticks = axisTicks(Math.min(...numbers), Math.max(...numbers));
-  const low = ticks[0] ?? 0;
-  const high = ticks[ticks.length - 1] ?? 1;
-  const y = (value: number) => TOP + PLOT_HEIGHT - ((value - low) / (high - low)) * PLOT_HEIGHT;
+  const multi = shown.length > 1;
+  const plotHeight = multi ? MULTI_PLOT_HEIGHT : SINGLE_PLOT_HEIGHT;
+  const top = multi ? MULTI_TOP : SINGLE_TOP;
+  const panelHeight = top + plotHeight;
+  const HEIGHT = panelHeight * shown.length + BOTTOM;
+  const panels = shown.map((entry, position) => {
+    const ticks = seriesTicks(
+      entry.values.filter((value): value is number => value !== null),
+      multi ? 3 : 4,
+    );
+    const low = ticks[0] ?? 0;
+    const high = ticks[ticks.length - 1] ?? 1;
+    const offset = position * panelHeight + top;
+    const y = (value: number) => offset + plotHeight - ((value - low) / (high - low)) * plotHeight;
+    return { entry, position, ticks, y, offset };
+  });
 
-  const path = (values: (number | null)[]) => {
+  const path = (values: (number | null)[], y: (value: number) => number) => {
     let result = "";
     let pen = false;
     values.forEach((value, index) => {
@@ -163,12 +207,27 @@ export function LineChart({ title, days, series }: LineChartProps) {
         onPointerMove={onPointer}
         onPointerDown={onPointer}
       >
-        {ticks.map((tick) => (
-          <g key={tick}>
-            <line className="chart-grid" x1={LEFT} x2={WIDTH - RIGHT} y1={y(tick)} y2={y(tick)} />
-            <text className="chart-axis" x={LEFT - 10} y={y(tick) + 5} textAnchor="end">
-              {numberFormat.format(tick)}
-            </text>
+        {panels.map(({ entry, ticks, y, offset }) => (
+          <g key={entry.id}>
+            {multi && (
+              <text className="chart-axis chart-panel-title" x={LEFT} y={offset - 10}>
+                {entry.label}
+              </text>
+            )}
+            {ticks.map((tick) => (
+              <g key={tick}>
+                <line
+                  className="chart-grid"
+                  x1={LEFT}
+                  x2={WIDTH - RIGHT}
+                  y1={y(tick)}
+                  y2={y(tick)}
+                />
+                <text className="chart-axis" x={LEFT - 10} y={y(tick) + 5} textAnchor="end">
+                  {numberFormat.format(tick)}
+                </text>
+              </g>
+            ))}
           </g>
         ))}
         {labelDays.map((index, position) => (
@@ -192,17 +251,17 @@ export function LineChart({ title, days, series }: LineChartProps) {
           className="chart-cursor"
           x1={x(active)}
           x2={x(active)}
-          y1={TOP}
-          y2={TOP + PLOT_HEIGHT}
+          y1={top}
+          y2={HEIGHT - BOTTOM}
         />
-        {shown.map((entry, position) => (
+        {panels.map(({ entry, position, y }) => (
           <path
             key={entry.id}
             className={`chart-line chart-line-${position + 1}`}
-            d={path(entry.values)}
+            d={path(entry.values, y)}
           />
         ))}
-        {shown.map((entry, position) => {
+        {panels.map(({ entry, position, y }) => {
           const value = entry.values[active];
           return value === null || value === undefined ? null : (
             <circle

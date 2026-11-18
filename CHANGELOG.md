@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.57.0] – 2026-11-18
+
+Diagramme: kleine Änderungen werden sichtbar.
+
+### Werkbank
+
+- **Liniendiagramme** (Lizenzen, Benutzer, Nutzung, DNS-Abgleich): Jede Reihe steht in einem eigenen Feld mit eigener Achse, eng um ihre Werte statt einer gemeinsamen Achse ab dem kleinsten Wert aller Reihen. Vorher verschwanden kleine Änderungen (wenige Stück bei Hunderten) als gerade Linie, besonders neben einer Reihe mit ganz anderer Größe. Mindestens vier Einheiten Bereich, damit eine Änderung um 1 nicht das ganze Feld füllt; bei positiven Werten nie unter null
+- Spec und Handbuch angepasst
+
 ## [0.56.0] – 2026-11-17
 
 Microsoft 365: Nutzung der Dienste.
