@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.60.0] – 2026-11-18
+
+Abstände im Menü einstellbar.
+
+### Werkbank
+
+- **Konto › Darstellung › Abstände im Menü:** Kompakt, Normal oder Weiträumig. Ändert die Höhe der Einträge (34, 44 oder 52 px), die Luft zwischen Einträgen und zwischen Gruppen; wirkt zusammen mit der Schriftgröße. Bei Bedienung mit dem Finger bleiben Einträge auch kompakt mindestens 44 px hoch. Gespeichert je Browser, beim Laden ohne Springen gesetzt
+- Spec und Handbuch angepasst
+
 ## [0.59.1] – 2026-11-18
 
 KI-Texte mit Anthropic: Verbindungstest schlug fehl.
