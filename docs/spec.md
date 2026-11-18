@@ -169,7 +169,7 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
 - **Erneute Anmeldung (Step-up)** beim Öffnen der Verwaltung, wenn die letzte Anmeldung länger als 15 Minuten zurückliegt (`STEP_UP_MINUTES`). Die Werkbank schickt die Person dann mit `prompt=login` zu Entra. Liefert Entra den Zeitpunkt der letzten echten Anmeldung mit (`auth_time`), zählt dieser; eine stille Anmeldung über eine bestehende Entra-Sitzung gilt dann nicht als frisch.
 - Jede Anmeldung beendet die vorherige Sitzung desselben Browsers (neues Token).
 - **Profilbild (optional, `ENTRA_PROFILE_PHOTO`):** Bei der Anmeldung liest die Werkbank mit der delegierten Berechtigung `User.Read` das eigene Bild der Person, speichert es und zeigt es allen angemeldeten Personen. Das Zugriffstoken wird danach verworfen. Ein Fehler beim Abruf verhindert die Anmeldung nicht.
-- **Seite „Konto“:** eigene Angaben, Rollen, Sitzung, Darstellung und Schriftgröße im Menü (je Browser), Version.
+- **Seite „Konto“:** eigene Angaben, Rollen, Sitzung, Darstellung, Schriftgröße und Abstände im Menü (je Browser), Version.
 - **Entra Conditional Access** mit einer eigenen Richtlinie nur für die Werkbank, da MFA im Tenant noch nicht allgemein erzwungen wird:
   - **Benutzer:** alle Gruppen mit Werkbank-Rollen (bzw. alle Benutzer)
   - **Zielressource:** Enterprise-App „Werkbank“
@@ -620,7 +620,7 @@ Evergreen:
 | Reports | später, für Evergreen (8.7) | Berichtsvorlagen, Download, geplanter Versand. Noch nicht gebaut; ohne Eintrag in der Navigation |
 | Verwaltung (eigener Bereich in der Navigation) | Admin (mit Step-up) | Seiten **Allgemein** (Branding, Aufbewahrung des Audit-Logs, Vorlauf für ablaufende Zertifikate und Secrets), **Rollen** (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), **Mail & Teams** (SMTP-Server, Teams), **Verbindungen** (KI-Texte, NetBox, Abfragen ins Internet) und **Audit-Log**. Später: Module, Kommentarregeln |
 | Verwaltung › Audit-Log | Admin | Filterbare Tabelle, Export |
-| Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel) und Schriftgröße im Menü (klein, normal, groß, sehr groß; je Browser, nur Navigation), Benachrichtigungen je Art mit Glocke, Mail, Teams und Push, Push je Gerät ein und aus mit Liste der Geräte und Testnachricht, auf iPhone/iPad Hinweis zur Installation, Version |
+| Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel) und Schriftgröße im Menü (klein, normal, groß, sehr groß) und Abstände im Menü (kompakt, normal, weiträumig; mit Touch mindestens 44 px; je Browser, nur Navigation), Benachrichtigungen je Art mit Glocke, Mail, Teams und Push, Push je Gerät ein und aus mit Liste der Geräte und Testnachricht, auf iPhone/iPad Hinweis zur Installation, Version |
 | Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Verweis auf die Einstellungen im Konto. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
 | IT-Projekte › Alle Projekte | Projekte.* (Anlegen: Projekte.Editor) | Liste mit Status, veranschlagt, geplant, Ist, offenen Punkten, letztem Jour Fixe; Filter, Suche, neues Projekt |

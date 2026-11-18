@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.60.0",
+    date: "2026-11-18",
+    summary: "Neu: Abstände im Menü einstellbar.",
+    sections: [
+      {
+        area: "Werkbank",
+        entries: [
+          "Im Konto unter Darstellung stellst du das Menü auf kompakt, normal oder weiträumig. Das gilt für diesen Browser.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.59.1",
     date: "2026-11-18",
     summary: "Korrektur: KI-Texte mit Anthropic funktionieren mit neueren Claude-Modellen.",

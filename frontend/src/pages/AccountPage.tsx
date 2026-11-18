@@ -3,6 +3,7 @@ import { Avatar } from "../components/Avatar";
 import { Link } from "../components/Link";
 import { NotificationPreferences } from "../components/NotificationPreferences";
 import { MenuSizeSwitch } from "../components/MenuSizeSwitch";
+import { MenuSpacingSwitch } from "../components/MenuSpacingSwitch";
 import { ThemeSwitch } from "../components/ThemeSwitch";
 import { NEWS_PATH } from "../navigation";
 import { HANDBOOK_PATH } from "../handbook";
@@ -88,6 +89,7 @@ export function AccountPage({ me }: { me: Me }) {
         <div className="detail-body">
           <ThemeSwitch />
           <MenuSizeSwitch />
+          <MenuSpacingSwitch />
         </div>
       </section>
 

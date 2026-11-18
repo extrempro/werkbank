@@ -1,4 +1,4 @@
-// Setzt die Darstellung (hell oder dunkel) und die Schriftgröße im Menü, bevor die Seite gezeichnet wird – sonst blitzt
+// Setzt die Darstellung (hell oder dunkel) sowie Schriftgröße und Abstände im Menü, bevor die Seite gezeichnet wird – sonst blitzt
 // beim Laden kurz die helle Ansicht auf. Die Auswahl selbst verwaltet src/theme.ts.
 (function () {
   var choice = null;
@@ -20,5 +20,15 @@
   }
   if (menu === "klein" || menu === "gross" || menu === "sehr-gross") {
     document.documentElement.dataset.menu = menu;
+  }
+  // Abstände im Menü (src/menuSize.ts); „normal“ ist ohne Attribut
+  var spacing = null;
+  try {
+    spacing = window.localStorage.getItem("werkbank-menue-abstand");
+  } catch {
+    // Speicher gesperrt: normale Abstände
+  }
+  if (spacing === "kompakt" || spacing === "weit") {
+    document.documentElement.dataset.menuSpacing = spacing;
   }
 })();
