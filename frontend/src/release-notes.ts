@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.59.0",
+    date: "2026-11-18",
+    summary: "KI-Texte: Anthropic lässt sich direkt anbinden.",
+    sections: [
+      {
+        area: "Werkbank",
+        entries: [
+          "Verwaltung › KI-Texte: Als Art der Schnittstelle lässt sich jetzt „Anthropic (Claude)“ wählen.",
+          "Schlägt der Verbindungstest fehl, steht die Meldung des Anbieters mit dabei.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.58.0",
     date: "2026-11-18",
     summary: "Neu: Schriftgröße im Menü einstellbar.",

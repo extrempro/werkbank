@@ -13,6 +13,8 @@ from werkbank.core.ai import (
     AI_RATE_MIN,
     AiCompleterDep,
     AiError,
+    AiProvider,
+    ai_provider,
     ai_rate,
     load_ai_config,
     stored_ai,
@@ -87,6 +89,7 @@ class SmtpOut(BaseModel):
 
 class AiOut(BaseModel):
     enabled: bool
+    provider: AiProvider
     base_url: str
     model: str
     texts_per_hour: int
@@ -176,6 +179,8 @@ class SmtpIn(BaseModel):
 
 class AiIn(BaseModel):
     enabled: bool
+    # Fehlt die Angabe (ältere Oberfläche), bleibt es OpenAI-kompatibel.
+    provider: AiProvider = "openai"
     base_url: str = Field(default="", max_length=300)
     model: str = Field(default="", max_length=100)
     texts_per_hour: int = Field(ge=AI_RATE_MIN, le=AI_RATE_MAX)
@@ -245,6 +250,7 @@ def _smtp_out(stored: Any, key_available: bool) -> SmtpOut:
 def _ai_out(stored: dict[str, Any], key_available: bool) -> AiOut:
     return AiOut(
         enabled=stored.get("enabled") is True,
+        provider=ai_provider(stored),
         base_url=str(stored.get("base_url") or ""),
         model=str(stored.get("model") or ""),
         texts_per_hour=ai_rate(stored),
@@ -624,6 +630,7 @@ def update_ai(
         )
     value = {
         "enabled": body.enabled,
+        "provider": body.provider,
         "base_url": body.base_url,
         "model": body.model,
         "texts_per_hour": body.texts_per_hour,
@@ -640,6 +647,7 @@ def update_ai(
         ip=client_ip(request),
         details={
             "enabled": body.enabled,
+            "provider": body.provider,
             "base_url": body.base_url,
             "model": body.model,
             "texts_per_hour": body.texts_per_hour,

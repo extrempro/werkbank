@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.59.0] – 2026-11-18
+
+KI-Texte: Anthropic direkt anbinden.
+
+### Werkbank
+
+- **KI-Texte, Art der Schnittstelle:** neben „OpenAI-kompatibel“ jetzt „Anthropic (Claude)“ über die eigene Schnittstelle von Anthropic (`/messages`, Kopfzeilen `x-api-key` und `anthropic-version`). Mitdenken ist ausgeschaltet und `temperature` wird nicht geschickt; über die Kompatibilitätsschicht lehnten Claude-5-Modelle die Anfrage mit 400 ab. Bei Wahl von Anthropic und leerer Adresse setzt die Oberfläche `https://api.anthropic.com/v1`
+- Bestehende Einstellungen bleiben OpenAI-kompatibel
+- **Fehlermeldung des Anbieters:** Verbindungstest und Auftrag nennen sie jetzt mit (gekürzt auf 200 Zeichen, einzeilig, nie der Schlüssel)
+- Spec und Handbuch angepasst
+
 ## [0.58.0] – 2026-11-18
 
 Schriftgröße im Menü einstellbar.

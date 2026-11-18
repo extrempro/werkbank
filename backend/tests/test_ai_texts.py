@@ -1,6 +1,7 @@
 """KI-Texte: Anbieter in der Verwaltung, Abruf, Vorschläge je Art von Einstellung."""
 
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from werkbank.core.ai import (
     AI_KEY,
     AiConfig,
     AiError,
+    AiProvider,
     complete,
     get_ai_completer,
     load_ai_config,
@@ -128,6 +130,64 @@ def test_complete_reports_errors_without_details(status: int, fragment: str) -> 
     assert ZUGANG not in str(caught.value)
 
 
+def test_complete_anthropic_uses_messages_without_thinking() -> None:
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["key"] = request.headers.get("x-api-key")
+        seen["auth"] = request.headers.get("authorization")
+        seen["version"] = request.headers.get("anthropic-version")
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(
+            200,
+            json={
+                "content": [{"type": "text", "text": " Ein "}, {"type": "text", "text": "Text. "}]
+            },
+        )
+
+    config = replace(CONFIG, provider="anthropic")
+    text = complete(config, "System", "Frage", transport=httpx.MockTransport(handler))
+    assert text == "Ein Text."
+    assert seen["url"] == "https://ki.example.com/v1/messages"
+    assert (seen["key"], seen["auth"]) == (ZUGANG, None)
+    assert seen["version"] == "2023-06-01"
+    body = seen["body"]
+    assert body["system"] == "System"
+    assert body["messages"] == [{"role": "user", "content": "Frage"}]
+    assert body["thinking"] == {"type": "disabled"}
+    assert "temperature" not in body
+
+    with pytest.raises(AiError, match="keinen Text"):
+        complete(
+            config,
+            "System",
+            "Frage",
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(200, json={"content": [{"type": "thinking"}]})
+            ),
+        )
+
+
+def test_complete_shows_shortened_provider_message_without_key() -> None:
+    message = f"model: unbekannt\nSchlüssel {ZUGANG} " + "x" * 400
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={"type": "error", "error": {"message": message}})
+
+    providers: tuple[AiProvider, ...] = ("openai", "anthropic")
+    for provider in providers:
+        config = replace(CONFIG, provider=provider)
+        with pytest.raises(AiError) as caught:
+            complete(config, "System", "Frage", transport=httpx.MockTransport(handler))
+        text = str(caught.value)
+        assert text.startswith("Der Anbieter hat mit einem Fehler geantwortet (400).")
+        assert "Meldung des Anbieters: model: unbekannt Schlüssel" in text
+        assert ZUGANG not in text
+        assert "\n" not in text
+        assert len(text) < 300
+
+
 def test_complete_rejects_unexpected_answers() -> None:
     def broken(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"unerwartet": True})
@@ -184,6 +244,17 @@ def test_ai_settings_are_saved_with_encrypted_key(clean: Session, tmp_path: Path
     assert decrypt_secret(settings, stored.value["api_key_encrypted"]) == ZUGANG
     config = load_ai_config(clean, settings)
     assert config is not None and config.api_key == ZUGANG and config.texts_per_hour == 10
+
+    assert config.provider == "openai" and data["provider"] == "openai"
+    anthropic = client.put(f"{ADMIN}/ai", json={**AI, "provider": "anthropic"}, headers=HEADERS)
+    assert anthropic.json()["ai"]["provider"] == "anthropic"
+    clean.expire_all()
+    config = load_ai_config(clean, settings)
+    assert config is not None and config.provider == "anthropic"
+    assert (
+        client.put(f"{ADMIN}/ai", json={**AI, "provider": "andere"}, headers=HEADERS).status_code
+        == 422
+    )
 
     # ohne neuen Schlüssel bleibt der alte; leerer Text löscht ihn
     kept = client.put(f"{ADMIN}/ai", json={**AI, "model": "anderes"}, headers=HEADERS)

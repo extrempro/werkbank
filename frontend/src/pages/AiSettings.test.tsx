@@ -10,6 +10,7 @@ afterEach(() => {
 
 const ai: AiSettingsData = {
   enabled: true,
+  provider: "openai",
   base_url: "https://ki.example.com/v1",
   model: "beispiel-modell",
   texts_per_hour: 30,
@@ -57,6 +58,7 @@ describe("AiSettings", () => {
     expect(calls[0]?.init?.method).toBe("PUT");
     const body = JSON.parse(String(calls[0]?.init?.body));
     expect(body.texts_per_hour).toBe(10);
+    expect(body.provider).toBe("openai");
     expect("api_key" in body).toBe(false);
     expect(onChange).toHaveBeenCalled();
   });
@@ -98,5 +100,22 @@ describe("AiSettings", () => {
     expect(screen.getByLabelText("Schlüssel (freiwillig)")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Verbindung testen" })).toBeDisabled();
     expect(screen.getByText(/fehlt die Schlüsseldatei/)).toBeVisible();
+  });
+
+  it("schaltet auf Anthropic und setzt bei leerer Adresse die Adresse von Anthropic", async () => {
+    const calls = stubFetch();
+    render(<AiSettings ai={{ ...ai, base_url: "" }} onChange={() => undefined} />);
+    fireEvent.change(screen.getByLabelText("Art der Schnittstelle"), {
+      target: { value: "anthropic" },
+    });
+    expect(screen.getByLabelText("Adresse der Schnittstelle")).toHaveValue(
+      "https://api.anthropic.com/v1",
+    );
+    expect(screen.getByText(/Mitdenken ist für die kurzen Texte ausgeschaltet/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "KI-Einstellungen speichern" }));
+    expect(await screen.findByText("Die KI-Einstellungen sind gespeichert.")).toBeVisible();
+    const body = JSON.parse(String(calls[0]?.init?.body));
+    expect(body.provider).toBe("anthropic");
+    expect(body.base_url).toBe("https://api.anthropic.com/v1");
   });
 });
