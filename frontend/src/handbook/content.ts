@@ -1255,7 +1255,7 @@ export const CHAPTERS: readonly Chapter[] = [
               ],
               [
                 "Verbindungen",
-                "KI-Texte (Anbieter, Modell, Höchstzahl je Stunde; Vorgabe: aus), NetBox für den DNS-Abgleich, Abfragen der IT-Tools ins Internet (Vorgabe: erlaubt)",
+                "KI-Texte (Art der Schnittstelle: OpenAI-kompatibel oder Anthropic, Adresse, Modell, Schlüssel, Höchstzahl je Stunde; Vorgabe: aus; „Verbindung testen“ zeigt bei Fehlern die Meldung des Anbieters), NetBox für den DNS-Abgleich, Abfragen der IT-Tools ins Internet (Vorgabe: erlaubt)",
               ],
               ["Audit-Log", "das Protokoll aller Aktionen (siehe oben)"],
             ],

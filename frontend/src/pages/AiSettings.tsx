@@ -4,20 +4,24 @@ import {
   saveAiSettings,
   testAiConnection,
   type AdminSettings,
+  type AiProvider,
   type AiSettings as AiSettingsData,
   type AiUpdate,
 } from "../api";
 
 type Message = { kind: "status" | "alert"; text: string };
 
+const ANTHROPIC_URL = "https://api.anthropic.com/v1";
+
 interface AiSettingsProps {
   ai: AiSettingsData;
   onChange: (settings: AdminSettings) => void;
 }
 
-/** Verwaltung › Allgemein: Anbieter für KI-Texte (OpenAI-kompatible Schnittstelle). */
+/** Verwaltung › Allgemein: Anbieter für KI-Texte (OpenAI-kompatibel oder Anthropic). */
 export function AiSettings({ ai, onChange }: AiSettingsProps) {
   const [enabled, setEnabled] = useState(ai.enabled);
+  const [provider, setProvider] = useState<AiProvider>(ai.provider);
   const [baseUrl, setBaseUrl] = useState(ai.base_url);
   const [model, setModel] = useState(ai.model);
   const [rate, setRate] = useState(String(ai.texts_per_hour));
@@ -33,6 +37,7 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
     event.preventDefault();
     const update: AiUpdate = {
       enabled,
+      provider,
       base_url: baseUrl.trim(),
       model: model.trim(),
       texts_per_hour: Number(rate),
@@ -105,13 +110,29 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
         </label>
         <div className="form-grid">
           <label>
+            Art der Schnittstelle
+            <select
+              value={provider}
+              onChange={(event) => {
+                const next = event.target.value === "anthropic" ? "anthropic" : "openai";
+                setProvider(next);
+                if (next === "anthropic" && baseUrl.trim() === "") {
+                  setBaseUrl(ANTHROPIC_URL);
+                }
+              }}
+            >
+              <option value="openai">OpenAI-kompatibel</option>
+              <option value="anthropic">Anthropic (Claude)</option>
+            </select>
+          </label>
+          <label>
             Adresse der Schnittstelle
             <input
               type="url"
               value={baseUrl}
               maxLength={300}
               autoComplete="off"
-              placeholder="https://ki.example.com/v1"
+              placeholder={provider === "anthropic" ? ANTHROPIC_URL : "https://ki.example.com/v1"}
               aria-describedby={urlHint}
               onChange={(event) => setBaseUrl(event.target.value)}
             />
@@ -152,8 +173,9 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
           </label>
         </div>
         <p className="small" id={urlHint}>
-          Jeder Anbieter mit OpenAI-kompatibler Schnittstelle, auch ein eigener Dienst im internen
-          Netz. Die Adresse endet meist auf /v1.
+          {provider === "anthropic"
+            ? `Schnittstelle von Anthropic (Messages-API), Adresse ${ANTHROPIC_URL}. Mitdenken ist für die kurzen Texte ausgeschaltet.`
+            : "Jeder Anbieter mit OpenAI-kompatibler Schnittstelle, auch ein eigener Dienst im internen Netz. Die Adresse endet meist auf /v1."}
         </p>
         <p className="small" id={keyHint}>
           {!ai.key_storage_available

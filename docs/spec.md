@@ -305,7 +305,7 @@ Standardregeln:
 - Übergeben werden nur technische Metadaten (Name, Schema-Text, Wert, Microsoft-Ankündigung), **keine personenbezogenen Daten**.
 - Ergebnis gekennzeichnet als „KI-generiert, ungeprüft“, bis eine berechtigte Person es übernimmt.
 - Abschaltbar in der Verwaltung. Anbieter, Vertrag (AVV) und Freigabe durch den Datenschutz klärt der Betreiber außerhalb der Werkbank.
-- Stand: umgesetzt für Einstellungen der M365-Konfiguration. Anbieter (OpenAI-kompatible Adresse, Modell, Schlüssel) und Höchstzahl je Stunde stehen in der Verwaltung, Standard ist ausgeschaltet. Abweichung zum Schutz der Daten: Übergeben werden nur Dienst, Bereich und Name der Eigenschaft, **nicht** der Wert und nicht der Name des Objekts (beides kann Personen- oder Firmennamen enthalten). Ein Text gilt deshalb für alle Einstellungen derselben Art (`cfg_ai_texts`). Der Worker erzeugt die Texte stündlich für Einstellungen ohne eigene Beschreibung; Reviewer geben frei oder verwerfen. Noch offen: Vorschläge für Evergreen-Vorgänge.
+- Stand: umgesetzt für Einstellungen der M365-Konfiguration. Anbieter (Art der Schnittstelle: OpenAI-kompatibel über `/chat/completions` oder Anthropic über `/messages` mit ausgeschaltetem Mitdenken und ohne `temperature`; Adresse, Modell, Schlüssel) und Höchstzahl je Stunde stehen in der Verwaltung; bei Fehlern zeigt die Werkbank die Meldung des Anbieters gekürzt (höchstens 200 Zeichen, einzeilig, nie der Schlüssel), Standard ist ausgeschaltet. Abweichung zum Schutz der Daten: Übergeben werden nur Dienst, Bereich und Name der Eigenschaft, **nicht** der Wert und nicht der Name des Objekts (beides kann Personen- oder Firmennamen enthalten). Ein Text gilt deshalb für alle Einstellungen derselben Art (`cfg_ai_texts`). Der Worker erzeugt die Texte stündlich für Einstellungen ohne eigene Beschreibung; Reviewer geben frei oder verwerfen. Noch offen: Vorschläge für Evergreen-Vorgänge.
 
 ### 6.10 Suche
 
@@ -820,7 +820,7 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 3 | Verwaltung | Entschieden: Step-up-Anmeldung genügt, keine zusätzliche Beschränkung auf das interne Netz |
 | 4 | Audit-Log | Entschieden: Aufbewahrung 90 Tage, in der Verwaltung einstellbar (30 bis 3650 Tage) |
 | 5 | Anhänge | Entschieden: kein Virenscan (6.5) |
-| 6 | KI-Texte | Entschieden: Anbieter frei einstellbar (OpenAI-kompatible Adresse, Modell und Schlüssel in der Verwaltung; der Schlüssel liegt verschlüsselt in der Datenbank). Texte entstehen automatisch und bleiben „ungeprüft“ bis zur Freigabe. Offen: AVV und Freigabe Datenschutz je nach gewähltem Anbieter |
+| 6 | KI-Texte | Entschieden: Anbieter frei einstellbar (OpenAI-kompatibel oder Anthropic; Adresse, Modell und Schlüssel in der Verwaltung; der Schlüssel liegt verschlüsselt in der Datenbank). Texte entstehen automatisch und bleiben „ungeprüft“ bis zur Freigabe. Offen: AVV und Freigabe Datenschutz je nach gewähltem Anbieter |
 | 7 | Benchmarks | Entschieden: Empfehlungen aus Microsoft Secure Score (eigene Seite, Zuordnung zu Einstellungen von Hand, später ergänzt um eine mitgelieferte Zuordnung); CIS-Benchmarks werden wegen der Lizenz nicht mitgeliefert |
 | 8 | Datenschutz | Rechtsgrundlage, Abstimmung mit dem DSB und Beteiligung des BR klärt der Betreiber; nicht Teil der Werkbank. Die Werkbank liefert dafür `docs/datenschutz.md` |
 | 9 | Hostname | Erledigt: Der öffentliche Hostname ist Konfiguration (`PUBLIC_URL`) und steht nicht im Repository |

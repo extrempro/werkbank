@@ -308,8 +308,12 @@ export interface SmtpSettings {
   password_storage_available: boolean;
 }
 
+/** Art der Schnittstelle: OpenAI-kompatibel oder Anthropic (Messages-API). */
+export type AiProvider = "openai" | "anthropic";
+
 export interface AiSettings {
   enabled: boolean;
+  provider: AiProvider;
   base_url: string;
   model: string;
   texts_per_hour: number;
@@ -321,6 +325,7 @@ export interface AiSettings {
 
 export interface AiUpdate {
   enabled: boolean;
+  provider: AiProvider;
   base_url: string;
   model: string;
   texts_per_hour: number;
