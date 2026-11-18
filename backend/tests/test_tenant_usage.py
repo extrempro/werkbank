@@ -122,8 +122,8 @@ def test_report_url_only_microsoft() -> None:
 def test_report_url_error_names_host_not_path() -> None:
     with pytest.raises(UtcmError) as error:
         check_report_url("https://example.com/data/download/geheimer-schluessel")
-    assert "example.com" in str(error.value)
-    assert "geheimer-schluessel" not in str(error.value)
+    # Genau der Host, nie der Pfad mit dem Download-Schlüssel
+    assert str(error.value) == "Unerwartete Download-Adresse des Berichts (https://example.com)"
 
 
 def test_report_redirect_to_other_host_is_refused() -> None:
