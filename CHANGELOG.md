@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.58.0] – 2026-11-18
+
+Schriftgröße im Menü einstellbar.
+
+### Werkbank
+
+- **Konto › Darstellung › Schriftgröße im Menü:** Klein, Normal, Groß oder Sehr groß (90, 100, 115 oder 130 %). Gilt für die Navigation links und das aufgeklappte Menü auf dem Handy, nicht für die Seiten; Symbole und Menübreite wachsen mit, Einträge bleiben mindestens 44 px hoch. Gespeichert je Browser wie die Darstellung, beim Laden ohne Springen gesetzt (`public/theme.js`), andere Tabs übernehmen die Auswahl
+- Auf der Kontoseite stehen die Überschriften beider Auswahlen jetzt sichtbar
+- Handbuch angepasst
+
 ## [0.57.1] – 2026-11-18
 
 Microsoft 365: Abruf der Nutzung schlug fehl.
