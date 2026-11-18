@@ -98,15 +98,32 @@ def test_parse_daily_counts_skips_empty_values_and_bad_dates() -> None:
 
 
 def test_report_url_only_microsoft() -> None:
-    assert check_report_url(DOWNLOAD) == DOWNLOAD
+    for good in (
+        DOWNLOAD,
+        "https://reportsweu.office.com/data/download/beispiel",
+        "https://eu.reports.office.com/data/download/beispiel",
+        "https://REPORTS.office.com/x",
+    ):
+        assert check_report_url(good) == good
     for bad in (
         "http://reports.office.com/x",
+        "https://reports.office.com:8443/x",
         "https://reports.office.com.example.com/x",
+        "https://evilreports.office.com/x",
+        "https://reports.office.com.evil/x",
+        "https://reports.example.com/x",
         "https://example.com/x",
         "",
     ):
         with pytest.raises(UtcmError):
             check_report_url(bad)
+
+
+def test_report_url_error_names_host_not_path() -> None:
+    with pytest.raises(UtcmError) as error:
+        check_report_url("https://example.com/data/download/geheimer-schluessel")
+    # Genau der Host, nie der Pfad mit dem Download-Schlüssel
+    assert str(error.value) == "Unerwartete Download-Adresse des Berichts (https://example.com)"
 
 
 def test_report_redirect_to_other_host_is_refused() -> None:

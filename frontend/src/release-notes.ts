@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.57.1",
+    date: "2026-11-18",
+    summary: "Korrektur: Die Nutzung der Dienste wird wieder abgerufen.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Nutzung: Der Abruf scheiterte, wenn Microsoft die Berichte von einem regionalen Server liefert. Das ist behoben.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.57.0",
     date: "2026-11-18",
     summary: "Diagramme zeigen jetzt auch kleine Änderungen.",
