@@ -2,6 +2,7 @@ import { formatDateTime, type Me } from "../api";
 import { Avatar } from "../components/Avatar";
 import { Link } from "../components/Link";
 import { NotificationPreferences } from "../components/NotificationPreferences";
+import { MenuSizeSwitch } from "../components/MenuSizeSwitch";
 import { ThemeSwitch } from "../components/ThemeSwitch";
 import { NEWS_PATH } from "../navigation";
 import { HANDBOOK_PATH } from "../handbook";
@@ -86,6 +87,7 @@ export function AccountPage({ me }: { me: Me }) {
         </div>
         <div className="detail-body">
           <ThemeSwitch />
+          <MenuSizeSwitch />
         </div>
       </section>
 

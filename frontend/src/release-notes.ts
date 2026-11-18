@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.58.0",
+    date: "2026-11-18",
+    summary: "Neu: Schriftgröße im Menü einstellbar.",
+    sections: [
+      {
+        area: "Werkbank",
+        entries: [
+          "Im Konto unter Darstellung wählst du die Schriftgröße im Menü: klein, normal, groß oder sehr groß. Sie gilt für diesen Browser.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.57.1",
     date: "2026-11-18",
     summary: "Korrektur: Die Nutzung der Dienste wird wieder abgerufen.",

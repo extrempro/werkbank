@@ -508,8 +508,25 @@ a {
   min-height: calc(100dvh - var(--kopf-hoehe));
 }
 
+/* Schriftgröße im Menü (Konto › Darstellung); Menübreite wächst mit. */
+:root {
+  --nav-scale: 1;
+}
+
+:root[data-menu="klein"] {
+  --nav-scale: 0.9;
+}
+
+:root[data-menu="gross"] {
+  --nav-scale: 1.15;
+}
+
+:root[data-menu="sehr-gross"] {
+  --nav-scale: 1.3;
+}
+
 .app-nav {
-  flex: 0 0 240px;
+  flex: 0 0 calc(240px * var(--nav-scale));
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -534,7 +551,7 @@ a {
 .nav-title {
   margin: 0 0 4px;
   padding: 0 14px;
-  font-size: 0.6875rem;
+  font-size: calc(0.6875rem * var(--nav-scale));
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -551,11 +568,11 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
+  min-height: max(44px, calc(44px * var(--nav-scale)));
   padding: 0 14px;
   border-radius: 8px;
   color: var(--farbe-text-mittel);
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--nav-scale));
   font-weight: 500;
   text-decoration: none;
 }
@@ -579,6 +596,12 @@ a {
   min-width: 0;
 }
 
+.nav-items .icon,
+.nav-areas .icon {
+  width: calc(20px * var(--nav-scale));
+  height: calc(20px * var(--nav-scale));
+}
+
 /* Bereiche: Umschalter zwischen den allgemeinen Seiten und den Tools */
 
 .app-nav .nav-areas {
@@ -595,12 +618,12 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
+  min-height: max(44px, calc(44px * var(--nav-scale)));
   padding: 0 14px;
   border: 1px solid transparent;
   border-radius: 8px;
   color: var(--farbe-text-mittel);
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * var(--nav-scale));
   font-weight: 600;
   text-decoration: none;
 }
@@ -2596,16 +2619,22 @@ details summary {
   margin: 0;
   padding: 0;
   border-top: 0;
-  max-width: 360px;
+  max-width: 440px;
+}
+
+.account .theme-switch + .theme-switch {
+  margin-top: 16px;
 }
 
 .account .theme-switch legend {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  float: none;
+  margin: 0 0 6px;
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--farbe-text);
 }
 
 .account .detail-body p,
