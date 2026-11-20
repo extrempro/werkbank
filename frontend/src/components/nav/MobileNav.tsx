@@ -71,17 +71,17 @@ export function MobileNav({
         <a
           href="/"
           className="mobile-bar-item"
-          aria-label={taskCount > 0 ? `Aufgaben: ${taskCount} offen` : "Aufgaben"}
           onClick={(event) => {
             event.preventDefault();
             onTasks();
           }}
         >
           <Icon name="aufgaben" />
-          <span aria-hidden="true">Aufgaben</span>
+          <span>Aufgaben</span>
+          {taskCount > 0 && " "}
           {taskCount > 0 && (
-            <span className="mobile-bar-count" aria-hidden="true">
-              {taskCount > 99 ? "99+" : taskCount}
+            <span className="mobile-bar-count">
+              {taskCount > 99 ? "99+" : taskCount} <span className="visually-hidden">offen</span>
             </span>
           )}
         </a>

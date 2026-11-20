@@ -274,7 +274,7 @@ describe("MobileNav", () => {
       />,
     );
     const bar = screen.getByRole("navigation", { name: "Schnellzugriff" });
-    expect(within(bar).getByRole("link", { name: "Aufgaben: 3 offen" })).toBeVisible();
+    expect(within(bar).getByRole("link", { name: "Aufgaben 3 offen" })).toBeVisible();
     fireEvent.click(within(bar).getByRole("button", { name: "Menü" }));
     const sheet = screen.getByRole("dialog", { name: "IT-Budget" });
     expect(sheet).toHaveAttribute("aria-modal", "true");
