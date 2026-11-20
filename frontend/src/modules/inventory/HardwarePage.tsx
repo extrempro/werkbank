@@ -16,6 +16,7 @@ import {
   parseHolder,
   roomChoices,
   SOURCE_LABELS,
+  today,
   type Assignees,
   type HardwareSummary,
   type ListState,
@@ -36,6 +37,8 @@ export interface DeviceFields {
   serial: string;
   hostname: string;
   note: string;
+  /** Anschaffungsdatum JJJJ-MM-TT, leer = unbekannt */
+  purchasedOn: string;
   roomId: string;
   /** „s:4“ für Stelle 4, „w:2“ für Arbeitsplatz 2, leer ohne Zuordnung */
   holder: string;
@@ -133,6 +136,16 @@ export function DeviceFormFields({
         </label>
         {fromNinja && <p className="small">Hostname und Seriennummer kommen aus NinjaOne.</p>}
         <label>
+          Angeschafft am (freiwillig)
+          <input
+            type="date"
+            value={value.purchasedOn}
+            min="1990-01-01"
+            max={today()}
+            onChange={(event) => set({ purchasedOn: event.target.value })}
+          />
+        </label>
+        <label>
           Notiz (freiwillig)
           <input
             type="text"
@@ -198,6 +211,9 @@ export function deviceProblem(value: DeviceFields): string | null {
   if (!value.kindId) {
     return "Bitte die Art wählen.";
   }
+  if (value.purchasedOn && (value.purchasedOn < "1990-01-01" || value.purchasedOn > today())) {
+    return "Das Anschaffungsdatum liegt nicht in einem sinnvollen Bereich.";
+  }
   return null;
 }
 
@@ -209,6 +225,7 @@ export function deviceInput(value: DeviceFields) {
     serial: value.serial.trim(),
     hostname: value.hostname.trim(),
     note: value.note.trim(),
+    purchased_on: value.purchasedOn || null,
     room_id: value.roomId ? Number(value.roomId) : null,
     ...parseHolder(value.holder),
   };
@@ -233,6 +250,7 @@ function NewDeviceForm({
     serial: "",
     hostname: "",
     note: "",
+    purchasedOn: "",
     roomId: "",
     holder: "",
   });

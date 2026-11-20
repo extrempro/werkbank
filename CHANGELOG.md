@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.69.0] – 2026-11-20
+
+IT-Bestand, Schritt 8: Statistik.
+
+### IT-Bestand
+
+- **Statistik** (`/bestand/statistik`): Geräte je Art, je Modell, nach Alter, je Standort, wo die Geräte sind, Betriebssystem, Verleih (offen, überfällig, neue Verleihe je Monat) und Ausmusterungen je Jahr mit Gründen. Filter nach Hersteller; je Auswertung Umschalter Balken/Kreis und Tabelle mit Anteil. Gezählt werden aktive Geräte, ausgemusterte nur bei den Ausmusterungen. API `GET /api/inventory/statistics?maker=`
+- **Anschaffungsdatum** am Gerät (Anlegen, Bearbeiten, Übersicht, Verlauf); Grundlage für das Alter, bei Monitoren ersatzweise das Baujahr aus dem Custom Field. Migration 0049
+- Diagrammfarben 4 bis 8 und „Andere“ als CSS-Variablen (Farbfolge der Diagramme, hell und dunkel)
+- Neuer Menüpunkt „Statistik“ im IT-Bestand
+
+### Behoben
+
+- Die Suchfelder über den Listen „Vorgänge“ und „Verleih“ und im Standortbaum sehen jetzt aus wie die übrigen Eingabefelder (Höhe 44 px, Rand, Abstand innen)
+
 ## [0.68.0] – 2026-11-20
 
 IT-Bestand, Schritt 7: Abgleich mit Entra.

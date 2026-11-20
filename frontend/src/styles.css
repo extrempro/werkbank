@@ -3728,12 +3728,24 @@ p.badges {
   --chart-1: #2a78d6;
   --chart-2: #eb6834;
   --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+  --chart-7: #6250d6;
+  --chart-8: #e34948;
+  --chart-andere: #8a8a86;
 }
 
 :root[data-theme="dunkel"] {
   --chart-1: #3987e5;
   --chart-2: #d95926;
   --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #0ca30c;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+  --chart-andere: #8a8a86;
 }
 
 /* Eigener Name: „.chart“ gehört dem Balkendiagramm „Änderungen je Tag“. Derselbe Name hatte
@@ -6231,10 +6243,6 @@ p.badges {
   display: none;
 }
 
-.loc-search input {
-  width: 100%;
-}
-
 .loc-hits {
   list-style: none;
   margin: 8px 0 0;
@@ -6736,8 +6744,27 @@ p.badges {
 }
 
 .list-search label {
-  font-size: 13px;
+  font-size: 0.875rem;
   font-weight: 600;
+}
+
+.loc-search {
+  margin-bottom: 8px;
+}
+
+/* Suchfelder über Listen und im Standortbaum: wie die Eingabefelder in Formularen */
+.list-search input,
+.loc-search input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
 }
 
 .list-more {
@@ -6847,4 +6874,143 @@ p.badges {
   gap: 0 16px;
   max-height: 18rem;
   overflow: auto;
+}
+
+/* IT-Bestand: Statistik */
+
+.stat-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 24px;
+  margin-bottom: 16px;
+}
+
+.stat-total {
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.stat-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.stat-bars {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stat-bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 3.5rem;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.stat-bar-label {
+  overflow-wrap: break-word;
+  font-size: 0.875rem;
+}
+
+.stat-bar-track {
+  display: block;
+  height: 18px;
+}
+
+.stat-bar {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  background: var(--chart-1);
+}
+
+.stat-bar-value,
+.stat-legend-value,
+.stat-table .num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.stat-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+}
+
+.stat-pie svg {
+  flex: 0 0 auto;
+}
+
+.stat-pie-total {
+  fill: var(--farbe-text);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.stat-pie-unit {
+  fill: var(--farbe-text-leise);
+  font-size: 12px;
+}
+
+.stat-legend {
+  flex: 1 1 200px;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stat-legend li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+.stat-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.stat-table {
+  margin-top: 12px;
+}
+
+.stat-table summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.stat-kpis {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 520px) {
+  .stat-bars li {
+    grid-template-columns: minmax(0, 1fr) 3rem;
+  }
+
+  .stat-bar-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
 }

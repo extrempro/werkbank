@@ -237,3 +237,14 @@ test("IT-Bestand: Verleih ansehen und neuen Verleih öffnen", async ({
   await expect(page.getByLabel("Rückgabe bis")).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test("IT-Bestand: Statistik", async ({ page }) => {
+  await loginAs(page, ["Bestand.Reader"], "Lena Leser");
+  await page.goto("/bestand/statistik");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Statistik" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Hersteller")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Verleih" })).toBeVisible();
+  await expectNoA11yViolations(page);
+});

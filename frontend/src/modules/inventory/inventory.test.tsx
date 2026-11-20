@@ -91,6 +91,7 @@ const detail: Hardware = {
   monitors: [],
   psref: null,
   loan: null,
+  purchased_on: null,
   holder_ref: null,
   position_id: null,
   workplace_id: null,
