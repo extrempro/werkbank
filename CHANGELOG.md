@@ -29,9 +29,6 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 ### Repository
 
 - **Node 26:** Frontend-Build im Docker-Image (`node:26-alpine`), CI und Lockfile-Workflow mit Node 26 (LTS bis April 2029) statt 22 (Wartung bis April 2027); `@types/node` passend auf 26. Node dient nur zum Bauen und Testen, die Anwendung selbst läuft mit Python
-
-### Repository
-
 - `CLAUDE.md`: Regel, aktuelle stabile Versionen von Frameworks und Paketen und ihre aktuellen Schnittstellen zu nutzen, wenn möglich (Prüfung vor neuen Abhängigkeiten, Updates in eigenem PR, Major-Updates nach Rückfrage)
 
 ## [0.73.0] – 2026-11-20
