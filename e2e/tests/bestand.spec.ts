@@ -160,7 +160,10 @@ test("IT-Bestand: Standorte anlegen und Etage öffnen", async ({
   await expectNoA11yViolations(page);
 
   // Breit lässt sich der Baum ausblenden; Ebenen klappen auf und zu.
-  if (testInfo.project.name !== "handy") {
+  // (Schmal, auch am Tablet neben dem Menü, steht der Baum hinter „Standort wechseln“.)
+  if (
+    !(await page.getByRole("button", { name: "Standort wechseln" }).isVisible())
+  ) {
     await tree
       .getByRole("button", { name: `Bauteil ${stamp} zuklappen` })
       .click();
