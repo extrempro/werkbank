@@ -36,29 +36,45 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ }),
     ).toBeVisible();
-    // Auf der Startseite zeigt die Navigation den allgemeinen Bereich; Evergreen ist ein eigener.
-    expect(screen.getByRole("link", { name: "Evergreen" })).toHaveAttribute("href", "/evergreen");
-    expect(screen.queryByRole("link", { name: "Microsoft 365" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Werkbank" })).toHaveAttribute("aria-current", "true");
-    expect(screen.getByRole("link", { name: "Meine Aufgaben" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: /^Neuigkeiten/ })).toHaveAttribute(
+    // Auf der Startseite zeigt die Navigation den Start-Bereich; Evergreen ist ein eigener.
+    const bar = screen.getByRole("navigation", { name: "Bereiche" });
+    expect(within(bar).getByRole("link", { name: "Evergreen" })).toHaveAttribute(
       "href",
-      "/neuigkeiten",
+      "/evergreen",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Navigation einklappen" }));
-    expect(screen.getByRole("button", { name: "Navigation ausklappen" })).toHaveAttribute(
+    expect(within(bar).queryByRole("link", { name: "Microsoft 365" })).toBeNull();
+    expect(within(bar).getByRole("link", { name: "Start" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(within(bar).getByRole("link", { name: "Handbuch" })).toHaveAttribute(
+      "href",
+      "/handbuch",
+    );
+    expect(screen.getByRole("link", { name: "Meine Aufgaben" })).toHaveAttribute("href", "/");
+    fireEvent.click(screen.getByRole("button", { name: "Menü einklappen" }));
+    expect(screen.queryByRole("navigation", { name: "Seiten: Start" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Menü ausklappen" })).toHaveAttribute(
       "aria-expanded",
       "false",
     );
     expect(window.localStorage.getItem("werkbank-navigation")).toBe("eingeklappt");
-    fireEvent.click(screen.getByRole("button", { name: "Dunkle Darstellung einschalten" }));
-    expect(document.documentElement.dataset.theme).toBe("dunkel");
-    expect(screen.getByText("EB")).toBeInTheDocument();
-    expect(screen.getByText("Evergreen-Team")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Erika Beispiel.*Konto öffnen/ })).toHaveAttribute(
-      "href",
-      "/konto",
+    fireEvent.click(screen.getByRole("button", { name: "Menü ausklappen" }));
+    expect(screen.getByRole("navigation", { name: "Seiten: Start" })).toBeVisible();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /^Konto und Einstellungen: Erika Beispiel/ }),
     );
+    const menu = screen.getByRole("menu", { name: "Konto" });
+    expect(within(menu).getByRole("menuitem", { name: "Konto" })).toHaveAttribute("href", "/konto");
+    expect(within(menu).getByRole("menuitem", { name: /^Release Notes/ })).toHaveAttribute(
+      "href",
+      "/neuigkeiten",
+    );
+    fireEvent.click(within(menu).getByRole("menuitemradio", { name: "Dunkel" }));
+    expect(document.documentElement.dataset.theme).toBe("dunkel");
+    expect(screen.getAllByText("EB").length).toBeGreaterThan(0);
+    expect(screen.getByText("Evergreen-Team")).toBeInTheDocument();
     expect(screen.queryByText("M365-Konfiguration")).not.toBeInTheDocument();
   });
 

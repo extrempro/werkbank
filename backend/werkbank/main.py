@@ -10,6 +10,7 @@ from werkbank.core.auth import router as auth_router
 from werkbank.core.avatar import router as avatar_router
 from werkbank.core.branding import router as branding_router
 from werkbank.core.csrf import OriginCheckMiddleware
+from werkbank.core.navigation import router as navigation_router
 from werkbank.core.notifications import router as notifications_router
 from werkbank.core.push import router as push_router
 from werkbank.core.ratelimit import RateLimitMiddleware, default_rules
@@ -33,6 +34,7 @@ from werkbank.modules.inventory.psref_sync import router as inventory_psref_rout
 from werkbank.modules.inventory.search import inventory_search
 from werkbank.modules.inventory.staff import router as inventory_staff_router
 from werkbank.modules.inventory.statistics import router as inventory_statistics_router
+from werkbank.modules.inventory.tasks import inventory_tasks
 from werkbank.modules.inventory.whereabouts import router as inventory_whereabouts_router
 from werkbank.modules.m365_config.api import router as m365_config_router
 from werkbank.modules.m365_config.recommendations_api import router as recommendations_router
@@ -73,6 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         evergreen_tasks,
         tenant_tasks,
         budget_tasks,
+        inventory_tasks,
     ]
     # Module, die Treffer für die Suche liefern
     app.state.search_providers = [
@@ -92,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_settings_router)
     app.include_router(branding_router)
     app.include_router(search_router)
+    app.include_router(navigation_router)
     app.include_router(tasks_router)
     app.include_router(push_router)
     app.include_router(notifications_router)

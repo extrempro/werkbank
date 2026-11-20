@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
+import { expectNoA11yViolations, loginAs, openPage } from "./helpers";
 
 test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
   page,
@@ -8,11 +8,7 @@ test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
   const name = `Monitor ${stamp}`;
   await loginAs(page, ["Bestand.Editor"], "Bernd Bestand");
   await page.goto("/");
-  await openNavigation(page);
-  await page
-    .getByRole("navigation", { name: "Hauptnavigation" })
-    .getByRole("link", { name: "IT-Bestand" })
-    .click();
+  await openPage(page, "IT-Bestand", "Hardware");
   await expect(page).toHaveURL(/\/bestand\/hardware$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Hardware" }),

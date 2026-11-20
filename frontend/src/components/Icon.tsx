@@ -126,19 +126,34 @@ const PATHS = {
   ],
   dunkel: ["M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"],
   einklappen: ["M11 6l-6 6 6 6", "M19 6l-6 6 6 6"],
+  glocke: ["M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9", "M10.3 21a1.94 1.94 0 0 0 3.4 0"],
+  evergreen: ["M12 3l6 8h-4l5 7H5l5-7H6z", "M12 18v3"],
+  geraet: ["M5 5h14v10H5z", "M3 19h18", "M9 15l-1 4", "M15 15l1 4"],
+  stern: ["M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"],
+  "pfeil-unten": ["M6 9l6 6 6-6"],
+  "pfeil-rechts": ["M9 6l6 6-6 6"],
+  zurueck: ["M15 6l-6 6 6 6"],
+  menue: ["M4 7h16", "M4 12h16", "M4 17h16"],
+  schliessen: ["M6 6l12 12", "M18 6L6 18"],
+  abmelden: ["M14 4h5v16h-5", "M10 8l-4 4 4 4", "M6 12h10"],
+  konto: ["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M4 21c1-4 4-6 8-6s7 2 8 6"],
+  auto: ["M12 3a9 9 0 1 0 0 18z", "M12 3a9 9 0 0 1 0 18"],
+  aufgaben: ["M22 12h-6l-2 3h-4l-2-3H2", "M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"],
+  loeschen: ["M4 7h16", "M10 11v6", "M14 11v6", "M6 7l1 13h10l1-13", "M9 7V4h6v3"],
   ausklappen: ["M13 6l6 6-6 6", "M5 6l6 6-6 6"],
 } as const;
 
 export type IconName = keyof typeof PATHS;
 
-export function Icon({ name }: { name: IconName }) {
+/** `filled`: Fläche gefüllt, z. B. der Stern einer angehefteten Seite. */
+export function Icon({ name, filled = false }: { name: IconName; filled?: boolean }) {
   return (
     <svg
       className="icon"
       width="20"
       height="20"
       viewBox="0 0 24 24"
-      fill="none"
+      fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"

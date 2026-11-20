@@ -1,13 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
+import { expectNoA11yViolations, loginAs, openHandbook } from "./helpers";
 
 test("Handbuch zeigt passende Kapitel, führt zu Abschnitten und ist barrierefrei", async ({
   page,
 }) => {
   await loginAs(page, ["Evergreen.Team"], "Hanna Handbuch");
   await page.goto("/");
-  await openNavigation(page);
-  await page.getByRole("link", { name: "Handbuch", exact: true }).click();
+  await openHandbook(page);
   await expect(page).toHaveURL(/\/handbuch$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Handbuch" }),
@@ -22,7 +21,7 @@ test("Handbuch zeigt passende Kapitel, führt zu Abschnitten und ist barrierefre
   await expectNoA11yViolations(page);
 
   await page.getByLabel("Im Handbuch suchen").fill("im Auftrag");
-  await page.getByRole("button", { name: "Suchen" }).click();
+  await page.getByRole("button", { name: "Suchen", exact: true }).click();
   await page
     .getByRole("link", {
       name: "Beschluss des Betriebsrats im Auftrag erfassen",

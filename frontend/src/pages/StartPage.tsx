@@ -1,5 +1,10 @@
 import type { Me, Task } from "../api";
+import { Icon } from "../components/Icon";
 import { Link } from "../components/Link";
+import { entriesFor } from "../components/nav/menuGroups";
+import { PinButton } from "../components/nav/PinButton";
+import { areasFor, type NavEntry } from "../navigation";
+import { RECENT_SHOWN, useNavPrefs } from "../navPrefs";
 import { greeting } from "../user";
 import { ModuleTiles } from "./ModuleTiles";
 import { RecentActivity } from "./RecentActivity";
@@ -30,7 +35,29 @@ function summary(tasks: Task[] | null): string {
   return total === 1 ? " · 1 offene Aufgabe" : ` · ${total} offene Aufgaben`;
 }
 
+/** Liste angehefteter oder zuletzt besuchter Seiten auf der Startseite. */
+function PageList({ entries, pins }: { entries: NavEntry[]; pins: boolean }) {
+  return (
+    <ul className="start-pages">
+      {entries.map((entry) => (
+        <li key={entry.item.path}>
+          <Link to={entry.item.path} className="start-page-link">
+            <Icon name={entry.item.icon} />
+            <span className="nav-label">{entry.item.label}</span>{" "}
+            <span className="side-chip">{entry.area.short}</span>
+          </Link>
+          {pins && <PinButton path={entry.item.path} label={entry.item.label} />}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function StartPage({ me, tasks, now = new Date() }: StartPageProps) {
+  const prefs = useNavPrefs();
+  const areas = areasFor(me.roles);
+  const pinned = entriesFor(areas, prefs.pinned);
+  const recent = entriesFor(areas, prefs.recent).slice(0, RECENT_SHOWN);
   const date = now.toLocaleDateString("de-DE", {
     weekday: "long",
     day: "numeric",
@@ -49,7 +76,12 @@ export function StartPage({ me, tasks, now = new Date() }: StartPageProps) {
         </p>
       </header>
       <div className="start-columns">
-        <section className="panel start-tasks" aria-labelledby="aufgaben-titel">
+        <section
+          id="aufgaben"
+          tabIndex={-1}
+          className="panel start-tasks"
+          aria-labelledby="aufgaben-titel"
+        >
           <div className="panel-head">
             <h2 id="aufgaben-titel">Meine Aufgaben</h2>
             <span className="small">aus allen Modulen</span>
@@ -79,6 +111,29 @@ export function StartPage({ me, tasks, now = new Date() }: StartPageProps) {
             </ul>
           )}
         </section>
+        <div className="start-side">
+          <section className="panel start-pinned" aria-labelledby="angeheftet-titel">
+            <div className="panel-head">
+              <h2 id="angeheftet-titel">Angeheftet</h2>
+            </div>
+            {pinned.length === 0 ? (
+              <p className="panel-empty">
+                Noch nichts angeheftet. Mit dem Stern neben einer Seite im Menü oder am Seitentitel
+                heftest du sie hier an.
+              </p>
+            ) : (
+              <PageList entries={pinned} pins />
+            )}
+          </section>
+          {recent.length > 0 && (
+            <section className="panel start-recent" aria-labelledby="zuletzt-titel">
+              <div className="panel-head">
+                <h2 id="zuletzt-titel">Zuletzt besucht</h2>
+              </div>
+              <PageList entries={recent} pins={false} />
+            </section>
+          )}
+        </div>
         <ModuleTiles roles={me.roles} />
         <RecentActivity />
       </div>

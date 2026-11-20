@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
+import { areaNames, expectNoA11yViolations, itemName, loginAs, openAccountMenu, openMenu, openPage } from "./helpers";
 
 test("ohne Anmeldung erscheint die Login-Seite", async ({ page }) => {
   await page.goto("/");
@@ -15,38 +15,28 @@ test("Admin sieht alle Bereiche", async ({ page }) => {
   await loginAs(page, ["Werkbank.Admin", "Config.Reviewer", "Evergreen.IT"]);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ })).toBeVisible();
-  const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
-  await openNavigation(page);
   // Audit-Log und Einstellungen stehen im eigenen Bereich „Verwaltung“.
-  await expect(nav.getByRole("link", { name: /^Verwaltung/ })).toBeVisible();
-  await nav.getByRole("link", { name: /^Microsoft 365/ }).click();
-  await openNavigation(page);
-  await expect(nav.getByRole("link", { name: "Änderungen" })).toBeVisible();
-  await nav.getByRole("link", { name: /^Evergreen/ }).click();
-  await openNavigation(page);
-  await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
+  expect(await areaNames(page)).toContain("Verwaltung");
+  await openPage(page, "Microsoft 365", "Änderungen");
+  await expect(page).toHaveURL(/\/m365\/aenderungen$/);
+  await openPage(page, "Evergreen", "Vorgänge");
+  await expect(page).toHaveURL(/\/evergreen$/);
   await expectNoA11yViolations(page);
 });
 
 test("Betriebsrat sieht nur Start und Evergreen", async ({ page }) => {
   await loginAs(page, ["Evergreen.Betriebsrat"], "Karl Rat");
   await page.goto("/");
-  await openNavigation(page);
-  const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
-  await expect(nav.getByText("Verwaltung")).toHaveCount(0);
-  await expect(nav.getByRole("link", { name: /^Microsoft 365/ })).toHaveCount(0);
-  await nav.getByRole("link", { name: /^Evergreen/ }).click();
+  expect(await areaNames(page)).toEqual(["Start", "Evergreen"]);
+  await openPage(page, "Evergreen", "Vorgänge");
   await expect(page).toHaveURL(/\/evergreen$/);
-  await openNavigation(page);
-  await expect(nav.getByRole("link", { name: "Vorgänge" })).toBeVisible();
 });
 
 test("Abmelden führt zur Login-Seite", async ({ page }) => {
   await loginAs(page, ["Config.Reader"], "Lea Leser");
   await page.goto("/");
-  // Auf dem Handy steht „Abmelden“ im Menü.
-  await openNavigation(page);
-  await page.getByRole("button", { name: "Abmelden" }).click();
+  const menu = await openAccountMenu(page);
+  await menu.getByRole("menuitem", { name: "Abmelden" }).click();
   await expect(page.getByRole("link", { name: "Mit Microsoft anmelden" })).toBeVisible();
 });
 
@@ -64,11 +54,8 @@ test("Abgelaufene Sitzung: Die Anmeldeseite erscheint mit Hinweis und Rückweg",
   await expect(page.getByRole("button", { name: /^Benachrichtigungen/ })).toBeVisible();
   // Sitzung endet, während die Seite offen ist.
   await context.clearCookies();
-  await openNavigation(page);
-  await page
-    .getByRole("navigation", { name: "Hauptnavigation" })
-    .getByRole("link", { name: "Änderungen" })
-    .click();
+  const menu = await openMenu(page);
+  await menu.getByRole("link", { name: itemName("Änderungen") }).click();
   await expect(page.getByText(/Deine Sitzung ist abgelaufen/)).toBeVisible();
   await expect(page.getByRole("link", { name: "Mit Microsoft anmelden" })).toHaveAttribute(
     "href",

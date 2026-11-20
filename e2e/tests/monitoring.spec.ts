@@ -1,16 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
+import { expectNoA11yViolations, loginAs, openPage } from "./helpers";
 
 test("IT-Monitoring zeigt den DNS-Abgleich und ist barrierefrei", async ({
   page,
 }) => {
   await loginAs(page, ["Monitoring.Reader"], "Mona Monitoring");
   await page.goto("/");
-  await openNavigation(page);
-  await page
-    .getByRole("navigation", { name: "Hauptnavigation" })
-    .getByRole("link", { name: "IT-Monitoring" })
-    .click();
+  await openPage(page, "IT-Monitoring", "DNS-Abgleich mit NetBox");
   await expect(page).toHaveURL(/\/monitoring\/dns$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "DNS-Abgleich mit NetBox" }),

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
+import { expectNoA11yViolations, loginAs, openPage } from "./helpers";
 
 test("IT-Projekte: Projekt anlegen, einstellen, Jour Fixe und Aufgaben", async ({
   page,
@@ -7,11 +7,7 @@ test("IT-Projekte: Projekt anlegen, einstellen, Jour Fixe und Aufgaben", async (
   const name = `Projekt ${testInfo.project.name} ${Date.now()}`;
   await loginAs(page, ["Projekte.Editor"], "Paula Projekt");
   await page.goto("/");
-  await openNavigation(page);
-  await page
-    .getByRole("navigation", { name: "Hauptnavigation" })
-    .getByRole("link", { name: "IT-Projekte" })
-    .click();
+  await openPage(page, "IT-Projekte", "Alle Projekte");
   await expect(page).toHaveURL(/\/projekte$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Projekte" }),
@@ -59,7 +55,7 @@ test("IT-Projekte: Projekt anlegen, einstellen, Jour Fixe und Aufgaben", async (
   await expectNoA11yViolations(page);
 
   // Aufgaben
-  await page.getByRole("link", { name: "Aufgaben", exact: true }).click();
+  await page.getByRole("main").getByRole("link", { name: "Aufgaben", exact: true }).click();
   await page.getByLabel("Neue Aufgabe").fill("Angebote vergleichen");
   await page.getByRole("button", { name: "Hinzufügen", exact: true }).click();
   await expect(

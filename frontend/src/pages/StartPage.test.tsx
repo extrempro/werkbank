@@ -1,11 +1,13 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Me } from "../api";
+import { resetNavPrefs } from "../navPrefs";
 import { StartPage } from "./StartPage";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  resetNavPrefs();
 });
 
 function mockApi(routes: Record<string, unknown>) {
@@ -29,6 +31,42 @@ const me: Me = {
 };
 
 describe("StartPage", () => {
+  it("zeigt angeheftete und zuletzt besuchte Seiten, nur mit Recht", () => {
+    mockApi({});
+    resetNavPrefs({
+      pinned: ["/m365/aenderungen", "/budget"],
+      recent: ["/m365/snapshots", "/verwaltung"],
+    });
+    render(<StartPage me={me} tasks={[]} />);
+    const pinned = screen.getByRole("region", { name: "Angeheftet" });
+    expect(within(pinned).getByRole("link", { name: "Änderungen M365" })).toHaveAttribute(
+      "href",
+      "/m365/aenderungen",
+    );
+    expect(within(pinned).queryByRole("link", { name: /Übersicht/ })).toBeNull();
+    expect(within(pinned).getByRole("button", { name: "Änderungen anheften" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    const recent = screen.getByRole("region", { name: "Zuletzt besucht" });
+    expect(
+      within(recent)
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("href")),
+    ).toEqual(["/m365/snapshots"]);
+  });
+
+  it("erklärt das Anheften, solange nichts angeheftet ist", () => {
+    mockApi({});
+    render(<StartPage me={me} tasks={[]} />);
+    expect(
+      within(screen.getByRole("region", { name: "Angeheftet" })).getByText(
+        /Noch nichts angeheftet/,
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Zuletzt besucht" })).toBeNull();
+  });
+
   it("zeigt Aufgaben mit Anzahl und Ziel", () => {
     const tasks = [
       {
