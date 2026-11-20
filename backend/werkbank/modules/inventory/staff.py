@@ -150,7 +150,7 @@ class PositionIn(BaseModel):
     person: PersonIn | None = None
     note: str = Field(default="", max_length=500)
 
-    @field_validator("note")
+    @field_validator("name", "note")
     @classmethod
     def plain(cls, value: str) -> str:
         return single_line(value)
