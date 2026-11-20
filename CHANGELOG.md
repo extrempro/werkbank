@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.71.0] – 2026-11-20
+
+### IT-Bestand
+
+- **Info-Fenster an den Plätzen im Grundriss:** Maus darüber oder Tastaturfokus zeigt Nummer, Raum, Typ, die Stellen mit Person und die Hardware am Arbeitsplatz und an seinen Stellen (höchstens 6, Rest als „und n weitere“); Klick öffnet den Arbeitsplatz. Bei Berührung öffnet das erste Antippen das Info-Fenster, das zweite den Arbeitsplatz. Treffer mindestens 24 px, Text auch für Screenreader
+- Die Plätze erscheinen jetzt auch bei „Standorte“ (nicht im Bearbeiten-Modus)
+- `GET /floors/{id}` liefert je Platz zusätzlich `shared`, `positions`, `hardware` und `hardware_more`
+- Spec, Datenschutz und Handbuch angepasst
+
 ## [0.70.0] – 2026-11-20
 
 ### IT-Bestand

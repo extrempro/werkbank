@@ -9,22 +9,25 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Path, Request, Response, status
 from pydantic import BaseModel, Field, field_validator, model_validator
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
 from werkbank.core.branding import ImageError
 from werkbank.core.deps import DbDep, SettingsDep
 from werkbank.core.sessions import now_utc
-from werkbank.modules.inventory.api import Editor, Reader, _audit, single_line
+from werkbank.modules.inventory.api import STATUS_ACTIVE, Editor, Reader, _audit, single_line
 from werkbank.modules.inventory.models import (
     InventoryCity,
     InventoryFloor,
     InventoryFloorPlan,
     InventoryHardware,
+    InventoryKind,
+    InventoryPosition,
     InventoryRoom,
     InventorySection,
     InventorySite,
     InventoryWorkplace,
+    InventoryWorkplacePosition,
 )
 from werkbank.modules.inventory.plans import inspect_plan
 
@@ -136,14 +139,37 @@ class RoomOut(BaseModel):
     hardware: int
 
 
+class SpotPosition(BaseModel):
+    number: str
+    name: str
+    # leer = unbesetzt
+    person_name: str
+
+
+class SpotDevice(BaseModel):
+    name: str
+    kind: str
+
+
 class SpotOut(BaseModel):
-    """Arbeitsplatz mit gesetztem Platz; x und y in Prozent der Etage wie die Räume."""
+    """Arbeitsplatz mit gesetztem Platz; x und y in Prozent der Etage wie die Räume.
+
+    Dazu, was das Info-Fenster im Grundriss zeigt: Stellen mit Person und die Hardware am
+    Arbeitsplatz und an seinen Stellen (höchstens ``SPOT_DEVICES``, der Rest als Zahl).
+    """
 
     id: int
     number: str
     room_id: int
     x: float
     y: float
+    shared: bool
+    positions: list[SpotPosition]
+    hardware: list[SpotDevice]
+    hardware_more: int
+
+
+SPOT_DEVICES = 6
 
 
 class FloorOut(BaseModel):
@@ -269,23 +295,59 @@ def floor_out(db: Session, floor: InventoryFloor) -> FloorOut:
 
 
 def floor_spots(db: Session, rooms: list[InventoryRoom]) -> list[SpotOut]:
-    """Plätze der Arbeitsplätze in diesen Räumen, umgerechnet auf die Etage."""
+    """Plätze der Arbeitsplätze in diesen Räumen, umgerechnet auf die Etage, mit Inhalt."""
     by_id = {room.id: room for room in rooms}
     if not by_id:
         return []
-    spots = []
-    for row in db.scalars(
-        select(InventoryWorkplace)
+    places = [
+        row
+        for row in db.scalars(
+            select(InventoryWorkplace)
+            .where(
+                InventoryWorkplace.room_id.in_(list(by_id)),
+                InventoryWorkplace.spot_x.is_not(None),
+                InventoryWorkplace.spot_y.is_not(None),
+            )
+            .order_by(InventoryWorkplace.number)
+        ).all()
+    ]
+    if not places:
+        return []
+    ids = [row.id for row in places]
+    links = db.execute(
+        select(InventoryWorkplacePosition.workplace_id, InventoryPosition)
+        .join(InventoryPosition, InventoryPosition.id == InventoryWorkplacePosition.position_id)
+        .where(InventoryWorkplacePosition.workplace_id.in_(ids))
+        .order_by(InventoryPosition.number)
+    ).all()
+    positions: dict[int, list[InventoryPosition]] = {}
+    for workplace_id, position in links:
+        positions.setdefault(workplace_id, []).append(position)
+    position_ids = {position.id for _, position in links}
+    kinds = dict(db.execute(select(InventoryKind.id, InventoryKind.name)).all())
+    devices = db.scalars(
+        select(InventoryHardware)
         .where(
-            InventoryWorkplace.room_id.in_(list(by_id)),
-            InventoryWorkplace.spot_x.is_not(None),
-            InventoryWorkplace.spot_y.is_not(None),
+            InventoryHardware.status == STATUS_ACTIVE,
+            or_(
+                InventoryHardware.workplace_id.in_(ids),
+                InventoryHardware.position_id.in_(list(position_ids) or [0]),
+            ),
         )
-        .order_by(InventoryWorkplace.number)
-    ).all():
+        .order_by(InventoryHardware.name, InventoryHardware.id)
+    ).all()
+    spots = []
+    for row in places:
         room = by_id.get(row.room_id or 0)
         if room is None or row.spot_x is None or row.spot_y is None:
             continue
+        own = {position.id for position in positions.get(row.id, [])}
+        mine = [
+            device
+            for device in devices
+            if device.workplace_id == row.id
+            or (device.position_id is not None and device.position_id in own)
+        ]
         spots.append(
             SpotOut(
                 id=row.id,
@@ -293,6 +355,20 @@ def floor_spots(db: Session, rooms: list[InventoryRoom]) -> list[SpotOut]:
                 room_id=room.id,
                 x=round(room.x + room.w * row.spot_x / 100, 2),
                 y=round(room.y + room.h * row.spot_y / 100, 2),
+                shared=row.shared,
+                positions=[
+                    SpotPosition(
+                        number=position.number,
+                        name=position.name,
+                        person_name=position.person_name if position.person_oid else "",
+                    )
+                    for position in positions.get(row.id, [])
+                ],
+                hardware=[
+                    SpotDevice(name=device.name, kind=kinds.get(device.kind_id, ""))
+                    for device in mine[:SPOT_DEVICES]
+                ],
+                hardware_more=max(0, len(mine) - SPOT_DEVICES),
             )
         )
     return spots

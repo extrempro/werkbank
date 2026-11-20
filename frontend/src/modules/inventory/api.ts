@@ -402,7 +402,44 @@ export interface Floor {
   plan: { url: string; width: number; height: number } | null;
   rooms: Room[];
   /** Arbeitsplätze mit gesetztem Platz; x und y in Prozent der Etage */
-  workplaces: { id: number; number: string; room_id: number; x: number; y: number }[];
+  workplaces: FloorSpot[];
+}
+
+export interface FloorSpot {
+  id: number;
+  number: string;
+  room_id: number;
+  x: number;
+  y: number;
+  shared: boolean;
+  positions: { number: string; name: string; person_name: string }[];
+  hardware: { name: string; kind: string }[];
+  hardware_more: number;
+}
+
+/** Inhalt des Info-Fensters am Platz: Überschrift und Zeilen (nur Text). */
+export function spotInfo(spot: FloorSpot, room: string | null): { title: string; lines: string[] } {
+  const title = [spot.number, room ? `Raum ${room}` : "", spot.shared ? "geteilt" : "einzeln"]
+    .filter(Boolean)
+    .join(" · ");
+  const lines =
+    spot.positions.length === 0
+      ? ["Keine Stelle"]
+      : spot.positions.map(
+          (position) =>
+            `${position.number} ${position.name} – ${position.person_name || "unbesetzt"}`,
+        );
+  if (spot.hardware.length === 0) {
+    lines.push("Keine Hardware");
+  } else {
+    const devices = spot.hardware.map((device) =>
+      device.kind ? `${device.name} (${device.kind})` : device.name,
+    );
+    lines.push(
+      `Hardware: ${devices.join(", ")}${spot.hardware_more > 0 ? ` und ${spot.hardware_more} weitere` : ""}`,
+    );
+  }
+  return { title, lines };
 }
 
 /** Etage und Raum aus dem Pfad, z. B. „/bestand/standorte/etage/4/raum/9“. */

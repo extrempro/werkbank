@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.71.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Info-Fenster an den Plätzen im Grundriss.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Fährst du im Grundriss mit der Maus über einen Platz, siehst du die Stellen, Personen und Hardware des Arbeitsplatzes. Ein Klick öffnet ihn.",
+          "Auf Tablet und Handy öffnet das erste Antippen das Info-Fenster, das zweite den Arbeitsplatz.",
+          "Die Plätze siehst du jetzt auch unter „Standorte“.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.70.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Ort und Platz im Grundriss.",

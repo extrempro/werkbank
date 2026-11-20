@@ -1394,7 +1394,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "hint",
-            text: "Wechselt der Arbeitsplatz den Raum, entfällt der Platz und du setzt ihn neu. Den Platz setzen dürfen nur Bearbeiterinnen und Bearbeiter des IT-Bestands.",
+            text: "Fährst du mit der Maus über einen Platz, siehst du Stellen, Personen und Hardware des Arbeitsplatzes; ein Klick öffnet ihn. Auf Tablet und Handy öffnet das erste Antippen das Info-Fenster, das zweite den Arbeitsplatz. Die Plätze siehst du auch unter „Standorte“. Wechselt der Arbeitsplatz den Raum, entfällt der Platz und du setzt ihn neu. Den Platz setzen dürfen nur Bearbeiterinnen und Bearbeiter des IT-Bestands.",
           },
         ],
         links: [{ to: "/bestand/arbeitsplaetze", label: "Zu den Arbeitsplätzen" }],

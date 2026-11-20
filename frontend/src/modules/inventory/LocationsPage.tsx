@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { navigate } from "../../router";
-import { PlanView } from "./PlanView";
+import { planSpots, PlanView } from "./PlanView";
 import {
   clampRect,
   createFloor,
@@ -907,6 +907,7 @@ export function LocationsPage({
                           floor={shownFloor}
                           selectedId={room?.id ?? null}
                           editing={editing}
+                          spots={editing ? [] : planSpots(shownFloor)}
                           label={`Grundriss ${shownFloor.name}`}
                           onSelect={(entry) =>
                             navigate(

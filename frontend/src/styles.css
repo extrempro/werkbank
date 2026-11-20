@@ -7096,3 +7096,82 @@ p.badges {
   gap: 10px;
   margin-top: 12px;
 }
+
+/* Plätze mit Info-Fenster: Treffer mindestens 24 px, der Punkt ist innen gezeichnet */
+
+.plan-spot-wrap {
+  position: absolute;
+  z-index: 4;
+  width: 0;
+  height: 0;
+}
+
+.plan-spot.plan-spot-button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.plan-spot.plan-spot-button::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 2px solid var(--farbe-flaeche);
+  border-radius: 50%;
+  background: var(--farbe-text-leise);
+}
+
+.plan-spot.plan-spot-button.plan-spot-on::before {
+  inset: 3px;
+  border-width: 3px;
+  background: var(--farbe-primaer);
+  box-shadow: 0 0 0 2px var(--farbe-primaer);
+}
+
+.plan-spot.plan-spot-button:hover::before {
+  background: var(--farbe-primaer);
+}
+
+.plan-spot.plan-spot-button:focus-visible {
+  border-radius: 50%;
+}
+
+.plan-tip {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 5;
+  display: grid;
+  gap: 4px;
+  width: max-content;
+  max-width: min(280px, 70vw);
+  padding: 8px 10px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
+  color: var(--farbe-text);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.plan-tip-left {
+  right: 16px;
+  left: auto;
+}
+
+.plan-tip-up {
+  top: auto;
+  bottom: 16px;
+}
+
+.plan-tip-hint {
+  color: var(--farbe-text-leise);
+  font-size: 0.75rem;
+}

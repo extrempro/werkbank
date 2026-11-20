@@ -12,6 +12,7 @@ import {
   type Hardware,
   type Locations,
 } from "./api";
+import { navigate } from "../../router";
 import { HardwareDetailPage } from "./HardwareDetailPage";
 import { LocationsPage } from "./LocationsPage";
 
@@ -92,7 +93,19 @@ const floor: Floor = {
     { id: 9, name: "Büro 0.12", x: 10, y: 10, w: 20, h: 15, hardware: 1 },
     { id: 10, name: "Lager", x: 50, y: 40, w: 10, h: 10, hardware: 0 },
   ],
-  workplaces: [{ id: 2, number: "AP-002", room_id: 9, x: 15, y: 14 }],
+  workplaces: [
+    {
+      id: 2,
+      number: "AP-002",
+      room_id: 9,
+      x: 15,
+      y: 14,
+      shared: false,
+      positions: [{ number: "ST-004", name: "Einkauf", person_name: "Alex Beispiel" }],
+      hardware: [{ name: "Notebook A", kind: "Notebook" }],
+      hardware_more: 2,
+    },
+  ],
 };
 
 describe("Standorte: Hilfsfunktionen", () => {
@@ -219,6 +232,17 @@ describe("Gerät: Standort", () => {
     render(<HardwareDetailPage hardwareId={7} tab="standort" roles={["Bestand.Reader"]} />);
     expect(await screen.findByText("Raum Büro 0.12")).toBeTruthy();
     expect(await screen.findByText("AP-002", { selector: ".plan-spot-label" })).toBeTruthy();
+    const spot = screen.getByRole("button", { name: /^AP-002 · Raum Büro 0\.12 · einzeln/ });
+    expect(spot.getAttribute("aria-label")).toContain("ST-004 Einkauf – Alex Beispiel");
+    expect(spot.getAttribute("aria-label")).toContain(
+      "Hardware: Notebook A (Notebook) und 2 weitere",
+    );
+    fireEvent.pointerEnter(spot, { pointerType: "mouse" });
+    expect(screen.getByRole("tooltip", { hidden: true }).textContent).toContain("Alex Beispiel");
+    fireEvent.pointerLeave(spot, { pointerType: "mouse" });
+    expect(screen.queryByRole("tooltip", { hidden: true })).toBeNull();
+    fireEvent.click(spot);
+    expect(vi.mocked(navigate)).toHaveBeenCalledWith("/bestand/arbeitsplaetze/2");
     expect(
       screen.getByRole("link", { name: /Raum Büro 0\.12 · Erdgeschoss · Bauteil A/ }),
     ).toBeTruthy();
