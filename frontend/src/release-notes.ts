@@ -39,6 +39,12 @@ export const RELEASES: readonly Release[] = [
           "Auf dem Handy und dem Tablet im Hochformat siehst du erst die Liste und öffnest einen Eintrag über die ganze Breite.",
         ],
       },
+      {
+        area: "Navigation",
+        entries: [
+          "„Verwaltung“ hat ein neues Symbol, damit es nicht mehr wie der Schalter für die helle Darstellung aussieht.",
+        ],
+      },
     ],
   },
   {

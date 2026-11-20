@@ -129,12 +129,12 @@ def test_new_workplace_needs_room_and_takes_spot(db: Session) -> None:
     assert half.status_code == 422
     created = editor.post(
         f"{BASE}/workplaces",
-        json={"room_id": room, "spot_x": 25.555, "spot_y": 40},
+        json={"room_id": room, "spot_x": 25.567, "spot_y": 40},
         headers=HEADERS,
     )
     assert created.status_code == 201, created.text
     body = created.json()
-    assert (body["spot_x"], body["spot_y"]) == (25.56, 40)
+    assert (body["spot_x"], body["spot_y"]) == (25.57, 40)
     # Beim Bearbeiten darf der Raum (noch) fehlen: bestehende Plätze ohne Raum bleiben gültig.
     edited = editor.put(
         f"{BASE}/workplaces/{body['id']}",
