@@ -4,13 +4,14 @@ import { Link } from "../../components/Link";
 import { navigate } from "../../router";
 import { ListSearch, MoreButton, useDebounced, usePagedList } from "./paged";
 import { EventPanel } from "./parts";
+import { PersonPicker } from "./PersonPicker";
 import {
   addCaseNote,
   CASE_FILTERS,
   CASE_STATES,
   casePath,
   decideCase,
-  DECISION_OPTIONS,
+  decisionOptions,
   fetchAssignees,
   fetchCase,
   fetchCases,
@@ -22,6 +23,7 @@ import {
   hardwarePath,
   INVENTORY_EDITOR_ROLE,
   loanPath,
+  positionPath,
   ninjaFactRows,
   roomChoices,
   runSyncNow,
@@ -32,6 +34,7 @@ import {
   type Case,
   type CaseFilter,
   type CaseSummary,
+  type Person,
   type DecisionInput,
   type HardwareSummary,
   type Locations,
@@ -133,16 +136,17 @@ function loadChoices(): Promise<Choices> {
 
 /** Entscheidung für einen offenen Vorgang; Zusatzfelder je nach Auswahl. */
 function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => void }) {
-  const options = DECISION_OPTIONS[entry.kind];
+  const options = decisionOptions(entry);
   const [choice, setChoice] = useState("");
   const [choices, setChoices] = useState<Choices | null>(null);
   const [target, setTarget] = useState(entry.hint ? String(entry.hint.id) : "");
   const [dueOn, setDueOn] = useState("");
+  const [person, setPerson] = useState<Person | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (entry.kind === "weg" || entry.kind === "ueberfaellig") {
+    if (entry.kind === "weg" || entry.kind === "ueberfaellig" || entry.kind === "person_inaktiv") {
       return;
     }
     let active = true;
@@ -184,6 +188,13 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
     if (choice === "lager" && target) {
       body.room_id = Number(target);
     }
+    if (choice === "nachfolge") {
+      if (!person) {
+        setError("Bitte die neue Person wählen.");
+        return;
+      }
+      body.person_oid = person.oid;
+    }
     if (choice === "verlaengert") {
       if (!dueOn || dueOn < today()) {
         setError("Bitte ein neues Rückgabedatum ab heute wählen.");
@@ -220,11 +231,13 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
             ? "Was soll mit dem Gerät passieren?"
             : entry.kind === "monitor"
               ? "Wo gehört der Monitor hin?"
-              : entry.kind === "rueckgabe"
-                ? "Wie sind die Geräte zurückgekommen?"
-                : entry.kind === "ueberfaellig"
-                  ? "Wie geht es mit dem Verleih weiter?"
-                  : "Was ist mit dem Gerät?"}
+              : entry.kind === "person_inaktiv"
+                ? "Wie geht es weiter?"
+                : entry.kind === "rueckgabe"
+                  ? "Wie sind die Geräte zurückgekommen?"
+                  : entry.kind === "ueberfaellig"
+                    ? "Wie geht es mit dem Verleih weiter?"
+                    : "Was ist mit dem Gerät?"}
         </legend>
         <div className="case-options">
           {options.map((option) => (
@@ -243,6 +256,7 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
       </fieldset>
       {entry.kind !== "weg" &&
         entry.kind !== "ueberfaellig" &&
+        entry.kind !== "person_inaktiv" &&
         choice &&
         choice !== "uebergehen" &&
         choice !== "defekt" &&
@@ -293,6 +307,9 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
             ))}
           </select>
         </label>
+      )}
+      {choice === "nachfolge" && (
+        <PersonPicker value={person} onChange={setPerson} label="Neue Person (aus Entra)" />
       )}
       {choice === "verlaengert" && (
         <label>
@@ -491,10 +508,38 @@ function CaseDetail({
               kommt zum Beispiel nach einem Mainboardtausch vor.
             </p>
           )}
-          {(shown.kind === "rueckgabe" || shown.kind === "ueberfaellig") && (
+          {(shown.kind === "rueckgabe" ||
+            shown.kind === "ueberfaellig" ||
+            shown.kind === "person_inaktiv") && (
             <>
-              <h3 className="sub-head">Verleih</h3>
+              <h3 className="sub-head">
+                {shown.kind === "person_inaktiv" ? "Person und Zuordnung" : "Verleih"}
+              </h3>
               <dl className="facts">
+                {shown.kind === "person_inaktiv" && shown.facts.reason && (
+                  <div>
+                    <dt>Konto in Entra</dt>
+                    <dd>
+                      {shown.facts.reason === "geloescht" ? "nicht mehr vorhanden" : "deaktiviert"}
+                    </dd>
+                  </div>
+                )}
+                {shown.kind === "person_inaktiv" && shown.facts.upn && (
+                  <div>
+                    <dt>Anmeldename</dt>
+                    <dd className="mono">{shown.facts.upn}</dd>
+                  </div>
+                )}
+                {shown.facts.position_id !== undefined && (
+                  <div>
+                    <dt>Stelle</dt>
+                    <dd>
+                      <Link to={positionPath(shown.facts.position_id)}>
+                        {shown.facts.position_number} {shown.facts.position_name}
+                      </Link>
+                    </dd>
+                  </div>
+                )}
                 {shown.facts.loan_id !== undefined && (
                   <div>
                     <dt>Verleih</dt>
@@ -535,43 +580,45 @@ function CaseDetail({
               </dl>
             </>
           )}
-          {shown.kind !== "rueckgabe" && shown.kind !== "ueberfaellig" && (
-            <>
-              <h3 className="sub-head">
-                {shown.kind === "neu"
-                  ? "Gerät laut NinjaOne"
-                  : shown.kind === "monitor"
-                    ? "Monitor laut Custom Field"
-                    : "Gerät im Bestand"}
-              </h3>
-              <dl className="facts">
-                {facts.map((row) => (
-                  <div key={row.label}>
-                    <dt>{row.label}</dt>
-                    <dd className={row.mono ? "mono" : undefined}>{row.value}</dd>
-                  </div>
-                ))}
-                {shown.hardware && (
-                  <div>
-                    <dt>Im Bestand</dt>
-                    <dd>
-                      <Link to={hardwarePath(shown.hardware.id)}>{shown.hardware.name}</Link>
-                      {shown.hardware.status === "ausgemustert" ? " (ausgemustert)" : ""}
-                    </dd>
-                  </div>
-                )}
-                {!open && (
-                  <div>
-                    <dt>Entscheidung</dt>
-                    <dd>
-                      {shown.decision_label || "–"}
-                      {shown.closed_at ? ` · ${formatDate(shown.closed_at)}` : ""}
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </>
-          )}
+          {shown.kind !== "rueckgabe" &&
+            shown.kind !== "ueberfaellig" &&
+            shown.kind !== "person_inaktiv" && (
+              <>
+                <h3 className="sub-head">
+                  {shown.kind === "neu"
+                    ? "Gerät laut NinjaOne"
+                    : shown.kind === "monitor"
+                      ? "Monitor laut Custom Field"
+                      : "Gerät im Bestand"}
+                </h3>
+                <dl className="facts">
+                  {facts.map((row) => (
+                    <div key={row.label}>
+                      <dt>{row.label}</dt>
+                      <dd className={row.mono ? "mono" : undefined}>{row.value}</dd>
+                    </div>
+                  ))}
+                  {shown.hardware && (
+                    <div>
+                      <dt>Im Bestand</dt>
+                      <dd>
+                        <Link to={hardwarePath(shown.hardware.id)}>{shown.hardware.name}</Link>
+                        {shown.hardware.status === "ausgemustert" ? " (ausgemustert)" : ""}
+                      </dd>
+                    </div>
+                  )}
+                  {!open && (
+                    <div>
+                      <dt>Entscheidung</dt>
+                      <dd>
+                        {shown.decision_label || "–"}
+                        {shown.closed_at ? ` · ${formatDate(shown.closed_at)}` : ""}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </>
+            )}
           {canEdit && open && <DecisionForm key={shown.id} entry={shown} onDone={update} />}
           {canEdit && <NoteForm entry={shown} onDone={update} />}
         </div>
@@ -610,7 +657,7 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
         <h1>Vorgänge</h1>
         <p className="page-sub">
           Eingang für alle Bearbeiter: neue Geräte aus NinjaOne, Geräte, die dort nicht mehr
-          auftauchen, und Rückgaben aus dem Verleih.
+          auftauchen, Rückgaben aus dem Verleih und Personen, die in Entra nicht mehr aktiv sind.
         </p>
       </header>
       <SyncBar canEdit={canEdit} />

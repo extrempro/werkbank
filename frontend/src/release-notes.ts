@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.68.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Abgleich der Personen mit Entra.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Einmal in der Stunde prüft die Werkbank die Personen an Stellen und in Verleihen gegen Entra. Neue Namen und Anmeldenamen übernimmt sie selbst.",
+          "Ist ein Konto deaktiviert oder gelöscht, entsteht ein Vorgang „Person nicht mehr aktiv“. Bei einer Stelle kannst du sie frei machen, eine neue Person eintragen oder alles so lassen.",
+          "Wird das Konto wieder aktiv oder ist der Verleih zurück, schließt sich der Vorgang selbst.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.67.1",
     date: "2026-11-20",
     summary: "IT-Bestand: Personensuche funktioniert wieder.",

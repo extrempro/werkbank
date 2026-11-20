@@ -63,6 +63,7 @@ from werkbank.modules.inventory.people import (
 from werkbank.modules.inventory.search import escape_like
 from werkbank.modules.inventory.staff import next_number
 from werkbank.modules.inventory.sync import (
+    CASE_PERSON,
     OPEN_STATES,
     STATE_DONE,
     _event,
@@ -247,7 +248,7 @@ def _cases_for(db: Session, loan_id: int) -> list[InventoryCase]:
         db.scalars(
             select(InventoryCase)
             .where(
-                InventoryCase.kind.in_((CASE_RETURN, CASE_OVERDUE)),
+                InventoryCase.kind.in_((CASE_RETURN, CASE_OVERDUE, CASE_PERSON)),
                 InventoryCase.facts["loan_id"].as_integer() == loan_id,
             )
             .order_by(InventoryCase.id)
@@ -344,9 +345,9 @@ def loanable(db: Session, device: InventoryHardware) -> str | None:
 
 
 def close_overdue_cases(db: Session, loan: InventoryLoan, user: CurrentUser | None) -> None:
-    """Alles zurück: offene Vorgänge „überfällig“ zu diesem Verleih schließen sich."""
+    """Alles zurück: offene Vorgänge „überfällig“ und „Person nicht mehr aktiv“ schließen sich."""
     for case in _cases_for(db, loan.id):
-        if case.kind != CASE_OVERDUE or case.status not in OPEN_STATES:
+        if case.kind not in (CASE_OVERDUE, CASE_PERSON) or case.status not in OPEN_STATES:
             continue
         case.decision = "zurueck"
         case.status = STATE_DONE
