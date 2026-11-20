@@ -81,7 +81,7 @@ class RoomIn(NameIn):
     h: float = Field(ge=ROOM_MIN, le=100)
 
     @model_validator(mode="after")
-    def inside(self) -> "RoomIn":
+    def inside(self) -> RoomIn:
         # Kleine Rundungsfehler der Oberfläche zulassen
         if self.x + self.w > 100.01 or self.y + self.h > 100.01:
             raise ValueError("Der Raum muss ganz auf dem Grundriss liegen")

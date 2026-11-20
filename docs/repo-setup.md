@@ -81,6 +81,17 @@ Settings → **Code security**:
 
 **Code scanning:** Hier **kein** „Default setup“ für CodeQL aktivieren. `.github/workflows/codeql.yml` ist das „Advanced setup“, beides zusammen führt zu Konflikten.
 
+## Python-Abhängigkeiten
+
+Die Python-Pakete des Backends stehen mit festen Versionen und Hashes in `backend/uv.lock`. Docker-Image und CI installieren nur von dort (`uv export … | pip install --require-hashes`); `uv lock --check` in der CI meldet, wenn `pyproject.toml` und Lockfile nicht zusammenpassen. Dependabot (`package-ecosystem: "uv"`) hält das Lockfile aktuell, mit 7 Tagen Wartezeit.
+
+Nach einer Änderung an `pyproject.toml` das Lockfile von Hand neu erzeugen, mit derselben uv-Version wie in Dockerfile und CI. Nur Versionen, die mindestens 7 Tage alt sind, nimmt uv von selbst (`[tool.uv] exclude-newer = "7 days"` in `pyproject.toml`):
+
+```
+cd backend
+uvx uv@0.13.8 lock
+```
+
 ## Releases
 
 Keine Einrichtung nötig. Sobald ein PR mit einer neuen Version in `main` gemergt ist, legt `.github/workflows/release.yml` den Tag `vX.Y.Z` und das Release mit dem Abschnitt aus `CHANGELOG.md` an. Ein von Hand gepushter Tag erzeugt ebenfalls ein Release. Der Workflow braucht dafür Schreibrechte auf Inhalte; er fordert sie selbst an (`contents: write`).

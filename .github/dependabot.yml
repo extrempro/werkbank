@@ -15,7 +15,8 @@ updates:
     commit-message:
       prefix: "chore(ci)"
 
-  - package-ecosystem: "pip"
+  # Python: Dependabot hält uv.lock aktuell (feste Versionen mit Hashes)
+  - package-ecosystem: "uv"
     directory: "/backend"
     cooldown:
       default-days: 7
@@ -25,14 +26,15 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
-      # Alle Python-Updates in einem PR pro Woche (meist nur angehobene Mindestversionen)
+      # Kleinere Python-Updates gesammelt in einem PR pro Woche, Hauptversionen einzeln zur Prüfung
       python:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     ignore:
-      # Node-Typen passend zur verwendeten Node-Version (22) halten
+      # Node-Typen passend zur verwendeten Node-Version (26) halten
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
       # Hauptversionen von TypeScript nur bewusst und zusammen mit typescript-eslint
@@ -54,7 +56,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/e2e"
     ignore:
-      # Node-Typen passend zur verwendeten Node-Version (22) halten
+      # Node-Typen passend zur verwendeten Node-Version (26) halten
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
       # Hauptversionen von TypeScript nur bewusst und zusammen mit typescript-eslint
@@ -78,7 +80,7 @@ updates:
       # Node-Image: nur LTS-Versionen, Hauptversionen bewusst anheben (keine ungeraden Versionen)
       - dependency-name: "node"
         update-types: ["version-update:semver-major"]
-      # Python-Image: Hauptversionen bewusst und zusammen mit requires-python anheben
+      # Python-Image: Hauptversionen bewusst und zusammen mit requires-python und uv.lock anheben
       - dependency-name: "python"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
     cooldown:

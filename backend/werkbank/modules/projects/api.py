@@ -201,7 +201,7 @@ class ProjectIn(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def end_after_start(self) -> "ProjectIn":
+    def end_after_start(self) -> ProjectIn:
         if self.starts_on and self.ends_on and self.ends_on < self.starts_on:
             raise ValueError("Das Projekt endet vor seinem Beginn")
         return self

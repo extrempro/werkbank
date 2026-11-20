@@ -370,7 +370,7 @@ class HealthOut(BaseModel):
     timeline_days: list[str]
     timeline: list[ServiceTimeline]
     # Alle Meldungen, die in diesen Tagen liefen, neueste zuerst (ohne Fehlalarme)
-    timeline_issues: list["IssueOut"]
+    timeline_issues: list[IssueOut]
 
 
 def _issue_end(row: TenantServiceIssue, now: datetime) -> datetime:

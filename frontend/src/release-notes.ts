@@ -39,6 +39,19 @@ export const RELEASES: readonly Release[] = [
     ],
   },
   {
+    version: "0.73.1",
+    date: "2026-11-20",
+    summary: "Technik: neuere Python-Version.",
+    sections: [
+      {
+        area: "Technik",
+        entries: [
+          "Die Werkbank läuft jetzt mit einer neueren Python-Version. Für dich ändert sich nichts.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.73.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Auswahl mit Suche, Standorte neu aufgebaut, übersichtlichere Listen.",

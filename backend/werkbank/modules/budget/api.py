@@ -228,7 +228,7 @@ class ItemIn(BaseModel):
         return clean_tags(value)
 
     @model_validator(mode="after")
-    def end_after_start(self) -> "ItemIn":
+    def end_after_start(self) -> ItemIn:
         start, end = self.start_year, self.end_year
         if start is not None and end is not None and end < start:
             raise ValueError("Die Laufzeit endet vor ihrem Beginn")
