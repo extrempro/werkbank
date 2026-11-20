@@ -403,6 +403,7 @@ export function Layout({ me }: LayoutProps) {
       <LocationsPage
         floorId={locationRoute.floorId}
         roomId={locationRoute.roomId}
+        node={locationRoute.node ?? null}
         roles={me.roles}
       />
     );

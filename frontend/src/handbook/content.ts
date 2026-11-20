@@ -1261,14 +1261,14 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Unter „Vorgänge“ landet, was eine Entscheidung braucht: ein neues Gerät in NinjaOne, ein Gerät, das dort nicht mehr auftaucht, eine Rückgabe aus dem Verleih oder ein überfälliger Verleih. Oben siehst du, wann zuletzt abgeglichen wurde. Über der Liste kannst du nach Nummer, Titel, Gerät oder Seriennummer suchen. Es werden zuerst 50 Vorgänge gezeigt, mit „Mehr anzeigen“ kommen weitere dazu. Das gilt auch für die Liste beim Verleih. Wenn du den Bestand pflegst, stehen offene Vorgänge als Aufgabe auf deiner Startseite, und das Symbol „Bestand“ in der Bereichsleiste bekommt einen Punkt.",
+            text: "Unter „Vorgänge“ landet, was eine Entscheidung braucht: ein neues Gerät in NinjaOne, ein Gerät, das dort nicht mehr auftaucht, eine Rückgabe aus dem Verleih oder ein überfälliger Verleih. Oben siehst du, wann zuletzt abgeglichen wurde. Oben in der Liste suchst du nach Nummer, Titel, Gerät oder Seriennummer, darunter wählst du den Status und die Art, zum Beispiel nur Rückgaben. Es werden zuerst 50 Vorgänge gezeigt, mit „Mehr anzeigen“ kommen weitere dazu. Die Liste scrollt für sich, die Ansicht daneben bleibt stehen. Auf dem Handy und dem Tablet im Hochformat siehst du erst nur die Liste; ein Vorgang öffnet sich über die ganze Breite, mit „Zur Liste“ geht es zurück. Das gilt auch für den Verleih. Wenn du den Bestand pflegst, stehen offene Vorgänge als Aufgabe auf deiner Startseite, und das Symbol „Bestand“ in der Bereichsleiste bekommt einen Punkt.",
           },
           {
             kind: "steps",
             items: [
               "Unter „Vorgänge“ einen Vorgang wählen.",
               "Auf „Ich übernehme“ tippen, damit alle sehen, dass du dich kümmerst.",
-              "Bei einem neuen Gerät wählen: einer Stelle zuordnen, einem Arbeitsplatz zuordnen, ins Lager, „Ist dasselbe Gerät“ oder nicht in den Bestand aufnehmen. Je nach Wahl Stelle, Arbeitsplatz, Raum oder das vorhandene Gerät auswählen.",
+              "Bei einem neuen Gerät wählen: einer Stelle zuordnen, einem Arbeitsplatz zuordnen, ins Lager, „Ist dasselbe Gerät“ oder nicht in den Bestand aufnehmen. Je nach Wahl Stelle, Arbeitsplatz, Raum oder das vorhandene Gerät suchen: ein paar Buchstaben oder Ziffern tippen (Nummer, Name der Person, Raum, Hostname oder Seriennummer) und den Treffer wählen. Mit „Ändern“ wählst du neu.",
               "„Übernehmen und abschließen“ tippen. Die Werkbank legt das Gerät an oder verknüpft es.",
             ],
           },
@@ -1395,9 +1395,10 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "steps",
             items: [
               "Unter „Arbeitsplätze“ auf „Arbeitsplatz anlegen“ tippen.",
-              "Den Raum wählen, dann den Typ: Einzelarbeitsplatz oder geteilter Arbeitsplatz. Einen Namen braucht der Arbeitsplatz nicht; er heißt nach seiner Nummer.",
+              "Den Raum suchen und wählen; er ist Pflicht. Hat die Etage einen Grundriss, erscheint er gleich darunter: Ein Klick in den Raum setzt den Platz des Arbeitsplatzes. Das ist freiwillig und geht auch später.",
+              "Den Typ wählen: Einzelarbeitsplatz oder geteilter Arbeitsplatz. Einen Namen braucht der Arbeitsplatz nicht; er heißt nach seiner Nummer.",
               "Auf Wunsch eine Vorlage für die Ausstattung wählen.",
-              "Unter „Stelle hinzufügen“ die Stelle wählen und „Hinzufügen“ tippen; bei einem geteilten Arbeitsplatz auch mehrere.",
+              "Unter „Stelle hinzufügen“ nach Nummer, Stelle, Person oder Abteilung suchen und den Treffer wählen; bei einem geteilten Arbeitsplatz auch mehrere.",
               "„Arbeitsplatz anlegen“ tippen.",
             ],
           },
@@ -1430,11 +1431,15 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Unter „Standorte“ steht der Baum Stadt › Standort › Gebäudeabschnitt › Etage. Er ist zugeklappt, offen ist nur der Weg zur gewählten Etage. Über das Suchfeld findest du Räume, Etagen und Standorte direkt. Rechts siehst du den Grundriss der Etage mit den Räumen und daneben die Liste der Räume mit der Zahl der Geräte.",
+            text: "Unter „Standorte“ steht links der Baum Stadt › Standort › Gebäudeabschnitt › Etage. Der Pfeil klappt eine Ebene auf oder zu, ein Klick auf den Namen öffnet sie. Offen ist anfangs nur der Weg zur Auswahl. Über das Suchfeld findest du Räume, Etagen und Standorte direkt. Mit dem Knopf oben im Baum blendest du ihn aus, damit der Grundriss mehr Platz hat; „Standortbaum einblenden“ holt ihn zurück.",
+          },
+          {
+            kind: "text",
+            text: "Rechts steht immer genau das, was du gewählt hast: Bei einer Stadt, einem Standort oder Abschnitt siehst du, was darunter liegt. Bei einer Etage siehst du den Grundriss und daneben die Räume mit der Zahl der Geräte. Wählst du einen Raum, stehen seine Angaben und Arbeitsplätze neben dem Grundriss; „Alle Räume“ führt zurück. Der Pfad über dem Titel ist anklickbar.",
           },
           {
             kind: "hint",
-            text: "Auf schmalen Bildschirmen ist der Baum ausgeblendet. Mit „Etage wechseln“ öffnest du ihn.",
+            text: "Auf schmalen Bildschirmen ist der Baum ausgeblendet. Mit „Standort wechseln“ öffnest du ihn.",
           },
           {
             kind: "text",
@@ -1443,8 +1448,8 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "steps",
             items: [
-              "Unter „Standorte pflegen“ nacheinander Stadt, Standort, Gebäudeabschnitt und Etage anlegen.",
-              "In der Etage „Grundriss hochladen“ tippen und ein Bild wählen (PNG, JPEG oder WebP).",
+              "Eine neue Stadt legst du unten im Baum unter „Neue Stadt“ an. Den Standort legst du in der Stadt an, den Gebäudeabschnitt im Standort und die Etage im Abschnitt, jeweils rechts unter „Neuer …“.",
+              "In der Etage „Etage bearbeiten“ tippen und „Grundriss hochladen“ wählen (PNG, JPEG oder WebP). Dort benennst du die Etage auch um, änderst die Reihenfolge oder löschst sie.",
               "„Räume bearbeiten“ tippen und auf freier Fläche ein Rechteck aufziehen. Danach den Namen des Raums eintragen und „Raum anlegen“ tippen.",
               "Räume verschiebst du durch Ziehen; der Griff unten rechts ändert die Größe. Ohne Maus wählst du den Raum und trägst die Lage in Prozent ein.",
               "„Fertig“ tippen.",
@@ -1452,7 +1457,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Ein Gerät ordnest du beim Erfassen oder unter „Bearbeiten“ einem Raum zu. Im Gerät zeigt der Reiter „Standort“ den Raum auf dem Grundriss. Löschen lässt sich nur, was leer ist: ein Raum ohne Geräte, eine Etage ohne Räume und so weiter.",
+            text: "Ein Gerät ordnest du beim Erfassen oder unter „Bearbeiten“ einem Raum zu. Im Gerät zeigt der Reiter „Standort“ den Raum auf dem Grundriss. Umbenennen und löschen kannst du Stadt, Standort und Abschnitt dort, wo du sie geöffnet hast. Löschen lässt sich nur, was leer ist: ein Raum ohne Geräte, eine Etage ohne Räume und so weiter.",
           },
         ],
         links: [{ to: "/bestand/standorte", label: "Zu den Standorten" }],

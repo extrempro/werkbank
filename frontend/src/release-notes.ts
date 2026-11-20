@@ -24,6 +24,30 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.73.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Auswahl mit Suche, Standorte neu aufgebaut, übersichtlichere Listen.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Stelle, Arbeitsplatz, Raum oder Gerät wählst du jetzt über ein Suchfeld: ein paar Buchstaben oder Ziffern tippen und den Treffer antippen. Das gilt zum Beispiel, wenn du im Vorgang einen neuen PC einer Stelle zuordnest.",
+          "Beim Anlegen eines Arbeitsplatzes ist der Raum Pflicht. Hat die Etage einen Grundriss, erscheint er gleich darunter, und ein Klick setzt den Platz.",
+          "„Standorte“ ist neu aufgebaut: Links klappst du jede Ebene auf und zu und blendest den Baum bei Bedarf aus. Rechts steht immer genau das, was du gewählt hast, und dort legst du auch Neues an.",
+          "Wählst du einen Raum, stehen seine Angaben und Arbeitsplätze neben dem Grundriss.",
+          "Bei Vorgängen und Verleih scrollt die Liste für sich, und die Ansicht bleibt stehen. Bei den Vorgängen kannst du nach der Art filtern, zum Beispiel nur Rückgaben.",
+          "Auf dem Handy und dem Tablet im Hochformat siehst du erst die Liste und öffnest einen Eintrag über die ganze Breite.",
+        ],
+      },
+      {
+        area: "Navigation",
+        entries: [
+          "„Verwaltung“ hat ein neues Symbol, damit es nicht mehr wie der Schalter für die helle Darstellung aussieht.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.72.0",
     date: "2026-11-20",
     summary: "Neue Navigation: Bereichsleiste, Seitenmenü, Anheften und Schnellsuche.",

@@ -90,6 +90,10 @@ const routes = {
   },
   "GET /api/inventory/locations": { cities: [] },
   "GET /api/inventory/hardware": [],
+  "GET /api/inventory/lookup": {
+    items: [{ id: 4, label: "ST-004 Einkauf", detail: "Alex Beispiel" }],
+    total: 1,
+  },
 };
 
 describe("Vorgänge: Hilfsfunktionen", () => {
@@ -136,9 +140,13 @@ describe("Vorgänge: Seite", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Einer Stelle zuordnen/ }));
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
     expect(await screen.findByText("Bitte eine Stelle wählen.")).toBeTruthy();
+    // Die Stelle wird gesucht: Der Server liefert die Treffer.
     fireEvent.change(await screen.findByRole("combobox", { name: /^Stelle/ }), {
-      target: { value: "4" },
+      target: { value: "einkauf" },
     });
+    fireEvent.click(await screen.findByRole("option", { name: /ST-004 Einkauf/ }));
+    expect(screen.getByRole("button", { name: "Stelle ändern: ST-004 Einkauf" })).toBeTruthy();
+    expect(calls.some((call) => call.url.includes("/lookup?kind=position"))).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
     await vi.waitFor(() => expect(calls.some((call) => call.url.endsWith("/decide"))).toBe(true));
     expect(calls.find((call) => call.url.endsWith("/decide"))?.body).toEqual({
@@ -146,6 +154,31 @@ describe("Vorgänge: Seite", () => {
       position_id: 4,
     });
     expect(await screen.findByText("Einer Stelle zugeordnet")).toBeTruthy();
+  });
+});
+
+describe("Vorgänge: Liste", () => {
+  it("grenzt nach Art ein und zeigt schmal erst die Liste", async () => {
+    const calls = stubFetch(routes);
+    const { container } = render(<CasesPage caseId={null} roles={["Bestand.Reader"]} />);
+    expect(container.querySelector(".case-layout-detail")).toBeNull();
+    fireEvent.change(await screen.findByRole("combobox", { name: "Art" }), {
+      target: { value: "rueckgabe" },
+    });
+    await vi.waitFor(() =>
+      expect(calls.some((call) => call.url.includes("kind=rueckgabe"))).toBe(true),
+    );
+  });
+
+  it("zeigt gewählt die Ansicht mit dem Weg zurück zur Liste", async () => {
+    stubFetch(routes);
+    const { container } = render(<CasesPage caseId={3} roles={["Bestand.Reader"]} />);
+    expect(await screen.findByRole("heading", { name: newCase.title })).toBeTruthy();
+    expect(container.querySelector(".case-layout-detail")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "‹ Zur Liste" })).toHaveAttribute(
+      "href",
+      "/bestand/vorgaenge",
+    );
   });
 });
 
@@ -183,7 +216,8 @@ describe("Vorgänge: neuer Monitor", () => {
     expect(await screen.findByText("Monitor laut Custom Field")).toBeTruthy();
     expect(screen.getByText("DisplayPort")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Am Arbeitsplatz anlegen/ }));
-    await screen.findByRole("combobox", { name: /^Arbeitsplatz/ });
+    // Der Vorschlag ist schon gewählt; „Ändern“ öffnet die Suche.
+    expect(await screen.findByText("Arbeitsplatz von NB-0142")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
     await vi.waitFor(() =>
       expect(calls.find((call) => call.url.endsWith("/decide"))?.body).toEqual({

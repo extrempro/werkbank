@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   equipmentLabel,
@@ -19,7 +19,7 @@ import {
   type WorkplaceSummary,
 } from "./api";
 import { PositionDetailPage, PositionsPage } from "./PositionsPage";
-import { WorkplaceDetailPage } from "./WorkplacesPage";
+import { WorkplaceDetailPage, WorkplacesPage } from "./WorkplacesPage";
 
 vi.mock("../../router", () => ({ navigate: vi.fn() }));
 
@@ -295,6 +295,78 @@ describe("Arbeitsplätze: Platz im Raum", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await vi.waitFor(() =>
       expect(calls.find((call) => call.method === "PUT")?.body).toEqual({ x: 25, y: 50 }),
+    );
+  });
+});
+
+describe("Arbeitsplätze: anlegen", () => {
+  const floor = {
+    id: 4,
+    name: "Erdgeschoss",
+    position: 0,
+    section_id: 3,
+    section: "Bauteil A",
+    site_id: 2,
+    site: "Haus Nord",
+    city_id: 1,
+    city: "Musterstadt",
+    plan: { url: "/api/inventory/floors/4/plan?v=1", width: 1600, height: 1000 },
+    rooms: [{ id: 9, name: "0.12", x: 10, y: 20, w: 40, h: 20, hardware: 0 }],
+    workplaces: [],
+  };
+
+  it("verlangt einen Raum, zeigt den Grundriss und sucht Stellen", async () => {
+    const calls = stubFetch({
+      "GET /api/inventory/workplaces": [],
+      "GET /api/inventory/assignees": { positions: [], workplaces: [] },
+      "GET /api/inventory/locations": { cities: [] },
+      "GET /api/inventory/master-data": {
+        kinds: [],
+        makers: [],
+        reasons: [],
+        departments: [],
+        kits: [],
+      },
+      // Eine Antwort für beide Suchen: Raum und Stelle
+      "GET /api/inventory/lookup": {
+        items: [
+          { id: 9, label: "Raum 0.12", detail: "Musterstadt / Haus Nord", floor_id: 4 },
+          { id: 4, label: "ST-004 Einkauf", detail: "Alex Beispiel" },
+        ],
+        total: 2,
+      },
+      "GET /api/inventory/floors/4": floor,
+      "POST /api/inventory/workplaces": { id: 12 },
+    });
+    render(<WorkplacesPage roles={["Bestand.Editor"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Arbeitsplatz anlegen" }));
+    const form = await screen.findByRole("region", { name: "Arbeitsplatz anlegen" });
+    fireEvent.click(within(form).getByRole("button", { name: "Arbeitsplatz anlegen" }));
+    expect(await within(form).findByText("Bitte wähle einen Raum.")).toBeTruthy();
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+
+    const room = within(form).getByRole("combobox", { name: "Raum (Pflicht)" });
+    fireEvent.focus(room);
+    fireEvent.change(room, { target: { value: "0.12" } });
+    fireEvent.click(await within(form).findByRole("option", { name: /Raum 0\.12/ }));
+    // Gleich darunter der Grundriss der Etage, der Platz ist freiwillig
+    expect(await within(form).findByText(/Freiwillig: Klick im Grundriss/)).toBeTruthy();
+
+    const position = within(form).getByRole("combobox", { name: "Stelle hinzufügen" });
+    fireEvent.focus(position);
+    fireEvent.change(position, { target: { value: "einkauf" } });
+    fireEvent.click(await within(form).findByRole("option", { name: /ST-004 Einkauf/ }));
+    expect(within(form).getByText("ST-004 Einkauf")).toBeTruthy();
+
+    fireEvent.click(within(form).getByRole("button", { name: "Arbeitsplatz anlegen" }));
+    await vi.waitFor(() =>
+      expect(calls.find((call) => call.method === "POST")?.body).toEqual({
+        room_id: 9,
+        shared: false,
+        kit_id: null,
+        position_ids: [4],
+        note: "",
+      }),
     );
   });
 });

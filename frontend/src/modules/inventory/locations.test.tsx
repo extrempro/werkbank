@@ -1,8 +1,9 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clampRect,
   firstFloorId,
+  levelPath,
   locationPath,
   parseLocationPath,
   rectFromPoints,
@@ -118,6 +119,13 @@ describe("Standorte: Hilfsfunktionen", () => {
       roomId: 9,
     });
     expect(parseLocationPath("/bestand/standorte/etage/x")).toBeNull();
+    expect(parseLocationPath("/bestand/standorte/abschnitt/3")).toEqual({
+      floorId: null,
+      roomId: null,
+      node: { level: "abschnitt", id: 3 },
+    });
+    expect(parseLocationPath("/bestand/standorte/gebaeude/3")).toBeNull();
+    expect(levelPath("stadt", 1)).toBe("/bestand/standorte/stadt/1");
   });
 
   it("begrenzt Rechtecke auf den Grundriss", () => {
@@ -134,8 +142,11 @@ describe("Standorte: Hilfsfunktionen", () => {
   it("sucht Räume und Etagen und gruppiert die Raumauswahl", () => {
     const hits = searchLocations(tree, "büro");
     expect(hits).toHaveLength(1);
-    expect(hits[0]).toMatchObject({ kind: "Raum", floorId: 4, roomId: 9 });
-    expect(searchLocations(tree, "nord")[0]).toMatchObject({ kind: "Standort", floorId: 4 });
+    expect(hits[0]).toMatchObject({ kind: "Raum", href: "/bestand/standorte/etage/4/raum/9" });
+    expect(searchLocations(tree, "nord")[0]).toMatchObject({
+      kind: "Standort",
+      href: "/bestand/standorte/standort/2",
+    });
     expect(searchLocations(tree, " ")).toEqual([]);
     expect(firstFloorId(tree)).toBe(4);
     expect(firstFloorId({ cities: [] })).toBeNull();
@@ -176,6 +187,88 @@ describe("Standorte: Seite", () => {
     await vi.waitFor(() => expect(calls.some((call) => call.method === "PUT")).toBe(true));
     const put = calls.find((call) => call.method === "PUT");
     expect(put?.body).toEqual({ name: "Lager", x: 90, y: 40, w: 10, h: 10 });
+  });
+});
+
+describe("Standorte: Aufbau", () => {
+  it("zeigt den Raum neben dem Grundriss mit seinen Arbeitsplätzen", async () => {
+    stubFetch({
+      "GET /api/inventory/locations": tree,
+      "GET /api/inventory/floors/4": floor,
+    });
+    render(<LocationsPage floorId={4} roomId={9} roles={["Bestand.Reader"]} />);
+    expect(await screen.findByRole("heading", { name: "Raum Büro 0.12" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "AP-002" })).toHaveAttribute(
+      "href",
+      "/bestand/arbeitsplaetze/2",
+    );
+    // Pfad zum Anklicken statt Text; die Liste der Räume ist durch den Raum ersetzt
+    expect(screen.getByRole("link", { name: "Bauteil A" })).toHaveAttribute(
+      "href",
+      "/bestand/standorte/abschnitt/3",
+    );
+    expect(screen.queryByRole("group", { name: "Räume dieser Etage" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "‹ Alle Räume" }));
+    expect(vi.mocked(navigate)).toHaveBeenCalledWith("/bestand/standorte/etage/4");
+  });
+
+  it("klappt Ebenen im Baum auf und zu und blendet den Baum aus", async () => {
+    stubFetch({
+      "GET /api/inventory/locations": tree,
+      "GET /api/inventory/floors/4": floor,
+    });
+    const { container } = render(
+      <LocationsPage floorId={4} roomId={null} roles={["Bestand.Reader"]} />,
+    );
+    const toggle = await screen.findByRole("button", { name: "Bauteil A zuklappen" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("link", { name: /Erdgeschoss/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "Bauteil A aufklappen" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.queryByRole("link", { name: /1\. Obergeschoss/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Standortbaum ausblenden" }));
+    expect(container.querySelector(".loc-layout-wide")).not.toBeNull();
+    expect(window.localStorage.getItem("werkbank-standortbaum")).toBe("aus");
+    fireEvent.click(screen.getByRole("button", { name: "Standortbaum einblenden" }));
+    expect(container.querySelector(".loc-layout-wide")).toBeNull();
+  });
+
+  it("zeigt einen Abschnitt mit seinen Etagen und legt dort eine neue an", async () => {
+    const calls = stubFetch({
+      "GET /api/inventory/locations": tree,
+      "POST /api/inventory/floors": { ...floor, id: 6, name: "Keller", rooms: [], workplaces: [] },
+    });
+    render(
+      <LocationsPage
+        floorId={null}
+        roomId={null}
+        node={{ level: "abschnitt", id: 3 }}
+        roles={["Bestand.Editor"]}
+      />,
+    );
+    expect(await screen.findByRole("heading", { name: "Bauteil A" })).toBeTruthy();
+    expect(screen.getByText("Gebäudeabschnitt")).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: "1. Obergeschoss" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("heading", { name: "Standorte pflegen" })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Neue Etage"), { target: { value: "Keller" } });
+    fireEvent.click(
+      within(screen.getByRole("region", { name: "Bauteil A" })).getByRole("button", {
+        name: "Anlegen",
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(calls.find((call) => call.method === "POST")?.body).toEqual({
+        name: "Keller",
+        section_id: 3,
+        position: 0,
+      }),
+    );
   });
 });
 

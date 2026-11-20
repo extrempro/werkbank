@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { Icon } from "../../components/Icon";
+import { Link } from "../../components/Link";
 import { navigate } from "../../router";
 import { planSpots, PlanView } from "./PlanView";
 import {
@@ -14,6 +16,7 @@ import {
   fetchLocations,
   firstFloorId,
   INVENTORY_EDITOR_ROLE,
+  levelPath,
   locationPath,
   PLAN_TYPES,
   renameLevel,
@@ -21,7 +24,10 @@ import {
   updateFloor,
   updateRoom,
   uploadPlan,
+  workplacePath,
   type Floor,
+  type FloorSpot,
+  type LocationLevel,
   type Locations,
   type Room,
   type RoomRect,
@@ -31,91 +37,258 @@ function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-/** Zugeklappter Baum: offen ist nur der Weg zur gewählten Etage, der Rest auf Wunsch. */
+/** Baum ein- oder ausgeblendet (in diesem Browser gemerkt). */
+const TREE_KEY = "werkbank-standortbaum";
+
+function readTreeHidden(): boolean {
+  try {
+    return window.localStorage.getItem(TREE_KEY) === "aus";
+  } catch {
+    return false;
+  }
+}
+
+function saveTreeHidden(hidden: boolean): void {
+  try {
+    window.localStorage.setItem(TREE_KEY, hidden ? "aus" : "an");
+  } catch {
+    // Speicher gesperrt: gilt nur bis zum Neuladen
+  }
+}
+
+type LevelApi = "cities" | "sites" | "sections";
+
+const LEVEL_API: Record<LocationLevel, LevelApi> = {
+  stadt: "cities",
+  standort: "sites",
+  abschnitt: "sections",
+};
+
+const LEVEL_LABEL: Record<LocationLevel, string> = {
+  stadt: "Stadt",
+  standort: "Standort",
+  abschnitt: "Gebäudeabschnitt",
+};
+
+const NEW_LABEL = {
+  stadt: "Neue Stadt",
+  standort: "Neuer Standort",
+  abschnitt: "Neuer Gebäudeabschnitt",
+  etage: "Neue Etage",
+} as const;
+
+interface Crumb {
+  label: string;
+  href: string;
+}
+
+interface Child {
+  id: number;
+  name: string;
+  count: string;
+  href: string;
+}
+
+interface LevelInfo {
+  name: string;
+  crumbs: Crumb[];
+  children: Child[];
+  /** was darunter angelegt wird */
+  childLabel: string;
+  childKind: "standort" | "abschnitt" | "etage";
+}
+
+/** Angaben zu einer gewählten Stadt, einem Standort oder Abschnitt aus dem Baum. */
+export function levelInfo(
+  tree: Locations,
+  node: { level: LocationLevel; id: number },
+): LevelInfo | null {
+  for (const city of tree.cities) {
+    const cityCrumb = { label: city.name, href: levelPath("stadt", city.id) };
+    if (node.level === "stadt" && city.id === node.id) {
+      return {
+        name: city.name,
+        crumbs: [],
+        childLabel: "Standort",
+        childKind: "standort",
+        children: city.sites.map((site) => ({
+          id: site.id,
+          name: site.name,
+          count: plural(site.sections.length, "Gebäudeabschnitt", "Gebäudeabschnitte"),
+          href: levelPath("standort", site.id),
+        })),
+      };
+    }
+    for (const site of city.sites) {
+      const siteCrumb = { label: site.name, href: levelPath("standort", site.id) };
+      if (node.level === "standort" && site.id === node.id) {
+        return {
+          name: site.name,
+          crumbs: [cityCrumb],
+          childLabel: "Gebäudeabschnitt",
+          childKind: "abschnitt",
+          children: site.sections.map((section) => ({
+            id: section.id,
+            name: section.name,
+            count: plural(section.floors.length, "Etage", "Etagen"),
+            href: levelPath("abschnitt", section.id),
+          })),
+        };
+      }
+      for (const section of site.sections) {
+        if (node.level === "abschnitt" && section.id === node.id) {
+          return {
+            name: section.name,
+            crumbs: [cityCrumb, siteCrumb],
+            childLabel: "Etage",
+            childKind: "etage",
+            children: section.floors.map((floor) => ({
+              id: floor.id,
+              name: floor.name,
+              count: floor.has_plan
+                ? plural(floor.rooms.length, "Raum", "Räume")
+                : "ohne Grundriss",
+              href: locationPath(floor.id),
+            })),
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
+  if (crumbs.length === 0) {
+    return null;
+  }
+  return (
+    <nav aria-label="Pfad" className="loc-crumbs small">
+      {crumbs.map((crumb, index) => (
+        <span key={crumb.href}>
+          {index > 0 && " › "}
+          <Link to={crumb.href}>{crumb.label}</Link>
+        </span>
+      ))}
+    </nav>
+  );
+}
+
+/** Baum: Pfeil klappt auf und zu, der Name öffnet Stadt, Standort, Abschnitt oder Etage. */
 function LocationTree({
   tree,
   floor,
-  onPick,
+  node,
 }: {
   tree: Locations;
   floor: Floor | null;
-  onPick: (floorId: number) => void;
+  node: { level: LocationLevel; id: number } | null;
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
-  const onPath: Record<string, boolean> = floor
-    ? { [`c${floor.city_id}`]: true, [`s${floor.site_id}`]: true, [`a${floor.section_id}`]: true }
-    : {};
+  // Offen ist anfangs nur der Weg zur gewählten Etage oder Ebene
+  const onPath: Record<string, boolean> = {};
+  if (floor) {
+    onPath[`c${floor.city_id}`] = true;
+    onPath[`s${floor.site_id}`] = true;
+    onPath[`a${floor.section_id}`] = true;
+  }
+  if (node) {
+    for (const city of tree.cities) {
+      for (const site of city.sites) {
+        if (node.level === "standort" && site.id === node.id) {
+          onPath[`c${city.id}`] = true;
+        }
+        for (const section of site.sections) {
+          if (node.level === "abschnitt" && section.id === node.id) {
+            onPath[`c${city.id}`] = true;
+            onPath[`s${site.id}`] = true;
+          }
+        }
+      }
+    }
+  }
   const isOpen = (key: string) => open[key] ?? onPath[key] ?? false;
   const toggle = (key: string) => setOpen({ ...open, [key]: !isOpen(key) });
 
-  const Toggle = ({
+  const Row = ({
     id,
+    level,
+    levelId,
     name,
     count,
-    level,
   }: {
     id: string;
+    level: LocationLevel;
+    levelId: number;
     name: string;
     count: string;
-    level: string;
   }) => (
-    <button
-      type="button"
-      className={`lt-toggle lt-${level}`}
-      aria-expanded={isOpen(id)}
-      onClick={() => toggle(id)}
-    >
-      <span className="lt-chev" aria-hidden="true">
-        {isOpen(id) ? "▾" : "▸"}
-      </span>
-      <span className="lt-name">{name}</span>
-      <span className="lt-count">{count}</span>
-    </button>
+    <div className={`lt-row lt-${level}`}>
+      <button
+        type="button"
+        className="lt-chev-button"
+        aria-expanded={isOpen(id)}
+        aria-label={`${name} ${isOpen(id) ? "zuklappen" : "aufklappen"}`}
+        onClick={() => toggle(id)}
+      >
+        <Icon name={isOpen(id) ? "pfeil-unten" : "pfeil-rechts"} />
+      </button>
+      <Link
+        to={levelPath(level, levelId)}
+        className="lt-open"
+        aria-current={node?.level === level && node.id === levelId ? "page" : undefined}
+      >
+        <span className="lt-name">{name}</span>
+        <span className="lt-count">{count}</span>
+      </Link>
+    </div>
   );
 
   return (
     <ul className="lt-list">
       {tree.cities.map((city) => (
         <li key={city.id}>
-          <Toggle
+          <Row
             id={`c${city.id}`}
+            level="stadt"
+            levelId={city.id}
             name={city.name}
             count={plural(city.sites.length, "Standort", "Standorte")}
-            level="city"
           />
           {isOpen(`c${city.id}`) && (
             <ul className="lt-children">
               {city.sites.map((site) => (
                 <li key={site.id}>
-                  <Toggle
+                  <Row
                     id={`s${site.id}`}
+                    level="standort"
+                    levelId={site.id}
                     name={site.name}
                     count={plural(
                       site.sections.reduce((sum, section) => sum + section.floors.length, 0),
                       "Etage",
                       "Etagen",
                     )}
-                    level="site"
                   />
                   {isOpen(`s${site.id}`) && (
                     <ul className="lt-children">
                       {site.sections.map((section) => (
                         <li key={section.id}>
-                          <Toggle
+                          <Row
                             id={`a${section.id}`}
+                            level="abschnitt"
+                            levelId={section.id}
                             name={section.name}
                             count={plural(section.floors.length, "Etage", "Etagen")}
-                            level="section"
                           />
                           {isOpen(`a${section.id}`) && (
                             <ul className="lt-children">
                               {section.floors.map((entry) => (
                                 <li key={entry.id}>
-                                  <button
-                                    type="button"
+                                  <Link
+                                    to={locationPath(entry.id)}
                                     className="lt-floor"
-                                    aria-current={entry.id === floor?.id ? "true" : undefined}
-                                    onClick={() => onPick(entry.id)}
+                                    aria-current={entry.id === floor?.id ? "page" : undefined}
                                   >
                                     <span className="lt-name">{entry.name}</span>
                                     <span className="lt-count">
@@ -123,7 +296,7 @@ function LocationTree({
                                         ? plural(entry.rooms.length, "Raum", "Räume")
                                         : "ohne Grundriss"}
                                     </span>
-                                  </button>
+                                  </Link>
                                 </li>
                               ))}
                             </ul>
@@ -142,51 +315,21 @@ function LocationTree({
   );
 }
 
-/** Neue Stadt, neuer Standort, Abschnitt oder neue Etage. */
-function AddLevelForm({
-  tree,
-  floor,
+/** Neuer Eintrag unter einer Ebene: Stadt, Standort, Abschnitt oder Etage. */
+function NewEntryForm({
+  kind,
+  parentId,
   onTree,
   onFloor,
 }: {
-  tree: Locations;
-  floor: Floor | null;
+  kind: "stadt" | "standort" | "abschnitt" | "etage";
+  parentId: number | null;
   onTree: (next: Locations) => void;
   onFloor: (next: Floor) => void;
 }) {
-  const [level, setLevel] = useState<"stadt" | "standort" | "abschnitt" | "etage">(
-    tree.cities.length === 0 ? "stadt" : "etage",
-  );
-  const [parent, setParent] = useState("");
   const [name, setName] = useState("");
   const [position, setPosition] = useState("0");
   const [error, setError] = useState<string | null>(null);
-
-  const parents: { id: number; label: string }[] = [];
-  for (const city of tree.cities) {
-    if (level === "standort") {
-      parents.push({ id: city.id, label: city.name });
-    }
-    for (const site of city.sites) {
-      if (level === "abschnitt") {
-        parents.push({ id: site.id, label: `${city.name} › ${site.name}` });
-      }
-      for (const section of site.sections) {
-        if (level === "etage") {
-          parents.push({ id: section.id, label: `${site.name} › ${section.name}` });
-        }
-      }
-    }
-  }
-  const preset =
-    level === "etage" && floor
-      ? String(floor.section_id)
-      : level === "abschnitt" && floor
-        ? String(floor.site_id)
-        : level === "standort" && floor
-          ? String(floor.city_id)
-          : "";
-  const parentValue = parent || preset;
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -194,18 +337,14 @@ function AddLevelForm({
       setError("Bitte einen Namen eintragen.");
       return;
     }
-    if (level !== "stadt" && !parentValue) {
-      setError("Bitte wählen, wozu der Eintrag gehört.");
-      return;
-    }
     setError(null);
-    const id = Number(parentValue);
+    const id = parentId ?? 0;
     let done: Promise<unknown>;
-    if (level === "stadt") {
+    if (kind === "stadt") {
       done = createLevel("cities", { name: name.trim() }).then(onTree);
-    } else if (level === "standort") {
+    } else if (kind === "standort") {
       done = createLevel("sites", { name: name.trim(), city_id: id }).then(onTree);
-    } else if (level === "abschnitt") {
+    } else if (kind === "abschnitt") {
       done = createLevel("sections", { name: name.trim(), site_id: id }).then(onTree);
     } else {
       done = createFloor({
@@ -221,206 +360,165 @@ function AddLevelForm({
   };
 
   return (
-    <form className="settings-form form-stack" onSubmit={onSubmit} noValidate>
-      <div className="tool-row">
+    <form className="settings-form tool-row loc-new" onSubmit={onSubmit} noValidate>
+      <label>
+        {NEW_LABEL[kind]}
+        <input
+          type="text"
+          value={name}
+          maxLength={80}
+          autoComplete="off"
+          onChange={(event) => setName(event.target.value)}
+        />
+      </label>
+      {kind === "etage" && (
         <label className="narrow">
-          Neu anlegen
-          <select
-            value={level}
-            onChange={(event) => {
-              setLevel(event.target.value as typeof level);
-              setParent("");
-            }}
-          >
-            <option value="stadt">Stadt</option>
-            <option value="standort">Standort</option>
-            <option value="abschnitt">Gebäudeabschnitt</option>
-            <option value="etage">Etage</option>
-          </select>
-        </label>
-        {level !== "stadt" && (
-          <label>
-            Gehört zu
-            <select value={parentValue} onChange={(event) => setParent(event.target.value)}>
-              <option value="">Bitte wählen</option>
-              {parents.map((entry) => (
-                <option key={entry.id} value={String(entry.id)}>
-                  {entry.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
-      <div className="tool-row">
-        <label>
-          Name
+          Reihenfolge
           <input
-            type="text"
-            value={name}
-            maxLength={80}
-            autoComplete="off"
-            onChange={(event) => setName(event.target.value)}
+            type="number"
+            inputMode="numeric"
+            min={-20}
+            max={200}
+            value={position}
+            onChange={(event) => setPosition(event.target.value)}
           />
         </label>
-        {level === "etage" && (
-          <label className="narrow">
-            Reihenfolge
-            <input
-              type="number"
-              inputMode="numeric"
-              min={-20}
-              max={200}
-              value={position}
-              onChange={(event) => setPosition(event.target.value)}
-            />
-          </label>
-        )}
-      </div>
+      )}
+      <button type="submit" className="button button-secondary">
+        Anlegen
+      </button>
       {error && (
         <p role="alert" className="hint-box hint-bad">
           {error}
         </p>
       )}
-      <div className="project-actions">
-        <button type="submit" className="button button-secondary">
-          Anlegen
-        </button>
-      </div>
     </form>
   );
 }
 
-/** Umbenennen und Löschen für Stadt, Standort, Abschnitt und Etage der gewählten Etage. */
-function PathEditor({
-  floor,
-  onTree,
-  onFloor,
-  onFloorGone,
+/** Umbenennen und Löschen; Löschen geht nur, wenn nichts mehr darunter hängt. */
+function RenameDelete({
+  label,
+  name,
+  extra,
+  onRename,
+  onDelete,
 }: {
-  floor: Floor;
-  onTree: (next: Locations) => void;
-  onFloor: (next: Floor) => void;
-  onFloorGone: (next: Locations) => void;
+  label: string;
+  name: string;
+  /** zusätzliches Feld, z. B. Reihenfolge der Etage */
+  extra?: { label: string; value: string };
+  onRename: (name: string, extra: string) => Promise<unknown>;
+  onDelete: () => Promise<unknown>;
 }) {
-  const entries = [
-    { kind: "cities" as const, id: floor.city_id, label: "Stadt", name: floor.city },
-    { kind: "sites" as const, id: floor.site_id, label: "Standort", name: floor.site },
-    {
-      kind: "sections" as const,
-      id: floor.section_id,
-      label: "Gebäudeabschnitt",
-      name: floor.section,
-    },
-    { kind: "floors" as const, id: floor.id, label: "Etage", name: floor.name },
-  ];
-  const [editing, setEditing] = useState<string | null>(null);
-  const [value, setValue] = useState("");
-  const [position, setPosition] = useState(String(floor.position));
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  const [extraValue, setExtraValue] = useState(extra?.value ?? "");
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const save = (event: FormEvent, entry: (typeof entries)[number]) => {
+  const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!value.trim()) {
       setError("Bitte einen Namen eintragen.");
       return;
     }
-    const done: Promise<unknown> =
-      entry.kind === "floors"
-        ? updateFloor(entry.id, { name: value.trim(), position: Number(position) || 0 }).then(
-            onFloor,
-          )
-        : renameLevel(entry.kind, entry.id, value.trim()).then((tree) => {
-            onTree(tree);
-            return fetchFloor(floor.id).then(onFloor);
-          });
-    done.then(
+    onRename(value.trim(), extraValue).then(
       () => {
-        setEditing(null);
+        setEditing(false);
         setError(null);
       },
       (problem: unknown) => setError(errorText(problem, "Konnte nicht gespeichert werden.")),
     );
   };
 
-  const remove = (entry: (typeof entries)[number]) => {
-    deleteLevel(entry.kind, entry.id).then(
-      (tree) => (entry.kind === "floors" ? onFloorGone(tree) : onTree(tree)),
-      (problem: unknown) => setError(errorText(problem, "Konnte nicht gelöscht werden.")),
-    );
-  };
-
   return (
-    <div className="path-editor">
-      <ul className="master-list">
-        {entries.map((entry) => (
-          <li key={entry.kind} className="master-row">
-            {editing === entry.kind ? (
-              <form className="master-edit" onSubmit={(event) => save(event, entry)} noValidate>
-                <label>
-                  {entry.label}
-                  <input
-                    type="text"
-                    value={value}
-                    maxLength={80}
-                    onChange={(event) => setValue(event.target.value)}
-                  />
-                </label>
-                {entry.kind === "floors" && (
-                  <label className="narrow">
-                    Reihenfolge
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min={-20}
-                      max={200}
-                      value={position}
-                      onChange={(event) => setPosition(event.target.value)}
-                    />
-                  </label>
-                )}
-                <button type="submit" className="button button-primary">
-                  Speichern
-                </button>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => setEditing(null)}
-                >
-                  Abbrechen
-                </button>
-              </form>
-            ) : (
-              <>
-                <span className="master-name">
-                  <span className="small">{entry.label}</span>
-                  <strong>{entry.name}</strong>
-                </span>
-                <span className="master-actions">
-                  <button
-                    type="button"
-                    className="row-button"
-                    onClick={() => {
-                      setEditing(entry.kind);
-                      setValue(entry.name);
-                      setError(null);
-                    }}
-                  >
-                    Umbenennen
-                  </button>
-                  <button type="button" className="row-button" onClick={() => remove(entry)}>
-                    Löschen
-                  </button>
-                </span>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
-      <p className="small">
-        Gelöscht werden kann nur, was leer ist: eine Etage ohne Räume, ein Abschnitt ohne Etagen und
-        so weiter.
-      </p>
+    <div className="loc-edit">
+      {editing ? (
+        <form className="settings-form tool-row" onSubmit={onSubmit} noValidate>
+          <label>
+            Name ({label})
+            <input
+              type="text"
+              value={value}
+              maxLength={80}
+              onChange={(event) => setValue(event.target.value)}
+            />
+          </label>
+          {extra && (
+            <label className="narrow">
+              {extra.label}
+              <input
+                type="number"
+                inputMode="numeric"
+                min={-20}
+                max={200}
+                value={extraValue}
+                onChange={(event) => setExtraValue(event.target.value)}
+              />
+            </label>
+          )}
+          <button type="submit" className="button button-primary">
+            Speichern
+          </button>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => setEditing(false)}
+          >
+            Abbrechen
+          </button>
+        </form>
+      ) : confirming ? (
+        <div className="hint-box hint-warn confirm-box">
+          <p>
+            {label} <strong>{name}</strong> löschen? Das geht nur, wenn nichts mehr darunter hängt.
+          </p>
+          <div className="project-actions">
+            <button
+              type="button"
+              className="button button-danger"
+              onClick={() =>
+                onDelete().catch((problem: unknown) => {
+                  setError(errorText(problem, "Konnte nicht gelöscht werden."));
+                  setConfirming(false);
+                })
+              }
+            >
+              Ja, löschen
+            </button>
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => setConfirming(false)}
+            >
+              Nein
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="project-actions">
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => {
+              setEditing(true);
+              setValue(name);
+              setExtraValue(extra?.value ?? "");
+              setError(null);
+            }}
+          >
+            Umbenennen
+          </button>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => setConfirming(true)}
+          >
+            {label} löschen
+          </button>
+        </div>
+      )}
       {error && (
         <p role="alert" className="hint-box hint-bad">
           {error}
@@ -430,15 +528,91 @@ function PathEditor({
   );
 }
 
-/** Raum: Name und Lage in Prozent (auch ohne Maus änderbar), Löschen. */
+/** Gewählte Stadt, Standort oder Abschnitt: was darunter liegt, Umbenennen, Löschen, Neu. */
+function LevelPanel({
+  tree,
+  node,
+  canEdit,
+  onTree,
+  onFloor,
+}: {
+  tree: Locations;
+  node: { level: LocationLevel; id: number };
+  canEdit: boolean;
+  onTree: (next: Locations) => void;
+  onFloor: (next: Floor) => void;
+}) {
+  const info = levelInfo(tree, node);
+  if (!info) {
+    return <p className="panel panel-empty">Diesen Eintrag gibt es nicht mehr.</p>;
+  }
+  const label = LEVEL_LABEL[node.level];
+  return (
+    <section className="panel" aria-labelledby="ebene-titel">
+      <div className="panel-head">
+        <div>
+          <Breadcrumbs crumbs={info.crumbs} />
+          <p className="small loc-kind">{label}</p>
+          <h2 id="ebene-titel">{info.name}</h2>
+        </div>
+      </div>
+      <div className="detail-body">
+        {info.children.length === 0 ? (
+          <p className="small">
+            Noch kein {info.childLabel === "Etage" ? "Eintrag" : info.childLabel} darunter.
+          </p>
+        ) : (
+          <ul className="loc-children">
+            {info.children.map((child) => (
+              <li key={child.id}>
+                <Link to={child.href}>{child.name}</Link>
+                <span className="small">{child.count}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {canEdit && (
+          <>
+            <NewEntryForm
+              key={`${node.level}-${node.id}`}
+              kind={info.childKind}
+              parentId={node.id}
+              onTree={onTree}
+              onFloor={onFloor}
+            />
+            <RenameDelete
+              key={`edit-${node.level}-${node.id}-${info.name}`}
+              label={label}
+              name={info.name}
+              onRename={(name) => renameLevel(LEVEL_API[node.level], node.id, name).then(onTree)}
+              onDelete={() =>
+                deleteLevel(LEVEL_API[node.level], node.id).then((next) => {
+                  onTree(next);
+                  const parent = info.crumbs[info.crumbs.length - 1];
+                  navigate(parent ? parent.href : "/bestand/standorte");
+                })
+              }
+            />
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** Raum neben dem Grundriss: Arbeitsplätze, Name und Lage (auch ohne Maus änderbar), Löschen. */
 function RoomPanel({
   room,
+  workplaces,
   canEdit,
+  onBack,
   onSave,
   onDelete,
 }: {
   room: Room;
+  workplaces: FloorSpot[];
   canEdit: boolean;
+  onBack: () => void;
   onSave: (name: string, rect: RoomRect) => Promise<unknown>;
   onDelete: () => Promise<unknown>;
 }) {
@@ -475,15 +649,35 @@ function RoomPanel({
   };
 
   return (
-    <section className="panel" aria-labelledby="raum-titel">
-      <div className="panel-head">
-        <h2 id="raum-titel">Raum {room.name}</h2>
-        <span className="small">
-          {room.hardware === 0 ? "keine Hardware" : plural(room.hardware, "Gerät", "Geräte")}
-        </span>
-      </div>
+    <section className="room-side" aria-labelledby="raum-titel">
+      <button type="button" className="row-button room-back" onClick={onBack}>
+        ‹ Alle Räume
+      </button>
+      <h3 id="raum-titel">Raum {room.name}</h3>
+      <p className="small">
+        {room.hardware === 0 ? "keine Hardware" : plural(room.hardware, "Gerät", "Geräte")}
+        {" · "}
+        {workplaces.length === 0
+          ? "kein Arbeitsplatz mit Platz im Grundriss"
+          : plural(workplaces.length, "Arbeitsplatz", "Arbeitsplätze")}
+      </p>
+      {workplaces.length > 0 && (
+        <ul className="link-list">
+          {workplaces.map((spot) => (
+            <li key={spot.id}>
+              <Link to={workplacePath(spot.id)}>{spot.number}</Link>
+              <span className="small">
+                {" "}
+                {spot.positions.length === 0
+                  ? "frei"
+                  : spot.positions.map((entry) => entry.person_name || entry.name).join(", ")}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       {canEdit ? (
-        <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
+        <form className="settings-form form-stack" onSubmit={onSubmit} noValidate>
           <label>
             Name
             <input
@@ -493,27 +687,30 @@ function RoomPanel({
               onChange={(event) => setName(event.target.value)}
             />
           </label>
-          <fieldset className="room-rect">
-            <legend>Lage in Prozent des Grundrisses</legend>
-            {(
-              [
-                ["x", "Von links"],
-                ["y", "Von oben"],
-                ["w", "Breite"],
-                ["h", "Höhe"],
-              ] as const
-            ).map(([key, label]) => (
-              <label key={key} className="narrow">
-                {label}
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={rect[key]}
-                  onChange={(event) => setRect({ ...rect, [key]: event.target.value })}
-                />
-              </label>
-            ))}
-          </fieldset>
+          <details className="room-rect-details">
+            <summary>Lage mit Zahlen ändern</summary>
+            <fieldset className="room-rect">
+              <legend>Lage in Prozent des Grundrisses</legend>
+              {(
+                [
+                  ["x", "Von links"],
+                  ["y", "Von oben"],
+                  ["w", "Breite"],
+                  ["h", "Höhe"],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="narrow">
+                  {label}
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={rect[key]}
+                    onChange={(event) => setRect({ ...rect, [key]: event.target.value })}
+                  />
+                </label>
+              ))}
+            </fieldset>
+          </details>
           {error && (
             <p role="alert" className="hint-box hint-bad">
               {error}
@@ -559,7 +756,7 @@ function RoomPanel({
           </div>
         </form>
       ) : (
-        <p className="detail-body small">
+        <p className="small">
           Lage: {room.x} % von links, {room.y} % von oben, {room.w} × {room.h} %.
         </p>
       )}
@@ -616,14 +813,17 @@ function NewRoomForm({
   );
 }
 
-/** IT-Bestand › Standorte: Baum, Grundriss mit Räumen, Pflege der Struktur. */
+/** IT-Bestand › Standorte: links der Baum, rechts genau das, was gewählt ist. */
 export function LocationsPage({
   floorId,
   roomId,
+  node = null,
   roles,
 }: {
   floorId: number | null;
   roomId: number | null;
+  /** gewählte Stadt, Standort oder Abschnitt */
+  node?: { level: LocationLevel; id: number } | null;
   roles: readonly string[];
 }) {
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
@@ -632,10 +832,13 @@ export function LocationsPage({
   const [failed, setFailed] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState(false);
+  const [floorSettings, setFloorSettings] = useState(false);
   const [draft, setDraft] = useState<RoomRect | null>(null);
   const [mobileTree, setMobileTree] = useState(false);
+  const [treeHidden, setTreeHidden] = useState(readTreeHidden);
   const [notice, setNotice] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const nodeKey = node ? `${node.level}-${node.id}` : "";
 
   useEffect(() => {
     let active = true;
@@ -645,10 +848,12 @@ export function LocationsPage({
           return;
         }
         setTree(result);
-        if (floorId === null) {
+        if (floorId === null && nodeKey === "") {
           const first = firstFloorId(result);
           if (first !== null) {
             navigate(locationPath(first));
+          } else if (result.cities[0]) {
+            navigate(levelPath("stadt", result.cities[0].id));
           }
         }
       },
@@ -658,7 +863,7 @@ export function LocationsPage({
     return () => {
       active = false;
     };
-  }, [floorId]);
+  }, [floorId, nodeKey]);
 
   useEffect(() => {
     if (floorId === null) {
@@ -680,11 +885,11 @@ export function LocationsPage({
   const hits = tree ? searchLocations(tree, query) : [];
 
   const refreshTree = () => fetchLocations().then(setTree);
-  const pick = (id: number, nextRoom: number | null = null) => {
+  const open = (href: string) => {
     setQuery("");
     setMobileTree(false);
     setDraft(null);
-    navigate(locationPath(id, nextRoom));
+    navigate(href);
   };
   const applyFloor = (next: Floor) => {
     setFloor(next);
@@ -692,6 +897,10 @@ export function LocationsPage({
     if (next.id !== floorId) {
       navigate(locationPath(next.id));
     }
+  };
+  const toggleTree = (hidden: boolean) => {
+    setTreeHidden(hidden);
+    saveTreeHidden(hidden);
   };
 
   const onFile = (event: ChangeEvent<HTMLInputElement>) => {
@@ -725,6 +934,19 @@ export function LocationsPage({
     );
   }
 
+  const selectedLabel = shownFloor
+    ? shownFloor.name
+    : node && tree
+      ? (levelInfo(tree, node)?.name ?? "")
+      : "";
+  const floorCrumbs: Crumb[] = shownFloor
+    ? [
+        { label: shownFloor.city, href: levelPath("stadt", shownFloor.city_id) },
+        { label: shownFloor.site, href: levelPath("standort", shownFloor.site_id) },
+        { label: shownFloor.section, href: levelPath("abschnitt", shownFloor.section_id) },
+      ]
+    : [];
+
   return (
     <div className="page page-wide">
       <header className="page-head">
@@ -742,7 +964,7 @@ export function LocationsPage({
           </div>
           <div className="detail-body">
             {canEdit ? (
-              <AddLevelForm tree={tree} floor={null} onTree={setTree} onFloor={applyFloor} />
+              <NewEntryForm kind="stadt" parentId={null} onTree={setTree} onFloor={applyFloor} />
             ) : (
               <p>Es sind noch keine Standorte angelegt.</p>
             )}
@@ -751,31 +973,46 @@ export function LocationsPage({
       )}
       {tree && tree.cities.length > 0 && (
         <div className="loc-wrap">
-          <div className="loc-layout">
-            {shownFloor && (
+          <div className={treeHidden ? "loc-layout loc-layout-wide" : "loc-layout"}>
+            {selectedLabel && (
               <div className="loc-mobilebar panel">
-                <span>
-                  <span className="small loc-mobile-path">
-                    {shownFloor.city} › {shownFloor.site} › {shownFloor.section}
-                  </span>
-                  <strong>{shownFloor.name}</strong>
-                </span>
+                <strong>{selectedLabel}</strong>
                 <button
                   type="button"
                   className="button button-secondary"
                   aria-expanded={mobileTree}
+                  aria-controls="standortbaum"
                   onClick={() => setMobileTree(!mobileTree)}
                 >
-                  {mobileTree ? "Schließen" : "Etage wechseln"}
+                  {mobileTree ? "Schließen" : "Standort wechseln"}
                 </button>
               </div>
             )}
             <nav
+              id="standortbaum"
               className={
-                mobileTree || !shownFloor ? "panel loc-tree loc-tree-open" : "panel loc-tree"
+                mobileTree || !selectedLabel ? "panel loc-tree loc-tree-open" : "panel loc-tree"
               }
               aria-label="Standorte"
+              onClick={(event) => {
+                // Schmal: Nach der Wahl im Baum schließt er sich wieder.
+                if (event.target instanceof Element && event.target.closest("a")) {
+                  setMobileTree(false);
+                }
+              }}
             >
+              <div className="loc-tree-head">
+                <span className="loc-tree-title">Standorte</span>
+                <button
+                  type="button"
+                  className="row-button loc-tree-hide"
+                  aria-label="Standortbaum ausblenden"
+                  title="Standortbaum ausblenden"
+                  onClick={() => toggleTree(true)}
+                >
+                  <Icon name="einklappen" />
+                </button>
+              </div>
               <div className="loc-search">
                 <label htmlFor="standort-suche" className="visually-hidden">
                   Raum, Etage oder Standort suchen
@@ -793,12 +1030,8 @@ export function LocationsPage({
                   <ul className="loc-hits" aria-label="Treffer">
                     {hits.length === 0 && <li className="small">Nichts gefunden.</li>}
                     {hits.map((hit) => (
-                      <li key={`${hit.kind}-${hit.floorId}-${hit.roomId ?? hit.name}`}>
-                        <button
-                          type="button"
-                          className="loc-hit"
-                          onClick={() => pick(hit.floorId, hit.roomId)}
-                        >
+                      <li key={hit.href}>
+                        <button type="button" className="loc-hit" onClick={() => open(hit.href)}>
                           <strong>{hit.name}</strong>
                           <span className="small">
                             {hit.kind}
@@ -810,59 +1043,50 @@ export function LocationsPage({
                   </ul>
                 )}
               </div>
-              <LocationTree tree={tree} floor={shownFloor} onPick={(id) => pick(id)} />
+              <LocationTree tree={tree} floor={shownFloor} node={node} />
+              {canEdit && (
+                <details className="loc-new-city">
+                  <summary>Neue Stadt</summary>
+                  <NewEntryForm
+                    kind="stadt"
+                    parentId={null}
+                    onTree={setTree}
+                    onFloor={applyFloor}
+                  />
+                </details>
+              )}
             </nav>
 
             <div className="loc-main">
-              {!shownFloor && floorId !== null && <p role="status">Wird geladen …</p>}
-              {!shownFloor && floorId === null && (
-                <p className="panel panel-empty">
-                  Noch keine Etage angelegt.
-                  {canEdit ? " Lege unten unter „Neu anlegen“ eine an." : ""}
-                </p>
+              {treeHidden && (
+                <button
+                  type="button"
+                  className="button button-secondary loc-tree-show"
+                  onClick={() => toggleTree(false)}
+                >
+                  <Icon name="ausklappen" />
+                  Standortbaum einblenden
+                </button>
               )}
+              {node && !shownFloor && (
+                <LevelPanel
+                  tree={tree}
+                  node={node}
+                  canEdit={canEdit}
+                  onTree={setTree}
+                  onFloor={applyFloor}
+                />
+              )}
+              {!node && !shownFloor && floorId !== null && <p role="status">Wird geladen …</p>}
               {shownFloor && (
                 <section className="panel" aria-labelledby="etage-titel">
                   <div className="panel-head">
                     <div>
-                      <p className="small loc-path">
-                        {shownFloor.city} › {shownFloor.site} › {shownFloor.section}
-                      </p>
+                      <Breadcrumbs crumbs={floorCrumbs} />
                       <h2 id="etage-titel">{shownFloor.name}</h2>
                     </div>
                     {canEdit && (
                       <div className="project-actions">
-                        <input
-                          ref={fileInput}
-                          type="file"
-                          accept={PLAN_TYPES.join(",")}
-                          className="visually-hidden"
-                          tabIndex={-1}
-                          aria-hidden="true"
-                          onChange={onFile}
-                        />
-                        <button
-                          type="button"
-                          className="button button-secondary"
-                          onClick={() => fileInput.current?.click()}
-                        >
-                          {shownFloor.plan ? "Grundriss ersetzen" : "Grundriss hochladen"}
-                        </button>
-                        {shownFloor.plan && (
-                          <button
-                            type="button"
-                            className="button button-secondary"
-                            onClick={() =>
-                              deletePlan(shownFloor.id).then(applyFloor, (problem: unknown) =>
-                                setNotice(
-                                  errorText(problem, "Der Grundriss konnte nicht entfernt werden."),
-                                ),
-                              )
-                            }
-                          >
-                            Grundriss entfernen
-                          </button>
-                        )}
                         <button
                           type="button"
                           className={editing ? "button button-primary" : "button button-secondary"}
@@ -874,10 +1098,78 @@ export function LocationsPage({
                         >
                           {editing ? "Fertig" : "Räume bearbeiten"}
                         </button>
+                        <button
+                          type="button"
+                          className="button button-secondary"
+                          aria-expanded={floorSettings}
+                          aria-controls="etage-einstellungen"
+                          onClick={() => setFloorSettings(!floorSettings)}
+                        >
+                          Etage bearbeiten
+                        </button>
                       </div>
                     )}
                   </div>
                   <div className="detail-body">
+                    {canEdit && floorSettings && (
+                      <div id="etage-einstellungen" className="loc-floor-settings">
+                        <div className="project-actions">
+                          <input
+                            ref={fileInput}
+                            type="file"
+                            accept={PLAN_TYPES.join(",")}
+                            className="visually-hidden"
+                            tabIndex={-1}
+                            aria-hidden="true"
+                            onChange={onFile}
+                          />
+                          <button
+                            type="button"
+                            className="button button-secondary"
+                            onClick={() => fileInput.current?.click()}
+                          >
+                            {shownFloor.plan ? "Grundriss ersetzen" : "Grundriss hochladen"}
+                          </button>
+                          {shownFloor.plan && (
+                            <button
+                              type="button"
+                              className="button button-secondary"
+                              onClick={() =>
+                                deletePlan(shownFloor.id).then(applyFloor, (problem: unknown) =>
+                                  setNotice(
+                                    errorText(
+                                      problem,
+                                      "Der Grundriss konnte nicht entfernt werden.",
+                                    ),
+                                  ),
+                                )
+                              }
+                            >
+                              Grundriss entfernen
+                            </button>
+                          )}
+                        </div>
+                        <RenameDelete
+                          key={`${shownFloor.id}-${shownFloor.name}-${shownFloor.position}`}
+                          label="Etage"
+                          name={shownFloor.name}
+                          extra={{ label: "Reihenfolge", value: String(shownFloor.position) }}
+                          onRename={(name, position) =>
+                            updateFloor(shownFloor.id, {
+                              name,
+                              position: Number(position) || 0,
+                            }).then(applyFloor)
+                          }
+                          onDelete={() =>
+                            deleteLevel("floors", shownFloor.id).then((next) => {
+                              setTree(next);
+                              setFloorSettings(false);
+                              navigate(levelPath("abschnitt", shownFloor.section_id));
+                            })
+                          }
+                        />
+                      </div>
+                    )}
                     {notice && (
                       <p role="alert" className="hint-box hint-bad">
                         {notice}
@@ -918,24 +1210,40 @@ export function LocationsPage({
                           onMove={(entry, rect) => void moveRoom(entry, rect)}
                         />
                       </div>
-                      {shownFloor.rooms.length > 0 && (
+                      {room ? (
+                        <RoomPanel
+                          key={`${room.id}-${room.x}-${room.y}-${room.w}-${room.h}-${room.name}`}
+                          room={room}
+                          workplaces={shownFloor.workplaces.filter(
+                            (spot) => spot.room_id === room.id,
+                          )}
+                          canEdit={canEdit}
+                          onBack={() => navigate(locationPath(shownFloor.id))}
+                          onSave={(name, rect) =>
+                            updateRoom(room.id, { name, ...rect }).then(applyFloor)
+                          }
+                          onDelete={() =>
+                            deleteRoom(room.id).then((next) => {
+                              applyFloor(next);
+                              navigate(locationPath(next.id));
+                            })
+                          }
+                        />
+                      ) : (
                         <div className="room-list" role="group" aria-label="Räume dieser Etage">
                           <p className="small room-list-head">
-                            {plural(shownFloor.rooms.length, "Raum", "Räume")}
+                            {shownFloor.rooms.length === 0
+                              ? canEdit
+                                ? "Noch keine Räume. Mit „Räume bearbeiten“ ziehst du sie im Grundriss auf."
+                                : "Noch keine Räume."
+                              : plural(shownFloor.rooms.length, "Raum", "Räume")}
                           </p>
                           {shownFloor.rooms.map((entry) => (
                             <button
                               key={entry.id}
                               type="button"
-                              aria-pressed={entry.id === room?.id}
-                              onClick={() =>
-                                navigate(
-                                  locationPath(
-                                    shownFloor.id,
-                                    entry.id === room?.id ? null : entry.id,
-                                  ),
-                                )
-                              }
+                              aria-pressed={false}
+                              onClick={() => navigate(locationPath(shownFloor.id, entry.id))}
                             >
                               <span className="lt-name">{entry.name}</span>
                               <span className="lt-count">
@@ -948,47 +1256,6 @@ export function LocationsPage({
                         </div>
                       )}
                     </div>
-                  </div>
-                </section>
-              )}
-              {shownFloor && room && (
-                <RoomPanel
-                  key={`${room.id}-${room.x}-${room.y}-${room.w}-${room.h}-${room.name}`}
-                  room={room}
-                  canEdit={canEdit}
-                  onSave={(name, rect) => updateRoom(room.id, { name, ...rect }).then(applyFloor)}
-                  onDelete={() =>
-                    deleteRoom(room.id).then((next) => {
-                      applyFloor(next);
-                      navigate(locationPath(next.id));
-                    })
-                  }
-                />
-              )}
-              {canEdit && (
-                <section className="panel" aria-labelledby="struktur-titel">
-                  <div className="panel-head">
-                    <h2 id="struktur-titel">Standorte pflegen</h2>
-                  </div>
-                  <div className="detail-body">
-                    <AddLevelForm
-                      tree={tree}
-                      floor={shownFloor}
-                      onTree={setTree}
-                      onFloor={applyFloor}
-                    />
-                    {shownFloor && (
-                      <PathEditor
-                        floor={shownFloor}
-                        onTree={setTree}
-                        onFloor={applyFloor}
-                        onFloorGone={(next) => {
-                          setTree(next);
-                          const first = firstFloorId(next);
-                          navigate(first === null ? "/bestand/standorte" : locationPath(first));
-                        }}
-                      />
-                    )}
                   </div>
                 </section>
               )}

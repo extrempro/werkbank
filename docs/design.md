@@ -26,6 +26,8 @@ Ziel: Jeder Screen sieht gleich aufgebaut aus und wird gleich bedient. Visuelle 
 - Ein neuer Bereich braucht nur einen Eintrag in `areasFor` (`frontend/src/navigation.ts`): Symbol, Kurzname, Abschnitt der Leiste, Gruppen. Die erlaubten Pfade für Anheften und „Zuletzt besucht“ stehen zusätzlich auf dem Server (`backend/werkbank/core/navigation.py`).
 - Unten rechts erscheint nach etwas Scrollen der Knopf „Nach oben“.
 - Maximale Inhaltsbreite 1180 px (Seiten mit Liste und Detail nebeneinander bis 1400 px), Abstand zum Rand 24 px (mobil 16 px).
+- **Liste und Ansicht** (z. B. Vorgänge, Verleih): Suche, Status und weitere Filter oben in der Liste; die Liste hat eine feste Höhe bis zum unteren Rand und scrollt für sich, die Ansicht daneben bleibt stehen. Unter 1024 px erst nur die Liste, gewählt nur die Ansicht mit „‹ Zur Liste“.
+- **Auswahl mit Suche** statt langer Auswahllisten (Stellen, Arbeitsplätze, Räume, Geräte): Combobox, die auf dem Server sucht (höchstens 20 Treffer, Hinweis bei mehr), Pfeiltasten und Enter; gewählt steht der Eintrag mit „Ändern“.
 - Symbole nur aus `components/Icon.tsx` (24 × 24, Linie, Strichstärke 2), nie direkt im Markup.
 
 ## 2. Liste und Detail

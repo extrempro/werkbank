@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
+from tests.inventory_rooms import room_for_tests
 from tests.test_admin_settings import HEADERS, settings_with_key
 from tests.test_m365_api import client_for
 from werkbank.core.app_settings import (
@@ -160,7 +161,9 @@ def test_loan_lifecycle(db: Session) -> None:
     view = reader.get(f"{BASE}/hardware/{notebook.id}").json()
     assert view["loan"]["number"] == loan["number"]
     assert any("Verliehen an Pia Beispiel" in event["text"] for event in view["events"])
-    workplace = client.post(f"{BASE}/workplaces", json={"name": "Platz"}, headers=HEADERS).json()
+    workplace = client.post(
+        f"{BASE}/workplaces", json={"name": "Platz", "room_id": room_for_tests(db)}, headers=HEADERS
+    ).json()
     update = {
         "kind_id": notebook.kind_id,
         "name": notebook.name,
@@ -397,3 +400,9 @@ def test_lists_search_and_pages(db: Session) -> None:
     hit = client.get(f"{BASE}/cases", params={"state": "alle", "q": "Such-Notebook 2"}).json()
     assert hit["total"] == 1 and numbers[2] in hit["cases"][0]["title"]
     assert client.get(f"{BASE}/cases", params={"q": "x" * 101}).status_code == 422
+    # Nach Art eingrenzen: nur Rückgaben, keine Monitore
+    by_kind = client.get(f"{BASE}/cases", params={"state": "alle", "kind": "rueckgabe"}).json()
+    assert by_kind["total"] == 3
+    monitors = client.get(f"{BASE}/cases", params={"state": "alle", "kind": "monitor"}).json()
+    assert monitors["total"] == 0
+    assert client.get(f"{BASE}/cases", params={"kind": "gibtsnicht"}).status_code == 422

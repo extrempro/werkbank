@@ -210,6 +210,13 @@ class WorkplaceIn(BaseModel):
         return single_line(value)
 
 
+class WorkplaceNew(WorkplaceIn):
+    """Neuer Arbeitsplatz: Raum ist Pflicht, der Platz im Grundriss freiwillig (in Prozent)."""
+
+    spot_x: float | None = Field(default=None, ge=0, le=100)
+    spot_y: float | None = Field(default=None, ge=0, le=100)
+
+
 class SpotIn(BaseModel):
     """Platz im Raum in Prozent der Raumbreite und -höhe; beides leer entfernt ihn."""
 
@@ -918,7 +925,17 @@ def read_assignees(user: Reader, db: DbDep) -> AssigneesOut:
 
 
 @router.post("/workplaces", status_code=status.HTTP_201_CREATED)
-def create_workplace(request: Request, body: WorkplaceIn, user: Editor, db: DbDep) -> WorkplaceOut:
+def create_workplace(request: Request, body: WorkplaceNew, user: Editor, db: DbDep) -> WorkplaceOut:
+    # Beim Anlegen ist der Raum Pflicht; bestehende Arbeitsplätze dürfen (noch) ohne sein.
+    if body.room_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Bitte wähle einen Raum."
+        )
+    if (body.spot_x is None) != (body.spot_y is None):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Bitte beide Werte für den Platz angeben oder beide leer lassen.",
+        )
     positions, room_id, kit_id = _check_workplace(db, body)
     row = InventoryWorkplace(
         number=next_number(db, "arbeitsplatz", InventoryWorkplace),
@@ -927,6 +944,8 @@ def create_workplace(request: Request, body: WorkplaceIn, user: Editor, db: DbDe
         shared=body.shared,
         kit_id=kit_id,
         note=body.note,
+        spot_x=round(body.spot_x, 2) if body.spot_x is not None else None,
+        spot_y=round(body.spot_y, 2) if body.spot_y is not None else None,
     )
     db.add(row)
     db.flush()
@@ -935,6 +954,8 @@ def create_workplace(request: Request, body: WorkplaceIn, user: Editor, db: DbDe
         add_staff_event(
             db, user, f"Standort: {place_label(room_place(db, room_id))}", workplace_id=row.id
         )
+    if row.spot_x is not None:
+        add_staff_event(db, user, "Platz im Raum gesetzt", workplace_id=row.id)
     for text in _set_positions(db, user, row, positions):
         add_staff_event(db, user, text, workplace_id=row.id)
     _audit(
