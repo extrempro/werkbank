@@ -23,7 +23,7 @@ test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
   await page.getByLabel("Bezeichnung", { exact: true }).fill(name);
   await page
-    .getByLabel("Art", { exact: true })
+    .getByRole("combobox", { name: /^Art/ })
     .selectOption({ label: "Monitor" });
   await page.getByLabel("Seriennummer", { exact: true }).fill(`SN-${stamp}`);
   await page.getByLabel("Inventurnummer (freiwillig)").fill(`INV-${stamp}`);
@@ -39,10 +39,10 @@ test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
   // Ausmustern
   await page.getByRole("button", { name: "Ausmustern" }).click();
   await page
-    .getByLabel("Grund", { exact: true })
+    .getByRole("combobox", { name: /^Grund/ })
     .selectOption({ label: "defekt" });
   await page
-    .getByLabel("Verbleib", { exact: true })
+    .getByRole("combobox", { name: /^Verbleib/ })
     .selectOption({ label: "entsorgt" });
   await page.getByRole("button", { name: "Weiter" }).click();
   await expectNoA11yViolations(page);

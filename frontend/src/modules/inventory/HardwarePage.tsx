@@ -257,7 +257,9 @@ function NewDeviceForm({ master, onCancel }: { master: MasterData; onCancel: () 
 export function HardwarePage({ roles }: { roles: readonly string[] }) {
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
   const [state, setState] = useState<ListState>("aktiv");
-  const [list, setList] = useState<HardwareSummary[] | null>(null);
+  // Geladene Liste mit dem Status, für den sie gilt; beim Umschalten zählt sie als „lädt“.
+  const [loaded, setLoaded] = useState<{ state: ListState; items: HardwareSummary[] } | null>(null);
+  const list = loaded && loaded.state === state ? loaded.items : null;
   const [master, setMaster] = useState<MasterData | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -278,9 +280,8 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
 
   useEffect(() => {
     let active = true;
-    setList(null);
     fetchHardwareList(state).then(
-      (result) => active && setList(result),
+      (result) => active && setLoaded({ state, items: result }),
       (error: unknown) =>
         active && setFailed(errorText(error, "Die Hardware konnte nicht geladen werden.")),
     );
