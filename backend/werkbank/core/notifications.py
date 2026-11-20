@@ -139,6 +139,16 @@ KINDS: dict[str, KindInfo] = {
         "DNS-Abgleich mit NetBox ist fehlgeschlagen",
         (Role.MONITORING_READER, Role.WERKBANK_ADMIN),
     ),
+    "bestand.vorgang_neu": KindInfo(
+        "IT-Bestand",
+        "Neuer Vorgang im Eingang, z. B. ein neues Gerät in NinjaOne",
+        (Role.INVENTORY_EDITOR,),
+    ),
+    "bestand.abgleich_fehlgeschlagen": KindInfo(
+        "IT-Bestand",
+        "Abgleich mit NinjaOne ist fehlgeschlagen",
+        (Role.INVENTORY_EDITOR, Role.WERKBANK_ADMIN),
+    ),
     "kern.auftrag_fehlgeschlagen": KindInfo(
         "Werkbank", "Ein Hintergrundauftrag ist fehlgeschlagen", (Role.WERKBANK_ADMIN,)
     ),

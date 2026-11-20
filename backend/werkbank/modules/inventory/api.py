@@ -271,8 +271,18 @@ class HolderOut(BaseModel):
     label: str
 
 
+class NinjaOut(BaseModel):
+    """Kenndaten aus NinjaOne (Stand des letzten Abgleichs)."""
+
+    ninja_id: int
+    facts: dict[str, object]
+    seen_at: datetime | None
+    missing_since: datetime | None
+
+
 class HardwareOut(HardwareSummary):
     location: LocationOut | None
+    ninja: NinjaOut | None
     holder_ref: HolderOut | None
     position_id: int | None
     workplace_id: int | None
@@ -486,6 +496,14 @@ def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
     return HardwareOut(
         **base.model_dump(),
         location=LocationOut(**vars(place)) if place else None,
+        ninja=NinjaOut(
+            ninja_id=row.ninja_id,
+            facts=dict(row.ninja_facts or {}),
+            seen_at=row.ninja_seen_at,
+            missing_since=row.ninja_missing_since,
+        )
+        if row.ninja_id is not None
+        else None,
         holder_ref=holder_ref,
         position_id=row.position_id,
         workplace_id=row.workplace_id,
@@ -640,6 +658,13 @@ def update_hardware(
     model = _model(db, body.model_id)
     room = _room(db, body.room_id)
     position, workplace = _holder(db, body.position_id, body.workplace_id)
+    if row.ninja_id is not None and (
+        body.hostname != row.hostname or body.serial.casefold() != row.serial.casefold()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Hostname und Seriennummer kommen aus NinjaOne und sind hier nicht änderbar.",
+        )
     _check_serial(db, body.serial, row.id)
     before = _details(row)
     changes: list[str] = []
