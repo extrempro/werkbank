@@ -298,14 +298,11 @@ test("IT-Bestand: Vorgänge und Technik ohne NinjaOne", async ({ page }) => {
   await expect(
     page.getByText(/Der Abgleich mit NinjaOne ist ausgeschaltet/),
   ).toBeVisible();
-  // Breit stehen Liste und Ansicht nebeneinander, schmal erst nur die Liste.
-  const wide = (page.viewportSize()?.width ?? 1280) >= 1024;
-  await expect(page.getByText("Wähle links einen Vorgang.")).toBeVisible({
-    visible: wide,
-  });
+  // Suche und Filter stehen in einer Zeile über der Tabelle.
   await expect(
-    page.getByRole("navigation", { name: "Vorgänge" }),
+    page.getByRole("searchbox", { name: "Vorgänge durchsuchen" }),
   ).toBeVisible();
+  await expect(page.getByRole("group", { name: "Status" })).toBeVisible();
   await page.getByRole("combobox", { name: "Art" }).selectOption("rueckgabe");
   await expect(page.getByRole("combobox", { name: "Art" })).toHaveValue(
     "rueckgabe",

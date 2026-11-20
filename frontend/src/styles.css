@@ -7437,14 +7437,29 @@ html {
   gap: 16px;
 }
 
-/* IT-Bestand › Vorgänge */
+/* IT-Bestand › Vorgänge: kompakter Kopf, eine Zeile Suche und Filter, Tabelle */
+.case-page {
+  gap: 12px;
+}
+
+.case-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px 16px;
+}
+
+.case-count {
+  margin: 0 0 4px;
+}
+
 .sync-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  padding: 12px 16px;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  margin: 0 0 0 auto;
 }
 
 .sync-bar > p {
@@ -7453,6 +7468,157 @@ html {
 
 .sync-bar .hint-box {
   flex-basis: 100%;
+}
+
+.case-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px;
+}
+
+.case-search {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.case-search input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.case-toolbar .case-kind {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+}
+
+.case-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.case-table td {
+  vertical-align: middle;
+}
+
+.case-row {
+  cursor: pointer;
+}
+
+.case-row:hover td {
+  background: var(--farbe-hover);
+}
+
+.case-row.is-selected td {
+  background: var(--farbe-auswahl);
+}
+
+.case-row.is-selected td:first-child {
+  box-shadow: inset 3px 0 0 var(--farbe-primaer);
+}
+
+.case-title-cell a {
+  font-weight: 600;
+  color: var(--farbe-text);
+  text-decoration: none;
+}
+
+.case-title-cell a:hover,
+.case-title-cell a:focus-visible {
+  text-decoration: underline;
+}
+
+.case-meta {
+  display: none;
+}
+
+.case-close {
+  min-width: 44px;
+  padding: 0;
+  font-size: 1.25rem;
+}
+
+.case-head {
+  justify-content: flex-start;
+}
+
+.case-head > div:first-child {
+  flex: 1 1 20rem;
+}
+
+/* Tabelle ohne Auswahl über die ganze Breite; mit Auswahl schmaler, die Ansicht rechts */
+.case-layout-table {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.case-layout-table:not(.case-layout-detail) .case-main {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .case-layout-table.case-layout-detail {
+    grid-template-columns: minmax(0, 54fr) minmax(0, 46fr);
+  }
+
+  .case-layout-detail .case-table .col-extra {
+    display: none;
+  }
+
+  .case-layout-table .case-list {
+    height: auto;
+    max-height: calc(100dvh - var(--kopf-hoehe) - 32px);
+    min-height: 0;
+  }
+
+  .case-layout-table.case-layout-detail .case-list {
+    height: calc(100dvh - var(--kopf-hoehe) - 32px);
+  }
+}
+
+@media (max-width: 1023px) {
+  .case-table .col-extra,
+  .case-table .col-nr,
+  .case-table thead {
+    display: none;
+  }
+
+  .case-meta {
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .case-table td {
+    padding: 10px 12px;
+  }
+
+  .case-close,
+  .sync-next {
+    display: none;
+  }
+
+  /* Status als eine Zeile zum Wischen */
+  .case-toolbar .chips {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .case-toolbar .chip {
+    flex: 0 0 auto;
+  }
 }
 
 /* Liste und Ansicht (Vorgänge, Verleih): Die Liste hat eine feste Höhe und scrollt für sich,

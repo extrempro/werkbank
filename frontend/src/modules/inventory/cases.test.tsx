@@ -180,6 +180,30 @@ describe("Vorgänge: Liste", () => {
       "/bestand/vorgaenge",
     );
   });
+
+  it("zeigt die Vorgänge als Tabelle und öffnet einen Vorgang per Klick auf die Zeile", async () => {
+    stubFetch(routes);
+    const { navigate } = await import("../../router");
+    render(<CasesPage caseId={null} roles={["Bestand.Reader"]} />);
+    const table = await screen.findByRole("table", { name: "Vorgänge" });
+    expect(screen.getByRole("columnheader", { name: "Bearbeitet von" })).toBeTruthy();
+    const link = screen.getByRole("link", { name: newCase.title });
+    expect(link).toHaveAttribute("href", "/bestand/vorgaenge/3");
+    fireEvent.click(table.querySelector("tbody td") as HTMLElement);
+    expect(navigate).toHaveBeenCalledWith("/bestand/vorgaenge/3");
+  });
+
+  it("schließt die Ansicht über das Kreuz", async () => {
+    stubFetch(routes);
+    const { navigate } = await import("../../router");
+    render(<CasesPage caseId={3} roles={["Bestand.Reader"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Ansicht schließen" }));
+    expect(navigate).toHaveBeenCalledWith("/bestand/vorgaenge");
+    expect(screen.getByRole("link", { name: newCase.title })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+  });
 });
 
 describe("Vorgänge: neuer Monitor", () => {
