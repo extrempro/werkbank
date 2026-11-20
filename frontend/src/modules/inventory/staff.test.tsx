@@ -10,6 +10,7 @@ import {
   parsePositionPath,
   parseWorkplacePath,
   positionPath,
+  spotInRoom,
   workplaceName,
   workplacePath,
   type Position,
@@ -95,6 +96,8 @@ const workplace: Workplace = {
   ...workplaceSummary,
   note: "",
   location: null,
+  spot_x: null,
+  spot_y: null,
   created_at: "2026-11-20T08:00:00Z",
   hardware_list: [],
   equipment: {
@@ -134,7 +137,7 @@ describe("Stellen und Arbeitsplätze: Hilfsfunktionen", () => {
     expect(equipmentLabel({ complete: null, missing: 0 })).toBe("keine Vorlage");
     expect(equipmentLabel({ complete: true, missing: 0 })).toBe("vollständig");
     expect(equipmentLabel({ complete: false, missing: 2 })).toBe("2 fehlen");
-    expect(workplaceName({ number: "AP-003", name: "" })).toBe("AP-003");
+    expect(workplaceName({ number: "AP-003" })).toBe("AP-003");
   });
 
   it("liest die Zuordnung eines Geräts", () => {
@@ -222,7 +225,7 @@ describe("Stellen: Seiten", () => {
     const { unmount } = render(
       <PositionDetailPage positionId={4} tab="arbeitsplaetze" roles={["Bestand.Reader"]} />,
     );
-    expect(await screen.findByRole("link", { name: "AP-002 Fenster" })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "AP-002" })).toBeTruthy();
     unmount();
     render(<PositionDetailPage positionId={4} tab="verlauf" roles={["Bestand.Reader"]} />);
     expect(await screen.findByText("Stelle angelegt")).toBeTruthy();
@@ -236,5 +239,62 @@ describe("Arbeitsplätze: Ausstattung", () => {
     expect(await screen.findByText("Es fehlt noch etwas: 1 fehlt.")).toBeTruthy();
     expect(screen.getByText("1 von 2")).toBeTruthy();
     expect(screen.getAllByText("1 von 1")).toHaveLength(1);
+  });
+});
+
+describe("Arbeitsplätze: Platz im Raum", () => {
+  const location = {
+    room_id: 9,
+    room: "0.12",
+    floor_id: 4,
+    floor: "Erdgeschoss",
+    section: "Bauteil A",
+    site: "Haus Nord",
+    city: "Musterstadt",
+  };
+  const floor = {
+    id: 4,
+    name: "Erdgeschoss",
+    position: 0,
+    section_id: 3,
+    section: "Bauteil A",
+    site_id: 2,
+    site: "Haus Nord",
+    city_id: 1,
+    city: "Musterstadt",
+    plan: null,
+    rooms: [{ id: 9, name: "0.12", x: 10, y: 20, w: 40, h: 20, hardware: 0 }],
+    workplaces: [],
+  };
+
+  it("rechnet einen Punkt der Etage in den Raum um", () => {
+    expect(spotInRoom({ x: 20, y: 30 }, { x: 10, y: 20, w: 40, h: 20 })).toEqual({ x: 25, y: 50 });
+    expect(spotInRoom({ x: 60, y: 30 }, { x: 10, y: 20, w: 40, h: 20 })).toBeNull();
+  });
+
+  it("setzt den Platz mit Zahlen und zeigt die Ortszeile", async () => {
+    const placed = { ...workplace, location, spot_x: 25, spot_y: 50 };
+    const calls = stubFetch({
+      "GET /api/inventory/workplaces/2": { ...workplace, location },
+      "GET /api/inventory/whereabouts/arbeitsplatz/2": {
+        via: null,
+        floors: [{ floor_id: 4, rooms: [location], workplace_ids: [2] }],
+      },
+      "GET /api/inventory/floors/4": floor,
+      "PUT /api/inventory/workplaces/2/spot": placed,
+    });
+    render(<WorkplaceDetailPage workplaceId={2} tab="standort" roles={["Bestand.Editor"]} />);
+    expect(
+      await screen.findByRole("link", { name: /Raum 0\.12 · Erdgeschoss · Bauteil A/ }),
+    ).toBeTruthy();
+    expect(await screen.findByText("Der Platz im Raum ist noch nicht gesetzt.")).toBeTruthy();
+    expect(screen.queryByLabelText("Bezeichnung")).toBeNull();
+    fireEvent.click(screen.getByText("Platz mit Zahlen eingeben"));
+    fireEvent.change(screen.getByLabelText("Von links im Raum (%)"), { target: { value: "25" } });
+    fireEvent.change(screen.getByLabelText("Von oben im Raum (%)"), { target: { value: "50" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await vi.waitFor(() =>
+      expect(calls.find((call) => call.method === "PUT")?.body).toEqual({ x: 25, y: 50 }),
+    );
   });
 });

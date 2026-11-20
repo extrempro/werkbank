@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.70.0] – 2026-11-20
+
+### IT-Bestand
+
+- **Ort sichtbar:** Unter dem Titel von Stelle, Arbeitsplatz und Gerät steht eine Ortszeile (Raum · Etage · Abschnitt · Standort · Stadt) mit Link zu „Standorte“. Der Reiter „Standort“ zeigt den Grundriss mit hervorgehobenen Räumen und den Plätzen der Arbeitsplätze; neu auch bei der Stelle (alle Räume ihrer Arbeitsplätze, Wahl der Etage). Geräte ohne eigenen Raum zeigen den Ort über ihren Arbeitsplatz oder ihre Stelle. API `GET /api/inventory/whereabouts/{art}/{id}`
+- **Platz im Raum:** Bearbeiter setzen den Platz eines Arbeitsplatzes per Klick in den Grundriss oder per Zahlen (Prozent im Raum); `PUT /api/inventory/workplaces/{id}/spot`, Eintrag im Verlauf und im Audit-Log. Beim Raumwechsel entfällt der Platz. Die Etage liefert die Plätze mit (`workplaces`). Migration 0050
+- **Arbeitsplätze ohne Bezeichnung:** Das Feld entfällt; Arbeitsplätze heißen nach ihrer Nummer, in Listen mit Raum (z. B. „AP-012 · Raum 2.14“). Vorhandene Bezeichnungen bleiben in der Datenbank, werden aber nicht mehr angezeigt
+
 ## [0.69.0] – 2026-11-20
 
 IT-Bestand, Schritt 8: Statistik.

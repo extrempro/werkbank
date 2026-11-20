@@ -1370,7 +1370,7 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "steps",
             items: [
               "Unter „Arbeitsplätze“ auf „Arbeitsplatz anlegen“ tippen.",
-              "Auf Wunsch Bezeichnung und Raum wählen, dann den Typ: Einzelarbeitsplatz oder geteilter Arbeitsplatz.",
+              "Den Raum wählen, dann den Typ: Einzelarbeitsplatz oder geteilter Arbeitsplatz. Einen Namen braucht der Arbeitsplatz nicht; er heißt nach seiner Nummer.",
               "Auf Wunsch eine Vorlage für die Ausstattung wählen.",
               "Unter „Stelle hinzufügen“ die Stelle wählen und „Hinzufügen“ tippen; bei einem geteilten Arbeitsplatz auch mehrere.",
               "„Arbeitsplatz anlegen“ tippen.",
@@ -1379,6 +1379,22 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "text",
             text: "Im Reiter „Ausstattung“ vergleicht die Werkbank die Vorlage mit der Hardware am Arbeitsplatz und an seinen Stellen. Jedes Gerät zählt nur einmal. Ein Gerät ordnest du beim Gerät unter „Bearbeiten“ bei „Zugeordnet zu“ einer Stelle oder einem Arbeitsplatz zu.",
+          },
+          {
+            kind: "text",
+            text: "Unter dem Titel von Stelle, Arbeitsplatz und Gerät steht, wo sie sich befinden. Im Reiter „Standort“ siehst du den Grundriss: Der Raum ist hervorgehoben, der Platz des Arbeitsplatzes als Punkt markiert. Bei einer Stelle sind es die Räume ihrer Arbeitsplätze; liegen sie auf mehreren Etagen, wählst du die Etage oben. Hat ein Gerät keinen eigenen Raum, zeigt die Werkbank den Ort über seinen Arbeitsplatz oder seine Stelle.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Den Arbeitsplatz öffnen und zum Reiter „Standort“ wechseln.",
+              "„Platz im Grundriss setzen“ tippen und im hervorgehobenen Raum auf die Stelle klicken, an der der Arbeitsplatz steht.",
+              "Ohne Maus: „Platz mit Zahlen eingeben“ öffnen und eintragen, wie weit von links und von oben im Raum der Platz liegt (in Prozent).",
+            ],
+          },
+          {
+            kind: "hint",
+            text: "Wechselt der Arbeitsplatz den Raum, entfällt der Platz und du setzt ihn neu. Den Platz setzen dürfen nur Bearbeiterinnen und Bearbeiter des IT-Bestands.",
           },
         ],
         links: [{ to: "/bestand/arbeitsplaetze", label: "Zu den Arbeitsplätzen" }],

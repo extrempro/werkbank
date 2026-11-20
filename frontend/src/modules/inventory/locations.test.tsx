@@ -92,6 +92,7 @@ const floor: Floor = {
     { id: 9, name: "Büro 0.12", x: 10, y: 10, w: 20, h: 15, hardware: 1 },
     { id: 10, name: "Lager", x: 50, y: 40, w: 10, h: 10, hardware: 0 },
   ],
+  workplaces: [{ id: 2, number: "AP-002", room_id: 9, x: 15, y: 14 }],
 };
 
 describe("Standorte: Hilfsfunktionen", () => {
@@ -210,9 +211,17 @@ describe("Gerät: Standort", () => {
     stubFetch({
       "GET /api/inventory/hardware/7": device,
       "GET /api/inventory/floors/4": floor,
+      "GET /api/inventory/whereabouts/geraet/7": {
+        via: null,
+        floors: [{ floor_id: 4, rooms: [device.location], workplace_ids: [2] }],
+      },
     });
     render(<HardwareDetailPage hardwareId={7} tab="standort" roles={["Bestand.Reader"]} />);
     expect(await screen.findByText("Raum Büro 0.12")).toBeTruthy();
+    expect(await screen.findByText("AP-002", { selector: ".plan-spot-label" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: /Raum Büro 0\.12 · Erdgeschoss · Bauteil A/ }),
+    ).toBeTruthy();
     const selected = await screen.findByRole("button", { name: "Büro 0.12", pressed: true });
     expect(selected).toBeTruthy();
   });

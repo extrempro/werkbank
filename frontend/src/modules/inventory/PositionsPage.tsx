@@ -4,6 +4,7 @@ import { Link } from "../../components/Link";
 import { INVENTORY_MASTER_PATH, INVENTORY_POSITIONS_PATH } from "../../navigation";
 import { navigate } from "../../router";
 import { PersonPicker } from "./PersonPicker";
+import { LocationPanel, PlaceLine } from "./PlaceInfo";
 import { DeviceList, EventPanel } from "./parts";
 import {
   createPosition,
@@ -467,6 +468,7 @@ export function PositionDetailPage({
               {position.person ? `Besetzt durch ${position.person.name}` : "Unbesetzt"} ·{" "}
               <span className="mono">{position.number}</span>
             </p>
+            <PlaceLine kind="stelle" id={position.id} />
           </header>
           <nav className="project-tabs" aria-label="Bereiche der Stelle">
             {POSITION_TABS.map((entry) => (
@@ -525,6 +527,14 @@ export function PositionDetailPage({
                 </p>
               </div>
             </section>
+          )}
+          {tab === "standort" && (
+            <LocationPanel
+              id="stelle-standort"
+              kind="stelle"
+              objectId={position.id}
+              emptyText="Die Arbeitsplätze dieser Stelle haben noch keinen Raum."
+            />
           )}
           {tab === "verlauf" && <EventPanel id="stelle-verlauf" events={position.events} />}
         </>

@@ -479,8 +479,9 @@ def position_label(row: InventoryPosition) -> str:
     return f"{row.number} {row.name}"
 
 
-def workplace_label(row: InventoryWorkplace) -> str:
-    return f"{row.number} {row.name}".strip()
+def workplace_label(row: InventoryWorkplace, room: str | None = None) -> str:
+    """Arbeitsplätze heißen nach Nummer und Raum, z. B. „AP-012 · Raum 2.14“."""
+    return f"{row.number} · Raum {room}" if room else row.number
 
 
 Holders = tuple[dict[int, str], dict[int, str]]
@@ -488,9 +489,13 @@ Holders = tuple[dict[int, str], dict[int, str]]
 
 def holders(db: Session) -> Holders:
     """Kurztexte der Stellen und Arbeitsplätze für Listen."""
+    rooms = dict(db.execute(select(InventoryRoom.id, InventoryRoom.name)).all())
     return (
         {row.id: position_label(row) for row in db.scalars(select(InventoryPosition)).all()},
-        {row.id: workplace_label(row) for row in db.scalars(select(InventoryWorkplace)).all()},
+        {
+            row.id: workplace_label(row, rooms.get(row.room_id) if row.room_id else None)
+            for row in db.scalars(select(InventoryWorkplace)).all()
+        },
     )
 
 

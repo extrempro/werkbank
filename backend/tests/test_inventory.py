@@ -485,3 +485,80 @@ def test_locations_rooms_and_plan(db: Session) -> None:
     without = editor.delete(f"{url}/plan", headers=HEADERS).json()
     assert without["plan"] is None
     assert editor.delete(url, headers=HEADERS).status_code == 200
+
+
+@pytest.mark.db
+def test_workplace_spot_and_whereabouts(db: Session) -> None:
+    editor = client_for(["Bestand.Editor"], "bestand-lageplan")
+    reader = client_for(["Bestand.Reader"], "bestand-lageplan-leser")
+    floor_id = build_floor(editor)
+    url = f"{BASE}/floors/{floor_id}"
+    floor = editor.post(
+        f"{url}/rooms", json={"name": "2.14", "x": 10, "y": 20, "w": 40, "h": 20}, headers=HEADERS
+    ).json()
+    floor = editor.post(
+        f"{url}/rooms", json={"name": "2.15", "x": 60, "y": 20, "w": 20, "h": 20}, headers=HEADERS
+    ).json()
+    rooms = {room["name"]: room["id"] for room in floor["rooms"]}
+    position = editor.post(f"{BASE}/positions", json={"name": "Einkauf"}, headers=HEADERS).json()
+    workplace = editor.post(
+        f"{BASE}/workplaces",
+        json={"name": "wird ignoriert", "room_id": rooms["2.14"], "position_ids": [position["id"]]},
+        headers=HEADERS,
+    ).json()
+    assert workplace["name"] == ""
+    spot_url = f"{BASE}/workplaces/{workplace['id']}/spot"
+
+    # Platz im Raum: nur Bearbeiter, beide Werte, 0 bis 100
+    assert reader.put(spot_url, json={"x": 50, "y": 50}, headers=HEADERS).status_code == 403
+    assert editor.put(spot_url, json={"x": 50}, headers=HEADERS).status_code == 422
+    assert editor.put(spot_url, json={"x": 101, "y": 5}, headers=HEADERS).status_code == 422
+    placed = editor.put(spot_url, json={"x": 25, "y": 50}, headers=HEADERS).json()
+    assert (placed["spot_x"], placed["spot_y"]) == (25, 50)
+    assert placed["events"][0]["text"] == "Platz im Raum gesetzt"
+    spots = reader.get(url).json()["workplaces"]
+    # Raum 10 + 40 · 25 % = 20, 20 + 20 · 50 % = 30
+    assert spots == [
+        {
+            "id": workplace["id"],
+            "number": workplace["number"],
+            "room_id": rooms["2.14"],
+            "x": 20,
+            "y": 30,
+        }
+    ]
+
+    # Wo: Arbeitsplatz, Stelle, Gerät über Arbeitsplatz, Gerät mit eigenem Raum
+    where = reader.get(f"{BASE}/whereabouts/arbeitsplatz/{workplace['id']}").json()
+    assert where["via"] is None and where["floors"][0]["workplace_ids"] == [workplace["id"]]
+    assert where["floors"][0]["rooms"][0]["room"] == "2.14"
+    where = reader.get(f"{BASE}/whereabouts/stelle/{position['id']}").json()
+    assert where["floors"][0]["workplace_ids"] == [workplace["id"]]
+    device = editor.post(
+        f"{BASE}/hardware",
+        json=hardware_body(editor, workplace_id=workplace["id"]),
+        headers=HEADERS,
+    ).json()
+    where = reader.get(f"{BASE}/whereabouts/geraet/{device['id']}").json()
+    assert where["via"]["kind"] == "arbeitsplatz" and where["via"]["label"] == workplace["number"]
+    assert where["floors"][0]["rooms"][0]["room_id"] == rooms["2.14"]
+    other = editor.post(
+        f"{BASE}/hardware",
+        json=hardware_body(editor, serial="OWN-1", room_id=rooms["2.15"]),
+        headers=HEADERS,
+    ).json()
+    where = reader.get(f"{BASE}/whereabouts/geraet/{other['id']}").json()
+    assert where["via"] is None and where["floors"][0]["workplace_ids"] == []
+    assert reader.get(f"{BASE}/whereabouts/geraet/999999").status_code == 404
+    assert reader.get(f"{BASE}/whereabouts/raum/1").status_code == 422
+
+    # Anderer Raum: der Platz entfällt; Liste zeigt Nummer und Raum
+    moved = editor.put(
+        f"{BASE}/workplaces/{workplace['id']}",
+        json={"room_id": rooms["2.15"], "position_ids": [position["id"]]},
+        headers=HEADERS,
+    ).json()
+    assert moved["spot_x"] is None
+    listed = reader.get(f"{BASE}/hardware/{device['id']}").json()
+    assert listed["holder"] == f"{workplace['number']} · Raum 2.15"
+    assert editor.put(spot_url, json={"x": None, "y": None}, headers=HEADERS).status_code == 200

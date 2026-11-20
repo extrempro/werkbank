@@ -401,6 +401,8 @@ export interface Floor {
   city: string;
   plan: { url: string; width: number; height: number } | null;
   rooms: Room[];
+  /** Arbeitsplätze mit gesetztem Platz; x und y in Prozent der Etage */
+  workplaces: { id: number; number: string; room_id: number; x: number; y: number }[];
 }
 
 /** Etage und Raum aus dem Pfad, z. B. „/bestand/standorte/etage/4/raum/9“. */
@@ -721,6 +723,9 @@ export interface WorkplaceSummary {
 export interface Workplace extends WorkplaceSummary {
   note: string;
   location: DeviceLocation | null;
+  /** Platz im Raum in Prozent des Raums; null = nicht gesetzt */
+  spot_x: number | null;
+  spot_y: number | null;
   created_at: string;
   hardware_list: HardwareSummary[];
   equipment: Equipment | null;
@@ -728,7 +733,6 @@ export interface Workplace extends WorkplaceSummary {
 }
 
 export interface WorkplaceInput {
-  name: string;
   room_id: number | null;
   shared: boolean;
   kit_id: number | null;
@@ -748,11 +752,12 @@ export interface NumberRange {
   next_number: string;
 }
 
-export type PositionTab = "uebersicht" | "arbeitsplaetze" | "hardware" | "verlauf";
+export type PositionTab = "uebersicht" | "arbeitsplaetze" | "standort" | "hardware" | "verlauf";
 
 export const POSITION_TABS: { id: PositionTab; label: string }[] = [
   { id: "uebersicht", label: "Übersicht" },
   { id: "arbeitsplaetze", label: "Arbeitsplätze" },
+  { id: "standort", label: "Standort" },
   { id: "hardware", label: "Hardware" },
   { id: "verlauf", label: "Verlauf" },
 ];
@@ -846,6 +851,53 @@ export function updateWorkplace(id: number, body: WorkplaceInput): Promise<Workp
   return putJson(`${BASE}/workplaces/${id}`, body, { quiet: true });
 }
 
+/** Platz im Raum setzen (Prozent des Raums) oder mit null entfernen. */
+export function setWorkplaceSpot(
+  id: number,
+  spot: { x: number; y: number } | null,
+): Promise<Workplace> {
+  return putJson(`${BASE}/workplaces/${id}/spot`, spot ?? { x: null, y: null }, { quiet: true });
+}
+
+export type PlaceKind = "stelle" | "arbeitsplatz" | "geraet";
+
+export interface PlaceInfo {
+  /** beim Gerät: woher der Ort kommt, wenn es keinen eigenen Raum hat */
+  via: { kind: "stelle" | "arbeitsplatz"; id: number; label: string } | null;
+  floors: { floor_id: number; rooms: DeviceLocation[]; workplace_ids: number[] }[];
+}
+
+export function fetchPlaceInfo(kind: PlaceKind, id: number): Promise<PlaceInfo> {
+  return getJson(`${BASE}/whereabouts/${kind}/${id}`);
+}
+
+/** Punkt in Prozent der Etage → Prozent im Raum; null, wenn er außerhalb des Raums liegt. */
+export function spotInRoom(
+  point: { x: number; y: number },
+  room: RoomRect,
+): { x: number; y: number } | null {
+  if (room.w <= 0 || room.h <= 0) {
+    return null;
+  }
+  const x = ((point.x - room.x) / room.w) * 100;
+  const y = ((point.y - room.y) / room.h) * 100;
+  if (x < 0 || x > 100 || y < 0 || y > 100) {
+    return null;
+  }
+  return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+}
+
+/** „Raum 2.14 · 1. OG · Abschnitt A · Verwaltung Nord · Beispielstadt“ */
+export function placeLine(location: DeviceLocation): string {
+  return [
+    `Raum ${location.room}`,
+    location.floor,
+    location.section,
+    location.site,
+    location.city,
+  ].join(" · ");
+}
+
 export function deleteWorkplace(id: number): Promise<WorkplaceSummary[]> {
   return deleteJson(`${BASE}/workplaces/${id}`, { quiet: true });
 }
@@ -865,7 +917,6 @@ export function updateNumberRange(key: NumberRange["key"], prefix: string): Prom
 /** Eingaben eines Arbeitsplatzes aus seinem aktuellen Stand, z. B. vor einer Änderung. */
 export function workplaceInput(workplace: WorkplaceSummary & { note?: string }): WorkplaceInput {
   return {
-    name: workplace.name,
     room_id: workplace.room_id,
     shared: workplace.shared,
     kit_id: workplace.kit_id,
@@ -936,8 +987,9 @@ export function equipmentLabel(entry: Pick<WorkplaceSummary, "complete" | "missi
   return entry.missing === 1 ? "1 fehlt" : `${entry.missing} fehlen`;
 }
 
-export function workplaceName(entry: Pick<WorkplaceSummary, "number" | "name">): string {
-  return entry.name ? `${entry.number} ${entry.name}` : entry.number;
+/** Arbeitsplätze heißen nach ihrer Nummer; der Raum steht jeweils daneben. */
+export function workplaceName(entry: Pick<WorkplaceSummary, "number">): string {
+  return entry.number;
 }
 
 /** Wert im Auswahlfeld „Zugeordnet zu“: „s:4“ für Stelle 4, „w:2“ für Arbeitsplatz 2. */

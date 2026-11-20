@@ -284,7 +284,7 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
             <option value="">Bitte wählen</option>
             {choices.assignees.workplaces.map((item) => (
               <option key={item.id} value={String(item.id)}>
-                {item.number} {item.name}
+                {item.number}
                 {item.place ? ` (${item.place})` : ""}
               </option>
             ))}

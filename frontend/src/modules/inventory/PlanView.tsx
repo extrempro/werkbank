@@ -1,6 +1,15 @@
 import { useRef, useState, type PointerEvent } from "react";
 import { clampRect, rectFromPoints, type Floor, type Room, type RoomRect } from "./api";
 
+/** Platz eines Arbeitsplatzes im Grundriss, in Prozent der Etage. */
+export interface PlanSpot {
+  id: number;
+  x: number;
+  y: number;
+  label: string;
+  on: boolean;
+}
+
 type Drag =
   | { kind: "neu"; start: { x: number; y: number }; rect: RoomRect }
   | { kind: "schieben"; room: Room; offset: { x: number; y: number }; rect: RoomRect }
@@ -25,19 +34,30 @@ function styleOf(rect: RoomRect) {
 export function PlanView({
   floor,
   selectedId,
+  highlighted = [],
+  spots = [],
+  placing = false,
   editing = false,
   label,
   onSelect,
   onDraw,
   onMove,
+  onPlace,
 }: {
   floor: Floor;
   selectedId: number | null;
+  /** weitere hervorgehobene Räume (z. B. alle Räume einer Stelle) */
+  highlighted?: number[];
+  /** Plätze der Arbeitsplätze; ``on`` hebt sie hervor */
+  spots?: PlanSpot[];
+  /** Platzieren: ein Klick in den Grundriss meldet die Stelle über ``onPlace`` */
+  placing?: boolean;
   editing?: boolean;
   label: string;
   onSelect?: (room: Room) => void;
   onDraw?: (rect: RoomRect) => void;
   onMove?: (room: Room, rect: RoomRect) => void;
+  onPlace?: (point: { x: number; y: number }) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
@@ -63,6 +83,11 @@ export function PlanView({
   };
 
   const onBoxDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (placing) {
+      event.preventDefault();
+      onPlace?.(point(event));
+      return;
+    }
     if (!editing || event.target !== event.currentTarget) {
       return;
     }
@@ -72,7 +97,7 @@ export function PlanView({
   };
 
   const onRoomDown = (event: PointerEvent, room: Room) => {
-    if (!editing) {
+    if (placing || !editing) {
       return;
     }
     event.stopPropagation();
@@ -134,7 +159,9 @@ export function PlanView({
   return (
     <div
       ref={box}
-      className={editing ? "plan-box plan-edit" : "plan-box"}
+      className={["plan-box", editing ? "plan-edit" : "", placing ? "plan-placing" : ""]
+        .filter(Boolean)
+        .join(" ")}
       style={{ aspectRatio: ratio }}
       role="group"
       aria-label={label}
@@ -151,7 +178,7 @@ export function PlanView({
       {floor.rooms.map((room) => {
         const moving = drag && drag.kind !== "neu" && drag.room.id === room.id;
         const rect = moving ? drag.rect : room;
-        const selected = room.id === selectedId;
+        const selected = room.id === selectedId || highlighted.includes(room.id);
         return (
           <div
             key={room.id}
@@ -163,6 +190,7 @@ export function PlanView({
               type="button"
               className="plan-room-button"
               aria-pressed={selected}
+              tabIndex={placing ? -1 : undefined}
               onClick={() => onSelect?.(room)}
             >
               {room.name}
@@ -177,6 +205,17 @@ export function PlanView({
           </div>
         );
       })}
+      {spots.map((spot) => (
+        <span
+          key={spot.id}
+          className={spot.on ? "plan-spot plan-spot-on" : "plan-spot"}
+          style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
+          title={spot.label}
+          aria-hidden="true"
+        >
+          {spot.on && <span className="plan-spot-label">{spot.label}</span>}
+        </span>
+      ))}
       {drag && drag.kind === "neu" && drag.rect.w > 0 && (
         <span className="plan-draft" style={styleOf(drag.rect)} aria-hidden="true" />
       )}

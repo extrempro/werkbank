@@ -369,11 +369,14 @@ class InventoryWorkplace(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     number: Mapped[str] = mapped_column(String(20), unique=True)
-    # freiwillige Bezeichnung, z. B. „Fensterplatz“
+    # früher freiwillige Bezeichnung; wird nicht mehr gepflegt oder angezeigt
     name: Mapped[str] = mapped_column(String(80), default="", server_default="")
     room_id: Mapped[int | None] = mapped_column(
         ForeignKey("inventory_rooms.id", ondelete="RESTRICT"), index=True
     )
+    # Platz im Raum in Prozent der Raumbreite und -höhe (0 bis 100); leer = nicht gesetzt
+    spot_x: Mapped[float | None] = mapped_column(Float)
+    spot_y: Mapped[float | None] = mapped_column(Float)
     shared: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("false"))
     kit_id: Mapped[int | None] = mapped_column(
         ForeignKey("inventory_kits.id", ondelete="RESTRICT"), index=True
