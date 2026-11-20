@@ -11,6 +11,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 - **Vorgänge kompakter:** Kopf in einer Zeile (Titel, Zahl offener Vorgänge, Stand des Abgleichs mit NinjaOne, „Jetzt abgleichen“), Beschreibungstext entfällt (steht im Handbuch). Suche, Status und Art in einer Zeile über der Liste
 - **Vorgänge als Tabelle:** Spalten Nr., Titel, Art, Eingang, Bearbeitet von, Status über die ganze Breite; die ganze Zeile ist anklickbar, der Titel ist der Verweis. Ein gewählter Vorgang öffnet rechts daneben (54/46), die Tabelle zeigt dann nur Nr., Titel und Status (ist sie breit genug, alle Spalten; Container-Query); „×“ schließt die Ansicht. Die Breite stellt man am Trenner ein (ziehen, Pfeiltasten, Pos1/Ende, Doppelklick setzt zurück; 30–75 %), gemerkt im Browser (`werkbank-vorgaenge-breite`)
 - **Vorgänge auf dem Handy:** unter 1024 px eine Zeile je Vorgang (Nummer, Art und Eingang klein über dem Titel, Status rechts), Status-Chips in einer Zeile zum Wischen, gewählt nur die Ansicht mit „‹ Zur Liste“
+- **Entscheidung kompakter:** Möglichkeiten als Chips statt Kacheln; die Erklärung steht hinter „i“ (Knopf mit `aria-expanded`) und zur gewählten Möglichkeit unter den Chips
 - Verleih bleibt bei Liste und Ansicht
 
 ### Tests und Dokumentation
