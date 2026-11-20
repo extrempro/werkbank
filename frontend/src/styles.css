@@ -7564,7 +7564,21 @@ html {
 }
 
 .case-head {
+  position: relative;
   justify-content: flex-start;
+}
+
+/* Kreuz immer oben rechts, auch wenn die Ansicht schmal ist */
+@media (min-width: 1024px) {
+  .case-layout-detail .case-head {
+    padding-right: 72px;
+  }
+
+  .case-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+  }
 }
 
 .case-head > div:first-child {
@@ -7582,12 +7596,49 @@ html {
 }
 
 @media (min-width: 1024px) {
+  /* Breite einstellbar (Trenner in der Mitte, gemerkt im Browser) */
   .case-layout.case-layout-table.case-layout-detail {
-    grid-template-columns: minmax(0, 54fr) minmax(0, 46fr);
+    grid-template-columns: minmax(0, calc(var(--case-split, 54) * 1%)) 16px minmax(0, 1fr);
+    gap: 0;
   }
 
   .case-layout-detail .case-table .col-extra {
     display: none;
+  }
+
+  /* Ist die Tabelle breit genug, bleiben alle Spalten stehen */
+  @container case-list (min-width: 52rem) {
+    .case-layout-detail .case-table .col-extra {
+      display: table-cell;
+    }
+  }
+
+  .case-layout-table .case-list {
+    container: case-list / inline-size;
+  }
+
+  .case-split {
+    position: sticky;
+    top: calc(var(--kopf-hoehe) + 16px);
+    align-self: start;
+    height: calc(100dvh - var(--kopf-hoehe) - 32px);
+    cursor: col-resize;
+    touch-action: none;
+    display: grid;
+    place-items: center;
+  }
+
+  .case-split::before {
+    content: "";
+    width: 4px;
+    height: 48px;
+    border-radius: 999px;
+    background: var(--farbe-rand-stark);
+  }
+
+  .case-split:hover::before,
+  .case-split:focus-visible::before {
+    background: var(--farbe-primaer);
   }
 
   .case-layout-table .case-list {
@@ -7618,6 +7669,7 @@ html {
   }
 
   .case-close,
+  .case-split,
   .sync-next {
     display: none;
   }
