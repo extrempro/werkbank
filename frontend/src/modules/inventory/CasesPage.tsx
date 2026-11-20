@@ -704,7 +704,7 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
           ))}
         </div>
         <label className="case-kind">
-          Art
+          <span className="case-kind-label">Art</span>
           <select
             value={kind}
             onChange={(event) => setKind(event.target.value as CaseKind | "alle")}
