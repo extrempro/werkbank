@@ -149,6 +149,51 @@ describe("Vorgänge: Seite", () => {
   });
 });
 
+describe("Vorgänge: neuer Monitor", () => {
+  it("schlägt den Arbeitsplatz vor", async () => {
+    const monitorCase: Case = {
+      ...newCase,
+      id: 5,
+      number: "V-005",
+      kind: "monitor",
+      kind_label: "Neuer Monitor",
+      title: "Neuer Monitor an NB-0142",
+      hint: null,
+      facts: {
+        maker: "Lenovo",
+        model: "T24D-4t",
+        serial: "V5A00000",
+        connector: "DisplayPort",
+        built: "2024-KW12",
+        host: "NB-0142",
+        host_id: 7,
+        suggest_workplace_id: 2,
+      },
+    };
+    const calls = stubFetch({
+      ...routes,
+      "GET /api/inventory/cases/5": monitorCase,
+      "GET /api/inventory/assignees": {
+        positions: [],
+        workplaces: [{ id: 2, number: "AP-002", name: "Fenster", shared: false, place: null }],
+      },
+      "POST /api/inventory/cases/5/decide": { ...monitorCase, status: "fertig" },
+    });
+    render(<CasesPage caseId={5} roles={["Bestand.Editor"]} />);
+    expect(await screen.findByText("Monitor laut Custom Field")).toBeTruthy();
+    expect(screen.getByText("DisplayPort")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Am Arbeitsplatz anlegen/ }));
+    await screen.findByRole("combobox", { name: /^Arbeitsplatz/ });
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
+    await vi.waitFor(() =>
+      expect(calls.find((call) => call.url.endsWith("/decide"))?.body).toEqual({
+        decision: "arbeitsplatz",
+        workplace_id: 2,
+      }),
+    );
+  });
+});
+
 describe("Verwaltung: NinjaOne", () => {
   it("speichert Region, Client-ID und Secret", async () => {
     const stored = {
@@ -163,6 +208,8 @@ describe("Verwaltung: NinjaOne", () => {
       ],
       organization_ids: [],
       role_ids: [],
+      monitor_field: "",
+      psref_enabled: false,
     };
     const calls = stubFetch({
       "GET /api/admin/settings/ninjaone": stored,
@@ -185,6 +232,8 @@ describe("Verwaltung: NinjaOne", () => {
       client_id: "app-id",
       organization_ids: [],
       role_ids: [],
+      monitor_field: "",
+      psref_enabled: false,
       client_secret: "geheim",
     });
   });

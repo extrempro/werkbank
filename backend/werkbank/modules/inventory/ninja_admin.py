@@ -17,6 +17,7 @@ from werkbank.core.app_settings import (
 )
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, SettingsDep
+from werkbank.modules.inventory.monitors import valid_field_name
 from werkbank.modules.inventory.ninja import (
     REGIONS,
     Fetcher,
@@ -64,6 +65,9 @@ class NinjaOut(BaseModel):
     # Auswahl für neue Geräte; leer heißt: alle
     organization_ids: list[int]
     role_ids: list[int]
+    # interner Name des Custom Fields mit den Monitoren; leer: keine Monitore
+    monitor_field: str
+    psref_enabled: bool
 
 
 class NinjaIn(BaseModel):
@@ -74,6 +78,19 @@ class NinjaIn(BaseModel):
     client_secret: str | None = Field(default=None, max_length=500)
     organization_ids: list[int] = Field(default_factory=list, max_length=SCOPE_MAX)
     role_ids: list[int] = Field(default_factory=list, max_length=SCOPE_MAX)
+    monitor_field: str = Field(default="", max_length=64)
+    # Technische Daten von Lenovo-Modellen täglich aus Lenovo PSREF holen
+    psref_enabled: bool = False
+
+    @field_validator("monitor_field")
+    @classmethod
+    def plain_field(cls, value: str) -> str:
+        value = value.strip()
+        if value and not valid_field_name(value):
+            raise ValueError(
+                "Nur Buchstaben, Ziffern und Unterstrich, beginnend mit einem Buchstaben"
+            )
+        return value
 
     @field_validator("organization_ids", "role_ids")
     @classmethod
@@ -107,6 +124,8 @@ class NinjaTestOut(BaseModel):
     pcs: int
     # davon in der gespeicherten Auswahl aus Organisationen und Rollen
     in_scope: int
+    # Monitore im Custom Field (0, wenn keins eingestellt ist)
+    monitors: int
 
 
 class OptionOut(BaseModel):
@@ -136,6 +155,8 @@ def _out(db: Session, key_available: bool) -> NinjaOut:
         regions=[RegionOut(id=key, name=name, host=host) for key, (name, host) in REGIONS.items()],
         organization_ids=_id_list(data.get("organization_ids")),
         role_ids=_id_list(data.get("role_ids")),
+        monitor_field=str(data.get("monitor_field") or ""),
+        psref_enabled=data.get("psref_enabled") is True,
     )
 
 
@@ -185,6 +206,8 @@ def put_ninja(
             "secret_encrypted": token,
             "organization_ids": body.organization_ids,
             "role_ids": body.role_ids,
+            "monitor_field": body.monitor_field,
+            "psref_enabled": body.psref_enabled,
         },
         user.user_id,
     )
@@ -202,6 +225,8 @@ def put_ninja(
             "secret_geaendert": body.client_secret is not None,
             "organisationen": body.organization_ids,
             "rollen": body.role_ids,
+            "monitore_feld": body.monitor_field,
+            "psref": body.psref_enabled,
         },
     )
     db.commit()
@@ -232,6 +257,7 @@ def test_ninja(
                 notebooks=notebooks,
                 pcs=len(devices) - notebooks,
                 in_scope=sum(1 for device in devices if scope.includes(device)),
+                monitors=sum(len(device.monitors) for device in devices),
             )
         except NinjaError as error:
             failure = str(error)

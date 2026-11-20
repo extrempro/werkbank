@@ -185,6 +185,9 @@ describe("Gerät: Standort", () => {
       position_id: null,
       workplace_id: null,
       ninja: null,
+      connected_to: null,
+      monitors: [],
+      psref: null,
       location: {
         room_id: 9,
         room: "Büro 0.12",

@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.65.0] – 2026-11-20
+
+IT-Bestand, Schritt 5: Monitore aus dem Custom Field in NinjaOne und technische Daten aus Lenovo PSREF.
+
+### IT-Bestand
+
+- **Monitore aus NinjaOne:** Ist in der Verwaltung der interne Name des Custom Fields eingetragen, liest der Abgleich es für alle Geräte über `/v2/queries/custom-fields` (seitenweise). Eine Zeile je Monitor, Felder mit `|` getrennt (Hersteller-Kennung aus EDID, Modell, Seriennummer, ProductCode, Baujahr-KW, Anschluss, zuletzt gesehen); Kopfzeile und Zeilen ohne Seriennummer fallen weg, bekannte Hersteller-Kennungen (LEN, DEL, HWP, SAM …) werden zu Namen
+- Erkannt wird ein Monitor an der Seriennummer. Neu an einem **PC mit Arbeitsplatz**: direkt an diesen Arbeitsplatz. Neu an einem **Notebook** oder PC ohne Arbeitsplatz: Vorgang „Neuer Monitor“ mit vorgeschlagenem Arbeitsplatz (der des Rechners oder der erste seiner Stelle); Entscheidungen: am Arbeitsplatz anlegen, der Stelle zuordnen, nicht übernehmen (wird nicht wieder gemeldet)
+- Hängt ein bekannter Monitor an einem anderen Rechner, ändert sich nur „Angeschlossen an“ mit Eintrag im Verlauf; Arbeitsplatz oder Stelle bleiben
+- **Technik:** beim Monitor „Angeschlossen an“ mit Link und die Werte aus dem Custom Field; beim Rechner die angeschlossenen Monitore
+- „Verbindung prüfen“ zählt auch die Monitore im Custom Field
+- **Lenovo PSREF** (in der Verwaltung bei NinjaOne einschaltbar, Vorgabe aus): Auftrag `bestand.psref` einmal am Tag für Lenovo-Modelle, die im Bestand vorkommen. Rechner über den Maschinentyp als Modellname (z. B. `10T7004BGE`, `/api/model/Info/SpecData`), Monitore über den Produktschlüssel aus dem Modellnamen (`/api/product/Compare/LoadSpecData`, Schreibweisen `ThinkVision_<Modell>_Monitor` und `ThinkVision_<Modell>`). Gespeichert je Modell: Name, Link, Merkmale, Status, Zeitpunkt; erneut nach 30 Tagen (gefunden) oder 7 Tagen (nicht gefunden, Fehler), höchstens 40 Modelle je Lauf mit Pause dazwischen. Gesendet wird nur die Modellbezeichnung
+- **Technik:** Abschnitt „Lenovo PSREF“ mit Link, Kamera, Mikrofon und Lautsprecher (soweit genannt), Eckdaten und allen Merkmalen zum Aufklappen; Bearbeiter können mit „Bei PSREF abrufen“ sofort neu abfragen (`POST /api/inventory/hardware/{id}/psref`)
+- Die PSREF-Schnittstellen sind nicht offiziell dokumentiert; ändert Lenovo sie, steht beim Modell „Abruf fehlgeschlagen“ oder „nicht gefunden“, der Bestand bleibt unberührt
+- Migrationen 0045 und 0046, Spec, Datenschutz, ASVS und Handbuch angepasst
+
 ## [0.64.0] – 2026-11-20
 
 IT-Bestand, Schritt 4: Abgleich mit NinjaOne und Vorgänge.

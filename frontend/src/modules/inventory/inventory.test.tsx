@@ -6,6 +6,8 @@ import {
   hardwarePath,
   modelLabel,
   parseHardwarePath,
+  psrefGroups,
+  psrefHighlights,
   today,
   type Hardware,
   type HardwareSummary,
@@ -85,6 +87,9 @@ const detail: Hardware = {
   ...notebook,
   location: null,
   ninja: null,
+  connected_to: null,
+  monitors: [],
+  psref: null,
   holder_ref: null,
   position_id: null,
   workplace_id: null,
@@ -254,6 +259,64 @@ describe("Gerät", () => {
       whereabouts: "entsorgt",
       wiped: true,
     });
+  });
+});
+
+describe("Lenovo PSREF", () => {
+  const lenovo: Hardware = {
+    ...detail,
+    kind: "Monitor",
+    maker: "Lenovo",
+    model: "T24D-4t",
+    has_storage: false,
+  };
+  const psref = {
+    url: "https://psref.lenovo.com/product/ThinkVision/ThinkVision_T24D_4t",
+    name: "ThinkVision T24D-4t",
+    status: "ok" as const,
+    checked_at: "2026-11-20T08:00:00Z",
+    av: { camera: "5MP", speakers: "2x 3W" },
+    specs: [
+      { group: "Anzeige", name: "Panel Type", value: "IPS" },
+      { group: "Anzeige", name: "Resolution", value: "1920x1200" },
+      { group: "", name: "Weight", value: "5 kg" },
+    ],
+  };
+
+  it("hebt Kamera, Lautsprecher und Eckdaten hervor und gruppiert die Merkmale", () => {
+    expect(psrefHighlights(psref)).toEqual([
+      { label: "Kamera", value: "5MP" },
+      { label: "Lautsprecher", value: "2x 3W" },
+      { label: "Panel Type", value: "IPS" },
+      { label: "Resolution", value: "1920x1200" },
+    ]);
+    expect(psrefGroups(psref.specs).map((group) => group.group)).toEqual(["Anzeige", "Allgemein"]);
+  });
+
+  it("zeigt die Daten mit Link und holt sie für Bearbeiter neu", async () => {
+    const calls = stubFetch({
+      "GET /api/inventory/hardware/7": lenovo,
+      "GET /api/inventory/master-data": master,
+      "POST /api/inventory/hardware/7/psref": { ...lenovo, psref },
+    });
+    render(<HardwareDetailPage hardwareId={7} tab="technik" roles={["Bestand.Editor"]} />);
+    expect(
+      await screen.findByText("Für dieses Modell wurden noch keine Daten aus PSREF geholt."),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Bei PSREF abrufen" }));
+    const link = await screen.findByRole("link", { name: /Bei PSREF öffnen/ });
+    expect(link.getAttribute("href")).toBe(psref.url);
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(screen.getByText("Kamera")).toBeTruthy();
+    expect(screen.getByText("Alle Merkmale (3)")).toBeTruthy();
+    expect(calls.some((call) => call.method === "POST")).toBe(true);
+  });
+
+  it("zeigt Lesern keinen Abruf", async () => {
+    stubFetch({ "GET /api/inventory/hardware/7": { ...lenovo, psref } });
+    render(<HardwareDetailPage hardwareId={7} tab="technik" roles={["Bestand.Reader"]} />);
+    expect(await screen.findByText("Lautsprecher")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Bei PSREF abrufen" })).toBeNull();
   });
 });
 

@@ -32,6 +32,7 @@ from werkbank.modules.inventory.models import (
     InventoryWorkplace,
 )
 from werkbank.modules.inventory.places import RoomPlace, room_place
+from werkbank.modules.inventory.psref import av_summary
 
 router = APIRouter(prefix="/api/inventory")
 
@@ -274,15 +275,48 @@ class HolderOut(BaseModel):
 class NinjaOut(BaseModel):
     """Kenndaten aus NinjaOne (Stand des letzten Abgleichs)."""
 
-    ninja_id: int
+    # None bei Monitoren aus dem Custom Field
+    ninja_id: int | None
     facts: dict[str, object]
     seen_at: datetime | None
     missing_since: datetime | None
 
 
+class SpecOut(BaseModel):
+    group: str
+    name: str
+    value: str
+
+
+class PsrefOut(BaseModel):
+    """Technische Daten des Modells aus Lenovo PSREF."""
+
+    url: str
+    name: str
+    status: str
+    checked_at: datetime | None
+    # Kamera, Mikrofon, Lautsprecher, soweit PSREF sie nennt
+    av: dict[str, str]
+    specs: list[SpecOut]
+
+
+class LinkedDevice(BaseModel):
+    """Kurzform eines Geräts, z. B. Rechner und angeschlossene Monitore."""
+
+    id: int
+    name: str
+    hostname: str
+    serial: str
+    status: str
+
+
 class HardwareOut(HardwareSummary):
     location: LocationOut | None
     ninja: NinjaOut | None
+    # Monitor: Rechner laut Custom Field; Rechner: Monitore, die zuletzt an ihm hingen
+    connected_to: LinkedDevice | None
+    monitors: list[LinkedDevice]
+    psref: PsrefOut | None
     holder_ref: HolderOut | None
     position_id: int | None
     workplace_id: int | None
@@ -408,6 +442,14 @@ def _places(db: Session) -> dict[int, str]:
     return {room_id: f"{room} · {site}, {floor}" for room_id, room, floor, site in rows}
 
 
+def _linked(row: InventoryHardware | None) -> LinkedDevice | None:
+    if row is None:
+        return None
+    return LinkedDevice(
+        id=row.id, name=row.name, hostname=row.hostname, serial=row.serial, status=row.status
+    )
+
+
 def position_label(row: InventoryPosition) -> str:
     return f"{row.number} {row.name}"
 
@@ -462,6 +504,28 @@ def _summary(
     )
 
 
+def psref_out(model: InventoryModel | None) -> PsrefOut | None:
+    if model is None or not model.psref_status:
+        return None
+    specs = [
+        SpecOut(
+            group=str(item.get("group", "")),
+            name=str(item.get("name", "")),
+            value=str(item.get("value", "")),
+        )
+        for item in (model.psref_specs or [])
+        if isinstance(item, dict)
+    ]
+    return PsrefOut(
+        url=model.psref_url,
+        name=model.psref_name,
+        status=model.psref_status,
+        checked_at=model.psref_checked_at,
+        av=av_summary(model.psref_specs or []),
+        specs=specs,
+    )
+
+
 def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
     kinds, models = _names(db)
     known = holders(db) if row.position_id or row.workplace_id else None
@@ -502,8 +566,24 @@ def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
             seen_at=row.ninja_seen_at,
             missing_since=row.ninja_missing_since,
         )
-        if row.ninja_id is not None
+        if row.ninja_id is not None or row.ninja_facts
         else None,
+        connected_to=_linked(db.get(InventoryHardware, row.connected_to_id))
+        if row.connected_to_id
+        else None,
+        monitors=[
+            item
+            for item in (
+                _linked(entry)
+                for entry in db.scalars(
+                    select(InventoryHardware)
+                    .where(InventoryHardware.connected_to_id == row.id)
+                    .order_by(InventoryHardware.name, InventoryHardware.id)
+                ).all()
+            )
+            if item is not None
+        ],
+        psref=psref_out(model),
         holder_ref=holder_ref,
         position_id=row.position_id,
         workplace_id=row.workplace_id,

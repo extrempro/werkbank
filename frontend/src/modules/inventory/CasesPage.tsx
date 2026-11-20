@@ -137,7 +137,7 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (entry.kind !== "neu") {
+    if (entry.kind === "weg") {
       return;
     }
     let active = true;
@@ -187,17 +187,28 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
     });
   };
 
+  const suggested = entry.facts.suggest_workplace_id;
   const pick = (id: string) => {
     setChoice(id);
     setError(null);
-    setTarget(id === "gleich" && entry.hint ? String(entry.hint.id) : "");
+    if (id === "gleich" && entry.hint) {
+      setTarget(String(entry.hint.id));
+    } else if (id === "arbeitsplatz" && entry.kind === "monitor" && suggested) {
+      setTarget(String(suggested));
+    } else {
+      setTarget("");
+    }
   };
 
   return (
     <form className="settings-form form-stack case-decision" onSubmit={onSubmit} noValidate>
       <fieldset className="seg-field">
         <legend>
-          {entry.kind === "neu" ? "Was soll mit dem Gerät passieren?" : "Was ist mit dem Gerät?"}
+          {entry.kind === "neu"
+            ? "Was soll mit dem Gerät passieren?"
+            : entry.kind === "monitor"
+              ? "Wo gehört der Monitor hin?"
+              : "Was ist mit dem Gerät?"}
         </legend>
         <div className="case-options">
           {options.map((option) => (
@@ -214,7 +225,7 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
           ))}
         </div>
       </fieldset>
-      {entry.kind === "neu" && choice && choice !== "uebergehen" && !choices && (
+      {entry.kind !== "weg" && choice && choice !== "uebergehen" && !choices && (
         <p role="status">Auswahl wird geladen …</p>
       )}
       {choice === "stelle" && choices && (
@@ -233,7 +244,9 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
       )}
       {choice === "arbeitsplatz" && choices && (
         <label>
-          Arbeitsplatz
+          {entry.kind === "monitor" && suggested
+            ? "Arbeitsplatz (Vorschlag ausgewählt)"
+            : "Arbeitsplatz"}
           <select value={target} onChange={(event) => setTarget(event.target.value)}>
             <option value="">Bitte wählen</option>
             {choices.assignees.workplaces.map((item) => (
@@ -449,7 +462,11 @@ function CaseDetail({
             </p>
           )}
           <h3 className="sub-head">
-            {shown.kind === "neu" ? "Gerät laut NinjaOne" : "Gerät im Bestand"}
+            {shown.kind === "neu"
+              ? "Gerät laut NinjaOne"
+              : shown.kind === "monitor"
+                ? "Monitor laut Custom Field"
+                : "Gerät im Bestand"}
           </h3>
           <dl className="facts">
             {facts.map((row) => (

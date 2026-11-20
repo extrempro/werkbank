@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.65.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Monitore aus NinjaOne und technische Daten von Lenovo.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Monitore, die ein Skript in NinjaOne einträgt, kommen jetzt in den Bestand. Hängt ein neuer Monitor an einem PC mit Arbeitsplatz, landet er direkt an diesem Arbeitsplatz.",
+          "Hängt ein neuer Monitor an einem Notebook, entsteht ein Vorgang „Neuer Monitor“ mit einem Vorschlag für den Arbeitsplatz.",
+          "Im Reiter „Technik“ siehst du beim Monitor, an welchem Rechner er hängt, und beim Rechner seine Monitore.",
+          "Für Lenovo-Rechner und Lenovo-Monitore holt die Werkbank auf Wunsch die technischen Daten von der Lenovo-Seite PSREF. Im Reiter „Technik“ stehen dann zum Beispiel Kamera, Mikrofon und Lautsprecher und ein Link zur Lenovo-Seite.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.64.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Abgleich mit NinjaOne und Vorgänge.",
