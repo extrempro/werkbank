@@ -1126,7 +1126,8 @@ export const AV_LABELS: { key: keyof PsrefInfo["av"]; label: string }[] = [
   { key: "speakers", label: "Lautsprecher" },
 ];
 
-const PSREF_KEY_SPECS = /\b(?:processor|memory|storage|graphics|display|resolution|panel|ports?)\b/i;
+const PSREF_KEY_SPECS =
+  /\b(?:processor|memory|storage|graphics|display|resolution|panel|ports?)\b/i;
 
 /** Wichtigste Angaben: Kamera, Mikrofon, Lautsprecher und die Eckdaten (höchstens 8). */
 export function psrefHighlights(psref: PsrefInfo): { label: string; value: string }[] {
