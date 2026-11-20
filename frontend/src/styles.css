@@ -6805,10 +6805,125 @@ html {
 
 .loc-tree {
   position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 32px);
+  top: calc(var(--kopf-hoehe) + 16px);
+  max-height: calc(100dvh - var(--kopf-hoehe) - 32px);
   overflow: auto;
   padding: 12px;
+}
+
+/* Baum ausgeblendet: Der Inhalt bekommt die volle Breite. */
+.loc-layout-wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.loc-layout-wide > .loc-tree {
+  display: none;
+}
+
+.loc-tree-show {
+  align-self: flex-start;
+  gap: 8px;
+}
+
+.loc-tree-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.loc-tree-title {
+  font-weight: 700;
+}
+
+.loc-tree-hide {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.loc-crumbs {
+  margin: 0 0 2px;
+}
+
+.loc-kind {
+  margin: 0;
+}
+
+.loc-children {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.loc-children li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--farbe-trenner);
+}
+
+.loc-children a {
+  font-weight: 600;
+}
+
+.loc-new,
+.loc-edit {
+  margin-top: 12px;
+}
+
+.loc-new-city {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.loc-new-city summary,
+.room-rect-details summary {
+  min-height: 36px;
+  padding: 8px 4px;
+  color: var(--farbe-link);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.loc-floor-settings {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+}
+
+.room-side {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.room-side h3 {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.room-side > p {
+  margin: 0;
+}
+
+.room-back {
+  justify-self: start;
+}
+
+.room-side .room-rect label {
+  flex-basis: 5rem;
 }
 
 .loc-mobilebar {
@@ -6870,6 +6985,42 @@ html {
   border-left: 1px solid var(--farbe-trenner);
 }
 
+.lt-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.lt-chev-button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--farbe-text-leise);
+  cursor: pointer;
+}
+
+.lt-chev-button .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.lt-chev-button:hover {
+  background: var(--farbe-hover);
+}
+
+.lt-open {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lt-open,
 .lt-toggle,
 .lt-floor,
 .room-list button {
@@ -6890,14 +7041,21 @@ html {
   cursor: pointer;
 }
 
+.lt-open:hover,
 .lt-toggle:hover,
 .lt-floor:hover,
 .room-list button:hover {
   background: var(--farbe-hover);
 }
 
-.lt-city {
+.lt-stadt .lt-open {
   font-weight: 600;
+}
+
+.lt-open,
+.lt-floor {
+  color: inherit;
+  text-decoration: none;
 }
 
 .lt-chev {
@@ -6924,10 +7082,11 @@ html {
 }
 
 .lt-floor {
-  padding-left: 26px;
+  padding-left: 30px;
 }
 
-.lt-floor[aria-current="true"],
+.lt-open[aria-current="page"],
+.lt-floor[aria-current="page"],
 .room-list button[aria-pressed="true"] {
   background: var(--farbe-auswahl);
   color: var(--farbe-auswahl-text);
@@ -7109,8 +7268,15 @@ html {
     max-height: none;
   }
 
-  .loc-tree-open {
+  .loc-tree-open,
+  .loc-layout-wide > .loc-tree-open {
     display: block;
+  }
+
+  /* Schmal öffnet „Standort wechseln“ den Baum; Aus- und Einblenden gibt es dort nicht. */
+  .loc-tree-hide,
+  .loc-tree-show {
+    display: none;
   }
 
   .plan-with-list {
@@ -7289,17 +7455,95 @@ html {
   flex-basis: 100%;
 }
 
+/* Liste und Ansicht (Vorgänge, Verleih): Die Liste hat eine feste Höhe und scrollt für sich,
+   die Ansicht daneben bleibt stehen. Schmal: erst die Liste, gewählt nur die Ansicht. */
 .case-layout {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
   gap: 16px;
-  align-items: flex-start;
+  align-items: start;
 }
 
 .case-list {
-  flex: 1 1 300px;
-  max-width: 420px;
+  position: sticky;
+  top: calc(var(--kopf-hoehe) + 16px);
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--kopf-hoehe) - 32px);
+  min-height: 360px;
   overflow: hidden;
+}
+
+.case-filters {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--farbe-rand);
+}
+
+.case-filters .list-search {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.case-filters .chips,
+.case-kind {
+  padding: 0 16px;
+}
+
+.case-kind {
+  display: grid;
+  gap: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.case-kind select {
+  min-height: 40px;
+  font-weight: 400;
+}
+
+.case-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.case-back {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .case-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .case-list {
+    position: static;
+    height: auto;
+    min-height: 0;
+  }
+
+  .case-scroll {
+    overflow: visible;
+  }
+
+  /* Gewählt: nur die Ansicht, mit „Zur Liste“ */
+  .case-layout-detail .case-list {
+    display: none;
+  }
+
+  .case-layout:not(.case-layout-detail) .case-main {
+    display: none;
+  }
+
+  .case-back {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-weight: 600;
+  }
 }
 
 .case-list ul {
@@ -7389,7 +7633,6 @@ html {
 
 .case-main {
   display: grid;
-  flex: 999 1 420px;
   gap: 16px;
   min-width: 0;
 }
@@ -7746,4 +7989,105 @@ html {
 .plan-tip-hint {
   color: var(--farbe-text-leise);
   font-size: 0.75rem;
+}
+
+/* Auswahl mit Suche (Stelle, Arbeitsplatz, Raum, Gerät) */
+.lookup {
+  position: relative;
+  display: grid;
+  gap: 4px;
+}
+
+.lookup-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.lookup input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.lookup input[aria-invalid="true"] {
+  border-color: var(--farbe-bad-text);
+}
+
+.lookup-list {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 25;
+  max-height: 320px;
+  margin: 4px 0 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+}
+
+.lookup-list[hidden] {
+  display: none;
+}
+
+.lookup-list li {
+  display: grid;
+  gap: 2px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.lookup-list li[aria-selected="true"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+.lookup-list li[aria-selected="true"] .small {
+  color: inherit;
+}
+
+.lookup-status {
+  margin: 0;
+}
+
+.lookup-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-neutral-flaeche);
+}
+
+.lookup-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.field-error {
+  margin: 0;
+  color: var(--farbe-bad-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.spot-picker {
+  display: grid;
+  gap: 8px;
 }

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openPage } from "./helpers";
+import { BASE_URL, expectNoA11yViolations, loginAs, openPage } from "./helpers";
 
 test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
   page,
@@ -102,44 +102,79 @@ test("IT-Bestand: Standorte anlegen und Etage öffnen", async ({
   ).toBeVisible();
   await expectNoA11yViolations(page);
 
-  const levels: [string, string, string | null][] = [
-    ["Stadt", `Stadt ${stamp}`, null],
-    ["Standort", `Haus ${stamp}`, `Stadt ${stamp}`],
-    ["Gebäudeabschnitt", `Bauteil ${stamp}`, `Haus ${stamp}`],
-  ];
-  for (const [level, name, parent] of levels) {
-    await page
-      .getByRole("combobox", { name: /^Neu anlegen/ })
-      .selectOption({ label: level });
-    if (parent) {
-      const parentSelect = page.getByRole("combobox", { name: /^Gehört zu/ });
-      const value = await parentSelect
-        .locator("option", { hasText: parent })
-        .getAttribute("value");
-      await parentSelect.selectOption(value ?? "");
+  const tree = page.getByRole("navigation", { name: "Standorte" });
+  // Schmal steht der Baum hinter „Standort wechseln“.
+  const openTree = async () => {
+    const toggle = page.getByRole("button", { name: "Standort wechseln" });
+    if (await toggle.isVisible()) {
+      await toggle.click();
     }
-    await page.getByLabel("Name", { exact: true }).fill(name);
-    await page.getByRole("button", { name: "Anlegen" }).click();
-    await expect(page.getByLabel("Name", { exact: true })).toHaveValue("");
+  };
+
+  // Neue Stadt: ohne Standorte im leeren Zustand, sonst unten im Baum
+  const empty = page.getByRole("region", { name: "Noch keine Standorte" });
+  const toggle = page.getByRole("button", { name: "Standort wechseln" });
+  await expect(empty.or(tree).or(toggle).first()).toBeVisible();
+  if (await empty.isVisible()) {
+    await empty.getByLabel("Neue Stadt").fill(`Stadt ${stamp}`);
+    await empty.getByRole("button", { name: "Anlegen" }).click();
+  } else {
+    await openTree();
+    await tree.locator("summary", { hasText: "Neue Stadt" }).click();
+    await tree.getByLabel("Neue Stadt").fill(`Stadt ${stamp}`);
+    await tree.getByRole("button", { name: "Anlegen" }).click();
   }
-  await page
-    .getByRole("combobox", { name: /^Neu anlegen/ })
-    .selectOption({ label: "Etage" });
-  const sectionOption = page
-    .getByRole("combobox", { name: /^Gehört zu/ })
-    .locator("option", { hasText: `Bauteil ${stamp}` });
-  const sectionValue = await sectionOption.getAttribute("value");
-  await page
-    .getByRole("combobox", { name: /^Gehört zu/ })
-    .selectOption(sectionValue ?? "");
-  await page.getByLabel("Name", { exact: true }).fill(`Etage ${stamp}`);
-  await page.getByRole("button", { name: "Anlegen" }).click();
+  await tree.getByRole("link", { name: new RegExp(`^Stadt ${stamp}`) }).click();
+  await expect(page).toHaveURL(/\/bestand\/standorte\/stadt\/\d+$/);
+
+  // Darunter jeweils dort anlegen, wo man gerade ist
+  const steps: [string, string][] = [
+    ["Neuer Standort", `Haus ${stamp}`],
+    ["Neuer Gebäudeabschnitt", `Bauteil ${stamp}`],
+  ];
+  for (const [label, name] of steps) {
+    const level = page.getByRole("main").getByRole("region").first();
+    await level.getByLabel(label).fill(name);
+    await level.getByRole("button", { name: "Anlegen" }).click();
+    await level.getByRole("link", { name, exact: true }).click();
+    await expect(
+      page.getByRole("heading", { level: 2, name, exact: true }),
+    ).toBeVisible();
+  }
+  await expectNoA11yViolations(page);
+  const section = page.getByRole("main").getByRole("region").first();
+  await section.getByLabel("Neue Etage").fill(`Etage ${stamp}`);
+  await section.getByRole("button", { name: "Anlegen" }).click();
   await expect(page).toHaveURL(/\/bestand\/standorte\/etage\/\d+$/);
   await expect(
     page.getByRole("heading", { level: 2, name: `Etage ${stamp}` }),
   ).toBeVisible();
   await expect(page.getByText("Noch kein Grundriss")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: `Bauteil ${stamp}`, exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Etage bearbeiten" }).click();
+  await expect(
+    page.getByRole("button", { name: "Grundriss hochladen" }),
+  ).toBeVisible();
   await expectNoA11yViolations(page);
+
+  // Breit lässt sich der Baum ausblenden; Ebenen klappen auf und zu.
+  // (Schmal, auch am Tablet neben dem Menü, steht der Baum hinter „Standort wechseln“.)
+  if (
+    !(await page.getByRole("button", { name: "Standort wechseln" }).isVisible())
+  ) {
+    await tree
+      .getByRole("button", { name: `Bauteil ${stamp} zuklappen` })
+      .click();
+    await expect(
+      tree.getByRole("link", { name: new RegExp(`^Etage ${stamp}`) }),
+    ).toHaveCount(0);
+    await tree.getByRole("button", { name: "Standortbaum ausblenden" }).click();
+    await expect(tree).toBeHidden();
+    await page.getByRole("button", { name: "Standortbaum einblenden" }).click();
+    await expect(tree).toBeVisible();
+  }
 });
 
 test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
@@ -177,20 +212,72 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
   ).toBeVisible();
   await expectNoA11yViolations(page);
 
+  // Ein Raum für den Arbeitsplatz (der Raum ist beim Anlegen Pflicht)
+  const headers = { Origin: new URL(BASE_URL).origin };
+  const post = async (url: string, data: object) => {
+    const response = await page.request.post(`/api/inventory/${url}`, {
+      data,
+      headers,
+    });
+    expect(response.ok(), await response.text()).toBe(true);
+    return response.json();
+  };
+  const cities = await post("cities", { name: `Ort ${stamp}` });
+  const city = cities.cities.find(
+    (entry: { name: string }) => entry.name === `Ort ${stamp}`,
+  );
+  const sites = await post("sites", {
+    name: `Gebäude ${stamp}`,
+    city_id: city.id,
+  });
+  const site = sites.cities.find(
+    (entry: { id: number }) => entry.id === city.id,
+  ).sites[0];
+  const sections = await post("sections", {
+    name: `Teil ${stamp}`,
+    site_id: site.id,
+  });
+  const section = sections.cities.find(
+    (entry: { id: number }) => entry.id === city.id,
+  ).sites[0].sections[0];
+  const floor = await post("floors", {
+    name: "EG",
+    section_id: section.id,
+    position: 0,
+  });
+  await post(`floors/${floor.id}/rooms`, {
+    name: `R ${stamp}`,
+    x: 10,
+    y: 10,
+    w: 30,
+    h: 30,
+  });
+
   // Arbeitsplatz mit der Stelle
   await page.goto("/bestand/arbeitsplaetze");
   await expect(
     page.getByRole("heading", { level: 1, name: "Arbeitsplätze" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
-  const add = page.getByRole("combobox", { name: /^Stelle hinzufügen/ });
-  const value = await add
-    .locator("option", { hasText: `Stelle ${stamp}` })
-    .getAttribute("value");
-  await add.selectOption(value ?? "");
-  await page.getByRole("button", { name: "Hinzufügen", exact: true }).click();
+  const form = page.getByRole("region", { name: "Arbeitsplatz anlegen" });
+  // Ohne Raum geht es nicht
+  await form.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
+  await expect(form.getByText("Bitte wähle einen Raum.")).toBeVisible();
+  await form
+    .getByRole("combobox", { name: "Raum (Pflicht)" })
+    .fill(`R ${stamp}`);
+  await form
+    .getByRole("option", { name: new RegExp(`Raum R ${stamp}`) })
+    .click();
+  await expect(form.getByText(/keinen Grundriss/)).toBeVisible();
+  await form
+    .getByRole("combobox", { name: "Stelle hinzufügen" })
+    .fill(`Stelle ${stamp}`);
+  await form
+    .getByRole("option", { name: new RegExp(`Stelle ${stamp}`) })
+    .click();
   await expectNoA11yViolations(page);
-  await page.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
+  await form.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
   await expect(page).toHaveURL(/\/bestand\/arbeitsplaetze\/\d+$/);
   await expect(
     page.getByRole("link", { name: new RegExp(`Stelle ${stamp}`) }),
@@ -211,7 +298,18 @@ test("IT-Bestand: Vorgänge und Technik ohne NinjaOne", async ({ page }) => {
   await expect(
     page.getByText(/Der Abgleich mit NinjaOne ist ausgeschaltet/),
   ).toBeVisible();
-  await expect(page.getByText("Wähle links einen Vorgang.")).toBeVisible();
+  // Breit stehen Liste und Ansicht nebeneinander, schmal erst nur die Liste.
+  const wide = (page.viewportSize()?.width ?? 1280) >= 1024;
+  await expect(page.getByText("Wähle links einen Vorgang.")).toBeVisible({
+    visible: wide,
+  });
+  await expect(
+    page.getByRole("navigation", { name: "Vorgänge" }),
+  ).toBeVisible();
+  await page.getByRole("combobox", { name: "Art" }).selectOption("rueckgabe");
+  await expect(page.getByRole("combobox", { name: "Art" })).toHaveValue(
+    "rueckgabe",
+  );
   await expectNoA11yViolations(page);
 });
 
@@ -223,7 +321,10 @@ test("IT-Bestand: Verleih ansehen und neuen Verleih öffnen", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: "Verleih" }),
   ).toBeVisible();
-  await expect(page.getByText("Wähle links einen Verleih.")).toBeVisible();
+  const wide = (page.viewportSize()?.width ?? 1280) >= 1024;
+  await expect(page.getByText("Wähle links einen Verleih.")).toBeVisible({
+    visible: wide,
+  });
   await expectNoA11yViolations(page);
   await page.getByRole("button", { name: "Neuer Verleih" }).click();
   await expect(

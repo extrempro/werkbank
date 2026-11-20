@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from tests.inventory_rooms import room_for_tests
 from tests.test_admin_settings import HEADERS, admin, settings_with_key
 from tests.test_m365_api import client_for
 from werkbank.config import Settings
@@ -351,7 +352,9 @@ def test_cases_api_decisions(db: Session) -> None:
     )
 
     # Arbeitsplatz: Gerät entsteht mit Hersteller und Modell aus NinjaOne
-    workplace = editor.post(f"{BASE}/workplaces", json={"name": "Platz"}, headers=HEADERS).json()
+    workplace = editor.post(
+        f"{BASE}/workplaces", json={"name": "Platz", "room_id": room_for_tests(db)}, headers=HEADERS
+    ).json()
     decided = editor.post(
         f"{BASE}/cases/{by_ninja[41]}/decide",
         json={"decision": "arbeitsplatz", "workplace_id": workplace["id"]},
@@ -609,7 +612,11 @@ def test_monitor_fields_are_read_page_by_page() -> None:
 @pytest.mark.db
 def test_monitors_are_attached_or_become_cases(db: Session) -> None:
     editor = client_for(["Bestand.Editor"], "monitor-bearbeiter")
-    workplace = editor.post(f"{BASE}/workplaces", json={"name": "Fenster"}, headers=HEADERS).json()
+    workplace = editor.post(
+        f"{BASE}/workplaces",
+        json={"name": "Fenster", "room_id": room_for_tests(db)},
+        headers=HEADERS,
+    ).json()
     position = editor.post(f"{BASE}/positions", json={"name": "Stelle M"}, headers=HEADERS).json()
     pc = InventoryHardware(
         kind_id=kind_id(db, "PC"),

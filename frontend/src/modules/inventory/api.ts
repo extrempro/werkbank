@@ -443,17 +443,37 @@ export function spotInfo(spot: FloorSpot, room: string | null): { title: string;
 }
 
 /** Etage und Raum aus dem Pfad, z. B. „/bestand/standorte/etage/4/raum/9“. */
-export function parseLocationPath(
-  path: string,
-): { floorId: number | null; roomId: number | null } | null {
+/** Ebene über der Etage, die bei „Standorte“ gewählt sein kann. */
+export type LocationLevel = "stadt" | "standort" | "abschnitt";
+
+export interface LocationRoute {
+  floorId: number | null;
+  roomId: number | null;
+  /** gewählte Stadt, Standort oder Abschnitt (statt einer Etage) */
+  node?: { level: LocationLevel; id: number };
+}
+
+export function parseLocationPath(path: string): LocationRoute | null {
   if (path === INVENTORY_LOCATIONS_PATH) {
     return { floorId: null, roomId: null };
+  }
+  const level = /^\/bestand\/standorte\/(stadt|standort|abschnitt)\/(\d{1,9})$/.exec(path);
+  if (level) {
+    return {
+      floorId: null,
+      roomId: null,
+      node: { level: level[1] as LocationLevel, id: Number(level[2]) },
+    };
   }
   const match = /^\/bestand\/standorte\/etage\/(\d{1,9})(?:\/raum\/(\d{1,9}))?$/.exec(path);
   if (!match) {
     return null;
   }
   return { floorId: Number(match[1]), roomId: match[2] ? Number(match[2]) : null };
+}
+
+export function levelPath(level: LocationLevel, id: number): string {
+  return `${INVENTORY_LOCATIONS_PATH}/${level}/${id}`;
 }
 
 export function locationPath(floorId: number, roomId: number | null = null): string {
@@ -570,8 +590,8 @@ export interface FloorHit {
   kind: "Stadt" | "Standort" | "Abschnitt" | "Etage" | "Raum";
   name: string;
   path: string;
-  floorId: number;
-  roomId: number | null;
+  /** Ziel bei „Standorte“ */
+  href: string;
 }
 
 /** Suche im Baum: Städte, Standorte, Abschnitte, Etagen und Räume (höchstens 12). */
@@ -583,30 +603,25 @@ export function searchLocations(tree: Locations, query: string): FloorHit[] {
   const hits: FloorHit[] = [];
   const has = (value: string) => value.toLocaleLowerCase("de").includes(needle);
   for (const city of tree.cities) {
-    const firstFloor = city.sites[0]?.sections[0]?.floors[0];
-    if (has(city.name) && firstFloor) {
-      hits.push({ kind: "Stadt", name: city.name, path: "", floorId: firstFloor.id, roomId: null });
+    if (has(city.name)) {
+      hits.push({ kind: "Stadt", name: city.name, path: "", href: levelPath("stadt", city.id) });
     }
     for (const site of city.sites) {
-      const siteFloor = site.sections[0]?.floors[0];
-      if (has(site.name) && siteFloor) {
+      if (has(site.name)) {
         hits.push({
           kind: "Standort",
           name: site.name,
           path: city.name,
-          floorId: siteFloor.id,
-          roomId: null,
+          href: levelPath("standort", site.id),
         });
       }
       for (const section of site.sections) {
-        const sectionFloor = section.floors[0];
-        if (has(section.name) && sectionFloor) {
+        if (has(section.name)) {
           hits.push({
             kind: "Abschnitt",
             name: section.name,
             path: `${city.name} › ${site.name}`,
-            floorId: sectionFloor.id,
-            roomId: null,
+            href: levelPath("abschnitt", section.id),
           });
         }
         for (const floor of section.floors) {
@@ -616,8 +631,7 @@ export function searchLocations(tree: Locations, query: string): FloorHit[] {
               kind: "Etage",
               name: floor.name,
               path: where,
-              floorId: floor.id,
-              roomId: null,
+              href: locationPath(floor.id),
             });
           }
           for (const room of floor.rooms) {
@@ -626,8 +640,7 @@ export function searchLocations(tree: Locations, query: string): FloorHit[] {
                 kind: "Raum",
                 name: room.name,
                 path: `${where} › ${floor.name}`,
-                floorId: floor.id,
-                roomId: room.id,
+                href: locationPath(floor.id, room.id),
               });
             }
           }
@@ -638,7 +651,6 @@ export function searchLocations(tree: Locations, query: string): FloorHit[] {
   return hits.slice(0, 12);
 }
 
-/** Erste Etage im Baum, z. B. als Vorauswahl; null ohne Etagen. */
 export function firstFloorId(tree: Locations): number | null {
   for (const city of tree.cities) {
     for (const site of city.sites) {
@@ -646,6 +658,31 @@ export function firstFloorId(tree: Locations): number | null {
         const floor = section.floors[0];
         if (floor) {
           return floor.id;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/** Raum als Eintrag für die Auswahl mit Suche (z. B. beim Bearbeiten eines Arbeitsplatzes). */
+export function roomItem(tree: Locations, roomId: number | null): LookupItem | null {
+  if (roomId === null) {
+    return null;
+  }
+  for (const city of tree.cities) {
+    for (const site of city.sites) {
+      for (const section of site.sections) {
+        for (const floor of section.floors) {
+          const room = floor.rooms.find((entry) => entry.id === roomId);
+          if (room) {
+            return {
+              id: room.id,
+              label: `Raum ${room.name}`,
+              detail: `${city.name} / ${site.name} / ${section.name} / ${floor.name}`,
+              floor_id: floor.id,
+            };
+          }
         }
       }
     }
@@ -880,7 +917,13 @@ export function fetchWorkplace(id: number): Promise<Workplace> {
   return getJson(`${BASE}/workplaces/${id}`);
 }
 
-export function createWorkplace(body: WorkplaceInput): Promise<Workplace> {
+/** Neuer Arbeitsplatz: Raum ist Pflicht, der Platz im Grundriss freiwillig (Prozent des Raums). */
+export interface WorkplaceNew extends WorkplaceInput {
+  spot_x?: number | null;
+  spot_y?: number | null;
+}
+
+export function createWorkplace(body: WorkplaceNew): Promise<Workplace> {
   return postJson(`${BASE}/workplaces`, body, { quiet: true });
 }
 
@@ -1506,8 +1549,43 @@ export function fetchCases(
   query = "",
   offset = 0,
   limit = PAGE_SIZE,
+  kind: CaseKind | "alle" = "alle",
 ): Promise<CaseList> {
-  return getJson(`${BASE}/cases?${pageQuery(filter, query, offset, limit)}`);
+  const params = pageQuery(filter, query, offset, limit);
+  return getJson(`${BASE}/cases?${params}${kind === "alle" ? "" : `&kind=${kind}`}`);
+}
+
+// --- Suche für Auswahlfelder --------------------------------------------------------------
+
+export type LookupKind = "position" | "workplace" | "room" | "hardware";
+
+export interface LookupItem {
+  id: number;
+  label: string;
+  detail: string;
+  /** nur bei Räumen: Etage für den Grundriss */
+  floor_id?: number | null;
+}
+
+export interface LookupResult {
+  items: LookupItem[];
+  total: number;
+}
+
+/** Höchstens 20 Treffer für ein Auswahlfeld; `computers` nur Notebooks und PCs. */
+export function lookup(
+  kind: LookupKind,
+  query: string,
+  options: { computers?: boolean } = {},
+): Promise<LookupResult> {
+  const params = new URLSearchParams({ kind });
+  if (query.trim()) {
+    params.set("q", query.trim().slice(0, 100));
+  }
+  if (options.computers) {
+    params.set("computers", "true");
+  }
+  return getJson(`${BASE}/lookup?${params.toString()}`);
 }
 
 export function fetchCase(id: number): Promise<Case> {

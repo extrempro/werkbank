@@ -502,77 +502,93 @@ export function LoansPage({
         )}
       </header>
       <ErrorText text={failed} />
-      <div className="chips" role="group" aria-label="Status">
-        {LOAN_FILTERS.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            className="chip chip-filter"
-            aria-pressed={filter === entry.id}
-            onClick={() => setFilter(entry.id)}
-          >
-            {entry.label}
-            {entry.id === "offen" && counts ? ` (${counts.open})` : ""}
-            {entry.id === "ueberfaellig" && counts ? ` (${counts.overdue})` : ""}
-          </button>
-        ))}
-      </div>
-      <div className="case-layout">
+      <div className={loanId === null ? "case-layout" : "case-layout case-layout-detail"}>
         <nav className="panel case-list" aria-label="Verleihe">
-          <ListSearch
-            value={search}
-            onChange={setSearch}
-            label="Verleihe durchsuchen"
-            placeholder="Nummer, Person, Gerät, Seriennummer …"
-          />
-          {!loans && !failed && <p role="status">Wird geladen …</p>}
-          {loans && loans.length === 0 && (
-            <p className="empty">
-              {query.trim() ? "Kein Verleih passt zur Suche." : "Keine Verleihe in dieser Liste."}
-            </p>
-          )}
-          {loans && loans.length > 0 && (
-            <ul>
-              {loans.map((entry) => (
-                <li key={entry.id}>
-                  <button
-                    type="button"
-                    className="case-item"
-                    aria-current={entry.id === loanId ? "true" : undefined}
-                    onClick={() => navigate(loanPath(entry.id))}
-                  >
-                    <span className="case-item-head">
-                      <span className="mono">{entry.number}</span>
-                      <span className={`pill ${LOAN_STATES[entry.state].pill}`}>
-                        {LOAN_STATES[entry.state].label}
-                      </span>
-                    </span>
-                    <strong>{entry.person_name}</strong>
-                    <span className="small">
-                      {entry.items === 1 ? "1 Gerät" : `${entry.items} Geräte`}
-                      {entry.items_open > 0 && entry.items_open < entry.items
-                        ? `, ${entry.items_open} noch aus`
-                        : ""}{" "}
-                      ·{" "}
-                      {entry.returned_on
-                        ? `zurück am ${formatDay(entry.returned_on)}`
-                        : `bis ${formatDay(entry.due_on)}`}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {loans && (
-            <MoreButton
-              shown={loans.length}
-              total={paged.total}
-              loading={paged.loadingMore}
-              onMore={paged.more}
+          <div className="case-filters">
+            <ListSearch
+              value={search}
+              onChange={setSearch}
+              label="Verleihe durchsuchen"
+              placeholder="Nummer, Person, Gerät, Seriennummer …"
             />
-          )}
+            <div className="chips" role="group" aria-label="Status">
+              {LOAN_FILTERS.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className="chip chip-filter"
+                  aria-pressed={filter === entry.id}
+                  onClick={() => setFilter(entry.id)}
+                >
+                  {entry.label}
+                  {entry.id === "offen" && counts ? ` (${counts.open})` : ""}
+                  {entry.id === "ueberfaellig" && counts ? ` (${counts.overdue})` : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="case-scroll">
+            {!loans && !failed && <p role="status">Wird geladen …</p>}
+            {loans && loans.length === 0 && (
+              <p className="empty">
+                {query.trim() ? "Kein Verleih passt zur Suche." : "Keine Verleihe in dieser Liste."}
+              </p>
+            )}
+            {loans && loans.length > 0 && (
+              <ul>
+                {loans.map((entry) => (
+                  <li key={entry.id}>
+                    <button
+                      type="button"
+                      className="case-item"
+                      aria-current={entry.id === loanId ? "true" : undefined}
+                      onClick={() => navigate(loanPath(entry.id))}
+                    >
+                      <span className="case-item-head">
+                        <span className="mono">{entry.number}</span>
+                        <span className={`pill ${LOAN_STATES[entry.state].pill}`}>
+                          {LOAN_STATES[entry.state].label}
+                        </span>
+                      </span>
+                      <strong>{entry.person_name}</strong>
+                      <span className="small">
+                        {entry.items === 1 ? "1 Gerät" : `${entry.items} Geräte`}
+                        {entry.items_open > 0 && entry.items_open < entry.items
+                          ? `, ${entry.items_open} noch aus`
+                          : ""}{" "}
+                        ·{" "}
+                        {entry.returned_on
+                          ? `zurück am ${formatDay(entry.returned_on)}`
+                          : `bis ${formatDay(entry.due_on)}`}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {loans && (
+              <MoreButton
+                shown={loans.length}
+                total={paged.total}
+                loading={paged.loadingMore}
+                onMore={paged.more}
+              />
+            )}
+          </div>
         </nav>
         <div className="case-main">
+          {loanId !== null && (
+            <a
+              className="case-back"
+              href={INVENTORY_LOANS_PATH}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate(INVENTORY_LOANS_PATH);
+              }}
+            >
+              ‹ Zur Liste
+            </a>
+          )}
           {loanId === "neu" && canEdit ? (
             <NewLoanForm
               onCreated={(loan) => {
