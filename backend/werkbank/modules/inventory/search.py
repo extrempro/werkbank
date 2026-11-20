@@ -101,13 +101,14 @@ def _positions(db: Session, pattern: str, limit: int) -> list[SearchHit]:
 
 
 def _workplaces(db: Session, pattern: str, limit: int) -> list[SearchHit]:
-    """Arbeitsplätze nach Nummer und Bezeichnung."""
-    rows = db.scalars(
-        select(InventoryWorkplace)
+    """Arbeitsplätze nach Nummer und Raum."""
+    rows = db.execute(
+        select(InventoryWorkplace, InventoryRoom.name)
+        .outerjoin(InventoryRoom, InventoryRoom.id == InventoryWorkplace.room_id)
         .where(
             or_(
                 func.lower(InventoryWorkplace.number).like(pattern, escape="\\"),
-                func.lower(InventoryWorkplace.name).like(pattern, escape="\\"),
+                func.lower(func.coalesce(InventoryRoom.name, "")).like(pattern, escape="\\"),
             )
         )
         .order_by(InventoryWorkplace.number)
@@ -117,11 +118,15 @@ def _workplaces(db: Session, pattern: str, limit: int) -> list[SearchHit]:
         SearchHit(
             module=MODULE,
             kind="Arbeitsplatz",
-            title=f"{row.number} {row.name}".strip(),
-            subtitle="geteilt" if row.shared else "einzeln",
+            title=row.number,
+            subtitle=" · ".join(
+                part
+                for part in ("geteilt" if row.shared else "einzeln", f"Raum {room}" if room else "")
+                if part
+            ),
             link=f"/bestand/arbeitsplaetze/{row.id}",
         )
-        for row in rows
+        for row, room in rows
     ]
 
 
