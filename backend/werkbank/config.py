@@ -100,6 +100,8 @@ class Settings(BaseSettings):
     # ihre Höchstgröße in Megabyte
     project_documents_dir: Path = Path("/data/belege/projekte")
     project_document_max_mb: int = 20
+    # Höchstgröße eines Grundrisses im IT-Bestand in Megabyte (Bild in der Datenbank)
+    inventory_plan_max_mb: int = 10
 
     # Test-Login ohne Entra. Nur in den Umgebungen "test" und "development" zulässig.
     enable_test_login: bool = False

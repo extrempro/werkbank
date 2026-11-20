@@ -25,6 +25,7 @@ from werkbank.modules.evergreen.search import evergreen_search
 from werkbank.modules.evergreen.tasks import evergreen_tasks
 from werkbank.modules.evergreen.workflow import evergreen_workflow
 from werkbank.modules.inventory.api import router as inventory_router
+from werkbank.modules.inventory.locations import router as inventory_locations_router
 from werkbank.modules.inventory.search import inventory_search
 from werkbank.modules.m365_config.api import router as m365_config_router
 from werkbank.modules.m365_config.recommendations_api import router as recommendations_router
@@ -96,6 +97,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(budget_imports_router)
     app.include_router(projects_router)
     app.include_router(inventory_router)
+    app.include_router(inventory_locations_router)
     app.include_router(tools_router)
     app.include_router(tools_account_router)
     app.include_router(monitoring_router)

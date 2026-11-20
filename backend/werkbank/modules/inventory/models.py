@@ -11,8 +11,11 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Index,
+    Integer,
+    LargeBinary,
     String,
     UniqueConstraint,
     func,
@@ -68,6 +71,94 @@ class InventoryRetireReason(Base):
     name: Mapped[str] = mapped_column(String(80), unique=True)
 
 
+class InventoryCity(Base):
+    """Eine Stadt, oberste Ebene der Standorte."""
+
+    __tablename__ = "inventory_cities"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), unique=True)
+
+
+class InventorySite(Base):
+    """Ein Standort in einer Stadt, z. B. ein Gebäudekomplex."""
+
+    __tablename__ = "inventory_sites"
+    __table_args__ = (UniqueConstraint("city_id", "name", name="uq_inventory_sites_city_name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    city_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_cities.id", ondelete="RESTRICT"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+
+
+class InventorySection(Base):
+    """Ein Gebäudeabschnitt eines Standorts."""
+
+    __tablename__ = "inventory_sections"
+    __table_args__ = (UniqueConstraint("site_id", "name", name="uq_inventory_sections_site_name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    site_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_sites.id", ondelete="RESTRICT"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+
+
+class InventoryFloor(Base):
+    """Eine Etage eines Gebäudeabschnitts; optional mit Grundriss."""
+
+    __tablename__ = "inventory_floors"
+    __table_args__ = (
+        UniqueConstraint("section_id", "name", name="uq_inventory_floors_section_name"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    section_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_sections.id", ondelete="RESTRICT"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+    # Reihenfolge innerhalb des Abschnitts, z. B. -1 Keller, 0 Erdgeschoss
+    position: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
+class InventoryFloorPlan(Base):
+    """Der Grundriss einer Etage als Bild (PNG, JPEG oder WebP; nie SVG)."""
+
+    __tablename__ = "inventory_floor_plans"
+
+    floor_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_floors.id", ondelete="CASCADE"), primary_key=True
+    )
+    content_type: Mapped[str] = mapped_column(String(32))
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    etag: Mapped[str] = mapped_column(String(32))
+    width: Mapped[int] = mapped_column(Integer)
+    height: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
+class InventoryRoom(Base):
+    """Ein Raum auf einer Etage. Lage als Rechteck in Prozent des Grundrisses."""
+
+    __tablename__ = "inventory_rooms"
+    __table_args__ = (UniqueConstraint("floor_id", "name", name="uq_inventory_rooms_floor_name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    floor_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_floors.id", ondelete="RESTRICT"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+    x: Mapped[float] = mapped_column(Float)
+    y: Mapped[float] = mapped_column(Float)
+    w: Mapped[float] = mapped_column(Float)
+    h: Mapped[float] = mapped_column(Float)
+
+
 class InventoryHardware(Base):
     """Ein Gerät im Bestand."""
 
@@ -94,6 +185,11 @@ class InventoryHardware(Base):
     serial: Mapped[str] = mapped_column(String(80), default="", server_default="")
     inventory_no: Mapped[str | None] = mapped_column(String(40))
     hostname: Mapped[str] = mapped_column(String(80), default="", server_default="")
+    # Raum, in dem das Gerät steht (z. B. Lager oder Besprechungsraum); später kommen
+    # Stellen und Arbeitsplätze dazu
+    room_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_rooms.id", ondelete="RESTRICT"), index=True
+    )
     # Herkunft: von Hand erfasst („manuell“); später auch aus NinjaOne
     source: Mapped[str] = mapped_column(String(16), default="manuell", server_default="manuell")
     note: Mapped[str] = mapped_column(String(500), default="", server_default="")

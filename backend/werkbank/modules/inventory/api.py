@@ -15,12 +15,17 @@ from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.modules.inventory.models import (
     InventoryEvent,
+    InventoryFloor,
     InventoryHardware,
     InventoryKind,
     InventoryMaker,
     InventoryModel,
     InventoryRetireReason,
+    InventoryRoom,
+    InventorySection,
+    InventorySite,
 )
+from werkbank.modules.inventory.places import RoomPlace, room_place
 
 router = APIRouter(prefix="/api/inventory")
 
@@ -135,6 +140,7 @@ class HardwareIn(BaseModel):
     serial: str = Field(default="", max_length=80)
     hostname: str = Field(default="", max_length=80)
     note: str = Field(default="", max_length=500)
+    room_id: int | None = Field(default=None, ge=1)
 
     @field_validator("name", "serial", "hostname", "note")
     @classmethod
@@ -198,6 +204,8 @@ class HardwareSummary(BaseModel):
     hostname: str
     source: str
     status: str
+    # Raum mit Standort und Etage als Text, z. B. „1.12 · Verwaltung Nord, 1. OG“
+    place: str | None
 
 
 class RetireOut(BaseModel):
@@ -214,7 +222,18 @@ class EventOut(BaseModel):
     text: str
 
 
+class LocationOut(BaseModel):
+    room_id: int
+    room: str
+    floor_id: int
+    floor: str
+    section: str
+    site: str
+    city: str
+
+
 class HardwareOut(HardwareSummary):
+    location: LocationOut | None
     model_id: int | None
     maker_id: int | None
     note: str
@@ -326,8 +345,22 @@ def _names(db: Session) -> tuple[dict[int, str], dict[int, tuple[str, str]]]:
     return kinds, models
 
 
+def _places(db: Session) -> dict[int, str]:
+    """Kurztext je Raum für die Liste."""
+    rows = db.execute(
+        select(InventoryRoom.id, InventoryRoom.name, InventoryFloor.name, InventorySite.name)
+        .join(InventoryFloor, InventoryFloor.id == InventoryRoom.floor_id)
+        .join(InventorySection, InventorySection.id == InventoryFloor.section_id)
+        .join(InventorySite, InventorySite.id == InventorySection.site_id)
+    ).all()
+    return {room_id: f"{room} · {site}, {floor}" for room_id, room, floor, site in rows}
+
+
 def _summary(
-    row: InventoryHardware, kinds: dict[int, str], models: dict[int, tuple[str, str]]
+    row: InventoryHardware,
+    kinds: dict[int, str],
+    models: dict[int, tuple[str, str]],
+    places: dict[int, str] | None = None,
 ) -> HardwareSummary:
     maker, model = models.get(row.model_id, (None, None)) if row.model_id else (None, None)
     return HardwareSummary(
@@ -342,12 +375,13 @@ def _summary(
         hostname=row.hostname,
         source=row.source,
         status=row.status,
+        place=(places or {}).get(row.room_id) if row.room_id else None,
     )
 
 
 def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
     kinds, models = _names(db)
-    base = _summary(row, kinds, models)
+    base = _summary(row, kinds, models, _places(db) if row.room_id else None)
     kind = db.get(InventoryKind, row.kind_id)
     model = db.get(InventoryModel, row.model_id) if row.model_id else None
     retire = None
@@ -369,8 +403,10 @@ def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
         .order_by(InventoryEvent.occurred_at.desc(), InventoryEvent.id.desc())
         .limit(EVENTS_MAX)
     ).all()
+    place = room_place(db, row.room_id)
     return HardwareOut(
         **base.model_dump(),
+        location=LocationOut(**vars(place)) if place else None,
         model_id=row.model_id,
         maker_id=model.maker_id if model else None,
         note=row.note,
@@ -392,6 +428,24 @@ def _details(row: InventoryHardware) -> dict[str, object]:
         "inventurnummer": row.inventory_no,
         "status": row.status,
     }
+
+
+def _room(db: Session, room_id: int | None) -> InventoryRoom | None:
+    if room_id is None:
+        return None
+    row = db.get(InventoryRoom, room_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannter Raum"
+        )
+    return row
+
+
+def place_label(place: RoomPlace | None) -> str:
+    """Kurzform für den Verlauf, z. B. „Raum 1.12 (Verwaltung Nord, 1. OG)“."""
+    if place is None:
+        return "kein Raum"
+    return f"Raum {place.room} ({place.site}, {place.floor})"
 
 
 def _model_label(db: Session, model: InventoryModel | None) -> str:
@@ -418,13 +472,15 @@ def list_hardware(
         query.order_by(func.lower(InventoryHardware.name), InventoryHardware.id).limit(LIST_MAX)
     ).all()
     kinds, models = _names(db)
-    return [_summary(row, kinds, models) for row in rows]
+    places = _places(db)
+    return [_summary(row, kinds, models, places) for row in rows]
 
 
 @router.post("/hardware", status_code=status.HTTP_201_CREATED)
 def create_hardware(request: Request, body: HardwareCreate, user: Editor, db: DbDep) -> HardwareOut:
     kind = _kind(db, body.kind_id)
     model = _model(db, body.model_id)
+    room = _room(db, body.room_id)
     _check_serial(db, body.serial, None)
     _check_inventory_no(db, body.inventory_no, None)
     row = InventoryHardware(
@@ -435,12 +491,15 @@ def create_hardware(request: Request, body: HardwareCreate, user: Editor, db: Db
         hostname=body.hostname,
         note=body.note,
         inventory_no=body.inventory_no,
+        room_id=room.id if room else None,
         source=SOURCE_MANUAL,
         status=STATUS_ACTIVE,
     )
     db.add(row)
     db.flush()
     add_event(db, row.id, user, "Von Hand erfasst")
+    if room is not None:
+        add_event(db, row.id, user, f"Standort: {place_label(room_place(db, room.id))}")
     if body.inventory_no:
         add_event(db, row.id, user, f"Inventurnummer gesetzt: {body.inventory_no}")
     _audit(db, request, user, "geraet_angelegt", "geraet", row.id, _details(row))
@@ -461,6 +520,7 @@ def update_hardware(
     row = _hardware(db, hardware_id)
     kind = _kind(db, body.kind_id)
     model = _model(db, body.model_id)
+    room = _room(db, body.room_id)
     _check_serial(db, body.serial, row.id)
     before = _details(row)
     changes: list[str] = []
@@ -478,12 +538,17 @@ def update_hardware(
         changes.append(f"Hostname: {row.hostname or 'leer'} → {body.hostname or 'leer'}")
     if row.note != body.note:
         changes.append("Notiz geändert")
+    if row.room_id != (room.id if room else None):
+        before_place = place_label(room_place(db, row.room_id))
+        after_place = place_label(room_place(db, room.id if room else None))
+        changes.append(f"Standort: {before_place} → {after_place}")
     row.kind_id = kind.id
     row.model_id = model.id if model else None
     row.name = body.name
     row.serial = body.serial
     row.hostname = body.hostname
     row.note = body.note
+    row.room_id = room.id if room else None
     if changes:
         add_event(db, row.id, user, "Geändert: " + "; ".join(changes))
         _audit(

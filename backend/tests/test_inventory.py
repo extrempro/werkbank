@@ -1,5 +1,6 @@
 """IT-Bestand: Rechte, Hardware, Inventurnummer, Ausmustern, Stammdaten und Suche."""
 
+import struct
 from collections.abc import Iterator
 from datetime import date, timedelta
 from typing import Any
@@ -9,13 +10,20 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from tests.test_m365_api import ORIGIN, client_for
+from werkbank.core.branding import PNG_SIGNATURE, ImageError
 from werkbank.core.models import AuditLog
 from werkbank.modules.inventory.api import single_line
 from werkbank.modules.inventory.models import (
+    InventoryCity,
+    InventoryFloor,
     InventoryHardware,
     InventoryKind,
     InventoryMaker,
+    InventoryRoom,
+    InventorySection,
+    InventorySite,
 )
+from werkbank.modules.inventory.plans import inspect_plan, jpeg_size
 from werkbank.modules.inventory.search import escape_like
 
 BASE = "/api/inventory"
@@ -26,6 +34,14 @@ HEADERS = {"Origin": ORIGIN}
 def db(db_session: Session) -> Iterator[Session]:
     def clean() -> None:
         db_session.execute(delete(InventoryHardware))
+        for model in (
+            InventoryRoom,
+            InventoryFloor,
+            InventorySection,
+            InventorySite,
+            InventoryCity,
+        ):
+            db_session.execute(delete(model))
         db_session.execute(delete(InventoryMaker))
         # Die Arten und Gründe aus der Migration bleiben, eigene kommen weg.
         db_session.execute(delete(InventoryKind).where(InventoryKind.name.like("Test%")))
@@ -71,6 +87,30 @@ def test_single_line_rejects_line_breaks() -> None:
 
 def test_escape_like_treats_wildcards_as_text() -> None:
     assert escape_like("50%_a\\b") == "50\\%\\_a\\\\b"
+
+
+def png(width: int, height: int) -> bytes:
+    """Kopf einer PNG-Datei; für die Prüfung reicht der IHDR-Block."""
+    header = b"\x00\x00\x00\rIHDR" + struct.pack(">II", width, height) + b"\x08\x02\x00\x00\x00"
+    return PNG_SIGNATURE + header + b"\x00" * 16
+
+
+def jpeg(width: int, height: int) -> bytes:
+    app0 = b"\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+    sof = b"\xff\xc0\x00\x11\x08" + struct.pack(">HH", height, width) + b"\x03" + b"\x00" * 9
+    return b"\xff\xd8" + app0 + sof + b"\xff\xd9"
+
+
+def test_plan_images_are_checked_by_content() -> None:
+    assert inspect_plan(png(800, 600)).content_type == "image/png"
+    info = inspect_plan(jpeg(1200, 900))
+    assert (info.content_type, info.width, info.height) == ("image/jpeg", 1200, 900)
+    assert jpeg_size(b"\xff\xd8\xff\xd9") is None
+    for bad in (b"<svg xmlns='http://www.w3.org/2000/svg'/>", b"GIF89a....", b"", png(10, 10)):
+        with pytest.raises(ImageError):
+            inspect_plan(bad)
+    with pytest.raises(ImageError):
+        inspect_plan(png(20000, 100))
 
 
 # --- mit Datenbank --------------------------------------------------------------------
@@ -327,3 +367,115 @@ def test_search_finds_hardware(db: Session) -> None:
     outsider = client_for(["Budget.Reader"], "bestand-suche-fremd")
     hits = outsider.get("/api/search", params={"q": "inv-23-1107"}).json()["hits"]
     assert all(hit["module"] != "IT-Bestand" for hit in hits)
+
+
+def build_floor(editor: Any) -> int:
+    """Stadt, Standort, Abschnitt und Etage anlegen; liefert die Kennung der Etage."""
+    tree = editor.post(f"{BASE}/cities", json={"name": "Beispielstadt"}, headers=HEADERS).json()
+    city = tree["cities"][0]["id"]
+    tree = editor.post(
+        f"{BASE}/sites", json={"name": "Verwaltung Nord", "city_id": city}, headers=HEADERS
+    ).json()
+    site = tree["cities"][0]["sites"][0]["id"]
+    tree = editor.post(
+        f"{BASE}/sections", json={"name": "Abschnitt A", "site_id": site}, headers=HEADERS
+    ).json()
+    section = tree["cities"][0]["sites"][0]["sections"][0]["id"]
+    floor = editor.post(
+        f"{BASE}/floors",
+        json={"name": "1. Obergeschoss", "section_id": section, "position": 1},
+        headers=HEADERS,
+    )
+    assert floor.status_code == 201, floor.text
+    return int(floor.json()["id"])
+
+
+@pytest.mark.db
+def test_locations_rooms_and_plan(db: Session) -> None:
+    editor = client_for(["Bestand.Editor"], "bestand-standorte")
+    reader = client_for(["Bestand.Reader"], "bestand-standorte-leser")
+    assert reader.post(f"{BASE}/cities", json={"name": "X"}, headers=HEADERS).status_code == 403
+    floor_id = build_floor(editor)
+    assert (
+        editor.post(f"{BASE}/cities", json={"name": "beispielstadt"}, headers=HEADERS).status_code
+        == 409
+    )
+
+    url = f"{BASE}/floors/{floor_id}"
+    room = {"name": "1.12 Büro", "x": 10, "y": 12, "w": 20, "h": 15}
+    floor = editor.post(f"{url}/rooms", json=room, headers=HEADERS).json()
+    assert [entry["name"] for entry in floor["rooms"]] == ["1.12 Büro"]
+    assert floor["city"] == "Beispielstadt"
+    room_id = floor["rooms"][0]["id"]
+    assert editor.post(f"{url}/rooms", json=room, headers=HEADERS).status_code == 409
+    for bad in (
+        {**room, "name": "Rand", "x": 90, "w": 20},
+        {**room, "name": "Klein", "w": 0.5},
+        {**room, "name": "Minus", "y": -1},
+    ):
+        assert editor.post(f"{url}/rooms", json=bad, headers=HEADERS).status_code == 422, bad
+    moved = editor.put(
+        f"{BASE}/rooms/{room_id}",
+        json={**room, "x": 30.123, "name": "1.12 Büro Nord"},
+        headers=HEADERS,
+    ).json()
+    assert moved["rooms"][0]["x"] == 30.12
+
+    # Grundriss: nur echte Bilder, abrufbar nur mit Rolle
+    refused = editor.put(
+        f"{url}/plan", content=b"<svg/>", headers={**HEADERS, "Content-Type": "image/svg+xml"}
+    )
+    assert refused.status_code == 422
+    uploaded = editor.put(
+        f"{url}/plan", content=png(800, 600), headers={**HEADERS, "Content-Type": "image/png"}
+    )
+    assert uploaded.status_code == 200, uploaded.text
+    plan = uploaded.json()["plan"]
+    assert (plan["width"], plan["height"]) == (800, 600)
+    image = reader.get(plan["url"])
+    assert image.status_code == 200
+    assert image.headers["content-type"] == "image/png"
+    assert image.headers["x-content-type-options"] == "nosniff"
+    assert "sandbox" in image.headers["content-security-policy"]
+    assert image.headers["cache-control"] == "no-store"
+    outsider = client_for(["Budget.Reader"], "bestand-standorte-fremd")
+    assert outsider.get(plan["url"]).status_code == 403
+    tree = reader.get(f"{BASE}/locations").json()
+    floor_brief = tree["cities"][0]["sites"][0]["sections"][0]["floors"][0]
+    assert floor_brief["has_plan"] is True
+    assert floor_brief["rooms"] == [{"id": room_id, "name": "1.12 Büro Nord"}]
+
+    # Gerät in den Raum stellen: Standort am Gerät, im Verlauf und in der Liste
+    device = editor.post(
+        f"{BASE}/hardware", json=hardware_body(editor, room_id=room_id), headers=HEADERS
+    ).json()
+    assert device["location"]["room"] == "1.12 Büro Nord"
+    assert device["location"]["floor_id"] == floor_id
+    assert any(event["text"].startswith("Standort: Raum 1.12") for event in device["events"])
+    listed = reader.get(f"{BASE}/hardware").json()[0]
+    assert listed["place"] == "1.12 Büro Nord · Verwaltung Nord, 1. Obergeschoss"
+    assert reader.get(url).json()["rooms"][0]["hardware"] == 1
+    bad_room = hardware_body(editor, serial="SN-X", room_id=999999)
+    assert editor.post(f"{BASE}/hardware", json=bad_room, headers=HEADERS).status_code == 422
+
+    # Belegtes lässt sich nicht löschen.
+    assert editor.delete(f"{BASE}/rooms/{room_id}", headers=HEADERS).status_code == 409
+    assert editor.delete(url, headers=HEADERS).status_code == 409
+    city_id = tree["cities"][0]["id"]
+    assert editor.delete(f"{BASE}/cities/{city_id}", headers=HEADERS).status_code == 409
+
+    # Raum gefunden über die Suche
+    hits = reader.get("/api/search", params={"q": "1.12 büro"}).json()["hits"]
+    links = [hit["link"] for hit in hits if hit["kind"] == "Raum"]
+    assert links == [f"/bestand/standorte/etage/{floor_id}/raum/{room_id}"]
+
+    # Gerät raus, dann Raum, Grundriss und Etage löschbar
+    editor.put(
+        f"{BASE}/hardware/{device['id']}",
+        json=hardware_body(editor, room_id=None),
+        headers=HEADERS,
+    )
+    assert editor.delete(f"{BASE}/rooms/{room_id}", headers=HEADERS).status_code == 200
+    without = editor.delete(f"{url}/plan", headers=HEADERS).json()
+    assert without["plan"] is None
+    assert editor.delete(url, headers=HEADERS).status_code == 200
