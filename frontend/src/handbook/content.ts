@@ -1236,7 +1236,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Unter „Vorgänge“ landet, was eine Entscheidung braucht: ein neues Gerät in NinjaOne, ein Gerät, das dort nicht mehr auftaucht, eine Rückgabe aus dem Verleih oder ein überfälliger Verleih. Oben siehst du, wann zuletzt abgeglichen wurde.",
+            text: "Unter „Vorgänge“ landet, was eine Entscheidung braucht: ein neues Gerät in NinjaOne, ein Gerät, das dort nicht mehr auftaucht, eine Rückgabe aus dem Verleih oder ein überfälliger Verleih. Oben siehst du, wann zuletzt abgeglichen wurde. Über der Liste kannst du nach Nummer, Titel, Gerät oder Seriennummer suchen. Es werden zuerst 50 Vorgänge gezeigt, mit „Mehr anzeigen“ kommen weitere dazu. Das gilt auch für die Liste beim Verleih.",
           },
           {
             kind: "steps",

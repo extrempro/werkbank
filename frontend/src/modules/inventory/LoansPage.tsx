@@ -3,6 +3,7 @@ import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { INVENTORY_LOANS_PATH } from "../../navigation";
 import { navigate } from "../../router";
+import { ListSearch, MoreButton, useDebounced, usePagedList } from "./paged";
 import { PersonPicker } from "./PersonPicker";
 import {
   casePath,
@@ -27,7 +28,7 @@ import {
   type Loan,
   type LoanableDevice,
   type LoanFilter,
-  type LoanList,
+  type LoanSummary,
   type Person,
 } from "./api";
 
@@ -462,22 +463,23 @@ export function LoansPage({
 }) {
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
   const [filter, setFilter] = useState<LoanFilter>("offen");
-  const [loaded, setLoaded] = useState<{ filter: LoanFilter; list: LoanList } | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
-  const list = loaded && loaded.filter === filter ? loaded.list : null;
-
-  useEffect(() => {
-    let active = true;
-    fetchLoans(filter).then(
-      (result) => active && setLoaded({ filter, list: result }),
-      (problem: unknown) =>
-        active && setFailed(errorText(problem, "Die Verleihe konnten nicht geladen werden.")),
-    );
-    return () => {
-      active = false;
-    };
-  }, [filter, reload]);
+  const [search, setSearch] = useState("");
+  const query = useDebounced(search);
+  const paged = usePagedList<LoanSummary, { open: number; overdue: number }>(
+    `${filter}|${query}`,
+    reload,
+    (offset, limit) =>
+      fetchLoans(filter, query, offset, limit).then((result) => ({
+        items: result.loans,
+        total: result.total,
+        extra: { open: result.open, overdue: result.overdue },
+      })),
+    "Die Verleihe konnten nicht geladen werden.",
+  );
+  const failed = paged.error;
+  const loans = paged.items;
+  const counts = paged.extra;
 
   return (
     <div className="page page-wide">
@@ -510,20 +512,28 @@ export function LoansPage({
             onClick={() => setFilter(entry.id)}
           >
             {entry.label}
-            {entry.id === "offen" && loaded ? ` (${loaded.list.open})` : ""}
-            {entry.id === "ueberfaellig" && loaded ? ` (${loaded.list.overdue})` : ""}
+            {entry.id === "offen" && counts ? ` (${counts.open})` : ""}
+            {entry.id === "ueberfaellig" && counts ? ` (${counts.overdue})` : ""}
           </button>
         ))}
       </div>
       <div className="case-layout">
         <nav className="panel case-list" aria-label="Verleihe">
-          {!list && !failed && <p role="status">Wird geladen …</p>}
-          {list && list.loans.length === 0 && (
-            <p className="empty">Keine Verleihe in dieser Liste.</p>
+          <ListSearch
+            value={search}
+            onChange={setSearch}
+            label="Verleihe durchsuchen"
+            placeholder="Nummer, Person, Gerät, Seriennummer …"
+          />
+          {!loans && !failed && <p role="status">Wird geladen …</p>}
+          {loans && loans.length === 0 && (
+            <p className="empty">
+              {query.trim() ? "Kein Verleih passt zur Suche." : "Keine Verleihe in dieser Liste."}
+            </p>
           )}
-          {list && list.loans.length > 0 && (
+          {loans && loans.length > 0 && (
             <ul>
-              {list.loans.map((entry) => (
+              {loans.map((entry) => (
                 <li key={entry.id}>
                   <button
                     type="button"
@@ -552,6 +562,14 @@ export function LoansPage({
                 </li>
               ))}
             </ul>
+          )}
+          {loans && (
+            <MoreButton
+              shown={loans.length}
+              total={paged.total}
+              loading={paged.loadingMore}
+              onMore={paged.more}
+            />
           )}
         </nav>
         <div className="case-main">

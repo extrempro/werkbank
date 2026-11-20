@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.67.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Suche und „Mehr anzeigen“ bei Vorgängen und Verleih.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Über den Listen „Vorgänge“ und „Verleih“ gibt es eine Suche. Die Treffer erscheinen schon beim Tippen.",
+          "Lange Listen zeigen zuerst 50 Einträge. Mit „Mehr anzeigen“ kommen weitere dazu.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.66.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Verleih.",

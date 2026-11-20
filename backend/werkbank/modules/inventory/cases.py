@@ -10,7 +10,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select
+from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.orm import Session
 
 from werkbank.core.app_settings import NINJA_KEY, get_setting
@@ -45,6 +45,7 @@ from werkbank.modules.inventory.models import (
     InventorySyncRun,
 )
 from werkbank.modules.inventory.places import room_place
+from werkbank.modules.inventory.search import escape_like
 from werkbank.modules.inventory.sync import (
     CASE_MISSING,
     CASE_MONITOR,
@@ -103,7 +104,8 @@ DECISIONS: dict[str, dict[str, str]] = {
 }
 # Entscheidungen, die nur die Werkbank selbst trifft
 AUTOMATIC = frozenset({"wieder_da", "ersetzt", "zurueck"})
-LIST_MAX = 1000
+PAGE_SIZE = 50
+PAGE_MAX = 200
 
 
 def _not_found() -> HTTPException:
@@ -153,6 +155,8 @@ class CaseOut(CaseSummary):
 class CaseListOut(BaseModel):
     cases: list[CaseSummary]
     open: int
+    # Treffer insgesamt (Status und Suche), für „Mehr anzeigen“
+    total: int
 
 
 class NoteIn(BaseModel):
@@ -490,20 +494,39 @@ def list_cases(
     user: Reader,
     db: DbDep,
     state: Annotated[Literal["offen", "neu", "arbeit", "fertig", "alle"], Query()] = "offen",
+    q: Annotated[str, Query(max_length=100)] = "",
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=PAGE_MAX)] = PAGE_SIZE,
 ) -> CaseListOut:
+    """Vorgänge seitenweise, neueste zuerst; ``q`` sucht in Nummer, Titel und Angaben."""
     query = select(InventoryCase)
     if state == "offen":
         query = query.where(InventoryCase.status.in_(OPEN_STATES))
     elif state != "alle":
         query = query.where(InventoryCase.status == state)
+    term = q.strip().casefold()
+    if term:
+        pattern = f"%{escape_like(term)}%"
+        query = query.where(
+            or_(
+                func.lower(InventoryCase.number).like(pattern, escape="\\"),
+                func.lower(InventoryCase.title).like(pattern, escape="\\"),
+                func.lower(cast(InventoryCase.facts, Text)).like(pattern, escape="\\"),
+            )
+        )
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     rows = db.scalars(
-        query.order_by(InventoryCase.created_at.desc(), InventoryCase.id.desc()).limit(LIST_MAX)
+        query.order_by(InventoryCase.created_at.desc(), InventoryCase.id.desc())
+        .offset(offset)
+        .limit(limit)
     ).all()
     names = _users(db, {row.assignee_id for row in rows if row.assignee_id})
     open_count = db.scalar(
         select(func.count()).select_from(InventoryCase).where(InventoryCase.status.in_(OPEN_STATES))
     )
-    return CaseListOut(cases=[_summary(row, names) for row in rows], open=open_count or 0)
+    return CaseListOut(
+        cases=[_summary(row, names) for row in rows], open=open_count or 0, total=total
+    )
 
 
 @router.get("/cases/{case_id}")

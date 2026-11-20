@@ -6728,6 +6728,32 @@ p.badges {
   list-style: none;
 }
 
+.list-search {
+  display: grid;
+  gap: 4px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--farbe-rand);
+}
+
+.list-search label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.list-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.list-more p {
+  margin: 0;
+}
+
 .case-list > p {
   margin: 0;
   padding: 16px;

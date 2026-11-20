@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { navigate } from "../../router";
+import { ListSearch, MoreButton, useDebounced, usePagedList } from "./paged";
 import { EventPanel } from "./parts";
 import {
   addCaseNote,
@@ -30,7 +31,7 @@ import {
   type Assignees,
   type Case,
   type CaseFilter,
-  type CaseList,
+  type CaseSummary,
   type DecisionInput,
   type HardwareSummary,
   type Locations,
@@ -584,22 +585,23 @@ function CaseDetail({
 export function CasesPage({ caseId, roles }: { caseId: number | null; roles: readonly string[] }) {
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
   const [filter, setFilter] = useState<CaseFilter>("offen");
-  const [loaded, setLoaded] = useState<{ filter: CaseFilter; list: CaseList } | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
-  const list = loaded && loaded.filter === filter ? loaded.list : null;
-
-  useEffect(() => {
-    let active = true;
-    fetchCases(filter).then(
-      (result) => active && setLoaded({ filter, list: result }),
-      (error: unknown) =>
-        active && setFailed(errorText(error, "Die Vorgänge konnten nicht geladen werden.")),
-    );
-    return () => {
-      active = false;
-    };
-  }, [filter, reload]);
+  const [search, setSearch] = useState("");
+  const query = useDebounced(search);
+  const paged = usePagedList<CaseSummary, { open: number }>(
+    `${filter}|${query}`,
+    reload,
+    (offset, limit) =>
+      fetchCases(filter, query, offset, limit).then((result) => ({
+        items: result.cases,
+        total: result.total,
+        extra: { open: result.open },
+      })),
+    "Die Vorgänge konnten nicht geladen werden.",
+  );
+  const failed = paged.error;
+  const cases = paged.items;
+  const openCount = paged.extra ? paged.extra.open : null;
 
   return (
     <div className="page page-wide">
@@ -627,19 +629,27 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
             onClick={() => setFilter(entry.id)}
           >
             {entry.label}
-            {entry.id === "offen" && loaded ? ` (${loaded.list.open})` : ""}
+            {entry.id === "offen" && openCount !== null ? ` (${openCount})` : ""}
           </button>
         ))}
       </div>
       <div className="case-layout">
         <nav className="panel case-list" aria-label="Vorgänge">
-          {!list && !failed && <p role="status">Wird geladen …</p>}
-          {list && list.cases.length === 0 && (
-            <p className="empty">Keine Vorgänge in diesem Status.</p>
+          <ListSearch
+            value={search}
+            onChange={setSearch}
+            label="Vorgänge durchsuchen"
+            placeholder="Nummer, Titel, Gerät, Seriennummer …"
+          />
+          {!cases && !failed && <p role="status">Wird geladen …</p>}
+          {cases && cases.length === 0 && (
+            <p className="empty">
+              {query.trim() ? "Kein Vorgang passt zur Suche." : "Keine Vorgänge in diesem Status."}
+            </p>
           )}
-          {list && list.cases.length > 0 && (
+          {cases && cases.length > 0 && (
             <ul>
-              {list.cases.map((entry) => (
+              {cases.map((entry) => (
                 <li key={entry.id}>
                   <button
                     type="button"
@@ -662,6 +672,14 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
                 </li>
               ))}
             </ul>
+          )}
+          {cases && (
+            <MoreButton
+              shown={cases.length}
+              total={paged.total}
+              loading={paged.loadingMore}
+              onMore={paged.more}
+            />
           )}
         </nav>
         <div className="case-main">

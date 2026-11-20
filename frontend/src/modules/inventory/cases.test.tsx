@@ -67,7 +67,7 @@ const newCase: Case = {
 };
 
 const routes = {
-  "GET /api/inventory/cases": { cases: [newCase], open: 1 },
+  "GET /api/inventory/cases": { cases: [newCase], open: 1, total: 1 },
   "GET /api/inventory/cases/3": newCase,
   "GET /api/inventory/ninjaone/status": {
     enabled: true,

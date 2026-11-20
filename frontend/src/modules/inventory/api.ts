@@ -1208,6 +1208,8 @@ export interface Case extends CaseSummary {
 export interface CaseList {
   cases: CaseSummary[];
   open: number;
+  /** Treffer insgesamt (Status und Suche) */
+  total: number;
 }
 
 export type CaseFilter = "offen" | "neu" | "arbeit" | "fertig" | "alle";
@@ -1352,8 +1354,30 @@ export function parseCasePath(path: string): { id: number | null } | null {
   return match ? { id: Number(match[1]) } : null;
 }
 
-export function fetchCases(filter: CaseFilter): Promise<CaseList> {
-  return getJson(`${BASE}/cases?state=${filter}`);
+/** Einträge je Seite in den Listen „Vorgänge“ und „Verleih“ */
+export const PAGE_SIZE = 50;
+
+function pageQuery(filter: string, query: string, offset: number, limit: number): string {
+  const params = new URLSearchParams({ state: filter });
+  if (query.trim()) {
+    params.set("q", query.trim().slice(0, 100));
+  }
+  if (offset > 0) {
+    params.set("offset", String(offset));
+  }
+  if (limit !== PAGE_SIZE) {
+    params.set("limit", String(limit));
+  }
+  return params.toString();
+}
+
+export function fetchCases(
+  filter: CaseFilter,
+  query = "",
+  offset = 0,
+  limit = PAGE_SIZE,
+): Promise<CaseList> {
+  return getJson(`${BASE}/cases?${pageQuery(filter, query, offset, limit)}`);
 }
 
 export function fetchCase(id: number): Promise<Case> {
@@ -1473,6 +1497,8 @@ export interface LoanList {
   loans: LoanSummary[];
   open: number;
   overdue: number;
+  /** Treffer insgesamt (Status und Suche) */
+  total: number;
 }
 
 export interface LoanableDevice {
@@ -1525,8 +1551,13 @@ export function parseLoanPath(path: string): { id: number | "neu" | null } | nul
   return match ? { id: Number(match[1]) } : null;
 }
 
-export function fetchLoans(filter: LoanFilter): Promise<LoanList> {
-  return getJson(`${BASE}/loans?state=${filter}`);
+export function fetchLoans(
+  filter: LoanFilter,
+  query = "",
+  offset = 0,
+  limit = PAGE_SIZE,
+): Promise<LoanList> {
+  return getJson(`${BASE}/loans?${pageQuery(filter, query, offset, limit)}`);
 }
 
 export function fetchLoan(id: number): Promise<Loan> {
