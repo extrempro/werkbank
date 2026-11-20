@@ -7899,6 +7899,7 @@ html {
 }
 
 .case-decision {
+  container-type: inline-size;
   padding-top: 16px;
   border-top: 1px solid var(--farbe-trenner);
 }
@@ -7908,6 +7909,35 @@ html {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.case-option-group {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.case-option-group + .case-option-group {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.case-option-group:not([role]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.case-option-group-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+}
+
+@container (max-width: 30rem) {
+  .case-option-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .case-option-wrap {

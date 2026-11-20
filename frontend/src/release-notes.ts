@@ -33,7 +33,7 @@ export const RELEASES: readonly Release[] = [
         entries: [
           "„Vorgänge“ braucht oben weniger Platz: Suche, Status und Art stehen in einer Zeile, der Stand des Abgleichs mit NinjaOne steht neben der Überschrift.",
           "Die Vorgänge stehen in einer Tabelle mit Nummer, Titel, Art, Eingang, Bearbeiter und Status. Ein Klick auf eine Zeile öffnet den Vorgang rechts daneben, mit „×“ schließt du ihn wieder. Die Breite von Tabelle und Ansicht stellst du am Trenner dazwischen ein; die Werkbank merkt sie sich.",
-          "Die Möglichkeiten bei „Was soll mit dem Gerät passieren?“ brauchen weniger Platz. Die Erklärung siehst du über das kleine „i“ und zur gewählten Möglichkeit darunter.",
+          "Die Möglichkeiten bei „Was soll mit dem Gerät passieren?“ brauchen weniger Platz und stehen in Gruppen (Zuordnen, Ohne Zuordnung, Nicht neu anlegen). Die Erklärung siehst du über das kleine „i“ und zur gewählten Möglichkeit darunter.",
           "Auf dem Handy siehst du eine kurze Zeile je Vorgang; den Status wählst du in einer Zeile zum Wischen.",
         ],
       },
