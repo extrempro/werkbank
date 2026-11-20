@@ -6,7 +6,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [0.65.0] – 2026-11-20
 
-IT-Bestand, Schritt 5 (Teil 1): Monitore aus dem Custom Field in NinjaOne.
+IT-Bestand, Schritt 5: Monitore aus dem Custom Field in NinjaOne und technische Daten aus Lenovo PSREF.
 
 ### IT-Bestand
 
@@ -15,7 +15,10 @@ IT-Bestand, Schritt 5 (Teil 1): Monitore aus dem Custom Field in NinjaOne.
 - Hängt ein bekannter Monitor an einem anderen Rechner, ändert sich nur „Angeschlossen an“ mit Eintrag im Verlauf; Arbeitsplatz oder Stelle bleiben
 - **Technik:** beim Monitor „Angeschlossen an“ mit Link und die Werte aus dem Custom Field; beim Rechner die angeschlossenen Monitore
 - „Verbindung prüfen“ zählt auch die Monitore im Custom Field
-- Migration 0045, Spec, Datenschutz und Handbuch angepasst
+- **Lenovo PSREF** (in der Verwaltung bei NinjaOne einschaltbar, Vorgabe aus): Auftrag `bestand.psref` einmal am Tag für Lenovo-Modelle, die im Bestand vorkommen. Rechner über den Maschinentyp als Modellname (z. B. `10T7004BGE`, `/api/model/Info/SpecData`), Monitore über den Produktschlüssel aus dem Modellnamen (`/api/product/Compare/LoadSpecData`, Schreibweisen `ThinkVision_<Modell>_Monitor` und `ThinkVision_<Modell>`). Gespeichert je Modell: Name, Link, Merkmale, Status, Zeitpunkt; erneut nach 30 Tagen (gefunden) oder 7 Tagen (nicht gefunden, Fehler), höchstens 40 Modelle je Lauf mit Pause dazwischen. Gesendet wird nur die Modellbezeichnung
+- **Technik:** Abschnitt „Lenovo PSREF“ mit Link, Kamera, Mikrofon und Lautsprecher (soweit genannt), Eckdaten und allen Merkmalen zum Aufklappen; Bearbeiter können mit „Bei PSREF abrufen“ sofort neu abfragen (`POST /api/inventory/hardware/{id}/psref`)
+- Die PSREF-Schnittstellen sind nicht offiziell dokumentiert; ändert Lenovo sie, steht beim Modell „Abruf fehlgeschlagen“ oder „nicht gefunden“, der Bestand bleibt unberührt
+- Migrationen 0045 und 0046, Spec, Datenschutz, ASVS und Handbuch angepasst
 
 ## [0.64.0] – 2026-11-20
 

@@ -32,6 +32,7 @@ from werkbank.modules.inventory.models import (
     InventoryWorkplace,
 )
 from werkbank.modules.inventory.places import RoomPlace, room_place
+from werkbank.modules.inventory.psref import av_summary
 
 router = APIRouter(prefix="/api/inventory")
 
@@ -281,6 +282,24 @@ class NinjaOut(BaseModel):
     missing_since: datetime | None
 
 
+class SpecOut(BaseModel):
+    group: str
+    name: str
+    value: str
+
+
+class PsrefOut(BaseModel):
+    """Technische Daten des Modells aus Lenovo PSREF."""
+
+    url: str
+    name: str
+    status: str
+    checked_at: datetime | None
+    # Kamera, Mikrofon, Lautsprecher, soweit PSREF sie nennt
+    av: dict[str, str]
+    specs: list[SpecOut]
+
+
 class LinkedDevice(BaseModel):
     """Kurzform eines Geräts, z. B. Rechner und angeschlossene Monitore."""
 
@@ -297,6 +316,7 @@ class HardwareOut(HardwareSummary):
     # Monitor: Rechner laut Custom Field; Rechner: Monitore, die zuletzt an ihm hingen
     connected_to: LinkedDevice | None
     monitors: list[LinkedDevice]
+    psref: PsrefOut | None
     holder_ref: HolderOut | None
     position_id: int | None
     workplace_id: int | None
@@ -484,6 +504,28 @@ def _summary(
     )
 
 
+def psref_out(model: InventoryModel | None) -> PsrefOut | None:
+    if model is None or not model.psref_status:
+        return None
+    specs = [
+        SpecOut(
+            group=str(item.get("group", "")),
+            name=str(item.get("name", "")),
+            value=str(item.get("value", "")),
+        )
+        for item in (model.psref_specs or [])
+        if isinstance(item, dict)
+    ]
+    return PsrefOut(
+        url=model.psref_url,
+        name=model.psref_name,
+        status=model.psref_status,
+        checked_at=model.psref_checked_at,
+        av=av_summary(model.psref_specs or []),
+        specs=specs,
+    )
+
+
 def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
     kinds, models = _names(db)
     known = holders(db) if row.position_id or row.workplace_id else None
@@ -541,6 +583,7 @@ def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
             )
             if item is not None
         ],
+        psref=psref_out(model),
         holder_ref=holder_ref,
         position_id=row.position_id,
         workplace_id=row.workplace_id,

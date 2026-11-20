@@ -24,6 +24,7 @@ from werkbank.modules.evergreen.jobs import (
 )
 from werkbank.modules.evergreen.notifications import evergreen_notifications
 from werkbank.modules.inventory.notifications import inventory_notifications
+from werkbank.modules.inventory.psref_sync import PSREF_SYNC, PSREF_SYNC_INTERVAL, psref_job
 from werkbank.modules.inventory.sync import NINJA_SYNC, NINJA_SYNC_INTERVAL, ninja_sync_job
 from werkbank.modules.m365_config.ai_texts import GENERATE_AI_TEXTS, generate_ai_texts_job
 from werkbank.modules.m365_config.jobs import COLLECT, collect_job
@@ -123,6 +124,7 @@ REGISTRY: dict[str, JobType] = {
     PUSH_DELIVER: JobType(handler=push_job, interval=PUSH_DELIVER_INTERVAL),
     DNS_CHECK: JobType(handler=dns_check_job, interval=DNS_CHECK_INTERVAL),
     NINJA_SYNC: JobType(handler=ninja_sync_job, interval=NINJA_SYNC_INTERVAL),
+    PSREF_SYNC: JobType(handler=psref_job, interval=PSREF_SYNC_INTERVAL),
     CHECK_IMPLEMENTATION: JobType(handler=check_implementation_job, interval=timedelta(hours=1)),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
 }

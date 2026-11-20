@@ -209,6 +209,7 @@ describe("Verwaltung: NinjaOne", () => {
       organization_ids: [],
       role_ids: [],
       monitor_field: "",
+      psref_enabled: false,
     };
     const calls = stubFetch({
       "GET /api/admin/settings/ninjaone": stored,
@@ -232,6 +233,7 @@ describe("Verwaltung: NinjaOne", () => {
       organization_ids: [],
       role_ids: [],
       monitor_field: "",
+      psref_enabled: false,
       client_secret: "geheim",
     });
   });

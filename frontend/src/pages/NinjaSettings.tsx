@@ -67,6 +67,7 @@ function NinjaForm({
   const [organizationIds, setOrganizationIds] = useState<number[]>(stored.organization_ids);
   const [roleIds, setRoleIds] = useState<number[]>(stored.role_ids);
   const [monitorField, setMonitorField] = useState(stored.monitor_field);
+  const [psrefEnabled, setPsrefEnabled] = useState(stored.psref_enabled);
   const [options, setOptions] = useState<NinjaOptions | null>(null);
   const [message, setMessage] = useState<Message | null>(initialMessage);
   const [busy, setBusy] = useState(false);
@@ -86,6 +87,7 @@ function NinjaForm({
         ? roleIds.filter((id) => options.roles.some((item) => item.id === id))
         : roleIds,
       monitor_field: monitorField.trim(),
+      psref_enabled: psrefEnabled,
     };
     if (removeSecret) {
       update.client_secret = "";
@@ -256,6 +258,21 @@ function NinjaForm({
           Interner Name des mehrzeiligen Textfelds (Buchstaben, Ziffern, Unterstrich). Eine Zeile je
           Monitor: Hersteller|Modell|Seriennummer|ProductCode|Baujahr-KW|Anschluss|ZuletztGesehen.
           Leer lassen, wenn keine Monitore gelesen werden sollen.
+        </p>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            className="check"
+            checked={psrefEnabled}
+            aria-describedby={`${secretHint}-psref`}
+            onChange={(event) => setPsrefEnabled(event.target.checked)}
+          />
+          Technische Daten aus Lenovo PSREF holen
+        </label>
+        <p className="small" id={`${secretHint}-psref`}>
+          Einmal am Tag fragt die Werkbank für Lenovo-Rechner (Modell als Maschinentyp, z. B.
+          10T7004BGE) und Lenovo-Monitore die technischen Daten bei psref.lenovo.com ab. Gesendet
+          wird nur die Modellbezeichnung, keine Seriennummer.
         </p>
         <label className="check-label">
           <input

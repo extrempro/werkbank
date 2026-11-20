@@ -1255,6 +1255,10 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "text",
             text: "Neue Monitore liest die Werkbank aus NinjaOne mit. Hängt ein neuer Monitor an einem PC mit Arbeitsplatz, kommt er direkt an diesen Arbeitsplatz. Hängt er an einem Notebook, entsteht ein Vorgang „Neuer Monitor“: Der Arbeitsplatz ist schon vorgeschlagen, du bestätigst ihn, ordnest den Monitor der Stelle zu oder übernimmst ihn nicht. Wechselt ein bekannter Monitor den Rechner, steht das nur im Verlauf. Fehlt ein Gerät in NinjaOne, wählst du: ausgemustert (vorher das Gerät ausmustern), verloren oder gestohlen, oder prüfen. Taucht das Gerät wieder auf, schließt die Werkbank den Vorgang selbst. Entscheiden dürfen nur Bearbeiterinnen und Bearbeiter des IT-Bestands.",
           },
+          {
+            kind: "text",
+            text: "Für Lenovo-Rechner und Lenovo-Monitore holt die Werkbank einmal am Tag die technischen Daten von der Lenovo-Seite PSREF, wenn ein Admin das in der Verwaltung bei NinjaOne eingeschaltet hat. Im Reiter „Technik“ stehen dann Kamera, Mikrofon und Lautsprecher (soweit Lenovo sie nennt), die wichtigsten Eckdaten, alle Merkmale zum Aufklappen und ein Link zur Lenovo-Seite. Mit „Bei PSREF abrufen“ holst du die Daten sofort neu. Bei Rechnern muss als Modell der Maschinentyp stehen, zum Beispiel 10T7004BGE.",
+          },
         ],
         links: [{ to: "/bestand/vorgaenge", label: "Zu den Vorgängen" }],
       },
