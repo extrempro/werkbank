@@ -7500,6 +7500,19 @@ html {
   align-items: center;
   gap: 8px;
   padding: 0;
+  font-weight: 400;
+  color: var(--farbe-text-mittel);
+}
+
+.case-toolbar .case-kind select {
+  min-height: 44px;
+  padding: 0 32px 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background-color: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 0.9375rem;
 }
 
 .case-table th {
@@ -7559,7 +7572,8 @@ html {
 }
 
 /* Tabelle ohne Auswahl über die ganze Breite; mit Auswahl schmaler, die Ansicht rechts */
-.case-layout-table {
+/* zwei Klassen: steht vor der allgemeinen Regel für .case-layout und muss sie schlagen */
+.case-layout.case-layout-table {
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -7568,7 +7582,7 @@ html {
 }
 
 @media (min-width: 1024px) {
-  .case-layout-table.case-layout-detail {
+  .case-layout.case-layout-table.case-layout-detail {
     grid-template-columns: minmax(0, 54fr) minmax(0, 46fr);
   }
 
@@ -7608,8 +7622,27 @@ html {
     display: none;
   }
 
-  /* Status als eine Zeile zum Wischen */
+  /* Suche und Art in einer Zeile, darunter der Status als eine Zeile zum Wischen */
+  .case-search {
+    flex: 1 1 0;
+  }
+
+  /* „Art“ nur für Screenreader, das Feld zeigt „Alle Arten“ */
+  .case-kind-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .case-toolbar .case-kind select {
+    max-width: 9.5rem;
+  }
+
   .case-toolbar .chips {
+    order: 3;
     flex: 1 1 100%;
     flex-wrap: nowrap;
     overflow-x: auto;
