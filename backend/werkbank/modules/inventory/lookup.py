@@ -105,7 +105,9 @@ def lookup(
     """Treffer für ein Auswahlfeld; ohne Suchbegriff die ersten Einträge."""
     words = fold(q).split()
     if kind == "position":
-        departments = dict(db.execute(select(InventoryDepartment.id, InventoryDepartment.name)))
+        departments = dict(
+            db.execute(select(InventoryDepartment.id, InventoryDepartment.name)).tuples().all()
+        )
         positions = db.scalars(select(InventoryPosition).order_by(InventoryPosition.number)).all()
         return _pick(
             words,

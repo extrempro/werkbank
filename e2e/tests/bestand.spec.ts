@@ -120,7 +120,7 @@ test("IT-Bestand: Standorte anlegen und Etage öffnen", async ({
     await empty.getByRole("button", { name: "Anlegen" }).click();
   } else {
     await openTree();
-    await tree.getByText("Neue Stadt", { exact: true }).click();
+    await tree.locator("summary", { hasText: "Neue Stadt" }).click();
     await tree.getByLabel("Neue Stadt").fill(`Stadt ${stamp}`);
     await tree.getByRole("button", { name: "Anlegen" }).click();
   }
@@ -151,7 +151,7 @@ test("IT-Bestand: Standorte anlegen und Etage öffnen", async ({
   ).toBeVisible();
   await expect(page.getByText("Noch kein Grundriss")).toBeVisible();
   await expect(
-    page.getByRole("link", { name: `Bauteil ${stamp}` }),
+    page.getByRole("link", { name: `Bauteil ${stamp}`, exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Etage bearbeiten" }).click();
   await expect(

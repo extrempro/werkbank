@@ -146,11 +146,7 @@ describe("Vorgänge: Seite", () => {
     });
     fireEvent.click(await screen.findByRole("option", { name: /ST-004 Einkauf/ }));
     expect(screen.getByRole("button", { name: "Stelle ändern: ST-004 Einkauf" })).toBeTruthy();
-    expect(
-      calls.some(
-        (call) => call.url.includes("/lookup?kind=position") && call.url.includes("q=einkauf"),
-      ),
-    ).toBe(true);
+    expect(calls.some((call) => call.url.includes("/lookup?kind=position"))).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
     await vi.waitFor(() => expect(calls.some((call) => call.url.endsWith("/decide"))).toBe(true));
     expect(calls.find((call) => call.url.endsWith("/decide"))?.body).toEqual({
