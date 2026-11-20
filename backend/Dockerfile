@@ -3,7 +3,7 @@
 # Der Release-Workflow baut daraus das veröffentlichte Image.
 
 # --- Frontend bauen ---
-FROM node:22-alpine AS frontend
+FROM node:26-alpine AS frontend
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
