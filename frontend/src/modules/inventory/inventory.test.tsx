@@ -48,6 +48,8 @@ const master: MasterData = {
   ],
   makers: [{ id: 5, name: "Hersteller A", models: [{ id: 9, name: "Notebook 14 G10", used: 1 }] }],
   reasons: [{ id: 3, name: "defekt", used: 0 }],
+  departments: [],
+  kits: [],
 };
 
 const notebook: HardwareSummary = {
@@ -63,6 +65,7 @@ const notebook: HardwareSummary = {
   source: "manuell",
   status: "aktiv",
   place: null,
+  holder: null,
 };
 
 const monitor: HardwareSummary = {
@@ -81,6 +84,9 @@ const monitor: HardwareSummary = {
 const detail: Hardware = {
   ...notebook,
   location: null,
+  holder_ref: null,
+  position_id: null,
+  workplace_id: null,
   model_id: 9,
   maker_id: 5,
   note: "",

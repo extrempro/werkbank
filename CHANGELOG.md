@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.63.0] – 2026-11-20
+
+IT-Bestand, Schritt 3: Stellen, Arbeitsplätze und Ausstattungsvorlagen.
+
+### IT-Bestand
+
+- **Stellen:** neue Seiten `/bestand/stellen` (Liste mit Suche) und je Stelle mit den Reitern Übersicht, Arbeitsplätze, Hardware und Verlauf; Nummer aus dem Nummernkreis, Abteilung, Besetzung durch eine Person aus Entra (Suche über Microsoft Graph mit `User.Read.All`, nur für `Bestand.Editor`); Löschen nur ohne Hardware
+- **Arbeitsplätze:** neue Seiten `/bestand/arbeitsplaetze` (Liste mit Filtern einzeln, geteilt, frei, Ausstattung fehlt) und je Arbeitsplatz mit den Reitern Übersicht, Ausstattung, Hardware, Standort und Verlauf; Einzelarbeitsplatz höchstens eine Stelle, geteilter mehrere
+- **Ausstattungsvorlagen** in den Stammdaten: Zeilen mit passenden Hardware-Arten und Anzahl; am Arbeitsplatz zeigt die Werkbank, was fehlt (Hardware am Platz und an seinen Stellen, jedes Gerät zählt einmal)
+- **Stammdaten:** neu Abteilungen, Ausstattung Arbeitsplatz und Nummernkreise (Präfix je Kreis, Vorgabe `ST-` und `AP-`)
+- **Gerät:** „Zugeordnet zu“ Stelle oder Arbeitsplatz (höchstens eins), mit Link in der Übersicht und im Verlauf; die Liste findet Geräte auch darüber
+- **Suche** der Werkbank findet Stellen und Arbeitsplätze
+- **Verlauf** je Stelle und Arbeitsplatz; Audit-Log ohne Namen von Personen
+- Räume mit Arbeitsplätzen und Hardware-Arten in einer Vorlage lassen sich nicht löschen
+- Migration 0043, Spec, Entra-Einrichtung, Datenschutz, ASVS und Handbuch angepasst
+
 ## [0.62.0] – 2026-11-20
 
 IT-Bestand, Schritt 2: Standorte mit Grundrissen und Räumen.

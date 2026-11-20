@@ -3,6 +3,7 @@ import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { INVENTORY_HARDWARE_PATH } from "../../navigation";
 import {
+  fetchAssignees,
   fetchFloor,
   fetchHardware,
   fetchLocations,
@@ -13,7 +14,9 @@ import {
   hardwarePath,
   INVENTORY_EDITOR_ROLE,
   locationPath,
+  holderValue,
   modelLabel,
+  positionPath,
   reactivateHardware,
   retireHardware,
   setInventoryNo,
@@ -21,6 +24,8 @@ import {
   today,
   updateHardware,
   WHEREABOUTS_LABELS,
+  workplacePath,
+  type Assignees,
   type Floor,
   type Hardware,
   type HardwareTab,
@@ -45,11 +50,13 @@ function EditForm({
   device,
   master,
   locations,
+  assignees,
   onDone,
 }: {
   device: Hardware;
   master: MasterData;
   locations: Locations | null;
+  assignees: Assignees | null;
   onDone: (next: Hardware | null) => void;
 }) {
   const [fields, setFields] = useState<DeviceFields>({
@@ -60,6 +67,7 @@ function EditForm({
     hostname: device.hostname,
     note: device.note,
     roomId: device.location ? String(device.location.room_id) : "",
+    holder: holderValue(device.position_id, device.workplace_id),
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -80,7 +88,13 @@ function EditForm({
 
   return (
     <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-      <DeviceFormFields master={master} locations={locations} value={fields} onChange={setFields} />
+      <DeviceFormFields
+        master={master}
+        locations={locations}
+        assignees={assignees}
+        value={fields}
+        onChange={setFields}
+      />
       <ErrorBox text={error} />
       <div className="project-actions">
         <button type="submit" className="button button-primary" disabled={busy}>
@@ -358,12 +372,14 @@ function Overview({
   device,
   master,
   locations,
+  assignees,
   canEdit,
   onChange,
 }: {
   device: Hardware;
   master: MasterData | null;
   locations: Locations | null;
+  assignees: Assignees | null;
   canEdit: boolean;
   onChange: (next: Hardware) => void;
 }) {
@@ -507,6 +523,25 @@ function Overview({
               </dd>
             </div>
             <div>
+              <dt>Zugeordnet zu</dt>
+              <dd>
+                {device.holder_ref ? (
+                  <Link
+                    to={
+                      device.holder_ref.kind === "stelle"
+                        ? positionPath(device.holder_ref.id)
+                        : workplacePath(device.holder_ref.id)
+                    }
+                  >
+                    {device.holder_ref.kind === "stelle" ? "Stelle " : "Arbeitsplatz "}
+                    {device.holder_ref.label}
+                  </Link>
+                ) : (
+                  "–"
+                )}
+              </dd>
+            </div>
+            <div>
               <dt>Hostname</dt>
               <dd className="mono">{device.hostname || "–"}</dd>
             </div>
@@ -527,7 +562,13 @@ function Overview({
           </dl>
         )}
         {mode === "bearbeiten" && master && (
-          <EditForm device={device} master={master} locations={locations} onDone={done} />
+          <EditForm
+            device={device}
+            master={master}
+            locations={locations}
+            assignees={assignees}
+            onDone={done}
+          />
         )}
         {mode === "inventur" && <InventoryNoForm device={device} onDone={done} />}
         {mode === "ausmustern" && master && (
@@ -635,6 +676,7 @@ export function HardwareDetailPage({
   const [device, setDevice] = useState<Hardware | null>(null);
   const [master, setMaster] = useState<MasterData | null>(null);
   const [locations, setLocations] = useState<Locations | null>(null);
+  const [assignees, setAssignees] = useState<Assignees | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
 
   useEffect(() => {
@@ -651,6 +693,10 @@ export function HardwareDetailPage({
       );
       fetchLocations().then(
         (result) => active && setLocations(result),
+        () => undefined,
+      );
+      fetchAssignees().then(
+        (result) => active && setAssignees(result),
         () => undefined,
       );
     }
@@ -706,6 +752,7 @@ export function HardwareDetailPage({
               device={device}
               master={master}
               locations={locations}
+              assignees={assignees}
               canEdit={canEdit}
               onChange={setDevice}
             />

@@ -1155,7 +1155,7 @@ export const CHAPTERS: readonly Chapter[] = [
     id: "it-bestand",
     title: "IT-Bestand",
     summary:
-      "Hardware mit Inventurnummer und Verlauf, Standorte mit Grundrissen, Ausmustern und die Stammdaten dazu.",
+      "Hardware mit Inventurnummer und Verlauf, Stellen und Arbeitsplätze, Standorte mit Grundrissen, Ausmustern und die Stammdaten dazu.",
     roles: [INVENTORY_READER, INVENTORY_EDITOR],
     sections: [
       {
@@ -1227,6 +1227,55 @@ export const CHAPTERS: readonly Chapter[] = [
         ],
       },
       {
+        id: "stellen",
+        title: "Stellen",
+        blocks: [
+          {
+            kind: "text",
+            text: "Unter „Stellen“ steht jede Stelle mit Nummer, Abteilung und der Person, die sie besetzt. Hardware und Arbeitsplätze hängen an der Stelle, nicht an der Person: Wechselt die Person, bleibt alles an der Stelle.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Unter „Stellen“ auf „Stelle anlegen“ tippen.",
+              "Bezeichnung eintragen und auf Wunsch die Abteilung wählen.",
+              "Unter „Wer besetzt die Stelle?“ mindestens zwei Buchstaben des Namens oder Anmeldenamens tippen und die Person aus der Liste wählen. Ist die Stelle frei, das Feld leer lassen.",
+              "„Stelle anlegen“ tippen. Die Nummer vergibt die Werkbank.",
+            ],
+          },
+          {
+            kind: "text",
+            text: "Anlegen und ändern dürfen nur Bearbeiterinnen und Bearbeiter des IT-Bestands. Die Personen kommen aus Entra; eine neue Besetzung steht im Verlauf der Stelle. Eine Stelle lässt sich nur löschen, wenn keine Hardware mehr an ihr hängt.",
+          },
+        ],
+        links: [{ to: "/bestand/stellen", label: "Zu den Stellen" }],
+      },
+      {
+        id: "arbeitsplaetze",
+        title: "Arbeitsplätze und Ausstattung",
+        blocks: [
+          {
+            kind: "text",
+            text: "Ein Arbeitsplatz steht in einem Raum. Ein Einzelarbeitsplatz gehört zu genau einer Stelle, ein geteilter Arbeitsplatz zu mehreren. Mit den Filtern über der Liste findest du zum Beispiel freie Plätze oder Plätze, an denen Ausstattung fehlt.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Unter „Arbeitsplätze“ auf „Arbeitsplatz anlegen“ tippen.",
+              "Auf Wunsch Bezeichnung und Raum wählen, dann den Typ: Einzelarbeitsplatz oder geteilter Arbeitsplatz.",
+              "Auf Wunsch eine Vorlage für die Ausstattung wählen.",
+              "Unter „Stelle hinzufügen“ die Stelle wählen und „Hinzufügen“ tippen; bei einem geteilten Arbeitsplatz auch mehrere.",
+              "„Arbeitsplatz anlegen“ tippen.",
+            ],
+          },
+          {
+            kind: "text",
+            text: "Im Reiter „Ausstattung“ vergleicht die Werkbank die Vorlage mit der Hardware am Arbeitsplatz und an seinen Stellen. Jedes Gerät zählt nur einmal. Ein Gerät ordnest du beim Gerät unter „Bearbeiten“ bei „Zugeordnet zu“ einer Stelle oder einem Arbeitsplatz zu.",
+          },
+        ],
+        links: [{ to: "/bestand/arbeitsplaetze", label: "Zu den Arbeitsplätzen" }],
+      },
+      {
         id: "standorte",
         title: "Standorte und Räume",
         blocks: [
@@ -1269,6 +1318,9 @@ export const CHAPTERS: readonly Chapter[] = [
               "Hardware-Arten: zum Beispiel Notebook, PC, Monitor. Bei jeder Art legst du fest, ob sie einen Datenträger hat.",
               "Hersteller und Modelle: je Hersteller beliebig viele Modelle.",
               "Gründe fürs Ausmustern: zum Beispiel defekt, veraltet, verloren oder gestohlen, Garantietausch.",
+              "Abteilungen: Auswahl bei der Stelle.",
+              "Ausstattung Arbeitsplatz: Vorlagen mit Zeilen, zum Beispiel „1 Rechner (Notebook oder PC)“ und „2 Monitore“.",
+              "Nummernkreise: Präfix für die Nummern von Stellen und Arbeitsplätzen. Ein neues Präfix gilt nur für neue Einträge.",
             ],
           },
           {

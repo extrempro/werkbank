@@ -34,6 +34,8 @@ import {
   INVENTORY_HARDWARE_PATH,
   INVENTORY_LOCATIONS_PATH,
   INVENTORY_MASTER_PATH,
+  INVENTORY_POSITIONS_PATH,
+  INVENTORY_WORKPLACES_PATH,
   LICENSES_PATH,
   NEWS_PATH,
   toolCategoryPath,
@@ -48,10 +50,17 @@ import { NewsPage } from "../pages/NewsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
 import { HandbookPage } from "../pages/HandbookPage";
 import { DnsCheckPage } from "../modules/monitoring/DnsCheckPage";
-import { parseHardwarePath, parseLocationPath } from "../modules/inventory/api";
+import {
+  parseHardwarePath,
+  parseLocationPath,
+  parsePositionPath,
+  parseWorkplacePath,
+} from "../modules/inventory/api";
 import { HardwareDetailPage } from "../modules/inventory/HardwareDetailPage";
 import { HardwarePage } from "../modules/inventory/HardwarePage";
 import { LocationsPage } from "../modules/inventory/LocationsPage";
+import { PositionDetailPage, PositionsPage } from "../modules/inventory/PositionsPage";
+import { WorkplaceDetailPage, WorkplacesPage } from "../modules/inventory/WorkplacesPage";
 import { MasterDataPage } from "../modules/inventory/MasterDataPage";
 import { parseProjectPath } from "../modules/projects/api";
 import { ProjectPage } from "../modules/projects/ProjectPage";
@@ -267,6 +276,8 @@ export function Layout({ me }: LayoutProps) {
   const projectRoute = parseProjectPath(path);
   const hardwareRoute = parseHardwarePath(path);
   const locationRoute = parseLocationPath(path);
+  const positionRoute = parsePositionPath(path);
+  const workplaceRoute = parseWorkplacePath(path);
 
   const licenseMatch = /^\/m365\/lizenzen\/(\d{1,9})$/.exec(path);
   const licenseId = licenseMatch ? Number(licenseMatch[1]) : null;
@@ -369,6 +380,34 @@ export function Layout({ me }: LayoutProps) {
       <LocationsPage
         floorId={locationRoute.floorId}
         roomId={locationRoute.roomId}
+        roles={me.roles}
+      />
+    );
+  } else if (path === INVENTORY_POSITIONS_PATH && current) {
+    page = <PositionsPage roles={me.roles} />;
+  } else if (
+    positionRoute !== null &&
+    items.some((item) => item.path === INVENTORY_POSITIONS_PATH)
+  ) {
+    page = (
+      <PositionDetailPage
+        key={positionRoute.id}
+        positionId={positionRoute.id}
+        tab={positionRoute.tab}
+        roles={me.roles}
+      />
+    );
+  } else if (path === INVENTORY_WORKPLACES_PATH && current) {
+    page = <WorkplacesPage roles={me.roles} />;
+  } else if (
+    workplaceRoute !== null &&
+    items.some((item) => item.path === INVENTORY_WORKPLACES_PATH)
+  ) {
+    page = (
+      <WorkplaceDetailPage
+        key={workplaceRoute.id}
+        workplaceId={workplaceRoute.id}
+        tab={workplaceRoute.tab}
         roles={me.roles}
       />
     );

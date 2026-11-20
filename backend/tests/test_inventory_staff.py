@@ -191,14 +191,15 @@ def test_positions_numbers_and_people(db: Session) -> None:
     assert second["number"] != position["number"]
     assert second["person"] is None
 
-    for bad in (
+    for invalid in (
         {"name": " "},
         {"name": "a\nb"},
         {"name": "X", "department_id": 999999},
         {"name": "X", "person": {"oid": "keine-oid", "name": "A"}},
         {"name": "X", "person": {"oid": OID, "name": " "}},
     ):
-        assert editor.post(f"{BASE}/positions", json=bad, headers=HEADERS).status_code == 422, bad
+        response = editor.post(f"{BASE}/positions", json=invalid, headers=HEADERS)
+        assert response.status_code == 422, invalid
     assert reader.post(f"{BASE}/positions", json={"name": "X"}, headers=HEADERS).status_code == 403
 
     url = f"{BASE}/positions/{position['id']}"

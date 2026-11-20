@@ -145,3 +145,64 @@ test("IT-Bestand: Standorte anlegen und Etage öffnen", async ({
   await expect(page.getByText("Noch kein Grundriss")).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
+  page,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  await loginAs(page, ["Bestand.Editor"], "Bernd Bestand");
+
+  // Abteilung in den Stammdaten
+  await page.goto("/bestand/stammdaten");
+  await page.getByRole("button", { name: "Abteilungen" }).click();
+  await page.getByLabel("Neue Abteilung").fill(`Abteilung ${stamp}`);
+  await page.getByRole("button", { name: "Hinzufügen" }).click();
+  await expect(page.getByText(`Abteilung ${stamp}`)).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Stelle ohne Person
+  await page.goto("/bestand/stellen");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Stellen" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Stelle anlegen" }).click();
+  await page.getByLabel("Bezeichnung", { exact: true }).fill(`Stelle ${stamp}`);
+  await page
+    .getByRole("combobox", { name: /^Abteilung/ })
+    .selectOption({ label: `Abteilung ${stamp}` });
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Stelle anlegen" }).click();
+  await expect(page).toHaveURL(/\/bestand\/stellen\/\d+$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: `Stelle ${stamp}` }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Unbesetzt", { exact: false }).first(),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Arbeitsplatz mit der Stelle
+  await page.goto("/bestand/arbeitsplaetze");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Arbeitsplätze" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
+  await page.getByLabel("Bezeichnung (freiwillig)").fill(`Platz ${stamp}`);
+  const add = page.getByRole("combobox", { name: /^Stelle hinzufügen/ });
+  const value = await add
+    .locator("option", { hasText: `Stelle ${stamp}` })
+    .getAttribute("value");
+  await add.selectOption(value ?? "");
+  await page.getByRole("button", { name: "Hinzufügen", exact: true }).click();
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
+  await expect(page).toHaveURL(/\/bestand\/arbeitsplaetze\/\d+$/);
+  await expect(
+    page.getByRole("link", { name: new RegExp(`Stelle ${stamp}`) }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.getByRole("link", { name: "Ausstattung", exact: true }).click();
+  await expect(page.getByText(/Keine Vorlage gewählt/)).toBeVisible();
+  await expectNoA11yViolations(page);
+});
