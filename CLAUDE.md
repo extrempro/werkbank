@@ -26,7 +26,7 @@ die jeder lesen darf: keine Hostnamen, IP-Adressen, Tenant-IDs, Zugangsdaten, Fi
 - **Bei jeder neuen Version:** Version in `frontend/package.json`, `e2e/package.json` (samt Lockfiles), `backend/pyproject.toml` und `backend/werkbank/__init__.py` anheben; im `CHANGELOG.md` einen Abschnitt `## [X.Y.Z] – JJJJ-MM-TT` mit den Einträgen des PRs und allem aus „Unveröffentlicht“ anlegen; Eintrag in `frontend/src/release-notes.ts`.
 - **Neuigkeiten in der App:** `frontend/src/release-notes.ts` ist die Quelle der Seite „Neuigkeiten“. Dort steht nur, was man in der Anwendung bemerkt (neue Funktionen, geänderte Bedienung, behobene Fehler), in einfacher Sprache und ohne Fachbegriffe aus der Entwicklung. Änderungen nur am Repository (CI, Abhängigkeiten, Tests, Doku) kommen ausschließlich in `CHANGELOG.md`.
 - **Anrede:** In der Oberfläche, in den Neuigkeiten und im Handbuch immer „du“, auch für Betriebsrat und Geschäftsführung.
-- **Backend:** Python 3.12+, FastAPI, SQLAlchemy 2, Alembic, Pydantic. ruff und mypy müssen fehlerfrei sein.
+- **Backend:** Python 3.14+, FastAPI, SQLAlchemy 2, Alembic, Pydantic. ruff und mypy müssen fehlerfrei sein.
 - **Frontend:** React, Vite, TypeScript (strict). eslint und prettier müssen fehlerfrei sein.
 - **Frameworks und Pakete aktuell halten, wenn möglich:**
   - Neue Abhängigkeiten in der aktuellen stabilen Version einbinden (keine Alpha-, Beta- oder RC-Versionen). Wie bei Dependabot: Eine Version muss mindestens 7 Tage alt sein (Schutz vor kompromittierten Releases).

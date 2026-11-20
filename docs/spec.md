@@ -135,7 +135,7 @@ Sichtbarkeit:
 
 | Baustein | Technik |
 |---|---|
-| Backend | Python 3.12+, FastAPI, SQLAlchemy 2, Alembic (Migrationen je Modul), Pydantic |
+| Backend | Python 3.14+, FastAPI, SQLAlchemy 2, Alembic (Migrationen je Modul), Pydantic |
 | Frontend | React + Vite + TypeScript, als PWA mit Service Worker |
 | Worker | gleicher Code wie Backend, eigener Container (`python -m werkbank.worker`), Job-Tabelle in PostgreSQL (keine zusätzliche Queue in v1). Genau ein Worker; regelmäßige Aufträge plant er selbst ein. Fehlgeschlagene Aufträge stehen im Audit-Log. |
 | PowerShell | Container mit PowerShell 7, ExchangeOnlineManagement- und MicrosoftTeams-Modul. Nimmt **nur** benannte Jobs vom Worker an (kein freier Befehl). |

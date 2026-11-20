@@ -74,8 +74,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: "3.12"
-      - run: pip install -e ".[dev]"
+          python-version: "3.14"
+      # Abhängigkeiten nur aus uv.lock (feste Versionen mit Hashes), wie im Docker-Image
+      - run: pip install uv==0.13.8
+      - name: Lockfile passt zu pyproject.toml
+        run: uv lock --check
+      - name: Abhängigkeiten aus uv.lock
+        run: |
+          uv export --frozen --extra dev --no-emit-project --format requirements-txt \
+            -o /tmp/requirements.txt
+          pip install --require-hashes --no-deps -r /tmp/requirements.txt
+          pip install --no-deps -e .
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy .

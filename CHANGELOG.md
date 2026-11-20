@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.73.1] – 2026-11-20
+
+### Technik
+
+- **Python 3.14:** Docker-Image (`python:3.14-slim`) und CI laufen mit Python 3.14 statt 3.12; `requires-python`, ruff und mypy entsprechend. ruff-Anpassungen für 3.14 (Rückgabetypen ohne Anführungszeichen, `except` ohne Klammern nach PEP 758)
+- **Lockfile für das Backend:** `backend/uv.lock` mit festen Versionen und Hashes (erzeugt mit uv 0.13.8, nur Versionen, die mindestens 7 Tage alt sind). Docker und CI installieren nur von dort (`--require-hashes`), die CI prüft mit `uv lock --check`, ob Lockfile und `pyproject.toml` zusammenpassen. Dependabot betreut jetzt `uv` statt `pip`; Hauptversionen kommen als eigener PR
+- Anleitung zum Neuerzeugen des Lockfiles in `docs/repo-setup.md`
+
 ### Repository
 
 - `CLAUDE.md`: Regel, aktuelle stabile Versionen von Frameworks und Paketen und ihre aktuellen Schnittstellen zu nutzen, wenn möglich (Prüfung vor neuen Abhängigkeiten, Updates in eigenem PR, Major-Updates nach Rückfrage)

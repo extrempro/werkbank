@@ -108,7 +108,7 @@ def _auth_time(claims: dict[str, Any]) -> datetime | None:
         return None
     try:
         moment = datetime.fromtimestamp(value, UTC)
-    except (OverflowError, OSError, ValueError):
+    except OverflowError, OSError, ValueError:
         return None
     return min(moment, now_utc())
 

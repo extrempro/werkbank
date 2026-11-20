@@ -189,7 +189,8 @@ class BudgetInvoice(Base):
     doc_key: Mapped[str | None] = mapped_column(String(64))
     doc_size: Mapped[int | None] = mapped_column(Integer)
 
-    lines: Mapped[list["BudgetInvoiceLine"]] = relationship(
+    # SQLAlchemy liest die Annotation sofort, die Klasse steht weiter unten: Anführungszeichen
+    lines: Mapped[list["BudgetInvoiceLine"]] = relationship(  # noqa: UP037
         order_by="BudgetInvoiceLine.position",
         cascade="all, delete-orphan",
         passive_deletes=True,

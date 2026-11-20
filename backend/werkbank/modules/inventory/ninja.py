@@ -101,7 +101,7 @@ def _moment(value: Any) -> datetime | None:
         return None
     try:
         return datetime.fromtimestamp(float(value), tz=UTC)
-    except (OverflowError, OSError, ValueError):
+    except OverflowError, OSError, ValueError:
         return None
 
 

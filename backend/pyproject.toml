@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "werkbank"
-version = "0.73.0"
+version = "0.73.1"
 description = "Werkbank - Open-Source-Plattform für IT-Abteilungen"
 license = "MIT"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.162.2",
     "uvicorn[standard]>=0.54.0",
@@ -29,6 +29,9 @@ dev = [
     "mypy>=2.4.1",
 ]
 
+# Abhängigkeiten sind in uv.lock festgeschrieben (mit Hashes); Docker und CI installieren nur
+# von dort. Neu erzeugen: siehe docs/repo-setup.md („Python-Abhängigkeiten“).
+
 [tool.setuptools.packages.find]
 include = ["werkbank*"]
 
@@ -37,7 +40,7 @@ werkbank = ["**/*.yaml"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "N", "SIM", "RUF"]
@@ -47,7 +50,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "N", "SIM", "RUF"]
 "migrations/**" = ["N999"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 strict = true
 packages = ["werkbank", "tests"]
 
