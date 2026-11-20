@@ -4,6 +4,27 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.72.0] – 2026-11-20
+
+### Navigation
+
+- **Bereichsleiste** (76 px) ganz links: Symbol mit Kurznamen je Bereich, voller Name als Tooltip und `aria-label`, Abschnitte Start | M365, Evergreen | Monitoring, Bestand | Budget, Projekte | Tools; am Fuß Verwaltung (nur Admin) und Handbuch. Punkt am Symbol bei offenen Aufgaben im Bereich
+- **Seitenmenü** (256 px): Name des Bereichs, Seiten in Gruppen zum Auf- und Zuklappen (`aria-expanded`, Zustand je Browser); neue Gruppen im IT-Budget (Überblick, Ausgaben, Stammdaten, Verwaltung anfangs eingeklappt) und im IT-Bestand (Bestand, Verleih, Verwaltung anfangs eingeklappt); „Menü einklappen“ lässt nur die Bereichsleiste stehen. Der Menüpunkt bleibt auch auf Detailseiten hervorgehoben
+- **Kontomenü** oben rechts (Initialen oder Bild) mit Konto, Release Notes, Hell/Dunkel/Automatisch, „Zuletzt besucht leeren“ und Abmelden; Menü-Muster mit Tastatur. Die alten Knöpfe am Fuß der Navigation, „Abmelden“ und die Person in der Kopfzeile entfallen
+- **Anheften und „Zuletzt besucht“:** Stern neben jeder Seite im Seitenmenü und hinter dem Seitentitel; Gruppen „Angeheftet“ und „Zuletzt besucht“ im Start-Bereich und auf der Startseite. Gespeichert je Person auf dem Server: Tabelle `nav_entries` (Migration 0051), `GET/PUT/POST/DELETE /api/navigation`, nur eigene Einträge, nur Pfade aus einer Liste erlaubter Seiten mit derselben Rollenlogik (`core/navigation.py`), höchstens 20 bzw. 10 Einträge, Filter nach Rollen auch bei der Ausgabe
+- **Schnellsuche** (Strg+K / ⌘K, Suchfeld in der Kopfzeile): findet Seiten nach Name, Gruppe und Bereich, nur mit Recht; ohne Eingabe „Zuletzt besucht“; modaler Dialog mit Combobox, Fokusfalle und Rückgabe des Fokus; „In allen Einträgen suchen“ führt zur Seite „Suche“
+- **Handy** (bis 760 px): feste Leiste unten mit Start, Suche, Aufgaben und Menü (`safe-area-inset-bottom`); „Menü“ öffnet ein Blatt von unten mit den Seiten des Bereichs und „‹ Alle Bereiche“; Schnellsuche im Vollbild mit „Abbrechen“; schmalere, haftende Kopfzeile
+- Neue Symbole in `Icon.tsx` (Stern, Pfeile, Menü, Schließen, Konto, Abmelden, Automatisch, Aufgaben, Glocke, Löschen, Evergreen, Gerät); keine Symbole mehr direkt im Markup von Kopfzeile und Glocke
+
+### IT-Bestand
+
+- Neue Aufgabe „Offene Vorgänge bearbeiten“ für `Bestand.Editor` (`modules/inventory/tasks.py`); damit bekommt „Bestand“ in der Bereichsleiste einen Punkt
+
+### Tests und Dokumentation
+
+- Backend: `test_navigation.py` (Rechte, nur eigene Einträge, Grenzen, Filter nach Entzug der Rolle, Aufgabe für offene Vorgänge); Frontend: `navigation.test.ts`, `nav.test.tsx`, Startseite; E2E für Desktop, Tablet und iPhone mit axe (`navigation.spec.ts`, `mobile.spec.ts`), bestehende E2E-Tests auf die neue Navigation umgestellt
+- `docs/design.md`, `docs/spec.md`, `docs/datenschutz.md` („Zuletzt besucht“ als Nutzungsspur), `docs/security/asvs-l2.md`, `docs/a11y-wcag22.md` und Handbuch angepasst
+
 ## [0.71.0] – 2026-11-20
 
 ### IT-Bestand

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { BASE_URL, expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
+import { BASE_URL, expectNoA11yViolations, itemName, loginAs, openMenu, openPage } from "./helpers";
 
 test("Admin sieht das Audit-Log mit der eigenen Anmeldung", async ({ page }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
@@ -198,15 +198,13 @@ test("Admin schaltet Push ein, das Konto zeigt Geräte und die Spalte Push", asy
 test("Verwaltung ist ein eigener Bereich mit Unterseiten", async ({ page }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
   await page.goto("/");
-  await openNavigation(page);
-  const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
-  await nav.getByRole("link", { name: /^Verwaltung/ }).click();
+  await openPage(page, "Verwaltung", "Allgemein");
   await expect(page).toHaveURL(/\/verwaltung$/);
-  await openNavigation(page);
+  const menu = await openMenu(page);
   for (const label of ["Allgemein", "Rollen", "Mail & Teams", "Verbindungen", "Audit-Log"]) {
-    await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
+    await expect(menu.getByRole("link", { name: itemName(label) })).toBeVisible();
   }
-  await nav.getByRole("link", { name: "Audit-Log", exact: true }).click();
+  await menu.getByRole("link", { name: itemName("Audit-Log") }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Audit-Log" })).toBeVisible();
 });
 

@@ -77,7 +77,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Die Sitzung endet nach 30 Minuten ohne Aktivität und spätestens nach 8 Stunden. Dann zeigt die Werkbank einen Hinweis und du meldest dich neu an. Mit „Abmelden“ oben rechts, auf dem Handy unten im Menü, beendest du die Sitzung sofort.",
+            text: "Die Sitzung endet nach 30 Minuten ohne Aktivität und spätestens nach 8 Stunden. Dann zeigt die Werkbank einen Hinweis und du meldest dich neu an. Mit „Abmelden“ im Kontomenü oben rechts (dein Bild oder deine Initialen) beendest du die Sitzung sofort.",
           },
           {
             kind: "hint",
@@ -92,11 +92,13 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "list",
             items: [
-              "Kopfzeile: Name der Werkbank, Suchfeld, Glocke für Benachrichtigungen, „Meine Aufgaben“, dein Konto und „Abmelden“.",
-              "Bereiche: Oben in der Navigation wechselst du zwischen Werkbank, Microsoft 365, Evergreen, IT-Budget, IT-Projekte, IT-Bestand, IT-Tools und IT-Monitoring. Darunter stehen nur die Seiten des gewählten Bereichs.",
-              "Zähler an der Navigation zeigen, wie viele Aufgaben auf einer Seite oder in einem Bereich warten.",
-              "Unten in der Navigation stehen vier Knöpfe: Handbuch, Neuigkeiten, hell oder dunkel und „Navigation einklappen“. Eingeklappt bleiben nur die Symbole; die Wahl merkt sich dein Browser.",
-              "Auf dem Handy öffnet der Knopf „Menü“ oben links die Navigation.",
+              "Kopfzeile: Name der Werkbank, Suchfeld, Glocke für Benachrichtigungen, „Meine Aufgaben“ und rechts dein Kontomenü.",
+              "Bereichsleiste ganz links: ein Symbol je Bereich, zum Beispiel Start, M365, Evergreen, Monitoring, Bestand, Budget, Projekte und Tools. Fährst du mit der Maus darüber, steht der volle Name da. Ganz unten stehen Verwaltung (nur für Admins) und das Handbuch.",
+              "Ein Punkt an einem Symbol zeigt: In diesem Bereich warten Aufgaben auf dich.",
+              "Seitenmenü daneben: oben der Name des Bereichs, darunter seine Seiten in Gruppen. Eine Gruppe klappst du mit einem Klick auf ihre Überschrift auf oder zu; dein Browser merkt sich das. Zähler zeigen, wie viele Aufgaben auf einer Seite warten.",
+              "„Menü einklappen“ unten im Seitenmenü lässt nur die Bereichsleiste stehen. Ein Klick auf einen Bereich öffnet das Menü wieder.",
+              "Kontomenü oben rechts: Konto, Release Notes, hell, dunkel oder automatisch, „Zuletzt besucht leeren“ und „Abmelden“.",
+              "Auf dem Handy steht unten eine Leiste mit Start, Suche, Aufgaben und Menü. „Menü“ zeigt erst die Seiten des aktuellen Bereichs; über „Alle Bereiche“ kommst du in jeden anderen.",
             ],
           },
           {
@@ -123,6 +125,25 @@ export const CHAPTERS: readonly Chapter[] = [
           },
         ],
         links: [{ to: "/", label: "Zur Startseite" }],
+      },
+      {
+        id: "anheften",
+        title: "Seiten anheften und „Zuletzt besucht“",
+        blocks: [
+          {
+            kind: "text",
+            text: "Seiten, die du oft brauchst, heftest du mit dem Stern an. Der Stern steht neben jeder Seite im Seitenmenü (er erscheint, wenn du mit der Maus darüber fährst oder mit der Tastatur hinkommst) und neben der Überschrift der Seite. Ein gefüllter Stern heißt: angeheftet.",
+          },
+          {
+            kind: "list",
+            items: [
+              "Angeheftete Seiten stehen im Bereich Start unter „Angeheftet“ und auf der Startseite, jeweils mit dem Namen ihres Bereichs. Du kannst bis zu 20 Seiten anheften.",
+              "„Zuletzt besucht“ zeigt die letzten fünf Seiten, die du geöffnet hast. Leeren kannst du die Liste im Kontomenü.",
+              "Beides gilt für dein Konto, also auf jedem Gerät. Fehlt dir später eine Rolle, verschwindet die Seite aus der Liste.",
+              "Am Handy siehst du angeheftete Seiten im Menü an einem kleinen Stern. Anheften geht am Computer oder Tablet.",
+            ],
+          },
+        ],
       },
       {
         id: "benachrichtigungen",
@@ -174,7 +195,11 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Das Suchfeld in der Kopfzeile sucht in allem, was du sehen darfst: Einstellungen, erkannte Änderungen, Evergreen-Vorgänge, Budgetposten, IT-Tools und dieses Handbuch. Gib mindestens zwei Zeichen ein und drücke Enter. Auf schmalen Bildschirmen steht die Suche in der Navigation.",
+            text: "Das Suchfeld in der Kopfzeile öffnet die Schnellsuche, ebenso Strg+K (am Mac ⌘K). Sie findet Seiten der Werkbank nach Name, Gruppe und Bereich, zum Beispiel „Rechnungen“ oder „Budget Statistik“. Ohne Eingabe zeigt sie, was du zuletzt besucht hast. Mit den Pfeiltasten wählst du einen Treffer, Enter öffnet ihn, Escape schließt die Suche. Auf dem Handy öffnest du sie mit „Suche“ in der Leiste unten.",
+          },
+          {
+            kind: "text",
+            text: "„In allen Einträgen suchen“ unten in der Schnellsuche führt zur Seite „Suche“. Sie sucht in allem, was du sehen darfst: Einstellungen, erkannte Änderungen, Evergreen-Vorgänge, Budgetposten, IT-Tools und dieses Handbuch.",
           },
           {
             kind: "list",
@@ -193,11 +218,11 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Ein Klick auf deinen Namen oben rechts öffnet die Seite „Konto“: deine Angaben aus Microsoft, deine Rollen mit kurzer Erklärung, Beginn und Ende der Sitzung, die Darstellung (automatisch, hell oder dunkel) die Schriftgröße im Menü (klein, normal, groß, sehr groß) und die Abstände im Menü (kompakt, normal, weiträumig; mit dem Finger bleiben Einträge immer gut antippbar; alles gilt nur für diesen Browser), deine Benachrichtigungen (Glocke, Mail, Teams) und die Version der Werkbank.",
+            text: "Das Kontomenü oben rechts (dein Bild oder deine Initialen) führt zur Seite „Konto“: deine Angaben aus Microsoft, deine Rollen mit kurzer Erklärung, Beginn und Ende der Sitzung, die Darstellung (automatisch, hell oder dunkel) die Schriftgröße im Menü (klein, normal, groß, sehr groß) und die Abstände im Menü (kompakt, normal, weiträumig; mit dem Finger bleiben Einträge immer gut antippbar; alles gilt nur für diesen Browser), deine Benachrichtigungen (Glocke, Mail, Teams) und die Version der Werkbank.",
           },
           {
             kind: "text",
-            text: "„Neuigkeiten“ beschreibt je Version, was sich geändert hat. Gibt es Neues, das du noch nicht gesehen hast, weist die Werkbank darauf hin.",
+            text: "„Release Notes“ im Kontomenü öffnet die Neuigkeiten: je Version, was sich geändert hat. Gibt es Neues, das du noch nicht gesehen hast, zeigt das Kontomenü einen Punkt. Hell, dunkel oder automatisch stellst du direkt im Kontomenü um.",
           },
           {
             kind: "text",
@@ -1236,7 +1261,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Unter „Vorgänge“ landet, was eine Entscheidung braucht: ein neues Gerät in NinjaOne, ein Gerät, das dort nicht mehr auftaucht, eine Rückgabe aus dem Verleih oder ein überfälliger Verleih. Oben siehst du, wann zuletzt abgeglichen wurde. Über der Liste kannst du nach Nummer, Titel, Gerät oder Seriennummer suchen. Es werden zuerst 50 Vorgänge gezeigt, mit „Mehr anzeigen“ kommen weitere dazu. Das gilt auch für die Liste beim Verleih.",
+            text: "Unter „Vorgänge“ landet, was eine Entscheidung braucht: ein neues Gerät in NinjaOne, ein Gerät, das dort nicht mehr auftaucht, eine Rückgabe aus dem Verleih oder ein überfälliger Verleih. Oben siehst du, wann zuletzt abgeglichen wurde. Über der Liste kannst du nach Nummer, Titel, Gerät oder Seriennummer suchen. Es werden zuerst 50 Vorgänge gezeigt, mit „Mehr anzeigen“ kommen weitere dazu. Das gilt auch für die Liste beim Verleih. Wenn du den Bestand pflegst, stehen offene Vorgänge als Aufgabe auf deiner Startseite, und das Symbol „Bestand“ in der Bereichsleiste bekommt einen Punkt.",
           },
           {
             kind: "steps",

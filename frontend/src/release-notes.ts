@@ -24,6 +24,30 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.72.0",
+    date: "2026-11-20",
+    summary: "Neue Navigation: Bereichsleiste, Seitenmenü, Anheften und Schnellsuche.",
+    sections: [
+      {
+        area: "Navigation",
+        entries: [
+          "Ganz links steht jetzt eine schmale Leiste mit einem Symbol für jeden Bereich. Daneben siehst du die Seiten des Bereichs, in Gruppen, die du auf- und zuklappen kannst.",
+          "Ein Punkt an einem Symbol zeigt dir, dass in diesem Bereich Aufgaben auf dich warten.",
+          "Mit dem Stern heftest du Seiten an, die du oft brauchst. Du findest sie im Bereich Start und auf der Startseite, zusammen mit den Seiten, die du zuletzt besucht hast.",
+          "Mit Strg+K (am Mac ⌘K) oder dem Suchfeld oben findest du jede Seite schnell nach ihrem Namen.",
+          "Konto, Release Notes, hell oder dunkel und Abmelden findest du jetzt oben rechts in deinem Kontomenü.",
+          "Auf dem Handy hast du unten eine Leiste mit Start, Suche, Aufgaben und Menü.",
+        ],
+      },
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Wenn du den Bestand pflegst, stehen offene Vorgänge jetzt als Aufgabe auf deiner Startseite.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.71.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Info-Fenster an den Plätzen im Grundriss.",

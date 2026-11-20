@@ -314,10 +314,17 @@ Standardregeln:
 Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) und Vorgänge (ID, Titel, Zusammenfassung). Ergebnisse gefiltert nach Berechtigung.
 
 - Stand: umgesetzt als `GET /api/search` mit einem Anbieter je Modul (`core/search.py`), Suchfeld in der Kopfzeile und Seite „Suche“. Gesucht wird in Einstellungen (Pfad, Name, Beschreibung, Begründung), erkannten Änderungen (geändert von, Kommentar) und Vorgängen (Nummer, Titel, Dienst, Zusammenfassung). Jeder Anbieter wendet dieselben Rechte an wie die Seiten seines Moduls. Abweichung: Im Wert einer Einstellung wird noch nicht gesucht. Die IT-Tools liegen im Browser; die Seite „Suche“ ergänzt passende Tools selbst, wenn die Person die Rolle `Tools.User` hat, und passende Abschnitte des Handbuchs (6.11). Diese Treffer stehen sofort da, auch während der Server noch sucht oder wenn seine Suche fehlschlägt.
+- Schnellsuche (Strg+K / ⌘K, Suchfeld in der Kopfzeile, am Handy „Suche“ unten): findet Seiten der Navigation nach Name, Gruppe und Bereich, nur mit Recht, ganz im Browser; ohne Eingabe „Zuletzt besucht“. „In allen Einträgen suchen“ führt zur Seite „Suche“ mit dem Suchbegriff.
+
+### 6.10a Navigation, Anheften und „Zuletzt besucht“
+
+- Bereichsleiste (ein Symbol je Bereich), Seitenmenü mit Gruppen und Kontomenü; am Handy eine Leiste unten mit Menü als Blatt (Gestaltung: `docs/design.md`, Kapitel 1). Bereiche, Gruppen und Seiten nach Rollen in `areasFor` (`frontend/src/navigation.ts`).
+- Anheften und „Zuletzt besucht“ werden je Person auf dem Server gespeichert (Tabelle `nav_entries`, Migration 0051): `GET /api/navigation`, `PUT /api/navigation/pins` (höchstens 20, Reihenfolge wie übergeben), `POST /api/navigation/recent` (die letzten 10 bleiben), `DELETE /api/navigation/recent`. Nur eigene Einträge; nur Pfade aus der Liste erlaubter Seiten in `core/navigation.py`, die dieselbe Rollenlogik spiegelt; beim Ausgeben wird erneut nach Rollen gefiltert. Ohne Netz zeigt die Oberfläche den zuletzt geladenen Stand; der Service Worker speichert nichts davon.
+- Aufgabe für `Bestand.Editor`: „Offene Vorgänge bearbeiten“ (neue und angefangene Vorgänge im IT-Bestand, `modules/inventory/tasks.py`).
 
 ### 6.11 Handbuch
 
-- Seite „Handbuch“ (`/handbuch`) für alle, erreichbar über die Navigation (unten), die Seite „Konto“ und die Suche. Kapitel je Bereich (`/handbuch/<kapitel>`, Abschnitte als Sprungziel `#<abschnitt>`), mit Inhaltsverzeichnis, Anleitungen in Schritten, Begriffen, Hinweisen und Verweisen auf die Seiten der Werkbank.
+- Seite „Handbuch“ (`/handbuch`) für alle, erreichbar über die Bereichsleiste (unten; am Handy im Menü unter „Alle Bereiche“), die Seite „Konto“ und die Suche. Kapitel je Bereich (`/handbuch/<kapitel>`, Abschnitte als Sprungziel `#<abschnitt>`), mit Inhaltsverzeichnis, Anleitungen in Schritten, Begriffen, Hinweisen und Verweisen auf die Seiten der Werkbank.
 - Jede Person sieht die allgemeinen Kapitel und die ihrer Rollen; einzelne Abschnitte können auf Rollen beschränkt sein. `Werkbank.Admin` sieht alles. Ein Kapitel ohne passende Rolle gilt als nicht vorhanden.
 - Die Inhalte liegen als Daten in `frontend/src/handbook/content.ts` und werden nur als Text dargestellt. Die Suche im Handbuch und die Treffer auf der Seite „Suche“ ermittelt der Browser.
 - Nur Bedienung; Einrichtung und Betrieb stehen weiter in `docs/`.

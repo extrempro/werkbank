@@ -1,16 +1,10 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useState,
-  type FormEvent,
-  type MouseEvent,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useId, useState, type MouseEvent, type ReactNode } from "react";
 import { fetchTasks, TASKS_CHANGED, type Me, type Task } from "../api";
 import {
+  activeNavPath,
   allNavItems,
   areaForPath,
+  type NavArea,
   ADMIN_CONNECTIONS_PATH,
   ADMIN_MAIL_PATH,
   ADMIN_PATH,
@@ -77,7 +71,7 @@ import { chaptersFor, HANDBOOK_PATH } from "../handbook";
 import { NOTIFICATIONS_PATH } from "../notifications";
 import { NotificationBell } from "./NotificationBell";
 import { NotFoundPage } from "../pages/NotFoundPage";
-import { SEARCH_PATH, SearchPage, searchUrl } from "../pages/SearchPage";
+import { SEARCH_PATH, SearchPage } from "../pages/SearchPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { StartPage } from "../pages/StartPage";
 import { InboxPage } from "../modules/evergreen/InboxPage";
@@ -108,17 +102,22 @@ import { UsersPage } from "../modules/tenant/UsersPage";
 import { CATEGORY_LABELS, findTool, type ToolCategory } from "../tools";
 import { ToolPage, TOOLS_PATH, ToolsOverviewPage } from "../tools/ToolsPage";
 import { ToolsHistoryPage } from "../tools/ToolsHistoryPage";
-import { currentTheme, saveTheme } from "../theme";
 import { navigate, usePath } from "../router";
 import { headerLogo, useBranding } from "../branding";
-import { Avatar } from "./Avatar";
 import { BrandMark } from "./Brand";
 import { Icon } from "./Icon";
 import { ScrollTop } from "./ScrollTop";
-import { roleLabel } from "../user";
+import { loadNavPrefs, recordVisit } from "../navPrefs";
+import { AccountMenu, ACCOUNT_PATH } from "./nav/AccountMenu";
+import { AreaBar } from "./nav/AreaBar";
+import { MobileNav } from "./nav/MobileNav";
+import { QuickSearch } from "./nav/QuickSearch";
+import { SideMenu } from "./nav/SideMenu";
+import { TitlePin } from "./nav/TitlePin";
 
 const SETTINGS_PATH = "/m365/einstellungen";
 const RECOMMENDATIONS_PATH = "/m365/empfehlungen";
+/** Seitenmenü eingeklappt oder offen (in diesem Browser gemerkt). */
 const NAV_KEY = "werkbank-navigation";
 
 function readCollapsed(): boolean {
@@ -128,7 +127,19 @@ function readCollapsed(): boolean {
     return false;
   }
 }
-const ACCOUNT_PATH = "/konto";
+
+function saveCollapsed(collapsed: boolean): void {
+  try {
+    window.localStorage.setItem(NAV_KEY, collapsed ? "eingeklappt" : "offen");
+  } catch {
+    // Speicher gesperrt: Die Wahl gilt dann nur bis zum Neuladen.
+  }
+}
+
+/** Auf dem Mac ⌘K, sonst Strg+K. */
+function shortcutLabel(): string {
+  return /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? "⌘K" : "Strg K";
+}
 
 interface LayoutProps {
   me: Me;
@@ -141,12 +152,12 @@ export function Layout({ me }: LayoutProps) {
   const path = usePath();
   const branding = useBranding();
   const logoUrl = headerLogo(branding);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const navId = useId();
+  const sideMenuId = useId();
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [newsUnseen, setNewsUnseen] = useState(hasUnseenRelease);
   const [collapsed, setCollapsed] = useState(readCollapsed);
-  const [theme, setTheme] = useState(currentTheme);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
   const onNewsSeen = useCallback(() => setNewsUnseen(false), []);
   const taskCount = (tasks ?? []).reduce((sum, task) => sum + task.count, 0);
 
@@ -186,45 +197,22 @@ export function Layout({ me }: LayoutProps) {
       window.clearInterval(timer);
     };
   }, [path]);
-  // Die Darstellung kann auch auf der Seite „Konto“ oder am Gerät wechseln.
+  // Angeheftete und zuletzt besuchte Seiten einmal laden.
   useEffect(() => {
-    const observer = new MutationObserver(() => setTheme(currentTheme()));
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-    return () => observer.disconnect();
+    void loadNavPrefs();
+  }, []);
+  // Strg+K / ⌘K öffnet die Schnellsuche.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  const role = roleLabel(me.roles);
-  const navClass = ["app-nav", menuOpen ? "open" : "", collapsed ? "collapsed" : ""]
-    .filter(Boolean)
-    .join(" ");
-  const onToggleCollapsed = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    try {
-      window.localStorage.setItem(NAV_KEY, next ? "eingeklappt" : "offen");
-    } catch {
-      // Speicher gesperrt: Die Wahl gilt dann nur bis zum Neuladen.
-    }
-  };
-  const onToggleTheme = () => {
-    const next = currentTheme() === "dunkel" ? "hell" : "dunkel";
-    saveTheme(next);
-    setTheme(next);
-  };
-  const onSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const field = event.currentTarget.elements.namedItem("q");
-    const query = field instanceof HTMLInputElement ? field.value.trim() : "";
-    if (query.length >= 2) {
-      navigate(searchUrl(query));
-      if (field instanceof HTMLInputElement) {
-        field.value = "";
-      }
-    }
-  };
   // Zähler in der Navigation: Aufgaben, die auf genau diese Seite führen; bei „Start“ alle.
   const badgeFor = (target: string): number =>
     target === "/"
@@ -236,22 +224,47 @@ export function Layout({ me }: LayoutProps) {
   const areas = areasFor(me.roles);
   const items = allNavItems(areas.flatMap((area) => area.groups));
   const currentArea = areaForPath(areas, path);
-  const groups = currentArea?.groups ?? [];
-  const areaBadge = (areaId: string): number =>
-    areaId === "werkbank"
-      ? 0
-      : allNavItems(areas.find((area) => area.id === areaId)?.groups ?? []).reduce(
-          (sum, item) => sum + badgeFor(item.path),
-          0,
-        );
+  // Punkt in der Bereichsleiste: Es gibt Aufgaben auf einer Seite des Bereichs (nicht bei Start).
+  const hasOpen = (area: NavArea): boolean =>
+    area.id !== "werkbank" && allNavItems(area.groups).some((item) => badgeFor(item.path) > 0);
   const current = items.find((item) => item.path === path);
 
-  const onNavClick = (event: MouseEvent<HTMLAnchorElement>, target: string) => {
-    event.preventDefault();
-    setMenuOpen(false);
+  const go = (target: string) => {
     navigate(target);
     document.getElementById("inhalt")?.focus();
   };
+  const onNavClick = (event: MouseEvent<HTMLAnchorElement>, target: string) => {
+    event.preventDefault();
+    go(target);
+  };
+  const setMenu = (next: boolean) => {
+    setCollapsed(next);
+    saveCollapsed(next);
+  };
+  // Ein Bereich in der Leiste öffnet seine erste Seite; ein eingeklapptes Menü geht wieder auf.
+  // Ist das Menü zu und der Bereich schon offen, klappt nur das Menü auf.
+  const onArea = (event: MouseEvent<HTMLAnchorElement>, area: NavArea) => {
+    event.preventDefault();
+    const reopenOnly = collapsed && area.id === currentArea?.id;
+    if (collapsed) {
+      setMenu(false);
+    }
+    if (!reopenOnly) {
+      go(area.home);
+    }
+  };
+  const onTasks = () => {
+    go("/");
+    window.setTimeout(() => document.getElementById("aufgaben")?.focus(), 0);
+  };
+
+  // Besuchte Seiten der Navigation merken (Start selbst nicht).
+  const visited = current && path !== "/" ? path : null;
+  useEffect(() => {
+    if (visited) {
+      void recordVisit(visited);
+    }
+  }, [visited]);
 
   const settingMatch = /^\/m365\/einstellungen\/(\d{1,9})$/.exec(path);
   const settingId = settingMatch ? Number(settingMatch[1]) : null;
@@ -272,7 +285,7 @@ export function Layout({ me }: LayoutProps) {
       : null;
   // Auf der Seite eines Tools ist in der Navigation seine Kategorie hervorgehoben.
   const openTool = toolId !== null ? findTool(toolId) : undefined;
-  const navPath = openTool ? toolCategoryPath(openTool.category) : path;
+  const navPath = activeNavPath(items, openTool ? toolCategoryPath(openTool.category) : path);
 
   const partnerMatch = /^\/budget\/partner\/(\d{1,9})$/.exec(path);
   const partnerId = partnerMatch ? Number(partnerMatch[1]) : null;
@@ -474,20 +487,11 @@ export function Layout({ me }: LayoutProps) {
   }
 
   return (
-    <div className="app">
+    <div className={collapsed ? "app nav-collapsed" : "app"}>
       <a className="skip-link" href="#inhalt">
         Zum Inhalt springen
       </a>
       <header className="app-header">
-        <button
-          type="button"
-          className="menu-toggle"
-          aria-expanded={menuOpen}
-          aria-controls={navId}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          Menü
-        </button>
         <a className="brand" href="/" onClick={(event) => onNavClick(event, "/")}>
           <BrandMark logoUrl={logoUrl} />
           {logoUrl && !branding.show_name ? (
@@ -499,187 +503,86 @@ export function Layout({ me }: LayoutProps) {
             </span>
           )}
         </a>
-        <form className="header-search" role="search" onSubmit={onSearch}>
-          <label htmlFor="kopf-suche" className="visually-hidden">
-            Suchen
-          </label>
-          <input
-            id="kopf-suche"
-            type="search"
-            name="q"
-            maxLength={100}
-            autoComplete="off"
-            placeholder="Suchen in Einstellungen, Vorgängen, Änderungen …"
-          />
-        </form>
+        <button
+          type="button"
+          className="header-search"
+          aria-label="Seite suchen"
+          aria-haspopup="dialog"
+          aria-expanded={searchOpen}
+          aria-keyshortcuts="Control+K Meta+K"
+          onClick={() => setSearchOpen(true)}
+        >
+          <Icon name="suche" />
+          <span className="header-search-text">Seite suchen …</span>
+          <kbd aria-hidden="true">{shortcutLabel()}</kbd>
+        </button>
         <div className="user">
           <NotificationBell path={path} />
           <a
             className="header-tasks"
             href="/"
             aria-label={taskCount > 0 ? `Meine Aufgaben: ${taskCount} offen` : "Meine Aufgaben"}
-            onClick={(event) => onNavClick(event, "/")}
+            onClick={(event) => {
+              event.preventDefault();
+              onTasks();
+            }}
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M22 12h-6l-2 3h-4l-2-3H2" />
-              <path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z" />
-            </svg>
+            <Icon name="aufgaben" />
             {taskCount > 0 && (
               <span className="header-tasks-count" aria-hidden="true">
                 {taskCount}
               </span>
             )}
           </a>
-          <a
-            className="user-pill"
-            href={ACCOUNT_PATH}
-            aria-current={path === ACCOUNT_PATH ? "page" : undefined}
-            onClick={(event) => onNavClick(event, ACCOUNT_PATH)}
-          >
-            <Avatar name={me.display_name} url={me.avatar_url} />
-            <span className="user-text">
-              <span className="user-name">{me.display_name}</span>
-              {role && <span className="user-role">{role}</span>}
-            </span>
-            <span className="visually-hidden"> – Konto öffnen</span>
-          </a>
-          {/* Auf dem Handy steht „Abmelden“ im Menü, hier fehlt der Platz. */}
-          <form method="post" action="/auth/logout" className="header-logout">
-            <button type="submit" className="button button-quiet">
-              Abmelden
-            </button>
-          </form>
+          <AccountMenu me={me} newsUnseen={newsUnseen} onNavigate={go} />
         </div>
       </header>
       <div className="app-body">
-        <nav id={navId} className={navClass} aria-label="Hauptnavigation">
-          {areas.length > 1 && (
-            <ul className="nav-areas" aria-label="Bereiche">
-              {areas.map((area) => (
-                <li key={area.id}>
-                  <a
-                    href={area.home}
-                    title={collapsed ? area.label : undefined}
-                    aria-current={area.id === currentArea?.id ? "true" : undefined}
-                    onClick={(event) => onNavClick(event, area.home)}
-                  >
-                    <Icon name={area.icon} />
-                    <span className="nav-label">{area.label}</span>
-                    {area.id !== currentArea?.id && areaBadge(area.id) > 0 && (
-                      <span className="nav-count">
-                        {areaBadge(area.id)}
-                        <span className="visually-hidden"> offen</span>
-                      </span>
-                    )}
-                  </a>
-                </li>
-              ))}
-            </ul>
+        <div className="app-nav">
+          <AreaBar
+            areas={areas}
+            currentId={currentArea?.id}
+            hasOpen={hasOpen}
+            handbookOpen={path.startsWith(HANDBOOK_PATH)}
+            collapsed={collapsed}
+            sideMenuId={sideMenuId}
+            onArea={onArea}
+            onHandbook={(event) => onNavClick(event, HANDBOOK_PATH)}
+            onExpand={() => setMenu(false)}
+          />
+          {currentArea && (
+            <SideMenu
+              id={sideMenuId}
+              area={currentArea}
+              areas={areas}
+              activePath={navPath}
+              hidden={collapsed}
+              badgeFor={badgeFor}
+              onNavigate={onNavClick}
+              onCollapse={() => setMenu(true)}
+            />
           )}
-          <div className="nav-items">
-            {groups.map((group) => (
-              <div className="nav-group" key={group.title ?? group.items[0]?.path ?? "start"}>
-                {group.title && <p className="nav-title">{group.title}</p>}
-                <ul>
-                  {group.items.map((item) => (
-                    <li key={item.path}>
-                      <a
-                        href={item.path}
-                        title={collapsed ? item.label : undefined}
-                        aria-current={item.path === navPath ? "page" : undefined}
-                        onClick={(event) => onNavClick(event, item.path)}
-                      >
-                        <Icon name={item.icon} />
-                        <span className="nav-label">{item.label}</span>
-                        {badgeFor(item.path) > 0 && (
-                          <span className="nav-count">
-                            {badgeFor(item.path)}
-                            <span className="visually-hidden">
-                              {item.path === "/" ? " offene Aufgaben" : " offen"}
-                            </span>
-                          </span>
-                        )}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <div className="nav-foot">
-            {/* Nur auf dem Handy sichtbar; dort fehlt „Abmelden“ in der Kopfzeile. */}
-            <form method="post" action="/auth/logout" className="nav-logout">
-              <button type="submit" className="button button-secondary">
-                Abmelden
-              </button>
-            </form>
-            <a
-              className="nav-tool"
-              href={HANDBOOK_PATH}
-              title="Handbuch"
-              aria-current={path.startsWith(HANDBOOK_PATH) ? "page" : undefined}
-              onClick={(event) => onNavClick(event, HANDBOOK_PATH)}
-            >
-              <Icon name="handbuch" />
-              <span className="visually-hidden">Handbuch</span>
-            </a>
-            <a
-              className="nav-tool"
-              href={NEWS_PATH}
-              title="Neuigkeiten"
-              aria-current={path === NEWS_PATH ? "page" : undefined}
-              onClick={(event) => onNavClick(event, NEWS_PATH)}
-            >
-              <Icon name="neuigkeiten" />
-              <span className="visually-hidden">Neuigkeiten</span>
-              {newsUnseen && (
-                <span className="nav-dot">
-                  <span className="visually-hidden"> – neue Version</span>
-                </span>
-              )}
-            </a>
-            <button
-              type="button"
-              className="nav-tool"
-              title={theme === "dunkel" ? "Helle Darstellung" : "Dunkle Darstellung"}
-              onClick={onToggleTheme}
-            >
-              <Icon name={theme === "dunkel" ? "hell" : "dunkel"} />
-              <span className="visually-hidden">
-                {theme === "dunkel"
-                  ? "Helle Darstellung einschalten"
-                  : "Dunkle Darstellung einschalten"}
-              </span>
-            </button>
-            <button
-              type="button"
-              className="nav-tool nav-collapse"
-              title={collapsed ? "Navigation ausklappen" : "Navigation einklappen"}
-              aria-expanded={!collapsed}
-              aria-controls={navId}
-              onClick={onToggleCollapsed}
-            >
-              <Icon name={collapsed ? "ausklappen" : "einklappen"} />
-              <span className="visually-hidden">
-                {collapsed ? "Navigation ausklappen" : "Navigation einklappen"}
-              </span>
-            </button>
-          </div>
-        </nav>
+        </div>
         <main id="inhalt" className="app-main" tabIndex={-1}>
           {page}
+          {current && path !== "/" && (
+            <TitlePin containerId="inhalt" path={current.path} label={current.label} />
+          )}
         </main>
       </div>
+      <MobileNav
+        areas={areas}
+        current={currentArea}
+        activePath={navPath}
+        taskCount={taskCount}
+        searchOpen={searchOpen}
+        hasOpen={hasOpen}
+        badgeFor={badgeFor}
+        onNavigate={go}
+        onSearch={() => setSearchOpen(true)}
+        onTasks={onTasks}
+      />
+      {searchOpen && <QuickSearch areas={areas} onClose={closeSearch} onNavigate={go} />}
       <ScrollTop />
     </div>
   );

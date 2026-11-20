@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { allNavItems, areaForPath, areasFor, navigationFor } from "./navigation";
+import {
+  activeNavPath,
+  allNavItems,
+  areaForPath,
+  areasFor,
+  findNavEntry,
+  navigationFor,
+  searchPages,
+} from "./navigation";
 
 describe("navigationFor", () => {
   it("zeigt Betriebsrat nur Start und Evergreen", () => {
@@ -28,7 +36,7 @@ describe("navigationFor", () => {
   });
 
   it("ignoriert unbekannte Rollen", () => {
-    expect(navigationFor(["Irgendwas"])).toHaveLength(1);
+    expect(navigationFor(["Irgendwas"])).toHaveLength(2);
   });
 
   it("gibt jedem Eintrag ein Symbol und führt Neuigkeiten nicht mehr als Menüpunkt", () => {
@@ -44,7 +52,7 @@ describe("areasFor", () => {
   it("gibt Microsoft 365 und Evergreen je einen eigenen Bereich", () => {
     const areas = areasFor(all);
     expect(areas.map((area) => area.label)).toEqual([
-      "Werkbank",
+      "Start",
       "Microsoft 365",
       "Evergreen",
       "IT-Monitoring",
@@ -160,11 +168,11 @@ describe("areasFor", () => {
       );
     const shared = [
       "/budget",
-      "/budget/posten",
       "/budget/planung",
       "/budget/statistik",
-      "/budget/vertraege",
+      "/budget/posten",
       "/budget/rechnungen",
+      "/budget/vertraege",
       "/budget/partner",
       "/budget/konten",
     ];
@@ -178,5 +186,111 @@ describe("areasFor", () => {
     expect(paths(["Tenant.Reader"])).toEqual([]);
     const areas = areasFor(["Budget.Manager"]);
     expect(areaForPath(areas, "/budget/konten")?.id).toBe("budget");
+  });
+
+  it("gruppiert das IT-Budget; die Verwaltung ist anfangs eingeklappt", () => {
+    const budget = (roles: string[]) => areasFor(roles).find((area) => area.id === "budget");
+    expect(budget(["Budget.Reader"])?.groups.map((group) => group.title)).toEqual([
+      "Überblick",
+      "Ausgaben",
+      "Stammdaten",
+    ]);
+    const manager = budget(["Budget.Manager"]);
+    expect(manager?.groups.map((group) => [group.title, group.collapsed ?? false])).toEqual([
+      ["Überblick", false],
+      ["Ausgaben", false],
+      ["Stammdaten", false],
+      ["Verwaltung", true],
+    ]);
+  });
+
+  it("gruppiert den IT-Bestand", () => {
+    const bestand = areasFor(["Bestand.Reader"]).find((area) => area.id === "bestand");
+    expect(
+      bestand?.groups.map((group) => [group.title, group.items.map((item) => item.label)]),
+    ).toEqual([
+      [null, ["Vorgänge", "Statistik"]],
+      ["Bestand", ["Hardware", "Stellen", "Arbeitsplätze", "Standorte"]],
+      ["Verleih", ["Verleih"]],
+      ["Verwaltung", ["Stammdaten"]],
+    ]);
+    expect(bestand?.groups[3]?.collapsed).toBe(true);
+  });
+
+  it("gibt jedem Bereich Kurzname, Symbol und Abschnitt der Leiste in der richtigen Reihenfolge", () => {
+    const areas = areasFor([
+      "Werkbank.Admin",
+      "Config.Reader",
+      "Evergreen.IT",
+      "Budget.Manager",
+      "Tools.User",
+      "Projekte.Reader",
+      "Bestand.Reader",
+    ]);
+    expect(areas.map((area) => [area.short, area.section])).toEqual([
+      ["Start", "start"],
+      ["M365", "anwendungen"],
+      ["Evergreen", "anwendungen"],
+      ["Monitoring", "betrieb"],
+      ["Bestand", "betrieb"],
+      ["Budget", "planung"],
+      ["Projekte", "planung"],
+      ["Tools", "werkzeuge"],
+      ["Verwaltung", "unten"],
+    ]);
+    expect(new Set(areas.map((area) => area.icon)).size).toBe(areas.length);
+    expect(areas.every((area) => area.short.length <= 10)).toBe(true);
+  });
+
+  it("zeigt den Start-Bereich mit Start und Suche", () => {
+    const start = areasFor([])[0];
+    expect(start?.id).toBe("werkbank");
+    expect(allNavItems(start?.groups ?? []).map((item) => item.path)).toEqual(["/", "/suche"]);
+  });
+});
+
+describe("activeNavPath", () => {
+  const items = allNavItems(navigationFor(["Bestand.Reader", "Budget.Reader"]));
+
+  it("findet den Menüpunkt, unter dem eine Seite liegt", () => {
+    expect(activeNavPath(items, "/bestand/hardware")).toBe("/bestand/hardware");
+    expect(activeNavPath(items, "/bestand/hardware/7/verlauf")).toBe("/bestand/hardware");
+    expect(activeNavPath(items, "/budget/vertraege/3")).toBe("/budget/vertraege");
+    // Der längste Pfad gewinnt: /budget/partner, nicht /budget
+    expect(activeNavPath(items, "/budget/partner/4")).toBe("/budget/partner");
+    expect(activeNavPath(items, "/konto")).toBeUndefined();
+    expect(activeNavPath(items, "/")).toBe("/");
+  });
+});
+
+describe("Anheften und Suche nach Seiten", () => {
+  it("findet Seiten nur mit Recht", () => {
+    const reader = areasFor(["Budget.Reader"]);
+    expect(findNavEntry(reader, "/budget/rechnungen")?.area.short).toBe("Budget");
+    expect(findNavEntry(reader, "/budget/rechnungen")?.group).toBe("Ausgaben");
+    // Pfade ohne Recht lassen sich nicht anheften: Es gibt keinen Menüpunkt dafür.
+    expect(findNavEntry(reader, "/budget/import")).toBeUndefined();
+    expect(findNavEntry(reader, "/verwaltung")).toBeUndefined();
+    expect(findNavEntry(reader, "/budget/rechnungen/12")).toBeUndefined();
+    expect(findNavEntry(areasFor(["Budget.Manager"]), "/budget/import")?.group).toBe("Verwaltung");
+  });
+
+  it("sucht nach Name, Gruppe und Bereich, Treffer im Namen zuerst", () => {
+    const areas = areasFor(["Budget.Manager", "Bestand.Reader", "Tools.User"]);
+    const labels = (query: string) =>
+      searchPages(areas, query).map((entry) => `${entry.item.label} (${entry.area.short})`);
+    expect(labels("statistik")).toEqual(["Statistik (Bestand)", "Statistik (Budget)"]);
+    expect(labels("budget statistik")).toEqual(["Statistik (Budget)"]);
+    expect(labels("ausgaben")).toEqual([
+      "Budgetposten (Budget)",
+      "Rechnungen (Budget)",
+      "Verträge (Budget)",
+    ]);
+    // Umlaute: „vertrage“ findet nichts, „vertraege“ und „verträ“ schon
+    expect(labels("vertraege")).toEqual(["Verträge (Budget)"]);
+    expect(labels("verträ")).toEqual(["Verträge (Budget)"]);
+    expect(labels("arbeitspl")).toEqual(["Arbeitsplätze (Bestand)"]);
+    expect(labels("")).toEqual([]);
+    expect(labels("dns")).toEqual([]);
   });
 });

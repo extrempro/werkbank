@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
+import { expectNoA11yViolations, loginAs, openPage } from "./helpers";
 
 const ORIGIN = "http://localhost:8080";
 
@@ -14,11 +14,7 @@ test("Suche findet Vorgänge und beachtet, wer sie sehen darf", async ({ page, b
   const id = (await created.json()).id as number;
 
   await page.goto("/");
-  await openNavigation(page);
-  await page
-    .getByRole("navigation", { name: "Hauptnavigation" })
-    .getByRole("link", { name: "Suche", exact: true })
-    .click();
+  await openPage(page, "Start", "Suche");
   await expect(page.getByRole("heading", { level: 1, name: "Suche" })).toBeVisible();
   await page.getByLabel("Suchbegriff").fill(word);
   await page.getByRole("button", { name: "Suchen" }).click();

@@ -277,3 +277,23 @@ class NotificationChannel(Base):
     kind: Mapped[str] = mapped_column(String(64), primary_key=True)
     # Ab hier wird mitgeteilt; ältere Benachrichtigungen nicht
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class NavEntry(Base):
+    """Angeheftete und zuletzt besuchte Seiten je Person (Navigation).
+
+    Gespeichert werden nur Pfade aus der Navigation; ``kind`` ist „pin“ oder „recent“,
+    ``position`` die Reihenfolge (angeheftet) bzw. ``used_at`` der letzte Besuch.
+    """
+
+    __tablename__ = "nav_entries"
+    __table_args__ = (UniqueConstraint("user_id", "kind", "path", name="uq_nav_entries_entry"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(8))
+    path: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

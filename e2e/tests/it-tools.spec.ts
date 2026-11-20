@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
+import { areaNames, expectNoA11yViolations, itemName, loginAs, openMenu, openPage } from "./helpers";
 
 test("IT-Tools: Übersicht mit Suche und Favoriten", async ({
   page,
@@ -11,11 +11,7 @@ test("IT-Tools: Übersicht mit Suche und Favoriten", async ({
     `Tina Favoriten ${testInfo.project.name} ${testInfo.retry}`,
   );
   await page.goto("/");
-  await openNavigation(page);
-  await page
-    .getByRole("navigation", { name: "Hauptnavigation" })
-    .getByRole("link", { name: /^IT-Tools/ })
-    .click();
+  await openPage(page, "IT-Tools", "Alle Tools");
   await expect(page).toHaveURL(/\/it-tools$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "IT-Tools" }),
@@ -488,9 +484,8 @@ test("IT-Tools: Kategorien in der Navigation und Tools in der Suche", async ({
 }) => {
   await loginAs(page, ["Tools.User"], "Tina Tools");
   await page.goto("/it-tools");
-  await openNavigation(page);
-  const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
-  await nav.getByRole("link", { name: "Text", exact: true }).click();
+  const menu = await openMenu(page);
+  await menu.getByRole("link", { name: itemName("Text") }).click();
   await expect(page).toHaveURL(/\/it-tools\/kategorie\/text$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Text" }),
@@ -503,9 +498,9 @@ test("IT-Tools: Kategorien in der Navigation und Tools in der Suche", async ({
 
   // Auf der Seite eines Tools ist seine Kategorie hervorgehoben.
   await page.goto("/it-tools/regex");
-  await openNavigation(page);
+  const again = await openMenu(page);
   await expect(
-    nav.getByRole("link", { name: "Text", exact: true }),
+    again.getByRole("link", { name: itemName("Text") }),
   ).toHaveAttribute("aria-current", "page");
 
   await page.goto("/suche?q=subnetz");
@@ -525,12 +520,7 @@ test("IT-Tools: ohne die Rolle gibt es den Bereich nicht", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Seite nicht gefunden" }),
   ).toBeVisible();
-  await openNavigation(page);
-  await expect(
-    page
-      .getByRole("navigation", { name: "Hauptnavigation" })
-      .getByRole("link", { name: /^IT-Tools/ }),
-  ).toHaveCount(0);
+  expect(await areaNames(page)).not.toContain("IT-Tools");
 });
 
 test("IT-Tools: Planung und E-Mail-Header", async ({ page }) => {

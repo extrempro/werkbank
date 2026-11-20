@@ -5,22 +5,28 @@ Ziel: Jeder Screen sieht gleich aufgebaut aus und wird gleich bedient. Visuelle 
 ## 1. Seitenaufbau
 
 ```
-┌──────────────────────────────────────────────────────┐
-│ Kopfzeile: Logo · Suche · Aufgaben · Person/Rolle    │
-├────────────┬─────────────────────────────────────────┤
-│ Navigation │ Modul-Label (klein, Großbuchstaben)     │
-│ (gruppiert │ Titel (H1)                              │
-│ nach Modul)│ Untertitel (ein Satz)                   │
-│            │ Filter / Reiter                         │
-│            │ Inhalt                                  │
-└────────────┴─────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│ Kopfzeile: Logo · Suchfeld (Strg+K) · Glocke · Aufgaben · Konto│
+├──────┬──────────────┬─────────────────────────────────────────┤
+│ Be-  │ Seitenmenü   │ Modul-Label (klein, Großbuchstaben)     │
+│ reich│ Bereichsname │ Titel (H1) ☆                            │
+│ (Sym-│ ▾ Gruppe     │ Untertitel (ein Satz)                   │
+│ bole)│   Seite   ☆  │ Filter / Reiter                         │
+│      │ Menü einkl.  │ Inhalt                                  │
+└──────┴──────────────┴─────────────────────────────────────────┘
 ```
 
-- Navigation links, jeder Eintrag mit Symbol. Auf breiten Bildschirmen einklappbar (nur Symbole). Unter 768 px als Menü über einen Button in der Kopfzeile.
-- Am Fuß der Navigation: Neuigkeiten, Umschalter hell/dunkel, Einklappen. Unten rechts erscheint nach etwas Scrollen der Knopf „Nach oben“.
-- Bereiche: Oben in der Navigation steht ein Umschalter zwischen „Werkbank“ (Start, Suche, Allgemein, Verwaltung) und je Tool einem eigenen Bereich, derzeit „Microsoft 365“ (Konfiguration) und „Evergreen“ (Vorgänge, Eingang). Ab etwa sechs Bereichen wird der Umschalter zu einem Auswahlmenü. Die Navigation zeigt nur die Seiten des gewählten Bereichs; der Bereich ergibt sich aus der geöffneten Seite. Neue Tools kommen als weiterer Bereich in `frontend/src/navigation.ts` dazu. Nur Bereiche und Gruppen mit Berechtigung werden angezeigt.
+- **Bereichsleiste** (76 px, ganz links): je Bereich ein Symbol mit Kurznamen; voller Name als Tooltip und Name für Screenreader. Abschnitte durch Linien getrennt: Start | Microsoft 365, Evergreen | IT-Monitoring, IT-Bestand | IT-Budget, IT-Projekte | IT-Tools; am Fuß Verwaltung (nur Admin) und Handbuch. Ein Punkt am Symbol zeigt offene Aufgaben im Bereich (aus den Zählern von „Meine Aufgaben“). Der aktive Bereich ist hinterlegt und hat `aria-current`.
+- **Seitenmenü** (256 px, wächst mit der Schriftgröße im Menü): oben der Name des Bereichs, darunter die Seiten in Gruppen. Gruppen mit Überschrift klappen auf und zu (Pfeil, `aria-expanded`); der Zustand gilt je Browser. Eine Gruppe kann anfangs eingeklappt sein (z. B. „Verwaltung“ im IT-Budget und IT-Bestand). Jede Seite hat ein Symbol aus `components/Icon.tsx`. Abstände (kompakt/normal/weiträumig) und Schriftgröße aus dem Konto gelten hier.
+- „Menü einklappen“ unten im Seitenmenü lässt nur die Bereichsleiste stehen (`werkbank-navigation` im Browser). Ein Klick auf einen Bereich öffnet das Menü wieder.
+- **Anheften:** Stern neben jeder Seite im Seitenmenü (sichtbar bei Hover und Tastaturfokus, angeheftet immer) und hinter dem Seitentitel. Der Start-Bereich zeigt „Angeheftet“ (mit Chip des Bereichs) und „Zuletzt besucht“ (letzte fünf), die Startseite dieselben Listen.
+- **Kontomenü** oben rechts (Initialen oder Bild): Konto, Release Notes, Hell/Dunkel/Automatisch, „Zuletzt besucht leeren“, Abmelden. Menü-Muster mit Pfeiltasten, Pos1/Ende; Esc schließt und gibt den Fokus zurück.
+- **Schnellsuche:** Das Suchfeld in der Kopfzeile und Strg+K/⌘K öffnen einen modalen Dialog, der Seiten nach Name, Gruppe und Bereich findet (nur mit Recht). Ohne Eingabe: „Zuletzt besucht“. Pfeiltasten wählen, Enter öffnet, Esc schließt; Fokus bleibt im Dialog und kehrt danach zurück. „In allen Einträgen suchen“ führt zur Seite „Suche“.
+- **Handy (bis 760 px):** Bereichsleiste und Seitenmenü entfallen. Unten eine feste Leiste mit Start, Suche, Aufgaben und Menü (`safe-area-inset-bottom`). „Menü“ öffnet ein Blatt von unten (bis 86 % Höhe): erst die Seiten des aktuellen Bereichs, über „‹ Alle Bereiche“ alle Bereiche mit Symbol, vollem Namen und Punkt. Keine Sterne zum Anklicken, angeheftete Seiten nur mit kleinem Stern markiert. Die Schnellsuche füllt den Bildschirm und hat „Abbrechen“. Die Kopfzeile ist schmaler (56 px) und haftet oben; alle Tippflächen mindestens 44 px.
+- Ein neuer Bereich braucht nur einen Eintrag in `areasFor` (`frontend/src/navigation.ts`): Symbol, Kurzname, Abschnitt der Leiste, Gruppen. Die erlaubten Pfade für Anheften und „Zuletzt besucht“ stehen zusätzlich auf dem Server (`backend/werkbank/core/navigation.py`).
+- Unten rechts erscheint nach etwas Scrollen der Knopf „Nach oben“.
 - Maximale Inhaltsbreite 1180 px (Seiten mit Liste und Detail nebeneinander bis 1400 px), Abstand zum Rand 24 px (mobil 16 px).
-- Die Suche steht in der Kopfzeile, auf schmalen Bildschirmen in der Navigation. Die Person oben rechts führt zur Seite „Konto“.
+- Symbole nur aus `components/Icon.tsx` (24 × 24, Linie, Strichstärke 2), nie direkt im Markup.
 
 ## 2. Liste und Detail
 

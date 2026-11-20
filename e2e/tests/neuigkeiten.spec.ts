@@ -1,15 +1,17 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openNavigation } from "./helpers";
+import { expectNoA11yViolations, loginAs, openAccountMenu } from "./helpers";
 
 test("Neuigkeiten zeigen die Version, der Hinweis „neu“ verschwindet nach dem Öffnen", async ({
   page,
 }) => {
   await loginAs(page, ["Evergreen.Betriebsrat"], "Nora Neu");
   await page.goto("/");
-  await openNavigation(page);
-  const nav = page.getByRole("navigation", { name: "Hauptnavigation" });
-  const link = nav.getByRole("link", { name: /Neuigkeiten/ });
-  await expect(link).toHaveAccessibleName("Neuigkeiten – neue Version");
+  await expect(page.getByRole("button", { name: /^Konto und Einstellungen/ })).toHaveAccessibleName(
+    /, neue Version$/,
+  );
+  const menu = await openAccountMenu(page);
+  const link = menu.getByRole("menuitem", { name: /^Release Notes/ });
+  await expect(link).toHaveAccessibleName("Release Notes neu");
   await link.click();
   await expect(page).toHaveURL(/\/neuigkeiten$/);
   await expect(page.getByRole("heading", { level: 1, name: "Neuigkeiten" })).toBeVisible();
@@ -17,6 +19,6 @@ test("Neuigkeiten zeigen die Version, der Hinweis „neu“ verschwindet nach de
   await expectNoA11yViolations(page);
 
   await page.reload();
-  await openNavigation(page);
-  await expect(nav.getByRole("link", { name: "Neuigkeiten", exact: true })).toBeVisible();
+  const again = await openAccountMenu(page);
+  await expect(again.getByRole("menuitem", { name: "Release Notes", exact: true })).toBeVisible();
 });

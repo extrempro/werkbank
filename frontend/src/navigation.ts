@@ -10,6 +10,8 @@ export interface NavItem {
 export interface NavGroup {
   title: string | null;
   items: NavItem[];
+  /** Gruppe ist anfangs eingeklappt (die Person kann sie aufklappen; der Browser merkt es sich). */
+  collapsed?: boolean;
 }
 
 export const NEWS_PATH = "/neuigkeiten";
@@ -68,34 +70,47 @@ function hasAny(roles: readonly string[], wanted: readonly string[]): boolean {
   return wanted.some((role) => roles.includes(role));
 }
 
+/** Abschnitte der Bereichsleiste, durch Linien getrennt; „unten“ steht am Fuß der Leiste. */
+export type BarSection = "start" | "anwendungen" | "betrieb" | "planung" | "werkzeuge" | "unten";
+
 /** Ein Bereich der Werkbank: allgemeine Seiten oder ein Tool mit seinen eigenen Seiten. */
 export interface NavArea {
   id: string;
+  /** Voller Name: Seitenmenü, Tooltip und Screenreader. */
   label: string;
+  /** Kurzname unter dem Symbol in der Bereichsleiste. */
+  short: string;
   icon: IconName;
+  /** Abschnitt in der Bereichsleiste. */
+  section: BarSection;
   /** Seite, die beim Wechsel in den Bereich geöffnet wird. */
   home: string;
   groups: NavGroup[];
 }
 
+/** Die persönlichen Gruppen (Angeheftet, Zuletzt besucht) stehen im Start-Bereich. */
+export const START_AREA = "werkbank";
+
 /**
- * Bereiche nach Rollen (docs/spec.md, Kapitel 4 und 10). Jedes Tool bekommt einen eigenen
- * Bereich; die Navigation zeigt immer nur die Seiten des gewählten Bereichs.
- * Nur Komfort: Die Rechte prüft immer der Server.
+ * Bereiche nach Rollen (docs/spec.md, Kapitel 4 und 10), in der Reihenfolge der Bereichsleiste.
+ * Ein neuer Bereich braucht nur einen Eintrag hier. Nur Komfort: Die Rechte prüft immer der
+ * Server; die erlaubten Pfade stehen dort noch einmal (backend/werkbank/core/navigation.py).
  */
 export function areasFor(roles: readonly string[]): NavArea[] {
-  const general: NavGroup[] = [
+  const areas: NavArea[] = [
     {
-      title: null,
-      items: [
-        { path: "/", label: "Start", icon: "start" },
-        { path: "/suche", label: "Suche", icon: "suche" },
+      id: START_AREA,
+      label: "Start",
+      short: "Start",
+      icon: "start",
+      section: "start",
+      home: "/",
+      // Zwischen den beiden Gruppen stehen im Menü „Angeheftet“ und „Zuletzt besucht“.
+      groups: [
+        { title: null, items: [{ path: "/", label: "Start", icon: "start" }] },
+        { title: null, items: [{ path: "/suche", label: "Suche", icon: "suche" }] },
       ],
     },
-  ];
-
-  const areas: NavArea[] = [
-    { id: "werkbank", label: "Werkbank", icon: "start", home: "/", groups: general },
   ];
   if (hasAny(roles, [...CONFIG_ROLES, TENANT_READER])) {
     const groups: NavGroup[] = [];
@@ -126,7 +141,9 @@ export function areasFor(roles: readonly string[]): NavArea[] {
     areas.push({
       id: "m365",
       label: "Microsoft 365",
+      short: "M365",
       icon: "m365",
+      section: "anwendungen",
       home: hasAny(roles, CONFIG_ROLES) ? "/m365" : LICENSES_PATH,
       groups,
     });
@@ -139,34 +156,130 @@ export function areasFor(roles: readonly string[]): NavArea[] {
     areas.push({
       id: "evergreen",
       label: "Evergreen",
-      icon: "vorgaenge",
+      short: "Evergreen",
+      icon: "evergreen",
+      section: "anwendungen",
       home: "/evergreen",
       // Ohne Überschrift: Der Bereich heißt schon so.
       groups: [{ title: null, items }],
     });
   }
+  if (roles.includes(MONITORING_READER) || roles.includes(ADMIN)) {
+    areas.push({
+      id: "monitoring",
+      label: "IT-Monitoring",
+      short: "Monitoring",
+      icon: "monitoring",
+      section: "betrieb",
+      home: MONITORING_DNS_PATH,
+      groups: [
+        {
+          title: null,
+          items: [
+            { path: MONITORING_DNS_PATH, label: "DNS-Abgleich mit NetBox", icon: "netzwerk" },
+          ],
+        },
+      ],
+    });
+  }
+  if (hasAny(roles, INVENTORY_ROLES)) {
+    areas.push({
+      id: "bestand",
+      label: "IT-Bestand",
+      short: "Bestand",
+      icon: "bestand",
+      section: "betrieb",
+      home: INVENTORY_HARDWARE_PATH,
+      groups: [
+        {
+          title: null,
+          items: [
+            { path: INVENTORY_CASES_PATH, label: "Vorgänge", icon: "vorgaenge" },
+            { path: INVENTORY_STATISTICS_PATH, label: "Statistik", icon: "statistik" },
+          ],
+        },
+        {
+          title: "Bestand",
+          items: [
+            { path: INVENTORY_HARDWARE_PATH, label: "Hardware", icon: "geraet" },
+            { path: INVENTORY_POSITIONS_PATH, label: "Stellen", icon: "stellen" },
+            { path: INVENTORY_WORKPLACES_PATH, label: "Arbeitsplätze", icon: "arbeitsplatz" },
+            { path: INVENTORY_LOCATIONS_PATH, label: "Standorte", icon: "standort" },
+          ],
+        },
+        {
+          title: "Verleih",
+          items: [{ path: INVENTORY_LOANS_PATH, label: "Verleih", icon: "verleih" }],
+        },
+        {
+          title: "Verwaltung",
+          collapsed: true,
+          items: [{ path: INVENTORY_MASTER_PATH, label: "Stammdaten", icon: "einstellungen" }],
+        },
+      ],
+    });
+  }
   if (hasAny(roles, BUDGET_ROLES)) {
-    const items: NavItem[] = [
-      { path: BUDGET_PATH, label: "Übersicht", icon: "uebersicht" },
-      { path: BUDGET_ITEMS_PATH, label: "Budgetposten", icon: "posten" },
-      { path: BUDGET_PLANNING_PATH, label: "Mehrjahresübersicht", icon: "kalender" },
-      { path: BUDGET_STATISTICS_PATH, label: "Statistik", icon: "statistik" },
-      { path: BUDGET_CONTRACTS_PATH, label: "Verträge", icon: "vertraege" },
-      { path: BUDGET_INVOICES_PATH, label: "Rechnungen", icon: "rechnungen" },
-      { path: BUDGET_PARTNERS_PATH, label: "Partner", icon: "partner" },
-      { path: BUDGET_ACCOUNTS_PATH, label: "Konten", icon: "konten" },
+    const groups: NavGroup[] = [
+      {
+        title: "Überblick",
+        items: [
+          { path: BUDGET_PATH, label: "Übersicht", icon: "uebersicht" },
+          { path: BUDGET_PLANNING_PATH, label: "Mehrjahresübersicht", icon: "kalender" },
+          { path: BUDGET_STATISTICS_PATH, label: "Statistik", icon: "statistik" },
+        ],
+      },
+      {
+        title: "Ausgaben",
+        items: [
+          { path: BUDGET_ITEMS_PATH, label: "Budgetposten", icon: "posten" },
+          { path: BUDGET_INVOICES_PATH, label: "Rechnungen", icon: "rechnungen" },
+          { path: BUDGET_CONTRACTS_PATH, label: "Verträge", icon: "vertraege" },
+        ],
+      },
+      {
+        title: "Stammdaten",
+        items: [
+          { path: BUDGET_PARTNERS_PATH, label: "Partner", icon: "partner" },
+          { path: BUDGET_ACCOUNTS_PATH, label: "Konten", icon: "konten" },
+        ],
+      },
     ];
     if (roles.includes(BUDGET_MANAGER)) {
-      items.push({ path: BUDGET_IMPORT_PATH, label: "Import", icon: "import" });
-      items.push({ path: BUDGET_SETTINGS_PATH, label: "Einstellungen", icon: "einstellungen" });
+      groups.push({
+        title: "Verwaltung",
+        collapsed: true,
+        items: [
+          { path: BUDGET_IMPORT_PATH, label: "Import", icon: "import" },
+          { path: BUDGET_SETTINGS_PATH, label: "Einstellungen", icon: "einstellungen" },
+        ],
+      });
     }
     areas.push({
       id: "budget",
       label: "IT-Budget",
+      short: "Budget",
       icon: "budget",
+      section: "planung",
       home: BUDGET_PATH,
-      // Ohne Überschrift: Der Bereich heißt schon so.
-      groups: [{ title: null, items }],
+      groups,
+    });
+  }
+  if (hasAny(roles, PROJECT_ROLES)) {
+    areas.push({
+      id: "projekte",
+      label: "IT-Projekte",
+      short: "Projekte",
+      icon: "projekte",
+      section: "planung",
+      home: PROJECTS_PATH,
+      // Ohne Überschrift: Der Bereich heißt schon so. Die Projekte selbst stehen auf der Seite.
+      groups: [
+        {
+          title: null,
+          items: [{ path: PROJECTS_PATH, label: "Alle Projekte", icon: "uebersicht" }],
+        },
+      ],
     });
   }
   if (roles.includes(TOOLS_USER)) {
@@ -176,7 +289,9 @@ export function areasFor(roles: readonly string[]): NavArea[] {
     areas.push({
       id: "it-tools",
       label: "IT-Tools",
+      short: "Tools",
       icon: "werkzeuge",
+      section: "werkzeuge",
       home: TOOLS_PATH,
       groups: [
         // Ohne Überschrift: Der Bereich heißt schon so.
@@ -198,68 +313,13 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       ],
     });
   }
-  if (hasAny(roles, PROJECT_ROLES)) {
-    areas.push({
-      id: "projekte",
-      label: "IT-Projekte",
-      icon: "projekte",
-      home: PROJECTS_PATH,
-      // Ohne Überschrift: Der Bereich heißt schon so. Die Projekte selbst stehen auf der Seite.
-      groups: [
-        {
-          title: null,
-          items: [{ path: PROJECTS_PATH, label: "Alle Projekte", icon: "uebersicht" }],
-        },
-      ],
-    });
-  }
-  if (hasAny(roles, INVENTORY_ROLES)) {
-    areas.push({
-      id: "bestand",
-      label: "IT-Bestand",
-      icon: "bestand",
-      home: INVENTORY_HARDWARE_PATH,
-      groups: [
-        {
-          title: "Bestand",
-          items: [
-            { path: INVENTORY_CASES_PATH, label: "Vorgänge", icon: "vorgaenge" },
-            { path: INVENTORY_HARDWARE_PATH, label: "Hardware", icon: "bestand" },
-            { path: INVENTORY_POSITIONS_PATH, label: "Stellen", icon: "stellen" },
-            { path: INVENTORY_WORKPLACES_PATH, label: "Arbeitsplätze", icon: "arbeitsplatz" },
-            { path: INVENTORY_LOCATIONS_PATH, label: "Standorte", icon: "standort" },
-            { path: INVENTORY_LOANS_PATH, label: "Verleih", icon: "verleih" },
-            { path: INVENTORY_STATISTICS_PATH, label: "Statistik", icon: "statistik" },
-          ],
-        },
-        {
-          title: "Einstellungen",
-          items: [{ path: INVENTORY_MASTER_PATH, label: "Stammdaten", icon: "einstellungen" }],
-        },
-      ],
-    });
-  }
-  if (roles.includes(MONITORING_READER) || roles.includes(ADMIN)) {
-    areas.push({
-      id: "monitoring",
-      label: "IT-Monitoring",
-      icon: "monitoring",
-      home: MONITORING_DNS_PATH,
-      groups: [
-        {
-          title: null,
-          items: [
-            { path: MONITORING_DNS_PATH, label: "DNS-Abgleich mit NetBox", icon: "netzwerk" },
-          ],
-        },
-      ],
-    });
-  }
   if (roles.includes(ADMIN)) {
     areas.push({
       id: "verwaltung",
       label: "Verwaltung",
+      short: "Verwaltung",
       icon: "verwaltung",
+      section: "unten",
       home: ADMIN_PATH,
       // Ohne Überschrift: Der Bereich heißt schon so.
       groups: [
@@ -284,15 +344,89 @@ export function navigationFor(roles: readonly string[]): NavGroup[] {
   return areasFor(roles).flatMap((area) => area.groups);
 }
 
-/** Bereich, zu dem ein Pfad gehört. Unbekannte Pfade (Konto, Neuigkeiten) zählen zum ersten. */
-export function areaForPath(areas: readonly NavArea[], path: string): NavArea | undefined {
-  const owns = (area: NavArea) =>
-    allNavItems(area.groups).some(
-      (item) => item.path === path || (item.path !== "/" && path.startsWith(`${item.path}/`)),
-    );
-  return areas.find(owns) ?? areas[0];
-}
-
 export function allNavItems(groups: readonly NavGroup[]): NavItem[] {
   return groups.flatMap((group) => group.items);
+}
+
+/**
+ * Menüpunkt, zu dem ein Pfad gehört: derselbe Pfad oder der längste, unter dem er liegt
+ * (z. B. `/bestand/hardware/7` → Hardware). Start („/“) zählt nur genau.
+ */
+export function activeNavPath(items: readonly NavItem[], path: string): string | undefined {
+  let best: string | undefined;
+  for (const item of items) {
+    const owns = item.path === path || (item.path !== "/" && path.startsWith(`${item.path}/`));
+    if (owns && (best === undefined || item.path.length > best.length)) {
+      best = item.path;
+    }
+  }
+  return best;
+}
+
+/** Bereich, zu dem ein Pfad gehört. Unbekannte Pfade (Konto, Neuigkeiten) zählen zum ersten. */
+export function areaForPath(areas: readonly NavArea[], path: string): NavArea | undefined {
+  return (
+    areas.find((area) => activeNavPath(allNavItems(area.groups), path) !== undefined) ?? areas[0]
+  );
+}
+
+/** Ein Menüpunkt mit seinem Bereich und seiner Gruppe (für Suche, Anheften, Zuletzt besucht). */
+export interface NavEntry {
+  item: NavItem;
+  area: NavArea;
+  group: string | null;
+}
+
+export function navEntries(areas: readonly NavArea[]): NavEntry[] {
+  return areas.flatMap((area) =>
+    area.groups.flatMap((group) => group.items.map((item) => ({ item, area, group: group.title }))),
+  );
+}
+
+/** Menüpunkt zu genau diesem Pfad; ohne Recht oder bei unbekanntem Pfad `undefined`. */
+export function findNavEntry(areas: readonly NavArea[], path: string): NavEntry | undefined {
+  return navEntries(areas).find((entry) => entry.item.path === path);
+}
+
+/** Text vereinfachen, damit „ae“ auch „ä“ findet und Groß-/Kleinschreibung nicht zählt. */
+function fold(text: string): string {
+  return text
+    .toLocaleLowerCase("de-DE")
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss");
+}
+
+/**
+ * Schnellsuche über die Seiten, die die Person sehen darf: nach Name, Gruppe und Bereich.
+ * Jedes Wort muss irgendwo vorkommen; Treffer im Namen stehen vorn.
+ */
+export function searchPages(areas: readonly NavArea[], query: string, limit = 12): NavEntry[] {
+  const words = fold(query).split(/\s+/).filter(Boolean);
+  if (words.length === 0) {
+    return [];
+  }
+  const scored: { entry: NavEntry; score: number; index: number }[] = [];
+  navEntries(areas).forEach((entry, index) => {
+    const label = fold(entry.item.label);
+    const context = fold(`${entry.group ?? ""} ${entry.area.label} ${entry.area.short}`);
+    let score = 0;
+    for (const word of words) {
+      if (label.startsWith(word) || label.includes(` ${word}`)) {
+        score += 3;
+      } else if (label.includes(word)) {
+        score += 2;
+      } else if (context.includes(word)) {
+        score += 1;
+      } else {
+        return;
+      }
+    }
+    scored.push({ entry, score, index });
+  });
+  return scored
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, limit)
+    .map(({ entry }) => entry);
 }
