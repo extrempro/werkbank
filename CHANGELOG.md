@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.62.0] – 2026-11-20
+
+IT-Bestand, Schritt 2: Standorte mit Grundrissen und Räumen.
+
+### IT-Bestand
+
+- **Standorte:** neue Seite `/bestand/standorte` mit Baum Stadt › Standort › Gebäudeabschnitt › Etage (zugeklappt, offen ist der Weg zur gewählten Etage), Suche über alle Ebenen und Räume, Raumliste neben dem Grundriss; auf schmalen Bildschirmen „Etage wechseln“ statt des Baums
+- **Grundriss** je Etage als PNG, JPEG oder WebP (Prüfung am Inhalt, 50 bis 12 000 Pixel je Seite, höchstens `INVENTORY_PLAN_MAX_MB`, Vorgabe 10 MB), gespeichert in der Datenbank; Auslieferung mit `Cache-Control: no-store`, `nosniff` und `Content-Security-Policy: default-src 'none'; sandbox`
+- **Räume** als Rechtecke auf dem Grundriss: aufziehen, verschieben, Größe ändern; ohne Maus über Zahlenfelder (Lage in Prozent). Lage wird serverseitig geprüft
+- **Pflege der Struktur** für `Bestand.Editor`: anlegen, umbenennen, löschen (nur, was leer ist; Räume nur ohne Hardware)
+- **Gerät:** Raum zuordnen (beim Erfassen und Bearbeiten), Angabe „Standort“ in der Übersicht, neuer Reiter „Standort“ mit hervorgehobenem Raum, Spalte „Standort“ in der Liste und in der Suche; Raumwechsel steht im Verlauf
+- **Suche** der Werkbank findet auch Räume
+- Migration 0042, Spec, Datenschutz, ASVS und Handbuch angepasst
+
 ## [0.61.0] – 2026-11-20
 
 Neuer Bereich IT-Bestand, Schritt 1: Hardware von Hand, Inventurnummer, Ausmustern, Stammdaten.

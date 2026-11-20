@@ -46,6 +46,7 @@ export const MONITORING_DNS_PATH = "/monitoring/dns";
 export const PROJECTS_PATH = "/projekte";
 export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
 export const INVENTORY_MASTER_PATH = "/bestand/stammdaten";
+export const INVENTORY_LOCATIONS_PATH = "/bestand/standorte";
 export const ADMIN_PATH = "/verwaltung";
 export const ADMIN_ROLES_PATH = "/verwaltung/rollen";
 export const ADMIN_MAIL_PATH = "/verwaltung/mail-teams";
@@ -216,7 +217,10 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       groups: [
         {
           title: "Bestand",
-          items: [{ path: INVENTORY_HARDWARE_PATH, label: "Hardware", icon: "bestand" }],
+          items: [
+            { path: INVENTORY_HARDWARE_PATH, label: "Hardware", icon: "bestand" },
+            { path: INVENTORY_LOCATIONS_PATH, label: "Standorte", icon: "standort" },
+          ],
         },
         {
           title: "Einstellungen",

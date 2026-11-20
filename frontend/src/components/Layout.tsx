@@ -32,6 +32,7 @@ import {
   MONITORING_DNS_PATH,
   PROJECTS_PATH,
   INVENTORY_HARDWARE_PATH,
+  INVENTORY_LOCATIONS_PATH,
   INVENTORY_MASTER_PATH,
   LICENSES_PATH,
   NEWS_PATH,
@@ -47,9 +48,10 @@ import { NewsPage } from "../pages/NewsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
 import { HandbookPage } from "../pages/HandbookPage";
 import { DnsCheckPage } from "../modules/monitoring/DnsCheckPage";
-import { parseHardwarePath } from "../modules/inventory/api";
+import { parseHardwarePath, parseLocationPath } from "../modules/inventory/api";
 import { HardwareDetailPage } from "../modules/inventory/HardwareDetailPage";
 import { HardwarePage } from "../modules/inventory/HardwarePage";
+import { LocationsPage } from "../modules/inventory/LocationsPage";
 import { MasterDataPage } from "../modules/inventory/MasterDataPage";
 import { parseProjectPath } from "../modules/projects/api";
 import { ProjectPage } from "../modules/projects/ProjectPage";
@@ -264,6 +266,7 @@ export function Layout({ me }: LayoutProps) {
 
   const projectRoute = parseProjectPath(path);
   const hardwareRoute = parseHardwarePath(path);
+  const locationRoute = parseLocationPath(path);
 
   const licenseMatch = /^\/m365\/lizenzen\/(\d{1,9})$/.exec(path);
   const licenseId = licenseMatch ? Number(licenseMatch[1]) : null;
@@ -355,6 +358,17 @@ export function Layout({ me }: LayoutProps) {
         key={hardwareRoute.id}
         hardwareId={hardwareRoute.id}
         tab={hardwareRoute.tab}
+        roles={me.roles}
+      />
+    );
+  } else if (
+    locationRoute !== null &&
+    items.some((item) => item.path === INVENTORY_LOCATIONS_PATH)
+  ) {
+    page = (
+      <LocationsPage
+        floorId={locationRoute.floorId}
+        roomId={locationRoute.roomId}
         roles={me.roles}
       />
     );

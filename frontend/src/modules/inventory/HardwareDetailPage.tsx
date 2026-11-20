@@ -3,13 +3,16 @@ import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { INVENTORY_HARDWARE_PATH } from "../../navigation";
 import {
+  fetchFloor,
   fetchHardware,
+  fetchLocations,
   fetchMasterData,
   formatDate,
   formatDay,
   HARDWARE_TABS,
   hardwarePath,
   INVENTORY_EDITOR_ROLE,
+  locationPath,
   modelLabel,
   reactivateHardware,
   retireHardware,
@@ -18,12 +21,15 @@ import {
   today,
   updateHardware,
   WHEREABOUTS_LABELS,
+  type Floor,
   type Hardware,
   type HardwareTab,
+  type Locations,
   type MasterData,
   type Whereabouts,
 } from "./api";
 import { deviceInput, DeviceFormFields, deviceProblem, type DeviceFields } from "./HardwarePage";
+import { PlanView } from "./PlanView";
 
 type Mode = "ansicht" | "bearbeiten" | "inventur" | "ausmustern";
 
@@ -38,10 +44,12 @@ function ErrorBox({ text }: { text: string | null }) {
 function EditForm({
   device,
   master,
+  locations,
   onDone,
 }: {
   device: Hardware;
   master: MasterData;
+  locations: Locations | null;
   onDone: (next: Hardware | null) => void;
 }) {
   const [fields, setFields] = useState<DeviceFields>({
@@ -51,6 +59,7 @@ function EditForm({
     serial: device.serial,
     hostname: device.hostname,
     note: device.note,
+    roomId: device.location ? String(device.location.room_id) : "",
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -71,7 +80,7 @@ function EditForm({
 
   return (
     <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-      <DeviceFormFields master={master} value={fields} onChange={setFields} />
+      <DeviceFormFields master={master} locations={locations} value={fields} onChange={setFields} />
       <ErrorBox text={error} />
       <div className="project-actions">
         <button type="submit" className="button button-primary" disabled={busy}>
@@ -348,11 +357,13 @@ function RetireForm({
 function Overview({
   device,
   master,
+  locations,
   canEdit,
   onChange,
 }: {
   device: Hardware;
   master: MasterData | null;
+  locations: Locations | null;
   canEdit: boolean;
   onChange: (next: Hardware) => void;
 }) {
@@ -484,6 +495,18 @@ function Overview({
               <dd className="mono">{device.inventory_no ?? "keine"}</dd>
             </div>
             <div>
+              <dt>Standort</dt>
+              <dd>
+                {device.location ? (
+                  <Link to={locationPath(device.location.floor_id, device.location.room_id)}>
+                    {device.place}
+                  </Link>
+                ) : (
+                  "–"
+                )}
+              </dd>
+            </div>
+            <div>
               <dt>Hostname</dt>
               <dd className="mono">{device.hostname || "–"}</dd>
             </div>
@@ -504,7 +527,7 @@ function Overview({
           </dl>
         )}
         {mode === "bearbeiten" && master && (
-          <EditForm device={device} master={master} onDone={done} />
+          <EditForm device={device} master={master} locations={locations} onDone={done} />
         )}
         {mode === "inventur" && <InventoryNoForm device={device} onDone={done} />}
         {mode === "ausmustern" && master && (
@@ -542,6 +565,62 @@ function History({ device }: { device: Hardware }) {
   );
 }
 
+/** Reiter Standort: Grundriss der Etage, der Raum des Geräts ist hervorgehoben. */
+function LocationTab({ device }: { device: Hardware }) {
+  const floorId = device.location?.floor_id ?? null;
+  const [floor, setFloor] = useState<Floor | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (floorId === null) {
+      return;
+    }
+    let active = true;
+    fetchFloor(floorId).then(
+      (result) => active && setFloor(result),
+      (error: unknown) =>
+        active && setFailed(errorText(error, "Der Grundriss konnte nicht geladen werden.")),
+    );
+    return () => {
+      active = false;
+    };
+  }, [floorId]);
+
+  const location = device.location;
+  const shown = floor && floor.id === floorId ? floor : null;
+  return (
+    <section className="panel" aria-labelledby="standort-titel">
+      <div className="panel-head">
+        <h2 id="standort-titel">Standort</h2>
+        {location && (
+          <Link to={locationPath(location.floor_id, location.room_id)}>Bei Standorte öffnen</Link>
+        )}
+      </div>
+      <div className="detail-body">
+        {!location && <p>Diesem Gerät ist kein Raum zugeordnet.</p>}
+        {location && (
+          <p>
+            <strong>Raum {location.room}</strong>
+            <br />
+            <span className="small">
+              {location.city} › {location.site} › {location.section} › {location.floor}
+            </span>
+          </p>
+        )}
+        <ErrorBox text={failed} />
+        {location && !failed && !shown && <p role="status">Wird geladen …</p>}
+        {location && shown && (
+          <PlanView
+            floor={shown}
+            selectedId={location.room_id}
+            label={`Grundriss ${location.floor}, Raum ${location.room} hervorgehoben`}
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
 /** IT-Bestand › Hardware › Gerät: Übersicht mit Aktionen und Verlauf. */
 export function HardwareDetailPage({
   hardwareId,
@@ -555,6 +634,7 @@ export function HardwareDetailPage({
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
   const [device, setDevice] = useState<Hardware | null>(null);
   const [master, setMaster] = useState<MasterData | null>(null);
+  const [locations, setLocations] = useState<Locations | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
 
   useEffect(() => {
@@ -567,6 +647,10 @@ export function HardwareDetailPage({
     if (canEdit) {
       fetchMasterData().then(
         (result) => active && setMaster(result),
+        () => undefined,
+      );
+      fetchLocations().then(
+        (result) => active && setLocations(result),
         () => undefined,
       );
     }
@@ -617,11 +701,17 @@ export function HardwareDetailPage({
               </Link>
             ))}
           </nav>
-          {tab === "uebersicht" ? (
-            <Overview device={device} master={master} canEdit={canEdit} onChange={setDevice} />
-          ) : (
-            <History device={device} />
+          {tab === "uebersicht" && (
+            <Overview
+              device={device}
+              master={master}
+              locations={locations}
+              canEdit={canEdit}
+              onChange={setDevice}
+            />
           )}
+          {tab === "standort" && <LocationTab device={device} />}
+          {tab === "verlauf" && <History device={device} />}
         </>
       )}
     </div>

@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.62.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Standorte mit Grundrissen und Räumen.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Neu unter „Standorte“: Städte, Standorte, Gebäudeabschnitte und Etagen als aufklappbarer Baum mit Suche.",
+          "Je Etage lädst du einen Grundriss als Bild hoch und zeichnest die Räume darauf ein. Ohne Maus trägst du die Lage eines Raums als Zahlen ein.",
+          "Geräte lassen sich einem Raum zuordnen. Der Reiter „Standort“ im Gerät zeigt den Raum auf dem Grundriss.",
+          "Die Geräteliste hat eine Spalte „Standort“, und die Suche findet Geräte und Räume auch über den Standort.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.61.0",
     date: "2026-11-20",
     summary: "Neu: Bereich IT-Bestand mit Hardware, Inventurnummer und Ausmustern.",

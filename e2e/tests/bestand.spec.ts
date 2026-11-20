@@ -94,3 +94,54 @@ test("IT-Bestand: Lesende ändern nichts, ohne Rolle gibt es den Bereich nicht",
   const api = await page.request.get("/api/inventory/hardware");
   expect(api.status()).toBe(403);
 });
+
+test("IT-Bestand: Standorte anlegen und Etage öffnen", async ({
+  page,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  await loginAs(page, ["Bestand.Editor"], "Bernd Bestand");
+  await page.goto("/bestand/standorte");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Standorte" }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  const levels: [string, string, string | null][] = [
+    ["Stadt", `Stadt ${stamp}`, null],
+    ["Standort", `Haus ${stamp}`, `Stadt ${stamp}`],
+    ["Gebäudeabschnitt", `Bauteil ${stamp}`, `Haus ${stamp}`],
+  ];
+  for (const [level, name, parent] of levels) {
+    await page
+      .getByRole("combobox", { name: /^Neu anlegen/ })
+      .selectOption({ label: level });
+    if (parent) {
+      const parentSelect = page.getByRole("combobox", { name: /^Gehört zu/ });
+      const value = await parentSelect
+        .locator("option", { hasText: parent })
+        .getAttribute("value");
+      await parentSelect.selectOption(value ?? "");
+    }
+    await page.getByLabel("Name", { exact: true }).fill(name);
+    await page.getByRole("button", { name: "Anlegen" }).click();
+    await expect(page.getByLabel("Name", { exact: true })).toHaveValue("");
+  }
+  await page
+    .getByRole("combobox", { name: /^Neu anlegen/ })
+    .selectOption({ label: "Etage" });
+  const sectionOption = page
+    .getByRole("combobox", { name: /^Gehört zu/ })
+    .locator("option", { hasText: `Bauteil ${stamp}` });
+  const sectionValue = await sectionOption.getAttribute("value");
+  await page
+    .getByRole("combobox", { name: /^Gehört zu/ })
+    .selectOption(sectionValue ?? "");
+  await page.getByLabel("Name", { exact: true }).fill(`Etage ${stamp}`);
+  await page.getByRole("button", { name: "Anlegen" }).click();
+  await expect(page).toHaveURL(/\/bestand\/standorte\/etage\/\d+$/);
+  await expect(
+    page.getByRole("heading", { level: 2, name: `Etage ${stamp}` }),
+  ).toBeVisible();
+  await expect(page.getByText("Noch kein Grundriss")).toBeVisible();
+  await expectNoA11yViolations(page);
+});
