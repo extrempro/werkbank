@@ -85,11 +85,11 @@ Settings → **Code security**:
 
 Die Python-Pakete des Backends stehen mit festen Versionen und Hashes in `backend/uv.lock`. Docker-Image und CI installieren nur von dort (`uv export … | pip install --require-hashes`); `uv lock --check` in der CI meldet, wenn `pyproject.toml` und Lockfile nicht zusammenpassen. Dependabot (`package-ecosystem: "uv"`) hält das Lockfile aktuell, mit 7 Tagen Wartezeit.
 
-Nach einer Änderung an `pyproject.toml` das Lockfile von Hand neu erzeugen, mit derselben uv-Version wie in Dockerfile und CI und nur mit Versionen, die mindestens 7 Tage alt sind:
+Nach einer Änderung an `pyproject.toml` das Lockfile von Hand neu erzeugen, mit derselben uv-Version wie in Dockerfile und CI. Nur Versionen, die mindestens 7 Tage alt sind, nimmt uv von selbst (`[tool.uv] exclude-newer = "7 days"` in `pyproject.toml`):
 
 ```
 cd backend
-uvx uv@0.13.8 lock --exclude-newer "$(date -u -d '7 days ago' +%Y-%m-%dT00:00:00Z)"
+uvx uv@0.13.8 lock
 ```
 
 ## Releases

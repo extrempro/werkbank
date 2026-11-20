@@ -61,3 +61,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["db: Test braucht eine PostgreSQL-Datenbank (DATABASE_URL)"]
+
+[tool.uv]
+# Nur Versionen, die mindestens 7 Tage alt sind (wie die Wartezeit bei Dependabot)
+exclude-newer = "7 days"
