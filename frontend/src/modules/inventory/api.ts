@@ -1,5 +1,10 @@
 import { ApiError, deleteJson, getJson, postJson, putJson } from "../../api";
-import { INVENTORY_HARDWARE_PATH, INVENTORY_LOCATIONS_PATH } from "../../navigation";
+import {
+  INVENTORY_HARDWARE_PATH,
+  INVENTORY_LOCATIONS_PATH,
+  INVENTORY_POSITIONS_PATH,
+  INVENTORY_WORKPLACES_PATH,
+} from "../../navigation";
 
 const BASE = "/api/inventory";
 
@@ -34,6 +39,8 @@ export interface HardwareSummary {
   status: HardwareStatus;
   /** Raum mit Standort und Etage als Text; null ohne Raum. */
   place: string | null;
+  /** Stelle oder Arbeitsplatz als Text; null ohne Zuordnung. */
+  holder: string | null;
 }
 
 export interface Retire {
@@ -60,8 +67,17 @@ export interface DeviceLocation {
   city: string;
 }
 
+export interface HolderRef {
+  kind: "stelle" | "arbeitsplatz";
+  id: number;
+  label: string;
+}
+
 export interface Hardware extends HardwareSummary {
   location: DeviceLocation | null;
+  holder_ref: HolderRef | null;
+  position_id: number | null;
+  workplace_id: number | null;
   model_id: number | null;
   maker_id: number | null;
   note: string;
@@ -79,6 +95,8 @@ export interface HardwareInput {
   hostname: string;
   note: string;
   room_id: number | null;
+  position_id: number | null;
+  workplace_id: number | null;
 }
 
 export interface RetireInput {
@@ -114,10 +132,32 @@ export interface Reason {
   used: number;
 }
 
+export interface Department {
+  id: number;
+  name: string;
+  used: number;
+}
+
+export interface KitRow {
+  label: string;
+  count: number;
+  kind_ids: number[];
+}
+
+export interface Kit {
+  id: number;
+  name: string;
+  /** an so vielen Arbeitsplätzen gewählt */
+  used: number;
+  rows: KitRow[];
+}
+
 export interface MasterData {
   kinds: Kind[];
   makers: Maker[];
   reasons: Reason[];
+  departments: Department[];
+  kits: Kit[];
 }
 
 /** Die Reiter eines Geräts; der erste hat keinen eigenen Pfadteil. */
@@ -184,7 +224,7 @@ export function fetchMasterData(): Promise<MasterData> {
   return getJson(`${BASE}/master-data`);
 }
 
-export type MasterKind = "kinds" | "makers" | "reasons";
+export type MasterKind = "kinds" | "makers" | "reasons" | "departments";
 
 export function createEntry(
   kind: MasterKind,
@@ -201,7 +241,7 @@ export function updateEntry(
   return putJson(`${BASE}/${kind}/${id}`, body, { quiet: true });
 }
 
-export function deleteEntry(kind: MasterKind | "models", id: number): Promise<MasterData> {
+export function deleteEntry(kind: MasterKind | "models" | "kits", id: number): Promise<MasterData> {
   return deleteJson(`${BASE}/${kind}/${id}`, { quiet: true });
 }
 
@@ -211,6 +251,12 @@ export function createModel(makerId: number, name: string): Promise<MasterData> 
 
 export function updateModel(id: number, name: string): Promise<MasterData> {
   return putJson(`${BASE}/models/${id}`, { name }, { quiet: true });
+}
+
+export function saveKit(id: number | null, body: { name: string; rows: KitRow[] }) {
+  return id === null
+    ? postJson<MasterData>(`${BASE}/kits`, body, { quiet: true })
+    : putJson<MasterData>(`${BASE}/kits/${id}`, body, { quiet: true });
 }
 
 /** Text für Hersteller und Modell, z. B. „Hersteller A Monitor 27“; ohne Modell „–“. */
@@ -241,6 +287,7 @@ export function filterHardware(
       device.inventory_no ?? "",
       device.hostname,
       device.place ?? "",
+      device.holder ?? "",
     ].some((value) => value.toLocaleLowerCase("de").includes(needle));
   });
 }
@@ -564,4 +611,369 @@ export function roomChoices(tree: Locations): { label: string; rooms: RoomBrief[
     }
   }
   return groups;
+}
+
+// --- Stellen und Arbeitsplätze ---------------------------------------------------------------
+
+export interface Person {
+  oid: string;
+  name: string;
+  upn: string;
+  department?: string;
+  job_title?: string;
+  enabled?: boolean;
+}
+
+export interface PositionBrief {
+  id: number;
+  number: string;
+  name: string;
+  person_name: string;
+}
+
+export interface WorkplaceBrief {
+  id: number;
+  number: string;
+  name: string;
+  shared: boolean;
+  place: string | null;
+}
+
+export interface PositionSummary {
+  id: number;
+  number: string;
+  name: string;
+  department_id: number | null;
+  department: string;
+  person: Person | null;
+  workplaces: number;
+  hardware: number;
+  /** Standorte der Arbeitsplätze, z. B. „Haus Nord, Haus Süd“; leer ohne Arbeitsplatz */
+  sites: string;
+}
+
+export interface Position extends PositionSummary {
+  note: string;
+  created_at: string;
+  workplace_list: WorkplaceBrief[];
+  hardware_list: HardwareSummary[];
+  events: HardwareEvent[];
+}
+
+export interface PositionInput {
+  name: string;
+  department_id: number | null;
+  person: Person | null;
+  note: string;
+}
+
+export interface EquipmentRow {
+  label: string;
+  need: number;
+  have: number;
+  kinds: string[];
+  devices: string[];
+}
+
+export interface Equipment {
+  kit: string;
+  complete: boolean;
+  missing: number;
+  rows: EquipmentRow[];
+}
+
+export interface WorkplaceSummary {
+  id: number;
+  number: string;
+  name: string;
+  shared: boolean;
+  room_id: number | null;
+  place: string | null;
+  positions: PositionBrief[];
+  kit_id: number | null;
+  kit: string | null;
+  /** null ohne Vorlage */
+  complete: boolean | null;
+  missing: number;
+}
+
+export interface Workplace extends WorkplaceSummary {
+  note: string;
+  location: DeviceLocation | null;
+  created_at: string;
+  hardware_list: HardwareSummary[];
+  equipment: Equipment | null;
+  events: HardwareEvent[];
+}
+
+export interface WorkplaceInput {
+  name: string;
+  room_id: number | null;
+  shared: boolean;
+  kit_id: number | null;
+  position_ids: number[];
+  note: string;
+}
+
+export interface Assignees {
+  positions: PositionBrief[];
+  workplaces: WorkplaceBrief[];
+}
+
+export interface NumberRange {
+  key: "stelle" | "arbeitsplatz";
+  label: string;
+  prefix: string;
+  next_number: string;
+}
+
+export type PositionTab = "uebersicht" | "arbeitsplaetze" | "hardware" | "verlauf";
+
+export const POSITION_TABS: { id: PositionTab; label: string }[] = [
+  { id: "uebersicht", label: "Übersicht" },
+  { id: "arbeitsplaetze", label: "Arbeitsplätze" },
+  { id: "hardware", label: "Hardware" },
+  { id: "verlauf", label: "Verlauf" },
+];
+
+export type WorkplaceTab = "uebersicht" | "ausstattung" | "hardware" | "standort" | "verlauf";
+
+export const WORKPLACE_TABS: { id: WorkplaceTab; label: string }[] = [
+  { id: "uebersicht", label: "Übersicht" },
+  { id: "ausstattung", label: "Ausstattung" },
+  { id: "hardware", label: "Hardware" },
+  { id: "standort", label: "Standort" },
+  { id: "verlauf", label: "Verlauf" },
+];
+
+function detailPath(base: string, id: number, tab: string): string {
+  return tab === "uebersicht" ? `${base}/${id}` : `${base}/${id}/${tab}`;
+}
+
+function parseDetailPath<T extends string>(
+  base: string,
+  path: string,
+  tabs: readonly { id: T }[],
+): { id: number; tab: T } | null {
+  if (!path.startsWith(`${base}/`)) {
+    return null;
+  }
+  const match = /^(\d{1,9})(?:\/([a-z]{1,20}))?$/.exec(path.slice(base.length + 1));
+  if (!match) {
+    return null;
+  }
+  const tab = (match[2] ?? "uebersicht") as T;
+  if (!tabs.some((entry) => entry.id === tab) || (match[2] && tab === "uebersicht")) {
+    return null;
+  }
+  return { id: Number(match[1]), tab };
+}
+
+export function positionPath(id: number, tab: PositionTab = "uebersicht"): string {
+  return detailPath(INVENTORY_POSITIONS_PATH, id, tab);
+}
+
+export function parsePositionPath(path: string): { id: number; tab: PositionTab } | null {
+  return parseDetailPath(INVENTORY_POSITIONS_PATH, path, POSITION_TABS);
+}
+
+export function workplacePath(id: number, tab: WorkplaceTab = "uebersicht"): string {
+  return detailPath(INVENTORY_WORKPLACES_PATH, id, tab);
+}
+
+export function parseWorkplacePath(path: string): { id: number; tab: WorkplaceTab } | null {
+  return parseDetailPath(INVENTORY_WORKPLACES_PATH, path, WORKPLACE_TABS);
+}
+
+export function searchPeople(query: string): Promise<Person[]> {
+  return getJson(`${BASE}/people?q=${encodeURIComponent(query)}`);
+}
+
+export function fetchPositions(): Promise<PositionSummary[]> {
+  return getJson(`${BASE}/positions`);
+}
+
+export function fetchPosition(id: number): Promise<Position> {
+  return getJson(`${BASE}/positions/${id}`);
+}
+
+export function createPosition(body: PositionInput): Promise<Position> {
+  return postJson(`${BASE}/positions`, body, { quiet: true });
+}
+
+export function updatePosition(id: number, body: PositionInput): Promise<Position> {
+  return putJson(`${BASE}/positions/${id}`, body, { quiet: true });
+}
+
+export function deletePosition(id: number): Promise<PositionSummary[]> {
+  return deleteJson(`${BASE}/positions/${id}`, { quiet: true });
+}
+
+export function fetchWorkplaces(): Promise<WorkplaceSummary[]> {
+  return getJson(`${BASE}/workplaces`);
+}
+
+export function fetchWorkplace(id: number): Promise<Workplace> {
+  return getJson(`${BASE}/workplaces/${id}`);
+}
+
+export function createWorkplace(body: WorkplaceInput): Promise<Workplace> {
+  return postJson(`${BASE}/workplaces`, body, { quiet: true });
+}
+
+export function updateWorkplace(id: number, body: WorkplaceInput): Promise<Workplace> {
+  return putJson(`${BASE}/workplaces/${id}`, body, { quiet: true });
+}
+
+export function deleteWorkplace(id: number): Promise<WorkplaceSummary[]> {
+  return deleteJson(`${BASE}/workplaces/${id}`, { quiet: true });
+}
+
+export function fetchAssignees(): Promise<Assignees> {
+  return getJson(`${BASE}/assignees`);
+}
+
+export function fetchNumberRanges(): Promise<NumberRange[]> {
+  return getJson(`${BASE}/number-ranges`);
+}
+
+export function updateNumberRange(key: NumberRange["key"], prefix: string): Promise<NumberRange[]> {
+  return putJson(`${BASE}/number-ranges/${key}`, { prefix }, { quiet: true });
+}
+
+/** Eingaben eines Arbeitsplatzes aus seinem aktuellen Stand, z. B. vor einer Änderung. */
+export function workplaceInput(workplace: WorkplaceSummary & { note?: string }): WorkplaceInput {
+  return {
+    name: workplace.name,
+    room_id: workplace.room_id,
+    shared: workplace.shared,
+    kit_id: workplace.kit_id,
+    position_ids: workplace.positions.map((entry) => entry.id),
+    note: workplace.note ?? "",
+  };
+}
+
+/** Suche in Stellen über Nummer, Bezeichnung, Person, Abteilung und Standorte. */
+export function filterPositions(
+  list: readonly PositionSummary[],
+  query: string,
+): PositionSummary[] {
+  const needle = query.trim().toLocaleLowerCase("de");
+  if (!needle) {
+    return [...list];
+  }
+  return list.filter((entry) =>
+    [
+      entry.number,
+      entry.name,
+      entry.person?.name ?? "",
+      entry.person?.upn ?? "",
+      entry.department,
+      entry.sites,
+    ].some((value) => value.toLocaleLowerCase("de").includes(needle)),
+  );
+}
+
+export type WorkplaceFilter = "alle" | "einzeln" | "geteilt" | "frei" | "unvollstaendig";
+
+export const WORKPLACE_FILTERS: { id: WorkplaceFilter; label: string }[] = [
+  { id: "alle", label: "Alle" },
+  { id: "einzeln", label: "Einzeln" },
+  { id: "geteilt", label: "Geteilt" },
+  { id: "frei", label: "Frei" },
+  { id: "unvollstaendig", label: "Ausstattung fehlt" },
+];
+
+export function filterWorkplaces(
+  list: readonly WorkplaceSummary[],
+  filter: WorkplaceFilter,
+): WorkplaceSummary[] {
+  return list.filter((entry) => {
+    switch (filter) {
+      case "einzeln":
+        return !entry.shared;
+      case "geteilt":
+        return entry.shared;
+      case "frei":
+        return entry.positions.length === 0;
+      case "unvollstaendig":
+        return entry.complete === false;
+      default:
+        return true;
+    }
+  });
+}
+
+/** Text zur Ausstattung, z. B. „vollständig“, „2 fehlen“ oder „keine Vorlage“. */
+export function equipmentLabel(entry: Pick<WorkplaceSummary, "complete" | "missing">): string {
+  if (entry.complete === null) {
+    return "keine Vorlage";
+  }
+  if (entry.complete) {
+    return "vollständig";
+  }
+  return entry.missing === 1 ? "1 fehlt" : `${entry.missing} fehlen`;
+}
+
+export function workplaceName(entry: Pick<WorkplaceSummary, "number" | "name">): string {
+  return entry.name ? `${entry.number} ${entry.name}` : entry.number;
+}
+
+/** Wert im Auswahlfeld „Zugeordnet zu“: „s:4“ für Stelle 4, „w:2“ für Arbeitsplatz 2. */
+export function holderValue(positionId: number | null, workplaceId: number | null): string {
+  if (positionId !== null) {
+    return `s:${positionId}`;
+  }
+  return workplaceId !== null ? `w:${workplaceId}` : "";
+}
+
+export function parseHolder(value: string): {
+  position_id: number | null;
+  workplace_id: number | null;
+} {
+  const match = /^([sw]):(\d{1,9})$/.exec(value);
+  if (!match) {
+    return { position_id: null, workplace_id: null };
+  }
+  const id = Number(match[2]);
+  return match[1] === "s"
+    ? { position_id: id, workplace_id: null }
+    : { position_id: null, workplace_id: id };
+}
+
+// --- Ausstattungsvorlagen ---------------------------------------------------------------------
+
+export interface DraftRow {
+  label: string;
+  count: string;
+  kindIds: number[];
+}
+
+export function draftRows(rows: KitRow[]): DraftRow[] {
+  return rows.map((row) => ({ label: row.label, count: String(row.count), kindIds: row.kind_ids }));
+}
+
+/** Prüft eine Vorlage; liefert einen Fehlertext oder die Zeilen zum Speichern. */
+export function kitProblem(name: string, rows: DraftRow[]): string | KitRow[] {
+  if (!name.trim()) {
+    return "Bitte einen Namen für die Vorlage eintragen.";
+  }
+  if (rows.length === 0) {
+    return "Eine Vorlage braucht mindestens eine Zeile.";
+  }
+  const result: KitRow[] = [];
+  for (const [index, row] of rows.entries()) {
+    const count = Number(row.count);
+    if (!row.label.trim()) {
+      return `Zeile ${index + 1}: Bitte eine Bezeichnung eintragen.`;
+    }
+    if (row.kindIds.length === 0) {
+      return `Zeile ${index + 1}: Bitte mindestens eine passende Hardware-Art wählen.`;
+    }
+    if (!Number.isInteger(count) || count < 1 || count > 9) {
+      return `Zeile ${index + 1}: Die Anzahl muss zwischen 1 und 9 liegen.`;
+    }
+    result.push({ label: row.label.trim(), count, kind_ids: row.kindIds });
+  }
+  return result;
 }

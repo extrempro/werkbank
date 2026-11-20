@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.63.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Stellen, Arbeitsplätze und Vorlagen für die Ausstattung.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Neu unter „Stellen“: Jede Stelle hat eine Nummer, eine Abteilung und wird von einer Person besetzt, die du aus Entra auswählst. Hardware und Arbeitsplätze hängen an der Stelle, nicht an der Person.",
+          "Neu unter „Arbeitsplätze“: einzelne oder geteilte Arbeitsplätze in einem Raum, mit den Stellen, die sie nutzen.",
+          "Unter „Stammdaten“ legst du Vorlagen für die Ausstattung an, zum Beispiel ein Rechner und zwei Monitore. Am Arbeitsplatz siehst du dann, was noch fehlt.",
+          "Ein Gerät ordnest du unter „Bearbeiten“ einer Stelle oder einem Arbeitsplatz zu.",
+          "Stellen und Arbeitsplätze bekommen fortlaufende Nummern und haben einen Verlauf.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.62.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Standorte mit Grundrissen und Räumen.",

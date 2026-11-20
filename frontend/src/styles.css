@@ -6499,3 +6499,152 @@ p.badges {
     max-height: 16rem;
   }
 }
+
+/* IT-Bestand › Stellen und Arbeitsplätze */
+.panel-note {
+  margin: 0;
+  padding: 12px 20px 0;
+}
+
+.sub-head {
+  margin: 8px 0 0;
+  font-size: 1rem;
+}
+
+.link-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.seg-field {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+}
+
+.seg-field legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+.seg-field p {
+  margin: 0;
+}
+
+.picker {
+  display: grid;
+  gap: 6px;
+}
+
+.picker-label {
+  margin: 0;
+  font-weight: 600;
+}
+
+.picker input {
+  width: 100%;
+}
+
+.picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+.picker-hits ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+}
+
+.picker-hits p {
+  margin: 0;
+}
+
+.picker-hit {
+  display: grid;
+  width: 100%;
+  min-height: 44px;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker-hit:hover,
+.picker-hit:focus-visible {
+  background: var(--farbe-hover);
+}
+
+.equip-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.equip-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.equip-list .pill {
+  flex: none;
+  min-width: 5.5rem;
+  justify-content: center;
+}
+
+.kit-rows {
+  display: grid;
+  gap: 12px;
+}
+
+.kit-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+}
+
+.kit-row legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+.number-ranges {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 16px;
+}

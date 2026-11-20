@@ -102,6 +102,8 @@ describe("areasFor", () => {
     expect(id("/bestand/stammdaten")).toBe("bestand");
     expect(id("/bestand/standorte")).toBe("bestand");
     expect(id("/bestand/standorte/etage/3/raum/4")).toBe("bestand");
+    expect(id("/bestand/stellen/7/verlauf")).toBe("bestand");
+    expect(id("/bestand/arbeitsplaetze/2")).toBe("bestand");
   });
 
   it("ordnet jede Seite ihrem Bereich zu", () => {

@@ -24,6 +24,7 @@ from werkbank.modules.inventory.models import (
     InventoryRoom,
     InventorySection,
     InventorySite,
+    InventoryWorkplace,
 )
 from werkbank.modules.inventory.plans import inspect_plan
 
@@ -687,6 +688,12 @@ def delete_room(request: Request, room_id: ObjectId, user: Editor, db: DbDep) ->
         .where(InventoryHardware.room_id == row.id)
     ):
         raise _conflict("In diesem Raum steht noch Hardware.")
+    if db.scalar(
+        select(func.count())
+        .select_from(InventoryWorkplace)
+        .where(InventoryWorkplace.room_id == row.id)
+    ):
+        raise _conflict("In diesem Raum gibt es noch Arbeitsplätze.")
     floor_id = row.floor_id
     name = row.name
     db.delete(row)

@@ -5,6 +5,7 @@ import { INVENTORY_MASTER_PATH } from "../../navigation";
 import { navigate } from "../../router";
 import {
   createHardware,
+  fetchAssignees,
   fetchHardwareList,
   fetchLocations,
   fetchMasterData,
@@ -12,8 +13,10 @@ import {
   hardwarePath,
   INVENTORY_EDITOR_ROLE,
   modelLabel,
+  parseHolder,
   roomChoices,
   SOURCE_LABELS,
+  type Assignees,
   type HardwareSummary,
   type ListState,
   type Locations,
@@ -34,18 +37,23 @@ export interface DeviceFields {
   hostname: string;
   note: string;
   roomId: string;
+  /** „s:4“ für Stelle 4, „w:2“ für Arbeitsplatz 2, leer ohne Zuordnung */
+  holder: string;
 }
 
 /** Felder eines Geräts; beim Anlegen und Bearbeiten gleich. */
 export function DeviceFormFields({
   master,
   locations,
+  assignees,
   value,
   onChange,
 }: {
   master: MasterData;
   /** Standorte für die Raumauswahl; null, solange sie laden oder fehlen. */
   locations: Locations | null;
+  /** Stellen und Arbeitsplätze für „Zugeordnet zu“; null, solange sie laden oder fehlen. */
+  assignees: Assignees | null;
   value: DeviceFields;
   onChange: (next: DeviceFields) => void;
 }) {
@@ -146,6 +154,32 @@ export function DeviceFormFields({
       {locations && groups.length === 0 && (
         <p className="small">Räume lassen sich unter Standorte auf einem Grundriss anlegen.</p>
       )}
+      <label>
+        Zugeordnet zu (freiwillig)
+        <select value={value.holder} onChange={(event) => set({ holder: event.target.value })}>
+          <option value="">niemandem</option>
+          {assignees && assignees.positions.length > 0 && (
+            <optgroup label="Stellen">
+              {assignees.positions.map((entry) => (
+                <option key={entry.id} value={`s:${entry.id}`}>
+                  {entry.number} {entry.name}
+                  {entry.person_name ? ` (${entry.person_name})` : ""}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {assignees && assignees.workplaces.length > 0 && (
+            <optgroup label="Arbeitsplätze">
+              {assignees.workplaces.map((entry) => (
+                <option key={entry.id} value={`w:${entry.id}`}>
+                  {entry.number} {entry.name}
+                  {entry.place ? ` (${entry.place})` : ""}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+      </label>
     </>
   );
 }
@@ -170,6 +204,7 @@ export function deviceInput(value: DeviceFields) {
     hostname: value.hostname.trim(),
     note: value.note.trim(),
     room_id: value.roomId ? Number(value.roomId) : null,
+    ...parseHolder(value.holder),
   };
 }
 
@@ -177,10 +212,12 @@ export function deviceInput(value: DeviceFields) {
 function NewDeviceForm({
   master,
   locations,
+  assignees,
   onCancel,
 }: {
   master: MasterData;
   locations: Locations | null;
+  assignees: Assignees | null;
   onCancel: () => void;
 }) {
   const [fields, setFields] = useState<DeviceFields>({
@@ -191,6 +228,7 @@ function NewDeviceForm({
     hostname: "",
     note: "",
     roomId: "",
+    holder: "",
   });
   const [inventoryNo, setInventoryNo] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -233,6 +271,7 @@ function NewDeviceForm({
         <DeviceFormFields
           master={master}
           locations={locations}
+          assignees={assignees}
           value={fields}
           onChange={setFields}
         />
@@ -303,6 +342,7 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
   const list = loaded && loaded.state === state ? loaded.items : null;
   const [master, setMaster] = useState<MasterData | null>(null);
   const [locations, setLocations] = useState<Locations | null>(null);
+  const [assignees, setAssignees] = useState<Assignees | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [kindId, setKindId] = useState<number | null>(null);
@@ -318,6 +358,10 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
     // Ohne Standorte bleibt die Raumauswahl leer; das ist kein Fehler der Seite.
     fetchLocations().then(
       (result) => active && setLocations(result),
+      () => undefined,
+    );
+    fetchAssignees().then(
+      (result) => active && setAssignees(result),
       () => undefined,
     );
     return () => {
@@ -372,7 +416,12 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
         </p>
       )}
       {canEdit && creating && master && master.kinds.length > 0 && (
-        <NewDeviceForm master={master} locations={locations} onCancel={() => setCreating(false)} />
+        <NewDeviceForm
+          master={master}
+          locations={locations}
+          assignees={assignees}
+          onCancel={() => setCreating(false)}
+        />
       )}
 
       {failed && (

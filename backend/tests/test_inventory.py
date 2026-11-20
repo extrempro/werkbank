@@ -15,13 +15,17 @@ from werkbank.core.models import AuditLog
 from werkbank.modules.inventory.api import single_line
 from werkbank.modules.inventory.models import (
     InventoryCity,
+    InventoryDepartment,
     InventoryFloor,
     InventoryHardware,
     InventoryKind,
+    InventoryKit,
     InventoryMaker,
+    InventoryPosition,
     InventoryRoom,
     InventorySection,
     InventorySite,
+    InventoryWorkplace,
 )
 from werkbank.modules.inventory.plans import inspect_plan, jpeg_size
 from werkbank.modules.inventory.search import escape_like
@@ -34,6 +38,8 @@ HEADERS = {"Origin": ORIGIN}
 def db(db_session: Session) -> Iterator[Session]:
     def clean() -> None:
         db_session.execute(delete(InventoryHardware))
+        for staff in (InventoryWorkplace, InventoryPosition, InventoryKit, InventoryDepartment):
+            db_session.execute(delete(staff))
         for model in (
             InventoryRoom,
             InventoryFloor,

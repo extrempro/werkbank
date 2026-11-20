@@ -180,6 +180,10 @@ describe("Gerät: Standort", () => {
       source: "manuell",
       status: "aktiv",
       place: "Büro 0.12 · Haus Nord, Erdgeschoss",
+      holder: null,
+      holder_ref: null,
+      position_id: null,
+      workplace_id: null,
       location: {
         room_id: 9,
         room: "Büro 0.12",

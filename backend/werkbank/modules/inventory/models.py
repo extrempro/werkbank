@@ -9,6 +9,7 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Float,
@@ -171,6 +172,7 @@ class InventoryHardware(Base):
             unique=True,
             postgresql_where=sql_text("inventory_no IS NOT NULL"),
         ),
+        CheckConstraint("position_id IS NULL OR workplace_id IS NULL", name="one_holder"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -185,10 +187,16 @@ class InventoryHardware(Base):
     serial: Mapped[str] = mapped_column(String(80), default="", server_default="")
     inventory_no: Mapped[str | None] = mapped_column(String(40))
     hostname: Mapped[str] = mapped_column(String(80), default="", server_default="")
-    # Raum, in dem das Gerät steht (z. B. Lager oder Besprechungsraum); später kommen
-    # Stellen und Arbeitsplätze dazu
+    # Raum, in dem das Gerät steht (z. B. Lager oder Besprechungsraum)
     room_id: Mapped[int | None] = mapped_column(
         ForeignKey("inventory_rooms.id", ondelete="RESTRICT"), index=True
+    )
+    # Zugeordnet zu einer Stelle oder einem Arbeitsplatz (höchstens eins von beiden)
+    position_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_positions.id", ondelete="RESTRICT"), index=True
+    )
+    workplace_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_workplaces.id", ondelete="RESTRICT"), index=True
     )
     # Herkunft: von Hand erfasst („manuell“); später auch aus NinjaOne
     source: Mapped[str] = mapped_column(String(16), default="manuell", server_default="manuell")
@@ -213,13 +221,29 @@ class InventoryHardware(Base):
 
 
 class InventoryEvent(Base):
-    """Ein Eintrag im Verlauf eines Geräts. Der Text entsteht in der Werkbank selbst."""
+    """Ein Eintrag im Verlauf eines Geräts, einer Stelle oder eines Arbeitsplatzes.
+
+    Der Text entsteht in der Werkbank selbst. Genau eins der drei Ziele ist gesetzt.
+    """
 
     __tablename__ = "inventory_events"
+    __table_args__ = (
+        CheckConstraint(
+            "(hardware_id IS NOT NULL)::int + (position_id IS NOT NULL)::int"
+            " + (workplace_id IS NOT NULL)::int = 1",
+            name="one_target",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    hardware_id: Mapped[int] = mapped_column(
+    hardware_id: Mapped[int | None] = mapped_column(
         ForeignKey("inventory_hardware.id", ondelete="CASCADE"), index=True
+    )
+    position_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_positions.id", ondelete="CASCADE"), index=True
+    )
+    workplace_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_workplaces.id", ondelete="CASCADE"), index=True
     )
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -227,3 +251,120 @@ class InventoryEvent(Base):
     # None: von der Werkbank selbst (z. B. ein Abgleich)
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     text: Mapped[str] = mapped_column(String(400))
+
+
+class InventoryDepartment(Base):
+    """Eine Abteilung, der Stellen angehören (Stammdaten)."""
+
+    __tablename__ = "inventory_departments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), unique=True)
+
+
+class InventoryNumberRange(Base):
+    """Nummernkreis: Präfix und nächste Zahl, z. B. für Stellen „ST-“ und 12 → „ST-012“."""
+
+    __tablename__ = "inventory_number_ranges"
+
+    # stelle oder arbeitsplatz (später auch verleih)
+    key: Mapped[str] = mapped_column(String(16), primary_key=True)
+    prefix: Mapped[str] = mapped_column(String(10))
+    next_value: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+
+
+class InventoryPosition(Base):
+    """Eine Stelle. Die Besetzung pflegt die Werkbank; die Person stammt aus Entra.
+
+    Hardware und Arbeitsplätze hängen an der Stelle, nicht an der Person.
+    """
+
+    __tablename__ = "inventory_positions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(20), unique=True)
+    name: Mapped[str] = mapped_column(String(120))
+    department_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_departments.id", ondelete="RESTRICT"), index=True
+    )
+    # Person aus Entra (Objekt-ID, Name und Anmeldename zum Zeitpunkt der Auswahl)
+    person_oid: Mapped[str | None] = mapped_column(String(36), index=True)
+    person_name: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    person_upn: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    note: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class InventoryKit(Base):
+    """Vorlage für die Ausstattung eines Arbeitsplatzes (Stammdaten)."""
+
+    __tablename__ = "inventory_kits"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), unique=True)
+
+
+class InventoryKitRow(Base):
+    """Eine Zeile einer Vorlage: Bezeichnung, passende Arten und Anzahl."""
+
+    __tablename__ = "inventory_kit_rows"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kit_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_kits.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    label: Mapped[str] = mapped_column(String(80))
+    count: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+
+
+class InventoryKitRowKind(Base):
+    """Eine Hardware-Art, die zu einer Zeile der Vorlage passt."""
+
+    __tablename__ = "inventory_kit_row_kinds"
+
+    row_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_kit_rows.id", ondelete="CASCADE"), primary_key=True
+    )
+    kind_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_kinds.id", ondelete="RESTRICT"), primary_key=True, index=True
+    )
+
+
+class InventoryWorkplace(Base):
+    """Ein Arbeitsplatz in einem Raum: einzeln (eine Stelle) oder geteilt (mehrere)."""
+
+    __tablename__ = "inventory_workplaces"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(20), unique=True)
+    # freiwillige Bezeichnung, z. B. „Fensterplatz“
+    name: Mapped[str] = mapped_column(String(80), default="", server_default="")
+    room_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_rooms.id", ondelete="RESTRICT"), index=True
+    )
+    shared: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("false"))
+    kit_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_kits.id", ondelete="RESTRICT"), index=True
+    )
+    note: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class InventoryWorkplacePosition(Base):
+    """Welche Stellen einen Arbeitsplatz nutzen."""
+
+    __tablename__ = "inventory_workplace_positions"
+
+    workplace_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_workplaces.id", ondelete="CASCADE"), primary_key=True
+    )
+    position_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_positions.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
