@@ -104,7 +104,7 @@ describe("Hilfsfunktionen", () => {
     expect(parseHardwarePath("/bestand/hardware/7")).toEqual({ id: 7, tab: "uebersicht" });
     expect(parseHardwarePath("/bestand/hardware/7/verlauf")).toEqual({ id: 7, tab: "verlauf" });
     expect(parseHardwarePath("/bestand/hardware/x")).toBeNull();
-    expect(parseHardwarePath("/bestand/hardware/7/technik")).toBeNull();
+    expect(parseHardwarePath("/bestand/hardware/7/unbekannt")).toBeNull();
   });
 
   it("sucht in allen Kennungen und filtert nach Art", () => {
