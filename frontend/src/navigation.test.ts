@@ -82,6 +82,8 @@ describe("areasFor", () => {
     ]);
     expect(areasFor(["Projekte.Reader"]).map((area) => area.id)).toEqual(["werkbank", "projekte"]);
     expect(areasFor(["Budget.Reader"]).map((area) => area.id)).not.toContain("projekte");
+    expect(areasFor(["Bestand.Reader"]).map((area) => area.id)).toEqual(["werkbank", "bestand"]);
+    expect(areasFor(["Projekte.Reader"]).map((area) => area.id)).not.toContain("bestand");
   });
 
   it("ordnet die Seiten eines Projekts dem Bereich IT-Projekte zu", () => {
@@ -90,6 +92,14 @@ describe("areasFor", () => {
     expect(id("/projekte")).toBe("projekte");
     expect(id("/projekte/12")).toBe("projekte");
     expect(id("/projekte/12/jour-fixe")).toBe("projekte");
+  });
+
+  it("ordnet die Seiten des IT-Bestands dem Bereich zu", () => {
+    const areas = areasFor(["Bestand.Reader", "Projekte.Reader"]);
+    const id = (path: string) => areaForPath(areas, path)?.id;
+    expect(id("/bestand/hardware")).toBe("bestand");
+    expect(id("/bestand/hardware/7")).toBe("bestand");
+    expect(id("/bestand/stammdaten")).toBe("bestand");
   });
 
   it("ordnet jede Seite ihrem Bereich zu", () => {

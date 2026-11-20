@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.61.0] – 2026-11-20
+
+Neuer Bereich IT-Bestand, Schritt 1: Hardware von Hand, Inventurnummer, Ausmustern, Stammdaten.
+
+### IT-Bestand
+
+- **Rollen** `Bestand.Reader` (ansehen) und `Bestand.Editor` (pflegen); neuer Bereich „IT-Bestand“ in der Navigation mit „Hardware“ und „Stammdaten“
+- **Hardware:** Liste mit Status-Filter (im Bestand, ausgemustert, alle), Suche über Bezeichnung, Art, Modell, Seriennummer, Inventurnummer und Hostname, Filter nach Art; Gerät mit Reitern Übersicht und Verlauf
+- **Erfassen und Bearbeiten** von Hand; Seriennummer (ohne Groß-/Kleinschreibung) und Inventurnummer sind eindeutig, bei einer Doppelung nennt die Antwort das andere Gerät
+- **Inventurnummer** mit eigenem Endpunkt (`PUT /api/inventory/hardware/{id}/inventory-no`) und Rückfrage in der Oberfläche, auch beim Anlegen
+- **Ausmustern** statt Löschen: Grund aus den Stammdaten, Verbleib (entsorgt, verkauft oder abgegeben, an Leasing zurück, beim Hersteller), Datum (höchstens ein Tag in der Zukunft wegen Zeitzone), Notiz; bei Arten mit Datenträger ist die Bestätigung „gelöscht oder vernichtet“ Pflicht. „Wieder in Betrieb nehmen“ macht es rückgängig
+- **Verlauf** je Gerät; Texte erzeugt die Werkbank selbst, Darstellung nur als Text
+- **Stammdaten:** Hardware-Arten mit Merkmal „hat Datenträger“, Hersteller mit Modellen, Gründe fürs Ausmustern; Startwerte über die Migration; verwendete Einträge lassen sich nicht löschen
+- **Suche** der Werkbank liefert Geräte (LIKE-Platzhalter werden als Text behandelt)
+- **Audit-Log** für alle Änderungen (Modul `bestand`), ohne Personendaten
+- **Tabellen als Karten:** neue gemeinsame Klasse `table-cards` mit `data-label` je Zelle; unter 760 px Breite des Bereichs werden Zeilen zu Karten
+- Migration 0041, Spec, Entra-Einrichtung, Datenschutz, ASVS und Handbuch angepasst
+
 ## [0.60.0] – 2026-11-18
 
 Abstände im Menü einstellbar.

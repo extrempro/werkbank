@@ -118,6 +118,8 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Monitoring Leser | `Monitoring.Reader` | Bereich IT-Monitoring ansehen (z. B. DNS-Abgleich mit NetBox) |
 | Projekte Leser | `Projekte.Reader` | IT-Projekte ansehen: Übersicht, Budget, Jour Fixe und Aufgaben |
 | Projekte Bearbeiter | `Projekte.Editor` | IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe mit Anhängen und Aufgaben |
+| IT-Bestand Leser | `Bestand.Reader` | IT-Bestand ansehen: Hardware und Stammdaten |
+| IT-Bestand Bearbeiter | `Bestand.Editor` | IT-Bestand pflegen: Hardware erfassen, Inventurnummern setzen, ausmustern, Stammdaten |
 
 Für alle Rollen gilt:
 - **Zulässige Mitgliedstypen:** Benutzer/Gruppen
@@ -153,6 +155,8 @@ Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wä
 | `GG-Werkbank-Monitoring` | Monitoring.Reader |
 | `GG-Werkbank-Projekte-Lesen` | Projekte.Reader |
 | `GG-Werkbank-Projekte` | Projekte.Editor |
+| `GG-Werkbank-Bestand-Lesen` | Bestand.Reader |
+| `GG-Werkbank-Bestand` | Bestand.Editor |
 | `GG-Werkbank-Budget-Leser` | Budget.Reader |
 
 Dann: Unternehmensanwendungen → Werkbank → **Benutzer und Gruppen → Benutzer/Gruppe hinzufügen** → Gruppe wählen → Rolle wählen → **Zuweisen**. Für jede Gruppe wiederholen.

@@ -95,6 +95,7 @@ const PATHS = {
   monitoring: ["M3 12h4l3-8 4 16 3-8h4"],
   import: ["M12 4v11", "M7 10l5 5 5-5", "M4 20h16"],
   projekte: ["M3 8h18v12H3z", "M8 8V5h8v3", "M3 13h18"],
+  bestand: ["M4 5h16v11H4z", "M9 20h6", "M12 16v4"],
   handbuch: [
     "M4 5a2 2 0 0 1 2-2h6v17H6a2 2 0 0 0-2 2z",
     "M20 5a2 2 0 0 0-2-2h-6v17h6a2 2 0 0 1 2 2z",

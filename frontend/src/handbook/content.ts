@@ -15,6 +15,8 @@ const TOOLS = "Tools.User";
 const MONITORING = "Monitoring.Reader";
 const PROJECTS_READER = "Projekte.Reader";
 const PROJECTS_EDITOR = "Projekte.Editor";
+const INVENTORY_READER = "Bestand.Reader";
+const INVENTORY_EDITOR = "Bestand.Editor";
 
 /**
  * Das Handbuch der Werkbank. Bei jeder Änderung an der Anwendung prüfen, ob ein Kapitel
@@ -91,7 +93,7 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "list",
             items: [
               "Kopfzeile: Name der Werkbank, Suchfeld, Glocke für Benachrichtigungen, „Meine Aufgaben“, dein Konto und „Abmelden“.",
-              "Bereiche: Oben in der Navigation wechselst du zwischen Werkbank, Microsoft 365, Evergreen, IT-Budget, IT-Projekte, IT-Tools und IT-Monitoring. Darunter stehen nur die Seiten des gewählten Bereichs.",
+              "Bereiche: Oben in der Navigation wechselst du zwischen Werkbank, Microsoft 365, Evergreen, IT-Budget, IT-Projekte, IT-Bestand, IT-Tools und IT-Monitoring. Darunter stehen nur die Seiten des gewählten Bereichs.",
               "Zähler an der Navigation zeigen, wie viele Aufgaben auf einer Seite oder in einem Bereich warten.",
               "Unten in der Navigation stehen vier Knöpfe: Handbuch, Neuigkeiten, hell oder dunkel und „Navigation einklappen“. Eingeklappt bleiben nur die Symbole; die Wahl merkt sich dein Browser.",
               "Auf dem Handy öffnet der Knopf „Menü“ oben links die Navigation.",
@@ -258,6 +260,11 @@ export const CHAPTERS: readonly Chapter[] = [
               [
                 "Projekte.Editor",
                 "IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe und Aufgaben",
+              ],
+              ["Bestand.Reader", "den IT-Bestand ansehen: Hardware und Stammdaten"],
+              [
+                "Bestand.Editor",
+                "Hardware erfassen, Inventurnummern setzen, Geräte ausmustern, Stammdaten pflegen",
               ],
             ],
           },
@@ -1141,6 +1148,101 @@ export const CHAPTERS: readonly Chapter[] = [
             text: "Ein neues Projekt legst du unter „Alle Projekte“ mit „Neues Projekt“ an; danach öffnen sich seine Einstellungen. Beendete Projekte setzt du auf „abgeschlossen“: Sie bleiben lesbar, im IT-Budget lassen sich ihnen keine Posten mehr zuordnen. „Projekt löschen“ entfernt das Projekt mit Jour Fixe, Anhängen und Aufgaben; die Budgetposten bleiben im IT-Budget und verlieren nur die Zuordnung.",
           },
         ],
+      },
+    ],
+  },
+  {
+    id: "it-bestand",
+    title: "IT-Bestand",
+    summary: "Hardware mit Inventurnummer und Verlauf, Ausmustern und die Stammdaten dazu.",
+    roles: [INVENTORY_READER, INVENTORY_EDITOR],
+    sections: [
+      {
+        id: "hardware",
+        title: "Hardware im Überblick",
+        blocks: [
+          {
+            kind: "text",
+            text: "Unter „Hardware“ stehen alle Geräte mit Art, Hersteller und Modell, Seriennummer, Inventurnummer und Herkunft. Die Suche findet Geräte über Bezeichnung, Seriennummer, Inventurnummer, Hostname, Art und Modell; daneben filterst du nach Art. Vorgabe ist die Ansicht „Im Bestand“; ausgemusterte Geräte findest du unter „Ausgemustert“ oder „Alle“.",
+          },
+          {
+            kind: "text",
+            text: "Ein Gerät hat die Reiter Übersicht und Verlauf. Im Verlauf steht jede Änderung mit Datum und Person, zum Beispiel eine neue Inventurnummer oder das Ausmustern.",
+          },
+          {
+            kind: "hint",
+            text: "Auf schmalen Bildschirmen wird die Liste zu Karten: oben das Gerät, darunter die Angaben mit ihrer Bezeichnung.",
+          },
+        ],
+        links: [{ to: "/bestand/hardware", label: "Zur Hardware" }],
+      },
+      {
+        id: "erfassen",
+        title: "Gerät erfassen und ändern",
+        roles: [INVENTORY_EDITOR],
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Unter „Hardware“ auf „Gerät erfassen“ tippen.",
+              "Bezeichnung und Art eintragen, auf Wunsch Hersteller und Modell, Seriennummer, Hostname und eine Notiz.",
+              "Hat das Gerät schon einen Aufkleber mit Inventurnummer, sie gleich mit eintragen.",
+              "„Gerät anlegen“ tippen. Mit Inventurnummer fragt die Werkbank noch einmal nach: Vergleiche die Nummer mit dem Aufkleber und bestätige.",
+            ],
+          },
+          {
+            kind: "text",
+            text: "Eine Seriennummer und eine Inventurnummer gehören immer zu genau einem Gerät. Ist eine Nummer schon vergeben, nennt die Werkbank das Gerät, bei dem sie steht.",
+          },
+          {
+            kind: "text",
+            text: "In der Übersicht eines Geräts änderst du mit „Bearbeiten“ die Angaben. Die Inventurnummer hat einen eigenen Knopf: Nach „Weiter“ fragt die Werkbank nach, bevor sie die Nummer setzt, ändert oder – bei leerem Feld – entfernt.",
+          },
+        ],
+      },
+      {
+        id: "ausmustern",
+        title: "Gerät ausmustern",
+        roles: [INVENTORY_EDITOR],
+        blocks: [
+          {
+            kind: "text",
+            text: "Geräte werden nicht gelöscht, sondern ausgemustert. So bleiben Inventurnummer, Seriennummer und Verlauf für Inventur und Nachweise erhalten.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Im Gerät auf „Ausmustern“ tippen.",
+              "Grund, Verbleib und Datum wählen. Verbleib ist entsorgt, verkauft oder abgegeben, an Leasing zurück oder beim Hersteller.",
+              "Bei Geräten mit Datenträger (zum Beispiel Notebook und PC) bestätigen, dass er gelöscht oder vernichtet ist. Ohne diesen Haken geht es nicht weiter.",
+              "Auf Wunsch eine Notiz eintragen, etwa die Nummer des Entsorgungsnachweises.",
+              "„Weiter“ und dann „Ja, ausmustern“ tippen.",
+            ],
+          },
+          {
+            kind: "hint",
+            text: "Versehentlich ausgemustert? Im Gerät „Wieder in Betrieb nehmen“ tippen. Auch das steht im Verlauf.",
+          },
+        ],
+      },
+      {
+        id: "stammdaten",
+        title: "Stammdaten",
+        blocks: [
+          {
+            kind: "list",
+            items: [
+              "Hardware-Arten: zum Beispiel Notebook, PC, Monitor. Bei jeder Art legst du fest, ob sie einen Datenträger hat.",
+              "Hersteller und Modelle: je Hersteller beliebig viele Modelle.",
+              "Gründe fürs Ausmustern: zum Beispiel defekt, veraltet, verloren oder gestohlen, Garantietausch.",
+            ],
+          },
+          {
+            kind: "text",
+            text: "Einträge, die noch von Geräten verwendet werden, lassen sich umbenennen, aber nicht löschen. Pflegen dürfen sie nur Bearbeiterinnen und Bearbeiter des IT-Bestands.",
+          },
+        ],
+        links: [{ to: "/bestand/stammdaten", label: "Zu den Stammdaten" }],
       },
     ],
   },

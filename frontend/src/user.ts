@@ -16,6 +16,8 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Monitoring.Reader", "IT-Monitoring"],
   ["Projekte.Editor", "IT-Projekte"],
   ["Projekte.Reader", "IT-Projekte"],
+  ["Bestand.Editor", "IT-Bestand"],
+  ["Bestand.Reader", "IT-Bestand"],
 ];
 
 const ROLE_INFO: Record<string, { label: string; description: string }> = {
@@ -74,6 +76,15 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
     label: "Projekte Bearbeiter",
     description:
       "IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe mit Anhängen und Aufgaben",
+  },
+  "Bestand.Reader": {
+    label: "IT-Bestand Leser",
+    description: "IT-Bestand ansehen: Hardware und Stammdaten",
+  },
+  "Bestand.Editor": {
+    label: "IT-Bestand Bearbeiter",
+    description:
+      "IT-Bestand pflegen: Hardware erfassen, Inventurnummern setzen, ausmustern, Stammdaten",
   },
 };
 

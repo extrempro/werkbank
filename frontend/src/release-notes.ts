@@ -24,6 +24,28 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.61.0",
+    date: "2026-11-20",
+    summary: "Neu: Bereich IT-Bestand mit Hardware, Inventurnummer und Ausmustern.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Neuer Bereich IT-Bestand: Unter „Hardware“ stehen alle Geräte mit Art, Hersteller und Modell, Seriennummer und Inventurnummer. Die Suche findet Geräte über alle Nummern.",
+          "Geräte erfasst du von Hand. Vor dem Setzen oder Ändern einer Inventurnummer fragt die Werkbank noch einmal nach.",
+          "Geräte werden ausgemustert statt gelöscht: mit Grund, Verbleib und Datum, bei Notebooks und PCs mit Bestätigung, dass der Datenträger gelöscht oder vernichtet ist. Ausgemusterte Geräte bleiben mit ihrem Verlauf erhalten.",
+          "Jedes Gerät hat einen Verlauf mit allen Änderungen.",
+          "Unter „Stammdaten“ pflegst du Hardware-Arten, Hersteller und Modelle sowie die Gründe fürs Ausmustern.",
+          "Auf kleinen Bildschirmen wird die Geräteliste zu übersichtlichen Karten.",
+        ],
+      },
+      {
+        area: "Werkbank",
+        entries: ["Die Suche oben findet jetzt auch Geräte aus dem IT-Bestand."],
+      },
+    ],
+  },
+  {
     version: "0.60.0",
     date: "2026-11-18",
     summary: "Neu: Abstände im Menü einstellbar.",
