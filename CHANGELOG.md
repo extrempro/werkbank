@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.67.1] – 2026-11-20
+
+### Behoben
+
+- **Personensuche im IT-Bestand** (Stelle besetzen, neuer Verleih): meldete „Die Anmeldedaten für Entra sind nicht lesbar“, weil das Zertifikat der Collector-App nur im Container `worker` eingebunden war, die Suche aber im Container `web` läuft. `deploy/docker-compose.yml` bindet `collector_client_key.pem` und `collector_client_cert.pem` jetzt auch in `web` ein; `deploy/README.md` angepasst. **Beim Update die neue `docker-compose.yml` übernehmen.**
+
 ## [0.67.0] – 2026-11-20
 
 ### IT-Bestand

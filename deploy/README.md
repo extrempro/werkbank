@@ -37,7 +37,7 @@ Compose erwartet **sechs Dateien** in einem Ordner auf dem Docker-Host. Fehlt ei
 |---|---|---|
 | `postgres_password` | Passwort der Datenbank | `web`, `worker`, `db` |
 | `entra_client_key.pem`, `entra_client_cert.pem` | Zertifikat der App-Registrierung „Werkbank“ (Anmeldung) | `web` |
-| `collector_client_key.pem`, `collector_client_cert.pem` | Zertifikat der App-Registrierung „Werkbank Collector“ (Abruf) | `worker` |
+| `collector_client_key.pem`, `collector_client_cert.pem` | Zertifikat der App-Registrierung „Werkbank Collector“ (Abruf, Personensuche im IT-Bestand) | `worker`, `web` |
 | `settings_key` | Schlüssel, mit dem geheime Werte aus der Verwaltung (z. B. das SMTP-Passwort) verschlüsselt in der Datenbank liegen | `web`, `worker` |
 
 Ein Secret ist hier eine Datei auf dem Docker-Host, die Docker beim Start in den Container einblendet. So stehen Passwort und Schlüssel weder im Repository noch in den Umgebungsvariablen.

@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.67.1",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Personensuche funktioniert wieder.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Die Suche nach Personen beim Besetzen einer Stelle und beim Verleih meldete, dass die Anmeldedaten für Entra nicht lesbar seien. Das ist behoben.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.67.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Suche und „Mehr anzeigen“ bei Vorgängen und Verleih.",
