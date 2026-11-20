@@ -107,6 +107,11 @@ def _serial(system: dict[str, Any]) -> str:
     return ""
 
 
+def _part(item: dict[str, Any], key: str) -> dict[str, Any]:
+    value = item.get(key)
+    return value if isinstance(value, dict) else {}
+
+
 def parse_device(item: dict[str, Any], policies: dict[int, str]) -> NinjaDevice | None:
     """Ein Eintrag aus /v2/devices-detailed; None für Nicht-Arbeitsplatzrechner."""
     ninja_id = item.get("id")
@@ -115,9 +120,9 @@ def parse_device(item: dict[str, Any], policies: dict[int, str]) -> NinjaDevice 
         return None
     if node_class not in WORKSTATION_CLASSES:
         return None
-    system = item.get("system") if isinstance(item.get("system"), dict) else {}
-    os_info = item.get("os") if isinstance(item.get("os"), dict) else {}
-    memory = item.get("memory") if isinstance(item.get("memory"), dict) else {}
+    system = _part(item, "system")
+    os_info = _part(item, "os")
+    memory = _part(item, "memory")
     chassis = _text(system.get("chassisType"), 40).upper()
     kind = "Notebook" if chassis in LAPTOP_CHASSIS else "PC"
     capacity = memory.get("capacity")

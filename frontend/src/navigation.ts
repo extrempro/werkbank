@@ -48,6 +48,7 @@ export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
 export const INVENTORY_MASTER_PATH = "/bestand/stammdaten";
 export const INVENTORY_LOCATIONS_PATH = "/bestand/standorte";
 export const INVENTORY_POSITIONS_PATH = "/bestand/stellen";
+export const INVENTORY_CASES_PATH = "/bestand/vorgaenge";
 export const INVENTORY_WORKPLACES_PATH = "/bestand/arbeitsplaetze";
 export const ADMIN_PATH = "/verwaltung";
 export const ADMIN_ROLES_PATH = "/verwaltung/rollen";
@@ -220,6 +221,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
         {
           title: "Bestand",
           items: [
+            { path: INVENTORY_CASES_PATH, label: "Vorgänge", icon: "vorgaenge" },
             { path: INVENTORY_HARDWARE_PATH, label: "Hardware", icon: "bestand" },
             { path: INVENTORY_POSITIONS_PATH, label: "Stellen", icon: "stellen" },
             { path: INVENTORY_WORKPLACES_PATH, label: "Arbeitsplätze", icon: "arbeitsplatz" },

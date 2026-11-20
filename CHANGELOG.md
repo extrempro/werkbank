@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.64.0] – 2026-11-20
+
+IT-Bestand, Schritt 4: Abgleich mit NinjaOne und Vorgänge.
+
+### IT-Bestand
+
+- **Abgleich mit NinjaOne** alle 30 Minuten (Auftrag `bestand.ninjaone`): Anmeldung als API-App mit Client-ID und Secret (OAuth 2.0 Client Credentials, Scope „monitoring“), gelesen werden nur Arbeitsplatzrechner (Windows, macOS, Linux) über `/v2/devices-detailed` und `/v2/policies`. Erkennung erst über die NinjaOne-ID, dann über die Seriennummer; der Hostname ist nur ein Hinweis. Hostname, Kenndaten (Betriebssystem, IP-Adressen, Arbeitsspeicher, Richtlinie, zuletzt online) werden übernommen und stehen im Verlauf. Liefert NinjaOne keine Geräte, obwohl welche verknüpft sind, bricht der Lauf ohne Änderungen ab
+- **Vorgänge** (`/bestand/vorgaenge`): Eingang für neue Geräte aus NinjaOne und Geräte, die dort fehlen; Nummer aus dem Nummernkreis (Vorgabe `V-`), Status neu, in Bearbeitung, fertig; „Ich übernehme“, Notizen, Verlauf. Entscheidungen für neue Geräte: Stelle, Arbeitsplatz, Lager (mit Raum), „Ist dasselbe Gerät“ (vorhandenes Gerät übernimmt den Eintrag), nicht aufnehmen (wird nicht wieder gemeldet). Für fehlende Geräte: ausgemustert (erst nach dem Ausmustern), verloren oder gestohlen, prüfen; taucht ein Gerät wieder auf, schließt sich der Vorgang
+- Neue Geräte aus NinjaOne bekommen Art (Notebook oder PC nach Bauform), Hersteller und Modell; fehlen Hersteller oder Modell in den Stammdaten, legt die Werkbank sie an
+- **Gerät:** neuer Reiter „Technik“ mit den Kenndaten aus NinjaOne; Hostname und Seriennummer verknüpfter Geräte lassen sich nicht von Hand ändern
+- **Verwaltung › Verbindungen:** NinjaOne mit Region, Client-ID und Secret (verschlüsselt gespeichert), „Verbindung prüfen“; Stand und „Jetzt abgleichen“ auf der Seite Vorgänge
+- **Benachrichtigungen:** neuer Vorgang (Bearbeiter des IT-Bestands) und fehlgeschlagener Abgleich, nur mit Nummer und Link
+- Migration 0044, Spec, Datenschutz, ASVS und Handbuch angepasst
+
 ## [0.63.0] – 2026-11-20
 
 IT-Bestand, Schritt 3: Stellen, Arbeitsplätze und Ausstattungsvorlagen.

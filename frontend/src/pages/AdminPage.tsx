@@ -12,6 +12,7 @@ import {
 import { AiSettings } from "./AiSettings";
 import { BrandingSettings } from "./BrandingSettings";
 import { GeneralSettings } from "./GeneralSettings";
+import { NinjaSettings } from "./NinjaSettings";
 import { PeopleRoles } from "./PeopleRoles";
 
 /** Seiten im Bereich Verwaltung (das Audit-Log hat eine eigene Seite). */
@@ -119,6 +120,7 @@ export function AdminPage({ section = "allgemein" }: { section?: AdminSection })
             onChange={setGeneral}
             parts={["netbox", "internet"]}
           />
+          <NinjaSettings />
         </div>
       )}
 

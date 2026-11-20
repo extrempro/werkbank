@@ -531,16 +531,16 @@ def decide_case(
                 "Entschieden: nicht in den Bestand aufnehmen; der Abgleich meldet es nicht wieder",
             )
     else:
-        device = db.get(InventoryHardware, row.hardware_id) if row.hardware_id else None
+        linked = db.get(InventoryHardware, row.hardware_id) if row.hardware_id else None
         if body.decision == "ausgemustert":
-            if device is not None and device.status != STATUS_RETIRED:
+            if linked is not None and linked.status != STATUS_RETIRED:
                 raise _conflict(
                     "Bitte mustere das Gerät zuerst aus (mit Grund, Verbleib und Datenträger)."
                 )
             _close(db, user, row, "ausgemustert", "Entschieden: Gerät ist ausgemustert")
         elif body.decision == "verloren":
-            if device is not None:
-                add_event(db, device.id, user, f"Laut Vorgang {row.number} verloren oder gestohlen")
+            if linked is not None:
+                add_event(db, linked.id, user, f"Laut Vorgang {row.number} verloren oder gestohlen")
             _close(db, user, row, "verloren", "Entschieden: verloren oder gestohlen")
         else:  # pruefen
             row.decision = "pruefen"

@@ -184,6 +184,7 @@ describe("Gerät: Standort", () => {
       holder_ref: null,
       position_id: null,
       workplace_id: null,
+      ninja: null,
       location: {
         room_id: 9,
         room: "Büro 0.12",

@@ -84,6 +84,7 @@ const monitor: HardwareSummary = {
 const detail: Hardware = {
   ...notebook,
   location: null,
+  ninja: null,
   holder_ref: null,
   position_id: null,
   workplace_id: null,
