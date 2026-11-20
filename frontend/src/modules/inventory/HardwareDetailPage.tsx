@@ -1,0 +1,629 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { errorText } from "../../api";
+import { Link } from "../../components/Link";
+import { INVENTORY_HARDWARE_PATH } from "../../navigation";
+import {
+  fetchHardware,
+  fetchMasterData,
+  formatDate,
+  formatDay,
+  HARDWARE_TABS,
+  hardwarePath,
+  INVENTORY_EDITOR_ROLE,
+  modelLabel,
+  reactivateHardware,
+  retireHardware,
+  setInventoryNo,
+  SOURCE_LABELS,
+  today,
+  updateHardware,
+  WHEREABOUTS_LABELS,
+  type Hardware,
+  type HardwareTab,
+  type MasterData,
+  type Whereabouts,
+} from "./api";
+import { deviceInput, DeviceFormFields, deviceProblem, type DeviceFields } from "./HardwarePage";
+
+type Mode = "ansicht" | "bearbeiten" | "inventur" | "ausmustern";
+
+function ErrorBox({ text }: { text: string | null }) {
+  return text ? (
+    <p role="alert" className="hint-box hint-bad">
+      {text}
+    </p>
+  ) : null;
+}
+
+function EditForm({
+  device,
+  master,
+  onDone,
+}: {
+  device: Hardware;
+  master: MasterData;
+  onDone: (next: Hardware | null) => void;
+}) {
+  const [fields, setFields] = useState<DeviceFields>({
+    kindId: String(device.kind_id),
+    modelId: device.model_id === null ? "" : String(device.model_id),
+    name: device.name,
+    serial: device.serial,
+    hostname: device.hostname,
+    note: device.note,
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    const problem = deviceProblem(fields);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    setBusy(true);
+    updateHardware(device.id, deviceInput(fields)).then(onDone, (problem: unknown) => {
+      setError(errorText(problem, "Die Änderung konnte nicht gespeichert werden."));
+      setBusy(false);
+    });
+  };
+
+  return (
+    <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
+      <DeviceFormFields master={master} value={fields} onChange={setFields} />
+      <ErrorBox text={error} />
+      <div className="project-actions">
+        <button type="submit" className="button button-primary" disabled={busy}>
+          Speichern
+        </button>
+        <button type="button" className="button button-secondary" onClick={() => onDone(null)}>
+          Abbrechen
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** Inventurnummer setzen, ändern oder entfernen – immer mit Rückfrage. */
+function InventoryNoForm({
+  device,
+  onDone,
+}: {
+  device: Hardware;
+  onDone: (next: Hardware | null) => void;
+}) {
+  const [value, setValue] = useState(device.inventory_no ?? "");
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const next = value.trim();
+
+  const save = () => {
+    setBusy(true);
+    setInventoryNo(device.id, next || null).then(onDone, (problem: unknown) => {
+      setError(errorText(problem, "Die Inventurnummer konnte nicht gespeichert werden."));
+      setConfirming(false);
+      setBusy(false);
+    });
+  };
+
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (next === (device.inventory_no ?? "")) {
+      onDone(null);
+      return;
+    }
+    setError(null);
+    setConfirming(true);
+  };
+
+  let question: string;
+  if (!next) {
+    question = `Inventurnummer ${device.inventory_no ?? ""} wirklich entfernen?`;
+  } else if (device.inventory_no) {
+    question = `Inventurnummer von ${device.inventory_no} auf ${next} ändern?`;
+  } else {
+    question = `Inventurnummer ${next} für dieses Gerät eintragen?`;
+  }
+
+  return (
+    <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
+      <label className="narrow">
+        Inventurnummer
+        <input
+          type="text"
+          value={value}
+          maxLength={40}
+          autoComplete="off"
+          spellCheck={false}
+          disabled={confirming}
+          onChange={(event) => setValue(event.target.value)}
+        />
+      </label>
+      <p className="small">Leer lassen, um die Inventurnummer zu entfernen.</p>
+      <ErrorBox text={error} />
+      {confirming ? (
+        <div className="hint-box hint-warn confirm-box">
+          <p>
+            {question} Bitte mit dem Aufkleber am Gerät vergleichen. Die Änderung steht danach im
+            Verlauf.
+          </p>
+          <div className="project-actions">
+            <button
+              type="button"
+              className="button button-primary"
+              disabled={busy}
+              autoFocus
+              onClick={save}
+            >
+              Ja, übernehmen
+            </button>
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => setConfirming(false)}
+            >
+              Zurück
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="project-actions">
+          <button type="submit" className="button button-primary">
+            Weiter
+          </button>
+          <button type="button" className="button button-secondary" onClick={() => onDone(null)}>
+            Abbrechen
+          </button>
+        </div>
+      )}
+    </form>
+  );
+}
+
+function RetireForm({
+  device,
+  master,
+  onDone,
+}: {
+  device: Hardware;
+  master: MasterData;
+  onDone: (next: Hardware | null) => void;
+}) {
+  const [reasonId, setReasonId] = useState("");
+  const [whereabouts, setWhereabouts] = useState<Whereabouts | "">("");
+  const [day, setDay] = useState(today());
+  const [wiped, setWiped] = useState(false);
+  const [note, setNote] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!reasonId) {
+      setError("Bitte einen Grund wählen.");
+      return;
+    }
+    if (!whereabouts) {
+      setError("Bitte den Verbleib wählen.");
+      return;
+    }
+    if (!day) {
+      setError("Bitte ein Datum eintragen.");
+      return;
+    }
+    if (device.has_storage && !wiped) {
+      setError("Bitte bestätige, dass der Datenträger gelöscht oder vernichtet ist.");
+      return;
+    }
+    setError(null);
+    setConfirming(true);
+  };
+
+  const save = () => {
+    if (!whereabouts) {
+      return;
+    }
+    setBusy(true);
+    retireHardware(device.id, {
+      reason_id: Number(reasonId),
+      whereabouts,
+      retired_on: day,
+      wiped: device.has_storage ? wiped : false,
+      note: note.trim(),
+    }).then(onDone, (problem: unknown) => {
+      setError(errorText(problem, "Das Gerät konnte nicht ausgemustert werden."));
+      setConfirming(false);
+      setBusy(false);
+    });
+  };
+
+  return (
+    <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
+      <div className="tool-row">
+        <label>
+          Grund
+          <select
+            value={reasonId}
+            disabled={confirming}
+            onChange={(event) => setReasonId(event.target.value)}
+          >
+            <option value="">Bitte wählen</option>
+            {master.reasons.map((reason) => (
+              <option key={reason.id} value={String(reason.id)}>
+                {reason.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Verbleib
+          <select
+            value={whereabouts}
+            disabled={confirming}
+            onChange={(event) => setWhereabouts(event.target.value as Whereabouts | "")}
+          >
+            <option value="">Bitte wählen</option>
+            {(Object.keys(WHEREABOUTS_LABELS) as Whereabouts[]).map((key) => (
+              <option key={key} value={key}>
+                {WHEREABOUTS_LABELS[key]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="narrow">
+          Datum
+          <input
+            type="date"
+            value={day}
+            max={today()}
+            disabled={confirming}
+            onChange={(event) => setDay(event.target.value)}
+          />
+        </label>
+      </div>
+      {device.has_storage && (
+        <label className="check-label">
+          <input
+            type="checkbox"
+            checked={wiped}
+            disabled={confirming}
+            onChange={(event) => setWiped(event.target.checked)}
+          />
+          Der Datenträger ist gelöscht oder vernichtet.
+        </label>
+      )}
+      <label>
+        Notiz (freiwillig), z. B. Nummer des Entsorgungsnachweises
+        <input
+          type="text"
+          value={note}
+          maxLength={300}
+          disabled={confirming}
+          onChange={(event) => setNote(event.target.value)}
+        />
+      </label>
+      <ErrorBox text={error} />
+      {confirming ? (
+        <div className="hint-box hint-warn confirm-box">
+          <p>
+            „{device.name}“ wirklich ausmustern? Das Gerät verschwindet aus der Liste „Im Bestand“
+            und bleibt mit seinem Verlauf unter „Ausgemustert“ erhalten.
+          </p>
+          <div className="project-actions">
+            <button
+              type="button"
+              className="button button-danger"
+              disabled={busy}
+              autoFocus
+              onClick={save}
+            >
+              Ja, ausmustern
+            </button>
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => setConfirming(false)}
+            >
+              Zurück
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="project-actions">
+          <button type="submit" className="button button-primary">
+            Weiter
+          </button>
+          <button type="button" className="button button-secondary" onClick={() => onDone(null)}>
+            Abbrechen
+          </button>
+        </div>
+      )}
+    </form>
+  );
+}
+
+function Overview({
+  device,
+  master,
+  canEdit,
+  onChange,
+}: {
+  device: Hardware;
+  master: MasterData | null;
+  canEdit: boolean;
+  onChange: (next: Hardware) => void;
+}) {
+  const [mode, setMode] = useState<Mode>("ansicht");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const retired = device.status === "ausgemustert";
+
+  const done = (next: Hardware | null) => {
+    if (next) {
+      onChange(next);
+    }
+    setMode("ansicht");
+  };
+
+  const reactivate = () => {
+    setBusy(true);
+    setError(null);
+    reactivateHardware(device.id)
+      .then(onChange, (problem: unknown) =>
+        setError(errorText(problem, "Das Gerät konnte nicht wieder in Betrieb genommen werden.")),
+      )
+      .finally(() => setBusy(false));
+  };
+
+  const titles: Record<Mode, string> = {
+    ansicht: "Übersicht",
+    bearbeiten: "Gerät bearbeiten",
+    inventur: "Inventurnummer",
+    ausmustern: "Gerät ausmustern",
+  };
+
+  return (
+    <>
+      {retired && device.retire && (
+        <section className="panel" aria-labelledby="ausgemustert-titel">
+          <div className="panel-head">
+            <h2 id="ausgemustert-titel">Ausgemustert</h2>
+            {canEdit && (
+              <button
+                type="button"
+                className="button button-secondary"
+                disabled={busy}
+                onClick={reactivate}
+              >
+                Wieder in Betrieb nehmen
+              </button>
+            )}
+          </div>
+          <dl className="facts">
+            <div>
+              <dt>Datum</dt>
+              <dd>{formatDay(device.retire.retired_on)}</dd>
+            </div>
+            <div>
+              <dt>Grund</dt>
+              <dd>{device.retire.reason}</dd>
+            </div>
+            <div>
+              <dt>Verbleib</dt>
+              <dd>
+                {device.retire.whereabouts ? WHEREABOUTS_LABELS[device.retire.whereabouts] : "–"}
+              </dd>
+            </div>
+            {device.retire.wiped !== null && (
+              <div>
+                <dt>Datenträger</dt>
+                <dd>{device.retire.wiped ? "gelöscht oder vernichtet" : "nicht bestätigt"}</dd>
+              </div>
+            )}
+            {device.retire.note && (
+              <div>
+                <dt>Notiz</dt>
+                <dd>{device.retire.note}</dd>
+              </div>
+            )}
+          </dl>
+          <ErrorBox text={error} />
+        </section>
+      )}
+
+      <section className="panel" aria-labelledby="geraet-daten">
+        <div className="panel-head">
+          <h2 id="geraet-daten">{titles[mode]}</h2>
+          {canEdit && mode === "ansicht" && master && (
+            <div className="project-actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setMode("bearbeiten")}
+              >
+                Bearbeiten
+              </button>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setMode("inventur")}
+              >
+                Inventurnummer
+              </button>
+              {!retired && (
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setMode("ausmustern")}
+                >
+                  Ausmustern
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        {mode === "ansicht" && (
+          <dl className="facts">
+            <div>
+              <dt>Art</dt>
+              <dd>{device.kind}</dd>
+            </div>
+            <div>
+              <dt>Hersteller und Modell</dt>
+              <dd>{modelLabel(device)}</dd>
+            </div>
+            <div>
+              <dt>Seriennummer</dt>
+              <dd className="mono">{device.serial || "–"}</dd>
+            </div>
+            <div>
+              <dt>Inventurnummer</dt>
+              <dd className="mono">{device.inventory_no ?? "keine"}</dd>
+            </div>
+            <div>
+              <dt>Hostname</dt>
+              <dd className="mono">{device.hostname || "–"}</dd>
+            </div>
+            <div>
+              <dt>Herkunft</dt>
+              <dd>{SOURCE_LABELS[device.source] ?? device.source}</dd>
+            </div>
+            <div>
+              <dt>Erfasst am</dt>
+              <dd>{formatDate(device.created_at)}</dd>
+            </div>
+            {device.note && (
+              <div>
+                <dt>Notiz</dt>
+                <dd>{device.note}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+        {mode === "bearbeiten" && master && (
+          <EditForm device={device} master={master} onDone={done} />
+        )}
+        {mode === "inventur" && <InventoryNoForm device={device} onDone={done} />}
+        {mode === "ausmustern" && master && (
+          <RetireForm device={device} master={master} onDone={done} />
+        )}
+      </section>
+    </>
+  );
+}
+
+function History({ device }: { device: Hardware }) {
+  return (
+    <section className="panel" aria-labelledby="geraet-verlauf">
+      <div className="panel-head">
+        <h2 id="geraet-verlauf">Verlauf</h2>
+      </div>
+      <div className="detail-body">
+        {device.events.length === 0 ? (
+          <p className="empty">Noch keine Einträge.</p>
+        ) : (
+          <ol className="timeline">
+            {device.events.map((event, index) => (
+              <li key={`${event.occurred_at}-${index}`}>
+                <div className="timeline-head">
+                  <strong>{formatDate(event.occurred_at)}</strong>
+                  <span className="small">{event.who}</span>
+                </div>
+                <span>{event.text}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** IT-Bestand › Hardware › Gerät: Übersicht mit Aktionen und Verlauf. */
+export function HardwareDetailPage({
+  hardwareId,
+  tab,
+  roles,
+}: {
+  hardwareId: number;
+  tab: HardwareTab;
+  roles: readonly string[];
+}) {
+  const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
+  const [device, setDevice] = useState<Hardware | null>(null);
+  const [master, setMaster] = useState<MasterData | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetchHardware(hardwareId).then(
+      (result) => active && setDevice(result),
+      (error: unknown) =>
+        active && setFailed(errorText(error, "Das Gerät konnte nicht geladen werden.")),
+    );
+    if (canEdit) {
+      fetchMasterData().then(
+        (result) => active && setMaster(result),
+        () => undefined,
+      );
+    }
+    return () => {
+      active = false;
+    };
+  }, [hardwareId, canEdit]);
+
+  return (
+    <div className="page page-wide">
+      <p className="small">
+        <Link to={INVENTORY_HARDWARE_PATH}>← Alle Geräte</Link>
+      </p>
+      {failed && (
+        <p role="alert" className="hint-box hint-bad">
+          {failed}
+        </p>
+      )}
+      {!failed && !device && <p role="status">Wird geladen …</p>}
+      {device && (
+        <>
+          <header className="page-head project-head">
+            <div>
+              <p className="module-label">IT-Bestand · {device.kind}</p>
+              <h1>{device.name}</h1>
+              <p className="page-sub">
+                {[modelLabel(device), device.serial && `SN ${device.serial}`]
+                  .filter((part) => part && part !== "–")
+                  .join(" · ") || "Ohne Modell und Seriennummer"}
+                {device.status === "ausgemustert" && (
+                  <>
+                    {" "}
+                    <span className="pill pill-neutral">ausgemustert</span>
+                  </>
+                )}
+              </p>
+            </div>
+          </header>
+          <nav className="project-tabs" aria-label="Bereiche des Geräts">
+            {HARDWARE_TABS.map((entry) => (
+              <Link
+                key={entry.id}
+                to={hardwarePath(device.id, entry.id)}
+                className={entry.id === tab ? "project-tab project-tab-on" : "project-tab"}
+                aria-current={entry.id === tab ? "page" : undefined}
+              >
+                {entry.label}
+              </Link>
+            ))}
+          </nav>
+          {tab === "uebersicht" ? (
+            <Overview device={device} master={master} canEdit={canEdit} onChange={setDevice} />
+          ) : (
+            <History device={device} />
+          )}
+        </>
+      )}
+    </div>
+  );
+}

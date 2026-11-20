@@ -31,6 +31,8 @@ import {
   HEALTH_PATH,
   MONITORING_DNS_PATH,
   PROJECTS_PATH,
+  INVENTORY_HARDWARE_PATH,
+  INVENTORY_MASTER_PATH,
   LICENSES_PATH,
   NEWS_PATH,
   toolCategoryPath,
@@ -45,6 +47,10 @@ import { NewsPage } from "../pages/NewsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
 import { HandbookPage } from "../pages/HandbookPage";
 import { DnsCheckPage } from "../modules/monitoring/DnsCheckPage";
+import { parseHardwarePath } from "../modules/inventory/api";
+import { HardwareDetailPage } from "../modules/inventory/HardwareDetailPage";
+import { HardwarePage } from "../modules/inventory/HardwarePage";
+import { MasterDataPage } from "../modules/inventory/MasterDataPage";
 import { parseProjectPath } from "../modules/projects/api";
 import { ProjectPage } from "../modules/projects/ProjectPage";
 import { ProjectsPage } from "../modules/projects/ProjectsPage";
@@ -257,6 +263,7 @@ export function Layout({ me }: LayoutProps) {
   const contractId = contractMatch ? Number(contractMatch[1]) : null;
 
   const projectRoute = parseProjectPath(path);
+  const hardwareRoute = parseHardwarePath(path);
 
   const licenseMatch = /^\/m365\/lizenzen\/(\d{1,9})$/.exec(path);
   const licenseId = licenseMatch ? Number(licenseMatch[1]) : null;
@@ -337,6 +344,22 @@ export function Layout({ me }: LayoutProps) {
         roles={me.roles}
       />
     );
+  } else if (path === INVENTORY_HARDWARE_PATH && current) {
+    page = <HardwarePage roles={me.roles} />;
+  } else if (
+    hardwareRoute !== null &&
+    items.some((item) => item.path === INVENTORY_HARDWARE_PATH)
+  ) {
+    page = (
+      <HardwareDetailPage
+        key={hardwareRoute.id}
+        hardwareId={hardwareRoute.id}
+        tab={hardwareRoute.tab}
+        roles={me.roles}
+      />
+    );
+  } else if (path === INVENTORY_MASTER_PATH && current) {
+    page = <MasterDataPage roles={me.roles} />;
   } else if (path === MONITORING_DNS_PATH && current) {
     page = <DnsCheckPage isAdmin={me.roles.includes("Werkbank.Admin")} />;
   } else if (path === BUDGET_PATH && current) {

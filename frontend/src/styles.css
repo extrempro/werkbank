@@ -6058,3 +6058,144 @@ p.badges {
   padding: 6px 0;
   border-top: 1px solid var(--farbe-trenner);
 }
+
+/* Tabellen, die bei wenig Platz zu Karten werden (z. B. IT-Bestand › Hardware).
+   Jede Zelle braucht data-label mit dem Spaltennamen; die Zeilen-Überschrift ist der Kartentitel. */
+
+.card-wrap {
+  container-type: inline-size;
+}
+
+@container (max-width: 760px) {
+  .table-cards,
+  .table-cards tbody {
+    display: block;
+  }
+
+  .table-cards thead {
+    display: none;
+  }
+
+  .table-cards tr {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px 18px;
+    align-items: start;
+    margin: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--farbe-rand);
+    border-radius: 10px;
+    background: var(--farbe-flaeche);
+  }
+
+  .table-cards th,
+  .table-cards td {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .table-cards th[scope="row"] {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--farbe-trenner);
+    font-size: 1rem;
+  }
+
+  .table-cards td::before {
+    content: attr(data-label);
+    color: var(--farbe-text-leise);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+}
+
+/* Rückfrage vor einer Änderung (z. B. Inventurnummer, Ausmustern) */
+
+.confirm-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirm-box p {
+  margin: 0;
+}
+
+/* IT-Bestand › Stammdaten */
+
+.master-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.master-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 16px;
+  padding: 8px 0;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.master-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.master-actions,
+.master-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.master-edit input {
+  min-width: min(260px, 100%);
+}
+
+.master-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.master-add {
+  margin: 0 0 12px;
+}
+
+.master-add .tool-row {
+  align-items: end;
+}
+
+.master-group {
+  padding: 12px 0;
+  border-top: 2px solid var(--farbe-rand);
+}
+
+.master-sub {
+  margin-left: 18px;
+}
+
+.master-storage {
+  margin-top: 16px;
+}
+
+.master-storage summary {
+  cursor: pointer;
+  padding: 10px 0;
+}

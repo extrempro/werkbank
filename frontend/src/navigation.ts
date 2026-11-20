@@ -20,6 +20,7 @@ const EVERGREEN_EDITORS = ["Evergreen.IT", "Evergreen.Team"];
 const TOOLS_USER = "Tools.User";
 const MONITORING_READER = "Monitoring.Reader";
 const PROJECT_ROLES = ["Projekte.Reader", "Projekte.Editor"];
+const INVENTORY_ROLES = ["Bestand.Reader", "Bestand.Editor"];
 const TENANT_READER = "Tenant.Reader";
 const BUDGET_MANAGER = "Budget.Manager";
 const BUDGET_ROLES = ["Budget.Reader", "Budget.Editor", BUDGET_MANAGER];
@@ -43,6 +44,8 @@ export const BUDGET_PLANNING_PATH = "/budget/planung";
 export const BUDGET_STATISTICS_PATH = "/budget/statistik";
 export const MONITORING_DNS_PATH = "/monitoring/dns";
 export const PROJECTS_PATH = "/projekte";
+export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
+export const INVENTORY_MASTER_PATH = "/bestand/stammdaten";
 export const ADMIN_PATH = "/verwaltung";
 export const ADMIN_ROLES_PATH = "/verwaltung/rollen";
 export const ADMIN_MAIL_PATH = "/verwaltung/mail-teams";
@@ -200,6 +203,24 @@ export function areasFor(roles: readonly string[]): NavArea[] {
         {
           title: null,
           items: [{ path: PROJECTS_PATH, label: "Alle Projekte", icon: "uebersicht" }],
+        },
+      ],
+    });
+  }
+  if (hasAny(roles, INVENTORY_ROLES)) {
+    areas.push({
+      id: "bestand",
+      label: "IT-Bestand",
+      icon: "bestand",
+      home: INVENTORY_HARDWARE_PATH,
+      groups: [
+        {
+          title: "Bestand",
+          items: [{ path: INVENTORY_HARDWARE_PATH, label: "Hardware", icon: "bestand" }],
+        },
+        {
+          title: "Einstellungen",
+          items: [{ path: INVENTORY_MASTER_PATH, label: "Stammdaten", icon: "einstellungen" }],
         },
       ],
     });

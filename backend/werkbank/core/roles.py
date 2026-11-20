@@ -21,6 +21,8 @@ class Role(StrEnum):
     MONITORING_READER = "Monitoring.Reader"
     PROJECTS_READER = "Projekte.Reader"
     PROJECTS_EDITOR = "Projekte.Editor"
+    INVENTORY_READER = "Bestand.Reader"
+    INVENTORY_EDITOR = "Bestand.Editor"
 
 
 KNOWN_ROLES: frozenset[str] = frozenset(role.value for role in Role)
@@ -82,5 +84,10 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
     Role.PROJECTS_EDITOR: (
         "Projekte Bearbeiter",
         "IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe mit Anhängen und Aufgaben",
+    ),
+    Role.INVENTORY_READER: ("IT-Bestand Leser", "IT-Bestand ansehen: Hardware und Stammdaten"),
+    Role.INVENTORY_EDITOR: (
+        "IT-Bestand Bearbeiter",
+        "IT-Bestand pflegen: Hardware erfassen, Inventurnummern setzen, ausmustern, Stammdaten",
     ),
 }

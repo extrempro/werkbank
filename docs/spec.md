@@ -99,6 +99,8 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Monitoring.Reader` | IT-Monitoring | Bereich IT-Monitoring ansehen |
 | `Projekte.Reader` | IT-Projekte | Projekte ansehen: Übersicht, Budget, Jour Fixe mit Anhängen, Aufgaben |
 | `Projekte.Editor` | IT-Projekte | Projekte anlegen, ändern und löschen; Jour Fixe, Anhänge und Aufgaben pflegen |
+| `Bestand.Reader` | IT-Bestand | Hardware mit Verlauf und Stammdaten ansehen |
+| `Bestand.Editor` | IT-Bestand | Hardware erfassen und ändern, Inventurnummern setzen, ausmustern und wieder in Betrieb nehmen, Stammdaten pflegen |
 
 Sichtbarkeit:
 
@@ -548,6 +550,19 @@ Projekte der IT mit Budget, Ansprechpartnern, Links, Jour-Fixe-Protokollen und e
 - **Suche:** Projekte nach Name und Beschreibung (nur mit Projekt-Rolle).
 - **Audit:** Anlegen, Ändern und Löschen von Projekten, Aufgaben, Jour-Fixe-Einträgen und Anhängen (Modul `projekte`), ohne Namen von Personen.
 
+## 8d. Bereich IT-Bestand
+
+Bestand der IT-Hardware. Wird schrittweise aufgebaut; geplant sind danach Standorte mit Grundrissen, Stellen und Arbeitsplätze, Abgleich mit NinjaOne mit Vorgängen, Monitore und Lenovo-PSREF-Daten, Verleih, Abgleich mit Entra und Statistik. Zugriff: `Bestand.Reader` liest, `Bestand.Editor` pflegt (serverseitig geprüft). Eigener Bereich „IT-Bestand“ in der Navigation (`/bestand/hardware`, ein Gerät unter `/bestand/hardware/{id}` mit den Reitern Übersicht und Verlauf; `/bestand/stammdaten`).
+
+- **Gerät:** Bezeichnung, Art, optional Hersteller und Modell, Seriennummer, Inventurnummer, Hostname, Notiz, Herkunft (bisher nur „von Hand“). Seriennummer (ohne Groß- und Kleinschreibung) und Inventurnummer sind eindeutig, sobald eingetragen.
+- **Inventurnummer:** Setzen, Ändern und Entfernen nur mit Rückfrage in der Oberfläche, auch beim Anlegen; jede Änderung steht im Verlauf und im Audit-Log.
+- **Ausmustern statt Löschen:** Grund (Stammdaten), Verbleib (entsorgt, verkauft oder abgegeben, an Leasing zurück, beim Hersteller), Datum (nicht in der Zukunft; ein Tag Spielraum wegen der Zeitzone), Notiz. Bei Arten mit Datenträger ist die Bestätigung „gelöscht oder vernichtet“ Pflicht. Ein Bearbeiter allein genügt. Ausgemusterte Geräte bleiben mit Verlauf erhalten und stehen unter „Ausgemustert“; „Wieder in Betrieb nehmen“ macht das Ausmustern rückgängig. Geräte werden nicht gelöscht.
+- **Verlauf:** je Gerät mit Datum und Person; die Texte erzeugt die Werkbank, dargestellt nur als Text.
+- **Stammdaten:** Hardware-Arten (mit Merkmal „hat Datenträger“), Hersteller mit Modellen, Gründe fürs Ausmustern. Startwerte kommen mit der Migration. Verwendete Einträge lassen sich umbenennen, aber nicht löschen.
+- **Liste:** Status (im Bestand, ausgemustert, alle), Suche über Bezeichnung, Art, Modell, Seriennummer, Inventurnummer und Hostname, Filter nach Art. Auf schmalen Bildschirmen werden die Zeilen zu Karten.
+- **Suche:** Geräte nach Bezeichnung, Seriennummer, Inventurnummer und Hostname (nur mit Bestand-Rolle).
+- **Audit:** alle Änderungen an Geräten und Stammdaten (Modul `bestand`), ohne Personendaten.
+
 ## 9. Datenmodell (Überblick)
 
 Kern:
@@ -625,6 +640,9 @@ Evergreen:
 | Neuigkeiten | alle | Änderungen je Version, die man in der Anwendung bemerkt |
 | IT-Projekte › Alle Projekte | Projekte.* (Anlegen: Projekte.Editor) | Liste mit Status, veranschlagt, geplant, Ist, offenen Punkten, letztem Jour Fixe; Filter, Suche, neues Projekt |
 | IT-Projekte › Projekt | Projekte.* (Einstellungen und Ändern: Projekte.Editor) | Reiter Übersicht, Budget, Jour Fixe (Markdown mit Leiste und Vorschau, PDF-Anhänge), Aufgaben, Einstellungen |
+| IT-Bestand › Hardware | Bestand.* (Erfassen: Bestand.Editor) | Liste mit Status, Suche, Filter nach Art, Kartenansicht auf schmalen Bildschirmen; Gerät erfassen |
+| IT-Bestand › Gerät | Bestand.* (Ändern: Bestand.Editor) | Reiter Übersicht (Bearbeiten, Inventurnummer mit Rückfrage, Ausmustern, Wieder in Betrieb nehmen) und Verlauf |
+| IT-Bestand › Stammdaten | Bestand.* (Pflegen: Bestand.Editor) | Hardware-Arten, Hersteller und Modelle, Gründe fürs Ausmustern |
 | DNS-Abgleich mit NetBox | Monitoring.Reader, Admin | Kennzahlen, Verlauf 90 Tage, Kacheln je Stand als Filter, Filter Probleme/Abweichend/Fehlt öffentlich/Fehler/In Ordnung/Neu/Alle mit Anzahl, Suche, Tabelle je Zone mit der Zone als Überschrift, „Jetzt prüfen“ für Admins |
 | Handbuch | alle | Kapitel je Bereich nach Rollen, Suche im Handbuch, je Kapitel Inhaltsverzeichnis und Abschnitte mit Verweisen |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |

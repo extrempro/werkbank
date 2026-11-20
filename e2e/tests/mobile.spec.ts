@@ -33,6 +33,7 @@ test("Handy: Logo frei, „Abmelden“ im Menü und nichts breiter als der Bilds
       "Tools.User",
       "Monitoring.Reader",
       "Projekte.Editor",
+      "Bestand.Editor",
     ],
     "Maximiliane Mustermann-Beispiel",
   );
