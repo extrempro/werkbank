@@ -8,6 +8,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 - `CLAUDE.md`: Regel, aktuelle stabile Versionen von Frameworks und Paketen und ihre aktuellen Schnittstellen zu nutzen, wenn möglich (Prüfung vor neuen Abhängigkeiten, Updates in eigenem PR, Major-Updates nach Rückfrage)
 
+## [0.74.0] – 2026-11-20
+
+### IT-Bestand
+
+- **Vorgänge kompakter:** Kopf in einer Zeile (Titel, Zahl offener Vorgänge, Stand des Abgleichs mit NinjaOne, „Jetzt abgleichen“), Beschreibungstext entfällt (steht im Handbuch). Suche, Status und Art in einer Zeile über der Liste
+- **Vorgänge als Tabelle:** Spalten Nr., Titel, Art, Eingang, Bearbeitet von, Status über die ganze Breite; die ganze Zeile ist anklickbar, der Titel ist der Verweis. Ein gewählter Vorgang öffnet rechts daneben (54/46), die Tabelle zeigt dann nur Nr., Titel und Status; „×“ schließt die Ansicht
+- **Vorgänge auf dem Handy:** unter 1024 px eine Zeile je Vorgang (Nummer, Art und Eingang klein über dem Titel, Status rechts), Status-Chips in einer Zeile zum Wischen, gewählt nur die Ansicht mit „‹ Zur Liste“
+- Verleih bleibt bei Liste und Ansicht
+
+### Tests und Dokumentation
+
+- Frontend-Tests für Tabelle, Klick auf die Zeile und Schließen der Ansicht; E2E `bestand.spec.ts` angepasst
+- `docs/design.md`, `docs/a11y-wcag22.md` und Handbuch angepasst
+
 ## [0.73.0] – 2026-11-20
 
 ### IT-Bestand

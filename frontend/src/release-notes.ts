@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.74.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Vorgänge als kompakte Tabelle.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "„Vorgänge“ braucht oben weniger Platz: Suche, Status und Art stehen in einer Zeile, der Stand des Abgleichs mit NinjaOne steht neben der Überschrift.",
+          "Die Vorgänge stehen in einer Tabelle mit Nummer, Titel, Art, Eingang, Bearbeiter und Status. Ein Klick auf eine Zeile öffnet den Vorgang rechts daneben, mit „×“ schließt du ihn wieder.",
+          "Auf dem Handy siehst du eine kurze Zeile je Vorgang; den Status wählst du in einer Zeile zum Wischen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.73.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Auswahl mit Suche, Standorte neu aufgebaut, übersichtlichere Listen.",

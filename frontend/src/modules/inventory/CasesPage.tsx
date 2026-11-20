@@ -1,10 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { INVENTORY_CASES_PATH as CASES_PATH } from "../../navigation";
 import { navigate } from "../../router";
 import { LookupPicker } from "./LookupPicker";
-import { ListSearch, MoreButton, useDebounced, usePagedList } from "./paged";
+import { MoreButton, useDebounced, usePagedList } from "./paged";
 import { EventPanel } from "./parts";
 import { PersonPicker } from "./PersonPicker";
 import {
@@ -67,7 +67,7 @@ function SyncBar({ canEdit }: { canEdit: boolean }) {
   }
   if (!status.enabled) {
     return (
-      <p className="hint-box">
+      <p className="sync-bar small">
         Der Abgleich mit NinjaOne ist ausgeschaltet. Einschalten kann ihn ein Admin in der
         Verwaltung unter „Verbindungen“.
       </p>
@@ -75,11 +75,11 @@ function SyncBar({ canEdit }: { canEdit: boolean }) {
   }
   const last = status.last_run;
   return (
-    <div className="sync-bar panel">
-      <p>
+    <div className="sync-bar">
+      <p className="small">
         {last ? (
           <>
-            Letzter Abgleich mit NinjaOne: {formatMoment(last.started_at)}
+            NinjaOne: zuletzt {formatMoment(last.started_at)}
             {last.status === "ok"
               ? ` · ${last.devices} Geräte, ${last.new_cases} neu, ${last.missing_cases} fehlen`
               : ""}
@@ -88,7 +88,7 @@ function SyncBar({ canEdit }: { canEdit: boolean }) {
           "Noch kein Abgleich mit NinjaOne."
         )}
         {status.next_run_at && (
-          <span className="small"> · nächster: {formatMoment(status.next_run_at)}</span>
+          <span className="sync-next"> · nächster: {formatMoment(status.next_run_at)}</span>
         )}
       </p>
       {last && last.status !== "ok" && (
@@ -355,10 +355,12 @@ function CaseDetail({
   caseId,
   canEdit,
   onChanged,
+  onClose,
 }: {
   caseId: number;
   canEdit: boolean;
   onChanged: () => void;
+  onClose: () => void;
 }) {
   const [entry, setEntry] = useState<Case | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -440,6 +442,14 @@ function CaseDetail({
               )}
             </div>
           )}
+          <button
+            type="button"
+            className="button button-secondary case-close"
+            aria-label="Ansicht schließen"
+            onClick={onClose}
+          >
+            ×
+          </button>
         </div>
         <div className="detail-body">
           {notice && (
@@ -575,7 +585,56 @@ function CaseDetail({
   );
 }
 
-/** IT-Bestand › Vorgänge: Eingang für neue und fehlende Geräte aus NinjaOne. */
+/** Zeile der Vorgangstabelle. Die ganze Zeile ist anklickbar, für Tastatur und Screenreader
+ *  zählt der Verweis im Titel. */
+function CaseRow({ entry, selected }: { entry: CaseSummary; selected: boolean }) {
+  const path = casePath(entry.id);
+  const open = () => navigate(path);
+  return (
+    <tr
+      className={selected ? "case-row is-selected" : "case-row"}
+      onClick={(event) => {
+        if (!(event.target as HTMLElement).closest("a")) {
+          open();
+        }
+      }}
+    >
+      <td className="col-nr mono nowrap">{entry.number}</td>
+      <td className="case-title-cell">
+        <span className="case-meta small">
+          <span className="mono">{entry.number}</span> · {entry.kind_label} ·{" "}
+          {formatDate(entry.created_at)}
+        </span>
+        <a
+          href={path}
+          aria-current={selected ? "true" : undefined}
+          onClick={(event) => {
+            const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+            if (event.button !== 0 || modified) {
+              return;
+            }
+            event.preventDefault();
+            open();
+          }}
+        >
+          {entry.title}
+        </a>
+      </td>
+      <td className="col-extra nowrap">{entry.kind_label}</td>
+      <td className="col-extra nowrap">{formatDate(entry.created_at)}</td>
+      <td className="col-extra">{entry.assignee ?? "–"}</td>
+      <td className="nowrap">
+        <span className={`pill ${CASE_STATES[entry.status].pill}`}>
+          {CASE_STATES[entry.status].label}
+        </span>
+      </td>
+    </tr>
+  );
+}
+
+/** IT-Bestand › Vorgänge: Eingang für neue und fehlende Geräte aus NinjaOne.
+ *  Breit: Tabelle über die ganze Breite, ein gewählter Vorgang öffnet rechts daneben.
+ *  Schmal: erst die Liste, gewählt nur die Ansicht mit „Zur Liste“. */
 export function CasesPage({ caseId, roles }: { caseId: number | null; roles: readonly string[] }) {
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
   const [filter, setFilter] = useState<CaseFilter>("offen");
@@ -583,6 +642,7 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
   const query = useDebounced(search);
+  const searchId = useId();
   const paged = usePagedList<CaseSummary, { open: number }>(
     `${filter}|${kind}|${query}`,
     reload,
@@ -597,61 +657,75 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
   const failed = paged.error;
   const cases = paged.items;
   const openCount = paged.extra ? paged.extra.open : null;
+  const backToList = () => navigate(CASES_PATH);
 
   return (
-    <div className="page page-wide">
-      <header className="page-head">
-        <p className="module-label">IT-Bestand</p>
-        <h1>Vorgänge</h1>
-        <p className="page-sub">
-          Eingang für alle Bearbeiter: neue Geräte aus NinjaOne, Geräte, die dort nicht mehr
-          auftauchen, Rückgaben aus dem Verleih und Personen, die in Entra nicht mehr aktiv sind.
-        </p>
+    <div className="page page-wide case-page">
+      <header className="page-head case-top">
+        <div>
+          <p className="module-label">IT-Bestand</p>
+          <h1>Vorgänge</h1>
+        </div>
+        {openCount !== null && <p className="case-count small">{openCount} offen</p>}
+        <SyncBar canEdit={canEdit} />
       </header>
-      <SyncBar canEdit={canEdit} />
       {failed && (
         <p role="alert" className="hint-box hint-bad">
           {failed}
         </p>
       )}
-      <div className={caseId === null ? "case-layout" : "case-layout case-layout-detail"}>
-        <nav className="panel case-list" aria-label="Vorgänge">
-          <div className="case-filters">
-            <ListSearch
-              value={search}
-              onChange={setSearch}
-              label="Vorgänge durchsuchen"
-              placeholder="Nummer, Titel, Gerät, Seriennummer …"
-            />
-            <div className="chips" role="group" aria-label="Status">
-              {CASE_FILTERS.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  className="chip chip-filter"
-                  aria-pressed={filter === entry.id}
-                  onClick={() => setFilter(entry.id)}
-                >
-                  {entry.label}
-                  {entry.id === "offen" && openCount !== null ? ` (${openCount})` : ""}
-                </button>
-              ))}
-            </div>
-            <label className="case-kind">
-              Art
-              <select
-                value={kind}
-                onChange={(event) => setKind(event.target.value as CaseKind | "alle")}
-              >
-                <option value="alle">Alle Arten</option>
-                {(Object.keys(CASE_KIND_SHORT) as CaseKind[]).map((key) => (
-                  <option key={key} value={key}>
-                    {CASE_KIND_SHORT[key]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+      <div className="panel case-toolbar">
+        <div className="case-search">
+          <label htmlFor={searchId} className="visually-hidden">
+            Vorgänge durchsuchen
+          </label>
+          <input
+            id={searchId}
+            type="search"
+            value={search}
+            maxLength={100}
+            placeholder="Nummer, Titel, Gerät, Seriennummer …"
+            autoComplete="off"
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+        <div className="chips" role="group" aria-label="Status">
+          {CASE_FILTERS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              className="chip chip-filter"
+              aria-pressed={filter === entry.id}
+              onClick={() => setFilter(entry.id)}
+            >
+              {entry.label}
+              {entry.id === "offen" && openCount !== null ? ` (${openCount})` : ""}
+            </button>
+          ))}
+        </div>
+        <label className="case-kind">
+          Art
+          <select
+            value={kind}
+            onChange={(event) => setKind(event.target.value as CaseKind | "alle")}
+          >
+            <option value="alle">Alle Arten</option>
+            {(Object.keys(CASE_KIND_SHORT) as CaseKind[]).map((key) => (
+              <option key={key} value={key}>
+                {CASE_KIND_SHORT[key]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div
+        className={
+          caseId === null
+            ? "case-layout case-layout-table"
+            : "case-layout case-layout-table case-layout-detail"
+        }
+      >
+        <div className="panel case-list">
           <div className="case-scroll">
             {!cases && !failed && <p role="status">Wird geladen …</p>}
             {cases && cases.length === 0 && (
@@ -662,30 +736,31 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
               </p>
             )}
             {cases && cases.length > 0 && (
-              <ul>
-                {cases.map((entry) => (
-                  <li key={entry.id}>
-                    <button
-                      type="button"
-                      className="case-item"
-                      aria-current={entry.id === caseId ? "true" : undefined}
-                      onClick={() => navigate(casePath(entry.id))}
-                    >
-                      <span className="case-item-head">
-                        <span className="mono">{entry.number}</span>
-                        <span className={`pill ${CASE_STATES[entry.status].pill}`}>
-                          {CASE_STATES[entry.status].label}
-                        </span>
-                      </span>
-                      <strong>{entry.title}</strong>
-                      <span className="small">
-                        {entry.kind_label} · {formatDate(entry.created_at)}
-                        {entry.assignee ? ` · ${entry.assignee}` : ""}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <table className="case-table" aria-label="Vorgänge">
+                <thead>
+                  <tr>
+                    <th scope="col" className="col-nr">
+                      Nr.
+                    </th>
+                    <th scope="col">Titel</th>
+                    <th scope="col" className="col-extra">
+                      Art
+                    </th>
+                    <th scope="col" className="col-extra">
+                      Eingang
+                    </th>
+                    <th scope="col" className="col-extra">
+                      Bearbeitet von
+                    </th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cases.map((entry) => (
+                    <CaseRow key={entry.id} entry={entry} selected={entry.id === caseId} />
+                  ))}
+                </tbody>
+              </table>
             )}
             {cases && (
               <MoreButton
@@ -696,29 +771,28 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
               />
             )}
           </div>
-        </nav>
+        </div>
         <div className="case-main">
           {caseId !== null && (
-            <a
-              className="case-back"
-              href={CASES_PATH}
-              onClick={(event) => {
-                event.preventDefault();
-                navigate(CASES_PATH);
-              }}
-            >
-              ‹ Zur Liste
-            </a>
-          )}
-          {caseId === null ? (
-            <p className="panel panel-empty">Wähle links einen Vorgang.</p>
-          ) : (
-            <CaseDetail
-              key={caseId}
-              caseId={caseId}
-              canEdit={canEdit}
-              onChanged={() => setReload(reload + 1)}
-            />
+            <>
+              <a
+                className="case-back"
+                href={CASES_PATH}
+                onClick={(event) => {
+                  event.preventDefault();
+                  backToList();
+                }}
+              >
+                ‹ Zur Liste
+              </a>
+              <CaseDetail
+                key={caseId}
+                caseId={caseId}
+                canEdit={canEdit}
+                onChanged={() => setReload(reload + 1)}
+                onClose={backToList}
+              />
+            </>
           )}
         </div>
       </div>
