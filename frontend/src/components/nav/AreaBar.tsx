@@ -39,13 +39,16 @@ export function AreaBar({
           className="area-link"
           href={area.home}
           title={area.label}
-          aria-label={dot ? `${area.label}, offene Aufgaben` : area.label}
           aria-current={area.id === currentId ? "true" : undefined}
           onClick={(event) => onArea(event, area)}
         >
           <Icon name={area.icon} />
+          {/* Sichtbar der Kurzname, für Screenreader der volle Name */}
           <span className="area-short" aria-hidden="true">
             {area.short}
+          </span>
+          <span className="visually-hidden">
+            {dot ? `${area.label}, offene Aufgaben` : area.label}
           </span>
           {dot && <span className="area-dot" aria-hidden="true" />}
         </a>
@@ -72,14 +75,11 @@ export function AreaBar({
             className="area-link"
             href={HANDBOOK_PATH}
             title="Handbuch"
-            aria-label="Handbuch"
             aria-current={handbookOpen ? "page" : undefined}
             onClick={onHandbook}
           >
             <Icon name="handbuch" />
-            <span className="area-short" aria-hidden="true">
-              Handbuch
-            </span>
+            <span className="area-short">Handbuch</span>
           </a>
         </li>
         {collapsed && (
@@ -88,12 +88,12 @@ export function AreaBar({
               type="button"
               className="area-link"
               title="Menü ausklappen"
-              aria-label="Menü ausklappen"
               aria-expanded={false}
               aria-controls={sideMenuId}
               onClick={onExpand}
             >
               <Icon name="ausklappen" />
+              <span className="visually-hidden">Menü ausklappen</span>
             </button>
           </li>
         )}

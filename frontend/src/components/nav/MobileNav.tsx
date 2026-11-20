@@ -231,8 +231,7 @@ function MenuSheet({
                             {count > 0 && " "}
                             {count > 0 && (
                               <span className="nav-count">
-                                {count}
-                                <span className="visually-hidden"> offen</span>
+                                {count} <span className="visually-hidden">offen</span>
                               </span>
                             )}
                           </a>

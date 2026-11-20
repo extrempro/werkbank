@@ -17,7 +17,7 @@ test("Suche findet Vorgänge und beachtet, wer sie sehen darf", async ({ page, b
   await openPage(page, "Start", "Suche");
   await expect(page.getByRole("heading", { level: 1, name: "Suche" })).toBeVisible();
   await page.getByLabel("Suchbegriff").fill(word);
-  await page.getByRole("button", { name: "Suchen" }).click();
+  await page.getByRole("button", { name: "Suchen", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/suche\\?q=${word}$`));
   const hit = page.getByRole("link", { name: `${word} in Teams` });
   await expect(hit).toBeVisible();
@@ -35,12 +35,17 @@ test("Suche findet Vorgänge und beachtet, wer sie sehen darf", async ({ page, b
   await context.close();
 });
 
-test("Suchfeld in der Kopfzeile führt zur Suche", async ({ page }, testInfo) => {
+test("Suchfeld in der Kopfzeile führt über die Schnellsuche zur Suche", async ({
+  page,
+}, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Das Feld steht nur auf breiten Bildschirmen");
   await loginAs(page, ["Config.Reader"], "Lea Leser");
   await page.goto("/");
-  await page.getByLabel("Suchen", { exact: true }).fill("gibtesnicht");
-  await page.getByLabel("Suchen", { exact: true }).press("Enter");
+  await page.getByRole("button", { name: "Seite suchen" }).click();
+  const field = page.getByRole("combobox", { name: "Seite suchen" });
+  await field.fill("gibtesnicht");
+  // Keine Seite heißt so: Enter sucht in allen Einträgen.
+  await field.press("Enter");
   await expect(page).toHaveURL(/\/suche\?q=gibtesnicht$/);
   await expect(page.getByLabel("Suchbegriff")).toHaveValue("gibtesnicht");
   await expect(page.getByText(/Keine Treffer für/)).toBeVisible();

@@ -506,14 +506,13 @@ export function Layout({ me }: LayoutProps) {
         <button
           type="button"
           className="header-search"
-          aria-label="Seite suchen"
           aria-haspopup="dialog"
           aria-expanded={searchOpen}
           aria-keyshortcuts="Control+K Meta+K"
           onClick={() => setSearchOpen(true)}
         >
           <Icon name="suche" />
-          <span className="header-search-text">Seite suchen …</span>
+          <span className="header-search-text">Seite suchen</span>
           <kbd aria-hidden="true">{shortcutLabel()}</kbd>
         </button>
         <div className="user">

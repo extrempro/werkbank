@@ -120,9 +120,9 @@ export function SideMenu({
                           {count > 0 && " "}
                           {count > 0 && (
                             <span className="nav-count">
-                              {count}
+                              {count}{" "}
                               <span className="visually-hidden">
-                                {entry.item.path === "/" ? " offene Aufgaben" : " offen"}
+                                {entry.item.path === "/" ? "offene Aufgaben" : "offen"}
                               </span>
                             </span>
                           )}

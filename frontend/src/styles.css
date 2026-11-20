@@ -3485,7 +3485,16 @@ p.badges {
     padding: 0;
   }
 
-  .header-search-text,
+  /* Der Text bleibt für Screenreader. */
+  .header-search-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .header-search kbd {
     display: none;
   }
@@ -3615,6 +3624,13 @@ p.badges {
   color: var(--farbe-text);
   box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
   cursor: pointer;
+}
+
+/* Am Handy über der Leiste unten */
+@media (max-width: 760px) {
+  .scroll-top {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
 }
 
 .scroll-top:hover {

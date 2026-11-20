@@ -43,7 +43,7 @@ export function itemName(label: string): RegExp {
 }
 
 function areaName(label: string): RegExp {
-  return new RegExp(`^${escape(label)}(,|$)`);
+  return new RegExp(`^${escape(label)}\\s*(,|$)`);
 }
 
 /** Handy-Ansicht (bis 760 px): Leiste unten statt Bereichsleiste und Seitenmenü. */
@@ -125,13 +125,11 @@ export async function areaNames(page: Page): Promise<string[]> {
   const strip = (name: string | null) =>
     (name ?? "").replace(/, offene Aufgaben$/, "").trim();
   if (!isPhone(page)) {
-    const links = page
+    // Sichtbar steht der Kurzname, der volle Name steht für Screenreader daneben.
+    const labels = page
       .getByRole("navigation", { name: "Bereiche" })
-      .getByRole("link");
-    const names = await links.evaluateAll((all) =>
-      all.map((a) => a.getAttribute("aria-label")),
-    );
-    return names.map(strip).filter((name) => name !== "Handbuch");
+      .locator("a.area-link .visually-hidden");
+    return (await labels.allTextContents()).map(strip);
   }
   const sheet = await openMenu(page);
   const back = sheet.getByRole("button", { name: "Alle Bereiche" });

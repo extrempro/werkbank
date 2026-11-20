@@ -112,11 +112,14 @@ export function AccountMenu({ me, newsUnseen, onNavigate }: AccountMenuProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        aria-label={`Konto und Einstellungen: ${me.display_name}${newsUnseen ? ", neue Version" : ""}`}
         onClick={() => (open ? close(false) : show())}
         onKeyDown={onButtonKey}
       >
         <Avatar name={me.display_name} url={me.avatar_url} />
+        <span className="visually-hidden">
+          Konto und Einstellungen: {me.display_name}
+          {newsUnseen ? ", neue Version" : ""}
+        </span>
         {newsUnseen && <span className="account-dot" aria-hidden="true" />}
       </button>
       {open && (

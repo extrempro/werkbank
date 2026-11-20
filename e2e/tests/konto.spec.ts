@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs } from "./helpers";
+import { expectNoA11yViolations, loginAs, openAccountMenu } from "./helpers";
 
 test("Konto zeigt Angaben, Rollen, Sitzung, Darstellung und Version", async ({ page }) => {
   await loginAs(page, ["Evergreen.Betriebsrat"], "Kira Konto");
   await page.goto("/");
-  await page.getByRole("link", { name: /Kira Konto/ }).click();
+  const menu = await openAccountMenu(page);
+  await expect(page.getByRole("button", { name: /Kira Konto/ })).toBeVisible();
+  await menu.getByRole("menuitem", { name: "Konto" }).click();
   await expect(page).toHaveURL(/\/konto$/);
   await expect(page.getByRole("heading", { level: 1, name: "Konto" })).toBeVisible();
   await expect(page.getByText("Evergreen Betriebsrat")).toBeVisible();

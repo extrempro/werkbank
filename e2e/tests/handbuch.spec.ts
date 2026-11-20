@@ -21,7 +21,7 @@ test("Handbuch zeigt passende Kapitel, führt zu Abschnitten und ist barrierefre
   await expectNoA11yViolations(page);
 
   await page.getByLabel("Im Handbuch suchen").fill("im Auftrag");
-  await page.getByRole("button", { name: "Suchen" }).click();
+  await page.getByRole("button", { name: "Suchen", exact: true }).click();
   await page
     .getByRole("link", {
       name: "Beschluss des Betriebsrats im Auftrag erfassen",
