@@ -61,6 +61,11 @@ class NinjaDevice:
     ram_gb: int | None
     policy: str
     node_class: str
+    # Organisation und Geräterolle in NinjaOne (für die Auswahl in der Verwaltung)
+    organization_id: int | None = None
+    organization: str = ""
+    role_id: int | None = None
+    role: str = ""
 
     def facts(self) -> dict[str, Any]:
         """Was am Gerät gespeichert und im Reiter „Technik“ gezeigt wird."""
@@ -75,6 +80,8 @@ class NinjaDevice:
             "last_contact": self.last_contact.isoformat() if self.last_contact else None,
             "ram_gb": self.ram_gb,
             "policy": self.policy,
+            "organization": self.organization,
+            "role": self.role,
         }
 
 
@@ -112,7 +119,16 @@ def _part(item: dict[str, Any], key: str) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def parse_device(item: dict[str, Any], policies: dict[int, str]) -> NinjaDevice | None:
+def _int(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def parse_device(
+    item: dict[str, Any],
+    policies: dict[int, str],
+    organizations: dict[int, str] | None = None,
+    roles: dict[int, str] | None = None,
+) -> NinjaDevice | None:
     """Ein Eintrag aus /v2/devices-detailed; None für Nicht-Arbeitsplatzrechner."""
     ninja_id = item.get("id")
     node_class = item.get("nodeClass")
@@ -151,6 +167,10 @@ def parse_device(item: dict[str, Any], policies: dict[int, str]) -> NinjaDevice 
         ram_gb=ram_gb,
         policy=policies.get(policy_id, "") if isinstance(policy_id, int) else "",
         node_class=str(node_class),
+        organization_id=_int(item.get("organizationId")),
+        organization=(organizations or {}).get(_int(item.get("organizationId")) or 0, ""),
+        role_id=_int(item.get("nodeRoleId")),
+        role=(roles or {}).get(_int(item.get("nodeRoleId")) or 0, ""),
     )
 
 
@@ -216,13 +236,78 @@ class NinjaClient:
 Fetcher = Callable[[NinjaConfig], list[NinjaDevice]]
 
 
+@dataclass(frozen=True)
+class NinjaOption:
+    """Organisation oder Geräterolle zur Auswahl in der Verwaltung."""
+
+    id: int
+    name: str
+
+
+def _names(data: Any) -> dict[int, str]:
+    names: dict[int, str] = {}
+    for entry in data if isinstance(data, list) else []:
+        if isinstance(entry, dict) and _int(entry.get("id")) is not None:
+            names[entry["id"]] = _text(entry.get("name"), 120)
+    return names
+
+
+def load_organizations(client: NinjaClient) -> dict[int, str]:
+    """Alle Organisationen (seitenweise)."""
+    names: dict[int, str] = {}
+    after: int | None = None
+    for _ in range(MAX_PAGES):
+        params = {"pageSize": str(PAGE_SIZE)}
+        if after is not None:
+            params["after"] = str(after)
+        page = client.get("organizations", params)
+        if not isinstance(page, list):
+            raise NinjaError("Unerwartete Antwort von NinjaOne (Organisationen).")
+        found = _names(page)
+        names.update(found)
+        if len(page) < PAGE_SIZE or not found:
+            return names
+        after = max(found)
+    return names
+
+
+def load_roles(client: NinjaClient) -> dict[int, str]:
+    """Geräterollen der Arbeitsplatzrechner (Windows, macOS, Linux)."""
+    data = client.get("roles")
+    return _names(
+        [
+            entry
+            for entry in (data if isinstance(data, list) else [])
+            if isinstance(entry, dict) and entry.get("nodeClass") in WORKSTATION_CLASSES
+        ]
+    )
+
+
+def load_options(client: NinjaClient) -> tuple[list[NinjaOption], list[NinjaOption]]:
+    """Organisationen und Geräterollen, nach Namen sortiert."""
+
+    def options(names: dict[int, str]) -> list[NinjaOption]:
+        return sorted(
+            (NinjaOption(id=key, name=value or f"#{key}") for key, value in names.items()),
+            key=lambda option: option.name.casefold(),
+        )
+
+    return options(load_organizations(client)), options(load_roles(client))
+
+
+OptionsLoader = Callable[[NinjaConfig], tuple[list[NinjaOption], list[NinjaOption]]]
+
+
+def fetch_options(config: NinjaConfig) -> tuple[list[NinjaOption], list[NinjaOption]]:
+    with httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=False) as http:
+        return load_options(NinjaClient(config, http))
+
+
 def load_devices(client: NinjaClient) -> list[NinjaDevice]:
     """Alle Arbeitsplatzrechner, seitenweise (nach der letzten ID)."""
-    policies: dict[int, str] = {}
-    data = client.get("policies")
-    for entry in data if isinstance(data, list) else []:
-        if isinstance(entry, dict) and isinstance(entry.get("id"), int):
-            policies[entry["id"]] = _text(entry.get("name"), 120)
+    policies = _names(client.get("policies"))
+    organizations = load_organizations(client)
+    roles = load_roles(client)
     devices: list[NinjaDevice] = []
     after: int | None = None
     for _ in range(MAX_PAGES):
@@ -235,7 +320,7 @@ def load_devices(client: NinjaClient) -> list[NinjaDevice]:
         ids = [item.get("id") for item in page if isinstance(item, dict)]
         for item in page:
             if isinstance(item, dict):
-                device = parse_device(item, policies)
+                device = parse_device(item, policies, organizations, roles)
                 if device is not None:
                     devices.append(device)
         numeric = [value for value in ids if isinstance(value, int)]

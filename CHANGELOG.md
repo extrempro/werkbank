@@ -15,6 +15,8 @@ IT-Bestand, Schritt 4: Abgleich mit NinjaOne und Vorgänge.
 - Neue Geräte aus NinjaOne bekommen Art (Notebook oder PC nach Bauform), Hersteller und Modell; fehlen Hersteller oder Modell in den Stammdaten, legt die Werkbank sie an
 - **Gerät:** neuer Reiter „Technik“ mit den Kenndaten aus NinjaOne; Hostname und Seriennummer verknüpfter Geräte lassen sich nicht von Hand ändern
 - **Verwaltung › Verbindungen:** NinjaOne mit Region, Client-ID und Secret (verschlüsselt gespeichert), „Verbindung prüfen“; Stand und „Jetzt abgleichen“ auf der Seite Vorgänge
+- **Auswahl nach Organisation und Geräterolle** (je mehrfach, leer heißt alle): Listen aus NinjaOne (`/v2/organizations`, `/v2/roles`, nur Rollen für Arbeitsplatzrechner) über `POST /api/admin/settings/ninjaone/options`. Die Auswahl legt fest, welche neuen Geräte einen Vorgang bekommen; verknüpfte Geräte gleicht die Werkbank weiter ab, damit eine geänderte Auswahl keine Vorgänge „fehlt“ auslöst. Organisation und Geräterolle stehen im Reiter „Technik“
+- **Standorte:** gleichmäßigere Abstände im Baum, in der Raumliste und in den Formularen; Namen im Baum brechen nur noch an Leerzeichen um, die Anzahl rutscht bei Platzmangel in die nächste Zeile
 - **Benachrichtigungen:** neuer Vorgang (Bearbeiter des IT-Bestands) und fehlgeschlagener Abgleich, nur mit Nummer und Link
 - Migration 0044, Spec, Datenschutz, ASVS und Handbuch angepasst
 

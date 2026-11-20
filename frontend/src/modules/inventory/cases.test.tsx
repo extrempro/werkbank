@@ -161,6 +161,8 @@ describe("Verwaltung: NinjaOne", () => {
         { id: "eu", name: "Europa", host: "eu.ninjarmm.com" },
         { id: "app", name: "USA", host: "app.ninjarmm.com" },
       ],
+      organization_ids: [],
+      role_ids: [],
     };
     const calls = stubFetch({
       "GET /api/admin/settings/ninjaone": stored,
@@ -181,6 +183,8 @@ describe("Verwaltung: NinjaOne", () => {
       enabled: true,
       region: "eu",
       client_id: "app-id",
+      organization_ids: [],
+      role_ids: [],
       client_secret: "geheim",
     });
   });

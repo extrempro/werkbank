@@ -7,6 +7,10 @@ Vorgang als „möglicherweise dasselbe Gerät“, verknüpft wird darüber nie.
 
 Vorgänge entstehen nur für neue Geräte (weder ID noch Seriennummer bekannt) und für Geräte, die
 in NinjaOne fehlen. Taucht ein fehlendes Gerät wieder auf, schließt der Abgleich den Vorgang.
+
+In der Verwaltung lassen sich Organisationen und Geräterollen auswählen. Die Auswahl legt nur fest,
+welche neuen Geräte einen Vorgang bekommen. Verknüpfte Geräte gleicht die Werkbank weiter ab,
+auch außerhalb der Auswahl; so entstehen bei einer geänderten Auswahl keine Vorgänge „fehlt“.
 """
 
 import logging
@@ -71,6 +75,35 @@ def load_ninja_config(
     if region not in REGIONS or not isinstance(client_id, str) or not client_id or not secret:
         return None
     return NinjaConfig(region=str(region), client_id=client_id, client_secret=secret)
+
+
+@dataclass(frozen=True)
+class NinjaScope:
+    """Auswahl aus der Verwaltung; leer heißt: alle."""
+
+    organization_ids: frozenset[int] = frozenset()
+    role_ids: frozenset[int] = frozenset()
+
+    def includes(self, device: NinjaDevice) -> bool:
+        if self.organization_ids and device.organization_id not in self.organization_ids:
+            return False
+        return not self.role_ids or device.role_id in self.role_ids
+
+
+def _ids(value: Any) -> frozenset[int]:
+    if not isinstance(value, list):
+        return frozenset()
+    return frozenset(item for item in value if isinstance(item, int) and not isinstance(item, bool))
+
+
+def load_ninja_scope(db: Session) -> NinjaScope:
+    stored: Any = get_setting(db, NINJA_KEY)
+    if not isinstance(stored, dict):
+        return NinjaScope()
+    return NinjaScope(
+        organization_ids=_ids(stored.get("organization_ids")),
+        role_ids=_ids(stored.get("role_ids")),
+    )
 
 
 @dataclass
@@ -173,7 +206,9 @@ def _hostname_hint(db: Session, hostname: str) -> InventoryHardware | None:
     ).first()
 
 
-def apply_devices(db: Session, devices: list[NinjaDevice], now: datetime) -> SyncResult:
+def apply_devices(
+    db: Session, devices: list[NinjaDevice], now: datetime, scope: NinjaScope | None = None
+) -> SyncResult:
     """Gleicht den Bestand mit der Liste aus NinjaOne ab (ohne Commit)."""
     result = SyncResult(devices=len(devices))
     seen: set[int] = set()
@@ -212,7 +247,7 @@ def apply_devices(db: Session, devices: list[NinjaDevice], now: datetime) -> Syn
                 )
                 _event(db, f"Wieder in NinjaOne (Vorgang {missing.number})", hardware_id=row.id)
             continue
-        if device.ninja_id in ignored:
+        if device.ninja_id in ignored or (scope is not None and not scope.includes(device)):
             continue
         open_new = _open_case(db, CASE_NEW, ninja_id=device.ninja_id)
         if open_new is not None:
@@ -288,7 +323,7 @@ def run_sync(
             raise NinjaError(
                 "NinjaOne hat keine Geräte geliefert; der Abgleich hat nichts verändert."
             )
-        result = apply_devices(db, devices, now)
+        result = apply_devices(db, devices, now, load_ninja_scope(db))
         run.devices = result.devices
         run.updated = result.updated
         run.new_cases = result.new_cases

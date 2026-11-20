@@ -17,8 +17,15 @@ from werkbank.core.app_settings import (
 )
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, SettingsDep
-from werkbank.modules.inventory.ninja import REGIONS, Fetcher, NinjaError, fetch_devices
-from werkbank.modules.inventory.sync import load_ninja_config
+from werkbank.modules.inventory.ninja import (
+    REGIONS,
+    Fetcher,
+    NinjaError,
+    OptionsLoader,
+    fetch_devices,
+    fetch_options,
+)
+from werkbank.modules.inventory.sync import NinjaScope, load_ninja_config
 
 router = APIRouter(prefix="/api/admin/settings/ninjaone")
 MODULE = "verwaltung"
@@ -30,6 +37,15 @@ def get_ninja_fetcher() -> Fetcher:
 
 
 FetcherDep = Annotated[Fetcher, Depends(get_ninja_fetcher)]
+SCOPE_MAX = 200
+
+
+def get_ninja_options() -> OptionsLoader:
+    """In Tests ersetzbar."""
+    return fetch_options
+
+
+OptionsDep = Annotated[OptionsLoader, Depends(get_ninja_options)]
 
 
 class RegionOut(BaseModel):
@@ -45,6 +61,9 @@ class NinjaOut(BaseModel):
     secret_set: bool
     secret_storage_available: bool
     regions: list[RegionOut]
+    # Auswahl für neue Geräte; leer heißt: alle
+    organization_ids: list[int]
+    role_ids: list[int]
 
 
 class NinjaIn(BaseModel):
@@ -53,6 +72,15 @@ class NinjaIn(BaseModel):
     client_id: str = Field(default="", max_length=200)
     # None: Secret unverändert. Leerer Text: Secret löschen.
     client_secret: str | None = Field(default=None, max_length=500)
+    organization_ids: list[int] = Field(default_factory=list, max_length=SCOPE_MAX)
+    role_ids: list[int] = Field(default_factory=list, max_length=SCOPE_MAX)
+
+    @field_validator("organization_ids", "role_ids")
+    @classmethod
+    def unique_ids(cls, value: list[int]) -> list[int]:
+        if any(item < 1 for item in value):
+            raise ValueError("Nur positive Kennungen")
+        return sorted(set(value))
 
     @field_validator("client_id")
     @classmethod
@@ -77,6 +105,18 @@ class NinjaTestOut(BaseModel):
     devices: int
     notebooks: int
     pcs: int
+    # davon in der gespeicherten Auswahl aus Organisationen und Rollen
+    in_scope: int
+
+
+class OptionOut(BaseModel):
+    id: int
+    name: str
+
+
+class NinjaOptionsOut(BaseModel):
+    organizations: list[OptionOut]
+    roles: list[OptionOut]
 
 
 def _stored(db: Session) -> dict[str, Any]:
@@ -94,7 +134,15 @@ def _out(db: Session, key_available: bool) -> NinjaOut:
         secret_set=bool(data.get("secret_encrypted")),
         secret_storage_available=key_available,
         regions=[RegionOut(id=key, name=name, host=host) for key, (name, host) in REGIONS.items()],
+        organization_ids=_id_list(data.get("organization_ids")),
+        role_ids=_id_list(data.get("role_ids")),
     )
+
+
+def _id_list(value: Any) -> list[int]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, int) and not isinstance(item, bool)]
 
 
 @router.get("")
@@ -135,6 +183,8 @@ def put_ninja(
             "region": body.region,
             "client_id": body.client_id,
             "secret_encrypted": token,
+            "organization_ids": body.organization_ids,
+            "role_ids": body.role_ids,
         },
         user.user_id,
     )
@@ -150,6 +200,8 @@ def put_ninja(
             "eingeschaltet": body.enabled,
             "region": body.region,
             "secret_geaendert": body.client_secret is not None,
+            "organisationen": body.organization_ids,
+            "rollen": body.role_ids,
         },
     )
     db.commit()
@@ -170,8 +222,16 @@ def test_ninja(
         try:
             devices = fetch(config)
             notebooks = sum(1 for device in devices if device.kind == "Notebook")
+            stored = _stored(db)
+            scope = NinjaScope(
+                organization_ids=frozenset(_id_list(stored.get("organization_ids"))),
+                role_ids=frozenset(_id_list(stored.get("role_ids"))),
+            )
             result = NinjaTestOut(
-                devices=len(devices), notebooks=notebooks, pcs=len(devices) - notebooks
+                devices=len(devices),
+                notebooks=notebooks,
+                pcs=len(devices) - notebooks,
+                in_scope=sum(1 for device in devices if scope.includes(device)),
             )
         except NinjaError as error:
             failure = str(error)
@@ -190,3 +250,24 @@ def test_ninja(
     if failure is not None or result is None:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=failure)
     return result
+
+
+@router.post("/options")
+def ninja_options(
+    request: Request, user: AdminUser, db: DbDep, settings: SettingsDep, load: OptionsDep
+) -> NinjaOptionsOut:
+    """Organisationen und Geräterollen aus NinjaOne für die Auswahl (gespeicherte Anmeldung)."""
+    config = load_ninja_config(db, settings, require_enabled=False)
+    if config is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Bitte zuerst Region, Client-ID und Client-Secret speichern.",
+        )
+    try:
+        organizations, roles = load(config)
+    except NinjaError as error:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(error)) from error
+    return NinjaOptionsOut(
+        organizations=[OptionOut(id=item.id, name=item.name) for item in organizations],
+        roles=[OptionOut(id=item.id, name=item.name) for item in roles],
+    )

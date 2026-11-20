@@ -6207,23 +6207,24 @@ p.badges {
 
 .loc-layout {
   display: grid;
-  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  gap: 16px;
   align-items: start;
 }
 
 .loc-main {
-  display: grid;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   min-width: 0;
 }
 
 .loc-tree {
   position: sticky;
-  top: 1rem;
-  max-height: calc(100vh - 2rem);
+  top: 16px;
+  max-height: calc(100vh - 32px);
   overflow: auto;
-  padding: 0.75rem;
+  padding: 12px;
 }
 
 .loc-mobilebar {
@@ -6236,16 +6237,21 @@ p.badges {
 
 .loc-hits {
   list-style: none;
-  margin: 0.5rem 0;
-  padding: 0;
-  border-bottom: 1px solid var(--farbe-rand);
+  margin: 8px 0 0;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--farbe-trenner);
+}
+
+.loc-hits > li.small {
+  padding: 6px 8px;
 }
 
 .loc-hit {
   display: grid;
   width: 100%;
-  gap: 0.1rem;
-  padding: 0.4rem 0.5rem;
+  min-height: 44px;
+  gap: 2px;
+  padding: 6px 8px;
   border: 0;
   border-radius: 6px;
   background: none;
@@ -6271,24 +6277,30 @@ p.badges {
 }
 
 .lt-list {
-  margin-top: 0.5rem;
+  display: grid;
+  gap: 2px;
+  margin-top: 8px;
 }
 
 .lt-children {
-  margin-left: 0.85rem;
-  padding-left: 0.4rem;
-  border-left: 1px solid var(--farbe-rand);
+  display: grid;
+  gap: 2px;
+  margin: 2px 0 4px 15px;
+  padding-left: 6px;
+  border-left: 1px solid var(--farbe-trenner);
 }
 
 .lt-toggle,
 .lt-floor,
 .room-list button {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.4rem;
+  column-gap: 6px;
+  row-gap: 0;
   width: 100%;
-  min-height: 2rem;
-  padding: 0.3rem 0.5rem;
+  min-height: 40px;
+  padding: 8px;
   border: 0;
   border-radius: 6px;
   background: none;
@@ -6309,20 +6321,30 @@ p.badges {
 }
 
 .lt-chev {
-  width: 0.8rem;
+  flex: none;
+  width: 12px;
   color: var(--farbe-text-leise);
 }
 
+/* Namen nur an Leerzeichen und Bindestrichen umbrechen; die Zahl rutscht bei Platzmangel
+   in die nächste Zeile statt den Namen zu zerteilen */
 .lt-name {
-  flex: 1;
+  flex: 1 1 8rem;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  hyphens: manual;
 }
 
 .lt-count {
+  margin-left: auto;
   color: var(--farbe-text-leise);
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
+  font-weight: 400;
   white-space: nowrap;
+}
+
+.lt-floor {
+  padding-left: 26px;
 }
 
 .lt-floor[aria-current="true"],
@@ -6334,8 +6356,8 @@ p.badges {
 
 .plan-with-list {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 13rem;
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  gap: 16px;
   align-items: start;
 }
 
@@ -6345,13 +6367,14 @@ p.badges {
 
 .room-list {
   display: grid;
-  gap: 0.15rem;
+  gap: 2px;
   max-height: 32rem;
   overflow: auto;
 }
 
 .room-list-head {
-  margin: 0 0 0.25rem;
+  margin: 0 0 4px;
+  padding: 0 8px;
 }
 
 .plan-box {
@@ -6457,10 +6480,29 @@ p.badges {
   flex: 1 1 6rem;
 }
 
+.room-rect legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+
 .path-editor {
-  margin-top: 1.25rem;
-  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
   border-top: 1px solid var(--farbe-trenner);
+}
+
+.path-editor > p {
+  margin: 0;
+}
+
+/* Formular, dessen Felder, Zeilen und Knöpfe untereinander mit Abstand stehen */
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 @container (max-width: 760px) {
@@ -6771,4 +6813,12 @@ p.badges {
 .tech-list {
   display: grid;
   gap: 16px;
+}
+
+.scope-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0 16px;
+  max-height: 18rem;
+  overflow: auto;
 }

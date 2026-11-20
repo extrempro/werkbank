@@ -194,7 +194,7 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
   };
 
   return (
-    <form className="settings-form case-decision" onSubmit={onSubmit} noValidate>
+    <form className="settings-form form-stack case-decision" onSubmit={onSubmit} noValidate>
       <fieldset className="seg-field">
         <legend>
           {entry.kind === "neu" ? "Was soll mit dem Gerät passieren?" : "Was ist mit dem Gerät?"}
@@ -320,7 +320,7 @@ function NoteForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => void
     );
   };
   return (
-    <form className="settings-form" onSubmit={onSubmit} noValidate>
+    <form className="settings-form form-stack" onSubmit={onSubmit} noValidate>
       <div className="tool-row">
         <label>
           Notiz

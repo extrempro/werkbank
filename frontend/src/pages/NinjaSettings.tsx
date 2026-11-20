@@ -1,9 +1,11 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { errorText } from "../api";
 import {
+  fetchNinjaOptions,
   fetchNinjaSettings,
   saveNinjaSettings,
   testNinja,
+  type NinjaOptions,
   type NinjaSettings as Settings,
   type NinjaUpdate,
 } from "../modules/inventory/api";
@@ -62,13 +64,27 @@ function NinjaForm({
   const [clientId, setClientId] = useState(stored.client_id);
   const [secret, setSecret] = useState("");
   const [removeSecret, setRemoveSecret] = useState(false);
+  const [organizationIds, setOrganizationIds] = useState<number[]>(stored.organization_ids);
+  const [roleIds, setRoleIds] = useState<number[]>(stored.role_ids);
+  const [options, setOptions] = useState<NinjaOptions | null>(null);
   const [message, setMessage] = useState<Message | null>(initialMessage);
   const [busy, setBusy] = useState(false);
   const secretHint = useId();
 
   const onSave = (event: FormEvent) => {
     event.preventDefault();
-    const update: NinjaUpdate = { enabled, region, client_id: clientId.trim() };
+    const update: NinjaUpdate = {
+      enabled,
+      region,
+      client_id: clientId.trim(),
+      // Was es in NinjaOne nicht mehr gibt, fällt beim Speichern weg
+      organization_ids: options
+        ? organizationIds.filter((id) => options.organizations.some((item) => item.id === id))
+        : organizationIds,
+      role_ids: options
+        ? roleIds.filter((id) => options.roles.some((item) => item.id === id))
+        : roleIds,
+    };
     if (removeSecret) {
       update.client_secret = "";
     } else if (secret.trim()) {
@@ -94,13 +110,27 @@ function NinjaForm({
       .then((result) =>
         setMessage({
           kind: "status",
-          text: `Verbindung in Ordnung: ${result.devices} Arbeitsplatzrechner (${result.notebooks} Notebooks, ${result.pcs} PCs).`,
+          text: `Verbindung in Ordnung: ${result.devices} Arbeitsplatzrechner (${result.notebooks} Notebooks, ${result.pcs} PCs), davon ${result.in_scope} in der gespeicherten Auswahl.`,
         }),
       )
       .catch((error: unknown) =>
         setMessage({
           kind: "alert",
           text: `NinjaOne ist nicht erreichbar: ${errorText(error, "unbekannter Fehler")}`,
+        }),
+      )
+      .finally(() => setBusy(false));
+  };
+
+  const onLoadOptions = () => {
+    setBusy(true);
+    setMessage(null);
+    fetchNinjaOptions()
+      .then(setOptions)
+      .catch((error: unknown) =>
+        setMessage({
+          kind: "alert",
+          text: `Organisationen und Rollen ließen sich nicht laden: ${errorText(error, "unbekannter Fehler")}`,
         }),
       )
       .finally(() => setBusy(false));
@@ -175,6 +205,37 @@ function NinjaForm({
             Gespeichertes Secret löschen
           </label>
         )}
+        <ScopePicker
+          legend="Organisationen"
+          empty="Alle Organisationen"
+          options={options?.organizations ?? null}
+          selected={organizationIds}
+          onChange={setOrganizationIds}
+        />
+        <ScopePicker
+          legend="Geräterollen"
+          empty="Alle Geräterollen"
+          options={options?.roles ?? null}
+          selected={roleIds}
+          onChange={setRoleIds}
+        />
+        {!options && (
+          <div>
+            <button
+              type="button"
+              className="button button-secondary"
+              disabled={busy || !stored.secret_set || stored.client_id === ""}
+              onClick={onLoadOptions}
+            >
+              Organisationen und Rollen laden
+            </button>
+          </div>
+        )}
+        <p className="small">
+          Die Auswahl legt fest, welche neuen Geräte einen Vorgang bekommen. Nichts ausgewählt
+          heißt: alle. Geräte, die schon im Bestand verknüpft sind, gleicht die Werkbank weiter ab,
+          auch wenn sie nicht mehr zur Auswahl passen.
+        </p>
         <label className="check-label">
           <input
             type="checkbox"
@@ -207,5 +268,70 @@ function NinjaForm({
         )}
       </form>
     </section>
+  );
+}
+
+/** Mehrfachauswahl für Organisationen oder Geräterollen; leer heißt: alle. */
+function ScopePicker({
+  legend,
+  empty,
+  options,
+  selected,
+  onChange,
+}: {
+  legend: string;
+  empty: string;
+  /** null, solange die Liste aus NinjaOne nicht geladen ist */
+  options: { id: number; name: string }[] | null;
+  selected: number[];
+  onChange: (next: number[]) => void;
+}) {
+  const known = new Set(options?.map((option) => option.id) ?? []);
+  const unknown = selected.filter((id) => options !== null && !known.has(id));
+  return (
+    <fieldset className="seg-field">
+      <legend>{legend}</legend>
+      {options === null ? (
+        <p className="small">
+          {selected.length === 0
+            ? `${empty}.`
+            : `${selected.length} ausgewählt. Zum Ändern die Liste aus NinjaOne laden.`}
+        </p>
+      ) : (
+        <>
+          {options.length === 0 && <p className="small">NinjaOne liefert keine Einträge.</p>}
+          <div className="scope-options">
+            {options.map((option) => (
+              <label key={option.id} className="check-label">
+                <input
+                  type="checkbox"
+                  className="check"
+                  checked={selected.includes(option.id)}
+                  onChange={(event) =>
+                    onChange(
+                      event.target.checked
+                        ? [...selected, option.id]
+                        : selected.filter((id) => id !== option.id),
+                    )
+                  }
+                />
+                {option.name}
+              </label>
+            ))}
+          </div>
+          {unknown.length > 0 && (
+            <p className="hint-box hint-warn">
+              {unknown.length} gespeicherte Auswahl gibt es in NinjaOne nicht mehr. Beim Speichern
+              entfällt sie.
+            </p>
+          )}
+          <p className="small">
+            {selected.filter((id) => known.has(id)).length === 0
+              ? `${empty}.`
+              : `${selected.filter((id) => known.has(id)).length} ausgewählt.`}
+          </p>
+        </>
+      )}
+    </fieldset>
   );
 }

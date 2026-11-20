@@ -991,12 +991,17 @@ export interface NinjaSettings {
   secret_set: boolean;
   secret_storage_available: boolean;
   regions: { id: string; name: string; host: string }[];
+  /** Auswahl für neue Geräte; leer heißt: alle */
+  organization_ids: number[];
+  role_ids: number[];
 }
 
 export interface NinjaUpdate {
   enabled: boolean;
   region: string;
   client_id: string;
+  organization_ids: number[];
+  role_ids: number[];
   /** Weglassen: bleibt. Leerer Text: löschen. */
   client_secret?: string;
 }
@@ -1005,6 +1010,17 @@ export interface NinjaTest {
   devices: number;
   notebooks: number;
   pcs: number;
+  /** davon in der gespeicherten Auswahl */
+  in_scope: number;
+}
+
+export interface NinjaOptions {
+  organizations: { id: number; name: string }[];
+  roles: { id: number; name: string }[];
+}
+
+export function fetchNinjaOptions(): Promise<NinjaOptions> {
+  return postJson(`${NINJA_ADMIN}/options`, undefined, { quiet: true });
 }
 
 const NINJA_ADMIN = "/api/admin/settings/ninjaone";
@@ -1033,6 +1049,8 @@ export interface NinjaFacts {
   last_contact?: string | null;
   ram_gb?: number | null;
   policy?: string;
+  organization?: string;
+  role?: string;
   name?: string;
   last_seen?: string | null;
   ninja_id?: number;
@@ -1230,6 +1248,8 @@ export function ninjaFactRows(
   add("Betriebssystem", facts.os);
   add("IP-Adresse", (facts.ip ?? []).join(", "), true);
   add("Arbeitsspeicher", facts.ram_gb ? `${facts.ram_gb} GB` : "");
+  add("Organisation", facts.organization);
+  add("Geräterolle", facts.role);
   add("Richtlinie", facts.policy);
   add("Zuletzt online", facts.last_contact ? formatDate(facts.last_contact) : "");
   add("Bezeichnung im Bestand", facts.name);

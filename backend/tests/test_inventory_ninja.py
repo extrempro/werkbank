@@ -31,12 +31,20 @@ from werkbank.modules.inventory.ninja import (
     NinjaConfig,
     NinjaDevice,
     NinjaError,
+    NinjaOption,
     load_devices,
+    load_options,
     parse_device,
 )
-from werkbank.modules.inventory.ninja_admin import get_ninja_fetcher
+from werkbank.modules.inventory.ninja_admin import get_ninja_fetcher, get_ninja_options
 from werkbank.modules.inventory.notifications import inventory_notifications
-from werkbank.modules.inventory.sync import apply_devices, load_ninja_config, run_sync
+from werkbank.modules.inventory.sync import (
+    NinjaScope,
+    apply_devices,
+    load_ninja_config,
+    load_ninja_scope,
+    run_sync,
+)
 
 BASE = "/api/inventory"
 NOW = datetime(2026, 11, 20, 10, 0, tzinfo=UTC)
@@ -108,10 +116,26 @@ def test_client_logs_in_and_pages() -> None:
         assert request.headers["Authorization"] == "Bearer t"
         if request.url.path == "/api/v2/policies":
             return httpx.Response(200, json=[{"id": 1, "name": "Standard"}])
+        if request.url.path == "/api/v2/organizations":
+            return httpx.Response(200, json=[{"id": 5, "name": "Verwaltung"}])
+        if request.url.path == "/api/v2/roles":
+            return httpx.Response(
+                200,
+                json=[
+                    {"id": 7, "name": "Notebook", "nodeClass": "WINDOWS_WORKSTATION"},
+                    {"id": 8, "name": "Server", "nodeClass": "WINDOWS_SERVER"},
+                ],
+            )
         after = request.url.params.get("after")
         if after is None:
             page = [
-                {"id": index, "nodeClass": "WINDOWS_WORKSTATION", "systemName": f"PC-{index}"}
+                {
+                    "id": index,
+                    "nodeClass": "WINDOWS_WORKSTATION",
+                    "systemName": f"PC-{index}",
+                    "organizationId": 5,
+                    "nodeRoleId": 7,
+                }
                 for index in range(1, 501)
             ]
             return httpx.Response(200, json=page)
@@ -121,8 +145,15 @@ def test_client_logs_in_and_pages() -> None:
     with httpx.Client(transport=httpx.MockTransport(handler)) as http:
         devices = load_devices(NinjaClient(CONFIG, http))
     assert len(devices) == 501
+    assert (devices[0].organization, devices[0].role) == ("Verwaltung", "Notebook")
+    assert devices[0].facts()["organization"] == "Verwaltung"
     assert calls[0].startswith("POST /ws/oauth/token")
     assert sum(1 for call in calls if call.startswith("POST")) == 1
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as http:
+        organizations, roles = load_options(NinjaClient(CONFIG, http))
+    assert [(item.id, item.name) for item in organizations] == [(5, "Verwaltung")]
+    assert [(item.id, item.name) for item in roles] == [(7, "Notebook")]
 
     def refused(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, json={"error": "invalid_client"})
@@ -440,7 +471,39 @@ def test_admin_ninja_settings_and_status(db: Session, tmp_path: Path) -> None:
         lambda config: [device(1, "NB-1", "S1"), device(2, "PC-1", "S2", kind="PC")]
     )
     tested = client.post(f"{url}/test", headers=HEADERS)
-    assert tested.json() == {"devices": 2, "notebooks": 1, "pcs": 1}
+    assert tested.json() == {"devices": 2, "notebooks": 1, "pcs": 1, "in_scope": 2}
+
+    cast(FastAPI, client.app).dependency_overrides[get_ninja_options] = lambda: (
+        lambda config: ([NinjaOption(5, "Verwaltung")], [NinjaOption(7, "Notebook")])
+    )
+    options = client.post(f"{url}/options", headers=HEADERS).json()
+    assert options == {
+        "organizations": [{"id": 5, "name": "Verwaltung"}],
+        "roles": [{"id": 7, "name": "Notebook"}],
+    }
+    scoped = client.put(
+        url,
+        json={
+            "enabled": True,
+            "region": "eu",
+            "client_id": "app-id",
+            "organization_ids": [5, 5],
+            "role_ids": [8, 7],
+        },
+        headers=HEADERS,
+    ).json()
+    assert (scoped["organization_ids"], scoped["role_ids"]) == ([5], [7, 8])
+    assert scoped["secret_set"] is True
+    db.expire_all()
+    assert load_ninja_scope(db) == NinjaScope(frozenset({5}), frozenset({7, 8}))
+    bad = client.put(
+        url,
+        json={"enabled": False, "region": "eu", "client_id": "x", "role_ids": [0]},
+        headers=HEADERS,
+    )
+    assert bad.status_code == 422
+    tested = client.post(f"{url}/test", headers=HEADERS).json()
+    assert tested["in_scope"] == 0
 
     reader = client_for(["Bestand.Reader"], "ninja-status")
     assert client_for(["Bestand.Editor"], "ninja-nicht-admin").get(url).status_code == 403
@@ -450,3 +513,40 @@ def test_admin_ninja_settings_and_status(db: Session, tmp_path: Path) -> None:
     assert reader.post(f"{BASE}/ninjaone/run", headers=HEADERS).status_code == 403
     assert editor.post(f"{BASE}/ninjaone/run", headers=HEADERS).status_code == 200
     assert db.scalars(select(Job).where(Job.type == "bestand.ninjaone")).first() is not None
+
+
+def test_scope_by_organization_and_role() -> None:
+    inside = device(1, "NB-1", "S1", organization_id=5, role_id=7)
+    other_org = device(2, "NB-2", "S2", organization_id=6, role_id=7)
+    other_role = device(3, "NB-3", "S3", organization_id=5, role_id=9)
+    assert NinjaScope().includes(other_org)
+    scope = NinjaScope(organization_ids=frozenset({5}), role_ids=frozenset({7, 8}))
+    assert scope.includes(inside)
+    assert not scope.includes(other_org)
+    assert not scope.includes(other_role)
+    assert NinjaScope(role_ids=frozenset({9})).includes(other_role)
+
+
+@pytest.mark.db
+def test_scope_limits_new_cases_but_keeps_linked_devices(db: Session) -> None:
+    linked = InventoryHardware(
+        kind_id=kind_id(db, "PC"), name="PC alt", serial="S-LINK", hostname="PC-1", ninja_id=10
+    )
+    db.add(linked)
+    db.commit()
+    scope = NinjaScope(organization_ids=frozenset({5}))
+    result = apply_devices(
+        db,
+        [
+            device(10, "PC-1", "S-LINK", organization_id=6),
+            device(11, "NB-IN", "S-IN", organization_id=5),
+            device(12, "NB-OUT", "S-OUT", organization_id=6),
+        ],
+        NOW,
+        scope,
+    )
+    db.commit()
+    assert (result.new_cases, result.missing_cases) == (1, 0)
+    assert db.scalars(select(InventoryCase.ninja_id)).all() == [11]
+    db.refresh(linked)
+    assert linked.ninja_seen_at is not None
