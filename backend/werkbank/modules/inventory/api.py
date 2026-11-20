@@ -14,16 +14,22 @@ from werkbank.core.models import User
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.modules.inventory.models import (
+    InventoryDepartment,
     InventoryEvent,
     InventoryFloor,
     InventoryHardware,
     InventoryKind,
+    InventoryKit,
+    InventoryKitRow,
+    InventoryKitRowKind,
     InventoryMaker,
     InventoryModel,
+    InventoryPosition,
     InventoryRetireReason,
     InventoryRoom,
     InventorySection,
     InventorySite,
+    InventoryWorkplace,
 )
 from werkbank.modules.inventory.places import RoomPlace, room_place
 
@@ -127,10 +133,32 @@ class ReasonOut(BaseModel):
     used: int
 
 
+class DepartmentOut(BaseModel):
+    id: int
+    name: str
+    used: int
+
+
+class KitRowOut(BaseModel):
+    label: str
+    count: int
+    kind_ids: list[int]
+
+
+class KitOut(BaseModel):
+    id: int
+    name: str
+    # an so vielen Arbeitsplätzen gewählt
+    used: int
+    rows: list[KitRowOut]
+
+
 class MasterDataOut(BaseModel):
     kinds: list[KindOut]
     makers: list[MakerOut]
     reasons: list[ReasonOut]
+    departments: list[DepartmentOut]
+    kits: list[KitOut]
 
 
 class HardwareIn(BaseModel):
@@ -141,6 +169,9 @@ class HardwareIn(BaseModel):
     hostname: str = Field(default="", max_length=80)
     note: str = Field(default="", max_length=500)
     room_id: int | None = Field(default=None, ge=1)
+    # Zugeordnet zu einer Stelle oder einem Arbeitsplatz (höchstens eins von beiden)
+    position_id: int | None = Field(default=None, ge=1)
+    workplace_id: int | None = Field(default=None, ge=1)
 
     @field_validator("name", "serial", "hostname", "note")
     @classmethod
@@ -206,6 +237,8 @@ class HardwareSummary(BaseModel):
     status: str
     # Raum mit Standort und Etage als Text, z. B. „1.12 · Verwaltung Nord, 1. OG“
     place: str | None
+    # Stelle oder Arbeitsplatz als Text, z. B. „ST-004 Sachbearbeitung“
+    holder: str | None
 
 
 class RetireOut(BaseModel):
@@ -232,8 +265,17 @@ class LocationOut(BaseModel):
     city: str
 
 
+class HolderOut(BaseModel):
+    kind: Literal["stelle", "arbeitsplatz"]
+    id: int
+    label: str
+
+
 class HardwareOut(HardwareSummary):
     location: LocationOut | None
+    holder_ref: HolderOut | None
+    position_id: int | None
+    workplace_id: int | None
     model_id: int | None
     maker_id: int | None
     note: str
@@ -356,11 +398,41 @@ def _places(db: Session) -> dict[int, str]:
     return {room_id: f"{room} · {site}, {floor}" for room_id, room, floor, site in rows}
 
 
+def position_label(row: InventoryPosition) -> str:
+    return f"{row.number} {row.name}"
+
+
+def workplace_label(row: InventoryWorkplace) -> str:
+    return f"{row.number} {row.name}".strip()
+
+
+Holders = tuple[dict[int, str], dict[int, str]]
+
+
+def holders(db: Session) -> Holders:
+    """Kurztexte der Stellen und Arbeitsplätze für Listen."""
+    return (
+        {row.id: position_label(row) for row in db.scalars(select(InventoryPosition)).all()},
+        {row.id: workplace_label(row) for row in db.scalars(select(InventoryWorkplace)).all()},
+    )
+
+
+def holder_text(row: InventoryHardware, known: Holders | None) -> str | None:
+    if known is None:
+        return None
+    if row.position_id is not None:
+        return known[0].get(row.position_id)
+    if row.workplace_id is not None:
+        return known[1].get(row.workplace_id)
+    return None
+
+
 def _summary(
     row: InventoryHardware,
     kinds: dict[int, str],
     models: dict[int, tuple[str, str]],
     places: dict[int, str] | None = None,
+    known: Holders | None = None,
 ) -> HardwareSummary:
     maker, model = models.get(row.model_id, (None, None)) if row.model_id else (None, None)
     return HardwareSummary(
@@ -376,12 +448,14 @@ def _summary(
         source=row.source,
         status=row.status,
         place=(places or {}).get(row.room_id) if row.room_id else None,
+        holder=holder_text(row, known),
     )
 
 
 def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
     kinds, models = _names(db)
-    base = _summary(row, kinds, models, _places(db) if row.room_id else None)
+    known = holders(db) if row.position_id or row.workplace_id else None
+    base = _summary(row, kinds, models, _places(db) if row.room_id else None, known)
     kind = db.get(InventoryKind, row.kind_id)
     model = db.get(InventoryModel, row.model_id) if row.model_id else None
     retire = None
@@ -404,9 +478,17 @@ def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
         .limit(EVENTS_MAX)
     ).all()
     place = room_place(db, row.room_id)
+    holder_ref = None
+    if row.position_id is not None:
+        holder_ref = HolderOut(kind="stelle", id=row.position_id, label=base.holder or "")
+    elif row.workplace_id is not None:
+        holder_ref = HolderOut(kind="arbeitsplatz", id=row.workplace_id, label=base.holder or "")
     return HardwareOut(
         **base.model_dump(),
         location=LocationOut(**vars(place)) if place else None,
+        holder_ref=holder_ref,
+        position_id=row.position_id,
+        workplace_id=row.workplace_id,
         model_id=row.model_id,
         maker_id=model.maker_id if model else None,
         note=row.note,
@@ -441,6 +523,36 @@ def _room(db: Session, room_id: int | None) -> InventoryRoom | None:
     return row
 
 
+def _holder(
+    db: Session, position_id: int | None, workplace_id: int | None
+) -> tuple[InventoryPosition | None, InventoryWorkplace | None]:
+    if position_id is not None and workplace_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Ein Gerät gehört entweder zu einer Stelle oder zu einem Arbeitsplatz.",
+        )
+    position = db.get(InventoryPosition, position_id) if position_id is not None else None
+    if position_id is not None and position is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannte Stelle"
+        )
+    workplace = db.get(InventoryWorkplace, workplace_id) if workplace_id is not None else None
+    if workplace_id is not None and workplace is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannter Arbeitsplatz"
+        )
+    return position, workplace
+
+
+def holder_label(position: InventoryPosition | None, workplace: InventoryWorkplace | None) -> str:
+    """Für den Verlauf, z. B. „Stelle ST-004 Sachbearbeitung“."""
+    if position is not None:
+        return f"Stelle {position_label(position)}"
+    if workplace is not None:
+        return f"Arbeitsplatz {workplace_label(workplace)}"
+    return "niemand"
+
+
 def place_label(place: RoomPlace | None) -> str:
     """Kurzform für den Verlauf, z. B. „Raum 1.12 (Verwaltung Nord, 1. OG)“."""
     if place is None:
@@ -473,7 +585,8 @@ def list_hardware(
     ).all()
     kinds, models = _names(db)
     places = _places(db)
-    return [_summary(row, kinds, models, places) for row in rows]
+    known = holders(db)
+    return [_summary(row, kinds, models, places, known) for row in rows]
 
 
 @router.post("/hardware", status_code=status.HTTP_201_CREATED)
@@ -481,6 +594,7 @@ def create_hardware(request: Request, body: HardwareCreate, user: Editor, db: Db
     kind = _kind(db, body.kind_id)
     model = _model(db, body.model_id)
     room = _room(db, body.room_id)
+    position, workplace = _holder(db, body.position_id, body.workplace_id)
     _check_serial(db, body.serial, None)
     _check_inventory_no(db, body.inventory_no, None)
     row = InventoryHardware(
@@ -492,6 +606,8 @@ def create_hardware(request: Request, body: HardwareCreate, user: Editor, db: Db
         note=body.note,
         inventory_no=body.inventory_no,
         room_id=room.id if room else None,
+        position_id=position.id if position else None,
+        workplace_id=workplace.id if workplace else None,
         source=SOURCE_MANUAL,
         status=STATUS_ACTIVE,
     )
@@ -500,6 +616,8 @@ def create_hardware(request: Request, body: HardwareCreate, user: Editor, db: Db
     add_event(db, row.id, user, "Von Hand erfasst")
     if room is not None:
         add_event(db, row.id, user, f"Standort: {place_label(room_place(db, room.id))}")
+    if position is not None or workplace is not None:
+        add_event(db, row.id, user, f"Zugeordnet: {holder_label(position, workplace)}")
     if body.inventory_no:
         add_event(db, row.id, user, f"Inventurnummer gesetzt: {body.inventory_no}")
     _audit(db, request, user, "geraet_angelegt", "geraet", row.id, _details(row))
@@ -521,6 +639,7 @@ def update_hardware(
     kind = _kind(db, body.kind_id)
     model = _model(db, body.model_id)
     room = _room(db, body.room_id)
+    position, workplace = _holder(db, body.position_id, body.workplace_id)
     _check_serial(db, body.serial, row.id)
     before = _details(row)
     changes: list[str] = []
@@ -542,6 +661,17 @@ def update_hardware(
         before_place = place_label(room_place(db, row.room_id))
         after_place = place_label(room_place(db, room.id if room else None))
         changes.append(f"Standort: {before_place} → {after_place}")
+    new_position = position.id if position else None
+    new_workplace = workplace.id if workplace else None
+    if (row.position_id, row.workplace_id) != (new_position, new_workplace):
+        old_position = db.get(InventoryPosition, row.position_id) if row.position_id else None
+        old_workplace = db.get(InventoryWorkplace, row.workplace_id) if row.workplace_id else None
+        changes.append(
+            f"Zuordnung: {holder_label(old_position, old_workplace)} → "
+            f"{holder_label(position, workplace)}"
+        )
+    row.position_id = new_position
+    row.workplace_id = new_workplace
     row.kind_id = kind.id
     row.model_id = model.id if model else None
     row.name = body.name
@@ -702,6 +832,13 @@ def master_data(db: Session) -> MasterDataOut:
             .group_by(InventoryHardware.retire_reason_id)
         ).all()
     )
+    department_use = dict(
+        db.execute(
+            select(InventoryPosition.department_id, func.count())
+            .where(InventoryPosition.department_id.is_not(None))
+            .group_by(InventoryPosition.department_id)
+        ).all()
+    )
     models_by_maker: dict[int, list[ModelOut]] = {}
     for model in db.scalars(
         select(InventoryModel).order_by(func.lower(InventoryModel.name), InventoryModel.id)
@@ -732,10 +869,64 @@ def master_data(db: Session) -> MasterDataOut:
                 )
             ).all()
         ],
+        departments=[
+            DepartmentOut(id=row.id, name=row.name, used=department_use.get(row.id, 0))
+            for row in db.scalars(
+                select(InventoryDepartment).order_by(
+                    func.lower(InventoryDepartment.name), InventoryDepartment.id
+                )
+            ).all()
+        ],
+        kits=kits_out(db),
     )
 
 
-NamedTable = type[InventoryKind] | type[InventoryMaker] | type[InventoryRetireReason]
+def kits_out(db: Session) -> list[KitOut]:
+    kit_use = dict(
+        db.execute(
+            select(InventoryWorkplace.kit_id, func.count())
+            .where(InventoryWorkplace.kit_id.is_not(None))
+            .group_by(InventoryWorkplace.kit_id)
+        ).all()
+    )
+    kinds_by_row: dict[int, list[int]] = {}
+    for row_id, kind_id in db.execute(
+        select(InventoryKitRowKind.row_id, InventoryKitRowKind.kind_id).order_by(
+            InventoryKitRowKind.kind_id
+        )
+    ).all():
+        kinds_by_row.setdefault(row_id, []).append(kind_id)
+    rows_by_kit: dict[int, list[KitRowOut]] = {}
+    for kit_row in db.scalars(
+        select(InventoryKitRow).order_by(InventoryKitRow.position, InventoryKitRow.id)
+    ).all():
+        rows_by_kit.setdefault(kit_row.kit_id, []).append(
+            KitRowOut(
+                label=kit_row.label,
+                count=kit_row.count,
+                kind_ids=kinds_by_row.get(kit_row.id, []),
+            )
+        )
+    return [
+        KitOut(
+            id=kit.id,
+            name=kit.name,
+            used=kit_use.get(kit.id, 0),
+            rows=rows_by_kit.get(kit.id, []),
+        )
+        for kit in db.scalars(
+            select(InventoryKit).order_by(func.lower(InventoryKit.name), InventoryKit.id)
+        ).all()
+    ]
+
+
+NamedTable = (
+    type[InventoryKind]
+    | type[InventoryMaker]
+    | type[InventoryRetireReason]
+    | type[InventoryDepartment]
+    | type[InventoryKit]
+)
 
 
 def _name_free(db: Session, model: NamedTable, name: str, own_id: int | None) -> None:
@@ -798,6 +989,13 @@ def delete_kind(request: Request, kind_id: ObjectId, user: Editor, db: DbDep) ->
     )
     if used:
         raise _conflict("Diese Art wird noch von Geräten verwendet.")
+    in_kit = db.scalar(
+        select(func.count())
+        .select_from(InventoryKitRowKind)
+        .where(InventoryKitRowKind.kind_id == row.id)
+    )
+    if in_kit:
+        raise _conflict("Diese Art steht noch in einer Ausstattungsvorlage.")
     name = row.name
     db.delete(row)
     _audit(db, request, user, "art_geloescht", "art", kind_id, {"name": name})
@@ -987,5 +1185,156 @@ def delete_reason(request: Request, reason_id: ObjectId, user: Editor, db: DbDep
     name = row.name
     db.delete(row)
     _audit(db, request, user, "grund_geloescht", "grund", reason_id, {"name": name})
+    db.commit()
+    return master_data(db)
+
+
+@router.post("/departments", status_code=status.HTTP_201_CREATED)
+def create_department(request: Request, body: NameIn, user: Editor, db: DbDep) -> MasterDataOut:
+    _name_free(db, InventoryDepartment, body.name, None)
+    row = InventoryDepartment(name=body.name)
+    db.add(row)
+    db.flush()
+    _audit(db, request, user, "abteilung_angelegt", "abteilung", row.id, {"name": row.name})
+    db.commit()
+    return master_data(db)
+
+
+@router.put("/departments/{department_id}")
+def update_department(
+    request: Request, department_id: ObjectId, body: NameIn, user: Editor, db: DbDep
+) -> MasterDataOut:
+    row = db.get(InventoryDepartment, department_id)
+    if row is None:
+        raise _not_found()
+    _name_free(db, InventoryDepartment, body.name, row.id)
+    before = row.name
+    row.name = body.name
+    _audit(
+        db,
+        request,
+        user,
+        "abteilung_geaendert",
+        "abteilung",
+        row.id,
+        {"vorher": before, "nachher": row.name},
+    )
+    db.commit()
+    return master_data(db)
+
+
+@router.delete("/departments/{department_id}")
+def delete_department(
+    request: Request, department_id: ObjectId, user: Editor, db: DbDep
+) -> MasterDataOut:
+    row = db.get(InventoryDepartment, department_id)
+    if row is None:
+        raise _not_found()
+    used = db.scalar(
+        select(func.count())
+        .select_from(InventoryPosition)
+        .where(InventoryPosition.department_id == row.id)
+    )
+    if used:
+        raise _conflict("Diese Abteilung ist noch bei Stellen eingetragen.")
+    name = row.name
+    db.delete(row)
+    _audit(db, request, user, "abteilung_geloescht", "abteilung", department_id, {"name": name})
+    db.commit()
+    return master_data(db)
+
+
+# --- Ausstattungsvorlagen ---------------------------------------------------------------------
+
+KIT_ROWS_MAX = 20
+
+
+class KitRowIn(BaseModel):
+    label: str = Field(min_length=1, max_length=80)
+    count: int = Field(ge=1, le=9)
+    kind_ids: list[int] = Field(min_length=1, max_length=20)
+
+    @field_validator("label")
+    @classmethod
+    def plain(cls, value: str) -> str:
+        return _not_empty(single_line(value))
+
+
+class KitIn(NameIn):
+    rows: list[KitRowIn] = Field(min_length=1, max_length=KIT_ROWS_MAX)
+
+
+def _kit_rows(db: Session, kit: InventoryKit, rows: list[KitRowIn]) -> None:
+    known = set(db.scalars(select(InventoryKind.id)).all())
+    for index, entry in enumerate(rows):
+        kind_ids = sorted(set(entry.kind_ids))
+        if any(kind_id not in known for kind_id in kind_ids):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannte Hardware-Art"
+            )
+        kit_row = InventoryKitRow(
+            kit_id=kit.id, position=index, label=entry.label, count=entry.count
+        )
+        db.add(kit_row)
+        db.flush()
+        for kind_id in kind_ids:
+            db.add(InventoryKitRowKind(row_id=kit_row.id, kind_id=kind_id))
+
+
+def _kit_details(body: KitIn) -> dict[str, object]:
+    return {
+        "name": body.name,
+        "zeilen": [
+            {"bezeichnung": row.label, "anzahl": row.count, "arten": sorted(set(row.kind_ids))}
+            for row in body.rows
+        ],
+    }
+
+
+@router.post("/kits", status_code=status.HTTP_201_CREATED)
+def create_kit(request: Request, body: KitIn, user: Editor, db: DbDep) -> MasterDataOut:
+    _name_free(db, InventoryKit, body.name, None)
+    kit = InventoryKit(name=body.name)
+    db.add(kit)
+    db.flush()
+    _kit_rows(db, kit, body.rows)
+    _audit(db, request, user, "vorlage_angelegt", "vorlage", kit.id, _kit_details(body))
+    db.commit()
+    return master_data(db)
+
+
+@router.put("/kits/{kit_id}")
+def update_kit(
+    request: Request, kit_id: ObjectId, body: KitIn, user: Editor, db: DbDep
+) -> MasterDataOut:
+    kit = db.get(InventoryKit, kit_id)
+    if kit is None:
+        raise _not_found()
+    _name_free(db, InventoryKit, body.name, kit.id)
+    kit.name = body.name
+    for kit_row in db.scalars(select(InventoryKitRow).where(InventoryKitRow.kit_id == kit.id)):
+        db.delete(kit_row)
+    db.flush()
+    _kit_rows(db, kit, body.rows)
+    _audit(db, request, user, "vorlage_geaendert", "vorlage", kit.id, _kit_details(body))
+    db.commit()
+    return master_data(db)
+
+
+@router.delete("/kits/{kit_id}")
+def delete_kit(request: Request, kit_id: ObjectId, user: Editor, db: DbDep) -> MasterDataOut:
+    kit = db.get(InventoryKit, kit_id)
+    if kit is None:
+        raise _not_found()
+    used = db.scalar(
+        select(func.count())
+        .select_from(InventoryWorkplace)
+        .where(InventoryWorkplace.kit_id == kit.id)
+    )
+    if used:
+        raise _conflict("Diese Vorlage ist noch an Arbeitsplätzen gewählt.")
+    name = kit.name
+    db.delete(kit)
+    _audit(db, request, user, "vorlage_geloescht", "vorlage", kit_id, {"name": name})
     db.commit()
     return master_data(db)

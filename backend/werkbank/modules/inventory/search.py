@@ -1,4 +1,4 @@
-"""Suche im IT-Bestand: Geräte nach Bezeichnung, Seriennummer, Inventurnummer und Hostname."""
+"""Suche im IT-Bestand: Geräte, Stellen, Arbeitsplätze und Räume."""
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -10,9 +10,11 @@ from werkbank.modules.inventory.models import (
     InventoryFloor,
     InventoryHardware,
     InventoryKind,
+    InventoryPosition,
     InventoryRoom,
     InventorySection,
     InventorySite,
+    InventoryWorkplace,
 )
 
 MODULE = "IT-Bestand"
@@ -64,8 +66,63 @@ def inventory_search(db: Session, user: CurrentUser, query: str) -> list[SearchH
             )
         )
     if len(hits) < MAX_ITEMS:
+        hits.extend(_positions(db, pattern, MAX_ITEMS - len(hits)))
+    if len(hits) < MAX_ITEMS:
+        hits.extend(_workplaces(db, pattern, MAX_ITEMS - len(hits)))
+    if len(hits) < MAX_ITEMS:
         hits.extend(_rooms(db, pattern, MAX_ITEMS - len(hits)))
     return hits
+
+
+def _positions(db: Session, pattern: str, limit: int) -> list[SearchHit]:
+    """Stellen nach Nummer, Bezeichnung und Person."""
+    rows = db.scalars(
+        select(InventoryPosition)
+        .where(
+            or_(
+                func.lower(InventoryPosition.number).like(pattern, escape="\\"),
+                func.lower(InventoryPosition.name).like(pattern, escape="\\"),
+                func.lower(InventoryPosition.person_name).like(pattern, escape="\\"),
+            )
+        )
+        .order_by(InventoryPosition.number)
+        .limit(limit)
+    ).all()
+    return [
+        SearchHit(
+            module=MODULE,
+            kind="Stelle",
+            title=f"{row.number} {row.name}",
+            subtitle=row.person_name if row.person_oid else "unbesetzt",
+            link=f"/bestand/stellen/{row.id}",
+        )
+        for row in rows
+    ]
+
+
+def _workplaces(db: Session, pattern: str, limit: int) -> list[SearchHit]:
+    """Arbeitsplätze nach Nummer und Bezeichnung."""
+    rows = db.scalars(
+        select(InventoryWorkplace)
+        .where(
+            or_(
+                func.lower(InventoryWorkplace.number).like(pattern, escape="\\"),
+                func.lower(InventoryWorkplace.name).like(pattern, escape="\\"),
+            )
+        )
+        .order_by(InventoryWorkplace.number)
+        .limit(limit)
+    ).all()
+    return [
+        SearchHit(
+            module=MODULE,
+            kind="Arbeitsplatz",
+            title=f"{row.number} {row.name}".strip(),
+            subtitle="geteilt" if row.shared else "einzeln",
+            link=f"/bestand/arbeitsplaetze/{row.id}",
+        )
+        for row in rows
+    ]
 
 
 def _rooms(db: Session, pattern: str, limit: int) -> list[SearchHit]:
