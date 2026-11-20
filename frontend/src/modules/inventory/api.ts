@@ -1550,7 +1550,7 @@ export function changeLoanDue(id: number, dueOn: string): Promise<Loan> {
 
 /** Datum in einigen Tagen als JJJJ-MM-TT (lokale Zeit). */
 export function daysFrom(start: string, days: number): string {
-  const [year, month, day] = start.split("-").map(Number);
+  const [year = 1970, month = 1, day = 1] = start.split("-").map(Number);
   const date = new Date(year, month - 1, day + days);
   return today(date);
 }

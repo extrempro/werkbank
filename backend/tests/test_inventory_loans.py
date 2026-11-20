@@ -274,6 +274,7 @@ def test_overdue_case_extends_loan(db: Session) -> None:
         f"{BASE}/loans/{loan['id']}/due", json={"due_on": soon.isoformat()}, headers=HEADERS
     )
     assert later.status_code == 200 and later.json()["due_on"] == soon.isoformat()
+    db.expire_all()
     check_loans(db, at(soon + timedelta(days=1)))
     second = db.scalars(
         select(InventoryCase).where(
