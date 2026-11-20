@@ -133,6 +133,9 @@ function SyncBar({ canEdit }: { canEdit: boolean }) {
 function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => void }) {
   const options = decisionOptions(entry);
   const [choice, setChoice] = useState("");
+  // Erklärung zu einer Möglichkeit: per „i“ oder für die gewählte
+  const [info, setInfo] = useState<string | null>(null);
+  const hintId = useId();
   // Gewählte Stelle, Arbeitsplatz, Raum oder Gerät (Auswahl mit Suche)
   const [target, setTarget] = useState<LookupItem | null>(null);
   const [dueOn, setDueOn] = useState("");
@@ -191,9 +194,11 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
     });
   };
 
+  const hinted = options.find((option) => option.id === (info ?? choice));
   const suggested = entry.facts.suggest_workplace_id;
   const pick = (id: string) => {
     setChoice(id);
+    setInfo(null);
     setError(null);
     if (id === "gleich" && entry.hint) {
       const hint = entry.hint;
@@ -231,18 +236,33 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
         </legend>
         <div className="case-options">
           {options.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className="case-option"
-              aria-pressed={choice === option.id}
-              onClick={() => pick(option.id)}
-            >
-              <strong>{option.label}</strong>
-              <span className="small">{option.hint}</span>
-            </button>
+            <span key={option.id} className="case-option-wrap">
+              <button
+                type="button"
+                className="case-option"
+                aria-pressed={choice === option.id}
+                onClick={() => pick(option.id)}
+              >
+                {option.label}
+              </button>
+              <button
+                type="button"
+                className="case-info"
+                aria-label={`Erklärung zu „${option.label}“`}
+                aria-expanded={info === option.id}
+                aria-controls={hintId}
+                onClick={() => setInfo(info === option.id ? null : option.id)}
+              >
+                i
+              </button>
+            </span>
           ))}
         </div>
+        {hinted && (
+          <p id={hintId} className="small case-option-hint">
+            <strong>{hinted.label}:</strong> {hinted.hint}
+          </p>
+        )}
       </fieldset>
       {choice === "stelle" && (
         <LookupPicker

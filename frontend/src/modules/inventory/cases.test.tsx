@@ -137,7 +137,14 @@ describe("Vorgänge: Seite", () => {
       },
     });
     render(<CasesPage caseId={3} roles={["Bestand.Editor"]} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Einer Stelle zuordnen/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Einer Stelle zuordnen/ }));
+    expect(screen.getByText(/Das Gerät gehört dann zur Stelle/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Erklärung zu „Ins Lager“" }));
+    expect(screen.getByRole("button", { name: "Erklärung zu „Ins Lager“" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByText(/Nicht zugeordnet/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
     expect(await screen.findByText("Bitte eine Stelle wählen.")).toBeTruthy();
     // Die Stelle wird gesucht: Der Server liefert die Treffer.
@@ -255,7 +262,7 @@ describe("Vorgänge: neuer Monitor", () => {
     render(<CasesPage caseId={5} roles={["Bestand.Editor"]} />);
     expect(await screen.findByText("Monitor laut Custom Field")).toBeTruthy();
     expect(screen.getByText("DisplayPort")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Am Arbeitsplatz anlegen/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Am Arbeitsplatz anlegen/ }));
     // Der Vorschlag ist schon gewählt; „Ändern“ öffnet die Suche.
     expect(await screen.findByText("Arbeitsplatz von NB-0142")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
@@ -344,8 +351,8 @@ describe("Vorgänge: Person nicht mehr aktiv", () => {
     render(<CasesPage caseId={9} roles={["Bestand.Editor"]} />);
     expect(await screen.findByText("deaktiviert")).toBeTruthy();
     expect(screen.getByRole("link", { name: /ST-004 Sachbearbeitung/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Geklärt/ })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /Neue Person eintragen/ }));
+    expect(screen.queryByRole("button", { name: /^Geklärt/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /^Neue Person eintragen/ }));
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
     expect((await screen.findByRole("alert")).textContent).toContain("neue Person");
     fireEvent.change(screen.getByLabelText(/Neue Person \(aus Entra\)/), {
@@ -368,8 +375,8 @@ describe("Vorgänge: Person nicht mehr aktiv", () => {
     };
     stubFetch({ ...routes, "GET /api/inventory/cases/9": loanCase });
     render(<CasesPage caseId={9} roles={["Bestand.Editor"]} />);
-    expect(await screen.findByRole("button", { name: /Geklärt/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Stelle frei machen/ })).toBeNull();
+    expect(await screen.findByRole("button", { name: /^Geklärt/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Stelle frei machen/ })).toBeNull();
     expect(screen.getByRole("link", { name: "L-003" })).toBeTruthy();
   });
 });
