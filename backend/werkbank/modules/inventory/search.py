@@ -6,7 +6,14 @@ from sqlalchemy.orm import Session
 from werkbank.core.roles import Role
 from werkbank.core.search import SearchHit
 from werkbank.core.sessions import CurrentUser
-from werkbank.modules.inventory.models import InventoryHardware, InventoryKind
+from werkbank.modules.inventory.models import (
+    InventoryFloor,
+    InventoryHardware,
+    InventoryKind,
+    InventoryRoom,
+    InventorySection,
+    InventorySite,
+)
 
 MODULE = "IT-Bestand"
 MAX_ITEMS = 8
@@ -56,4 +63,30 @@ def inventory_search(db: Session, user: CurrentUser, query: str) -> list[SearchH
                 link=f"/bestand/hardware/{row.id}",
             )
         )
+    if len(hits) < MAX_ITEMS:
+        hits.extend(_rooms(db, pattern, MAX_ITEMS - len(hits)))
     return hits
+
+
+def _rooms(db: Session, pattern: str, limit: int) -> list[SearchHit]:
+    """Räume nach Name; der Treffer öffnet die Etage mit markiertem Raum."""
+    rows = db.execute(
+        select(InventoryRoom.id, InventoryRoom.name, InventoryFloor.id, InventoryFloor.name)
+        .add_columns(InventorySite.name)
+        .join(InventoryFloor, InventoryFloor.id == InventoryRoom.floor_id)
+        .join(InventorySection, InventorySection.id == InventoryFloor.section_id)
+        .join(InventorySite, InventorySite.id == InventorySection.site_id)
+        .where(func.lower(InventoryRoom.name).like(pattern, escape="\\"))
+        .order_by(func.lower(InventoryRoom.name), InventoryRoom.id)
+        .limit(limit)
+    ).all()
+    return [
+        SearchHit(
+            module=MODULE,
+            kind="Raum",
+            title=f"Raum {name}",
+            subtitle=f"{site} · {floor}",
+            link=f"/bestand/standorte/etage/{floor_id}/raum/{room_id}",
+        )
+        for room_id, name, floor_id, floor, site in rows
+    ]

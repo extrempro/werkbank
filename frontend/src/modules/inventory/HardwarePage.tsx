@@ -6,14 +6,17 @@ import { navigate } from "../../router";
 import {
   createHardware,
   fetchHardwareList,
+  fetchLocations,
   fetchMasterData,
   filterHardware,
   hardwarePath,
   INVENTORY_EDITOR_ROLE,
   modelLabel,
+  roomChoices,
   SOURCE_LABELS,
   type HardwareSummary,
   type ListState,
+  type Locations,
   type MasterData,
 } from "./api";
 
@@ -30,19 +33,24 @@ export interface DeviceFields {
   serial: string;
   hostname: string;
   note: string;
+  roomId: string;
 }
 
 /** Felder eines Geräts; beim Anlegen und Bearbeiten gleich. */
 export function DeviceFormFields({
   master,
+  locations,
   value,
   onChange,
 }: {
   master: MasterData;
+  /** Standorte für die Raumauswahl; null, solange sie laden oder fehlen. */
+  locations: Locations | null;
   value: DeviceFields;
   onChange: (next: DeviceFields) => void;
 }) {
   const set = (patch: Partial<DeviceFields>) => onChange({ ...value, ...patch });
+  const groups = locations ? roomChoices(locations) : [];
   return (
     <>
       <div className="tool-row">
@@ -120,6 +128,24 @@ export function DeviceFormFields({
           />
         </label>
       </div>
+      <label>
+        Raum (freiwillig)
+        <select value={value.roomId} onChange={(event) => set({ roomId: event.target.value })}>
+          <option value="">kein Raum</option>
+          {groups.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.rooms.map((room) => (
+                <option key={room.id} value={String(room.id)}>
+                  {room.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+      {locations && groups.length === 0 && (
+        <p className="small">Räume lassen sich unter Standorte auf einem Grundriss anlegen.</p>
+      )}
     </>
   );
 }
@@ -143,11 +169,20 @@ export function deviceInput(value: DeviceFields) {
     serial: value.serial.trim(),
     hostname: value.hostname.trim(),
     note: value.note.trim(),
+    room_id: value.roomId ? Number(value.roomId) : null,
   };
 }
 
 /** Neues Gerät von Hand; mit Inventurnummer erst nach einer Rückfrage. */
-function NewDeviceForm({ master, onCancel }: { master: MasterData; onCancel: () => void }) {
+function NewDeviceForm({
+  master,
+  locations,
+  onCancel,
+}: {
+  master: MasterData;
+  locations: Locations | null;
+  onCancel: () => void;
+}) {
   const [fields, setFields] = useState<DeviceFields>({
     kindId: "",
     modelId: "",
@@ -155,6 +190,7 @@ function NewDeviceForm({ master, onCancel }: { master: MasterData; onCancel: () 
     serial: "",
     hostname: "",
     note: "",
+    roomId: "",
   });
   const [inventoryNo, setInventoryNo] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -194,7 +230,12 @@ function NewDeviceForm({ master, onCancel }: { master: MasterData; onCancel: () 
         <h2 id="geraet-neu-titel">Gerät erfassen</h2>
       </div>
       <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-        <DeviceFormFields master={master} value={fields} onChange={setFields} />
+        <DeviceFormFields
+          master={master}
+          locations={locations}
+          value={fields}
+          onChange={setFields}
+        />
         <label className="narrow">
           Inventurnummer (freiwillig)
           <input
@@ -261,6 +302,7 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
   const [loaded, setLoaded] = useState<{ state: ListState; items: HardwareSummary[] } | null>(null);
   const list = loaded && loaded.state === state ? loaded.items : null;
   const [master, setMaster] = useState<MasterData | null>(null);
+  const [locations, setLocations] = useState<Locations | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [kindId, setKindId] = useState<number | null>(null);
@@ -272,6 +314,11 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
       (result) => active && setMaster(result),
       (error: unknown) =>
         active && setFailed(errorText(error, "Die Stammdaten konnten nicht geladen werden.")),
+    );
+    // Ohne Standorte bleibt die Raumauswahl leer; das ist kein Fehler der Seite.
+    fetchLocations().then(
+      (result) => active && setLocations(result),
+      () => undefined,
     );
     return () => {
       active = false;
@@ -325,7 +372,7 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
         </p>
       )}
       {canEdit && creating && master && master.kinds.length > 0 && (
-        <NewDeviceForm master={master} onCancel={() => setCreating(false)} />
+        <NewDeviceForm master={master} locations={locations} onCancel={() => setCreating(false)} />
       )}
 
       {failed && (
@@ -412,6 +459,9 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
                     Inventurnummer
                   </th>
                   <th scope="col" role="columnheader">
+                    Standort
+                  </th>
+                  <th scope="col" role="columnheader">
                     Herkunft
                   </th>
                 </tr>
@@ -439,6 +489,9 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
                     </td>
                     <td role="cell" data-label="Inventurnummer" className="mono">
                       {device.inventory_no ?? "–"}
+                    </td>
+                    <td role="cell" data-label="Standort">
+                      {device.place ?? "–"}
                     </td>
                     <td role="cell" data-label="Herkunft">
                       {SOURCE_LABELS[device.source] ?? device.source}

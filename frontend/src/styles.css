@@ -6199,3 +6199,303 @@ p.badges {
   cursor: pointer;
   padding: 10px 0;
 }
+
+/* IT-Bestand › Standorte */
+.loc-wrap {
+  container-type: inline-size;
+}
+
+.loc-layout {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.loc-main {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.loc-tree {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: 0.75rem;
+}
+
+.loc-mobilebar {
+  display: none;
+}
+
+.loc-search input {
+  width: 100%;
+}
+
+.loc-hits {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+  border-bottom: 1px solid var(--farbe-rand);
+}
+
+.loc-hit {
+  display: grid;
+  width: 100%;
+  gap: 0.1rem;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.loc-hit:hover {
+  background: var(--farbe-hover);
+}
+
+.loc-path {
+  margin: 0;
+}
+
+.lt-list,
+.lt-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lt-list {
+  margin-top: 0.5rem;
+}
+
+.lt-children {
+  margin-left: 0.85rem;
+  padding-left: 0.4rem;
+  border-left: 1px solid var(--farbe-rand);
+}
+
+.lt-toggle,
+.lt-floor,
+.room-list button {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 2rem;
+  padding: 0.3rem 0.5rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lt-toggle:hover,
+.lt-floor:hover,
+.room-list button:hover {
+  background: var(--farbe-hover);
+}
+
+.lt-city {
+  font-weight: 600;
+}
+
+.lt-chev {
+  width: 0.8rem;
+  color: var(--farbe-text-leise);
+}
+
+.lt-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lt-count {
+  color: var(--farbe-text-leise);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.lt-floor[aria-current="true"],
+.room-list button[aria-pressed="true"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+  font-weight: 600;
+}
+
+.plan-with-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 13rem;
+  gap: 1rem;
+  align-items: start;
+}
+
+.plan-main {
+  min-width: 0;
+}
+
+.room-list {
+  display: grid;
+  gap: 0.15rem;
+  max-height: 32rem;
+  overflow: auto;
+}
+
+.room-list-head {
+  margin: 0 0 0.25rem;
+}
+
+.plan-box {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-neutral-flaeche);
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.plan-edit {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.plan-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.plan-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--farbe-text-leise);
+}
+
+.plan-room,
+.plan-draft {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--farbe-primaer);
+  border-radius: 4px;
+  background: rgb(31 87 195 / 12%);
+}
+
+.plan-room-on {
+  border-color: var(--farbe-akzent);
+  background: rgb(242 163 58 / 30%);
+  outline: 2px solid var(--farbe-flaeche);
+  z-index: 1;
+}
+
+.plan-edit .plan-room {
+  cursor: move;
+}
+
+.plan-draft {
+  border-style: dashed;
+  pointer-events: none;
+}
+
+.plan-room-button {
+  width: 100%;
+  height: 100%;
+  padding: 0.15rem 0.25rem;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: left;
+  text-overflow: ellipsis;
+  cursor: inherit;
+}
+
+.plan-handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--farbe-flaeche);
+  border-radius: 50%;
+  background: var(--farbe-akzent);
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.room-rect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem 0.75rem;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+}
+
+.room-rect label {
+  flex: 1 1 6rem;
+}
+
+.path-editor {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+@container (max-width: 760px) {
+  .loc-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .loc-mobilebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .loc-mobilebar > span {
+    display: grid;
+    min-width: 0;
+  }
+
+  .loc-tree {
+    display: none;
+    position: static;
+    max-height: none;
+  }
+
+  .loc-tree-open {
+    display: block;
+  }
+
+  .plan-with-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .room-list {
+    max-height: 16rem;
+  }
+}

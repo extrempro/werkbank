@@ -552,7 +552,7 @@ Projekte der IT mit Budget, Ansprechpartnern, Links, Jour-Fixe-Protokollen und e
 
 ## 8d. Bereich IT-Bestand
 
-Bestand der IT-Hardware. Wird schrittweise aufgebaut; geplant sind danach Standorte mit Grundrissen, Stellen und Arbeitsplätze, Abgleich mit NinjaOne mit Vorgängen, Monitore und Lenovo-PSREF-Daten, Verleih, Abgleich mit Entra und Statistik. Zugriff: `Bestand.Reader` liest, `Bestand.Editor` pflegt (serverseitig geprüft). Eigener Bereich „IT-Bestand“ in der Navigation (`/bestand/hardware`, ein Gerät unter `/bestand/hardware/{id}` mit den Reitern Übersicht und Verlauf; `/bestand/stammdaten`).
+Bestand der IT-Hardware. Wird schrittweise aufgebaut; geplant sind danach Stellen und Arbeitsplätze, Abgleich mit NinjaOne mit Vorgängen, Monitore und Lenovo-PSREF-Daten, Verleih, Abgleich mit Entra und Statistik. Zugriff: `Bestand.Reader` liest, `Bestand.Editor` pflegt (serverseitig geprüft). Eigener Bereich „IT-Bestand“ in der Navigation (`/bestand/hardware`, ein Gerät unter `/bestand/hardware/{id}` mit den Reitern Übersicht, Standort und Verlauf; `/bestand/standorte` mit `/etage/{id}` und `/raum/{id}`; `/bestand/stammdaten`).
 
 - **Gerät:** Bezeichnung, Art, optional Hersteller und Modell, Seriennummer, Inventurnummer, Hostname, Notiz, Herkunft (bisher nur „von Hand“). Seriennummer (ohne Groß- und Kleinschreibung) und Inventurnummer sind eindeutig, sobald eingetragen.
 - **Inventurnummer:** Setzen, Ändern und Entfernen nur mit Rückfrage in der Oberfläche, auch beim Anlegen; jede Änderung steht im Verlauf und im Audit-Log.
@@ -561,7 +561,11 @@ Bestand der IT-Hardware. Wird schrittweise aufgebaut; geplant sind danach Stando
 - **Stammdaten:** Hardware-Arten (mit Merkmal „hat Datenträger“), Hersteller mit Modellen, Gründe fürs Ausmustern. Startwerte kommen mit der Migration. Verwendete Einträge lassen sich umbenennen, aber nicht löschen.
 - **Liste:** Status (im Bestand, ausgemustert, alle), Suche über Bezeichnung, Art, Modell, Seriennummer, Inventurnummer und Hostname, Filter nach Art. Auf schmalen Bildschirmen werden die Zeilen zu Karten.
 - **Suche:** Geräte nach Bezeichnung, Seriennummer, Inventurnummer und Hostname (nur mit Bestand-Rolle).
-- **Audit:** alle Änderungen an Geräten und Stammdaten (Modul `bestand`), ohne Personendaten.
+- **Standorte:** Stadt › Standort › Gebäudeabschnitt › Etage › Raum. Baum zugeklappt mit offenem Weg zur gewählten Etage, Suche über alle Ebenen, Raumliste neben dem Grundriss; schmal mit „Etage wechseln“. Löschen nur, was leer ist; Räume nur ohne Hardware (409).
+- **Grundriss:** ein Bild je Etage (PNG, JPEG, WebP; Prüfung am Inhalt, 50 bis 12 000 Pixel je Seite, höchstens `INVENTORY_PLAN_MAX_MB`, Vorgabe 10 MB), in der Datenbank (`inventory_floor_plans`). `GET /api/inventory/floors/{id}/plan` mit `no-store`, `nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`; die URL trägt den ETag als Versionsparameter.
+- **Räume:** Rechteck in Prozent des Grundrisses (x, y, Breite, Höhe; serverseitig auf 0 bis 100 geprüft, auf zwei Stellen gerundet). Aufziehen, Verschieben und Größe ändern mit Zeiger; für Tastatur und Bildschirmleser Zahlenfelder (WCAG 2.5.7).
+- **Gerät im Raum:** optional; Anzeige als „Raum · Standort, Etage“, Reiter Standort mit hervorgehobenem Raum, Wechsel im Verlauf. Die Suche findet Räume.
+- **Audit:** alle Änderungen an Geräten, Standorten, Grundrissen und Stammdaten (Modul `bestand`), ohne Personendaten.
 
 ## 9. Datenmodell (Überblick)
 

@@ -1154,7 +1154,8 @@ export const CHAPTERS: readonly Chapter[] = [
   {
     id: "it-bestand",
     title: "IT-Bestand",
-    summary: "Hardware mit Inventurnummer und Verlauf, Ausmustern und die Stammdaten dazu.",
+    summary:
+      "Hardware mit Inventurnummer und Verlauf, Standorte mit Grundrissen, Ausmustern und die Stammdaten dazu.",
     roles: [INVENTORY_READER, INVENTORY_EDITOR],
     sections: [
       {
@@ -1224,6 +1225,39 @@ export const CHAPTERS: readonly Chapter[] = [
             text: "Versehentlich ausgemustert? Im Gerät „Wieder in Betrieb nehmen“ tippen. Auch das steht im Verlauf.",
           },
         ],
+      },
+      {
+        id: "standorte",
+        title: "Standorte und Räume",
+        blocks: [
+          {
+            kind: "text",
+            text: "Unter „Standorte“ steht der Baum Stadt › Standort › Gebäudeabschnitt › Etage. Er ist zugeklappt, offen ist nur der Weg zur gewählten Etage. Über das Suchfeld findest du Räume, Etagen und Standorte direkt. Rechts siehst du den Grundriss der Etage mit den Räumen und daneben die Liste der Räume mit der Zahl der Geräte.",
+          },
+          {
+            kind: "hint",
+            text: "Auf schmalen Bildschirmen ist der Baum ausgeblendet. Mit „Etage wechseln“ öffnest du ihn.",
+          },
+          {
+            kind: "text",
+            text: "Anlegen und ändern dürfen nur Bearbeiterinnen und Bearbeiter des IT-Bestands:",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Unter „Standorte pflegen“ nacheinander Stadt, Standort, Gebäudeabschnitt und Etage anlegen.",
+              "In der Etage „Grundriss hochladen“ tippen und ein Bild wählen (PNG, JPEG oder WebP).",
+              "„Räume bearbeiten“ tippen und auf freier Fläche ein Rechteck aufziehen. Danach den Namen des Raums eintragen und „Raum anlegen“ tippen.",
+              "Räume verschiebst du durch Ziehen; der Griff unten rechts ändert die Größe. Ohne Maus wählst du den Raum und trägst die Lage in Prozent ein.",
+              "„Fertig“ tippen.",
+            ],
+          },
+          {
+            kind: "text",
+            text: "Ein Gerät ordnest du beim Erfassen oder unter „Bearbeiten“ einem Raum zu. Im Gerät zeigt der Reiter „Standort“ den Raum auf dem Grundriss. Löschen lässt sich nur, was leer ist: ein Raum ohne Geräte, eine Etage ohne Räume und so weiter.",
+          },
+        ],
+        links: [{ to: "/bestand/standorte", label: "Zu den Standorten" }],
       },
       {
         id: "stammdaten",

@@ -1,5 +1,5 @@
-import { deleteJson, getJson, postJson, putJson } from "../../api";
-import { INVENTORY_HARDWARE_PATH } from "../../navigation";
+import { ApiError, deleteJson, getJson, postJson, putJson } from "../../api";
+import { INVENTORY_HARDWARE_PATH, INVENTORY_LOCATIONS_PATH } from "../../navigation";
 
 const BASE = "/api/inventory";
 
@@ -32,6 +32,8 @@ export interface HardwareSummary {
   hostname: string;
   source: string;
   status: HardwareStatus;
+  /** Raum mit Standort und Etage als Text; null ohne Raum. */
+  place: string | null;
 }
 
 export interface Retire {
@@ -48,7 +50,18 @@ export interface HardwareEvent {
   text: string;
 }
 
+export interface DeviceLocation {
+  room_id: number;
+  room: string;
+  floor_id: number;
+  floor: string;
+  section: string;
+  site: string;
+  city: string;
+}
+
 export interface Hardware extends HardwareSummary {
+  location: DeviceLocation | null;
   model_id: number | null;
   maker_id: number | null;
   note: string;
@@ -65,6 +78,7 @@ export interface HardwareInput {
   serial: string;
   hostname: string;
   note: string;
+  room_id: number | null;
 }
 
 export interface RetireInput {
@@ -107,10 +121,11 @@ export interface MasterData {
 }
 
 /** Die Reiter eines Geräts; der erste hat keinen eigenen Pfadteil. */
-export type HardwareTab = "uebersicht" | "verlauf";
+export type HardwareTab = "uebersicht" | "standort" | "verlauf";
 
 export const HARDWARE_TABS: { id: HardwareTab; label: string }[] = [
   { id: "uebersicht", label: "Übersicht" },
+  { id: "standort", label: "Standort" },
   { id: "verlauf", label: "Verlauf" },
 ];
 
@@ -122,7 +137,7 @@ export function hardwarePath(id: number, tab: HardwareTab = "uebersicht"): strin
 
 /** Gerät und Reiter aus dem Pfad, z. B. „/bestand/hardware/7/verlauf“; sonst null. */
 export function parseHardwarePath(path: string): { id: number; tab: HardwareTab } | null {
-  const match = /^\/bestand\/hardware\/(\d{1,9})(?:\/(verlauf))?$/.exec(path);
+  const match = /^\/bestand\/hardware\/(\d{1,9})(?:\/(standort|verlauf))?$/.exec(path);
   if (!match) {
     return null;
   }
@@ -203,7 +218,7 @@ export function modelLabel(device: Pick<HardwareSummary, "maker" | "model">): st
   return device.model ? `${device.maker ?? ""} ${device.model}`.trim() : "–";
 }
 
-/** Suche über Bezeichnung, Art, Modell, Seriennummer, Inventurnummer und Hostname. */
+/** Suche über Bezeichnung, Art, Modell, Seriennummer, Inventurnummer, Hostname und Standort. */
 export function filterHardware(
   list: readonly HardwareSummary[],
   query: string,
@@ -225,6 +240,7 @@ export function filterHardware(
       device.serial,
       device.inventory_no ?? "",
       device.hostname,
+      device.place ?? "",
     ].some((value) => value.toLocaleLowerCase("de").includes(needle));
   });
 }
@@ -249,4 +265,303 @@ export function today(now: Date = new Date()): string {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+// --- Standorte ---------------------------------------------------------------------------
+
+export interface RoomBrief {
+  id: number;
+  name: string;
+}
+
+export interface FloorBrief {
+  id: number;
+  name: string;
+  position: number;
+  has_plan: boolean;
+  rooms: RoomBrief[];
+}
+
+export interface SectionNode {
+  id: number;
+  name: string;
+  floors: FloorBrief[];
+}
+
+export interface SiteNode {
+  id: number;
+  name: string;
+  sections: SectionNode[];
+}
+
+export interface CityNode {
+  id: number;
+  name: string;
+  sites: SiteNode[];
+}
+
+export interface Locations {
+  cities: CityNode[];
+}
+
+export interface Room {
+  id: number;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  hardware: number;
+}
+
+export interface RoomRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface Floor {
+  id: number;
+  name: string;
+  position: number;
+  section_id: number;
+  section: string;
+  site_id: number;
+  site: string;
+  city_id: number;
+  city: string;
+  plan: { url: string; width: number; height: number } | null;
+  rooms: Room[];
+}
+
+/** Etage und Raum aus dem Pfad, z. B. „/bestand/standorte/etage/4/raum/9“. */
+export function parseLocationPath(
+  path: string,
+): { floorId: number | null; roomId: number | null } | null {
+  if (path === INVENTORY_LOCATIONS_PATH) {
+    return { floorId: null, roomId: null };
+  }
+  const match = /^\/bestand\/standorte\/etage\/(\d{1,9})(?:\/raum\/(\d{1,9}))?$/.exec(path);
+  if (!match) {
+    return null;
+  }
+  return { floorId: Number(match[1]), roomId: match[2] ? Number(match[2]) : null };
+}
+
+export function locationPath(floorId: number, roomId: number | null = null): string {
+  const base = `${INVENTORY_LOCATIONS_PATH}/etage/${floorId}`;
+  return roomId === null ? base : `${base}/raum/${roomId}`;
+}
+
+export function fetchLocations(): Promise<Locations> {
+  return getJson(`${BASE}/locations`);
+}
+
+export function fetchFloor(id: number): Promise<Floor> {
+  return getJson(`${BASE}/floors/${id}`);
+}
+
+export type LevelKind = "cities" | "sites" | "sections";
+
+export function createLevel(
+  kind: LevelKind,
+  body: { name: string; city_id?: number; site_id?: number },
+): Promise<Locations> {
+  return postJson(`${BASE}/${kind}`, body, { quiet: true });
+}
+
+export function renameLevel(kind: LevelKind, id: number, name: string): Promise<Locations> {
+  return putJson(`${BASE}/${kind}/${id}`, { name }, { quiet: true });
+}
+
+export function deleteLevel(kind: LevelKind | "floors", id: number): Promise<Locations> {
+  return deleteJson(`${BASE}/${kind}/${id}`, { quiet: true });
+}
+
+export function createFloor(body: {
+  name: string;
+  section_id: number;
+  position: number;
+}): Promise<Floor> {
+  return postJson(`${BASE}/floors`, body, { quiet: true });
+}
+
+export function updateFloor(id: number, body: { name: string; position: number }): Promise<Floor> {
+  return putJson(`${BASE}/floors/${id}`, body, { quiet: true });
+}
+
+export function createRoom(floorId: number, body: RoomRect & { name: string }): Promise<Floor> {
+  return postJson(`${BASE}/floors/${floorId}/rooms`, body, { quiet: true });
+}
+
+export function updateRoom(id: number, body: RoomRect & { name: string }): Promise<Floor> {
+  return putJson(`${BASE}/rooms/${id}`, body, { quiet: true });
+}
+
+export function deleteRoom(id: number): Promise<Floor> {
+  return deleteJson(`${BASE}/rooms/${id}`, { quiet: true });
+}
+
+export function deletePlan(floorId: number): Promise<Floor> {
+  return deleteJson(`${BASE}/floors/${floorId}/plan`, { quiet: true });
+}
+
+export const PLAN_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+/** Lädt den Grundriss hoch; der Inhalt der Anfrage ist das Bild selbst. */
+export async function uploadPlan(floorId: number, file: File): Promise<Floor> {
+  const response = await fetch(`${BASE}/floors/${floorId}/plan`, {
+    method: "PUT",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": file.type || "application/octet-stream",
+    },
+    body: file,
+  });
+  if (!response.ok) {
+    let detail: string | null = null;
+    try {
+      const body: unknown = await response.json();
+      if (typeof body === "object" && body !== null && "detail" in body) {
+        const value = (body as { detail: unknown }).detail;
+        detail = typeof value === "string" ? value : null;
+      }
+    } catch {
+      // ohne Text
+    }
+    throw new ApiError(response.status, false, detail);
+  }
+  return (await response.json()) as Floor;
+}
+
+/** Rechteck auf 0–100 % begrenzen und auf zwei Stellen runden. */
+export function clampRect(rect: RoomRect, min = 1): RoomRect {
+  const round = (value: number) => Math.round(value * 100) / 100;
+  const w = Math.min(100, Math.max(min, rect.w));
+  const h = Math.min(100, Math.max(min, rect.h));
+  const x = Math.min(100 - w, Math.max(0, rect.x));
+  const y = Math.min(100 - h, Math.max(0, rect.y));
+  return { x: round(x), y: round(y), w: round(w), h: round(h) };
+}
+
+/** Rechteck aus zwei Punkten (beim Aufziehen), unabhängig von der Richtung. */
+export function rectFromPoints(
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+): RoomRect {
+  return {
+    x: Math.min(start.x, end.x),
+    y: Math.min(start.y, end.y),
+    w: Math.abs(end.x - start.x),
+    h: Math.abs(end.y - start.y),
+  };
+}
+
+export interface FloorHit {
+  kind: "Stadt" | "Standort" | "Abschnitt" | "Etage" | "Raum";
+  name: string;
+  path: string;
+  floorId: number;
+  roomId: number | null;
+}
+
+/** Suche im Baum: Städte, Standorte, Abschnitte, Etagen und Räume (höchstens 12). */
+export function searchLocations(tree: Locations, query: string): FloorHit[] {
+  const needle = query.trim().toLocaleLowerCase("de");
+  if (!needle) {
+    return [];
+  }
+  const hits: FloorHit[] = [];
+  const has = (value: string) => value.toLocaleLowerCase("de").includes(needle);
+  for (const city of tree.cities) {
+    const firstFloor = city.sites[0]?.sections[0]?.floors[0];
+    if (has(city.name) && firstFloor) {
+      hits.push({ kind: "Stadt", name: city.name, path: "", floorId: firstFloor.id, roomId: null });
+    }
+    for (const site of city.sites) {
+      const siteFloor = site.sections[0]?.floors[0];
+      if (has(site.name) && siteFloor) {
+        hits.push({
+          kind: "Standort",
+          name: site.name,
+          path: city.name,
+          floorId: siteFloor.id,
+          roomId: null,
+        });
+      }
+      for (const section of site.sections) {
+        const sectionFloor = section.floors[0];
+        if (has(section.name) && sectionFloor) {
+          hits.push({
+            kind: "Abschnitt",
+            name: section.name,
+            path: `${city.name} › ${site.name}`,
+            floorId: sectionFloor.id,
+            roomId: null,
+          });
+        }
+        for (const floor of section.floors) {
+          const where = `${site.name} › ${section.name}`;
+          if (has(floor.name)) {
+            hits.push({
+              kind: "Etage",
+              name: floor.name,
+              path: where,
+              floorId: floor.id,
+              roomId: null,
+            });
+          }
+          for (const room of floor.rooms) {
+            if (has(room.name)) {
+              hits.push({
+                kind: "Raum",
+                name: room.name,
+                path: `${where} › ${floor.name}`,
+                floorId: floor.id,
+                roomId: room.id,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+  return hits.slice(0, 12);
+}
+
+/** Erste Etage im Baum, z. B. als Vorauswahl; null ohne Etagen. */
+export function firstFloorId(tree: Locations): number | null {
+  for (const city of tree.cities) {
+    for (const site of city.sites) {
+      for (const section of site.sections) {
+        const floor = section.floors[0];
+        if (floor) {
+          return floor.id;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/** Alle Räume mit Ort, z. B. für die Auswahl am Gerät. */
+export function roomChoices(tree: Locations): { label: string; rooms: RoomBrief[] }[] {
+  const groups: { label: string; rooms: RoomBrief[] }[] = [];
+  for (const city of tree.cities) {
+    for (const site of city.sites) {
+      for (const section of site.sections) {
+        for (const floor of section.floors) {
+          if (floor.rooms.length > 0) {
+            groups.push({
+              label: `${city.name} › ${site.name} › ${section.name} › ${floor.name}`,
+              rooms: floor.rooms,
+            });
+          }
+        }
+      }
+    }
+  }
+  return groups;
 }

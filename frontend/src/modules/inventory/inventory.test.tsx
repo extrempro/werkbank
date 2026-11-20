@@ -62,6 +62,7 @@ const notebook: HardwareSummary = {
   hostname: "NB-0142",
   source: "manuell",
   status: "aktiv",
+  place: null,
 };
 
 const monitor: HardwareSummary = {
@@ -79,6 +80,7 @@ const monitor: HardwareSummary = {
 
 const detail: Hardware = {
   ...notebook,
+  location: null,
   model_id: 9,
   maker_id: 5,
   note: "",
