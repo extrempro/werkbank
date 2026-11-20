@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.68.0] – 2026-11-20
+
+IT-Bestand, Schritt 7: Abgleich mit Entra.
+
+### IT-Bestand
+
+- Auftrag `bestand.entra` jede Stunde: prüft die Personen an Stellen und in offenen Verleihen über `GET /users/{id}`. Ist Entra nicht erreichbar oder nicht eingerichtet, ändert der Lauf nichts
+- Name und Anmeldename (beim Verleih auch die Mailadresse) werden aus Entra nachgezogen, mit Eintrag im Verlauf der Stelle bzw. der verliehenen Geräte
+- Neuer Vorgang **„Person nicht mehr aktiv“**, wenn ein Konto deaktiviert oder gelöscht ist: je Stelle und je offenem Verleih, einmal je Zeitraum der Inaktivität. Entscheidungen bei Stellen: Stelle frei machen, neue Person eintragen (der Server liest sie aus Entra), erst mal so lassen; beim Verleih: geklärt. Schließt sich selbst, wenn das Konto wieder aktiv ist oder der Verleih vollständig zurück ist
+- Migration 0048 (`inventory_person_states`); Spec, Datenschutz, ASVS, Entra-Einrichtung und Handbuch angepasst
+
 ## [0.67.0] – 2026-11-20
 
 ### IT-Bestand

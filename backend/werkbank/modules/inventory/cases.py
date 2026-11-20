@@ -8,7 +8,7 @@ ausführt (Gerät anlegen und zuordnen, mit einem vorhandenen Gerät verknüpfen
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.orm import Session
@@ -42,14 +42,22 @@ from werkbank.modules.inventory.models import (
     InventoryLoan,
     InventoryMonitorIgnore,
     InventoryNinjaIgnore,
+    InventoryPosition,
     InventorySyncRun,
+)
+from werkbank.modules.inventory.people import (
+    PeopleError,
+    PersonLookup,
+    get_person_lookup,
 )
 from werkbank.modules.inventory.places import room_place
 from werkbank.modules.inventory.search import escape_like
+from werkbank.modules.inventory.staff import add_staff_event
 from werkbank.modules.inventory.sync import (
     CASE_MISSING,
     CASE_MONITOR,
     CASE_NEW,
+    CASE_PERSON,
     NINJA_SYNC,
     NINJA_SYNC_INTERVAL,
     OPEN_STATES,
@@ -71,6 +79,7 @@ KIND_LABELS = {
     CASE_MONITOR: "Neuer Monitor",
     CASE_RETURN: "Rückgabe prüfen",
     CASE_OVERDUE: "Verleih überfällig",
+    CASE_PERSON: "Person nicht mehr aktiv",
 }
 DECISIONS: dict[str, dict[str, str]] = {
     CASE_NEW: {
@@ -102,8 +111,16 @@ DECISIONS: dict[str, dict[str, str]] = {
         "zurueck": "Alles zurück",
     },
 }
+DECISIONS[CASE_PERSON] = {
+    "frei": "Stelle frei gemacht",
+    "nachfolge": "Neue Person eingetragen",
+    "lassen": "So gelassen",
+    "geklaert": "Geklärt",
+    "wieder_aktiv": "Konto wieder aktiv",
+    "zurueck": "Alles zurück",
+}
 # Entscheidungen, die nur die Werkbank selbst trifft
-AUTOMATIC = frozenset({"wieder_da", "ersetzt", "zurueck"})
+AUTOMATIC = frozenset({"wieder_da", "ersetzt", "zurueck", "wieder_aktiv"})
 PAGE_SIZE = 50
 PAGE_MAX = 200
 
@@ -184,6 +201,8 @@ class DecisionIn(BaseModel):
     hardware_id: int | None = Field(default=None, ge=1)
     # bei „verlaengert“: neues Rückgabedatum
     due_on: date | None = None
+    # bei „nachfolge“: neue Person (Objekt-ID aus Entra)
+    person_oid: str | None = Field(default=None, min_length=36, max_length=36)
 
 
 class SyncRunOut(BaseModel):
@@ -489,6 +508,62 @@ def _decide_loan(
     _close(db, user, row, "geklaert", "Entschieden: geklärt")
 
 
+def _decide_person(
+    db: Session,
+    user: CurrentUser,
+    row: InventoryCase,
+    body: DecisionIn,
+    details: dict[str, object],
+    lookup: PersonLookup,
+) -> None:
+    """Person nicht mehr aktiv: Stelle frei machen, neu besetzen oder so lassen."""
+    facts = row.facts or {}
+    position_id = facts.get("position_id")
+    if not isinstance(position_id, int):
+        # Vorgang zu einem Verleih: Rückgabe trägt man beim Verleih ein
+        if body.decision != "geklaert":
+            raise _invalid("Diese Entscheidung passt nicht zum Vorgang.")
+        _close(db, user, row, "geklaert", "Entschieden: geklärt")
+        return
+    if body.decision == "geklaert":
+        raise _invalid("Diese Entscheidung passt nicht zum Vorgang.")
+    position = db.get(InventoryPosition, position_id)
+    if position is None:
+        raise _conflict("Die Stelle gibt es nicht mehr.")
+    if body.decision == "lassen":
+        _close(db, user, row, "lassen", "Entschieden: so gelassen")
+        return
+    if position.person_oid != facts.get("person_oid"):
+        raise _conflict("Die Stelle ist inzwischen anders besetzt.")
+    before = position.person_name or "unbesetzt"
+    if body.decision == "frei":
+        position.person_oid = None
+        position.person_name = ""
+        position.person_upn = ""
+        add_staff_event(db, user, f"Besetzung: {before} → unbesetzt", position_id=position.id)
+        _close(db, user, row, "frei", "Entschieden: Stelle frei gemacht")
+        return
+    if body.person_oid is None:
+        raise _invalid("Bitte die neue Person wählen.")
+    try:
+        person = lookup(body.person_oid.lower())
+    except PeopleError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Die Person lässt sich in Entra nicht nachschlagen: {exc}",
+        ) from exc
+    if person is None or not person.enabled:
+        raise _invalid("Diese Person gibt es in Entra nicht oder ihr Konto ist deaktiviert.")
+    position.person_oid = person.oid
+    position.person_name = (person.name or person.upn)[:200]
+    position.person_upn = person.upn[:200]
+    add_staff_event(
+        db, user, f"Besetzung: {before} → {position.person_name}", position_id=position.id
+    )
+    details["neue_person"] = person.oid
+    _close(db, user, row, "nachfolge", f"Entschieden: neu besetzt mit {position.person_name}")
+
+
 @router.get("/cases")
 def list_cases(
     user: Reader,
@@ -585,7 +660,12 @@ def add_case_note(
 
 @router.post("/cases/{case_id}/decide")
 def decide_case(
-    request: Request, case_id: ObjectId, body: DecisionIn, user: Editor, db: DbDep
+    request: Request,
+    case_id: ObjectId,
+    body: DecisionIn,
+    user: Editor,
+    db: DbDep,
+    lookup: Annotated[PersonLookup, Depends(get_person_lookup)],
 ) -> CaseOut:
     """Führt die Entscheidung aus und schließt den Vorgang (außer bei „prüfen“)."""
     row = _case(db, case_id)
@@ -599,6 +679,8 @@ def decide_case(
         _decide_monitor(db, user, row, body, details)
     elif row.kind in (CASE_RETURN, CASE_OVERDUE):
         _decide_loan(db, user, row, body, details)
+    elif row.kind == CASE_PERSON:
+        _decide_person(db, user, row, body, details, lookup)
     elif row.kind == CASE_NEW:
         if body.decision in ("stelle", "arbeitsplatz", "lager"):
             device = _create_from_case(db, user, row, body)

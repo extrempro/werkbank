@@ -552,3 +552,21 @@ class InventoryLoanMessage(Base):
     error: Mapped[str] = mapped_column(String(200), default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class InventoryPersonState(Base):
+    """Zuletzt gesehener Stand einer Person aus Entra (Abgleich jede Stunde).
+
+    ``inactive_since`` ist gesetzt, solange das Konto deaktiviert oder gelöscht ist; Vorgänge
+    „Person nicht mehr aktiv“ entstehen einmal je Zeitraum und Stelle bzw. Verleih.
+    """
+
+    __tablename__ = "inventory_person_states"
+
+    oid: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    upn: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    # aktiv, deaktiviert oder geloescht
+    state: Mapped[str] = mapped_column(String(12), default="aktiv", server_default="aktiv")
+    inactive_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

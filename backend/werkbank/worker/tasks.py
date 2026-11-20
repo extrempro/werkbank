@@ -23,6 +23,7 @@ from werkbank.modules.evergreen.jobs import (
     fetch_messages_job,
 )
 from werkbank.modules.evergreen.notifications import evergreen_notifications
+from werkbank.modules.inventory.entra_sync import ENTRA_SYNC, ENTRA_SYNC_INTERVAL, entra_sync_job
 from werkbank.modules.inventory.loans import LOAN_JOB, LOAN_JOB_INTERVAL, loan_job
 from werkbank.modules.inventory.notifications import inventory_notifications
 from werkbank.modules.inventory.psref_sync import PSREF_SYNC, PSREF_SYNC_INTERVAL, psref_job
@@ -127,6 +128,7 @@ REGISTRY: dict[str, JobType] = {
     NINJA_SYNC: JobType(handler=ninja_sync_job, interval=NINJA_SYNC_INTERVAL),
     PSREF_SYNC: JobType(handler=psref_job, interval=PSREF_SYNC_INTERVAL),
     LOAN_JOB: JobType(handler=loan_job, interval=LOAN_JOB_INTERVAL),
+    ENTRA_SYNC: JobType(handler=entra_sync_job, interval=ENTRA_SYNC_INTERVAL),
     CHECK_IMPLEMENTATION: JobType(handler=check_implementation_job, interval=timedelta(hours=1)),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
 }

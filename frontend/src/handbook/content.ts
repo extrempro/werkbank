@@ -1309,6 +1309,14 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
+            text: "Einmal in der Stunde prüft die Werkbank alle Personen an Stellen und in offenen Verleihen gegen Entra. Ändert sich dort der Name oder der Anmeldename, übernimmt sie das und schreibt es in den Verlauf. Ist ein Konto deaktiviert oder gelöscht, entsteht je Stelle und je Verleih ein Vorgang „Person nicht mehr aktiv“.",
+          },
+          {
+            kind: "hint",
+            text: "Im Vorgang zu einer Stelle wählst du „Stelle frei machen“, „Neue Person eintragen“ oder „Erst mal so lassen“ (zum Beispiel in der Elternzeit). Beim Verleih trägst du die Rückgabe wie gewohnt ein; dann schließt sich der Vorgang selbst. Wird das Konto wieder aktiv, schließen sich offene Vorgänge ebenfalls von selbst.",
+          },
+          {
+            kind: "text",
             text: "Unter „Stellen“ steht jede Stelle mit Nummer, Abteilung und der Person, die sie besetzt. Hardware und Arbeitsplätze hängen an der Stelle, nicht an der Person: Wechselt die Person, bleibt alles an der Stelle.",
           },
           {

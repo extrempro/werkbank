@@ -1089,6 +1089,13 @@ export interface NinjaFacts {
   devices?: string[];
   person?: string;
   due_on?: string;
+  /** Vorgang „Person nicht mehr aktiv“ */
+  person_oid?: string;
+  upn?: string;
+  reason?: "deaktiviert" | "geloescht";
+  position_id?: number;
+  position_number?: string;
+  position_name?: string;
 }
 
 export interface NinjaInfo {
@@ -1100,7 +1107,7 @@ export interface NinjaInfo {
 }
 
 export type CaseState = "neu" | "arbeit" | "fertig";
-export type CaseKind = "neu" | "weg" | "monitor" | "rueckgabe" | "ueberfaellig";
+export type CaseKind = "neu" | "weg" | "monitor" | "rueckgabe" | "ueberfaellig" | "person_inaktiv";
 
 export type PsrefStatus = "ok" | "nicht_gefunden" | "fehler";
 
@@ -1232,6 +1239,8 @@ export interface DecisionOption {
   id: string;
   label: string;
   hint: string;
+  /** Nur für Vorgänge zu einer Stelle oder zu einem Verleih */
+  only?: "stelle" | "verleih";
 }
 
 export const DECISION_OPTIONS: Record<CaseKind, DecisionOption[]> = {
@@ -1283,6 +1292,32 @@ export const DECISION_OPTIONS: Record<CaseKind, DecisionOption[]> = {
       hint: "Steht im Verlauf der Geräte. Reparieren oder ausmustern kannst du danach.",
     },
   ],
+  person_inaktiv: [
+    {
+      id: "frei",
+      label: "Stelle frei machen",
+      hint: "Die Person wird aus der Stelle entfernt. Die Geräte bleiben an der Stelle.",
+      only: "stelle",
+    },
+    {
+      id: "nachfolge",
+      label: "Neue Person eintragen",
+      hint: "Die Stelle bekommt eine neue Person aus Entra.",
+      only: "stelle",
+    },
+    {
+      id: "lassen",
+      label: "Erst mal so lassen",
+      hint: "Die Person bleibt eingetragen, zum Beispiel in der Elternzeit.",
+      only: "stelle",
+    },
+    {
+      id: "geklaert",
+      label: "Geklärt",
+      hint: "Die Rückgabe trägst du beim Verleih ein; dann schließt sich der Vorgang selbst.",
+      only: "verleih",
+    },
+  ],
   ueberfaellig: [
     {
       id: "verlaengert",
@@ -1322,6 +1357,8 @@ export interface DecisionInput {
   hardware_id?: number;
   /** bei „verlaengert“: neues Rückgabedatum (JJJJ-MM-TT) */
   due_on?: string;
+  /** bei „nachfolge“: neue Person (Objekt-ID aus Entra) */
+  person_oid?: string;
 }
 
 export interface SyncRun {
@@ -1599,3 +1636,18 @@ export function filterLoanable(list: LoanableDevice[], query: string): LoanableD
     ),
   );
 }
+
+/** Entscheidungen, die zu diesem Vorgang passen (bei „Person nicht mehr aktiv“: Stelle oder Verleih). */
+export function decisionOptions(entry: { kind: CaseKind; facts: NinjaFacts }): DecisionOption[] {
+  const context = entry.facts.loan_id !== undefined ? "verleih" : "stelle";
+  return DECISION_OPTIONS[entry.kind].filter((option) => !option.only || option.only === context);
+}
+
+export const CASE_KIND_SHORT: Record<CaseKind, string> = {
+  neu: "Neues Gerät",
+  weg: "Gerät fehlt",
+  monitor: "Neuer Monitor",
+  rueckgabe: "Rückgabe prüfen",
+  ueberfaellig: "Verleih überfällig",
+  person_inaktiv: "Person nicht mehr aktiv",
+};

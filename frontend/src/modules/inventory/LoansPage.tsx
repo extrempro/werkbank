@@ -7,6 +7,7 @@ import { ListSearch, MoreButton, useDebounced, usePagedList } from "./paged";
 import { PersonPicker } from "./PersonPicker";
 import {
   casePath,
+  CASE_KIND_SHORT,
   CASE_STATES,
   changeLoanDue,
   createLoan,
@@ -403,8 +404,7 @@ function LoanDetail({
                 {loan.cases.map((entry) => (
                   <li key={entry.id}>
                     <Link to={casePath(entry.id)}>
-                      {entry.number} ·{" "}
-                      {entry.kind === "rueckgabe" ? "Rückgabe prüfen" : "Verleih überfällig"}
+                      {entry.number} · {CASE_KIND_SHORT[entry.kind]}
                     </Link>{" "}
                     <span className={`pill ${CASE_STATES[entry.status].pill}`}>
                       {CASE_STATES[entry.status].label}
