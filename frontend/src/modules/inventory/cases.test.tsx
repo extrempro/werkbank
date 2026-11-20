@@ -193,6 +193,22 @@ describe("Vorgänge: Liste", () => {
     expect(navigate).toHaveBeenCalledWith("/bestand/vorgaenge/3");
   });
 
+  it("stellt die Breite von Tabelle und Ansicht mit den Pfeiltasten ein und merkt sie", async () => {
+    stubFetch(routes);
+    window.localStorage.setItem("werkbank-vorgaenge-breite", "60");
+    render(<CasesPage caseId={3} roles={["Bestand.Reader"]} />);
+    const handle = await screen.findByRole("separator", {
+      name: "Breite von Tabelle und Ansicht",
+    });
+    expect(handle).toHaveAttribute("aria-valuenow", "60");
+    fireEvent.keyDown(handle, { key: "ArrowLeft" });
+    expect(handle).toHaveAttribute("aria-valuenow", "58");
+    fireEvent.keyDown(handle, { key: "End" });
+    expect(handle).toHaveAttribute("aria-valuenow", "75");
+    expect(window.localStorage.getItem("werkbank-vorgaenge-breite")).toBe("75");
+    window.localStorage.removeItem("werkbank-vorgaenge-breite");
+  });
+
   it("schließt die Ansicht über das Kreuz", async () => {
     stubFetch(routes);
     const { navigate } = await import("../../router");

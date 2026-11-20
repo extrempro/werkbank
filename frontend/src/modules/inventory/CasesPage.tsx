@@ -1,4 +1,13 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { INVENTORY_CASES_PATH as CASES_PATH } from "../../navigation";
@@ -585,6 +594,93 @@ function CaseDetail({
   );
 }
 
+// Breite der Tabelle neben der Ansicht in Prozent, gemerkt im Browser
+const SPLIT_KEY = "werkbank-vorgaenge-breite";
+const SPLIT_DEFAULT = 54;
+const SPLIT_MIN = 30;
+const SPLIT_MAX = 75;
+const SPLIT_STEP = 2;
+
+function clampSplit(value: number): number {
+  return Math.round(Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, value)));
+}
+
+function readSplit(): number {
+  try {
+    const value = Number(window.localStorage.getItem(SPLIT_KEY));
+    return value ? clampSplit(value) : SPLIT_DEFAULT;
+  } catch {
+    return SPLIT_DEFAULT;
+  }
+}
+
+function saveSplit(value: number): void {
+  try {
+    window.localStorage.setItem(SPLIT_KEY, String(value));
+  } catch {
+    // ohne Speicher im Browser gilt die Breite nur bis zum Neuladen
+  }
+}
+
+/** Trenner zwischen Tabelle und Ansicht: ziehen oder mit den Pfeiltasten verschieben. */
+function SplitHandle({
+  value,
+  onChange,
+  container,
+}: {
+  value: number;
+  onChange: (next: number) => void;
+  container: () => HTMLElement | null;
+}) {
+  const dragging = useRef(false);
+  const fromPointer = (event: PointerEvent<HTMLDivElement>) => {
+    const box = container()?.getBoundingClientRect();
+    if (box && box.width > 0) {
+      onChange(clampSplit(((event.clientX - box.left) / box.width) * 100));
+    }
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const next =
+      event.key === "ArrowLeft"
+        ? value - SPLIT_STEP
+        : event.key === "ArrowRight"
+          ? value + SPLIT_STEP
+          : event.key === "Home"
+            ? SPLIT_MIN
+            : event.key === "End"
+              ? SPLIT_MAX
+              : null;
+    if (next !== null) {
+      event.preventDefault();
+      onChange(clampSplit(next));
+    }
+  };
+  return (
+    <div
+      className="case-split"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Breite von Tabelle und Ansicht"
+      aria-valuemin={SPLIT_MIN}
+      aria-valuemax={SPLIT_MAX}
+      aria-valuenow={value}
+      aria-valuetext={`Tabelle ${value} Prozent`}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      onDoubleClick={() => onChange(SPLIT_DEFAULT)}
+      onPointerDown={(event) => {
+        dragging.current = true;
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => dragging.current && fromPointer(event)}
+      onPointerUp={(event) => {
+        dragging.current = false;
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }}
+    />
+  );
+}
+
 /** Zeile der Vorgangstabelle. Die ganze Zeile ist anklickbar, für Tastatur und Screenreader
  *  zählt der Verweis im Titel. */
 function CaseRow({ entry, selected }: { entry: CaseSummary; selected: boolean }) {
@@ -658,6 +754,12 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
   const cases = paged.items;
   const openCount = paged.extra ? paged.extra.open : null;
   const backToList = () => navigate(CASES_PATH);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const [split, setSplit] = useState(readSplit);
+  const changeSplit = (next: number) => {
+    setSplit(next);
+    saveSplit(next);
+  };
 
   return (
     <div className="page page-wide case-page">
@@ -719,11 +821,13 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
         </label>
       </div>
       <div
+        ref={layoutRef}
         className={
           caseId === null
             ? "case-layout case-layout-table"
             : "case-layout case-layout-table case-layout-detail"
         }
+        style={{ "--case-split": split } as CSSProperties}
       >
         <div className="panel case-list">
           <div className="case-scroll">
@@ -772,6 +876,9 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
             )}
           </div>
         </div>
+        {caseId !== null && (
+          <SplitHandle value={split} onChange={changeSplit} container={() => layoutRef.current} />
+        )}
         <div className="case-main">
           {caseId !== null && (
             <>

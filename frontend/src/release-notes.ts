@@ -32,7 +32,7 @@ export const RELEASES: readonly Release[] = [
         area: "IT-Bestand",
         entries: [
           "„Vorgänge“ braucht oben weniger Platz: Suche, Status und Art stehen in einer Zeile, der Stand des Abgleichs mit NinjaOne steht neben der Überschrift.",
-          "Die Vorgänge stehen in einer Tabelle mit Nummer, Titel, Art, Eingang, Bearbeiter und Status. Ein Klick auf eine Zeile öffnet den Vorgang rechts daneben, mit „×“ schließt du ihn wieder.",
+          "Die Vorgänge stehen in einer Tabelle mit Nummer, Titel, Art, Eingang, Bearbeiter und Status. Ein Klick auf eine Zeile öffnet den Vorgang rechts daneben, mit „×“ schließt du ihn wieder. Die Breite von Tabelle und Ansicht stellst du am Trenner dazwischen ein; die Werkbank merkt sie sich.",
           "Auf dem Handy siehst du eine kurze Zeile je Vorgang; den Status wählst du in einer Zeile zum Wischen.",
         ],
       },
