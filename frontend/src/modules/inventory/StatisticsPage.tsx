@@ -48,8 +48,11 @@ function Pie({ items, total, label }: { items: StatCount[]; total: number; label
   const radius = 70;
   const width = 26;
   const circumference = 2 * Math.PI * radius;
-  let offset = 0;
   const gap = slices.length > 1 ? 2 : 0;
+  const lengths = slices.map((item) => (total > 0 ? (item.count / total) * circumference : 0));
+  const offsets = lengths.map((_, index) =>
+    lengths.slice(0, index).reduce((sum, value) => sum + value, 0),
+  );
   return (
     <div className="stat-pie">
       <svg viewBox="0 0 180 180" width="180" height="180" role="img" aria-label={label}>
@@ -62,9 +65,8 @@ function Pie({ items, total, label }: { items: StatCount[]; total: number; label
           strokeWidth={width}
         />
         {slices.map((item, index) => {
-          const length = total > 0 ? (item.count / total) * circumference : 0;
-          const dash = Math.max(0, length - gap);
-          const circle = (
+          const dash = Math.max(0, (lengths[index] ?? 0) - gap);
+          return (
             <circle
               key={item.label}
               cx="90"
@@ -74,14 +76,12 @@ function Pie({ items, total, label }: { items: StatCount[]; total: number; label
               stroke={sliceColor(item, index)}
               strokeWidth={width}
               strokeDasharray={`${dash} ${circumference - dash}`}
-              strokeDashoffset={-offset}
+              strokeDashoffset={-(offsets[index] ?? 0)}
               transform="rotate(-90 90 90)"
             >
               <title>{`${item.label}: ${item.count} (${percentText(item.count, total)})`}</title>
             </circle>
           );
-          offset += length;
-          return circle;
         })}
         <text x="90" y="88" textAnchor="middle" className="stat-pie-total">
           {total}
