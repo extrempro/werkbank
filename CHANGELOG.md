@@ -15,6 +15,12 @@ IT-Bestand, Schritt 7: Abgleich mit Entra.
 - Neuer Vorgang **„Person nicht mehr aktiv“**, wenn ein Konto deaktiviert oder gelöscht ist: je Stelle und je offenem Verleih, einmal je Zeitraum der Inaktivität. Entscheidungen bei Stellen: Stelle frei machen, neue Person eintragen (der Server liest sie aus Entra), erst mal so lassen; beim Verleih: geklärt. Schließt sich selbst, wenn das Konto wieder aktiv ist oder der Verleih vollständig zurück ist
 - Migration 0048 (`inventory_person_states`); Spec, Datenschutz, ASVS, Entra-Einrichtung und Handbuch angepasst
 
+## [0.67.1] – 2026-11-20
+
+### Behoben
+
+- **Personensuche im IT-Bestand** (Stelle besetzen, neuer Verleih): meldete „Die Anmeldedaten für Entra sind nicht lesbar“, weil das Zertifikat der Collector-App nur im Container `worker` eingebunden war, die Suche aber im Container `web` läuft. `deploy/docker-compose.yml` bindet `collector_client_key.pem` und `collector_client_cert.pem` jetzt auch in `web` ein; `deploy/README.md` angepasst. **Beim Update die neue `docker-compose.yml` übernehmen.**
+
 ## [0.67.0] – 2026-11-20
 
 ### IT-Bestand

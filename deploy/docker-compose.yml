@@ -26,6 +26,11 @@ services:
         target: entra_client_key.pem
       - source: entra_client_cert
         target: entra_client_cert.pem
+      # Personensuche im IT-Bestand (Stellen, Verleih) liest Entra über die Collector-App
+      - source: collector_client_key
+        target: collector_client_key.pem
+      - source: collector_client_cert
+        target: collector_client_cert.pem
       - settings_key
     ports:
       - "${BIND_IP:-127.0.0.1}:${BIND_PORT:-8080}:8000"
