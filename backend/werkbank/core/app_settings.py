@@ -27,6 +27,7 @@ TOOLS_INTERNET_KEY = "tools_internet"
 TEAMS_KEY = "teams_workflow"
 PUSH_KEY = "push"
 NETBOX_KEY = "netbox"
+NINJA_KEY = "inventory.ninjaone"
 
 MIN_KEY_LENGTH = 32
 

@@ -1155,7 +1155,7 @@ export const CHAPTERS: readonly Chapter[] = [
     id: "it-bestand",
     title: "IT-Bestand",
     summary:
-      "Hardware mit Inventurnummer und Verlauf, Stellen und Arbeitsplätze, Standorte mit Grundrissen, Ausmustern und die Stammdaten dazu.",
+      "Vorgänge aus NinjaOne, Hardware mit Inventurnummer und Verlauf, Stellen und Arbeitsplätze, Standorte mit Grundrissen, Ausmustern und die Stammdaten dazu.",
     roles: [INVENTORY_READER, INVENTORY_EDITOR],
     sections: [
       {
@@ -1225,6 +1225,38 @@ export const CHAPTERS: readonly Chapter[] = [
             text: "Versehentlich ausgemustert? Im Gerät „Wieder in Betrieb nehmen“ tippen. Auch das steht im Verlauf.",
           },
         ],
+      },
+      {
+        id: "vorgaenge",
+        title: "Vorgänge und NinjaOne",
+        blocks: [
+          {
+            kind: "text",
+            text: "PCs und Notebooks gleicht die Werkbank alle 30 Minuten mit NinjaOne ab. Ein Gerät erkennt sie an seiner Kennung in NinjaOne, sonst an der Seriennummer. Welche Organisationen und Geräterollen dabei berücksichtigt werden, legt ein Admin in der Verwaltung fest. Hostname und technische Daten kommen aus NinjaOne; du siehst sie beim Gerät im Reiter „Technik“.",
+          },
+          {
+            kind: "text",
+            text: "Unter „Vorgänge“ landet, was eine Entscheidung braucht: ein neues Gerät in NinjaOne oder ein Gerät, das dort nicht mehr auftaucht. Oben siehst du, wann zuletzt abgeglichen wurde.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Unter „Vorgänge“ einen Vorgang wählen.",
+              "Auf „Ich übernehme“ tippen, damit alle sehen, dass du dich kümmerst.",
+              "Bei einem neuen Gerät wählen: einer Stelle zuordnen, einem Arbeitsplatz zuordnen, ins Lager, „Ist dasselbe Gerät“ oder nicht in den Bestand aufnehmen. Je nach Wahl Stelle, Arbeitsplatz, Raum oder das vorhandene Gerät auswählen.",
+              "„Übernehmen und abschließen“ tippen. Die Werkbank legt das Gerät an oder verknüpft es.",
+            ],
+          },
+          {
+            kind: "hint",
+            text: "Steht oben „Möglicherweise dasselbe Gerät“, gehört der Hostname schon zu einem Gerät im Bestand. Das passiert zum Beispiel nach einem Mainboardtausch. Dann ist „Ist dasselbe Gerät“ meist richtig.",
+          },
+          {
+            kind: "text",
+            text: "Fehlt ein Gerät in NinjaOne, wählst du: ausgemustert (vorher das Gerät ausmustern), verloren oder gestohlen, oder prüfen. Taucht das Gerät wieder auf, schließt die Werkbank den Vorgang selbst. Entscheiden dürfen nur Bearbeiterinnen und Bearbeiter des IT-Bestands.",
+          },
+        ],
+        links: [{ to: "/bestand/vorgaenge", label: "Zu den Vorgängen" }],
       },
       {
         id: "stellen",

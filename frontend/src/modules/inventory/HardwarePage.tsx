@@ -48,8 +48,11 @@ export function DeviceFormFields({
   assignees,
   value,
   onChange,
+  fromNinja = false,
 }: {
   master: MasterData;
+  /** Hostname und Seriennummer kommen aus NinjaOne und sind dann nur lesbar. */
+  fromNinja?: boolean;
   /** Standorte für die Raumauswahl; null, solange sie laden oder fehlen. */
   locations: Locations | null;
   /** Stellen und Arbeitsplätze für „Zugeordnet zu“; null, solange sie laden oder fehlen. */
@@ -110,6 +113,7 @@ export function DeviceFormFields({
             maxLength={80}
             autoComplete="off"
             spellCheck={false}
+            readOnly={fromNinja}
             onChange={(event) => set({ serial: event.target.value })}
           />
         </label>
@@ -123,9 +127,11 @@ export function DeviceFormFields({
             maxLength={80}
             autoComplete="off"
             spellCheck={false}
+            readOnly={fromNinja}
             onChange={(event) => set({ hostname: event.target.value })}
           />
         </label>
+        {fromNinja && <p className="small">Hostname und Seriennummer kommen aus NinjaOne.</p>}
         <label>
           Notiz (freiwillig)
           <input

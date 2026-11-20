@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.64.0] – 2026-11-20
+
+IT-Bestand, Schritt 4: Abgleich mit NinjaOne und Vorgänge.
+
+### IT-Bestand
+
+- **Abgleich mit NinjaOne** alle 30 Minuten (Auftrag `bestand.ninjaone`): Anmeldung als API-App mit Client-ID und Secret (OAuth 2.0 Client Credentials, Scope „monitoring“), gelesen werden nur Arbeitsplatzrechner (Windows, macOS, Linux) über `/v2/devices-detailed` und `/v2/policies`. Erkennung erst über die NinjaOne-ID, dann über die Seriennummer; der Hostname ist nur ein Hinweis. Hostname, Kenndaten (Betriebssystem, IP-Adressen, Arbeitsspeicher, Richtlinie, zuletzt online) werden übernommen und stehen im Verlauf. Liefert NinjaOne keine Geräte, obwohl welche verknüpft sind, bricht der Lauf ohne Änderungen ab
+- **Vorgänge** (`/bestand/vorgaenge`): Eingang für neue Geräte aus NinjaOne und Geräte, die dort fehlen; Nummer aus dem Nummernkreis (Vorgabe `V-`), Status neu, in Bearbeitung, fertig; „Ich übernehme“, Notizen, Verlauf. Entscheidungen für neue Geräte: Stelle, Arbeitsplatz, Lager (mit Raum), „Ist dasselbe Gerät“ (vorhandenes Gerät übernimmt den Eintrag), nicht aufnehmen (wird nicht wieder gemeldet). Für fehlende Geräte: ausgemustert (erst nach dem Ausmustern), verloren oder gestohlen, prüfen; taucht ein Gerät wieder auf, schließt sich der Vorgang
+- Neue Geräte aus NinjaOne bekommen Art (Notebook oder PC nach Bauform), Hersteller und Modell; fehlen Hersteller oder Modell in den Stammdaten, legt die Werkbank sie an
+- **Gerät:** neuer Reiter „Technik“ mit den Kenndaten aus NinjaOne; Hostname und Seriennummer verknüpfter Geräte lassen sich nicht von Hand ändern
+- **Verwaltung › Verbindungen:** NinjaOne mit Region, Client-ID und Secret (verschlüsselt gespeichert), „Verbindung prüfen“; Stand und „Jetzt abgleichen“ auf der Seite Vorgänge
+- **Auswahl nach Organisation und Geräterolle** (je mehrfach, leer heißt alle): Listen aus NinjaOne (`/v2/organizations`, `/v2/roles`, nur Rollen für Arbeitsplatzrechner) über `POST /api/admin/settings/ninjaone/options`. Die Auswahl legt fest, welche neuen Geräte einen Vorgang bekommen; verknüpfte Geräte gleicht die Werkbank weiter ab, damit eine geänderte Auswahl keine Vorgänge „fehlt“ auslöst. Organisation und Geräterolle stehen im Reiter „Technik“
+- **Standorte:** gleichmäßigere Abstände im Baum, in der Raumliste und in den Formularen; Namen im Baum brechen nur noch an Leerzeichen um, die Anzahl rutscht bei Platzmangel in die nächste Zeile
+- **Benachrichtigungen:** neuer Vorgang (Bearbeiter des IT-Bestands) und fehlgeschlagener Abgleich, nur mit Nummer und Link
+- Migration 0044, Spec, Datenschutz, ASVS und Handbuch angepasst
+
 ## [0.63.0] – 2026-11-20
 
 IT-Bestand, Schritt 3: Stellen, Arbeitsplätze und Ausstattungsvorlagen.

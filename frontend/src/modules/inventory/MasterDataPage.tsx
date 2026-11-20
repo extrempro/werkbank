@@ -396,7 +396,7 @@ function NumberRangeForm({
   };
 
   return (
-    <form className="settings-form" onSubmit={onSubmit} noValidate>
+    <form className="settings-form form-stack" onSubmit={onSubmit} noValidate>
       <label htmlFor={inputId}>Präfix für {entry.label}</label>
       <div className="tool-row">
         <input

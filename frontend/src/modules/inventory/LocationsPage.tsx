@@ -221,7 +221,7 @@ function AddLevelForm({
   };
 
   return (
-    <form className="settings-form" onSubmit={onSubmit} noValidate>
+    <form className="settings-form form-stack" onSubmit={onSubmit} noValidate>
       <div className="tool-row">
         <label className="narrow">
           Neu anlegen
@@ -588,7 +588,7 @@ function NewRoomForm({
     );
   };
   return (
-    <form className="hint-box confirm-box settings-form" onSubmit={onSubmit} noValidate>
+    <form className="hint-box confirm-box settings-form form-stack" onSubmit={onSubmit} noValidate>
       <label>
         Name des neuen Raums
         <input

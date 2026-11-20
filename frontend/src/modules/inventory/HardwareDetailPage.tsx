@@ -16,6 +16,7 @@ import {
   locationPath,
   holderValue,
   modelLabel,
+  ninjaFactRows,
   positionPath,
   reactivateHardware,
   retireHardware,
@@ -92,6 +93,7 @@ function EditForm({
         master={master}
         locations={locations}
         assignees={assignees}
+        fromNinja={device.ninja !== null}
         value={fields}
         onChange={setFields}
       />
@@ -606,6 +608,47 @@ function History({ device }: { device: Hardware }) {
   );
 }
 
+/** Reiter Technik: Kenndaten aus NinjaOne, nur lesend. */
+function TechTab({ device }: { device: Hardware }) {
+  const ninja = device.ninja;
+  return (
+    <section className="panel" aria-labelledby="geraet-technik">
+      <div className="panel-head">
+        <h2 id="geraet-technik">Technik</h2>
+        <span className="small">nur lesend, aus NinjaOne</span>
+      </div>
+      <div className="detail-body tech-list">
+        {!ninja ? (
+          <p className="empty">
+            Für dieses Gerät gibt es keine technischen Daten: Es ist nicht mit NinjaOne verknüpft.
+          </p>
+        ) : (
+          <>
+            {ninja.missing_since && (
+              <p className="hint-box hint-warn">
+                Seit {formatDate(ninja.missing_since)} nicht mehr in NinjaOne.
+              </p>
+            )}
+            <p className="small">
+              Stand des letzten Abgleichs
+              {ninja.seen_at ? ` vom ${formatDate(ninja.seen_at)}` : ""} · ID in NinjaOne{" "}
+              <span className="mono">{ninja.ninja_id}</span>
+            </p>
+            <dl className="facts">
+              {ninjaFactRows(ninja.facts).map((row) => (
+                <div key={row.label}>
+                  <dt>{row.label}</dt>
+                  <dd className={row.mono ? "mono" : undefined}>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 /** Reiter Standort: Grundriss der Etage, der Raum des Geräts ist hervorgehoben. */
 function LocationTab({ device }: { device: Hardware }) {
   const floorId = device.location?.floor_id ?? null;
@@ -758,6 +801,7 @@ export function HardwareDetailPage({
             />
           )}
           {tab === "standort" && <LocationTab device={device} />}
+          {tab === "technik" && <TechTab device={device} />}
           {tab === "verlauf" && <History device={device} />}
         </>
       )}

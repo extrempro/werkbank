@@ -1,5 +1,6 @@
 import { ApiError, deleteJson, getJson, postJson, putJson } from "../../api";
 import {
+  INVENTORY_CASES_PATH,
   INVENTORY_HARDWARE_PATH,
   INVENTORY_LOCATIONS_PATH,
   INVENTORY_POSITIONS_PATH,
@@ -75,6 +76,8 @@ export interface HolderRef {
 
 export interface Hardware extends HardwareSummary {
   location: DeviceLocation | null;
+  /** Kenndaten aus NinjaOne; null bei Geräten ohne Eintrag in NinjaOne */
+  ninja: NinjaInfo | null;
   holder_ref: HolderRef | null;
   position_id: number | null;
   workplace_id: number | null;
@@ -161,11 +164,12 @@ export interface MasterData {
 }
 
 /** Die Reiter eines Geräts; der erste hat keinen eigenen Pfadteil. */
-export type HardwareTab = "uebersicht" | "standort" | "verlauf";
+export type HardwareTab = "uebersicht" | "standort" | "technik" | "verlauf";
 
 export const HARDWARE_TABS: { id: HardwareTab; label: string }[] = [
   { id: "uebersicht", label: "Übersicht" },
   { id: "standort", label: "Standort" },
+  { id: "technik", label: "Technik" },
   { id: "verlauf", label: "Verlauf" },
 ];
 
@@ -177,7 +181,7 @@ export function hardwarePath(id: number, tab: HardwareTab = "uebersicht"): strin
 
 /** Gerät und Reiter aus dem Pfad, z. B. „/bestand/hardware/7/verlauf“; sonst null. */
 export function parseHardwarePath(path: string): { id: number; tab: HardwareTab } | null {
-  const match = /^\/bestand\/hardware\/(\d{1,9})(?:\/(standort|verlauf))?$/.exec(path);
+  const match = /^\/bestand\/hardware\/(\d{1,9})(?:\/(standort|technik|verlauf))?$/.exec(path);
   if (!match) {
     return null;
   }
@@ -976,4 +980,279 @@ export function kitProblem(name: string, rows: DraftRow[]): string | KitRow[] {
     result.push({ label: row.label.trim(), count, kind_ids: row.kindIds });
   }
   return result;
+}
+
+// --- NinjaOne und Vorgänge ----------------------------------------------------------------------
+
+export interface NinjaSettings {
+  enabled: boolean;
+  region: string;
+  client_id: string;
+  secret_set: boolean;
+  secret_storage_available: boolean;
+  regions: { id: string; name: string; host: string }[];
+  /** Auswahl für neue Geräte; leer heißt: alle */
+  organization_ids: number[];
+  role_ids: number[];
+}
+
+export interface NinjaUpdate {
+  enabled: boolean;
+  region: string;
+  client_id: string;
+  organization_ids: number[];
+  role_ids: number[];
+  /** Weglassen: bleibt. Leerer Text: löschen. */
+  client_secret?: string;
+}
+
+export interface NinjaTest {
+  devices: number;
+  notebooks: number;
+  pcs: number;
+  /** davon in der gespeicherten Auswahl */
+  in_scope: number;
+}
+
+export interface NinjaOptions {
+  organizations: { id: number; name: string }[];
+  roles: { id: number; name: string }[];
+}
+
+export function fetchNinjaOptions(): Promise<NinjaOptions> {
+  return postJson(`${NINJA_ADMIN}/options`, undefined, { quiet: true });
+}
+
+const NINJA_ADMIN = "/api/admin/settings/ninjaone";
+
+export function fetchNinjaSettings(): Promise<NinjaSettings> {
+  return getJson(NINJA_ADMIN);
+}
+
+export function saveNinjaSettings(update: NinjaUpdate): Promise<NinjaSettings> {
+  return putJson(NINJA_ADMIN, update);
+}
+
+export function testNinja(): Promise<NinjaTest> {
+  return postJson(`${NINJA_ADMIN}/test`);
+}
+
+/** Kenndaten aus NinjaOne am Gerät (Stand des letzten Abgleichs). */
+export interface NinjaFacts {
+  hostname?: string;
+  serial?: string;
+  kind?: string;
+  maker?: string;
+  model?: string;
+  os?: string;
+  ip?: string[];
+  last_contact?: string | null;
+  ram_gb?: number | null;
+  policy?: string;
+  organization?: string;
+  role?: string;
+  name?: string;
+  last_seen?: string | null;
+  ninja_id?: number;
+}
+
+export interface NinjaInfo {
+  ninja_id: number;
+  facts: NinjaFacts;
+  seen_at: string | null;
+  missing_since: string | null;
+}
+
+export type CaseState = "neu" | "arbeit" | "fertig";
+export type CaseKind = "neu" | "weg";
+
+export interface CaseSummary {
+  id: number;
+  number: string;
+  kind: CaseKind;
+  kind_label: string;
+  status: CaseState;
+  title: string;
+  created_at: string;
+  assignee: string | null;
+}
+
+export interface HardwareRef {
+  id: number;
+  name: string;
+  hostname: string;
+  serial: string;
+  status: HardwareStatus;
+}
+
+export interface Case extends CaseSummary {
+  facts: NinjaFacts;
+  decision: string;
+  decision_label: string;
+  closed_at: string | null;
+  hardware: HardwareRef | null;
+  hint: HardwareRef | null;
+  events: HardwareEvent[];
+}
+
+export interface CaseList {
+  cases: CaseSummary[];
+  open: number;
+}
+
+export type CaseFilter = "offen" | "neu" | "arbeit" | "fertig" | "alle";
+
+export const CASE_FILTERS: { id: CaseFilter; label: string }[] = [
+  { id: "offen", label: "Offen" },
+  { id: "neu", label: "Neu" },
+  { id: "arbeit", label: "In Bearbeitung" },
+  { id: "fertig", label: "Fertig" },
+  { id: "alle", label: "Alle" },
+];
+
+export const CASE_STATES: Record<CaseState, { label: string; pill: string }> = {
+  neu: { label: "Neu", pill: "pill-info" },
+  arbeit: { label: "In Bearbeitung", pill: "pill-todo" },
+  fertig: { label: "Fertig", pill: "pill-ok" },
+};
+
+export interface DecisionOption {
+  id: string;
+  label: string;
+  hint: string;
+}
+
+export const DECISION_OPTIONS: Record<CaseKind, DecisionOption[]> = {
+  neu: [
+    { id: "stelle", label: "Einer Stelle zuordnen", hint: "Das Gerät gehört dann zur Stelle." },
+    {
+      id: "arbeitsplatz",
+      label: "Einem Arbeitsplatz zuordnen",
+      hint: "Zum Beispiel ein fester PC am Platz.",
+    },
+    { id: "lager", label: "Ins Lager", hint: "Nicht zugeordnet, auf Wunsch mit Raum." },
+    {
+      id: "gleich",
+      label: "Ist dasselbe Gerät",
+      hint: "Ein Gerät im Bestand übernimmt den Eintrag aus NinjaOne, z. B. nach einem Mainboardtausch.",
+    },
+    {
+      id: "uebergehen",
+      label: "Nicht in den Bestand aufnehmen",
+      hint: "Zum Beispiel ein Testgerät. Der Abgleich meldet es nicht wieder.",
+    },
+  ],
+  weg: [
+    {
+      id: "ausgemustert",
+      label: "Gerät ist ausgemustert",
+      hint: "Erst das Gerät ausmustern (mit Grund und Verbleib), dann hier abschließen.",
+    },
+    {
+      id: "verloren",
+      label: "Verloren oder gestohlen",
+      hint: "Steht im Verlauf des Geräts; ausmustern kannst du es später.",
+    },
+    {
+      id: "pruefen",
+      label: "Prüfen, der Agent fehlt vielleicht nur",
+      hint: "Gerät bleibt im Bestand. Taucht es wieder auf, schließt sich der Vorgang.",
+    },
+  ],
+};
+
+export interface DecisionInput {
+  decision: string;
+  position_id?: number;
+  workplace_id?: number;
+  room_id?: number;
+  hardware_id?: number;
+}
+
+export interface SyncRun {
+  started_at: string;
+  finished_at: string | null;
+  status: "ok" | "fehlgeschlagen";
+  devices: number;
+  updated: number;
+  new_cases: number;
+  missing_cases: number;
+  error: string;
+}
+
+export interface SyncStatus {
+  enabled: boolean;
+  interval_minutes: number;
+  last_run: SyncRun | null;
+  next_run_at: string | null;
+}
+
+export function casePath(id: number): string {
+  return `${INVENTORY_CASES_PATH}/${id}`;
+}
+
+export function parseCasePath(path: string): { id: number | null } | null {
+  if (path === INVENTORY_CASES_PATH) {
+    return { id: null };
+  }
+  const match = /^\/bestand\/vorgaenge\/(\d{1,9})$/.exec(path);
+  return match ? { id: Number(match[1]) } : null;
+}
+
+export function fetchCases(filter: CaseFilter): Promise<CaseList> {
+  return getJson(`${BASE}/cases?state=${filter}`);
+}
+
+export function fetchCase(id: number): Promise<Case> {
+  return getJson(`${BASE}/cases/${id}`);
+}
+
+export function takeCase(id: number): Promise<Case> {
+  return postJson(`${BASE}/cases/${id}/take`, undefined, { quiet: true });
+}
+
+export function setCaseStatus(id: number, state: "neu" | "arbeit"): Promise<Case> {
+  return postJson(`${BASE}/cases/${id}/status`, { status: state }, { quiet: true });
+}
+
+export function addCaseNote(id: number, text: string): Promise<Case> {
+  return postJson(`${BASE}/cases/${id}/note`, { text }, { quiet: true });
+}
+
+export function decideCase(id: number, body: DecisionInput): Promise<Case> {
+  return postJson(`${BASE}/cases/${id}/decide`, body, { quiet: true });
+}
+
+export function fetchSyncStatus(): Promise<SyncStatus> {
+  return getJson(`${BASE}/ninjaone/status`);
+}
+
+export function runSyncNow(): Promise<{ scheduled_at: string }> {
+  return postJson(`${BASE}/ninjaone/run`, undefined, { quiet: true });
+}
+
+/** Kenndaten aus NinjaOne als Liste für die Anzeige; leere Werte fallen weg. */
+export function ninjaFactRows(
+  facts: NinjaFacts,
+): { label: string; value: string; mono?: boolean }[] {
+  const rows: { label: string; value: string; mono?: boolean }[] = [];
+  const add = (label: string, value: string | null | undefined, mono = false) => {
+    if (value) {
+      rows.push({ label, value, mono });
+    }
+  };
+  add("Hostname", facts.hostname, true);
+  add("Seriennummer", facts.serial, true);
+  add("Typ laut NinjaOne", facts.kind);
+  add("Hersteller und Modell", [facts.maker, facts.model].filter(Boolean).join(" "));
+  add("Betriebssystem", facts.os);
+  add("IP-Adresse", (facts.ip ?? []).join(", "), true);
+  add("Arbeitsspeicher", facts.ram_gb ? `${facts.ram_gb} GB` : "");
+  add("Organisation", facts.organization);
+  add("Geräterolle", facts.role);
+  add("Richtlinie", facts.policy);
+  add("Zuletzt online", facts.last_contact ? formatDate(facts.last_contact) : "");
+  add("Bezeichnung im Bestand", facts.name);
+  add("Zuletzt in NinjaOne", facts.last_seen ? formatDate(facts.last_seen) : "");
+  return rows;
 }

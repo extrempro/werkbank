@@ -24,6 +24,24 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.64.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Abgleich mit NinjaOne und Vorgänge.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Die Werkbank gleicht PCs und Notebooks alle 30 Minuten mit NinjaOne ab. Hostname und technische Daten kommen von dort und stehen beim Gerät im neuen Reiter „Technik“.",
+          "Neu unter „Vorgänge“: Taucht in NinjaOne ein neues Gerät auf oder fehlt ein Gerät dort, entsteht ein Vorgang. Du entscheidest, ob das Gerät an eine Stelle, an einen Arbeitsplatz oder ins Lager kommt, ob es dasselbe ist wie ein Gerät im Bestand oder ob es nicht in den Bestand soll.",
+          "Mit „Ich übernehme“ und Notizen siehst du, wer sich gerade um einen Vorgang kümmert.",
+          "Über neue Vorgänge informiert dich die Glocke, wenn du das in deinem Konto eingeschaltet hast.",
+          "In der Verwaltung lässt sich festlegen, aus welchen Organisationen und mit welchen Geräterollen neue Geräte aus NinjaOne in die Vorgänge kommen.",
+          "Standorte: Die Liste der Standorte ist aufgeräumter, Namen werden nicht mehr mitten im Wort umgebrochen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.63.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Stellen, Arbeitsplätze und Vorlagen für die Ausstattung.",

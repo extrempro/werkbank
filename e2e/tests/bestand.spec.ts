@@ -206,3 +206,16 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
   await expect(page.getByText(/Keine Vorlage gewählt/)).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test("IT-Bestand: Vorgänge und Technik ohne NinjaOne", async ({ page }) => {
+  await loginAs(page, ["Bestand.Editor"], "Bernd Bestand");
+  await page.goto("/bestand/vorgaenge");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Vorgänge" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/Der Abgleich mit NinjaOne ist ausgeschaltet/),
+  ).toBeVisible();
+  await expect(page.getByText("Wähle links einen Vorgang.")).toBeVisible();
+  await expectNoA11yViolations(page);
+});

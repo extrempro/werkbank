@@ -6,6 +6,7 @@ bleiben so für Inventur und Nachweise erhalten.
 
 import uuid
 from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -18,10 +19,12 @@ from sqlalchemy import (
     Integer,
     LargeBinary,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
 from sqlalchemy import text as sql_text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from werkbank.db import Base
@@ -198,7 +201,13 @@ class InventoryHardware(Base):
     workplace_id: Mapped[int | None] = mapped_column(
         ForeignKey("inventory_workplaces.id", ondelete="RESTRICT"), index=True
     )
-    # Herkunft: von Hand erfasst („manuell“); später auch aus NinjaOne
+    # Gerät in NinjaOne (ID) mit den zuletzt gelesenen Kenndaten
+    ninja_id: Mapped[int | None] = mapped_column(Integer, unique=True)
+    ninja_facts: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # zuletzt im Abgleich gesehen; seit wann es in NinjaOne fehlt
+    ninja_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ninja_missing_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Herkunft: von Hand erfasst („manuell“) oder aus NinjaOne („ninja“)
     source: Mapped[str] = mapped_column(String(16), default="manuell", server_default="manuell")
     note: Mapped[str] = mapped_column(String(500), default="", server_default="")
     # aktiv oder ausgemustert
@@ -221,16 +230,17 @@ class InventoryHardware(Base):
 
 
 class InventoryEvent(Base):
-    """Ein Eintrag im Verlauf eines Geräts, einer Stelle oder eines Arbeitsplatzes.
+    """Ein Eintrag im Verlauf eines Geräts, einer Stelle, eines Arbeitsplatzes oder Vorgangs.
 
-    Der Text entsteht in der Werkbank selbst. Genau eins der drei Ziele ist gesetzt.
+    Der Text entsteht in der Werkbank selbst (Notizen schreiben Bearbeiter). Genau eins der
+    vier Ziele ist gesetzt.
     """
 
     __tablename__ = "inventory_events"
     __table_args__ = (
         CheckConstraint(
             "(hardware_id IS NOT NULL)::int + (position_id IS NOT NULL)::int"
-            " + (workplace_id IS NOT NULL)::int = 1",
+            " + (workplace_id IS NOT NULL)::int + (case_id IS NOT NULL)::int = 1",
             name="one_target",
         ),
     )
@@ -244,6 +254,9 @@ class InventoryEvent(Base):
     )
     workplace_id: Mapped[int | None] = mapped_column(
         ForeignKey("inventory_workplaces.id", ondelete="CASCADE"), index=True
+    )
+    case_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_cases.id", ondelete="CASCADE"), index=True
     )
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -368,3 +381,66 @@ class InventoryWorkplacePosition(Base):
     position_id: Mapped[int] = mapped_column(
         ForeignKey("inventory_positions.id", ondelete="CASCADE"), primary_key=True, index=True
     )
+
+
+class InventoryCase(Base):
+    """Ein Vorgang im Eingang des IT-Bestands, z. B. ein neues Gerät in NinjaOne.
+
+    Status: neu, arbeit (in Bearbeitung) oder fertig. Die Kenndaten zum Zeitpunkt des Anlegens
+    stehen in `facts`, damit der Vorgang auch später noch lesbar ist.
+    """
+
+    __tablename__ = "inventory_cases"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(20), unique=True)
+    # neu (neues Gerät in NinjaOne) oder weg (nicht mehr in NinjaOne)
+    kind: Mapped[str] = mapped_column(String(16), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="neu", server_default="neu", index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    ninja_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    hardware_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_hardware.id", ondelete="SET NULL"), index=True
+    )
+    # Hinweis „möglicherweise dasselbe Gerät“ (gleicher Hostname)
+    hint_hardware_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_hardware.id", ondelete="SET NULL")
+    )
+    facts: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    assignee_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    decision: Mapped[str] = mapped_column(String(32), default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class InventoryNinjaIgnore(Base):
+    """Geräte aus NinjaOne, die nicht in den Bestand sollen (z. B. Testgeräte)."""
+
+    __tablename__ = "inventory_ninja_ignored"
+
+    ninja_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    hostname: Mapped[str] = mapped_column(String(80), default="", server_default="")
+    serial: Mapped[str] = mapped_column(String(80), default="", server_default="")
+    ignored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ignored_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
+class InventorySyncRun(Base):
+    """Ein Lauf des Abgleichs mit NinjaOne mit seinen Zahlen."""
+
+    __tablename__ = "inventory_sync_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # ok oder fehlgeschlagen
+    status: Mapped[str] = mapped_column(String(16))
+    devices: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    updated: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    new_cases: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    missing_cases: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    error: Mapped[str] = mapped_column(Text, default="", server_default="")
