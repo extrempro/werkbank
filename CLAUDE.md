@@ -28,6 +28,13 @@ die jeder lesen darf: keine Hostnamen, IP-Adressen, Tenant-IDs, Zugangsdaten, Fi
 - **Anrede:** In der Oberfläche, in den Neuigkeiten und im Handbuch immer „du“, auch für Betriebsrat und Geschäftsführung.
 - **Backend:** Python 3.12+, FastAPI, SQLAlchemy 2, Alembic, Pydantic. ruff und mypy müssen fehlerfrei sein.
 - **Frontend:** React, Vite, TypeScript (strict). eslint und prettier müssen fehlerfrei sein.
+- **Frameworks und Pakete aktuell halten, wenn möglich:**
+  - Neue Abhängigkeiten in der aktuellen stabilen Version einbinden (keine Alpha-, Beta- oder RC-Versionen). Wie bei Dependabot: Eine Version muss mindestens 7 Tage alt sein (Schutz vor kompromittierten Releases).
+  - Vorher prüfen: Wird das Paket gepflegt? Passt die Lizenz zu MIT? Gibt es offene Sicherheitsmeldungen? Geht es auch ohne neues Paket? Wenige Abhängigkeiten sind besser als viele.
+  - In Code die aktuellen Schnittstellen und Muster der Frameworks nutzen, keine als veraltet (deprecated) markierten, zum Beispiel SQLAlchemy 2.0-Stil, Pydantic v2, `Annotated` in FastAPI und aktuelle React-APIs.
+  - Fällt bei der Arbeit an einem Bereich auf, dass ein genutztes Paket veraltet ist, das im PR nennen. Das Update kommt in einen eigenen PR (`chore/…`), nicht nebenbei in eine Funktion.
+  - Major-Updates nur nach Rückfrage, mit Hinweis auf die Breaking Changes und was angepasst werden muss.
+  - Spricht etwas gegen die aktuelle Version (Kompatibilität, bekannter Fehler, Sicherheit), die ältere Version behalten und den Grund im PR und als Kommentar an der Abhängigkeit festhalten.
 - **Tests:** Jede Funktion mit Unit-Tests. Jeder Screen mit E2E-Test in `e2e/` (Playwright, Profile Desktop/Tablet/iPhone, axe-core).
 
 ## Pflichten bei jeder Änderung
