@@ -87,6 +87,8 @@ export interface Hardware extends HardwareSummary {
   psref: PsrefInfo | null;
   /** Offener Verleih, in dem das Gerät gerade ist */
   loan: LoanRef | null;
+  /** Anschaffungsdatum JJJJ-MM-TT */
+  purchased_on: string | null;
   holder_ref: HolderRef | null;
   position_id: number | null;
   workplace_id: number | null;
@@ -106,6 +108,8 @@ export interface HardwareInput {
   serial: string;
   hostname: string;
   note: string;
+  /** Anschaffungsdatum JJJJ-MM-TT oder null */
+  purchased_on: string | null;
   room_id: number | null;
   position_id: number | null;
   workplace_id: number | null;
@@ -1651,3 +1655,61 @@ export const CASE_KIND_SHORT: Record<CaseKind, string> = {
   ueberfaellig: "Verleih überfällig",
   person_inaktiv: "Person nicht mehr aktiv",
 };
+
+// --- Statistik ----------------------------------------------------------------------------
+
+export interface StatCount {
+  label: string;
+  count: number;
+}
+
+export interface StatChart {
+  key: string;
+  title: string;
+  /** feste Reihenfolge (z. B. Altersgruppen) statt nach Größe */
+  ordered: boolean;
+  items: StatCount[];
+}
+
+export interface InventoryStatistics {
+  /** Hersteller für den Filter; id 0 = ohne Hersteller */
+  makers: { id: number; name: string; count: number }[];
+  maker_id: number | null;
+  total: number;
+  charts: StatChart[];
+  loans: { open: number; overdue: number; months: StatCount[] };
+  retired: { year: number; count: number; reasons: StatCount[] }[];
+}
+
+export function fetchInventoryStatistics(makerId: number | null): Promise<InventoryStatistics> {
+  return getJson(`${BASE}/statistics${makerId === null ? "" : `?maker=${makerId}`}`);
+}
+
+/** „2026-03“ → „03/26“ */
+export function monthLabel(value: string): string {
+  const [year = "", month = ""] = value.split("-");
+  return `${month}/${year.slice(2)}`;
+}
+
+/** Anteil in Prozent, gerundet; „<1 %“ für kleine Anteile. */
+export function percentText(count: number, total: number): string {
+  if (total <= 0) {
+    return "0 %";
+  }
+  const value = (count / total) * 100;
+  return value > 0 && value < 1 ? "<1 %" : `${Math.round(value)} %`;
+}
+
+/** Höchstens ``max`` Stücke für das Kreisdiagramm; der Rest als „Andere“. */
+export function pieSlices(items: StatCount[], max = 8): StatCount[] {
+  if (items.length <= max) {
+    return items;
+  }
+  const head = items.slice(0, max - 1);
+  const rest = items.slice(max - 1).reduce((sum, item) => sum + item.count, 0);
+  const other = head.find((item) => item.label === "Andere");
+  if (other) {
+    return head.map((item) => (item === other ? { ...item, count: item.count + rest } : item));
+  }
+  return [...head, { label: "Andere", count: rest }];
+}

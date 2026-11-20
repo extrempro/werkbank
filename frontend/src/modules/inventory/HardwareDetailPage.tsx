@@ -73,6 +73,7 @@ function EditForm({
     serial: device.serial,
     hostname: device.hostname,
     note: device.note,
+    purchasedOn: device.purchased_on ?? "",
     roomId: device.location ? String(device.location.room_id) : "",
     holder: holderValue(device.position_id, device.workplace_id),
   });
@@ -562,6 +563,10 @@ function Overview({
             <div>
               <dt>Herkunft</dt>
               <dd>{SOURCE_LABELS[device.source] ?? device.source}</dd>
+            </div>
+            <div>
+              <dt>Angeschafft am</dt>
+              <dd>{device.purchased_on ? formatDay(device.purchased_on) : "unbekannt"}</dd>
             </div>
             <div>
               <dt>Erfasst am</dt>

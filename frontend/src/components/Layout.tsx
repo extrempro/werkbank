@@ -33,6 +33,7 @@ import {
   PROJECTS_PATH,
   INVENTORY_CASES_PATH,
   INVENTORY_LOANS_PATH,
+  INVENTORY_STATISTICS_PATH,
   INVENTORY_HARDWARE_PATH,
   INVENTORY_LOCATIONS_PATH,
   INVENTORY_MASTER_PATH,
@@ -64,6 +65,7 @@ import { HardwareDetailPage } from "../modules/inventory/HardwareDetailPage";
 import { HardwarePage } from "../modules/inventory/HardwarePage";
 import { CasesPage } from "../modules/inventory/CasesPage";
 import { LoansPage } from "../modules/inventory/LoansPage";
+import { InventoryStatisticsPage } from "../modules/inventory/StatisticsPage";
 import { LocationsPage } from "../modules/inventory/LocationsPage";
 import { PositionDetailPage, PositionsPage } from "../modules/inventory/PositionsPage";
 import { WorkplaceDetailPage, WorkplacesPage } from "../modules/inventory/WorkplacesPage";
@@ -395,6 +397,8 @@ export function Layout({ me }: LayoutProps) {
     page = <CasesPage caseId={caseRoute.id} roles={me.roles} />;
   } else if (loanRoute !== null && items.some((item) => item.path === INVENTORY_LOANS_PATH)) {
     page = <LoansPage loanId={loanRoute.id} roles={me.roles} />;
+  } else if (path === INVENTORY_STATISTICS_PATH && current) {
+    page = <InventoryStatisticsPage />;
   } else if (path === INVENTORY_POSITIONS_PATH && current) {
     page = <PositionsPage roles={me.roles} />;
   } else if (

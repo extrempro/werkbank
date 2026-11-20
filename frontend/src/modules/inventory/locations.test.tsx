@@ -189,6 +189,7 @@ describe("Gerät: Standort", () => {
       monitors: [],
       psref: null,
       loan: null,
+      purchased_on: null,
       location: {
         room_id: 9,
         room: "Büro 0.12",

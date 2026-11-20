@@ -1263,6 +1263,29 @@ export const CHAPTERS: readonly Chapter[] = [
         links: [{ to: "/bestand/vorgaenge", label: "Zu den Vorgängen" }],
       },
       {
+        id: "statistik",
+        title: "Statistik",
+        blocks: [
+          {
+            kind: "text",
+            text: "Unter „Statistik“ siehst du Zahlen zum aktiven Bestand: Geräte je Art, je Modell, nach Alter, je Standort, wo die Geräte gerade sind, Betriebssysteme, den Verleih und die Ausmusterungen je Jahr. Ausgemusterte Geräte zählen nur bei den Ausmusterungen.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Oben unter „Hersteller“ einen Hersteller wählen, um nur seine Geräte zu sehen.",
+              "Bei jeder Auswertung mit „Balken“ oder „Kreis“ die Darstellung wechseln.",
+              "Unter „Als Tabelle“ stehen dieselben Zahlen mit Anteil zum Nachlesen.",
+            ],
+          },
+          {
+            kind: "hint",
+            text: "Das Alter rechnet die Werkbank aus dem Anschaffungsdatum am Gerät. Fehlt es, nimmt sie bei Monitoren das Baujahr aus NinjaOne, sonst zählt das Gerät als „unbekannt“. Das Anschaffungsdatum trägst du beim Gerät unter „Bearbeiten“ ein.",
+          },
+        ],
+        links: [{ to: "/bestand/statistik", label: "Zur Statistik" }],
+      },
+      {
         id: "verleih",
         title: "Verleih",
         blocks: [

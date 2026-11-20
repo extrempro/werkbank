@@ -164,6 +164,9 @@ class MasterDataOut(BaseModel):
     kits: list[KitOut]
 
 
+PURCHASE_MIN_YEAR = 1990
+
+
 class HardwareIn(BaseModel):
     kind_id: int = Field(ge=1)
     model_id: int | None = Field(default=None, ge=1)
@@ -175,6 +178,15 @@ class HardwareIn(BaseModel):
     # Zugeordnet zu einer Stelle oder einem Arbeitsplatz (höchstens eins von beiden)
     position_id: int | None = Field(default=None, ge=1)
     workplace_id: int | None = Field(default=None, ge=1)
+    # Anschaffungsdatum; leer heißt unbekannt
+    purchased_on: date | None = None
+
+    @field_validator("purchased_on")
+    @classmethod
+    def plausible_purchase(cls, value: date | None) -> date | None:
+        if value is not None and (value.year < PURCHASE_MIN_YEAR or value > date.today()):
+            raise ValueError("Das Anschaffungsdatum liegt nicht in einem sinnvollen Bereich.")
+        return value
 
     @field_validator("name", "serial", "hostname", "note")
     @classmethod
@@ -329,6 +341,7 @@ class HardwareOut(HardwareSummary):
     monitors: list[LinkedDevice]
     psref: PsrefOut | None
     loan: LoanRef | None
+    purchased_on: date | None
     holder_ref: HolderOut | None
     position_id: int | None
     workplace_id: int | None
@@ -516,6 +529,10 @@ def _summary(
     )
 
 
+def _day(value: date | None) -> str:
+    return f"{value:%d.%m.%Y}" if value else "leer"
+
+
 def open_loan(db: Session, hardware_id: int) -> InventoryLoan | None:
     """Verleih, in dem das Gerät gerade ist (noch nicht zurück)."""
     return db.scalars(
@@ -615,6 +632,7 @@ def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
         ],
         psref=psref_out(model),
         loan=loan_ref(open_loan(db, row.id)),
+        purchased_on=row.purchased_on,
         holder_ref=holder_ref,
         position_id=row.position_id,
         workplace_id=row.workplace_id,
@@ -733,6 +751,7 @@ def create_hardware(request: Request, body: HardwareCreate, user: Editor, db: Db
         serial=body.serial,
         hostname=body.hostname,
         note=body.note,
+        purchased_on=body.purchased_on,
         inventory_no=body.inventory_no,
         room_id=room.id if room else None,
         position_id=position.id if position else None,
@@ -797,6 +816,8 @@ def update_hardware(
         changes.append(f"Hostname: {row.hostname or 'leer'} → {body.hostname or 'leer'}")
     if row.note != body.note:
         changes.append("Notiz geändert")
+    if row.purchased_on != body.purchased_on:
+        changes.append(f"Anschaffung: {_day(row.purchased_on)} → {_day(body.purchased_on)}")
     if row.room_id != (room.id if room else None):
         before_place = place_label(room_place(db, row.room_id))
         after_place = place_label(room_place(db, room.id if room else None))
@@ -818,6 +839,7 @@ def update_hardware(
     row.serial = body.serial
     row.hostname = body.hostname
     row.note = body.note
+    row.purchased_on = body.purchased_on
     row.room_id = room.id if room else None
     if changes:
         add_event(db, row.id, user, "Geändert: " + "; ".join(changes))

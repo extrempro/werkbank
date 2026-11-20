@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.69.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Statistik und Anschaffungsdatum.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Neu unter „Statistik“: Geräte je Art, Modell, Alter, Standort und Betriebssystem, wo die Geräte gerade sind, der Verleih und die Ausmusterungen je Jahr. Du kannst nach Hersteller filtern und zwischen Balken und Kreis wechseln.",
+          "Am Gerät kannst du jetzt das Anschaffungsdatum eintragen. Daraus berechnet die Statistik das Alter.",
+          "Die Suchfelder bei „Vorgänge“, „Verleih“ und „Standorte“ sehen jetzt aus wie die anderen Eingabefelder.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.68.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Abgleich der Personen mit Entra.",

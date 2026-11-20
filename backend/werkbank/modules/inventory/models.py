@@ -220,6 +220,8 @@ class InventoryHardware(Base):
     connected_to_id: Mapped[int | None] = mapped_column(
         ForeignKey("inventory_hardware.id", ondelete="SET NULL"), index=True
     )
+    # Anschaffungsdatum (von Hand); Grundlage für das Alter in der Statistik
+    purchased_on: Mapped[date | None] = mapped_column(Date)
     # Herkunft: von Hand erfasst („manuell“) oder aus NinjaOne („ninja“)
     source: Mapped[str] = mapped_column(String(16), default="manuell", server_default="manuell")
     note: Mapped[str] = mapped_column(String(500), default="", server_default="")
