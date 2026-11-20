@@ -29,6 +29,7 @@ from werkbank.modules.inventory.api import router as inventory_router
 from werkbank.modules.inventory.cases import router as inventory_cases_router
 from werkbank.modules.inventory.loans import router as inventory_loans_router
 from werkbank.modules.inventory.locations import router as inventory_locations_router
+from werkbank.modules.inventory.lookup import router as inventory_lookup_router
 from werkbank.modules.inventory.ninja_admin import router as inventory_ninja_admin_router
 from werkbank.modules.inventory.psref_sync import router as inventory_psref_router
 from werkbank.modules.inventory.search import inventory_search
@@ -116,6 +117,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(inventory_psref_router)
     app.include_router(inventory_statistics_router)
     app.include_router(inventory_whereabouts_router)
+    app.include_router(inventory_lookup_router)
     app.include_router(tools_router)
     app.include_router(tools_account_router)
     app.include_router(monitoring_router)

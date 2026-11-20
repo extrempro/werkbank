@@ -387,7 +387,9 @@ def test_workplaces_kits_and_equipment(db: Session) -> None:
     assert editor.delete(f"{BASE}/kinds/{test_kind_id}", headers=HEADERS).status_code == 409
 
     # Platz ohne Hardware lässt sich löschen
-    empty = editor.post(f"{BASE}/workplaces", json={"position_ids": []}, headers=HEADERS).json()
+    empty = editor.post(
+        f"{BASE}/workplaces", json={"position_ids": [], "room_id": room["id"]}, headers=HEADERS
+    ).json()
     assert empty["complete"] is None
     gone = editor.delete(f"{BASE}/workplaces/{empty['id']}", headers=HEADERS)
     assert gone.status_code == 200

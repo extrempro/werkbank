@@ -1,22 +1,22 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
+import { INVENTORY_CASES_PATH as CASES_PATH } from "../../navigation";
 import { navigate } from "../../router";
+import { LookupPicker } from "./LookupPicker";
 import { ListSearch, MoreButton, useDebounced, usePagedList } from "./paged";
 import { EventPanel } from "./parts";
 import { PersonPicker } from "./PersonPicker";
 import {
   addCaseNote,
   CASE_FILTERS,
+  CASE_KIND_SHORT,
   CASE_STATES,
   casePath,
   decideCase,
   decisionOptions,
-  fetchAssignees,
   fetchCase,
   fetchCases,
-  fetchHardwareList,
-  fetchLocations,
   fetchSyncStatus,
   formatDate,
   formatDay,
@@ -25,19 +25,17 @@ import {
   loanPath,
   positionPath,
   ninjaFactRows,
-  roomChoices,
   runSyncNow,
   setCaseStatus,
   takeCase,
   today,
-  type Assignees,
   type Case,
   type CaseFilter,
+  type CaseKind,
   type CaseSummary,
   type Person,
   type DecisionInput,
-  type HardwareSummary,
-  type Locations,
+  type LookupItem,
   type SyncStatus,
 } from "./api";
 
@@ -122,42 +120,16 @@ function SyncBar({ canEdit }: { canEdit: boolean }) {
   );
 }
 
-interface Choices {
-  assignees: Assignees;
-  locations: Locations;
-  hardware: HardwareSummary[];
-}
-
-function loadChoices(): Promise<Choices> {
-  return Promise.all([fetchAssignees(), fetchLocations(), fetchHardwareList("aktiv")]).then(
-    ([assignees, locations, hardware]) => ({ assignees, locations, hardware }),
-  );
-}
-
 /** Entscheidung für einen offenen Vorgang; Zusatzfelder je nach Auswahl. */
 function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => void }) {
   const options = decisionOptions(entry);
   const [choice, setChoice] = useState("");
-  const [choices, setChoices] = useState<Choices | null>(null);
-  const [target, setTarget] = useState(entry.hint ? String(entry.hint.id) : "");
+  // Gewählte Stelle, Arbeitsplatz, Raum oder Gerät (Auswahl mit Suche)
+  const [target, setTarget] = useState<LookupItem | null>(null);
   const [dueOn, setDueOn] = useState("");
   const [person, setPerson] = useState<Person | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (entry.kind === "weg" || entry.kind === "ueberfaellig" || entry.kind === "person_inaktiv") {
-      return;
-    }
-    let active = true;
-    loadChoices().then(
-      (result) => active && setChoices(result),
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, [entry.kind]);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -178,15 +150,15 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
         return;
       }
       if (choice === "stelle") {
-        body.position_id = Number(target);
+        body.position_id = target.id;
       } else if (choice === "arbeitsplatz") {
-        body.workplace_id = Number(target);
+        body.workplace_id = target.id;
       } else {
-        body.hardware_id = Number(target);
+        body.hardware_id = target.id;
       }
     }
     if (choice === "lager" && target) {
-      body.room_id = Number(target);
+      body.room_id = target.id;
     }
     if (choice === "nachfolge") {
       if (!person) {
@@ -215,11 +187,20 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
     setChoice(id);
     setError(null);
     if (id === "gleich" && entry.hint) {
-      setTarget(String(entry.hint.id));
+      const hint = entry.hint;
+      setTarget({
+        id: hint.id,
+        label: hint.name,
+        detail: [hint.hostname, hint.serial ? `SN ${hint.serial}` : ""].filter(Boolean).join(" · "),
+      });
     } else if (id === "arbeitsplatz" && entry.kind === "monitor" && suggested) {
-      setTarget(String(suggested));
+      setTarget({
+        id: suggested,
+        label: `Arbeitsplatz von ${entry.facts.host ?? "dem Rechner"}`,
+        detail: "Vorschlag: dort steht der Rechner, an dem der Monitor hängt",
+      });
     } else {
-      setTarget("");
+      setTarget(null);
     }
   };
 
@@ -254,59 +235,32 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
           ))}
         </div>
       </fieldset>
-      {entry.kind !== "weg" &&
-        entry.kind !== "ueberfaellig" &&
-        entry.kind !== "person_inaktiv" &&
-        choice &&
-        choice !== "uebergehen" &&
-        choice !== "defekt" &&
-        !choices && <p role="status">Auswahl wird geladen …</p>}
-      {choice === "stelle" && choices && (
-        <label>
-          Stelle
-          <select value={target} onChange={(event) => setTarget(event.target.value)}>
-            <option value="">Bitte wählen</option>
-            {choices.assignees.positions.map((item) => (
-              <option key={item.id} value={String(item.id)}>
-                {item.number} {item.name}
-                {item.person_name ? ` (${item.person_name})` : ""}
-              </option>
-            ))}
-          </select>
-        </label>
+      {choice === "stelle" && (
+        <LookupPicker
+          kind="position"
+          label="Stelle"
+          placeholder="Nummer, Stelle, Person oder Abteilung …"
+          value={target}
+          onChange={setTarget}
+        />
       )}
-      {choice === "arbeitsplatz" && choices && (
-        <label>
-          {entry.kind === "monitor" && suggested
-            ? "Arbeitsplatz (Vorschlag ausgewählt)"
-            : "Arbeitsplatz"}
-          <select value={target} onChange={(event) => setTarget(event.target.value)}>
-            <option value="">Bitte wählen</option>
-            {choices.assignees.workplaces.map((item) => (
-              <option key={item.id} value={String(item.id)}>
-                {item.number}
-                {item.place ? ` (${item.place})` : ""}
-              </option>
-            ))}
-          </select>
-        </label>
+      {choice === "arbeitsplatz" && (
+        <LookupPicker
+          kind="workplace"
+          label="Arbeitsplatz"
+          placeholder="Nummer, Raum oder Person …"
+          value={target}
+          onChange={setTarget}
+        />
       )}
-      {choice === "lager" && choices && (
-        <label>
-          Raum (freiwillig)
-          <select value={target} onChange={(event) => setTarget(event.target.value)}>
-            <option value="">kein Raum</option>
-            {roomChoices(choices.locations).map((group) => (
-              <optgroup key={group.label} label={group.label}>
-                {group.rooms.map((room) => (
-                  <option key={room.id} value={String(room.id)}>
-                    {room.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
+      {choice === "lager" && (
+        <LookupPicker
+          kind="room"
+          label="Raum (freiwillig)"
+          placeholder="Raum, Etage oder Standort …"
+          value={target}
+          onChange={setTarget}
+        />
       )}
       {choice === "nachfolge" && (
         <PersonPicker value={person} onChange={setPerson} label="Neue Person (aus Entra)" />
@@ -322,22 +276,15 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
           />
         </label>
       )}
-      {choice === "gleich" && choices && (
-        <label>
-          Vorhandenes Gerät
-          <select value={target} onChange={(event) => setTarget(event.target.value)}>
-            <option value="">Bitte wählen</option>
-            {choices.hardware
-              .filter((item) => item.kind === "Notebook" || item.kind === "PC")
-              .map((item) => (
-                <option key={item.id} value={String(item.id)}>
-                  {item.name}
-                  {item.hostname ? ` · ${item.hostname}` : ""}
-                  {item.serial ? ` · SN ${item.serial}` : ""}
-                </option>
-              ))}
-          </select>
-        </label>
+      {choice === "gleich" && (
+        <LookupPicker
+          kind="hardware"
+          computers
+          label="Vorhandenes Gerät"
+          placeholder="Name, Hostname, Seriennummer oder Inventurnummer …"
+          value={target}
+          onChange={setTarget}
+        />
       )}
       {choice === "ausgemustert" && entry.hardware && entry.hardware.status !== "ausgemustert" && (
         <p className="hint-box hint-warn">
@@ -632,14 +579,15 @@ function CaseDetail({
 export function CasesPage({ caseId, roles }: { caseId: number | null; roles: readonly string[] }) {
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
   const [filter, setFilter] = useState<CaseFilter>("offen");
+  const [kind, setKind] = useState<CaseKind | "alle">("alle");
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
   const query = useDebounced(search);
   const paged = usePagedList<CaseSummary, { open: number }>(
-    `${filter}|${query}`,
+    `${filter}|${kind}|${query}`,
     reload,
     (offset, limit) =>
-      fetchCases(filter, query, offset, limit).then((result) => ({
+      fetchCases(filter, query, offset, limit, kind).then((result) => ({
         items: result.cases,
         total: result.total,
         extra: { open: result.open },
@@ -666,70 +614,102 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
           {failed}
         </p>
       )}
-      <div className="chips" role="group" aria-label="Status">
-        {CASE_FILTERS.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            className="chip chip-filter"
-            aria-pressed={filter === entry.id}
-            onClick={() => setFilter(entry.id)}
-          >
-            {entry.label}
-            {entry.id === "offen" && openCount !== null ? ` (${openCount})` : ""}
-          </button>
-        ))}
-      </div>
-      <div className="case-layout">
+      <div className={caseId === null ? "case-layout" : "case-layout case-layout-detail"}>
         <nav className="panel case-list" aria-label="Vorgänge">
-          <ListSearch
-            value={search}
-            onChange={setSearch}
-            label="Vorgänge durchsuchen"
-            placeholder="Nummer, Titel, Gerät, Seriennummer …"
-          />
-          {!cases && !failed && <p role="status">Wird geladen …</p>}
-          {cases && cases.length === 0 && (
-            <p className="empty">
-              {query.trim() ? "Kein Vorgang passt zur Suche." : "Keine Vorgänge in diesem Status."}
-            </p>
-          )}
-          {cases && cases.length > 0 && (
-            <ul>
-              {cases.map((entry) => (
-                <li key={entry.id}>
-                  <button
-                    type="button"
-                    className="case-item"
-                    aria-current={entry.id === caseId ? "true" : undefined}
-                    onClick={() => navigate(casePath(entry.id))}
-                  >
-                    <span className="case-item-head">
-                      <span className="mono">{entry.number}</span>
-                      <span className={`pill ${CASE_STATES[entry.status].pill}`}>
-                        {CASE_STATES[entry.status].label}
-                      </span>
-                    </span>
-                    <strong>{entry.title}</strong>
-                    <span className="small">
-                      {entry.kind_label} · {formatDate(entry.created_at)}
-                      {entry.assignee ? ` · ${entry.assignee}` : ""}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {cases && (
-            <MoreButton
-              shown={cases.length}
-              total={paged.total}
-              loading={paged.loadingMore}
-              onMore={paged.more}
+          <div className="case-filters">
+            <ListSearch
+              value={search}
+              onChange={setSearch}
+              label="Vorgänge durchsuchen"
+              placeholder="Nummer, Titel, Gerät, Seriennummer …"
             />
-          )}
+            <div className="chips" role="group" aria-label="Status">
+              {CASE_FILTERS.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  className="chip chip-filter"
+                  aria-pressed={filter === entry.id}
+                  onClick={() => setFilter(entry.id)}
+                >
+                  {entry.label}
+                  {entry.id === "offen" && openCount !== null ? ` (${openCount})` : ""}
+                </button>
+              ))}
+            </div>
+            <label className="case-kind">
+              Art
+              <select
+                value={kind}
+                onChange={(event) => setKind(event.target.value as CaseKind | "alle")}
+              >
+                <option value="alle">Alle Arten</option>
+                {(Object.keys(CASE_KIND_SHORT) as CaseKind[]).map((key) => (
+                  <option key={key} value={key}>
+                    {CASE_KIND_SHORT[key]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="case-scroll">
+            {!cases && !failed && <p role="status">Wird geladen …</p>}
+            {cases && cases.length === 0 && (
+              <p className="empty">
+                {query.trim()
+                  ? "Kein Vorgang passt zur Suche."
+                  : "Keine Vorgänge in diesem Status."}
+              </p>
+            )}
+            {cases && cases.length > 0 && (
+              <ul>
+                {cases.map((entry) => (
+                  <li key={entry.id}>
+                    <button
+                      type="button"
+                      className="case-item"
+                      aria-current={entry.id === caseId ? "true" : undefined}
+                      onClick={() => navigate(casePath(entry.id))}
+                    >
+                      <span className="case-item-head">
+                        <span className="mono">{entry.number}</span>
+                        <span className={`pill ${CASE_STATES[entry.status].pill}`}>
+                          {CASE_STATES[entry.status].label}
+                        </span>
+                      </span>
+                      <strong>{entry.title}</strong>
+                      <span className="small">
+                        {entry.kind_label} · {formatDate(entry.created_at)}
+                        {entry.assignee ? ` · ${entry.assignee}` : ""}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {cases && (
+              <MoreButton
+                shown={cases.length}
+                total={paged.total}
+                loading={paged.loadingMore}
+                onMore={paged.more}
+              />
+            )}
+          </div>
         </nav>
         <div className="case-main">
+          {caseId !== null && (
+            <a
+              className="case-back"
+              href={CASES_PATH}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate(CASES_PATH);
+              }}
+            >
+              ‹ Zur Liste
+            </a>
+          )}
           {caseId === null ? (
             <p className="panel panel-empty">Wähle links einen Vorgang.</p>
           ) : (

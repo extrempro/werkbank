@@ -570,11 +570,18 @@ def list_cases(
     db: DbDep,
     state: Annotated[Literal["offen", "neu", "arbeit", "fertig", "alle"], Query()] = "offen",
     q: Annotated[str, Query(max_length=100)] = "",
+    kind: Annotated[
+        Literal["alle", "neu", "weg", "monitor", "person_inaktiv", "rueckgabe", "ueberfaellig"],
+        Query(),
+    ] = "alle",
     offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
     limit: Annotated[int, Query(ge=1, le=PAGE_MAX)] = PAGE_SIZE,
 ) -> CaseListOut:
-    """Vorgänge seitenweise, neueste zuerst; ``q`` sucht in Nummer, Titel und Angaben."""
+    """Vorgänge seitenweise, neueste zuerst; ``q`` sucht in Nummer, Titel und Angaben,
+    ``kind`` grenzt auf eine Art ein (z. B. nur Rückgaben)."""
     query = select(InventoryCase)
+    if kind != "alle":
+        query = query.where(InventoryCase.kind == kind)
     if state == "offen":
         query = query.where(InventoryCase.status.in_(OPEN_STATES))
     elif state != "alle":

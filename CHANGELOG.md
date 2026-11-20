@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.73.0] – 2026-11-20
+
+### IT-Bestand
+
+- **Auswahl mit Suche:** Neuer Endpunkt `GET /api/inventory/lookup` (Stellen, Arbeitsplätze, Räume, Geräte; höchstens 20 Treffer mit Gesamtzahl, Geräte ohne ausgemusterte, `computers=true` nur Notebooks und PCs). Neue Combobox `LookupPicker` statt langer Auswahllisten bei der Entscheidung im Vorgang (Stelle, Arbeitsplatz, Raum, vorhandenes Gerät) und beim Arbeitsplatz (Raum, Stellen)
+- **Arbeitsplatz anlegen:** Raum ist Pflicht (Oberfläche und Server, nur beim Anlegen); der Grundriss der Etage erscheint gleich darunter, ein Klick in den Raum setzt den Platz (freiwillig, `spot_x`/`spot_y` beim Anlegen)
+- **Standorte neu aufgebaut:** Baum links ein- und ausblendbar (gemerkt im Browser), jede Ebene mit eigenem Pfeil zum Auf- und Zuklappen, der Name öffnet die Ebene. Rechts genau die Auswahl: Stadt, Standort und Abschnitt mit eigener Seite (`/bestand/standorte/{stadt|standort|abschnitt}/{id}`), „Neuer …“, Umbenennen und Löschen dort; Etage mit anklickbarem Pfad und „Etage bearbeiten“ (Grundriss, Name, Reihenfolge, Löschen); gewählter Raum mit Arbeitsplätzen neben dem Grundriss statt darunter. Der Block „Standorte pflegen“ entfällt
+- **Vorgänge und Verleih:** Suche und Filter oben in der Liste, neuer Filter „Art“ bei den Vorgängen (`kind`), Liste mit fester Höhe und eigenem Scrollen, Ansicht daneben bleibt stehen; unter 1024 px erst nur die Liste, gewählt nur die Ansicht mit „Zur Liste“
+
+### Tests und Dokumentation
+
+- Backend `test_inventory_lookup.py` (Treffer, Grenzen, Rechte, Pflicht-Raum, Platz beim Anlegen), Filter nach Art; bestehende Tests legen Arbeitsplätze mit Raum an (`tests/inventory_rooms.py`)
+- Frontend-Tests für Auswahl mit Suche, Arbeitsplatz anlegen, Standorte (Raum neben dem Grundriss, Baum auf und zu, Abschnitt mit neuer Etage) und Liste der Vorgänge; E2E `bestand.spec.ts` angepasst
+- `docs/spec.md`, `docs/design.md`, `docs/security/asvs-l2.md`, `docs/a11y-wcag22.md` und Handbuch angepasst
+
 ## [0.72.0] – 2026-11-20
 
 ### Navigation
