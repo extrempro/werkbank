@@ -16,7 +16,7 @@ import {
   type PlaceKind,
   type Workplace,
 } from "./api";
-import { PlanView, type PlanSpot } from "./PlanView";
+import { planSpots, PlanView, type PlanSpot } from "./PlanView";
 
 function usePlaceInfo(kind: PlaceKind, id: number, reload: number) {
   const [state, setState] = useState<{ key: string; data: PlaceInfo } | null>(null);
@@ -255,11 +255,8 @@ export function LocationPanel({
 
   const shown = floor && floor.id === floorId ? floor : null;
   const spots: PlanSpot[] = shown
-    ? shown.workplaces.map((spot) => ({
-        id: spot.id,
-        x: spot.x,
-        y: spot.y,
-        label: spot.number,
+    ? planSpots(shown).map((spot) => ({
+        ...spot,
         on: places ? places.workplace_ids.includes(spot.id) : false,
       }))
     : [];

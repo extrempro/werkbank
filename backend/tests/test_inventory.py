@@ -517,7 +517,7 @@ def test_workplace_spot_and_whereabouts(db: Session) -> None:
     assert (placed["spot_x"], placed["spot_y"]) == (25, 50)
     assert placed["events"][0]["text"] == "Platz im Raum gesetzt"
     spots = reader.get(url).json()["workplaces"]
-    # Raum 10 + 40 · 25 % = 20, 20 + 20 · 50 % = 30
+    # Raum 10 + 40 · 25 % = 20, 20 + 20 · 50 % = 30; dazu die Stelle (unbesetzt)
     assert spots == [
         {
             "id": workplace["id"],
@@ -525,6 +525,10 @@ def test_workplace_spot_and_whereabouts(db: Session) -> None:
             "room_id": rooms["2.14"],
             "x": 20,
             "y": 30,
+            "shared": False,
+            "positions": [{"number": position["number"], "name": "Einkauf", "person_name": ""}],
+            "hardware": [],
+            "hardware_more": 0,
         }
     ]
 
@@ -539,6 +543,18 @@ def test_workplace_spot_and_whereabouts(db: Session) -> None:
         json=hardware_body(editor, workplace_id=workplace["id"]),
         headers=HEADERS,
     ).json()
+    for index in range(7):
+        editor.post(
+            f"{BASE}/hardware",
+            json=hardware_body(
+                editor, serial=f"POS-{index}", name=f"Gerät {index}", position_id=position["id"]
+            ),
+            headers=HEADERS,
+        )
+    spot = reader.get(url).json()["workplaces"][0]
+    # 1 am Arbeitsplatz + 7 an der Stelle: 6 gezeigt, 2 weitere
+    assert len(spot["hardware"]) == 6 and spot["hardware_more"] == 2
+    assert spot["hardware"][0] == {"name": "Gerät 0", "kind": "Monitor"}
     where = reader.get(f"{BASE}/whereabouts/geraet/{device['id']}").json()
     assert where["via"]["kind"] == "arbeitsplatz" and where["via"]["label"] == workplace["number"]
     assert where["floors"][0]["rooms"][0]["room_id"] == rooms["2.14"]
