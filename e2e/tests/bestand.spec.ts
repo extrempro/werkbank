@@ -245,6 +245,8 @@ test("IT-Bestand: Statistik", async ({ page }) => {
     page.getByRole("heading", { level: 1, name: "Statistik" }),
   ).toBeVisible();
   await expect(page.getByLabel("Hersteller")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Verleih" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Verleih", exact: true }),
+  ).toBeVisible();
   await expectNoA11yViolations(page);
 });
