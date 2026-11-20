@@ -29,6 +29,7 @@ import {
   fetchSyncStatus,
   formatDate,
   formatDay,
+  groupOptions,
   hardwarePath,
   INVENTORY_EDITOR_ROLE,
   loanPath,
@@ -234,30 +235,44 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
                     ? "Wie geht es mit dem Verleih weiter?"
                     : "Was ist mit dem Gerät?"}
         </legend>
-        <div className="case-options">
-          {options.map((option) => (
-            <span key={option.id} className="case-option-wrap">
-              <button
-                type="button"
-                className="case-option"
-                aria-pressed={choice === option.id}
-                onClick={() => pick(option.id)}
-              >
-                {option.label}
-              </button>
-              <button
-                type="button"
-                className="case-info"
-                aria-label={`Erklärung zu „${option.label}“`}
-                aria-expanded={info === option.id}
-                aria-controls={hintId}
-                onClick={() => setInfo(info === option.id ? null : option.id)}
-              >
-                i
-              </button>
-            </span>
-          ))}
-        </div>
+        {groupOptions(options).map((group) => (
+          <div
+            key={group.title || "alle"}
+            className="case-option-group"
+            role={group.title ? "group" : undefined}
+            aria-label={group.title || undefined}
+          >
+            {group.title && (
+              <span className="case-option-group-title" aria-hidden="true">
+                {group.title}
+              </span>
+            )}
+            <div className="case-options">
+              {group.options.map((option) => (
+                <span key={option.id} className="case-option-wrap">
+                  <button
+                    type="button"
+                    className="case-option"
+                    aria-pressed={choice === option.id}
+                    onClick={() => pick(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                  <button
+                    type="button"
+                    className="case-info"
+                    aria-label={`Erklärung zu „${option.label}“`}
+                    aria-expanded={info === option.id}
+                    aria-controls={hintId}
+                    onClick={() => setInfo(info === option.id ? null : option.id)}
+                  >
+                    i
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
         {hinted && (
           <p id={hintId} className="small case-option-hint">
             <strong>{hinted.label}:</strong> {hinted.hint}
