@@ -199,7 +199,7 @@ describe("Gerät", () => {
     });
     render(<HardwareDetailPage hardwareId={7} tab="uebersicht" roles={["Bestand.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Inventurnummer" }));
-    fireEvent.change(screen.getByLabelText("Inventurnummer"), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Inventurnummer" }), {
       target: { value: "INV-24-0999" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
