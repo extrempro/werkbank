@@ -4,7 +4,6 @@ import { Link } from "../../components/Link";
 import { INVENTORY_HARDWARE_PATH } from "../../navigation";
 import {
   fetchAssignees,
-  fetchFloor,
   fetchHardware,
   fetchLocations,
   fetchMasterData,
@@ -32,7 +31,6 @@ import {
   WHEREABOUTS_LABELS,
   workplacePath,
   type Assignees,
-  type Floor,
   type Hardware,
   type PsrefInfo,
   type HardwareTab,
@@ -41,7 +39,7 @@ import {
   type Whereabouts,
 } from "./api";
 import { deviceInput, DeviceFormFields, deviceProblem, type DeviceFields } from "./HardwarePage";
-import { PlanView } from "./PlanView";
+import { LocationPanel, PlaceLine } from "./PlaceInfo";
 
 type Mode = "ansicht" | "bearbeiten" | "inventur" | "ausmustern";
 
@@ -799,62 +797,6 @@ function TechTab({
   );
 }
 
-/** Reiter Standort: Grundriss der Etage, der Raum des Geräts ist hervorgehoben. */
-function LocationTab({ device }: { device: Hardware }) {
-  const floorId = device.location?.floor_id ?? null;
-  const [floor, setFloor] = useState<Floor | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (floorId === null) {
-      return;
-    }
-    let active = true;
-    fetchFloor(floorId).then(
-      (result) => active && setFloor(result),
-      (error: unknown) =>
-        active && setFailed(errorText(error, "Der Grundriss konnte nicht geladen werden.")),
-    );
-    return () => {
-      active = false;
-    };
-  }, [floorId]);
-
-  const location = device.location;
-  const shown = floor && floor.id === floorId ? floor : null;
-  return (
-    <section className="panel" aria-labelledby="standort-titel">
-      <div className="panel-head">
-        <h2 id="standort-titel">Standort</h2>
-        {location && (
-          <Link to={locationPath(location.floor_id, location.room_id)}>Bei Standorte öffnen</Link>
-        )}
-      </div>
-      <div className="detail-body">
-        {!location && <p>Diesem Gerät ist kein Raum zugeordnet.</p>}
-        {location && (
-          <p>
-            <strong>Raum {location.room}</strong>
-            <br />
-            <span className="small">
-              {location.city} › {location.site} › {location.section} › {location.floor}
-            </span>
-          </p>
-        )}
-        <ErrorBox text={failed} />
-        {location && !failed && !shown && <p role="status">Wird geladen …</p>}
-        {location && shown && (
-          <PlanView
-            floor={shown}
-            selectedId={location.room_id}
-            label={`Grundriss ${location.floor}, Raum ${location.room} hervorgehoben`}
-          />
-        )}
-      </div>
-    </section>
-  );
-}
-
 /** IT-Bestand › Hardware › Gerät: Übersicht mit Aktionen und Verlauf. */
 export function HardwareDetailPage({
   hardwareId,
@@ -926,6 +868,15 @@ export function HardwareDetailPage({
                   </>
                 )}
               </p>
+              <PlaceLine
+                kind="geraet"
+                id={device.id}
+                reload={
+                  (device.location?.room_id ?? 0) * 100000 +
+                  (device.workplace_id ?? 0) * 100 +
+                  (device.position_id ?? 0)
+                }
+              />
             </div>
           </header>
           <nav className="project-tabs" aria-label="Bereiche des Geräts">
@@ -950,7 +901,15 @@ export function HardwareDetailPage({
               onChange={setDevice}
             />
           )}
-          {tab === "standort" && <LocationTab device={device} />}
+          {tab === "standort" && (
+            <LocationPanel
+              key={`${device.location?.room_id}-${device.workplace_id}-${device.position_id}`}
+              id="standort-titel"
+              kind="geraet"
+              objectId={device.id}
+              emptyText="Diesem Gerät ist kein Raum zugeordnet, auch nicht über einen Arbeitsplatz oder eine Stelle."
+            />
+          )}
           {tab === "technik" && <TechTab device={device} canEdit={canEdit} onChange={setDevice} />}
           {tab === "verlauf" && <History device={device} />}
         </>

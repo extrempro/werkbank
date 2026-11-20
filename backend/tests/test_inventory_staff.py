@@ -394,5 +394,7 @@ def test_workplaces_kits_and_equipment(db: Session) -> None:
     assert {entry["id"] for entry in gone.json()} == {workplace["id"]}
 
     # Suche findet Arbeitsplätze
-    hits = editor.get("/api/search", params={"q": "fenster"}).json()["hits"]
-    assert any(hit["kind"] == "Arbeitsplatz" for hit in hits)
+    hits = editor.get("/api/search", params={"q": workplace["number"]}).json()["hits"]
+    assert any(
+        hit["kind"] == "Arbeitsplatz" and hit["title"] == workplace["number"] for hit in hits
+    )

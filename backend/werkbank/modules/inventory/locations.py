@@ -136,6 +136,16 @@ class RoomOut(BaseModel):
     hardware: int
 
 
+class SpotOut(BaseModel):
+    """Arbeitsplatz mit gesetztem Platz; x und y in Prozent der Etage wie die Räume."""
+
+    id: int
+    number: str
+    room_id: int
+    x: float
+    y: float
+
+
 class FloorOut(BaseModel):
     id: int
     name: str
@@ -148,6 +158,7 @@ class FloorOut(BaseModel):
     city: str
     plan: PlanOut | None
     rooms: list[RoomOut]
+    workplaces: list[SpotOut]
 
 
 # --- Lesen -------------------------------------------------------------------------------
@@ -253,7 +264,38 @@ def floor_out(db: Session, floor: InventoryFloor) -> FloorOut:
             )
             for room in rooms
         ],
+        workplaces=floor_spots(db, list(rooms)),
     )
+
+
+def floor_spots(db: Session, rooms: list[InventoryRoom]) -> list[SpotOut]:
+    """Plätze der Arbeitsplätze in diesen Räumen, umgerechnet auf die Etage."""
+    by_id = {room.id: room for room in rooms}
+    if not by_id:
+        return []
+    spots = []
+    for row in db.scalars(
+        select(InventoryWorkplace)
+        .where(
+            InventoryWorkplace.room_id.in_(list(by_id)),
+            InventoryWorkplace.spot_x.is_not(None),
+            InventoryWorkplace.spot_y.is_not(None),
+        )
+        .order_by(InventoryWorkplace.number)
+    ).all():
+        room = by_id.get(row.room_id or 0)
+        if room is None or row.spot_x is None or row.spot_y is None:
+            continue
+        spots.append(
+            SpotOut(
+                id=row.id,
+                number=row.number,
+                room_id=room.id,
+                x=round(room.x + room.w * row.spot_x / 100, 2),
+                y=round(room.y + room.h * row.spot_y / 100, 2),
+            )
+        )
+    return spots
 
 
 @router.get("/locations")

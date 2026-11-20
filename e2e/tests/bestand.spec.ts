@@ -187,7 +187,6 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
     page.getByRole("heading", { level: 1, name: "Arbeitsplätze" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
-  await page.getByLabel("Bezeichnung (freiwillig)").fill(`Platz ${stamp}`);
   const add = page.getByRole("combobox", { name: /^Stelle hinzufügen/ });
   const value = await add
     .locator("option", { hasText: `Stelle ${stamp}` })

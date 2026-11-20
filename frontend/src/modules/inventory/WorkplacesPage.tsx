@@ -3,7 +3,8 @@ import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { INVENTORY_MASTER_PATH, INVENTORY_WORKPLACES_PATH } from "../../navigation";
 import { navigate } from "../../router";
-import { DeviceList, EventPanel, RoomPlanPanel } from "./parts";
+import { DeviceList, EventPanel } from "./parts";
+import { LocationPanel, PlaceLine } from "./PlaceInfo";
 import {
   createWorkplace,
   deleteWorkplace,
@@ -64,7 +65,6 @@ function WorkplaceForm({
   onSave: (body: WorkplaceInput) => Promise<unknown>;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState(initial.name);
   const [roomId, setRoomId] = useState(initial.room_id === null ? "" : String(initial.room_id));
   const [shared, setShared] = useState(initial.shared);
   const [kitId, setKitId] = useState(initial.kit_id === null ? "" : String(initial.kit_id));
@@ -89,7 +89,6 @@ function WorkplaceForm({
     setBusy(true);
     setError(null);
     onSave({
-      name: name.trim(),
       room_id: roomId ? Number(roomId) : null,
       shared,
       kit_id: kitId ? Number(kitId) : null,
@@ -104,17 +103,6 @@ function WorkplaceForm({
   return (
     <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
       <div className="tool-row">
-        <label>
-          Bezeichnung (freiwillig)
-          <input
-            type="text"
-            value={name}
-            maxLength={80}
-            autoComplete="off"
-            placeholder="z. B. Fensterplatz"
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
         <label>
           Raum (freiwillig)
           <select value={roomId} onChange={(event) => setRoomId(event.target.value)}>
@@ -260,7 +248,6 @@ function WorkplaceForm({
 }
 
 const EMPTY_WORKPLACE: WorkplaceInput = {
-  name: "",
   room_id: null,
   shared: false,
   kit_id: null,
@@ -644,9 +631,13 @@ export function WorkplaceDetailPage({
             <p className="module-label">Arbeitsplatz</p>
             <h1>{workplaceName(workplace)}</h1>
             <p className="page-sub">
-              {workplace.shared ? "Geteilt" : "Einzeln"} · {workplace.place ?? "ohne Raum"}{" "}
-              {equipmentPill(workplace)}
+              {workplace.shared ? "Geteilt" : "Einzeln"} {equipmentPill(workplace)}
             </p>
+            <PlaceLine
+              kind="arbeitsplatz"
+              id={workplace.id}
+              reload={(workplace.room_id ?? 0) * 1000 + (workplace.spot_x ?? -1)}
+            />
           </header>
           <nav className="project-tabs" aria-label="Bereiche des Arbeitsplatzes">
             {WORKPLACE_TABS.map((entry) => (
@@ -680,10 +671,14 @@ export function WorkplaceDetailPage({
             </section>
           )}
           {tab === "standort" && (
-            <RoomPlanPanel
+            <LocationPanel
               id="platz-standort"
-              location={workplace.location}
-              emptyText="Diesem Arbeitsplatz ist kein Raum zugeordnet."
+              kind="arbeitsplatz"
+              objectId={workplace.id}
+              emptyText="Diesem Arbeitsplatz ist kein Raum zugeordnet. Den Raum wählst du unter „Übersicht“ bei „Bearbeiten“."
+              workplace={workplace}
+              canEdit={canEdit}
+              onWorkplaceChange={setWorkplace}
             />
           )}
           {tab === "verlauf" && <EventPanel id="platz-verlauf" events={workplace.events} />}

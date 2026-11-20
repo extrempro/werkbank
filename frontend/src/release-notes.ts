@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.70.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Ort und Platz im Grundriss.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Bei Stelle, Arbeitsplatz und Gerät steht jetzt unter dem Titel, wo sie sich befinden.",
+          "Im Reiter „Standort“ siehst du den Grundriss mit dem Raum und dem Platz des Arbeitsplatzes. Bei einer Stelle sind es alle Räume ihrer Arbeitsplätze.",
+          "Den Platz eines Arbeitsplatzes setzt du mit einem Klick in den Grundriss.",
+          "Arbeitsplätze brauchen keinen Namen mehr. Sie heißen nach ihrer Nummer, in Listen steht der Raum dabei.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.69.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Statistik und Anschaffungsdatum.",

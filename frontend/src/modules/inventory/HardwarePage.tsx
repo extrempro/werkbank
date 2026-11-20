@@ -191,7 +191,7 @@ export function DeviceFormFields({
             <optgroup label="Arbeitsplätze">
               {assignees.workplaces.map((entry) => (
                 <option key={entry.id} value={`w:${entry.id}`}>
-                  {entry.number} {entry.name}
+                  {entry.number}
                   {entry.place ? ` (${entry.place})` : ""}
                 </option>
               ))}

@@ -198,17 +198,23 @@ class PositionOut(PositionSummary):
 
 
 class WorkplaceIn(BaseModel):
-    name: str = Field(default="", max_length=80)
     room_id: int | None = Field(default=None, ge=1)
     shared: bool = False
     kit_id: int | None = Field(default=None, ge=1)
     position_ids: list[int] = Field(default_factory=list, max_length=POSITIONS_PER_WORKPLACE)
     note: str = Field(default="", max_length=500)
 
-    @field_validator("name", "note")
+    @field_validator("note")
     @classmethod
     def plain(cls, value: str) -> str:
         return single_line(value)
+
+
+class SpotIn(BaseModel):
+    """Platz im Raum in Prozent der Raumbreite und -höhe; beides leer entfernt ihn."""
+
+    x: float | None = Field(default=None, ge=0, le=100)
+    y: float | None = Field(default=None, ge=0, le=100)
 
 
 class EquipmentRow(BaseModel):
@@ -244,6 +250,9 @@ class WorkplaceSummary(BaseModel):
 class WorkplaceOut(WorkplaceSummary):
     note: str
     location: LocationOut | None
+    # Platz im Raum (Prozent des Raums), None = nicht gesetzt
+    spot_x: float | None
+    spot_y: float | None
     created_at: datetime
     hardware_list: list[HardwareSummary]
     equipment: Equipment | None
@@ -578,6 +587,8 @@ def workplace_out(db: Session, row: InventoryWorkplace) -> WorkplaceOut:
         **summary.model_dump(),
         note=row.note,
         location=LocationOut(**vars(place)) if place else None,
+        spot_x=row.spot_x if row.room_id else None,
+        spot_y=row.spot_y if row.room_id else None,
         created_at=row.created_at,
         hardware_list=_hardware_of(db, workplace_id=row.id),
         equipment=equipment(db, row),
@@ -665,7 +676,6 @@ def _position_details(row: InventoryPosition) -> dict[str, object]:
     """Ins Audit-Log: Kennungen der Stelle, ob besetzt, aber keine Namen von Personen."""
     return {
         "nummer": row.number,
-        "bezeichnung": row.name,
         "abteilung": row.department_id,
         "besetzt": row.person_oid is not None,
     }
@@ -912,7 +922,7 @@ def create_workplace(request: Request, body: WorkplaceIn, user: Editor, db: DbDe
     positions, room_id, kit_id = _check_workplace(db, body)
     row = InventoryWorkplace(
         number=next_number(db, "arbeitsplatz", InventoryWorkplace),
-        name=body.name,
+        name="",
         room_id=room_id,
         shared=body.shared,
         kit_id=kit_id,
@@ -954,8 +964,6 @@ def update_workplace(
     positions, room_id, kit_id = _check_workplace(db, body)
     before = _workplace_details(row, _workplace_position_ids(db, row.id))
     changes: list[str] = []
-    if row.name != body.name:
-        changes.append(f"Bezeichnung: {row.name or 'leer'} → {body.name or 'leer'}")
     if row.shared != body.shared:
         changes.append("Typ: " + ("geteilt" if body.shared else "einzeln"))
     if row.room_id != room_id:
@@ -972,8 +980,11 @@ def update_workplace(
         )
     if row.note != body.note:
         changes.append("Notiz geändert")
-    row.name = body.name
     row.shared = body.shared
+    if row.room_id != room_id:
+        # Neuer Raum: der Platz im alten Raum passt nicht mehr
+        row.spot_x = None
+        row.spot_y = None
     row.room_id = room_id
     row.kit_id = kit_id
     row.note = body.note
@@ -994,6 +1005,47 @@ def update_workplace(
         )
     db.commit()
     db.refresh(row)
+    return workplace_out(db, row)
+
+
+@router.put("/workplaces/{workplace_id}/spot")
+def set_workplace_spot(
+    request: Request, workplace_id: ObjectId, body: SpotIn, user: Editor, db: DbDep
+) -> WorkplaceOut:
+    """Setzt den Platz im Raum (Grundriss) oder entfernt ihn."""
+    row = _workplace(db, workplace_id)
+    if (body.x is None) != (body.y is None):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Bitte beide Werte angeben oder beide leer lassen.",
+        )
+    if body.x is not None and row.room_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ordne dem Arbeitsplatz zuerst einen Raum zu.",
+        )
+    x = round(body.x, 2) if body.x is not None else None
+    y = round(body.y, 2) if body.y is not None else None
+    if (row.spot_x, row.spot_y) != (x, y):
+        row.spot_x = x
+        row.spot_y = y
+        add_staff_event(
+            db,
+            user,
+            "Platz im Raum gesetzt" if x is not None else "Platz im Raum entfernt",
+            workplace_id=row.id,
+        )
+        _audit(
+            db,
+            request,
+            user,
+            "arbeitsplatz_platz",
+            "arbeitsplatz",
+            row.id,
+            {"nummer": row.number, "x": x, "y": y},
+        )
+        db.commit()
+        db.refresh(row)
     return workplace_out(db, row)
 
 
