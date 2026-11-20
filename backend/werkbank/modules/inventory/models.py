@@ -293,7 +293,7 @@ class InventoryNumberRange(Base):
 
     __tablename__ = "inventory_number_ranges"
 
-    # stelle oder arbeitsplatz (später auch verleih)
+    # stelle, arbeitsplatz, vorgang oder verleih
     key: Mapped[str] = mapped_column(String(16), primary_key=True)
     prefix: Mapped[str] = mapped_column(String(10))
     next_value: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
@@ -471,3 +471,84 @@ class InventoryMonitorIgnore(Base):
     ignored_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+
+
+class InventoryLoan(Base):
+    """Ein Verleih: ein oder mehrere Geräte an eine Person aus Entra, mit Rückgabedatum.
+
+    Die Person bekommt Nachrichten nur mit Verleihnummer und Datum (Mail und Teams).
+    """
+
+    __tablename__ = "inventory_loans"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(20), unique=True)
+    person_oid: Mapped[str] = mapped_column(String(36), index=True)
+    person_name: Mapped[str] = mapped_column(String(200))
+    person_upn: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    # Zieladresse für Mail und Teams, vom Server aus Entra gelesen
+    person_mail: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    issued_on: Mapped[date] = mapped_column(Date)
+    due_on: Mapped[date] = mapped_column(Date, index=True)
+    # gesetzt, wenn alle Geräte zurück sind
+    returned_on: Mapped[date | None] = mapped_column(Date, index=True)
+    note: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    reminded_on: Mapped[date | None] = mapped_column(Date)
+    overdue_notified_on: Mapped[date | None] = mapped_column(Date)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class InventoryLoanItem(Base):
+    """Ein Gerät in einem Verleih; ``returned_on`` gesetzt heißt: zurück."""
+
+    __tablename__ = "inventory_loan_items"
+    __table_args__ = (
+        UniqueConstraint("loan_id", "hardware_id", name="uq_inventory_loan_items_loan_hardware"),
+        # Ein Gerät ist höchstens einmal gleichzeitig verliehen
+        Index(
+            "uq_inventory_loan_items_open",
+            "hardware_id",
+            unique=True,
+            postgresql_where=sql_text("returned_on IS NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    loan_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_loans.id", ondelete="CASCADE"), index=True
+    )
+    hardware_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_hardware.id", ondelete="CASCADE"), index=True
+    )
+    returned_on: Mapped[date | None] = mapped_column(Date)
+    returned_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+
+class InventoryLoanMessage(Base):
+    """Nachricht an die ausleihende Person (Ausgabe, Erinnerung, überfällig, Rückgabe).
+
+    Der Auftrag ``bestand.verleih`` verschickt sie; der Text entsteht erst beim Versand und
+    enthält nur Verleihnummer und Datum.
+    """
+
+    __tablename__ = "inventory_loan_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    loan_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_loans.id", ondelete="CASCADE"), index=True
+    )
+    # ausgabe, erinnerung, ueberfaellig, rueckgabe
+    kind: Mapped[str] = mapped_column(String(16))
+    # mail oder teams
+    channel: Mapped[str] = mapped_column(String(8))
+    # offen, gesendet, fehler (aufgegeben), aus (Kanal nicht eingerichtet)
+    status: Mapped[str] = mapped_column(String(10), default="offen", server_default="offen")
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    error: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

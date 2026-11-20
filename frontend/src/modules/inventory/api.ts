@@ -2,6 +2,7 @@ import { ApiError, deleteJson, getJson, postJson, putJson } from "../../api";
 import {
   INVENTORY_CASES_PATH,
   INVENTORY_HARDWARE_PATH,
+  INVENTORY_LOANS_PATH,
   INVENTORY_LOCATIONS_PATH,
   INVENTORY_POSITIONS_PATH,
   INVENTORY_WORKPLACES_PATH,
@@ -84,6 +85,8 @@ export interface Hardware extends HardwareSummary {
   monitors: LinkedDevice[];
   /** Technische Daten des Modells aus Lenovo PSREF; null, wenn nie abgefragt */
   psref: PsrefInfo | null;
+  /** Offener Verleih, in dem das Gerät gerade ist */
+  loan: LoanRef | null;
   holder_ref: HolderRef | null;
   position_id: number | null;
   workplace_id: number | null;
@@ -735,7 +738,7 @@ export interface Assignees {
 }
 
 export interface NumberRange {
-  key: "stelle" | "arbeitsplatz";
+  key: "stelle" | "arbeitsplatz" | "vorgang" | "verleih";
   label: string;
   prefix: string;
   next_number: string;
@@ -1080,6 +1083,12 @@ export interface NinjaFacts {
   suggest_workplace_id?: number | null;
   last_seen?: string | null;
   ninja_id?: number;
+  /** Vorgänge zum Verleih */
+  loan_id?: number;
+  loan_number?: string;
+  devices?: string[];
+  person?: string;
+  due_on?: string;
 }
 
 export interface NinjaInfo {
@@ -1091,7 +1100,7 @@ export interface NinjaInfo {
 }
 
 export type CaseState = "neu" | "arbeit" | "fertig";
-export type CaseKind = "neu" | "weg" | "monitor";
+export type CaseKind = "neu" | "weg" | "monitor" | "rueckgabe" | "ueberfaellig";
 
 export type PsrefStatus = "ok" | "nicht_gefunden" | "fehler";
 
@@ -1260,6 +1269,30 @@ export const DECISION_OPTIONS: Record<CaseKind, DecisionOption[]> = {
       hint: "Der Monitor wird nicht erfasst und beim nächsten Abgleich nicht wieder gemeldet.",
     },
   ],
+  rueckgabe: [
+    {
+      id: "lager",
+      label: "Geprüft, zurück ins Lager",
+      hint: "Alles in Ordnung; auf Wunsch mit Raum. Danach kannst du es wieder verleihen.",
+    },
+    {
+      id: "defekt",
+      label: "Defekt oder unvollständig",
+      hint: "Steht im Verlauf der Geräte. Reparieren oder ausmustern kannst du danach.",
+    },
+  ],
+  ueberfaellig: [
+    {
+      id: "verlaengert",
+      label: "Rückgabe verlängern",
+      hint: "Neues Datum; die Erinnerungen richten sich danach.",
+    },
+    {
+      id: "geklaert",
+      label: "Geklärt",
+      hint: "Zum Beispiel mit der Person gesprochen. Die Rückgabe trägst du beim Verleih ein.",
+    },
+  ],
   weg: [
     {
       id: "ausgemustert",
@@ -1285,6 +1318,8 @@ export interface DecisionInput {
   workplace_id?: number;
   room_id?: number;
   hardware_id?: number;
+  /** bei „verlaengert“: neues Rückgabedatum (JJJJ-MM-TT) */
+  due_on?: string;
 }
 
 export interface SyncRun {
@@ -1378,4 +1413,158 @@ export function ninjaFactRows(
   add("Bezeichnung im Bestand", facts.name);
   add("Zuletzt in NinjaOne", facts.last_seen ? formatDate(facts.last_seen) : "");
   return rows;
+}
+
+// --- Verleih ------------------------------------------------------------------------------
+
+export type LoanState = "offen" | "ueberfaellig" | "zurueck";
+export type LoanFilter = "offen" | "ueberfaellig" | "zurueck" | "alle";
+
+export interface LoanRef {
+  id: number;
+  number: string;
+  person_name: string;
+  due_on: string;
+}
+
+export interface LoanSummary {
+  id: number;
+  number: string;
+  person_name: string;
+  issued_on: string;
+  due_on: string;
+  returned_on: string | null;
+  state: LoanState;
+  items: number;
+  items_open: number;
+}
+
+export interface LoanItem {
+  hardware_id: number;
+  name: string;
+  kind: string;
+  serial: string;
+  inventory_no: string | null;
+  returned_on: string | null;
+}
+
+export type LoanMessageStatus = "offen" | "gesendet" | "fehler" | "aus";
+
+export interface LoanMessage {
+  kind: string;
+  kind_label: string;
+  channel: "mail" | "teams";
+  status: LoanMessageStatus;
+  created_at: string;
+  sent_at: string | null;
+}
+
+export interface Loan extends LoanSummary {
+  person_upn: string;
+  has_address: boolean;
+  note: string;
+  created_at: string;
+  entries: LoanItem[];
+  messages: LoanMessage[];
+  cases: { id: number; number: string; kind: CaseKind; status: CaseState }[];
+}
+
+export interface LoanList {
+  loans: LoanSummary[];
+  open: number;
+  overdue: number;
+}
+
+export interface LoanableDevice {
+  id: number;
+  name: string;
+  kind: string;
+  serial: string;
+  inventory_no: string | null;
+}
+
+export interface LoanInput {
+  person: { oid: string };
+  due_on: string;
+  hardware_ids: number[];
+  note: string;
+}
+
+export const LOAN_FILTERS: { id: LoanFilter; label: string }[] = [
+  { id: "offen", label: "Ausgeliehen" },
+  { id: "ueberfaellig", label: "Überfällig" },
+  { id: "zurueck", label: "Zurück" },
+  { id: "alle", label: "Alle" },
+];
+
+export const LOAN_STATES: Record<LoanState, { label: string; pill: string }> = {
+  offen: { label: "Ausgeliehen", pill: "pill-info" },
+  ueberfaellig: { label: "Überfällig", pill: "pill-bad" },
+  zurueck: { label: "Zurück", pill: "pill-ok" },
+};
+
+export const MESSAGE_STATES: Record<LoanMessageStatus, string> = {
+  offen: "wird verschickt",
+  gesendet: "verschickt",
+  fehler: "fehlgeschlagen",
+  aus: "nicht verschickt",
+};
+
+export function loanPath(id: number | "neu"): string {
+  return `${INVENTORY_LOANS_PATH}/${id}`;
+}
+
+export function parseLoanPath(path: string): { id: number | "neu" | null } | null {
+  if (path === INVENTORY_LOANS_PATH) {
+    return { id: null };
+  }
+  if (path === `${INVENTORY_LOANS_PATH}/neu`) {
+    return { id: "neu" };
+  }
+  const match = /^\/bestand\/verleih\/(\d{1,9})$/.exec(path);
+  return match ? { id: Number(match[1]) } : null;
+}
+
+export function fetchLoans(filter: LoanFilter): Promise<LoanList> {
+  return getJson(`${BASE}/loans?state=${filter}`);
+}
+
+export function fetchLoan(id: number): Promise<Loan> {
+  return getJson(`${BASE}/loans/${id}`);
+}
+
+export function fetchLoanable(): Promise<LoanableDevice[]> {
+  return getJson(`${BASE}/loans/available`);
+}
+
+export function createLoan(body: LoanInput): Promise<Loan> {
+  return postJson(`${BASE}/loans`, body, { quiet: true });
+}
+
+export function returnLoanItems(id: number, hardwareIds: number[]): Promise<Loan> {
+  return postJson(`${BASE}/loans/${id}/return`, { hardware_ids: hardwareIds }, { quiet: true });
+}
+
+export function changeLoanDue(id: number, dueOn: string): Promise<Loan> {
+  return putJson(`${BASE}/loans/${id}/due`, { due_on: dueOn }, { quiet: true });
+}
+
+/** Datum in einigen Tagen als JJJJ-MM-TT (lokale Zeit). */
+export function daysFrom(start: string, days: number): string {
+  const [year = 1970, month = 1, day = 1] = start.split("-").map(Number);
+  const date = new Date(year, month - 1, day + days);
+  return today(date);
+}
+
+/** Ein Gerät passt zur Suche, wenn Name, Art, Seriennummer oder Inventurnummer passen. */
+export function filterLoanable(list: LoanableDevice[], query: string): LoanableDevice[] {
+  const term = query.trim().toLowerCase();
+  if (!term) {
+    return list;
+  }
+  return list.filter((item) =>
+    [item.name, item.kind, item.serial, item.inventory_no ?? ""].some((value) =>
+      value.toLowerCase().includes(term),
+    ),
+  );
 }

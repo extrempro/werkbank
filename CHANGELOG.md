@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.66.0] – 2026-11-20
+
+IT-Bestand, Schritt 6: Verleih.
+
+### IT-Bestand
+
+- **Verleih** (`/bestand/verleih`): Geräte an eine Person aus Entra verleihen, mit Rückgabedatum (höchstens ein Jahr) und optionaler Notiz. Ein Verleih hat eine Nummer aus dem neuen Nummernkreis „Verleih“ (Vorgabe `L-`) und kann mehrere Geräte umfassen. Verleihbar sind aktive Geräte ohne Stelle und Arbeitsplatz, die nicht schon verliehen sind (Datenbank-Index: ein Gerät höchstens einmal offen). Liste mit Ausgeliehen, Überfällig, Zurück und Alle
+- Rückgabe einzeln oder vollständig; je Rückgabe ein Vorgang „Rückgabe prüfen“ (Entscheidungen: geprüft und zurück ins Lager mit optionalem Raum, defekt oder unvollständig). Rückgabedatum beim Verleih änderbar
+- **Nachrichten an die Person** per Mail und Teams (über den vorhandenen SMTP-Server und Teams-Workflow): bei Ausgabe, zwei Tage vor dem Rückgabedatum, bei Überfälligkeit am Tag danach und dann wöchentlich, bei vollständiger Rückgabe. Inhalt nur Verleihnummer und Datum. Auftrag `bestand.verleih` alle 15 Minuten; bis zu fünf Versuche, nach drei Tagen verfallen; Stand je Nachricht beim Verleih sichtbar
+- Die Mailadresse liest der Server über die Objekt-ID selbst aus Entra (`GET /users/{id}`); deaktivierte Konten werden abgelehnt. Die Personensuche liefert dafür zusätzlich `mail`
+- Vorgang **„Verleih überfällig“** am Tag nach dem Rückgabedatum (Entscheidungen: verlängern, geklärt); schließt sich, wenn alles zurück ist. Nach „geklärt“ kommt erst nach einem neuen Rückgabedatum wieder einer
+- **Gerät:** Hinweis „Verliehen an …“ mit Link; verliehene Geräte lassen sich nicht einer Stelle oder einem Arbeitsplatz zuordnen und nicht ausmustern
+- Neues Icon „Verleih“; Migration 0047, Spec, Datenschutz, ASVS und Handbuch angepasst
+
 ## [0.65.0] – 2026-11-20
 
 IT-Bestand, Schritt 5: Monitore aus dem Custom Field in NinjaOne und technische Daten aus Lenovo PSREF.

@@ -4,6 +4,8 @@ Die Werkbank kann Benachrichtigungen in den persönlichen Teams-Chat jeder Perso
 
 Was verschickt wird: Gesammelt höchstens alle 15 Minuten je Person eine Karte mit der Zahl der neuen Benachrichtigungen je Bereich und einem Link in die Werkbank. Die Karte enthält keine fachlichen Inhalte. Welche Arten jemand in Teams bekommt, stellt jede Person im Konto ein; anfangs ist Teams für alle aus.
 
+Derselbe Workflow stellt auch die Nachrichten zum Verleih im IT-Bestand zu (Ausgabe, Erinnerung, Überfälligkeit, Rückgabe). Sie gehen an die ausleihende Person, auch wenn sie die Werkbank nicht nutzt, und nennen nur Verleihnummer und Datum, ohne Link.
+
 ## 1. Workflow anlegen
 
 1. In Power Automate (oder in Teams unter „Workflows“) einen neuen Cloud-Flow ohne Vorlage anlegen.

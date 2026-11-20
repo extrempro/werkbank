@@ -1155,7 +1155,7 @@ export const CHAPTERS: readonly Chapter[] = [
     id: "it-bestand",
     title: "IT-Bestand",
     summary:
-      "Vorgänge aus NinjaOne, Hardware mit Inventurnummer und Verlauf, Stellen und Arbeitsplätze, Standorte mit Grundrissen, Ausmustern und die Stammdaten dazu.",
+      "Vorgänge aus NinjaOne, Hardware mit Inventurnummer und Verlauf, Stellen und Arbeitsplätze, Standorte mit Grundrissen, Verleih, Ausmustern und die Stammdaten dazu.",
     roles: [INVENTORY_READER, INVENTORY_EDITOR],
     sections: [
       {
@@ -1236,7 +1236,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Unter „Vorgänge“ landet, was eine Entscheidung braucht: ein neues Gerät in NinjaOne oder ein Gerät, das dort nicht mehr auftaucht. Oben siehst du, wann zuletzt abgeglichen wurde.",
+            text: "Unter „Vorgänge“ landet, was eine Entscheidung braucht: ein neues Gerät in NinjaOne, ein Gerät, das dort nicht mehr auftaucht, eine Rückgabe aus dem Verleih oder ein überfälliger Verleih. Oben siehst du, wann zuletzt abgeglichen wurde.",
           },
           {
             kind: "steps",
@@ -1261,6 +1261,47 @@ export const CHAPTERS: readonly Chapter[] = [
           },
         ],
         links: [{ to: "/bestand/vorgaenge", label: "Zu den Vorgängen" }],
+      },
+      {
+        id: "verleih",
+        title: "Verleih",
+        blocks: [
+          {
+            kind: "text",
+            text: "Unter „Verleih“ siehst du, welche Geräte gerade ausgeliehen sind, welche überfällig sind und was zurück ist. Ein Verleih hat eine eigene Nummer (z. B. L-001) und kann mehrere Geräte umfassen.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Unter „Verleih“ auf „Neuer Verleih“ tippen.",
+              "Unter „Wer leiht aus?“ mindestens zwei Buchstaben des Namens tippen und die Person aus der Liste wählen.",
+              "Das Rückgabedatum wählen und die Geräte ankreuzen. Verleihen kannst du Geräte, die keiner Stelle und keinem Arbeitsplatz zugeordnet und nicht schon verliehen sind.",
+              "„Verleihen“ tippen. Die Nummer vergibt die Werkbank.",
+            ],
+          },
+          {
+            kind: "text",
+            text: "Die Person bekommt per Mail und Teams eine Nachricht: bei der Ausgabe, zwei Tage vor dem Rückgabedatum, wenn der Verleih überfällig ist (am Tag danach und dann jede Woche) und wenn alles zurück ist. Darin stehen nur die Verleihnummer und das Datum, keine Gerätedaten. Welche Nachrichten verschickt wurden, steht beim Verleih.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Den Verleih öffnen.",
+              "Die Geräte ankreuzen, die zurück sind. Einzelne Geräte gehen auch.",
+              "„Rückgabe eintragen“ tippen. Für jede Rückgabe entsteht ein Vorgang „Rückgabe prüfen“.",
+              "Im Vorgang „Geprüft, zurück ins Lager“ oder „Defekt oder unvollständig“ wählen.",
+            ],
+          },
+          {
+            kind: "hint",
+            text: "Ist ein Verleih überfällig, entsteht der Vorgang „Verleih überfällig“. Dort verlängerst du die Rückgabe oder schließt ihn als geklärt. Sind alle Geräte zurück, schließt er sich selbst. Das Rückgabedatum kannst du auch direkt beim Verleih ändern.",
+          },
+          {
+            kind: "text",
+            text: "Ein verliehenes Gerät kannst du nicht einer Stelle oder einem Arbeitsplatz zuordnen und nicht ausmustern, bis die Rückgabe eingetragen ist. Verleihen und Rückgaben eintragen dürfen nur Bearbeiterinnen und Bearbeiter des IT-Bestands.",
+          },
+        ],
+        links: [{ to: "/bestand/verleih", label: "Zum Verleih" }],
       },
       {
         id: "stellen",

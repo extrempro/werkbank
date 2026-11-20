@@ -50,6 +50,7 @@ export const INVENTORY_LOCATIONS_PATH = "/bestand/standorte";
 export const INVENTORY_POSITIONS_PATH = "/bestand/stellen";
 export const INVENTORY_CASES_PATH = "/bestand/vorgaenge";
 export const INVENTORY_WORKPLACES_PATH = "/bestand/arbeitsplaetze";
+export const INVENTORY_LOANS_PATH = "/bestand/verleih";
 export const ADMIN_PATH = "/verwaltung";
 export const ADMIN_ROLES_PATH = "/verwaltung/rollen";
 export const ADMIN_MAIL_PATH = "/verwaltung/mail-teams";
@@ -226,6 +227,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
             { path: INVENTORY_POSITIONS_PATH, label: "Stellen", icon: "stellen" },
             { path: INVENTORY_WORKPLACES_PATH, label: "Arbeitsplätze", icon: "arbeitsplatz" },
             { path: INVENTORY_LOCATIONS_PATH, label: "Standorte", icon: "standort" },
+            { path: INVENTORY_LOANS_PATH, label: "Verleih", icon: "verleih" },
           ],
         },
         {

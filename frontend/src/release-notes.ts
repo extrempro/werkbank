@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.66.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Verleih.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Neu unter „Verleih“: Du verleihst ein oder mehrere Geräte an eine Person, mit Rückgabedatum und eigener Verleihnummer.",
+          "Die Person bekommt per Mail und Teams eine Nachricht bei der Ausgabe, eine Erinnerung zwei Tage vorher, eine Mahnung bei Verspätung und eine Bestätigung, wenn alles zurück ist. Darin stehen nur Verleihnummer und Datum.",
+          "Rückgaben trägst du beim Verleih ein, auch einzeln. Danach erinnert dich ein Vorgang daran, die Geräte zu prüfen. Ist ein Verleih überfällig, entsteht ebenfalls ein Vorgang.",
+          "Beim Gerät siehst du, an wen es gerade verliehen ist.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.65.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Monitore aus NinjaOne und technische Daten von Lenovo.",

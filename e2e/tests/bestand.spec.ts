@@ -219,3 +219,21 @@ test("IT-Bestand: Vorgänge und Technik ohne NinjaOne", async ({ page }) => {
   await expect(page.getByText("Wähle links einen Vorgang.")).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test("IT-Bestand: Verleih ansehen und neuen Verleih öffnen", async ({
+  page,
+}) => {
+  await loginAs(page, ["Bestand.Editor"], "Bernd Bestand");
+  await page.goto("/bestand/verleih");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Verleih" }),
+  ).toBeVisible();
+  await expect(page.getByText("Wähle links einen Verleih.")).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Neuer Verleih" }).click();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Neuer Verleih" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Rückgabe bis")).toBeVisible();
+  await expectNoA11yViolations(page);
+});
