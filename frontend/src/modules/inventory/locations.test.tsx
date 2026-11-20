@@ -127,7 +127,7 @@ describe("Standorte: Hilfsfunktionen", () => {
     expect(firstFloorId({ cities: [] })).toBeNull();
     const groups = roomChoices(tree);
     expect(groups).toHaveLength(1);
-    expect(groups[0].label).toContain("Erdgeschoss");
+    expect(groups[0]?.label).toContain("Erdgeschoss");
   });
 });
 
