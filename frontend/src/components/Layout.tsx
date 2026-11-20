@@ -32,6 +32,7 @@ import {
   MONITORING_DNS_PATH,
   PROJECTS_PATH,
   INVENTORY_CASES_PATH,
+  INVENTORY_LOANS_PATH,
   INVENTORY_HARDWARE_PATH,
   INVENTORY_LOCATIONS_PATH,
   INVENTORY_MASTER_PATH,
@@ -53,6 +54,7 @@ import { HandbookPage } from "../pages/HandbookPage";
 import { DnsCheckPage } from "../modules/monitoring/DnsCheckPage";
 import {
   parseCasePath,
+  parseLoanPath,
   parseHardwarePath,
   parseLocationPath,
   parsePositionPath,
@@ -61,6 +63,7 @@ import {
 import { HardwareDetailPage } from "../modules/inventory/HardwareDetailPage";
 import { HardwarePage } from "../modules/inventory/HardwarePage";
 import { CasesPage } from "../modules/inventory/CasesPage";
+import { LoansPage } from "../modules/inventory/LoansPage";
 import { LocationsPage } from "../modules/inventory/LocationsPage";
 import { PositionDetailPage, PositionsPage } from "../modules/inventory/PositionsPage";
 import { WorkplaceDetailPage, WorkplacesPage } from "../modules/inventory/WorkplacesPage";
@@ -281,6 +284,7 @@ export function Layout({ me }: LayoutProps) {
   const locationRoute = parseLocationPath(path);
   const positionRoute = parsePositionPath(path);
   const caseRoute = parseCasePath(path);
+  const loanRoute = parseLoanPath(path);
   const workplaceRoute = parseWorkplacePath(path);
 
   const licenseMatch = /^\/m365\/lizenzen\/(\d{1,9})$/.exec(path);
@@ -389,6 +393,8 @@ export function Layout({ me }: LayoutProps) {
     );
   } else if (caseRoute !== null && items.some((item) => item.path === INVENTORY_CASES_PATH)) {
     page = <CasesPage caseId={caseRoute.id} roles={me.roles} />;
+  } else if (loanRoute !== null && items.some((item) => item.path === INVENTORY_LOANS_PATH)) {
+    page = <LoansPage loanId={loanRoute.id} roles={me.roles} />;
   } else if (path === INVENTORY_POSITIONS_PATH && current) {
     page = <PositionsPage roles={me.roles} />;
   } else if (

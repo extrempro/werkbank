@@ -13,6 +13,7 @@ import {
   HARDWARE_TABS,
   hardwarePath,
   INVENTORY_EDITOR_ROLE,
+  loanPath,
   locationPath,
   holderValue,
   modelLabel,
@@ -421,6 +422,12 @@ function Overview({
 
   return (
     <>
+      {device.loan && (
+        <p className="hint-box">
+          Verliehen an {device.loan.person_name} bis {formatDay(device.loan.due_on)} ·{" "}
+          <Link to={loanPath(device.loan.id)}>Verleih {device.loan.number} öffnen</Link>
+        </p>
+      )}
       {retired && device.retire && (
         <section className="panel" aria-labelledby="ausgemustert-titel">
           <div className="panel-head">

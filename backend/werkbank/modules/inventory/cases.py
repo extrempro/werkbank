@@ -5,7 +5,7 @@ neu, in Bearbeitung oder fertig. Abgeschlossen wird er mit einer Entscheidung, d
 ausführt (Gerät anlegen und zuordnen, mit einem vorhandenen Gerät verknüpfen, übergehen …).
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
@@ -33,11 +33,13 @@ from werkbank.modules.inventory.api import (
     place_label,
     single_line,
 )
+from werkbank.modules.inventory.loans import CASE_OVERDUE, CASE_RETURN, set_due
 from werkbank.modules.inventory.models import (
     InventoryCase,
     InventoryEvent,
     InventoryHardware,
     InventoryKind,
+    InventoryLoan,
     InventoryMonitorIgnore,
     InventoryNinjaIgnore,
     InventorySyncRun,
@@ -66,6 +68,8 @@ KIND_LABELS = {
     CASE_NEW: "Neu in NinjaOne",
     CASE_MISSING: "Nicht mehr in NinjaOne",
     CASE_MONITOR: "Neuer Monitor",
+    CASE_RETURN: "Rückgabe prüfen",
+    CASE_OVERDUE: "Verleih überfällig",
 }
 DECISIONS: dict[str, dict[str, str]] = {
     CASE_NEW: {
@@ -87,9 +91,18 @@ DECISIONS: dict[str, dict[str, str]] = {
         "stelle": "Der Stelle zugeordnet",
         "uebergehen": "Nicht übernommen",
     },
+    CASE_RETURN: {
+        "lager": "Geprüft, zurück ins Lager",
+        "defekt": "Defekt oder unvollständig",
+    },
+    CASE_OVERDUE: {
+        "verlaengert": "Rückgabe verlängert",
+        "geklaert": "Geklärt",
+        "zurueck": "Alles zurück",
+    },
 }
 # Entscheidungen, die nur die Werkbank selbst trifft
-AUTOMATIC = frozenset({"wieder_da", "ersetzt"})
+AUTOMATIC = frozenset({"wieder_da", "ersetzt", "zurueck"})
 LIST_MAX = 1000
 
 
@@ -165,6 +178,8 @@ class DecisionIn(BaseModel):
     room_id: int | None = Field(default=None, ge=1)
     # bei „gleich“: das vorhandene Gerät
     hardware_id: int | None = Field(default=None, ge=1)
+    # bei „verlaengert“: neues Rückgabedatum
+    due_on: date | None = None
 
 
 class SyncRunOut(BaseModel):
@@ -418,6 +433,58 @@ def _decide_monitor(
     _close(db, user, row, body.decision, f"Entschieden: {DECISIONS[CASE_MONITOR][body.decision]}")
 
 
+def _decide_loan(
+    db: Session,
+    user: CurrentUser,
+    row: InventoryCase,
+    body: DecisionIn,
+    details: dict[str, object],
+) -> None:
+    """Rückgabe prüfen oder überfälligen Verleih klären."""
+    facts = row.facts or {}
+    loan_id = facts.get("loan_id")
+    loan = db.get(InventoryLoan, loan_id) if isinstance(loan_id, int) else None
+    if row.kind == CASE_RETURN:
+        ids = [item for item in facts.get("hardware_ids") or [] if isinstance(item, int)]
+        devices = [device for device in (db.get(InventoryHardware, i) for i in ids) if device]
+        if body.decision == "lager":
+            room = _room(db, body.room_id)
+            for device in devices:
+                text = f"Nach Rückgabe geprüft (Vorgang {row.number})"
+                if room is not None and device.room_id != room.id:
+                    device.room_id = room.id
+                    text += f"; Standort: {place_label(room_place(db, room.id))}"
+                add_event(db, device.id, user, text)
+        else:
+            for device in devices:
+                add_event(
+                    db,
+                    device.id,
+                    user,
+                    f"Nach Rückgabe defekt oder unvollständig (Vorgang {row.number})",
+                )
+        _close(
+            db, user, row, body.decision, f"Entschieden: {DECISIONS[CASE_RETURN][body.decision]}"
+        )
+        return
+    if body.decision == "verlaengert":
+        if loan is None or loan.returned_on is not None:
+            raise _conflict("Der Verleih ist schon zurück.")
+        if body.due_on is None:
+            raise _invalid("Bitte ein neues Rückgabedatum wählen.")
+        set_due(db, loan, body.due_on, user)
+        details["rueckgabe_bis"] = body.due_on.isoformat()
+        _close(
+            db,
+            user,
+            row,
+            "verlaengert",
+            f"Entschieden: Rückgabe verlängert bis {body.due_on:%d.%m.%Y}",
+        )
+        return
+    _close(db, user, row, "geklaert", "Entschieden: geklärt")
+
+
 @router.get("/cases")
 def list_cases(
     user: Reader,
@@ -507,6 +574,8 @@ def decide_case(
 
     if row.kind == CASE_MONITOR:
         _decide_monitor(db, user, row, body, details)
+    elif row.kind in (CASE_RETURN, CASE_OVERDUE):
+        _decide_loan(db, user, row, body, details)
     elif row.kind == CASE_NEW:
         if body.decision in ("stelle", "arbeitsplatz", "lager"):
             device = _create_from_case(db, user, row, body)

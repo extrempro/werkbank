@@ -41,6 +41,8 @@ class Person:
     department: str
     job_title: str
     enabled: bool
+    # Mailadresse aus Entra (leer, wenn keine Postfach-Adresse eingetragen ist)
+    mail: str = ""
 
 
 def search_term(query: str) -> str:
@@ -66,12 +68,16 @@ def parse_people(items: list[dict[str, Any]]) -> list[Person]:
                 department=_text(item.get("department"), 120),
                 job_title=_text(item.get("jobTitle"), 120),
                 enabled=item.get("accountEnabled") is not False,
+                mail=_text(item.get("mail"), 200),
             )
         )
     return people
 
 
 PeopleFinder = Callable[[str], list[Person]]
+# Eine Person über die Objekt-ID; None, wenn es sie in Entra nicht gibt
+PersonLookup = Callable[[str], Person | None]
+SELECT = "id,displayName,userPrincipalName,department,jobTitle,accountEnabled,mail"
 
 
 class GraphPeople(UtcmClient):
@@ -87,7 +93,7 @@ class GraphPeople(UtcmClient):
             params={
                 "$search": f'"displayName:{term}" OR "userPrincipalName:{term}"',
                 "$filter": "userType eq 'Member'",
-                "$select": "id,displayName,userPrincipalName,department,jobTitle,accountEnabled",
+                "$select": SELECT,
                 "$orderby": "displayName",
                 "$top": str(MAX_HITS),
                 "$count": "true",
@@ -96,6 +102,18 @@ class GraphPeople(UtcmClient):
         )
         values = data.get("value")
         return parse_people([item for item in values or [] if isinstance(item, dict)])
+
+    def get(self, oid: str) -> Person | None:
+        if not _OID.match(oid):
+            return None
+        try:
+            data = self._json("GET", f"{GRAPH_URL}/users/{oid.lower()}", params={"$select": SELECT})
+        except UtcmError as exc:
+            if "mit 404" in str(exc):
+                return None
+            raise
+        found = parse_people([data])
+        return found[0] if found else None
 
 
 # Token-Abruf je Einstellungen merken, damit MSAL das Token zwischenspeichern kann
@@ -120,6 +138,29 @@ def graph_people_finder(settings: Settings) -> PeopleFinder:
             raise PeopleError(str(exc)) from exc
 
     return find
+
+
+def graph_person_lookup(settings: Settings) -> PersonLookup:
+    graph_people_finder(settings)  # prüft die Einrichtung
+    token = _TOKENS[id(settings)]
+
+    def lookup(oid: str) -> Person | None:
+        try:
+            with httpx.Client(timeout=HTTP_TIMEOUT_SECONDS, follow_redirects=False) as http:
+                return GraphPeople(http, token).get(oid)
+        except UtcmError as exc:
+            raise PeopleError(str(exc)) from exc
+
+    return lookup
+
+
+def get_person_lookup(settings: SettingsDep) -> PersonLookup:
+    """Abhängigkeit für den Verleih; in Tests ersetzbar."""
+
+    def lookup(oid: str) -> Person | None:
+        return graph_person_lookup(settings)(oid)
+
+    return lookup
 
 
 def get_people_finder(settings: SettingsDep) -> PeopleFinder:

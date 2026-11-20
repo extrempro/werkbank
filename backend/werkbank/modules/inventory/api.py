@@ -22,6 +22,8 @@ from werkbank.modules.inventory.models import (
     InventoryKit,
     InventoryKitRow,
     InventoryKitRowKind,
+    InventoryLoan,
+    InventoryLoanItem,
     InventoryMaker,
     InventoryModel,
     InventoryPosition,
@@ -300,6 +302,15 @@ class PsrefOut(BaseModel):
     specs: list[SpecOut]
 
 
+class LoanRef(BaseModel):
+    """Offener Verleih eines Geräts."""
+
+    id: int
+    number: str
+    person_name: str
+    due_on: date
+
+
 class LinkedDevice(BaseModel):
     """Kurzform eines Geräts, z. B. Rechner und angeschlossene Monitore."""
 
@@ -317,6 +328,7 @@ class HardwareOut(HardwareSummary):
     connected_to: LinkedDevice | None
     monitors: list[LinkedDevice]
     psref: PsrefOut | None
+    loan: LoanRef | None
     holder_ref: HolderOut | None
     position_id: int | None
     workplace_id: int | None
@@ -504,6 +516,24 @@ def _summary(
     )
 
 
+def open_loan(db: Session, hardware_id: int) -> InventoryLoan | None:
+    """Verleih, in dem das Gerät gerade ist (noch nicht zurück)."""
+    return db.scalars(
+        select(InventoryLoan)
+        .join(InventoryLoanItem, InventoryLoanItem.loan_id == InventoryLoan.id)
+        .where(
+            InventoryLoanItem.hardware_id == hardware_id, InventoryLoanItem.returned_on.is_(None)
+        )
+        .limit(1)
+    ).first()
+
+
+def loan_ref(loan: InventoryLoan | None) -> LoanRef | None:
+    if loan is None:
+        return None
+    return LoanRef(id=loan.id, number=loan.number, person_name=loan.person_name, due_on=loan.due_on)
+
+
 def psref_out(model: InventoryModel | None) -> PsrefOut | None:
     if model is None or not model.psref_status:
         return None
@@ -584,6 +614,7 @@ def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
             if item is not None
         ],
         psref=psref_out(model),
+        loan=loan_ref(open_loan(db, row.id)),
         holder_ref=holder_ref,
         position_id=row.position_id,
         workplace_id=row.workplace_id,
@@ -746,6 +777,10 @@ def update_hardware(
             detail="Hostname und Seriennummer kommen aus NinjaOne und sind hier nicht änderbar.",
         )
     _check_serial(db, body.serial, row.id)
+    if (position is not None or workplace is not None) and open_loan(db, row.id) is not None:
+        raise _conflict(
+            "Das Gerät ist verliehen. Trag zuerst die Rückgabe ein, dann kannst du es zuordnen."
+        )
     before = _details(row)
     changes: list[str] = []
     if row.name != body.name:
@@ -840,6 +875,8 @@ def retire_hardware(
     row = _hardware(db, hardware_id)
     if row.status == STATUS_RETIRED:
         raise _conflict("Das Gerät ist schon ausgemustert.")
+    if open_loan(db, row.id) is not None:
+        raise _conflict("Das Gerät ist verliehen. Trag zuerst die Rückgabe ein.")
     reason = db.get(InventoryRetireReason, body.reason_id)
     if reason is None:
         raise HTTPException(
