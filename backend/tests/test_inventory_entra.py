@@ -78,6 +78,12 @@ def editor(entra: FakeEntra) -> TestClient:
     return client
 
 
+def sync(db: Session, entra: FakeEntra) -> tuple[int, int]:
+    """Frischer Stand aus der Datenbank, wie im Auftrag mit eigener Sitzung."""
+    db.expire_all()
+    return run_entra_sync(db, entra)
+
+
 def person_cases(db: Session) -> list[InventoryCase]:
     db.expire_all()
     return list(
@@ -116,11 +122,11 @@ def test_entra_sync(db: Session) -> None:
 
     # Entra nicht erreichbar: nichts passiert
     entra.down = True
-    assert run_entra_sync(db, entra) == (0, 0)
+    assert sync(db, entra) == (0, 0)
     entra.down = False
 
     # Aktiv: Name und Anmeldename werden nachgezogen (zwei Stellen; der Verleih stimmt schon)
-    assert run_entra_sync(db, entra) == (2, 0)
+    assert sync(db, entra) == (2, 0)
     db.expire_all()
     stored = db.get(InventoryPosition, first["id"])
     assert stored is not None
@@ -131,12 +137,12 @@ def test_entra_sync(db: Session) -> None:
             InventoryEvent.text.like("Angaben aus Entra:%"),
         )
     ).first()
-    assert run_entra_sync(db, entra) == (0, 0)
+    assert sync(db, entra) == (0, 0)
 
     # Deaktiviert: je Stelle und Verleih ein Vorgang, nur einmal
     entra.people[OID] = person(OID, "Pia Beispiel", "pia@example.com", enabled=False)
-    assert run_entra_sync(db, entra) == (0, 3)
-    assert run_entra_sync(db, entra) == (0, 0)
+    assert sync(db, entra) == (0, 3)
+    assert sync(db, entra) == (0, 0)
     cases = person_cases(db)
     assert {case.facts.get("position_id") for case in cases} == {first["id"], second["id"], None}
     assert all(case.facts["reason"] == "deaktiviert" for case in cases)
@@ -156,13 +162,13 @@ def test_entra_sync(db: Session) -> None:
 
     # Wieder aktiv: offene Vorgänge schließen sich selbst
     entra.people[OID] = person(OID, "Pia Beispiel", "pia@example.com")
-    assert run_entra_sync(db, entra) == (0, 0)
+    assert sync(db, entra) == (0, 0)
     decisions = {case.facts.get("position_id"): case.decision for case in person_cases(db)}
     assert decisions == {first["id"]: "lassen", second["id"]: "wieder_aktiv", None: "geklaert"}
 
     # Gelöscht: neuer Zeitraum, neue Vorgänge
     del entra.people[OID]
-    assert run_entra_sync(db, entra) == (0, 3)
+    assert sync(db, entra) == (0, 3)
     fresh = [case for case in person_cases(db) if case.status == "neu"]
     assert len(fresh) == 3 and all(case.facts["reason"] == "geloescht" for case in fresh)
     by_position = {case.facts.get("position_id"): case for case in fresh}
