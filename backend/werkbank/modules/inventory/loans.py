@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
@@ -60,6 +60,7 @@ from werkbank.modules.inventory.people import (
     PersonLookup,
     get_person_lookup,
 )
+from werkbank.modules.inventory.search import escape_like
 from werkbank.modules.inventory.staff import next_number
 from werkbank.modules.inventory.sync import (
     OPEN_STATES,
@@ -79,6 +80,8 @@ OVERDUE_REPEAT_DAYS = 7
 DUE_MAX_DAYS = 366
 ITEMS_MAX = 20
 LIST_MAX = 1000
+PAGE_SIZE = 50
+PAGE_MAX = 200
 MESSAGE_ATTEMPTS = 5
 # Ältere, noch nicht verschickte Nachrichten verfallen
 MESSAGE_MAX_AGE = timedelta(days=3)
@@ -194,6 +197,8 @@ class LoanListOut(BaseModel):
     loans: list[LoanSummary]
     open: int
     overdue: int
+    # Treffer insgesamt (Status und Suche), für „Mehr anzeigen“
+    total: int
 
 
 class AvailableOut(BaseModel):
@@ -359,7 +364,11 @@ def list_loans(
     user: Reader,
     db: DbDep,
     state: Annotated[Literal["offen", "ueberfaellig", "zurueck", "alle"], Query()] = "offen",
+    q: Annotated[str, Query(max_length=100)] = "",
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=PAGE_MAX)] = PAGE_SIZE,
 ) -> LoanListOut:
+    """Verleihe seitenweise; ``q`` sucht in Nummer, Person und den Geräten."""
     today = local_today()
     query = select(InventoryLoan)
     if state == "offen":
@@ -368,8 +377,35 @@ def list_loans(
         query = query.where(InventoryLoan.returned_on.is_(None), InventoryLoan.due_on < today)
     elif state == "zurueck":
         query = query.where(InventoryLoan.returned_on.is_not(None))
+    term = q.strip().casefold()
+    if term:
+        pattern = f"%{escape_like(term)}%"
+        devices = (
+            select(InventoryLoanItem.loan_id)
+            .join(InventoryHardware, InventoryHardware.id == InventoryLoanItem.hardware_id)
+            .where(
+                or_(
+                    func.lower(InventoryHardware.name).like(pattern, escape="\\"),
+                    func.lower(InventoryHardware.serial).like(pattern, escape="\\"),
+                    func.lower(func.coalesce(InventoryHardware.inventory_no, "")).like(
+                        pattern, escape="\\"
+                    ),
+                )
+            )
+        )
+        query = query.where(
+            or_(
+                func.lower(InventoryLoan.number).like(pattern, escape="\\"),
+                func.lower(InventoryLoan.person_name).like(pattern, escape="\\"),
+                func.lower(InventoryLoan.person_upn).like(pattern, escape="\\"),
+                InventoryLoan.id.in_(devices),
+            )
+        )
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     rows = db.scalars(
-        query.order_by(InventoryLoan.due_on.asc(), InventoryLoan.id.desc()).limit(LIST_MAX)
+        query.order_by(InventoryLoan.due_on.asc(), InventoryLoan.id.desc())
+        .offset(offset)
+        .limit(limit)
     ).all()
     items: dict[int, list[InventoryLoanItem]] = {}
     if rows:
@@ -389,6 +425,7 @@ def list_loans(
         loans=[_summary(row, items.get(row.id, []), today) for row in rows],
         open=open_count or 0,
         overdue=overdue or 0,
+        total=total,
     )
 
 

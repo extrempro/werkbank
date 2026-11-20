@@ -100,6 +100,7 @@ const list: LoanList = {
   ],
   open: 1,
   overdue: 0,
+  total: 1,
 };
 
 describe("Hilfsfunktionen Verleih", () => {
@@ -139,7 +140,7 @@ describe("Verleih", () => {
 
   it("legt einen Verleih mit Person und Geräten an", async () => {
     const calls = stubFetch({
-      "GET /api/inventory/loans": { loans: [], open: 0, overdue: 0 },
+      "GET /api/inventory/loans": { loans: [], open: 0, overdue: 0, total: 0 },
       "GET /api/inventory/loans/available": [
         { id: 7, name: "Leih-Notebook 1", kind: "Notebook", serial: "LN-1", inventory_no: null },
         { id: 8, name: "Headset 7", kind: "Headset", serial: "", inventory_no: null },
@@ -188,5 +189,36 @@ describe("Verleih", () => {
     expect(await screen.findByText(/Rückgabe eingetragen/)).toBeTruthy();
     expect(screen.getByRole("link", { name: /V-030/ })).toBeTruthy();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({ hardware_ids: [8] });
+  });
+});
+
+describe("Suche und Mehr anzeigen", () => {
+  it("lädt weitere Verleihe nach und sucht auf dem Server", async () => {
+    const page = (from: number, count: number) =>
+      Array.from({ length: count }, (_, index) => ({
+        ...list.loans[0],
+        id: from + index,
+        number: `L-${String(from + index).padStart(3, "0")}`,
+      }));
+    const calls = stubFetch({
+      "GET /api/inventory/loans?state=offen": { ...list, loans: page(1, 50), total: 52 },
+      "GET /api/inventory/loans?state=offen&offset=50": {
+        ...list,
+        loans: page(51, 2),
+        total: 52,
+      },
+      "GET /api/inventory/loans?state=offen&q=L-052": { ...list, loans: page(52, 1), total: 1 },
+    });
+    render(<LoansPage loanId={null} roles={["Bestand.Reader"]} />);
+    expect(await screen.findByText("50 von 52")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Mehr anzeigen" }));
+    expect(await screen.findByText("52 von 52")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Mehr anzeigen" })).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Verleihe durchsuchen"), {
+      target: { value: "L-052" },
+    });
+    expect(await screen.findByText("1 von 1")).toBeTruthy();
+    expect(calls.some((call) => call.url.includes("q=L-052"))).toBe(true);
   });
 });

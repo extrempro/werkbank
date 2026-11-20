@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.67.0] – 2026-11-20
+
+### IT-Bestand
+
+- **Vorgänge und Verleih:** Sofortsuche über der Liste (auf dem Server, kurze Verzögerung beim Tippen). Vorgänge werden in Nummer, Titel und Angaben durchsucht, Verleihe in Nummer, Person und den Geräten (Name, Seriennummer, Inventurnummer)
+- Beide Listen laden seitenweise (50 Einträge) mit „x von y“ und „Mehr anzeigen“; die API hat dafür `q`, `offset`, `limit` (höchstens 200) und liefert `total`. Nach einer Änderung lädt die Liste so viele Einträge neu, wie zu sehen waren
+
 ## [0.66.0] – 2026-11-20
 
 IT-Bestand, Schritt 6: Verleih.

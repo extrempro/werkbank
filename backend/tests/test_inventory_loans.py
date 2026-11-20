@@ -352,3 +352,48 @@ def test_send_pending_only_number_and_date(db: Session, tmp_path: Path) -> None:
     assert cards[0]["recipient"] == "pia.beispiel@example.com"
     assert "Geheimes Notebook" not in str(cards[0])
     assert {status for _, _, status in messages(db, loan["id"])} == {"gesendet"}
+
+
+@pytest.mark.db
+def test_lists_search_and_pages(db: Session) -> None:
+    client = editor()
+    due = (local_today() + timedelta(days=7)).isoformat()
+    numbers = []
+    for index in range(3):
+        row = device(db, "Notebook", f"Such-Notebook {index}", f"SN-SUCH-{index}")
+        numbers.append(
+            client.post(
+                f"{BASE}/loans",
+                json={"person": {"oid": OID}, "due_on": due, "hardware_ids": [row.id]},
+                headers=HEADERS,
+            ).json()["number"]
+        )
+    first = client.get(f"{BASE}/loans?state=alle&limit=2").json()
+    assert first["total"] == 3 and len(first["loans"]) == 2
+    rest = client.get(f"{BASE}/loans?state=alle&limit=2&offset=2").json()
+    assert len(rest["loans"]) == 1
+    assert {item["id"] for item in first["loans"] + rest["loans"]} == {
+        item["id"] for item in client.get(f"{BASE}/loans?state=alle").json()["loans"]
+    }
+    # Suche nach Gerät, Nummer und Person; Platzhalter zählen als Text
+    found = client.get(f"{BASE}/loans", params={"state": "alle", "q": "sn-such-1"}).json()
+    assert [item["number"] for item in found["loans"]] == [numbers[1]] and found["total"] == 1
+    assert client.get(f"{BASE}/loans", params={"q": numbers[2]}).json()["total"] == 1
+    assert client.get(f"{BASE}/loans", params={"q": "pia bei"}).json()["total"] == 3
+    assert client.get(f"{BASE}/loans", params={"q": "%"}).json()["total"] == 0
+    assert client.get(f"{BASE}/loans?limit=0").status_code == 422
+
+    # Vorgänge: Rückgaben erzeugen, dann suchen und blättern
+    for number in numbers:
+        loan = next(item for item in first["loans"] + rest["loans"] if item["number"] == number)
+        detail = client.get(f"{BASE}/loans/{loan['id']}").json()
+        client.post(
+            f"{BASE}/loans/{loan['id']}/return",
+            json={"hardware_ids": [detail["entries"][0]["hardware_id"]]},
+            headers=HEADERS,
+        )
+    cases = client.get(f"{BASE}/cases?state=alle&limit=2").json()
+    assert cases["total"] == 3 and len(cases["cases"]) == 2
+    hit = client.get(f"{BASE}/cases", params={"state": "alle", "q": "Such-Notebook 2"}).json()
+    assert hit["total"] == 1 and numbers[2] in hit["cases"][0]["title"]
+    assert client.get(f"{BASE}/cases", params={"q": "x" * 101}).status_code == 422
