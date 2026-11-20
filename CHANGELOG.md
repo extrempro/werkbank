@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.65.0] – 2026-11-20
+
+IT-Bestand, Schritt 5 (Teil 1): Monitore aus dem Custom Field in NinjaOne.
+
+### IT-Bestand
+
+- **Monitore aus NinjaOne:** Ist in der Verwaltung der interne Name des Custom Fields eingetragen, liest der Abgleich es für alle Geräte über `/v2/queries/custom-fields` (seitenweise). Eine Zeile je Monitor, Felder mit `|` getrennt (Hersteller-Kennung aus EDID, Modell, Seriennummer, ProductCode, Baujahr-KW, Anschluss, zuletzt gesehen); Kopfzeile und Zeilen ohne Seriennummer fallen weg, bekannte Hersteller-Kennungen (LEN, DEL, HWP, SAM …) werden zu Namen
+- Erkannt wird ein Monitor an der Seriennummer. Neu an einem **PC mit Arbeitsplatz**: direkt an diesen Arbeitsplatz. Neu an einem **Notebook** oder PC ohne Arbeitsplatz: Vorgang „Neuer Monitor“ mit vorgeschlagenem Arbeitsplatz (der des Rechners oder der erste seiner Stelle); Entscheidungen: am Arbeitsplatz anlegen, der Stelle zuordnen, nicht übernehmen (wird nicht wieder gemeldet)
+- Hängt ein bekannter Monitor an einem anderen Rechner, ändert sich nur „Angeschlossen an“ mit Eintrag im Verlauf; Arbeitsplatz oder Stelle bleiben
+- **Technik:** beim Monitor „Angeschlossen an“ mit Link und die Werte aus dem Custom Field; beim Rechner die angeschlossenen Monitore
+- „Verbindung prüfen“ zählt auch die Monitore im Custom Field
+- Migration 0045, Spec, Datenschutz und Handbuch angepasst
+
 ## [0.64.0] – 2026-11-20
 
 IT-Bestand, Schritt 4: Abgleich mit NinjaOne und Vorgänge.

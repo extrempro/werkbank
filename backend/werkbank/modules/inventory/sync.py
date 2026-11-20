@@ -29,9 +29,15 @@ from werkbank.modules.inventory.models import (
     InventoryCase,
     InventoryEvent,
     InventoryHardware,
+    InventoryKind,
+    InventoryMaker,
+    InventoryModel,
+    InventoryMonitorIgnore,
     InventoryNinjaIgnore,
     InventorySyncRun,
+    InventoryWorkplacePosition,
 )
+from werkbank.modules.inventory.monitors import MonitorLine, valid_field_name
 from werkbank.modules.inventory.ninja import (
     REGIONS,
     Fetcher,
@@ -50,6 +56,8 @@ STATUS_OK = "ok"
 STATUS_FAILED = "fehlgeschlagen"
 CASE_NEW = "neu"
 CASE_MISSING = "weg"
+CASE_MONITOR = "monitor"
+MONITOR_KIND = "Monitor"
 STATE_NEW = "neu"
 STATE_WORK = "arbeit"
 STATE_DONE = "fertig"
@@ -69,12 +77,18 @@ def load_ninja_config(
     if require_enabled and stored.get("enabled") is not True:
         return None
     region = stored.get("region")
+    field = stored.get("monitor_field")
     client_id = stored.get("client_id")
     token = stored.get("secret_encrypted")
     secret = decrypt_secret(settings, token) if isinstance(token, str) and token else None
     if region not in REGIONS or not isinstance(client_id, str) or not client_id or not secret:
         return None
-    return NinjaConfig(region=str(region), client_id=client_id, client_secret=secret)
+    return NinjaConfig(
+        region=str(region),
+        client_id=client_id,
+        client_secret=secret,
+        monitor_field=field if isinstance(field, str) and valid_field_name(field) else "",
+    )
 
 
 @dataclass(frozen=True)
@@ -112,6 +126,7 @@ class SyncResult:
     updated: int = 0
     new_cases: int = 0
     missing_cases: int = 0
+    monitors_added: int = 0
 
 
 def _event(
@@ -206,6 +221,174 @@ def _hostname_hint(db: Session, hostname: str) -> InventoryHardware | None:
     ).first()
 
 
+def kind_named(db: Session, name: str) -> InventoryKind | None:
+    return db.scalars(
+        select(InventoryKind).where(func.lower(InventoryKind.name) == name.casefold())
+    ).first()
+
+
+def model_for(db: Session, maker_name: str, model_name: str) -> InventoryModel | None:
+    """Hersteller und Modell aus NinjaOne; fehlen sie in den Stammdaten, entstehen sie neu."""
+    if not maker_name or not model_name:
+        return None
+    maker = db.scalars(
+        select(InventoryMaker).where(func.lower(InventoryMaker.name) == maker_name.casefold())
+    ).first()
+    if maker is None:
+        maker = InventoryMaker(name=maker_name[:80])
+        db.add(maker)
+        db.flush()
+    model = db.scalars(
+        select(InventoryModel).where(
+            InventoryModel.maker_id == maker.id,
+            func.lower(InventoryModel.name) == model_name.casefold(),
+        )
+    ).first()
+    if model is None:
+        model = InventoryModel(maker_id=maker.id, name=model_name[:120])
+        db.add(model)
+        db.flush()
+    return model
+
+
+def suggested_workplace(db: Session, host: InventoryHardware) -> int | None:
+    """Arbeitsplatz des Rechners, sonst der erste Arbeitsplatz seiner Stelle."""
+    if host.workplace_id is not None:
+        return host.workplace_id
+    if host.position_id is None:
+        return None
+    return db.scalars(
+        select(InventoryWorkplacePosition.workplace_id)
+        .where(InventoryWorkplacePosition.position_id == host.position_id)
+        .order_by(InventoryWorkplacePosition.workplace_id)
+        .limit(1)
+    ).first()
+
+
+def host_label(host: InventoryHardware) -> str:
+    return host.hostname or host.name
+
+
+def create_monitor(
+    db: Session,
+    facts: dict[str, Any],
+    host: InventoryHardware | None,
+    *,
+    workplace_id: int | None = None,
+    position_id: int | None = None,
+) -> InventoryHardware:
+    """Legt einen Monitor aus dem Custom Field an (ohne Verlauf; den schreibt der Aufrufer)."""
+    kind = kind_named(db, MONITOR_KIND)
+    if kind is None:
+        raise LookupError(MONITOR_KIND)
+    maker = facts.get("maker") if isinstance(facts.get("maker"), str) else ""
+    model_name = facts.get("model") if isinstance(facts.get("model"), str) else ""
+    serial = facts.get("serial") if isinstance(facts.get("serial"), str) else ""
+    model = model_for(db, str(maker), str(model_name))
+    row = InventoryHardware(
+        kind_id=kind.id,
+        model_id=model.id if model else None,
+        name=(f"{maker} {model_name}".strip() or f"Monitor {serial}")[:160],
+        serial=str(serial)[:80],
+        hostname="",
+        note="",
+        inventory_no=None,
+        workplace_id=workplace_id,
+        position_id=position_id,
+        source=SOURCE_NINJA,
+        status=STATUS_ACTIVE,
+        connected_to_id=host.id if host else None,
+        ninja_facts={key: value for key, value in facts.items() if not key.endswith("_id")},
+    )
+    db.add(row)
+    db.flush()
+    return row
+
+
+def _monitor_case(db: Session, serial: str) -> InventoryCase | None:
+    return db.scalars(
+        select(InventoryCase)
+        .where(
+            InventoryCase.kind == CASE_MONITOR,
+            InventoryCase.status.in_(OPEN_STATES),
+            func.lower(InventoryCase.facts["serial"].astext) == serial.casefold(),
+        )
+        .limit(1)
+    ).first()
+
+
+def apply_monitors(
+    db: Session, host: InventoryHardware, lines: tuple[MonitorLine, ...]
+) -> tuple[int, int]:
+    """Monitore eines Rechners abgleichen; liefert (neu angelegt, neue Vorgänge).
+
+    Bekannte Monitore (gleiche Seriennummer) bekommen nur die neuen Kenndaten und, wenn sie an
+    einem anderen Rechner hängen, einen Eintrag im Verlauf; ihre Zuordnung bleibt. Neue Monitore
+    an einem PC mit Arbeitsplatz kommen direkt an diesen Arbeitsplatz, alle anderen in einen
+    Vorgang.
+    """
+    added = cases = 0
+    host_kind = db.get(InventoryKind, host.kind_id)
+    for line in lines:
+        facts = {**line.facts(), "host": host_label(host)}
+        monitor = db.scalars(
+            select(InventoryHardware)
+            .where(
+                func.lower(InventoryHardware.serial) == line.serial.casefold(),
+                InventoryHardware.id != host.id,
+            )
+            .limit(1)
+        ).first()
+        if monitor is not None:
+            if monitor.connected_to_id != host.id:
+                before = (
+                    db.get(InventoryHardware, monitor.connected_to_id)
+                    if monitor.connected_to_id
+                    else None
+                )
+                _event(
+                    db,
+                    f"Angeschlossen an: {host_label(before) if before else 'unbekannt'} → "
+                    f"{host_label(host)} (laut NinjaOne)",
+                    hardware_id=monitor.id,
+                )
+                monitor.connected_to_id = host.id
+            if monitor.ninja_facts != facts:
+                monitor.ninja_facts = facts
+            continue
+        if db.get(InventoryMonitorIgnore, line.serial.casefold()[:80]) is not None:
+            continue
+        open_case = _monitor_case(db, line.serial)
+        if open_case is not None:
+            open_case.facts = {**open_case.facts, **facts}
+            continue
+        is_pc = host_kind is not None and host_kind.name.casefold() == "pc"
+        if is_pc and host.workplace_id is not None and kind_named(db, MONITOR_KIND):
+            row = create_monitor(db, facts, host, workplace_id=host.workplace_id)
+            _event(
+                db,
+                f"Aus NinjaOne übernommen (Custom Field an {host_label(host)}), an den "
+                "Arbeitsplatz des PCs",
+                hardware_id=row.id,
+            )
+            added += 1
+            continue
+        _new_case(
+            db,
+            CASE_MONITOR,
+            f"Neuer Monitor an {host_label(host)}",
+            {
+                **facts,
+                "host_id": host.id,
+                "suggest_workplace_id": suggested_workplace(db, host),
+            },
+            f"Im Custom Field von {host_label(host)} gefunden"
+            + ("; Notebook, daher Arbeitsplatz bestätigen" if not is_pc else ""),
+        )
+        cases += 1
+    return added, cases
+
+
 def apply_devices(
     db: Session, devices: list[NinjaDevice], now: datetime, scope: NinjaScope | None = None
 ) -> SyncResult:
@@ -237,6 +420,9 @@ def apply_devices(
         if row is not None:
             if _apply(db, row, device, now):
                 result.updated += 1
+            added, cases = apply_monitors(db, row, device.monitors)
+            result.monitors_added += added
+            result.new_cases += cases
             missing = _open_case(db, CASE_MISSING, hardware_id=row.id)
             if missing is not None:
                 missing.status = STATE_DONE
@@ -325,7 +511,7 @@ def run_sync(
             )
         result = apply_devices(db, devices, now, load_ninja_scope(db))
         run.devices = result.devices
-        run.updated = result.updated
+        run.updated = result.updated + result.monitors_added
         run.new_cases = result.new_cases
         run.missing_cases = result.missing_cases
     except NinjaError as exc:

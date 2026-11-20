@@ -274,15 +274,29 @@ class HolderOut(BaseModel):
 class NinjaOut(BaseModel):
     """Kenndaten aus NinjaOne (Stand des letzten Abgleichs)."""
 
-    ninja_id: int
+    # None bei Monitoren aus dem Custom Field
+    ninja_id: int | None
     facts: dict[str, object]
     seen_at: datetime | None
     missing_since: datetime | None
 
 
+class LinkedDevice(BaseModel):
+    """Kurzform eines Geräts, z. B. Rechner und angeschlossene Monitore."""
+
+    id: int
+    name: str
+    hostname: str
+    serial: str
+    status: str
+
+
 class HardwareOut(HardwareSummary):
     location: LocationOut | None
     ninja: NinjaOut | None
+    # Monitor: Rechner laut Custom Field; Rechner: Monitore, die zuletzt an ihm hingen
+    connected_to: LinkedDevice | None
+    monitors: list[LinkedDevice]
     holder_ref: HolderOut | None
     position_id: int | None
     workplace_id: int | None
@@ -408,6 +422,14 @@ def _places(db: Session) -> dict[int, str]:
     return {room_id: f"{room} · {site}, {floor}" for room_id, room, floor, site in rows}
 
 
+def _linked(row: InventoryHardware | None) -> LinkedDevice | None:
+    if row is None:
+        return None
+    return LinkedDevice(
+        id=row.id, name=row.name, hostname=row.hostname, serial=row.serial, status=row.status
+    )
+
+
 def position_label(row: InventoryPosition) -> str:
     return f"{row.number} {row.name}"
 
@@ -502,8 +524,23 @@ def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
             seen_at=row.ninja_seen_at,
             missing_since=row.ninja_missing_since,
         )
-        if row.ninja_id is not None
+        if row.ninja_id is not None or row.ninja_facts
         else None,
+        connected_to=_linked(db.get(InventoryHardware, row.connected_to_id))
+        if row.connected_to_id
+        else None,
+        monitors=[
+            item
+            for item in (
+                _linked(entry)
+                for entry in db.scalars(
+                    select(InventoryHardware)
+                    .where(InventoryHardware.connected_to_id == row.id)
+                    .order_by(InventoryHardware.name, InventoryHardware.id)
+                ).all()
+            )
+            if item is not None
+        ],
         holder_ref=holder_ref,
         position_id=row.position_id,
         workplace_id=row.workplace_id,

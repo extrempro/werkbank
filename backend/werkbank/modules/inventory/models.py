@@ -207,6 +207,10 @@ class InventoryHardware(Base):
     # zuletzt im Abgleich gesehen; seit wann es in NinjaOne fehlt
     ninja_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ninja_missing_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Monitor: Rechner, an dem er laut Custom Field in NinjaOne zuletzt hing
+    connected_to_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_hardware.id", ondelete="SET NULL"), index=True
+    )
     # Herkunft: von Hand erfasst („manuell“) oder aus NinjaOne („ninja“)
     source: Mapped[str] = mapped_column(String(16), default="manuell", server_default="manuell")
     note: Mapped[str] = mapped_column(String(500), default="", server_default="")
@@ -444,3 +448,17 @@ class InventorySyncRun(Base):
     new_cases: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     missing_cases: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     error: Mapped[str] = mapped_column(Text, default="", server_default="")
+
+
+class InventoryMonitorIgnore(Base):
+    """Monitore aus dem Custom Field, die nicht in den Bestand sollen (nach Seriennummer)."""
+
+    __tablename__ = "inventory_monitor_ignored"
+
+    # Seriennummer in Kleinbuchstaben
+    serial: Mapped[str] = mapped_column(String(80), primary_key=True)
+    model: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    ignored_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ignored_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )

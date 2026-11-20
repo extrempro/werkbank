@@ -6,11 +6,13 @@ Kenndaten; Server, Netzwerkgeräte und andere Knoten bleiben außen vor.
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
 
 import httpx
+
+from werkbank.modules.inventory.monitors import MonitorLine, parse_monitor_field
 
 # Regionen von NinjaOne und ihre Hosts; die Adresse wird nie frei eingegeben
 REGIONS: dict[str, tuple[str, str]] = {
@@ -38,6 +40,8 @@ class NinjaConfig:
     region: str
     client_id: str
     client_secret: str
+    # interner Name des Custom Fields mit den Monitoren; leer: keine Monitore lesen
+    monitor_field: str = ""
 
     @property
     def base(self) -> str:
@@ -66,6 +70,8 @@ class NinjaDevice:
     organization: str = ""
     role_id: int | None = None
     role: str = ""
+    # Monitore aus dem Custom Field (nur, wenn eins eingestellt ist)
+    monitors: tuple[MonitorLine, ...] = ()
 
     def facts(self) -> dict[str, Any]:
         """Was am Gerät gespeichert und im Reiter „Technik“ gezeigt wird."""
@@ -330,6 +336,46 @@ def load_devices(client: NinjaClient) -> list[NinjaDevice]:
     raise NinjaError("Zu viele Geräte in NinjaOne; der Abgleich hat abgebrochen.")
 
 
+def load_monitor_fields(client: NinjaClient, field: str) -> dict[int, list[MonitorLine]]:
+    """Custom Field aller Geräte über den Bericht /v2/queries/custom-fields (seitenweise)."""
+    result: dict[int, list[MonitorLine]] = {}
+    cursor: str | None = None
+    for _ in range(MAX_PAGES):
+        params = {"fields": field, "pageSize": str(PAGE_SIZE)}
+        if cursor:
+            params["cursor"] = cursor
+        data = client.get("queries/custom-fields", params)
+        if not isinstance(data, dict):
+            raise NinjaError("Unerwartete Antwort von NinjaOne (Custom Fields).")
+        rows = data.get("results")
+        for row in rows if isinstance(rows, list) else []:
+            if not isinstance(row, dict):
+                continue
+            device_id = _int(row.get("deviceId"))
+            fields = row.get("fields")
+            if device_id is not None and isinstance(fields, dict):
+                lines = parse_monitor_field(fields.get(field))
+                if lines:
+                    result[device_id] = lines
+        next_cursor = data.get("cursor")
+        name = next_cursor.get("name") if isinstance(next_cursor, dict) else None
+        if not isinstance(rows, list) or len(rows) < PAGE_SIZE or not isinstance(name, str):
+            return result
+        cursor = name
+    return result
+
+
+def load_snapshot(client: NinjaClient, monitor_field: str = "") -> list[NinjaDevice]:
+    """Arbeitsplatzrechner und, wenn eingestellt, ihre Monitore."""
+    devices = load_devices(client)
+    if not monitor_field:
+        return devices
+    monitors = load_monitor_fields(client, monitor_field)
+    return [
+        replace(device, monitors=tuple(monitors.get(device.ninja_id, ()))) for device in devices
+    ]
+
+
 def fetch_devices(config: NinjaConfig) -> list[NinjaDevice]:
     with httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=False) as http:
-        return load_devices(NinjaClient(config, http))
+        return load_snapshot(NinjaClient(config, http), config.monitor_field)

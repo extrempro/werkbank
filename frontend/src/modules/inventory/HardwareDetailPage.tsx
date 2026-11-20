@@ -93,7 +93,7 @@ function EditForm({
         master={master}
         locations={locations}
         assignees={assignees}
-        fromNinja={device.ninja !== null}
+        fromNinja={device.ninja?.ninja_id != null}
         value={fields}
         onChange={setFields}
       />
@@ -618,6 +618,28 @@ function TechTab({ device }: { device: Hardware }) {
         <span className="small">nur lesend, aus NinjaOne</span>
       </div>
       <div className="detail-body tech-list">
+        {device.connected_to && (
+          <p>
+            Angeschlossen an{" "}
+            <Link to={hardwarePath(device.connected_to.id)}>
+              {device.connected_to.hostname || device.connected_to.name}
+            </Link>{" "}
+            <span className="small">· erkannt über das Custom Field in NinjaOne</span>
+          </p>
+        )}
+        {device.monitors.length > 0 && (
+          <div>
+            <h3 className="sub-head">Angeschlossene Monitore</h3>
+            <ul className="link-list">
+              {device.monitors.map((monitor) => (
+                <li key={monitor.id}>
+                  <Link to={hardwarePath(monitor.id)}>{monitor.name}</Link>
+                  {monitor.serial && <span className="small mono">{monitor.serial}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {!ninja ? (
           <p className="empty">
             Für dieses Gerät gibt es keine technischen Daten: Es ist nicht mit NinjaOne verknüpft.
@@ -631,8 +653,13 @@ function TechTab({ device }: { device: Hardware }) {
             )}
             <p className="small">
               Stand des letzten Abgleichs
-              {ninja.seen_at ? ` vom ${formatDate(ninja.seen_at)}` : ""} · ID in NinjaOne{" "}
-              <span className="mono">{ninja.ninja_id}</span>
+              {ninja.seen_at ? ` vom ${formatDate(ninja.seen_at)}` : ""}
+              {ninja.ninja_id !== null && (
+                <>
+                  {" "}
+                  · ID in NinjaOne <span className="mono">{ninja.ninja_id}</span>
+                </>
+              )}
             </p>
             <dl className="facts">
               {ninjaFactRows(ninja.facts).map((row) => (

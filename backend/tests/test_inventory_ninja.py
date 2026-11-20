@@ -21,11 +21,13 @@ from werkbank.modules.inventory.models import (
     InventoryHardware,
     InventoryKind,
     InventoryMaker,
+    InventoryMonitorIgnore,
     InventoryNinjaIgnore,
     InventoryPosition,
     InventorySyncRun,
     InventoryWorkplace,
 )
+from werkbank.modules.inventory.monitors import parse_monitor_field, valid_field_name
 from werkbank.modules.inventory.ninja import (
     NinjaClient,
     NinjaConfig,
@@ -33,6 +35,7 @@ from werkbank.modules.inventory.ninja import (
     NinjaError,
     NinjaOption,
     load_devices,
+    load_monitor_fields,
     load_options,
     parse_device,
 )
@@ -177,6 +180,7 @@ def db(db_session: Session) -> Iterator[Session]:
             InventoryWorkplace,
             InventoryPosition,
             InventoryNinjaIgnore,
+            InventoryMonitorIgnore,
             InventorySyncRun,
             InventoryMaker,
         ):
@@ -471,7 +475,13 @@ def test_admin_ninja_settings_and_status(db: Session, tmp_path: Path) -> None:
         lambda config: [device(1, "NB-1", "S1"), device(2, "PC-1", "S2", kind="PC")]
     )
     tested = client.post(f"{url}/test", headers=HEADERS)
-    assert tested.json() == {"devices": 2, "notebooks": 1, "pcs": 1, "in_scope": 2}
+    assert tested.json() == {
+        "devices": 2,
+        "notebooks": 1,
+        "pcs": 1,
+        "in_scope": 2,
+        "monitors": 0,
+    }
 
     cast(FastAPI, client.app).dependency_overrides[get_ninja_options] = lambda: (
         lambda config: ([NinjaOption(5, "Verwaltung")], [NinjaOption(7, "Notebook")])
@@ -550,3 +560,148 @@ def test_scope_limits_new_cases_but_keeps_linked_devices(db: Session) -> None:
     assert db.scalars(select(InventoryCase.ninja_id)).all() == [11]
     db.refresh(linked)
     assert linked.ninja_seen_at is not None
+
+
+# --- Monitore aus dem Custom Field ----------------------------------------------------
+
+MONITOR_FIELD = """Hersteller|Modell|Seriennummer|ProductCode|Baujahr-KW|Anschluss|ZuletztGesehen
+LEN|T24D-4t|V5A00000|62B5|2024-KW12|DisplayPort|2026-11-20
+DEL|P2422H|CN0ABC|A0B1|2023-KW05|HDMI|kein-datum
+XYZ|Ohne Seriennummer||||
+LEN|T24D-4t|v5a00000|62B5|2024-KW12|DisplayPort|2026-11-20"""
+
+
+def test_parse_monitor_field() -> None:
+    lines = parse_monitor_field(MONITOR_FIELD)
+    assert [(line.maker, line.model, line.serial) for line in lines] == [
+        ("Lenovo", "T24D-4t", "V5A00000"),
+        ("Dell", "P2422H", "CN0ABC"),
+    ]
+    assert lines[0].facts()["built"] == "2024-KW12"
+    assert lines[0].last_seen == "2026-11-20" and lines[1].last_seen == ""
+    assert parse_monitor_field(None) == []
+    assert valid_field_name("monitore") and not valid_field_name("1abc")
+    assert not valid_field_name("feld-name")
+
+
+def test_monitor_fields_are_read_page_by_page() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/ws/oauth/token":
+            return httpx.Response(200, json={"access_token": "t"})
+        assert request.url.params["fields"] == "monitore"
+        return httpx.Response(
+            200,
+            json={
+                "results": [
+                    {"deviceId": 41, "fields": {"monitore": MONITOR_FIELD}},
+                    {"deviceId": 42, "fields": {}},
+                    {"deviceId": "x", "fields": {"monitore": MONITOR_FIELD}},
+                ],
+                "cursor": {"name": "weiter"},
+            },
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as http:
+        found = load_monitor_fields(NinjaClient(CONFIG, http), "monitore")
+    assert list(found) == [41] and len(found[41]) == 2
+
+
+@pytest.mark.db
+def test_monitors_are_attached_or_become_cases(db: Session) -> None:
+    editor = client_for(["Bestand.Editor"], "monitor-bearbeiter")
+    workplace = editor.post(f"{BASE}/workplaces", json={"name": "Fenster"}, headers=HEADERS).json()
+    position = editor.post(f"{BASE}/positions", json={"name": "Stelle M"}, headers=HEADERS).json()
+    pc = InventoryHardware(
+        kind_id=kind_id(db, "PC"),
+        name="PC",
+        serial="PC-SN",
+        hostname="PC-0207",
+        ninja_id=51,
+        workplace_id=workplace["id"],
+    )
+    notebook = InventoryHardware(
+        kind_id=kind_id(db, "Notebook"),
+        name="NB",
+        serial="NB-SN",
+        hostname="NB-0142",
+        ninja_id=52,
+        position_id=position["id"],
+    )
+    db.add_all([pc, notebook])
+    db.commit()
+    editor.put(
+        f"{BASE}/workplaces/{workplace['id']}",
+        json={"name": "Fenster", "shared": False, "position_ids": [position["id"]]},
+        headers=HEADERS,
+    )
+    lines = tuple(parse_monitor_field(MONITOR_FIELD))
+    result = apply_devices(
+        db,
+        [
+            device(51, "PC-0207", "PC-SN", kind="PC", monitors=lines[:1]),
+            device(52, "NB-0142", "NB-SN", monitors=lines[1:]),
+        ],
+        NOW,
+    )
+    db.commit()
+    # PC am Arbeitsplatz: Monitor direkt dort; Notebook: Vorgang mit Vorschlag
+    assert (result.monitors_added, result.new_cases) == (1, 1)
+    monitor = db.scalars(
+        select(InventoryHardware).where(InventoryHardware.serial == "V5A00000")
+    ).one()
+    assert monitor.workplace_id == workplace["id"] and monitor.connected_to_id == pc.id
+    assert monitor.ninja_facts and monitor.ninja_facts["connector"] == "DisplayPort"
+    case = db.scalars(select(InventoryCase).where(InventoryCase.kind == "monitor")).one()
+    assert case.facts["suggest_workplace_id"] == workplace["id"]
+
+    # Zweiter Lauf: nichts Neues; der Lenovo hängt jetzt am Notebook → nur Verlauf
+    moved = apply_devices(
+        db,
+        [
+            device(51, "PC-0207", "PC-SN", kind="PC"),
+            device(52, "NB-0142", "NB-SN", monitors=lines),
+        ],
+        NOW,
+    )
+    db.commit()
+    assert (moved.monitors_added, moved.new_cases) == (0, 0)
+    db.refresh(monitor)
+    assert monitor.connected_to_id == notebook.id
+    assert monitor.workplace_id == workplace["id"]
+
+    reader = client_for(["Bestand.Reader"], "monitor-leser")
+    pc_view = reader.get(f"{BASE}/hardware/{pc.id}").json()
+    assert pc_view["monitors"] == []
+    nb_view = reader.get(f"{BASE}/hardware/{notebook.id}").json()
+    assert [item["serial"] for item in nb_view["monitors"]] == ["V5A00000"]
+    monitor_view = reader.get(f"{BASE}/hardware/{monitor.id}").json()
+    assert monitor_view["connected_to"]["hostname"] == "NB-0142"
+    assert any("NB-0142" in event["text"] for event in monitor_view["events"])
+
+    # Vorgang: am vorgeschlagenen Arbeitsplatz anlegen
+    decided = editor.post(
+        f"{BASE}/cases/{case.id}/decide",
+        json={"decision": "arbeitsplatz", "workplace_id": workplace["id"]},
+        headers=HEADERS,
+    ).json()
+    assert decided["status"] == "fertig"
+    dell = reader.get(f"{BASE}/hardware/{decided['hardware']['id']}").json()
+    assert (dell["kind"], dell["maker"], dell["model"]) == ("Monitor", "Dell", "P2422H")
+    assert dell["connected_to"]["id"] == notebook.id
+
+    # Nicht übernehmen: kommt nicht wieder
+    other = tuple(parse_monitor_field("SAM|S24|SAM-SN|1|2022-KW01|HDMI|2026-11-20"))
+    apply_devices(db, [device(52, "NB-0142", "NB-SN", monitors=other)], NOW)
+    db.commit()
+    skipped = db.scalars(
+        select(InventoryCase).where(InventoryCase.kind == "monitor", InventoryCase.status == "neu")
+    ).one()
+    assert (
+        editor.post(
+            f"{BASE}/cases/{skipped.id}/decide", json={"decision": "uebergehen"}, headers=HEADERS
+        ).status_code
+        == 200
+    )
+    again = apply_devices(db, [device(52, "NB-0142", "NB-SN", monitors=other)], NOW)
+    db.commit()
+    assert again.new_cases == 0

@@ -38,14 +38,14 @@ from werkbank.modules.inventory.models import (
     InventoryEvent,
     InventoryHardware,
     InventoryKind,
-    InventoryMaker,
-    InventoryModel,
+    InventoryMonitorIgnore,
     InventoryNinjaIgnore,
     InventorySyncRun,
 )
 from werkbank.modules.inventory.places import room_place
 from werkbank.modules.inventory.sync import (
     CASE_MISSING,
+    CASE_MONITOR,
     CASE_NEW,
     NINJA_SYNC,
     NINJA_SYNC_INTERVAL,
@@ -54,12 +54,19 @@ from werkbank.modules.inventory.sync import (
     STATE_DONE,
     STATE_NEW,
     STATE_WORK,
+    create_monitor,
+    host_label,
+    model_for,
 )
 from werkbank.worker.jobs import enqueue
 
 router = APIRouter(prefix="/api/inventory")
 
-KIND_LABELS = {CASE_NEW: "Neu in NinjaOne", CASE_MISSING: "Nicht mehr in NinjaOne"}
+KIND_LABELS = {
+    CASE_NEW: "Neu in NinjaOne",
+    CASE_MISSING: "Nicht mehr in NinjaOne",
+    CASE_MONITOR: "Neuer Monitor",
+}
 DECISIONS: dict[str, dict[str, str]] = {
     CASE_NEW: {
         "stelle": "Einer Stelle zugeordnet",
@@ -74,6 +81,11 @@ DECISIONS: dict[str, dict[str, str]] = {
         "pruefen": "Prüfen, beim nächsten Abgleich erneut",
         "wieder_da": "Wieder in NinjaOne",
         "ersetzt": "Durch einen neuen Eintrag in NinjaOne ersetzt",
+    },
+    CASE_MONITOR: {
+        "arbeitsplatz": "Am Arbeitsplatz angelegt",
+        "stelle": "Der Stelle zugeordnet",
+        "uebergehen": "Nicht übernommen",
     },
 }
 # Entscheidungen, die nur die Werkbank selbst trifft
@@ -259,30 +271,6 @@ def _kind_by_name(db: Session, name: str) -> InventoryKind:
     return kind
 
 
-def _model_for(db: Session, maker_name: str, model_name: str) -> InventoryModel | None:
-    """Hersteller und Modell aus NinjaOne; fehlen sie in den Stammdaten, entstehen sie neu."""
-    if not maker_name or not model_name:
-        return None
-    maker = db.scalars(
-        select(InventoryMaker).where(func.lower(InventoryMaker.name) == maker_name.casefold())
-    ).first()
-    if maker is None:
-        maker = InventoryMaker(name=maker_name[:80])
-        db.add(maker)
-        db.flush()
-    model = db.scalars(
-        select(InventoryModel).where(
-            InventoryModel.maker_id == maker.id,
-            func.lower(InventoryModel.name) == model_name.casefold(),
-        )
-    ).first()
-    if model is None:
-        model = InventoryModel(maker_id=maker.id, name=model_name[:120])
-        db.add(model)
-        db.flush()
-    return model
-
-
 def _text(facts: dict[str, Any], key: str, limit: int) -> str:
     value = facts.get(key)
     return value.strip()[:limit] if isinstance(value, str) else ""
@@ -320,7 +308,7 @@ def _create_from_case(
     kind = _kind_by_name(db, _text(facts, "kind", 40) or "PC")
     maker_name = _text(facts, "maker", 80)
     model_name = _text(facts, "model", 120)
-    model = _model_for(db, maker_name, model_name)
+    model = model_for(db, maker_name, model_name)
     hostname = _text(facts, "hostname", 80)
     name = f"{maker_name} {model_name}".strip() or hostname or f"Gerät {row.ninja_id}"
     device = InventoryHardware(
@@ -360,6 +348,74 @@ def _close(db: Session, user: CurrentUser, row: InventoryCase, decision: str, te
 
 
 # --- Endpunkte ------------------------------------------------------------------------------
+
+
+def _decide_monitor(
+    db: Session,
+    user: CurrentUser,
+    row: InventoryCase,
+    body: DecisionIn,
+    details: dict[str, object],
+) -> None:
+    """Neuer Monitor: am Arbeitsplatz oder an der Stelle anlegen, oder nicht übernehmen."""
+    facts = dict(row.facts or {})
+    serial = _text(facts, "serial", 80)
+    if body.decision == "uebergehen":
+        key = serial.casefold()
+        if key and db.get(InventoryMonitorIgnore, key) is None:
+            db.add(
+                InventoryMonitorIgnore(
+                    serial=key, model=_text(facts, "model", 120), ignored_by=user.user_id
+                )
+            )
+        _close(
+            db,
+            user,
+            row,
+            "uebergehen",
+            "Entschieden: Monitor nicht übernehmen; der Abgleich meldet ihn nicht wieder",
+        )
+        return
+    if serial and db.scalar(
+        select(InventoryHardware.id).where(
+            func.lower(InventoryHardware.serial) == serial.casefold()
+        )
+    ):
+        raise _conflict("Ein Gerät mit dieser Seriennummer ist schon im Bestand.")
+    if body.decision == "arbeitsplatz":
+        if body.workplace_id is None:
+            raise _invalid("Bitte einen Arbeitsplatz wählen.")
+        position, workplace = _holder(db, None, body.workplace_id)
+    else:
+        if body.position_id is None:
+            raise _invalid("Bitte eine Stelle wählen.")
+        position, workplace = _holder(db, body.position_id, None)
+    host_id = facts.get("host_id")
+    host = db.get(InventoryHardware, host_id) if isinstance(host_id, int) else None
+    try:
+        monitor = create_monitor(
+            db,
+            facts,
+            host,
+            workplace_id=workplace.id if workplace else None,
+            position_id=position.id if position else None,
+        )
+    except LookupError as exc:
+        raise _conflict(
+            "Die Hardware-Art „Monitor“ fehlt in den Stammdaten. Bitte zuerst anlegen."
+        ) from exc
+    add_event(
+        db,
+        monitor.id,
+        user,
+        f"Aus NinjaOne übernommen (Vorgang {row.number}"
+        + (f", angeschlossen an {host_label(host)}" if host else "")
+        + ")",
+    )
+    add_event(db, monitor.id, user, f"Zugeordnet: {holder_label(position, workplace)}")
+    row.hardware_id = monitor.id
+    details["geraet"] = monitor.id
+    _close(db, user, row, body.decision, f"Entschieden: {DECISIONS[CASE_MONITOR][body.decision]}")
 
 
 @router.get("/cases")
@@ -449,7 +505,9 @@ def decide_case(
         raise _invalid("Diese Entscheidung passt nicht zum Vorgang.")
     details: dict[str, object] = {"nummer": row.number, "entscheidung": body.decision}
 
-    if row.kind == CASE_NEW:
+    if row.kind == CASE_MONITOR:
+        _decide_monitor(db, user, row, body, details)
+    elif row.kind == CASE_NEW:
         if body.decision in ("stelle", "arbeitsplatz", "lager"):
             device = _create_from_case(db, user, row, body)
             row.hardware_id = device.id

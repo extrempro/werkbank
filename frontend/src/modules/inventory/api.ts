@@ -78,6 +78,10 @@ export interface Hardware extends HardwareSummary {
   location: DeviceLocation | null;
   /** Kenndaten aus NinjaOne; null bei Geräten ohne Eintrag in NinjaOne */
   ninja: NinjaInfo | null;
+  /** Monitor: Rechner, an dem er laut NinjaOne zuletzt hing */
+  connected_to: LinkedDevice | null;
+  /** Rechner: Monitore, die laut NinjaOne zuletzt an ihm hingen */
+  monitors: LinkedDevice[];
   holder_ref: HolderRef | null;
   position_id: number | null;
   workplace_id: number | null;
@@ -994,6 +998,8 @@ export interface NinjaSettings {
   /** Auswahl für neue Geräte; leer heißt: alle */
   organization_ids: number[];
   role_ids: number[];
+  /** interner Name des Custom Fields mit den Monitoren; leer: keine Monitore */
+  monitor_field: string;
 }
 
 export interface NinjaUpdate {
@@ -1002,6 +1008,7 @@ export interface NinjaUpdate {
   client_id: string;
   organization_ids: number[];
   role_ids: number[];
+  monitor_field: string;
   /** Weglassen: bleibt. Leerer Text: löschen. */
   client_secret?: string;
 }
@@ -1012,6 +1019,8 @@ export interface NinjaTest {
   pcs: number;
   /** davon in der gespeicherten Auswahl */
   in_scope: number;
+  /** Monitore im Custom Field */
+  monitors: number;
 }
 
 export interface NinjaOptions {
@@ -1052,19 +1061,36 @@ export interface NinjaFacts {
   organization?: string;
   role?: string;
   name?: string;
+  maker_code?: string;
+  product_code?: string;
+  built?: string;
+  connector?: string;
+  monitor_seen?: string;
+  host?: string;
+  host_id?: number;
+  suggest_workplace_id?: number | null;
   last_seen?: string | null;
   ninja_id?: number;
 }
 
 export interface NinjaInfo {
-  ninja_id: number;
+  /** null bei Monitoren aus dem Custom Field */
+  ninja_id: number | null;
   facts: NinjaFacts;
   seen_at: string | null;
   missing_since: string | null;
 }
 
 export type CaseState = "neu" | "arbeit" | "fertig";
-export type CaseKind = "neu" | "weg";
+export type CaseKind = "neu" | "weg" | "monitor";
+
+export interface LinkedDevice {
+  id: number;
+  name: string;
+  hostname: string;
+  serial: string;
+  status: HardwareStatus;
+}
 
 export interface CaseSummary {
   id: number;
@@ -1140,6 +1166,23 @@ export const DECISION_OPTIONS: Record<CaseKind, DecisionOption[]> = {
       id: "uebergehen",
       label: "Nicht in den Bestand aufnehmen",
       hint: "Zum Beispiel ein Testgerät. Der Abgleich meldet es nicht wieder.",
+    },
+  ],
+  monitor: [
+    {
+      id: "arbeitsplatz",
+      label: "Am Arbeitsplatz anlegen",
+      hint: "Der Monitor bleibt am Schreibtisch, auch wenn das Notebook woanders ist.",
+    },
+    {
+      id: "stelle",
+      label: "Der Stelle zuordnen",
+      hint: "Wenn der Monitor mit dem Notebook mitgeht, zum Beispiel ein mobiler Monitor.",
+    },
+    {
+      id: "uebergehen",
+      label: "Nicht übernehmen",
+      hint: "Der Monitor wird nicht erfasst und beim nächsten Abgleich nicht wieder gemeldet.",
     },
   ],
   weg: [
@@ -1245,6 +1288,11 @@ export function ninjaFactRows(
   add("Seriennummer", facts.serial, true);
   add("Typ laut NinjaOne", facts.kind);
   add("Hersteller und Modell", [facts.maker, facts.model].filter(Boolean).join(" "));
+  add("Product Code", facts.product_code, true);
+  add("Baujahr", facts.built);
+  add("Anschluss", facts.connector);
+  add("Angeschlossen an", facts.host, true);
+  add("Zuletzt gesehen (Skript)", facts.monitor_seen ? formatDate(facts.monitor_seen) : "");
   add("Betriebssystem", facts.os);
   add("IP-Adresse", (facts.ip ?? []).join(", "), true);
   add("Arbeitsspeicher", facts.ram_gb ? `${facts.ram_gb} GB` : "");

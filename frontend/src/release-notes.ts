@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.65.0",
+    date: "2026-11-20",
+    summary: "IT-Bestand: Monitore aus NinjaOne.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Monitore, die ein Skript in NinjaOne einträgt, kommen jetzt in den Bestand. Hängt ein neuer Monitor an einem PC mit Arbeitsplatz, landet er direkt an diesem Arbeitsplatz.",
+          "Hängt ein neuer Monitor an einem Notebook, entsteht ein Vorgang „Neuer Monitor“ mit einem Vorschlag für den Arbeitsplatz.",
+          "Im Reiter „Technik“ siehst du beim Monitor, an welchem Rechner er hängt, und beim Rechner seine Monitore.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.64.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Abgleich mit NinjaOne und Vorgänge.",

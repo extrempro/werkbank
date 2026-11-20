@@ -1253,7 +1253,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Fehlt ein Gerät in NinjaOne, wählst du: ausgemustert (vorher das Gerät ausmustern), verloren oder gestohlen, oder prüfen. Taucht das Gerät wieder auf, schließt die Werkbank den Vorgang selbst. Entscheiden dürfen nur Bearbeiterinnen und Bearbeiter des IT-Bestands.",
+            text: "Neue Monitore liest die Werkbank aus NinjaOne mit. Hängt ein neuer Monitor an einem PC mit Arbeitsplatz, kommt er direkt an diesen Arbeitsplatz. Hängt er an einem Notebook, entsteht ein Vorgang „Neuer Monitor“: Der Arbeitsplatz ist schon vorgeschlagen, du bestätigst ihn, ordnest den Monitor der Stelle zu oder übernimmst ihn nicht. Wechselt ein bekannter Monitor den Rechner, steht das nur im Verlauf. Fehlt ein Gerät in NinjaOne, wählst du: ausgemustert (vorher das Gerät ausmustern), verloren oder gestohlen, oder prüfen. Taucht das Gerät wieder auf, schließt die Werkbank den Vorgang selbst. Entscheiden dürfen nur Bearbeiterinnen und Bearbeiter des IT-Bestands.",
           },
         ],
         links: [{ to: "/bestand/vorgaenge", label: "Zu den Vorgängen" }],
