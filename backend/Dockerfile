@@ -11,7 +11,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # --- Laufzeit ---
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -22,10 +22,18 @@ RUN groupadd --system --gid 10001 werkbank \
     && useradd --system --uid 10001 --gid werkbank --no-create-home werkbank
 
 WORKDIR /app
-COPY backend/pyproject.toml backend/alembic.ini ./
+COPY backend/pyproject.toml backend/uv.lock backend/alembic.ini ./
 COPY backend/werkbank ./werkbank
 COPY backend/migrations ./migrations
-RUN pip install .
+# Abhängigkeiten nur aus uv.lock (feste Versionen mit Hashes), danach die Werkbank selbst.
+# uv dient nur zum Auslesen des Lockfiles und wird danach wieder entfernt.
+RUN pip install uv==0.13.8 \
+    && uv export --frozen --no-dev --no-emit-project --format requirements-txt \
+        -o /tmp/requirements.txt \
+    && pip install --require-hashes --no-deps -r /tmp/requirements.txt \
+    && pip install --no-deps . \
+    && pip uninstall -y uv \
+    && rm /tmp/requirements.txt
 COPY --from=frontend /build/dist /app/static
 
 # Ablage der PDF-Belege: Ein Volume an dieser Stelle übernimmt beim ersten Anlegen den Besitzer.

@@ -93,7 +93,7 @@ def decrypt_secret(settings: Settings, token: str) -> str | None:
     """Klartext, oder None, wenn der Wert mit dem aktuellen Schlüssel nicht lesbar ist."""
     try:
         return _fernet(settings).decrypt(token.encode("ascii")).decode("utf-8")
-    except (InvalidToken, SecretKeyMissingError, ValueError):
+    except InvalidToken, SecretKeyMissingError, ValueError:
         return None
 
 
