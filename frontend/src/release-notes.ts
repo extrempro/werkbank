@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.86.1",
+    date: "2026-11-21",
+    summary:
+      "Sicherheit: Das Programmpaket der Werkbank wird bei jeder Änderung auf bekannte Lücken geprüft.",
+    sections: [
+      {
+        area: "Sicherheit",
+        entries: [
+          "Das Programmpaket der Werkbank wird bei jeder Änderung und jede Woche auf bekannte Sicherheitslücken geprüft. Es enthält jetzt die aktuellen Sicherheitsupdates und weniger Teile, die nicht gebraucht werden. In der Bedienung ändert sich nichts.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.86.0",
     date: "2026-11-21",
     summary:

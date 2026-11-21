@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.86.1] – 2026-11-21
+
+### Sicherheit
+
+- **Image-Scan in der CI:** neuer Job „Trivy (Docker-Image)“ im Workflow „Sicherheit“ (jeder PR, Push auf `main`, wöchentlich). Er baut das Image aus `backend/Dockerfile`, speichert es als Datei und prüft es mit Trivy ohne Zugriff auf den Docker-Socket; Abbruch bei HIGH und CRITICAL, für die es ein Update gibt (`--ignore-unfixed`). Begründete Ausnahmen in `.trivyignore`, die auch der Dateisystem-Scan liest
+- **Trivy festgelegt:** `aquasec/trivy:0.76.1` mit Digest statt `latest` (Angriff auf die Trivy-Lieferkette im März 2026, CVE-2026-33634)
+- **Laufzeit-Image gehärtet:** Debian-Sicherheitsupdates beim Bauen (behebt u. a. CVE-2026-85091 in zlib); pip und ensurepip werden nach der Installation entfernt, mit ihnen die von pip mitgebrachten Bibliotheken (msgpack, urllib3, setuptools)
+
+### Dokumentation
+
+- `docs/spec.md` (Container-Scan), `docs/repo-setup.md` (neuer Pflicht-Check „Trivy (Docker-Image)“)
+
 ## [0.86.0] – 2026-11-21
 
 ### IT-Budget

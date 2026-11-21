@@ -59,6 +59,7 @@ Settings → **Rules** → Rulesets → **New branch ruleset**:
 - `Semgrep (statische Analyse, XSS)`
 - `gitleaks (Secrets)`
 - `Trivy (Abhängigkeiten, Konfiguration, Secrets)`
+- `Trivy (Docker-Image)`
 - `CodeQL (python)`
 - `Frontend (Lint, Typen, Tests, Build)`
 - `E2E, Barrierefreiheit, Lighthouse`
