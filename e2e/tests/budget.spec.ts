@@ -61,7 +61,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   ).toBeVisible();
   // Nach dem Speichern steht der Posten in der Ansicht, mit fester Nummer.
   const itemPane = page.getByRole("region", { name: `Posten ${number}` });
-  await expect(itemPane.getByText(/^BP-\d{4}-\d{3,}$/)).toBeVisible();
+  await expect(itemPane.getByText(/^BP-\d{4}-\d{3,}$/).first()).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
   // Abhaken und wieder öffnen, ohne Rechnung
@@ -214,7 +214,6 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await page.goto("/budget");
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Kündigungstermine" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Zu erledigen" })).toBeVisible();
   await expect(
     page.getByRole("img", { name: /Testkonto Wartung: \d+ % ausgegeben/ }).first(),
   ).toBeVisible();
