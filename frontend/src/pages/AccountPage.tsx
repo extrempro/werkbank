@@ -1,4 +1,5 @@
-import { formatDateTime, type Me } from "../api";
+import type { Me } from "../api";
+import { AccountSessions } from "../components/AccountSessions";
 import { Avatar } from "../components/Avatar";
 import { Link } from "../components/Link";
 import { NotificationPreferences } from "../components/NotificationPreferences";
@@ -10,13 +11,15 @@ import { HANDBOOK_PATH } from "../handbook";
 import { NOTIFICATIONS_PATH } from "../notifications";
 import { roleInfo } from "../user";
 
-/** Eigene Angaben, Rollen, Sitzung und persönliche Einstellungen. */
+/** Eigene Angaben, Rollen, angemeldete Geräte und persönliche Einstellungen. */
 export function AccountPage({ me }: { me: Me }) {
   return (
     <div className="page account">
       <header className="page-head">
         <h1>Konto</h1>
-        <p className="page-sub">Deine Angaben, Rollen und persönlichen Einstellungen.</p>
+        <p className="page-sub">
+          Deine Angaben, Rollen, angemeldeten Geräte und persönlichen Einstellungen.
+        </p>
       </header>
 
       <section className="panel account-profile" aria-label="Profil">
@@ -52,34 +55,7 @@ export function AccountPage({ me }: { me: Me }) {
         </ul>
       </section>
 
-      <section className="panel" aria-labelledby="konto-sitzung">
-        <div className="panel-head">
-          <h2 id="konto-sitzung">Sitzung</h2>
-        </div>
-        <div className="detail-body">
-          <dl className="detail-facts">
-            <div>
-              <dt>Angemeldet seit</dt>
-              <dd>{formatDateTime(me.authenticated_at)}</dd>
-            </div>
-            {me.session_expires_at && (
-              <div>
-                <dt>Läuft spätestens ab</dt>
-                <dd>{formatDateTime(me.session_expires_at)}</dd>
-              </div>
-            )}
-          </dl>
-          <p className="small">
-            Ohne Aktivität endet die Sitzung früher. Eine neue Anmeldung beendet die bisherige
-            Sitzung dieses Browsers.
-          </p>
-          <form method="post" action="/auth/logout">
-            <button type="submit" className="button button-secondary">
-              Abmelden
-            </button>
-          </form>
-        </div>
-      </section>
+      <AccountSessions />
 
       <section className="panel" aria-labelledby="konto-darstellung">
         <div className="panel-head">

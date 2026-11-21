@@ -4,6 +4,7 @@ from fastapi import FastAPI, Response, status
 
 from werkbank import __version__
 from werkbank.config import Settings, get_settings
+from werkbank.core.account_sessions import router as account_sessions_router
 from werkbank.core.admin_settings import router as admin_settings_router
 from werkbank.core.audit_api import router as audit_router
 from werkbank.core.auth import router as auth_router
@@ -92,6 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RateLimitMiddleware, rules=default_rules(settings))
     app.add_middleware(SecurityHeadersMiddleware)
     app.include_router(auth_router)
+    app.include_router(account_sessions_router)
     app.include_router(audit_router)
     app.include_router(avatar_router)
     app.include_router(admin_settings_router)

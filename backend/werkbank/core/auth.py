@@ -35,6 +35,7 @@ from werkbank.core.sessions import (
     new_token,
     now_utc,
 )
+from werkbank.core.user_agent import describe_device
 
 AUTH_FLOW_COOKIE = "__Host-werkbank-auth"
 AUTH_FLOW_MINUTES = 10
@@ -144,7 +145,14 @@ def _start_session(
     user.last_roles = roles
     db.flush()
     store_photo(db, user.id, photo)
-    token = create_session(db, settings, user, roles, authenticated_at=authenticated_at or now)
+    token = create_session(
+        db,
+        settings,
+        user,
+        roles,
+        authenticated_at=authenticated_at or now,
+        device=describe_device(request.headers.get("user-agent")),
+    )
     write_audit(
         db,
         module="kern",

@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.87.0",
+    date: "2026-11-21",
+    summary: "Konto: Du siehst, wo du angemeldet bist, und kannst andere Geräte abmelden.",
+    sections: [
+      {
+        area: "Konto",
+        entries: [
+          "Unter „Angemeldete Geräte“ im Konto siehst du alle Geräte, auf denen du gerade angemeldet bist, etwa „Edge unter Windows“ oder „Safari auf dem iPhone“, mit Anmeldezeit und letzter Aktivität.",
+          "Ein anderes Gerät meldest du dort einzeln ab, mit „Auf allen anderen Geräten abmelden“ alle außer diesem. Das hilft, wenn du ein Gerät verloren oder weitergegeben hast.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.86.1",
     date: "2026-11-21",
     summary:

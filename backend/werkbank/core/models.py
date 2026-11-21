@@ -113,6 +113,8 @@ class UserSession(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     authenticated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Kurzbeschreibung wie „Edge unter Windows“ (core/user_agent.py), keine Browserkennung
+    device: Mapped[str] = mapped_column(String(80), default="", server_default="")
 
 
 class AuthFlow(Base):
