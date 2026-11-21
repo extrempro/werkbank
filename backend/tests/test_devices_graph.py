@@ -2,6 +2,7 @@
 
 import json
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 import pytest
@@ -207,9 +208,9 @@ def test_second_login_keeps_only_access_token(db_session: Session) -> None:
     )
     client = admin_client(fake)
     start = client.get("/api/devices/admin/login")
-    assert start.status_code == 303 and start.headers["location"].startswith(
-        "https://login.example.com"
-    )
+    target = urlsplit(start.headers["location"])
+    assert start.status_code == 303
+    assert (target.scheme, target.hostname) == ("https", "login.example.com")
     assert fake.scopes == ADMIN_SCOPES and fake.kwargs["prompt"] == "select_account"
     assert fake.kwargs["redirect_uri"] == f"{ORIGIN}/auth/geraete/callback"
     back = client.get("/auth/geraete/callback?code=x&state=abc")
