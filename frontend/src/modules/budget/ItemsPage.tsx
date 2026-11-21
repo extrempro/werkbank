@@ -1,8 +1,19 @@
-import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { errorText } from "../../api";
+import { FilterBar, useMediaQuery } from "../../components/FilterBar";
 import { Link } from "../../components/Link";
+import { SplitHandle, useSplit } from "../../components/SplitHandle";
 import {
   BUDGET_ACCOUNTS_PATH,
+  BUDGET_INVOICES_PATH,
   BUDGET_SETTINGS_PATH,
   BUDGET_STATISTICS_PATH,
 } from "../../navigation";
@@ -17,8 +28,10 @@ import {
   fetchAccounts,
   fetchBudgetOverview,
   fetchContracts,
+  fetchInvoices,
   fetchPartners,
   fetchTags,
+  formatBudgetDay,
   formatEuro,
   hasTag,
   ITEM_STATUS_LABELS,
@@ -32,6 +45,7 @@ import {
   updateItem,
   type Account,
   type Contract,
+  type Invoice,
   type Item,
   type ItemRow,
   type ItemStatus,
@@ -40,16 +54,18 @@ import {
   type Partner,
   type TagCount,
 } from "./api";
-import { DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
+import { DeleteButton, FormStep, ReadOnlyNote } from "./shared";
 import { fetchProjectChoices, projectPath, type ProjectChoice } from "../projects/api";
 
 function amount(cents: number | null): string {
   return cents === null ? "–" : formatEuro(cents);
 }
 
+// Farben nach der Designrichtlinie: offen braucht noch etwas (orange), Rechnung liegt vor
+// wartet (blau), abgeschlossen ist erledigt (grün).
 const STATUS_PILLS: Record<ItemStatus, string> = {
-  offen: "pill pill-neutral",
-  rechnung: "pill pill-todo",
+  offen: "pill pill-todo",
+  rechnung: "pill pill-info",
   abgeschlossen: "pill pill-ok",
 };
 
@@ -64,6 +80,12 @@ export function StatusPill({ status }: { status: ItemStatus | null | undefined }
 }
 
 type Runtime = "einmalig" | "bis" | "offen";
+
+const RUNTIMES: { value: Runtime; label: string }[] = [
+  { value: "einmalig", label: "Einmalig" },
+  { value: "bis", label: "Mehrere Jahre" },
+  { value: "offen", label: "Bis auf Weiteres" },
+];
 
 interface FormProps {
   /** null: neuen Budgetposten anlegen. */
@@ -88,6 +110,8 @@ interface FormProps {
   onCancel: () => void;
 }
 
+/** Maske für einen Budgetposten in drei Abschnitten: was und bei wem, Kosten und Laufzeit,
+ *  Verknüpfen. Steht in der Ansicht rechts neben der Tabelle. */
 function ItemForm({
   item,
   accounts,
@@ -102,7 +126,8 @@ function ItemForm({
   onSaved,
   onCancel,
 }: FormProps) {
-  const reveal = useRevealOnMount<HTMLElement>();
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => heading.current?.focus(), []);
   const [accountId, setAccountId] = useState(item ? String(item.account_id) : "");
   const [partnerId, setPartnerId] = useState(item?.partner_id ? String(item.partner_id) : "");
   // Stillgelegte Partner nur, wenn der Posten sie schon hat.
@@ -163,23 +188,39 @@ function ItemForm({
   }
   yearChoices.sort((left, right) => left.year - right.year);
   const endChoices = yearChoices.filter((entry) => entry.year > Number(start));
-  // Weitere Angaben stehen offen, wenn sie schon etwas enthalten.
-  const hasMore = Boolean(item && (item.note || !item.active));
+  const yearName = (value: string) =>
+    yearChoices.find((entry) => String(entry.year) === value)?.name ?? value;
+
+  // Zusammenfassung in Worten unter Kosten und Laufzeit
+  const costCents = parseEuro(cost);
+  let summary: string | null = null;
+  if (costCents !== null && cost.trim() !== "") {
+    const each = formatEuro(costCents);
+    if (runtime === "einmalig") {
+      summary = `Plan: ${each} nur für ${yearLabel} ${yearName(start)}.`;
+    } else if (runtime === "offen") {
+      summary = `Plan: ${each} je ${yearLabel} ab ${yearName(start)}, bis du ein Ende einträgst.`;
+    } else if (end && Number(end) > Number(start)) {
+      const count = endChoices.filter((entry) => entry.year <= Number(end)).length + 1;
+      summary = `Plan: ${each} je ${yearLabel} von ${yearName(start)} bis ${yearName(end)}, zusammen ${formatEuro(costCents * count)}.`;
+    }
+  }
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    const costCents = parseEuro(cost);
     let problem: string | null = null;
-    if (!accountId || !name.trim()) {
-      problem = "Bitte Konto wählen und eine Bezeichnung eintragen.";
+    if (!name.trim()) {
+      problem = "Bitte eine Bezeichnung eintragen.";
+    } else if (!accountId) {
+      problem = "Bitte ein Konto wählen.";
+    } else if (!partnerId) {
+      problem = "Bitte einen Partner wählen.";
     } else if (costCents === null) {
-      problem = "Die erwarteten Kosten sind nicht lesbar. Bitte so eintragen: 15000,00";
+      problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 15000,00";
     } else if (runtime === "bis" && (!end || Number(end) <= Number(start))) {
       problem = `Bitte wählen, bis zu welchem ${yearLabel} der Posten läuft.`;
     } else if (tags.length > TAGS_MAX) {
       problem = `Es sind höchstens ${TAGS_MAX} Tags je Budgetposten möglich.`;
-    } else if (!partnerId) {
-      problem = "Bitte einen Partner wählen.";
     }
     if (problem !== null || costCents === null) {
       setError(problem);
@@ -209,217 +250,263 @@ function ItemForm({
   };
 
   return (
-    <section className="panel" aria-labelledby="posten-formular-titel" ref={reveal} tabIndex={-1}>
-      <div className="panel-head">
-        <h2 id="posten-formular-titel">{item ? `${item.name} bearbeiten` : "Posten hinzufügen"}</h2>
+    <section className="panel budget-pane" aria-labelledby="posten-formular-titel">
+      <div className="panel-head case-head">
+        <div>
+          <p className="small">
+            {item ? `Budgetposten ${item.number}` : "Die Nummer wird beim Speichern vergeben."}
+          </p>
+          <h2 id="posten-formular-titel" ref={heading} tabIndex={-1}>
+            {item ? `${item.name} bearbeiten` : "Posten hinzufügen"}
+          </h2>
+        </div>
+        <button
+          type="button"
+          className="button button-secondary case-close"
+          aria-label="Maske schließen"
+          onClick={onCancel}
+        >
+          ×
+        </button>
       </div>
       <form
-        className="detail-body settings-form"
+        className="detail-body settings-form budget-form"
         onSubmit={onSubmit}
         onChange={() => setTouched(true)}
         noValidate
       >
-        <fieldset className="budget-fieldset">
-          <legend>Was</legend>
-          <div className="tool-row">
-            <label>
-              Konto
-              <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-                <option value="">Bitte wählen</option>
-                {choices.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.number} {entry.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Bezeichnung
-              <input
-                type="text"
-                value={name}
-                maxLength={160}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </label>
-            <label>
-              Partner
-              <select value={partnerId} onChange={(event) => setPartnerId(event.target.value)}>
-                <option value="">Bitte wählen</option>
-                {partnerChoices.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Vertrag (freiwillig)
-              <select value={contractId} onChange={(event) => setContractId(event.target.value)}>
-                <option value="">Kein Vertrag</option>
-                {contracts.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.title} · {entry.partner_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          {projectChoices.length > 0 && (
-            <div className="tool-row">
-              <label>
-                Projekt (freiwillig)
-                <select value={projectId} onChange={(event) => setProjectId(event.target.value)}>
-                  <option value="">Kein Projekt</option>
-                  {projectChoices.map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.name}
-                      {entry.status === "abgeschlossen" ? " (abgeschlossen)" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
+        <p className="small budget-muted">
+          Pflichtfelder sind mit <span aria-hidden="true">*</span>
+          <span className="visually-hidden">Stern</span> markiert.
+        </p>
+        <FormStep number={1} title="Was und bei wem">
+          <label className="form-wide">
+            <span>
+              Bezeichnung <span aria-hidden="true">*</span>
+            </span>
+            <input
+              type="text"
+              value={name}
+              maxLength={160}
+              required
+              aria-required="true"
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <label>
+            <span>
+              Konto <span aria-hidden="true">*</span>
+            </span>
+            <select
+              value={accountId}
+              required
+              aria-required="true"
+              onChange={(event) => setAccountId(event.target.value)}
+            >
+              <option value="">Bitte wählen</option>
+              {choices.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.number} {entry.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>
+              Partner <span aria-hidden="true">*</span>
+            </span>
+            <select
+              value={partnerId}
+              required
+              aria-required="true"
+              aria-describedby="posten-partner-hinweis"
+              onChange={(event) => setPartnerId(event.target.value)}
+            >
+              <option value="">Bitte wählen</option>
+              {partnerChoices.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.name}
+                </option>
+              ))}
+            </select>
+            <span id="posten-partner-hinweis" className="form-hint">
+              Die Firma, um die es geht.
+            </span>
+          </label>
+        </FormStep>
+        <FormStep number={2} title="Kosten und Laufzeit">
+          <label>
+            <span>
+              Betrag (Brutto) <span aria-hidden="true">*</span>
+            </span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={cost}
+              required
+              aria-required="true"
+              onChange={(event) => setCost(event.target.value)}
+            />
+          </label>
+          <label>
+            {runtime === "einmalig" ? yearLabel : `Ab ${yearLabel}`}
+            <select value={start} onChange={(event) => setStart(event.target.value)}>
+              {yearChoices.map((entry) => (
+                <option key={entry.year} value={entry.year}>
+                  {entry.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="form-wide form-field">
+            <span className="form-label" id="posten-laufzeit">
+              Laufzeit
+            </span>
+            <div className="segmented" role="group" aria-labelledby="posten-laufzeit">
+              {RUNTIMES.map((entry) => (
+                <button
+                  key={entry.value}
+                  type="button"
+                  aria-pressed={runtime === entry.value}
+                  onClick={() => {
+                    setTouched(true);
+                    setRuntime(entry.value);
+                  }}
+                >
+                  {entry.label}
+                </button>
+              ))}
             </div>
-          )}
-          <p className="small budget-muted">
-            Ein Posten hat höchstens einen Vertrag. Rechnungen buchst du immer auf den Posten.
-            {projectChoices.length > 0 &&
-              " Gehört der Posten zu einem IT-Projekt, zählen seine Kosten dort mit."}
-          </p>
-        </fieldset>
-        <fieldset className="budget-fieldset">
-          <legend>Kosten und Laufzeit</legend>
-          <div className="tool-row">
-            <label className="narrow">
-              Erwartete Kosten je {yearLabel} (brutto, Euro)
-              <input
-                type="text"
-                inputMode="decimal"
-                value={cost}
-                onChange={(event) => setCost(event.target.value)}
-              />
-            </label>
-            <label className="narrow">
-              Ab {yearLabel}
-              <select value={start} onChange={(event) => setStart(event.target.value)}>
-                {yearChoices.map((entry) => (
+          </div>
+          {runtime === "bis" && (
+            <label>
+              Bis {yearLabel}
+              <select value={end} onChange={(event) => setEnd(event.target.value)}>
+                <option value="">Bitte wählen</option>
+                {endChoices.map((entry) => (
                   <option key={entry.year} value={entry.year}>
                     {entry.name}
                   </option>
                 ))}
               </select>
             </label>
-            <label className="narrow">
-              Laufzeit
-              <select
-                value={runtime}
-                onChange={(event) => setRuntime(event.target.value as Runtime)}
-              >
-                <option value="einmalig">einmalig</option>
-                <option value="bis">mehrere Jahre</option>
-                <option value="offen">bis auf Weiteres</option>
+          )}
+          {summary && (
+            <p className="form-wide form-summary" aria-live="polite">
+              {summary}
+            </p>
+          )}
+        </FormStep>
+        <FormStep number={3} title="Verknüpfen" hint="freiwillig">
+          <label>
+            Vertrag
+            <select value={contractId} onChange={(event) => setContractId(event.target.value)}>
+              <option value="">Kein Vertrag</option>
+              {contracts.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.title} · {entry.partner_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {projectChoices.length > 0 && (
+            <label>
+              IT-Projekt
+              <select value={projectId} onChange={(event) => setProjectId(event.target.value)}>
+                <option value="">Kein Projekt</option>
+                {projectChoices.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                    {entry.status === "abgeschlossen" ? " (abgeschlossen)" : ""}
+                  </option>
+                ))}
               </select>
             </label>
-            {runtime === "bis" && (
-              <label className="narrow">
-                Bis {yearLabel}
-                <select value={end} onChange={(event) => setEnd(event.target.value)}>
-                  <option value="">Bitte wählen</option>
-                  {endChoices.map((entry) => (
-                    <option key={entry.year} value={entry.year}>
-                      {entry.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </div>
-          <p className="small budget-muted">
-            Die erwarteten Kosten gelten in jedem {yearLabel} der Laufzeit. Der Posten ist offen,
-            bis eine Rechnung ihn abschließt.
-          </p>
-        </fieldset>
-        <fieldset className="budget-fieldset">
-          <legend>Tags (freiwillig)</legend>
-          {knownTags.length > 0 ? (
-            <div className="chips">
-              {knownTags.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  className="chip budget-tag"
-                  aria-pressed={isChosen(entry.tag)}
-                  onClick={() => toggleTag(entry.tag)}
-                >
-                  {entry.tag}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="small budget-muted">
-              Es gibt noch keine Tags.{" "}
-              {canManageTags
-                ? "Lege sie zuerst an, dann kannst du sie hier wählen."
-                : "Der Budgetverwalter legt sie unter Einstellungen an."}
-            </p>
           )}
-          {canManageTags && !leaveAsked && (
-            <p className="small">
-              <a href={BUDGET_SETTINGS_PATH} onClick={onManageTags}>
-                Tags verwalten unter Einstellungen › Tags
-              </a>
-            </p>
-          )}
-          {canManageTags && leaveAsked && (
-            <div className="hint-box" role="alert">
-              <p>
-                Du hast in diesem Formular schon etwas eingetragen. Beim Wechsel zu den Tags geht
-                das verloren, weil der Budgetposten noch nicht gespeichert ist.
-              </p>
-              <div className="actions">
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => navigate(BUDGET_SETTINGS_PATH)}
-                >
-                  Trotzdem zu den Tags
-                </button>
-                <button
-                  type="button"
-                  className="button button-primary"
-                  onClick={() => setLeaveAsked(false)}
-                >
-                  Hierbleiben
-                </button>
+          <div className="form-wide form-field">
+            <span className="form-label" id="posten-tags">
+              Tags
+            </span>
+            {knownTags.length > 0 ? (
+              <div className="chips" role="group" aria-labelledby="posten-tags">
+                {knownTags.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className="chip budget-tag"
+                    aria-pressed={isChosen(entry.tag)}
+                    onClick={() => toggleTag(entry.tag)}
+                  >
+                    {entry.tag}
+                  </button>
+                ))}
               </div>
-            </div>
-          )}
-        </fieldset>
-        <details className="budget-more" open={hasMore}>
-          <summary>Weitere Angaben: Notiz{item ? ", stilllegen" : ""}</summary>
-          <div className="budget-more-body">
-            <label>
-              Notiz (freiwillig)
-              <input
-                type="text"
-                value={note}
-                maxLength={500}
-                onChange={(event) => setNote(event.target.value)}
-              />
-            </label>
-            {item && (
-              <label className="check-label">
-                <input
-                  type="checkbox"
-                  className="check"
-                  checked={active}
-                  onChange={(event) => setActive(event.target.checked)}
-                />
-                Budgetposten ist aktiv
-              </label>
+            ) : (
+              <p className="small budget-muted">
+                Es gibt noch keine Tags.{" "}
+                {canManageTags
+                  ? "Lege sie zuerst an, dann kannst du sie hier wählen."
+                  : "Der Budgetverwalter legt sie unter Einstellungen an."}
+              </p>
+            )}
+            {canManageTags && !leaveAsked && (
+              <p className="small">
+                <a href={BUDGET_SETTINGS_PATH} onClick={onManageTags}>
+                  Tags verwalten unter Einstellungen › Tags
+                </a>
+              </p>
+            )}
+            {canManageTags && leaveAsked && (
+              <div className="hint-box" role="alert">
+                <p>
+                  Du hast in diesem Formular schon etwas eingetragen. Beim Wechsel zu den Tags geht
+                  das verloren, weil der Budgetposten noch nicht gespeichert ist.
+                </p>
+                <div className="actions">
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() => setLeaveAsked(false)}
+                  >
+                    Hierbleiben
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    onClick={() => navigate(BUDGET_SETTINGS_PATH)}
+                  >
+                    Trotzdem zu den Tags
+                  </button>
+                </div>
+              </div>
             )}
           </div>
-        </details>
+          <label className="form-wide">
+            Notiz
+            <input
+              type="text"
+              value={note}
+              maxLength={500}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </label>
+          {item && (
+            <label className="check-label form-wide">
+              <input
+                type="checkbox"
+                className="check"
+                checked={active}
+                onChange={(event) => setActive(event.target.checked)}
+              />
+              Budgetposten ist aktiv
+            </label>
+          )}
+        </FormStep>
+        {error && (
+          <p role="alert" className="hint-box hint-bad">
+            {error}
+          </p>
+        )}
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>
             {item ? "Änderungen speichern" : "Posten speichern"}
@@ -428,20 +515,264 @@ function ItemForm({
             Abbrechen
           </button>
         </div>
-        {error && (
-          <p role="alert" className="hint-box hint-bad">
-            {error}
-          </p>
-        )}
       </form>
     </section>
   );
 }
 
-/** IT-Budget › Budgetposten: Vorhaben mit Partner, erwarteten Kosten, Status und Ist. */
+const STEPS: { status: ItemStatus; label: string }[] = [
+  { status: "offen", label: "offen" },
+  { status: "rechnung", label: "Rechnung liegt vor" },
+  { status: "abgeschlossen", label: "abgeschlossen" },
+];
+
+/** Ansicht eines Budgetpostens rechts neben der Tabelle. */
+function ItemDetail({
+  row,
+  yearLabel,
+  yearName,
+  invoices,
+  canEdit,
+  canOpenProjects,
+  onEdit,
+  onClosure,
+  onDeleted,
+  onClose,
+}: {
+  row: ItemRow;
+  yearLabel: string;
+  yearName: string;
+  /** Rechnungen des Jahres mit einer Position auf diesem Posten; null: noch nicht geladen. */
+  invoices: Invoice[] | null;
+  canEdit: boolean;
+  canOpenProjects: boolean;
+  onEdit: () => void;
+  onClosure: (close: boolean) => void;
+  onDeleted: () => void;
+  onClose: () => void;
+}) {
+  const { item } = row;
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => heading.current?.focus(), [item.id]);
+  const level = row.status ? STEPS.findIndex((entry) => entry.status === row.status) : -1;
+  const lines = (invoices ?? []).flatMap((invoice) =>
+    invoice.lines.filter((line) => line.item_id === item.id).map((line) => ({ invoice, line })),
+  );
+  const canClose = canEdit && row.status !== null && row.status !== "abgeschlossen";
+  const facts: [string, ReactNode][] = [
+    ["Nummer", <span className="mono">{item.number}</span>],
+    [
+      "Partner",
+      item.partner_name ?? (
+        <span className="pill pill-todo budget-pill">fehlt – beim Bearbeiten wählen</span>
+      ),
+    ],
+    ["Konto", `${item.account_number} ${item.account_name}`],
+    ["Laufzeit", runtimeText(item)],
+    ["Vertrag", item.contract_title ?? "–"],
+  ];
+  if (item.project_id && item.project_name) {
+    facts.push([
+      "IT-Projekt",
+      canOpenProjects ? (
+        <Link to={projectPath(item.project_id)}>{item.project_name}</Link>
+      ) : (
+        item.project_name
+      ),
+    ]);
+  }
+  facts.push(["Tags", item.tags.length > 0 ? item.tags.join(", ") : "–"]);
+  facts.push(["Vorjahr", amount(row.previous_cents)]);
+  if (item.note) {
+    facts.push(["Notiz", item.note]);
+  }
+  const canReopen = canEdit && row.status === "abgeschlossen" && row.closed_by_hand;
+  return (
+    <section className="panel budget-pane" aria-labelledby="posten-ansicht-titel">
+      <div className="panel-head case-head">
+        <div>
+          <p className="small">
+            <span className="mono">{item.number}</span> · {item.account_number} {item.account_name}
+          </p>
+          <h2 id="posten-ansicht-titel" ref={heading} tabIndex={-1}>
+            {item.name}
+          </h2>
+          <p className="budget-badges">
+            <StatusPill status={row.status} />
+            {!item.active && <span className="pill pill-neutral budget-pill">stillgelegt</span>}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="button button-secondary case-close"
+          aria-label="Ansicht schließen"
+          onClick={onClose}
+        >
+          ×
+        </button>
+      </div>
+      <div className="detail-body">
+        {row.status && (
+          <div className="stepper-wrap">
+            <ol className="stepper" aria-label={`Status für ${yearLabel} ${yearName}`}>
+              {STEPS.map((entry, index) => {
+                const done = index < level || (index === level && entry.status === "abgeschlossen");
+                const current = index === level && !done;
+                return (
+                  <li
+                    key={entry.status}
+                    className={done ? "done" : current ? "current" : undefined}
+                    aria-current={index === level ? "step" : undefined}
+                  >
+                    <span className="stepper-mark" aria-hidden="true">
+                      {done ? "✓" : index + 1}
+                    </span>
+                    {entry.label}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        )}
+        <dl className="budget-cards budget-cards-small">
+          <div className="panel budget-card">
+            <dt>Geplant</dt>
+            <dd className="budget-card-value">{amount(row.expected_cents)}</dd>
+          </div>
+          <div className="panel budget-card">
+            <dt>Ist</dt>
+            <dd className="budget-card-value">{formatEuro(row.actual_cents)}</dd>
+          </div>
+          <div className="panel budget-card">
+            <dt>Verfügbar</dt>
+            <dd className="budget-card-value">
+              {row.expected_cents === null
+                ? "–"
+                : formatEuro(row.expected_cents - row.actual_cents)}
+            </dd>
+          </div>
+        </dl>
+        <dl className="budget-facts">
+          {facts.map(([term, value]) => (
+            <div key={term}>
+              <dt>{term}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="budget-section-head">
+          <h3>Rechnungen auf diesem Posten</h3>
+          {canEdit && <Link to={BUDGET_INVOICES_PATH}>Rechnung erfassen</Link>}
+        </div>
+        {invoices === null ? (
+          <p role="status" className="small">
+            Wird geladen …
+          </p>
+        ) : lines.length === 0 ? (
+          <p className="small budget-muted">
+            Für {yearLabel} {yearName} gibt es noch keine Rechnung auf diesem Posten.
+          </p>
+        ) : (
+          <ul className="budget-list">
+            {lines.map(({ invoice, line }) => (
+              <li key={line.id}>
+                <span>
+                  {invoice.number} · {formatBudgetDay(invoice.invoice_date)}
+                  <span className="small budget-muted tenant-part">
+                    {invoice.status === "gebucht" ? "gebucht" : "zu prüfen"}
+                  </span>
+                </span>
+                <span className="betrag">{formatEuro(line.gross_cents)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {canEdit && (
+          <div className="actions">
+            {canClose && (
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={() => onClosure(true)}
+              >
+                Abschließen
+              </button>
+            )}
+            <button
+              type="button"
+              className={canClose ? "button button-secondary" : "button button-primary"}
+              onClick={onEdit}
+            >
+              Bearbeiten
+            </button>
+            {canReopen && (
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => onClosure(false)}
+              >
+                Wieder öffnen
+              </button>
+            )}
+            <DeleteButton
+              what={`Budgetposten ${item.name}`}
+              run={() => deleteItem(item.id)}
+              onDeleted={onDeleted}
+            />
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+type StatusFilter = "alle" | ItemStatus | "ohne";
+type SortKey = "nr" | "name" | "konto" | "partner" | "plan" | "ist";
+type GroupKey = "konto" | "partner" | "keine";
+
+const SORT_LABELS: Record<SortKey, string> = {
+  nr: "Nummer",
+  name: "Name",
+  konto: "Konto",
+  partner: "Partner",
+  plan: "Geplant",
+  ist: "Ist",
+};
+
+function compareRows(key: SortKey): (left: ItemRow, right: ItemRow) => number {
+  const text = (value: string) => value.toLocaleLowerCase("de");
+  switch (key) {
+    case "name":
+      return (left, right) => text(left.item.name).localeCompare(text(right.item.name), "de");
+    case "konto":
+      return (left, right) =>
+        left.item.account_number.localeCompare(right.item.account_number, "de", {
+          numeric: true,
+        });
+    case "partner":
+      // Posten ohne Partner zuletzt
+      return (left, right) =>
+        (left.item.partner_name ? 0 : 1) - (right.item.partner_name ? 0 : 1) ||
+        text(left.item.partner_name ?? "").localeCompare(text(right.item.partner_name ?? ""), "de");
+    case "plan":
+      return (left, right) => (left.expected_cents ?? 0) - (right.expected_cents ?? 0);
+    case "ist":
+      return (left, right) => left.actual_cents - right.actual_cents;
+    default:
+      return (left, right) =>
+        left.item.number.localeCompare(right.item.number, "de", { numeric: true });
+  }
+}
+
+const SPLIT_KEY = "werkbank-budgetposten-breite";
+const NARROW_QUERY = "(max-width: 1023px)";
+
+/** IT-Budget › Budgetposten: Tabelle mit Ansicht rechts. Ein gewählter Posten oder die Maske
+ *  öffnet neben der Tabelle; schmal steht nur die Ansicht mit „Zur Liste“. */
 export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
   const canOpenProjects = roles.includes("Projekte.Reader") || roles.includes("Projekte.Editor");
+  const narrow = useMediaQuery(NARROW_QUERY);
   const [year, setYear] = useState<number | null>(rememberedYear);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -449,25 +780,30 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [projects, setProjects] = useState<ProjectChoice[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [projectFilter, setProjectFilter] = useState("");
-  // Suchtext aus der Adresse (Treffer der Suche oben führen mit dem Namen des Postens hierher).
+  // Suchtext aus der Adresse (Treffer der Suche oben führen mit der Nummer des Postens hierher).
   // Eigene Eingabe gilt, bis ein neuer Suchtext über die Adresse kommt.
   const linked = useSearchParam("suche");
   const [typed, setTyped] = useState({ from: linked, text: linked });
   const search = typed.from === linked ? typed.text : linked;
   const setSearch = (text: string) => setTyped({ from: linked, text });
   const [tagFilter, setTagFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ItemStatus | "">("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("alle");
+  const [sort, setSort] = useState<{ key: SortKey; up: boolean }>({ key: "nr", up: true });
+  const [group, setGroup] = useState<GroupKey>("konto");
   const [failed, setFailed] = useState(false);
-  const [editing, setEditing] = useState<Item | null>(null);
-  const [formRound, setFormRound] = useState(0);
-  const [formOpen, setFormOpen] = useState(false);
-  const closeForm = () => {
-    setEditing(null);
-    setFormOpen(false);
-  };
+  // Ansicht rechts: ein gewählter Posten, die Maske für einen neuen oder einen gewählten Posten
+  const [picked, setView] = useState<
+    | { kind: "posten"; id: number }
+    | { kind: "neu"; round: number }
+    | { kind: "bearbeiten"; id: number }
+    | null
+  >(null);
   const [round, setRound] = useState(0);
   const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const [split, changeSplit] = useSplit(SPLIT_KEY);
 
   useEffect(() => {
     let active = true;
@@ -513,30 +849,96 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
     };
   }, [year, round]);
 
+  // Rechnungen des Jahres für die Ansicht eines Postens; ohne sie bleibt die Ansicht nutzbar.
+  const shownYear = overview?.year ?? null;
+  useEffect(() => {
+    if (shownYear === null) {
+      return;
+    }
+    let active = true;
+    fetchInvoices(shownYear)
+      .then((list) => active && setInvoices(list.entries))
+      .catch(() => active && setInvoices([]));
+    return () => {
+      active = false;
+    };
+  }, [shownYear, round]);
+
   const label = overview?.settings.year_label ?? "Geschäftsjahr";
-  const filtered =
-    search.trim() !== "" || tagFilter !== "" || statusFilter !== "" || projectFilter !== "";
-  const rows = (overview?.items ?? []).filter(
-    (row) =>
-      itemMatches(row.item, search) &&
-      (tagFilter === "" || hasTag(row.item, tagFilter)) &&
-      (statusFilter === "" || row.status === statusFilter) &&
-      (projectFilter === "" || String(row.item.project_id ?? "") === projectFilter),
-  );
-  const total = (pick: (row: (typeof rows)[number]) => number | null) =>
-    rows.reduce((sum, row) => sum + (pick(row) ?? 0), 0);
+  const all = overview?.items ?? [];
+  const matchesStatus = (row: ItemRow, filter: StatusFilter) =>
+    filter === "alle" || (filter === "ohne" ? !row.item.partner_id : row.status === filter);
+  const rows = all
+    .filter(
+      (row) =>
+        itemMatches(row.item, search) &&
+        (tagFilter === "" || hasTag(row.item, tagFilter)) &&
+        matchesStatus(row, statusFilter) &&
+        (projectFilter === "" || String(row.item.project_id ?? "") === projectFilter),
+    )
+    .sort((left, right) => {
+      const result = compareRows(sort.key)(left, right);
+      return (sort.up ? result : -result) || left.item.id - right.item.id;
+    });
+  const groups: { key: string; title: string; sub: string; rows: ItemRow[] }[] = [];
+  if (group === "keine") {
+    groups.push({ key: "alle", title: "", sub: "", rows });
+  } else {
+    const byKey = new Map<string, ItemRow[]>();
+    for (const row of rows) {
+      const key =
+        group === "konto"
+          ? `${row.item.account_number} ${row.item.account_name}`
+          : (row.item.partner_name ?? "");
+      byKey.set(key, [...(byKey.get(key) ?? []), row]);
+    }
+    const keys = [...byKey.keys()].sort((left, right) =>
+      left === "" ? 1 : right === "" ? -1 : left.localeCompare(right, "de", { numeric: true }),
+    );
+    for (const key of keys) {
+      const list = byKey.get(key) ?? [];
+      groups.push({
+        key,
+        title: key || "Ohne Partner",
+        sub: `${list.length} Posten · geplant ${formatEuro(
+          list.reduce((sum, row) => sum + (row.expected_cents ?? 0), 0),
+        )} · Ist ${formatEuro(list.reduce((sum, row) => sum + row.actual_cents, 0))}`,
+        rows: list,
+      });
+    }
+  }
   const sums = {
-    expected: total((row) => row.expected_cents),
-    actual: total((row) => row.actual_cents),
-    previous: total((row) => row.previous_cents),
+    expected: rows.reduce((sum, row) => sum + (row.expected_cents ?? 0), 0),
+    actual: rows.reduce((sum, row) => sum + row.actual_cents, 0),
   };
+  const filtered =
+    search.trim() !== "" || tagFilter !== "" || statusFilter !== "alle" || projectFilter !== "";
+  const moreActive =
+    (tagFilter !== "" ? 1 : 0) +
+    (projectFilter !== "" ? 1 : 0) +
+    (group !== "konto" ? 1 : 0) +
+    (narrow && (sort.key !== "nr" || !sort.up) ? 1 : 0);
   const yearChoices = [...(overview?.years ?? [])].sort((left, right) => left.year - right.year);
+  // Kommt die Nummer eines Postens über die Adresse, öffnet er gleich (bis zum Schließen).
+  const [dismissed, setDismissed] = useState("");
+  const linkedRow = linked
+    ? all.find((row) => row.item.number.toLowerCase() === linked.trim().toLowerCase())
+    : undefined;
+  const view =
+    picked ??
+    (linkedRow && dismissed !== linked ? { kind: "posten" as const, id: linkedRow.item.id } : null);
+  const selectedId = view && view.kind !== "neu" ? view.id : null;
+  const selectedRow =
+    selectedId === null ? null : (all.find((row) => row.item.id === selectedId) ?? null);
+  const paneOpen = view !== null && (view.kind === "neu" || selectedRow !== null);
+  const closeView = () => {
+    setView(null);
+    setDismissed(linked);
+  };
 
   const onItemSaved = (saved: Item) => {
-    setMessage({ kind: "status", text: `${saved.name} ist gespeichert.` });
-    setEditing(null);
-    setFormOpen(false);
-    setFormRound(formRound + 1);
+    setMessage({ kind: "status", text: `${saved.name} (${saved.number}) ist gespeichert.` });
+    setView({ kind: "posten", id: saved.id });
     setRound(round + 1);
   };
 
@@ -545,8 +947,8 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
     if (!overview) {
       return;
     }
-    const year = overview.year;
-    (close ? closeItem(row.item.id, year) : reopenItem(row.item.id, year))
+    const shown = overview.year;
+    (close ? closeItem(row.item.id, shown) : reopenItem(row.item.id, shown))
       .then(() => {
         setMessage({
           kind: "status",
@@ -561,7 +963,35 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
       );
   };
 
-  const columns = canEdit ? 7 : 6;
+  const resetFilters = () => {
+    setSearch("");
+    setTagFilter("");
+    setStatusFilter("alle");
+    setProjectFilter("");
+    setGroup("konto");
+    setSort({ key: "nr", up: true });
+  };
+
+  const sortHeader = (key: SortKey, text: string, className?: string) => {
+    const on = sort.key === key;
+    return (
+      <th
+        scope="col"
+        className={className}
+        aria-sort={on ? (sort.up ? "ascending" : "descending") : "none"}
+      >
+        <button
+          type="button"
+          className="th-sort"
+          onClick={() => setSort({ key, up: on ? !sort.up : true })}
+        >
+          {text}
+          <span aria-hidden="true">{on ? (sort.up ? " ▲" : " ▼") : ""}</span>
+        </button>
+      </th>
+    );
+  };
+  const columnCount = 8;
 
   return (
     <div className="page page-wide budget-page">
@@ -570,19 +1000,18 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           <p className="module-label">IT-Budget</p>
           <h1>Budgetposten</h1>
           <p className="page-sub">
-            Jeder Posten ist ein Vorhaben mit erwarteten Kosten und Laufzeit. Er bleibt offen, bis
-            du ihn mit „Abschließen“ abhakst oder eine Rechnung ihn abschließt. Alle Beträge sind
-            brutto.
+            Jeder Posten ist ein Vorhaben mit Partner, Betrag und Laufzeit.
           </p>
         </div>
         {overview && (
-          <div className="settings-form">
+          <div className="budget-head-actions settings-form">
             <label className="narrow">
               {label}
               <select
                 value={overview.year}
                 onChange={(event) => {
                   setMessage(null);
+                  setView(null);
                   rememberYear(Number(event.target.value));
                   setYear(Number(event.target.value));
                 }}
@@ -594,44 +1023,22 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                 ))}
               </select>
             </label>
+            {canEdit && accounts.length > 0 && (
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={() => {
+                  setMessage(null);
+                  setView({ kind: "neu", round: round + 1 });
+                }}
+              >
+                Posten hinzufügen
+              </button>
+            )}
           </div>
         )}
       </header>
       <ReadOnlyNote roles={roles} />
-      {canEdit && overview && accounts.length > 0 && (
-        <div className="budget-toolbar">
-          <button
-            type="button"
-            className="button button-primary"
-            aria-expanded={formOpen || editing !== null}
-            onClick={() => {
-              setEditing(null);
-              setMessage(null);
-              setFormRound(formRound + 1);
-              setFormOpen(true);
-            }}
-          >
-            Posten hinzufügen
-          </button>
-        </div>
-      )}
-      {canEdit && overview && accounts.length > 0 && (formOpen || editing) && (
-        <ItemForm
-          key={editing ? `posten-${editing.id}` : `neu-${formRound}`}
-          item={editing}
-          accounts={accounts}
-          contracts={contracts}
-          projects={projects}
-          partners={partners}
-          knownTags={knownTags}
-          canManageTags={roles.includes(BUDGET_MANAGER_ROLE)}
-          years={yearChoices}
-          defaultYear={overview.year}
-          yearLabel={label}
-          onSaved={onItemSaved}
-          onCancel={closeForm}
-        />
-      )}
 
       {failed && (
         <p role="alert" className="panel panel-empty">
@@ -645,235 +1052,124 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           {canEdit && <Link to={BUDGET_ACCOUNTS_PATH}>Konten anlegen</Link>}
         </p>
       )}
-      {overview && accounts.length > 0 && overview.items.length === 0 && (
-        <p className="panel panel-empty">In {overview.year_name} läuft noch kein Budgetposten.</p>
+      {overview && all.length > 0 && (
+        <FilterBar<StatusFilter>
+          search={{
+            label: "Budgetposten suchen",
+            value: search,
+            placeholder: "Nummer, Name, Konto, Partner oder Tag",
+            onChange: setSearch,
+          }}
+          status={{
+            label: "Status",
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [
+              { value: "alle", label: "Alle", count: all.length },
+              ...(Object.keys(ITEM_STATUS_LABELS) as ItemStatus[]).map((entry) => ({
+                value: entry,
+                label:
+                  entry === "offen"
+                    ? "Offen"
+                    : entry === "abgeschlossen"
+                      ? "Abgeschlossen"
+                      : ITEM_STATUS_LABELS[entry],
+                count: all.filter((row) => row.status === entry).length,
+              })),
+              {
+                value: "ohne",
+                label: "Ohne Partner",
+                count: all.filter((row) => !row.item.partner_id).length,
+              },
+            ],
+          }}
+          moreTitle="Weitere Filter und Sortierung"
+          moreActive={moreActive}
+          onReset={
+            filtered || group !== "konto" || sort.key !== "nr" || !sort.up
+              ? resetFilters
+              : undefined
+          }
+          more={
+            <>
+              {knownTags.length > 0 && (
+                <label className="filter-field">
+                  Tag
+                  <select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}>
+                    <option value="">alle</option>
+                    {knownTags.map((entry) => (
+                      <option key={entry.tag} value={entry.tag}>
+                        {entry.tag} ({entry.items})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {projects.length > 0 && (
+                <label className="filter-field">
+                  IT-Projekt
+                  <select
+                    value={projectFilter}
+                    onChange={(event) => setProjectFilter(event.target.value)}
+                  >
+                    <option value="">alle</option>
+                    {projects.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="filter-field">
+                Gruppieren
+                <select
+                  value={group}
+                  onChange={(event) => setGroup(event.target.value as GroupKey)}
+                >
+                  <option value="konto">nach Konto</option>
+                  <option value="partner">nach Partner</option>
+                  <option value="keine">nicht gruppieren</option>
+                </select>
+              </label>
+              {narrow && (
+                <label className="filter-field">
+                  Sortieren
+                  <select
+                    value={`${sort.key}-${sort.up ? "auf" : "ab"}`}
+                    onChange={(event) => {
+                      const [key, direction] = event.target.value.split("-");
+                      setSort({ key: key as SortKey, up: direction === "auf" });
+                    }}
+                  >
+                    {(Object.keys(SORT_LABELS) as SortKey[]).flatMap((key) => [
+                      <option key={`${key}-auf`} value={`${key}-auf`}>
+                        {SORT_LABELS[key]} aufsteigend
+                      </option>,
+                      <option key={`${key}-ab`} value={`${key}-ab`}>
+                        {SORT_LABELS[key]} absteigend
+                      </option>,
+                    ])}
+                  </select>
+                </label>
+              )}
+            </>
+          }
+          extra={
+            tagFilter !== "" ? (
+              <Link to={`${BUDGET_STATISTICS_PATH}?tag=${encodeURIComponent(tagFilter)}`}>
+                Statistik zu „{tagFilter}“
+              </Link>
+            ) : undefined
+          }
+        />
       )}
-      {overview && overview.items.length > 0 && (
-        <div className="budget-toolbar budget-filter settings-form">
-          <label>
-            Budgetposten suchen
-            <input
-              type="search"
-              value={search}
-              placeholder="Name, Konto, Partner oder Tag"
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Status
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as ItemStatus | "")}
-            >
-              <option value="">alle</option>
-              {(Object.keys(ITEM_STATUS_LABELS) as ItemStatus[]).map((entry) => (
-                <option key={entry} value={entry}>
-                  {ITEM_STATUS_LABELS[entry]}
-                </option>
-              ))}
-            </select>
-          </label>
-          {knownTags.length > 0 && (
-            <label className="narrow">
-              Tag
-              <select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}>
-                <option value="">alle</option>
-                {knownTags.map((entry) => (
-                  <option key={entry.tag} value={entry.tag}>
-                    {entry.tag} ({entry.items})
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {projects.length > 0 && (
-            <label className="narrow">
-              Projekt
-              <select
-                value={projectFilter}
-                onChange={(event) => setProjectFilter(event.target.value)}
-              >
-                <option value="">alle</option>
-                {projects.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          {filtered && (
-            <button
-              type="button"
-              className="button button-secondary"
-              onClick={() => {
-                setSearch("");
-                setTagFilter("");
-                setStatusFilter("");
-                setProjectFilter("");
-              }}
-            >
-              Filter aufheben
-            </button>
-          )}
-          {tagFilter !== "" && (
-            <Link to={`${BUDGET_STATISTICS_PATH}?tag=${encodeURIComponent(tagFilter)}`}>
-              Statistik zu „{tagFilter}“
-            </Link>
-          )}
-        </div>
-      )}
-      {overview && overview.items.length > 0 && (
+      {overview && accounts.length > 0 && (
         <p role="status" className="small budget-muted">
-          {filtered
-            ? `${rows.length} von ${overview.items.length} Budgetposten`
-            : `${overview.items.length} Budgetposten`}
+          {all.length === 0
+            ? `In ${overview.year_name} läuft noch kein Budgetposten.`
+            : `${filtered ? `${rows.length} von ${all.length}` : rows.length} Budgetposten · geplant ${formatEuro(sums.expected)} · Ist ${formatEuro(sums.actual)}`}
         </p>
-      )}
-      {overview && overview.items.length > 0 && (
-        <div
-          className="table-wrap budget-table"
-          tabIndex={0}
-          role="region"
-          aria-label={`Budgetposten ${overview.year_name}`}
-        >
-          <table>
-            <caption className="visually-hidden">
-              Budgetposten im {label} {overview.year_name}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Konto</th>
-                <th scope="col">Budgetposten</th>
-                <th scope="col">Status</th>
-                <th scope="col" className="betrag">
-                  Erwartet
-                </th>
-                <th scope="col" className="betrag">
-                  Ist
-                </th>
-                <th scope="col" className="betrag">
-                  Vorjahr
-                </th>
-                {canEdit && <th scope="col">Aktion</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.item.id}>
-                  <td>
-                    <span className="mono">{row.item.account_number}</span>
-                    <span className="small budget-muted tenant-part">{row.item.account_name}</span>
-                  </td>
-                  <th scope="row">
-                    {row.item.name}
-                    {!row.item.active && (
-                      <span className="pill pill-neutral budget-pill">stillgelegt</span>
-                    )}
-                    <span className="small budget-muted tenant-part">
-                      {row.item.partner_name ? `${row.item.partner_name} · ` : ""}
-                      {runtimeText(row.item)}
-                      {row.item.contract_title ? ` · Vertrag: ${row.item.contract_title}` : ""}
-                    </span>
-                    {!row.item.partner_name && (
-                      <span className="pill pill-todo budget-pill">Partner fehlt</span>
-                    )}
-                    {row.item.project_id && row.item.project_name && (
-                      <span className="small budget-muted tenant-part">
-                        Projekt:{" "}
-                        {canOpenProjects ? (
-                          <Link to={projectPath(row.item.project_id)}>{row.item.project_name}</Link>
-                        ) : (
-                          row.item.project_name
-                        )}
-                      </span>
-                    )}
-                    {row.item.tags.length > 0 && (
-                      <span className="budget-tags">
-                        {row.item.tags.map((tag) => (
-                          <button
-                            key={tag}
-                            type="button"
-                            className="chip budget-tag"
-                            aria-pressed={tagFilter.toLowerCase() === tag.toLowerCase()}
-                            aria-label={`Nach Tag ${tag} filtern`}
-                            onClick={() =>
-                              setTagFilter(tagFilter.toLowerCase() === tag.toLowerCase() ? "" : tag)
-                            }
-                          >
-                            {tag}
-                          </button>
-                        ))}
-                      </span>
-                    )}
-                  </th>
-                  <td>
-                    <StatusPill status={row.status} />
-                  </td>
-                  <td className="betrag">{amount(row.expected_cents)}</td>
-                  <td className="betrag">{formatEuro(row.actual_cents)}</td>
-                  <td className="betrag budget-muted">{amount(row.previous_cents)}</td>
-                  {canEdit && (
-                    <td>
-                      {row.status !== null && row.status !== "abgeschlossen" && (
-                        <button
-                          type="button"
-                          className="button button-secondary"
-                          aria-label={`${row.item.name} abschließen`}
-                          onClick={() => onClosure(row, true)}
-                        >
-                          Abschließen
-                        </button>
-                      )}
-                      {row.status === "abgeschlossen" && row.closed_by_hand && (
-                        <button
-                          type="button"
-                          className="button button-secondary"
-                          aria-label={`${row.item.name} wieder öffnen`}
-                          onClick={() => onClosure(row, false)}
-                        >
-                          Wieder öffnen
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="button button-secondary"
-                        aria-label={`${row.item.name} bearbeiten`}
-                        onClick={() => {
-                          setMessage(null);
-                          setEditing(row.item);
-                        }}
-                      >
-                        Bearbeiten
-                      </button>
-                      <DeleteButton
-                        what={`Budgetposten ${row.item.name}`}
-                        run={() => deleteItem(row.item.id)}
-                        onDeleted={() => {
-                          closeForm();
-                          setMessage({ kind: "status", text: `${row.item.name} ist gelöscht.` });
-                          setRound(round + 1);
-                        }}
-                      />
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="budget-summe">
-                <th scope="row" colSpan={3}>
-                  {filtered ? "Summe der gezeigten Posten" : "Summe"}
-                </th>
-                <td className="betrag">{formatEuro(sums.expected)}</td>
-                <td className="betrag">{formatEuro(sums.actual)}</td>
-                <td className="betrag budget-muted" colSpan={columns - 5}>
-                  {formatEuro(sums.previous)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
       )}
       {message && (
         <p
@@ -883,6 +1179,183 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           {message.text}
         </p>
       )}
+      {overview && (all.length > 0 || paneOpen) && (
+        <div
+          ref={layoutRef}
+          className={
+            paneOpen
+              ? "case-layout case-layout-table case-layout-detail"
+              : "case-layout case-layout-table"
+          }
+          style={{ "--case-split": split } as CSSProperties}
+        >
+          <div className="panel case-list">
+            <div className="case-scroll">
+              {all.length > 0 && rows.length === 0 && (
+                <p className="empty">Kein Budgetposten passt zu Suche und Filter.</p>
+              )}
+              {rows.length > 0 && (
+                <table className="case-table budget-items-table">
+                  <caption className="visually-hidden">
+                    Budgetposten im {label} {overview.year_name}
+                  </caption>
+                  <thead>
+                    <tr>
+                      {sortHeader("nr", "Nr.", "col-nr")}
+                      {sortHeader("name", "Budgetposten")}
+                      {sortHeader("konto", "Konto", "col-extra")}
+                      {sortHeader("partner", "Partner", "col-extra")}
+                      {sortHeader("plan", "Geplant", "col-extra betrag")}
+                      {sortHeader("ist", "Ist", "col-extra betrag")}
+                      <th scope="col">Status</th>
+                      <th scope="col" className="col-extra betrag">
+                        Vorjahr
+                      </th>
+                    </tr>
+                  </thead>
+                  {groups.map((entry) => (
+                    <tbody key={entry.key}>
+                      {group !== "keine" && (
+                        <tr className="case-group">
+                          <th scope="rowgroup" colSpan={columnCount}>
+                            {entry.title}
+                            <span className="small budget-muted"> · {entry.sub}</span>
+                          </th>
+                        </tr>
+                      )}
+                      {entry.rows.map((row) => (
+                        <ItemTableRow
+                          key={row.item.id}
+                          row={row}
+                          selected={row.item.id === selectedId}
+                          onOpen={() => {
+                            setMessage(null);
+                            setView({ kind: "posten", id: row.item.id });
+                          }}
+                        />
+                      ))}
+                    </tbody>
+                  ))}
+                </table>
+              )}
+            </div>
+          </div>
+          {paneOpen && (
+            <SplitHandle value={split} onChange={changeSplit} container={() => layoutRef.current} />
+          )}
+          <div className="case-main">
+            {paneOpen && (
+              <>
+                <a
+                  className="case-back"
+                  href="#"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    closeView();
+                  }}
+                >
+                  ‹ Zur Liste
+                </a>
+                {view?.kind === "posten" && selectedRow && (
+                  <ItemDetail
+                    row={selectedRow}
+                    yearLabel={label}
+                    yearName={overview.year_name}
+                    invoices={invoices}
+                    canEdit={canEdit}
+                    canOpenProjects={canOpenProjects}
+                    onEdit={() => setView({ kind: "bearbeiten", id: selectedRow.item.id })}
+                    onClosure={(close) => onClosure(selectedRow, close)}
+                    onDeleted={() => {
+                      setMessage({
+                        kind: "status",
+                        text: `${selectedRow.item.name} ist gelöscht.`,
+                      });
+                      setView(null);
+                      setRound(round + 1);
+                    }}
+                    onClose={closeView}
+                  />
+                )}
+                {canEdit &&
+                  (view?.kind === "neu" || (view?.kind === "bearbeiten" && selectedRow)) && (
+                    <ItemForm
+                      key={view.kind === "neu" ? `neu-${view.round}` : `posten-${view.id}`}
+                      item={view.kind === "bearbeiten" && selectedRow ? selectedRow.item : null}
+                      accounts={accounts}
+                      contracts={contracts}
+                      projects={projects}
+                      partners={partners}
+                      knownTags={knownTags}
+                      canManageTags={roles.includes(BUDGET_MANAGER_ROLE)}
+                      years={yearChoices}
+                      defaultYear={overview.year}
+                      yearLabel={label}
+                      onSaved={onItemSaved}
+                      onCancel={() =>
+                        setView(view.kind === "bearbeiten" ? { kind: "posten", id: view.id } : null)
+                      }
+                    />
+                  )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+/** Zeile der Tabelle: ganz anklickbar; für Tastatur und Screenreader zählt der Name. */
+function ItemTableRow({
+  row,
+  selected,
+  onOpen,
+}: {
+  row: ItemRow;
+  selected: boolean;
+  onOpen: () => void;
+}) {
+  const { item } = row;
+  return (
+    <tr
+      className={selected ? "case-row is-selected" : "case-row"}
+      onClick={(event) => {
+        if (!(event.target as HTMLElement).closest("button, a")) {
+          onOpen();
+        }
+      }}
+    >
+      <td className="col-nr mono nowrap">{item.number}</td>
+      <td className="case-title-cell">
+        <span className="case-meta small">
+          <span className="mono">{item.number}</span> · {item.account_number} {item.account_name}
+        </span>
+        <button
+          type="button"
+          className="button-link budget-row-title"
+          aria-current={selected ? "true" : undefined}
+          onClick={onOpen}
+        >
+          {item.name}
+        </button>
+        <span className="small budget-muted tenant-part">{runtimeText(item)}</span>
+        {!item.active && <span className="pill pill-neutral budget-pill">stillgelegt</span>}
+      </td>
+      <td className="col-extra">
+        <span className="mono">{item.account_number}</span>
+        <span className="small budget-muted tenant-part">{item.account_name}</span>
+      </td>
+      <td className="col-extra">
+        {item.partner_name ?? <span className="pill pill-todo budget-pill">Partner fehlt</span>}
+      </td>
+      <td className="col-extra betrag">{amount(row.expected_cents)}</td>
+      <td className="col-extra betrag">{formatEuro(row.actual_cents)}</td>
+      <td className="nowrap budget-status-cell">
+        <StatusPill status={row.status} />
+        <span className="case-meta small betrag">{amount(row.expected_cents)}</span>
+      </td>
+      <td className="col-extra betrag budget-muted">{amount(row.previous_cents)}</td>
+    </tr>
   );
 }

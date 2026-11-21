@@ -26,7 +26,10 @@ Ziel: Jeder Screen sieht gleich aufgebaut aus und wird gleich bedient. Visuelle 
 - Ein neuer Bereich braucht nur einen Eintrag in `areasFor` (`frontend/src/navigation.ts`): Symbol, Kurzname, Abschnitt der Leiste, Gruppen. Die erlaubten Pfade für Anheften und „Zuletzt besucht“ stehen zusätzlich auf dem Server (`backend/werkbank/core/navigation.py`).
 - Unten rechts erscheint nach etwas Scrollen der Knopf „Nach oben“.
 - Maximale Inhaltsbreite 1180 px (Seiten mit Liste und Detail nebeneinander bis 1400 px), Abstand zum Rand 24 px (mobil 16 px).
-- **Tabelle mit Ansicht rechts** (Vorgänge im IT-Bestand, Einträge in Evergreen; Trenner als gemeinsame Komponente `components/SplitHandle.tsx`): kompakter Kopf in einer Zeile, Suche und Filter in einer Zeile darüber, Tabelle über die ganze Breite; die ganze Zeile ist anklickbar, der Titel ist der Verweis. Gewählt: Tabelle und Ansicht nebeneinander (Start 54 %), Breite am Trenner einstellbar (30–75 %, im Browser gemerkt), schmale Tabelle nur Nr., Titel und Status, Ansicht mit „×“. Unter 1024 px eine Zeile je Eintrag (Nummer, Art, Datum klein über dem Titel), Status-Chips zum Wischen, gewählt nur die Ansicht mit „‹ Zur Liste“.
+- **Tabelle mit Ansicht rechts** (Vorgänge im IT-Bestand, Einträge in Evergreen, im IT-Budget Budgetposten, Rechnungen und Verträge; Trenner als gemeinsame Komponente `components/SplitHandle.tsx`): kompakter Kopf in einer Zeile, Suche und Filter in einer Zeile darüber, Tabelle über die ganze Breite; die ganze Zeile ist anklickbar, der Titel ist der Verweis. Gewählt: Tabelle und Ansicht nebeneinander (Start 54 %), Breite am Trenner einstellbar (30–75 %, im Browser gemerkt), schmale Tabelle nur Nr., Titel und Status, Ansicht mit „×“. Masken zum Anlegen und Bearbeiten stehen in derselben Ansicht. Unter 1024 px eine Karte je Eintrag (Nummer, Art, Datum klein über dem Titel, rechts Status und Betrag), gewählt nur die Ansicht mit „‹ Zur Liste“.
+- **Filter über Listen** (gemeinsame Komponente `components/FilterBar.tsx`): Am Computer und Tablet Suche und weitere Filter in einer Zeile, jedes Feld mit sichtbarer Beschriftung, darunter der Status als Chips mit Anzahl („Offen · 3“), dazu „Filter aufheben“. Am Handy (bis 760 px) die Suche über die ganze Breite, darunter der Status als Auswahl und „Weitere Filter“ (mit Zahl der gesetzten Filter); die weiteren Filter öffnen in einem Blatt von unten mit „Zurücksetzen“ und „Fertig“. Umschalter zwischen Ansichten (z. B. Liste und Waben) sind keine Filter und bleiben Chips.
+- **Listen am Handy als Karten:** Jeder Eintrag ist eine eigene Karte mit deutlichem Rahmen und Abstand. Tabellen bekommen dafür `table-cards` in einem `card-wrap` (jede Zelle mit `data-label`, die Zeilenüberschrift ist der Kartentitel), Tabellen mit Ansicht rechts (`case-table`) und Listen mit Ansicht (`case-item`) werden unter 1024 px von selbst zu Karten. Auswertungen und Matrizen (Statistik, Mehrjahresübersicht, Diagramme) bleiben Tabellen zum Wischen.
+- **Masken in Abschnitten:** nummerierte Abschnitte (`FormStep`, z. B. „1 Was und bei wem“, „2 Kosten und Laufzeit“), Pflichtfelder mit „*“ und Hinweis oben, wenige Möglichkeiten als Knopfleiste (`segmented`, `aria-pressed`), darunter eine Zusammenfassung in Worten.
 - **Liste und Ansicht** (z. B. Verleih): Suche, Status und weitere Filter oben in der Liste; die Liste hat eine feste Höhe bis zum unteren Rand und scrollt für sich, die Ansicht daneben bleibt stehen. Unter 1024 px erst nur die Liste, gewählt nur die Ansicht mit „‹ Zur Liste“.
 - **Auswahl mit Suche** statt langer Auswahllisten (Stellen, Arbeitsplätze, Räume, Geräte): Combobox, die auf dem Server sucht (höchstens 20 Treffer, Hinweis bei mehr), Pfeiltasten und Enter; gewählt steht der Eintrag mit „Ändern“.
 - Symbole nur aus `components/Icon.tsx` (24 × 24, Linie, Strichstärke 2), nie direkt im Markup.
@@ -37,6 +40,7 @@ Ziel: Jeder Screen sieht gleich aufgebaut aus und wird gleich bedient. Visuelle 
 - Tablet und Handy: Das Detail steht unter der Liste bzw. auf einer eigenen Seite mit „Zurück“.
 - Solange nichts gewählt ist, zeigt der Detailbereich auf breiten Bildschirmen einen schraffierten Platzhalter mit Hinweis (`components/Placeholder`).
 - Ausgewähltes Element sichtbar markiert (Rahmen bzw. Hintergrund **und** `aria-current`).
+- Gruppieren und Sortieren über eine Auswahl gibt es nur bei den Budgetposten (nach Konto, Partner oder nicht gruppiert; am Handy sortieren über eine Auswahl, weil die Spaltenköpfe fehlen).
 - Ausnahme Gerätezuordnung: Das Detail öffnet als modale Seitenleiste von rechts (am Handy volle Breite), der Scan als Dialog in drei Schritten (am Handy bildschirmfüllend), weil beide Abläufe vor allem am Handy neben dem Gerät laufen. Am Handy Karten statt Tabelle; der Fortschritt steht als vier Striche neben dem Status-Badge.
 
 ## 3. Buttons und Aktionen
@@ -58,10 +62,10 @@ Einheitlich für die ganze App, immer mit Text (nie nur Farbe):
 
 | Bedeutung | Beispiel | Farbe |
 |---|---|---|
-| Handlung nötig | Offen, Wartet auf mich | Orange |
+| Handlung nötig | Offen, Wartet auf mich, zu prüfen, Partner fehlt | Orange |
 | Erledigt / positiv | Gewollt, Abgeschlossen, Zustimmung | Grün |
 | Negativ / Abweichung | Ungewollt, Abgelehnt, weicht ab | Rot |
-| Information / Wartend | Neu, Geplant | Blau |
+| Information / Wartend | Neu, Geplant, Rechnung liegt vor | Blau |
 | Neutral | Nicht pflichtig, Idee | Grau |
 | KI-Vorschlag | KI-generiert, ungeprüft | Violett |
 

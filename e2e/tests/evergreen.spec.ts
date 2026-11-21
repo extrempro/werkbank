@@ -32,8 +32,12 @@ test("Bearbeiter legen einen Eintrag an, fügen Notizen an und schließen ab", a
     .fill("Mit der Fachabteilung klären");
   await page.getByRole("button", { name: "Notiz anfügen" }).click();
   await expect(page.getByText("Mit der Fachabteilung klären")).toBeVisible();
+  // Am Handy steht „Bearbeitet“ auch als (verborgene) Option der Status-Auswahl.
   await expect(
-    page.getByText("Bearbeitet", { exact: true }).first(),
+    page
+      .getByText("Bearbeitet", { exact: true })
+      .filter({ visible: true })
+      .first(),
   ).toBeVisible();
 
   // Ein zweiter Bearbeiter ergänzt und schließt ab

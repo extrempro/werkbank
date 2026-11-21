@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { FilterBar } from "../../components/FilterBar";
 import { Link } from "../../components/Link";
 import { INVENTORY_MASTER_PATH } from "../../navigation";
 import { navigate } from "../../router";
@@ -457,34 +458,33 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
       <section className="panel" aria-labelledby="hardware-liste">
         <div className="panel-head">
           <h2 id="hardware-liste">Geräte</h2>
-          <div className="chips" role="group" aria-label="Status">
-            {STATES.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                className="chip chip-filter"
-                aria-pressed={state === entry.id}
-                onClick={() => setState(entry.id)}
-              >
-                {entry.label}
-              </button>
-            ))}
-          </div>
         </div>
-        <div className="detail-body settings-form">
-          <div className="tool-row">
-            <label>
-              Geräte durchsuchen
-              <input
-                type="search"
-                value={query}
-                maxLength={100}
-                autoComplete="off"
-                placeholder="Bezeichnung, Seriennummer, Inventurnummer …"
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </label>
-            <label className="narrow">
+        <FilterBar<ListState>
+          plain
+          search={{
+            label: "Geräte durchsuchen",
+            value: query,
+            placeholder: "Bezeichnung, Seriennummer, Inventurnummer …",
+            onChange: setQuery,
+          }}
+          status={{
+            label: "Status",
+            value: state,
+            onChange: setState,
+            options: STATES.map((entry) => ({ value: entry.id, label: entry.label })),
+          }}
+          moreActive={kindId === null ? 0 : 1}
+          onReset={
+            query !== "" || state !== "aktiv" || kindId !== null
+              ? () => {
+                  setQuery("");
+                  setState("aktiv");
+                  setKindId(null);
+                }
+              : undefined
+          }
+          more={
+            <label className="filter-field">
               Nach Art filtern
               <select
                 value={kindId === null ? "" : String(kindId)}
@@ -500,7 +500,9 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
                 ))}
               </select>
             </label>
-          </div>
+          }
+        />
+        <div className="detail-body settings-form">
           {!failed && !list && <p role="status">Wird geladen …</p>}
           {list && (
             <p className="small" role="status">

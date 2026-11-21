@@ -233,8 +233,13 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
         <p className="panel panel-empty">Es sind noch keine Partner angelegt.</p>
       )}
       {partners && partners.length > 0 && (
-        <div className="table-wrap budget-table" tabIndex={0} role="region" aria-label="Partner">
-          <table>
+        <div
+          className="table-wrap card-wrap budget-table"
+          tabIndex={0}
+          role="region"
+          aria-label="Partner"
+        >
+          <table className="table-cards">
             <caption className="visually-hidden">Vertragspartner und Rechnungssteller</caption>
             <thead>
               <tr>
@@ -252,10 +257,10 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
                   <th scope="row">
                     <Link to={`${BUDGET_PARTNERS_PATH}/${partner.id}`}>{partner.name}</Link>
                   </th>
-                  <td>{partnerRoles(partner)}</td>
-                  <td>{partner.customer_number || "–"}</td>
-                  <td>{partner.note || "–"}</td>
-                  <td>
+                  <td data-label="Rolle">{partnerRoles(partner)}</td>
+                  <td data-label="Kundennummer">{partner.customer_number || "–"}</td>
+                  <td data-label="Notiz">{partner.note || "–"}</td>
+                  <td data-label="Stand">
                     <span className={partner.active ? "pill pill-ok" : "pill pill-neutral"}>
                       {partner.active ? "aktiv" : "stillgelegt"}
                     </span>

@@ -32,6 +32,7 @@ from werkbank.modules.budget.models import (
     BudgetItem,
     BudgetPartner,
 )
+from werkbank.modules.budget.numbers import assign_item_number
 from werkbank.modules.budget.settings import (
     YEAR_MAX,
     YEAR_MIN,
@@ -717,6 +718,7 @@ def take_row(
         tags=[],
         active=True,
     )
+    assign_item_number(db, item)
     db.add(item)
     db.flush()
     entry.status = ROW_TAKEN

@@ -6651,8 +6651,20 @@ html {
 
 @container (max-width: 760px) {
   .table-cards,
-  .table-cards tbody {
+  .table-cards tbody,
+  .table-cards tfoot {
     display: block;
+  }
+
+  .table-cards tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .table-cards tfoot {
+    padding: 0 8px 8px;
   }
 
   .table-cards thead {
@@ -6664,11 +6676,44 @@ html {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 10px 18px;
     align-items: start;
-    margin: 8px;
     padding: 12px 14px;
-    border: 1px solid var(--farbe-rand);
-    border-radius: 10px;
+    border: 1px solid var(--farbe-rand-stark);
+    border-radius: 12px;
     background: var(--farbe-flaeche);
+    box-shadow: 0 1px 2px rgb(20 33 61 / 6%);
+  }
+
+  /* Zwischenüberschrift einer Gruppe: keine Karte */
+  .table-cards tr.card-group {
+    display: block;
+    padding: 8px 4px 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .table-cards tr.card-group th {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-weight: 700;
+  }
+
+  .table-cards tfoot tr {
+    background: var(--farbe-neutral-flaeche);
+    box-shadow: none;
+  }
+
+  .table-cards td:empty {
+    display: none;
+  }
+
+  .table-cards td.betrag {
+    text-align: left;
+  }
+
+  .table-cards th[scope="row"] {
+    color: var(--farbe-text);
   }
 
   .table-cards th,
@@ -6693,7 +6738,7 @@ html {
     font-size: 1rem;
   }
 
-  .table-cards td::before {
+  .table-cards td[data-label]::before {
     content: attr(data-label);
     color: var(--farbe-text-leise);
     font-size: 0.75rem;
@@ -7744,11 +7789,6 @@ html {
   border-bottom: 1px solid var(--farbe-rand);
 }
 
-.case-filters .list-search {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
 .case-filters .chips,
 .case-kind {
   padding: 0 16px;
@@ -7814,24 +7854,10 @@ html {
   list-style: none;
 }
 
-.list-search {
-  display: grid;
-  gap: 4px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--farbe-rand);
-}
-
-.list-search label {
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
 .loc-search {
   margin-bottom: 8px;
 }
 
-/* Suchfelder über Listen und im Standortbaum: wie die Eingabefelder in Formularen */
-.list-search input,
 .loc-search input {
   width: 100%;
   min-height: 44px;
@@ -7845,6 +7871,7 @@ html {
   font-weight: 400;
 }
 
+/* Suchfelder über Listen und im Standortbaum: wie die Eingabefelder in Formularen */
 .list-more {
   display: flex;
   flex-wrap: wrap;
@@ -9057,5 +9084,615 @@ html {
 
   .dev-head .actions .button {
     flex: 1 1 auto;
+  }
+}
+
+/* Filterzeile über Listen (components/FilterBar.tsx): Computer und Tablet mit Suche, weiteren
+   Filtern und Status-Chips; Handy mit Suche, Status als Auswahl und „Weitere Filter“ im Blatt. */
+
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+}
+
+.filter-search,
+.filter-status,
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--farbe-text-mittel);
+}
+
+.filter-search {
+  flex: 1 1 240px;
+  max-width: 26rem;
+}
+
+.filter-search input,
+.filter-status select,
+.filter-field select,
+.filter-field input {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.filter-search input {
+  width: 100%;
+}
+
+.filter-reset {
+  min-height: 44px;
+}
+
+.filter-chips .chip {
+  white-space: nowrap;
+}
+
+.filter-bar-phone .filter-row {
+  flex-wrap: wrap;
+}
+
+.filter-bar-phone .filter-search {
+  flex: 1 1 100%;
+  max-width: none;
+}
+
+.filter-bar-phone .filter-status {
+  flex: 1 1 0;
+}
+
+.filter-bar-phone .filter-status select {
+  width: 100%;
+}
+
+.filter-more-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+
+.filter-count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--farbe-primaer);
+  color: var(--farbe-auf-primaer);
+  font-size: 0.75rem;
+  line-height: 22px;
+  text-align: center;
+}
+
+.filter-sheet .sheet-head {
+  padding: 8px 8px 0 18px;
+}
+
+.filter-sheet .sheet-title {
+  padding: 0;
+}
+
+.filter-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 18px 16px;
+}
+
+.filter-sheet-body .filter-field select,
+.filter-sheet-body .filter-field input {
+  width: 100%;
+  min-height: 48px;
+}
+
+.filter-sheet-foot {
+  display: flex;
+  gap: 10px;
+  padding: 10px 18px 16px;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.filter-sheet-foot .button {
+  flex: 1 1 0;
+  min-height: 48px;
+}
+
+/* Tabellen mit Ansicht rechts unter 1024 px: Zeilen als Karten mit Abstand */
+@media (max-width: 1023px) {
+  .case-list:has(.case-table) {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  /* Tabellen mit Ansicht rechts (Vorgänge, Einträge, Budgetposten …): Zeilen als Karten,
+     links Titel mit Angaben darüber, rechts der Status */
+  .case-table,
+  .case-table tbody {
+    display: block;
+  }
+
+  .case-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .case-table tbody + tbody {
+    margin-top: 8px;
+  }
+
+  .case-table tr.case-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--farbe-rand-stark);
+    border-radius: 12px;
+    background: var(--farbe-flaeche);
+    box-shadow: 0 1px 2px rgb(20 33 61 / 6%);
+  }
+
+  .case-table tr.case-row td {
+    display: block;
+    border: 0;
+    background: none;
+  }
+
+  .case-table tr.case-row td.col-extra,
+  .case-table tr.case-row td.col-nr {
+    display: none;
+  }
+
+  .case-table tr.case-row.is-selected {
+    border-color: var(--farbe-primaer);
+    background: var(--farbe-auswahl);
+  }
+
+  .case-table tr.case-row.is-selected td:first-child {
+    box-shadow: none;
+  }
+}
+
+/* Sortierbare Spaltenköpfe */
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.th-sort:hover,
+.th-sort:focus-visible {
+  color: var(--farbe-link);
+  text-decoration: underline;
+}
+
+/* Masken in nummerierten Abschnitten (Ansicht rechts) */
+.form-step {
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 4px;
+  border: 0;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.form-step > legend {
+  float: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.form-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+  font-size: 0.875rem;
+}
+
+.form-step-hint {
+  font-weight: 400;
+  color: var(--farbe-text-leise);
+}
+
+.form-step-body {
+  clear: both;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px 16px;
+  padding: 12px 0 0 38px;
+}
+
+.form-wide {
+  grid-column: 1 / -1;
+}
+
+.budget-form .budget-fieldset {
+  min-width: 0;
+}
+
+.budget-form select,
+.budget-form input:not([type="checkbox"]) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.budget-form .tool-row > label {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.budget-pane .budget-upload {
+  align-self: flex-start;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.form-hint {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--farbe-text-leise);
+}
+
+.form-summary {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+@media (max-width: 760px) {
+  .form-step-body {
+    padding-left: 0;
+  }
+}
+
+/* Auswahl aus wenigen Möglichkeiten als Knopfleiste (aria-pressed) */
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.segmented button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text-mittel);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented button[aria-pressed="true"] {
+  border-color: var(--farbe-primaer);
+  background: var(--farbe-primaer);
+  color: var(--farbe-auf-primaer);
+}
+
+/* Budgetposten: Tabelle mit Ansicht rechts */
+.budget-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+}
+
+.budget-row-title {
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  color: var(--farbe-text);
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+}
+
+.budget-row-title:hover,
+.budget-row-title:focus-visible {
+  text-decoration: underline;
+}
+
+.budget-items-table th {
+  vertical-align: middle;
+}
+
+.case-table tr.case-group th {
+  position: static;
+  white-space: normal;
+  background: var(--farbe-grund);
+  color: var(--farbe-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.budget-status-cell .case-meta {
+  margin: 4px 0 0;
+  text-align: right;
+  color: var(--farbe-text);
+}
+
+.budget-pane .detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.budget-pane .budget-badges {
+  margin: 6px 0 0;
+}
+
+.budget-cards-small {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.budget-cards-small .budget-card {
+  padding: 12px 14px;
+}
+
+.budget-cards-small .budget-card-value {
+  font-size: 1.125rem;
+}
+
+.budget-pane .budget-section-head h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+@media (max-width: 1023px) {
+  .case-table tr.case-group {
+    display: block;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .case-table tr.case-group th {
+    display: block;
+    padding: 12px 4px 0;
+    background: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .case-wide-only {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .budget-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .budget-card {
+    padding: 12px 14px;
+  }
+
+  .budget-card-value {
+    font-size: 1.25rem;
+  }
+}
+
+/* Vorschlag „Monatsposten anlegen“ am Vertrag */
+.budget-suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+  background: var(--farbe-grund);
+}
+
+.budget-suggest p {
+  margin: 0;
+}
+
+.budget-suggest-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+}
+
+.budget-suggest-row label {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.budget-suggest-row select {
+  width: 100%;
+}
+
+/* Übersicht: Zu erledigen mit Sprung in die Liste */
+.budget-todo-title {
+  margin: 0 0 8px;
+  font-size: 0.9375rem;
+}
+
+.budget-todos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.budget-todo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 14px;
+  color: var(--farbe-text);
+  text-decoration: none;
+}
+
+.budget-todo:hover,
+.budget-todo:focus-visible {
+  background: var(--farbe-hover);
+}
+
+.budget-todo strong {
+  display: block;
+}
+
+.budget-todo-count {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  font-weight: 700;
+}
+
+.budget-todo-todo {
+  background: var(--farbe-todo-flaeche);
+  color: var(--farbe-todo-text);
+}
+
+.budget-todo-info {
+  background: var(--farbe-info-flaeche);
+  color: var(--farbe-info-text);
+}
+
+.budget-todo-bad {
+  background: var(--farbe-bad-flaeche);
+  color: var(--farbe-bad-text);
+}
+
+.budget-kind-row th {
+  background: var(--farbe-grund);
+  color: var(--farbe-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.budget-usage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+}
+
+.budget-usage .budget-track {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 1023px) {
+  .budget-usage {
+    display: inline-flex;
+    width: 160px;
+    min-width: 0;
+  }
+}
+
+.budget-usage .small {
+  white-space: nowrap;
+}
+
+.filter-bar-plain {
+  padding: 12px 16px 0;
+}
+
+/* Liste und Ansicht (Verleih): unter 1024 px jeder Eintrag als Karte */
+@media (max-width: 1023px) {
+  .case-list:has(> .case-scroll > ul .case-item) {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .case-list:has(> .case-scroll > ul .case-item) .case-filters {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border: 1px solid var(--farbe-rand);
+    border-radius: var(--radius);
+    background: var(--farbe-flaeche);
+  }
+
+  .case-scroll > ul:has(.case-item) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .case-scroll > ul .case-item {
+    border: 1px solid var(--farbe-rand-stark);
+    border-radius: 12px;
+    background: var(--farbe-flaeche);
+    box-shadow: 0 1px 2px rgb(20 33 61 / 6%);
+  }
+}
+
+.tree-filter .filter-bar-plain {
+  padding: 0;
+}
+
+@container (max-width: 760px) {
+  .table-cards td.number {
+    text-align: left;
   }
 }

@@ -70,11 +70,11 @@ describe("ChangesPage", () => {
     const calls = stubFetch();
     render(<ChangesPage me={me(["Config.Reader"])} />);
     const row = await screen.findByRole("button", { name: "MFA für alle – State" });
-    expect(screen.getByRole("button", { name: "Offen (1)" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Offen · 1" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("button", { name: "Gewollt (2)" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Gewollt · 2" })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
@@ -134,7 +134,7 @@ describe("ChangesPage", () => {
     const calls = stubFetch();
     render(<ChangesPage me={me(["Config.Reader"])} />);
     await screen.findByRole("button", { name: "MFA für alle – State" });
-    fireEvent.click(screen.getByRole("button", { name: "Alle (4)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Alle · 4" }));
     await waitFor(() => {
       expect(calls.some((call) => !call.url.includes("status="))).toBe(true);
     });

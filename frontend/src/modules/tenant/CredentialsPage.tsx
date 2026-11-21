@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FilterBar } from "../../components/FilterBar";
 import { formatDateTime } from "../../api";
 import { formatDay } from "../../components/LineChart";
 import {
@@ -109,36 +110,29 @@ export function CredentialsPage() {
           {display === "waben" && <Honeycomb entries={all} />}
           {display === "liste" && (
             <>
-              <div className="chips" role="group" aria-label="Einträge filtern">
-                <button
-                  type="button"
-                  className="chip chip-filter"
-                  aria-pressed={view === "handlungsbedarf"}
-                  onClick={() => setView("handlungsbedarf")}
-                >
-                  Handlungsbedarf ({list.attention})
-                </button>
-                <button
-                  type="button"
-                  className="chip chip-filter"
-                  aria-pressed={view === "alle"}
-                  onClick={() => setView("alle")}
-                >
-                  Alle ({list.total})
-                </button>
-              </div>
+              <FilterBar
+                status={{
+                  label: "Einträge filtern",
+                  value: view,
+                  onChange: setView,
+                  options: [
+                    { value: "handlungsbedarf", label: "Handlungsbedarf", count: list.attention },
+                    { value: "alle", label: "Alle", count: list.total },
+                  ],
+                }}
+              />
               {shown.length === 0 ? (
                 <p className="panel panel-empty">
                   Kein Handlungsbedarf: In den nächsten {notice} Tagen läuft nichts ab.
                 </p>
               ) : (
                 <div
-                  className="table-wrap"
+                  className="table-wrap card-wrap"
                   tabIndex={0}
                   role="region"
                   aria-label="Zertifikate und Secrets"
                 >
-                  <table>
+                  <table className="table-cards">
                     <caption className="visually-hidden">
                       Zertifikate und Secrets nach Ablauf
                     </caption>
@@ -161,13 +155,13 @@ export function CredentialsPage() {
                               <span className="small mono tenant-part">{entry.app_id}</span>
                             )}
                           </th>
-                          <td>{credentialKind(entry)}</td>
-                          <td>{entry.name ?? "–"}</td>
-                          <td>
+                          <td data-label="Art">{credentialKind(entry)}</td>
+                          <td data-label="Bezeichnung">{entry.name ?? "–"}</td>
+                          <td data-label="Läuft ab">
                             {entry.expires_at ? formatDay(entry.expires_at.slice(0, 10)) : "–"}
                           </td>
-                          <td>{remainingText(entry.days_left)}</td>
-                          <td>
+                          <td data-label="Restlaufzeit">{remainingText(entry.days_left)}</td>
+                          <td data-label="Stand">
                             <span className={`pill pill-${LEVEL_INFO[entry.level].tone}`}>
                               {LEVEL_INFO[entry.level].text}
                             </span>

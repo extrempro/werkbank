@@ -100,12 +100,12 @@ function SnapshotCompare({ snapshots }: { snapshots: Snapshot[] }) {
           )}
           {result.differences.length > 0 && (
             <div
-              className="table-wrap"
+              className="table-wrap card-wrap"
               tabIndex={0}
               role="region"
               aria-label="Unterschiede zwischen den Abrufen"
             >
-              <table>
+              <table className="table-cards">
                 <caption className="visually-hidden">Unterschiede zwischen den Abrufen</caption>
                 <thead>
                   <tr>
@@ -120,16 +120,18 @@ function SnapshotCompare({ snapshots }: { snapshots: Snapshot[] }) {
                 <tbody>
                   {result.differences.map((item) => (
                     <tr key={item.path}>
-                      <td>{KIND_LABELS[item.kind]}</td>
-                      <td>
+                      <td data-label="Art">{KIND_LABELS[item.kind]}</td>
+                      <td data-label="Dienst › Bereich">
                         {workloadLabel(item.workload)} › {areaLabel(item.area)}
                       </td>
-                      <td>{item.object_name ?? "–"}</td>
-                      <td className="mono">{item.property}</td>
-                      <td className="mono">
+                      <td data-label="Objekt">{item.object_name ?? "–"}</td>
+                      <td className="mono" data-label="Eigenschaft">
+                        {item.property}
+                      </td>
+                      <td className="mono" data-label="Vorher">
                         {item.kind === "neu" ? "–" : formatValue(item.old_value)}
                       </td>
-                      <td className="mono">
+                      <td className="mono" data-label="Nachher">
                         {item.kind === "entfernt" ? "–" : formatValue(item.new_value)}
                       </td>
                     </tr>
@@ -182,8 +184,8 @@ export function SnapshotsPage() {
       {snapshots.length > 0 && (
         <section aria-labelledby="snapshot-list">
           <h2 id="snapshot-list">Alle Abrufe</h2>
-          <div className="table-wrap" tabIndex={0} role="region" aria-label="Abrufe">
-            <table>
+          <div className="table-wrap card-wrap" tabIndex={0} role="region" aria-label="Abrufe">
+            <table className="table-cards">
               <caption className="visually-hidden">Abrufe, neueste zuerst</caption>
               <thead>
                 <tr>
@@ -198,11 +200,13 @@ export function SnapshotsPage() {
               <tbody>
                 {snapshots.map((snapshot) => (
                   <tr key={snapshot.id}>
-                    <td className="nowrap">{formatDateTime(snapshot.started_at)}</td>
-                    <td>{snapshotLabel(snapshot.status)}</td>
-                    <td>{snapshot.resource_count}</td>
-                    <td>{snapshot.change_count}</td>
-                    <td>
+                    <td className="nowrap" data-label="Beginn">
+                      {formatDateTime(snapshot.started_at)}
+                    </td>
+                    <td data-label="Ergebnis">{snapshotLabel(snapshot.status)}</td>
+                    <td data-label="Objekte">{snapshot.resource_count}</td>
+                    <td data-label="Änderungen">{snapshot.change_count}</td>
+                    <td data-label="Quellen">
                       <ul className="plain">
                         {Object.entries(snapshot.source_status).map(([source, ok]) => (
                           <li key={source}>
@@ -217,7 +221,7 @@ export function SnapshotsPage() {
                         ))}
                       </ul>
                     </td>
-                    <td className="nowrap">
+                    <td className="nowrap" data-label="Export">
                       {hasState(snapshot) ? (
                         <>
                           <a

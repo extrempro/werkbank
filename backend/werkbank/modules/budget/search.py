@@ -1,4 +1,4 @@
-"""Suche im Modul IT-Budget: Budgetposten nach Name, Hinweis und Tag."""
+"""Suche im Modul IT-Budget: Budgetposten nach Nummer, Name, Hinweis und Tag."""
 
 from urllib.parse import quote
 
@@ -9,13 +9,17 @@ from werkbank.core.roles import Role
 from werkbank.core.search import SearchHit
 from werkbank.core.sessions import CurrentUser
 from werkbank.modules.budget.models import BudgetAccount, BudgetItem
+from werkbank.modules.budget.numbers import item_number
 
 MODULE = "IT-Budget"
 MAX_ITEMS = 8
 
 
 def budget_search(db: Session, user: CurrentUser, query: str) -> list[SearchHit]:
-    """Budgetposten, deren Name, Hinweis oder Tag den Suchtext enthält. Nur für Budget-Rollen."""
+    """Budgetposten, deren Nummer, Name, Hinweis oder Tag den Suchtext enthält.
+
+    Nur für Budget-Rollen.
+    """
     if not user.has_any_role(Role.BUDGET_READER, Role.BUDGET_EDITOR, Role.BUDGET_MANAGER):
         return []
     needle = query.casefold()
@@ -26,10 +30,16 @@ def budget_search(db: Session, user: CurrentUser, query: str) -> list[SearchHit]
     ).all()
     hits: list[SearchHit] = []
     for item, account in rows:
+        number = item_number(item.number_year, item.number_seq)
         tags = [tag for tag in item.tags if needle in tag.casefold()]
-        if not tags and needle not in item.name.casefold() and needle not in item.note.casefold():
+        if (
+            not tags
+            and needle not in number.casefold()
+            and needle not in item.name.casefold()
+            and needle not in item.note.casefold()
+        ):
             continue
-        parts = [f"{account.number} {account.name}"]
+        parts = [number, f"{account.number} {account.name}"]
         if item.tags:
             parts.append("Tags: " + ", ".join(item.tags))
         if not item.active:
@@ -40,8 +50,8 @@ def budget_search(db: Session, user: CurrentUser, query: str) -> list[SearchHit]
                 kind="Budgetposten",
                 title=item.name,
                 subtitle=" · ".join(parts),
-                # Die Seite Budgetposten filtert mit diesem Suchtext auf den Posten.
-                link=f"/budget/posten?suche={quote(item.name, safe='')}",
+                # Die Seite Budgetposten öffnet den Posten über seine Nummer.
+                link=f"/budget/posten?suche={quote(number, safe='')}",
             )
         )
         if len(hits) == MAX_ITEMS:

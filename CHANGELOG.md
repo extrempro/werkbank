@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.82.0] – 2026-11-21
+
+### IT-Budget
+
+- **Neuer Aufbau nach dem klickbaren Entwurf:** Budgetposten, Rechnungen und Verträge als Tabelle mit Ansicht rechts (wie die Vorgänge im IT-Bestand, Trenner 30–75 %, im Browser gemerkt); Anlegen und Bearbeiten in derselben Ansicht, Masken in nummerierten Abschnitten mit Pflichtfeldern und Zusammenfassung in Worten
+- **Feste Nummer je Budgetposten** `BP-<Jahr>-<laufende Nummer>` (z. B. BP-2026-012): Jahr = erstes Geschäftsjahr beim Anlegen, laufende Nummer je Jahr, ändert sich nie. Spalten `number_year`, `number_seq` mit eindeutiger Kombination, Migration `0056` nummeriert bestehende Posten je Jahr in der Reihenfolge der Anlage. Vergabe unter einer Datenbanksperre (`modules/budget/numbers.py`), auch beim Import. `number` in `ItemOut`, `item_number` an Rechnungspositionen, `number` an den Posten eines Vertrags. Die Suche über alle Module findet Posten über die Nummer und öffnet ihn
+- **Budgetposten:** Spalten Nr., Budgetposten, Konto, Partner, Geplant, Ist, Status, Vorjahr; sortieren über die Spaltenköpfe (`aria-sort`), gruppieren nach Konto, Partner oder gar nicht; Status-Filter mit „Ohne Partner“; Ansicht mit Schrittfolge des Status, Geplant/Ist/Verfügbar, Angaben und den Rechnungen auf dem Posten; Feld „Betrag (Brutto)“, bei einmaligen Posten heißt das Jahr „<Geschäftsjahr>“ statt „Ab <Geschäftsjahr>“
+- **Farben nach der Designrichtlinie:** „offen“ orange, „Rechnung liegt vor“ blau, „abgeschlossen“ grün
+- **Rechnungen:** Suche, Filter Zu prüfen/Gebucht/Alle, Rechnungssteller und Konto; Ansicht mit Positionen, Beleg und Aktionen; in der Maske zuerst der Rechnungssteller, seine Posten stehen oben in der Auswahl
+- **Verträge:** Kennzahlen (laufend, Soll, Ist, AVV fehlt), Filter Laufend, Kündigung bald, Gekündigt, AVV fehlt, Alle sowie Partner und Turnus; Maske mit Turnus zuerst und passend benanntem Betragsfeld. **Monatsposten anlegen:** `POST /api/budget/contracts/{id}/monthly-items` legt für einen monatlichen Vertrag je fälliger Zahlung im Geschäftsjahr einen Posten an (Partner und Bruttobetrag aus dem Vertrag, dem Vertrag zugeordnet, vorhandene Monate übersprungen), Audit `budget.monatsposten_angelegt`. Neue Rechenhilfe `due_dates` (Fälligkeiten im Zeitraum), `expected_cents` nutzt sie
+- **Übersicht:** „Zu erledigen“ mit Sprung in die Liste, Kennzahlen Geplant, Ist, Verfügbar, Budgetposten; Budget nach Konten getrennt nach laufenden Kosten und Investitionen mit Auslastung; Kündigungstermine und „Zuletzt gebucht“. Prognose entfällt in der Übersicht
+
+### Alle Bereiche
+
+- **Filter über Listen als gemeinsame Komponente** `components/FilterBar.tsx`: am Computer und Tablet Suche, beschriftete Filter und Status-Chips mit Anzahl („Offen · 3“) in einer Zeile, „Filter aufheben“; am Handy Status als Auswahl und „Weitere Filter“ in einem Blatt von unten (modal, „Zurücksetzen“, „Fertig“). Umgestellt: Vorgänge, Verleih, Hardware, Arbeitsplätze, Evergreen, IT-Projekte, M365-Änderungen und -Empfehlungen, Zertifikate und Secrets, DNS-Abgleich, Gerätezuordnung, Import-Vorgänge und Import-Zeilen. `ListSearch` entfällt
+- **Listen am Handy als Karten:** `table-cards` deutlicher (Rahmen, Abstand, Schatten, Gruppen und Summen), dazu Partner, Konten, Import-Vorgänge, Projekte, Lizenzen, Zertifikate, DNS-Einträge, Snapshots, Audit-Log, Rollen und Personen; Tabellen mit Ansicht rechts (`case-table`) und Listen mit Ansicht (`case-item`) unter 1024 px als Karten
+- Gemeinsame Bausteine `FormStep` (Masken in Abschnitten) und `segmented` (Knopfleiste mit `aria-pressed`), sortierbare Spaltenköpfe `th-sort`
+- `docs/design.md`: Filterzeile, Karten am Handy, Masken in Abschnitten, Tabelle mit Ansicht rechts auch im IT-Budget, Statusfarben; `docs/spec.md`, `docs/a11y-wcag22.md`, `docs/security/asvs-l2.md` und Handbuch angepasst
+
 ## [0.81.0] – 2026-11-21
 
 ### IT-Budget

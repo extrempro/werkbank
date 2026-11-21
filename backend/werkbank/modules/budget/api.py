@@ -18,6 +18,7 @@ from werkbank.db import Base
 from werkbank.modules.budget.contracts import (
     INTERVALS,
     NOTICE_WARN_DAYS,
+    due_dates,
     expected_cents,
     gross_cents,
     is_running,
@@ -45,6 +46,7 @@ from werkbank.modules.budget.models import (
     BudgetStatistic,
     BudgetTag,
 )
+from werkbank.modules.budget.numbers import assign_item_number, item_number
 from werkbank.modules.budget.plan import (
     ITEM_CLOSED,
     ITEM_INVOICED,
@@ -170,6 +172,8 @@ class AccountIn(BaseModel):
 
 class ItemOut(BaseModel):
     id: int
+    # Feste Nummer, z. B. BP-2026-012
+    number: str
     account_id: int
     account_number: str
     account_name: str
@@ -458,6 +462,7 @@ def item_out(
     account = accounts.get(row.account_id)
     return ItemOut(
         id=row.id,
+        number=item_number(row.number_year, row.number_seq),
         account_id=row.account_id,
         account_number=account.number if account else "",
         account_name=account.name if account else "",
@@ -818,6 +823,7 @@ def create_item(request: Request, body: ItemIn, user: Editor, db: DbDep) -> Item
     _check_item(db, body, None)
     row = BudgetItem(tags=_listed_tags(db, body.tags), project_id=body.project_id)
     _apply_item(db, row, body)
+    assign_item_number(db, row)
     db.add(row)
     db.flush()
     _set_item_contract(db, row.id, body.contract_id)
@@ -1089,6 +1095,7 @@ DATE_MAX = date(YEAR_MAX, 12, 31)
 
 class ContractItemOut(BaseModel):
     id: int
+    number: str
     name: str
     account_number: str
     account_name: str
@@ -1221,6 +1228,7 @@ def contract_out(
         linked.append(
             ContractItemOut(
                 id=item.id,
+                number=item_number(item.number_year, item.number_seq),
                 name=item.name,
                 account_number=account.number if account else "",
                 account_name=account.name if account else "",
@@ -1481,6 +1489,117 @@ def update_contract(
     return _one_contract(db, row)
 
 
+MONTH_NAMES = (
+    "Januar",
+    "Februar",
+    "März",
+    "April",
+    "Mai",
+    "Juni",
+    "Juli",
+    "August",
+    "September",
+    "Oktober",
+    "November",
+    "Dezember",
+)
+
+
+class MonthlyItemsIn(BaseModel):
+    # Geschäftsjahr, für das je fälliger Zahlung ein Posten entsteht
+    year: int = Field(ge=YEAR_MIN, le=YEAR_MAX)
+    account_id: int = Field(ge=1)
+
+
+class MonthlyItemsOut(BaseModel):
+    created: list[ItemOut]
+    # Monate, für die es im Konto schon einen Posten mit diesem Namen gibt
+    skipped: int
+
+
+def _monthly_name(title: str, due: date) -> str:
+    return f"{title[:140]} {MONTH_NAMES[due.month - 1]} {due.year}"
+
+
+@router.post("/contracts/{contract_id}/monthly-items", status_code=status.HTTP_201_CREATED)
+def create_monthly_items(
+    request: Request, contract_id: ContractId, body: MonthlyItemsIn, user: Editor, db: DbDep
+) -> MonthlyItemsOut:
+    """Legt für einen monatlichen Vertrag je fälliger Zahlung im Geschäftsjahr einen Posten an.
+
+    Partner und Betrag kommen aus dem Vertrag, die Posten werden ihm zugeordnet. Gibt es im
+    Konto schon einen Posten mit demselben Namen, entsteht für diesen Monat keiner.
+    """
+    row: BudgetContract | None = db.get(BudgetContract, contract_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    if row.interval != "monatlich":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Monatsposten gibt es nur für Verträge mit monatlicher Zahlung.",
+        )
+    account: BudgetAccount | None = db.get(BudgetAccount, body.account_id)
+    if account is None or not account.active:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Das Konto gibt es nicht oder es ist stillgelegt.",
+        )
+    first, last = fiscal_year_range(body.year, load_settings(db).start_month)
+    days = due_dates(row, first, last)
+    if not days:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="In diesem Geschäftsjahr ist aus dem Vertrag keine Zahlung fällig.",
+        )
+    taken = {
+        name.casefold()
+        for name in db.scalars(select(BudgetItem.name).where(BudgetItem.account_id == account.id))
+    }
+    partner = db.get(BudgetPartner, row.partner_id)
+    created: list[BudgetItem] = []
+    skipped = 0
+    for due in days:
+        name = _monthly_name(row.title, due)
+        if name.casefold() in taken:
+            skipped += 1
+            continue
+        item = BudgetItem(
+            account_id=account.id,
+            partner_id=row.partner_id,
+            partner=partner,
+            name=name,
+            amount_cents=row.amount_cents,
+            start_year=body.year,
+            end_year=body.year,
+            note=f"Monatsposten aus dem Vertrag {row.title}"[:500],
+            tags=[],
+            active=True,
+        )
+        assign_item_number(db, item)
+        db.add(item)
+        db.flush()
+        db.add(BudgetContractItem(contract_id=row.id, item_id=item.id))
+        taken.add(name.casefold())
+        created.append(item)
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.monatsposten_angelegt",
+        user_id=user.user_id,
+        object_type="vertrag",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={
+            "year": body.year,
+            "account_id": account.id,
+            "item_ids": [item.id for item in created],
+            "skipped": skipped,
+        },
+    )
+    db.commit()
+    return MonthlyItemsOut(created=[_one_item(db, item) for item in created], skipped=skipped)
+
+
 # --- Rechnungen ---
 
 InvoiceId = Annotated[int, Path(ge=1)]
@@ -1489,6 +1608,8 @@ InvoiceId = Annotated[int, Path(ge=1)]
 class InvoiceLineOut(BaseModel):
     id: int
     item_id: int
+    # Feste Nummer des Budgetpostens, z. B. BP-2026-012
+    item_number: str
     item_name: str
     account_number: str
     account_name: str
@@ -1603,6 +1724,7 @@ def _invoice_rows(db: DbDep, rows: list[BudgetInvoice]) -> list[InvoiceOut]:
         return InvoiceLineOut(
             id=line.id,
             item_id=line.item_id,
+            item_number=item_number(item.number_year, item.number_seq) if item else "",
             item_name=item.name if item else "",
             account_number=account.number if account else "",
             account_name=account.name if account else "",

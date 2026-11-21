@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from "react";
+import { FilterBar } from "../../components/FilterBar";
 import { errorText, formatDateTime } from "../../api";
 import { Link } from "../../components/Link";
 import { navigate } from "../../router";
@@ -294,26 +295,20 @@ export function ImportsPage() {
       <section className="panel" aria-labelledby="import-vorgaenge">
         <div className="panel-head">
           <h2 id="import-vorgaenge">Vorgänge</h2>
-          <div className="chips" role="group" aria-label="Stand">
-            {(
-              [
-                ["arbeit", "In Arbeit"],
-                ["fertig", "Abgeschlossen"],
-                ["alle", "Alle"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className="chip chip-filter"
-                aria-pressed={view === id}
-                onClick={() => setView(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
+        <FilterBar
+          plain
+          status={{
+            label: "Stand",
+            value: view,
+            onChange: setView,
+            options: [
+              { value: "arbeit", label: "In Arbeit" },
+              { value: "fertig", label: "Abgeschlossen" },
+              { value: "alle", label: "Alle" },
+            ],
+          }}
+        />
         {failed && (
           <p role="alert" className="detail-body">
             Die Vorgänge konnten nicht geladen werden.
@@ -328,8 +323,13 @@ export function ImportsPage() {
           <p className="detail-body small">Keine Vorgänge für diese Auswahl.</p>
         )}
         {shown.length > 0 && (
-          <div className="table-wrap" tabIndex={0} role="region" aria-label="Import-Vorgänge">
-            <table>
+          <div
+            className="table-wrap card-wrap"
+            tabIndex={0}
+            role="region"
+            aria-label="Import-Vorgänge"
+          >
+            <table className="table-cards">
               <caption className="visually-hidden">Vorgänge aus Excel-Dateien</caption>
               <thead>
                 <tr>
@@ -353,17 +353,17 @@ export function ImportsPage() {
                         {entry.created_by ? ` von ${entry.created_by}` : ""}
                       </span>
                     </th>
-                    <td>{entry.year_name}</td>
-                    <td>
+                    <td data-label="Geschäftsjahr">{entry.year_name}</td>
+                    <td data-label="Stand">
                       <span className={PILLS[entry.status]}>
                         {IMPORT_STATUS_LABELS[entry.status]}
                       </span>
                     </td>
-                    <td>{entry.rows}</td>
-                    <td>{entry.open}</td>
-                    <td>{entry.taken}</td>
-                    <td>{entry.skipped}</td>
-                    <td>
+                    <td data-label="Zeilen">{entry.rows}</td>
+                    <td data-label="Offen">{entry.open}</td>
+                    <td data-label="Übernommen">{entry.taken}</td>
+                    <td data-label="Übersprungen">{entry.skipped}</td>
+                    <td data-label="Fortschritt">
                       <span
                         className="import-progress"
                         role="img"

@@ -97,7 +97,7 @@ describe("EntriesPage", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Microsoft 365" })).toBeVisible();
     const table = await screen.findByRole("table", { name: "Einträge Microsoft 365" });
     expect(screen.getByText("1 offen, davon 1 neu")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Neu (1)" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Neu · 1" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Neuer Eintrag" })).toBeNull();
     expect(calls[0]?.url).toContain("software=m365");
     expect(calls[0]?.url).toContain("state=offen");

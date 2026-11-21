@@ -58,6 +58,8 @@ export interface OverviewRow {
 /** Ein Budgetposten: ein Vorhaben mit erwarteten Kosten je Geschäftsjahr und Laufzeit. */
 export interface Item {
   id: number;
+  /** Feste Nummer, z. B. BP-2026-012. */
+  number: string;
   account_id: number;
   account_number: string;
   account_name: string;
@@ -309,6 +311,7 @@ export interface ContractUpdate {
 
 export interface ContractItem {
   id: number;
+  number: string;
   name: string;
   account_number: string;
   account_name: string;
@@ -372,6 +375,24 @@ export function createPartner(update: PartnerUpdate): Promise<Partner> {
 
 export function updatePartner(id: number, update: PartnerUpdate): Promise<Partner> {
   return putJson<Partner>(`/api/budget/partners/${id}`, update);
+}
+
+export interface MonthlyItemsResult {
+  created: Item[];
+  /** Monate, für die es im Konto schon einen Posten mit diesem Namen gibt. */
+  skipped: number;
+}
+
+/** Legt für einen monatlichen Vertrag je fälliger Zahlung im Geschäftsjahr einen Posten an. */
+export function createMonthlyItems(
+  contractId: number,
+  year: number,
+  accountId: number,
+): Promise<MonthlyItemsResult> {
+  return postJson<MonthlyItemsResult>(`/api/budget/contracts/${contractId}/monthly-items`, {
+    year,
+    account_id: accountId,
+  });
 }
 
 export function fetchContracts(year?: number | null): Promise<ContractList> {
@@ -502,6 +523,8 @@ export interface InvoiceLineUpdate {
 export interface InvoiceLine extends Omit<InvoiceLineUpdate, "gross_cents"> {
   id: number;
   gross_cents: number;
+  /** Feste Nummer des Budgetpostens. */
+  item_number: string;
   item_name: string;
   account_number: string;
   account_name: string;
@@ -808,6 +831,7 @@ export function itemMatches(item: Item, search: string): boolean {
     return true;
   }
   return [
+    item.number,
     item.name,
     item.note,
     item.account_number,

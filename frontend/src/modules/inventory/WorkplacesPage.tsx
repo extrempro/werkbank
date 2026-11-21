@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { FilterBar } from "../../components/FilterBar";
 import { Link } from "../../components/Link";
 import { INVENTORY_MASTER_PATH, INVENTORY_WORKPLACES_PATH } from "../../navigation";
 import { navigate } from "../../router";
@@ -439,20 +440,16 @@ export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
       <section className="panel" aria-labelledby="plaetze-liste">
         <div className="panel-head">
           <h2 id="plaetze-liste">Alle Arbeitsplätze</h2>
-          <div className="chips" role="group" aria-label="Filter">
-            {WORKPLACE_FILTERS.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                className="chip chip-filter"
-                aria-pressed={filter === entry.id}
-                onClick={() => setFilter(entry.id)}
-              >
-                {entry.label}
-              </button>
-            ))}
-          </div>
         </div>
+        <FilterBar
+          plain
+          status={{
+            label: "Filter",
+            value: filter,
+            onChange: setFilter,
+            options: WORKPLACE_FILTERS.map((entry) => ({ value: entry.id, label: entry.label })),
+          }}
+        />
         <div className="detail-body">
           {!failed && !list && <p role="status">Wird geladen …</p>}
           {list && (

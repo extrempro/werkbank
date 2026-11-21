@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { FilterBar } from "../../components/FilterBar";
 import { Link } from "../../components/Link";
 import { navigate } from "../../router";
 import { formatEuro } from "../budget/api";
@@ -188,31 +189,18 @@ export function ProjectsPage({ roles }: { roles: readonly string[] }) {
         <section className="panel" aria-labelledby="projekte-liste">
           <div className="panel-head">
             <h2 id="projekte-liste">Projekte</h2>
-            <div className="chips" role="group" aria-label="Status">
-              {VIEWS.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  className="chip chip-filter"
-                  aria-pressed={view === entry.id}
-                  onClick={() => setView(entry.id)}
-                >
-                  {entry.label}
-                </button>
-              ))}
-            </div>
           </div>
+          <FilterBar
+            plain
+            search={{ label: "Projekte suchen", value: query, onChange: setQuery }}
+            status={{
+              label: "Status",
+              value: view,
+              onChange: setView,
+              options: VIEWS.map((entry) => ({ value: entry.id, label: entry.label })),
+            }}
+          />
           <div className="detail-body settings-form">
-            <label className="narrow">
-              Projekte suchen
-              <input
-                type="search"
-                value={query}
-                maxLength={100}
-                autoComplete="off"
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </label>
             <p className="small" role="status">
               {shown.length === 0
                 ? "Keine Projekte für diese Auswahl."
@@ -220,8 +208,13 @@ export function ProjectsPage({ roles }: { roles: readonly string[] }) {
             </p>
           </div>
           {shown.length > 0 && (
-            <div className="table-wrap" tabIndex={0} role="region" aria-label="Projektliste">
-              <table>
+            <div
+              className="table-wrap card-wrap"
+              tabIndex={0}
+              role="region"
+              aria-label="Projektliste"
+            >
+              <table className="table-cards">
                 <caption className="visually-hidden">Projekte mit Budget und Stand</caption>
                 <thead>
                   <tr>
@@ -249,16 +242,22 @@ export function ProjectsPage({ roles }: { roles: readonly string[] }) {
                           <span className="small tenant-part">{project.description}</span>
                         )}
                       </th>
-                      <td>
+                      <td data-label="Status">
                         <span className={STATUS_PILLS[project.status]}>
                           {STATUS_LABELS[project.status]}
                         </span>
                       </td>
-                      <td className="betrag">{money(project.budget.budget_cents)}</td>
-                      <td className="betrag">{formatEuro(project.budget.planned_cents)}</td>
-                      <td className="betrag">{formatEuro(project.budget.actual_cents)}</td>
-                      <td>{project.open_tasks}</td>
-                      <td>{formatDay(project.last_meeting_on)}</td>
+                      <td className="betrag" data-label="Veranschlagt">
+                        {money(project.budget.budget_cents)}
+                      </td>
+                      <td className="betrag" data-label="Geplant">
+                        {formatEuro(project.budget.planned_cents)}
+                      </td>
+                      <td className="betrag" data-label="Ist">
+                        {formatEuro(project.budget.actual_cents)}
+                      </td>
+                      <td data-label="Offene Punkte">{project.open_tasks}</td>
+                      <td data-label="Letzter Jour Fixe">{formatDay(project.last_meeting_on)}</td>
                     </tr>
                   ))}
                 </tbody>

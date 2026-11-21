@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { errorText } from "../../api";
 import { PAGE_SIZE } from "./api";
 
@@ -112,35 +112,6 @@ export function usePagedList<T, S>(
     loadingMore,
     more,
   };
-}
-
-/** Suchfeld über einer Liste; die Suche läuft auf dem Server. */
-export function ListSearch({
-  value,
-  onChange,
-  label,
-  placeholder,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  label: string;
-  placeholder: string;
-}) {
-  const id = useId();
-  return (
-    <div className="list-search">
-      <label htmlFor={id}>{label}</label>
-      <input
-        id={id}
-        type="search"
-        value={value}
-        maxLength={100}
-        placeholder={placeholder}
-        autoComplete="off"
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </div>
-  );
 }
 
 /** „50 von 312“ und „Mehr anzeigen“ unter einer Liste. */

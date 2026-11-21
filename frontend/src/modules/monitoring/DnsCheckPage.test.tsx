@@ -82,7 +82,7 @@ describe("DnsCheckPage", () => {
     expect(screen.getByText("kunde.example.com")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Jetzt prüfen" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Alle (2)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Alle · 2" }));
     expect(screen.getByText("www.example.com")).toBeVisible();
   });
 
@@ -92,21 +92,21 @@ describe("DnsCheckPage", () => {
     const ok = await screen.findByRole("button", { name: /^In Ordnung 1$/ });
     fireEvent.click(ok);
     expect(ok).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "In Ordnung (1)" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "In Ordnung · 1" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
     expect(screen.getByText("www.example.com")).toBeVisible();
     expect(screen.queryByText("mail.example.com")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Abweichend (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Abweichend · 1" }));
     expect(screen.getByText("mail.example.com")).toBeVisible();
     expect(screen.queryByText("www.example.com")).toBeNull();
     expect(screen.getByRole("button", { name: /^Abweichend 1$/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Fehler (0)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Fehler · 0" }));
     expect(screen.getByText("Keine Einträge für diese Auswahl.")).toBeVisible();
     // Zone als Überschrift über ihrer Tabelle
     fireEvent.click(screen.getByRole("button", { name: /^Geprüft 2/ }));
@@ -117,7 +117,7 @@ describe("DnsCheckPage", () => {
     window.history.replaceState(null, "", "/monitoring/dns?ansicht=neu");
     stubFetch(overview);
     render(<DnsCheckPage isAdmin />);
-    expect(await screen.findByRole("button", { name: "Neu (1)" })).toHaveAttribute(
+    expect(await screen.findByRole("button", { name: "Neu · 1" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );

@@ -127,8 +127,13 @@ export function AuditPage() {
         <p className="empty">Keine Einträge für diese Auswahl.</p>
       )}
       {entries.length > 0 && (
-        <div className="table-wrap" tabIndex={0} role="region" aria-label="Audit-Einträge">
-          <table>
+        <div
+          className="table-wrap card-wrap"
+          tabIndex={0}
+          role="region"
+          aria-label="Audit-Einträge"
+        >
+          <table className="table-cards">
             <caption className="visually-hidden">Audit-Einträge, neueste zuerst</caption>
             <thead>
               <tr>
@@ -144,13 +149,21 @@ export function AuditPage() {
             <tbody>
               {entries.map((entry) => (
                 <tr key={entry.id}>
-                  <td className="nowrap">{formatDateTime(entry.occurred_at)}</td>
-                  <td>{entry.user ?? "–"}</td>
-                  <td>{entry.module}</td>
-                  <td className="mono">{entry.action}</td>
-                  <td>{entry.result}</td>
-                  <td className="mono nowrap">{entry.origin ?? "–"}</td>
-                  <td className="details">{describeDetails(entry.details)}</td>
+                  <td className="nowrap" data-label="Zeitpunkt">
+                    {formatDateTime(entry.occurred_at)}
+                  </td>
+                  <td data-label="Person">{entry.user ?? "–"}</td>
+                  <td data-label="Modul">{entry.module}</td>
+                  <td className="mono" data-label="Aktion">
+                    {entry.action}
+                  </td>
+                  <td data-label="Ergebnis">{entry.result}</td>
+                  <td className="mono nowrap" data-label="Herkunft">
+                    {entry.origin ?? "–"}
+                  </td>
+                  <td className="details" data-label="Details">
+                    {describeDetails(entry.details)}
+                  </td>
                 </tr>
               ))}
             </tbody>

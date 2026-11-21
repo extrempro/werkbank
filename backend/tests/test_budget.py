@@ -17,6 +17,7 @@ from werkbank.core.models import AppSetting, AuditLog
 from werkbank.core.sessions import now_utc
 from werkbank.modules.budget.contracts import (
     add_months,
+    due_dates,
     expected_cents,
     gross_cents,
     is_running,
@@ -435,6 +436,17 @@ def test_expected_costs_follow_interval_and_term() -> None:
     assert expected_cents(contract(**ending, renewal_months=12), *year) == 1200
     cancelled = contract(**ending, renewal_months=12, cancelled_to=date(2026, 9, 30))
     assert expected_cents(cancelled, *year) == 200
+
+
+def test_due_dates_list_each_payment_in_the_year() -> None:
+    year = (date(2026, 8, 1), date(2027, 7, 31))
+    monthly = due_dates(contract(starts_on=date(2026, 10, 15)), *year)
+    assert monthly[0] == date(2026, 10, 15)
+    assert monthly[-1] == date(2027, 7, 15)
+    assert len(monthly) == 10
+    cancelled = contract(ends_on=date(2026, 12, 31), cancelled_to=date(2026, 9, 30))
+    assert due_dates(cancelled, *year) == [date(2026, 8, 31), date(2026, 9, 30)]
+    assert due_dates(contract(starts_on=date(2028, 1, 1)), *year) == []
 
 
 def test_gross_is_rounded_commercially() -> None:
@@ -1445,9 +1457,12 @@ def test_tags_statistics_and_search(db: Session) -> None:
 
     found = hits(reader, "projekt")
     assert [(hit["kind"], hit["title"], hit["link"]) for hit in found] == [
-        ("Budgetposten", "Datensicherung", "/budget/posten?suche=Datensicherung")
+        ("Budgetposten", "Datensicherung", "/budget/posten?suche=BP-2026-002")
     ]
     assert "Tags: Cloud, Projekt" in found[0]["subtitle"]
+    assert found[0]["subtitle"].startswith("BP-2026-002 · ")
+    # auch über die Nummer
+    assert [hit["title"] for hit in hits(reader, "bp-2026-002")] == ["Datensicherung"]
     assert [hit["title"] for hit in hits(reader, "office")] == ["Office-Lizenzen"]
     assert hits(reader, "%%") == []
     assert hits(stranger, "projekt") == []
@@ -1759,3 +1774,117 @@ def test_items_have_a_partner(db: Session) -> None:
     moved = db.get(BudgetItem, item["id"])
     db.refresh(moved)
     assert moved is not None and moved.partner_id == first["id"]
+
+
+@pytest.mark.db
+def test_items_get_a_fixed_number_per_year(db: Session) -> None:
+    editor = client_for(["Budget.Editor"], "posten-nummern")
+    account = editor.post(
+        f"{BASE}/accounts",
+        json={"number": "6815", "name": "Softwarewartung", "kind": "laufend"},
+        headers=HEADERS,
+    ).json()
+    year = editor.get(f"{BASE}/settings").json()["current_year"]
+
+    def create(name: str, start: int) -> dict[str, Any]:
+        response = post(
+            editor, "/items", {"account_id": account["id"], "name": name, "start_year": start}
+        )
+        assert response.status_code == 201, response.text
+        result: dict[str, Any] = response.json()
+        return result
+
+    first = create("Eins", year)
+    second = create("Zwei", year)
+    later = create("Drei", year + 1)
+    assert [first["number"], second["number"], later["number"]] == [
+        f"BP-{year}-001",
+        f"BP-{year}-002",
+        f"BP-{year + 1}-001",
+    ]
+    # Die Nummer bleibt, auch wenn sich der Beginn ändert.
+    moved = put(
+        editor,
+        f"/items/{first['id']}",
+        {"account_id": account["id"], "name": "Eins", "start_year": year + 1},
+    )
+    assert moved.json()["number"] == f"BP-{year}-001"
+    assert create("Vier", year + 1)["number"] == f"BP-{year + 1}-002"
+    listed = {entry["name"]: entry["number"] for entry in editor.get(f"{BASE}/items").json()}
+    assert listed["Zwei"] == f"BP-{year}-002"
+
+
+@pytest.mark.db
+def test_monthly_contracts_create_one_item_per_payment(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "monatsposten")
+    account = manager.post(
+        f"{BASE}/accounts",
+        json={"number": "6820", "name": "Mobilfunk", "kind": "laufend"},
+        headers=HEADERS,
+    ).json()
+    partner = manager.post(
+        f"{BASE}/partners", json={"name": "Beispiel Mobil GmbH"}, headers=HEADERS
+    ).json()
+    settings = manager.get(f"{BASE}/settings").json()
+    year = settings["current_year"]
+    body = {
+        "title": "Mobilfunk",
+        "partner_id": partner["id"],
+        "starts_on": f"{year - 1}-01-10",
+        "ends_on": f"{year + 3}-01-09",
+        "net_cents": 10_000,
+        "tax_rate_bp": 1900,
+        "interval": "monatlich",
+    }
+    created = manager.post(f"{BASE}/contracts", json=body, headers=HEADERS).json()
+    path = f"{BASE}/contracts/{created['id']}/monthly-items"
+    request = {"year": year, "account_id": account["id"]}
+    reader = client_for(["Budget.Reader"], "monatsposten-leser")
+    assert reader.post(path, json=request, headers=HEADERS).status_code == 403
+
+    response = manager.post(path, json=request, headers=HEADERS)
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert result["skipped"] == 0
+    assert len(result["created"]) == 12
+    first = result["created"][0]
+    assert (first["partner_name"], first["amount_cents"]) == ("Beispiel Mobil GmbH", 11_900)
+    assert (first["start_year"], first["end_year"]) == (year, year)
+    assert first["contract_id"] == created["id"]
+    assert first["name"].startswith("Mobilfunk ")
+    assert first["number"].startswith(f"BP-{year}-")
+    linked = manager.get(f"{BASE}/contracts", params={"year": year}).json()["entries"]
+    assert len(linked[0]["items"]) == 12
+
+    # Zweiter Aufruf legt nichts doppelt an.
+    again = manager.post(path, json=request, headers=HEADERS).json()
+    assert (again["created"], again["skipped"]) == ([], 12)
+
+    # Nur monatliche Verträge, nur bekannte Konten, nur Jahre mit Zahlungen
+    yearly = manager.post(
+        f"{BASE}/contracts",
+        json={**body, "title": "Jährlich", "interval": "jaehrlich"},
+        headers=HEADERS,
+    ).json()
+    assert (
+        manager.post(
+            f"{BASE}/contracts/{yearly['id']}/monthly-items", json=request, headers=HEADERS
+        ).status_code
+        == 422
+    )
+    assert (
+        manager.post(path, json={**request, "account_id": 999_999}, headers=HEADERS).status_code
+        == 422
+    )
+    assert (
+        manager.post(path, json={**request, "year": year - 3}, headers=HEADERS).status_code == 422
+    )
+    assert (
+        manager.post(
+            f"{BASE}/contracts/999999/monthly-items", json=request, headers=HEADERS
+        ).status_code
+        == 404
+    )
+    assert db.scalars(
+        select(AuditLog.action).where(AuditLog.action == "budget.monatsposten_angelegt")
+    ).all() == ["budget.monatsposten_angelegt", "budget.monatsposten_angelegt"]
