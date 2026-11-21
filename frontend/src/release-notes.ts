@@ -36,6 +36,12 @@ export const RELEASES: readonly Release[] = [
           "Die Werkbank verfolgt jedes Gerät bis zur Registrierung in Intune und meldet sich in der Glocke, wenn es zugeordnet und registriert ist. Bei Fehlern steht dabei, was zu tun ist, und die Request-ID für den Support von Microsoft.",
         ],
       },
+      {
+        area: "IT-Tools",
+        entries: [
+          "CSR erzeugen: Der angezeigte OpenSSL-Befehl stimmt jetzt auch, wenn im Namen ein Backslash oder ein Plus vorkommt.",
+        ],
+      },
     ],
   },
   {

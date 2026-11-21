@@ -20,6 +20,8 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 ### Sicherheit
 
 - CSP `script-src 'self' 'wasm-unsafe-eval'` für die QR-Erkennung, `Permissions-Policy` `camera=(self)`
+- IT-Tools › CSR: Der angezeigte OpenSSL-Befehl maskiert im Betreff jetzt auch Backslash und Plus, nicht nur den Schrägstrich (CodeQL-Meldung „Incomplete string escaping“)
+- IT-Budget › Excel-Export: In XML verbotene Zeichen U+FFFE und U+FFFF stehen im regulären Ausdruck jetzt als Escape statt unsichtbar im Quelltext (CodeQL-Meldung „Overly permissive regular expression range“, Wirkung unverändert)
 
 ### Dokumentation
 

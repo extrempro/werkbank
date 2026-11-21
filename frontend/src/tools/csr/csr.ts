@@ -219,7 +219,9 @@ export async function createCsr(o: CsrOptions): Promise<CsrResult> {
 export function opensslCommand(o: CsrOptions): string {
   const subj = (["C", "ST", "L", "O", "OU", "CN"] as (keyof Subject)[])
     .filter((k) => o.subject[k]?.trim())
-    .map((k) => `/${k}=${o.subject[k]!.trim().replace(/\//g, "\\/")}`)
+    // Für -subj von OpenSSL: zuerst den Backslash selbst, dann Trenner (/ zwischen den Teilen,
+    // + zwischen mehreren Werten eines Teils) mit Backslash maskieren
+    .map((k) => `/${k}=${o.subject[k]!.trim().replace(/[\\/+]/g, "\\$&")}`)
     .join("");
   const sans = parseSans(o.sans);
   const san = [

@@ -1139,7 +1139,7 @@ def test_workbook_writes_text_safely() -> None:
     content = workbook(
         [
             Sheet("Blatt: eins/zwei", [["Name", "Betrag"], ["=SUMME(A1)", Money(123_45)]]),
-            Sheet("Blatt: eins/zwei", [["<b>&\x01"]]),
+            Sheet("Blatt: eins/zwei", [["<b>&\x01\ufffe\uffffü\t"]]),
         ]
     )
     with zipfile.ZipFile(io.BytesIO(content)) as archive:
@@ -1150,6 +1150,8 @@ def test_workbook_writes_text_safely() -> None:
     assert 't="inlineStr"' in first and "<f>" not in first
     assert "=SUMME(A1)" in first and "<v>123.45</v>" in first
     assert "&lt;b&gt;&amp;" in second and "\x01" not in second
+    # In XML verbotene Zeichen fallen weg, erlaubte (Umlaut, Tabulator) bleiben
+    assert "\ufffe" not in second and "\uffff" not in second and "ü\t" in second
     # Blattnamen ohne verbotene Zeichen und eindeutig
     assert 'name="Blatt- eins-zwei"' in names and 'name="Blatt- eins-zwei (2)"' in names
 

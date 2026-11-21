@@ -14,7 +14,7 @@ from xml.sax.saxutils import escape
 XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 # Zeichen, die in XML 1.0 nicht vorkommen dürfen
-_INVALID = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f￾￿]")
+_INVALID = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]")
 # Excel erlaubt in Blattnamen höchstens 31 Zeichen und keines von diesen
 _SHEET_FORBIDDEN = re.compile(r"[\[\]:*?/\\]")
 # Excel zählt Tage ab dem 30.12.1899
