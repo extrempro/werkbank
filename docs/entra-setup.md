@@ -117,6 +117,7 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Projekte Leser | `Projekte.Reader` | IT-Projekte ansehen: Übersicht, Budget, Jour Fixe und Aufgaben |
 | Projekte Bearbeiter | `Projekte.Editor` | IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe mit Anhängen und Aufgaben |
 | IT-Bestand Leser | `Bestand.Reader` | IT-Bestand ansehen: Hardware, Stellen, Arbeitsplätze, Standorte und Stammdaten |
+| Gerätezuordnung | `Geraete.Zuordnung` | Neue Windows-Geräte per QR-Code scannen, zur Freigabe senden, mit Admin-Konto freigeben, verwerfen (Kapitel 4a) |
 | IT-Bestand Bearbeiter | `Bestand.Editor` | IT-Bestand pflegen: Hardware erfassen, Inventurnummern setzen, ausmustern, Stellen besetzen (Personensuche in Entra), Arbeitsplätze, Standorte, Stammdaten |
 
 Für alle Rollen gilt:
@@ -154,6 +155,7 @@ Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wä
 | `GG-Werkbank-Bestand-Lesen` | Bestand.Reader |
 | `GG-Werkbank-Bestand` | Bestand.Editor |
 | `GG-Werkbank-Budget-Leser` | Budget.Reader |
+| `GG-Werkbank-Geraete` | Geraete.Zuordnung |
 
 Dann: Unternehmensanwendungen → Werkbank → **Benutzer und Gruppen → Benutzer/Gruppe hinzufügen** → Gruppe wählen → Rolle wählen → **Zuweisen**. Für jede Gruppe wiederholen.
 
@@ -389,6 +391,54 @@ Hinweise:
 - Snapshots werden von Microsoft höchstens 7 Tage aufbewahrt; den Verlauf hält die Werkbank selbst
 - Voraussetzung laut Microsoft: Microsoft 365 E3 oder Entra ID P1
 
+## 4a. Gerätezuordnung (freiwillig)
+
+Für die Seite „Gerätezuordnung“ (Microsoft 365 › Geräte). Neue Windows-Geräte werden per QR-Code aus der Einrichtung dem Tenant zugeordnet (Windows Autopilot Device Preparation). Grundsätze:
+
+- **Schreiben nur mit einem Admin-Konto, delegiert:** Die Person meldet sich in der Werkbank zusätzlich mit ihrem Admin-Konto an. Die Werkbank-App bekommt dafür delegierte Berechtigungen, **keine** Anwendungsberechtigung mit Schreibrecht.
+- **Lesen im Hintergrund mit der Collector-App:** nur Leserechte, damit der Status ohne Admin-Konto weiterläuft.
+
+### 4a.1 Werkbank-App (Anmeldung mit dem Admin-Konto)
+
+1. App-Registrierung „Werkbank“ → **Authentifizierung** → bei der Plattform **Web** eine zweite Umleitungs-URI eintragen: `https://werkbank.example.com/auth/geraete/callback`.
+2. **API-Berechtigungen → Berechtigung hinzufügen → Microsoft Graph → Delegierte Berechtigungen:**
+
+| Berechtigung | Wofür |
+|---|---|
+| `DeviceManagementServiceConfig.ReadWrite.All` | Gerät importieren (`importTenantAssociatedDevice`), Duplikat und Status lesen |
+| `DeviceManagementConfiguration.Read.All` | Device-Preparation-Richtlinien zur Auswahl lesen |
+| `DeviceManagementManagedDevices.Read.All` | Registrierung in Intune prüfen (Gerätename, Konformität) |
+| `User.Read` | Admin-Konto anzeigen (Anmeldename) |
+
+3. **Administratorzustimmung für <Mandant> erteilen.** Ohne Zustimmung scheitert die Anmeldung mit dem Admin-Konto.
+
+4. **Admin-Konten zuweisen:** Mit „Zuweisung erforderlich“ (1.7) lässt Entra nur zugewiesene Konten an die App, auch bei dieser zweiten Anmeldung. Die Admin-Konten daher ebenfalls zuweisen, z. B. eine Gruppe mit den Admin-Konten mit der Rolle `Geraete.Zuordnung`. Die Werkbank wertet die Rollen des Admin-Kontos nicht aus; entscheidend ist die Rolle des angemeldeten Office-Kontos.
+
+Delegiert heißt: Die Werkbank kann nur, was das Admin-Konto selbst in Intune darf. Die Anmeldung muss aus dem eigenen Tenant kommen; die Werkbank hält nur das Zugriffstoken, verschlüsselt und höchstens 60 Minuten, nie ein Aktualisierungstoken. Die Richtlinie für MFA (Kapitel 2) gilt auch für diese Anmeldung, weil sie über dieselbe App läuft.
+
+### 4a.2 Intune-Rolle für die Admin-Konten
+
+Intune Admin Center → **Mandantenverwaltung → Rollen → Alle Rollen → Erstellen**, z. B. `Werkbank Gerätezuordnung`, mit diesen Rechten:
+
+- **Registrierungsprogramme:** Gerät lesen, Gerät erstellen, Gerät löschen
+- **Gerätekonfigurationen:** Zuweisen (Richtlinie beim Import mitgeben)
+- **Verwaltete Geräte:** Lesen
+
+Danach die Rolle den Admin-Konten (oder einer Gruppe mit ihnen) zuweisen, Bereich nach Bedarf. Fehlt die Rolle, meldet die Werkbank „Keine Berechtigung“ und ändert nichts.
+
+### 4a.3 Collector-App (Status im Hintergrund)
+
+1. App-Registrierung „Werkbank Collector“ → **API-Berechtigungen → Microsoft Graph → Anwendungsberechtigungen:** `DeviceManagementServiceConfig.Read.All` und `DeviceManagementManagedDevices.Read.All`, beide nur lesend. **Administratorzustimmung erteilen.**
+2. In der `.env` `DEVICES_MONITOR_ENABLED=true` setzen und die Werkbank neu starten.
+
+Die Werkbank prüft offene Einträge dann alle 5 Minuten, höchstens 7 Tage lang. Ohne diese Einstellung prüft „Alle aktualisieren“ mit dem verbundenen Admin-Konto.
+
+**Bitte im eigenen Tenant prüfen:** Die Schnittstelle `tenantAssociatedDevices` ist bei Microsoft nur in der Beta und nicht dokumentiert. Ob sie mit Anwendungsberechtigungen lesbar ist, zeigt der erste Lauf; bei einem Fehler steht er im Protokoll des Workers, und „Alle aktualisieren“ mit Admin-Konto geht weiterhin.
+
+### 4a.4 Rolle in der Werkbank
+
+App-Rolle `Geraete.Zuordnung` (1.6) einer Gruppe zuweisen (1.8). Das Recht in Intune hängt am Admin-Konto, nicht an der Rolle: Wer die Rolle hat, aber kein berechtigtes Admin-Konto, kann scannen und zur Freigabe senden, aber nicht freigeben.
+
 ---
 
 ## 5. Werte für die Umgebungsvariablen
@@ -421,4 +471,5 @@ Dateien im Secrets-Ordner (Schritt für Schritt: [`deploy/README.md`](../deploy/
 - [ ] App-Registrierung „Werkbank Collector“ mit Zertifikat, Berechtigungen und Administratorzustimmung (4.1)
 - [ ] Dienstprinzipale von UTCM angelegt, Leserechte vergeben (4.2)
 - [ ] Freiwillig: Exchange (4.3), Teams (4.4), SharePoint und OneDrive (4.5), Intune (4.6)
+- [ ] Freiwillig: Gerätezuordnung – Umleitungs-URI, delegierte Berechtigungen, Zustimmung, Intune-Rolle, Leserechte der Collector-App, `DEVICES_MONITOR_ENABLED` (4a)
 - [ ] Werte in den Umgebungsvariablen und Dateien im Secrets-Ordner auf dem Server (5)

@@ -739,6 +739,9 @@ function ScanDialog({ onClose, onDone, onOpenEntry }: ScanDialogProps) {
                       Jetzt freigeben
                     </button>
                   </div>
+                  {!tenantOk && (
+                    <p className="small">Zum Freigeben erst den Ziel-Tenant bestätigen.</p>
+                  )}
                 </>
               ) : (
                 <>
