@@ -18,6 +18,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# Sicherheitsupdates des Basis-Images einspielen; der Image-Scan in der CI prüft das Ergebnis.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system --gid 10001 werkbank \
     && useradd --system --uid 10001 --gid werkbank --no-create-home werkbank
 
@@ -26,14 +31,18 @@ COPY backend/pyproject.toml backend/uv.lock backend/alembic.ini ./
 COPY backend/werkbank ./werkbank
 COPY backend/migrations ./migrations
 # Abhängigkeiten nur aus uv.lock (feste Versionen mit Hashes), danach die Werkbank selbst.
-# uv dient nur zum Auslesen des Lockfiles und wird danach wieder entfernt.
+# uv dient nur zum Auslesen des Lockfiles und wird danach wieder entfernt. Zur Laufzeit braucht
+# die Werkbank auch pip nicht: pip und das ensurepip-Paket kommen raus, mit ihnen die von pip
+# mitgebrachten Bibliotheken (sonst Funde im Image-Scan, die nichts mit der Werkbank zu tun haben).
 RUN pip install uv==0.13.8 \
     && uv export --frozen --no-dev --no-emit-project --format requirements-txt \
         -o /tmp/requirements.txt \
     && pip install --require-hashes --no-deps -r /tmp/requirements.txt \
     && pip install --no-deps . \
     && pip uninstall -y uv \
-    && rm /tmp/requirements.txt
+    && rm /tmp/requirements.txt \
+    && python -m pip uninstall -y pip \
+    && rm -rf /usr/local/lib/python3*/ensurepip /usr/local/bin/pip*
 COPY --from=frontend /build/dist /app/static
 
 # Ablage der PDF-Belege: Ein Volume an dieser Stelle übernimmt beim ersten Anlegen den Besitzer.

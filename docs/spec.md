@@ -801,7 +801,7 @@ Handy (ab 360 px), Tablet, Desktop. Aktuelle Versionen von Edge, Chrome, Firefox
 | Barrierefreiheit | jeder PR | axe-core in Playwright, keine Verstöße „serious/critical“ |
 | Lighthouse | jeder PR | Lighthouse CI: Accessibility ≥ 95, Best Practices ≥ 95, Performance ≥ 85, PWA-Kriterien erfüllt |
 | Docker-Deployment | jeder PR | Image bauen (`backend/Dockerfile`), `docker compose up`, Healthchecks, Smoke-Test; die Compose-Datei für den Betrieb wird geprüft (Image aus der Registry, kein Build) |
-| Container-Scan | jeder PR, wöchentlich | Trivy |
+| Container-Scan | jeder PR, wöchentlich | Trivy: Dateisystem (Abhängigkeiten, Konfiguration, Secrets) und das gebaute Docker-Image; Abbruch bei HIGH/CRITICAL mit verfügbarem Update, begründete Ausnahmen in `.trivyignore`; Trivy auf Version und Digest festgelegt |
 | Statische Analyse | jeder PR, wöchentlich | CodeQL (Python, JavaScript/TypeScript), Semgrep (inkl. XSS-Regeln) |
 | Secrets | jeder Push, wöchentlich | gitleaks |
 | Abhängigkeiten | wöchentlich und jeder PR | Dependabot (wöchentlich), pip-audit und npm audit (jeder PR). Blockierend für npm sind die Pakete der ausgelieferten App (`--omit=dev`); Treffer in Entwicklungs- und Testwerkzeugen erscheinen als Warnung, weil sie nicht ausgeliefert werden und Lücken dort teils noch keine Korrektur haben (entschieden November 2026). Eine automatische Prüfung auf ungenutzte Pakete gibt es noch nicht |
