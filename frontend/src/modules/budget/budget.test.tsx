@@ -1650,19 +1650,130 @@ describe("Tag-Liste in den Einstellungen", () => {
 });
 
 describe("Statistik", () => {
+  const years = [2025, 2026].map((year) => ({ year, name: `${year}/${(year + 1) % 100}` }));
   const statistic = {
     year_label: "Wirtschaftsjahr",
     current_year: 2026,
     tags: ["Cloud"],
     mode: "any",
     years: [
-      { year: 2025, name: "2025/26", expected_cents: 1_000_000, actual_cents: 1_250_000 },
-      { year: 2026, name: "2026/27", expected_cents: 1_190_000, actual_cents: 300_000 },
+      {
+        year: 2025,
+        name: "2025/26",
+        expected_cents: 1_000_000,
+        actual_cents: 1_250_000,
+        actual_to_date_cents: 400_000,
+      },
+      {
+        year: 2026,
+        name: "2026/27",
+        expected_cents: 1_190_000,
+        actual_cents: 300_000,
+        actual_to_date_cents: 300_000,
+      },
     ],
     items: [{ item: office, expected_cents: 2_190_000, actual_cents: 1_550_000 }],
+    per_tag: [
+      {
+        tag: "Cloud",
+        years: [
+          {
+            year: 2025,
+            name: "2025/26",
+            expected_cents: 1_000_000,
+            actual_cents: 1_250_000,
+            actual_to_date_cents: 400_000,
+          },
+          {
+            year: 2026,
+            name: "2026/27",
+            expected_cents: 1_190_000,
+            actual_cents: 300_000,
+            actual_to_date_cents: 300_000,
+          },
+        ],
+      },
+    ],
+  };
+  const monthNames = [
+    "August",
+    "September",
+    "Oktober",
+    "November",
+    "Dezember",
+    "Januar",
+    "Februar",
+    "März",
+    "April",
+    "Mai",
+    "Juni",
+    "Juli",
+  ];
+  const summary = {
+    year_label: "Wirtschaftsjahr",
+    current_year: 2026,
+    year: 2026,
+    year_name: "2026/27",
+    years: [
+      { year: 2027, name: "2027/28" },
+      ...years.slice().reverse(),
+      { year: 2024, name: "2024/25" },
+    ],
+    compare: 2025,
+    compare_name: "2025/26",
+    elapsed_months: 4,
+    expected_cents: 10_000_000,
+    actual_cents: 2_500_000,
+    compare_to_date_cents: 2_000_000,
+    compare_actual_cents: 9_000_000,
+    months: monthNames.map((name, index) => ({
+      name,
+      actual_cents: index < 4 ? 625_000 : 0,
+      compare_cents: 750_000,
+    })),
+    accounts: [
+      { account: software, expected_cents: 8_000_000, actual_cents: 2_000_000 },
+      { account: hardware, expected_cents: 2_000_000, actual_cents: 500_000 },
+    ],
+    partners: [{ id: 5, name: "Beispiel Software GmbH", actual_cents: 2_500_000 }],
+    contracts: {
+      yearly_cents: 1_200_000,
+      soon_days: 90,
+      soon: 1,
+      next: [
+        {
+          id: 7,
+          title: "Wartung Server",
+          partner_name: "Beispiel Technik AG",
+          yearly_cents: 1_200_000,
+          notice_deadline: "2026-12-31",
+        },
+      ],
+    },
+  };
+  const compare = {
+    year_label: "Wirtschaftsjahr",
+    current_year: 2026,
+    year: 2026,
+    years: [2022, 2023, 2024, 2025, 2026].map((year) => ({
+      year,
+      name: `${year}/${(year + 1) % 100}`,
+    })),
+    cutoff: "2026-11-21",
+    accounts: [software, hardware].map((account, index) => ({
+      account,
+      values: [2022, 2023, 2024, 2025, 2026].map((year) => ({
+        year,
+        expected_cents: (index + 1) * 1_000_000,
+        actual_cents: (index + 1) * 900_000,
+        actual_to_date_cents: (index + 1) * 300_000,
+      })),
+    })),
   };
   const routes = {
     "GET /api/budget/settings": settings,
+    "GET /api/budget/statistics/summary": summary,
+    "GET /api/budget/statistics/compare": compare,
     "GET /api/budget/tags": [
       { id: 1, tag: "Cloud", items: 1 },
       { id: 2, tag: "Lizenzen", items: 1 },
@@ -1672,32 +1783,111 @@ describe("Statistik", () => {
     "POST /api/budget/statistics": { id: 4, name: "Lizenzen genau", tags: [], mode: "all" },
   };
 
-  it("erklärt den leeren Zustand", async () => {
+  it("zeigt den Überblick des laufenden Jahres mit Vergleich zum Vorjahr", async () => {
+    const calls = stubFetch(routes);
+    render(<StatisticsPage roles={["Budget.Reader"]} />);
+    expect(await screen.findByRole("tab", { name: "Überblick" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await vi.waitFor(() =>
+      expect(
+        calls.some((call) => call.url === "/api/budget/statistics/summary?year=2026&compare=2025"),
+      ).toBe(true),
+    );
+    expect(calls.some((call) => call.url === "/api/budget/statistics/compare?year=2026")).toBe(
+      true,
+    );
+    const cards = screen.getAllByRole("definition").map((entry) => plain(entry.textContent));
+    expect(cards).toContain("100.000,00 €");
+    expect(cards).toContain("25 %");
+    expect(cards).toContain("+25 %");
+    expect(screen.getByLabelText("Wirtschaftsjahr")).toHaveValue("2026");
+    expect(screen.getByLabelText("Vergleich mit")).toHaveValue("2025");
+    fireEvent.click(screen.getByRole("button", { name: "Oktober anzeigen" }));
+    expect(plain(screen.getByText(/^Ist bis dahin/).textContent)).toContain("18.750,00 €");
+    fireEvent.click(screen.getAllByRole("button", { name: "Als Tabelle" })[0]!);
+    expect(screen.getByRole("region", { name: "Ist je Monat 2026/27" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Wartung Server" })).toHaveAttribute(
+      "href",
+      "/budget/vertraege/7",
+    );
+
+    fireEvent.change(screen.getByLabelText("Vergleich mit"), { target: { value: "" } });
+    await vi.waitFor(() =>
+      expect(calls.at(-2)?.url).toBe("/api/budget/statistics/summary?year=2026"),
+    );
+  });
+
+  it("vergleicht Konten über mehrere Jahre, bis heute oder im ganzen Jahr", async () => {
+    stubFetch(routes);
+    render(<StatisticsPage roles={["Budget.Reader"]} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Konten und Partner" }));
+    const chips = within(screen.getByRole("group", { name: "Jahre im Vergleich" }));
+    expect(chips.getByRole("button", { name: /^2026\/27/ })).toBeDisabled();
+    expect(chips.getByRole("button", { name: /^2025\/26/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(chips.getByRole("button", { name: /^2024\/25/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    // Bis heute: Ist bis zum Stichtag in jedem Jahr
+    const first = screen.getByRole("button", { name: /^Softwarewartung: / });
+    expect(plain(first.getAttribute("aria-label"))).toBe(
+      "Softwarewartung: 2026/27 3.000,00 €, 2025/26 3.000,00 €",
+    );
+    fireEvent.click(chips.getByRole("button", { name: /^2024\/25/ }));
+    expect(
+      plain(screen.getByRole("button", { name: /^Softwarewartung: / }).getAttribute("aria-label")),
+    ).toContain("2024/25 3.000,00 €");
+    // Ganzes Jahr: laufendes Jahr erwartet, frühere mit dem Ist
+    fireEvent.click(screen.getByRole("button", { name: "Ganzes Jahr" }));
+    expect(
+      plain(screen.getByRole("button", { name: /^Softwarewartung: / }).getAttribute("aria-label")),
+    ).toBe(
+      "Softwarewartung: 2026/27 (erwartet) 10.000,00 €, 2025/26 9.000,00 €, 2024/25 9.000,00 €",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Nach Art" }));
+    expect(screen.getByRole("button", { name: /^Laufende Kosten: / })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Investition: / })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Überlappend" }));
+    expect(screen.getByRole("button", { name: /^Investition: / })).toHaveClass("stat-row");
+    fireEvent.click(screen.getAllByRole("button", { name: "Als Tabelle" })[0]!);
+    const table = within(screen.getByRole("region", { name: "Jahresvergleich nach Art" }));
+    expect(plain(table.getByRole("row", { name: /^Investition/ }).textContent)).toContain(
+      "18.000,00 €",
+    );
+    expect(screen.getByRole("link", { name: "Beispiel Software GmbH" })).toHaveAttribute(
+      "href",
+      "/budget/partner/5",
+    );
+  });
+
+  it("erklärt den leeren Zustand der Tags", async () => {
     stubFetch({ ...routes, "GET /api/budget/tags": [], "GET /api/budget/statistics": [] });
     render(<StatisticsPage roles={["Budget.Reader"]} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Nach Tags" }));
     expect(await screen.findByText(/Es sind noch keine Tags vergeben/)).toBeVisible();
   });
 
-  it("wertet gewählte Tags aus und zeigt Erwartung und Ist je Jahr", async () => {
+  it("wertet gewählte Tags je Jahr aus", async () => {
     const calls = stubFetch(routes);
     render(<StatisticsPage roles={["Budget.Reader"]} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Nach Tags" }));
     expect(await screen.findByText("Bitte mindestens einen Tag wählen.")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Cloud (1)" }));
-    const years = within(
-      await screen.findByRole("region", { name: "Erwartet und Ist je Wirtschaftsjahr" }),
+    await vi.waitFor(() =>
+      expect(calls.find((call) => call.url.endsWith("/query"))?.body).toEqual({
+        tags: ["Cloud"],
+        mode: "any",
+        start: 2022,
+      }),
     );
-    expect(calls.find((call) => call.url.endsWith("/query"))?.body).toEqual({
-      tags: ["Cloud"],
-      mode: "any",
-    });
-    const before = years.getByRole("row", { name: /^2025\/26/ });
-    expect(plain(before.textContent)).toContain("12.500,00 €");
-    expect(plain(before.textContent)).toContain("2.500,00 €");
-    expect(years.getByRole("row", { name: /^2026\/27/ })).toHaveTextContent("läuft");
-    expect(plain(years.getByRole("row", { name: /^Summe/ }).textContent)).toContain("21.900,00 €");
     expect(
-      screen.getByRole("img", { name: /^Erwartet und Ist je Wirtschaftsjahr/ }),
-    ).toBeInTheDocument();
+      plain((await screen.findByRole("button", { name: /^Cloud: / })).getAttribute("aria-label")),
+    ).toBe("Cloud: 2026/27 3.000,00 €, 2025/26 4.000,00 €");
     expect(
       within(screen.getByRole("region", { name: "Budgetposten der Auswahl" })).getByRole("row", {
         name: /Office-Lizenzen/,
@@ -1710,20 +1900,12 @@ describe("Statistik", () => {
     );
     expect(screen.queryByRole("button", { name: "Statistik speichern" })).toBeNull();
     expect(screen.queryByRole("button", { name: /löschen/i })).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "Ausblick: nächste fünf Jahre" }));
-    await vi.waitFor(() =>
-      expect(calls.filter((call) => call.url.endsWith("/query")).at(-1)?.body).toEqual({
-        tags: ["Cloud"],
-        mode: "any",
-        start: 2026,
-      }),
-    );
   });
 
   it("speichert eine Auswahl unter einem Namen und öffnet gespeicherte", async () => {
     const calls = stubFetch(routes);
     render(<StatisticsPage roles={["Budget.Editor"]} />);
+    fireEvent.click(await screen.findByRole("tab", { name: "Nach Tags" }));
     fireEvent.click(await screen.findByRole("button", { name: "Lizenzen (1)" }));
     fireEvent.click(screen.getByRole("button", { name: "Cloud (1)" }));
     fireEvent.click(screen.getByLabelText(/^Alle gewählten Tags müssen/));
@@ -1731,6 +1913,7 @@ describe("Statistik", () => {
       expect(calls.filter((call) => call.url.endsWith("/query")).at(-1)?.body).toEqual({
         tags: ["Lizenzen", "Cloud"],
         mode: "all",
+        start: 2022,
       }),
     );
     fireEvent.click(await screen.findByRole("button", { name: "Statistik speichern" }));
@@ -1751,6 +1934,7 @@ describe("Statistik", () => {
       expect(calls.filter((call) => call.url.endsWith("/query")).at(-1)?.body).toEqual({
         tags: ["cloud"],
         mode: "any",
+        start: 2022,
       }),
     );
   });

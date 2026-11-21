@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.86.0] – 2026-11-21
+
+### IT-Budget
+
+- **Statistik neu** (spec.md, IT-Budget › Statistik): drei Reiter „Überblick“, „Konten und Partner“ und „Nach Tags“; oben Geschäftsjahr und Vergleichsjahr als Auswahlliste
+- Neuer Endpunkt `GET /api/budget/statistics/summary`: Plan, Ist, Ist je Monat, je Konto und je Rechnungssteller eines Jahres, Ist des Vergleichsjahrs bis zum selben Tag und im ganzen Jahr, Verträge (Jahreskosten, Kündigungstermine in 90 Tagen, die nächsten drei)
+- Neuer Endpunkt `GET /api/budget/statistics/compare`: Plan, Ist und Ist bis zum Stichtag je Konto für das gewählte Jahr und die vier davor (`modules/budget/statistics.py`)
+- `POST /api/budget/statistics/query` liefert zusätzlich je Tag die Jahre (`per_tag`) und das Ist bis zum selben Tag (`actual_to_date_cents`)
+- Jahresvergleich mit Mehrfachauswahl der Jahre, „Nach Konto“/„Nach Art“, „Bis heute“/„Ganzes Jahr“ und den Darstellungen Säulen (knapp überlappend), überlappende Balken und Balken nebeneinander; Farben aus der Diagrammpalette (`--chart-1` bis `--chart-5`), erwartete Kosten gestrichelt, jede Grafik auch als Tabelle (`StatisticsCharts.tsx`)
+- Rückblick/Ausblick der Tag-Statistik entfällt; den Zeitraum bestimmt das oben gewählte Jahr
+- Info-Symbole „Ausschöpfung“, „Vergleich mit einem früheren Jahr“ und „Jahresvergleich“; Handbuch-Thema „Mehrjahresübersicht, Statistik und Excel“ überarbeitet
+
+### Tests
+
+- `tests/test_budget_statistics.py` (Stichtage, Überblick, Jahresvergleich, Tags je Jahr, Rechte); E2E der Statistik mit Überblick und Jahresvergleich; Zeitlimit des langen Budget-Durchlaufs auf 90 Sekunden
+
 ## [0.85.0] – 2026-11-21
 
 ### Evergreen

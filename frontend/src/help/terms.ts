@@ -136,6 +136,21 @@ export const HELP = {
     text: "Geplant minus Ist. Ein negativer Betrag heißt: mehr ausgegeben als geplant.",
     topic: ["it-budget", "begriffe"],
   },
+  "budget.ausschoepfung": {
+    term: "Ausschöpfung",
+    text: "Wie viel vom Geplanten schon ausgegeben ist: Ist geteilt durch Geplant. Vergleich sie mit den vergangenen Monaten des Jahres.",
+    topic: ["it-budget", "auswertung"],
+  },
+  "budget.vergleich": {
+    term: "Vergleich mit einem früheren Jahr",
+    text: "Ist dieses Jahres gegen das Ist des Vergleichsjahres im selben Zeitraum, also bis zum selben Tag. So zählen nur gleich lange Abschnitte.",
+    topic: ["it-budget", "auswertung"],
+  },
+  "budget.jahresvergleich": {
+    term: "Jahresvergleich",
+    text: "Je Konto oder Art ein Wert pro gewähltem Jahr. Vergangene Jahre zeigen das Ist, laufende und künftige die erwarteten Kosten, außer du wählst „Bis heute“.",
+    topic: ["it-budget", "auswertung"],
+  },
   "budget.avv": {
     term: "AVV (Auftragsverarbeitungsvertrag)",
     text: "Vertrag, den wir brauchen, wenn ein Partner für uns personenbezogene Daten verarbeitet. „AVV fehlt“ zählt laufende Verträge, bei denen er noch nicht vorliegt.",

@@ -757,6 +757,13 @@ export interface StatisticYear {
   name: string;
   expected_cents: number;
   actual_cents: number;
+  /** Ist bis zum selben Tag wie heute (im laufenden Jahr gleich dem Ist). */
+  actual_to_date_cents: number;
+}
+
+export interface StatisticTag {
+  tag: string;
+  years: StatisticYear[];
 }
 
 export interface Statistic {
@@ -767,6 +774,80 @@ export interface Statistic {
   years: StatisticYear[];
   /** Passende Budgetposten mit ihren Summen über den Zeitraum. */
   items: { item: Item; expected_cents: number; actual_cents: number }[];
+  /** Dieselben Jahre je einzelnem Tag. */
+  per_tag: StatisticTag[];
+}
+
+export interface StatisticSummary {
+  year_label: string;
+  current_year: number;
+  year: number;
+  year_name: string;
+  years: { year: number; name: string }[];
+  compare: number | null;
+  compare_name: string | null;
+  /** Angefangene Monate: 12 bei vergangenen, 0 bei künftigen Jahren. */
+  elapsed_months: number;
+  expected_cents: number;
+  actual_cents: number;
+  compare_to_date_cents: number | null;
+  compare_actual_cents: number | null;
+  months: { name: string; actual_cents: number; compare_cents: number | null }[];
+  accounts: { account: Account; expected_cents: number; actual_cents: number }[];
+  partners: { id: number; name: string; actual_cents: number }[];
+  contracts: {
+    yearly_cents: number;
+    soon_days: number;
+    soon: number;
+    next: {
+      id: number;
+      title: string;
+      partner_name: string;
+      yearly_cents: number | null;
+      notice_deadline: string;
+    }[];
+  };
+}
+
+export interface StatisticCompare {
+  year_label: string;
+  current_year: number;
+  year: number;
+  years: { year: number; name: string }[];
+  /** Stichtag für „bis heute“; nur im laufenden Jahr. */
+  cutoff: string | null;
+  accounts: {
+    account: Account;
+    values: {
+      year: number;
+      expected_cents: number;
+      actual_cents: number;
+      actual_to_date_cents: number;
+    }[];
+  }[];
+}
+
+/** Plan, Ist je Monat, Konten, Rechnungssteller und Verträge eines Geschäftsjahrs. */
+export function fetchStatisticSummary(
+  year: number | null,
+  compare: number | null,
+): Promise<StatisticSummary> {
+  const params = new URLSearchParams();
+  if (year !== null) {
+    params.set("year", String(year));
+  }
+  if (compare !== null) {
+    params.set("compare", String(compare));
+  }
+  const query = params.toString();
+  return getJson<StatisticSummary>(`/api/budget/statistics/summary${query ? `?${query}` : ""}`);
+}
+
+/** Plan und Ist je Konto im gewählten Jahr und den vier davor. */
+export function fetchStatisticCompare(year: number | null): Promise<StatisticCompare> {
+  return getJson<StatisticCompare>(
+    `/api/budget/statistics/compare${year !== null ? `?year=${year}` : ""}`,
+  );
 }
 
 export interface SavedStatistic {
