@@ -140,6 +140,8 @@ function overview(overrides: Partial<Overview> = {}): Overview {
         actual_cents: 0,
         forecast_cents: 5_000_050,
         status: "offen",
+        closed_by_hand: false,
+        closed_by_invoice: false,
         contracts: 0,
       },
       {
@@ -149,6 +151,8 @@ function overview(overrides: Partial<Overview> = {}): Overview {
         actual_cents: 0,
         forecast_cents: 1_190_000,
         status: "rechnung",
+        closed_by_hand: false,
+        closed_by_invoice: false,
         contracts: 1,
       },
     ],
@@ -241,7 +245,12 @@ describe("Budgetposten", () => {
   });
 
   it("zeigt die Abweichung von der Erwartung mit Vorzeichen", async () => {
-    const row = { previous_cents: null, contracts: 0 };
+    const row = {
+      previous_cents: null,
+      contracts: 0,
+      closed_by_hand: false,
+      closed_by_invoice: false,
+    };
     stubFetch({
       "GET /api/budget/overview": overview({
         items: [
@@ -275,6 +284,74 @@ describe("Budgetposten", () => {
     expect(plain(closed.textContent)).toContain("− 10.000,50 €");
   });
 
+  it("hakt Posten ab und nimmt das Abhaken zurück", async () => {
+    const row = {
+      previous_cents: null,
+      contracts: 0,
+      actual_cents: 0,
+      closed_by_invoice: false,
+    };
+    const calls = stubFetch({
+      "GET /api/budget/overview": overview({
+        items: [
+          {
+            ...row,
+            item: office,
+            expected_cents: 1_190_000,
+            forecast_cents: 1_190_000,
+            status: "rechnung",
+            closed_by_hand: false,
+          },
+          {
+            ...row,
+            item: server,
+            expected_cents: 5_000_050,
+            forecast_cents: 0,
+            status: "abgeschlossen",
+            closed_by_hand: true,
+          },
+        ],
+      }),
+      "GET /api/budget/accounts": [hardware, software],
+      "GET /api/budget/contracts": {
+        year: 2026,
+        years: [{ year: 2026, name: "2026/27" }],
+        current_year_name: "2026/27",
+        notice_warn_days: 60,
+        entries: [],
+      },
+      "GET /api/projects/choices": [],
+      "GET /api/budget/tags": [],
+      "POST /api/budget/items/11/close": {
+        item_id: 11,
+        year: 2026,
+        status: "abgeschlossen",
+        closed_by_hand: true,
+        closed_by_invoice: false,
+      },
+      "POST /api/budget/items/12/reopen": {
+        item_id: 12,
+        year: 2026,
+        status: "offen",
+        closed_by_hand: false,
+        closed_by_invoice: false,
+      },
+    });
+    render(<ItemsPage roles={["Budget.Editor"]} />);
+    const table = within(await screen.findByRole("region", { name: "Budgetposten 2026/27" }));
+    // „Rechnung liegt vor“: abhaken; von Hand abgeschlossen: wieder öffnen
+    expect(table.queryByRole("button", { name: "Server abschließen" })).toBeNull();
+    fireEvent.click(table.getByRole("button", { name: "Office-Lizenzen abschließen" }));
+    expect(
+      await screen.findByText("Office-Lizenzen ist im Wirtschaftsjahr 2026/27 abgeschlossen."),
+    ).toBeVisible();
+    expect(calls.find((call) => call.url === "/api/budget/items/11/close")?.body).toEqual({
+      year: 2026,
+    });
+    fireEvent.click(table.getByRole("button", { name: "Server wieder öffnen" }));
+    expect(await screen.findByText("Server ist wieder offen.")).toBeVisible();
+  });
+
   it("fügt einen Posten als Vorgang hinzu und ändert einen", async () => {
     const calls = stubFetch({
       "GET /api/budget/overview": overview(),
@@ -282,6 +359,8 @@ describe("Budgetposten", () => {
       "POST /api/budget/items": { ...office, id: 13, name: "Zeiterfassung Lizenz" },
       "PUT /api/budget/items/12": { ...server, active: true },
       "GET /api/budget/contracts": {
+        year: 2026,
+        years: [{ year: 2026, name: "2026/27" }],
         current_year_name: "2026/27",
         notice_warn_days: 60,
         entries: [contract()],
@@ -520,6 +599,8 @@ function contract(overrides: Partial<Contract> = {}): Contract {
     days_to_deadline: 15,
     deadline_soon: true,
     current_year_cents: 600_000,
+    year_actual_cents: 0,
+    closed_items: 0,
     ...overrides,
   };
 }
@@ -594,6 +675,8 @@ describe("Übersicht nach dem Entwurf", () => {
         open_invoices: 0,
       }),
       "GET /api/budget/contracts": {
+        year: 2026,
+        years: [{ year: 2026, name: "2026/27" }],
         current_year_name: "2026/27",
         notice_warn_days: 60,
         entries: [
@@ -667,6 +750,8 @@ describe("Partner", () => {
 describe("Verträge", () => {
   const routes = {
     "GET /api/budget/contracts": {
+      year: 2026,
+      years: [{ year: 2026, name: "2026/27" }],
       current_year_name: "2026/27",
       notice_warn_days: 60,
       entries: [
@@ -702,6 +787,33 @@ describe("Verträge", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Alle (2)" }));
     expect(table.getByRole("row", { name: /^Altvertrag/ })).toHaveTextContent("beendet");
+  });
+
+  it("zeigt Monatsbetrag mit Jahressumme sowie Soll und Ist im Geschäftsjahr", async () => {
+    const calls = stubFetch({
+      ...routes,
+      "GET /api/budget/contracts": {
+        ...routes["GET /api/budget/contracts"],
+        years: [
+          { year: 2027, name: "2027/28" },
+          { year: 2026, name: "2026/27" },
+        ],
+        entries: [contract({ year_actual_cents: 150_000, closed_items: 1 })],
+      },
+    });
+    render(<ContractsPage roles={["Budget.Reader"]} />);
+    const table = within(await screen.findByRole("region", { name: "Verträge" }));
+    expect(table.getByRole("columnheader", { name: "Soll 2026/27" })).toBeVisible();
+    const row = plain(table.getByRole("row", { name: /^Wartung Zeiterfassung/ }).textContent);
+    expect(row).toContain("500,00 € monatlich");
+    expect(row).toContain("6.000,00 € im Jahr");
+    expect(row).toContain("1.500,00 €");
+    expect(row).toContain("1 von 1 Posten abgeschlossen");
+    expect(plain(screen.getByText(/^Ist 2026\/27:/).textContent)).toContain("1.500,00 €");
+    fireEvent.change(screen.getByLabelText("Geschäftsjahr"), { target: { value: "2027" } });
+    await vi.waitFor(() =>
+      expect(calls.map((call) => call.url)).toContain("/api/budget/contracts?year=2027"),
+    );
   });
 
   it("zeigt einen Vertrag mit Daten, Fristen und Zuordnung", async () => {
@@ -885,6 +997,8 @@ describe("Rechnungen", () => {
     "GET /api/budget/partners": [partner, distributor],
     "GET /api/budget/items": [office, server],
     "GET /api/budget/contracts": {
+      year: 2026,
+      years: [{ year: 2026, name: "2026/27" }],
       current_year_name: "2026/27",
       notice_warn_days: 60,
       entries: [contract()],
@@ -1229,6 +1343,8 @@ describe("Belege", () => {
     "GET /api/budget/items": [office],
     "GET /api/budget/settings": settings,
     "GET /api/budget/contracts": {
+      year: 2026,
+      years: [{ year: 2026, name: "2026/27" }],
       current_year_name: "2026/27",
       notice_warn_days: 60,
       entries: [],

@@ -70,6 +70,24 @@ class BudgetItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class BudgetItemClosure(Base):
+    """Ein Budgetposten, der in einem Geschäftsjahr von Hand abgeschlossen ist („abhaken“).
+
+    Daneben schließt auch eine gebuchte Rechnungsposition mit „Schließt den Budgetposten ab“
+    den Posten; das steht an der Position, nicht hier.
+    """
+
+    __tablename__ = "budget_item_closures"
+
+    item_id: Mapped[int] = mapped_column(
+        ForeignKey("budget_items.id", ondelete="CASCADE"), primary_key=True
+    )
+    # Geschäftsjahr (Kalenderjahr des Beginns)
+    year: Mapped[int] = mapped_column(Integer, primary_key=True)
+    closed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    closed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class BudgetTag(Base):
     """Ein Tag aus der Liste, die der Budgetverwalter pflegt. Posten wählen nur aus dieser Liste."""
 

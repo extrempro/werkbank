@@ -10,6 +10,7 @@ import { navigate, useSearchParam } from "../../router";
 import {
   BUDGET_EDITOR_ROLES,
   BUDGET_MANAGER_ROLE,
+  closeItem,
   createItem,
   deleteItem,
   euroInput,
@@ -25,11 +26,13 @@ import {
   TAGS_MAX,
   rememberedYear,
   rememberYear,
+  reopenItem,
   runtimeText,
   updateItem,
   type Account,
   type Contract,
   type Item,
+  type ItemRow,
   type ItemStatus,
   type ItemUpdate,
   type Overview,
@@ -518,6 +521,27 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
     setRound(round + 1);
   };
 
+  /** Posten im gewählten Geschäftsjahr abhaken (close) oder das Abhaken zurücknehmen. */
+  const onClosure = (row: ItemRow, close: boolean) => {
+    if (!overview) {
+      return;
+    }
+    const year = overview.year;
+    (close ? closeItem(row.item.id, year) : reopenItem(row.item.id, year))
+      .then(() => {
+        setMessage({
+          kind: "status",
+          text: close
+            ? `${row.item.name} ist im ${overview.settings.year_label} ${overview.year_name} abgeschlossen.`
+            : `${row.item.name} ist wieder offen.`,
+        });
+        setRound(round + 1);
+      })
+      .catch((failure: unknown) =>
+        setMessage({ kind: "alert", text: errorText(failure, "Das hat nicht geklappt.") }),
+      );
+  };
+
   const columns = canEdit ? 9 : 8;
 
   return (
@@ -528,8 +552,8 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           <h1>Budgetposten</h1>
           <p className="page-sub">
             Jeder Posten ist ein Vorhaben mit erwarteten Kosten und Laufzeit. Er bleibt offen, bis
-            eine Rechnung ihn abschließt. Prognose: abgeschlossen das Ist, sonst das Höhere aus
-            Erwartung und Ist. Alle Beträge sind brutto.
+            du ihn mit „Abschließen“ abhakst oder eine Rechnung ihn abschließt. Prognose:
+            abgeschlossen das Ist, sonst das Höhere aus Erwartung und Ist. Alle Beträge sind brutto.
           </p>
         </div>
         {overview && (
@@ -777,6 +801,26 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                   <td className="betrag budget-muted">{amount(row.previous_cents)}</td>
                   {canEdit && (
                     <td>
+                      {row.status !== null && row.status !== "abgeschlossen" && (
+                        <button
+                          type="button"
+                          className="button button-secondary"
+                          aria-label={`${row.item.name} abschließen`}
+                          onClick={() => onClosure(row, true)}
+                        >
+                          Abschließen
+                        </button>
+                      )}
+                      {row.status === "abgeschlossen" && row.closed_by_hand && (
+                        <button
+                          type="button"
+                          className="button button-secondary"
+                          aria-label={`${row.item.name} wieder öffnen`}
+                          onClick={() => onClosure(row, false)}
+                        >
+                          Wieder öffnen
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="button button-secondary"

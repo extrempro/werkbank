@@ -106,8 +106,29 @@ export interface ItemRow {
   actual_cents: number;
   forecast_cents: number;
   status: ItemStatus | null;
+  /** Von Hand abgehakt („Abschließen“ am Posten) bzw. durch eine Rechnungsposition. */
+  closed_by_hand: boolean;
+  closed_by_invoice: boolean;
   /** Zahl der laufenden Verträge, die dem Posten zugeordnet sind. */
   contracts: number;
+}
+
+export interface Closure {
+  item_id: number;
+  year: number;
+  status: ItemStatus | null;
+  closed_by_hand: boolean;
+  closed_by_invoice: boolean;
+}
+
+/** Budgetposten für ein Geschäftsjahr abhaken. */
+export function closeItem(id: number, year: number): Promise<Closure> {
+  return postJson<Closure>(`/api/budget/items/${id}/close`, { year });
+}
+
+/** Abhaken zurücknehmen (nur, was von Hand abgeschlossen ist). */
+export function reopenItem(id: number, year: number): Promise<Closure> {
+  return postJson<Closure>(`/api/budget/items/${id}/reopen`, { year });
 }
 
 export interface Totals {
@@ -303,8 +324,12 @@ export interface Contract extends Omit<ContractUpdate, "item_ids"> {
   notice_deadline: string | null;
   days_to_deadline: number | null;
   deadline_soon: boolean;
-  /** Zahlungen des Vertrags im laufenden Geschäftsjahr (nur zur Information). */
+  /** Soll: Zahlungen, die im gewählten Geschäftsjahr fällig werden (bis zur Kündigung). */
   current_year_cents: number;
+  /** Ist: gebuchte Rechnungen der zugeordneten Posten, die im Geschäftsjahr abgeschlossen sind. */
+  year_actual_cents: number;
+  /** So viele der zugeordneten Posten sind im Geschäftsjahr abgeschlossen. */
+  closed_items: number;
 }
 
 /** Zugeordnete Budgetposten in Kurzform: „6815 · Lizenzen, 6820 · Telefonie“. */
@@ -316,7 +341,10 @@ export function contractItemsText(contract: Contract): string {
 }
 
 export interface ContractList {
+  /** Gewähltes Geschäftsjahr; current_year_name ist sein Name. */
+  year: number;
   current_year_name: string;
+  years: { year: number; name: string }[];
   notice_warn_days: number;
   entries: Contract[];
 }
@@ -341,8 +369,10 @@ export function updatePartner(id: number, update: PartnerUpdate): Promise<Partne
   return putJson<Partner>(`/api/budget/partners/${id}`, update);
 }
 
-export function fetchContracts(): Promise<ContractList> {
-  return getJson<ContractList>("/api/budget/contracts");
+export function fetchContracts(year?: number | null): Promise<ContractList> {
+  return getJson<ContractList>(
+    year ? `/api/budget/contracts?year=${year}` : "/api/budget/contracts",
+  );
 }
 
 export function createContract(update: ContractUpdate): Promise<Contract> {

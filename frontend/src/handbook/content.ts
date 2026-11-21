@@ -821,7 +821,7 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Je Geschäftsjahr hat ein Posten einen Status: „offen“, „Rechnung liegt vor“ oder „abgeschlossen“. Abgeschlossen ist er, sobald eine gebuchte Rechnungsposition mit „schließt den Posten ab“ auf ihm liegt. Filter nach Suchtext, Status und Tag helfen beim Finden.",
+            text: "Je Geschäftsjahr hat ein Posten einen Status: „offen“, „Rechnung liegt vor“ oder „abgeschlossen“. Abgeschlossen ist er, sobald du ihn mit „Abschließen“ abhakst (gilt für das oben gewählte Geschäftsjahr) oder eine gebuchte Rechnungsposition mit „schließt den Posten ab“ auf ihm liegt. „Wieder öffnen“ nimmt das Abhaken zurück; schließt eine Rechnung den Posten ab, entfernst du dafür den Haken an der Rechnungsposition. Filter nach Suchtext, Status und Tag helfen beim Finden.",
           },
           {
             kind: "steps",
@@ -857,7 +857,10 @@ export const CHAPTERS: readonly Chapter[] = [
             items: [
               "Der Kündigungstermin ergibt sich aus Laufzeitende minus Kündigungsfrist. Ist er verstrichen, gilt der Termin der nächsten Laufzeit.",
               "Ab 60 Tagen vor dem Termin steht der Vertrag als Aufgabe auf der Startseite; die Glocke erinnert 60, 30 und 7 Tage vorher.",
-              "Kosten kommen nur über Rechnungen ins Budget. Die Zahlungen im Geschäftsjahr am Vertrag sind eine Information.",
+              "Kosten kommen nur über Rechnungen ins Budget. Am Vertrag siehst du je Geschäftsjahr (Auswahl oben) das Soll und das Ist.",
+              "Soll: die Zahlungen, die im Geschäftsjahr fällig werden. Bei einem jährlichen Vertrag ist das der Jahresbetrag. Bei einem monatlichen Vertrag trägst du den Monatsbetrag ein; die Liste zeigt dazu die Summe eines vollen Jahres.",
+              "Ist: die Rechnungen der zugeordneten Budgetposten, sobald ein Posten abgeschlossen ist. Bei monatlichen Verträgen legst du je Monat einen Posten an; das Ist wächst dann mit jedem abgeschlossenen Monat.",
+              "Gekündigt: Das Soll zählt nur die Zahlungen bis zum Kündigungstag, im folgenden Geschäftsjahr nichts mehr.",
             ],
           },
         ],

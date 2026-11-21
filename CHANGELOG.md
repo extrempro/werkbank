@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.79.0] – 2026-11-21
+
+### IT-Budget
+
+- **Budgetposten abhaken:** Unter „Budgetposten“ gibt es „Abschließen“ und „Wieder öffnen“ für das gewählte Geschäftsjahr (`Budget.Editor`, `Budget.Manager`). Neue Endpunkte `POST /api/budget/items/{id}/close` und `…/reopen`, gespeichert je Posten und Jahr (Tabelle `budget_item_closures`, Migration `0054`), Audit `budget.posten_abgeschlossen` und `budget.posten_wieder_geoeffnet`. Der Haken „schließt den Posten ab“ an der Rechnungsposition bleibt; was eine Rechnung abschließt, öffnet „Wieder öffnen“ nicht
+- **Verträge mit Soll und Ist je Geschäftsjahr** (Auswahl oben, `GET /api/budget/contracts?year=`): Soll = im Jahr fällige Zahlungen (nach Kündigung nur bis zum Kündigungstag), Ist = gebuchte Rechnungen der zugeordneten Posten, die im Jahr abgeschlossen sind, dazu „x von y Posten abgeschlossen“. Neue Felder `year_actual_cents`, `closed_items`, `year`, `years`
+- Liste der Verträge: Betrag je Zahlung mit Turnus, bei monatlich, vierteljährlich und halbjährlich dazu die Summe eines vollen Jahres; Spalten Soll und Ist; Summen Soll und Ist oben. Die Vertragsmaske zeigt die Jahressumme schon bei der Eingabe
+
 ## [0.78.0] – 2026-11-21
 
 ### IT-Budget

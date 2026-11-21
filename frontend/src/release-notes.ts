@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.79.0",
+    date: "2026-11-21",
+    summary: "IT-Budget: Budgetposten abhaken, Verträge mit Soll und Ist je Geschäftsjahr.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Budgetposten lassen sich jetzt mit „Abschließen“ abhaken, auch wenn keine Rechnung sie abschließt. „Wieder öffnen“ nimmt das zurück.",
+          "Verträge zeigen je Geschäftsjahr das Soll (fällige Zahlungen) und das Ist (Rechnungen der abgeschlossenen Budgetposten). Das Geschäftsjahr wählst du oben.",
+          "Bei monatlichen Verträgen steht neben dem Monatsbetrag auch die Summe eines vollen Jahres. Nach einer Kündigung zählt das Soll nur noch bis zum Kündigungstag.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.78.0",
     date: "2026-11-21",
     summary: "IT-Budget: Der Excel-Import legt je Zeile einen eigenen Budgetposten an.",

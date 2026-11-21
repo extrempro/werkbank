@@ -58,6 +58,8 @@ export function ContractDetail({ contract, yearName }: { contract: Contract; yea
       "Jahreskosten brutto",
       contract.yearly_cents === null ? "einmalig" : formatEuro(contract.yearly_cents),
     ],
+    [`Soll ${yearName}`, formatEuro(contract.current_year_cents)],
+    [`Ist ${yearName}`, formatEuro(contract.year_actual_cents)],
   ];
   return (
     <>
@@ -105,8 +107,11 @@ export function ContractDetail({ contract, yearName }: { contract: Contract; yea
               ))}
             </ul>
             <p className="small budget-muted">
-              Zahlungen im {yearName}: {formatEuro(contract.current_year_cents)}. Ins Budget gehen
-              sie über die Rechnungen.
+              Soll im {yearName}: {formatEuro(contract.current_year_cents)}
+              {contract.cancelled_to ? " (nur bis zur Kündigung)" : ""}. Ist:{" "}
+              {formatEuro(contract.year_actual_cents)} aus {contract.closed_items} von{" "}
+              {contract.items.length} abgeschlossenen Budgetposten. Das Ist wächst, sobald ein
+              Posten abgeschlossen ist.
             </p>
           </section>
         </div>
