@@ -7,6 +7,7 @@ import {
   isPhone,
   loginAs,
   openPage,
+  confirmDialog,
 } from "./helpers";
 
 test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
@@ -32,9 +33,7 @@ test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
   await page.getByLabel("Seriennummer", { exact: true }).fill(`SN-${stamp}`);
   await page.getByLabel("Inventurnummer (freiwillig)").fill(`INV-${stamp}`);
   await page.getByRole("button", { name: "Gerät anlegen" }).click();
-  await expect(page.getByText(/für dieses Gerät eintragen/)).toBeVisible();
-  await expectNoA11yViolations(page);
-  await page.getByRole("button", { name: "Ja, Gerät anlegen" }).click();
+  await confirmDialog(page, "Gerät anlegen", true);
   await expect(page).toHaveURL(/\/bestand\/hardware\/\d+$/);
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   await expect(page.getByText(`INV-${stamp}`)).toBeVisible();
@@ -49,8 +48,7 @@ test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
     .getByRole("combobox", { name: /^Verbleib/ })
     .selectOption({ label: "entsorgt" });
   await page.getByRole("button", { name: "Weiter" }).click();
-  await expectNoA11yViolations(page);
-  await page.getByRole("button", { name: "Ja, ausmustern" }).click();
+  await confirmDialog(page, "Ausmustern", true);
   await expect(
     page.getByRole("heading", { name: "Ausgemustert" }),
   ).toBeVisible();

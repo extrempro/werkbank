@@ -5,6 +5,7 @@ import {
   expectNoA11yViolations,
   expectStatus,
   loginAs,
+  confirmDialog,
 } from "./helpers";
 
 const ORIGIN = new URL(BASE_URL).origin;
@@ -95,12 +96,14 @@ test("Bearbeiter legen einen Eintrag an, bewerten ihn, fügen Notizen an und sch
   await page.getByRole("tab", { name: "Notizen und Verlauf" }).click();
   await page.getByLabel("Notiz", { exact: true }).fill("Betrifft uns nicht");
   await page.getByRole("button", { name: "Abschließen" }).click();
+  await confirmDialog(page, "Abschließen");
   await expect(
     page.getByRole("button", { name: "Wieder öffnen" }),
   ).toBeVisible();
   await expect(page.getByText("Betrifft uns nicht")).toBeVisible();
   await expectNoA11yViolations(page);
   await page.getByRole("button", { name: "Wieder öffnen" }).click();
+  await confirmDialog(page, "Wieder öffnen");
   await expect(
     page.getByRole("button", { name: "Notiz anfügen" }),
   ).toBeVisible();

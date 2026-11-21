@@ -12,6 +12,7 @@ import {
   type ImportRow,
 } from "./imports";
 import { ImportsPage } from "./ImportsPage";
+import { confirmDialog } from "../../test/confirm";
 
 afterEach(() => {
   cleanup();
@@ -304,15 +305,15 @@ describe("Import", () => {
     render(<ImportDetailPage importId={3} />);
     await screen.findByRole("heading", { name: "Zeile 5: Notebooks" });
     fireEvent.click(screen.getByRole("button", { name: "Zeile 5 löschen" }));
-    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    await confirmDialog("Löschen");
     expect(await screen.findByRole("heading", { name: "Zeile 6: Lizenz" })).toBeVisible();
     expect(calls.some((call) => call.method === "DELETE")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Import abbrechen" }));
-    expect(screen.getByRole("group", { name: "Import abbrechen" })).toHaveTextContent(
+    expect(await screen.findByRole("alertdialog")).toHaveTextContent(
       "1 offene und übersprungene Zeilen werden gelöscht",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Import wirklich abbrechen" }));
+    await confirmDialog("Import abbrechen");
     expect(await screen.findByText(/Der Import ist abgebrochen/)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Import abbrechen" })).toBeNull();
     expect(calls.some((call) => call.url === "/api/budget/imports/3/cancel")).toBe(true);

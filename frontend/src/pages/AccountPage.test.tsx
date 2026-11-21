@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Me } from "../api";
 import { AccountPage } from "./AccountPage";
+import { confirmDialog } from "../test/confirm";
 
 afterEach(() => {
   cleanup();
@@ -104,12 +105,14 @@ describe("AccountPage", () => {
     const list = await screen.findByRole("list", { name: "Angemeldete Geräte" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(3);
     fireEvent.click(screen.getByRole("button", { name: /^Abmelden.*Safari auf dem iPhone$/ }));
+    await confirmDialog("Abmelden");
     expect(await screen.findByText("Safari auf dem iPhone ist abgemeldet.")).toBeVisible();
     expect(
       calls.some((call) => call.method === "DELETE" && call.url === "/api/account/sessions/b"),
     ).toBe(true);
     expect(await screen.findByText("2 Geräte")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Auf allen anderen Geräten abmelden" }));
+    await confirmDialog("Abmelden");
     expect(await screen.findByText("1 anderes Gerät ist abgemeldet.")).toBeVisible();
     expect(await screen.findByText("1 Gerät")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Auf allen anderen Geräten abmelden" })).toBeNull();

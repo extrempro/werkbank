@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { errorText } from "../../api";
 import { navigate } from "../../router";
 import { PROJECTS_PATH } from "../../navigation";
@@ -54,7 +55,6 @@ export function SettingsTab({ project, onSaved }: Props) {
   const [links, setLinks] = useState<ProjectLink[]>(project.links);
   const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const setPerson = (index: number, change: Partial<Person>) =>
     setPeople(people.map((entry, i) => (i === index ? { ...entry, ...change } : entry)));
@@ -123,11 +123,10 @@ export function SettingsTab({ project, onSaved }: Props) {
 
   const onDelete = () => {
     setBusy(true);
-    deleteProject(project.id)
+    return deleteProject(project.id)
       .then(() => navigate(PROJECTS_PATH))
       .catch((error: unknown) => {
         setBusy(false);
-        setConfirmDelete(false);
         setMessage({
           kind: "alert",
           text: errorText(error, "Das Projekt konnte nicht gelöscht werden."),
@@ -430,33 +429,19 @@ export function SettingsTab({ project, onSaved }: Props) {
             willst, setze den Status auf „abgeschlossen“.
           </p>
           <div className="project-actions">
-            {confirmDelete ? (
-              <>
-                <button
-                  type="button"
-                  className="button button-danger"
-                  disabled={busy}
-                  onClick={onDelete}
-                >
-                  Wirklich löschen
-                </button>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => setConfirmDelete(false)}
-                >
-                  Doch nicht
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => setConfirmDelete(true)}
-              >
-                Projekt löschen
-              </button>
-            )}
+            <ConfirmButton
+              className="button button-secondary"
+              disabled={busy}
+              confirm={{
+                title: "Projekt löschen?",
+                text: `„${project.name}“ wird mit Jour Fixe, Anhängen und Aufgaben gelöscht. Budgetposten im IT-Budget bleiben und verlieren nur die Zuordnung.`,
+                action: "Projekt löschen",
+                danger: true,
+              }}
+              onConfirm={onDelete}
+            >
+              Projekt löschen
+            </ConfirmButton>
           </div>
         </div>
       </section>

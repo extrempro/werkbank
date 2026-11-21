@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.88.0] – 2026-11-21
+
+### Bedienung
+
+- **Bestätigungsdialog** (spec.md 6.10b, design.md „Bestätigen“): neue Komponente `components/ConfirmDialog.tsx` mit `ConfirmButton` und `useConfirm`. PC und Tablet ein Fenster in der Mitte, Handy ein Blatt von unten (Griff, Wischen nach unten bricht ab), Rolle `alertdialog`, Fokus zuerst auf „Abbrechen“, Esc und Klick daneben brechen ab, offen und gesperrt, solange die Aktion läuft; bei Unumkehrbarem roter Knopf (`--farbe-gefahr`, hell und dunkel), Warnsymbol und Hinweis
+- Alle bisherigen Rückfragen direkt in der Seite („Wirklich löschen“, „Ja, …“, „Doch nicht“) auf den Dialog umgestellt: Löschen im IT-Budget (`DeleteButton`), Rechnung löschen, Partner zusammenlegen, Import abbrechen, Projekt, Jour Fixe, Stelle, Arbeitsplatz, Standorte, Räume und Stammdaten löschen, Inventurnummer, Gerät anlegen mit Inventurnummer, Ausmustern, Tool-Verlauf löschen
+- Neu mit Rückfrage: Rechnung buchen, Budgetposten abschließen und wieder öffnen, Import-Datei verwerfen, Evergreen-Eintrag abschließen und wieder öffnen, Jour-Fixe-Anhang entfernen, Aufgabe löschen, Grundriss entfernen, Gerätezuordnung (Jetzt freigeben, Zur Freigabe senden, Verwerfen, Admin-Konto trennen), anderes Gerät bzw. alle anderen Geräte abmelden, Push-Gerät entfernen, Branding-Bild entfernen
+- `useModal` kennt jetzt mehrere offene Fenster: Tasten gelten nur dem obersten (Esc in der Rückfrage schließt nicht die Geräte-Ansicht dahinter)
+
+### Dokumentation
+
+- Regel „Bestätigen“ in `docs/design.md` und `CLAUDE.md`, `docs/spec.md` 6.10b, Handbuch „Aufbau der Oberfläche“
+
+### Tests
+
+- `ConfirmDialog.test.tsx`, Hilfen `test/confirm.ts` und `confirmDialog` in den E2E-Hilfen; betroffene Unit- und E2E-Tests auf den Dialog umgestellt
+
 ## [0.87.0] – 2026-11-21
 
 ### Konto

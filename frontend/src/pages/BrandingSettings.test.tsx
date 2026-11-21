@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_BRANDING, getBranding, setBranding, type Branding } from "../branding";
 import { BrandingSettings } from "./BrandingSettings";
+import { confirmDialog } from "../test/confirm";
 
 afterEach(() => {
   cleanup();
@@ -111,6 +112,7 @@ describe("BrandingSettings", () => {
     fireEvent.click(
       screen.getByRole("button", { name: /Entfernen – Logo für dunklen Hintergrund/ }),
     );
+    await confirmDialog("Entfernen");
     expect(await screen.findByText("Logo für dunklen Hintergrund: entfernt.")).toBeVisible();
     expect(calls[0]?.init?.method).toBe("DELETE");
     expect(getBranding().logo_dark_url).toBeNull();

@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { errorText } from "../../api";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
 import type { HelpKey } from "../../help/terms";
@@ -645,7 +646,7 @@ function History({ entry, onChanged }: { entry: Entry; onChanged: (entry: Entry)
   const run = (action: () => Promise<Entry>) => {
     setBusy(true);
     setNotice(null);
-    action().then(
+    return action().then(
       (updated) => {
         setNote("");
         setBusy(false);
@@ -712,27 +713,35 @@ function History({ entry, onChanged }: { entry: Entry; onChanged: (entry: Entry)
           />
           <div className="project-actions">
             {done ? (
-              <button
-                type="button"
+              <ConfirmButton
                 className="button button-primary"
                 disabled={busy}
-                onClick={() => run(() => reopenEntry(entry.id, note.trim()))}
+                confirm={{
+                  title: "Eintrag wieder öffnen?",
+                  text: `„${entry.title}“ wird wieder offen und erscheint in den Aufgaben.`,
+                  action: "Wieder öffnen",
+                }}
+                onConfirm={() => run(() => reopenEntry(entry.id, note.trim()))}
               >
                 Wieder öffnen
-              </button>
+              </ConfirmButton>
             ) : (
               <>
                 <button type="submit" className="button button-primary" disabled={busy}>
                   Notiz anfügen
                 </button>
-                <button
-                  type="button"
+                <ConfirmButton
                   className="button button-secondary"
                   disabled={busy}
-                  onClick={() => run(() => closeEntry(entry.id, note.trim()))}
+                  confirm={{
+                    title: "Eintrag abschließen?",
+                    text: `„${entry.title}“ gilt dann als erledigt${note.trim() ? "; dein Text wird als letzte Notiz angefügt" : ""}. Mit „Wieder öffnen“ machst du das rückgängig.`,
+                    action: "Abschließen",
+                  }}
+                  onConfirm={() => run(() => closeEntry(entry.id, note.trim()))}
                 >
                   Abschließen
-                </button>
+                </ConfirmButton>
               </>
             )}
           </div>

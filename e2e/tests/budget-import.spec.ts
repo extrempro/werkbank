@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs } from "./helpers";
+import { expectNoA11yViolations, loginAs, confirmDialog } from "./helpers";
 
 test("Budgetverwalter importiert eine Excel-Datei Zeile für Zeile", async ({
   page,
@@ -57,15 +57,14 @@ test("Budgetverwalter importiert eine Excel-Datei Zeile für Zeile", async ({
 
   // Eine offene Zeile löschen, dann den Import abbrechen: Rest wird gelöscht.
   await page.getByRole("button", { name: /^Zeile \d+ löschen$/ }).click();
-  await page.getByRole("button", { name: "Wirklich löschen" }).click();
+  await confirmDialog(page, "Löschen");
   await expect(
     page.getByRole("heading", {
       name: /1 übernommen, 1 übersprungen, 1 offen/,
     }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Import abbrechen" }).click();
-  await expectNoA11yViolations(page);
-  await page.getByRole("button", { name: "Import wirklich abbrechen" }).click();
+  await confirmDialog(page, "Import abbrechen", true);
   await expect(page.getByText(/Der Import ist abgebrochen/)).toBeVisible();
   await expect(
     page.getByRole("heading", {

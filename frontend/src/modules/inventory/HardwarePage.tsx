@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { useConfirm } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
 import { Link } from "../../components/Link";
 import { INVENTORY_MASTER_PATH } from "../../navigation";
@@ -256,18 +257,17 @@ function NewDeviceForm({
     holder: "",
   });
   const [inventoryNo, setInventoryNo] = useState("");
-  const [confirming, setConfirming] = useState(false);
+  const [ask, dialog] = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const save = () => {
     setBusy(true);
     setError(null);
-    createHardware({ ...deviceInput(fields), inventory_no: inventoryNo.trim() || null })
+    return createHardware({ ...deviceInput(fields), inventory_no: inventoryNo.trim() || null })
       .then((device) => navigate(hardwarePath(device.id)))
       .catch((problem: unknown) => {
         setError(errorText(problem, "Das Gerät konnte nicht angelegt werden."));
-        setConfirming(false);
         setBusy(false);
       });
   };
@@ -281,7 +281,14 @@ function NewDeviceForm({
     }
     if (inventoryNo.trim()) {
       setError(null);
-      setConfirming(true);
+      ask(
+        {
+          title: `Inventurnummer ${inventoryNo.trim()} eintragen?`,
+          text: "Bitte mit dem Aufkleber am Gerät vergleichen. Später lässt sie sich nur mit Bestätigung ändern.",
+          action: "Gerät anlegen",
+        },
+        save,
+      );
       return;
     }
     save();
@@ -308,7 +315,7 @@ function NewDeviceForm({
             maxLength={40}
             autoComplete="off"
             spellCheck={false}
-            disabled={confirming}
+            disabled={busy}
             onChange={(event) => setInventoryNo(event.target.value)}
           />
         </label>
@@ -317,42 +324,15 @@ function NewDeviceForm({
             {error}
           </p>
         )}
-        {confirming ? (
-          <div className="hint-box hint-warn confirm-box">
-            <p>
-              Inventurnummer <strong className="mono">{inventoryNo.trim()}</strong> für dieses Gerät
-              eintragen? Bitte mit dem Aufkleber am Gerät vergleichen. Später lässt sie sich nur mit
-              Bestätigung ändern.
-            </p>
-            <div className="project-actions">
-              <button
-                type="button"
-                className="button button-primary"
-                disabled={busy}
-                autoFocus
-                onClick={save}
-              >
-                Ja, Gerät anlegen
-              </button>
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => setConfirming(false)}
-              >
-                Zurück
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="project-actions">
-            <button type="submit" className="button button-primary" disabled={busy}>
-              Gerät anlegen
-            </button>
-            <button type="button" className="button button-secondary" onClick={onCancel}>
-              Abbrechen
-            </button>
-          </div>
-        )}
+        <div className="project-actions">
+          <button type="submit" className="button button-primary" disabled={busy}>
+            Gerät anlegen
+          </button>
+          <button type="button" className="button button-secondary" onClick={onCancel}>
+            Abbrechen
+          </button>
+        </div>
+        {dialog}
       </form>
     </section>
   );

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openAccountMenu } from "./helpers";
+import { expectNoA11yViolations, loginAs, openAccountMenu, confirmDialog } from "./helpers";
 
 test("Konto zeigt Angaben, Rollen, Geräte, Darstellung und Version", async ({ page }) => {
   await loginAs(page, ["Evergreen.Reader"], "Kira Konto");
@@ -33,6 +33,7 @@ test("Auf allen anderen Geräten abmelden", async ({ page, browser }) => {
   await expect(list.getByRole("listitem")).toHaveCount(2);
   await expectNoA11yViolations(page);
   await page.getByRole("button", { name: "Auf allen anderen Geräten abmelden" }).click();
+  await confirmDialog(page, "Abmelden", true);
   await expect(page.getByText("1 anderes Gerät ist abgemeldet.")).toBeVisible();
   await expect(list.getByRole("listitem")).toHaveCount(1);
   expect((await otherPage.request.get("/api/me")).status()).toBe(401);

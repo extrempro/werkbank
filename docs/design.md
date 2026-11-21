@@ -63,6 +63,16 @@ Ziel: Jeder Screen sieht gleich aufgebaut aus und wird gleich bedient. Visuelle 
 - Deaktivierte Buttons zeigen darunter, **warum** sie deaktiviert sind.
 - Mindestgröße 44 × 44 px.
 
+### Bestätigen
+
+Jede Aktion mit Folgen fragt vorher in einem **Bestätigungsdialog** nach (`components/ConfirmDialog.tsx`: `ConfirmButton` für einen Knopf, `useConfirm` z. B. für das Absenden einer Maske). Keine Rückfragen mehr direkt in der Seite („Wirklich löschen?“, „Ja, …“).
+
+- **Wann:** Löschen, Verwerfen, Entfernen von Gespeichertem, Buchen, Abschließen und Wieder öffnen, Freigeben und Zur Freigabe senden, Zusammenlegen, Abbrechen eines Vorgangs, Abmelden anderer Geräte, Trennen von Konten und alles, was andere sehen oder was sich nicht einfach zurücknehmen lässt.
+- **Nicht:** Speichern einer Maske, Filter, Ansicht wechseln, Entfernen in einer Maske vor dem Speichern, Dinge nur im eigenen Browser (z. B. Bild in einem IT-Tool), „Alle als gelesen“, Abmelden auf diesem Gerät.
+- **Inhalt:** Überschrift als Frage mit dem Gegenstand („Rechnung buchen?“), ein bis zwei Sätze, was genau passiert, und der Knopf mit dem Verb der Aktion („Buchen“, „Löschen“), nie „OK“ oder „Ja“. Lässt sich die Aktion nicht zurücknehmen: `danger` (roter Knopf, Warnsymbol, Hinweis „Das lässt sich nicht rückgängig machen.“); lässt sie sich zurücknehmen, steht im Text wie.
+- **Gerät:** PC und Tablet ein Fenster in der Mitte, Handy ein Blatt von unten mit großen Knöpfen untereinander (Aktion oben).
+- **Bedienung:** Der Fokus startet auf „Abbrechen“; Esc, Klick daneben und am Handy Wischen nach unten brechen ab. Während die Aktion läuft, bleibt der Dialog offen und gesperrt; Fehler zeigt die Seite danach an.
+
 ## 4. Status-Badges
 
 Einheitlich für die ganze App, immer mit Text (nie nur Farbe):

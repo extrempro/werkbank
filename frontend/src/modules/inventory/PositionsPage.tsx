@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { Link } from "../../components/Link";
 import { INVENTORY_MASTER_PATH, INVENTORY_POSITIONS_PATH } from "../../navigation";
 import { navigate } from "../../router";
@@ -278,7 +279,7 @@ function Overview({
   canEdit: boolean;
   onChange: (next: Position) => void;
 }) {
-  const [mode, setMode] = useState<"ansicht" | "bearbeiten" | "loeschen">("ansicht");
+  const [mode, setMode] = useState<"ansicht" | "bearbeiten">("ansicht");
   const [departments, setDepartments] = useState<Department[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -303,15 +304,26 @@ function Overview({
             <button type="button" className="button button-secondary" onClick={edit}>
               Bearbeiten
             </button>
-            <button
-              type="button"
+            <ConfirmButton
               className="button button-secondary"
               disabled={position.hardware > 0}
               title={position.hardware > 0 ? "An der Stelle hängt noch Hardware" : undefined}
-              onClick={() => setMode("loeschen")}
+              confirm={{
+                title: `Stelle ${position.name} löschen?`,
+                text: "Verknüpfungen zu Arbeitsplätzen entfallen.",
+                action: "Stelle löschen",
+                danger: true,
+              }}
+              onConfirm={() =>
+                deletePosition(position.id).then(
+                  () => navigate(INVENTORY_POSITIONS_PATH),
+                  (problem: unknown) =>
+                    setError(errorText(problem, "Die Stelle konnte nicht gelöscht werden.")),
+                )
+              }
             >
               Löschen
-            </button>
+            </ConfirmButton>
           </div>
         )}
       </div>
@@ -339,39 +351,6 @@ function Overview({
             <p role="alert" className="hint-box hint-bad">
               {error}
             </p>
-          )}
-          {mode === "loeschen" && (
-            <div className="hint-box hint-warn confirm-box">
-              <p>
-                Stelle <strong>{position.name}</strong> löschen? Verknüpfungen zu Arbeitsplätzen
-                entfallen. Das lässt sich nicht rückgängig machen.
-              </p>
-              <div className="project-actions">
-                <button
-                  type="button"
-                  className="button button-danger"
-                  autoFocus
-                  onClick={() =>
-                    deletePosition(position.id).then(
-                      () => navigate(INVENTORY_POSITIONS_PATH),
-                      (problem: unknown) => {
-                        setError(errorText(problem, "Die Stelle konnte nicht gelöscht werden."));
-                        setMode("ansicht");
-                      },
-                    )
-                  }
-                >
-                  Ja, Stelle löschen
-                </button>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => setMode("ansicht")}
-                >
-                  Nein
-                </button>
-              </div>
-            </div>
           )}
           <dl className="facts">
             <div>

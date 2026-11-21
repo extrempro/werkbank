@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { Icon } from "../../components/Icon";
 import { Link } from "../../components/Link";
 import { navigate } from "../../router";
@@ -414,7 +415,6 @@ function RenameDelete({
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
   const [extraValue, setExtraValue] = useState(extra?.value ?? "");
-  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = (event: FormEvent) => {
@@ -469,33 +469,6 @@ function RenameDelete({
             Abbrechen
           </button>
         </form>
-      ) : confirming ? (
-        <div className="hint-box hint-warn confirm-box">
-          <p>
-            {label} <strong>{name}</strong> löschen? Das geht nur, wenn nichts mehr darunter hängt.
-          </p>
-          <div className="project-actions">
-            <button
-              type="button"
-              className="button button-danger"
-              onClick={() =>
-                onDelete().catch((problem: unknown) => {
-                  setError(errorText(problem, "Konnte nicht gelöscht werden."));
-                  setConfirming(false);
-                })
-              }
-            >
-              Ja, löschen
-            </button>
-            <button
-              type="button"
-              className="button button-secondary"
-              onClick={() => setConfirming(false)}
-            >
-              Nein
-            </button>
-          </div>
-        </div>
       ) : (
         <div className="project-actions">
           <button
@@ -510,13 +483,22 @@ function RenameDelete({
           >
             Umbenennen
           </button>
-          <button
-            type="button"
+          <ConfirmButton
             className="button button-secondary"
-            onClick={() => setConfirming(true)}
+            confirm={{
+              title: `${label} ${name} löschen?`,
+              text: "Das geht nur, wenn nichts mehr darunter hängt.",
+              action: `${label} löschen`,
+              danger: true,
+            }}
+            onConfirm={() =>
+              onDelete().catch((problem: unknown) =>
+                setError(errorText(problem, "Konnte nicht gelöscht werden.")),
+              )
+            }
           >
             {label} löschen
-          </button>
+          </ConfirmButton>
         </div>
       )}
       {error && (
@@ -623,7 +605,6 @@ function RoomPanel({
     w: String(room.w),
     h: String(room.h),
   });
-  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = (event: FormEvent) => {
@@ -720,39 +701,24 @@ function RoomPanel({
             <button type="submit" className="button button-primary">
               Raum speichern
             </button>
-            {confirming ? (
-              <>
-                <button
-                  type="button"
-                  className="button button-danger"
-                  onClick={() =>
-                    onDelete().catch((problem: unknown) => {
-                      setError(errorText(problem, "Der Raum konnte nicht gelöscht werden."));
-                      setConfirming(false);
-                    })
-                  }
-                >
-                  Ja, Raum löschen
-                </button>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => setConfirming(false)}
-                >
-                  Nein
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="button button-secondary"
-                disabled={room.hardware > 0}
-                title={room.hardware > 0 ? "Im Raum steht noch Hardware" : undefined}
-                onClick={() => setConfirming(true)}
-              >
-                Raum löschen
-              </button>
-            )}
+            <ConfirmButton
+              className="button button-secondary"
+              disabled={room.hardware > 0}
+              title={room.hardware > 0 ? "Im Raum steht noch Hardware" : undefined}
+              confirm={{
+                title: `Raum ${room.name} löschen?`,
+                text: "Der Raum verschwindet aus dem Grundriss.",
+                action: "Raum löschen",
+                danger: true,
+              }}
+              onConfirm={() =>
+                onDelete().catch((problem: unknown) =>
+                  setError(errorText(problem, "Der Raum konnte nicht gelöscht werden.")),
+                )
+              }
+            >
+              Raum löschen
+            </ConfirmButton>
           </div>
         </form>
       ) : (
@@ -1131,10 +1097,15 @@ export function LocationsPage({
                             {shownFloor.plan ? "Grundriss ersetzen" : "Grundriss hochladen"}
                           </button>
                           {shownFloor.plan && (
-                            <button
-                              type="button"
+                            <ConfirmButton
                               className="button button-secondary"
-                              onClick={() =>
+                              confirm={{
+                                title: "Grundriss entfernen?",
+                                text: `Das Bild der Etage ${shownFloor.name} wird gelöscht. Die Räume bleiben, sind aber ohne Grundriss nicht mehr zu sehen, bis du ein neues Bild hochlädst.`,
+                                action: "Entfernen",
+                                danger: true,
+                              }}
+                              onConfirm={() =>
                                 deletePlan(shownFloor.id).then(applyFloor, (problem: unknown) =>
                                   setNotice(
                                     errorText(
@@ -1146,7 +1117,7 @@ export function LocationsPage({
                               }
                             >
                               Grundriss entfernen
-                            </button>
+                            </ConfirmButton>
                           )}
                         </div>
                         <RenameDelete

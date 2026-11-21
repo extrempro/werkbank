@@ -16,6 +16,7 @@ import {
 import { HardwareDetailPage } from "./HardwareDetailPage";
 import { HardwarePage } from "./HardwarePage";
 import { MasterDataPage } from "./MasterDataPage";
+import { confirmDialog } from "../../test/confirm";
 
 afterEach(() => {
   cleanup();
@@ -173,10 +174,12 @@ describe("Hardware-Liste", () => {
       target: { value: " INV-24-0500 " },
     });
     fireEvent.click(screen.getByRole("button", { name: "Gerät anlegen" }));
-    expect(screen.getByText("INV-24-0500")).toBeTruthy();
+    expect(
+      await screen.findByRole("alertdialog", { name: "Inventurnummer INV-24-0500 eintragen?" }),
+    ).toBeTruthy();
     expect(calls.some((call) => call.method === "POST")).toBe(false);
 
-    fireEvent.click(screen.getByRole("button", { name: "Ja, Gerät anlegen" }));
+    await confirmDialog("Gerät anlegen");
     await vi.waitFor(() => expect(calls.some((call) => call.method === "POST")).toBe(true));
     const post = calls.find((call) => call.method === "POST");
     expect(post?.body).toMatchObject({
@@ -219,9 +222,9 @@ describe("Gerät", () => {
       target: { value: "INV-24-0999" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
-    expect(screen.getByText(/von INV-24-0412 auf INV-24-0999 ändern/)).toBeTruthy();
+    expect(await screen.findByText(/von INV-24-0412 auf INV-24-0999 ändern/)).toBeTruthy();
     expect(calls.some((call) => call.method === "PUT")).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "Ja, übernehmen" }));
+    await confirmDialog("Übernehmen");
     expect(await screen.findByText("INV-24-0999")).toBeTruthy();
     expect(calls.find((call) => call.method === "PUT")?.body).toEqual({
       inventory_no: "INV-24-0999",
@@ -253,7 +256,7 @@ describe("Gerät", () => {
 
     fireEvent.click(screen.getByLabelText("Der Datenträger ist gelöscht oder vernichtet."));
     fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
-    fireEvent.click(screen.getByRole("button", { name: "Ja, ausmustern" }));
+    await confirmDialog("Ausmustern");
     const section = await screen.findByRole("region", { name: "Ausgemustert" });
     expect(within(section).getByText("entsorgt")).toBeTruthy();
     expect(calls.find((call) => call.method === "POST")?.body).toMatchObject({

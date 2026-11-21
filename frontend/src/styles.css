@@ -43,6 +43,9 @@
   --farbe-bad-text: #9a2a12;
   --farbe-info-flaeche: #e8eefb;
   --farbe-info-text: #163f8f;
+  /* Knopf für Aktionen, die sich nicht rückgängig machen lassen (Bestätigungsdialog) */
+  --farbe-gefahr: #b42318;
+  --farbe-auf-gefahr: #fff;
   --farbe-info-rand: #9fb8ea;
   --farbe-ki-flaeche: #efe7fb;
   --farbe-ki-text: #5b2a9a;
@@ -100,6 +103,8 @@
   --farbe-bad-text: #f5a896;
   --farbe-info-flaeche: #1d2c4d;
   --farbe-info-text: #b3ccff;
+  --farbe-gefahr: #c0392b;
+  --farbe-auf-gefahr: #fff;
   --farbe-info-rand: #4a6bb0;
   --farbe-ki-flaeche: #2e2247;
   --farbe-ki-text: #d9c6fa;
@@ -11182,4 +11187,176 @@ html {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+/* Bestätigungsdialog (components/ConfirmDialog.tsx): PC und Tablet in der Mitte,
+   Handy als Blatt von unten mit großen Knöpfen untereinander. */
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(10 15 25 / 55%);
+}
+
+.confirm-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 460px;
+  max-width: 100%;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 24px;
+  border-radius: 14px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 30%);
+}
+
+.confirm-grip {
+  display: none;
+}
+
+.confirm-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.confirm-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--farbe-info-flaeche);
+  color: var(--farbe-info-text);
+}
+
+.confirm-danger .confirm-icon {
+  background: var(--farbe-bad-flaeche);
+  color: var(--farbe-bad-text);
+}
+
+.confirm-icon svg {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.confirm-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.confirm-title {
+  margin: 0;
+  font-size: 1.1875rem;
+  overflow-wrap: anywhere;
+}
+
+.confirm-text {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--farbe-text-mittel);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.confirm-text p {
+  margin: 0;
+}
+
+.confirm-warning {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--farbe-bad-flaeche);
+  color: var(--farbe-bad-text);
+  font-weight: 600;
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-button-danger {
+  border-color: var(--farbe-gefahr);
+  background: var(--farbe-gefahr);
+  color: var(--farbe-auf-gefahr);
+}
+
+.confirm-button-danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+@media (max-width: 760px) {
+  .confirm-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .confirm-dialog {
+    width: 100%;
+    max-height: 90dvh;
+    padding: 0 20px calc(24px + env(safe-area-inset-bottom));
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 32px rgb(0 0 0 / 25%);
+  }
+
+  .confirm-grip {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0 4px;
+    touch-action: none;
+  }
+
+  .confirm-grip span {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--farbe-rand-stark);
+  }
+
+  .confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirm-actions .button {
+    width: 100%;
+    min-height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .confirm-dialog {
+    animation: confirm-in 0.16s ease-out;
+  }
+
+  @keyframes confirm-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .confirm-dialog {
+    border: 1px solid CanvasText;
+  }
 }

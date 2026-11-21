@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { errorText, formatDateTime } from "../api";
+import { ConfirmButton } from "../components/ConfirmDialog";
 import { Link } from "../components/Link";
 import {
   deleteHistory,
@@ -16,7 +17,6 @@ import { findTool } from "./index";
 export function ToolsHistoryPage() {
   const entries = useHistory(undefined, 200);
   const prefs = useToolPrefs();
-  const [confirm, setConfirm] = useState(false);
   const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
 
   const onSwitch = (enabled: boolean) => {
@@ -37,12 +37,7 @@ export function ToolsHistoryPage() {
     );
   };
 
-  const onDeleteAll = () => {
-    if (!confirm) {
-      setConfirm(true);
-      return;
-    }
-    setConfirm(false);
+  const onDeleteAll = () =>
     deleteHistory().then(
       () => setMessage({ kind: "status", text: "Der Verlauf ist gelöscht." }),
       (error: unknown) =>
@@ -51,7 +46,6 @@ export function ToolsHistoryPage() {
           text: errorText(error, "Der Verlauf konnte nicht gelöscht werden."),
         }),
     );
-  };
 
   return (
     <div className="page">
@@ -83,23 +77,19 @@ export function ToolsHistoryPage() {
             Favoriten und zuletzt genutzte Tools gelten für dein Konto, also auf jedem Gerät.
           </p>
           <div className="actions">
-            <button
-              type="button"
-              className={confirm ? "button button-danger" : "button button-secondary"}
+            <ConfirmButton
+              className="button button-secondary"
               disabled={!entries || entries.length === 0}
-              onClick={onDeleteAll}
+              confirm={{
+                title: "Ganzen Verlauf löschen?",
+                text: "Alle gespeicherten Einstellungen deiner Tools werden gelöscht. Favoriten bleiben.",
+                action: "Verlauf löschen",
+                danger: true,
+              }}
+              onConfirm={onDeleteAll}
             >
-              {confirm ? "Wirklich den ganzen Verlauf löschen?" : "Ganzen Verlauf löschen"}
-            </button>
-            {confirm && (
-              <button
-                type="button"
-                className="button button-quiet"
-                onClick={() => setConfirm(false)}
-              >
-                Abbrechen
-              </button>
-            )}
+              Ganzen Verlauf löschen
+            </ConfirmButton>
           </div>
           {message && (
             <p

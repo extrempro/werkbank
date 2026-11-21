@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.88.0",
+    date: "2026-11-21",
+    summary:
+      "Bevor etwas mit Folgen passiert, fragt die Werkbank jetzt in einem eigenen Fenster nach.",
+    sections: [
+      {
+        area: "Bedienung",
+        entries: [
+          "Löschen, Buchen, Abschließen, Freigeben, Verwerfen und andere Aktionen mit Folgen fragen jetzt in einem eigenen Fenster nach. Dort steht, was genau passiert.",
+          "Lässt sich etwas nicht rückgängig machen, ist der Knopf rot und es steht ein Hinweis dabei.",
+          "Am Computer und Tablet erscheint das Fenster in der Mitte, auf dem Handy als Blatt von unten mit großen Knöpfen. „Abbrechen“, Esc, ein Klick daneben oder Wischen nach unten brechen ab.",
+          "Neu mit Rückfrage sind zum Beispiel: Rechnung buchen, Posten und Evergreen-Einträge abschließen, Geräte freigeben und andere Geräte im Konto abmelden.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.87.0",
     date: "2026-11-21",
     summary: "Konto: Du siehst, wo du angemeldet bist, und kannst andere Geräte abmelden.",
