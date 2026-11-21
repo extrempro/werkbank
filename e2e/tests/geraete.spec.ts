@@ -4,6 +4,8 @@ import { BASE_URL, expectNoA11yViolations, loginAs } from "./helpers";
 // Gerätezuordnung mit nachgestelltem Microsoft Graph (ENVIRONMENT=test): Das Admin-Konto
 // verbindet der Test über /api/devices/admin/test-login. Die QR-Codes in fixtures/ enthalten
 // erfundene Gerätedaten; die Seriennummer steuert das Verhalten (DOPPELT, FEHLER500).
+// Importierte Geräte merkt sich der nachgestellte Graph (wie Microsoft: danach Duplikat),
+// deshalb gibt es für Freigabe und Sofortfreigabe je Profil einen eigenen Code.
 
 const ORIGIN = new URL(BASE_URL).origin;
 const PAGE = "/m365/geraete/zuordnung";
@@ -35,7 +37,9 @@ async function scanPhoto(page: Page, name: string) {
 
 test("Scannen, zur Freigabe senden, eine andere Person gibt frei", async ({
   page,
-}) => {
+}, testInfo) => {
+  const code = `freigabe-${testInfo.project.name}`;
+  const serial = `E2E-FREIGABE-${testInfo.project.name.toUpperCase()}`;
   await loginAs(page, ROLE, "Erika Beispiel");
   await page.goto(PAGE);
   await expect(
@@ -46,8 +50,8 @@ test("Scannen, zur Freigabe senden, eine andere Person gibt frei", async ({
   ).toBeVisible();
   await expectNoA11yViolations(page);
 
-  const dialog = await scanPhoto(page, "freigabe");
-  await expect(dialog.getByText("E2E-FREIGABE")).toBeVisible();
+  const dialog = await scanPhoto(page, code);
+  await expect(dialog.getByText(serial)).toBeVisible();
   await expectNoA11yViolations(page);
   await dialog.getByRole("button", { name: "Zur Freigabe senden" }).click();
   await expect(dialog.getByText(/Zur Freigabe gesendet/)).toBeVisible();
@@ -58,9 +62,11 @@ test("Scannen, zur Freigabe senden, eine andere Person gibt frei", async ({
   await loginAs(page, ROLE, "Ole Beispiel");
   await connectAdmin(page);
   await page.goto(`${PAGE}?ansicht=freigabe`);
-  await expect(page.getByText(/Admin-Konto verbunden/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Admin-Konto verbunden/ }),
+  ).toBeVisible();
   await page
-    .getByRole("button", { name: /E2E-FREIGABE/ })
+    .getByRole("button", { name: new RegExp(serial) })
     .first()
     .click();
   const drawer = page.getByRole("dialog", { name: "Modell 1" });
@@ -107,13 +113,13 @@ test("Wartendes Gerät verwerfen", async ({ page }) => {
 
 test("Sofort freigeben mit Admin-Konto, Duplikat und Fehler von Microsoft", async ({
   page,
-}) => {
+}, testInfo) => {
   await loginAs(page, ROLE, "Ole Beispiel");
   await connectAdmin(page);
   await page.goto(PAGE);
 
   // Sofortfreigabe: erst nach Bestätigung des Tenants
-  let dialog = await scanPhoto(page, "sofort");
+  let dialog = await scanPhoto(page, `sofort-${testInfo.project.name}`);
   const go = dialog.getByRole("button", { name: "Jetzt freigeben" });
   await expect(go).toBeDisabled();
   await dialog.getByRole("checkbox", { name: /Beispiel-Tenant/ }).check();

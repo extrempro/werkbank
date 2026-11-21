@@ -126,7 +126,7 @@ function CopyId({ value }: { value: string }) {
       <span className="mono">{value}</span>
       <button
         type="button"
-        className="button button-quiet dev-copy-button"
+        className="button button-secondary dev-copy-button"
         onClick={() => {
           void navigator.clipboard?.writeText(value).then(() => setCopied(true));
         }}
@@ -321,12 +321,12 @@ function DeviceDrawer({ device, admin, onClose, onChanged }: DrawerProps) {
             <h2 id={titleId}>{device.model}</h2>
             <StatusPill device={device} />
           </div>
-          <button type="button" className="button button-quiet dev-close" onClick={onClose}>
+          <button type="button" className="button button-secondary dev-close" onClick={onClose}>
             <Icon name="schliessen" />
             <span className="visually-hidden">Schließen</span>
           </button>
         </div>
-        <div className="dev-drawer-body">
+        <div className="dev-drawer-body" tabIndex={0} role="region" aria-label="Details zum Gerät">
           <section aria-labelledby={`${titleId}-verlauf`}>
             <h3 id={`${titleId}-verlauf`}>Verlauf</h3>
             <ol className="dev-timeline">
@@ -608,7 +608,7 @@ function ScanDialog({ onClose, onDone, onOpenEntry }: ScanDialogProps) {
       >
         <div className="dev-dialog-head">
           <h2 id={titleId}>Gerät zuordnen</h2>
-          <button type="button" className="button button-quiet dev-close" onClick={onClose}>
+          <button type="button" className="button button-secondary dev-close" onClick={onClose}>
             <Icon name="schliessen" />
             <span className="visually-hidden">Schließen</span>
           </button>
@@ -628,7 +628,7 @@ function ScanDialog({ onClose, onDone, onOpenEntry }: ScanDialogProps) {
           ))}
         </ol>
 
-        <div className="dev-dialog-body">
+        <div className="dev-dialog-body" tabIndex={0} role="region" aria-label="Schritt">
           {step.kind === "kamera" && <Scanner onCode={onCode} />}
 
           {step.kind === "pruefen" && !step.scan && !step.error && (
