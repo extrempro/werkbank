@@ -21,6 +21,7 @@ class Role(StrEnum):
     PROJECTS_EDITOR = "Projekte.Editor"
     INVENTORY_READER = "Bestand.Reader"
     INVENTORY_EDITOR = "Bestand.Editor"
+    DEVICES_ASSOCIATION = "Geraete.Zuordnung"
 
 
 KNOWN_ROLES: frozenset[str] = frozenset(role.value for role in Role)
@@ -35,6 +36,10 @@ def filter_known_roles(roles: object) -> list[str]:
 
 # Anzeigename und Beschreibung je Rolle (wie in docs/entra-setup.md, Abschnitt 1.6)
 ROLE_INFO: dict[str, tuple[str, str]] = {
+    Role.DEVICES_ASSOCIATION: (
+        "Gerätezuordnung",
+        "Neue Windows-Geräte per QR-Code scannen, zur Freigabe senden, freigeben, verwerfen",
+    ),
     Role.WERKBANK_ADMIN: (
         "Werkbank Admin",
         "Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log",

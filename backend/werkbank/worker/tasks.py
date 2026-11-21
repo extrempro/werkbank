@@ -16,6 +16,8 @@ from werkbank.core.notify_channels import DELIVER, DELIVER_INTERVAL, deliver_job
 from werkbank.core.push import PUSH_DELIVER, PUSH_DELIVER_INTERVAL, push_job
 from werkbank.core.sessions import now_utc
 from werkbank.modules.budget.notifications import budget_notifications
+from werkbank.modules.devices.jobs import STATUS_JOB, STATUS_JOB_INTERVAL, status_job
+from werkbank.modules.devices.notifications import devices_notifications
 from werkbank.modules.evergreen.jobs import FETCH_MESSAGES, fetch_messages_job
 from werkbank.modules.evergreen.notifications import evergreen_notifications
 from werkbank.modules.inventory.entra_sync import ENTRA_SYNC, ENTRA_SYNC_INTERVAL, entra_sync_job
@@ -112,6 +114,7 @@ NOTIFICATION_SOURCES = (
     budget_notifications,
     monitoring_notifications,
     inventory_notifications,
+    devices_notifications,
 )
 
 REGISTRY: dict[str, JobType] = {
@@ -124,6 +127,7 @@ REGISTRY: dict[str, JobType] = {
     PSREF_SYNC: JobType(handler=psref_job, interval=PSREF_SYNC_INTERVAL),
     LOAN_JOB: JobType(handler=loan_job, interval=LOAN_JOB_INTERVAL),
     ENTRA_SYNC: JobType(handler=entra_sync_job, interval=ENTRA_SYNC_INTERVAL),
+    STATUS_JOB: JobType(handler=status_job, interval=STATUS_JOB_INTERVAL),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
 }
 

@@ -90,6 +90,16 @@ KINDS: dict[str, KindInfo] = {
         "Neue Einträge zum Sichten",
         (Role.EVERGREEN_EDITOR,),
     ),
+    "geraete.zugeordnet": KindInfo(
+        "Gerätezuordnung",
+        "Ein Gerät, das du gescannt oder freigegeben hast, ist zugeordnet",
+        (Role.DEVICES_ASSOCIATION,),
+    ),
+    "geraete.registriert": KindInfo(
+        "Gerätezuordnung",
+        "Ein Gerät, das du gescannt oder freigegeben hast, ist in Intune registriert",
+        (Role.DEVICES_ASSOCIATION,),
+    ),
     "budget.rechnung_pruefen": KindInfo(
         "IT-Budget", "Rechnung wartet auf Prüfung", (Role.BUDGET_MANAGER,)
     ),

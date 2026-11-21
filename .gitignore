@@ -46,3 +46,6 @@ Thumbs.db
 data/
 uploads/
 *.log
+
+# Echte QR-Codes für den Golden-Test der Gerätezuordnung (nie ins Repository)
+backend/tests/fixtures-private/
