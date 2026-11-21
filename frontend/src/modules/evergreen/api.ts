@@ -1,313 +1,163 @@
-import { deleteJson, getJson, patchJson, postJson } from "../../api";
+import { getJson, postJson } from "../../api";
 
 const BASE = "/api/evergreen";
+export const PAGE_SIZE = 50;
 
-export interface Item {
+/** Unterabschnitte (Software); weitere kommen später dazu. */
+export const SOFTWARE: Record<string, string> = { m365: "Microsoft 365" };
+export type SoftwareKey = "m365";
+
+export type EntryStatus = "neu" | "bearbeitet" | "abgeschlossen";
+export type EntryFilter = "offen" | EntryStatus | "alle";
+
+export const ENTRY_STATES: Record<EntryStatus, { label: string; pill: string }> = {
+  neu: { label: "Neu", pill: "pill-info" },
+  bearbeitet: { label: "Bearbeitet", pill: "pill-todo" },
+  abgeschlossen: { label: "Abgeschlossen", pill: "pill-ok" },
+};
+
+export const ENTRY_FILTERS: { id: EntryFilter; label: string }[] = [
+  { id: "offen", label: "Offen" },
+  { id: "neu", label: "Neu" },
+  { id: "bearbeitet", label: "Bearbeitet" },
+  { id: "abgeschlossen", label: "Abgeschlossen" },
+  { id: "alle", label: "Alle" },
+];
+
+export const SOURCE_LABELS: Record<string, string> = {
+  nachrichtencenter: "Nachrichtencenter",
+  manuell: "Von Hand",
+  aenderung: "Erkannte Änderung",
+};
+
+export const NOTE_LABELS: Record<string, string> = {
+  notiz: "Notiz",
+  abgeschlossen: "Abgeschlossen",
+  geoeffnet: "Wieder geöffnet",
+  aktualisiert: "Meldung aktualisiert",
+};
+
+export interface EntrySummary {
   id: number;
   number: string;
+  software: string;
   title: string;
-  service: string | null;
   source: string;
-  major_change: boolean;
-  rollout_date: string | null;
-  step: string;
-  step_title: string;
-  finished: boolean;
-  waiting_for_me: boolean;
-  created_at: string;
-}
-
-export interface ItemCounts {
-  offen: number;
-  meine: number;
-  abgeschlossen: number;
-  alle: number;
-}
-
-export interface ItemList {
-  entries: Item[];
-  has_more: boolean;
-  can_create: boolean;
-  counts?: ItemCounts;
-}
-
-export interface Step {
-  id: string;
-  title: string;
-}
-
-export interface WorkflowAction {
-  id: string;
-  title: string;
-  comment_required: boolean;
-  on_behalf: boolean;
-}
-
-export interface WorkflowEvent {
-  id: number;
-  occurred_at: string;
-  step_title: string;
-  action_title: string;
-  target_title: string;
-  user: string | null;
-  on_behalf_of: string | null;
-  comment: string | null;
-  session_date: string | null;
-}
-
-export interface Message {
-  id: number;
-  message_id: string;
-  title: string;
+  source_ref: string | null;
   services: string[];
-  category: string | null;
   major_change: boolean;
   action_required_by: string | null;
-  published_at: string | null;
-  modified_at: string | null;
-  body: string | null;
-  status: string;
-  item_id: number | null;
+  status: EntryStatus;
+  created_at: string;
+  updated_at: string;
+  last_editor: string | null;
 }
 
-export interface MessageList {
-  entries: Message[];
-  has_more: boolean;
-  new_count: number;
-}
-
-export interface PlanEntry {
-  id: number;
-  label: string;
-  target_value: unknown;
-  instruction: string | null;
-  provisional: boolean;
-  status: string;
-  monitored: boolean;
-  confirmed_by: string | null;
-  confirmed_at: string | null;
-  setting_id: number | null;
-  setting_path: string | null;
-  current_value: unknown;
-}
-
-export interface SettingChoice {
-  id: number;
-  path: string;
-  title: string;
-  value: unknown;
-}
-
-export interface NewPlanEntry {
-  label: string;
-  target_value: unknown;
-  instruction: string;
-  provisional: boolean;
-  setting_id: number | null;
-}
-
-export interface ItemDetail {
-  item: Item;
-  plan: PlanEntry[];
-  can_plan: boolean;
-  provisional_hint: boolean;
-  message: Message | null;
-  message_updated: boolean;
-  summary: string | null;
-  departments_feedback: string | null;
-  not_controllable: boolean;
-  steps: Step[];
-  actions: WorkflowAction[];
-  events: WorkflowEvent[];
+export interface EntryList {
+  entries: EntrySummary[];
+  total: number;
+  open: number;
+  new: number;
   can_edit: boolean;
 }
 
-export interface NewItem {
+export interface Note {
+  id: number;
+  kind: string;
+  text: string | null;
+  author: string | null;
+  created_at: string;
+}
+
+export interface Entry extends EntrySummary {
+  category: string | null;
+  published_at: string | null;
+  modified_at: string | null;
+  body: string | null;
+  closed_at: string | null;
+  notes: Note[];
+  can_edit: boolean;
+}
+
+export function entriesPath(software: string): string {
+  return `/evergreen/${software}`;
+}
+
+export function entryPath(software: string, id: number): string {
+  return `/evergreen/${software}/${id}`;
+}
+
+/** Pfad /evergreen/<software>[/<id>] lesen. */
+export function parseEvergreenPath(
+  path: string,
+): { software: SoftwareKey; entryId: number | null } | null {
+  // „/evergreen“ allein (alte Links) führt zu Microsoft 365
+  if (path === "/evergreen") {
+    return { software: "m365", entryId: null };
+  }
+  const match = /^\/evergreen\/([a-z0-9]{1,20})(?:\/(\d{1,9}))?$/.exec(path);
+  if (!match || !match[1] || !(match[1] in SOFTWARE)) {
+    return null;
+  }
+  return { software: match[1] as SoftwareKey, entryId: match[2] ? Number(match[2]) : null };
+}
+
+export function fetchEntries(
+  software: string,
+  state: EntryFilter,
+  query: string,
+  offset: number,
+  limit: number = PAGE_SIZE,
+): Promise<EntryList> {
+  const params = new URLSearchParams({
+    software,
+    state,
+    offset: String(offset),
+    limit: String(limit),
+  });
+  if (query.trim()) {
+    params.set("q", query.trim());
+  }
+  return getJson(`${BASE}/entries?${params.toString()}`);
+}
+
+export function fetchEntry(id: number): Promise<Entry> {
+  return getJson(`${BASE}/entries/${id}`);
+}
+
+export function createEntry(body: {
+  software: string;
   title: string;
-  service: string;
-  summary: string;
-  rollout_date: string;
-  major_change: boolean;
+  body?: string;
+  service?: string;
+}): Promise<Entry> {
+  return postJson(`${BASE}/entries`, body);
 }
 
-export interface ItemUpdate {
-  summary: string;
-  departments_feedback: string;
-  rollout_date: string | null;
-  not_controllable: boolean;
+export function addNote(id: number, text: string): Promise<Entry> {
+  return postJson(`${BASE}/entries/${id}/notes`, { text });
 }
 
-export function fetchItems(view: string, offset: number): Promise<ItemList> {
-  const params = new URLSearchParams({ view, offset: String(offset), limit: "50" });
-  return getJson(`${BASE}/items?${params.toString()}`);
+export function closeEntry(id: number, text: string): Promise<Entry> {
+  return postJson(`${BASE}/entries/${id}/close`, { text: text || null });
 }
 
-export function fetchItem(id: number): Promise<ItemDetail> {
-  return getJson(`${BASE}/items/${id}`);
+export function reopenEntry(id: number, text: string): Promise<Entry> {
+  return postJson(`${BASE}/entries/${id}/reopen`, { text: text || null });
 }
 
-export function createItem(item: NewItem): Promise<Item> {
-  return postJson(`${BASE}/items`, {
-    title: item.title,
-    service: item.service || null,
-    summary: item.summary || null,
-    rollout_date: item.rollout_date || null,
-    major_change: item.major_change,
-  });
+export function createEntryFromChange(changeId: number): Promise<Entry> {
+  return postJson(`${BASE}/entries/from-change`, { change_id: changeId });
 }
 
-/** Legt aus einer erkannten Änderung in M365-Konfiguration einen Vorgang an. */
-export function createItemFromChange(changeId: number): Promise<Item> {
-  return postJson(`${BASE}/items/from-change`, { change_id: changeId });
-}
-
-export function updateItem(id: number, update: ItemUpdate): Promise<ItemDetail> {
-  return patchJson(`${BASE}/items/${id}`, update);
-}
-
-export function performAction(
-  id: number,
-  action: string,
-  expectedStep: string,
-  comment: string,
-  sessionDate: string,
-): Promise<ItemDetail> {
-  return postJson(`${BASE}/items/${id}/actions`, {
-    action,
-    expected_step: expectedStep,
-    comment: comment || null,
-    session_date: sessionDate || null,
-  });
-}
-
-export function searchSettings(search: string): Promise<SettingChoice[]> {
-  return getJson(`${BASE}/settings?${new URLSearchParams({ search }).toString()}`);
-}
-
-export function addPlanEntry(itemId: number, entry: NewPlanEntry): Promise<ItemDetail> {
-  return postJson(`${BASE}/items/${itemId}/plan`, {
-    ...entry,
-    instruction: entry.instruction || null,
-  });
-}
-
-export function removePlanEntry(itemId: number, planId: number): Promise<ItemDetail> {
-  return deleteJson(`${BASE}/items/${itemId}/plan/${planId}`);
-}
-
-export function confirmPlanEntry(
-  itemId: number,
-  planId: number,
-  done: boolean,
-): Promise<ItemDetail> {
-  return postJson(`${BASE}/items/${itemId}/plan/${planId}/confirm`, { done });
-}
-
-const PLAN_STATUS_LABELS: Record<string, string> = {
-  erfuellt: "Umgesetzt (vom Abruf bestätigt)",
-  offen: "Noch nicht umgesetzt",
-  bestaetigt: "Umgesetzt (von der IT bestätigt)",
-  unbestaetigt: "Noch nicht bestätigt",
-};
-
-export function planStatusLabel(status: string): string {
-  return PLAN_STATUS_LABELS[status] ?? status;
-}
-
-export function fetchMessages(view: string, offset: number): Promise<MessageList> {
-  const params = new URLSearchParams({ view, offset: String(offset), limit: "50" });
-  return getJson(`${BASE}/messages?${params.toString()}`);
-}
-
-export function adoptMessage(id: number): Promise<Item> {
-  return postJson(`${BASE}/messages/${id}/adopt`);
-}
-
-export function setMessageStatus(id: number, status: "neu" | "ignoriert"): Promise<Message> {
-  return postJson(`${BASE}/messages/${id}/status`, { status });
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-  planForChange: "Geplante Änderung",
-  stayInformed: "Zur Information",
-  preventOrFixIssue: "Problem vermeiden oder beheben",
-};
-
-export function categoryLabel(category: string | null): string {
-  return category ? (CATEGORY_LABELS[category] ?? category) : "–";
-}
-
-const dateOnly = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
-const DAY = 24 * 60 * 60 * 1000;
-/** Ab so vielen Tagen bis zum Rollout gilt ein Vorgang als dringend (spec.md 8.4). */
-export const URGENT_DAYS = 21;
-
+/** Datum ohne Uhrzeit (TT.MM.JJJJ) oder „–“. */
 export function formatDate(iso: string | null): string {
-  return iso ? dateOnly.format(new Date(`${iso}T00:00:00`)) : "–";
-}
-
-/** Tage bis zum Rollout, bezogen auf den heutigen Tag. Negativ: Der Rollout hat begonnen. */
-export function daysUntil(iso: string, today: Date = new Date()): number {
-  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  return Math.round((new Date(`${iso}T00:00:00`).getTime() - start) / DAY);
-}
-
-/** Frist als Text, z. B. „in 12 Tagen (dringend)“. Ohne Datum ein Gedankenstrich. */
-export function rolloutText(item: Pick<Item, "rollout_date" | "finished">, today?: Date): string {
-  if (!item.rollout_date) {
+  if (!iso) {
     return "–";
   }
-  const date = formatDate(item.rollout_date);
-  if (item.finished) {
-    return date;
-  }
-  const days = daysUntil(item.rollout_date, today);
-  if (days < 0) {
-    return `${date} (Rollout hat begonnen)`;
-  }
-  const when = days === 0 ? "heute" : days === 1 ? "in 1 Tag" : `in ${days} Tagen`;
-  return `${date}, ${when}${days <= URGENT_DAYS ? " (dringend)" : ""}`;
-}
-
-export function isUrgent(item: Pick<Item, "rollout_date" | "finished">, today?: Date): boolean {
-  return (
-    !item.finished &&
-    item.rollout_date !== null &&
-    daysUntil(item.rollout_date, today) <= URGENT_DAYS
-  );
-}
-
-const SOURCE_LABELS: Record<string, string> = {
-  manuell: "von Hand angelegt",
-  nachrichtencenter: "Nachrichtencenter",
-  einstellung: "erkannte Änderung einer Einstellung",
-};
-
-export function sourceLabel(source: string): string {
-  return SOURCE_LABELS[source] ?? source;
-}
-
-/** Kurze Frist für die Liste, z. B. „Rollout am 01.12.2026 · noch 17 Tage“. */
-export function rolloutShort(item: Pick<Item, "rollout_date" | "finished">, today?: Date): string {
-  if (!item.rollout_date) {
-    return "Rollout: kein Datum";
-  }
-  const date = formatDate(item.rollout_date);
-  if (item.finished) {
-    return `Rollout: ${date}`;
-  }
-  const days = daysUntil(item.rollout_date, today);
-  if (days < 0) {
-    return `Rollout am ${date} · hat begonnen`;
-  }
-  const when = days === 0 ? "heute" : days === 1 ? "noch 1 Tag" : `noch ${days} Tage`;
-  return `Rollout am ${date} · ${when}`;
-}
-
-/** Farbe des Status: Handlung nötig (orange), abgeschlossen (grün), sonst wartend (blau). */
-export function stepClass(item: Pick<Item, "finished" | "waiting_for_me" | "step">): string {
-  if (item.finished) {
-    return item.step === "abgelehnt" ? "pill pill-bad" : "pill pill-ok";
-  }
-  return item.waiting_for_me ? "pill pill-todo" : "pill pill-info";
+  return new Date(iso).toLocaleDateString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }

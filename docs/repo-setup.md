@@ -22,7 +22,7 @@ Repository-Einstellungen können nur Personen mit Admin-Rechten ändern, Claude 
 
 Repository-Startseite → Zahnrad bei **About**:
 
-- Beschreibung: `Werkbank – Open-Source-Plattform für IT-Abteilungen: M365-Konfigurationsüberwachung und Evergreen-Freigaben`
+- Beschreibung: `Werkbank – Open-Source-Plattform für IT-Abteilungen: M365-Konfigurationsüberwachung und Evergreen`
 - Topics: `microsoft-365`, `entra-id`, `evergreen`, `configuration-management`, `drift-detection`, `fastapi`, `react`, `pwa`, `docker`, `self-hosted`
 
 ## 5. Actions-Berechtigungen

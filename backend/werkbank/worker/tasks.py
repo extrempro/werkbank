@@ -16,12 +16,7 @@ from werkbank.core.notify_channels import DELIVER, DELIVER_INTERVAL, deliver_job
 from werkbank.core.push import PUSH_DELIVER, PUSH_DELIVER_INTERVAL, push_job
 from werkbank.core.sessions import now_utc
 from werkbank.modules.budget.notifications import budget_notifications
-from werkbank.modules.evergreen.jobs import (
-    CHECK_IMPLEMENTATION,
-    FETCH_MESSAGES,
-    check_implementation_job,
-    fetch_messages_job,
-)
+from werkbank.modules.evergreen.jobs import FETCH_MESSAGES, fetch_messages_job
 from werkbank.modules.evergreen.notifications import evergreen_notifications
 from werkbank.modules.inventory.entra_sync import ENTRA_SYNC, ENTRA_SYNC_INTERVAL, entra_sync_job
 from werkbank.modules.inventory.loans import LOAN_JOB, LOAN_JOB_INTERVAL, loan_job
@@ -129,7 +124,6 @@ REGISTRY: dict[str, JobType] = {
     PSREF_SYNC: JobType(handler=psref_job, interval=PSREF_SYNC_INTERVAL),
     LOAN_JOB: JobType(handler=loan_job, interval=LOAN_JOB_INTERVAL),
     ENTRA_SYNC: JobType(handler=entra_sync_job, interval=ENTRA_SYNC_INTERVAL),
-    CHECK_IMPLEMENTATION: JobType(handler=check_implementation_job, interval=timedelta(hours=1)),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
 }
 

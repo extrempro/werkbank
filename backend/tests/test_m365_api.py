@@ -84,7 +84,7 @@ def test_api_requires_login() -> None:
 
 @pytest.mark.db
 def test_other_roles_are_forbidden(db: Session) -> None:
-    client = client_for(["Evergreen.Betriebsrat", "Tools.User"], "m365-fremd")
+    client = client_for(["Evergreen.Reader", "Tools.User"], "m365-fremd")
     for path in ("overview", "settings", "changes", "snapshots", "settings/1"):
         assert client.get(f"{BASE}/{path}").status_code == 403
 
@@ -149,7 +149,6 @@ def test_settings_list_search_and_detail(db: Session) -> None:
     everything = client.get(f"{BASE}/settings", params={"include_removed": "true"}).json()
     open_total = client.get(f"{BASE}/overview").json()["open_changes"]
     assert sum(entry["open_changes"] for entry in everything["entries"]) == open_total
-    assert not any(entry["from_evergreen"] for entry in everything["entries"])
     assert listing["entries"][0]["value"] == "disabled"
     assert listing["has_more"] is False
 
@@ -527,7 +526,7 @@ def test_tasks_depend_on_role_and_state(db: Session) -> None:
     assert titles == ["Änderungen bewerten", "Abweichungen vom Soll-Wert prüfen"]
 
     # Leser und andere Rollen bekommen keine Aufgaben aus dem Modul
-    for roles, oid in ((["Config.Reader"], "m365-leser"), (["Evergreen.Team"], "m365-team")):
+    for roles, oid in ((["Config.Reader"], "m365-leser"), (["Evergreen.Reader"], "m365-team")):
         assert client_for(roles, oid).get("/api/tasks").json() == {"tasks": [], "total": 0}
 
 

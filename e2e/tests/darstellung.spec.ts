@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { expectNoA11yViolations, loginAs } from "./helpers";
 
-const ROLES = ["Werkbank.Admin", "Config.Reviewer", "Evergreen.IT"];
+const ROLES = ["Werkbank.Admin", "Config.Reviewer", "Evergreen.Editor"];
 
 test("Automatisch folgt der Einstellung des Geräts", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
@@ -21,7 +21,7 @@ test("Dunkel bleibt nach dem Neuladen und ist auf allen Seiten gut lesbar", asyn
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dunkel");
   await expectNoA11yViolations(page);
 
-  for (const path of ["/m365", "/m365/aenderungen", "/m365/einstellungen", "/evergreen", "/audit"]) {
+  for (const path of ["/m365", "/m365/aenderungen", "/m365/einstellungen", "/evergreen/m365", "/audit"]) {
     await page.goto(path);
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dunkel");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();

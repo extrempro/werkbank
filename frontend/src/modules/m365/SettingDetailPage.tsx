@@ -92,7 +92,6 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
   const crumbs = [workloadLabel(setting.workload), areaLabel(setting.area), setting.object_name]
     .filter((part): part is string => Boolean(part))
     .join(" › ");
-  const fromEvergreen = meta.target_set && (meta.target_source ?? "").startsWith("Evergreen");
 
   return (
     <div className="page">
@@ -156,19 +155,6 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
             <strong>Weicht vom Soll-Wert ab.</strong> Soll: {formatValue(meta.target_value)}, Ist:{" "}
             {formatValue(setting.value)}
           </p>
-        )}
-
-        {fromEvergreen && (
-          <div className="hint-box hint-evergreen">
-            <p className="hint-title">Geregelt durch Evergreen-Vorgang</p>
-            <p>
-              Der Soll-Wert stammt aus {meta.target_source}.{" "}
-              {setting.deviates
-                ? "Der Wert weicht vom Beschluss ab."
-                : "Der Beschluss ist eingehalten."}
-            </p>
-            <Link to="/evergreen">Zu den Vorgängen →</Link>
-          </div>
         )}
 
         <section className="setting-section" aria-labelledby="angaben-titel">

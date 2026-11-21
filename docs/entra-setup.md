@@ -106,10 +106,8 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Werkbank Admin | `Werkbank.Admin` | Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log |
 | Konfiguration Leser | `Config.Reader` | M365-Konfiguration ansehen und exportieren |
 | Konfiguration Prüfer | `Config.Reviewer` | Änderungen bewerten, Beschreibungen und Soll-Werte pflegen |
-| Evergreen IT | `Evergreen.IT` | Technische Bewertung und Umsetzung von Evergreen-Vorgängen |
-| Evergreen Team | `Evergreen.Team` | Rückmeldungen der Fachabteilungen und BR-Vorlagen |
-| Evergreen Betriebsrat | `Evergreen.Betriebsrat` | Stellungnahme zu vorgelegten Vorgängen |
-| Evergreen Geschäftsführung | `Evergreen.GF` | Abnahme von Vorgängen |
+| Evergreen Leser | `Evergreen.Reader` | Evergreen-Einträge und ihre Notizen ansehen |
+| Evergreen Bearbeiter | `Evergreen.Editor` | Evergreen-Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen |
 | IT-Tools Nutzer | `Tools.User` | Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter) |
 | Tenant Leser | `Tenant.Reader` | Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen |
 | Budget Bearbeiter | `Budget.Editor` | IT-Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen |
@@ -144,10 +142,8 @@ Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wä
 | `GG-Werkbank-Admin` | Werkbank.Admin |
 | `GG-Werkbank-Config-Reader` | Config.Reader |
 | `GG-Werkbank-Config-Reviewer` | Config.Reviewer |
-| `GG-Werkbank-Evergreen-IT` | Evergreen.IT |
-| `GG-Werkbank-Evergreen-Team` | Evergreen.Team |
-| `GG-Werkbank-Evergreen-BR` | Evergreen.Betriebsrat |
-| `GG-Werkbank-Evergreen-GF` | Evergreen.GF |
+| `GG-Werkbank-Evergreen-Leser` | Evergreen.Reader |
+| `GG-Werkbank-Evergreen-Bearbeiter` | Evergreen.Editor |
 | `GG-Werkbank-Tools` | Tools.User |
 | `GG-Werkbank-Tenant` | Tenant.Reader |
 | `GG-Werkbank-Budget-IT` | Budget.Editor |
@@ -179,7 +175,7 @@ Entra Admin Center → **Schutz → Bedingter Zugriff → Richtlinien → Neue R
 | Richtlinie aktivieren | zuerst **Nur Bericht**, nach einigen Tagen ohne Auffälligkeiten **Ein** |
 
 Vor dem Einschalten:
-- Personen ohne MFA-Methode (z. B. Betriebsrat, Geschäftsführung) informieren und Microsoft Authenticator einrichten lassen.
+- Personen ohne MFA-Methode (z. B. Geschäftsführung mit Lesezugriff auf das Budget) informieren und Microsoft Authenticator einrichten lassen.
 - In den Anmeldeprotokollen prüfen, ob „Nur Bericht“ wie erwartet greift.
 
 ---
@@ -218,7 +214,7 @@ Der Collector liest die Einstellungen des Tenants über **Unified Tenant Configu
 |---|---|
 | `ConfigurationMonitoring.ReadWrite.All` | Snapshots bei UTCM anstoßen, abholen und wieder entfernen. Das Schreibrecht betrifft nur diese Snapshot-Aufträge, nicht die Einstellungen des Tenants. Mit `ConfigurationMonitoring.Read.All` allein lassen sich keine Snapshots erstellen. |
 | `AuditLog.Read.All` | „Geändert von“: Wer eine Einstellung geändert hat, steht im Entra-Audit-Log. |
-| `ServiceMessage.Read.All` | Evergreen: Meldungen aus dem Nachrichtencenter lesen. |
+| `ServiceMessage.Read.All` | Evergreen: Meldungen aus dem Nachrichtencenter lesen (jede Meldung wird ein Eintrag). |
 | `SecurityEvents.Read.All` | Freiwillig: Empfehlungen aus Microsoft Secure Score lesen (Seite „Empfehlungen“). Erst danach in der `.env` `SECURE_SCORE_ENABLED=true` setzen; ohne die Berechtigung schlägt der Abruf fehl. |
 | `Organization.Read.All` und `User.Read.All` | Freiwillig: Lizenzen und Benutzerzahlen lesen (Seiten „Lizenzen“ und „Benutzer“). Gelesen werden gekaufte und zugewiesene Lizenzen, die Abos mit ihrem Stichtag und die **Zahl** der Konten; Namen von Personen ruft die Werkbank nicht ab. `User.Read.All` erlaubt bei Microsoft grundsätzlich das Lesen aller Benutzerprofile, eine engere Berechtigung für die reine Anzahl gibt es nicht. Erst danach in der `.env` `TENANT_MONITOR_ENABLED=true` setzen; ohne die Berechtigungen schlägt der Abruf fehl. **IT-Bestand:** Mit `User.Read.All` sucht die Werkbank beim Besetzen einer Stelle nach Personen (Name, Anmeldename, Abteilung, Position, ob das Konto aktiv ist; nur Mitglieder, keine Gäste). Gesucht wird nur, wenn jemand mit `Bestand.Editor` tippt; gespeichert wird nur die gewählte Person an der Stelle bzw. im Verleih (dort mit Mailadresse für die Nachrichten). Einmal in der Stunde prüft die Werkbank diese Personen einzeln über ihre Objekt-ID (Name, Anmeldename, Mailadresse, ob das Konto aktiv ist). Ohne die Berechtigung zeigt die Personensuche einen Hinweis, alles andere im IT-Bestand funktioniert. |
 | `Application.Read.All` | Freiwillig: Zertifikate und Secrets der Anwendungen lesen (Seite „Zertifikate und Secrets“). Gelesen werden Bezeichnung und Ablaufdatum von App-Registrierungen und die Signaturzertifikate von Unternehmensanwendungen mit SAML. Den geheimen Wert eines Secrets liefert Microsoft nicht aus, die Werkbank speichert ihn nie. Erst danach in der `.env` `TENANT_CREDENTIALS_ENABLED=true` setzen; ohne die Berechtigung schlägt der Abruf fehl. |

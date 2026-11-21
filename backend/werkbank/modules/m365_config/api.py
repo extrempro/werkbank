@@ -109,8 +109,6 @@ class SettingOut(BaseModel):
     deviates: bool
     # Anzahl noch nicht bewerteter Änderungen an dieser Einstellung
     open_changes: int
-    # Der Soll-Wert stammt aus einem Evergreen-Vorgang (Beschluss)
-    from_evergreen: bool
     # Angezeigt wird ein KI-Text, den noch niemand geprüft hat
     ai_unreviewed: bool
 
@@ -332,9 +330,6 @@ def _setting_out(
         criticality=meta.criticality if meta else None,
         deviates=_deviates(setting, version, meta),
         open_changes=open_changes,
-        from_evergreen=bool(
-            meta and meta.target_set and (meta.target_source or "").startswith("Evergreen")
-        ),
         ai_unreviewed=ai_state == AiTextState.UNREVIEWED and not (meta and meta.description),
     )
 

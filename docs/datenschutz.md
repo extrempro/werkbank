@@ -5,7 +5,7 @@
 ## 1. Zweck der Verarbeitung
 
 - Überwachung der Konfiguration des Microsoft-365-Tenants (Nachvollziehbarkeit, Sicherheit)
-- Durchführung und Dokumentation des Freigabeprozesses für neue Microsoft-Funktionen (Evergreen) unter Beteiligung von Betriebsrat und Geschäftsführung
+- Sichtung und Dokumentation von Neuerungen der eingesetzten Software durch die IT (Evergreen)
 - Nachweis von Bewertungen und Entscheidungen (Audit-Log)
 
 ## 2. Verarbeitete personenbezogene Daten
@@ -18,7 +18,7 @@
 | Aktionen im Audit-Log (wer, wann, was) | Werkbank | Nachweis, Sicherheit | 90 Tage (in der Verwaltung einstellbar), danach automatische Löschung |
 | IP-Adresse (gekürzt) | Anfrage | Sicherheit | wie Audit-Log |
 | IP-Adresse (vollständig, nur als Zähler im Arbeitsspeicher) | Anfrage | Schutz vor Missbrauch (Begrenzung der Anfragerate) | höchstens wenige Minuten, wird nicht gespeichert |
-| Kommentare, Begründungen, Beschlüsse (Evergreen: wer hat wann wie entschieden, auch „im Auftrag“ mit Sitzungsdatum) | Eingabe | Nachweis | **[OFFEN]** |
+| Kommentare und Begründungen; Evergreen: Notizen mit Person und Zeitpunkt, wer abgeschlossen oder wieder geöffnet hat (die Daten des früheren Freigabe-Ablaufs wurden mit 0.76 gelöscht) | Eingabe | Nachweis | **[OFFEN]** |
 | „Geändert von“ (Konto oder Anwendung, die eine Tenant-Einstellung geändert hat) | Entra-Audit-Log, beim Abruf abgefragt | Nachvollziehbarkeit | **[OFFEN]**; gespeichert je erkannter Änderung |
 | Bewertungen und gepflegte Angaben (wer, wann, Kommentar; „Verantwortlich“ als Freitext) | Eingabe | Nachweis | **[OFFEN]** |
 | Namen und Adressen in Tenant-Einstellungen (z. B. Konten in Ausnahmen von Richtlinien; mit Exchange auch Adressen in Transportregeln und Schutz-Richtlinien; mit Teams und SharePoint vor allem Domänen für Freigabe und externen Zugriff; mit Intune Gruppen-IDs in Zuweisungen) | Abruf über UTCM | Überwachung der Konfiguration | solange der Verlauf aufbewahrt wird **[OFFEN]** |

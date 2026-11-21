@@ -204,7 +204,7 @@ def good_claims(**overrides: Any) -> dict[str, Any]:
         "oid": "11111111-1111-1111-1111-111111111111",
         "name": "Max Beispiel",
         "preferred_username": "max@example.com",
-        "roles": ["Evergreen.Team"],
+        "roles": ["Evergreen.Reader"],
     }
     claims.update(overrides)
     return claims
@@ -219,7 +219,7 @@ def test_entra_login_flow(migrated_db: None) -> None:
     back = client.get("/auth/callback", params={"code": "x", "state": "abc"})
     assert back.status_code == 303
     assert back.headers["location"] == "/evergreen"
-    assert client.get("/api/me").json()["roles"] == ["Evergreen.Team"]
+    assert client.get("/api/me").json()["roles"] == ["Evergreen.Reader"]
 
 
 @pytest.mark.db

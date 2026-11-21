@@ -3,10 +3,8 @@ import type { Chapter } from "./types";
 const ADMIN = "Werkbank.Admin";
 const CONFIG_READER = "Config.Reader";
 const CONFIG_REVIEWER = "Config.Reviewer";
-const EV_IT = "Evergreen.IT";
-const EV_TEAM = "Evergreen.Team";
-const EV_BR = "Evergreen.Betriebsrat";
-const EV_GF = "Evergreen.GF";
+const EV_READER = "Evergreen.Reader";
+const EV_EDITOR = "Evergreen.Editor";
 const TENANT = "Tenant.Reader";
 const BUDGET_READER = "Budget.Reader";
 const BUDGET_EDITOR = "Budget.Editor";
@@ -35,7 +33,7 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Die Werkbank ist die Plattform der IT für wiederkehrende Arbeit rund um Microsoft 365, Freigaben, das IT-Budget und kleine Werkzeuge. Jeder Bereich ist ein eigenes Modul. Was du siehst, hängt von deinen Rollen ab: Wer zum Beispiel nur für den Betriebsrat Stellung nimmt, sieht nur die Startseite und Evergreen.",
+            text: "Die Werkbank ist die Plattform der IT für wiederkehrende Arbeit rund um Microsoft 365, Freigaben, das IT-Budget und kleine Werkzeuge. Jeder Bereich ist ein eigenes Modul. Was du siehst, hängt von deinen Rollen ab: Wer zum Beispiel nur Evergreen lesen darf, sieht nur die Startseite und Evergreen.",
           },
           {
             kind: "terms",
@@ -47,7 +45,7 @@ export const CHAPTERS: readonly Chapter[] = [
               ],
               [
                 "Evergreen",
-                "Neuerungen von Microsoft bewerten und mit Betriebsrat und Geschäftsführung freigeben",
+                "Neuerungen von Software (zurzeit Microsoft 365) sichten, mit Notizen festhalten und abschließen",
               ],
               [
                 "IT-Budget",
@@ -199,7 +197,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "„In allen Einträgen suchen“ unten in der Schnellsuche führt zur Seite „Suche“. Sie sucht in allem, was du sehen darfst: Einstellungen, erkannte Änderungen, Evergreen-Vorgänge, Budgetposten, IT-Tools und dieses Handbuch.",
+            text: "„In allen Einträgen suchen“ unten in der Schnellsuche führt zur Seite „Suche“. Sie sucht in allem, was du sehen darfst: Einstellungen, erkannte Änderungen, Evergreen-Einträge, Budgetposten, IT-Tools und dieses Handbuch.",
           },
           {
             kind: "list",
@@ -266,13 +264,11 @@ export const CHAPTERS: readonly Chapter[] = [
                 "Tenant.Reader",
                 "Lizenzen, Benutzerzahlen, Zertifikate, Dienststatus und Nutzung ansehen",
               ],
-              ["Evergreen.IT", "Vorgänge bewerten und umsetzen, andere Schritte vertreten"],
+              ["Evergreen.Reader", "Evergreen-Einträge und ihre Notizen ansehen"],
               [
-                "Evergreen.Team",
-                "Rückmeldungen der Fachabteilungen und Vorlage für den Betriebsrat",
+                "Evergreen.Editor",
+                "Evergreen-Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen",
               ],
-              ["Evergreen.Betriebsrat", "zu vorgelegten Vorgängen Stellung nehmen"],
-              ["Evergreen.GF", "Vorgänge nach dem Betriebsrat abnehmen oder zurückgeben"],
               ["Budget.Reader", "das IT-Budget ansehen"],
               ["Budget.Editor", "Konten, Posten, Verträge, Partner und Rechnungen pflegen"],
               [
@@ -394,7 +390,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Eine Bewertung lässt sich zurücksetzen; auch das wird protokolliert. Mit der Rolle Evergreen.IT kannst du aus einer Änderung einen Evergreen-Vorgang anlegen.",
+            text: "Eine Bewertung lässt sich zurücksetzen; auch das wird protokolliert. Mit der Rolle Evergreen.Editor kannst du aus einer Änderung einen Evergreen-Eintrag anlegen.",
           },
         ],
         roles: [CONFIG_REVIEWER, ADMIN],
@@ -418,7 +414,7 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Ein Soll-Wert legt fest, wie eine Einstellung sein soll, von Hand oder aus einem Evergreen-Beschluss. Weicht der gelesene Wert ab, ist die Einstellung markiert, die Übersicht zählt sie, und Reviewer bekommen eine Aufgabe und eine Benachrichtigung.",
+            text: "Ein Soll-Wert legt fest, wie eine Einstellung sein soll, von Hand. Weicht der gelesene Wert ab, ist die Einstellung markiert, die Übersicht zählt sie, und Reviewer bekommen eine Aufgabe und eine Benachrichtigung.",
           },
         ],
       },
@@ -559,9 +555,8 @@ export const CHAPTERS: readonly Chapter[] = [
   {
     id: "evergreen",
     title: "Evergreen",
-    summary:
-      "Neuerungen von Microsoft bewerten und mit Betriebsrat und Geschäftsführung freigeben.",
-    roles: [EV_IT, EV_TEAM, EV_BR, EV_GF],
+    summary: "Neuerungen von Software sichten, mit Notizen festhalten und abschließen.",
+    roles: [EV_READER, EV_EDITOR],
     sections: [
       {
         id: "worum-es-geht",
@@ -569,170 +564,79 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Microsoft ändert Microsoft 365 laufend. Evergreen sorgt dafür, dass jede Neuerung, die die Mitbestimmung berührt, bewertet, dem Betriebsrat vorgelegt, von der Geschäftsführung abgenommen und danach wie beschlossen eingestellt wird. Ein solcher Fall heißt Vorgang und hat eine Nummer wie EV-2026-014.",
+            text: "Software wie Microsoft 365 ändert sich laufend. In Evergreen hält die IT fest, welche Neuerungen es gibt, was sie für uns bedeuten und was zu tun ist. Jede Neuerung ist ein Eintrag mit einer Nummer wie EV-2026-014.",
           },
-        ],
-      },
-      {
-        id: "ablauf",
-        title: "Der Ablauf",
-        blocks: [
+          {
+            kind: "text",
+            text: "Je Software gibt es einen eigenen Abschnitt. Zurzeit ist das Microsoft 365; weitere können später dazukommen.",
+          },
           {
             kind: "terms",
             items: [
-              [
-                "1. IT-Bewertung",
-                "IT: mitbestimmungspflichtig oder nicht (dann mit Begründung abgeschlossen)",
-              ],
-              ["2. Fachabteilungen", "Team: Rückmeldungen der Fachabteilungen liegen vor"],
-              ["3. Vorlage BR", "Team: an den Betriebsrat übergeben"],
-              ["4. Betriebsrat", "zustimmen, mit Auflagen zustimmen oder ablehnen"],
-              ["5. Geschäftsführung", "abnehmen oder zurückgeben (zurück zur Vorlage BR)"],
-              [
-                "6. Umsetzung",
-                "IT stellt die Soll-Werte ein; schließt von selbst, wenn alles stimmt",
-              ],
-            ],
-          },
-          {
-            kind: "text",
-            text: "Ein Vorgang kommt nur über diese Aktionen weiter. Jede Aktion steht mit Person, Zeitpunkt, Entscheidung und Kommentar im Protokoll des Vorgangs; das Protokoll lässt sich nicht ändern. Endzustände: abgeschlossen, ohne Vorlage abgeschlossen, abgelehnt.",
-          },
-          {
-            kind: "hint",
-            text: "Kommentar Pflicht bei: nicht mitbestimmungspflichtig, mit Auflagen zustimmen, ablehnen und zurückgeben.",
-          },
-        ],
-      },
-      {
-        id: "liste",
-        title: "Vorgänge finden",
-        blocks: [
-          {
-            kind: "text",
-            text: "Die Seite „Vorgänge“ hat die Ansichten „Offen“, „Wartet auf mich“, „Abgeschlossen“ und „Alle“. „Wartet auf mich“ zeigt die Vorgänge in deinem Schritt. Die Detailseite zeigt Frist, Schrittleiste, Angaben, Entscheidung, geplante Umsetzung und das Protokoll.",
-          },
-          {
-            kind: "text",
-            text: "„Rollout in X Tagen“ zeigt, wann Microsoft die Neuerung ausrollt. Ab 21 Tagen oder weniger ist die Frist rot markiert.",
-          },
-        ],
-        links: [{ to: "/evergreen", label: "Zu den Vorgängen" }],
-      },
-      {
-        id: "sichtbarkeit",
-        title: "Was Betriebsrat und Geschäftsführung sehen",
-        roles: [EV_BR, EV_GF, EV_IT, EV_TEAM],
-        blocks: [
-          {
-            kind: "text",
-            text: "Der Betriebsrat sieht einen Vorgang, sobald er ihm vorgelegt wurde; die Geschäftsführung, sobald er bei ihr ankommt. Vorher gibt es den Vorgang für sie nicht. Technische Einzelheiten wie Pfade und Ist-Werte sind für beide ausgeblendet.",
-          },
-        ],
-      },
-      {
-        id: "anlegen",
-        title: "Vorgang anlegen",
-        roles: [EV_IT, EV_TEAM],
-        blocks: [
-          {
-            kind: "steps",
-            items: [
-              "Wähle auf der Seite „Vorgänge“ den Knopf „Vorgang anlegen“.",
-              "Trage Titel (mindestens 3 Zeichen), Dienst, Rollout-Datum und eine verständliche Zusammenfassung ein.",
-              "Speichere. Der Vorgang bekommt eine Nummer und steht in der IT-Bewertung.",
-            ],
-          },
-          {
-            kind: "text",
-            text: "Vorgänge entstehen auch aus dem Eingang (Meldungen von Microsoft) und, für die IT, aus einer erkannten Änderung einer Einstellung.",
-          },
-        ],
-      },
-      {
-        id: "eingang",
-        title: "Eingang: Meldungen von Microsoft",
-        roles: [EV_IT, EV_TEAM],
-        blocks: [
-          {
-            kind: "text",
-            text: "Die Werkbank liest alle sechs Stunden das Nachrichtencenter von Microsoft 365. Alle Meldungen landen im Eingang. Größere Änderungen und Meldungen mit Handlungsfrist werden automatisch zu Vorgängen; die Frist wird zum Rollout-Datum.",
-          },
-          {
-            kind: "steps",
-            items: [
-              "Öffne „Eingang“ und lies die Meldung.",
-              "Wähle „Als Vorgang übernehmen“, wenn sie bewertet werden muss, oder „Beiseitelegen“, wenn nicht.",
-              "Beiseitegelegte Meldungen findest du unter „Beiseitegelegt“ und kannst sie zurückholen.",
-            ],
-          },
-          {
-            kind: "text",
-            text: "Ändert Microsoft eine Meldung später, zeigt der Vorgang einen Hinweis. Titel und Zusammenfassung bleiben, wie ihr sie geschrieben habt.",
-          },
-        ],
-        links: [{ to: "/evergreen/eingang", label: "Zum Eingang" }],
-      },
-      {
-        id: "entscheiden",
-        title: "Im eigenen Schritt entscheiden",
-        blocks: [
-          {
-            kind: "steps",
-            items: [
-              "Öffne den Vorgang, z. B. über „Wartet auf mich“ oder die Glocke.",
-              "Lies Zusammenfassung, Rückmeldungen und bisherige Entscheidungen im Protokoll.",
-              "Wähle die Aktion deines Schritts und schreibe einen Kommentar, wo er Pflicht ist.",
-              "Bestätige. Der Vorgang geht an den nächsten Schritt, und die Zuständigen werden benachrichtigt.",
-            ],
-          },
-          {
-            kind: "hint",
-            text: "Hat jemand anderes den Vorgang inzwischen weitergegeben, weist die Werkbank deine Aktion ab. Lade dann neu.",
-          },
-        ],
-      },
-      {
-        id: "im-auftrag",
-        title: "Beschluss des Betriebsrats im Auftrag erfassen",
-        roles: [EV_IT, EV_TEAM],
-        blocks: [
-          {
-            kind: "text",
-            text: "Hat der Betriebsrat in einer Sitzung beschlossen, kann das Team oder die IT den Beschluss im Schritt „Betriebsrat“ erfassen.",
-          },
-          {
-            kind: "steps",
-            items: [
-              "Wähle „Beschluss im Auftrag erfassen“.",
-              "Trage das Datum der Sitzung (nicht in der Zukunft) und den Inhalt des Beschlusses ein und wähle die Entscheidung.",
-              "Bestätige. Im Protokoll steht dein Name mit dem Zusatz „im Auftrag des BR“.",
+              ["Neu", "noch niemand hat sich den Eintrag angesehen"],
+              ["Bearbeitet", "es gibt mindestens eine Notiz"],
+              ["Abgeschlossen", "nichts mehr zu tun; lässt sich wieder öffnen"],
             ],
           },
         ],
       },
       {
-        id: "umsetzung",
-        title: "Umsetzung und Soll-Werte",
-        roles: [EV_IT],
+        id: "eintraege",
+        title: "Woher die Einträge kommen",
         blocks: [
-          {
-            kind: "text",
-            text: "Unter „Geplante Umsetzung“ trägt die IT ein, wie die Neuerung eingestellt wird: Bezeichnung, Soll-Wert, Anleitung, Kennzeichen „vorläufig“ und, wenn möglich, die überwachte Einstellung aus Microsoft 365.",
-          },
           {
             kind: "list",
             items: [
-              "Mit überwachter Einstellung gilt ein Eintrag als umgesetzt, sobald der Abruf den Soll-Wert im Tenant findet.",
-              "Ohne überwachte Einstellung bestätigst du die Umsetzung je Eintrag selbst; Person und Zeitpunkt werden festgehalten.",
-              "Sind alle Einträge umgesetzt, schließt der Schritt „Umsetzung“ von selbst. Von Hand schließen geht nicht.",
-              "Ist die Neuerung nicht steuerbar, kennzeichne den Vorgang als „nicht steuerbar“; dann schließt er ohne Einträge.",
-              "Beim Abschluss werden die Soll-Werte bei den Einstellungen hinterlegt; Abweichungen fallen danach auf.",
+              "Jede Meldung aus dem Nachrichtencenter von Microsoft wird automatisch ein Eintrag mit dem Status „Neu“. Ändert Microsoft die Meldung später, übernimmt die Werkbank den neuen Text und vermerkt das im Verlauf. Der Status bleibt.",
+              "Bearbeiter legen mit „Neuer Eintrag“ selbst einen an, zum Beispiel für eine Neuerung, die nicht im Nachrichtencenter steht.",
+              "Aus einer erkannten Änderung in der M365-Konfiguration machst du mit „Evergreen-Eintrag anlegen“ einen Eintrag.",
+            ],
+          },
+        ],
+        links: [{ to: "/evergreen/m365", label: "Zu Microsoft 365" }],
+      },
+      {
+        id: "liste",
+        title: "Liste und Ansicht",
+        blocks: [
+          {
+            kind: "text",
+            text: "Die Einträge stehen in einer Tabelle mit Nummer, Titel, Dienst, Eingang, der Person, die zuletzt etwas eingetragen hat, und dem Status. Oben suchst du nach Nummer, Titel, Kennung der Meldung (z. B. MC123456), Dienst oder Text und wählst den Status. Ein Klick auf eine Zeile öffnet den Eintrag rechts daneben; die Breite stellst du am Trenner dazwischen ein. Auf dem Handy öffnet sich der Eintrag über die ganze Breite, mit „Zur Liste“ geht es zurück.",
+          },
+          {
+            kind: "text",
+            text: "Der Text der Meldung steht als reiner Text in der Ansicht. Darunter folgen die Notizen und der Verlauf.",
+          },
+        ],
+      },
+      {
+        id: "notizen",
+        title: "Notizen anfügen und abschließen",
+        roles: [EV_EDITOR],
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Öffne den Eintrag.",
+              "Schreib unter „Notizen und Verlauf“, was du herausgefunden oder erledigt hast, und wähle „Notiz anfügen“. Ein neuer Eintrag ist danach „Bearbeitet“.",
+              "Weitere Notizen können du und andere Bearbeiter jederzeit anfügen.",
+              "Ist nichts mehr zu tun, wähle „Abschließen“. Steht etwas im Feld, wird es die letzte Notiz.",
             ],
           },
           {
             kind: "hint",
-            text: "Rollt Microsoft in höchstens 21 Tagen aus und gibt es noch keinen Beschluss, schlägt die Werkbank eine vorläufige Sperre vor: ein Soll-Wert mit Kennzeichen „vorläufig“, der sofort gilt.",
+            text: "Einen abgeschlossenen Eintrag öffnest du mit „Wieder öffnen“; er ist dann wieder „Bearbeitet“. Neue Einträge zählen als Aufgabe auf deiner Startseite, und du bekommst eine Benachrichtigung, wenn neue dazukommen.",
+          },
+        ],
+      },
+      {
+        id: "lesen",
+        title: "Nur lesen",
+        roles: [EV_READER],
+        blocks: [
+          {
+            kind: "text",
+            text: "Mit der Rolle Evergreen.Reader siehst du alle Einträge mit ihren Notizen, kannst aber nichts ändern. Aufgaben und Benachrichtigungen aus Evergreen bekommst du nicht.",
           },
         ],
       },

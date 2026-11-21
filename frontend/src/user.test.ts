@@ -18,7 +18,7 @@ describe("initials", () => {
 describe("roleLabel", () => {
   it("zeigt die wichtigste Rolle", () => {
     expect(roleLabel(["Config.Reader", "Werkbank.Admin"])).toBe("Administration");
-    expect(roleLabel(["Evergreen.Betriebsrat"])).toBe("Betriebsrat");
+    expect(roleLabel(["Evergreen.Reader"])).toBe("Evergreen-Leser");
     expect(roleLabel(["Irgendwas"])).toBeNull();
   });
 });

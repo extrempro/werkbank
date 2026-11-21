@@ -4,7 +4,7 @@ from typing import Any
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
@@ -13,7 +13,7 @@ from werkbank.core.text import html_to_text
 from werkbank.main import create_app
 from werkbank.modules.evergreen.jobs import FETCH_MESSAGES
 from werkbank.modules.evergreen.message_center import fetch_messages, parse_time
-from werkbank.modules.evergreen.models import EvItem, EvMessage, MessageStatus
+from werkbank.modules.evergreen.models import EvEntry, EvNote
 from werkbank.modules.m365_config.utcm import UtcmClient
 from werkbank.worker.tasks import build_registry
 
@@ -57,7 +57,9 @@ def client_for(roles: list[str], oid: str) -> TestClient:
     settings = Settings(public_url=ORIGIN, environment="test", enable_test_login=True)
     client = TestClient(create_app(settings), base_url=ORIGIN, follow_redirects=False)
     response = client.post(
-        "/auth/test-login", json={"oid": oid, "name": "Ina IT", "roles": roles}, headers=HEADERS
+        "/auth/test-login",
+        json={"oid": oid, "name": "Ina Beispiel", "roles": roles},
+        headers=HEADERS,
     )
     assert response.status_code == 303, response.text
     return client
@@ -100,124 +102,88 @@ def test_job_is_registered_with_collector() -> None:
 
 @pytest.fixture
 def db(db_session: Session) -> Session:
-    """Leerer Eingang für jeden Test."""
-    db_session.execute(update(EvMessage).values(item_id=None))
-    db_session.execute(delete(EvMessage))
+    """Keine Einträge zu Beginn jedes Tests."""
+    db_session.execute(delete(EvEntry))
     db_session.commit()
     return db_session
 
 
+def by_ref(db: Session, ref: str) -> EvEntry:
+    return db.execute(select(EvEntry).where(EvEntry.source_ref == ref)).scalar_one()
+
+
 @pytest.mark.db
-def test_fetch_fills_inbox_and_creates_items_by_rule(db: Session) -> None:
+def test_every_message_becomes_a_new_entry(db: Session) -> None:
     graph = FakeGraph(
         [
             raw("MC100001"),
             raw("MC100002", isMajorChange=True, title="Großer Umbau", services=["Exchange Online"]),
             raw("MC100003", actionRequiredByDateTime="2027-02-01T00:00:00Z"),
-            raw("MC100004", actionRequiredByDateTime="0001-01-01T00:00:00Z"),
             {"title": "ohne Kennung"},
         ]
     )
     result = fetch_messages(db, graph.client())
-    assert (result.received, result.new, result.updated, result.items_created) == (5, 4, 0, 2)
+    assert (result.received, result.new, result.updated) == (4, 3, 0)
     assert graph.filters[0].startswith("lastModifiedDateTime ge ")
 
-    messages = {m.message_id: m for m in db.scalars(select(EvMessage)).all()}
-    assert messages["MC100001"].status == MessageStatus.NEW
-    assert messages["MC100001"].body == "Neue Funktion\n\nAb Januar"
-    assert messages["MC100004"].status == MessageStatus.NEW
-    major = messages["MC100002"]
-    assert major.status == MessageStatus.ADOPTED and major.item_id is not None
-    item = db.get(EvItem, major.item_id)
-    assert item is not None
-    assert (item.title, item.service, item.source, item.source_ref, item.major_change) == (
+    first = by_ref(db, "MC100001")
+    assert (first.software, first.source, first.status) == ("m365", "nachrichtencenter", "neu")
+    assert first.body == "Neue Funktion\n\nAb Januar"
+    assert first.number.startswith("EV-")
+    major = by_ref(db, "MC100002")
+    assert (major.title, major.services, major.major_change) == (
         "Großer Umbau",
-        "Exchange Online",
-        "nachrichtencenter",
-        "MC100002",
+        ["Exchange Online"],
         True,
     )
-    deadline_item = db.get(EvItem, messages["MC100003"].item_id)
-    assert deadline_item is not None and str(deadline_item.rollout_date) == "2027-02-01"
+    deadline = by_ref(db, "MC100003").action_required_by
+    assert deadline is not None and deadline.date().isoformat() == "2027-02-01"
     audit = db.scalars(
         select(AuditLog)
         .where(AuditLog.action == "nachrichtencenter.abgerufen")
         .order_by(AuditLog.id)
     ).all()
-    assert audit[-1].details == {
-        "gelesen": 5,
-        "neu": 4,
-        "aktualisiert": 0,
-        "vorgaenge_angelegt": 2,
-    }
+    assert audit[-1].details == {"gelesen": 4, "neu": 3, "aktualisiert": 0}
 
 
 @pytest.mark.db
-def test_second_fetch_updates_without_duplicates(db: Session) -> None:
-    fetch_messages(db, FakeGraph([raw("MC200001"), raw("MC200002", isMajorChange=True)]).client())
-    items_before = len(db.scalars(select(EvItem.id)).all())
+def test_update_from_microsoft_keeps_status_and_notes_it(db: Session) -> None:
+    fetch_messages(db, FakeGraph([raw("MC200001"), raw("MC200002")]).client())
+    entry = by_ref(db, "MC200001")
+    entry.status = "abgeschlossen"
+    db.commit()
+    count = len(db.scalars(select(EvEntry.id)).all())
 
-    changed = [
-        raw(
-            "MC200001",
-            title="Jetzt wichtig",
-            isMajorChange=True,
-            lastModifiedDateTime="2024-11-12T08:00:00Z",
-        ),
-        raw("MC200002", isMajorChange=True),
-    ]
-    graph = FakeGraph(changed)
+    changed = raw("MC200001", title="Jetzt wichtig", lastModifiedDateTime="2024-11-12T08:00:00Z")
+    graph = FakeGraph([changed, raw("MC200002")])
     result = fetch_messages(db, graph.client())
-    assert (result.new, result.updated, result.items_created) == (0, 1, 1)
+    assert (result.new, result.updated) == (0, 1)
     # der zweite Abruf fragt nur ab der letzten Änderung (mit Überlappung)
     assert graph.filters[0] == "lastModifiedDateTime ge 2024-11-10T07:00:00Z"
-    assert len(db.scalars(select(EvItem.id)).all()) == items_before + 1
-    message = db.execute(select(EvMessage).where(EvMessage.message_id == "MC200001")).scalar_one()
-    assert (message.title, message.status) == ("Jetzt wichtig", MessageStatus.ADOPTED)
+    assert len(db.scalars(select(EvEntry.id)).all()) == count
+    db.refresh(entry)
+    assert (entry.title, entry.status) == ("Jetzt wichtig", "abgeschlossen")
+    notes = db.scalars(select(EvNote).where(EvNote.entry_id == entry.id)).all()
+    assert [(note.kind, note.user_id) for note in notes] == [("aktualisiert", None)]
 
 
 @pytest.mark.db
-def test_inbox_api_adopt_ignore_and_roles(db: Session) -> None:
+def test_tasks_and_notifications_only_for_editors(db: Session) -> None:
+    from datetime import datetime as moment
+
+    from werkbank.modules.evergreen.notifications import evergreen_notifications
+
     fetch_messages(db, FakeGraph([raw("MC300001"), raw("MC300002")]).client())
-    client = client_for(["Evergreen.IT"], "ev-it")
-    for roles, oid in ((["Evergreen.Betriebsrat"], "ev-br"), (["Config.Reader"], "m365-leser")):
-        assert client_for(roles, oid).get(f"{BASE}/messages").status_code == 403
+    editor = client_for(["Evergreen.Editor"], "ev-bearbeiter")
+    reader = client_for(["Evergreen.Reader"], "ev-leser")
+    tasks = editor.get("/api/tasks").json()["tasks"]
+    mine = [task for task in tasks if task["module"] == "Evergreen"]
+    assert [(task["title"], task["count"], task["link"]) for task in mine] == [
+        ("Microsoft 365: neue Einträge sichten", 2, "/evergreen/m365")
+    ]
+    assert not [t for t in reader.get("/api/tasks").json()["tasks"] if t["module"] == "Evergreen"]
 
-    inbox = client.get(f"{BASE}/messages").json()
-    assert inbox["new_count"] == 2
-    ids = {entry["message_id"]: entry["id"] for entry in inbox["entries"]}
-    tasks = [task["title"] for task in client.get("/api/tasks").json()["tasks"]]
-    assert "Eingang: neue Meldungen von Microsoft sichten" in tasks
-
-    adopted = client.post(f"{BASE}/messages/{ids['MC300001']}/adopt", headers=HEADERS)
-    assert adopted.status_code == 201, adopted.text
-    item_id = adopted.json()["id"]
-    assert adopted.json()["source"] == "nachrichtencenter"
-    again = client.post(f"{BASE}/messages/{ids['MC300001']}/adopt", headers=HEADERS)
-    assert again.status_code == 409
-    detail = client.get(f"{BASE}/items/{item_id}").json()
-    assert detail["message"]["message_id"] == "MC300001"
-    assert detail["message_updated"] is False
-    assert detail["summary"] == "Neue Funktion\n\nAb Januar"
-
-    url = f"{BASE}/messages/{ids['MC300002']}/status"
-    ignored = client.post(url, json={"status": "ignoriert"}, headers=HEADERS)
-    assert ignored.json()["status"] == "ignoriert"
-    assert client.get(f"{BASE}/messages").json()["entries"] == []
-    listed = client.get(f"{BASE}/messages", params={"view": "ignoriert"}).json()["entries"]
-    assert [entry["message_id"] for entry in listed] == ["MC300002"]
-    assert client.post(url, json={"status": "neu"}, headers=HEADERS).json()["status"] == "neu"
-    assert client.post(url, json={"status": "uebernommen"}, headers=HEADERS).status_code == 422
-    blocked = client.post(
-        f"{BASE}/messages/{ids['MC300001']}/status", json={"status": "ignoriert"}, headers=HEADERS
-    )
-    assert blocked.status_code == 409
-    assert client.post(f"{BASE}/messages/999999999/adopt", headers=HEADERS).status_code == 404
-
-    # Microsoft ändert die Meldung nach der Übernahme: Hinweis am Vorgang
-    later = raw("MC300001", lastModifiedDateTime="2099-01-01T00:00:00Z", title="Geändert")
-    fetch_messages(db, FakeGraph([later]).client())
-    detail = client.get(f"{BASE}/items/{item_id}").json()
-    assert detail["message_updated"] is True
-    assert detail["message"]["title"] == "Geändert"
-    assert detail["item"]["title"] == "Meldung MC300001"
+    events = list(evergreen_notifications(db, Settings(environment="test"), moment.now(UTC)))
+    assert len(events) == 1
+    assert events[0].title == "Evergreen Microsoft 365: 2 neue Einträge"
+    assert events[0].link == "/evergreen/m365"

@@ -29,7 +29,7 @@ describe("App", () => {
     mockFetch(200, {
       display_name: "Erika Beispiel",
       email: "erika@example.com",
-      roles: ["Evergreen.Team"],
+      roles: ["Evergreen.Reader"],
       authenticated_at: "2026-11-14T08:00:00Z",
     });
     render(<App />);
@@ -40,7 +40,7 @@ describe("App", () => {
     const bar = screen.getByRole("navigation", { name: "Bereiche" });
     expect(within(bar).getByRole("link", { name: "Evergreen" })).toHaveAttribute(
       "href",
-      "/evergreen",
+      "/evergreen/m365",
     );
     expect(within(bar).queryByRole("link", { name: "Microsoft 365" })).toBeNull();
     expect(within(bar).getByRole("link", { name: "Start" })).toHaveAttribute(
@@ -74,7 +74,7 @@ describe("App", () => {
     fireEvent.click(within(menu).getByRole("menuitemradio", { name: "Dunkel" }));
     expect(document.documentElement.dataset.theme).toBe("dunkel");
     expect(screen.getAllByText("EB").length).toBeGreaterThan(0);
-    expect(screen.getByText("Evergreen-Team")).toBeInTheDocument();
+    expect(screen.getByText("Evergreen-Leser")).toBeInTheDocument();
     expect(screen.queryByText("M365-Konfiguration")).not.toBeInTheDocument();
   });
 
@@ -91,7 +91,7 @@ describe("App", () => {
               JSON.stringify({
                 display_name: "Erika Beispiel",
                 email: "erika@example.com",
-                roles: ["Evergreen.Team"],
+                roles: ["Evergreen.Reader"],
                 authenticated_at: "2026-11-14T08:00:00Z",
               }),
               { status: 200 },
@@ -168,7 +168,7 @@ describe("App", () => {
     mockFetch(200, {
       display_name: "Erika Beispiel",
       email: "erika@example.com",
-      roles: ["Evergreen.Team"],
+      roles: ["Evergreen.Reader"],
       authenticated_at: "2026-11-14T08:00:00Z",
     });
     render(<App />);

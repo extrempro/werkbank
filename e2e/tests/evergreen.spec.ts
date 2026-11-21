@@ -1,120 +1,96 @@
 import { expect, test } from "@playwright/test";
 import { BASE_URL, expectNoA11yViolations, loginAs } from "./helpers";
 
-function isoInDays(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
-}
+const ORIGIN = new URL(BASE_URL).origin;
 
-test("Ein Vorgang läuft von der IT über Betriebsrat bis zur Geschäftsführung", async ({
+test("Bearbeiter legen einen Eintrag an, fügen Notizen an und schließen ab", async ({
   page,
 }, testInfo) => {
   const title = `Neue Funktion ${testInfo.project.name} ${Date.now()}`;
 
-  // IT legt den Vorgang an und bringt ihn bis zur Vorlage beim Betriebsrat
-  await loginAs(page, ["Evergreen.IT"], "Ina IT");
-  await page.goto("/evergreen");
-  await expect(page.getByRole("heading", { level: 1, name: "Vorgänge" })).toBeVisible();
-  await page.getByRole("button", { name: "Vorgang anlegen" }).click();
+  await loginAs(page, ["Evergreen.Editor"], "Ina Beispiel");
+  await page.goto("/evergreen/m365");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Microsoft 365" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Neuer Eintrag" }).click();
   await page.getByLabel("Titel").fill(title);
-  await page.getByLabel("Dienst (z. B. Teams, Exchange)").fill("Teams");
-  await page.getByLabel("Rollout-Datum").fill(isoInDays(10));
+  await page.getByLabel("Dienst (optional)").fill("Microsoft Teams");
   await expectNoA11yViolations(page);
   await page.getByRole("button", { name: "Anlegen" }).click();
 
-  await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
-  await expect(page.getByText("(dringend)")).toBeVisible();
-  await expectNoA11yViolations(page);
-  const itemUrl = new URL(page.url()).pathname;
-
-  await page.getByRole("button", { name: "Mitbestimmungspflichtig", exact: true }).click();
-  await expect(page.getByText("Neuer Schritt: Fachabteilungen.")).toBeVisible();
-  await page.getByRole("button", { name: "Rückmeldungen liegen vor" }).click();
-  await expect(page.getByText("Neuer Schritt: Vorlage BR.")).toBeVisible();
-  await page.getByRole("button", { name: "An den Betriebsrat übergeben" }).click();
   await expect(
-    page.getByRole("heading", { name: "Beschluss im Auftrag erfassen" }),
+    page.getByRole("heading", { level: 2, name: title }),
   ).toBeVisible();
+  await expect(page).toHaveURL(/\/evergreen\/m365\/\d+$/);
+  const entryUrl = new URL(page.url()).pathname;
+  await expect(page.getByText("Noch keine Notizen.")).toBeVisible();
   await expectNoA11yViolations(page);
 
-  // Betriebsrat entscheidet selbst; ohne Kommentar geht „Mit Auflagen“ nicht
-  await loginAs(page, ["Evergreen.Betriebsrat"], "Bea Betriebsrat");
-  await page.goto("/evergreen");
-  await page.getByRole("link", { name: title }).click();
-  await expect(page.getByRole("heading", { name: "Entscheidung: Betriebsrat" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Angaben bearbeiten" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Mit Auflagen zustimmen" }).click();
-  await expect(page.getByRole("alert")).toContainText("Kommentar nötig");
-  await page.getByLabel("Kommentar").fill("Nur für die Pilotgruppe");
-  await page.getByRole("button", { name: "Mit Auflagen zustimmen" }).click();
-  await expect(page.getByText("Neuer Schritt: Geschäftsführung.")).toBeVisible();
-  await expectNoA11yViolations(page);
-
-  // Geschäftsführung sieht die Aufgabe auf der Startseite und nimmt ab
-  await loginAs(page, ["Evergreen.GF"], "Gerd Geschaeftsfuehrung");
-  await page.goto("/");
+  await page
+    .getByLabel("Notiz", { exact: true })
+    .fill("Mit der Fachabteilung klären");
+  await page.getByRole("button", { name: "Notiz anfügen" }).click();
+  await expect(page.getByText("Mit der Fachabteilung klären")).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /Geschäftsführung: Vorgänge bearbeiten/ }),
+    page.getByText("Bearbeitet", { exact: true }).first(),
   ).toBeVisible();
-  await page.goto(itemUrl);
-  await page.getByRole("button", { name: "Abnehmen" }).click();
-  await expect(page.getByText("Neuer Schritt: Umsetzung.")).toBeVisible();
-  await expect(page.getByText("Nur für die Pilotgruppe")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Abnehmen" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Soll-Wert hinzufügen" })).toHaveCount(0);
-  await expectNoA11yViolations(page);
 
-  // IT plant die Umsetzung und bestätigt sie: Der Vorgang schließt von selbst
-  await loginAs(page, ["Evergreen.IT"], "Ina IT");
-  await page.goto(itemUrl);
-  await page.getByRole("button", { name: "Soll-Wert hinzufügen" }).click();
-  await page.getByLabel(/Bezeichnung/).fill("Funktion für alle abschalten");
-  await page.getByLabel(/^Soll-Wert/).fill("false");
-  await page.getByLabel(/Anleitung/).fill("Teams Admin Center, Besprechungsrichtlinien");
+  // Ein zweiter Bearbeiter ergänzt und schließt ab
+  await loginAs(page, ["Evergreen.Editor"], "Ole Beispiel");
+  await page.goto(entryUrl);
+  await page.getByLabel("Notiz", { exact: true }).fill("Betrifft uns nicht");
+  await page.getByRole("button", { name: "Abschließen" }).click();
+  await expect(
+    page.getByRole("button", { name: "Wieder öffnen" }),
+  ).toBeVisible();
+  await expect(page.getByText("Betrifft uns nicht")).toBeVisible();
   await expectNoA11yViolations(page);
-  await page.getByRole("button", { name: "Eintragen" }).click();
-  await expect(page.getByText("Noch nicht bestätigt")).toBeVisible();
-  await expectNoA11yViolations(page);
-  await page.getByRole("button", { name: /Als umgesetzt bestätigen/ }).click();
-  await expect(page.getByText("An diesem Vorgang ist nichts mehr zu tun.")).toBeVisible();
-  await expect(page.getByText("Umgesetzt (von der IT bestätigt)")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Soll-Wert hinzufügen" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Wieder öffnen" }).click();
+  await expect(
+    page.getByRole("button", { name: "Notiz anfügen" }),
+  ).toBeVisible();
 });
 
-test("Der Betriebsrat sieht einen Vorgang erst, wenn er ihm vorgelegt wurde", async ({ page }) => {
-  await loginAs(page, ["Evergreen.IT"], "Ina IT");
-  const created = await page.request.post("/api/evergreen/items", {
-    data: { title: `Noch nicht vorgelegt ${Date.now()}` },
-    headers: { Origin: new URL(BASE_URL).origin },
+test("Leser sehen Einträge ohne Bearbeitung und haben keine Aufgaben", async ({
+  page,
+}) => {
+  await loginAs(page, ["Evergreen.Editor"], "Ina Beispiel");
+  const created = await page.request.post("/api/evergreen/entries", {
+    data: { title: `Nur lesen ${Date.now()}` },
+    headers: { Origin: ORIGIN },
   });
   expect(created.status()).toBe(201);
   const id = (await created.json()).id as number;
 
-  await loginAs(page, ["Evergreen.Betriebsrat"], "Bea Betriebsrat");
-  expect((await page.request.get(`/api/evergreen/items/${id}`)).status()).toBe(404);
-  await page.goto(`/evergreen/${id}`);
-  await expect(page.getByText("für dich nicht sichtbar")).toBeVisible();
-});
-
-test("Ohne Evergreen-Rolle bleibt das Modul verschlossen", async ({ page }) => {
-  await loginAs(page, ["Config.Reader"], "Lea Leser");
-  await page.goto("/evergreen");
-  await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
-  expect((await page.request.get("/api/evergreen/items")).status()).toBe(403);
-});
-
-test("Der Eingang ist für IT erreichbar und zunächst leer", async ({ page }) => {
-  await loginAs(page, ["Evergreen.IT"], "Ina IT");
-  await page.goto("/evergreen/eingang");
-  await expect(page.getByRole("heading", { level: 1, name: "Eingang" })).toBeVisible();
-  await expect(page.getByText("Keine Meldungen für diese Auswahl.")).toBeVisible();
+  await loginAs(page, ["Evergreen.Reader"], "Lea Beispiel");
+  await page.goto(`/evergreen/m365/${id}`);
+  await expect(page.getByText("Noch keine Notizen.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Notiz anfügen" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("button", { name: "Neuer Eintrag" })).toHaveCount(
+    0,
+  );
   await expectNoA11yViolations(page);
+  const note = await page.request.post(`/api/evergreen/entries/${id}/notes`, {
+    data: { text: "Versuch" },
+    headers: { Origin: ORIGIN },
+  });
+  expect(note.status()).toBe(403);
+  const tasks = (await (await page.request.get("/api/tasks")).json()).tasks as {
+    module: string;
+  }[];
+  expect(tasks.filter((task) => task.module === "Evergreen")).toEqual([]);
+});
 
-  await loginAs(page, ["Evergreen.GF"], "Gerd Geschaeftsfuehrung");
-  await page.goto("/evergreen/eingang");
-  await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
-  expect((await page.request.get("/api/evergreen/messages")).status()).toBe(403);
+test("Ohne Evergreen-Rolle bleibt der Bereich verschlossen", async ({
+  page,
+}) => {
+  await loginAs(page, ["Config.Reader"], "Lea Leser");
+  await page.goto("/evergreen/m365");
+  await expect(
+    page.getByRole("heading", { name: "Seite nicht gefunden" }),
+  ).toBeVisible();
+  expect((await page.request.get("/api/evergreen/entries")).status()).toBe(403);
 });

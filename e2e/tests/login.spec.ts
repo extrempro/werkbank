@@ -12,24 +12,24 @@ test("ohne Anmeldung erscheint die Login-Seite", async ({ page }) => {
 });
 
 test("Admin sieht alle Bereiche", async ({ page }) => {
-  await loginAs(page, ["Werkbank.Admin", "Config.Reviewer", "Evergreen.IT"]);
+  await loginAs(page, ["Werkbank.Admin", "Config.Reviewer", "Evergreen.Editor"]);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ })).toBeVisible();
   // Audit-Log und Einstellungen stehen im eigenen Bereich „Verwaltung“.
   expect(await areaNames(page)).toContain("Verwaltung");
   await openPage(page, "Microsoft 365", "Änderungen");
   await expect(page).toHaveURL(/\/m365\/aenderungen$/);
-  await openPage(page, "Evergreen", "Vorgänge");
-  await expect(page).toHaveURL(/\/evergreen$/);
+  await openPage(page, "Evergreen", "Microsoft 365");
+  await expect(page).toHaveURL(/\/evergreen\/m365$/);
   await expectNoA11yViolations(page);
 });
 
-test("Betriebsrat sieht nur Start und Evergreen", async ({ page }) => {
-  await loginAs(page, ["Evergreen.Betriebsrat"], "Karl Rat");
+test("Evergreen-Leser sehen nur Start und Evergreen", async ({ page }) => {
+  await loginAs(page, ["Evergreen.Reader"], "Karl Rat");
   await page.goto("/");
   expect(await areaNames(page)).toEqual(["Start", "Evergreen"]);
-  await openPage(page, "Evergreen", "Vorgänge");
-  await expect(page).toHaveURL(/\/evergreen$/);
+  await openPage(page, "Evergreen", "Microsoft 365");
+  await expect(page).toHaveURL(/\/evergreen\/m365$/);
 });
 
 test("Abmelden führt zur Login-Seite", async ({ page }) => {

@@ -6,7 +6,7 @@ from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from tests.test_evergreen_api import BASE as EVERGREEN
-from tests.test_evergreen_api import ORIGIN, client_for, new_item, to_betriebsrat
+from tests.test_evergreen_api import ORIGIN, client_for, new_entry
 from tests.test_m365_api import db as m365_db  # noqa: F401  (füllt Einstellungen und Änderungen)
 from werkbank.config import Settings
 from werkbank.main import create_app
@@ -27,7 +27,7 @@ def test_search_requires_login() -> None:
 
 @pytest.mark.db
 def test_query_limits(migrated_db: None) -> None:
-    client = client_for(["Evergreen.IT"], "suche-it")
+    client = client_for(["Evergreen.Editor"], "suche-it")
     assert client.get("/api/search", params={"q": "a"}).status_code == 422
     assert client.get("/api/search", params={"q": "x" * 101}).status_code == 422
     assert client.get("/api/search").status_code == 422
@@ -37,27 +37,24 @@ def test_query_limits(migrated_db: None) -> None:
 
 
 @pytest.mark.db
-def test_evergreen_hits_follow_visibility(migrated_db: None) -> None:
-    it = client_for(["Evergreen.IT"], "suche-it")
-    item_id = new_item(it, "Suchwort Zeppelin in Teams", service="Teams")
-    number = it.get(f"{EVERGREEN}/items/{item_id}").json()["item"]["number"]
+def test_evergreen_hits_for_readers_and_editors(migrated_db: None) -> None:
+    it = client_for(["Evergreen.Editor"], "suche-it")
+    entry_id = new_entry(it, "Suchwort Zeppelin in Teams")
+    number = it.get(f"{EVERGREEN}/entries/{entry_id}").json()["number"]
 
     found = hits(it, "zeppelin")
-    assert [hit["link"] for hit in found] == [f"/evergreen/{item_id}"]
+    assert [hit["link"] for hit in found] == [f"/evergreen/m365/{entry_id}"]
     assert found[0]["module"] == "Evergreen"
-    assert found[0]["kind"] == "Vorgang"
-    assert number in found[0]["subtitle"]
-    assert [hit["link"] for hit in hits(it, number)] == [f"/evergreen/{item_id}"]
+    assert found[0]["kind"] == "Eintrag"
+    assert number in found[0]["subtitle"] and "Microsoft 365" in found[0]["subtitle"]
+    assert [hit["link"] for hit in hits(it, number)] == [f"/evergreen/m365/{entry_id}"]
 
-    # Der Betriebsrat findet den Vorgang erst, wenn er ihm vorgelegt wurde.
-    br = client_for(["Evergreen.Betriebsrat"], "suche-br", "Bea BR")
-    assert hits(br, "zeppelin") == []
-    to_betriebsrat(it, item_id)
-    assert [hit["link"] for hit in hits(br, "zeppelin")] == [f"/evergreen/{item_id}"]
+    reader = client_for(["Evergreen.Reader"], "suche-ev-leser", "Bea Beispiel")
+    assert [hit["link"] for hit in hits(reader, "zeppelin")] == [f"/evergreen/m365/{entry_id}"]
 
     # Ohne Evergreen-Rolle gibt es keine Treffer aus Evergreen.
-    reader = client_for(["Config.Reader"], "suche-leser")
-    assert hits(reader, "zeppelin") == []
+    other = client_for(["Config.Reader"], "suche-leser")
+    assert hits(other, "zeppelin") == []
 
 
 @pytest.mark.db
@@ -73,6 +70,6 @@ def test_m365_hits_only_with_config_role(m365_db: Session) -> None:  # noqa: F81
     changes = [hit for hit in hits(reader, "ada@example.com") if hit["kind"] == "Änderung"]
     assert changes and "ada@example.com" in changes[0]["subtitle"]
 
-    br = client_for(["Evergreen.Betriebsrat"], "suche-br", "Bea BR")
+    br = client_for(["Evergreen.Reader"], "suche-br", "Bea BR")
     assert hits(br, "MFA") == []
     assert hits(br, "ada@example.com") == []

@@ -15,7 +15,7 @@ test("Bereichsleiste und Seitenmenü mit Gruppen zum Aufklappen", async ({
   test.skip(isPhone(page), "Auf dem Handy gibt es die Leiste unten");
   await loginAs(
     page,
-    ["Werkbank.Admin", "Config.Reviewer", "Evergreen.IT", "Budget.Manager"],
+    ["Werkbank.Admin", "Config.Reviewer", "Evergreen.Editor", "Budget.Manager"],
     `Nina Navi ${testInfo.project.name}`,
   );
   await page.goto("/");
@@ -75,7 +75,7 @@ test("Menü einklappen: nur die Bereichsleiste bleibt, ein Bereich öffnet es wi
   test.skip(isPhone(page), "Auf dem Handy gibt es die Leiste unten");
   await loginAs(
     page,
-    ["Config.Reviewer", "Evergreen.IT"],
+    ["Config.Reviewer", "Evergreen.Editor"],
     `Nina Navi ${testInfo.project.name}`,
   );
   await page.goto("/m365");
@@ -94,7 +94,7 @@ test("Menü einklappen: nur die Bereichsleiste bleibt, ein Bereich öffnet es wi
     .getByRole("navigation", { name: "Bereiche" })
     .getByRole("link", { name: /^Evergreen/ })
     .click();
-  await expect(page).toHaveURL(/\/evergreen$/);
+  await expect(page).toHaveURL(/\/evergreen\/m365$/);
   await expect(
     page.getByRole("navigation", { name: "Seiten: Evergreen" }),
   ).toBeVisible();
@@ -170,7 +170,7 @@ test("Kontomenü: mit der Tastatur bedienbar, Darstellung umschalten", async ({
   await page.emulateMedia({ colorScheme: "light" });
   await loginAs(
     page,
-    ["Evergreen.Betriebsrat"],
+    ["Evergreen.Reader"],
     `Nina Navi ${testInfo.project.name}`,
   );
   await page.goto("/");
@@ -212,7 +212,7 @@ test("Schnellsuche findet Seiten nach Name, Gruppe und Bereich", async ({
 }, testInfo) => {
   await loginAs(
     page,
-    ["Budget.Reader", "Evergreen.IT"],
+    ["Budget.Reader", "Evergreen.Editor"],
     `Sina Suche ${testInfo.project.name}`,
   );
   await page.goto("/");
@@ -242,10 +242,10 @@ test("Schnellsuche findet Seiten nach Name, Gruppe und Bereich", async ({
     dialog.getByRole("link", { name: /In allen Einträgen suchen/ }),
   ).toHaveAttribute("href", "/suche?q=import");
   await expectNoA11yViolations(page);
-  await field.fill("eingang");
+  await field.fill("microsoft");
   await page.keyboard.press("Enter");
   await expect(dialog).toBeHidden();
-  await expect(page).toHaveURL(/\/evergreen\/eingang$/);
+  await expect(page).toHaveURL(/\/evergreen\/m365$/);
 
   if (isPhone(page)) {
     await page
@@ -265,7 +265,9 @@ test("Schnellsuche findet Seiten nach Name, Gruppe und Bereich", async ({
   await expect(dialog).toBeVisible();
   // Ohne Eingabe stehen die zuletzt besuchten Seiten da.
   await expect(dialog.getByText("Zuletzt besucht")).toBeVisible();
-  await expect(dialog.getByRole("option", { name: /Eingang/ })).toBeVisible();
+  await expect(
+    dialog.getByRole("option", { name: /Microsoft 365/ }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();

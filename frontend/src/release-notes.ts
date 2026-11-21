@@ -24,6 +24,30 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.76.0",
+    date: "2026-11-21",
+    summary: "Evergreen: Einträge je Software mit Notizen, nur für die IT.",
+    sections: [
+      {
+        area: "Evergreen",
+        entries: [
+          "Evergreen ist jetzt nur noch für die IT. Den Ablauf mit Fachabteilungen, Betriebsrat und Geschäftsführung gibt es nicht mehr.",
+          "Je Software gibt es einen eigenen Abschnitt, zuerst Microsoft 365.",
+          "Jede Meldung von Microsoft wird ein Eintrag. Eingang und Vorgänge sind dafür zusammengelegt.",
+          "Ein Eintrag ist neu, bearbeitet oder abgeschlossen. Bearbeiter fügen Notizen an, auch mehrere Personen nacheinander. Mit der ersten Notiz ist er bearbeitet, abgeschlossene Einträge lassen sich wieder öffnen.",
+          "Die Einträge stehen in einer Tabelle wie die Vorgänge im IT-Bestand; die Ansicht öffnet rechts daneben.",
+          "Aufgaben und Benachrichtigungen zu neuen Einträgen bekommen nur Bearbeiter.",
+        ],
+      },
+      {
+        area: "Anmeldung",
+        entries: [
+          "Der Hinweis „Sitzung abgelaufen“ hat wieder Abstand zum Knopf „Mit Microsoft anmelden“.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.75.0",
     date: "2026-11-21",
     summary: "IT-Bestand: Vorgänge mit einstellbarer Breite und kompakter Entscheidung.",

@@ -27,7 +27,7 @@ test("Admin sieht die Rollen in der Verwaltung", async ({ page }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
   await page.goto("/verwaltung/rollen");
   await expect(page.getByRole("heading", { level: 1, name: "Rollen" })).toBeVisible();
-  await expect(page.getByText("Evergreen Betriebsrat", { exact: true })).toBeVisible();
+  await expect(page.getByText("Evergreen Leser", { exact: true })).toBeVisible();
   await expect(page.getByRole("cell", { name: /Ada Admin/ }).first()).toBeVisible();
   await expectNoA11yViolations(page);
 });
@@ -219,7 +219,7 @@ test("Ohne Admin-Rolle gibt es Audit-Log und Verwaltung nicht in der Oberfläche
 });
 
 test("Betriebsrat kommt nicht an Audit-Log und Verwaltung", async ({ page }) => {
-  await loginAs(page, ["Evergreen.Betriebsrat"], "Karl Rat");
+  await loginAs(page, ["Evergreen.Reader"], "Karl Rat");
   await page.goto("/audit");
   await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
   const api = await page.request.get("/api/audit");

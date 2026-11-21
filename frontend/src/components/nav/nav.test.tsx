@@ -166,7 +166,7 @@ describe("navPrefs", () => {
 });
 
 describe("QuickSearch", () => {
-  const areas = areasFor(["Budget.Reader", "Evergreen.IT"]);
+  const areas = areasFor(["Budget.Reader", "Evergreen.Editor"]);
 
   it("findet Seiten, Enter öffnet den markierten Treffer", () => {
     vi.useFakeTimers();
@@ -195,7 +195,7 @@ describe("QuickSearch", () => {
   });
 
   it("zeigt ohne Eingabe die zuletzt besuchten Seiten und verlinkt die volle Suche", () => {
-    resetNavPrefs({ pinned: [], recent: ["/evergreen/eingang", "/budget/import"] });
+    resetNavPrefs({ pinned: [], recent: ["/evergreen/m365", "/budget/import"] });
     render(<QuickSearch areas={areas} onClose={() => undefined} onNavigate={() => undefined} />);
     expect(screen.getByText("Zuletzt besucht")).toBeVisible();
     expect(screen.getAllByRole("option").map((option) => option.id)).toHaveLength(1);
@@ -257,7 +257,7 @@ describe("AccountMenu", () => {
 describe("MobileNav", () => {
   it("zeigt im Blatt erst den Bereich, dann alle Bereiche", () => {
     resetNavPrefs({ pinned: ["/budget/rechnungen"], recent: [] });
-    const areas = areasFor(["Budget.Reader", "Evergreen.Team"]);
+    const areas = areasFor(["Budget.Reader", "Evergreen.Reader"]);
     const budget = areas.find((area) => area.id === "budget")!;
     render(
       <MobileNav

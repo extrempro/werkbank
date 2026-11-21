@@ -9,10 +9,8 @@ class Role(StrEnum):
     WERKBANK_ADMIN = "Werkbank.Admin"
     CONFIG_READER = "Config.Reader"
     CONFIG_REVIEWER = "Config.Reviewer"
-    EVERGREEN_IT = "Evergreen.IT"
-    EVERGREEN_TEAM = "Evergreen.Team"
-    EVERGREEN_BETRIEBSRAT = "Evergreen.Betriebsrat"
-    EVERGREEN_GF = "Evergreen.GF"
+    EVERGREEN_READER = "Evergreen.Reader"
+    EVERGREEN_EDITOR = "Evergreen.Editor"
     TOOLS_USER = "Tools.User"
     TENANT_READER = "Tenant.Reader"
     BUDGET_EDITOR = "Budget.Editor"
@@ -46,16 +44,11 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
         "Konfiguration Prüfer",
         "Änderungen bewerten, Beschreibungen und Soll-Werte pflegen",
     ),
-    Role.EVERGREEN_IT: (
-        "Evergreen IT",
-        "Technische Bewertung und Umsetzung von Evergreen-Vorgängen",
+    Role.EVERGREEN_READER: ("Evergreen Leser", "Evergreen-Einträge und ihre Notizen ansehen"),
+    Role.EVERGREEN_EDITOR: (
+        "Evergreen Bearbeiter",
+        "Evergreen-Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen",
     ),
-    Role.EVERGREEN_TEAM: ("Evergreen Team", "Rückmeldungen der Fachabteilungen und BR-Vorlagen"),
-    Role.EVERGREEN_BETRIEBSRAT: (
-        "Evergreen Betriebsrat",
-        "Stellungnahme zu vorgelegten Vorgängen",
-    ),
-    Role.EVERGREEN_GF: ("Evergreen Geschäftsführung", "Abnahme von Vorgängen"),
     Role.TOOLS_USER: (
         "IT-Tools Nutzer",
         "Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter)",

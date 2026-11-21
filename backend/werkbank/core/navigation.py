@@ -25,13 +25,7 @@ RECENT_MAX = 10
 PATH_MAX = 120
 
 CONFIG = (Role.CONFIG_READER, Role.CONFIG_REVIEWER)
-EVERGREEN = (
-    Role.EVERGREEN_IT,
-    Role.EVERGREEN_TEAM,
-    Role.EVERGREEN_BETRIEBSRAT,
-    Role.EVERGREEN_GF,
-)
-EVERGREEN_EDITORS = (Role.EVERGREEN_IT, Role.EVERGREEN_TEAM)
+EVERGREEN = (Role.EVERGREEN_READER, Role.EVERGREEN_EDITOR)
 BUDGET = (Role.BUDGET_READER, Role.BUDGET_EDITOR, Role.BUDGET_MANAGER)
 PROJECTS = (Role.PROJECTS_READER, Role.PROJECTS_EDITOR)
 INVENTORY = (Role.INVENTORY_READER, Role.INVENTORY_EDITOR)
@@ -51,8 +45,7 @@ PAGES: dict[str, tuple[str, ...]] = {
     "/m365/zugangsdaten": (Role.TENANT_READER,),
     "/m365/dienststatus": (Role.TENANT_READER,),
     "/m365/nutzung": (Role.TENANT_READER,),
-    "/evergreen": EVERGREEN,
-    "/evergreen/eingang": EVERGREEN_EDITORS,
+    "/evergreen/m365": EVERGREEN,
     "/budget": BUDGET,
     "/budget/planung": BUDGET,
     "/budget/statistik": BUDGET,

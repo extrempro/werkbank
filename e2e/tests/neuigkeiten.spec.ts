@@ -4,7 +4,7 @@ import { expectNoA11yViolations, loginAs, openAccountMenu } from "./helpers";
 test("Neuigkeiten zeigen die Version, der Hinweis „neu“ verschwindet nach dem Öffnen", async ({
   page,
 }) => {
-  await loginAs(page, ["Evergreen.Betriebsrat"], "Nora Neu");
+  await loginAs(page, ["Evergreen.Reader"], "Nora Neu");
   await page.goto("/");
   await expect(page.getByRole("button", { name: /^Konto und Einstellungen/ })).toHaveAccessibleName(
     /, neue Version$/,

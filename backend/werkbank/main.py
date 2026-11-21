@@ -24,7 +24,6 @@ from werkbank.modules.budget.tasks import budget_tasks
 from werkbank.modules.evergreen.api import router as evergreen_router
 from werkbank.modules.evergreen.search import evergreen_search
 from werkbank.modules.evergreen.tasks import evergreen_tasks
-from werkbank.modules.evergreen.workflow import evergreen_workflow
 from werkbank.modules.inventory.api import router as inventory_router
 from werkbank.modules.inventory.cases import router as inventory_cases_router
 from werkbank.modules.inventory.loans import router as inventory_loans_router
@@ -59,8 +58,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     """Erzeugt die FastAPI-Anwendung."""
     settings = settings or get_settings()
     settings.validate_for_startup()
-    # Workflow-Beschreibungen beim Start prüfen: Ein Fehler darin soll sofort auffallen.
-    evergreen_workflow()
 
     app = FastAPI(
         title="Werkbank",

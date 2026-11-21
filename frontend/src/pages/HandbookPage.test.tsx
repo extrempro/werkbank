@@ -9,7 +9,7 @@ afterEach(() => {
 
 describe("HandbookPage", () => {
   it("zeigt nur die Kapitel der eigenen Rollen und sucht darin", () => {
-    render(<HandbookPage roles={["Evergreen.GF"]} chapterId={null} />);
+    render(<HandbookPage roles={["Evergreen.Reader"]} chapterId={null} />);
     expect(screen.getByRole("heading", { level: 1, name: "Handbuch" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Evergreen" })).toHaveAttribute(
       "href",

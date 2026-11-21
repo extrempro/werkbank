@@ -158,7 +158,7 @@ def test_job_only_when_enabled() -> None:
 @pytest.mark.db
 def test_list_views_and_roles(db: Session) -> None:
     fetch(db)
-    stranger = client_for(["Evergreen.IT"], "empfehlung-fremd")
+    stranger = client_for(["Evergreen.Editor"], "empfehlung-fremd")
     assert stranger.get(f"{BASE}/recommendations").status_code == 403
 
     reader = client_for(["Config.Reader"], "empfehlung-leser")

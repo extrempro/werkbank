@@ -340,12 +340,6 @@ export function SettingsPage({ me, selectedId }: SettingsPageProps) {
                         <span className="pill pill-todo">offen</span>
                       )}
                       {setting.deviates && <span className="pill pill-bad">weicht ab</span>}
-                      {setting.from_evergreen && (
-                        <span className="pill pill-info" title="Durch Beschluss geregelt">
-                          BR
-                          <span className="visually-hidden"> – durch Beschluss geregelt</span>
-                        </span>
-                      )}
                       {setting.ai_unreviewed && (
                         <span className="pill pill-neutral" title="KI-Text, ungeprüft">
                           KI
