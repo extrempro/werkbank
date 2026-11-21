@@ -82,7 +82,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Die Sitzung endet nach 30 Minuten ohne Aktivität und spätestens nach 8 Stunden. Dann zeigt die Werkbank einen Hinweis und du meldest dich neu an. Mit „Abmelden“ im Kontomenü oben rechts (dein Bild oder deine Initialen) beendest du die Sitzung sofort.",
+                text: "Die Sitzung endet nach 30 Minuten ohne Aktivität und spätestens nach 8 Stunden. Dann zeigt die Werkbank einen Hinweis und du meldest dich neu an. Mit „Abmelden“ im Kontomenü oben rechts (dein Bild oder deine Initialen) beendest du die Sitzung sofort. Unter „Konto“ › „Angemeldete Geräte“ siehst du, wo du sonst noch angemeldet bist, etwa „Safari auf dem iPhone“. Dort meldest du ein anderes Gerät einzeln ab oder mit „Auf allen anderen Geräten abmelden“ alle außer diesem, zum Beispiel wenn du ein Gerät verloren oder weitergegeben hast.",
               },
               {
                 kind: "hint",
@@ -251,7 +251,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Das Kontomenü oben rechts (dein Bild oder deine Initialen) führt zur Seite „Konto“: deine Angaben aus Microsoft, deine Rollen mit kurzer Erklärung, Beginn und Ende der Sitzung, die Darstellung (automatisch, hell oder dunkel) die Schriftgröße im Menü (klein, normal, groß, sehr groß) und die Abstände im Menü (kompakt, normal, weiträumig; mit dem Finger bleiben Einträge immer gut antippbar; alles gilt nur für diesen Browser), deine Benachrichtigungen (Glocke, Mail, Teams) und die Version der Werkbank.",
+                text: "Das Kontomenü oben rechts (dein Bild oder deine Initialen) führt zur Seite „Konto“: deine Angaben aus Microsoft, deine Rollen mit kurzer Erklärung, die angemeldeten Geräte, die Darstellung (automatisch, hell oder dunkel) die Schriftgröße im Menü (klein, normal, groß, sehr groß) und die Abstände im Menü (kompakt, normal, weiträumig; mit dem Finger bleiben Einträge immer gut antippbar; alles gilt nur für diesen Browser), deine Benachrichtigungen (Glocke, Mail, Teams) und die Version der Werkbank.",
               },
               {
                 kind: "text",

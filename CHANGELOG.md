@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.87.0] – 2026-11-21
+
+### Konto
+
+- **Angemeldete Geräte** (spec.md 6.1): Das Konto listet alle eigenen gültigen Sitzungen, dieses Gerät zuerst und markiert, mit Gerät, angemeldet seit und zuletzt aktiv. Andere Geräte lassen sich einzeln oder mit „Auf allen anderen Geräten abmelden“ alle auf einmal abmelden; dieses Gerät weiter über „Abmelden“. Ersetzt den bisherigen Abschnitt „Sitzung“
+- Neue Endpunkte `GET /api/account/sessions`, `DELETE /api/account/sessions/{id}` (nur eigene, nicht die laufende) und `POST /api/account/sessions/logout-others` (`core/account_sessions.py`); Audit `sitzung.beendet`, `sitzungen.andere_beendet`
+- Gerät als Kurzbeschreibung aus der Browserkennung aus festen Wörtern („Edge unter Windows“, `core/user_agent.py`), neue Spalte `user_sessions.device` (Migration `0059`); ältere Sitzungen erscheinen als „Unbekanntes Gerät“
+
+### Dokumentation
+
+- `docs/spec.md` 6.1 und Seitenübersicht, `docs/datenschutz.md` (Sitzungen), `docs/security/asvs-l2.md` (Sitzungen verwalten)
+
 ## [0.86.1] – 2026-11-21
 
 ### Sicherheit

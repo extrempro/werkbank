@@ -46,7 +46,13 @@ class CurrentUser:
 
 
 def create_session(
-    db: Session, settings: Settings, user: User, roles: list[str], *, authenticated_at: datetime
+    db: Session,
+    settings: Settings,
+    user: User,
+    roles: list[str],
+    *,
+    authenticated_at: datetime,
+    device: str = "",
 ) -> str:
     """Legt eine Sitzung an und liefert das Token für das Cookie."""
     token = new_token()
@@ -60,6 +66,7 @@ def create_session(
             last_seen_at=now,
             expires_at=now + timedelta(hours=settings.session_max_hours),
             authenticated_at=authenticated_at,
+            device=device[:80],
         )
     )
     return token
@@ -94,6 +101,12 @@ def load_session(db: Session, settings: Settings, token: str | None) -> CurrentU
         authenticated_at=user_session.authenticated_at,
         expires_at=user_session.expires_at,
     )
+
+
+def is_active(user_session: UserSession, settings: Settings, now: datetime) -> bool:
+    """Ob die Sitzung noch gilt: weder Höchstdauer noch Leerlaufzeit überschritten."""
+    idle_limit = user_session.last_seen_at + timedelta(minutes=settings.session_idle_minutes)
+    return now < user_session.expires_at and now < idle_limit
 
 
 def delete_session(db: Session, token: str | None) -> None:
