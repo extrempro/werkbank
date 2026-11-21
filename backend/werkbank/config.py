@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     collector_timeout_minutes: int = 30
     # Abstand, in dem das Nachrichtencenter von Microsoft gelesen wird (Bereich Evergreen)
     message_center_interval_hours: int = 6
+    # Gerätezuordnung: offene Einträge im Hintergrund mit der Collector-App prüfen (nur lesend;
+    # braucht DeviceManagementServiceConfig.Read.All und DeviceManagementManagedDevices.Read.All)
+    devices_monitor_enabled: bool = False
     collector_poll_seconds: int = 20
 
     # Höchstzahl Anfragen pro Minute und Absender-IP (0 = aus), siehe core/ratelimit.py

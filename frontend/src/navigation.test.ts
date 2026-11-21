@@ -149,6 +149,18 @@ describe("areasFor", () => {
     expect(both?.groups.map((group) => group.title)).toEqual(["Konfiguration", "Tenant"]);
   });
 
+  it("zeigt die Gerätezuordnung nur mit ihrer Rolle", () => {
+    const only = areasFor(["Geraete.Zuordnung"]).find((area) => area.id === "m365");
+    expect(only?.home).toBe("/m365/geraete/zuordnung");
+    expect(only?.groups.map((group) => group.title)).toEqual(["Geräte"]);
+    const config = areasFor(["Config.Reader"]).find((area) => area.id === "m365");
+    expect(config?.groups.map((group) => group.title)).not.toContain("Geräte");
+    const all = areasFor(["Config.Reader", "Tenant.Reader", "Geraete.Zuordnung"]).find(
+      (area) => area.id === "m365",
+    );
+    expect(all?.groups.map((group) => group.title)).toEqual(["Konfiguration", "Tenant", "Geräte"]);
+  });
+
   it("führt die Kategorien der IT-Tools als eigene Einträge", () => {
     const areas = areasFor(["Tools.User"]);
     const tools = areas.find((area) => area.id === "it-tools");

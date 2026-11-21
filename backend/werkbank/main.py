@@ -21,6 +21,9 @@ from werkbank.modules.budget.api import router as budget_router
 from werkbank.modules.budget.imports import router as budget_imports_router
 from werkbank.modules.budget.search import budget_search
 from werkbank.modules.budget.tasks import budget_tasks
+from werkbank.modules.devices.admin import router as devices_admin_router
+from werkbank.modules.devices.api import router as devices_router
+from werkbank.modules.devices.tasks import devices_tasks
 from werkbank.modules.evergreen.api import router as evergreen_router
 from werkbank.modules.evergreen.search import evergreen_search
 from werkbank.modules.evergreen.tasks import evergreen_tasks
@@ -74,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         tenant_tasks,
         budget_tasks,
         inventory_tasks,
+        devices_tasks,
     ]
     # Module, die Treffer für die Suche liefern
     app.state.search_providers = [
@@ -120,6 +124,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(monitoring_router)
     app.include_router(monitoring_admin_router)
     app.include_router(evergreen_router)
+    app.include_router(devices_admin_router)
+    app.include_router(devices_router)
 
     @app.get("/health", include_in_schema=False)
     def health() -> dict[str, str]:

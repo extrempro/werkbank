@@ -39,6 +39,7 @@ import {
   TOOLS_HISTORY_PATH,
   USERS_PATH,
   USAGE_PATH,
+  DEVICE_ASSOCIATION_PATH,
 } from "../navigation";
 import { AccountPage } from "../pages/AccountPage";
 import { AdminPage } from "../pages/AdminPage";
@@ -46,6 +47,7 @@ import { AuditPage } from "../pages/AuditPage";
 import { NewsPage } from "../pages/NewsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
 import { HandbookPage } from "../pages/HandbookPage";
+import { DeviceAssociationPage } from "../modules/devices/DeviceAssociationPage";
 import { DnsCheckPage } from "../modules/monitoring/DnsCheckPage";
 import {
   parseCasePath,
@@ -372,6 +374,8 @@ export function Layout({ me }: LayoutProps) {
     page = <HealthPage />;
   } else if (path === USAGE_PATH && current) {
     page = <UsagePage />;
+  } else if (path === DEVICE_ASSOCIATION_PATH && current) {
+    page = <DeviceAssociationPage />;
   } else if (path === PROJECTS_PATH && current) {
     page = <ProjectsPage roles={me.roles} />;
   } else if (projectRoute !== null && items.some((item) => item.path === PROJECTS_PATH)) {

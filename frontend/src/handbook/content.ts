@@ -15,6 +15,7 @@ const PROJECTS_READER = "Projekte.Reader";
 const PROJECTS_EDITOR = "Projekte.Editor";
 const INVENTORY_READER = "Bestand.Reader";
 const INVENTORY_EDITOR = "Bestand.Editor";
+const DEVICES = "Geraete.Zuordnung";
 
 /**
  * Das Handbuch der Werkbank. Bei jeder Änderung an der Anwendung prüfen, ob ein Kapitel
@@ -41,7 +42,7 @@ export const CHAPTERS: readonly Chapter[] = [
               ["Werkbank", "Startseite und Suche"],
               [
                 "Microsoft 365",
-                "Einstellungen des Tenants, Lizenzen, Benutzerzahlen, Zertifikate und Dienststatus",
+                "Einstellungen des Tenants, Lizenzen, Benutzerzahlen, Zertifikate, Dienststatus und das Zuordnen neuer Geräte",
               ],
               [
                 "Evergreen",
@@ -286,6 +287,10 @@ export const CHAPTERS: readonly Chapter[] = [
               [
                 "Bestand.Editor",
                 "Hardware erfassen, Inventurnummern setzen, Geräte ausmustern, Stammdaten pflegen",
+              ],
+              [
+                "Geraete.Zuordnung",
+                "neue Windows-Geräte per QR-Code scannen und dem Tenant zuordnen",
               ],
             ],
           },
@@ -549,6 +554,120 @@ export const CHAPTERS: readonly Chapter[] = [
           },
         ],
         links: [{ to: "/m365/nutzung", label: "Zur Nutzung" }],
+      },
+    ],
+  },
+  {
+    id: "geraetezuordnung",
+    title: "Microsoft 365: Gerätezuordnung",
+    summary:
+      "Neue Windows-Geräte per QR-Code dem Tenant zuordnen und verfolgen, bis sie in Intune sind.",
+    roles: [DEVICES],
+    sections: [
+      {
+        id: "worum-es-geht",
+        title: "Worum es geht",
+        blocks: [
+          {
+            kind: "text",
+            text: "Ein neues Windows-Gerät zeigt in der Einrichtung einen QR-Code. Du scannst ihn mit dem Handy oder am PC, die Werkbank meldet das Gerät bei Microsoft für euren Tenant an und verfolgt es, bis es in Intune registriert ist.",
+          },
+          {
+            kind: "text",
+            text: "Du arbeitest mit zwei Konten: Angemeldet bist du mit deinem Office-Konto. Das Zuordnen bei Microsoft läuft mit deinem Admin-Konto, das die Rechte in Intune hat. Dafür meldest du dich auf der Seite zusätzlich mit dem Admin-Konto an. Die Verbindung gilt höchstens eine Stunde und endet mit „Trennen“ oder beim Abmelden.",
+          },
+          {
+            kind: "hint",
+            text: "Ohne Admin-Konto kannst du scannen und das Gerät zur Freigabe senden. Freigeben kann dann jemand mit Admin-Konto, auch später am PC.",
+          },
+        ],
+        links: [{ to: "/m365/geraete/zuordnung", label: "Zur Gerätezuordnung" }],
+      },
+      {
+        id: "scannen",
+        title: "Gerät scannen",
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Am neuen Gerät in der Einrichtung (bei der Auswahl der Region) fünfmal die Windows-Taste drücken und „Scan QR code“ wählen.",
+              "In der Werkbank „QR-Code scannen“ wählen und den Code ins Feld halten. Geht die Kamera nicht, nimm „Foto auswählen“ und fotografiere den Code.",
+              "Gerätedaten prüfen: Hersteller, Modell, Seriennummer. Gibt es das Gerät schon, ist eine zweite Zuordnung gesperrt; „Eintrag öffnen“ zeigt den vorhandenen Eintrag.",
+              "Richtlinie wählen, falls nötig, und bestätigen, dass das Gerät in den angezeigten Tenant gehört.",
+              "„Jetzt freigeben“ (mit Admin-Konto) oder „Zur Freigabe senden“.",
+              "Nach „Vorab zugeordnet“ am Gerät auf „Weiter“ klicken. Den Rest prüft die Werkbank von selbst.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "freigabe",
+        title: "Zur Freigabe senden, freigeben, verwerfen",
+        blocks: [
+          {
+            kind: "text",
+            text: "„Zur Freigabe senden“ legt das Gerät unter „Wartet auf Freigabe“ ab. Die Gerätedaten liegen verschlüsselt in der Werkbank und werden nach 24 Stunden gelöscht, wenn niemand freigibt. Das Gerät wartet so lange in der Einrichtung.",
+          },
+          {
+            kind: "list",
+            items: [
+              "Freigeben: Eintrag öffnen, mit dem Admin-Konto angemeldet „Jetzt freigeben“ wählen. Das kann auch eine andere Person sein.",
+              "Verwerfen: Eintrag öffnen, „Verwerfen“ und bestätigen. Eintrag und Gerätedaten sind dann gelöscht; das Gerät muss neu gescannt werden.",
+              "Wartende Geräte stehen als Aufgabe auf deiner Startseite.",
+            ],
+          },
+        ],
+      },
+      {
+        id: "status",
+        title: "Status und Verlauf",
+        blocks: [
+          {
+            kind: "terms",
+            items: [
+              ["Wartet auf Freigabe", "gescannt, noch nicht an Microsoft übertragen"],
+              ["Vorab zugeordnet", "Microsoft kennt das Gerät; am Gerät auf „Weiter“ klicken"],
+              ["Zugeordnet", "das Gerät hat die Zuordnung abgeschlossen und richtet sich ein"],
+              ["In Intune registriert", "fertig; Gerätename und Konformität stehen im Eintrag"],
+              [
+                "Nicht abgeschlossen",
+                "7 Tage ohne Fortschritt; die Werkbank prüft nicht mehr von selbst",
+              ],
+            ],
+          },
+          {
+            kind: "text",
+            text: "Die Werkbank prüft offene Geräte im Hintergrund alle 5 Minuten. „Status aktualisieren“ im Eintrag oder „Alle aktualisieren“ prüft sofort. Die Glocke meldet dir, wenn ein Gerät, das du gescannt oder freigegeben hast, zugeordnet oder in Intune registriert ist.",
+          },
+        ],
+      },
+      {
+        id: "fehler",
+        title: "Wenn etwas nicht klappt",
+        blocks: [
+          {
+            kind: "terms",
+            items: [
+              [
+                "Keine Berechtigung",
+                "dem Admin-Konto fehlt die Rolle in Intune; anderes Konto nehmen oder die Rolle anfragen",
+              ],
+              ["Daten nicht akzeptiert", "den QR-Code neu scannen"],
+              ["Zu viele Anfragen", "eine Minute warten und noch einmal versuchen"],
+              [
+                "Microsoft konnte das Gerät nicht zuordnen",
+                "ein neuer Versuch hilft nicht; die Voraussetzungen am Gerät prüfen",
+              ],
+            ],
+          },
+          {
+            kind: "list",
+            items: [
+              "Voraussetzungen: ein echtes Gerät (keine virtuelle Maschine), Windows 11 24H2 oder 25H2 mit aktuellem Update, TPM 2.0 aktiv, Secure Boot eingeschaltet.",
+              "Bei Fehlern steht die Request-ID dabei. Kopiere sie für den Support von Microsoft.",
+            ],
+          },
+        ],
       },
     ],
   },

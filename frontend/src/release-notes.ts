@@ -39,6 +39,27 @@ export const RELEASES: readonly Release[] = [
     ],
   },
   {
+    version: "0.77.0",
+    date: "2026-11-21",
+    summary: "Neu: Gerätezuordnung – neue Windows-Geräte per QR-Code dem Tenant zuordnen.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Neue Seite „Gerätezuordnung“ unter Geräte: Den QR-Code aus der Windows-Einrichtung mit dem Handy oder am PC scannen, Gerät prüfen und dem Tenant zuordnen. Geht die Kamera nicht, reicht ein Foto des Codes.",
+          "Zum Zuordnen meldest du dich zusätzlich mit deinem Admin-Konto an. Ohne Admin-Konto kannst du das Gerät zur Freigabe senden; freigeben kann dann jemand anderes oder du selbst später am PC. Wartende Geräte stehen als Aufgabe auf der Startseite.",
+          "Die Werkbank verfolgt jedes Gerät bis zur Registrierung in Intune und meldet sich in der Glocke, wenn es zugeordnet und registriert ist. Bei Fehlern steht dabei, was zu tun ist, und die Request-ID für den Support von Microsoft.",
+        ],
+      },
+      {
+        area: "IT-Tools",
+        entries: [
+          "CSR erzeugen: Der angezeigte OpenSSL-Befehl stimmt jetzt auch, wenn im Namen ein Backslash oder ein Plus vorkommt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.76.0",
     date: "2026-11-21",
     summary: "Evergreen: Einträge je Software mit Notizen, nur für die IT.",

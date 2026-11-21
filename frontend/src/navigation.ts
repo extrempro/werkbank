@@ -23,6 +23,7 @@ const MONITORING_READER = "Monitoring.Reader";
 const PROJECT_ROLES = ["Projekte.Reader", "Projekte.Editor"];
 const INVENTORY_ROLES = ["Bestand.Reader", "Bestand.Editor"];
 const TENANT_READER = "Tenant.Reader";
+const DEVICES_ROLE = "Geraete.Zuordnung";
 const BUDGET_MANAGER = "Budget.Manager";
 const BUDGET_ROLES = ["Budget.Reader", "Budget.Editor", BUDGET_MANAGER];
 
@@ -33,6 +34,7 @@ export const USERS_PATH = "/m365/benutzer";
 export const CREDENTIALS_PATH = "/m365/zugangsdaten";
 export const HEALTH_PATH = "/m365/dienststatus";
 export const USAGE_PATH = "/m365/nutzung";
+export const DEVICE_ASSOCIATION_PATH = "/m365/geraete/zuordnung";
 export const BUDGET_PATH = "/budget";
 export const BUDGET_ACCOUNTS_PATH = "/budget/konten";
 export const BUDGET_SETTINGS_PATH = "/budget/einstellungen";
@@ -112,7 +114,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       ],
     },
   ];
-  if (hasAny(roles, [...CONFIG_ROLES, TENANT_READER])) {
+  if (hasAny(roles, [...CONFIG_ROLES, TENANT_READER, DEVICES_ROLE])) {
     const groups: NavGroup[] = [];
     if (hasAny(roles, CONFIG_ROLES)) {
       groups.push({
@@ -138,13 +140,23 @@ export function areasFor(roles: readonly string[]): NavArea[] {
         ],
       });
     }
+    if (roles.includes(DEVICES_ROLE)) {
+      groups.push({
+        title: "Geräte",
+        items: [{ path: DEVICE_ASSOCIATION_PATH, label: "Gerätezuordnung", icon: "geraet" }],
+      });
+    }
     areas.push({
       id: "m365",
       label: "Microsoft 365",
       short: "M365",
       icon: "m365",
       section: "anwendungen",
-      home: hasAny(roles, CONFIG_ROLES) ? "/m365" : LICENSES_PATH,
+      home: hasAny(roles, CONFIG_ROLES)
+        ? "/m365"
+        : roles.includes(TENANT_READER)
+          ? LICENSES_PATH
+          : DEVICE_ASSOCIATION_PATH,
       groups,
     });
   }

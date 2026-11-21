@@ -13,6 +13,33 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 - „Vorschläge für die Planung“ (Zeilen mit „Jährlich“) verlängert den Posten der Zeile ins folgende Geschäftsjahr (bis auf Weiteres oder nur dieses Jahr) mit änderbaren Kosten je Jahr, statt einen zweiten Posten anzulegen
 - API: `take` erwartet `account_id` statt `item_id`; `plan` ohne `name`, Antwort `extended` statt `created`/`existing`; Zeilen liefern den angelegten Posten (`item_id`, `item_name`)
 
+## [0.77.0] – 2026-11-21
+
+### Gerätezuordnung (neu)
+
+- **Neue Seite** Microsoft 365 › Geräte › „Gerätezuordnung“ (`/m365/geraete/zuordnung`) mit eigener Rolle `Geraete.Zuordnung` (**in Entra anlegen und zuweisen**, siehe `docs/entra-setup.md`, Kapitel 4a). Vorlage: AutopilotQR (MIT, Hinweis in `THIRD_PARTY_NOTICES.md`)
+- **QR-Code aus der Windows-Einrichtung scannen** (Device Preparation): Kamera mit laufender Erkennung oder Foto; Erkennung mit `zxing-wasm` 3.1.6 (MIT, enthält ZXing-C++ unter Apache 2.0), WASM selbst gehostet, erst beim ersten Scan geladen. Der Server prüft den Code und baut die Gerätedaten für Microsoft
+- **Zwei Abläufe:** sofort freigeben (Ziel-Tenant bestätigen, Richtlinie wählen) oder „Zur Freigabe senden“; freigeben kann dieselbe oder eine andere Person, „Verwerfen“ löscht den Eintrag. Gerätedaten verschlüsselt, höchstens 24 Stunden, danach gelöscht
+- **Admin-Konto:** zweite Anmeldung über den Server (Autorisierungscode mit PKCE, Rückweg `/auth/geraete/callback`) mit delegierten Berechtigungen der Werkbank-App; nur das Zugriffstoken, verschlüsselt und an die Sitzung gebunden, höchstens 60 Minuten. Keine Anwendungsberechtigung mit Schreibrecht
+- **Microsoft Graph (beta):** Device-Preparation-Richtlinien, Duplikatsperre über die Seriennummer, `importTenantAssociatedDevice` mit Bestätigung (alle 3 s bis 30 s); 429 mit `Retry-After` höchstens dreimal, 5xx ohne neuen Versuch mit den Voraussetzungen am Gerät, Request-ID immer sichtbar
+- **Status** Wartet auf Freigabe › Vorab zugeordnet › Zugeordnet › In Intune registriert, nach 7 Tagen ohne Fortschritt „Nicht abgeschlossen“. Auftrag `geraete.status` alle 5 Minuten: löscht abgelaufene Gerätedaten und Tokens, prüft offene Einträge nur lesend mit der Collector-App, wenn `DEVICES_MONITOR_ENABLED=true` (Berechtigungen `DeviceManagementServiceConfig.Read.All`, `DeviceManagementManagedDevices.Read.All`)
+- Aufgabe „Geräte warten auf Freigabe“; Benachrichtigungen `geraete.zugeordnet` und `geraete.registriert`; Audit je Gerät
+- Datenbank: Migration `0053_geraetezuordnung` (Tabellen `dev_associations`, `dev_admin_sessions`)
+
+### Sicherheit
+
+- CSP `script-src 'self' 'wasm-unsafe-eval'` für die QR-Erkennung, `Permissions-Policy` `camera=(self)`
+- IT-Tools › CSR: Der angezeigte OpenSSL-Befehl maskiert im Betreff jetzt auch Backslash und Plus, nicht nur den Schrägstrich (CodeQL-Meldung „Incomplete string escaping“)
+- IT-Budget › Excel-Export: In XML verbotene Zeichen U+FFFE und U+FFFF stehen im regulären Ausdruck jetzt als Escape statt unsichtbar im Quelltext (CodeQL-Meldung „Overly permissive regular expression range“, Wirkung unverändert)
+
+### Dokumentation
+
+- `docs/spec.md` Kapitel 7c, `docs/entra-setup.md` Kapitel 4a (Umleitungs-URI, delegierte Berechtigungen, Zustimmung, Intune-Rolle, Collector), Datenschutz, ASVS, WCAG, Design, `deploy/.env.example`, Handbuch-Kapitel „Microsoft 365: Gerätezuordnung“; neu `THIRD_PARTY_NOTICES.md`
+
+### Tests
+
+- Lesen des QR-Codes mit erfundenen Daten und optionalem Golden-Test aus `backend/tests/fixtures-private/` (per `.gitignore` ausgeschlossen), Rollen, Freigabe durch eine andere Person, Verwerfen, Löschen nach 24 Stunden, Graph mit nachgestellten Antworten, Oberfläche (Vitest) und E2E `geraete.spec.ts` mit nachgestelltem Graph
+
 ## [0.76.0] – 2026-11-21
 
 ### Evergreen

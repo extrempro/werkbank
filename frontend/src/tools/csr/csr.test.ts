@@ -82,4 +82,15 @@ describe("OpenSSL-Befehl", () => {
     expect(command).toContain("-addext 'subjectAltName=DNS:www.example.com'");
     expect(command).toContain("ec_paramgen_curve:P-256");
   });
+
+  it("maskiert Backslash, Schrägstrich und Plus im Betreff", () => {
+    const command = opensslCommand({
+      keyType: "p256",
+      subject: { CN: "www.example.com", O: "A\\B/C+D" },
+      sans: "",
+      serverAuth: true,
+      clientAuth: false,
+    });
+    expect(command).toContain("-subj '/O=A\\\\B\\/C\\+D/CN=www.example.com'");
+  });
 });
