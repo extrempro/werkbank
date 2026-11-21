@@ -11347,9 +11347,9 @@ html {
     animation: confirm-in 0.16s ease-out;
   }
 
+  /* Nur Bewegung, keine Deckkraft: sonst ist der Text beim Öffnen kurz zu blass (Kontrast). */
   @keyframes confirm-in {
     from {
-      opacity: 0;
       transform: translateY(8px);
     }
   }
