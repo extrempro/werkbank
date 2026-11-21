@@ -7500,6 +7500,19 @@ html {
   align-items: center;
   gap: 8px;
   padding: 0;
+  font-weight: 400;
+  color: var(--farbe-text-mittel);
+}
+
+.case-toolbar .case-kind select {
+  min-height: 44px;
+  padding: 0 32px 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background-color: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 0.9375rem;
 }
 
 .case-table th {
@@ -7551,7 +7564,21 @@ html {
 }
 
 .case-head {
+  position: relative;
   justify-content: flex-start;
+}
+
+/* Kreuz immer oben rechts, auch wenn die Ansicht schmal ist */
+@media (min-width: 1024px) {
+  .case-layout-detail .case-head {
+    padding-right: 72px;
+  }
+
+  .case-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+  }
 }
 
 .case-head > div:first-child {
@@ -7559,7 +7586,8 @@ html {
 }
 
 /* Tabelle ohne Auswahl über die ganze Breite; mit Auswahl schmaler, die Ansicht rechts */
-.case-layout-table {
+/* zwei Klassen: steht vor der allgemeinen Regel für .case-layout und muss sie schlagen */
+.case-layout.case-layout-table {
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -7568,12 +7596,49 @@ html {
 }
 
 @media (min-width: 1024px) {
-  .case-layout-table.case-layout-detail {
-    grid-template-columns: minmax(0, 54fr) minmax(0, 46fr);
+  /* Breite einstellbar (Trenner in der Mitte, gemerkt im Browser) */
+  .case-layout.case-layout-table.case-layout-detail {
+    grid-template-columns: minmax(0, calc(var(--case-split, 54) * 1%)) 16px minmax(0, 1fr);
+    gap: 0;
   }
 
   .case-layout-detail .case-table .col-extra {
     display: none;
+  }
+
+  /* Ist die Tabelle breit genug, bleiben alle Spalten stehen */
+  @container case-list (min-width: 52rem) {
+    .case-layout-detail .case-table .col-extra {
+      display: table-cell;
+    }
+  }
+
+  .case-layout-table .case-list {
+    container: case-list / inline-size;
+  }
+
+  .case-split {
+    position: sticky;
+    top: calc(var(--kopf-hoehe) + 16px);
+    align-self: start;
+    height: calc(100dvh - var(--kopf-hoehe) - 32px);
+    cursor: col-resize;
+    touch-action: none;
+    display: grid;
+    place-items: center;
+  }
+
+  .case-split::before {
+    content: "";
+    width: 4px;
+    height: 48px;
+    border-radius: 999px;
+    background: var(--farbe-rand-stark);
+  }
+
+  .case-split:hover::before,
+  .case-split:focus-visible::before {
+    background: var(--farbe-primaer);
   }
 
   .case-layout-table .case-list {
@@ -7604,12 +7669,32 @@ html {
   }
 
   .case-close,
+  .case-split,
   .sync-next {
     display: none;
   }
 
-  /* Status als eine Zeile zum Wischen */
+  /* Suche und Art in einer Zeile, darunter der Status als eine Zeile zum Wischen */
+  .case-search {
+    flex: 1 1 0;
+  }
+
+  /* „Art“ nur für Screenreader, das Feld zeigt „Alle Arten“ */
+  .case-kind-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .case-toolbar .case-kind select {
+    max-width: 9.5rem;
+  }
+
   .case-toolbar .chips {
+    order: 3;
     flex: 1 1 100%;
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -7814,34 +7899,99 @@ html {
 }
 
 .case-decision {
+  container-type: inline-size;
   padding-top: 16px;
   border-top: 1px solid var(--farbe-trenner);
 }
 
+/* Entscheidung: kompakte Chips, die Erklärung steht hinter „i“ bzw. unter der Auswahl */
 .case-options {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.case-option {
+.case-option-group {
   display: grid;
-  gap: 2px;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.case-option-group + .case-option-group {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.case-option-group:not([role]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.case-option-group-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--farbe-text-leise);
+}
+
+@container (max-width: 30rem) {
+  .case-option-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.case-option-wrap {
+  display: inline-flex;
+}
+
+.case-option,
+.case-info {
   min-height: 44px;
-  padding: 10px 12px;
   border: 1px solid var(--farbe-rand-stark);
-  border-radius: 10px;
   background: var(--farbe-flaeche);
   color: var(--farbe-text);
   font: inherit;
-  text-align: left;
   cursor: pointer;
 }
 
+.case-option {
+  padding: 0 12px 0 14px;
+  border-radius: 999px 0 0 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.case-info {
+  width: 36px;
+  margin-left: -1px;
+  border-radius: 0 999px 999px 0;
+  color: var(--farbe-text-leise);
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.case-option:hover,
+.case-info:hover {
+  background: var(--farbe-hover);
+}
+
 .case-option[aria-pressed="true"] {
+  position: relative;
   border-color: var(--farbe-primaer);
   background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
   box-shadow: inset 0 0 0 1px var(--farbe-primaer);
+}
+
+.case-info[aria-expanded="true"] {
+  border-color: var(--farbe-primaer);
+  color: var(--farbe-auswahl-text);
+}
+
+.case-option-hint {
+  margin: 8px 0 0;
 }
 
 .tech-list {

@@ -1377,26 +1377,45 @@ export interface DecisionOption {
   hint: string;
   /** Nur für Vorgänge zu einer Stelle oder zu einem Verleih */
   only?: "stelle" | "verleih";
+  /** Überschrift der Gruppe, wenn die Möglichkeiten gruppiert stehen */
+  group?: string;
 }
+
+const ASSIGN = "Zuordnen";
+const UNASSIGNED = "Ohne Zuordnung";
+const NOT_NEW = "Nicht neu anlegen";
 
 export const DECISION_OPTIONS: Record<CaseKind, DecisionOption[]> = {
   neu: [
-    { id: "stelle", label: "Einer Stelle zuordnen", hint: "Das Gerät gehört dann zur Stelle." },
+    {
+      id: "stelle",
+      label: "Einer Stelle zuordnen",
+      hint: "Das Gerät gehört dann zur Stelle.",
+      group: ASSIGN,
+    },
     {
       id: "arbeitsplatz",
       label: "Einem Arbeitsplatz zuordnen",
       hint: "Zum Beispiel ein fester PC am Platz.",
+      group: ASSIGN,
     },
-    { id: "lager", label: "Ins Lager", hint: "Nicht zugeordnet, auf Wunsch mit Raum." },
+    {
+      id: "lager",
+      label: "Ins Lager",
+      hint: "Nicht zugeordnet, auf Wunsch mit Raum.",
+      group: UNASSIGNED,
+    },
     {
       id: "gleich",
       label: "Ist dasselbe Gerät",
       hint: "Ein Gerät im Bestand übernimmt den Eintrag aus NinjaOne, z. B. nach einem Mainboardtausch.",
+      group: NOT_NEW,
     },
     {
       id: "uebergehen",
       label: "Nicht in den Bestand aufnehmen",
       hint: "Zum Beispiel ein Testgerät. Der Abgleich meldet es nicht wieder.",
+      group: NOT_NEW,
     },
   ],
   monitor: [
@@ -1404,16 +1423,19 @@ export const DECISION_OPTIONS: Record<CaseKind, DecisionOption[]> = {
       id: "arbeitsplatz",
       label: "Am Arbeitsplatz anlegen",
       hint: "Der Monitor bleibt am Schreibtisch, auch wenn das Notebook woanders ist.",
+      group: ASSIGN,
     },
     {
       id: "stelle",
       label: "Der Stelle zuordnen",
       hint: "Wenn der Monitor mit dem Notebook mitgeht, zum Beispiel ein mobiler Monitor.",
+      group: ASSIGN,
     },
     {
       id: "uebergehen",
       label: "Nicht übernehmen",
       hint: "Der Monitor wird nicht erfasst und beim nächsten Abgleich nicht wieder gemeldet.",
+      group: NOT_NEW,
     },
   ],
   rueckgabe: [
@@ -1806,6 +1828,23 @@ export function filterLoanable(list: LoanableDevice[], query: string): LoanableD
       value.toLowerCase().includes(term),
     ),
   );
+}
+
+/** Möglichkeiten nach Gruppe, in der Reihenfolge des ersten Auftretens; ohne Gruppen eine Gruppe. */
+export function groupOptions(
+  options: DecisionOption[],
+): { title: string; options: DecisionOption[] }[] {
+  const groups: { title: string; options: DecisionOption[] }[] = [];
+  for (const option of options) {
+    const title = option.group ?? "";
+    const group = groups.find((entry) => entry.title === title);
+    if (group) {
+      group.options.push(option);
+    } else {
+      groups.push({ title, options: [option] });
+    }
+  }
+  return groups;
 }
 
 /** Entscheidungen, die zu diesem Vorgang passen (bei „Person nicht mehr aktiv“: Stelle oder Verleih). */

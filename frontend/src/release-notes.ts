@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.75.0",
+    date: "2026-11-21",
+    summary: "IT-Bestand: Vorgänge mit einstellbarer Breite und kompakter Entscheidung.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Die Tabelle der Vorgänge nutzt gleich die ganze Breite, nicht erst nach dem ersten Klick.",
+          "Die Breite von Tabelle und Ansicht stellst du am Trenner dazwischen ein; die Werkbank merkt sie sich.",
+          "Die Möglichkeiten bei „Was soll mit dem Gerät passieren?“ brauchen weniger Platz und stehen in Gruppen. Die Erklärung siehst du über das kleine „i“ und zur gewählten Möglichkeit darunter.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.74.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Vorgänge als kompakte Tabelle.",

@@ -1,4 +1,13 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { INVENTORY_CASES_PATH as CASES_PATH } from "../../navigation";
@@ -20,6 +29,7 @@ import {
   fetchSyncStatus,
   formatDate,
   formatDay,
+  groupOptions,
   hardwarePath,
   INVENTORY_EDITOR_ROLE,
   loanPath,
@@ -124,6 +134,9 @@ function SyncBar({ canEdit }: { canEdit: boolean }) {
 function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => void }) {
   const options = decisionOptions(entry);
   const [choice, setChoice] = useState("");
+  // Erklärung zu einer Möglichkeit: per „i“ oder für die gewählte
+  const [info, setInfo] = useState<string | null>(null);
+  const hintId = useId();
   // Gewählte Stelle, Arbeitsplatz, Raum oder Gerät (Auswahl mit Suche)
   const [target, setTarget] = useState<LookupItem | null>(null);
   const [dueOn, setDueOn] = useState("");
@@ -182,9 +195,11 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
     });
   };
 
+  const hinted = options.find((option) => option.id === (info ?? choice));
   const suggested = entry.facts.suggest_workplace_id;
   const pick = (id: string) => {
     setChoice(id);
+    setInfo(null);
     setError(null);
     if (id === "gleich" && entry.hint) {
       const hint = entry.hint;
@@ -220,20 +235,49 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
                     ? "Wie geht es mit dem Verleih weiter?"
                     : "Was ist mit dem Gerät?"}
         </legend>
-        <div className="case-options">
-          {options.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className="case-option"
-              aria-pressed={choice === option.id}
-              onClick={() => pick(option.id)}
-            >
-              <strong>{option.label}</strong>
-              <span className="small">{option.hint}</span>
-            </button>
-          ))}
-        </div>
+        {groupOptions(options).map((group) => (
+          <div
+            key={group.title || "alle"}
+            className="case-option-group"
+            role={group.title ? "group" : undefined}
+            aria-label={group.title || undefined}
+          >
+            {group.title && (
+              <span className="case-option-group-title" aria-hidden="true">
+                {group.title}
+              </span>
+            )}
+            <div className="case-options">
+              {group.options.map((option) => (
+                <span key={option.id} className="case-option-wrap">
+                  <button
+                    type="button"
+                    className="case-option"
+                    aria-pressed={choice === option.id}
+                    onClick={() => pick(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                  <button
+                    type="button"
+                    className="case-info"
+                    aria-label={`Erklärung zu „${option.label}“`}
+                    aria-expanded={info === option.id}
+                    aria-controls={hintId}
+                    onClick={() => setInfo(info === option.id ? null : option.id)}
+                  >
+                    i
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+        {hinted && (
+          <p id={hintId} className="small case-option-hint">
+            <strong>{hinted.label}:</strong> {hinted.hint}
+          </p>
+        )}
       </fieldset>
       {choice === "stelle" && (
         <LookupPicker
@@ -585,6 +629,93 @@ function CaseDetail({
   );
 }
 
+// Breite der Tabelle neben der Ansicht in Prozent, gemerkt im Browser
+const SPLIT_KEY = "werkbank-vorgaenge-breite";
+const SPLIT_DEFAULT = 54;
+const SPLIT_MIN = 30;
+const SPLIT_MAX = 75;
+const SPLIT_STEP = 2;
+
+function clampSplit(value: number): number {
+  return Math.round(Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, value)));
+}
+
+function readSplit(): number {
+  try {
+    const value = Number(window.localStorage.getItem(SPLIT_KEY));
+    return value ? clampSplit(value) : SPLIT_DEFAULT;
+  } catch {
+    return SPLIT_DEFAULT;
+  }
+}
+
+function saveSplit(value: number): void {
+  try {
+    window.localStorage.setItem(SPLIT_KEY, String(value));
+  } catch {
+    // ohne Speicher im Browser gilt die Breite nur bis zum Neuladen
+  }
+}
+
+/** Trenner zwischen Tabelle und Ansicht: ziehen oder mit den Pfeiltasten verschieben. */
+function SplitHandle({
+  value,
+  onChange,
+  container,
+}: {
+  value: number;
+  onChange: (next: number) => void;
+  container: () => HTMLElement | null;
+}) {
+  const dragging = useRef(false);
+  const fromPointer = (event: PointerEvent<HTMLDivElement>) => {
+    const box = container()?.getBoundingClientRect();
+    if (box && box.width > 0) {
+      onChange(clampSplit(((event.clientX - box.left) / box.width) * 100));
+    }
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const next =
+      event.key === "ArrowLeft"
+        ? value - SPLIT_STEP
+        : event.key === "ArrowRight"
+          ? value + SPLIT_STEP
+          : event.key === "Home"
+            ? SPLIT_MIN
+            : event.key === "End"
+              ? SPLIT_MAX
+              : null;
+    if (next !== null) {
+      event.preventDefault();
+      onChange(clampSplit(next));
+    }
+  };
+  return (
+    <div
+      className="case-split"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Breite von Tabelle und Ansicht"
+      aria-valuemin={SPLIT_MIN}
+      aria-valuemax={SPLIT_MAX}
+      aria-valuenow={value}
+      aria-valuetext={`Tabelle ${value} Prozent`}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      onDoubleClick={() => onChange(SPLIT_DEFAULT)}
+      onPointerDown={(event) => {
+        dragging.current = true;
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => dragging.current && fromPointer(event)}
+      onPointerUp={(event) => {
+        dragging.current = false;
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }}
+    />
+  );
+}
+
 /** Zeile der Vorgangstabelle. Die ganze Zeile ist anklickbar, für Tastatur und Screenreader
  *  zählt der Verweis im Titel. */
 function CaseRow({ entry, selected }: { entry: CaseSummary; selected: boolean }) {
@@ -658,6 +789,12 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
   const cases = paged.items;
   const openCount = paged.extra ? paged.extra.open : null;
   const backToList = () => navigate(CASES_PATH);
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const [split, setSplit] = useState(readSplit);
+  const changeSplit = (next: number) => {
+    setSplit(next);
+    saveSplit(next);
+  };
 
   return (
     <div className="page page-wide case-page">
@@ -704,7 +841,7 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
           ))}
         </div>
         <label className="case-kind">
-          Art
+          <span className="case-kind-label">Art</span>
           <select
             value={kind}
             onChange={(event) => setKind(event.target.value as CaseKind | "alle")}
@@ -719,11 +856,13 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
         </label>
       </div>
       <div
+        ref={layoutRef}
         className={
           caseId === null
             ? "case-layout case-layout-table"
             : "case-layout case-layout-table case-layout-detail"
         }
+        style={{ "--case-split": split } as CSSProperties}
       >
         <div className="panel case-list">
           <div className="case-scroll">
@@ -772,6 +911,9 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
             )}
           </div>
         </div>
+        {caseId !== null && (
+          <SplitHandle value={split} onChange={changeSplit} container={() => layoutRef.current} />
+        )}
         <div className="case-main">
           {caseId !== null && (
             <>
