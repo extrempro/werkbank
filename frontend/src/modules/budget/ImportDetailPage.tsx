@@ -50,7 +50,10 @@ interface EditorProps {
   onDone: (detail: ImportDetail, rowId: number, advance: boolean) => void;
 }
 
-/** Eine Zeile prüfen: Partner, Datum, Nummern, Konto, Posten, Betrag, Steuersatz. */
+/**
+ * Eine Zeile prüfen: Partner, Datum, Nummern, Konto, Betrag, Steuersatz. Übernehmen legt einen
+ * eigenen Budgetposten an (Name aus der Bezeichnung) und eine Rechnung, die ihn abschließt.
+ */
 function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorProps) {
   const id = useId();
   const accountOf = (number: string | null) =>
@@ -71,34 +74,13 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
   const [accountId, setAccountId] = useState(
     String(initialItem?.account_id ?? accountOf(row.account_number)?.id ?? ""),
   );
-  const [itemId, setItemId] = useState(() => {
-    if (row.item_id) {
-      return String(row.item_id);
-    }
-    const account = accountOf(row.account_number);
-    const general = items.find(
-      (item) => item.account_id === account?.id && item.name.startsWith("Allgemein"),
-    );
-    return general ? String(general.id) : "";
-  });
   const [gross, setGross] = useState(euroInput(row.gross_cents < 0 ? 0 : row.gross_cents));
   const [tax, setTax] = useState(detail.tax_rate_bp);
   const [yearly, setYearly] = useState(row.yearly);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const done = row.status !== "offen";
-  const accountItems = items.filter(
-    (item) => String(item.account_id) === accountId && (item.active || String(item.id) === itemId),
-  );
   const grossCents = parseEuro(gross);
-
-  const onAccount = (value: string) => {
-    setAccountId(value);
-    const general = items.find(
-      (item) => String(item.account_id) === value && item.name.startsWith("Allgemein"),
-    );
-    setItemId(general ? String(general.id) : "");
-  };
 
   const onTake = (event: FormEvent) => {
     event.preventDefault();
@@ -107,8 +89,8 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
       problem = "Bitte das Rechnungsdatum eintragen.";
     } else if (!number.trim()) {
       problem = "Bitte eine Rechnungsnummer eintragen.";
-    } else if (!itemId) {
-      problem = "Bitte Konto und Budgetposten wählen.";
+    } else if (!accountId) {
+      problem = "Bitte ein Konto wählen.";
     } else if (grossCents === null) {
       problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 1190,00";
     } else if (choice === "neu" && !newName.trim()) {
@@ -125,7 +107,7 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
       number: number.trim(),
       internal_number: internal.trim(),
       description: description.trim(),
-      item_id: Number(itemId),
+      account_id: Number(accountId),
       gross_cents: grossCents,
       tax_rate_bp: tax,
       yearly,
@@ -279,22 +261,11 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
           </label>
           <label>
             Konto
-            <select value={accountId} onChange={(event) => onAccount(event.target.value)}>
+            <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
               <option value="">Bitte wählen</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.number} {account.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Budgetposten
-            <select value={itemId} onChange={(event) => setItemId(event.target.value)}>
-              <option value="">Bitte wählen</option>
-              {accountItems.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
                 </option>
               ))}
             </select>
@@ -321,6 +292,11 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
         </div>
         <p className="small">
           Netto: {grossCents === null ? "–" : formatEuro(netFromGross(grossCents, tax))}
+        </p>
+        <p className="small">
+          {done
+            ? `Budgetposten: ${row.item_name ?? "–"}`
+            : `Übernehmen legt den Budgetposten „${description.trim() || "Name des Partners"}“ an, mit dem Betrag als erwarteten Kosten; die Rechnung schließt ihn ab. Gibt es den Namen im Konto schon, bekommt er eine Nummer.`}
         </p>
         <label className="check-label">
           <input
@@ -376,35 +352,43 @@ function PlanPanel({
 }) {
   const candidates = planCandidates(detail.rows_detail);
   const [chosen, setChosen] = useState<Record<number, boolean>>({});
-  const [names, setNames] = useState<Record<number, string>>({});
+  const [amounts, setAmounts] = useState<Record<number, string>>({});
   const [ongoing, setOngoing] = useState<Record<number, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
   const nextYear = detail.year + 1;
+  const amountOf = (row: ImportRow) =>
+    amounts[row.id] ?? euroInput(row.gross_cents < 0 ? 0 : row.gross_cents);
 
   const onPlan = () => {
-    const entries = candidates
-      .filter((row) => chosen[row.id])
-      .map((row) => ({
-        row_id: row.id,
-        name: (names[row.id] ?? row.description).trim() || row.firm,
-        amount_cents: row.gross_cents < 0 ? 0 : row.gross_cents,
-        ongoing: ongoing[row.id] ?? true,
-      }));
-    if (entries.length === 0) {
+    const picked = candidates.filter((row) => chosen[row.id]);
+    if (picked.length === 0) {
       setMessage({ kind: "alert", text: "Bitte mindestens eine Zeile auswählen." });
       return;
     }
+    const unreadable = picked.find((row) => parseEuro(amountOf(row)) === null);
+    if (unreadable) {
+      setMessage({
+        kind: "alert",
+        text: `Der Betrag in Zeile ${unreadable.row_number} ist nicht lesbar. Bitte so eintragen: 1190,00`,
+      });
+      return;
+    }
+    const entries = picked.map((row) => ({
+      row_id: row.id,
+      amount_cents: parseEuro(amountOf(row)) ?? 0,
+      ongoing: ongoing[row.id] ?? true,
+    }));
     setBusy(true);
     setMessage(null);
     planRows(detail.id, entries)
       .then((result) => {
-        const existing = result.existing.length
-          ? ` Schon vorhanden: ${result.existing.join(", ")}.`
-          : "";
         setMessage({
           kind: "status",
-          text: `${result.created} Budgetposten angelegt.${existing}`,
+          text:
+            result.extended === 1
+              ? "1 Budgetposten läuft jetzt weiter."
+              : `${result.extended} Budgetposten laufen jetzt weiter.`,
         });
         onDone(result.detail);
       })
@@ -421,8 +405,9 @@ function PlanPanel({
       </div>
       <div className="detail-body">
         <p className="small">
-          Übernommene Zeilen mit „Jährlich“. Ausgewählte werden Budgetposten ab {detail.year_label}{" "}
-          {nextYear}. Gibt es den Posten im Konto schon, wird er nicht doppelt angelegt.
+          Übernommene Zeilen mit „Jährlich“. Der Budgetposten einer ausgewählten Zeile läuft im{" "}
+          {detail.year_label} {nextYear} weiter, mit den eingetragenen Kosten je Jahr. Es entsteht
+          kein zweiter Posten.
         </p>
       </div>
       {candidates.length === 0 ? (
@@ -435,7 +420,7 @@ function PlanPanel({
               <tr>
                 <th scope="col">Übernehmen</th>
                 <th scope="col">Zeile</th>
-                <th scope="col">Name des Postens</th>
+                <th scope="col">Budgetposten</th>
                 <th scope="col" className="betrag">
                   Erwartete Kosten je Jahr
                 </th>
@@ -457,16 +442,16 @@ function PlanPanel({
                     Zeile {row.row_number}
                     <span className="small tenant-part">{row.firm}</span>
                   </th>
-                  <td>
+                  <td>{row.item_name ?? row.description}</td>
+                  <td className="betrag">
                     <input
                       type="text"
-                      aria-label={`Name des Postens aus Zeile ${row.row_number}`}
-                      value={names[row.id] ?? row.description}
-                      maxLength={160}
-                      onChange={(event) => setNames({ ...names, [row.id]: event.target.value })}
+                      inputMode="decimal"
+                      aria-label={`Erwartete Kosten je Jahr für Zeile ${row.row_number}`}
+                      value={amountOf(row)}
+                      onChange={(event) => setAmounts({ ...amounts, [row.id]: event.target.value })}
                     />
                   </td>
-                  <td className="betrag">{formatEuro(row.gross_cents)}</td>
                   <td>
                     <select
                       aria-label={`Laufzeit für Zeile ${row.row_number}`}
@@ -475,8 +460,8 @@ function PlanPanel({
                         setOngoing({ ...ongoing, [row.id]: event.target.value === "offen" })
                       }
                     >
-                      <option value="offen">ab {nextYear} bis auf Weiteres</option>
-                      <option value="einmalig">nur {nextYear}</option>
+                      <option value="offen">bis auf Weiteres</option>
+                      <option value="einmalig">bis {nextYear}</option>
                     </select>
                   </td>
                 </tr>
@@ -502,7 +487,7 @@ function PlanPanel({
               disabled={busy}
               onClick={onPlan}
             >
-              Ausgewählte als Budgetposten anlegen
+              Ausgewählte in die Planung übernehmen
             </button>
           </div>
         )}

@@ -56,7 +56,8 @@ function row(overrides: Partial<ImportRow> = {}): ImportRow {
     partner_match: "neu",
     partner_id: null,
     partner_name: null,
-    item_id: 7,
+    item_id: null,
+    item_name: null,
     ...overrides,
   };
 }
@@ -88,8 +89,6 @@ function detail(overrides: Partial<ImportDetail> = {}): ImportDetail {
         budget_cents: 1_500_000,
         account_id: 1,
         created: true,
-        item_id: 7,
-        item_name: "Allgemein 2026",
         rows: 2,
       },
     ],
@@ -120,7 +119,7 @@ const account: Account = {
   note: "",
   active: true,
 };
-const general = { id: 7, account_id: 1, name: "Allgemein 2026", active: true } as Item;
+const general = { id: 7, account_id: 1, name: "Notebooks", active: true } as Item;
 const partner = { id: 9, name: "Beispiel Software GmbH", active: true } as Partner;
 
 describe("Hilfen", () => {
@@ -192,7 +191,10 @@ describe("Import", () => {
     });
     render(<ImportDetailPage importId={3} />);
     expect(await screen.findByRole("heading", { name: "Zeile 5: Notebooks" })).toBeVisible();
-    expect(screen.getByLabelText("Budgetposten")).toHaveValue("7");
+    // Kein Budgetposten zum Auswählen: Übernehmen legt ihn aus der Bezeichnung an
+    expect(screen.queryByLabelText("Budgetposten")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Konto")).toHaveValue("1");
+    expect(screen.getByText(/legt den Budgetposten „Notebooks“ an/)).toBeVisible();
     expect(screen.getByText(/Netto: 1\.000,00/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und weiter" }));
     expect(await screen.findByRole("heading", { name: "Zeile 6: Lizenz" })).toBeVisible();
@@ -201,7 +203,7 @@ describe("Import", () => {
       number: "RE-1",
       internal_number: "re.26.001",
       description: "Notebooks",
-      item_id: 7,
+      account_id: 1,
       gross_cents: 119_000,
       tax_rate_bp: 1900,
       yearly: false,
@@ -230,5 +232,51 @@ describe("Import", () => {
     fireEvent.change(screen.getByLabelText(/^Betrag brutto/), { target: { value: "10,00" } });
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und weiter" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Bitte einen Partner wählen");
+    fireEvent.click(screen.getByLabelText("Als neuen Partner anlegen"));
+    fireEvent.change(screen.getByLabelText("Konto"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen und weiter" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte ein Konto wählen");
+  });
+
+  it("übernimmt Zeilen mit „Jährlich“ in die Planung, ihr Posten läuft weiter", async () => {
+    const taken = row({
+      id: 2,
+      row_number: 6,
+      description: "Lizenz",
+      gross_cents: 23_800,
+      yearly: true,
+      status: "uebernommen",
+      invoice_id: 12,
+      item_id: 8,
+      item_name: "Lizenz",
+    });
+    const base = detail({ status: "abgeschlossen", open: 0, taken: 1, rows_detail: [taken] });
+    const calls = stubFetch({
+      "GET /api/budget/imports/3": base,
+      "GET /api/budget/accounts": [account],
+      "GET /api/budget/items": [general],
+      "GET /api/budget/partners": [partner],
+      "GET /api/budget/settings": {},
+      "POST /api/budget/imports/3/plan": {
+        extended: 1,
+        detail: { ...base, rows_detail: [{ ...taken, planned_item_id: 8 }] },
+      },
+    });
+    render(<ImportDetailPage importId={3} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Vorschläge für die Planung/ }));
+    const panel = within(await screen.findByRole("region", { name: "Vorschläge" }));
+    expect(panel.getByText("Lizenz")).toBeVisible();
+    fireEvent.click(panel.getByLabelText("Zeile 6 übernehmen"));
+    fireEvent.change(panel.getByLabelText("Erwartete Kosten je Jahr für Zeile 6"), {
+      target: { value: "250,00" },
+    });
+    fireEvent.change(panel.getByLabelText("Laufzeit für Zeile 6"), {
+      target: { value: "einmalig" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Ausgewählte in die Planung übernehmen" }));
+    expect(await screen.findByText("1 Budgetposten läuft jetzt weiter.")).toBeVisible();
+    expect(calls.find((call) => call.url === "/api/budget/imports/3/plan")?.body).toEqual({
+      entries: [{ row_id: 2, amount_cents: 25_000, ongoing: false }],
+    });
   });
 });
