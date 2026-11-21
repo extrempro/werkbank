@@ -452,7 +452,9 @@ Muster „Liste und Ansicht“ aus `design.md` (seit 0.83; vorher Tabelle mit An
    - Kurzfassung (Klartext für Menschen ohne IT-Hintergrund), Was ändert sich für Mitarbeitende?, Schulung / Kommunikation (je Text, höchstens 4000 Zeichen).
    - **Mitbestimmungsrelevant?** Auswahl Ja / Nein / Noch prüfen (Radiogruppe) und Begründung. Hilfetext: „Eignet sich die Funktion zur Leistungs- oder Verhaltenskontrolle, oder verarbeitet sie neue personenbezogene Daten?“
    - **Verknüpfte Einstellung** aus der M365-Konfiguration: Pfad, aktueller Wert als Badge und Link „Einstellung und Verlauf öffnen“ (nur mit Recht auf die M365-Konfiguration; sonst nur der Pfad). Verknüpft wird von Hand über eine Auswahl mit Suche (`design.md`); höchstens eine Einstellung je Eintrag, „Verknüpfung lösen“ möglich.
-   - Steckbrief-Felder (Betroffen, Standard, Steuerbar) und Rollout-Phasen (Name, Beginn, Ende als Monat oder Datum, höchstens 6) werden ebenfalls hier bearbeitet.
+   - Steckbrief-Felder (Betroffen, Standard, Steuerbar) und Rollout-Phasen (Name, Beginn, Ende als Monat, höchstens 6) werden ebenfalls hier bearbeitet.
+   - **Vorschläge per Regeln** (keine KI, keine Übertragung von Daten): Beim Einlesen und bei jeder Aktualisierung erkennt die Werkbank im Abschnitt „When this will happen“ Zeilen der Form „<Phase>: <Zeitangabe>“ (z. B. „Targeted Release: early January 2027“, „General Availability (Worldwide): late January 2027 to late February 2027“; Monatsnamen englisch, „early/mid/late“ werden ignoriert, Phasen auf Deutsch benannt: Targeted Release, Allgemein verfügbar, Vorschau, GCC …) und legt daraus Phasen an. Aus den Kennzeichen folgt „Betroffen“ („Nutzer“, „Admins“, „Nutzer und Admins“). Vorgeschlagene Werte tragen das Badge „Vorschlag, ungeprüft“ (grau) und gelten als geprüft, sobald jemand die Bewertung speichert. Von Hand geprüfte Werte überschreibt eine Aktualisierung nie; ungeprüfte Vorschläge werden neu berechnet.
+   - Ändert Microsoft den Zeitplan (8.1), werden die bisherigen Phasen als „vorher“ gesichert (schraffiert im Zeitstrahl), und die neuen Phasen gelten wieder als Vorschlag.
    - „Bewertung speichern“ (Hauptaktion). „Als BR-Vorlage übernehmen“ (Nebenaktion) ist vorgesehen, aber noch nicht umgesetzt und wird nicht angezeigt (16, Punkt 16).
 2. **Text von Microsoft:** der Originaltext nach Abschnitten in einklappbaren Blöcken (`<details>`, `lang="en"`), der erste offen; darüber „Zuletzt von Microsoft geändert: …“. Einträge von Hand oder aus erkannten Änderungen zeigen hier ihre Beschreibung.
 3. **Notizen und Verlauf:** Verlauf, Notiz, Abschließen und Wieder öffnen wie in 8.2.
@@ -643,7 +645,7 @@ Evergreen:
 | Tabelle | Wichtige Felder |
 |---|---|
 | `ev_entries` | id, jahr, nummer, software, titel, quelle, quelle_ref, dienste (JSONB), kategorie, major, handeln_bis, veroeffentlicht, geaendert_ms, text, status, angelegt_von, angelegt, aktualisiert, abgeschlossen |
-| `ev_entries` (seit 0.83 zusätzlich) | kennzeichen (JSONB), abschnitte (JSONB: Überschrift, Text), zeitplan_vorher, zeitplan_geaendert, betroffen, standard (an, aus, entfaellt), steuerbar (ja, nein), steuerbar_womit, phasen (JSONB: Name, Beginn, Ende), phasen_vorher (JSONB), kurzfassung, aenderung_mitarbeitende, schulung, mitbestimmung (ja, nein, pruefen), mitbestimmung_grund, setting_id? |
+| `ev_entries` (seit 0.83 zusätzlich) | kennzeichen (JSONB), abschnitte (JSONB: Überschrift, Text), zeitplan_vorher, zeitplan_geaendert, betroffen, standard (an, aus, entfaellt), steuerbar (ja, nein), steuerbar_womit, phasen (JSONB: Name, Beginn, Ende), phasen_vorher (JSONB), vorschlag (JSONB: Felder, die noch Vorschlag sind), kurzfassung, aenderung_mitarbeitende, schulung, mitbestimmung (ja, nein, pruefen), mitbestimmung_grund, setting_id? |
 | `ev_notes` | id, entry_id, art (notiz, abgeschlossen, geoeffnet, aktualisiert, zeitplan, bewertet), text, details (JSONB, geänderte Felder), user_id?, zeitpunkt |
 
 ---
@@ -891,4 +893,4 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 11 | Copyright | Entschieden: `extrempro` |
 | 12 | ASVS-Version | Entschieden: OWASP ASVS 5.0.0 |
 | 16 | Evergreen: BR-Vorlage | Offen: Was „Als BR-Vorlage übernehmen“ erzeugt (Dokument, Eintrag für die IT-Kommission, PDF) und für wen |
-| 17 | Evergreen: Steckbrief automatisch | Offen: Steckbrief und Rollout-Phasen nur von Hand, per Regeln oder per KI aus dem Text vorschlagen (8.4) |
+| 17 | Evergreen: Steckbrief automatisch | Entschieden: Vorschläge per Regeln (8.4), Rest von Hand. KI-Vorschläge vielleicht später, dann nach Abstimmung mit dem Datenschutz |
