@@ -283,4 +283,38 @@ describe("Import", () => {
       entries: [{ row_id: 2, amount_cents: 25_000, ongoing: false }],
     });
   });
+  it("löscht eine offene Zeile und bricht den Import ab", async () => {
+    const base = detail();
+    const second = base.rows_detail[1]!;
+    const afterDelete = detail({ rows: 1, open: 1, rows_detail: [second] });
+    const calls = stubFetch({
+      "GET /api/budget/imports/3": base,
+      "GET /api/budget/accounts": [account],
+      "GET /api/budget/items": [general],
+      "GET /api/budget/partners": [partner],
+      "GET /api/budget/settings": {},
+      "DELETE /api/budget/imports/3/rows/1": afterDelete,
+      "POST /api/budget/imports/3/cancel": detail({
+        status: "abgebrochen",
+        rows: 0,
+        open: 0,
+        rows_detail: [],
+      }),
+    });
+    render(<ImportDetailPage importId={3} />);
+    await screen.findByRole("heading", { name: "Zeile 5: Notebooks" });
+    fireEvent.click(screen.getByRole("button", { name: "Zeile 5 löschen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    expect(await screen.findByRole("heading", { name: "Zeile 6: Lizenz" })).toBeVisible();
+    expect(calls.some((call) => call.method === "DELETE")).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Import abbrechen" }));
+    expect(screen.getByRole("group", { name: "Import abbrechen" })).toHaveTextContent(
+      "1 offene und übersprungene Zeilen werden gelöscht",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Import wirklich abbrechen" }));
+    expect(await screen.findByText(/Der Import ist abgebrochen/)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Import abbrechen" })).toBeNull();
+    expect(calls.some((call) => call.url === "/api/budget/imports/3/cancel")).toBe(true);
+  });
 });

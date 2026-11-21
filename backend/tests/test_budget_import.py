@@ -462,3 +462,51 @@ def test_import_flow(db: Session) -> None:
     db.expire_all()
     assert db.get(BudgetItem, after[0]["item_id"]) is not None
     assert manager.get(BASE).json() == []
+
+
+@pytest.mark.db
+def test_cancel_import_and_delete_rows(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "import-abbruch")
+    detail = upload(manager, make_xlsx(budget_file())).json()
+    url = f"{BASE}/{detail['id']}"
+    draft_rows = detail["rows_detail"]
+    # Im Entwurf: weder abbrechen noch Zeilen löschen (der Entwurf wird verworfen)
+    assert manager.post(f"{url}/cancel", headers=HEADERS).status_code == 409
+    row_url = f"{url}/rows/{draft_rows[0]['id']}"
+    assert manager.delete(row_url, headers=HEADERS).status_code == 409
+    started = manager.post(f"{url}/start", json={"year": 2026}, headers=HEADERS).json()
+    rows = with_accounts(started)
+    taken = manager.post(
+        f"{url}/rows/{rows[0]['id']}/take", json=take_body(rows[0]), headers=HEADERS
+    )
+    assert taken.status_code == 200, taken.text
+    manager.post(f"{url}/rows/{rows[1]['id']}/skip", headers=HEADERS)
+
+    # Einzeln löschen: offene Zeile ja, übernommene nicht
+    one = manager.delete(f"{url}/rows/{rows[2]['id']}", headers=HEADERS)
+    assert one.status_code == 200, one.text
+    assert [entry["row_number"] for entry in one.json()["rows_detail"]] == [
+        rows[0]["row_number"],
+        rows[1]["row_number"],
+        rows[3]["row_number"],
+    ]
+    assert manager.delete(f"{url}/rows/{rows[0]['id']}", headers=HEADERS).status_code == 409
+    # Nur Budgetverwalter
+    editor = client_for(["Budget.Editor"], "import-abbruch-it")
+    assert editor.post(f"{url}/cancel", headers=HEADERS).status_code == 403
+
+    # Abbrechen: offene und übersprungene Zeilen weg, übernommene bleiben, keine Aufgabe mehr
+    cancelled = manager.post(f"{url}/cancel", headers=HEADERS)
+    assert cancelled.status_code == 200, cancelled.text
+    data = cancelled.json()
+    assert data["status"] == "abgebrochen" and data["finished_at"] is not None
+    assert [(entry["status"], entry["item_id"] is not None) for entry in data["rows_detail"]] == [
+        ("uebernommen", True)
+    ]
+    assert (data["open"], data["taken"], data["skipped"]) == (0, 1, 0)
+    assert db.get(BudgetItem, data["rows_detail"][0]["item_id"]) is not None
+    tasks = manager.get("/api/tasks").json()["tasks"]
+    assert not any(task["link"] == "/budget/import" for task in tasks)
+    assert manager.post(f"{url}/cancel", headers=HEADERS).status_code == 409
+    assert manager.post(f"{url}/rows/{rows[3]['id']}/skip", headers=HEADERS).status_code == 404
+    assert manager.get(BASE).json()[0]["status"] == "abgebrochen"

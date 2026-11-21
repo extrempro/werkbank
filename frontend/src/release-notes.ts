@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.81.0",
+    date: "2026-11-21",
+    summary: "IT-Budget: Import abbrechen und offene Zeilen löschen.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Import aus Excel: Mit „Import abbrechen“ löschst du alle offenen und übersprungenen Zeilen eines Vorgangs. Übernommene Zeilen und ihre Budgetposten bleiben, der Vorgang steht dann als „abgebrochen“ in der Liste.",
+          "Einzelne offene oder übersprungene Zeilen lassen sich jetzt auch löschen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.80.0",
     date: "2026-11-21",
     summary: "IT-Budget: Partner am Budgetposten, Import ohne Rechnungen.",

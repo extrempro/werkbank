@@ -53,6 +53,8 @@ ROWS_MAX = 2000
 STATUS_DRAFT = "entwurf"
 STATUS_OPEN = "offen"
 STATUS_DONE = "abgeschlossen"
+# Abgebrochen: offene und übersprungene Zeilen sind gelöscht, übernommene bleiben als Nachweis
+STATUS_CANCELLED = "abgebrochen"
 ROW_OPEN = "offen"
 ROW_TAKEN = "uebernommen"
 ROW_SKIPPED = "uebersprungen"
@@ -435,7 +437,7 @@ def _refresh_status(row: BudgetImport, rows: list[BudgetImportRow]) -> None:
     if any(entry.status == ROW_OPEN for entry in rows):
         row.status = STATUS_OPEN
         row.finished_at = None
-    elif row.status != STATUS_DONE:
+    elif row.status not in (STATUS_DONE, STATUS_CANCELLED):
         row.status = STATUS_DONE
         row.finished_at = now_utc()
 
@@ -627,6 +629,10 @@ def _row(db: Session, row: BudgetImport, row_id: int) -> BudgetImportRow:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Der Import ist noch nicht gestartet."
         )
+    if row.status == STATUS_CANCELLED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Der Import ist abgebrochen."
+        )
     return entry
 
 
@@ -813,6 +819,53 @@ def plan_rows(
     _audit(db, request, user, "planung", row.id, {"posten_verlaengert": extended})
     db.commit()
     return PlanOut(extended=extended, detail=detail_out(db, row))
+
+
+@router.delete("/{import_id}/rows/{row_id}")
+def delete_row(
+    request: Request, import_id: ImportId, row_id: RowId, user: Manager, db: DbDep
+) -> ImportOut:
+    """Löscht eine offene oder übersprungene Zeile. Übernommene bleiben als Nachweis."""
+    row = _import(db, import_id)
+    entry = _row(db, row, row_id)
+    if entry.status == ROW_TAKEN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Übernommene Zeilen bleiben stehen; ihren Budgetposten änderst du dort.",
+        )
+    number = entry.row_number
+    db.delete(entry)
+    db.flush()
+    _refresh_status(row, _rows(db, row.id))
+    _audit(db, request, user, "zeile_geloescht", row.id, {"zeile": number})
+    db.commit()
+    return detail_out(db, row)
+
+
+@router.post("/{import_id}/cancel")
+def cancel_import(request: Request, import_id: ImportId, user: Manager, db: DbDep) -> ImportOut:
+    """Bricht den Import ab: offene und übersprungene Zeilen werden gelöscht, übernommene Zeilen
+    und ihre Budgetposten bleiben. Der Vorgang steht danach als „abgebrochen“ in der Liste."""
+    row = _import(db, import_id)
+    if row.status == STATUS_DRAFT:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ein Entwurf wird verworfen, nicht abgebrochen.",
+        )
+    if row.status == STATUS_CANCELLED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Der Import ist schon abgebrochen."
+        )
+    removed = 0
+    for entry in _rows(db, row.id):
+        if entry.status != ROW_TAKEN:
+            db.delete(entry)
+            removed += 1
+    row.status = STATUS_CANCELLED
+    row.finished_at = now_utc()
+    _audit(db, request, user, "abgebrochen", row.id, {"zeilen_geloescht": removed})
+    db.commit()
+    return detail_out(db, row)
 
 
 @router.delete("/{import_id}")

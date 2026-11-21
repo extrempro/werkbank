@@ -25,6 +25,7 @@ const PILLS: Record<ImportStatus, string> = {
   entwurf: "pill pill-neutral",
   offen: "pill pill-todo",
   abgeschlossen: "pill pill-ok",
+  abgebrochen: "pill pill-neutral",
 };
 
 /** Schritt 2: Was die Werkbank in der Datei erkannt hat; mit „Vorgang anlegen“ geht es los. */
@@ -221,7 +222,9 @@ export function ImportsPage() {
     (entry) =>
       entry.status !== "entwurf" &&
       (view === "alle" ||
-        (view === "fertig" ? entry.status === "abgeschlossen" : entry.status === "offen")),
+        (view === "fertig"
+          ? entry.status === "abgeschlossen" || entry.status === "abgebrochen"
+          : entry.status === "offen")),
   );
 
   return (

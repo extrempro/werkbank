@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.81.0] – 2026-11-21
+
+### IT-Budget
+
+- **Import abbrechen:** Knopf „Import abbrechen“ im Vorgang (mit Rückfrage). Offene und übersprungene Zeilen werden gelöscht, übernommene Zeilen und ihre Budgetposten bleiben; der Vorgang steht als „abgebrochen“ in der Liste (Filter „Abgeschlossen“) und ist keine Aufgabe mehr. `POST /api/budget/imports/{id}/cancel`, Audit `budget.import_abgebrochen`
+- **Zeilen löschen:** offene oder übersprungene Zeilen einzeln löschen (mit Rückfrage), übernommene bleiben. `DELETE /api/budget/imports/{id}/rows/{row}`, Audit `budget.import_zeile_geloescht`
+
 ## [0.80.0] – 2026-11-21
 
 ### IT-Budget
