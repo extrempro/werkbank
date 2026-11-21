@@ -21,6 +21,7 @@ import {
   formatDate,
   kindPill,
   reopenEntry,
+  requestAiSuggestion,
   saveAssessment,
   searchSettings,
   type Codetermination,
@@ -33,18 +34,29 @@ const NOTE_MAX = 4000;
 const TEXT_MAX = 4000;
 const MAX_PHASES = 6;
 const SUGGESTED = "Vorschlag, ungeprüft";
+const AI_SUGGESTED = "KI-Vorschlag, ungeprüft";
 const CODETERMINATION_HELP =
   "Eignet sich die Funktion zur Leistungs- oder Verhaltenskontrolle, oder verarbeitet sie neue personenbezogene Daten?";
 
 type TabId = "bewertung" | "microsoft" | "verlauf";
 
-function SuggestedPill() {
+/** Kennzeichen eines ungeprüften Vorschlags: grau aus den Regeln, violett von der KI. */
+function SuggestedPill({ ai = false }: { ai?: boolean }) {
   return (
     <span className="ev-suggested-wrap">
-      <span className="pill pill-neutral ev-suggested">{SUGGESTED}</span>
-      <InfoTip term="evergreen.vorschlag" />
+      <span className={`pill ${ai ? "pill-ki" : "pill-neutral"} ev-suggested`}>
+        {ai ? AI_SUGGESTED : SUGGESTED}
+      </span>
+      <InfoTip term={ai ? "evergreen.ki-vorschlag" : "evergreen.vorschlag"} />
     </span>
   );
+}
+
+/** Kennzeichen für ein Feld, falls es noch ein Vorschlag ist. */
+function suggestionFor(entry: Entry, field: string) {
+  return entry.suggested.includes(field) ? (
+    <SuggestedPill ai={entry.ai_suggested.includes(field)} />
+  ) : null;
 }
 
 function deadlineText(iso: string): string {
@@ -91,11 +103,34 @@ function Fact({
 }
 
 /** Oberste Karte: Kopf, Badges, vier Kacheln und Rollout. */
-function Profile({ entry, onClose }: { entry: Entry; onClose: () => void }) {
+function Profile({
+  entry,
+  onClose,
+  onChanged,
+}: {
+  entry: Entry;
+  onClose: () => void;
+  onChanged: (entry: Entry) => void;
+}) {
   const tags = new Set(entry.tags.map((tag) => tag.toLowerCase()));
   const state = ENTRY_STATES[entry.status];
-  const suggested = new Set(entry.suggested);
   const fromMicrosoft = entry.source === "nachrichtencenter";
+  const [asking, setAsking] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const askAi = () => {
+    setAsking(true);
+    setAiError(null);
+    requestAiSuggestion(entry.id).then(
+      (updated) => {
+        setAsking(false);
+        onChanged(updated);
+      },
+      (problem: unknown) => {
+        setAsking(false);
+        setAiError(errorText(problem, "Die KI hat keinen Vorschlag geliefert."));
+      },
+    );
+  };
   return (
     <section className="panel ev-profile" aria-labelledby="eintrag-titel">
       <div className="ev-profile-top small">
@@ -140,7 +175,7 @@ function Profile({ entry, onClose }: { entry: Entry; onClose: () => void }) {
           label="Betroffen"
           info="evergreen.betroffen"
           value={entry.affected ?? "Noch offen"}
-          extra={suggested.has("affected") ? <SuggestedPill /> : null}
+          extra={suggestionFor(entry, "affected")}
         />
         <Fact
           label="Standard"
@@ -150,12 +185,14 @@ function Profile({ entry, onClose }: { entry: Entry; onClose: () => void }) {
             entry.default_state && entry.default_state !== "entfaellt" ? "nach dem Rollout" : null
           }
           warn={entry.default_state === "an"}
+          extra={suggestionFor(entry, "default_state")}
         />
         <Fact
           label="Steuerbar"
           info="evergreen.steuerbar"
           value={entry.controllable === null ? "Noch offen" : entry.controllable ? "Ja" : "Nein"}
           sub={entry.controllable ? entry.controllable_how : null}
+          extra={suggestionFor(entry, "controllable")}
         />
         <Fact
           label="Handeln bis"
@@ -175,13 +212,35 @@ function Profile({ entry, onClose }: { entry: Entry; onClose: () => void }) {
         <div className="ev-rollout-head">
           <h3>Rollout</h3>
           <InfoTip term="evergreen.rollout" />
-          {suggested.has("phases") && <SuggestedPill />}
+          {suggestionFor(entry, "phases")}
           {entry.schedule_changed_at && (
             <span className="ev-changed">
               Zeitplan geändert am {formatDate(entry.schedule_changed_at)}
             </span>
           )}
         </div>
+        {entry.can_edit && fromMicrosoft && entry.ai_available && (
+          <div className="ev-ai">
+            <button
+              type="button"
+              className="button button-secondary"
+              disabled={asking}
+              onClick={askAi}
+            >
+              {asking ? "KI liest die Meldung …" : "KI-Vorschlag holen"}
+            </button>
+            <span className="small">
+              {entry.ai_pending
+                ? "Die KI schaut sich die Meldung auch beim nächsten stündlichen Lauf an."
+                : "Liest Rollout und Steckbrief aus dem Text von Microsoft. Geprüfte Werte bleiben."}
+            </span>
+          </div>
+        )}
+        {aiError && (
+          <p role="alert" className="hint-box hint-bad">
+            {aiError}
+          </p>
+        )}
         {entry.phases.length > 0 || entry.phases_previous.length > 0 ? (
           <Timeline label="Rollout-Phasen" phases={entry.phases} previous={entry.phases_previous} />
         ) : (
@@ -236,8 +295,6 @@ function AssessmentForm({ entry, onSaved }: { entry: Entry; onSaved: (entry: Ent
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const id = useId();
-  const suggested = new Set(entry.suggested);
-
   const changePhase = (index: number, patch: Partial<Phase>) =>
     setPhases(phases.map((phase, at) => (at === index ? { ...phase, ...patch } : phase)));
 
@@ -381,7 +438,7 @@ function AssessmentForm({ entry, onSaved }: { entry: Entry; onSaved: (entry: Ent
           <label htmlFor={`${id}-affected`} className="form-label">
             Betroffen
           </label>
-          {suggested.has("affected") && <SuggestedPill />}
+          {suggestionFor(entry, "affected")}
           <input
             id={`${id}-affected`}
             maxLength={200}
@@ -394,6 +451,7 @@ function AssessmentForm({ entry, onSaved }: { entry: Entry; onSaved: (entry: Ent
           <label htmlFor={`${id}-default`} className="form-label">
             Standard nach dem Rollout
           </label>
+          {suggestionFor(entry, "default_state")}
           <select
             id={`${id}-default`}
             value={defaultState}
@@ -411,6 +469,7 @@ function AssessmentForm({ entry, onSaved }: { entry: Entry; onSaved: (entry: Ent
           <label htmlFor={`${id}-control`} className="form-label">
             Steuerbar
           </label>
+          {suggestionFor(entry, "controllable")}
           <select
             id={`${id}-control`}
             value={controllable}
@@ -436,7 +495,8 @@ function AssessmentForm({ entry, onSaved }: { entry: Entry; onSaved: (entry: Ent
           </div>
         )}
         <fieldset className="form-wide ev-phases">
-          <legend>Rollout-Phasen {suggested.has("phases") && <SuggestedPill />}</legend>
+          <legend>Rollout-Phasen</legend>
+          {suggestionFor(entry, "phases")}
           {phases.length === 0 && <p className="small">Noch keine Phase eingetragen.</p>}
           {phases.map((phase, index) => (
             <div className="ev-phase" key={index}>
@@ -701,6 +761,8 @@ export function EntryDetail({
   const [entry, setEntry] = useState<Entry | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [tab, setTab] = useState<TabId>("bewertung");
+  // Neue Vorschläge der KI setzen die Maske neu auf
+  const [formRound, setFormRound] = useState(0);
   const prefix = `ev-${entryId}`;
 
   useEffect(() => {
@@ -755,7 +817,14 @@ export function EntryDetail({
 
   return (
     <>
-      <Profile entry={entry} onClose={onClose} />
+      <Profile
+        entry={entry}
+        onClose={onClose}
+        onChanged={(updated) => {
+          update(updated);
+          setFormRound((round) => round + 1);
+        }}
+      />
       <section className="panel ev-tabs" aria-label="Bewertung, Text und Verlauf">
         <Tabs
           label="Ansicht des Eintrags"
@@ -768,7 +837,7 @@ export function EntryDetail({
           "bewertung",
           <>
             {entry.can_edit ? (
-              <AssessmentForm key={entry.id} entry={entry} onSaved={update} />
+              <AssessmentForm key={`${entry.id}-${formRound}`} entry={entry} onSaved={update} />
             ) : (
               <AssessmentView entry={entry} />
             )}

@@ -24,6 +24,29 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.85.0",
+    date: "2026-11-21",
+    summary:
+      "Evergreen: Die KI liest Rollout-Phasen und Steckbrief aus den Meldungen von Microsoft.",
+    sections: [
+      {
+        area: "Evergreen",
+        entries: [
+          "Die KI liest aus jeder neuen Meldung von Microsoft die Rollout-Phasen und den Steckbrief: wer betroffen ist, ob die Funktion von selbst eingeschaltet wird und ob ihr sie steuern könnt. Das geht auch bei unterschiedlich geschriebenen Meldungen.",
+          "Solche Werte sind violett als „KI-Vorschlag, ungeprüft“ markiert, bis du die Bewertung speicherst. Was du schon geprüft hast, überschreibt die KI nicht.",
+          "Mit „KI-Vorschlag holen“ im Eintrag fragst du die KI sofort.",
+          "Ändert Microsoft den Zeitplan, liest die KI ihn neu; der alte Plan bleibt schraffiert sichtbar.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter KI-Texte gibt es den neuen Schalter „Vorschläge für Evergreen einschalten“. Er ist anfangs aus.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.84.0",
     date: "2026-11-21",
     summary:

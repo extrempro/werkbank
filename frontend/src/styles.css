@@ -44,6 +44,8 @@
   --farbe-info-flaeche: #e8eefb;
   --farbe-info-text: #163f8f;
   --farbe-info-rand: #9fb8ea;
+  --farbe-ki-flaeche: #efe7fb;
+  --farbe-ki-text: #5b2a9a;
   /* Blase der Info-Symbole: hell weiß mit Rahmen, dunkel etwas heller als die Fläche */
   --farbe-blase: #ffffff;
   --farbe-blase-rand: #c9ced6;
@@ -99,6 +101,8 @@
   --farbe-info-flaeche: #1d2c4d;
   --farbe-info-text: #b3ccff;
   --farbe-info-rand: #4a6bb0;
+  --farbe-ki-flaeche: #2e2247;
+  --farbe-ki-text: #d9c6fa;
   --farbe-blase: #222a38;
   --farbe-blase-rand: #3d4758;
   --farbe-blase-text: #e8ebf0;
@@ -2517,6 +2521,12 @@ details summary {
 .pill-neutral {
   background: var(--farbe-neutral-flaeche);
   color: var(--farbe-text-mittel);
+}
+
+/* KI-Vorschlag (design.md: violett) */
+.pill-ki {
+  background: var(--farbe-ki-flaeche);
+  color: var(--farbe-ki-text);
 }
 
 .badges {
@@ -8452,6 +8462,14 @@ html {
 .ev-rollout-head h3 {
   margin: 0;
   font-size: 0.9375rem;
+}
+
+.ev-ai {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 10px 0 4px;
 }
 
 .ev-changed {

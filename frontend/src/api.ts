@@ -312,7 +312,10 @@ export interface SmtpSettings {
 export type AiProvider = "openai" | "anthropic";
 
 export interface AiSettings {
+  /** Beschreibungen für Einstellungen der M365-Konfiguration */
   enabled: boolean;
+  /** Vorschläge für Rollout-Phasen und Steckbrief in Evergreen */
+  evergreen: boolean;
   provider: AiProvider;
   base_url: string;
   model: string;
@@ -325,6 +328,7 @@ export interface AiSettings {
 
 export interface AiUpdate {
   enabled: boolean;
+  evergreen: boolean;
   provider: AiProvider;
   base_url: string;
   model: string;

@@ -818,7 +818,11 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "hint",
-                text: "Werte mit „Vorschlag, ungeprüft“ hat die Werkbank aus der Meldung gelesen, zum Beispiel die Rollout-Phasen aus „When this will happen“. Prüf sie kurz; mit dem Speichern gelten sie als geprüft. Jede Änderung steht mit vorher und nachher im Verlauf. Ein neuer Eintrag ist nach dem Speichern „Bearbeitet“.",
+                text: "Werte mit „KI-Vorschlag, ungeprüft“ (violett) hat die KI aus dem Text von Microsoft gelesen, Werte mit „Vorschlag, ungeprüft“ (grau) die Werkbank nach festen Regeln, zum Beispiel die Rollout-Phasen aus „When this will happen“. Prüf sie kurz; mit dem Speichern gelten sie als geprüft, und kein späterer Vorschlag überschreibt sie. Jede Änderung steht mit vorher und nachher im Verlauf. Ein neuer Eintrag ist nach dem Speichern „Bearbeitet“.",
+              },
+              {
+                kind: "text",
+                text: "Ist in der Verwaltung „Vorschläge für Evergreen“ eingeschaltet, liest die KI bei jeder neuen Meldung und bei jedem geänderten Zeitplan Rollout, Betroffen, Standard und Steuerbar aus dem Text von Microsoft. Mit „KI-Vorschlag holen“ oben im Eintrag fragst du sie sofort. Die Kurzfassung und die Mitbestimmung bleiben eure eigene Einschätzung.",
               },
             ],
           },
@@ -1792,7 +1796,7 @@ export const AREAS: readonly Area[] = [
                   ],
                   [
                     "Verbindungen",
-                    "KI-Texte (Art der Schnittstelle: OpenAI-kompatibel oder Anthropic, Adresse, Modell, Schlüssel, Höchstzahl je Stunde; Vorgabe: aus; „Verbindung testen“ zeigt bei Fehlern die Meldung des Anbieters), NetBox für den DNS-Abgleich, Abfragen der IT-Tools ins Internet (Vorgabe: erlaubt)",
+                    "KI-Texte (Art der Schnittstelle: OpenAI-kompatibel oder Anthropic, Adresse, Modell, Schlüssel, Höchstzahl je Stunde; je ein Schalter für die Beschreibungen in M365 und die Vorschläge in Evergreen, Vorgabe: aus; „Verbindung testen“ zeigt bei Fehlern die Meldung des Anbieters), NetBox für den DNS-Abgleich, Abfragen der IT-Tools ins Internet (Vorgabe: erlaubt)",
                   ],
                   ["Audit-Log", "das Protokoll aller Aktionen (siehe oben)"],
                 ],
@@ -1812,7 +1816,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Abrufe aus dem Tenant, das Nachrichtencenter, KI-Texte, Benachrichtigungen und das Aufräumen laufen im Hintergrund. Schlägt ein Auftrag fehl, bekommst du eine Benachrichtigung, und der Fehler steht im Audit-Log; ein fehlgeschlagener Abruf der Einstellungen erscheint zusätzlich als Aufgabe.",
+                text: "Abrufe aus dem Tenant, das Nachrichtencenter, KI-Texte und KI-Vorschläge für Evergreen, Benachrichtigungen und das Aufräumen laufen im Hintergrund. Schlägt ein Auftrag fehl, bekommst du eine Benachrichtigung, und der Fehler steht im Audit-Log; ein fehlgeschlagener Abruf der Einstellungen erscheint zusätzlich als Aufgabe.",
               },
             ],
           },

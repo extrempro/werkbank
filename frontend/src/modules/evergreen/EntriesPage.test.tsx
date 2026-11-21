@@ -69,6 +69,9 @@ const entry: Entry = {
   phases: [{ name: "Targeted Release", start: "2027-01", end: "2027-02" }],
   phases_previous: [{ name: "Allgemein verfügbar", start: "2026-12", end: "2026-12" }],
   suggested: ["affected", "phases"],
+  ai_suggested: ["phases"],
+  ai_pending: false,
+  ai_available: true,
   summary: null,
   staff_change: null,
   training: null,
@@ -123,6 +126,12 @@ const routes = {
     status: "bearbeitet",
     summary: "Kurz und klar",
     suggested: [],
+  },
+  "POST /api/evergreen/entries/5/ai-suggestion": {
+    ...entry,
+    default_state: "aus",
+    suggested: ["affected", "phases", "default_state"],
+    ai_suggested: ["phases", "default_state"],
   },
   "GET /api/evergreen/settings": {
     settings: [{ id: 3, path: "teams/Besprechung/Copilot", value: "true" }],
@@ -205,7 +214,9 @@ describe("EntriesPage", () => {
       expect(badges).toHaveTextContent(badge);
     }
     expect(screen.getByText("Eingeschaltet").closest(".ev-fact")).toHaveClass("ev-fact-warn");
-    expect(screen.getAllByText("Vorschlag, ungeprüft")).toHaveLength(2);
+    expect(screen.getAllByText("Vorschlag, ungeprüft")).toHaveLength(1);
+    expect(screen.getByText("KI-Vorschlag, ungeprüft")).toHaveClass("pill-ki");
+    expect(screen.queryByRole("button", { name: "KI-Vorschlag holen" })).toBeNull();
     expect(screen.getByText("Zeitplan geändert am 20.11.2026")).toBeVisible();
     const phases = screen.getByRole("list", { name: "Rollout-Phasen" });
     expect(phases).toHaveTextContent("Targeted Release: Jan 2027 bis Feb 2027");
@@ -291,6 +302,17 @@ describe("EntriesPage", () => {
       controllable_how: "Besprechungsrichtlinie",
       phases: [{ name: "Targeted Release", start: "2027-01", end: "2027-02" }],
     });
+  });
+
+  it("holt als Bearbeiter einen KI-Vorschlag und setzt die Maske neu auf", async () => {
+    const calls = stubFetch(routes);
+    render(<EntriesPage software="m365" entryId={5} roles={["Evergreen.Editor"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "KI-Vorschlag holen" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Standard nach dem Rollout")).toHaveValue("aus"),
+    );
+    expect(calls.some((call) => call.url.endsWith("/ai-suggestion"))).toBe(true);
+    expect(screen.getAllByText("KI-Vorschlag, ungeprüft").length).toBeGreaterThan(1);
   });
 
   it("fügt als Bearbeiter eine Notiz an und schließt ab", async () => {
