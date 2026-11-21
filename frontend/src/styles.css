@@ -265,6 +265,11 @@ a {
   text-align: center;
 }
 
+/* Hinweis (z. B. Sitzung abgelaufen) mit Abstand zum Knopf darunter */
+.login-card .hint-box {
+  margin: 0 0 20px;
+}
+
 .login-hint {
   margin-top: 20px;
   font-size: 0.875rem;

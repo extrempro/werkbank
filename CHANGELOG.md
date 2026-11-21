@@ -16,6 +16,10 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 - **Aufgaben und Benachrichtigungen nur für Bearbeiter:** Aufgabe „Microsoft 365: neue Einträge sichten“; eine Benachrichtigung „Neue Einträge“ je Software mit Anzahl (statt einer je Meldung). Leser haben keine Aufgaben aus Evergreen
 - Startseite: Kachel zeigt offene und neue Einträge. M365-Konfiguration: „Evergreen-Eintrag anlegen“ bei einer Änderung (nur `Evergreen.Editor`); der Hinweis „Geregelt durch Evergreen-Vorgang“ entfällt, gesetzte Soll-Werte bleiben
 
+### Anmeldung
+
+- Abstand zwischen dem Hinweis „Sitzung abgelaufen“ und dem Knopf „Mit Microsoft anmelden“ (der Hinweis klebte am Knopf)
+
 ### Daten (Migration 0052)
 
 - **Löscht alle bisherigen Evergreen-Daten** (Vorgänge, Meldungen, geplante Umsetzung, Protokoll des Ablaufs), wie beschlossen. Vor dem Update ein Backup ziehen. Der nächste Abruf holt die Meldungen der letzten 30 Tage neu

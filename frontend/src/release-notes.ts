@@ -39,6 +39,12 @@ export const RELEASES: readonly Release[] = [
           "Aufgaben und Benachrichtigungen zu neuen Einträgen bekommen nur Bearbeiter.",
         ],
       },
+      {
+        area: "Anmeldung",
+        entries: [
+          "Der Hinweis „Sitzung abgelaufen“ hat wieder Abstand zum Knopf „Mit Microsoft anmelden“.",
+        ],
+      },
     ],
   },
   {
