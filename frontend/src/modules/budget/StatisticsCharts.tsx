@@ -502,7 +502,7 @@ export function MonthColumns({
 }) {
   const max = niceMax(Math.max(1, ...actual, ...(compare ?? [])));
   return (
-    <div className="stat-scroll">
+    <div className="stat-scroll" tabIndex={0} role="region" aria-label="Ausgaben je Monat, Säulen">
       <div className="stat-columns" style={{ minWidth: 420 }}>
         <Axis max={max} height={160} />
         <div className="stat-columns-body">
