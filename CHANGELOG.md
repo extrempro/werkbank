@@ -4,14 +4,27 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.75.0] – 2026-11-21
+
+### IT-Bestand
+
+- **Vorgänge ohne Auswahl über die ganze Breite:** In 0.74.0 stand die Tabelle erst nach dem Klick auf einen Vorgang richtig; die Regel für die Tabelle verlor gegen die allgemeine für Liste und Ansicht
+- **Feld „Art“** mit Rahmen und Höhe wie das Suchfeld; schmal stehen Suche und Art in einer Zeile („Art“ nur für Screenreader)
+- **Breite von Tabelle und Ansicht einstellbar:** Trenner zum Ziehen, mit Pfeiltasten, Pos1/Ende, Doppelklick setzt zurück (30–75 %), gemerkt im Browser (`werkbank-vorgaenge-breite`). Ist die Tabelle breit genug, zeigt sie alle Spalten (Container-Query); „×“ bleibt oben rechts
+- **Entscheidung kompakter:** Möglichkeiten als Chips statt Kacheln; die Erklärung steht hinter „i“ (Knopf mit `aria-expanded`) und zur gewählten Möglichkeit unter den Chips. Bei „Neu in NinjaOne“ und „Neuer Monitor“ gruppiert: Zuordnen, Ohne Zuordnung, Nicht neu anlegen
+
+### Tests und Dokumentation
+
+- Frontend-Tests für Trenner (Tastatur, gespeicherte Breite) und die Erklärung per „i“
+- `docs/design.md`, `docs/a11y-wcag22.md` und Handbuch angepasst
+
 ## [0.74.0] – 2026-11-20
 
 ### IT-Bestand
 
 - **Vorgänge kompakter:** Kopf in einer Zeile (Titel, Zahl offener Vorgänge, Stand des Abgleichs mit NinjaOne, „Jetzt abgleichen“), Beschreibungstext entfällt (steht im Handbuch). Suche, Status und Art in einer Zeile über der Liste
-- **Vorgänge als Tabelle:** Spalten Nr., Titel, Art, Eingang, Bearbeitet von, Status über die ganze Breite; die ganze Zeile ist anklickbar, der Titel ist der Verweis. Ein gewählter Vorgang öffnet rechts daneben (54/46), die Tabelle zeigt dann nur Nr., Titel und Status (ist sie breit genug, alle Spalten; Container-Query); „×“ schließt die Ansicht. Die Breite stellt man am Trenner ein (ziehen, Pfeiltasten, Pos1/Ende, Doppelklick setzt zurück; 30–75 %), gemerkt im Browser (`werkbank-vorgaenge-breite`)
+- **Vorgänge als Tabelle:** Spalten Nr., Titel, Art, Eingang, Bearbeitet von, Status über die ganze Breite; die ganze Zeile ist anklickbar, der Titel ist der Verweis. Ein gewählter Vorgang öffnet rechts daneben (54/46), die Tabelle zeigt dann nur Nr., Titel und Status; „×“ schließt die Ansicht
 - **Vorgänge auf dem Handy:** unter 1024 px eine Zeile je Vorgang (Nummer, Art und Eingang klein über dem Titel, Status rechts), Status-Chips in einer Zeile zum Wischen, gewählt nur die Ansicht mit „‹ Zur Liste“
-- **Entscheidung kompakter:** Möglichkeiten als Chips statt Kacheln; die Erklärung steht hinter „i“ (Knopf mit `aria-expanded`) und zur gewählten Möglichkeit unter den Chips. Bei „Neu in NinjaOne“ und „Neuer Monitor“ gruppiert: Zuordnen, Ohne Zuordnung, Nicht neu anlegen
 - Verleih bleibt bei Liste und Ansicht
 
 ### Tests und Dokumentation
@@ -30,9 +43,6 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 ### Repository
 
 - **Node 26:** Frontend-Build im Docker-Image (`node:26-alpine`), CI und Lockfile-Workflow mit Node 26 (LTS bis April 2029) statt 22 (Wartung bis April 2027); `@types/node` passend auf 26. Node dient nur zum Bauen und Testen, die Anwendung selbst läuft mit Python
-
-### Repository
-
 - `CLAUDE.md`: Regel, aktuelle stabile Versionen von Frameworks und Paketen und ihre aktuellen Schnittstellen zu nutzen, wenn möglich (Prüfung vor neuen Abhängigkeiten, Updates in eigenem PR, Major-Updates nach Rückfrage)
 
 ## [0.73.0] – 2026-11-20

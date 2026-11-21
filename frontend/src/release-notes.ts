@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.75.0",
+    date: "2026-11-21",
+    summary: "IT-Bestand: Vorgänge mit einstellbarer Breite und kompakter Entscheidung.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Die Tabelle der Vorgänge nutzt gleich die ganze Breite, nicht erst nach dem ersten Klick.",
+          "Die Breite von Tabelle und Ansicht stellst du am Trenner dazwischen ein; die Werkbank merkt sie sich.",
+          "Die Möglichkeiten bei „Was soll mit dem Gerät passieren?“ brauchen weniger Platz und stehen in Gruppen. Die Erklärung siehst du über das kleine „i“ und zur gewählten Möglichkeit darunter.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.74.0",
     date: "2026-11-20",
     summary: "IT-Bestand: Vorgänge als kompakte Tabelle.",
@@ -32,8 +47,7 @@ export const RELEASES: readonly Release[] = [
         area: "IT-Bestand",
         entries: [
           "„Vorgänge“ braucht oben weniger Platz: Suche, Status und Art stehen in einer Zeile, der Stand des Abgleichs mit NinjaOne steht neben der Überschrift.",
-          "Die Vorgänge stehen in einer Tabelle mit Nummer, Titel, Art, Eingang, Bearbeiter und Status. Ein Klick auf eine Zeile öffnet den Vorgang rechts daneben, mit „×“ schließt du ihn wieder. Die Breite von Tabelle und Ansicht stellst du am Trenner dazwischen ein; die Werkbank merkt sie sich.",
-          "Die Möglichkeiten bei „Was soll mit dem Gerät passieren?“ brauchen weniger Platz und stehen in Gruppen (Zuordnen, Ohne Zuordnung, Nicht neu anlegen). Die Erklärung siehst du über das kleine „i“ und zur gewählten Möglichkeit darunter.",
+          "Die Vorgänge stehen in einer Tabelle mit Nummer, Titel, Art, Eingang, Bearbeiter und Status. Ein Klick auf eine Zeile öffnet den Vorgang rechts daneben, mit „×“ schließt du ihn wieder.",
           "Auf dem Handy siehst du eine kurze Zeile je Vorgang; den Status wählst du in einer Zeile zum Wischen.",
         ],
       },
