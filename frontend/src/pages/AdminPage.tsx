@@ -151,8 +151,8 @@ export function AdminPage({ section = "allgemein" }: { section?: AdminSection })
           </div>
           {view === "person" && <PeopleRoles />}
           {view === "rolle" && roles && (
-            <div className="table-wrap" tabIndex={0} role="region" aria-label="Rollen">
-              <table>
+            <div className="table-wrap card-wrap" tabIndex={0} role="region" aria-label="Rollen">
+              <table className="table-cards">
                 <caption className="visually-hidden">App-Rollen und Personen</caption>
                 <thead>
                   <tr>
@@ -164,12 +164,12 @@ export function AdminPage({ section = "allgemein" }: { section?: AdminSection })
                 <tbody>
                   {roles.map((role) => (
                     <tr key={role.value}>
-                      <td>
+                      <td data-label="Rolle">
                         <span className="role-label">{role.label}</span>
                         <span className="mono small">{role.value}</span>
                       </td>
-                      <td>{role.description}</td>
-                      <td>
+                      <td data-label="Darf">{role.description}</td>
+                      <td data-label="Personen (letzte Anmeldung)">
                         {role.holders.length === 0 ? (
                           <span className="empty">niemand</span>
                         ) : (

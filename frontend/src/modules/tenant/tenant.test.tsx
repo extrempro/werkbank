@@ -325,7 +325,7 @@ describe("Zertifikate und Secrets", () => {
     expect(table.queryByText("Reiseportal")).toBeNull();
     expect(screen.getByText(/Hinweis ab 60 Tagen, Warnung ab 30/)).toBeVisible();
 
-    fireEvent.click(screen.getByRole("button", { name: "Alle (3)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Alle · 3" }));
     expect(table.getByRole("row", { name: /^Reiseportal/ })).toHaveTextContent(
       "Signaturzertifikat (SAML)",
     );

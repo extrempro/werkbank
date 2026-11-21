@@ -1,9 +1,10 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { FilterBar } from "../../components/FilterBar";
 import { Link } from "../../components/Link";
 import { INVENTORY_LOANS_PATH } from "../../navigation";
 import { navigate } from "../../router";
-import { ListSearch, MoreButton, useDebounced, usePagedList } from "./paged";
+import { MoreButton, useDebounced, usePagedList } from "./paged";
 import { PersonPicker } from "./PersonPicker";
 import {
   casePath,
@@ -505,27 +506,30 @@ export function LoansPage({
       <div className={loanId === null ? "case-layout" : "case-layout case-layout-detail"}>
         <nav className="panel case-list" aria-label="Verleihe">
           <div className="case-filters">
-            <ListSearch
-              value={search}
-              onChange={setSearch}
-              label="Verleihe durchsuchen"
-              placeholder="Nummer, Person, Gerät, Seriennummer …"
+            <FilterBar
+              plain
+              search={{
+                label: "Verleihe durchsuchen",
+                value: search,
+                placeholder: "Nummer, Person, Gerät, Seriennummer …",
+                onChange: setSearch,
+              }}
+              status={{
+                label: "Status",
+                value: filter,
+                onChange: setFilter,
+                options: LOAN_FILTERS.map((entry) => ({
+                  value: entry.id,
+                  label: entry.label,
+                  count:
+                    entry.id === "offen" && counts
+                      ? counts.open
+                      : entry.id === "ueberfaellig" && counts
+                        ? counts.overdue
+                        : null,
+                })),
+              }}
             />
-            <div className="chips" role="group" aria-label="Status">
-              {LOAN_FILTERS.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  className="chip chip-filter"
-                  aria-pressed={filter === entry.id}
-                  onClick={() => setFilter(entry.id)}
-                >
-                  {entry.label}
-                  {entry.id === "offen" && counts ? ` (${counts.open})` : ""}
-                  {entry.id === "ueberfaellig" && counts ? ` (${counts.overdue})` : ""}
-                </button>
-              ))}
-            </div>
           </div>
           <div className="case-scroll">
             {!loans && !failed && <p role="status">Wird geladen …</p>}

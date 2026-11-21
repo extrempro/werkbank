@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs } from "./helpers";
+import { chooseStatus, expectNoA11yViolations, expectStatus, loginAs } from "./helpers";
 
 // Die Testumgebung hat keinen Zugang zu einem Tenant: geprüft werden Aufbau, Rechte und
 // Barrierefreiheit der Seiten im leeren Zustand. Inhalte decken die Backend- und
@@ -23,15 +23,9 @@ test("Änderungen, Einstellungen und Snapshots sind erreichbar und leer", async 
   await page.goto("/m365/aenderungen");
   await expect(page.getByRole("heading", { level: 1, name: "Änderungen" })).toBeVisible();
   await expect(page.getByText("Keine Änderungen für diese Auswahl.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Offen (0)" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await page.getByRole("button", { name: "Alle (0)" }).click();
-  await expect(page.getByRole("button", { name: "Alle (0)" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expectStatus(page, "Änderungen filtern", "Offen");
+  await chooseStatus(page, "Änderungen filtern", "Alle");
+  await expectStatus(page, "Änderungen filtern", "Alle");
   await expectNoA11yViolations(page);
 
   await page.goto("/m365/einstellungen");

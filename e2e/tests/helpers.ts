@@ -163,3 +163,56 @@ export async function openHandbook(page: Page) {
   }
   await sheet.getByRole("link", { name: "Handbuch" }).click();
 }
+
+/**
+ * Status über einer Liste wählen (gemeinsame Filterzeile): am Computer und Tablet ein Chip
+ * „Name · Anzahl“, am Handy eine Auswahl.
+ */
+export async function chooseStatus(page: Page, label: string, option: string) {
+  if (isPhone(page)) {
+    const select = page.getByRole("combobox", { name: label, exact: true });
+    const value = await select
+      .getByRole("option", { name: new RegExp(`^${escape(option)}( ·|$)`) })
+      .getAttribute("value");
+    await select.selectOption(value ?? "");
+  } else {
+    await page
+      .getByRole("group", { name: label, exact: true })
+      .getByRole("button", { name: new RegExp(`^${escape(option)}( ·|$)`) })
+      .click();
+  }
+}
+
+/** Prüft, welcher Status über einer Liste gewählt ist. */
+export async function expectStatus(page: Page, label: string, option: string) {
+  const name = new RegExp(`^${escape(option)}( ·|$)`);
+  if (isPhone(page)) {
+    const select = page.getByRole("combobox", { name: label, exact: true });
+    await expect(select.locator("option:checked")).toHaveText(name);
+  } else {
+    await expect(
+      page
+        .getByRole("group", { name: label, exact: true })
+        .getByRole("button", { name }),
+    ).toHaveAttribute("aria-pressed", "true");
+  }
+}
+
+/**
+ * Ein weiteres Filterfeld setzen: am Computer und Tablet in der Filterzeile, am Handy im Blatt
+ * „Weitere Filter“, das danach mit „Fertig“ schließt.
+ */
+export async function chooseFilter(page: Page, label: string, option: string) {
+  if (isPhone(page)) {
+    await page.getByRole("button", { name: /^Weitere Filter/ }).click();
+    const sheet = page.getByRole("dialog");
+    await sheet
+      .getByRole("combobox", { name: label, exact: true })
+      .selectOption({ label: option });
+    await sheet.getByRole("button", { name: "Fertig" }).click();
+  } else {
+    await page
+      .getByRole("combobox", { name: label, exact: true })
+      .selectOption({ label: option });
+  }
+}

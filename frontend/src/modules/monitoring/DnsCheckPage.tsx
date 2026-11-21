@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FilterBar } from "../../components/FilterBar";
 import { errorText, formatDateTime } from "../../api";
 import { LineChart } from "../../components/LineChart";
 import { Link } from "../../components/Link";
@@ -70,20 +71,20 @@ function RowView({ row }: { row: DnsRow }) {
         <code>{row.fqdn}</code>
         {row.new && <span className="pill pill-todo dns-new">neu</span>}
       </th>
-      <td>{row.type}</td>
-      <td>
+      <td data-label="Typ">{row.type}</td>
+      <td data-label="Status">
         <span className={PILL[row.status]}>{STATUS_LABELS[row.status]}</span>
       </td>
-      <td>
+      <td data-label="NetBox">
         <Values values={row.netbox.length ? row.netbox : row.inactive} marked={row.missing} />
         {row.netbox.length === 0 && row.inactive.length > 0 && (
           <span className="small">inaktiv erfasst</span>
         )}
       </td>
-      <td>
+      <td data-label="Öffentlich">
         <Values values={row.public} marked={row.extra} />
       </td>
-      <td>
+      <td data-label="Hinweise">
         {row.notes.map((note) => (
           <p key={note} className="small dns-note">
             {note}
@@ -297,29 +298,24 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
             <h2 id="dns-eintraege">Einträge</h2>
           </div>
           <div className="detail-body">
-            <div className="chips" role="group" aria-label="Einträge filtern">
-              {VIEWS.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  className="chip chip-filter"
-                  aria-pressed={view === entry.id}
-                  onClick={() => setView(entry.id)}
-                >
-                  {entry.label} ({numbers.format(counts[entry.id])})
-                </button>
-              ))}
-            </div>
-            <label className="dns-search">
-              Suchen in Name, Zone, Typ und Werten
-              <input
-                type="search"
-                value={query}
-                maxLength={100}
-                autoComplete="off"
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </label>
+            <FilterBar<DnsView>
+              plain
+              search={{
+                label: "Suchen in Name, Zone, Typ und Werten",
+                value: query,
+                onChange: setQuery,
+              }}
+              status={{
+                label: "Einträge filtern",
+                value: view,
+                onChange: setView,
+                options: VIEWS.map((entry) => ({
+                  value: entry.id,
+                  label: entry.label,
+                  count: counts[entry.id],
+                })),
+              }}
+            />
             <p className="small" role="status">
               {shown.length === 0
                 ? view === "probleme" && !query
@@ -336,8 +332,8 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
                   {numbers.format(rows.length)} {rows.length === 1 ? "Eintrag" : "Einträge"}
                 </span>
               </h3>
-              <div className="table-wrap" tabIndex={0} role="region" aria-label={zone}>
-                <table className="dns-table">
+              <div className="table-wrap card-wrap" tabIndex={0} role="region" aria-label={zone}>
+                <table className="dns-table table-cards">
                   <caption className="visually-hidden">{zone}</caption>
                   <thead>
                     <tr>

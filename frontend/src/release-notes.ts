@@ -24,6 +24,33 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.82.0",
+    date: "2026-11-21",
+    summary:
+      "IT-Budget neu aufgebaut: Nummern für Budgetposten, Liste mit Ansicht daneben, Monatsposten aus Verträgen; Filter und Listen am Handy überall einfacher.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Jeder Budgetposten hat jetzt eine feste Nummer wie BP-2026-012. Du findest ihn darüber in der Liste und in der Suche.",
+          "Budgetposten, Rechnungen und Verträge öffnen sich rechts neben der Liste. Dort legst du auch neue an und bearbeitest sie. Die Masken sind in nummerierte Abschnitte gegliedert und zeigen eine Zusammenfassung in Worten.",
+          "Budgetposten lassen sich über die Spaltenköpfe sortieren und nach Konto oder Partner gruppieren. Das Feld heißt jetzt „Betrag (Brutto)“.",
+          "Status in Farben wie überall: offen orange, Rechnung liegt vor blau, abgeschlossen grün.",
+          "Rechnung erfassen: Erst den Rechnungssteller wählen, dann stehen seine Budgetposten oben in der Auswahl.",
+          "Verträge: Kennzahlen oben, Filter wie „Kündigung bald“ oder „AVV fehlt“. Bei monatlichen Verträgen legst du mit „Monatsposten anlegen“ je Monat einen Budgetposten an.",
+          "Die Übersicht zeigt oben, was zu erledigen ist, und das Budget nach Konten mit Auslastung.",
+        ],
+      },
+      {
+        area: "Alle Bereiche",
+        entries: [
+          "Auf dem Handy wählst du den Status einer Liste aus einer Auswahl. Weitere Filter öffnest du mit „Weitere Filter“.",
+          "Auf dem Handy steht jeder Eintrag einer Liste als eigene Karte, gut voneinander getrennt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.81.0",
     date: "2026-11-21",
     summary: "IT-Budget: Import abbrechen und offene Zeilen löschen.",

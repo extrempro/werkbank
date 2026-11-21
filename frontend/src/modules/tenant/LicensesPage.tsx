@@ -111,8 +111,8 @@ function LicenseListPage({ now }: { now: number }) {
           <p className="small" role="status">
             Stand {formatDateTime(list.fetched_at)}
           </p>
-          <div className="table-wrap" tabIndex={0} role="region" aria-label="Lizenzen">
-            <table>
+          <div className="table-wrap card-wrap" tabIndex={0} role="region" aria-label="Lizenzen">
+            <table className="table-cards">
               <caption className="visually-hidden">Lizenzen des Tenants</caption>
               <thead>
                 <tr>
@@ -141,11 +141,17 @@ function LicenseListPage({ now }: { now: number }) {
                         <span className="small mono tenant-part">{license.part_number}</span>
                       )}
                     </th>
-                    <td className="number">{formatCount(license.total)}</td>
-                    <td className="number">{formatCount(license.consumed)}</td>
-                    <td className="number">{formatCount(license.free)}</td>
-                    <td>{lifecycleDay(license)}</td>
-                    <td>
+                    <td className="number" data-label="Gekauft">
+                      {formatCount(license.total)}
+                    </td>
+                    <td className="number" data-label="Zugewiesen">
+                      {formatCount(license.consumed)}
+                    </td>
+                    <td className="number" data-label="Frei">
+                      {formatCount(license.free)}
+                    </td>
+                    <td data-label="Stichtag">{lifecycleDay(license)}</td>
+                    <td data-label="Hinweise">
                       <Notes license={license} now={now} />
                     </td>
                   </tr>

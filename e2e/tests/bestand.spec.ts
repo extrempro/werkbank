@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { BASE_URL, expectNoA11yViolations, loginAs, openPage } from "./helpers";
+import {
+  BASE_URL,
+  chooseFilter,
+  chooseStatus,
+  expectNoA11yViolations,
+  isPhone,
+  loginAs,
+  openPage,
+} from "./helpers";
 
 test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
   page,
@@ -56,7 +64,7 @@ test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
 
   // Liste: unter „Ausgemustert“ zu finden
   await page.goto("/bestand/hardware");
-  await page.getByRole("button", { name: "Ausgemustert" }).click();
+  await chooseStatus(page, "Status", "Ausgemustert");
   await page.getByLabel("Geräte durchsuchen").fill(stamp);
   await expect(page.getByRole("link", { name })).toBeVisible();
   await expectNoA11yViolations(page);
@@ -298,15 +306,22 @@ test("IT-Bestand: Vorgänge und Technik ohne NinjaOne", async ({ page }) => {
   await expect(
     page.getByText(/Der Abgleich mit NinjaOne ist ausgeschaltet/),
   ).toBeVisible();
-  // Suche und Filter stehen in einer Zeile über der Tabelle.
+  // Suche und Filter stehen über der Tabelle; am Handy der Status als Auswahl und die Art
+  // unter „Weitere Filter“.
   await expect(
     page.getByRole("searchbox", { name: "Vorgänge durchsuchen" }),
   ).toBeVisible();
-  await expect(page.getByRole("group", { name: "Status" })).toBeVisible();
-  await page.getByRole("combobox", { name: "Art" }).selectOption("rueckgabe");
-  await expect(page.getByRole("combobox", { name: "Art" })).toHaveValue(
-    "rueckgabe",
-  );
+  if (isPhone(page)) {
+    await expect(page.getByRole("combobox", { name: "Status" })).toBeVisible();
+  } else {
+    await expect(page.getByRole("group", { name: "Status" })).toBeVisible();
+  }
+  await chooseFilter(page, "Art", "Rückgabe prüfen");
+  await expect(
+    page
+      .getByRole("button", { name: /^(Weitere Filter 1 geändert|Filter aufheben)$/ })
+      .first(),
+  ).toBeVisible();
   await expectNoA11yViolations(page);
 });
 

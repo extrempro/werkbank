@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { FilterBar } from "../../components/FilterBar";
 import { ApiError, formatDateTime, type Me } from "../../api";
 import { Placeholder } from "../../components/Placeholder";
 import { navigate } from "../../router";
@@ -253,55 +254,57 @@ export function ChangesPage({ me }: ChangesPageProps) {
         </p>
       </header>
 
-      <div className="chips" role="group" aria-label="Änderungen filtern">
-        {FILTERS.map((option) => (
-          <button
-            type="button"
-            key={option.key}
-            className="chip chip-filter"
-            aria-pressed={filter === option.value}
-            onClick={() => pickFilter(option.value)}
-          >
-            {option.label}
-            {counts && ` (${counts[option.key]})`}
-          </button>
-        ))}
-      </div>
-
-      {(groups.length > 0 || place.workload) && (
-        <label className="changes-place">
-          Dienst und Bereich
-          <select value={placeValue(place)} onChange={(event) => pickPlace(event.target.value)}>
-            <option value="">Alle</option>
-            {placeOptions(groups).map((option) => (
-              <optgroup key={option.workload} label={workloadLabel(option.workload)}>
-                <option value={option.workload}>
-                  {workloadLabel(option.workload)}: alle Bereiche (
-                  {option.areas.reduce((sum, group) => sum + group.count, 0)})
-                </option>
-                {option.areas.map((group) => (
-                  <option key={group.area} value={`${group.workload}|${group.area}`}>
-                    {areaLabel(group.area)} ({group.count})
-                  </option>
+      <FilterBar
+        status={{
+          label: "Änderungen filtern",
+          value: filter,
+          onChange: pickFilter,
+          options: FILTERS.map((option) => ({
+            value: option.value,
+            label: option.label,
+            count: counts ? counts[option.key] : null,
+          })),
+        }}
+        moreTitle="Dienst und Bereich"
+        moreActive={place.workload ? 1 : 0}
+        more={
+          groups.length > 0 || place.workload ? (
+            <label className="filter-field changes-place">
+              Dienst und Bereich
+              <select value={placeValue(place)} onChange={(event) => pickPlace(event.target.value)}>
+                <option value="">Alle</option>
+                {placeOptions(groups).map((option) => (
+                  <optgroup key={option.workload} label={workloadLabel(option.workload)}>
+                    <option value={option.workload}>
+                      {workloadLabel(option.workload)}: alle Bereiche (
+                      {option.areas.reduce((sum, group) => sum + group.count, 0)})
+                    </option>
+                    {option.areas.map((group) => (
+                      <option key={group.area} value={`${group.workload}|${group.area}`}>
+                        {areaLabel(group.area)} ({group.count})
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
-              </optgroup>
-            ))}
-            {/* Gewählt, aber im aktuellen Status ohne Änderungen: bleibt sichtbar */}
-            {place.workload &&
-              !groups.some(
-                (group) =>
-                  group.workload === place.workload && (!place.area || group.area === place.area),
-              ) && (
-                <option value={placeValue(place)}>
-                  {place.area
-                    ? placeTitle(place.workload, place.area)
-                    : workloadLabel(place.workload)}{" "}
-                  (0)
-                </option>
-              )}
-          </select>
-        </label>
-      )}
+                {/* Gewählt, aber im aktuellen Status ohne Änderungen: bleibt sichtbar */}
+                {place.workload &&
+                  !groups.some(
+                    (group) =>
+                      group.workload === place.workload &&
+                      (!place.area || group.area === place.area),
+                  ) && (
+                    <option value={placeValue(place)}>
+                      {place.area
+                        ? placeTitle(place.workload, place.area)
+                        : workloadLabel(place.workload)}{" "}
+                      (0)
+                    </option>
+                  )}
+              </select>
+            </label>
+          ) : undefined
+        }
+      />
 
       {message && (
         <p role={message.kind} className={message.kind === "alert" ? "hint-box hint-bad" : ""}>

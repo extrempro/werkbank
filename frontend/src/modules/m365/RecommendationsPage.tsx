@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { FilterBar } from "../../components/FilterBar";
 import { ApiError, formatDateTime, type Me } from "../../api";
 import { Link } from "../../components/Link";
 import { Placeholder } from "../../components/Placeholder";
@@ -99,25 +100,24 @@ export function RecommendationsPage({ me, selectedId }: RecommendationsPageProps
                   {formatDateTime(list.fetched_at)}
                 </p>
               )}
-              <div className="chips" role="group" aria-label="Empfehlungen filtern">
-                {VIEWS.map((option) => (
-                  <button
-                    type="button"
-                    key={option.value}
-                    className="chip chip-filter"
-                    aria-pressed={view === option.value}
-                    onClick={() => {
-                      if (option.value !== view) {
-                        setStatus("loading");
-                        setView(option.value);
-                      }
-                    }}
-                  >
-                    {option.label}
-                    {list && ` (${viewCount(list, option.value)})`}
-                  </button>
-                ))}
-              </div>
+              <FilterBar
+                plain
+                status={{
+                  label: "Empfehlungen filtern",
+                  value: view,
+                  onChange: (value) => {
+                    if (value !== view) {
+                      setStatus("loading");
+                      setView(value);
+                    }
+                  },
+                  options: VIEWS.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                    count: list ? viewCount(list, option.value) : null,
+                  })),
+                }}
+              />
             </div>
 
             {status === "error" && (

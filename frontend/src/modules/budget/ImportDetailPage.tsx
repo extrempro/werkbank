@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { FilterBar } from "../../components/FilterBar";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { BUDGET_IMPORT_PATH } from "../../navigation";
@@ -676,25 +677,19 @@ export function ImportDetailPage({ importId }: { importId: number }) {
       {view === "zeilen" && (
         <div className="import-split">
           <aside className="import-aside" aria-label="Zeilen">
-            <div className="chips" role="group" aria-label="Filter">
-              {(
-                [
-                  ["offen", "Offen"],
-                  ["hinweis", "Mit Hinweis"],
-                  ["alle", "Alle"],
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  className="chip chip-filter"
-                  aria-pressed={filter === id}
-                  onClick={() => setFilter(id)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <FilterBar
+              plain
+              status={{
+                label: "Filter",
+                value: filter,
+                onChange: setFilter,
+                options: [
+                  { value: "offen", label: "Offen" },
+                  { value: "hinweis", label: "Mit Hinweis" },
+                  { value: "alle", label: "Alle" },
+                ],
+              }}
+            />
             {shown.length === 0 ? (
               <p className="small">
                 {filter === "offen"

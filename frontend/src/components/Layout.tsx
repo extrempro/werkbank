@@ -460,7 +460,7 @@ export function Layout({ me }: LayoutProps) {
   } else if (path === BUDGET_CONTRACTS_PATH && current) {
     page = <ContractsPage roles={me.roles} />;
   } else if (contractId !== null && items.some((item) => item.path === BUDGET_CONTRACTS_PATH)) {
-    page = <ContractsPage key={contractId} roles={me.roles} selectedId={contractId} />;
+    page = <ContractsPage roles={me.roles} selectedId={contractId} />;
   } else if (path === BUDGET_PLANNING_PATH && current) {
     page = <PlanningPage />;
   } else if (path === BUDGET_STATISTICS_PATH && current) {

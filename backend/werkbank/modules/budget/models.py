@@ -49,9 +49,16 @@ class BudgetItem(Base):
     """
 
     __tablename__ = "budget_items"
-    __table_args__ = (UniqueConstraint("account_id", "name"),)
+    __table_args__ = (
+        UniqueConstraint("account_id", "name"),
+        UniqueConstraint("number_year", "number_seq"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # Feste Nummer BP-<Jahr>-<laufende Nummer>: das Jahr ist das erste Geschäftsjahr beim
+    # Anlegen, die laufende Nummer zählt je Jahr hoch. Sie ändert sich danach nie.
+    number_year: Mapped[int] = mapped_column(Integer)
+    number_seq: Mapped[int] = mapped_column(Integer)
     account_id: Mapped[int] = mapped_column(ForeignKey("budget_accounts.id"), index=True)
     name: Mapped[str] = mapped_column(String(160))
     # Erwartete Kosten je Geschäftsjahr (brutto, in Cent); gelten in jedem Jahr der Laufzeit

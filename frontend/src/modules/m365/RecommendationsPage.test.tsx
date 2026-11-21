@@ -95,12 +95,12 @@ describe("RecommendationsPage", () => {
     expect(await screen.findByText("Enable user risk policy")).toBeVisible();
     expect(screen.getByRole("heading", { level: 1, name: "Empfehlungen" })).toBeVisible();
     expect(screen.getByText(/Erreicht: 10 von 17,5 Punkten/)).toBeVisible();
-    expect(screen.getByRole("button", { name: "Offen (1)" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Offen · 1" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
     expect(screen.getByText(/Empfehlung in der Liste wählen/)).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Erfüllt (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Erfüllt · 1" }));
     await vi.waitFor(() =>
       expect(calls.some((call) => call.url.includes("view=erfuellt"))).toBe(true),
     );

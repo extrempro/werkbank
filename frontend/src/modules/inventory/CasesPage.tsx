@@ -4,6 +4,7 @@ import { Link } from "../../components/Link";
 import { INVENTORY_CASES_PATH as CASES_PATH } from "../../navigation";
 import { navigate } from "../../router";
 import { LookupPicker } from "./LookupPicker";
+import { FilterBar } from "../../components/FilterBar";
 import { SplitHandle, useSplit } from "../../components/SplitHandle";
 import { MoreButton, useDebounced, usePagedList } from "./paged";
 import { EventPanel } from "./parts";
@@ -681,7 +682,6 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
   const query = useDebounced(search);
-  const searchId = useId();
   const paged = usePagedList<CaseSummary, { open: number }>(
     `${filter}|${kind}|${query}`,
     reload,
@@ -715,50 +715,50 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
           {failed}
         </p>
       )}
-      <div className="panel case-toolbar">
-        <div className="case-search">
-          <label htmlFor={searchId} className="visually-hidden">
-            Vorgänge durchsuchen
-          </label>
-          <input
-            id={searchId}
-            type="search"
-            value={search}
-            maxLength={100}
-            placeholder="Nummer, Titel, Gerät, Seriennummer …"
-            autoComplete="off"
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </div>
-        <div className="chips" role="group" aria-label="Status">
-          {CASE_FILTERS.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              className="chip chip-filter"
-              aria-pressed={filter === entry.id}
-              onClick={() => setFilter(entry.id)}
+      <FilterBar<CaseFilter>
+        search={{
+          label: "Vorgänge durchsuchen",
+          value: search,
+          placeholder: "Nummer, Titel, Gerät, Seriennummer …",
+          onChange: setSearch,
+        }}
+        status={{
+          label: "Status",
+          value: filter,
+          onChange: setFilter,
+          options: CASE_FILTERS.map((entry) => ({
+            value: entry.id,
+            label: entry.label,
+            count: entry.id === "offen" ? openCount : null,
+          })),
+        }}
+        moreActive={kind !== "alle" ? 1 : 0}
+        onReset={
+          search !== "" || filter !== "offen" || kind !== "alle"
+            ? () => {
+                setSearch("");
+                setFilter("offen");
+                setKind("alle");
+              }
+            : undefined
+        }
+        more={
+          <label className="filter-field">
+            Art
+            <select
+              value={kind}
+              onChange={(event) => setKind(event.target.value as CaseKind | "alle")}
             >
-              {entry.label}
-              {entry.id === "offen" && openCount !== null ? ` (${openCount})` : ""}
-            </button>
-          ))}
-        </div>
-        <label className="case-kind">
-          <span className="case-kind-label">Art</span>
-          <select
-            value={kind}
-            onChange={(event) => setKind(event.target.value as CaseKind | "alle")}
-          >
-            <option value="alle">Alle Arten</option>
-            {(Object.keys(CASE_KIND_SHORT) as CaseKind[]).map((key) => (
-              <option key={key} value={key}>
-                {CASE_KIND_SHORT[key]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+              <option value="alle">Alle Arten</option>
+              {(Object.keys(CASE_KIND_SHORT) as CaseKind[]).map((key) => (
+                <option key={key} value={key}>
+                  {CASE_KIND_SHORT[key]}
+                </option>
+              ))}
+            </select>
+          </label>
+        }
+      />
       <div
         ref={layoutRef}
         className={

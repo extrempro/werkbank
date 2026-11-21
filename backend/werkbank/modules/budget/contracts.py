@@ -41,25 +41,29 @@ def expected_cents(contract: BudgetContract, first: date, last: date) -> int:
 
     Die erste Zahlung ist am Vertragsbeginn fällig, die weiteren im Abstand des Turnus.
     """
+    return contract.amount_cents * len(due_dates(contract, first, last))
+
+
+def due_dates(contract: BudgetContract, first: date, last: date) -> list[date]:
+    """Tage, an denen zwischen `first` und `last` (einschließlich) eine Zahlung fällig wird."""
     end = cost_end(contract)
     upper = last if end is None else min(last, end)
     if upper < first or contract.starts_on > upper:
-        return 0
+        return []
     if contract.interval == INTERVAL_ONCE:
-        return contract.amount_cents if contract.starts_on >= first else 0
+        return [contract.starts_on] if contract.starts_on >= first else []
     step = INTERVAL_MONTHS[contract.interval]
-    # Erste Zahlung, die im Zeitraum liegen kann: nicht jeden Monat seit Beginn einzeln prüfen.
     months_before = (first.year - contract.starts_on.year) * 12 + (
         first.month - contract.starts_on.month
     )
     index = max(0, months_before // step - 1)
-    total = 0
+    days: list[date] = []
     while True:
         due = add_months(contract.starts_on, index * step)
         if due > upper:
-            return total
+            return days
         if due >= first:
-            total += contract.amount_cents
+            days.append(due)
         index += 1
 
 

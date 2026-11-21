@@ -56,8 +56,13 @@ export function PeopleRoles() {
           : `${shown.length} von ${people.length} Personen`}
       </p>
       {shown.length > 0 && (
-        <div className="table-wrap" tabIndex={0} role="region" aria-label="Personen und Rollen">
-          <table>
+        <div
+          className="table-wrap card-wrap"
+          tabIndex={0}
+          role="region"
+          aria-label="Personen und Rollen"
+        >
+          <table className="table-cards">
             <caption className="visually-hidden">Personen mit ihren Rollen</caption>
             <thead>
               <tr>
@@ -74,7 +79,7 @@ export function PeopleRoles() {
                     {person.display_name}
                     {person.email && <span className="small tenant-part">{person.email}</span>}
                   </th>
-                  <td>
+                  <td data-label="Rollen (letzte Anmeldung)">
                     {person.roles.length === 0 ? (
                       <span className="empty">keine Rolle</span>
                     ) : (
@@ -89,7 +94,7 @@ export function PeopleRoles() {
                       </ul>
                     )}
                   </td>
-                  <td>{formatDateTime(person.last_login_at)}</td>
+                  <td data-label="Letzte Anmeldung">{formatDateTime(person.last_login_at)}</td>
                 </tr>
               ))}
             </tbody>

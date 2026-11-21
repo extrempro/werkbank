@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { FilterBar } from "../../components/FilterBar";
 import { errorText } from "../../api";
 import { Icon } from "../../components/Icon";
 import { useModal } from "../../components/nav/useModal";
@@ -860,7 +861,6 @@ export function DeviceAssociationPage() {
   const [selected, setSelected] = useState<Device | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const searchId = useId();
 
   const load = useCallback(async () => {
     try {
@@ -1037,35 +1037,24 @@ export function DeviceAssociationPage() {
         </dl>
       )}
 
-      <div className="panel case-toolbar dev-toolbar">
-        <div className="chips" role="group" aria-label="Ansicht">
-          {VIEWS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="chip chip-filter"
-              aria-pressed={view === item.id}
-              onClick={() => chooseView(item.id)}
-            >
-              {item.label}
-              {item.count && counts ? ` (${countFor(counts, item.count)})` : ""}
-            </button>
-          ))}
-        </div>
-        <div className="case-search">
-          <label htmlFor={searchId} className="visually-hidden">
-            Seriennummer oder Modell suchen
-          </label>
-          <input
-            id={searchId}
-            type="search"
-            placeholder="Seriennummer oder Modell suchen"
-            value={query}
-            maxLength={100}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-      </div>
+      <FilterBar
+        search={{
+          label: "Seriennummer oder Modell suchen",
+          value: query,
+          placeholder: "Seriennummer oder Modell",
+          onChange: setQuery,
+        }}
+        status={{
+          label: "Ansicht",
+          value: view,
+          onChange: chooseView,
+          options: VIEWS.map((item) => ({
+            value: item.id,
+            label: item.label,
+            count: item.count && counts ? countFor(counts, item.count) : null,
+          })),
+        }}
+      />
 
       <div className="panel dev-list">
         {list && entries.length === 0 ? (

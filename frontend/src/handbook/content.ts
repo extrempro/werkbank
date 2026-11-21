@@ -98,6 +98,7 @@ export const CHAPTERS: readonly Chapter[] = [
               "„Menü einklappen“ unten im Seitenmenü lässt nur die Bereichsleiste stehen. Ein Klick auf einen Bereich öffnet das Menü wieder.",
               "Kontomenü oben rechts: Konto, Release Notes, hell, dunkel oder automatisch, „Zuletzt besucht leeren“ und „Abmelden“.",
               "Auf dem Handy steht unten eine Leiste mit Start, Suche, Aufgaben und Menü. „Menü“ zeigt erst die Seiten des aktuellen Bereichs; über „Alle Bereiche“ kommst du in jeden anderen.",
+              "Über Listen stehen Suche und Filter. Am Computer und Tablet wählst du den Status mit den Knöpfen darunter, „Filter aufheben“ setzt alles zurück. Auf dem Handy wählst du den Status aus einer Liste; die übrigen Filter öffnest du mit „Weitere Filter“, die Zahl daran zeigt, wie viele gesetzt sind. Auf dem Handy steht jeder Eintrag als eigene Karte untereinander.",
             ],
           },
           {
@@ -205,7 +206,7 @@ export const CHAPTERS: readonly Chapter[] = [
             items: [
               "Vorgänge findest du auch über ihre Nummer, z. B. EV-2026-014.",
               "Einstellungen findest du über Name, Pfad, Beschreibung oder Begründung.",
-              "Budgetposten findest du über Name, Notiz und Tag.",
+              "Budgetposten findest du über ihre Nummer, z. B. BP-2026-012, über Name, Notiz und Tag.",
             ],
           },
         ],
@@ -765,7 +766,7 @@ export const CHAPTERS: readonly Chapter[] = [
     id: "it-budget",
     title: "IT-Budget",
     summary:
-      "Konten, Budgetposten, Verträge, Rechnungen und Partner; Plan, Ist und Prognose je Geschäftsjahr.",
+      "Konten, Budgetposten, Verträge, Rechnungen und Partner; Plan und Ist je Geschäftsjahr.",
     roles: [BUDGET_READER, BUDGET_EDITOR, BUDGET_MANAGER],
     sections: [
       {
@@ -782,7 +783,11 @@ export const CHAPTERS: readonly Chapter[] = [
               ["Konto", "Sachkonto mit Nummer, laufende Kosten oder Investition"],
               [
                 "Budgetposten",
-                "ein Vorhaben unter einem Konto, z. B. eine Software, mit erwarteten Kosten je Geschäftsjahr und Laufzeit",
+                "ein Vorhaben unter einem Konto, z. B. eine Software, mit Betrag je Geschäftsjahr und Laufzeit",
+              ],
+              [
+                "Nummer",
+                "jeder Budgetposten hat eine feste Nummer wie BP-2026-012: das Geschäftsjahr, in dem er angelegt wurde, und eine laufende Nummer. Sie ändert sich nie.",
               ],
               [
                 "Vertrag",
@@ -796,9 +801,9 @@ export const CHAPTERS: readonly Chapter[] = [
                 "Rechnung",
                 "Kopf mit Rechnungssteller, Nummer und Datum und eine oder mehrere Positionen, jede auf einem Budgetposten",
               ],
-              ["Plan", "die erwarteten Kosten der Budgetposten"],
+              ["Plan", "die Beträge der Budgetposten (geplant)"],
               ["Ist", "Summe der gebuchten Rechnungspositionen (brutto) im Geschäftsjahr"],
-              ["Prognose", "bei abgeschlossenen Posten das Ist, sonst das Höhere aus Plan und Ist"],
+              ["Verfügbar", "Plan minus Ist"],
             ],
           },
           {
@@ -813,7 +818,7 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Die Übersicht zeigt Kennzahlen des Geschäftsjahrs, das Budget nach Konten mit Plan, Ist und Prognose, Kündigungstermine der nächsten 120 Tage und Handlungsbedarf wie zu prüfende Rechnungen.",
+            text: "Oben steht, was zu erledigen ist, zum Beispiel zu prüfende Rechnungen, Posten ohne Partner, anstehende Kündigungstermine oder Verträge ohne AVV; ein Klick führt in die passende Liste. Darunter stehen die Kennzahlen Geplant, Ist, Verfügbar und die Zahl der Budgetposten, das Budget nach Konten (laufende Kosten und Investitionen) mit Auslastung, die Kündigungstermine der nächsten 120 Tage und die zuletzt gebuchten Rechnungen.",
           },
         ],
         links: [{ to: "/budget", label: "Zur Übersicht" }],
@@ -824,16 +829,16 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Je Geschäftsjahr hat ein Posten einen Status: „offen“, „Rechnung liegt vor“ oder „abgeschlossen“. Abgeschlossen ist er, sobald du ihn mit „Abschließen“ abhakst (gilt für das oben gewählte Geschäftsjahr) oder eine gebuchte Rechnungsposition mit „schließt den Posten ab“ auf ihm liegt. „Wieder öffnen“ nimmt das Abhaken zurück; schließt eine Rechnung den Posten ab, entfernst du dafür den Haken an der Rechnungsposition. Die Liste zeigt je Posten den Partner, die erwarteten Kosten, das Ist und das Vorjahr. Ältere Posten ohne Partner tragen den Hinweis „Partner fehlt“; beim nächsten Bearbeiten wählst du ihn. Filter nach Suchtext (auch nach dem Partner), Status und Tag helfen beim Finden.",
+            text: "Je Geschäftsjahr hat ein Posten einen Status: „offen“, „Rechnung liegt vor“ oder „abgeschlossen“. Abgeschlossen ist er, sobald du ihn mit „Abschließen“ abhakst (gilt für das oben gewählte Geschäftsjahr) oder eine gebuchte Rechnungsposition mit „schließt den Posten ab“ auf ihm liegt. „Wieder öffnen“ nimmt das Abhaken zurück; schließt eine Rechnung den Posten ab, entfernst du dafür den Haken an der Rechnungsposition. Die Tabelle zeigt je Posten Nummer, Konto, Partner, Geplant, Ist, Status und Vorjahr. Ein Klick auf eine Spaltenüberschrift sortiert, unter „Gruppieren“ wählst du nach Konto, nach Partner oder ohne Gruppen; auf dem Handy sortierst du unter „Weitere Filter“. Ein Klick auf einen Posten öffnet ihn rechts daneben mit Status, Beträgen, Angaben und den Rechnungen auf dem Posten; dort findest du auch „Abschließen“, „Bearbeiten“ und „Löschen“. Ältere Posten ohne Partner tragen den Hinweis „Partner fehlt“; beim nächsten Bearbeiten wählst du ihn. Suche (auch nach Nummer und Partner), Status, Tag und IT-Projekt helfen beim Finden.",
           },
           {
             kind: "steps",
             items: [
-              "Wähle „Posten hinzufügen“.",
-              "Wähle das Konto und den Partner (die Firma, Pflicht), gib eine Bezeichnung und die erwarteten Kosten je Geschäftsjahr (brutto) ein.",
-              "Lege die Laufzeit fest: einmalig, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres.",
-              "Optional: Vertrag, IT-Projekt und Tags wählen; unter „Weitere Angaben“ die Notiz. Tags legt der Budgetverwalter unter Einstellungen › Tags an.",
-              "Speichere.",
+              "Wähle „Posten hinzufügen“. Die Maske öffnet rechts neben der Tabelle.",
+              "Abschnitt 1: Bezeichnung, Konto und Partner (die Firma) eintragen; alle drei sind Pflicht.",
+              "Abschnitt 2: den Betrag (brutto) eintragen und die Laufzeit wählen: einmalig in einem Geschäftsjahr, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres. Darunter steht der Plan in Worten.",
+              "Abschnitt 3 (freiwillig): Vertrag, IT-Projekt, Tags und Notiz. Tags legt der Budgetverwalter unter Einstellungen › Tags an.",
+              "Speichere. Die Nummer bekommt der Posten beim Speichern.",
             ],
           },
           {
@@ -842,7 +847,7 @@ export const CHAPTERS: readonly Chapter[] = [
           },
           {
             kind: "text",
-            text: "Gehört ein Posten zu einem IT-Projekt, wähle das Projekt im Feld „Projekt“. Seine erwarteten Kosten und Rechnungen zählen dann im Projekt unter Budget mit. Ein Posten gehört höchstens zu einem Projekt; abgeschlossene Projekte stehen nicht mehr zur Wahl. Über den Filter „Projekt“ siehst du alle Posten eines Projekts.",
+            text: "Gehört ein Posten zu einem IT-Projekt, wähle das Projekt im Feld „IT-Projekt“. Seine erwarteten Kosten und Rechnungen zählen dann im Projekt unter Budget mit. Ein Posten gehört höchstens zu einem Projekt; abgeschlossene Projekte stehen nicht mehr zur Wahl. Über den Filter „IT-Projekt“ siehst du alle Posten eines Projekts.",
           },
         ],
         links: [{ to: "/budget/posten", label: "Zu den Budgetposten" }],
@@ -853,7 +858,7 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Ein Vertrag hat Partner, Betrag je Zahlung (netto mit Steuersatz), Turnus, Beginn, Laufzeit, Verlängerung, Kündigungsfrist und den Stand des Auftragsverarbeitungsvertrags (AVV). Die Zuordnung zu Budgetposten pflegst du am Vertrag oder am Posten.",
+            text: "Ein Vertrag hat Partner, Turnus, Betrag je Zahlung (netto mit Steuersatz), Beginn, Laufzeit, Verlängerung, Kündigungsfrist und den Stand des Auftragsverarbeitungsvertrags (AVV). In der Maske wählst du zuerst den Turnus; das Betragsfeld heißt dann passend, zum Beispiel „Monatsbetrag“ oder „Jahresbetrag“, und darunter steht das Soll in Worten. Die Zuordnung zu Budgetposten pflegst du am Vertrag oder am Posten. Oben stehen die Kennzahlen, darunter die Tabelle mit den Filtern Laufend, Kündigung bald, Gekündigt, AVV fehlt und Alle; ein Klick öffnet den Vertrag rechts daneben.",
           },
           {
             kind: "list",
@@ -863,6 +868,7 @@ export const CHAPTERS: readonly Chapter[] = [
               "Kosten kommen nur über Rechnungen ins Budget. Am Vertrag siehst du je Geschäftsjahr (Auswahl oben) das Soll und das Ist.",
               "Soll: die Zahlungen, die im Geschäftsjahr fällig werden. Bei einem jährlichen Vertrag ist das der Jahresbetrag. Bei einem monatlichen Vertrag trägst du den Monatsbetrag ein; die Liste zeigt dazu die Summe eines vollen Jahres.",
               "Ist: die Rechnungen der zugeordneten Budgetposten, sobald ein Posten abgeschlossen ist. Bei monatlichen Verträgen legst du je Monat einen Posten an; das Ist wächst dann mit jedem abgeschlossenen Monat.",
+              "Monatsposten: Bei einem laufenden monatlichen Vertrag wählst du in der Ansicht das Konto und „Monatsposten anlegen“. Für das gewählte Geschäftsjahr entsteht je fälliger Zahlung ein Posten mit Partner und Monatsbetrag, z. B. „Mobilfunk Oktober 2026“, und wird dem Vertrag zugeordnet. Gibt es einen Monat schon, wird er übersprungen.",
               "Gekündigt: Das Soll zählt nur die Zahlungen bis zum Kündigungstag, im folgenden Geschäftsjahr nichts mehr.",
             ],
           },
@@ -877,8 +883,9 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "steps",
             items: [
-              "Wähle auf der Seite „Rechnungen“ „Rechnung erfassen“.",
-              "Trage Rechnungssteller, Rechnungsnummer, interne Nummer und Rechnungsdatum ein. Das Datum bestimmt das Geschäftsjahr.",
+              "Wähle auf der Seite „Rechnungen“ „Rechnung erfassen“. Die Maske öffnet rechts neben der Tabelle.",
+              "Wähle zuerst den Rechnungssteller. Seine Budgetposten stehen danach oben in der Auswahl.",
+              "Trage Rechnungsnummer, interne Nummer und Rechnungsdatum ein. Das Datum bestimmt das Geschäftsjahr.",
               "Lege für jeden Budgetposten eine Position an: Budgetposten aus der Liste wählen, Netto und Steuersatz eintragen. Das Brutto rechnet die Werkbank.",
               "Prüfe das Kennzeichen „schließt den Posten ab“; bei Posten mit Vertrag ist es anfangs aus.",
               "Optional: den Rechnungsbetrag laut Beleg eintragen; er muss zur Summe passen. Den Beleg als PDF anhängen (höchstens 15 MB).",
@@ -899,7 +906,7 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Offene Rechnungen stehen auf deiner Startseite und in der Glocke. Prüfe Positionen und Beleg und buche. Rechnungen, die du selbst erfasst, sind sofort gebucht. Gebuchte Rechnungen ändern und löschen nur Personen mit Budget.Manager.",
+            text: "Offene Rechnungen stehen auf deiner Startseite und in der Glocke, auf der Seite „Rechnungen“ unter dem Filter „Zu prüfen“. Ein Klick auf eine Rechnung öffnet sie rechts daneben; prüfe Positionen und Beleg und wähle „Prüfen und buchen“. Rechnungen, die du selbst erfasst, sind sofort gebucht. Gebuchte Rechnungen ändern und löschen nur Personen mit Budget.Manager.",
           },
         ],
       },

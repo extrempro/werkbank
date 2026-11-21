@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { FilterBar } from "../../components/FilterBar";
 import { SplitHandle, useSplit } from "../../components/SplitHandle";
 import { navigate } from "../../router";
 import { MoreButton, useDebounced, usePagedList } from "../inventory/paged";
@@ -385,7 +386,6 @@ export function EntriesPage({
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
   const query = useDebounced(search);
-  const searchId = useId();
   const paged = usePagedList<EntrySummary, { open: number; new: number }>(
     `${software}|${filter}|${query}`,
     reload,
@@ -434,37 +434,24 @@ export function EntriesPage({
         </p>
       )}
       {creating && <NewEntryForm software={software} onCancel={() => setCreating(false)} />}
-      <div className="panel case-toolbar">
-        <div className="case-search">
-          <label htmlFor={searchId} className="visually-hidden">
-            Einträge durchsuchen
-          </label>
-          <input
-            id={searchId}
-            type="search"
-            value={search}
-            maxLength={100}
-            placeholder="Nummer, Titel, Meldung (MC…), Dienst …"
-            autoComplete="off"
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </div>
-        <div className="chips" role="group" aria-label="Status">
-          {ENTRY_FILTERS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="chip chip-filter"
-              aria-pressed={filter === item.id}
-              onClick={() => setFilter(item.id)}
-            >
-              {item.label}
-              {item.id === "offen" && openCount !== null ? ` (${openCount})` : ""}
-              {item.id === "neu" && newCount !== null ? ` (${newCount})` : ""}
-            </button>
-          ))}
-        </div>
-      </div>
+      <FilterBar
+        search={{
+          label: "Einträge durchsuchen",
+          value: search,
+          placeholder: "Nummer, Titel, Meldung (MC…), Dienst …",
+          onChange: setSearch,
+        }}
+        status={{
+          label: "Status",
+          value: filter,
+          onChange: setFilter,
+          options: ENTRY_FILTERS.map((item) => ({
+            value: item.id,
+            label: item.label,
+            count: item.id === "offen" ? openCount : item.id === "neu" ? newCount : null,
+          })),
+        }}
+      />
       <div
         ref={layoutRef}
         className={

@@ -210,8 +210,13 @@ export function AccountsPage({ roles }: { roles: readonly string[] }) {
         <p className="panel panel-empty">Es sind noch keine Konten angelegt.</p>
       )}
       {accounts && accounts.length > 0 && (
-        <div className="table-wrap budget-table" tabIndex={0} role="region" aria-label="Konten">
-          <table>
+        <div
+          className="table-wrap card-wrap budget-table"
+          tabIndex={0}
+          role="region"
+          aria-label="Konten"
+        >
+          <table className="table-cards">
             <caption className="visually-hidden">Konten des IT-Budgets</caption>
             <thead>
               <tr>
@@ -229,10 +234,10 @@ export function AccountsPage({ roles }: { roles: readonly string[] }) {
                   <th scope="row" className="mono">
                     {account.number}
                   </th>
-                  <td>{account.name}</td>
-                  <td>{KIND_LABELS[account.kind]}</td>
-                  <td>{account.note || "–"}</td>
-                  <td>
+                  <td data-label="Bezeichnung">{account.name}</td>
+                  <td data-label="Art">{KIND_LABELS[account.kind]}</td>
+                  <td data-label="Notiz">{account.note || "–"}</td>
+                  <td data-label="Stand">
                     <span className={account.active ? "pill pill-ok" : "pill pill-neutral"}>
                       {account.active ? "aktiv" : "stillgelegt"}
                     </span>
