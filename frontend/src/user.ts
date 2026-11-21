@@ -39,11 +39,12 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
   },
   "Evergreen.Reader": {
     label: "Evergreen Leser",
-    description: "Evergreen-Einträge und ihre Notizen ansehen",
+    description: "Evergreen-Einträge mit Bewertung und Notizen ansehen",
   },
   "Evergreen.Editor": {
     label: "Evergreen Bearbeiter",
-    description: "Evergreen-Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen",
+    description:
+      "Evergreen-Einträge anlegen, bewerten, Notizen anfügen, abschließen und wieder öffnen",
   },
   "Monitoring.Reader": {
     label: "Monitoring Leser",

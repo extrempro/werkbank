@@ -1,10 +1,13 @@
 import { useEffect, useId, useState, type KeyboardEvent } from "react";
 import { errorText } from "../../api";
-import { lookup, type LookupItem, type LookupKind } from "./api";
+import { lookup, type LookupItem, type LookupKind, type LookupResult } from "./api";
 import { useDebounced } from "./paged";
 
 interface LookupPickerProps {
-  kind: LookupKind;
+  /** Art der Suche im IT-Bestand; alternativ eine eigene Suche über `search`. */
+  kind?: LookupKind;
+  /** Eigene Suche (z. B. Einstellungen der M365-Konfiguration in Evergreen). */
+  search?: (query: string) => Promise<LookupResult>;
   label: string;
   value: LookupItem | null;
   onChange: (item: LookupItem | null) => void;
@@ -25,7 +28,8 @@ interface LookupPickerProps {
  * Escape schließt die Liste. Gewählt steht der Eintrag mit „Ändern“ da.
  */
 export function LookupPicker({
-  kind,
+  kind = "position",
+  search,
   label,
   value,
   onChange,
@@ -50,7 +54,7 @@ export function LookupPicker({
       return;
     }
     let current = true;
-    lookup(kind, debounced, { computers }).then(
+    (search ? search(debounced) : lookup(kind, debounced, { computers })).then(
       (next) => {
         if (current) {
           setResult(next);
@@ -63,7 +67,7 @@ export function LookupPicker({
     return () => {
       current = false;
     };
-  }, [kind, debounced, computers, open, value]);
+  }, [kind, search, debounced, computers, open, value]);
 
   const items = (result?.items ?? []).filter((item) => !exclude.includes(item.id));
   const selected = Math.min(active, Math.max(items.length - 1, 0));

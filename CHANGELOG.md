@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.83.0] – 2026-11-21
+
+### Evergreen
+
+- **Liste und Ansicht statt Tabelle** (spec.md 8.3): Liste mit fester Breite (280–360 px) und eigener Scrollleiste; Suche, Status-Chips Offen, Neu, Mit Frist, Abgeschlossen (mit Zahl, seitlich scrollbar), Schalter „Reine Info-Meldungen ausblenden“ (Kategorie `stayInformed` ohne „User impact“/„Admin impact“, Standard an, `werkbank-evergreen-info` im Browser). Offene Einträge in Gruppen Mit Frist (nach Frist), Neu, In Bearbeitung mit haftenden Überschriften; der ganze Listeneintrag ist ein Link mit `aria-current`. `GET /api/evergreen/entries` liefert bis zu 500 Einträge ohne Seiten (`limit`), neuer Status `frist`, `hide_info`, Zähler `due` und `done`, je Eintrag `kind` (Art) und `info_only`. Filter „Bearbeitet“ und „Alle“ entfallen in der Oberfläche
+- **Steckbrief:** Kopfzeile mit EV- und MC-Nummer, Veröffentlichung und Status; Badges Dienst, Art (aus den Kennzeichen), Betrifft Nutzer/Admins, Größere Änderung, Handlung nötig; Kacheln Betroffen, Standard, Steuerbar, Handeln bis (orange bei Frist oder „eingeschaltet“)
+- **Rollout als Zeitstrahl** (neue Komponente `components/Timeline.tsx`): Monate als Spalten, Balken je Phase, Linie „heute“, früherer Plan schraffiert; dieselben Angaben als Liste für Screenreader
+- **Drei Reiter** (neue Komponente `components/Tabs.tsx`, Pfeiltasten, Pos1/Ende): Unsere Bewertung (Kurzfassung, Änderung für Mitarbeitende, Schulung, Mitbestimmung Ja/Nein/Noch prüfen mit Begründung, verknüpfte Einstellung, Steckbrief und bis zu 6 Phasen), Text von Microsoft (Abschnitte zum Aufklappen, `lang="en"`), Notizen und Verlauf
+- **Bewertung speichern:** `PUT /api/evergreen/entries/{id}/assessment` (nur `Evergreen.Editor`, auch an abgeschlossenen Einträgen); geänderte Felder mit vorher/nachher im Verlauf („Bewertung geändert“, `ev_notes.details`) und im Audit-Log (`eintrag.bewertet`); ein neuer Eintrag wird „bearbeitet“. Einstellungen zum Verknüpfen sucht `GET /api/evergreen/settings` (höchstens 20); den Link zur Einstellung sieht nur, wer die M365-Konfiguration lesen darf. `LookupPicker` nimmt dafür eine eigene Suche an
+- **Nachrichtencenter:** Kennzeichen (`tags`) werden übernommen; der Text wird an den Überschriften in Abschnitte zerlegt (`modules/evergreen/rules.py`). Aus „When this will happen“ entstehen per Regeln (ohne KI) Vorschläge für Rollout-Phasen, aus den Kennzeichen für „Betroffen“, markiert als „Vorschlag, ungeprüft“ bis zum Speichern der Bewertung. Ändert Microsoft den Zeitplan, bleiben der alte Text und die alten Phasen als „vorher“ erhalten (Verlauf „Zeitplan geändert“). Bestehende Meldungen ergänzt der nächste Abruf
+- Migration `0057`: neue Spalten an `ev_entries` (Kennzeichen, Abschnitte, Zeitplan vorher, Steckbrief, Phasen, Bewertung, `setting_id`) und `ev_notes.details`
+- Rollenbeschreibungen von `Evergreen.Reader` und `Evergreen.Editor` nennen die Bewertung
+
+### Alle Bereiche
+
+- **Liste und Ansicht** (Verleih, Evergreen): unter 1200 px ist das Seitenmenü eingeklappt wie mit „Menü einklappen“ (Bereichsleiste bleibt, „Menü ausklappen“ öffnet es für die Seite wieder; `listViewPage` in `Layout.tsx`), unter 1100 px statt 1024 px erst nur die Liste; Liste höchstens 360 px breit
+- Blaue Status-Badges haben einen feinen Rahmen (neue Farbe `--farbe-info-rand` in hell und dunkel), damit sie auf einer gewählten Zeile sichtbar bleiben
+
+### Dokumentation
+
+- `docs/spec.md` Kapitel 8 (8.1, 8.3, neu 8.4), Datenmodell, Screens, offene Punkte 16 (BR-Vorlage) und 17 (Vorschläge per Regeln); `docs/design.md` mit den Mustern Steckbrief, Zeitstrahl und Reiter
+
 ## [0.82.0] – 2026-11-21
 
 ### IT-Budget

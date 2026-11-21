@@ -106,8 +106,8 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Werkbank Admin | `Werkbank.Admin` | Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log |
 | Konfiguration Leser | `Config.Reader` | M365-Konfiguration ansehen und exportieren |
 | Konfiguration Prüfer | `Config.Reviewer` | Änderungen bewerten, Beschreibungen und Soll-Werte pflegen |
-| Evergreen Leser | `Evergreen.Reader` | Evergreen-Einträge und ihre Notizen ansehen |
-| Evergreen Bearbeiter | `Evergreen.Editor` | Evergreen-Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen |
+| Evergreen Leser | `Evergreen.Reader` | Evergreen-Einträge mit Bewertung und Notizen ansehen |
+| Evergreen Bearbeiter | `Evergreen.Editor` | Evergreen-Einträge anlegen, bewerten, Notizen anfügen, abschließen und wieder öffnen |
 | IT-Tools Nutzer | `Tools.User` | Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter) |
 | Tenant Leser | `Tenant.Reader` | Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen |
 | Budget Bearbeiter | `Budget.Editor` | IT-Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen |

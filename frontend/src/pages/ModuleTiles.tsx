@@ -85,7 +85,7 @@ export function ModuleTiles({ roles }: { roles: readonly string[] }) {
         .catch(() => undefined);
     }
     if (showEvergreen) {
-      fetchEntries("m365", "offen", "", 0, 1)
+      fetchEntries("m365", "offen", "", false, 1)
         .then((list) => {
           if (active && list && typeof list === "object") {
             setEvergreen(evergreenTile(list));

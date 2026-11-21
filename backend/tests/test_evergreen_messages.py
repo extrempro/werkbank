@@ -187,3 +187,69 @@ def test_tasks_and_notifications_only_for_editors(db: Session) -> None:
     assert len(events) == 1
     assert events[0].title == "Evergreen Microsoft 365: 2 neue Einträge"
     assert events[0].link == "/evergreen/m365"
+
+
+SCHEDULE_HTML = (
+    "<p>[What and why:]</p><p>Something new.</p>"
+    "<p>[When this will happen:]</p>"
+    "<p>Targeted Release: early January 2027 to late January 2027.</p>"
+    "<p>General Availability: late January 2027 to late February 2027.</p>"
+)
+
+
+@pytest.mark.db
+def test_tags_sections_and_suggestions(db: Session) -> None:
+    message = raw(
+        "MC300001",
+        tags=["User impact", "New feature"],
+        body={"contentType": "html", "content": SCHEDULE_HTML},
+    )
+    fetch_messages(db, FakeGraph([message]).client())
+    entry = by_ref(db, "MC300001")
+    assert entry.tags == ["User impact", "New feature"]
+    assert [s["head"] for s in entry.sections] == ["What and why", "When this will happen"]
+    assert [p["name"] for p in entry.phases] == ["Targeted Release", "Allgemein verfügbar"]
+    assert entry.affected == "Nutzer"
+    assert entry.suggested == ["affected", "phases"]
+
+
+@pytest.mark.db
+def test_changed_schedule_keeps_previous_plan(db: Session) -> None:
+    first = raw("MC300002", body={"contentType": "html", "content": SCHEDULE_HTML})
+    fetch_messages(db, FakeGraph([first]).client())
+    entry = by_ref(db, "MC300002")
+    # von Hand geprüft: Betroffen bleibt bei einer Aktualisierung
+    entry.affected = "Alle mit Lizenz"
+    entry.suggested = []
+    db.commit()
+    old_phases = list(entry.phases)
+
+    moved = SCHEDULE_HTML.replace("January 2027", "March 2027").replace("February", "April")
+    changed = raw(
+        "MC300002",
+        tags=["Admin impact"],
+        lastModifiedDateTime="2024-11-12T08:00:00Z",
+        body={"contentType": "html", "content": moved},
+    )
+    fetch_messages(db, FakeGraph([changed]).client())
+    db.refresh(entry)
+    assert entry.schedule_previous is not None and "January 2027" in entry.schedule_previous
+    assert entry.schedule_changed_at is not None
+    assert entry.phases_previous == old_phases
+    assert entry.phases[0] == {"name": "Targeted Release", "start": "2027-03", "end": "2027-03"}
+    assert entry.suggested == ["phases"]
+    assert entry.affected == "Alle mit Lizenz"
+    kinds = [n.kind for n in db.scalars(select(EvNote).where(EvNote.entry_id == entry.id))]
+    assert kinds == ["aktualisiert", "zeitplan"]
+
+
+@pytest.mark.db
+def test_backfill_for_old_entries(db: Session) -> None:
+    fetch_messages(db, FakeGraph([raw("MC300003")]).client())
+    entry = by_ref(db, "MC300003")
+    entry.sections = []
+    entry.body = "[When this will happen:]\nRollout: May 2027"
+    db.commit()
+    fetch_messages(db, FakeGraph([]).client())
+    db.refresh(entry)
+    assert entry.phases == [{"name": "Rollout", "start": "2027-05", "end": "2027-05"}]

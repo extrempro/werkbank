@@ -203,3 +203,152 @@ def test_entry_from_detected_change(db: Session) -> None:
     assert "Vorher: enabled" in data["body"] and "Nachher: disabled" in data["body"]
     again = post(ina, "/entries/from-change", {"change_id": change.id})
     assert again.status_code == 409 and data["number"] in again.json()["detail"]
+
+
+def put(client: TestClient, path: str, body: dict[str, Any]) -> Any:
+    return client.put(f"{BASE}{path}", json=body, headers=HEADERS)
+
+
+ASSESSMENT: dict[str, Any] = {
+    "affected": "Alle Nutzer",
+    "default_state": "an",
+    "controllable": True,
+    "controllable_how": "Besprechungsrichtlinie",
+    "phases": [{"name": "Allgemein verfügbar", "start": "2027-01", "end": "2027-02"}],
+    "summary": "Teams fasst Besprechungen zusammen.",
+    "staff_change": "Neuer Knopf.",
+    "training": "Kurzinfo",
+    "codetermination": "pruefen",
+    "codetermination_reason": "Inhalte werden ausgewertet.",
+}
+
+
+@pytest.mark.db
+def test_assessment_saves_logs_and_sets_status(db: Session) -> None:
+    ina = editor()
+    entry_id = new_entry(ina)
+    reader = client_for(["Evergreen.Reader"], "ev-leser")
+    assert put(reader, f"/entries/{entry_id}/assessment", ASSESSMENT).status_code == 403
+
+    saved = put(ina, f"/entries/{entry_id}/assessment", ASSESSMENT)
+    assert saved.status_code == 200, saved.text
+    data = saved.json()
+    assert data["status"] == "bearbeitet"
+    assert (data["affected"], data["default_state"], data["controllable"]) == (
+        "Alle Nutzer",
+        "an",
+        True,
+    )
+    assert data["phases"] == ASSESSMENT["phases"]
+    note = data["notes"][-1]
+    assert note["kind"] == "bewertet" and note["author"] == "Ina Beispiel"
+    fields = [change["field"] for change in note["changes"]]
+    assert "Kurzfassung" in fields and "Rollout" in fields and len(fields) == 10
+    assert {"field": "Standard", "old": None, "new": "eingeschaltet"} in note["changes"]
+
+    # nichts geändert: kein weiterer Eintrag im Verlauf
+    again = put(ina, f"/entries/{entry_id}/assessment", ASSESSMENT).json()
+    assert len(again["notes"]) == len(data["notes"])
+    # „nein“ ist eine Änderung, „steuerbar mit“ entfällt dann
+    changed = put(ina, f"/entries/{entry_id}/assessment", {**ASSESSMENT, "controllable": False})
+    last = changed.json()["notes"][-1]["changes"]
+    assert {"field": "Steuerbar", "old": "Ja", "new": "Nein"} in last
+    assert changed.json()["controllable_how"] is None
+
+    audit = db.scalars(select(AuditLog).where(AuditLog.action == "eintrag.bewertet")).all()
+    assert len(audit) == 2
+
+    # auch an abgeschlossenen Einträgen
+    post(ina, f"/entries/{entry_id}/close")
+    closed = put(ina, f"/entries/{entry_id}/assessment", {**ASSESSMENT, "training": "Mail"})
+    assert closed.status_code == 200 and closed.json()["status"] == "abgeschlossen"
+
+
+@pytest.mark.db
+def test_assessment_validation(db: Session) -> None:
+    ina = editor()
+    entry_id = new_entry(ina)
+    path = f"/entries/{entry_id}/assessment"
+    bad_phase = {"name": "X", "start": "2027-13", "end": "2027-01"}
+    assert put(ina, path, {"phases": [bad_phase]}).status_code == 422
+    backwards = {"name": "X", "start": "2027-03", "end": "2027-01"}
+    assert "Ende" in put(ina, path, {"phases": [backwards]}).json()["detail"]
+    six = [{"name": f"P{i}", "start": "2027-01", "end": "2027-01"} for i in range(7)]
+    assert put(ina, path, {"phases": six}).status_code == 422
+    assert put(ina, path, {"default_state": "vielleicht"}).status_code == 422
+    assert put(ina, path, {"codetermination": "x"}).status_code == 422
+    assert put(ina, path, {"summary": "x" * 4001}).status_code == 422
+    assert put(ina, path, {"setting_id": 999_999_999}).status_code == 422
+    assert put(ina, "/entries/999999/assessment", {}).status_code == 404
+
+
+@pytest.mark.db
+def test_suggestions_confirmed_by_saving(db: Session) -> None:
+    ina = editor()
+    entry_id = new_entry(ina)
+    entry = db.get(EvEntry, entry_id)
+    assert entry is not None
+    entry.phases = [{"name": "Rollout", "start": "2027-05", "end": "2027-05"}]
+    entry.suggested = ["phases"]
+    db.commit()
+    data = ina.get(f"{BASE}/entries/{entry_id}").json()
+    assert data["suggested"] == ["phases"]
+    body = {"phases": data["phases"]}
+    confirmed = put(ina, f"/entries/{entry_id}/assessment", body).json()
+    assert confirmed["suggested"] == []
+    assert confirmed["notes"][-1]["text"] == "Vorschläge bestätigt."
+
+
+@pytest.mark.db
+def test_link_setting_and_search(db: Session) -> None:
+    snapshot(db, "ev-verknuepft", "enabled")
+    setting = db.execute(
+        select(CfgSetting).where(CfgSetting.object_id == "ev-verknuepft")
+    ).scalar_one()
+    ina = editor()
+    entry_id = new_entry(ina)
+    reader = client_for(["Evergreen.Reader"], "ev-leser")
+    assert reader.get(f"{BASE}/settings", params={"q": "teams"}).status_code == 403
+    assert ina.get(f"{BASE}/settings", params={"q": "x" * 101}).status_code == 422
+    assert ina.get(f"{BASE}/settings").json()["settings"]
+    found = ina.get(f"{BASE}/settings", params={"q": setting.path[:12]}).json()
+    assert setting.id in [hit["id"] for hit in found["settings"]]
+
+    linked = put(ina, f"/entries/{entry_id}/assessment", {"setting_id": setting.id}).json()
+    assert linked["setting"]["path"] == setting.path
+    assert linked["setting"]["value"] == "enabled"
+    assert linked["setting"]["can_open"] is False
+    config = client_for(["Evergreen.Reader", "Config.Reader"], "ev-config")
+    assert config.get(f"{BASE}/entries/{entry_id}").json()["setting"]["can_open"] is True
+
+
+@pytest.mark.db
+def test_list_due_info_filter_and_kind(db: Session) -> None:
+    ina = editor()
+    info = new_entry(ina, "Nur zur Info")
+    due = new_entry(ina, "Mit Frist")
+    impact = new_entry(ina, "Info mit Auswirkung")
+    for entry_id, extra in (
+        (info, {"category": "stayInformed"}),
+        (due, {"category": "planForChange", "tags": ["Retirement"]}),
+        (impact, {"category": "stayInformed", "tags": ["User impact"]}),
+    ):
+        row = db.get(EvEntry, entry_id)
+        assert row is not None
+        for name, value in extra.items():
+            setattr(row, name, value)
+    row = db.get(EvEntry, due)
+    assert row is not None
+    row.action_required_by = row.created_at
+    db.commit()
+
+    listed = ina.get(f"{BASE}/entries").json()
+    assert (listed["open"], listed["due"], listed["new"], listed["done"]) == (3, 1, 3, 0)
+    hidden = ina.get(f"{BASE}/entries", params={"hide_info": "true"}).json()
+    assert {e["id"] for e in hidden["entries"]} == {due, impact}
+    assert hidden["open"] == 2
+    frist = ina.get(f"{BASE}/entries", params={"state": "frist"}).json()
+    assert [e["id"] for e in frist["entries"]] == [due]
+    kinds = {e["id"]: (e["kind"], e["info_only"]) for e in listed["entries"]}
+    assert kinds[due] == ("Abkündigung", False)
+    assert kinds[info] == ("Information", True)

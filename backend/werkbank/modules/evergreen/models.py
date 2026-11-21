@@ -7,6 +7,7 @@ Status neu → bearbeitet (Notizen) → abgeschlossen. Notizen und Statuswechsel
 import uuid
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -23,6 +24,10 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from werkbank.db import Base
+
+# Verknüpfte Einstellung (setting_id): die Tabelle muss in den Metadaten bekannt sein, auch
+# wenn nur Evergreen geladen ist (z. B. im Worker beim Abruf des Nachrichtencenters).
+from werkbank.modules.m365_config import models as _config_models  # noqa: F401
 
 
 class EntrySource(StrEnum):
@@ -42,6 +47,20 @@ class NoteKind(StrEnum):
     CLOSED = "abgeschlossen"
     REOPENED = "geoeffnet"
     UPDATED = "aktualisiert"
+    SCHEDULE = "zeitplan"
+    ASSESSED = "bewertet"
+
+
+class DefaultState(StrEnum):
+    ON = "an"
+    OFF = "aus"
+    NONE = "entfaellt"
+
+
+class Codetermination(StrEnum):
+    YES = "ja"
+    NO = "nein"
+    CHECK = "pruefen"
 
 
 # Unterabschnitte (Software); weitere kommen später dazu
@@ -80,6 +99,38 @@ class EvEntry(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Seit 0.83: Kennzeichen und Abschnitte der Meldung, Steckbrief und Bewertung (spec.md 8.4)
+    tags: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    # [{"head": str | None, "text": str}]
+    sections: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    schedule_previous: Mapped[str | None] = mapped_column(Text)
+    schedule_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    affected: Mapped[str | None] = mapped_column(String(200))
+    default_state: Mapped[str | None] = mapped_column(String(16))
+    controllable: Mapped[bool | None] = mapped_column(Boolean)
+    controllable_how: Mapped[str | None] = mapped_column(String(300))
+    # [{"name": str, "start": "JJJJ-MM", "end": "JJJJ-MM"}]
+    phases: Mapped[list[dict[str, str]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    phases_previous: Mapped[list[dict[str, str]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    # Felder, deren Wert noch ein Vorschlag aus den Regeln ist („affected“, „phases“)
+    suggested: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    summary: Mapped[str | None] = mapped_column(Text)
+    staff_change: Mapped[str | None] = mapped_column(Text)
+    training: Mapped[str | None] = mapped_column(Text)
+    codetermination: Mapped[str | None] = mapped_column(String(16))
+    codetermination_reason: Mapped[str | None] = mapped_column(Text)
+    setting_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cfg_settings.id", ondelete="SET NULL")
+    )
+
     @property
     def number(self) -> str:
         return f"EV-{self.year}-{self.sequence:03d}"
@@ -96,6 +147,8 @@ class EvNote(Base):
     )
     kind: Mapped[str] = mapped_column(String(16))
     text: Mapped[str | None] = mapped_column(Text)
+    # geänderte Felder bei „bewertet“: [{"field", "old", "new"}]
+    details: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
     # leer bei Einträgen des Systems (z. B. Meldung von Microsoft aktualisiert)
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

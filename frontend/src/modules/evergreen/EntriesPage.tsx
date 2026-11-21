@@ -1,84 +1,105 @@
-import { useEffect, useId, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent, type MouseEvent } from "react";
 import { errorText } from "../../api";
 import { FilterBar } from "../../components/FilterBar";
-import { SplitHandle, useSplit } from "../../components/SplitHandle";
+import { Placeholder } from "../../components/Placeholder";
 import { navigate } from "../../router";
-import { MoreButton, useDebounced, usePagedList } from "../inventory/paged";
+import { useDebounced } from "../inventory/paged";
 import {
   ENTRY_FILTERS,
   ENTRY_STATES,
-  NOTE_LABELS,
+  LIST_MAX,
   SOFTWARE,
   SOURCE_LABELS,
-  addNote,
-  closeEntry,
   createEntry,
   entriesPath,
   entryPath,
   fetchEntries,
-  fetchEntry,
   formatDate,
-  reopenEntry,
-  type Entry,
   type EntryFilter,
+  type EntryList,
   type EntrySummary,
   type SoftwareKey,
 } from "./api";
+import { EntryDetail } from "./EntryDetail";
 
 const EDITOR_ROLE = "Evergreen.Editor";
-// Breite der Tabelle neben der Ansicht, gemerkt im Browser
-const SPLIT_KEY = "werkbank-evergreen-breite";
-const NOTE_MAX = 4000;
+// Schalter „Reine Info-Meldungen ausblenden“, gemerkt im Browser (Standard: an)
+const INFO_KEY = "werkbank-evergreen-info";
 
-function services(entry: EntrySummary): string {
-  return entry.services.length ? entry.services.join(", ") : "–";
+function readHideInfo(): boolean {
+  try {
+    return window.localStorage.getItem(INFO_KEY) !== "aus";
+  } catch {
+    return true;
+  }
 }
 
-/** Zeile der Tabelle. Die ganze Zeile ist anklickbar, für Tastatur und Screenreader zählt
- *  der Verweis im Titel. */
-function EntryRow({ entry, selected }: { entry: EntrySummary; selected: boolean }) {
+function storeHideInfo(value: boolean): void {
+  try {
+    window.localStorage.setItem(INFO_KEY, value ? "an" : "aus");
+  } catch {
+    // ohne Speicher im Browser gilt der Schalter nur bis zum Neuladen
+  }
+}
+
+interface Group {
+  key: string;
+  label: string;
+  entries: EntrySummary[];
+}
+
+/** Offene Einträge in Gruppen: mit Frist (früheste zuerst), neu, in Bearbeitung. */
+export function groupEntries(entries: readonly EntrySummary[]): Group[] {
+  const due = entries
+    .filter((entry) => entry.action_required_by)
+    .sort((a, b) => (a.action_required_by ?? "").localeCompare(b.action_required_by ?? ""));
+  const rest = entries.filter((entry) => !entry.action_required_by);
+  return [
+    { key: "frist", label: "Mit Frist", entries: due },
+    { key: "neu", label: "Neu", entries: rest.filter((entry) => entry.status === "neu") },
+    {
+      key: "bearbeitung",
+      label: "In Bearbeitung",
+      entries: rest.filter((entry) => entry.status !== "neu"),
+    },
+  ].filter((group) => group.entries.length > 0);
+}
+
+/** Listeneintrag: der ganze Eintrag ist ein Verweis auf die Ansicht. */
+function EntryItem({ entry, selected }: { entry: EntrySummary; selected: boolean }) {
   const path = entryPath(entry.software, entry.id);
-  const open = () => navigate(path);
+  const state = ENTRY_STATES[entry.status];
+  const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+    if (event.button !== 0 || modified) {
+      return;
+    }
+    event.preventDefault();
+    navigate(path);
+  };
   return (
-    <tr
-      className={selected ? "case-row is-selected" : "case-row"}
-      onClick={(event) => {
-        if (!(event.target as HTMLElement).closest("a")) {
-          open();
-        }
-      }}
-    >
-      <td className="col-nr mono nowrap">{entry.number}</td>
-      <td className="case-title-cell">
-        <span className="case-meta small">
-          <span className="mono">{entry.number}</span> · {services(entry)} ·{" "}
-          {formatDate(entry.created_at)}
+    <li>
+      <a
+        className="case-item ev-item"
+        href={path}
+        aria-current={selected ? "true" : undefined}
+        onClick={onClick}
+      >
+        <span className="case-item-head">
+          <span className="mono small">{entry.number}</span>
+          <span className={`pill ${state.pill}`}>{state.label}</span>
         </span>
-        <a
-          href={path}
-          aria-current={selected ? "true" : undefined}
-          onClick={(event) => {
-            const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
-            if (event.button !== 0 || modified) {
-              return;
-            }
-            event.preventDefault();
-            open();
-          }}
-        >
-          {entry.title}
-        </a>
-        {entry.major_change && <span className="pill pill-neutral ev-major">Größere Änderung</span>}
-      </td>
-      <td className="col-extra">{services(entry)}</td>
-      <td className="col-extra nowrap">{formatDate(entry.created_at)}</td>
-      <td className="col-extra">{entry.last_editor ?? "–"}</td>
-      <td className="nowrap">
-        <span className={`pill ${ENTRY_STATES[entry.status].pill}`}>
-          {ENTRY_STATES[entry.status].label}
+        <strong className="ev-item-title">{entry.title}</strong>
+        <span className="small ev-item-meta">
+          <span>
+            {entry.services[0] ?? "–"} · {entry.kind ?? SOURCE_LABELS[entry.source] ?? entry.source}
+          </span>
+          {entry.action_required_by && (
+            <span className="ev-due">bis {formatDate(entry.action_required_by)}</span>
+          )}
         </span>
-      </td>
-    </tr>
+      </a>
+    </li>
   );
 }
 
@@ -160,217 +181,8 @@ function NewEntryForm({ software, onCancel }: { software: SoftwareKey; onCancel:
   );
 }
 
-/** Ansicht eines Eintrags: Angaben, Text der Meldung, Verlauf mit Notizen. */
-function EntryDetail({
-  entryId,
-  onChanged,
-  onClose,
-}: {
-  entryId: number;
-  onChanged: () => void;
-  onClose: () => void;
-}) {
-  const [entry, setEntry] = useState<Entry | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
-  const [note, setNote] = useState("");
-  const [notice, setNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const noteId = useId();
-
-  useEffect(() => {
-    let active = true;
-    fetchEntry(entryId).then(
-      (loaded) => active && setEntry(loaded),
-      (problem: unknown) =>
-        active && setFailed(errorText(problem, "Der Eintrag konnte nicht geladen werden.")),
-    );
-    return () => {
-      active = false;
-    };
-  }, [entryId]);
-
-  if (failed) {
-    return (
-      <p role="alert" className="hint-box hint-bad">
-        {failed}
-      </p>
-    );
-  }
-  if (!entry) {
-    return <p role="status">Wird geladen …</p>;
-  }
-
-  const run = (action: () => Promise<Entry>) => {
-    setBusy(true);
-    setNotice(null);
-    action().then(
-      (updated) => {
-        setEntry(updated);
-        setNote("");
-        setBusy(false);
-        onChanged();
-      },
-      (problem: unknown) => {
-        setBusy(false);
-        setNotice(errorText(problem, "Das hat nicht geklappt."));
-      },
-    );
-  };
-  const submitNote = (event: FormEvent) => {
-    event.preventDefault();
-    if (!note.trim()) {
-      setNotice("Bitte eine Notiz eingeben.");
-      return;
-    }
-    run(() => addNote(entry.id, note.trim()));
-  };
-  const done = entry.status === "abgeschlossen";
-
-  return (
-    <>
-      <section className="panel" aria-labelledby="eintrag-titel">
-        <div className="panel-head case-head">
-          <div>
-            <p className="small">
-              <span className="mono">{entry.number}</span> ·{" "}
-              {SOURCE_LABELS[entry.source] ?? entry.source} · {formatDate(entry.created_at)}
-            </p>
-            <h2 id="eintrag-titel">{entry.title}</h2>
-            <p className="small">
-              <span className={`pill ${ENTRY_STATES[entry.status].pill}`}>
-                {ENTRY_STATES[entry.status].label}
-              </span>
-              {entry.last_editor ? ` Zuletzt: ${entry.last_editor}` : ""}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="button button-secondary case-close"
-            aria-label="Ansicht schließen"
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </div>
-        <div className="detail-body">
-          <dl className="facts">
-            <div>
-              <dt>Dienst</dt>
-              <dd>{services(entry)}</dd>
-            </div>
-            {entry.source === "nachrichtencenter" && entry.source_ref && (
-              <div>
-                <dt>Meldung</dt>
-                <dd className="mono">{entry.source_ref}</dd>
-              </div>
-            )}
-            {entry.published_at && (
-              <div>
-                <dt>Veröffentlicht</dt>
-                <dd>{formatDate(entry.published_at)}</dd>
-              </div>
-            )}
-            {entry.action_required_by && (
-              <div>
-                <dt>Handeln bis</dt>
-                <dd>{formatDate(entry.action_required_by)}</dd>
-              </div>
-            )}
-            {entry.major_change && (
-              <div>
-                <dt>Art</dt>
-                <dd>Größere Änderung</dd>
-              </div>
-            )}
-          </dl>
-          {entry.body && (
-            <details className="ev-body-wrap" open>
-              <summary>Text der Meldung</summary>
-              <div className="ev-body">{entry.body}</div>
-            </details>
-          )}
-        </div>
-      </section>
-
-      <section className="panel" aria-labelledby="eintrag-verlauf">
-        <div className="panel-head">
-          <h2 id="eintrag-verlauf">Notizen und Verlauf</h2>
-        </div>
-        <div className="detail-body">
-          {notice && (
-            <p role="alert" className="hint-box hint-bad">
-              {notice}
-            </p>
-          )}
-          {entry.notes.length === 0 ? (
-            <p className="empty">Noch keine Notizen.</p>
-          ) : (
-            <ol className="timeline">
-              {entry.notes.map((item) => (
-                <li key={item.id}>
-                  <div className="timeline-head">
-                    <strong>{NOTE_LABELS[item.kind] ?? item.kind}</strong>
-                    <span className="small">
-                      {formatDate(item.created_at)} · {item.author ?? "Werkbank"}
-                    </span>
-                  </div>
-                  {item.text && <span className="ev-note">{item.text}</span>}
-                </li>
-              ))}
-            </ol>
-          )}
-          {entry.can_edit && (
-            <form className="settings-form form-stack ev-note-form" onSubmit={submitNote}>
-              <label htmlFor={noteId}>{done ? "Notiz zum Wiederöffnen (optional)" : "Notiz"}</label>
-              <textarea
-                id={noteId}
-                value={note}
-                rows={3}
-                maxLength={NOTE_MAX}
-                onChange={(event) => setNote(event.target.value)}
-              />
-              <div className="project-actions">
-                {done ? (
-                  <button
-                    type="button"
-                    className="button"
-                    disabled={busy}
-                    onClick={() => run(() => reopenEntry(entry.id, note.trim()))}
-                  >
-                    Wieder öffnen
-                  </button>
-                ) : (
-                  <>
-                    <button type="submit" className="button" disabled={busy}>
-                      Notiz anfügen
-                    </button>
-                    <button
-                      type="button"
-                      className="button button-secondary"
-                      disabled={busy}
-                      onClick={() => run(() => closeEntry(entry.id, note.trim()))}
-                    >
-                      Abschließen
-                    </button>
-                  </>
-                )}
-              </div>
-              {!done && (
-                <p className="small">
-                  „Abschließen“ nimmt den Text oben als letzte Notiz mit, wenn du etwas eingetragen
-                  hast.
-                </p>
-              )}
-            </form>
-          )}
-        </div>
-      </section>
-    </>
-  );
-}
-
-/** Evergreen › Software: Einträge als Tabelle, ein gewählter Eintrag öffnet rechts daneben.
- *  Schmal: erst die Liste, gewählt nur die Ansicht mit „Zur Liste“. */
+/** Evergreen › Software: Liste und Ansicht (spec.md 8.3). Links die Liste mit Suche, Status
+ *  und Gruppen, rechts die Ansicht; schmal erst die Liste, gewählt nur die Ansicht. */
 export function EntriesPage({
   software,
   entryId,
@@ -382,40 +194,56 @@ export function EntriesPage({
 }) {
   const canEdit = roles.includes(EDITOR_ROLE);
   const [filter, setFilter] = useState<EntryFilter>("offen");
-  const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
+  const [hideInfo, setHideInfo] = useState(readHideInfo);
+  const [reload, setReload] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [list, setList] = useState<{ key: string; data: EntryList } | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
   const query = useDebounced(search);
-  const paged = usePagedList<EntrySummary, { open: number; new: number }>(
-    `${software}|${filter}|${query}`,
-    reload,
-    (offset, limit) =>
-      fetchEntries(software, filter, query, offset, limit).then((result) => ({
-        items: result.entries,
-        total: result.total,
-        extra: { open: result.open, new: result.new },
-      })),
-    "Die Einträge konnten nicht geladen werden.",
-  );
-  const entries = paged.items;
-  const openCount = paged.extra ? paged.extra.open : null;
-  const newCount = paged.extra ? paged.extra.new : null;
+  const infoId = useId();
+  const key = `${software}|${filter}|${query}|${hideInfo}`;
+
+  useEffect(() => {
+    let active = true;
+    fetchEntries(software, filter, query, hideInfo).then(
+      (data) => {
+        if (active) {
+          setList({ key, data });
+          setFailed(null);
+        }
+      },
+      (problem: unknown) =>
+        active && setFailed(errorText(problem, "Die Einträge konnten nicht geladen werden.")),
+    );
+    return () => {
+      active = false;
+    };
+  }, [software, filter, query, hideInfo, reload, key]);
+
+  const data = list?.data ?? null;
+  const entries = list && list.key === key ? list.data.entries : null;
   const listPath = entriesPath(software);
   const backToList = () => navigate(listPath);
-  const layoutRef = useRef<HTMLDivElement>(null);
-  const [split, changeSplit] = useSplit(SPLIT_KEY);
   const name = SOFTWARE[software] ?? software;
+  const counts: Record<EntryFilter, number | null> = {
+    offen: data ? data.open : null,
+    neu: data ? data.new : null,
+    frist: data ? data.due : null,
+    abgeschlossen: data ? data.done : null,
+  };
+  const groups = entries && filter === "offen" ? groupEntries(entries) : null;
 
   return (
-    <div className="page page-wide case-page">
+    <div className="page page-wide ev-page">
       <header className="page-head case-top">
         <div>
           <p className="module-label">Evergreen</p>
           <h1>{name}</h1>
         </div>
-        {openCount !== null && (
+        {data && (
           <p className="case-count small">
-            {openCount} offen{newCount ? `, davon ${newCount} neu` : ""}
+            {data.open} offen{data.new ? `, davon ${data.new} neu` : ""}
           </p>
         )}
         {canEdit && !creating && (
@@ -428,91 +256,88 @@ export function EntriesPage({
           </button>
         )}
       </header>
-      {paged.error && (
+      {failed && (
         <p role="alert" className="hint-box hint-bad">
-          {paged.error}
+          {failed}
         </p>
       )}
       {creating && <NewEntryForm software={software} onCancel={() => setCreating(false)} />}
-      <FilterBar
-        search={{
-          label: "Einträge durchsuchen",
-          value: search,
-          placeholder: "Nummer, Titel, Meldung (MC…), Dienst …",
-          onChange: setSearch,
-        }}
-        status={{
-          label: "Status",
-          value: filter,
-          onChange: setFilter,
-          options: ENTRY_FILTERS.map((item) => ({
-            value: item.id,
-            label: item.label,
-            count: item.id === "offen" ? openCount : item.id === "neu" ? newCount : null,
-          })),
-        }}
-      />
-      <div
-        ref={layoutRef}
-        className={
-          entryId === null
-            ? "case-layout case-layout-table"
-            : "case-layout case-layout-table case-layout-detail"
-        }
-        style={{ "--case-split": split } as CSSProperties}
-      >
-        <div className="panel case-list">
+      <div className={entryId === null ? "case-layout" : "case-layout case-layout-detail"}>
+        <nav className="panel case-list ev-list" aria-label={`Einträge ${name}`}>
+          <div className="case-filters">
+            <FilterBar
+              plain
+              search={{
+                label: "Einträge durchsuchen",
+                value: search,
+                placeholder: "Nummer, Titel, MC…, Dienst …",
+                onChange: setSearch,
+              }}
+              status={{
+                label: "Status",
+                value: filter,
+                onChange: setFilter,
+                options: ENTRY_FILTERS.map((item) => ({
+                  value: item.id,
+                  label: item.label,
+                  count: counts[item.id],
+                })),
+              }}
+            />
+            <label className="check-label ev-info-toggle" htmlFor={infoId}>
+              <input
+                id={infoId}
+                type="checkbox"
+                className="check"
+                checked={hideInfo}
+                onChange={(event) => {
+                  setHideInfo(event.target.checked);
+                  storeHideInfo(event.target.checked);
+                }}
+              />
+              Reine Info-Meldungen ausblenden
+            </label>
+          </div>
           <div className="case-scroll">
-            {!entries && !paged.error && <p role="status">Wird geladen …</p>}
+            {!entries && !failed && <p role="status">Wird geladen …</p>}
             {entries && entries.length === 0 && (
               <p className="empty">
-                {query.trim()
-                  ? "Kein Eintrag passt zur Suche."
-                  : "Keine Einträge in diesem Status."}
+                {query.trim() ? "Kein Eintrag passt zur Suche." : "Keine Einträge in dieser Liste."}
               </p>
             )}
-            {entries && entries.length > 0 && (
-              <table className="case-table" aria-label={`Einträge ${name}`}>
-                <thead>
-                  <tr>
-                    <th scope="col" className="col-nr">
-                      Nr.
-                    </th>
-                    <th scope="col">Titel</th>
-                    <th scope="col" className="col-extra">
-                      Dienst
-                    </th>
-                    <th scope="col" className="col-extra">
-                      Eingang
-                    </th>
-                    <th scope="col" className="col-extra">
-                      Bearbeitet von
-                    </th>
-                    <th scope="col">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entries.map((entry) => (
-                    <EntryRow key={entry.id} entry={entry} selected={entry.id === entryId} />
-                  ))}
-                </tbody>
-              </table>
+            {groups &&
+              groups.map((group) => (
+                <section key={group.key} className="ev-group" aria-labelledby={`ev-g-${group.key}`}>
+                  <h2 id={`ev-g-${group.key}`} className="ev-group-head">
+                    <span>{group.label}</span>
+                    <span className="ev-group-count">{group.entries.length}</span>
+                  </h2>
+                  <ul>
+                    {group.entries.map((entry) => (
+                      <EntryItem key={entry.id} entry={entry} selected={entry.id === entryId} />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            {entries && !groups && entries.length > 0 && (
+              <ul>
+                {entries.map((entry) => (
+                  <EntryItem key={entry.id} entry={entry} selected={entry.id === entryId} />
+                ))}
+              </ul>
             )}
-            {entries && (
-              <MoreButton
-                shown={entries.length}
-                total={paged.total}
-                loading={paged.loadingMore}
-                onMore={paged.more}
-              />
+            {entries && data && data.total > entries.length && (
+              <p className="small ev-more" role="status">
+                {entries.length} von {data.total} Einträgen – grenze die Suche ein (höchstens{" "}
+                {LIST_MAX}).
+              </p>
             )}
           </div>
-        </div>
-        {entryId !== null && (
-          <SplitHandle value={split} onChange={changeSplit} container={() => layoutRef.current} />
-        )}
+        </nav>
         <div className="case-main">
-          {entryId !== null && (
+          {entryId === null ? (
+            <Placeholder>Wähle links einen Eintrag, um ihn anzusehen und zu bewerten.</Placeholder>
+          ) : (
             <>
               <a
                 className="case-back"
@@ -527,7 +352,7 @@ export function EntriesPage({
               <EntryDetail
                 key={entryId}
                 entryId={entryId}
-                onChanged={() => setReload(reload + 1)}
+                onChanged={() => setReload((value) => value + 1)}
                 onClose={backToList}
               />
             </>

@@ -87,8 +87,8 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Werkbank.Admin` | Kern | Verwaltung: Module, Konnektoren, Kommentarregeln, Benachrichtigungsregeln, Audit-Log vollständig |
 | `Config.Reader` | M365-Konfiguration | Einstellungen, Verlauf, Änderungen, Snapshots ansehen und exportieren |
 | `Config.Reviewer` | M365-Konfiguration | zusätzlich Änderungen bewerten, Beschreibungen und Begründungen pflegen, Soll-Werte setzen |
-| `Evergreen.Reader` | Evergreen | Einträge mit Notizen ansehen; keine Aufgaben und Benachrichtigungen |
-| `Evergreen.Editor` | Evergreen | Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen; Aufgabe und Benachrichtigung bei neuen Einträgen |
+| `Evergreen.Reader` | Evergreen | Einträge mit Bewertung und Notizen ansehen; keine Aufgaben und Benachrichtigungen |
+| `Evergreen.Editor` | Evergreen | Einträge anlegen, bewerten, Notizen anfügen, abschließen und wieder öffnen; Aufgabe und Benachrichtigung bei neuen Einträgen |
 | `Tools.User` | IT-Tools | Bereich IT-Tools öffnen. Die Tools rechnen vollständig im Browser und haben keine Daten auf dem Server; die Rolle steuert deshalb nur, wer den Bereich sieht |
 | `Tenant.Reader` | Tenant | Lizenzen, Benutzerzahlen und Nutzung der Dienste mit Verlauf, Zertifikate und Secrets, Dienststatus ansehen |
 | `Budget.Editor` | IT-Budget | Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen |
@@ -399,7 +399,9 @@ Evergreen ist nur für die IT (seit 0.76; vorher Freigabe-Ablauf mit Betriebsrat
 
 ### 8.1 Quellen für Einträge
 
-1. **Nachrichtencenter** (Graph `admin/serviceAnnouncement/messages`): Der Worker liest alle 6 Stunden (`MESSAGE_CENTER_INTERVAL_HOURS`) die seit dem letzten Abruf geänderten Meldungen, beim ersten Mal die der letzten 30 Tage. Aktiv, sobald der Collector eingerichtet ist; die Collector-App braucht `ServiceMessage.Read.All`. **Jede** Meldung wird ein Eintrag mit Status „neu“. Übernommen werden Titel, Dienste, Kategorie, „Major Change“, „Action required by“, Veröffentlichung, letzte Änderung und der Text ohne HTML. Ändert Microsoft eine Meldung, werden die Angaben überschrieben und im Verlauf vermerkt („Meldung aktualisiert“); der Status bleibt.
+1. **Nachrichtencenter** (Graph `admin/serviceAnnouncement/messages`): Der Worker liest alle 6 Stunden (`MESSAGE_CENTER_INTERVAL_HOURS`) die seit dem letzten Abruf geänderten Meldungen, beim ersten Mal die der letzten 30 Tage. Aktiv, sobald der Collector eingerichtet ist; die Collector-App braucht `ServiceMessage.Read.All`. **Jede** Meldung wird ein Eintrag mit Status „neu“. Übernommen werden Titel, Dienste, Kategorie, Kennzeichen (`tags`, z. B. „User impact“, „Admin impact“, „New feature“, „Feature update“, „Retirement“), „Major Change“, „Action required by“, Veröffentlichung, letzte Änderung und der Text ohne HTML. Ändert Microsoft eine Meldung, werden die Angaben überschrieben und im Verlauf vermerkt („Meldung aktualisiert“); der Status bleibt.
+   - **Abschnitte:** Beim Einlesen wird der Text an den Überschriften der Meldung zerlegt (z. B. „What and why“, „When this will happen:“, „How this affects your organization:“, „What you need to do to prepare:“), bevor das HTML entfernt wird. Gespeichert wird die Liste der Abschnitte (Überschrift, Text). Findet die Werkbank keine bekannten Überschriften, gibt es einen einzigen Abschnitt ohne Überschrift, und die Meldung wird als Ganzes angezeigt.
+   - **Zeitplan geändert:** Ändert sich bei einer Aktualisierung der Abschnitt „When this will happen“, bleibt der vorherige Text als „vorheriger Zeitplan“ mit Zeitpunkt erhalten (immer nur der letzte), und der Verlauf vermerkt „Zeitplan geändert“.
 2. **Von Hand** (`Evergreen.Editor`): Titel, optional Dienst und Beschreibung.
 3. **Erkannte Änderung** aus M365-Konfiguration (`Evergreen.Editor`, Seite „Änderungen“): Titel aus Objekt, Eigenschaft und Art, Text mit Pfad, Vorher, Nachher und Urheber. Höchstens ein Eintrag je Änderung.
 
@@ -420,9 +422,45 @@ Doppelte Einträge verhindert die Kombination aus Quelle und Kennung (z. B. `MC1
 
 ### 8.3 Liste und Ansicht
 
-- Nummer `EV-JJJJ-NNN`. Tabelle wie die Vorgänge im IT-Bestand: Nr., Titel (mit Kennzeichen „Größere Änderung“), Dienst, Eingang, Bearbeitet von (wer zuletzt etwas eingetragen hat), Status; Filter Offen, Neu, Bearbeitet, Abgeschlossen, Alle; Suche in Nummer, Titel, Kennung der Meldung, Diensten und Text; 50 je Seite.
-- Ansicht rechts daneben mit einstellbarer Breite (`werkbank-evergreen-breite` im Browser), schmal über die ganze Breite mit „Zur Liste“.
+Muster „Liste und Ansicht“ aus `design.md` (seit 0.83; vorher Tabelle mit Ansicht rechts).
+
+- Nummer `EV-JJJJ-NNN`. Links eine Liste mit fester Breite (280–360 px) und fester Höhe bis zum unteren Rand; sie scrollt für sich, die Ansicht rechts bleibt stehen.
+- Oben in der Liste: Suche (Nummer, Titel, Kennung der Meldung, Dienste, Text), Status als Chips mit Anzahl – **Offen** (Standard: neu und bearbeitet), **Neu**, **Mit Frist** (offen und „Handeln bis“ gesetzt), **Abgeschlossen** –, bei Platzmangel seitlich scrollbar; darunter der Schalter „Reine Info-Meldungen ausblenden“ (Standard an, `werkbank-evergreen-info` im Browser). Reine Info-Meldung: Kategorie `stayInformed` und weder „User impact“ noch „Admin impact“ in den Kennzeichen. Am Handy wie alle Filter (`design.md`): Status als Auswahl.
+- Offene Einträge stehen in Gruppen mit Zähler, deren Überschriften beim Scrollen oben haften: 1. **Mit Frist** (nach Frist, früheste zuerst), 2. **Neu**, 3. **In Bearbeitung**; innerhalb von 2 und 3 neueste zuerst. Die Filter „Neu“ und „Abgeschlossen“ zeigen eine Liste ohne Gruppen. Die ganze Liste wird geladen (keine Seiten mehr); bei mehr als 500 Treffern Hinweis, die Suche einzugrenzen.
+- Listeneintrag: Nummer (Schrift für Werte) und Status-Badge in einer Zeile, Titel (höchstens zwei Zeilen, dann abgeschnitten), darunter Dienst · Art und gegebenenfalls „bis TT.MM.JJJJ“ in Orange. Der ganze Eintrag ist ein Link (`/evergreen/m365/<ID>`), gewählt mit Hintergrund, Balken links und `aria-current`.
+- Ohne Auswahl zeigt die Ansicht den Platzhalter. Unter 1100 px erst nur die Liste, gewählt nur die Ansicht mit „‹ Zur Liste“; unter 1200 px ist das Seitenmenü eingeklappt (Bereichsleiste bleibt, „Menü ausklappen“ öffnet es wieder).
 - Aufgabe auf der Startseite und Benachrichtigung „Neue Einträge“ nur für `Evergreen.Editor`.
+
+### 8.4 Ansicht eines Eintrags
+
+**Steckbrief** (oberste Karte):
+
+- Kopfzeile klein: EV-Nummer · Kennung der Meldung (MC…) · „veröffentlicht am …“, rechts das Status-Badge. Darunter der Titel (H2).
+- Badges: Dienst (grau); **Art** aus den Kennzeichen – „Neue Funktion“, „Funktionsupdate“, „Änderung“ (blau), „Abkündigung“ (rot); „Betrifft Nutzer“, „Betrifft Admins“, „Größere Änderung“ und „Handlung nötig“ (orange, wenn „Handeln bis“ gesetzt ist).
+- Vier Kacheln, die umbrechen: **Betroffen** (z. B. „Alle Nutzer“, „Admins“), **Standard** (nach dem Rollout an, aus oder entfällt), **Steuerbar** (ja/nein und womit), **Handeln bis** (Datum und „noch N Tage“). Eine Kachel mit Frist oder „standardmäßig eingeschaltet“ ist orange hinterlegt.
+
+**Rollout** als Zeitstrahl:
+
+- Monate als Spalten (vom ersten bis zum letzten Monat der Phasen, mindestens der aktuelle Monat), je Phase ein Balken (z. B. „Targeted Release“, „Allgemein verfügbar“), senkrechte Markierung „heute“. Abgeschlossene Phasen gefüllt, kommende umrandet.
+- Hat sich der Zeitplan geändert (8.1), erscheint der Hinweis „Zeitplan geändert: vorher …“; liegen für den alten Plan Phasen mit Datum vor, stehen sie schraffiert mit gestricheltem Rand darüber.
+- Die Grafik ist für Screenreader verborgen; dieselben Phasen mit Datum stehen zusätzlich als Liste darunter (auch ohne Grafik lesbar).
+- Ohne Phasen: Hinweis „Noch kein Zeitplan eingetragen“ und der Abschnitt „When this will happen“ als Text.
+
+**Drei Reiter** darunter (echte Tabs: `role="tablist"`, Pfeiltasten, Pos1/Ende):
+
+1. **Unsere Bewertung** (Standard)
+   - Kurzfassung (Klartext für Menschen ohne IT-Hintergrund), Was ändert sich für Mitarbeitende?, Schulung / Kommunikation (je Text, höchstens 4000 Zeichen).
+   - **Mitbestimmungsrelevant?** Auswahl Ja / Nein / Noch prüfen (Radiogruppe) und Begründung. Hilfetext: „Eignet sich die Funktion zur Leistungs- oder Verhaltenskontrolle, oder verarbeitet sie neue personenbezogene Daten?“
+   - **Verknüpfte Einstellung** aus der M365-Konfiguration: Pfad, aktueller Wert als Badge und Link „Einstellung und Verlauf öffnen“ (nur mit Recht auf die M365-Konfiguration; sonst nur der Pfad). Verknüpft wird von Hand über eine Auswahl mit Suche (`design.md`); höchstens eine Einstellung je Eintrag, „Verknüpfung lösen“ möglich.
+   - Steckbrief-Felder (Betroffen, Standard, Steuerbar) und Rollout-Phasen (Name, Beginn, Ende als Monat, höchstens 6) werden ebenfalls hier bearbeitet.
+   - **Vorschläge per Regeln** (keine KI, keine Übertragung von Daten): Beim Einlesen und bei jeder Aktualisierung erkennt die Werkbank im Abschnitt „When this will happen“ Zeilen der Form „<Phase>: <Zeitangabe>“ (z. B. „Targeted Release: early January 2027“, „General Availability (Worldwide): late January 2027 to late February 2027“; Monatsnamen englisch, „early/mid/late“ werden ignoriert, Phasen auf Deutsch benannt: Targeted Release, Allgemein verfügbar, Vorschau, GCC …) und legt daraus Phasen an. Aus den Kennzeichen folgt „Betroffen“ („Nutzer“, „Admins“, „Nutzer und Admins“). Vorgeschlagene Werte tragen das Badge „Vorschlag, ungeprüft“ (grau) und gelten als geprüft, sobald jemand die Bewertung speichert. Von Hand geprüfte Werte überschreibt eine Aktualisierung nie; ungeprüfte Vorschläge werden neu berechnet.
+   - Ändert Microsoft den Zeitplan (8.1), werden die bisherigen Phasen als „vorher“ gesichert (schraffiert im Zeitstrahl), und die neuen Phasen gelten wieder als Vorschlag.
+   - „Bewertung speichern“ (Hauptaktion). „Als BR-Vorlage übernehmen“ (Nebenaktion) ist vorgesehen, aber noch nicht umgesetzt und wird nicht angezeigt (16, Punkt 16).
+2. **Text von Microsoft:** der Originaltext nach Abschnitten in einklappbaren Blöcken (`<details>`, `lang="en"`), der erste offen; darüber „Zuletzt von Microsoft geändert: …“. Einträge von Hand oder aus erkannten Änderungen zeigen hier ihre Beschreibung.
+3. **Notizen und Verlauf:** Verlauf, Notiz, Abschließen und Wieder öffnen wie in 8.2.
+
+- Lesen alle mit `Evergreen.Reader` oder `Evergreen.Editor`; Bewertung, Steckbrief, Phasen und Verknüpfung ändern nur `Evergreen.Editor`, auch an abgeschlossenen Einträgen. Für Leser sind die Felder Text, nicht Formular.
+- Jede gespeicherte Änderung steht im Verlauf als „Bewertung geändert“ mit den geänderten Feldern (Feldname, vorher, nachher; lange Texte gekürzt) und im Audit-Log (`eintrag.bewertet`). Eine Bewertung setzt den Status „neu“ auf „bearbeitet“ wie eine Notiz.
 
 ---
 
@@ -607,7 +645,8 @@ Evergreen:
 | Tabelle | Wichtige Felder |
 |---|---|
 | `ev_entries` | id, jahr, nummer, software, titel, quelle, quelle_ref, dienste (JSONB), kategorie, major, handeln_bis, veroeffentlicht, geaendert_ms, text, status, angelegt_von, angelegt, aktualisiert, abgeschlossen |
-| `ev_notes` | id, entry_id, art (notiz, abgeschlossen, geoeffnet, aktualisiert), text, user_id?, zeitpunkt |
+| `ev_entries` (seit 0.83 zusätzlich) | kennzeichen (JSONB), abschnitte (JSONB: Überschrift, Text), zeitplan_vorher, zeitplan_geaendert, betroffen, standard (an, aus, entfaellt), steuerbar (ja, nein), steuerbar_womit, phasen (JSONB: Name, Beginn, Ende), phasen_vorher (JSONB), vorschlag (JSONB: Felder, die noch Vorschlag sind), kurzfassung, aenderung_mitarbeitende, schulung, mitbestimmung (ja, nein, pruefen), mitbestimmung_grund, setting_id? |
+| `ev_notes` | id, entry_id, art (notiz, abgeschlossen, geoeffnet, aktualisiert, zeitplan, bewertet), text, details (JSONB, geänderte Felder), user_id?, zeitpunkt |
 
 ---
 
@@ -637,7 +676,7 @@ Evergreen:
 | IT-Budget › Konten | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Liste der Konten; anlegen, ändern, stilllegen |
 | IT-Budget › Einstellungen | Budget.Manager | Beginn und Bezeichnung des Geschäftsjahrs, Kostenstelle; Liste der Tags anlegen, umbenennen, löschen |
 | M365 › Snapshots | Config.* | Abrufe mit Status; Vergleich zweier Abrufe (neu, geändert, entfernt mit Vorher/Nachher); Stand eines Abrufs als JSON und CSV |
-| Evergreen › Microsoft 365 | Evergreen.Reader, Evergreen.Editor | Tabelle mit Filtern (Offen, Neu, Bearbeitet, Abgeschlossen, Alle) und Suche, Ansicht rechts: Angaben, Text der Meldung, Notizen und Verlauf; Bearbeiter: Neuer Eintrag, Notiz anfügen, Abschließen, Wieder öffnen |
+| Evergreen › Microsoft 365 | Evergreen.Reader, Evergreen.Editor | Liste und Ansicht (8.3): Liste mit Suche, Status (Offen, Neu, Mit Frist, Abgeschlossen), „Reine Info-Meldungen ausblenden“ und Gruppen; Ansicht mit Steckbrief, Rollout und Reitern Unsere Bewertung, Text von Microsoft, Notizen und Verlauf; Bearbeiter: Neuer Eintrag, Bewertung speichern, Notiz anfügen, Abschließen, Wieder öffnen |
 | Reports | später | Berichtsvorlagen, Download, geplanter Versand. Noch nicht gebaut; ohne Eintrag in der Navigation |
 | Verwaltung (eigener Bereich in der Navigation) | Admin (mit Step-up) | Seiten **Allgemein** (Branding, Aufbewahrung des Audit-Logs, Vorlauf für ablaufende Zertifikate und Secrets), **Rollen** (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), **Mail & Teams** (SMTP-Server, Teams), **Verbindungen** (KI-Texte, NetBox, Abfragen ins Internet) und **Audit-Log**. Später: Module, Kommentarregeln |
 | Verwaltung › Audit-Log | Admin | Filterbare Tabelle, Export |
@@ -853,3 +892,5 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 10 | Mail | Entschieden: Versand über einen SMTP-Server, der in der Verwaltung eingetragen wird (Absender dort). Benachrichtigungen selbst folgen in Phase 4 |
 | 11 | Copyright | Entschieden: `extrempro` |
 | 12 | ASVS-Version | Entschieden: OWASP ASVS 5.0.0 |
+| 16 | Evergreen: BR-Vorlage | Offen: Was „Als BR-Vorlage übernehmen“ erzeugt (Dokument, Eintrag für die IT-Kommission, PDF) und für wen |
+| 17 | Evergreen: Steckbrief automatisch | Entschieden: Vorschläge per Regeln (8.4), Rest von Hand. KI-Vorschläge vielleicht später, dann nach Abstimmung mit dem Datenschutz |
