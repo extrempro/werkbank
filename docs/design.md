@@ -37,6 +37,7 @@ Ziel: Jeder Screen sieht gleich aufgebaut aus und wird gleich bedient. Visuelle 
 - Tablet und Handy: Das Detail steht unter der Liste bzw. auf einer eigenen Seite mit „Zurück“.
 - Solange nichts gewählt ist, zeigt der Detailbereich auf breiten Bildschirmen einen schraffierten Platzhalter mit Hinweis (`components/Placeholder`).
 - Ausgewähltes Element sichtbar markiert (Rahmen bzw. Hintergrund **und** `aria-current`).
+- Ausnahme Gerätezuordnung: Das Detail öffnet als modale Seitenleiste von rechts (am Handy volle Breite), der Scan als Dialog in drei Schritten (am Handy bildschirmfüllend), weil beide Abläufe vor allem am Handy neben dem Gerät laufen. Am Handy Karten statt Tabelle; der Fortschritt steht als vier Striche neben dem Status-Badge.
 
 ## 3. Buttons und Aktionen
 

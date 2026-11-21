@@ -45,6 +45,7 @@ PAGES: dict[str, tuple[str, ...]] = {
     "/m365/zugangsdaten": (Role.TENANT_READER,),
     "/m365/dienststatus": (Role.TENANT_READER,),
     "/m365/nutzung": (Role.TENANT_READER,),
+    "/m365/geraete/zuordnung": (Role.DEVICES_ASSOCIATION,),
     "/evergreen/m365": EVERGREEN,
     "/budget": BUDGET,
     "/budget/planung": BUDGET,
