@@ -6,7 +6,7 @@ nur Bearbeiter. Status: neu → bearbeitet (erste Notiz oder Bewertung) → abge
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
@@ -14,11 +14,18 @@ from pydantic import BaseModel, Field
 from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.orm import Session
 
+from werkbank.core.ai import AiCompleterDep, AiError
 from werkbank.core.audit import write_audit
-from werkbank.core.deps import DbDep, require_roles
+from werkbank.core.deps import DbDep, SettingsDep, require_roles
 from werkbank.core.models import User
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
+from werkbank.modules.evergreen.ai_suggest import (
+    evergreen_ai_enabled,
+    load_evergreen_ai,
+    suggest,
+    used_last_hour,
+)
 from werkbank.modules.evergreen.models import (
     Codetermination,
     DefaultState,
@@ -140,6 +147,12 @@ class EntryOut(EntrySummaryOut):
     phases: list[Phase]
     phases_previous: list[Phase]
     suggested: list[str]
+    # Felder aus `suggested`, deren Vorschlag von der KI kommt
+    ai_suggested: list[str]
+    # Die KI wird beim nächsten Lauf gefragt
+    ai_pending: bool
+    # „KI-Vorschlag holen“ ist möglich (Schalter in der Verwaltung an)
+    ai_available: bool
     summary: str | None
     staff_change: str | None
     training: str | None
@@ -311,6 +324,9 @@ def _entry_out(db: Session, entry: EvEntry, user: CurrentUser) -> EntryOut:
         phases=[Phase(**item) for item in entry.phases or []],
         phases_previous=[Phase(**item) for item in entry.phases_previous or []],
         suggested=list(entry.suggested or []),
+        ai_suggested=list(entry.ai_suggested or []),
+        ai_pending=entry.ai_pending,
+        ai_available=evergreen_ai_enabled(db),
         summary=entry.summary,
         staff_change=entry.staff_change,
         training=entry.training,
@@ -615,6 +631,7 @@ def assess(
     if not changes and not confirmed:
         return _entry_out(db, entry, user)
     entry.suggested = []
+    entry.ai_suggested = []
     text = "Vorschläge bestätigt." if not changes else None
     note = add_note(db, entry, NoteKind.ASSESSED, text, user.user_id)
     note.details = changes or None
@@ -628,6 +645,54 @@ def assess(
         entry,
         {"felder": [change["field"] for change in changes]},
     )
+    db.commit()
+    return _entry_out(db, entry, user)
+
+
+AI_REPEAT_MINUTES = 10
+
+
+@router.post("/entries/{entry_id}/ai-suggestion")
+def ai_suggestion(
+    entry_id: EntryId,
+    user: Editor,
+    db: DbDep,
+    settings: SettingsDep,
+    completer: AiCompleterDep,
+) -> EntryOut:
+    """Fragt die KI sofort nach Rollout-Phasen und Steckbrief (spec.md 8.4)."""
+    entry = _entry(db, entry_id)
+    if entry.source != EntrySource.MESSAGE_CENTER:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vorschläge der KI gibt es nur für Meldungen aus dem Nachrichtencenter.",
+        )
+    try:
+        config = load_evergreen_ai(db, settings)
+    except AiError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    if config is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Die KI-Vorschläge für Evergreen sind in der Verwaltung ausgeschaltet.",
+        )
+    now = now_utc()
+    if entry.ai_at and entry.ai_at > now - timedelta(minutes=AI_REPEAT_MINUTES):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Die KI wurde zu diesem Eintrag gerade erst gefragt. "
+            f"Versuch es in {AI_REPEAT_MINUTES} Minuten noch einmal.",
+        )
+    if used_last_hour(db) >= config.texts_per_hour:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Die Höchstzahl an KI-Anfragen je Stunde ist erreicht. Versuch es später.",
+        )
+    try:
+        suggest(db, entry, config, completer, user.user_id)
+    except AiError as error:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(error)) from error
     db.commit()
     return _entry_out(db, entry, user)
 

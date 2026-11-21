@@ -10,6 +10,7 @@ afterEach(() => {
 
 const ai: AiSettingsData = {
   enabled: true,
+  evergreen: false,
   provider: "openai",
   base_url: "https://ki.example.com/v1",
   model: "beispiel-modell",
@@ -52,12 +53,14 @@ describe("AiSettings", () => {
     fireEvent.change(screen.getByLabelText("Neue Texte je Stunde (höchstens)"), {
       target: { value: "10" },
     });
+    fireEvent.click(screen.getByLabelText("Vorschläge für Evergreen einschalten"));
     fireEvent.click(screen.getByRole("button", { name: "KI-Einstellungen speichern" }));
     expect(await screen.findByText("Die KI-Einstellungen sind gespeichert.")).toBeVisible();
     expect(calls[0]?.url).toBe("/api/admin/settings/ai");
     expect(calls[0]?.init?.method).toBe("PUT");
     const body = JSON.parse(String(calls[0]?.init?.body));
     expect(body.texts_per_hour).toBe(10);
+    expect(body.evergreen).toBe(true);
     expect(body.provider).toBe("openai");
     expect("api_key" in body).toBe(false);
     expect(onChange).toHaveBeenCalled();

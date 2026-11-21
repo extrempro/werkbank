@@ -150,6 +150,12 @@ export interface Entry extends EntrySummary, Assessment {
   schedule_changed_at: string | null;
   phases_previous: Phase[];
   suggested: string[];
+  /** Felder aus `suggested`, deren Vorschlag von der KI kommt. */
+  ai_suggested: string[];
+  /** Die KI schaut sich die Meldung beim nächsten Lauf an. */
+  ai_pending: boolean;
+  /** „KI-Vorschlag holen“ ist eingeschaltet. */
+  ai_available: boolean;
   setting: LinkedSetting | null;
   notes: Note[];
   can_edit: boolean;
@@ -227,6 +233,11 @@ export function saveAssessment(
   body: Assessment & { setting_id: number | null },
 ): Promise<Entry> {
   return putJson(`${BASE}/entries/${id}/assessment`, body);
+}
+
+/** Fragt die KI sofort nach Rollout-Phasen und Steckbrief. */
+export function requestAiSuggestion(id: number): Promise<Entry> {
+  return postJson(`${BASE}/entries/${id}/ai-suggestion`, {});
 }
 
 /** Einstellungen der M365-Konfiguration zum Verknüpfen (für die Auswahl mit Suche). */

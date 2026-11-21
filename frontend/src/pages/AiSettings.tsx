@@ -21,6 +21,7 @@ interface AiSettingsProps {
 /** Verwaltung › Allgemein: Anbieter für KI-Texte (OpenAI-kompatibel oder Anthropic). */
 export function AiSettings({ ai, onChange }: AiSettingsProps) {
   const [enabled, setEnabled] = useState(ai.enabled);
+  const [evergreen, setEvergreen] = useState(ai.evergreen);
   const [provider, setProvider] = useState<AiProvider>(ai.provider);
   const [baseUrl, setBaseUrl] = useState(ai.base_url);
   const [model, setModel] = useState(ai.model);
@@ -37,6 +38,7 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
     event.preventDefault();
     const update: AiUpdate = {
       enabled,
+      evergreen,
       provider,
       base_url: baseUrl.trim(),
       model: model.trim(),
@@ -88,8 +90,8 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
     <section className="panel" aria-labelledby="ki-titel">
       <div className="panel-head">
         <h3 id="ki-titel">KI-Texte</h3>
-        <span className={ai.enabled ? "pill pill-ok" : "pill pill-neutral"}>
-          {ai.enabled ? "eingeschaltet" : "ausgeschaltet"}
+        <span className={ai.enabled || ai.evergreen ? "pill pill-ok" : "pill pill-neutral"}>
+          {ai.enabled || ai.evergreen ? "eingeschaltet" : "ausgeschaltet"}
         </span>
       </div>
       <form className="detail-body settings-form" onSubmit={onSave}>
@@ -107,6 +109,21 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
             onChange={(event) => setEnabled(event.target.checked)}
           />
           KI-Texte einschalten
+        </label>
+        <p className="small">
+          Evergreen: Die KI liest aus Meldungen von Microsoft die Rollout-Phasen und den Steckbrief
+          (Betroffen, Standard, Steuerbar). An den Anbieter gehen nur Titel, Dienste und Abschnitte
+          der Meldung, also öffentlicher Text von Microsoft, nie Notizen oder eure Bewertung. Die
+          Vorschläge sind als „KI-Vorschlag, ungeprüft“ markiert.
+        </p>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            className="check"
+            checked={evergreen}
+            onChange={(event) => setEvergreen(event.target.checked)}
+          />
+          Vorschläge für Evergreen einschalten
         </label>
         <div className="form-grid">
           <label>
@@ -186,7 +203,8 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
         </p>
         <p className="small" id={rateHint}>
           Begrenzt die Kosten beim Anbieter. Erlaubt sind {ai.texts_per_hour_min} bis{" "}
-          {ai.texts_per_hour_max}. Für gleichartige Einstellungen entsteht nur ein Text.
+          {ai.texts_per_hour_max}. Für gleichartige Einstellungen entsteht nur ein Text. Die Zahl
+          gilt je Bereich: für die Beschreibungen in M365 und für die Vorschläge in Evergreen.
         </p>
         {ai.api_key_set && (
           <label className="check-label">

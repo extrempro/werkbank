@@ -49,6 +49,7 @@ class NoteKind(StrEnum):
     UPDATED = "aktualisiert"
     SCHEDULE = "zeitplan"
     ASSESSED = "bewertet"
+    AI = "ki"
 
 
 class DefaultState(StrEnum):
@@ -130,6 +131,14 @@ class EvEntry(Base):
     setting_id: Mapped[int | None] = mapped_column(
         ForeignKey("cfg_settings.id", ondelete="SET NULL")
     )
+    # Seit 0.85: Vorschläge der KI (spec.md 8.4). Felder aus `suggested`, die von der KI kommen
+    ai_suggested: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    # Die KI soll (wieder) gefragt werden: neue Meldung oder geänderter Zeitplan
+    ai_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # Zeitpunkt der letzten Anfrage an die KI (für die Höchstzahl je Stunde)
+    ai_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     @property
     def number(self) -> str:

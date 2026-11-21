@@ -88,7 +88,10 @@ class SmtpOut(BaseModel):
 
 
 class AiOut(BaseModel):
+    # Beschreibungen für Einstellungen der M365-Konfiguration
     enabled: bool
+    # Vorschläge für Rollout-Phasen und Steckbrief in Evergreen
+    evergreen: bool
     provider: AiProvider
     base_url: str
     model: str
@@ -179,6 +182,8 @@ class SmtpIn(BaseModel):
 
 class AiIn(BaseModel):
     enabled: bool
+    # Fehlt die Angabe (ältere Oberfläche), bleiben die Vorschläge für Evergreen aus.
+    evergreen: bool = False
     # Fehlt die Angabe (ältere Oberfläche), bleibt es OpenAI-kompatibel.
     provider: AiProvider = "openai"
     base_url: str = Field(default="", max_length=300)
@@ -250,6 +255,7 @@ def _smtp_out(stored: Any, key_available: bool) -> SmtpOut:
 def _ai_out(stored: dict[str, Any], key_available: bool) -> AiOut:
     return AiOut(
         enabled=stored.get("enabled") is True,
+        evergreen=stored.get("evergreen") is True,
         provider=ai_provider(stored),
         base_url=str(stored.get("base_url") or ""),
         model=str(stored.get("model") or ""),
@@ -619,7 +625,7 @@ def update_ai(
                 detail="Auf dem Server fehlt die Schlüsseldatei (settings_key). "
                 "Ohne sie kann kein Schlüssel gespeichert werden.",
             ) from error
-    if body.enabled and not (body.base_url and body.model):
+    if (body.enabled or body.evergreen) and not (body.base_url and body.model):
         raise HTTPException(
             status_code=422, detail="Zum Einschalten sind Adresse und Modell nötig."
         )
@@ -630,6 +636,7 @@ def update_ai(
         )
     value = {
         "enabled": body.enabled,
+        "evergreen": body.evergreen,
         "provider": body.provider,
         "base_url": body.base_url,
         "model": body.model,
@@ -647,6 +654,7 @@ def update_ai(
         ip=client_ip(request),
         details={
             "enabled": body.enabled,
+            "evergreen": body.evergreen,
             "provider": body.provider,
             "base_url": body.base_url,
             "model": body.model,

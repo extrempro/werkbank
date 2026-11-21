@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.85.0] – 2026-11-21
+
+### Evergreen
+
+- **KI-Vorschläge für Rollout und Steckbrief** (spec.md 8.4, 6.9): Der KI-Anbieter aus der Verwaltung liest Rollout-Phasen, Betroffen, Standard und Steuerbar aus dem Text der Meldung von Microsoft (`modules/evergreen/ai_suggest.py`). Übergeben werden nur Titel, Dienste und die Abschnitte „When this will happen“, „How this affects your organization“ und „What you need to do to prepare“. Die Antwort muss ein festes JSON-Format haben (Pydantic-Prüfung, höchstens 6 Phasen, Monate `JJJJ-MM`), sonst wird sie verworfen. Vorschläge füllen nur ungeprüfte Felder und sind violett als „KI-Vorschlag, ungeprüft“ markiert (`ai_suggested`); die Regeln bleiben Ersatz und überschreiben KI-Vorschläge nicht
+- Gefragt wird bei neuen Meldungen und geändertem Zeitplan (stündlicher Auftrag `evergreen.ki_vorschlaege`, `ai_pending`), einmalig für alle offenen Meldungen (Migration `0058`) und über „KI-Vorschlag holen“ (`POST /api/evergreen/entries/{id}/ai-suggestion`, nur `Evergreen.Editor`, höchstens alle 10 Minuten je Eintrag). Die Höchstzahl je Stunde gilt für Evergreen gesamt. Verlauf „KI-Vorschlag“, Audit `eintrag.ki_vorschlag` bzw. `ki.vorschlaege` bei Fehlern
+- **Eigener Schalter** „Vorschläge für Evergreen einschalten“ in Verwaltung › KI-Texte (`evergreen` in den KI-Einstellungen), unabhängig von den Beschreibungen in M365
+- Neues Badge `pill-ki` (violett, Variablen `--farbe-ki-…` hell und dunkel) und Info-Symbol „KI-Vorschlag, ungeprüft“
+
+### Tests
+
+- Audit-Abfragen in `test_evergreen_api.py` sortiert und auf den Testlauf begrenzt (liefen je nach Reihenfolge anderer Tests unterschiedlich)
+
+### Dokumentation
+
+- `docs/spec.md` 6.9, 8.4 und offener Punkt 17, `docs/datenschutz.md` (was an den KI-Anbieter geht)
+
 ## [0.84.0] – 2026-11-21
 
 ### Handbuch

@@ -110,6 +110,11 @@ export const HELP = {
     text: "Diesen Wert hat die Werkbank aus der Meldung gelesen. Mit dem Speichern der Bewertung gilt er als geprüft.",
     topic: ["evergreen", "bewerten"],
   },
+  "evergreen.ki-vorschlag": {
+    term: "KI-Vorschlag, ungeprüft",
+    text: "Diesen Wert hat die KI aus dem Text von Microsoft gelesen. Prüf ihn; mit dem Speichern der Bewertung gilt er als geprüft.",
+    topic: ["evergreen", "bewerten"],
+  },
   "evergreen.mitbestimmung": {
     term: "Mitbestimmungsrelevant",
     text: "Eine Funktion ist mitbestimmungsrelevant, wenn sie sich zur Leistungs- oder Verhaltenskontrolle eignet oder neue personenbezogene Daten verarbeitet. Dann ist der Betriebsrat zu beteiligen.",
