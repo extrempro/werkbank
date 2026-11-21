@@ -265,7 +265,9 @@ test("Schnellsuche findet Seiten nach Name, Gruppe und Bereich", async ({
   await expect(dialog).toBeVisible();
   // Ohne Eingabe stehen die zuletzt besuchten Seiten da.
   await expect(dialog.getByText("Zuletzt besucht")).toBeVisible();
-  await expect(dialog.getByRole("option", { name: /Eingang/ })).toBeVisible();
+  await expect(
+    dialog.getByRole("option", { name: /Microsoft 365/ }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();

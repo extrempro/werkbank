@@ -41,7 +41,9 @@ test("Handy: Leiste unten, Menü als Blatt mit allen Bereichen", async ({
   await evergreen.getByRole("link", { name: /^Microsoft 365/ }).click();
   await expect(evergreen).toBeHidden();
   await expect(page).toHaveURL(/\/evergreen\/m365$/);
-  await expect(page.getByRole("heading", { name: "Vorgänge" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Microsoft 365" }),
+  ).toBeVisible();
 
   // Das Blatt zeigt jetzt gleich die Seiten von Evergreen; Esc schließt es.
   await toggle.click();

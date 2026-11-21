@@ -50,16 +50,16 @@ def upgrade() -> None:
     op.execute("DROP TABLE ev_old_instances")
 
     # Benachrichtigungen, Aufträge und Navigation, die es so nicht mehr gibt
-    kinds = sa.bindparam("kinds", OLD_KINDS, expanding=True)
     for table in (
         "notifications",
         "notification_mutes",
         "notification_channels",
         "notification_kinds",
     ):
+        # feste Tabellennamen aus dem Tupel oben, keine Eingabe
+        statement = f"DELETE FROM {table} WHERE kind IN :kinds"  # noqa: S608
         op.get_bind().execute(
-            # feste Tabellennamen aus dem Tupel oben, keine Eingabe
-            sa.text(f"DELETE FROM {table} WHERE kind IN :kinds").bindparams(kinds)  # noqa: S608
+            sa.text(statement).bindparams(sa.bindparam("kinds", OLD_KINDS, expanding=True))
         )
     op.execute(
         "DELETE FROM notification_marks WHERE key LIKE 'evergreen.schritt:%'"
