@@ -20,13 +20,6 @@ down_revision: str | None = "0051"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-OLD_KINDS = (
-    "evergreen.schritt",
-    "evergreen.kommentar",
-    "evergreen.rollout",
-    "evergreen.meldung",
-)
-
 
 def upgrade() -> None:
     # Alte Evergreen-Daten löschen
@@ -50,17 +43,22 @@ def upgrade() -> None:
     op.execute("DROP TABLE ev_old_instances")
 
     # Benachrichtigungen, Aufträge und Navigation, die es so nicht mehr gibt
-    for table in (
-        "notifications",
-        "notification_mutes",
-        "notification_channels",
-        "notification_kinds",
-    ):
-        # feste Tabellennamen aus dem Tupel oben, keine Eingabe
-        statement = f"DELETE FROM {table} WHERE kind IN :kinds"  # noqa: S608
-        op.get_bind().execute(
-            sa.text(statement).bindparams(sa.bindparam("kinds", OLD_KINDS, expanding=True))
-        )
+    op.execute(
+        "DELETE FROM notifications WHERE kind IN"
+        " ('evergreen.schritt', 'evergreen.kommentar', 'evergreen.rollout', 'evergreen.meldung')"
+    )
+    op.execute(
+        "DELETE FROM notification_mutes WHERE kind IN"
+        " ('evergreen.schritt', 'evergreen.kommentar', 'evergreen.rollout', 'evergreen.meldung')"
+    )
+    op.execute(
+        "DELETE FROM notification_channels WHERE kind IN"
+        " ('evergreen.schritt', 'evergreen.kommentar', 'evergreen.rollout', 'evergreen.meldung')"
+    )
+    op.execute(
+        "DELETE FROM notification_kinds WHERE kind IN"
+        " ('evergreen.schritt', 'evergreen.kommentar', 'evergreen.rollout', 'evergreen.meldung')"
+    )
     op.execute(
         "DELETE FROM notification_marks WHERE key LIKE 'evergreen.schritt:%'"
         " OR key LIKE 'evergreen.kommentar:%' OR key LIKE 'evergreen.rollout:%'"
