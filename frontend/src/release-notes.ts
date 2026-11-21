@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.86.0",
+    date: "2026-11-21",
+    summary:
+      "IT-Budget: Die Statistik ist neu, mit Überblick, Jahresvergleich der Konten und Tags.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Die Statistik hat jetzt drei Reiter: Überblick, Konten und Partner, Nach Tags. Oben wählst du das Jahr und ein früheres Jahr zum Vergleich.",
+          "Der Überblick zeigt Geplant, Ist, Verfügbar, Ausschöpfung und die Veränderung zum Vergleichsjahr im selben Zeitraum, dazu den Verlauf über die Monate, die Ausgaben je Monat und die nächsten Kündigungstermine.",
+          "Im Jahresvergleich siehst du je Konto oder je Art mehrere Jahre nebeneinander. Du wählst die Jahre selbst, vergleichst „Bis heute“ oder das ganze Jahr und stellst sie als Säulen oder Balken dar.",
+          "Die Auswertung nach Tags zeigt je Tag dieselben Jahre wie der Jahresvergleich.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.85.0",
     date: "2026-11-21",
     summary:

@@ -1340,7 +1340,19 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Die Statistik wertet Posten mit gewählten Tags über fünf Geschäftsjahre aus, als Diagramm und Tabelle. Vorgabe: Einer der Tags reicht; wahlweise müssen alle passen. Eine Auswahl lässt sich unter einem Namen speichern.",
+                text: "Die Statistik hat drei Reiter. Oben wählst du das Jahr, um das es geht, und ein früheres Jahr zum Vergleich (Vorgabe: das Vorjahr). Alle Beträge sind brutto; Ist sind gebuchte Rechnungen nach Rechnungsdatum.",
+              },
+              {
+                kind: "text",
+                text: "„Überblick“ zeigt Geplant, Ist, Verfügbar, Ausschöpfung und die Veränderung zum Vergleichsjahr im selben Zeitraum. Darunter stehen der Verlauf (Ist aufsummiert je Monat mit dem Vergleichsjahr und den erwarteten Kosten als Linie), die Ausgaben je Monat, die Konten mit der höchsten Ausschöpfung und eine Kachel zu den Verträgen mit den nächsten Kündigungsterminen. Tippst du einen Monat an, stehen seine Werte darüber; „Als Tabelle“ zeigt dieselben Zahlen.",
+              },
+              {
+                kind: "text",
+                text: "„Konten und Partner“ beginnt mit dem Jahresvergleich: je Konto (oder unter „Nach Art“ für laufende Kosten und Investitionen) ein Wert für jedes gewählte Jahr. Du wählst das oben gewählte Jahr und bis zu vier davor; jedes behält seine Farbe. Im laufenden Jahr vergleicht „Bis heute“ jedes Jahr bis zum selben Tag, „Ganzes Jahr“ nimmt für laufende und künftige Jahre die erwarteten Kosten (gestrichelt). Die Darstellung wählst du als Säulen, überlappende Balken oder Balken nebeneinander. Tippst du ein Konto an, siehst du seine Werte und rechts den Verlauf über fünf Jahre. Darunter stehen Plan und Ist je Konto und die größten Rechnungssteller.",
+              },
+              {
+                kind: "text",
+                text: "„Nach Tags“ wertet Posten mit gewählten Tags aus: je Tag eine Gruppe mit denselben Jahren wie im Jahresvergleich. Müssen alle gewählten Tags am Posten stehen, gibt es eine gemeinsame Gruppe. Darunter stehen die passenden Posten; eine Auswahl lässt sich unter einem Namen speichern. Für einen Ausblick wählst du oben ein künftiges Jahr.",
               },
             ],
             links: [

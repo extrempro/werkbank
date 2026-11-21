@@ -4,6 +4,8 @@ import { BASE_URL, chooseFilter, expectNoA11yViolations, loginAs } from "./helpe
 const ORIGIN = new URL(BASE_URL).origin;
 
 test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
+  // Ein langer Durchlauf durch alle Seiten des Budgets; die Vorgabe von 30 Sekunden reicht nicht.
+  test.setTimeout(90_000);
   // Eigene Kontonummer je Lauf, damit eine Wiederholung nicht an einem vorhandenen Konto scheitert.
   const number = `T${Date.now() % 100_000_000}`;
   await loginAs(page, ["Budget.Manager"], "Bodo Budget");
@@ -186,12 +188,12 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expectNoA11yViolations(page);
   await page.getByRole("link", { name: `Statistik zu „Tag ${number}“` }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Statistik" })).toBeVisible();
-  const yearRow = page
-    .getByRole("region", { name: "Erwartet und Ist je Geschäftsjahr" })
-    .getByRole("row", { name: new RegExp(`^${new Date().getFullYear()}`) });
-  await expect(yearRow).toContainText("1.500,00");
-  await expect(yearRow).toContainText("172,50");
-  await expect(page.getByRole("img", { name: /^Erwartet und Ist je Geschäftsjahr/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Nach Tags" })).toHaveAttribute("aria-selected", "true");
+  // Je Tag eine Gruppe; im laufenden Jahr „bis heute“: gebucht 172,50
+  await expect(page.getByRole("button", { name: new RegExp(`^Tag ${number}: `) })).toHaveAttribute(
+    "aria-label",
+    new RegExp(`^Tag ${number}: ${new Date().getFullYear()} 172,50`),
+  );
   await expect(
     page.getByRole("region", { name: "Budgetposten der Auswahl" }).getByRole("row", {
       name: new RegExp(`Posten ${number}`),
@@ -209,6 +211,21 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   // Ohne Zurückscrollen lägen deren Knöpfe teils unter der festen Kopfzeile, und axe meldet sie
   // als verdeckt. Geprüft wird daher von oben.
   await page.evaluate(() => window.scrollTo(0, 0));
+  await expectNoA11yViolations(page);
+
+  // Überblick und Jahresvergleich der Statistik
+  await page.getByRole("tab", { name: "Überblick" }).click();
+  await expect(
+    page.getByRole("heading", { name: new RegExp(`^Verlauf ${new Date().getFullYear()}`) }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Verträge" })).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.getByRole("tab", { name: "Konten und Partner" }).click();
+  await expect(page.getByRole("group", { name: "Jahre im Vergleich" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Testkonto Wartung: / }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Nach Art" }).click();
+  await expect(page.getByRole("button", { name: /^Laufende Kosten: / })).toBeVisible();
+  await page.getByRole("button", { name: "Überlappend" }).click();
   await expectNoA11yViolations(page);
 
   await page.goto("/budget");

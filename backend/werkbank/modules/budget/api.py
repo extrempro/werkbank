@@ -66,6 +66,16 @@ from werkbank.modules.budget.settings import (
     fiscal_year_range,
     load_settings,
 )
+from werkbank.modules.budget.statistics import (
+    CONTRACT_SOON_DAYS,
+    actual_until,
+    compare_accounts,
+    cutoff_for,
+    elapsed_months,
+    summarize_contracts,
+    summarize_year,
+    tag_years,
+)
 from werkbank.modules.budget.tags import (
     adopt_spelling,
     clean_tag,
@@ -2541,6 +2551,13 @@ class StatisticYear(BaseModel):
     name: str
     expected_cents: int
     actual_cents: int
+    # Ist bis zum selben Tag wie heute (im laufenden Jahr gleich dem Ist)
+    actual_to_date_cents: int = 0
+
+
+class StatisticTag(BaseModel):
+    tag: str
+    years: list[StatisticYear]
 
 
 class StatisticItem(BaseModel):
@@ -2557,6 +2574,8 @@ class StatisticOut(BaseModel):
     mode: str
     years: list[StatisticYear]
     items: list[StatisticItem]
+    # Dieselben Jahre je einzelnem Tag (ein Posten kann bei mehreren Tags mitzählen)
+    per_tag: list[StatisticTag] = []
 
 
 class SavedStatisticIn(BaseModel):
@@ -2744,10 +2763,26 @@ def query_statistic(body: StatisticQuery, user: Reader, db: DbDep) -> StatisticO
     start = body.start if body.start is not None else current - STATISTIC_YEARS + 1
     years = [year for year in range(start, start + STATISTIC_YEARS) if YEAR_MIN <= year <= YEAR_MAX]
     accounts = {row.id: row for row in _accounts(db)}
-    chosen = [item for item in _items(db, accounts) if matches(item.tags, body.tags, body.mode)]
-    ids = [item.id for item in chosen]
+    all_items = _items(db, accounts)
+    chosen = [item for item in all_items if matches(item.tags, body.tags, body.mode)]
+    today = now_utc().date()
+
+    def year_rows(items: list[BudgetItem]) -> list[StatisticYear]:
+        sums = tag_years(db, items, years, settings.start_month, today, current)
+        return [
+            StatisticYear(
+                year=year,
+                name=fiscal_year_name(year, settings.start_month),
+                expected_cents=sums[year].expected_cents,
+                actual_cents=sums[year].actual_cents,
+                actual_to_date_cents=sums[year].actual_to_date_cents,
+            )
+            for year in years
+        ]
+
     plan: dict[int, dict[int, int]] = {}
     actual: dict[int, dict[int, int]] = {}
+    ids = [item.id for item in chosen]
     for item in chosen:
         for year in years:
             amount = expected_in(item, year)
@@ -2768,20 +2803,13 @@ def query_statistic(body: StatisticQuery, user: Reader, db: DbDep) -> StatisticO
             year = fiscal_year_of(invoice_date, settings.start_month)
             by_item = actual.setdefault(year, {})
             by_item[line.item_id] = by_item.get(line.item_id, 0) + line.gross_cents
+    spelled = adopt_spelling(body.tags, _known_tags(db))
     return StatisticOut(
         year_label=settings.year_label,
         current_year=current,
-        tags=adopt_spelling(body.tags, _known_tags(db)),
+        tags=spelled,
         mode=body.mode,
-        years=[
-            StatisticYear(
-                year=year,
-                name=fiscal_year_name(year, settings.start_month),
-                expected_cents=sum(plan.get(year, {}).values()),
-                actual_cents=sum(actual.get(year, {}).values()),
-            )
-            for year in years
-        ],
+        years=year_rows(chosen),
         items=[
             StatisticItem(
                 item=item_out(item, accounts, settings.start_month),
@@ -2790,6 +2818,242 @@ def query_statistic(body: StatisticQuery, user: Reader, db: DbDep) -> StatisticO
             )
             for item in chosen
         ],
+        per_tag=[
+            StatisticTag(
+                tag=tag,
+                years=year_rows([item for item in all_items if matches(item.tags, [tag], "any")]),
+            )
+            for tag in spelled
+        ],
+    )
+
+
+# --- Statistik: Überblick eines Geschäftsjahrs und Jahresvergleich der Konten ---
+
+# So viele Jahre vor dem gewählten zeigt der Jahresvergleich höchstens.
+COMPARE_BACK = 4
+
+
+class SummaryMonth(BaseModel):
+    name: str
+    actual_cents: int
+    # Ist desselben Monats im Vergleichsjahr; None ohne Vergleich
+    compare_cents: int | None
+
+
+class SummaryAccount(BaseModel):
+    account: AccountOut
+    expected_cents: int
+    actual_cents: int
+
+
+class SummaryPartner(BaseModel):
+    id: int
+    name: str
+    actual_cents: int
+
+
+class SummaryContract(BaseModel):
+    id: int
+    title: str
+    partner_name: str
+    yearly_cents: int | None
+    notice_deadline: date
+
+
+class SummaryContracts(BaseModel):
+    # Jahreskosten aller laufenden Verträge (ohne einmalige Zahlungen)
+    yearly_cents: int
+    soon_days: int
+    # Verträge, deren Kündigungstermin in soon_days Tagen erreicht ist
+    soon: int
+    next: list[SummaryContract]
+
+
+class StatisticSummaryOut(BaseModel):
+    year_label: str
+    current_year: int
+    year: int
+    year_name: str
+    years: list[YearOut]
+    compare: int | None
+    compare_name: str | None
+    # Angefangene Monate des Jahrs: 12 vergangen, 0 künftig
+    elapsed_months: int
+    expected_cents: int
+    actual_cents: int
+    # Ist des Vergleichsjahrs bis zum selben Tag bzw. im ganzen Jahr
+    compare_to_date_cents: int | None
+    compare_actual_cents: int | None
+    months: list[SummaryMonth]
+    accounts: list[SummaryAccount]
+    partners: list[SummaryPartner]
+    contracts: SummaryContracts
+
+
+class CompareValue(BaseModel):
+    year: int
+    expected_cents: int
+    actual_cents: int
+    actual_to_date_cents: int
+
+
+class CompareAccount(BaseModel):
+    account: AccountOut
+    values: list[CompareValue]
+
+
+class StatisticCompareOut(BaseModel):
+    year_label: str
+    current_year: int
+    year: int
+    years: list[YearOut]
+    # Stichtag für „bis heute“; nur, wenn das gewählte Jahr das laufende ist
+    cutoff: date | None
+    accounts: list[CompareAccount]
+
+
+def _statistic_years(current: int, chosen: int, start_month: int) -> list[YearOut]:
+    first_years = range(current - 10, current + PLAN_AHEAD + 1)
+    return [
+        YearOut(year=year, name=fiscal_year_name(year, start_month))
+        for year in sorted({*first_years, chosen}, reverse=True)
+        if YEAR_MIN <= year <= YEAR_MAX
+    ]
+
+
+@router.get("/statistics/summary")
+def statistic_summary(
+    user: Reader, db: DbDep, year: YearQuery = None, compare: YearQuery = None
+) -> StatisticSummaryOut:
+    """Plan, Ist je Monat, Konten, Rechnungssteller und Verträge eines Geschäftsjahrs.
+
+    Mit `compare` (ein früheres Jahr) zusätzlich dessen Ist je Monat und bis zum selben Tag.
+    """
+    settings = load_settings(db)
+    today = now_utc().date()
+    current = fiscal_year_of(today, settings.start_month)
+    chosen = current if year is None else year
+    if compare is not None and compare >= chosen:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Vergleich nur mit früheren Jahren"
+        )
+    accounts = {row.id: row for row in _accounts(db)}
+    items = _items(db, accounts)
+    summary = summarize_year(db, items, chosen, settings.start_month)
+    other = (
+        summarize_year(db, items, compare, settings.start_month) if compare is not None else None
+    )
+    to_date: int | None = None
+    if compare is not None:
+        until = cutoff_for(today, current, compare) if chosen == current else None
+        to_date = actual_until(db, compare, settings.start_month, until)
+    names = [MONTH_NAMES[(settings.start_month - 1 + index) % 12] for index in range(12)]
+    partner_names = {row.id: row.name for row in db.scalars(select(BudgetPartner)).all()}
+    contracts = summarize_contracts(db, today)
+    rows = [
+        SummaryAccount(
+            account=account_out(account),
+            expected_cents=summary.accounts_expected.get(account.id, 0),
+            actual_cents=summary.accounts_actual.get(account.id, 0),
+        )
+        for account in accounts.values()
+        if account.active
+        or account.id in summary.accounts_expected
+        or account.id in summary.accounts_actual
+    ]
+    return StatisticSummaryOut(
+        year_label=settings.year_label,
+        current_year=current,
+        year=chosen,
+        year_name=fiscal_year_name(chosen, settings.start_month),
+        years=_statistic_years(current, chosen, settings.start_month),
+        compare=compare,
+        compare_name=fiscal_year_name(compare, settings.start_month)
+        if compare is not None
+        else None,
+        elapsed_months=elapsed_months(chosen, current, today, settings.start_month),
+        expected_cents=summary.expected_cents,
+        actual_cents=summary.actual_cents,
+        compare_to_date_cents=to_date,
+        compare_actual_cents=other.actual_cents if other is not None else None,
+        months=[
+            SummaryMonth(
+                name=names[index],
+                actual_cents=summary.months[index],
+                compare_cents=other.months[index] if other is not None else None,
+            )
+            for index in range(12)
+        ],
+        accounts=rows,
+        partners=sorted(
+            (
+                SummaryPartner(id=pid, name=partner_names.get(pid, ""), actual_cents=cents)
+                for pid, cents in summary.partners.items()
+                if cents
+            ),
+            key=lambda entry: (-entry.actual_cents, entry.name.lower()),
+        ),
+        contracts=SummaryContracts(
+            yearly_cents=contracts.yearly_cents,
+            soon_days=CONTRACT_SOON_DAYS,
+            soon=contracts.soon,
+            next=[
+                SummaryContract(
+                    id=entry.contract.id,
+                    title=entry.contract.title,
+                    partner_name=entry.partner,
+                    yearly_cents=entry.yearly_cents,
+                    notice_deadline=entry.deadline,
+                )
+                for entry in contracts.next
+            ],
+        ),
+    )
+
+
+@router.get("/statistics/compare")
+def statistic_compare(user: Reader, db: DbDep, year: YearQuery = None) -> StatisticCompareOut:
+    """Plan und Ist je Konto im gewählten Geschäftsjahr und den vier davor.
+
+    Ist das gewählte Jahr das laufende, steht je Jahr auch das Ist bis zum selben Tag wie heute.
+    """
+    settings = load_settings(db)
+    today = now_utc().date()
+    current = fiscal_year_of(today, settings.start_month)
+    chosen = current if year is None else year
+    years = [entry for entry in range(chosen - COMPARE_BACK, chosen + 1) if entry >= YEAR_MIN]
+    accounts = {row.id: row for row in _accounts(db)}
+    data = compare_accounts(
+        db, _items(db, accounts), years, settings.start_month, today, current, chosen == current
+    )
+    rows = []
+    for account in accounts.values():
+        own = data.accounts.get(account.id, {})
+        if not account.active and not own:
+            continue
+        values = []
+        for entry in years:
+            cell = own.get(entry)
+            values.append(
+                CompareValue(
+                    year=entry,
+                    expected_cents=cell.expected_cents if cell else 0,
+                    actual_cents=cell.actual_cents if cell else 0,
+                    actual_to_date_cents=cell.actual_to_date_cents if cell else 0,
+                )
+            )
+        rows.append(CompareAccount(account=account_out(account), values=values))
+    return StatisticCompareOut(
+        year_label=settings.year_label,
+        current_year=current,
+        year=chosen,
+        years=[
+            YearOut(year=entry, name=fiscal_year_name(entry, settings.start_month))
+            for entry in years
+        ],
+        cutoff=data.cutoff,
+        accounts=rows,
     )
 
 
