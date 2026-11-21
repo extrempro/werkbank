@@ -28,6 +28,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ### Technik
 
+- Breit scrollt die Ansicht rechts für sich wie die Tabelle (IT-Bestand und Evergreen); die Seite bleibt stehen, das „×“ rutscht nicht mehr unter die Kopfzeile
 - Trenner zwischen Tabelle und Ansicht als gemeinsame Komponente (`components/SplitHandle.tsx`), genutzt von IT-Bestand › Vorgänge und Evergreen
 
 ### Repository
