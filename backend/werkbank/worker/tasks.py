@@ -18,6 +18,10 @@ from werkbank.core.sessions import now_utc
 from werkbank.modules.budget.notifications import budget_notifications
 from werkbank.modules.devices.jobs import STATUS_JOB, STATUS_JOB_INTERVAL, status_job
 from werkbank.modules.devices.notifications import devices_notifications
+from werkbank.modules.evergreen.ai_suggest import (
+    GENERATE_AI_SUGGESTIONS,
+    generate_suggestions_job,
+)
 from werkbank.modules.evergreen.jobs import FETCH_MESSAGES, fetch_messages_job
 from werkbank.modules.evergreen.notifications import evergreen_notifications
 from werkbank.modules.inventory.entra_sync import ENTRA_SYNC, ENTRA_SYNC_INTERVAL, entra_sync_job
@@ -129,6 +133,7 @@ REGISTRY: dict[str, JobType] = {
     ENTRA_SYNC: JobType(handler=entra_sync_job, interval=ENTRA_SYNC_INTERVAL),
     STATUS_JOB: JobType(handler=status_job, interval=STATUS_JOB_INTERVAL),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
+    GENERATE_AI_SUGGESTIONS: JobType(handler=generate_suggestions_job, interval=timedelta(hours=1)),
 }
 
 

@@ -113,11 +113,13 @@ def test_status_flow_with_notes(db: Session) -> None:
     assert reopened["notes"][-1]["text"] is None
 
     actions = db.scalars(
-        select(AuditLog.action).where(
+        select(AuditLog.action)
+        .where(
             AuditLog.module == "evergreen",
             AuditLog.object_id == created["number"],
             AuditLog.id > since,
         )
+        .order_by(AuditLog.id)
     ).all()
     assert actions == [
         "eintrag.angelegt",
@@ -225,6 +227,7 @@ ASSESSMENT: dict[str, Any] = {
 
 @pytest.mark.db
 def test_assessment_saves_logs_and_sets_status(db: Session) -> None:
+    since = db.scalar(select(func.max(AuditLog.id))) or 0
     ina = editor()
     entry_id = new_entry(ina)
     reader = client_for(["Evergreen.Reader"], "ev-leser")
@@ -255,7 +258,13 @@ def test_assessment_saves_logs_and_sets_status(db: Session) -> None:
     assert {"field": "Steuerbar", "old": "Ja", "new": "Nein"} in last
     assert changed.json()["controllable_how"] is None
 
-    audit = db.scalars(select(AuditLog).where(AuditLog.action == "eintrag.bewertet")).all()
+    audit = db.scalars(
+        select(AuditLog).where(
+            AuditLog.action == "eintrag.bewertet",
+            AuditLog.object_id == data["number"],
+            AuditLog.id > since,
+        )
+    ).all()
     assert len(audit) == 2
 
     # auch an abgeschlossenen Einträgen

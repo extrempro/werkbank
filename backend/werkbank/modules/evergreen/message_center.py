@@ -90,13 +90,14 @@ def apply_suggestions(entry: EvEntry) -> None:
     """
     entry.sections = split_sections(entry.body)
     suggested = set(entry.suggested or [])
-    if SUGGEST_PHASES in suggested or not entry.phases:
+    from_ai = set(entry.ai_suggested or [])
+    if (SUGGEST_PHASES in suggested and SUGGEST_PHASES not in from_ai) or not entry.phases:
         phases = parse_phases(schedule_text(entry.sections))
         entry.phases = phases
         suggested.discard(SUGGEST_PHASES)
         if phases:
             suggested.add(SUGGEST_PHASES)
-    if SUGGEST_AFFECTED in suggested or not entry.affected:
+    if (SUGGEST_AFFECTED in suggested and SUGGEST_AFFECTED not in from_ai) or not entry.affected:
         affected = suggest_affected(entry.tags)
         if affected or SUGGEST_AFFECTED in suggested:
             entry.affected = affected
@@ -119,7 +120,9 @@ def _update(db: Session, entry: EvEntry, fields: dict[str, Any], now: datetime) 
         entry.phases_previous = list(entry.phases or [])
         entry.phases = []
         entry.suggested = sorted(set(entry.suggested or []) | {SUGGEST_PHASES})
+        entry.ai_suggested = sorted(set(entry.ai_suggested or []) - {SUGGEST_PHASES})
         add_note(db, entry, NoteKind.SCHEDULE, SCHEDULE_TEXT, None, now)
+        entry.ai_pending = True
     apply_suggestions(entry)
 
 
@@ -168,6 +171,7 @@ def fetch_messages(db: Session, client: UtcmClient) -> FetchResult:
                 **fields,
             )
             apply_suggestions(created)
+            created.ai_pending = True
             new += 1
             continue
         if fields["modified_at"] == entry.modified_at:
