@@ -1556,7 +1556,7 @@ def test_items_are_closed_by_hand_and_contracts_show_target_and_actual(db: Sessi
     partner = post(manager, "/partners", {"name": "Beispiel Mobil GmbH"}).json()
     year = manager.get(f"{BASE}/settings").json()["current_year"]
 
-    def item(name: str) -> dict[str, Any]:
+    def item(name: str) -> Any:
         body = {
             "account_id": account["id"],
             "name": name,
