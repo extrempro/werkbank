@@ -920,6 +920,7 @@ export const CHAPTERS: readonly Chapter[] = [
               "Wähle „Vorgang anlegen und Zeilen abarbeiten“. Fehlende Konten werden angelegt. Budgetposten entstehen erst beim Übernehmen der Zeilen; das Budget je Konto aus der Datei wird nicht übernommen.",
               "Prüfe jede Zeile: den Partner (vorhandener, ähnlicher oder neuer), Bezeichnung, Konto und Betrag. Rechnungsnummer und Datum aus der Datei stehen nur zur Information dabei.",
               "Wähle „Übernehmen und weiter“ oder „Überspringen“. Jede übernommene Zeile wird ein eigener Budgetposten mit dem gewählten Partner (Name aus der Bezeichnung, der Betrag als erwartete Kosten). Eine Rechnung legt der Import nicht an; Rechnungsnummer und Datum aus der Datei stehen in der Notiz des Postens. Gibt es den Namen im Konto schon, bekommt der neue Posten eine Nummer, z. B. „Mobilfunk (2)“. Übersprungene Zeilen kannst du mit „Zurück auf offen“ wieder öffnen.",
+              "Brauchst du eine Zeile nicht, lösche sie mit „Löschen“ (offen oder übersprungen). Willst du den Rest der Datei nicht mehr übernehmen, wähle oben „Import abbrechen“: Alle offenen und übersprungenen Zeilen werden gelöscht, die übernommenen und ihre Budgetposten bleiben, und der Vorgang steht als „abgebrochen“ in der Liste.",
             ],
           },
           {

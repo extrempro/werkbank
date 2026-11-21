@@ -2,7 +2,7 @@ import { ApiError, deleteJson, getJson, postJson } from "../../api";
 import { BUDGET_IMPORT_PATH } from "../../navigation";
 import type { AccountKind } from "./api";
 
-export type ImportStatus = "entwurf" | "offen" | "abgeschlossen";
+export type ImportStatus = "entwurf" | "offen" | "abgeschlossen" | "abgebrochen";
 export type RowStatus = "offen" | "uebernommen" | "uebersprungen";
 /** entschieden: für die Firma schon gewählt; gefunden: gleicher Name; aehnlich; neu. */
 export type PartnerMatch = "entschieden" | "gefunden" | "aehnlich" | "neu";
@@ -11,6 +11,7 @@ export const IMPORT_STATUS_LABELS: Record<ImportStatus, string> = {
   entwurf: "Entwurf",
   offen: "in Arbeit",
   abgeschlossen: "abgeschlossen",
+  abgebrochen: "abgebrochen",
 };
 
 export const ROW_STATUS_LABELS: Record<RowStatus, string> = {
@@ -176,6 +177,16 @@ export function planRows(
   entries: PlanEntry[],
 ): Promise<{ extended: number; detail: ImportDetail }> {
   return postJson(`${BASE}/${id}/plan`, { entries });
+}
+
+/** Offene oder übersprungene Zeile löschen; übernommene bleiben. */
+export function deleteRow(id: number, rowId: number): Promise<ImportDetail> {
+  return deleteJson(`${BASE}/${id}/rows/${rowId}`);
+}
+
+/** Import abbrechen: offene und übersprungene Zeilen werden gelöscht, übernommene bleiben. */
+export function cancelImport(id: number): Promise<ImportDetail> {
+  return postJson(`${BASE}/${id}/cancel`);
 }
 
 export function deleteImport(id: number): Promise<{ deleted: boolean }> {

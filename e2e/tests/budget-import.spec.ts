@@ -55,16 +55,23 @@ test("Budgetverwalter importiert eine Excel-Datei Zeile für Zeile", async ({
   ).toBeVisible();
   await expectNoA11yViolations(page);
 
-  // Rest überspringen: Der Vorgang ist abgeschlossen und steht nicht mehr als Aufgabe an.
-  await page.getByRole("button", { name: "Überspringen" }).click();
+  // Eine offene Zeile löschen, dann den Import abbrechen: Rest wird gelöscht.
+  await page.getByRole("button", { name: /^Zeile \d+ löschen$/ }).click();
+  await page.getByRole("button", { name: "Wirklich löschen" }).click();
   await expect(
     page.getByRole("heading", {
-      name: /1 übernommen, 2 übersprungen, 1 offen/,
+      name: /1 übernommen, 1 übersprungen, 1 offen/,
     }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Überspringen" }).click();
-  await expect(page.getByText("Alle Zeilen sind erledigt.")).toBeVisible();
-  await expect(page.getByText(/abgeschlossen/).first()).toBeVisible();
+  await page.getByRole("button", { name: "Import abbrechen" }).click();
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Import wirklich abbrechen" }).click();
+  await expect(page.getByText(/Der Import ist abgebrochen/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: /1 übernommen, 0 übersprungen, 0 offen/,
+    }),
+  ).toBeVisible();
 });
 
 test("ohne Budgetverwaltung gibt es den Import nicht", async ({ page }) => {

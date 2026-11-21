@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { BUDGET_IMPORT_PATH } from "../../navigation";
@@ -15,7 +15,9 @@ import {
   type Partner,
 } from "./api";
 import {
+  cancelImport,
   deleteImport,
+  deleteRow,
   fetchImport,
   filterRows,
   IMPORT_STATUS_LABELS,
@@ -74,6 +76,8 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
   const [error, setError] = useState<string | null>(null);
   const done = row.status !== "offen";
   const grossCents = parseEuro(gross);
+  // Stand nach dem Löschen der Zeile, für die Anzeige danach
+  const removed = useRef<ImportDetail | null>(null);
 
   const onTake = (event: FormEvent) => {
     event.preventDefault();
@@ -301,6 +305,22 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
             Zurück auf offen
           </button>
         )}
+        {row.status !== "uebernommen" && (
+          <DeleteButton
+            what={`Zeile ${row.row_number}`}
+            disabled={busy}
+            run={() =>
+              deleteRow(detail.id, row.id).then((result) => {
+                removed.current = result;
+              })
+            }
+            onDeleted={() => {
+              if (removed.current) {
+                onDone(removed.current, row.id, true);
+              }
+            }}
+          />
+        )}
       </div>
     </form>
   );
@@ -469,6 +489,9 @@ export function ImportDetailPage({ importId }: { importId: number }) {
   const [filter, setFilter] = useState<RowFilter>("offen");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [view, setView] = useState<"zeilen" | "planung">("zeilen");
+  const [cancelAsked, setCancelAsked] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [round, setRound] = useState(0);
 
   useEffect(() => {
@@ -540,6 +563,21 @@ export function ImportDetailPage({ importId }: { importId: number }) {
 
   const done = detail.taken + detail.skipped;
   const candidates = planCandidates(rows).length;
+  const canCancel = detail.status !== "abgebrochen" && detail.open + detail.skipped > 0;
+
+  const onCancelImport = () => {
+    setCancelBusy(true);
+    setCancelError(null);
+    cancelImport(detail.id)
+      .then((result) => {
+        setDetail(result);
+        setCancelAsked(false);
+      })
+      .catch((failure: unknown) =>
+        setCancelError(errorText(failure, "Der Import konnte nicht abgebrochen werden.")),
+      )
+      .finally(() => setCancelBusy(false));
+  };
 
   return (
     <div className="page page-wide budget-page">
@@ -549,6 +587,55 @@ export function ImportDetailPage({ importId }: { importId: number }) {
           <h2 id="import-stand" className="import-stand">
             {detail.taken} übernommen, {detail.skipped} übersprungen, {detail.open} offen
           </h2>
+          {detail.status === "abgebrochen" && (
+            <p className="hint-box">
+              Der Import ist abgebrochen. Offene und übersprungene Zeilen sind gelöscht; die
+              übernommenen Zeilen und ihre Budgetposten bleiben.
+            </p>
+          )}
+          {canCancel && !cancelAsked && (
+            <p>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setCancelAsked(true)}
+              >
+                Import abbrechen
+              </button>
+            </p>
+          )}
+          {canCancel && cancelAsked && (
+            <div className="confirm-box" role="group" aria-label="Import abbrechen">
+              <p>
+                {detail.open + detail.skipped} offene und übersprungene Zeilen werden gelöscht. Die{" "}
+                {detail.taken} übernommenen Zeilen und ihre Budgetposten bleiben. Das lässt sich
+                nicht rückgängig machen.
+              </p>
+              <div className="actions">
+                <button
+                  type="button"
+                  className="button button-danger"
+                  disabled={cancelBusy}
+                  onClick={onCancelImport}
+                >
+                  Import wirklich abbrechen
+                </button>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  disabled={cancelBusy}
+                  onClick={() => setCancelAsked(false)}
+                >
+                  Doch nicht
+                </button>
+              </div>
+            </div>
+          )}
+          {cancelError && (
+            <p role="alert" className="hint-box hint-bad">
+              {cancelError}
+            </p>
+          )}
           <span
             className="import-progress import-progress-wide"
             role="img"
@@ -675,8 +762,8 @@ export function ImportDetailPage({ importId }: { importId: number }) {
         </div>
         <div className="detail-body">
           <p className="small">
-            Löscht nur den Vorgang mit seinen Zeilen. Übernommene Rechnungen, angelegte Konten,
-            Partner und Budgetposten bleiben.
+            Löscht nur den Vorgang mit seinen Zeilen. Angelegte Konten, Partner und Budgetposten
+            bleiben.
           </p>
           <DeleteButton
             what={`Vorgang ${detail.file_name}`}
