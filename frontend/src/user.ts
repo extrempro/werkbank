@@ -16,9 +16,15 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Projekte.Reader", "IT-Projekte"],
   ["Bestand.Editor", "IT-Bestand"],
   ["Bestand.Reader", "IT-Bestand"],
+  ["Geraete.Zuordnung", "Gerätezuordnung"],
 ];
 
 const ROLE_INFO: Record<string, { label: string; description: string }> = {
+  "Geraete.Zuordnung": {
+    label: "Gerätezuordnung",
+    description:
+      "Neue Windows-Geräte per QR-Code scannen, zur Freigabe senden, freigeben, verwerfen",
+  },
   "Werkbank.Admin": {
     label: "Werkbank Admin",
     description: "Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log",

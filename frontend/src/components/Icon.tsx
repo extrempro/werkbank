@@ -136,6 +136,27 @@ const PATHS = {
   aufgaben: ["M22 12h-6l-2 3h-4l-2-3H2", "M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"],
   loeschen: ["M4 7h16", "M10 11v6", "M14 11v6", "M6 7l1 13h10l1-13", "M9 7V4h6v3"],
   ausklappen: ["M13 6l6 6-6 6", "M5 6l6 6-6 6"],
+  qr: [
+    "M4 4h6v6H4z",
+    "M14 4h6v6h-6z",
+    "M4 14h6v6H4z",
+    "M14 14h2v2h-2z",
+    "M18 18h2v2h-2z",
+    "M14 18h2",
+    "M18 14h2",
+  ],
+  kamera: ["M4 8h3l2-3h6l2 3h3v11H4z", "M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"],
+  aktualisieren: [
+    "M20 11a8 8 0 0 0-14.3-4.9L4 8",
+    "M4 4v4h4",
+    "M4 13a8 8 0 0 0 14.3 4.9L20 16",
+    "M20 20v-4h-4",
+  ],
+  kopieren: ["M9 9h11v11H9z", "M5 15H4V4h11v1"],
+  info: ["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z", "M12 11v5", "M12 8h.01"],
+  haken: ["M5 12l5 5 9-10"],
+  warnung: ["M12 4l9 16H3z", "M12 10v4", "M12 17h.01"],
+  extern: ["M14 4h6v6", "M20 4l-9 9", "M18 14v6H4V6h6"],
 } as const;
 
 export type IconName = keyof typeof PATHS;
