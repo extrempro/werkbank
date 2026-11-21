@@ -47,7 +47,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .getByRole("combobox", { name: /^Partner/ })
     .selectOption({ label: `Beispiel Partner ${number}` });
   await itemForm.getByRole("textbox", { name: /^Betrag \(Brutto\)/ }).fill("1.500,00");
-  await expect(itemForm.getByText(/^Plan: 1\.500,00 € nur für/)).toBeVisible();
+  await expect(itemForm.getByText(/^Plan: 1\.500,00\s€ nur für/)).toBeVisible();
   // Tags stehen sichtbar in der Maske.
   await itemForm
     .getByRole("group", { name: "Tags" })
@@ -83,7 +83,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   // Turnus zuerst; das Betragsfeld heißt dann passend.
   await contractForm.getByRole("button", { name: "Monatlich" }).click();
   await contractForm.getByRole("textbox", { name: /^Monatsbetrag/ }).fill("100,00");
-  await expect(contractForm.getByText(/^Brutto 119,00 € je Monat/)).toBeVisible();
+  await expect(contractForm.getByText(/^Brutto 119,00\s€ je Monat/)).toBeVisible();
   // Ein Vertrag lässt sich mehreren Posten zuordnen; hier einem.
   await contractForm
     .getByRole("searchbox", { name: "Budgetposten suchen" })
