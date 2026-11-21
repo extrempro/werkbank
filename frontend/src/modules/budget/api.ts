@@ -76,6 +76,9 @@ export interface Item {
   active: boolean;
   /** Nur wenn mit Geschäftsjahr abgefragt: Status in diesem Jahr. */
   status?: ItemStatus | null;
+  /** Partner (Firma) des Postens; ältere Posten haben noch keinen. */
+  partner_id?: number | null;
+  partner_name?: string | null;
   /** Zugeordneter Vertrag; ein Posten hat höchstens einen. */
   contract_id?: number | null;
   contract_title?: string | null;
@@ -86,6 +89,8 @@ export interface Item {
 
 export interface ItemUpdate {
   account_id: number;
+  /** Partner (Firma) des Postens, Pflicht. */
+  partner_id: number;
   name: string;
   amount_cents: number;
   start_year: number;
@@ -549,6 +554,8 @@ export interface PartnerDetail {
   contracts: Contract[];
   invoices: Invoice[];
   invoice_total: number;
+  /** Budgetposten, deren Partner die Firma ist. */
+  items?: Item[];
 }
 
 export const STATUS_LABELS: Record<InvoiceStatus, string> = {
@@ -800,9 +807,14 @@ export function itemMatches(item: Item, search: string): boolean {
   if (needle === "") {
     return true;
   }
-  return [item.name, item.note, item.account_number, item.account_name, ...item.tags].some((text) =>
-    text.toLowerCase().includes(needle),
-  );
+  return [
+    item.name,
+    item.note,
+    item.account_number,
+    item.account_name,
+    item.partner_name ?? "",
+    ...item.tags,
+  ].some((text) => text.toLowerCase().includes(needle));
 }
 
 export function hasTag(item: Item, tag: string): boolean {

@@ -249,7 +249,12 @@ def test_budget_comes_from_the_items(db: Session) -> None:
         )
         assert rejected.status_code == 422
     # Ändern ohne Angabe lässt die Zuordnung, mit Angabe setzt es sie.
-    body = {"account_id": account["id"], "name": "Installation", "amount_cents": 200_000}
+    body = {
+        "account_id": account["id"],
+        "partner_id": install["partner_id"],
+        "name": "Installation",
+        "amount_cents": 200_000,
+    }
     unchanged = manager.put(f"{BUDGET}/items/{install['id']}", json=body, headers=HEADERS)
     assert unchanged.json()["project_id"] is None
     linked = manager.put(

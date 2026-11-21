@@ -788,7 +788,10 @@ export const CHAPTERS: readonly Chapter[] = [
                 "Vertrag",
                 "Vertrag mit einem Partner; kann zu einem oder mehreren Budgetposten gehören",
               ],
-              ["Partner", "Firma als Vertragspartner, Rechnungssteller oder beides"],
+              [
+                "Partner",
+                "Firma als Vertragspartner, Rechnungssteller oder Partner eines Budgetpostens",
+              ],
               [
                 "Rechnung",
                 "Kopf mit Rechnungssteller, Nummer und Datum und eine oder mehrere Positionen, jede auf einem Budgetposten",
@@ -821,13 +824,13 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Je Geschäftsjahr hat ein Posten einen Status: „offen“, „Rechnung liegt vor“ oder „abgeschlossen“. Abgeschlossen ist er, sobald du ihn mit „Abschließen“ abhakst (gilt für das oben gewählte Geschäftsjahr) oder eine gebuchte Rechnungsposition mit „schließt den Posten ab“ auf ihm liegt. „Wieder öffnen“ nimmt das Abhaken zurück; schließt eine Rechnung den Posten ab, entfernst du dafür den Haken an der Rechnungsposition. Filter nach Suchtext, Status und Tag helfen beim Finden.",
+            text: "Je Geschäftsjahr hat ein Posten einen Status: „offen“, „Rechnung liegt vor“ oder „abgeschlossen“. Abgeschlossen ist er, sobald du ihn mit „Abschließen“ abhakst (gilt für das oben gewählte Geschäftsjahr) oder eine gebuchte Rechnungsposition mit „schließt den Posten ab“ auf ihm liegt. „Wieder öffnen“ nimmt das Abhaken zurück; schließt eine Rechnung den Posten ab, entfernst du dafür den Haken an der Rechnungsposition. Die Liste zeigt je Posten den Partner, die erwarteten Kosten, das Ist und das Vorjahr. Ältere Posten ohne Partner tragen den Hinweis „Partner fehlt“; beim nächsten Bearbeiten wählst du ihn. Filter nach Suchtext (auch nach dem Partner), Status und Tag helfen beim Finden.",
           },
           {
             kind: "steps",
             items: [
               "Wähle „Posten hinzufügen“.",
-              "Wähle das Konto, gib eine Bezeichnung und die erwarteten Kosten je Geschäftsjahr (brutto) ein.",
+              "Wähle das Konto und den Partner (die Firma, Pflicht), gib eine Bezeichnung und die erwarteten Kosten je Geschäftsjahr (brutto) ein.",
               "Lege die Laufzeit fest: einmalig, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres.",
               "Optional: Vertrag, IT-Projekt und Tags wählen; unter „Weitere Angaben“ die Notiz. Tags legt der Budgetverwalter unter Einstellungen › Tags an.",
               "Speichere.",
@@ -913,25 +916,24 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "steps",
             items: [
               "Wähle die Excel-Datei aus. Gelesen wird das erste Blatt; die Datei selbst wird nicht gespeichert.",
-              "Prüfe, was erkannt wurde: Geschäftsjahr, Steuersatz als Vorgabe (die Beträge in der Datei sind brutto) und die Konten. Für neue Konten wählst du, ob es laufende Kosten oder eine Investition sind.",
+              "Prüfe, was erkannt wurde: Geschäftsjahr und die Konten (die Beträge in der Datei sind brutto). Für neue Konten wählst du, ob es laufende Kosten oder eine Investition sind.",
               "Wähle „Vorgang anlegen und Zeilen abarbeiten“. Fehlende Konten werden angelegt. Budgetposten entstehen erst beim Übernehmen der Zeilen; das Budget je Konto aus der Datei wird nicht übernommen.",
-              "Prüfe jede Zeile: den Rechnungssteller (vorhandener, ähnlicher oder neuer Partner), Datum, Nummern, Bezeichnung, Konto, Betrag und Steuersatz.",
-              "Wähle „Übernehmen und weiter“ oder „Überspringen“. Jede übernommene Zeile wird ein eigener Budgetposten (Name aus der Bezeichnung, der Betrag als erwartete Kosten) mit einer gebuchten Rechnung, die ihn abschließt. Gibt es den Namen im Konto schon, bekommt der neue Posten eine Nummer, z. B. „Mobilfunk (2)“. Übersprungene Zeilen kannst du mit „Zurück auf offen“ wieder öffnen.",
+              "Prüfe jede Zeile: den Partner (vorhandener, ähnlicher oder neuer), Bezeichnung, Konto und Betrag. Rechnungsnummer und Datum aus der Datei stehen nur zur Information dabei.",
+              "Wähle „Übernehmen und weiter“ oder „Überspringen“. Jede übernommene Zeile wird ein eigener Budgetposten mit dem gewählten Partner (Name aus der Bezeichnung, der Betrag als erwartete Kosten). Eine Rechnung legt der Import nicht an; Rechnungsnummer und Datum aus der Datei stehen in der Notiz des Postens. Gibt es den Namen im Konto schon, bekommt der neue Posten eine Nummer, z. B. „Mobilfunk (2)“. Übersprungene Zeilen kannst du mit „Zurück auf offen“ wieder öffnen.",
             ],
           },
           {
             kind: "list",
             items: [
               "Was du bei einer Firma als Partner wählst, schlägt die Werkbank für alle weiteren Zeilen dieser Firma vor.",
-              "Hinweise an einer Zeile zeigen zum Beispiel ein Datum außerhalb des Geschäftsjahrs, eine fehlende Rechnungsnummer (dann wird die interne Nummer vorgeschlagen) oder ein fehlendes Konto. Der Filter „Mit Hinweis“ zeigt nur diese Zeilen.",
-              "Gibt es dieselbe Rechnungsnummer beim selben Partner schon, übernimmt der Import die Zeile nicht doppelt.",
+              "Hinweise an einer Zeile zeigen zum Beispiel ein Datum außerhalb des Geschäftsjahrs, eine fehlende Firma oder ein fehlendes Konto. Der Filter „Mit Hinweis“ zeigt nur diese Zeilen.",
               "Zeilen mit „Jährlich“ stehen nach dem Übernehmen unter „Vorschläge für die Planung“. Wählst du sie aus, läuft ihr Budgetposten im folgenden Geschäftsjahr weiter, bis auf Weiteres oder nur für dieses Jahr, mit den eingetragenen Kosten je Jahr.",
               "Die Spalten Kostenstelle und Projekte werden nicht übernommen.",
             ],
           },
           {
             kind: "hint",
-            text: "Einen Vorgang zu löschen entfernt nur den Vorgang. Übernommene Rechnungen, neue Konten, Partner und Budgetposten bleiben.",
+            text: "Einen Vorgang zu löschen entfernt nur den Vorgang. Neue Konten, Partner und Budgetposten bleiben.",
           },
         ],
         links: [{ to: "/budget/import", label: "Zum Import" }],

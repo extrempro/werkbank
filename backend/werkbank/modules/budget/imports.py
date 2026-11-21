@@ -2,8 +2,8 @@
 
 Ablauf: Datei hochladen (Entwurf mit den erkannten Zeilen und Konten), prüfen und starten
 (fehlende Konten werden angelegt), dann jede Zeile übernehmen oder überspringen. Übernehmen legt
-je Zeile einen eigenen Budgetposten an (Name aus der Bezeichnung, erwartete Kosten = Betrag) und
-eine gebuchte Rechnung, die ihn abschließt. Zeilen mit „Jährlich“ lassen sich danach in die
+je Zeile einen eigenen Budgetposten mit Partner an (Name aus der Bezeichnung, erwartete Kosten =
+Betrag), keine Rechnung. Zeilen mit „Jährlich“ lassen sich danach in die
 Planung übernehmen: Ihr Posten läuft dann im folgenden Geschäftsjahr weiter. Nur
 `Budget.Manager`.
 """
@@ -29,8 +29,6 @@ from werkbank.modules.budget.models import (
     BudgetAccount,
     BudgetImport,
     BudgetImportRow,
-    BudgetInvoice,
-    BudgetInvoiceLine,
     BudgetItem,
     BudgetPartner,
 )
@@ -203,20 +201,18 @@ class StartIn(BaseModel):
 
 
 class TakeIn(BaseModel):
-    invoice_date: date
-    number: str = Field(min_length=1, max_length=80)
-    internal_number: str = Field(default="", max_length=60)
+    # Bezeichnung: wird der Name des Budgetpostens
     description: str = Field(default="", max_length=200)
     # Konto des neuen Budgetpostens
     account_id: int = Field(ge=1)
+    # Erwartete Kosten (brutto, Betrag aus der Datei)
     gross_cents: int = Field(ge=0, le=AMOUNT_MAX)
-    tax_rate_bp: int = 1900
     yearly: bool = False
-    # Vorhandener Partner oder Name eines neuen (genau eins von beiden)
+    # Partner des Postens: vorhandener oder Name eines neuen (genau eins von beiden)
     partner_id: int | None = Field(default=None, ge=1)
     new_partner: str | None = Field(default=None, max_length=160)
 
-    @field_validator("number", "internal_number", "description")
+    @field_validator("description")
     @classmethod
     def plain(cls, value: str) -> str:
         return _single_line(value)
@@ -225,20 +221,6 @@ class TakeIn(BaseModel):
     @classmethod
     def plain_partner(cls, value: str | None) -> str | None:
         return _single_line(value) if value is not None else None
-
-    @field_validator("tax_rate_bp")
-    @classmethod
-    def known_rate(cls, value: int) -> int:
-        if value not in TAX_RATES:
-            raise ValueError("Steuersatz 19 %, 7 % oder 0 %")
-        return value
-
-    @field_validator("invoice_date")
-    @classmethod
-    def in_range(cls, value: date) -> date:
-        if not YEAR_MIN <= value.year <= YEAR_MAX:
-            raise ValueError("Das Datum liegt außerhalb des erlaubten Bereichs")
-        return value
 
 
 class PlanEntry(BaseModel):
@@ -330,16 +312,19 @@ def _unique_item_name(db: Session, account_id: int, name: str) -> str:
 
 
 def _row_items(db: Session, rows: list[BudgetImportRow]) -> dict[int, BudgetItem]:
-    """Budgetposten der übernommenen Zeilen (über die Rechnungsposition), je Rechnung."""
-    invoice_ids = [entry.invoice_id for entry in rows if entry.invoice_id is not None]
-    if not invoice_ids:
+    """Budgetposten der übernommenen Zeilen, je Zeile."""
+    item_ids = {entry.item_id for entry in rows if entry.item_id is not None}
+    if not item_ids:
         return {}
-    found = db.execute(
-        select(BudgetInvoiceLine.invoice_id, BudgetItem)
-        .join(BudgetItem, BudgetItem.id == BudgetInvoiceLine.item_id)
-        .where(BudgetInvoiceLine.invoice_id.in_(invoice_ids), BudgetInvoiceLine.position == 0)
-    ).all()
-    return {invoice_id: item for invoice_id, item in found}
+    items = {
+        item.id: item
+        for item in db.scalars(select(BudgetItem).where(BudgetItem.id.in_(item_ids))).all()
+    }
+    return {
+        entry.id: items[entry.item_id]
+        for entry in rows
+        if entry.item_id is not None and entry.item_id in items
+    }
 
 
 def detail_out(db: Session, row: BudgetImport) -> ImportOut:
@@ -354,7 +339,7 @@ def detail_out(db: Session, row: BudgetImport) -> ImportOut:
         match, partner = match_partner(entry.firm, partners, row.partners)
         if entry.firm:
             firms[entry.firm.casefold()] = match == "neu"
-        item = row_items.get(entry.invoice_id) if entry.invoice_id is not None else None
+        item = row_items.get(entry.id)
         out_rows.append(
             RowOut(
                 id=entry.id,
@@ -415,7 +400,7 @@ def _year_hints(rows: list[BudgetImportRow], year: int, start_month: int) -> Non
     """Hinweis bei Rechnungsdaten außerhalb des Geschäftsjahrs (ersetzt einen alten)."""
     text = (
         f"Das Rechnungsdatum liegt außerhalb von {fiscal_year_name(year, start_month)}. "
-        "Die Rechnung zählt im Geschäftsjahr ihres Datums."
+        "Der Budgetposten wird trotzdem für dieses Geschäftsjahr angelegt."
     )
     for row in rows:
         hints = [hint for hint in row.hints if "außerhalb von" not in hint]
@@ -654,7 +639,7 @@ def take_row(
     user: Manager,
     db: DbDep,
 ) -> ImportOut:
-    """Übernimmt eine Zeile: eigener Budgetposten und eine gebuchte Rechnung, die ihn abschließt."""
+    """Übernimmt eine Zeile als eigenen Budgetposten mit Partner, ohne Rechnung."""
     row = _import(db, import_id)
     entry = _row(db, row, row_id)
     if entry.status == ROW_TAKEN:
@@ -698,69 +683,38 @@ def take_row(
             db.add(partner)
             db.flush()
             created_partner = True
-    duplicate = (
-        None
-        if created_partner
-        else db.scalars(
-            select(BudgetInvoice).where(
-                BudgetInvoice.invoicer_id == partner.id,
-                func.lower(BudgetInvoice.number) == body.number.lower(),
-            )
-        ).first()
-    )
-    if duplicate is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Die Rechnung {body.number} von {partner.name} gibt es schon. "
-            "Überspringe die Zeile oder ändere die Nummer.",
-        )
-    net = net_from_gross(body.gross_cents, body.tax_rate_bp)
     now = now_utc()
-    # Je Zeile ein eigener Posten im Geschäftsjahr des Imports; erwartete Kosten = Betrag
+    # Je Zeile ein eigener Posten im Geschäftsjahr des Imports, ohne Rechnung;
+    # erwartete Kosten = Betrag aus der Datei. Rechnungen werden später erfasst.
+    number = entry.number or entry.internal_number
+    source = " ".join(
+        part
+        for part in (
+            f"Rechnung {number}" if number else "",
+            f"vom {entry.invoice_date.strftime('%d.%m.%Y')}" if entry.invoice_date else "",
+        )
+        if part
+    )
     item = BudgetItem(
         account_id=account.id,
+        partner_id=partner.id,
         name=_unique_item_name(
-            db, account.id, body.description or partner.name or f"Rechnung {body.number}"
+            db, account.id, body.description or partner.name or f"Zeile {entry.row_number}"
         ),
         amount_cents=body.gross_cents,
         start_year=row.year,
         end_year=row.year,
-        note=f"Aus dem Import {row.file_name}, Zeile {entry.row_number}"[:500],
+        note=(
+            f"Aus dem Import {row.file_name}, Zeile {entry.row_number}"
+            + (f" ({source})" if source else "")
+        )[:500],
         tags=[],
         active=True,
     )
     db.add(item)
     db.flush()
-    invoice = BudgetInvoice(
-        invoicer_id=partner.id,
-        number=body.number,
-        internal_number=body.internal_number,
-        invoice_date=body.invoice_date,
-        net_cents=net,
-        gross_cents=body.gross_cents,
-        status="gebucht",
-        created_by=user.user_id,
-        booked_by=user.user_id,
-        booked_at=now,
-    )
-    invoice.lines = [
-        BudgetInvoiceLine(
-            position=0,
-            item_id=item.id,
-            net_cents=net,
-            tax_rate_bp=body.tax_rate_bp,
-            gross_cents=body.gross_cents,
-            description=body.description,
-            is_project=False,
-            is_yearly=body.yearly,
-            # Die Rechnung ist die ganze Ausgabe des Postens und schließt ihn ab.
-            closes_item=True,
-        )
-    ]
-    db.add(invoice)
-    db.flush()
     entry.status = ROW_TAKEN
-    entry.invoice_id = invoice.id
+    entry.item_id = item.id
     entry.yearly = body.yearly
     entry.done_by = user.user_id
     entry.done_at = now
@@ -775,7 +729,6 @@ def take_row(
         row.id,
         {
             "zeile": entry.row_number,
-            "rechnung": invoice.id,
             "partner_id": partner.id,
             "partner_neu": created_partner,
             "posten": item.id,
@@ -842,21 +795,16 @@ def plan_rows(
     extended = 0
     for plan in body.entries:
         entry = db.get(BudgetImportRow, plan.row_id)
-        if (
-            entry is None
-            or entry.import_id != row.id
-            or entry.status != ROW_TAKEN
-            or entry.invoice_id is None
-        ):
+        if entry is None or entry.import_id != row.id or entry.status != ROW_TAKEN:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Nur übernommene Zeilen lassen sich in die Planung übernehmen.",
             )
-        item = _row_items(db, [entry]).get(entry.invoice_id)
+        item = _row_items(db, [entry]).get(entry.id)
         if item is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Zu dieser Zeile gibt es keine Rechnung mehr.",
+                detail="Zu dieser Zeile gibt es keinen Budgetposten mehr.",
             )
         item.end_year = None if plan.ongoing else max(year, item.end_year or year)
         item.amount_cents = plan.amount_cents

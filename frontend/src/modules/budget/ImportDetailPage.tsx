@@ -19,18 +19,15 @@ import {
   fetchImport,
   filterRows,
   IMPORT_STATUS_LABELS,
-  netFromGross,
   nextOpenRow,
   percent,
   planCandidates,
   planRows,
-  rateLabel,
   reopenRow,
   ROW_STATUS_LABELS,
   ROW_STATUS_PILLS,
   skipRow,
   takeRow,
-  TAX_RATES,
   type ImportDetail,
   type ImportRow,
   type RowFilter,
@@ -51,8 +48,8 @@ interface EditorProps {
 }
 
 /**
- * Eine Zeile prüfen: Partner, Datum, Nummern, Konto, Betrag, Steuersatz. Übernehmen legt einen
- * eigenen Budgetposten an (Name aus der Bezeichnung) und eine Rechnung, die ihn abschließt.
+ * Eine Zeile prüfen: Partner, Bezeichnung, Konto, Betrag. Übernehmen legt einen eigenen
+ * Budgetposten mit Partner an (Name aus der Bezeichnung), keine Rechnung.
  */
 function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorProps) {
   const id = useId();
@@ -66,16 +63,12 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
   const [choice, setChoice] = useState<PartnerChoice>(suggested ? "vorschlag" : "neu");
   const [newName, setNewName] = useState(row.firm);
   const [otherId, setOtherId] = useState("");
-  const [day, setDay] = useState(row.invoice_date ?? "");
-  const [number, setNumber] = useState(row.number || row.internal_number);
-  const [internal, setInternal] = useState(row.internal_number);
   const [description, setDescription] = useState(row.description);
   const initialItem = items.find((item) => item.id === row.item_id);
   const [accountId, setAccountId] = useState(
     String(initialItem?.account_id ?? accountOf(row.account_number)?.id ?? ""),
   );
   const [gross, setGross] = useState(euroInput(row.gross_cents < 0 ? 0 : row.gross_cents));
-  const [tax, setTax] = useState(detail.tax_rate_bp);
   const [yearly, setYearly] = useState(row.yearly);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,11 +78,7 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
   const onTake = (event: FormEvent) => {
     event.preventDefault();
     let problem: string | null = null;
-    if (!day) {
-      problem = "Bitte das Rechnungsdatum eintragen.";
-    } else if (!number.trim()) {
-      problem = "Bitte eine Rechnungsnummer eintragen.";
-    } else if (!accountId) {
+    if (!accountId) {
       problem = "Bitte ein Konto wählen.";
     } else if (grossCents === null) {
       problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 1190,00";
@@ -103,13 +92,9 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
       return;
     }
     const update: TakeUpdate = {
-      invoice_date: day,
-      number: number.trim(),
-      internal_number: internal.trim(),
       description: description.trim(),
       account_id: Number(accountId),
       gross_cents: grossCents,
-      tax_rate_bp: tax,
       yearly,
     };
     if (choice === "neu") {
@@ -226,30 +211,21 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
         <p className="small">Die Entscheidung gilt auch für weitere Zeilen dieser Firma.</p>
       </fieldset>
       <fieldset className="budget-fieldset" disabled={done}>
-        <legend>Rechnung</legend>
+        <legend>Budgetposten</legend>
+        <p className="small">
+          Aus der Datei:{" "}
+          {[
+            row.number || row.internal_number
+              ? `Rechnung ${row.number || row.internal_number}`
+              : "",
+            row.internal_number && row.number ? `interne Nummer ${row.internal_number}` : "",
+            row.invoice_date ? `vom ${formatBudgetDay(row.invoice_date)}` : "",
+          ]
+            .filter(Boolean)
+            .join(", ") || "keine Rechnungsangaben"}
+          . Das steht in der Notiz des Postens; eine Rechnung legt der Import nicht an.
+        </p>
         <div className="form-grid">
-          <label>
-            Rechnungsdatum
-            <input type="date" value={day} onChange={(event) => setDay(event.target.value)} />
-          </label>
-          <label>
-            Rechnungsnummer
-            <input
-              type="text"
-              value={number}
-              maxLength={80}
-              onChange={(event) => setNumber(event.target.value)}
-            />
-          </label>
-          <label>
-            Interne Nummer
-            <input
-              type="text"
-              value={internal}
-              maxLength={60}
-              onChange={(event) => setInternal(event.target.value)}
-            />
-          </label>
           <label>
             Bezeichnung
             <input
@@ -271,7 +247,7 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
             </select>
           </label>
           <label>
-            Betrag brutto (Euro)
+            Erwartete Kosten brutto (Euro)
             <input
               type="text"
               inputMode="decimal"
@@ -279,24 +255,11 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
               onChange={(event) => setGross(event.target.value)}
             />
           </label>
-          <label>
-            Steuersatz
-            <select value={tax} onChange={(event) => setTax(Number(event.target.value))}>
-              {TAX_RATES.map((rate) => (
-                <option key={rate} value={rate}>
-                  {rateLabel(rate)}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
-        <p className="small">
-          Netto: {grossCents === null ? "–" : formatEuro(netFromGross(grossCents, tax))}
-        </p>
         <p className="small">
           {done
             ? `Budgetposten: ${row.item_name ?? "–"}`
-            : `Übernehmen legt den Budgetposten „${description.trim() || "Name des Partners"}“ an, mit dem Betrag als erwarteten Kosten; die Rechnung schließt ihn ab. Gibt es den Namen im Konto schon, bekommt er eine Nummer.`}
+            : `Übernehmen legt den Budgetposten „${description.trim() || "Name des Partners"}“ mit diesem Partner an, mit dem Betrag als erwarteten Kosten. Gibt es den Namen im Konto schon, bekommt er eine Nummer.`}
         </p>
         <label className="check-label">
           <input

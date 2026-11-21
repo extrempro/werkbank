@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.80.0",
+    date: "2026-11-21",
+    summary: "IT-Budget: Partner am Budgetposten, Import ohne Rechnungen.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Budgetposten haben jetzt einen Partner (Pflicht). Bei älteren Posten steht „Partner fehlt“, bis du ihn beim nächsten Bearbeiten wählst. Die Suche findet Posten auch über den Partner.",
+          "Die Liste der Budgetposten zeigt keine Prognose und keine Abweichung mehr.",
+          "Der Import aus Excel legt beim Übernehmen nur noch den Budgetposten mit Partner an, keine Rechnung. Rechnungsnummer und Datum aus der Datei stehen in der Notiz des Postens.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.79.0",
     date: "2026-11-21",
     summary: "IT-Budget: Budgetposten abhaken, Verträge mit Soll und Ist je Geschäftsjahr.",

@@ -201,10 +201,10 @@ def test_parses_rows_accounts_and_hints() -> None:
     assert first.internal_number == "re.26.001"
     assert first.invoice_date == date(2026, 2, 3)
     assert first.hints == []
-    # Ohne RE-Nummer: Hinweis; Jährlich erkannt
+    # Ohne RE-Nummer: kein Hinweis mehr (es entsteht keine Rechnung); Jährlich erkannt
     assert second.yearly is True
     assert second.number == ""
-    assert any("interne Nummer" in hint for hint in second.hints)
+    assert second.hints == []
     assert third.account_number == "6050"
     # Ohne Betrag in einer Kontospalte: Konto wählen
     assert fourth.account_number is None
@@ -274,13 +274,9 @@ def with_accounts(detail: dict[str, Any]) -> list[dict[str, Any]]:
 
 def take_body(row: dict[str, Any], **extra: Any) -> dict[str, Any]:
     body: dict[str, Any] = {
-        "invoice_date": row["invoice_date"],
-        "number": row["number"] or row["internal_number"],
-        "internal_number": row["internal_number"],
         "description": row["description"],
         "account_id": row.get("account_id"),
         "gross_cents": row["gross_cents"],
-        "tax_rate_bp": 1900,
         "yearly": row["yearly"],
     }
     if row["partner_id"]:
@@ -356,34 +352,27 @@ def test_import_flow(db: Session) -> None:
         == 409
     )
 
-    # Zeile 1: neuer Partner, gebuchte Rechnung mit Netto aus 19 %
+    # Zeile 1: neuer Partner, eigener Budgetposten, keine Rechnung
+    invoices_before = len(db.scalars(select(BudgetInvoice)).all())
     first = manager.post(take, json=take_body(rows[0]), headers=HEADERS)
     assert first.status_code == 200, first.text
     after = with_accounts(first.json())
-    assert after[0]["status"] == "uebernommen"
-    invoice = db.get(BudgetInvoice, after[0]["invoice_id"])
-    assert invoice is not None
-    assert (invoice.status, invoice.gross_cents, invoice.net_cents) == ("gebucht", 119_000, 100_000)
-    # Eigener Posten je Zeile: Name aus der Bezeichnung, erwartete Kosten = Betrag, abgeschlossen
-    assert invoice.lines[0].closes_item is True
-    item = db.get(BudgetItem, invoice.lines[0].item_id)
-    assert item is not None and after[0]["item_id"] == item.id
+    assert after[0]["status"] == "uebernommen" and after[0]["invoice_id"] is None
+    assert len(db.scalars(select(BudgetInvoice)).all()) == invoices_before
+    # Name aus der Bezeichnung, erwartete Kosten = Betrag, Partner am Posten, Rechnung in der Notiz
+    item = db.get(BudgetItem, after[0]["item_id"])
+    assert item is not None and item.partner is not None
     assert (item.account_id, item.name, item.amount_cents) == (hardware.id, "Notebooks", 119_000)
     assert (item.start_year, item.end_year, after[0]["item_name"]) == (2026, 2026, "Notebooks")
+    assert item.partner.name == "Beispiel Hardware GmbH"
+    assert "Rechnung RE-1 vom 03.02.2026" in item.note
     # Die Entscheidung gilt für weitere Zeilen derselben Firma
     assert after[2]["partner_match"] == "entschieden"
-    # Doppelte Rechnungsnummer beim selben Partner
-    duplicate = manager.post(
-        f"{BASE}/{detail['id']}/rows/{after[2]['id']}/take",
-        json=take_body(after[2], number="RE-1"),
-        headers=HEADERS,
-    )
-    assert duplicate.status_code == 409
-    # Partner fehlt oder beides angegeben
+    # Partner fehlt oder beides angegeben, Betrag negativ
     for body in (
         take_body(after[1], partner_id=None, new_partner=None),
         take_body(after[1], partner_id=after[1]["partner_id"], new_partner="X"),
-        take_body(after[1], tax_rate_bp=1600),
+        take_body(after[1], gross_cents=-1),
     ):
         response = manager.post(
             f"{BASE}/{detail['id']}/rows/{after[1]['id']}/take", json=body, headers=HEADERS
@@ -468,8 +457,8 @@ def test_import_flow(db: Session) -> None:
     )
     assert not_taken.status_code == 422
 
-    # Löschen des Vorgangs lässt Rechnungen, Konten und Posten stehen
+    # Löschen des Vorgangs lässt Konten, Partner und Posten stehen
     assert manager.delete(f"{BASE}/{detail['id']}", headers=HEADERS).json() == {"deleted": True}
     db.expire_all()
-    assert db.get(BudgetInvoice, after[0]["invoice_id"]) is not None
+    assert db.get(BudgetItem, after[0]["item_id"]) is not None
     assert manager.get(BASE).json() == []

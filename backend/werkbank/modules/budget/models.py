@@ -67,6 +67,10 @@ class BudgetItem(Base):
     project_id: Mapped[int | None] = mapped_column(
         ForeignKey("projects.id", ondelete="SET NULL"), index=True
     )
+    # Partner (Firma) des Postens; Pflicht beim Anlegen und Ändern. Ältere Posten haben noch
+    # keinen, bis sie bearbeitet werden. Rechnungen haben ihren eigenen Rechnungssteller.
+    partner_id: Mapped[int | None] = mapped_column(ForeignKey("budget_partners.id"), index=True)
+    partner: Mapped["BudgetPartner | None"] = relationship(lazy="selectin")  # noqa: UP037
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -297,7 +301,9 @@ class BudgetImportRow(Base):
     invoice_id: Mapped[int | None] = mapped_column(
         ForeignKey("budget_invoices.id", ondelete="SET NULL")
     )
-    # Budgetposten, der aus einer Zeile mit „Jährlich“ für die Planung angelegt wurde
+    # Budgetposten, den das Übernehmen der Zeile angelegt hat
+    item_id: Mapped[int | None] = mapped_column(ForeignKey("budget_items.id", ondelete="SET NULL"))
+    # Posten, der für die Planung ins folgende Geschäftsjahr verlängert wurde
     planned_item_id: Mapped[int | None] = mapped_column(
         ForeignKey("budget_items.id", ondelete="SET NULL")
     )

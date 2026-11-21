@@ -194,24 +194,24 @@ describe("Import", () => {
     // Kein Budgetposten zum Auswählen: Übernehmen legt ihn aus der Bezeichnung an
     expect(screen.queryByLabelText("Budgetposten")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Konto")).toHaveValue("1");
-    expect(screen.getByText(/legt den Budgetposten „Notebooks“ an/)).toBeVisible();
-    expect(screen.getByText(/Netto: 1\.000,00/)).toBeVisible();
+    expect(
+      screen.getByText(/legt den Budgetposten „Notebooks“ mit diesem Partner an/),
+    ).toBeVisible();
+    // Keine Rechnung: Rechnungsfelder gibt es nicht mehr, die Angaben aus der Datei stehen dabei
+    expect(screen.queryByLabelText("Rechnungsnummer")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Steuersatz")).not.toBeInTheDocument();
+    expect(screen.getByText(/Rechnung RE-1, interne Nummer re\.26\.001, vom/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und weiter" }));
     expect(await screen.findByRole("heading", { name: "Zeile 6: Lizenz" })).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
-      invoice_date: "2026-02-03",
-      number: "RE-1",
-      internal_number: "re.26.001",
       description: "Notebooks",
       account_id: 1,
       gross_cents: 119_000,
-      tax_rate_bp: 1900,
       yearly: false,
       new_partner: "Beispiel Hardware GmbH",
     });
-    // Nächste Zeile: Vorschlag des ähnlichen Partners, interne Nummer als Nummer, Hinweis sichtbar
+    // Nächste Zeile: Vorschlag des ähnlichen Partners, Hinweis sichtbar
     expect(screen.getByLabelText(/Ähnlicher Partner/)).toBeChecked();
-    expect(screen.getByLabelText("Rechnungsnummer")).toHaveValue("re.26.001");
     expect(screen.getByText(/Ohne Rechnungsnummer/)).toBeVisible();
   });
 
@@ -225,11 +225,15 @@ describe("Import", () => {
     });
     render(<ImportDetailPage importId={3} />);
     await screen.findByRole("heading", { name: "Zeile 5: Notebooks" });
-    fireEvent.change(screen.getByLabelText(/^Betrag brutto/), { target: { value: "viel" } });
+    fireEvent.change(screen.getByLabelText(/^Erwartete Kosten brutto/), {
+      target: { value: "viel" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und weiter" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Betrag ist nicht lesbar");
     fireEvent.click(screen.getByLabelText("Anderen vorhandenen Partner wählen"));
-    fireEvent.change(screen.getByLabelText(/^Betrag brutto/), { target: { value: "10,00" } });
+    fireEvent.change(screen.getByLabelText(/^Erwartete Kosten brutto/), {
+      target: { value: "10,00" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und weiter" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Bitte einen Partner wählen");
     fireEvent.click(screen.getByLabelText("Als neuen Partner anlegen"));
