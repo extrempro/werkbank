@@ -38,6 +38,7 @@ import { PartnersPage } from "./PartnersPage";
 import { PlanningPage } from "./PlanningPage";
 import { DeleteButton } from "./shared";
 import { StatisticsPage } from "./StatisticsPage";
+import { cancelDialog, confirmDialog } from "../../test/confirm";
 
 afterEach(() => {
   cleanup();
@@ -350,6 +351,7 @@ describe("Budgetposten", () => {
     // Rechnungen auf dem Posten
     expect(await pane.findByText(/RE-7/)).toBeVisible();
     fireEvent.click(pane.getByRole("button", { name: "Abschließen" }));
+    await confirmDialog("Abschließen");
     expect(
       await screen.findByText("Office-Lizenzen ist im Wirtschaftsjahr 2026/27 abgeschlossen."),
     ).toBeVisible();
@@ -361,6 +363,7 @@ describe("Budgetposten", () => {
     const serverPane = within(screen.getByRole("region", { name: "Server" }));
     expect(serverPane.queryByRole("button", { name: "Abschließen" })).toBeNull();
     fireEvent.click(serverPane.getByRole("button", { name: "Wieder öffnen" }));
+    await confirmDialog("Wieder öffnen");
     expect(await screen.findByText("Server ist wieder offen.")).toBeVisible();
     fireEvent.click(serverPane.getByRole("button", { name: "Ansicht schließen" }));
     expect(screen.queryByRole("region", { name: "Server" })).toBeNull();
@@ -1118,13 +1121,16 @@ describe("Rechnungen", () => {
     render(<InvoicesPage roles={["Budget.Manager"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "RE-1" }));
     fireEvent.click(screen.getByRole("button", { name: "Prüfen und buchen" }));
+    expect(calls.some((call) => call.url === "/api/budget/invoices/1/book")).toBe(false);
+    expect(await screen.findByRole("alertdialog", { name: "Rechnung buchen?" })).toBeVisible();
+    await confirmDialog("Buchen");
     expect(await screen.findByText(/RE-1 ist geprüft und gebucht/)).toBeVisible();
     expect(calls.some((call) => call.url === "/api/budget/invoices/1/book")).toBe(true);
 
     fireEvent.click(await screen.findByRole("button", { name: "RE-2" }));
     fireEvent.click(screen.getByRole("button", { name: "Löschen" }));
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    await confirmDialog("Löschen");
     expect(await screen.findByText("Rechnung RE-2 ist gelöscht.")).toBeVisible();
   });
 
@@ -1301,11 +1307,10 @@ describe("Partner im Detail", () => {
     fireEvent.change(screen.getByLabelText("Zusammenlegen mit"), { target: { value: "1" } });
     fireEvent.click(screen.getByRole("button", { name: "Zusammenlegen" }));
     expect(calls.some((call) => call.method === "POST")).toBe(false);
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Wirklich mit „Beispiel Software GmbH“ zusammenlegen",
-      }),
+    expect(await screen.findByRole("alertdialog")).toHaveTextContent(
+      "wandern zu „Beispiel Software GmbH“",
     );
+    await confirmDialog("Zusammenlegen");
     await vi.waitFor(() =>
       expect(calls.find((call) => call.method === "POST")?.body).toEqual({ into_id: 1 }),
     );
@@ -1323,16 +1328,20 @@ describe("Löschen", () => {
     render(<DeleteButton what="Vertrag Wartung" run={run} onDeleted={onDeleted} />);
     fireEvent.click(screen.getByRole("button", { name: "Vertrag Wartung löschen" }));
     expect(run).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Doch nicht" }));
-    expect(screen.queryByRole("button", { name: "Wirklich löschen" })).toBeNull();
+    const dialog = await screen.findByRole("alertdialog", { name: "Vertrag Wartung löschen?" });
+    expect(dialog).toHaveTextContent("Das lässt sich nicht rückgängig machen.");
+    await cancelDialog();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(run).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Vertrag Wartung löschen" }));
-    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    await confirmDialog("Löschen");
     expect(await screen.findByRole("alert")).toHaveTextContent("Das Löschen hat nicht geklappt.");
     expect(onDeleted).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 
     fireEvent.click(screen.getByRole("button", { name: "Vertrag Wartung löschen" }));
-    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    await confirmDialog("Löschen");
     await vi.waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
   });
 
@@ -1345,7 +1354,7 @@ describe("Löschen", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Partner Beispiel Distribution AG löschen" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    await confirmDialog("Löschen");
     expect(await screen.findByText("Beispiel Distribution AG ist gelöscht.")).toBeVisible();
     expect(calls.some((call) => call.method === "DELETE")).toBe(true);
     expect(screen.queryByRole("link", { name: "Beispiel Distribution AG" })).toBeNull();
@@ -1644,7 +1653,7 @@ describe("Tag-Liste in den Einstellungen", () => {
     expect(calls.find((call) => call.method === "PUT")?.body).toEqual({ name: "Cloud" });
 
     fireEvent.click(screen.getByRole("button", { name: "Tag Lizenzen löschen" }));
-    fireEvent.click(screen.getByRole("button", { name: "Wirklich löschen" }));
+    await confirmDialog("Löschen");
     expect(await screen.findByText("Der Tag „Lizenzen“ ist gelöscht.")).toBeVisible();
   });
 });

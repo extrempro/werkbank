@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { areaNames, expectNoA11yViolations, itemName, loginAs, openMenu, openPage } from "./helpers";
+import { areaNames, expectNoA11yViolations, itemName, loginAs, openMenu, openPage, confirmDialog } from "./helpers";
 
 test("IT-Tools: Übersicht mit Suche und Favoriten", async ({
   page,
@@ -79,9 +79,7 @@ test("IT-Tools: Verlauf speichert Einstellungen und öffnet sie wieder", async (
 
   await page.goto("/it-tools/verlauf");
   await page.getByRole("button", { name: "Ganzen Verlauf löschen" }).click();
-  await page
-    .getByRole("button", { name: "Wirklich den ganzen Verlauf löschen?" })
-    .click();
+  await confirmDialog(page, "Verlauf löschen");
   await expect(page.getByText(/Noch kein Verlauf/)).toBeVisible();
 });
 

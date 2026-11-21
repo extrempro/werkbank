@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { BASE_URL, chooseFilter, expectNoA11yViolations, loginAs } from "./helpers";
+import { BASE_URL, chooseFilter, expectNoA11yViolations, loginAs, confirmDialog } from "./helpers";
 
 const ORIGIN = new URL(BASE_URL).origin;
 
@@ -68,10 +68,12 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expectNoA11yViolations(page);
   // Abhaken und wieder öffnen, ohne Rechnung
   await itemPane.getByRole("button", { name: "Abschließen" }).click();
+  await confirmDialog(page, "Abschließen", true);
   await expect(
     page.getByText(new RegExp(`Posten ${number} ist im .* abgeschlossen\\.`)),
   ).toBeVisible();
   await itemPane.getByRole("button", { name: "Wieder öffnen" }).click();
+  await confirmDialog(page, "Wieder öffnen");
   await expect(page.getByText(`Posten ${number} ist wieder offen.`)).toBeVisible();
 
   await page.goto("/budget/vertraege");

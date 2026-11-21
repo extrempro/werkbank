@@ -216,3 +216,14 @@ export async function chooseFilter(page: Page, label: string, option: string) {
       .selectOption({ label: option });
   }
 }
+
+/** Bestätigungsdialog abwarten, optional auf Barrierefreiheit prüfen und mit `action` bestätigen. */
+export async function confirmDialog(page: Page, action: string, checkA11y = false) {
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toBeVisible();
+  if (checkA11y) {
+    await expectNoA11yViolations(page);
+  }
+  await dialog.getByRole("button", { name: action, exact: true }).click();
+  await expect(dialog).toBeHidden();
+}

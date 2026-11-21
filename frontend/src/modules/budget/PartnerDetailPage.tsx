@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError, errorText } from "../../api";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { Link } from "../../components/Link";
 import { BUDGET_CONTRACTS_PATH, BUDGET_PARTNERS_PATH } from "../../navigation";
 import { navigate } from "../../router";
@@ -30,7 +31,6 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
   const [others, setOthers] = useState<Partner[]>([]);
   const [state, setState] = useState<"laden" | "fehler" | "fehlt" | "da">("laden");
   const [target, setTarget] = useState("");
-  const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -61,7 +61,7 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
     }
     setBusy(true);
     setError(null);
-    mergePartner(detail.partner.id, Number(target))
+    return mergePartner(detail.partner.id, Number(target))
       .then((result) => navigate(`${BUDGET_PARTNERS_PATH}/${result.partner.id}`))
       .catch((problem: unknown) => {
         setError(errorText(problem, "Die Partner konnten nicht zusammengelegt werden."));
@@ -223,7 +223,6 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
                     value={target}
                     onChange={(event) => {
                       setTarget(event.target.value);
-                      setConfirm(false);
                     }}
                   >
                     <option value="">Bitte wählen</option>
@@ -234,38 +233,19 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
                     ))}
                   </select>
                 </label>
-                {!confirm ? (
-                  <button
-                    key="vorbereiten"
-                    type="button"
-                    className="button button-secondary"
-                    disabled={!target}
-                    onClick={() => setConfirm(true)}
-                  >
-                    Zusammenlegen
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      key="ausfuehren"
-                      type="button"
-                      className="button button-danger"
-                      disabled={busy}
-                      onClick={onMerge}
-                    >
-                      Wirklich mit „{targetName}“ zusammenlegen
-                    </button>
-                    <button
-                      key="abbrechen"
-                      type="button"
-                      className="button button-secondary"
-                      disabled={busy}
-                      onClick={() => setConfirm(false)}
-                    >
-                      Doch nicht
-                    </button>
-                  </>
-                )}
+                <ConfirmButton
+                  className="button button-secondary"
+                  disabled={!target || busy}
+                  confirm={{
+                    title: "Partner zusammenlegen?",
+                    text: `Alle Verträge, Rechnungen und Budgetposten von „${partner.name}“ wandern zu „${targetName}“. Danach wird „${partner.name}“ gelöscht.`,
+                    action: "Zusammenlegen",
+                    danger: true,
+                  }}
+                  onConfirm={onMerge}
+                >
+                  Zusammenlegen
+                </ConfirmButton>
               </div>
               {error && (
                 <p role="alert" className="hint-box hint-bad">

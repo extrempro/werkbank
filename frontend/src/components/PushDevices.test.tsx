@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PushSettings } from "../pages/PushSettings";
 import { PushDevices } from "./PushDevices";
+import { confirmDialog } from "../test/confirm";
 
 afterEach(() => {
   cleanup();
@@ -45,6 +46,7 @@ describe("PushDevices", () => {
     // jsdom kann kein Push: Hinweis statt Knopf
     expect(screen.getByText(/kann keine Push-Nachrichten empfangen/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /^Entfernen/ }));
+    await confirmDialog("Entfernen");
     expect(await screen.findByText("Das Gerät ist entfernt.")).toBeVisible();
     expect(calls.some((call) => call.method === "DELETE" && call.url.endsWith("/3"))).toBe(true);
   });

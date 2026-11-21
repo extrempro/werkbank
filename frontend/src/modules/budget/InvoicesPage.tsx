@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { errorText } from "../../api";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
 import { Link } from "../../components/Link";
 import { SplitHandle, useSplit } from "../../components/SplitHandle";
@@ -611,16 +612,15 @@ function InvoiceDetail({
   entry: Invoice;
   canBook: boolean;
   mayChange: boolean;
-  onBook: () => void;
+  onBook: () => unknown;
   onEdit: () => void;
-  onDelete: () => void;
+  onDelete: () => unknown;
   onUpload: (file: File | undefined) => void;
   onDocumentDeleted: () => void;
   onClose: () => void;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), [entry.id]);
-  const [deleting, setDeleting] = useState(false);
   const booked = entry.status === "gebucht";
   const facts: [string, ReactNode][] = [
     ["Rechnungsdatum", formatBudgetDay(entry.invoice_date)],
@@ -743,11 +743,19 @@ function InvoiceDetail({
         {(mayChange || (canBook && !booked)) && (
           <div className="actions">
             {canBook && !booked && (
-              <button type="button" className="button button-primary" onClick={onBook}>
+              <ConfirmButton
+                className="button button-primary"
+                confirm={{
+                  title: "Rechnung buchen?",
+                  text: `Rechnung ${entry.number} über ${formatEuro(entry.gross_cents)} wird gebucht und zählt ab dann zum Ist ihrer Budgetposten. Danach lässt sie sich nicht mehr bearbeiten.`,
+                  action: "Buchen",
+                }}
+                onConfirm={onBook}
+              >
                 Prüfen und buchen
-              </button>
+              </ConfirmButton>
             )}
-            {mayChange && !deleting && (
+            {mayChange && (
               <>
                 <button
                   type="button"
@@ -758,27 +766,18 @@ function InvoiceDetail({
                 >
                   Bearbeiten
                 </button>
-                <button
-                  type="button"
+                <ConfirmButton
                   className="button button-secondary button-danger-text"
-                  onClick={() => setDeleting(true)}
+                  confirm={{
+                    title: "Rechnung löschen?",
+                    text: `Rechnung ${entry.number} wird mit allen Positionen${entry.doc_name ? " und dem Beleg" : ""} gelöscht.`,
+                    action: "Löschen",
+                    danger: true,
+                  }}
+                  onConfirm={onDelete}
                 >
                   Löschen
-                </button>
-              </>
-            )}
-            {mayChange && deleting && (
-              <>
-                <button type="button" className="button button-danger" onClick={onDelete}>
-                  Wirklich löschen
-                </button>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => setDeleting(false)}
-                >
-                  Doch nicht
-                </button>
+                </ConfirmButton>
               </>
             )}
           </div>
@@ -855,7 +854,7 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
       { kind: "rechnung", id: saved.id },
     );
   };
-  const onBook = (entry: Invoice) => {
+  const onBook = (entry: Invoice) =>
     bookInvoice(entry.id)
       .then(() =>
         done(`Rechnung ${entry.number} ist geprüft und gebucht. Sie zählt jetzt zum Ist.`, {
@@ -864,12 +863,10 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
         }),
       )
       .catch((error: unknown) => fail(error, "Die Rechnung konnte nicht gebucht werden."));
-  };
-  const onDelete = (entry: Invoice) => {
+  const onDelete = (entry: Invoice) =>
     deleteInvoice(entry.id)
       .then(() => done(`Rechnung ${entry.number} ist gelöscht.`))
       .catch((error: unknown) => fail(error, "Die Rechnung konnte nicht gelöscht werden."));
-  };
 
   const onUpload = (entry: Invoice, file: File | undefined) => {
     if (!file) {

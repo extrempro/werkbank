@@ -1,3 +1,4 @@
+import { useConfirm } from "../../components/ConfirmDialog";
 import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
@@ -125,16 +126,15 @@ function InventoryNoForm({
   onDone: (next: Hardware | null) => void;
 }) {
   const [value, setValue] = useState(device.inventory_no ?? "");
-  const [confirming, setConfirming] = useState(false);
+  const [ask, dialog] = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const next = value.trim();
 
   const save = () => {
     setBusy(true);
-    setInventoryNo(device.id, next || null).then(onDone, (problem: unknown) => {
+    return setInventoryNo(device.id, next || null).then(onDone, (problem: unknown) => {
       setError(errorText(problem, "Die Inventurnummer konnte nicht gespeichert werden."));
-      setConfirming(false);
       setBusy(false);
     });
   };
@@ -146,12 +146,19 @@ function InventoryNoForm({
       return;
     }
     setError(null);
-    setConfirming(true);
+    ask(
+      {
+        title: question,
+        text: "Bitte mit dem Aufkleber am Gerät vergleichen. Die Änderung steht danach im Verlauf.",
+        action: next ? "Übernehmen" : "Entfernen",
+      },
+      save,
+    );
   };
 
   let question: string;
   if (!next) {
-    question = `Inventurnummer ${device.inventory_no ?? ""} wirklich entfernen?`;
+    question = `Inventurnummer ${device.inventory_no ?? ""} entfernen?`;
   } else if (device.inventory_no) {
     question = `Inventurnummer von ${device.inventory_no} auf ${next} ändern?`;
   } else {
@@ -168,47 +175,21 @@ function InventoryNoForm({
           maxLength={40}
           autoComplete="off"
           spellCheck={false}
-          disabled={confirming}
+          disabled={busy}
           onChange={(event) => setValue(event.target.value)}
         />
       </label>
       <p className="small">Leer lassen, um die Inventurnummer zu entfernen.</p>
       <ErrorBox text={error} />
-      {confirming ? (
-        <div className="hint-box hint-warn confirm-box">
-          <p>
-            {question} Bitte mit dem Aufkleber am Gerät vergleichen. Die Änderung steht danach im
-            Verlauf.
-          </p>
-          <div className="project-actions">
-            <button
-              type="button"
-              className="button button-primary"
-              disabled={busy}
-              autoFocus
-              onClick={save}
-            >
-              Ja, übernehmen
-            </button>
-            <button
-              type="button"
-              className="button button-secondary"
-              onClick={() => setConfirming(false)}
-            >
-              Zurück
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="project-actions">
-          <button type="submit" className="button button-primary">
-            Weiter
-          </button>
-          <button type="button" className="button button-secondary" onClick={() => onDone(null)}>
-            Abbrechen
-          </button>
-        </div>
-      )}
+      <div className="project-actions">
+        <button type="submit" className="button button-primary" disabled={busy}>
+          Weiter
+        </button>
+        <button type="button" className="button button-secondary" onClick={() => onDone(null)}>
+          Abbrechen
+        </button>
+      </div>
+      {dialog}
     </form>
   );
 }
@@ -227,7 +208,7 @@ function RetireForm({
   const [day, setDay] = useState(today());
   const [wiped, setWiped] = useState(false);
   const [note, setNote] = useState("");
-  const [confirming, setConfirming] = useState(false);
+  const [ask, dialog] = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -250,7 +231,14 @@ function RetireForm({
       return;
     }
     setError(null);
-    setConfirming(true);
+    ask(
+      {
+        title: `„${device.name}“ ausmustern?`,
+        text: "Das Gerät verschwindet aus der Liste „Im Bestand“ und bleibt mit seinem Verlauf unter „Ausgemustert“ erhalten.",
+        action: "Ausmustern",
+      },
+      save,
+    );
   };
 
   const save = () => {
@@ -258,7 +246,7 @@ function RetireForm({
       return;
     }
     setBusy(true);
-    retireHardware(device.id, {
+    return retireHardware(device.id, {
       reason_id: Number(reasonId),
       whereabouts,
       retired_on: day,
@@ -266,7 +254,6 @@ function RetireForm({
       note: note.trim(),
     }).then(onDone, (problem: unknown) => {
       setError(errorText(problem, "Das Gerät konnte nicht ausgemustert werden."));
-      setConfirming(false);
       setBusy(false);
     });
   };
@@ -278,7 +265,7 @@ function RetireForm({
           Grund
           <select
             value={reasonId}
-            disabled={confirming}
+            disabled={busy}
             onChange={(event) => setReasonId(event.target.value)}
           >
             <option value="">Bitte wählen</option>
@@ -293,7 +280,7 @@ function RetireForm({
           Verbleib
           <select
             value={whereabouts}
-            disabled={confirming}
+            disabled={busy}
             onChange={(event) => setWhereabouts(event.target.value as Whereabouts | "")}
           >
             <option value="">Bitte wählen</option>
@@ -310,7 +297,7 @@ function RetireForm({
             type="date"
             value={day}
             max={today()}
-            disabled={confirming}
+            disabled={busy}
             onChange={(event) => setDay(event.target.value)}
           />
         </label>
@@ -320,7 +307,7 @@ function RetireForm({
           <input
             type="checkbox"
             checked={wiped}
-            disabled={confirming}
+            disabled={busy}
             onChange={(event) => setWiped(event.target.checked)}
           />
           Der Datenträger ist gelöscht oder vernichtet.
@@ -332,46 +319,20 @@ function RetireForm({
           type="text"
           value={note}
           maxLength={300}
-          disabled={confirming}
+          disabled={busy}
           onChange={(event) => setNote(event.target.value)}
         />
       </label>
       <ErrorBox text={error} />
-      {confirming ? (
-        <div className="hint-box hint-warn confirm-box">
-          <p>
-            „{device.name}“ wirklich ausmustern? Das Gerät verschwindet aus der Liste „Im Bestand“
-            und bleibt mit seinem Verlauf unter „Ausgemustert“ erhalten.
-          </p>
-          <div className="project-actions">
-            <button
-              type="button"
-              className="button button-danger"
-              disabled={busy}
-              autoFocus
-              onClick={save}
-            >
-              Ja, ausmustern
-            </button>
-            <button
-              type="button"
-              className="button button-secondary"
-              onClick={() => setConfirming(false)}
-            >
-              Zurück
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="project-actions">
-          <button type="submit" className="button button-primary">
-            Weiter
-          </button>
-          <button type="button" className="button button-secondary" onClick={() => onDone(null)}>
-            Abbrechen
-          </button>
-        </div>
-      )}
+      <div className="project-actions">
+        <button type="submit" className="button button-primary" disabled={busy}>
+          Weiter
+        </button>
+        <button type="button" className="button button-secondary" onClick={() => onDone(null)}>
+          Abbrechen
+        </button>
+      </div>
+      {dialog}
     </form>
   );
 }

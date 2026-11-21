@@ -12,6 +12,7 @@ import {
   sendPushTest,
   type PushState,
 } from "../notifications";
+import { ConfirmButton } from "./ConfirmDialog";
 
 type Message = { kind: "status" | "alert"; text: string };
 
@@ -41,7 +42,7 @@ export function PushDevices() {
   const run = (action: () => Promise<PushState>, done: string, onHere?: boolean) => {
     setBusy(true);
     setMessage(null);
-    action()
+    return action()
       .then((result) => {
         setState(result);
         if (onHere !== undefined) {
@@ -129,15 +130,19 @@ export function PushDevices() {
                     ` · zuletzt zugestellt ${formatDateTime(device.last_success_at)}`}
                 </span>
               </span>
-              <button
-                type="button"
+              <ConfirmButton
                 className="button button-link"
                 disabled={busy}
-                onClick={() => run(() => removePushDevice(device.id), "Das Gerät ist entfernt.")}
+                confirm={{
+                  title: `${device.label || "Gerät"} entfernen?`,
+                  text: "Dieses Gerät bekommt keine Push-Nachrichten mehr. Einschalten kannst du Push dort später wieder.",
+                  action: "Entfernen",
+                }}
+                onConfirm={() => run(() => removePushDevice(device.id), "Das Gerät ist entfernt.")}
               >
                 Entfernen
                 <span className="visually-hidden"> – {device.label || "Gerät"}</span>
-              </button>
+              </ConfirmButton>
             </li>
           ))}
         </ul>

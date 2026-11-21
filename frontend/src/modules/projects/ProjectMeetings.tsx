@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type ChangeEvent, type FormEvent } from "react";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { errorText } from "../../api";
 import { fileSize } from "../budget/api";
 import {
@@ -175,7 +176,7 @@ function Files({ projectId, meeting, canEdit, onChanged }: FilesProps) {
 
   const onRemove = (fileId: number, name: string) => {
     setMessage(null);
-    deleteFile(projectId, meeting.id, fileId)
+    return deleteFile(projectId, meeting.id, fileId)
       .then((result) => {
         setMessage({ kind: "status", text: `${name} ist entfernt.` });
         onChanged(result);
@@ -205,14 +206,19 @@ function Files({ projectId, meeting, canEdit, onChanged }: FilesProps) {
               </a>
               <span className="small">PDF, {fileSize(file.size)}</span>
               {canEdit && (
-                <button
-                  type="button"
+                <ConfirmButton
                   className="button button-secondary"
                   aria-label={`Anhang ${file.name} entfernen`}
-                  onClick={() => onRemove(file.id, file.name)}
+                  confirm={{
+                    title: "Anhang entfernen?",
+                    text: `${file.name} wird aus dem Jour Fixe gelöscht.`,
+                    action: "Entfernen",
+                    danger: true,
+                  }}
+                  onConfirm={() => onRemove(file.id, file.name)}
                 >
                   Entfernen
-                </button>
+                </ConfirmButton>
               )}
             </li>
           ))}
@@ -246,7 +252,6 @@ export function MeetingsTab({ projectId, canEdit }: { projectId: number; canEdit
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selected, setSelected] = useState<Meeting | null>(null);
   const [mode, setMode] = useState<"view" | "edit" | "new">("view");
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [message, setMessage] = useState<Message>(null);
   const [round, setRound] = useState(0);
 
@@ -301,7 +306,7 @@ export function MeetingsTab({ projectId, canEdit }: { projectId: number; canEdit
     if (!current) {
       return;
     }
-    deleteMeeting(projectId, current.id)
+    return deleteMeeting(projectId, current.id)
       .then(() => {
         setMessage({
           kind: "status",
@@ -309,11 +314,9 @@ export function MeetingsTab({ projectId, canEdit }: { projectId: number; canEdit
         });
         setSelectedId(null);
         setSelected(null);
-        setConfirmDelete(false);
         setRound((value) => value + 1);
       })
       .catch((problem: unknown) => {
-        setConfirmDelete(false);
         setMessage({
           kind: "alert",
           text: errorText(problem, "Der Eintrag konnte nicht gelöscht werden."),
@@ -341,7 +344,6 @@ export function MeetingsTab({ projectId, canEdit }: { projectId: number; canEdit
             className="button button-primary"
             onClick={() => {
               setMessage(null);
-              setConfirmDelete(false);
               setMode("new");
             }}
           >
@@ -364,7 +366,6 @@ export function MeetingsTab({ projectId, canEdit }: { projectId: number; canEdit
                   aria-current={entry.id === shownId && mode !== "new" ? "true" : undefined}
                   onClick={() => {
                     setMessage(null);
-                    setConfirmDelete(false);
                     setMode("view");
                     setSelectedId(entry.id);
                   }}
@@ -434,29 +435,19 @@ export function MeetingsTab({ projectId, canEdit }: { projectId: number; canEdit
                   >
                     Bearbeiten
                   </button>
-                  {confirmDelete ? (
-                    <>
-                      <button type="button" className="button button-danger" onClick={onDelete}>
-                        Wirklich löschen
-                      </button>
-                      <button
-                        type="button"
-                        className="button button-secondary"
-                        onClick={() => setConfirmDelete(false)}
-                      >
-                        Doch nicht
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="button button-secondary"
-                      aria-label={`Eintrag vom ${formatDay(current.held_on)} löschen`}
-                      onClick={() => setConfirmDelete(true)}
-                    >
-                      Löschen
-                    </button>
-                  )}
+                  <ConfirmButton
+                    className="button button-secondary"
+                    aria-label={`Eintrag vom ${formatDay(current.held_on)} löschen`}
+                    confirm={{
+                      title: "Jour Fixe löschen?",
+                      text: `Der Eintrag vom ${formatDay(current.held_on)} wird mit seinen Anhängen gelöscht.`,
+                      action: "Löschen",
+                      danger: true,
+                    }}
+                    onConfirm={onDelete}
+                  >
+                    Löschen
+                  </ConfirmButton>
                 </div>
               )}
             </div>

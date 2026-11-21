@@ -1,3 +1,4 @@
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { InfoTip } from "../../components/InfoTip";
 import {
   useEffect,
@@ -548,7 +549,7 @@ function ItemDetail({
   canEdit: boolean;
   canOpenProjects: boolean;
   onEdit: () => void;
-  onClosure: (close: boolean) => void;
+  onClosure: (close: boolean) => unknown;
   onDeleted: () => void;
   onClose: () => void;
 }) {
@@ -697,13 +698,17 @@ function ItemDetail({
         {canEdit && (
           <div className="actions">
             {canClose && (
-              <button
-                type="button"
+              <ConfirmButton
                 className="button button-primary"
-                onClick={() => onClosure(true)}
+                confirm={{
+                  title: "Posten abschließen?",
+                  text: `${item.name} gilt dann im ${yearLabel} ${yearName} als erledigt. Mit „Wieder öffnen“ machst du das rückgängig.`,
+                  action: "Abschließen",
+                }}
+                onConfirm={() => onClosure(true)}
               >
                 Abschließen
-              </button>
+              </ConfirmButton>
             )}
             <button
               type="button"
@@ -713,13 +718,17 @@ function ItemDetail({
               Bearbeiten
             </button>
             {canReopen && (
-              <button
-                type="button"
+              <ConfirmButton
                 className="button button-secondary"
-                onClick={() => onClosure(false)}
+                confirm={{
+                  title: "Posten wieder öffnen?",
+                  text: `${item.name} gilt im ${yearLabel} ${yearName} wieder als offen.`,
+                  action: "Wieder öffnen",
+                }}
+                onConfirm={() => onClosure(false)}
               >
                 Wieder öffnen
-              </button>
+              </ConfirmButton>
             )}
             <DeleteButton
               what={`Budgetposten ${item.name}`}
@@ -955,7 +964,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
       return;
     }
     const shown = overview.year;
-    (close ? closeItem(row.item.id, shown) : reopenItem(row.item.id, shown))
+    return (close ? closeItem(row.item.id, shown) : reopenItem(row.item.id, shown))
       .then(() => {
         setMessage({
           kind: "status",

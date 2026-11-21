@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { errorText } from "../../api";
 import {
   createTask,
@@ -84,7 +85,7 @@ export function TasksTab({ projectId, canEdit }: { projectId: number; canEdit: b
 
   const onDelete = (task: Task) => {
     setMessage(null);
-    deleteTask(projectId, task.id)
+    return deleteTask(projectId, task.id)
       .then(() => {
         setMessage({ kind: "status", text: `„${task.text}“ ist gelöscht.` });
         reload();
@@ -199,14 +200,19 @@ export function TasksTab({ projectId, canEdit }: { projectId: number; canEdit: b
                     .join(" · ")}
                 </span>
                 {canEdit && (
-                  <button
-                    type="button"
+                  <ConfirmButton
                     className="button button-secondary"
                     aria-label={`Aufgabe ${task.text} löschen`}
-                    onClick={() => onDelete(task)}
+                    confirm={{
+                      title: "Aufgabe löschen?",
+                      text: `„${task.text}“ wird gelöscht.`,
+                      action: "Löschen",
+                      danger: true,
+                    }}
+                    onConfirm={() => onDelete(task)}
                   >
                     Löschen
-                  </button>
+                  </ConfirmButton>
                 )}
               </li>
             ))}

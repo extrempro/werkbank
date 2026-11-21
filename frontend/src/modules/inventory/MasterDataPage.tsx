@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { errorText } from "../../api";
 import {
   createEntry,
@@ -58,7 +59,6 @@ function EntryRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
-  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputId = useId();
 
@@ -113,45 +113,27 @@ function EntryRow({
       )}
       {canEdit && !editing && (
         <span className="master-actions">
-          {confirming ? (
-            <>
-              <span className="small">Wirklich löschen?</span>
-              <button
-                type="button"
-                className="button button-danger"
-                onClick={() =>
-                  onDelete().catch((problem: unknown) => {
-                    setError(errorText(problem, "Konnte nicht gelöscht werden."));
-                    setConfirming(false);
-                  })
-                }
-              >
-                Ja, löschen
-              </button>
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => setConfirming(false)}
-              >
-                Nein
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" className="row-button" onClick={() => setEditing(true)}>
-                Umbenennen
-              </button>
-              <button
-                type="button"
-                className="row-button"
-                disabled={used > 0}
-                title={used > 0 ? "Wird noch verwendet" : undefined}
-                onClick={() => setConfirming(true)}
-              >
-                Löschen
-              </button>
-            </>
-          )}
+          <button type="button" className="row-button" onClick={() => setEditing(true)}>
+            Umbenennen
+          </button>
+          <ConfirmButton
+            className="row-button"
+            disabled={used > 0}
+            title={used > 0 ? "Wird noch verwendet" : undefined}
+            confirm={{
+              title: `„${name}“ löschen?`,
+              text: "Der Eintrag wird aus der Liste gelöscht.",
+              action: "Löschen",
+              danger: true,
+            }}
+            onConfirm={() =>
+              onDelete().catch((problem: unknown) =>
+                setError(errorText(problem, "Konnte nicht gelöscht werden.")),
+              )
+            }
+          >
+            Löschen
+          </ConfirmButton>
         </span>
       )}
       {error && (
@@ -782,7 +764,6 @@ function KitEntry({
   onEdit: () => void;
   onDelete: () => Promise<unknown>;
 }) {
-  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const names = new Map(kinds.map((kind) => [kind.id, kind.name]));
   const summary = kit.rows
@@ -801,45 +782,27 @@ function KitEntry({
       </span>
       {canEdit && (
         <span className="master-actions">
-          {confirming ? (
-            <>
-              <span className="small">Wirklich löschen?</span>
-              <button
-                type="button"
-                className="button button-danger"
-                onClick={() =>
-                  onDelete().catch((problem: unknown) => {
-                    setError(errorText(problem, "Konnte nicht gelöscht werden."));
-                    setConfirming(false);
-                  })
-                }
-              >
-                Ja, löschen
-              </button>
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => setConfirming(false)}
-              >
-                Nein
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" className="row-button" onClick={onEdit}>
-                Bearbeiten
-              </button>
-              <button
-                type="button"
-                className="row-button"
-                disabled={kit.used > 0}
-                title={kit.used > 0 ? "Wird noch an Arbeitsplätzen verwendet" : undefined}
-                onClick={() => setConfirming(true)}
-              >
-                Löschen
-              </button>
-            </>
-          )}
+          <button type="button" className="row-button" onClick={onEdit}>
+            Bearbeiten
+          </button>
+          <ConfirmButton
+            className="row-button"
+            disabled={kit.used > 0}
+            title={kit.used > 0 ? "Wird noch an Arbeitsplätzen verwendet" : undefined}
+            confirm={{
+              title: `Ausstattung „${kit.name}“ löschen?`,
+              text: "Der Eintrag wird aus der Liste gelöscht.",
+              action: "Löschen",
+              danger: true,
+            }}
+            onConfirm={() =>
+              onDelete().catch((problem: unknown) =>
+                setError(errorText(problem, "Konnte nicht gelöscht werden.")),
+              )
+            }
+          >
+            Löschen
+          </ConfirmButton>
         </span>
       )}
       {error && (

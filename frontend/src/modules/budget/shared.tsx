@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { errorText } from "../../api";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { BUDGET_EDITOR_ROLES, fetchBudgetSettings, type BudgetSettings } from "./api";
 
 interface HeadProps {
@@ -80,69 +81,44 @@ export function useRevealOnMount<T extends HTMLElement>(): RefObject<T | null> {
 }
 
 interface DeleteProps {
-  /** Was gelöscht wird, für Screenreader: „Vertrag Wartung“. */
+  /** Was gelöscht wird: „Vertrag Wartung“. Steht in der Frage und für Screenreader am Knopf. */
   what: string;
+  /** Was das Löschen sonst noch bewirkt, ein Satz; ohne Angabe ein allgemeiner Satz. */
+  detail?: string;
   run: () => Promise<unknown>;
   onDeleted: () => void;
   disabled?: boolean;
 }
 
-/** „Löschen“ mit Bestätigung. Lehnt der Server ab, steht der Grund daneben. */
-export function DeleteButton({ what, run, onDeleted, disabled = false }: DeleteProps) {
-  const [confirm, setConfirm] = useState(false);
-  const [busy, setBusy] = useState(false);
+/** „Löschen“ mit Bestätigungsdialog. Lehnt der Server ab, steht der Grund daneben. */
+export function DeleteButton({ what, detail, run, onDeleted, disabled = false }: DeleteProps) {
   const [error, setError] = useState<string | null>(null);
 
   const onDelete = () => {
-    setBusy(true);
     setError(null);
-    run()
+    return run()
       .then(onDeleted)
       .catch((problem: unknown) => {
         setError(errorText(problem, "Das Löschen hat nicht geklappt."));
-        setBusy(false);
-        setConfirm(false);
       });
   };
 
   return (
     <span className="budget-delete">
-      {confirm ? (
-        <>
-          <button
-            key="ja"
-            type="button"
-            className="button button-danger"
-            disabled={busy}
-            onClick={onDelete}
-          >
-            Wirklich löschen
-          </button>
-          <button
-            key="nein"
-            type="button"
-            className="button button-secondary"
-            disabled={busy}
-            onClick={() => setConfirm(false)}
-          >
-            Doch nicht
-          </button>
-        </>
-      ) : (
-        <button
-          key="start"
-          type="button"
-          className="button button-secondary"
-          aria-label={`${what} löschen`}
-          disabled={disabled}
-          onClick={() => {
-            setError(null);
-            setConfirm(true);
-          }}
-        >
-          Löschen
-        </button>
-      )}
+      <ConfirmButton
+        className="button button-secondary"
+        aria-label={`${what} löschen`}
+        disabled={disabled}
+        confirm={{
+          title: `${what} löschen?`,
+          text: detail ?? `${what} wird endgültig gelöscht.`,
+          action: "Löschen",
+          danger: true,
+        }}
+        onConfirm={onDelete}
+      >
+        Löschen
+      </ConfirmButton>
       {error && (
         <span role="alert" className="small budget-bad budget-delete-error">
           {error}

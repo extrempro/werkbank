@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { BASE_URL, expectNoA11yViolations, itemName, loginAs, openMenu, openPage } from "./helpers";
+import { BASE_URL, expectNoA11yViolations, itemName, loginAs, openMenu, openPage, confirmDialog } from "./helpers";
 
 test("Admin sieht das Audit-Log mit der eigenen Anmeldung", async ({ page }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
@@ -102,6 +102,7 @@ test("Admin stellt Logo und Akzentfarbe ein und nimmt beides wieder zurück", as
   await page.getByRole("button", { name: "Name und Farbe speichern" }).click();
   await expect(page.getByText("Name und Farbe sind gespeichert.")).toBeVisible();
   await page.getByRole("button", { name: "Entfernen – Logo für dunklen Hintergrund" }).click();
+  await confirmDialog(page, "Entfernen");
   await expect(page.getByText("Logo für dunklen Hintergrund: entfernt.")).toBeVisible();
   await expect(headerLogo).toHaveCount(0);
 });
@@ -167,8 +168,10 @@ test("Zu große Bilder passt die Werkbank beim Hochladen selbst an", async ({ pa
 
   // Aufräumen, damit die übrigen Tests das gewohnte Aussehen vorfinden.
   await page.getByRole("button", { name: "Entfernen – Logo für hellen Hintergrund" }).click();
+  await confirmDialog(page, "Entfernen");
   await expect(page.getByText("Logo für hellen Hintergrund: entfernt.")).toBeVisible();
   await page.getByRole("button", { name: "Entfernen – Favicon" }).click();
+  await confirmDialog(page, "Entfernen");
   await expect(page.getByText("Favicon: entfernt.")).toBeVisible();
 });
 

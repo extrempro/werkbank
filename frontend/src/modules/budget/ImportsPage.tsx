@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from "react";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
 import { errorText, formatDateTime } from "../../api";
 import { Link } from "../../components/Link";
@@ -48,11 +49,10 @@ function DraftReview({ draft, onCancel }: { draft: ImportDetail; onCancel: () =>
       });
   };
 
-  const onDiscard = () => {
+  const onDiscard = () =>
     deleteImport(draft.id)
       .then(onCancel)
       .catch(() => onCancel());
-  };
 
   return (
     <section className="panel" aria-labelledby="import-pruefen">
@@ -168,9 +168,17 @@ function DraftReview({ draft, onCancel }: { draft: ImportDetail; onCancel: () =>
           <button type="button" className="button button-primary" disabled={busy} onClick={onStart}>
             Vorgang anlegen und Zeilen abarbeiten
           </button>
-          <button type="button" className="button button-secondary" onClick={onDiscard}>
+          <ConfirmButton
+            className="button button-secondary"
+            confirm={{
+              title: "Datei verwerfen?",
+              text: `Die Vorschau von „${draft.file_name}“ wird verworfen, es wird nichts übernommen. Du kannst die Datei danach neu hochladen.`,
+              action: "Verwerfen",
+            }}
+            onConfirm={onDiscard}
+          >
             Verwerfen
-          </button>
+          </ConfirmButton>
         </div>
       </div>
     </section>

@@ -316,6 +316,10 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 - Anheften und „Zuletzt besucht“ werden je Person auf dem Server gespeichert (Tabelle `nav_entries`, Migration 0051): `GET /api/navigation`, `PUT /api/navigation/pins` (höchstens 20, Reihenfolge wie übergeben), `POST /api/navigation/recent` (die letzten 10 bleiben), `DELETE /api/navigation/recent`. Nur eigene Einträge; nur Pfade aus der Liste erlaubter Seiten in `core/navigation.py`, die dieselbe Rollenlogik spiegelt; beim Ausgeben wird erneut nach Rollen gefiltert. Ohne Netz zeigt die Oberfläche den zuletzt geladenen Stand; der Service Worker speichert nichts davon.
 - Aufgabe für `Bestand.Editor`: „Offene Vorgänge bearbeiten“ (neue und angefangene Vorgänge im IT-Bestand, `modules/inventory/tasks.py`).
 
+### 6.10b Bestätigen
+
+Aktionen mit Folgen fragen vorher in einem Bestätigungsdialog nach (Regeln in `docs/design.md`, Abschnitt „Bestätigen“; `components/ConfirmDialog.tsx`). PC und Tablet: Fenster in der Mitte; Handy: Blatt von unten. Überschrift als Frage, ein bis zwei Sätze, was passiert, Knopf mit dem Verb; bei Unumkehrbarem roter Knopf und Hinweis. Fokus zuerst auf „Abbrechen“, Esc, Klick daneben und Wischen nach unten brechen ab; bei mehreren offenen Fenstern (z. B. Geräte-Ansicht) gilt Esc nur dem obersten. Betroffen sind u. a. Löschen in allen Bereichen, Rechnung buchen, Posten und Evergreen-Einträge abschließen und wieder öffnen, Partner zusammenlegen, Import abbrechen und verwerfen, Inventurnummer setzen, Gerät ausmustern, Grundriss entfernen, Geräte freigeben, zur Freigabe senden, verwerfen und Admin-Konto trennen, andere Geräte abmelden, Push-Gerät entfernen, Branding-Bilder entfernen und den Tool-Verlauf löschen.
+
 ### 6.11 Handbuch, Info-Symbole und Hilfe
 
 - Seite „Handbuch“ (`/handbuch`) für alle, erreichbar über die Bereichsleiste (unten; am Handy im Menü unter „Alle Bereiche“), die Seite „Konto“, die Suche, „Hilfe“ an jedem Seitentitel und „Mehr im Handbuch“ in den Info-Symbolen.

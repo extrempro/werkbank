@@ -8,6 +8,7 @@ import {
   type ScanResult,
 } from "./api";
 import { DeviceAssociationPage } from "./DeviceAssociationPage";
+import { confirmDialog } from "../../test/confirm";
 
 // Kamera und WASM gibt es in jsdom nicht: Der Scanner liefert per Knopf einen Code.
 const QR = "devicelink:/1/?sn=TEST-0001&data=abc";
@@ -180,6 +181,7 @@ describe("Gerätezuordnung", () => {
     fireEvent.click(await screen.findByRole("button", { name: /QR-Code scannen/ }));
     fireEvent.click(screen.getByRole("button", { name: "Code erkannt" }));
     fireEvent.click(await screen.findByRole("button", { name: "Zur Freigabe senden" }));
+    await confirmDialog("Senden");
     expect(await screen.findByText(/Zur Freigabe gesendet/)).toBeInTheDocument();
     expect(calls.find((call) => call.url === "/api/devices/entries/pending")?.body).toEqual({
       qr: QR,
@@ -209,6 +211,8 @@ describe("Gerätezuordnung", () => {
     });
     fireEvent.click(screen.getByRole("checkbox", { name: /Beispiel-Tenant/ }));
     fireEvent.click(go);
+    expect(calls.some((call) => call.url === "/api/devices/entries/import")).toBe(false);
+    await confirmDialog("Freigeben");
     expect(await screen.findByText(/Jetzt am Gerät auf „Weiter“ klicken/)).toBeInTheDocument();
     expect(calls.find((call) => call.url === "/api/devices/entries/import")?.body).toEqual({
       qr: QR,
@@ -239,6 +243,7 @@ describe("Gerätezuordnung", () => {
     fireEvent.click(screen.getByRole("button", { name: "Code erkannt" }));
     fireEvent.click(await screen.findByRole("checkbox", { name: /Beispiel-Tenant/ }));
     fireEvent.click(screen.getByRole("button", { name: "Jetzt freigeben" }));
+    await confirmDialog("Freigeben");
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Secure Boot ist eingeschaltet");
     expect(alert).toHaveTextContent("00000000-test-0500");
@@ -287,6 +292,7 @@ describe("Gerätezuordnung", () => {
     expect(within(drawer).getByText(/verschlüsselt/)).toBeInTheDocument();
     await within(drawer).findByLabelText("Device-Preparation-Richtlinie");
     fireEvent.click(within(drawer).getByRole("button", { name: "Jetzt freigeben" }));
+    await confirmDialog("Freigeben");
     expect(await screen.findByText(/Vorab zugeordnet\. Jetzt am Gerät/)).toBeInTheDocument();
   });
 
@@ -301,7 +307,12 @@ describe("Gerätezuordnung", () => {
     const drawer = await screen.findByRole("dialog", { name: "Notebook 14" });
     fireEvent.click(within(drawer).getByRole("button", { name: "Verwerfen" }));
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
-    fireEvent.click(within(drawer).getByRole("button", { name: /Verwerfen/ }));
+    // Esc schließt nur die Rückfrage, nicht die Ansicht dahinter
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Notebook 14" })).toBeInTheDocument();
+    fireEvent.click(within(drawer).getByRole("button", { name: "Verwerfen" }));
+    await confirmDialog("Verwerfen");
     await waitFor(() => expect(calls.some((call) => call.method === "DELETE")).toBe(true));
     expect(await screen.findByText(/Gerätedaten gelöscht/)).toBeInTheDocument();
   });

@@ -6,6 +6,7 @@ import {
   uploadBrandingImage,
   type BrandingImageKind,
 } from "../api";
+import { ConfirmButton } from "../components/ConfirmDialog";
 import { setBranding, useBranding, type Branding } from "../branding";
 import {
   ImageProblem,
@@ -145,7 +146,7 @@ export function BrandingSettings() {
   const onRemove = (slot: ImageSlot) => {
     setBusy(true);
     setImageMessage(null);
-    removeBrandingImage(slot.kind)
+    return removeBrandingImage(slot.kind)
       .then((result) => {
         setBranding(result);
         setImageMessage({ kind: "status", text: `${slot.title}: entfernt.` });
@@ -277,14 +278,18 @@ export function BrandingSettings() {
                 </label>
                 {url && (
                   <div className="actions">
-                    <button
-                      type="button"
+                    <ConfirmButton
                       className="button button-secondary"
                       disabled={busy}
-                      onClick={() => onRemove(slot)}
+                      confirm={{
+                        title: `${slot.title} entfernen?`,
+                        text: "Das Bild wird gelöscht. Du kannst jederzeit ein neues hochladen.",
+                        action: "Entfernen",
+                      }}
+                      onConfirm={() => onRemove(slot)}
                     >
                       Entfernen <span className="visually-hidden">– {slot.title}</span>
-                    </button>
+                    </ConfirmButton>
                   </div>
                 )}
               </fieldset>

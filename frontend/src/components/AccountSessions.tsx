@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { deleteJson, errorText, formatDateTime, getJson, postJson } from "../api";
+import { ConfirmButton } from "./ConfirmDialog";
 
 export interface AccountSession {
   id: string;
@@ -52,7 +53,7 @@ export function AccountSessions() {
   const run = (action: () => Promise<{ ended: number }>, done: (ended: number) => string) => {
     setBusy(true);
     setMessage(null);
-    action()
+    return action()
       .then((result) => {
         setMessage({ kind: "status", text: done(result.ended) });
         setRound((value) => value + 1);
@@ -99,11 +100,15 @@ export function AccountSessions() {
                     Abmelden
                   </button>
                 ) : (
-                  <button
-                    type="button"
+                  <ConfirmButton
                     className="button button-link"
                     disabled={busy}
-                    onClick={() =>
+                    confirm={{
+                      title: `${entry.device} abmelden?`,
+                      text: `Die Sitzung auf diesem Gerät endet, zuletzt aktiv ${formatDateTime(entry.last_seen_at)}. Dort meldest du dich danach neu an.`,
+                      action: "Abmelden",
+                    }}
+                    onConfirm={() =>
                       run(
                         () => deleteJson<{ ended: number }>(`${BASE}/${entry.id}`),
                         () => `${entry.device} ist abgemeldet.`,
@@ -111,7 +116,7 @@ export function AccountSessions() {
                     }
                   >
                     Abmelden<span className="visually-hidden"> – {entry.device}</span>
-                  </button>
+                  </ConfirmButton>
                 )}
               </li>
             ))}
@@ -124,11 +129,15 @@ export function AccountSessions() {
         </p>
         {others.length > 0 && (
           <div className="actions">
-            <button
-              type="button"
+            <ConfirmButton
               className="button button-secondary"
               disabled={busy}
-              onClick={() =>
+              confirm={{
+                title: "Auf allen anderen Geräten abmelden?",
+                text: `${others.length === 1 ? "1 anderes Gerät wird" : `${others.length} andere Geräte werden`} abgemeldet. Auf diesem Gerät bleibst du angemeldet.`,
+                action: "Abmelden",
+              }}
+              onConfirm={() =>
                 run(
                   () => postJson<{ ended: number }>(`${BASE}/logout-others`),
                   (ended) =>
@@ -139,7 +148,7 @@ export function AccountSessions() {
               }
             >
               Auf allen anderen Geräten abmelden
-            </button>
+            </ConfirmButton>
           </div>
         )}
         {message && (

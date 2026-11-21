@@ -1,3 +1,4 @@
+import { ConfirmButton, useConfirm } from "../../components/ConfirmDialog";
 import { InfoTip } from "../../components/InfoTip";
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { FilterBar } from "../../components/FilterBar";
@@ -189,7 +190,7 @@ function PolicySelect({
   );
 }
 
-function AdminCard({ admin, onDisconnect }: { admin: Admin; onDisconnect: () => void }) {
+function AdminCard({ admin, onDisconnect }: { admin: Admin; onDisconnect: () => unknown }) {
   if (!admin.connected) {
     return (
       <section className="panel dev-admin" aria-labelledby="dev-admin-title">
@@ -220,9 +221,17 @@ function AdminCard({ admin, onDisconnect }: { admin: Admin; onDisconnect: () => 
           Endet beim Abmelden.
         </p>
       </div>
-      <button type="button" className="button button-secondary" onClick={onDisconnect}>
+      <ConfirmButton
+        className="button button-secondary"
+        confirm={{
+          title: "Admin-Konto trennen?",
+          text: `Die Verbindung mit ${admin.upn} endet. Zum Freigeben meldest du dich danach neu mit dem Admin-Konto an.`,
+          action: "Trennen",
+        }}
+        onConfirm={onDisconnect}
+      >
         Trennen
-      </button>
+      </ConfirmButton>
     </section>
   );
 }
@@ -244,7 +253,6 @@ function DeviceDrawer({ device, admin, onClose, onChanged }: DrawerProps) {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [policies, setPolicies] = useState<Policy[] | null>(null);
   const [policy, setPolicy] = useState("");
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const pending = device.status === "freigabe";
   const link = intuneUrl(device);
 
@@ -431,7 +439,7 @@ function DeviceDrawer({ device, admin, onClose, onChanged }: DrawerProps) {
         </div>
 
         <div className="dev-drawer-actions">
-          {pending && !confirmDiscard && (
+          {pending && (
             <>
               {admin.connected ? (
                 <>
@@ -441,51 +449,38 @@ function DeviceDrawer({ device, admin, onClose, onChanged }: DrawerProps) {
                   <p className="small">
                     Wird freigegeben mit <span className="mono">{admin.upn}</span>.
                   </p>
-                  <button
-                    type="button"
+                  <ConfirmButton
                     className="button"
                     disabled={busy}
-                    onClick={() => void onApprove()}
+                    confirm={{
+                      title: "Gerät jetzt freigeben?",
+                      text: `${device.model} (${device.serial_number}) wird mit ${admin.upn} bei Microsoft dem Tenant zugeordnet. Zurücknehmen geht danach nur in Intune.`,
+                      action: "Freigeben",
+                    }}
+                    onConfirm={onApprove}
                   >
                     {busy ? "Wird zugeordnet …" : "Jetzt freigeben"}
-                  </button>
+                  </ConfirmButton>
                 </>
               ) : (
                 <a className="button" href={ADMIN_LOGIN_URL}>
                   Mit Admin-Konto anmelden
                 </a>
               )}
-              <button
-                type="button"
+              <ConfirmButton
                 className="button button-secondary"
                 disabled={busy}
-                onClick={() => setConfirmDiscard(true)}
+                confirm={{
+                  title: "Eintrag verwerfen?",
+                  text: `Eintrag und Gerätedaten von ${device.model} (${device.serial_number}) werden gelöscht. Das Gerät muss danach neu gescannt werden.`,
+                  action: "Verwerfen",
+                  danger: true,
+                }}
+                onConfirm={onDiscard}
               >
                 Verwerfen
-              </button>
+              </ConfirmButton>
             </>
-          )}
-          {pending && confirmDiscard && (
-            <div className="confirm-box" role="group" aria-label="Verwerfen bestätigen">
-              <p>Eintrag und Gerätedaten löschen? Das Gerät muss danach neu gescannt werden.</p>
-              <div className="actions">
-                <button
-                  type="button"
-                  className="button button-danger"
-                  disabled={busy}
-                  onClick={() => void onDiscard()}
-                >
-                  <Icon name="loeschen" /> Verwerfen
-                </button>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => setConfirmDiscard(false)}
-                >
-                  Abbrechen
-                </button>
-              </div>
-            </div>
           )}
           {!pending && device.status !== "registriert" && (
             <button
@@ -525,6 +520,7 @@ interface ScanDialogProps {
 
 /** Scan-Dialog in drei Schritten: Scannen › Prüfen › Zuordnen. Auf dem Handy bildschirmfüllend. */
 function ScanDialog({ onClose, onDone, onOpenEntry }: ScanDialogProps) {
+  const [ask, confirmDialog] = useConfirm();
   const dialog = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useModal(dialog, true, onClose);
@@ -594,10 +590,33 @@ function ScanDialog({ onClose, onDone, onOpenEntry }: ScanDialogProps) {
   const scanned = step.kind === "kamera" ? null : step.scan;
   const label = scanned ? `${scanned.model} (${scanned.serial_number})` : "";
 
+  const askSend = () => {
+    if (step.kind !== "pruefen" || !step.scan) {
+      return;
+    }
+    const { qr, scan } = step;
+    ask(
+      {
+        title: "Zur Freigabe senden?",
+        text: `${label} wartet dann unter „Wartet auf Freigabe“. Freigeben kann jede Person mit Admin-Konto.`,
+        action: "Senden",
+      },
+      () => onSend(qr, scan),
+    );
+  };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (step.kind === "pruefen" && step.scan?.admin_connected && tenantOk) {
-      void onImport(step.qr, step.scan);
+      const { qr, scan } = step;
+      ask(
+        {
+          title: "Gerät jetzt freigeben?",
+          text: `${label} wird mit ${scan.admin_upn ?? "dem Admin-Konto"} bei Microsoft dem Tenant zugeordnet. Zurücknehmen geht danach nur in Intune.`,
+          action: "Freigeben",
+        },
+        () => onImport(qr, scan),
+      );
     }
   };
 
@@ -737,7 +756,7 @@ function ScanDialog({ onClose, onDone, onOpenEntry }: ScanDialogProps) {
                       type="button"
                       className="button button-secondary"
                       disabled={busy}
-                      onClick={() => step.scan && void onSend(step.qr, step.scan)}
+                      onClick={askSend}
                     >
                       Zur Freigabe senden
                     </button>
@@ -765,12 +784,7 @@ function ScanDialog({ onClose, onDone, onOpenEntry }: ScanDialogProps) {
                     <button type="button" className="button button-secondary" onClick={again}>
                       Neu scannen
                     </button>
-                    <button
-                      type="button"
-                      className="button"
-                      disabled={busy}
-                      onClick={() => step.scan && void onSend(step.qr, step.scan)}
-                    >
+                    <button type="button" className="button" disabled={busy} onClick={askSend}>
                       {busy ? "Wird gesendet …" : "Zur Freigabe senden"}
                     </button>
                   </div>
@@ -851,6 +865,7 @@ function ScanDialog({ onClose, onDone, onOpenEntry }: ScanDialogProps) {
           </div>
         )}
       </div>
+      {confirmDialog}
     </div>
   );
 }
@@ -990,7 +1005,7 @@ export function DeviceAssociationPage() {
         </p>
       )}
 
-      {admin && <AdminCard admin={admin} onDisconnect={() => void onDisconnect()} />}
+      {admin && <AdminCard admin={admin} onDisconnect={onDisconnect} />}
 
       {counts && counts.freigabe > 0 && view !== "freigabe" && (
         <div className="hint-box hint-warn dev-pending">

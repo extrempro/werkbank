@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
@@ -490,8 +491,6 @@ export function ImportDetailPage({ importId }: { importId: number }) {
   const [filter, setFilter] = useState<RowFilter>("offen");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [view, setView] = useState<"zeilen" | "planung">("zeilen");
-  const [cancelAsked, setCancelAsked] = useState(false);
-  const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [round, setRound] = useState(0);
 
@@ -567,17 +566,12 @@ export function ImportDetailPage({ importId }: { importId: number }) {
   const canCancel = detail.status !== "abgebrochen" && detail.open + detail.skipped > 0;
 
   const onCancelImport = () => {
-    setCancelBusy(true);
     setCancelError(null);
-    cancelImport(detail.id)
-      .then((result) => {
-        setDetail(result);
-        setCancelAsked(false);
-      })
+    return cancelImport(detail.id)
+      .then((result) => setDetail(result))
       .catch((failure: unknown) =>
         setCancelError(errorText(failure, "Der Import konnte nicht abgebrochen werden.")),
-      )
-      .finally(() => setCancelBusy(false));
+      );
   };
 
   return (
@@ -594,43 +588,21 @@ export function ImportDetailPage({ importId }: { importId: number }) {
               übernommenen Zeilen und ihre Budgetposten bleiben.
             </p>
           )}
-          {canCancel && !cancelAsked && (
+          {canCancel && (
             <p>
-              <button
-                type="button"
+              <ConfirmButton
                 className="button button-secondary"
-                onClick={() => setCancelAsked(true)}
+                confirm={{
+                  title: "Import abbrechen?",
+                  text: `${detail.open + detail.skipped} offene und übersprungene Zeilen werden gelöscht. Die ${detail.taken} übernommenen Zeilen und ihre Budgetposten bleiben.`,
+                  action: "Import abbrechen",
+                  danger: true,
+                }}
+                onConfirm={onCancelImport}
               >
                 Import abbrechen
-              </button>
+              </ConfirmButton>
             </p>
-          )}
-          {canCancel && cancelAsked && (
-            <div className="confirm-box" role="group" aria-label="Import abbrechen">
-              <p>
-                {detail.open + detail.skipped} offene und übersprungene Zeilen werden gelöscht. Die{" "}
-                {detail.taken} übernommenen Zeilen und ihre Budgetposten bleiben. Das lässt sich
-                nicht rückgängig machen.
-              </p>
-              <div className="actions">
-                <button
-                  type="button"
-                  className="button button-danger"
-                  disabled={cancelBusy}
-                  onClick={onCancelImport}
-                >
-                  Import wirklich abbrechen
-                </button>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  disabled={cancelBusy}
-                  onClick={() => setCancelAsked(false)}
-                >
-                  Doch nicht
-                </button>
-              </div>
-            </div>
           )}
           {cancelError && (
             <p role="alert" className="hint-box hint-bad">

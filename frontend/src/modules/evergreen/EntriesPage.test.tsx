@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { navigate } from "../../router";
 import { entryPath, parseEvergreenPath, type Entry, type EntrySummary } from "./api";
 import { EntriesPage, groupEntries } from "./EntriesPage";
+import { confirmDialog } from "../../test/confirm";
 
 vi.mock("../../router", () => ({ navigate: vi.fn() }));
 
@@ -332,6 +333,7 @@ describe("EntriesPage", () => {
     expect(note?.body).toEqual({ text: "Mit Fachabteilung klären" });
 
     fireEvent.click(screen.getByRole("button", { name: "Abschließen" }));
+    await confirmDialog("Abschließen");
     expect(await screen.findByRole("button", { name: "Wieder öffnen" })).toBeVisible();
     const close = calls.find((call) => call.url.endsWith("/close"));
     expect(close?.body).toEqual({ text: null });

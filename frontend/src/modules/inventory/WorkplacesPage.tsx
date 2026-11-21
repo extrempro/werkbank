@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
 import { Link } from "../../components/Link";
 import { INVENTORY_MASTER_PATH, INVENTORY_WORKPLACES_PATH } from "../../navigation";
@@ -510,7 +511,6 @@ function Overview({
   onChange: (next: Workplace) => void;
 }) {
   const [choices, setChoices] = useState<Choices | null>(null);
-  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasHardware = workplace.hardware_list.length > 0;
 
@@ -525,20 +525,31 @@ function Overview({
     <section className="panel" aria-labelledby="platz-daten">
       <div className="panel-head">
         <h2 id="platz-daten">Übersicht</h2>
-        {canEdit && !choices && !confirming && (
+        {canEdit && !choices && (
           <div className="project-actions">
             <button type="button" className="button button-secondary" onClick={edit}>
               Bearbeiten
             </button>
-            <button
-              type="button"
+            <ConfirmButton
               className="button button-secondary"
               disabled={hasHardware}
               title={hasHardware ? "Am Arbeitsplatz hängt noch Hardware" : undefined}
-              onClick={() => setConfirming(true)}
+              confirm={{
+                title: `Arbeitsplatz ${workplaceName(workplace)} löschen?`,
+                text: "Der Arbeitsplatz wird mit seiner Zuordnung zu Stellen gelöscht.",
+                action: "Arbeitsplatz löschen",
+                danger: true,
+              }}
+              onConfirm={() =>
+                deleteWorkplace(workplace.id).then(
+                  () => navigate(INVENTORY_WORKPLACES_PATH),
+                  (problem: unknown) =>
+                    setError(errorText(problem, "Der Arbeitsplatz konnte nicht gelöscht werden.")),
+                )
+              }
             >
               Löschen
-            </button>
+            </ConfirmButton>
           </div>
         )}
       </div>
@@ -561,41 +572,6 @@ function Overview({
             <p role="alert" className="hint-box hint-bad">
               {error}
             </p>
-          )}
-          {confirming && (
-            <div className="hint-box hint-warn confirm-box">
-              <p>
-                Arbeitsplatz <strong>{workplaceName(workplace)}</strong> löschen? Das lässt sich
-                nicht rückgängig machen.
-              </p>
-              <div className="project-actions">
-                <button
-                  type="button"
-                  className="button button-danger"
-                  autoFocus
-                  onClick={() =>
-                    deleteWorkplace(workplace.id).then(
-                      () => navigate(INVENTORY_WORKPLACES_PATH),
-                      (problem: unknown) => {
-                        setError(
-                          errorText(problem, "Der Arbeitsplatz konnte nicht gelöscht werden."),
-                        );
-                        setConfirming(false);
-                      },
-                    )
-                  }
-                >
-                  Ja, Arbeitsplatz löschen
-                </button>
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => setConfirming(false)}
-                >
-                  Nein
-                </button>
-              </div>
-            </div>
           )}
           <dl className="facts">
             <div>

@@ -3,6 +3,10 @@ import { useEffect, type RefObject } from "react";
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// Offene Dialoge, der oberste zuletzt. Tasten gehören nur ihm (z. B. Bestätigung über einer
+// Geräte-Ansicht: Esc schließt nur die Bestätigung).
+const stack: object[] = [];
+
 /**
  * Verhalten eines modalen Dialogs: Fokus beim Öffnen hinein (auf `initial` oder das erste
  * bedienbare Element), Tab bleibt im Dialog, Esc schließt, danach kehrt der Fokus zurück.
@@ -18,10 +22,15 @@ export function useModal(
     if (!open || !dialog) {
       return;
     }
+    const token = {};
+    stack.push(token);
     const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const first = initial?.current ?? dialog.querySelector<HTMLElement>(FOCUSABLE);
     first?.focus();
     const onKey = (event: KeyboardEvent) => {
+      if (stack[stack.length - 1] !== token) {
+        return;
+      }
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
@@ -53,6 +62,7 @@ export function useModal(
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("keydown", onKey);
+      stack.splice(stack.indexOf(token), 1);
       if (before && before.isConnected) {
         before.focus();
       }

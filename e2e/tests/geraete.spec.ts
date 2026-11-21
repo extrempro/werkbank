@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { BASE_URL, expectNoA11yViolations, loginAs } from "./helpers";
+import { BASE_URL, expectNoA11yViolations, loginAs, confirmDialog } from "./helpers";
 
 // Gerätezuordnung mit nachgestelltem Microsoft Graph (ENVIRONMENT=test): Das Admin-Konto
 // verbindet der Test über /api/devices/admin/test-login. Die QR-Codes in fixtures/ enthalten
@@ -54,6 +54,7 @@ test("Scannen, zur Freigabe senden, eine andere Person gibt frei", async ({
   await expect(dialog.getByText(serial)).toBeVisible();
   await expectNoA11yViolations(page);
   await dialog.getByRole("button", { name: "Zur Freigabe senden" }).click();
+  await confirmDialog(page, "Senden");
   await expect(dialog.getByText(/Zur Freigabe gesendet/)).toBeVisible();
   await dialog.getByRole("button", { name: "Zur Liste" }).click();
   await expect(dialog).toBeHidden();
@@ -76,6 +77,7 @@ test("Scannen, zur Freigabe senden, eine andere Person gibt frei", async ({
     .selectOption({ label: "Testrichtlinie Büro" });
   await expectNoA11yViolations(page);
   await drawer.getByRole("button", { name: "Jetzt freigeben" }).click();
+  await confirmDialog(page, "Freigeben", true);
   await expect(
     page.getByText(/Vorab zugeordnet\. Jetzt am Gerät/),
   ).toBeVisible();
@@ -87,6 +89,7 @@ test("Wartendes Gerät verwerfen", async ({ page }) => {
   await page.goto(PAGE);
   const dialog = await scanPhoto(page, "verwerfen");
   await dialog.getByRole("button", { name: "Zur Freigabe senden" }).click();
+  await confirmDialog(page, "Senden");
   await expect(dialog.getByText(/Zur Freigabe gesendet/)).toBeVisible();
   await dialog.getByRole("button", { name: "Zur Liste" }).click();
 
@@ -97,14 +100,8 @@ test("Wartendes Gerät verwerfen", async ({ page }) => {
     .click();
   const drawer = page.getByRole("dialog", { name: "Modell 1" });
   await drawer.getByRole("button", { name: "Verwerfen" }).click();
-  await expect(
-    drawer.getByText(/Eintrag und Gerätedaten löschen/),
-  ).toBeVisible();
-  await expectNoA11yViolations(page);
-  await drawer
-    .getByRole("group", { name: "Verwerfen bestätigen" })
-    .getByRole("button", { name: "Verwerfen" })
-    .click();
+  await expect(page.getByRole("alertdialog")).toContainText("Eintrag und Gerätedaten");
+  await confirmDialog(page, "Verwerfen", true);
   await expect(page.getByText(/Gerätedaten gelöscht/)).toBeVisible();
   await expect(page.getByRole("button", { name: /E2E-VERWERFEN/ })).toHaveCount(
     0,
@@ -125,6 +122,7 @@ test("Sofort freigeben mit Admin-Konto, Duplikat und Fehler von Microsoft", asyn
   await dialog.getByRole("checkbox", { name: /Beispiel-Tenant/ }).check();
   await expectNoA11yViolations(page);
   await go.click();
+  await confirmDialog(page, "Freigeben");
   await expect(
     dialog.getByText(/Jetzt am Gerät auf „Weiter“ klicken/),
   ).toBeVisible();
@@ -145,6 +143,7 @@ test("Sofort freigeben mit Admin-Konto, Duplikat und Fehler von Microsoft", asyn
   await dialog.getByLabel(/Foto auswählen/).setInputFiles(fixture("fehler500"));
   await dialog.getByRole("checkbox", { name: /Beispiel-Tenant/ }).check();
   await dialog.getByRole("button", { name: "Jetzt freigeben" }).click();
+  await confirmDialog(page, "Freigeben");
   const alert = dialog.getByRole("alert");
   await expect(alert).toContainText(
     "Microsoft konnte das Gerät nicht zuordnen",

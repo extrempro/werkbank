@@ -104,6 +104,7 @@ export const AREAS: readonly Area[] = [
                   "„Menü einklappen“ unten im Seitenmenü lässt nur die Bereichsleiste stehen. Ein Klick auf einen Bereich öffnet das Menü wieder.",
                   "Kontomenü oben rechts: Konto, Release Notes, hell, dunkel oder automatisch, „Zuletzt besucht leeren“ und „Abmelden“.",
                   "Auf dem Handy steht unten eine Leiste mit Start, Suche, Aufgaben und Menü. „Menü“ zeigt erst die Seiten des aktuellen Bereichs; über „Alle Bereiche“ kommst du in jeden anderen.",
+                  "Bei Aktionen mit Folgen, etwa Löschen, Buchen, Abschließen, Freigeben oder andere Geräte abmelden, fragt die Werkbank in einem eigenen Fenster nach, am Handy als Blatt von unten. Dort steht, was genau passiert. Lässt sich etwas nicht rückgängig machen, ist der Knopf rot und es steht ein Hinweis dabei. „Abbrechen“, Esc, ein Klick daneben oder am Handy Wischen nach unten brechen ab.",
                   "Über Listen stehen Suche und Filter. Am Computer und Tablet wählst du den Status mit den Knöpfen darunter, „Filter aufheben“ setzt alles zurück. Auf dem Handy wählst du den Status aus einer Liste; die übrigen Filter öffnest du mit „Weitere Filter“, die Zahl daran zeigt, wie viele gesetzt sind. Auf dem Handy steht jeder Eintrag als eigene Karte untereinander.",
                 ],
               },
