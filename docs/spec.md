@@ -314,10 +314,16 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 - Anheften und „Zuletzt besucht“ werden je Person auf dem Server gespeichert (Tabelle `nav_entries`, Migration 0051): `GET /api/navigation`, `PUT /api/navigation/pins` (höchstens 20, Reihenfolge wie übergeben), `POST /api/navigation/recent` (die letzten 10 bleiben), `DELETE /api/navigation/recent`. Nur eigene Einträge; nur Pfade aus der Liste erlaubter Seiten in `core/navigation.py`, die dieselbe Rollenlogik spiegelt; beim Ausgeben wird erneut nach Rollen gefiltert. Ohne Netz zeigt die Oberfläche den zuletzt geladenen Stand; der Service Worker speichert nichts davon.
 - Aufgabe für `Bestand.Editor`: „Offene Vorgänge bearbeiten“ (neue und angefangene Vorgänge im IT-Bestand, `modules/inventory/tasks.py`).
 
-### 6.11 Handbuch
+### 6.11 Handbuch, Info-Symbole und Hilfe
 
-- Seite „Handbuch“ (`/handbuch`) für alle, erreichbar über die Bereichsleiste (unten; am Handy im Menü unter „Alle Bereiche“), die Seite „Konto“ und die Suche. Kapitel je Bereich (`/handbuch/<kapitel>`, Abschnitte als Sprungziel `#<abschnitt>`), mit Inhaltsverzeichnis, Anleitungen in Schritten, Begriffen, Hinweisen und Verweisen auf die Seiten der Werkbank.
-- Jede Person sieht die allgemeinen Kapitel und die ihrer Rollen; einzelne Abschnitte können auf Rollen beschränkt sein. `Werkbank.Admin` sieht alles. Ein Kapitel ohne passende Rolle gilt als nicht vorhanden.
+- Seite „Handbuch“ (`/handbuch`) für alle, erreichbar über die Bereichsleiste (unten; am Handy im Menü unter „Alle Bereiche“), die Seite „Konto“, die Suche, „Hilfe“ an jedem Seitentitel und „Mehr im Handbuch“ in den Info-Symbolen.
+- Aufbau (seit 0.84): **Bereiche** in der Reihenfolge der Bereichsleiste (Grundlagen, Microsoft 365, Evergreen, IT-Monitoring, IT-Bestand, IT-Budget, IT-Projekte, IT-Tools, Verwaltung, Fragen und Hilfe), darin **Teile** wie die Gruppen im Seitenmenü (z. B. IT-Budget: Überblick, Ausgaben, Stammdaten, Verwaltung) und je **Thema** eine Seite (`/handbuch/<bereich>/<thema>`; `/handbuch/<bereich>` listet die Themen). Alte Adressen (`/handbuch/<kapitel>#<abschnitt>`) werden nicht weitergeleitet.
+- **Untermenü:** Auf Handbuch-Seiten steht im Seitenmenü statt des Menüs eines Bereichs das Handbuch: Suche (filtert sofort), „Übersicht“, die Bereiche zum Auf- und Zuklappen mit Zahl der Themen (Zustand je Browser, `werkbank-handbuch-gruppen`; der geöffnete Bereich ist anfangs offen), darin die Teile mit Überschrift und die Themen (gewählt mit `aria-current`). Am Handy öffnet „Alle Themen“ dasselbe Menü in einem Blatt von unten.
+- **Themenseite:** Pfad (Handbuch › Bereich › Teil), Titel, für welche Rollen das Thema gilt, Verweis auf die passende Seite der Werkbank, Inhalt (Text, Anleitungen in Schritten, Begriffe, Hinweise, Verweise), „Weitere Themen in <Teil>“ und vorheriges/nächstes Thema.
+- Jede Person sieht die Themen ihrer Rollen (Rollen am Thema, sonst am Teil, sonst am Bereich); `Werkbank.Admin` sieht alles. Ein Thema ohne passende Rolle gilt als nicht vorhanden.
+- **Info-Symbole:** Fachbegriffe, berechnete Werte und Felder mit Folgen tragen ein „i“ (gemeinsame Komponente `components/InfoTip.tsx`). Klick oder Enter öffnet eine Blase mit höchstens zwei Sätzen und „Mehr im Handbuch ›“ (nur, wenn die Person das Thema sehen darf); Esc, ein Klick daneben oder ein zweiter Klick schließt sie. Die Texte stehen zentral in `frontend/src/help/terms.ts`, jeweils mit Thema im Handbuch.
+- **Begriffe A–Z** (`/handbuch/hilfe/begriffe`): alle Erklärungen der Info-Symbole, deren Thema die Person sehen darf, alphabetisch mit Verweis auf das Thema.
+- **Hilfe zu dieser Seite:** Hinter dem Seitentitel (neben dem Stern) steht „Hilfe“; es führt zum passenden Thema (Zuordnung Pfad → Thema in `help/terms.ts`, längster passender Pfad, erstes sichtbares Thema).
 - Die Inhalte liegen als Daten in `frontend/src/handbook/content.ts` und werden nur als Text dargestellt. Die Suche im Handbuch und die Treffer auf der Seite „Suche“ ermittelt der Browser.
 - Nur Bedienung; Einrichtung und Betrieb stehen weiter in `docs/`.
 
@@ -689,7 +695,7 @@ Evergreen:
 | IT-Bestand › Gerät | Bestand.* (Ändern: Bestand.Editor) | Reiter Übersicht (Bearbeiten, Inventurnummer mit Rückfrage, Ausmustern, Wieder in Betrieb nehmen) und Verlauf |
 | IT-Bestand › Stammdaten | Bestand.* (Pflegen: Bestand.Editor) | Hardware-Arten, Hersteller und Modelle, Gründe fürs Ausmustern |
 | DNS-Abgleich mit NetBox | Monitoring.Reader, Admin | Kennzahlen, Verlauf 90 Tage, Kacheln je Stand als Filter, Filter Probleme/Abweichend/Fehlt öffentlich/Fehler/In Ordnung/Neu/Alle mit Anzahl, Suche, Tabelle je Zone mit der Zone als Überschrift, „Jetzt prüfen“ für Admins |
-| Handbuch | alle | Kapitel je Bereich nach Rollen, Suche im Handbuch, je Kapitel Inhaltsverzeichnis und Abschnitte mit Verweisen |
+| Handbuch | alle | Bereiche, Teile und je Thema eine Seite nach Rollen; eigenes Seitenmenü mit Suche (am Handy „Alle Themen“); Begriffe A–Z; Themenseite mit Rollen, Verweis, weiteren Themen und vor/zurück |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
 
 Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz.

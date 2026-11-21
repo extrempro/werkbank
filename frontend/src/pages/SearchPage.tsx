@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { searchAll, type SearchHit } from "../api";
 import { Link } from "../components/Link";
-import { chapterPath, searchHandbook } from "../handbook";
+import { searchHandbook, topicPath } from "../handbook";
 import { TOOLS_PATH } from "../navigation";
 import { navigate, useSearchParam } from "../router";
 import { CATEGORY_LABELS, searchTools } from "../tools";
@@ -37,14 +37,14 @@ export function toolHits(query: string): SearchHit[] {
   }));
 }
 
-/** Treffer im Handbuch, nur in den Kapiteln, die zu den Rollen passen. Sucht der Browser. */
+/** Treffer im Handbuch, nur in den Themen, die zu den Rollen passen. Sucht der Browser. */
 export function handbookHits(query: string, roles: readonly string[]): SearchHit[] {
   return searchHandbook(query, roles, 5).map((hit) => ({
     module: "Handbuch",
-    kind: "Abschnitt",
-    title: hit.section.title,
-    subtitle: hit.chapter.title,
-    link: chapterPath(hit.chapter.id, hit.section.id),
+    kind: "Thema",
+    title: hit.topic.title,
+    subtitle: hit.area.title,
+    link: topicPath(hit.area.id, hit.topic.id),
   }));
 }
 

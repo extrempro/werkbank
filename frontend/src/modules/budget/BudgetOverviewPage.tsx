@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState } from "react";
 import { Link } from "../../components/Link";
 import {
@@ -279,19 +280,25 @@ export function BudgetOverviewPage({ roles }: { roles: readonly string[] }) {
           )}
           <dl className="budget-cards">
             <div className="panel budget-card">
-              <dt>Geplant {overview.year_name}</dt>
+              <dt>
+                Geplant {overview.year_name} <InfoTip term="budget.geplant" />
+              </dt>
               <dd className="budget-card-value">{formatEuro(expected)}</dd>
               <dd className="budget-card-sub">
                 Vorjahr {formatEuro(overview.previous.total_cents)}
               </dd>
             </div>
             <div className="panel budget-card">
-              <dt>Ist bis heute</dt>
+              <dt>
+                Ist bis heute <InfoTip term="budget.ist" />
+              </dt>
               <dd className="budget-card-value">{formatEuro(actual)}</dd>
               <dd className="budget-card-sub">{share(actual, expected)} % des Geplanten</dd>
             </div>
             <div className="panel budget-card">
-              <dt>Verfügbar</dt>
+              <dt>
+                Verfügbar <InfoTip term="budget.verfuegbar" />
+              </dt>
               <dd className="budget-card-value">{formatEuro(expected - actual)}</dd>
               <dd
                 className={expected - actual < 0 ? "budget-card-sub budget-bad" : "budget-card-sub"}

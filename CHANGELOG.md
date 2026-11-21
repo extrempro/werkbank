@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.84.0] – 2026-11-21
+
+### Handbuch
+
+- **Neu geordnet** (spec.md 6.11): Bereiche in der Reihenfolge der Bereichsleiste, darin Teile wie im Seitenmenü und je Thema eine eigene Seite (`/handbuch/<bereich>/<thema>`); die Texte sind unverändert übernommen, nur neu sortiert. Neue Typen `Area`, `Part`, `Topic` (`handbook/types.ts`), Hilfen `areasFor`, `topicsFor`, `findTopic`, `topicPath`, `parseHandbookPath`. Alte Adressen werden nicht weitergeleitet
+- **Eigenes Seitenmenü** (`components/nav/HandbookMenu.tsx`): Suche, „Übersicht“, Bereiche zum Aufklappen mit Zahl der Themen (Zustand je Browser), Teile als Überschriften; am Handy „Alle Themen“ als Blatt von unten
+- **Themenseite** mit Pfad, Rollen, Verweis in die Werkbank, „Weitere Themen in …“ und vor/zurück; Bereichsseite mit allen Themen
+- **Neue Themen** „Info-Symbole und Hilfe“ (Grundlagen) und „Begriffe A–Z“ (Fragen und Hilfe)
+
+### Alle Bereiche
+
+- **Info-Symbole „i“** (`components/InfoTip.tsx`, Texte in `help/terms.ts`): kurze Erklärung als Blase mit „Mehr im Handbuch“, passend zur hellen und dunklen Darstellung (neue Variablen `--farbe-blase…`), bedienbar per Klick, Tastatur und Esc. Eingebaut an Kennzahlen und Begriffen in M365 (Überwachte Einstellungen, Abweichungen, Gelesene Objekte, Kritikalität, Soll-Wert, Punkte, Auswirkung auf Nutzer), Tenant (Frei, Handlungsbedarf), Gerätezuordnung (Ziel-Tenant, Konformität), Evergreen (Steckbrief, Rollout, Vorschlag, Mitbestimmung, Info-Meldungen), IT-Budget (Geplant, Ist, Verfügbar, AVV, Kündigungstermin, Wenn nicht gekündigt), IT-Projekte (Veranschlagt, Ist) und IT-Bestand (Inventurnummer, Herkunft, Datenträger, überfällig)
+- **„Hilfe“ am Seitentitel** neben dem Stern, führt zum passenden Thema im Handbuch (Zuordnung `PAGE_HELP` in `help/terms.ts`)
+- Auf Handbuch-Seiten ist in der Bereichsleiste nur noch „Handbuch“ markiert
+
+### Dokumentation
+
+- `CLAUDE.md`: Info-Symbole bei jeder Änderung mitpflegen und das Ergebnis nennen; `docs/spec.md` 6.11 und Screens, `docs/design.md` (Info-Symbol, Hilfe am Seitentitel, Handbuch-Menü), `docs/a11y-wcag22.md`
+
 ## [0.83.0] – 2026-11-21
 
 ### Evergreen

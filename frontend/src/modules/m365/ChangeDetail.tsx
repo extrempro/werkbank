@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useId, useState } from "react";
 import { formatDateTime } from "../../api";
 import { Link } from "../../components/Link";
@@ -84,7 +85,9 @@ export function ChangeDetail({
           </div>
           {change.criticality && (
             <div>
-              <dt>Kritikalität</dt>
+              <dt>
+                Kritikalität <InfoTip term="m365.kritikalitaet" />
+              </dt>
               <dd>{criticalityLabel(change.criticality)}</dd>
             </div>
           )}

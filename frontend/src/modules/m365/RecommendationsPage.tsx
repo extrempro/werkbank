@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState, type FormEvent } from "react";
 import { FilterBar } from "../../components/FilterBar";
 import { ApiError, formatDateTime, type Me } from "../../api";
@@ -296,11 +297,15 @@ function RecommendationPanel({ id, canEdit, onChanged }: RecommendationPanelProp
             </dd>
           </div>
           <div>
-            <dt>Punkte</dt>
+            <dt>
+              Punkte <InfoTip term="m365.punkte" />
+            </dt>
             <dd>{formatScore(entry.score, entry.max_score)}</dd>
           </div>
           <div>
-            <dt>Auswirkung auf Nutzer</dt>
+            <dt>
+              Auswirkung auf Nutzer <InfoTip term="m365.auswirkung" />
+            </dt>
             <dd>{levelLabel(entry.user_impact)}</dd>
           </div>
           <div>

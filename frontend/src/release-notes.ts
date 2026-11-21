@@ -24,6 +24,31 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.84.0",
+    date: "2026-11-21",
+    summary:
+      "Kurze Erklärungen hinter einem „i“, „Hilfe“ an jeder Seite und ein neu geordnetes Handbuch mit eigenem Menü.",
+    sections: [
+      {
+        area: "Alle Bereiche",
+        entries: [
+          "Neben Fachbegriffen und Kennzahlen steht ein kleines „i“. Ein Klick darauf zeigt eine kurze Erklärung als Blase, „Mehr im Handbuch“ führt zum passenden Thema.",
+          "Neben dem Titel jeder Seite steht „Hilfe“. Damit öffnest du das Thema im Handbuch, das zu dieser Seite passt.",
+        ],
+      },
+      {
+        area: "Handbuch",
+        entries: [
+          "Das Handbuch hat ein eigenes Menü: die Bereiche wie in der Bereichsleiste zum Aufklappen, darin die Themen. Oben im Menü suchst du in allen Themen.",
+          "Jedes Thema hat jetzt eine eigene Seite, mit Verweis auf die passende Seite der Werkbank, weiteren Themen und vor und zurück.",
+          "Neu ist „Begriffe A–Z“ mit allen Erklärungen hinter den „i“.",
+          "Am Handy öffnest du alle Themen über „Alle Themen“.",
+          "Ältere Links auf Kapitel des Handbuchs führen nicht mehr ans Ziel. Such das Thema einfach im Menü.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.83.0",
     date: "2026-11-21",
     summary:

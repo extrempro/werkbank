@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
@@ -459,7 +460,9 @@ function Overview({
             </div>
             {device.retire.wiped !== null && (
               <div>
-                <dt>Datenträger</dt>
+                <dt>
+                  Datenträger <InfoTip term="bestand.datentraeger" />
+                </dt>
                 <dd>{device.retire.wiped ? "gelöscht oder vernichtet" : "nicht bestätigt"}</dd>
               </div>
             )}
@@ -520,7 +523,9 @@ function Overview({
               <dd className="mono">{device.serial || "–"}</dd>
             </div>
             <div>
-              <dt>Inventurnummer</dt>
+              <dt>
+                Inventurnummer <InfoTip term="bestand.inventurnummer" />
+              </dt>
               <dd className="mono">{device.inventory_no ?? "keine"}</dd>
             </div>
             <div>
@@ -559,7 +564,9 @@ function Overview({
               <dd className="mono">{device.hostname || "–"}</dd>
             </div>
             <div>
-              <dt>Herkunft</dt>
+              <dt>
+                Herkunft <InfoTip term="bestand.herkunft" />
+              </dt>
               <dd>{SOURCE_LABELS[device.source] ?? device.source}</dd>
             </div>
             <div>

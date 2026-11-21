@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState } from "react";
 import { FilterBar } from "../../components/FilterBar";
 import { formatDateTime } from "../../api";
@@ -81,7 +82,9 @@ export function CredentialsPage() {
               <dd className="kpi-number">{formatCount(list.total)}</dd>
             </div>
             <div className={list.attention > 0 ? "kpi kpi-warn" : "kpi kpi-ok"}>
-              <dt>Handlungsbedarf</dt>
+              <dt>
+                Handlungsbedarf <InfoTip term="tenant.handlungsbedarf" />
+              </dt>
               <dd className="kpi-number">{formatCount(list.attention)}</dd>
             </div>
           </dl>

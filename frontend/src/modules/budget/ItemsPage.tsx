@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import {
   useEffect,
   useRef,
@@ -636,15 +637,21 @@ function ItemDetail({
         )}
         <dl className="budget-cards budget-cards-small">
           <div className="panel budget-card">
-            <dt>Geplant</dt>
+            <dt>
+              Geplant <InfoTip term="budget.geplant" />
+            </dt>
             <dd className="budget-card-value">{amount(row.expected_cents)}</dd>
           </div>
           <div className="panel budget-card">
-            <dt>Ist</dt>
+            <dt>
+              Ist <InfoTip term="budget.ist" />
+            </dt>
             <dd className="budget-card-value">{formatEuro(row.actual_cents)}</dd>
           </div>
           <div className="panel budget-card">
-            <dt>Verfügbar</dt>
+            <dt>
+              Verfügbar <InfoTip term="budget.verfuegbar" />
+            </dt>
             <dd className="budget-card-value">
               {row.expected_cents === null
                 ? "–"

@@ -69,13 +69,13 @@ describe("SearchPage", () => {
     );
   });
 
-  it("findet Abschnitte im Handbuch, die zu den Rollen passen", async () => {
+  it("findet Themen im Handbuch, die zu den Rollen passen", async () => {
     window.history.replaceState(null, "", searchUrl("Kündigungstermin"));
     stubFetch([]);
     const { unmount } = render(<SearchPage roles={["Budget.Editor"]} />);
     expect(await screen.findByRole("link", { name: "Verträge" })).toHaveAttribute(
       "href",
-      "/handbuch/it-budget#vertraege",
+      "/handbuch/it-budget/vertraege",
     );
     unmount();
     render(<SearchPage roles={["Evergreen.GF"]} />);

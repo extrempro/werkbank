@@ -1,6 +1,8 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { errorText } from "../../api";
+import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
+import type { HelpKey } from "../../help/terms";
 import { Tabs, tabIds } from "../../components/Tabs";
 import { Timeline } from "../../components/Timeline";
 import { FormStep } from "../budget/shared";
@@ -37,7 +39,12 @@ const CODETERMINATION_HELP =
 type TabId = "bewertung" | "microsoft" | "verlauf";
 
 function SuggestedPill() {
-  return <span className="pill pill-neutral ev-suggested">{SUGGESTED}</span>;
+  return (
+    <span className="ev-suggested-wrap">
+      <span className="pill pill-neutral ev-suggested">{SUGGESTED}</span>
+      <InfoTip term="evergreen.vorschlag" />
+    </span>
+  );
 }
 
 function deadlineText(iso: string): string {
@@ -56,12 +63,14 @@ function deadlineText(iso: string): string {
 
 function Fact({
   label,
+  info,
   value,
   sub,
   warn = false,
   extra,
 }: {
   label: string;
+  info: HelpKey;
   value: string;
   sub?: string | null;
   warn?: boolean;
@@ -69,7 +78,9 @@ function Fact({
 }) {
   return (
     <div className={warn ? "ev-fact ev-fact-warn" : "ev-fact"}>
-      <dt>{label}</dt>
+      <dt>
+        {label} <InfoTip term={info} />
+      </dt>
       <dd>
         <span className="ev-fact-value">{value}</span>
         {sub && <span className="small">{sub}</span>}
@@ -127,11 +138,13 @@ function Profile({ entry, onClose }: { entry: Entry; onClose: () => void }) {
       <dl className="ev-facts">
         <Fact
           label="Betroffen"
+          info="evergreen.betroffen"
           value={entry.affected ?? "Noch offen"}
           extra={suggested.has("affected") ? <SuggestedPill /> : null}
         />
         <Fact
           label="Standard"
+          info="evergreen.standard"
           value={entry.default_state ? DEFAULT_STATES[entry.default_state] : "Noch offen"}
           sub={
             entry.default_state && entry.default_state !== "entfaellt" ? "nach dem Rollout" : null
@@ -140,11 +153,13 @@ function Profile({ entry, onClose }: { entry: Entry; onClose: () => void }) {
         />
         <Fact
           label="Steuerbar"
+          info="evergreen.steuerbar"
           value={entry.controllable === null ? "Noch offen" : entry.controllable ? "Ja" : "Nein"}
           sub={entry.controllable ? entry.controllable_how : null}
         />
         <Fact
           label="Handeln bis"
+          info="evergreen.handeln-bis"
           value={entry.action_required_by ? formatDate(entry.action_required_by) : "–"}
           sub={
             entry.action_required_by
@@ -159,6 +174,7 @@ function Profile({ entry, onClose }: { entry: Entry; onClose: () => void }) {
       <div className="ev-rollout">
         <div className="ev-rollout-head">
           <h3>Rollout</h3>
+          <InfoTip term="evergreen.rollout" />
           {suggested.has("phases") && <SuggestedPill />}
           {entry.schedule_changed_at && (
             <span className="ev-changed">
@@ -312,8 +328,11 @@ function AssessmentForm({ entry, onSaved }: { entry: Entry; onSaved: (entry: Ent
       </FormStep>
       <FormStep number={2} title="Mitbestimmungsrelevant?">
         <div className="form-wide form-field">
-          <span id={`${id}-cd-help`} className="form-hint">
-            {CODETERMINATION_HELP}
+          <span className="ev-help-row">
+            <span id={`${id}-cd-help`} className="form-hint">
+              {CODETERMINATION_HELP}
+            </span>
+            <InfoTip term="evergreen.mitbestimmung" />
           </span>
           <div
             className="segmented"
@@ -496,7 +515,10 @@ function AssessmentView({ entry }: { entry: Entry }) {
       <h3>Schulung / Kommunikation</h3>
       <Text value={entry.training} />
       <div className="ev-codetermination">
-        <h3>Mitbestimmungsrelevant?</h3>
+        <div className="ev-help-row">
+          <h3>Mitbestimmungsrelevant?</h3>
+          <InfoTip term="evergreen.mitbestimmung" />
+        </div>
         <p className="small">{CODETERMINATION_HELP}</p>
         {cd ? (
           <p>
