@@ -135,7 +135,7 @@ def test_login_stores_photo_and_everyone_can_see_it(migrated_db: None, db_sessio
 
     # Eine andere angemeldete Person sieht das Bild, ohne Anmeldung gibt es nichts.
     other = client_for(make_app())
-    login_as(other, ["Evergreen.Betriebsrat"], oid="avatar-andere")
+    login_as(other, ["Evergreen.Reader"], oid="avatar-andere")
     assert other.get(url).status_code == 200
     assert client_for(make_app()).get(url).status_code == 401
     assert other.get("/api/users/00000000-0000-0000-0000-000000000000/avatar").status_code == 404

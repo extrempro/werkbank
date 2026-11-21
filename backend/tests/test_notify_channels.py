@@ -65,7 +65,7 @@ def test_only_power_automate_addresses() -> None:
 
 def test_digest_counts_modules_without_content() -> None:
     digest = summarize(
-        ["budget.rechnung_pruefen", "budget.kuendigung", "evergreen.schritt", "gibt.es_nicht"],
+        ["budget.rechnung_pruefen", "budget.kuendigung", "evergreen.neu", "gibt.es_nicht"],
         "Erika Beispiel",
     )
     assert digest.total == 3
@@ -93,9 +93,7 @@ def test_mail_is_branded_plain_and_html_with_embedded_logo() -> None:
 
 
 def test_mail_without_logo_shows_name() -> None:
-    markup = mail_html(
-        BRAND, summarize(["evergreen.schritt"], "Ina"), "https://w.example.com", None
-    )
+    markup = mail_html(BRAND, summarize(["evergreen.neu"], "Ina"), "https://w.example.com", None)
     assert "cid:" not in markup and ">Werkbank</span>" in markup
 
 
@@ -103,7 +101,7 @@ def test_teams_card_names_recipient_and_link_only() -> None:
     payload = teams_payload(
         "erika@example.com",
         BRAND,
-        summarize(["evergreen.schritt", "evergreen.schritt"], "Erika"),
+        summarize(["evergreen.neu", "evergreen.neu"], "Erika"),
         "https://werkbank.example.com",
     )
     assert payload["recipient"] == "erika@example.com"
@@ -217,10 +215,10 @@ def test_failed_delivery_is_retried(db: Session, tmp_path: Path) -> None:
     erika = person(db, "erneut")
     db.add(
         NotificationChannel(
-            user_id=erika, channel="teams", kind="evergreen.schritt", created_at=NOW - timedelta(1)
+            user_id=erika, channel="teams", kind="evergreen.neu", created_at=NOW - timedelta(1)
         )
     )
-    note(db, erika, "evergreen.schritt", created_at=NOW)
+    note(db, erika, "evergreen.neu", created_at=NOW)
     db.commit()
 
     def broken(url: str, payload: dict[str, Any]) -> None:
@@ -247,8 +245,8 @@ def test_failed_delivery_is_retried(db: Session, tmp_path: Path) -> None:
 def test_nothing_without_configuration(db: Session, tmp_path: Path) -> None:
     settings = settings_with_key(tmp_path)
     erika = person(db, "ohne-server")
-    db.add(NotificationChannel(user_id=erika, channel="mail", kind="evergreen.schritt"))
-    note(db, erika, "evergreen.schritt", created_at=NOW + timedelta(seconds=1))
+    db.add(NotificationChannel(user_id=erika, channel="mail", kind="evergreen.neu"))
+    note(db, erika, "evergreen.neu", created_at=NOW + timedelta(seconds=1))
     db.commit()
     assert deliver(db, settings, mail_sender=lambda c, m: None, now=NOW) == {
         "mail": 0,
@@ -271,7 +269,7 @@ def test_settings_per_channel(db: Session, tmp_path: Path) -> None:
         "/api/notifications/settings",
         json={
             "disabled": ["budget.prognose"],
-            "mail": ["budget.rechnung_pruefen", "budget.prognose", "evergreen.schritt"],
+            "mail": ["budget.rechnung_pruefen", "budget.prognose", "evergreen.neu"],
             "teams": ["budget.kuendigung"],
         },
         headers=HEADERS,
@@ -280,7 +278,7 @@ def test_settings_per_channel(db: Session, tmp_path: Path) -> None:
     assert by_kind["budget.rechnung_pruefen"]["mail"] is True
     # Ohne Glocke keine Mail; fremde Arten werden nicht gespeichert
     assert by_kind["budget.prognose"]["mail"] is False
-    assert "evergreen.schritt" not in by_kind
+    assert "evergreen.neu" not in by_kind
     assert by_kind["budget.kuendigung"]["teams"] is True
     # Nur die Glocke ändern: Mail und Teams bleiben
     kept = client.put("/api/notifications/settings", json={"disabled": []}, headers=HEADERS).json()[

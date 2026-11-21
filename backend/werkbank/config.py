@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     # SharePoint nicht); braucht SharePointTenantSettings.Read.All für die Collector-App
     collector_sharepoint_enabled: bool = False
     collector_timeout_minutes: int = 30
-    # Abstand, in dem das Nachrichtencenter von Microsoft gelesen wird (Modul Evergreen)
+    # Abstand, in dem das Nachrichtencenter von Microsoft gelesen wird (Bereich Evergreen)
     message_center_interval_hours: int = 6
     collector_poll_seconds: int = 20
 

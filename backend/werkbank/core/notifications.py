@@ -85,31 +85,10 @@ KINDS: dict[str, KindInfo] = {
         "Lizenzen voll, überbucht oder Stichtag naht",
         (Role.TENANT_READER,),
     ),
-    "evergreen.schritt": KindInfo(
+    "evergreen.neu": KindInfo(
         "Evergreen",
-        "Ein Eintrag wartet auf deinen Schritt",
-        (
-            Role.EVERGREEN_IT,
-            Role.EVERGREEN_TEAM,
-            Role.EVERGREEN_BETRIEBSRAT,
-            Role.EVERGREEN_GF,
-        ),
-    ),
-    "evergreen.kommentar": KindInfo(
-        "Evergreen",
-        "Kommentar oder Beschluss zu einem Eintrag, an dem du beteiligt bist",
-        (
-            Role.EVERGREEN_IT,
-            Role.EVERGREEN_TEAM,
-            Role.EVERGREEN_BETRIEBSRAT,
-            Role.EVERGREEN_GF,
-        ),
-    ),
-    "evergreen.rollout": KindInfo(
-        "Evergreen", "Rollout-Termin in 14, 7 und 3 Tagen", (Role.EVERGREEN_IT,)
-    ),
-    "evergreen.meldung": KindInfo(
-        "Evergreen", "Neue Meldung von Microsoft mit Handlungsfrist", (Role.EVERGREEN_IT,)
+        "Neue Einträge zum Sichten",
+        (Role.EVERGREEN_EDITOR,),
     ),
     "budget.rechnung_pruefen": KindInfo(
         "IT-Budget", "Rechnung wartet auf Prüfung", (Role.BUDGET_MANAGER,)

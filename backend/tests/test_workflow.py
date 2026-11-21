@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -12,14 +13,15 @@ from werkbank.core.workflow import (
     WorkflowDefinitionError,
     WorkflowError,
     available_actions,
+    load_workflow,
     parse_workflow,
     perform_action,
     perform_automatic,
     start_workflow,
 )
-from werkbank.modules.evergreen.workflow import evergreen_workflow
 
-FLOW = evergreen_workflow()
+# Beispiel-Ablauf (früher der Ablauf von Evergreen); die Engine nutzt derzeit kein Bereich
+FLOW = load_workflow(Path(__file__).with_name("fixtures") / "workflow_beispiel.yaml")
 
 
 def minimal(**overrides: Any) -> dict[str, Any]:
@@ -31,7 +33,7 @@ def minimal(**overrides: Any) -> dict[str, Any]:
             {
                 "id": "a",
                 "titel": "A",
-                "rollen": ["Evergreen.IT"],
+                "rollen": ["Evergreen.Editor"],
                 "aktionen": [{"id": "weiter", "titel": "Weiter", "ziel": "fertig"}],
             }
         ],
@@ -55,7 +57,7 @@ def person(*roles: str, user_id: uuid.UUID | None = None) -> CurrentUser:
 # --- ohne Datenbank -------------------------------------------------------------------
 
 
-def test_evergreen_workflow_matches_spec() -> None:
+def test_example_workflow_loads() -> None:
     assert FLOW.name == "evergreen"
     assert FLOW.start == "it_bewertung"
     assert list(FLOW.steps) == [
@@ -68,8 +70,8 @@ def test_evergreen_workflow_matches_spec() -> None:
     ]
     assert set(FLOW.end_states) == {"abgeschlossen", "ohne_vorlage_abgeschlossen", "abgelehnt"}
     br = FLOW.steps["betriebsrat"]
-    assert br.roles == ("Evergreen.Betriebsrat",)
-    assert br.on_behalf_roles == ("Evergreen.Team", "Evergreen.IT")
+    assert br.roles == ("Evergreen.Reader",)
+    assert br.on_behalf_roles == ("Projekte.Editor", "Evergreen.Editor")
     required = {
         (step.id, action.id)
         for step in FLOW.steps.values()
@@ -96,7 +98,11 @@ def test_evergreen_workflow_matches_spec() -> None:
         ({"schritte": []}, "schritte"),
         ({"workflow": ""}, "workflow"),
         (
-            {"schritte": [{"id": "a", "titel": "A", "rollen": ["Evergreen.IT"], "aktionen": []}]},
+            {
+                "schritte": [
+                    {"id": "a", "titel": "A", "rollen": ["Evergreen.Editor"], "aktionen": []}
+                ]
+            },
             "Sackgasse",
         ),
         (
@@ -105,7 +111,7 @@ def test_evergreen_workflow_matches_spec() -> None:
                     {
                         "id": "a",
                         "titel": "A",
-                        "rollen": ["Evergreen.IT"],
+                        "rollen": ["Evergreen.Editor"],
                         "aktionen": [{"id": "x", "titel": "X", "ziel": "nirgendwo"}],
                     }
                 ]
@@ -156,19 +162,19 @@ def test_available_actions_by_role() -> None:
         id=1, workflow="evergreen", object_type="t", object_id="1", step="betriebsrat"
     )
     instance.finished = False
-    direct = available_actions(FLOW, instance, person("Evergreen.Betriebsrat"))
+    direct = available_actions(FLOW, instance, person("Evergreen.Reader"))
     assert [item.action.id for item in direct] == ["zustimmen", "auflagen", "ablehnen"]
     assert not any(item.on_behalf for item in direct)
-    proxy = available_actions(FLOW, instance, person("Evergreen.Team"))
+    proxy = available_actions(FLOW, instance, person("Projekte.Editor"))
     assert len(proxy) == 3 and all(item.on_behalf for item in proxy)
-    assert available_actions(FLOW, instance, person("Evergreen.GF")) == []
+    assert available_actions(FLOW, instance, person("Budget.Manager")) == []
     assert available_actions(FLOW, instance, person("Config.Reviewer")) == []
 
     instance.step = "umsetzung"
-    assert available_actions(FLOW, instance, person("Evergreen.IT")) == []
+    assert available_actions(FLOW, instance, person("Evergreen.Editor")) == []
     instance.step = "abgelehnt"
     instance.finished = True
-    assert available_actions(FLOW, instance, person("Evergreen.IT")) == []
+    assert available_actions(FLOW, instance, person("Evergreen.Editor")) == []
 
 
 # --- mit Datenbank --------------------------------------------------------------------
@@ -209,11 +215,11 @@ def test_full_path_to_completion(db_session: Session, actor: uuid.UUID) -> None:
     assert (instance.step, instance.finished) == ("it_bewertung", False)
 
     steps = [
-        ("pflichtig", "Evergreen.IT", None),
-        ("rueckmeldungen_liegen_vor", "Evergreen.Team", None),
-        ("an_br_uebergeben", "Evergreen.Team", None),
-        ("auflagen", "Evergreen.Betriebsrat", "Nur für die Pilotgruppe"),
-        ("abnehmen", "Evergreen.GF", None),
+        ("pflichtig", "Evergreen.Editor", None),
+        ("rueckmeldungen_liegen_vor", "Projekte.Editor", None),
+        ("an_br_uebergeben", "Projekte.Editor", None),
+        ("auflagen", "Evergreen.Reader", "Nur für die Pilotgruppe"),
+        ("abnehmen", "Budget.Manager", None),
     ]
     for action, role, comment in steps:
         perform_action(db, FLOW, instance.id, action, person(role, user_id=actor), comment=comment)
@@ -223,7 +229,7 @@ def test_full_path_to_completion(db_session: Session, actor: uuid.UUID) -> None:
 
     # Umsetzung schließt nur automatisch
     with pytest.raises(WorkflowError) as error:
-        perform_action(db, FLOW, instance.id, "soll_ist_erfuellt", person("Evergreen.IT"))
+        perform_action(db, FLOW, instance.id, "soll_ist_erfuellt", person("Evergreen.Editor"))
     assert error.value.code == "invalid"
     db.rollback()
     assert perform_automatic(db, FLOW, instance.id, "soll_ist_erfuellt") is not None
@@ -253,7 +259,7 @@ def test_full_path_to_completion(db_session: Session, actor: uuid.UUID) -> None:
 
     # nach dem Ende ist nichts mehr möglich
     with pytest.raises(WorkflowError) as closed:
-        perform_action(db, FLOW, instance.id, "pflichtig", person("Evergreen.IT"))
+        perform_action(db, FLOW, instance.id, "pflichtig", person("Evergreen.Editor"))
     assert closed.value.code == "conflict"
     db.rollback()
     assert perform_automatic(db, FLOW, instance.id, "soll_ist_erfuellt") is None
@@ -266,12 +272,12 @@ def test_rules_role_comment_and_stale_step(db_session: Session, actor: uuid.UUID
     instance = new_instance(db)
 
     cases: list[tuple[str, str, dict[str, Any], str]] = [
-        ("pflichtig", "Evergreen.GF", {}, "forbidden"),
-        ("nicht_pflichtig", "Evergreen.IT", {}, "invalid"),
-        ("nicht_pflichtig", "Evergreen.IT", {"comment": "   "}, "invalid"),
-        ("nicht_pflichtig", "Evergreen.IT", {"comment": "x" * 4001}, "invalid"),
-        ("zustimmen", "Evergreen.IT", {}, "invalid"),
-        ("pflichtig", "Evergreen.IT", {"expected_step": "betriebsrat"}, "conflict"),
+        ("pflichtig", "Budget.Manager", {}, "forbidden"),
+        ("nicht_pflichtig", "Evergreen.Editor", {}, "invalid"),
+        ("nicht_pflichtig", "Evergreen.Editor", {"comment": "   "}, "invalid"),
+        ("nicht_pflichtig", "Evergreen.Editor", {"comment": "x" * 4001}, "invalid"),
+        ("zustimmen", "Evergreen.Editor", {}, "invalid"),
+        ("pflichtig", "Evergreen.Editor", {"expected_step": "betriebsrat"}, "conflict"),
     ]
     for action, role, extra, code in cases:
         with pytest.raises(WorkflowError) as error:
@@ -279,7 +285,7 @@ def test_rules_role_comment_and_stale_step(db_session: Session, actor: uuid.UUID
         assert error.value.code == code, (action, role, extra)
         db.rollback()
     with pytest.raises(WorkflowError):
-        perform_action(db, FLOW, 999_999_999, "pflichtig", person("Evergreen.IT"))
+        perform_action(db, FLOW, 999_999_999, "pflichtig", person("Evergreen.Editor"))
     db.rollback()
     assert events(db, instance) == []
 
@@ -288,7 +294,7 @@ def test_rules_role_comment_and_stale_step(db_session: Session, actor: uuid.UUID
         FLOW,
         instance.id,
         "nicht_pflichtig",
-        person("Evergreen.IT", user_id=actor),
+        person("Evergreen.Editor", user_id=actor),
         comment="  Betrifft keine Leistungs- oder Verhaltenskontrolle  ",
         expected_step="it_bewertung",
     )
@@ -304,7 +310,7 @@ def test_decision_on_behalf_and_return_from_management(
 ) -> None:
     db = db_session
     instance = new_instance(db)
-    it = person("Evergreen.IT", user_id=actor)
+    it = person("Evergreen.Editor", user_id=actor)
     for action in ("pflichtig", "rueckmeldungen_liegen_vor", "an_br_uebergeben"):
         perform_action(db, FLOW, instance.id, action, it)
     # IT erfasst den Beschluss des Betriebsrats aus dem Sitzungsprotokoll
@@ -319,7 +325,7 @@ def test_decision_on_behalf_and_return_from_management(
         FLOW,
         instance.id,
         "zurueckgeben",
-        person("Evergreen.GF", user_id=actor),
+        person("Budget.Manager", user_id=actor),
         comment="Bitte Kosten ergänzen",
     )
     db.commit()
@@ -337,7 +343,7 @@ def test_decision_on_behalf_and_return_from_management(
 def test_protocol_cannot_be_changed(db_session: Session, actor: uuid.UUID) -> None:
     db = db_session
     instance = new_instance(db)
-    perform_action(db, FLOW, instance.id, "pflichtig", person("Evergreen.IT", user_id=actor))
+    perform_action(db, FLOW, instance.id, "pflichtig", person("Evergreen.Editor", user_id=actor))
     db.commit()
     for statement in (
         update(WorkflowEvent)

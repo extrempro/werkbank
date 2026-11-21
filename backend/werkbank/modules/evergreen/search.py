@@ -1,51 +1,51 @@
-"""Suche im Modul Evergreen: Vorgänge, die die Person sehen darf."""
+"""Suche im Bereich Evergreen: Einträge nach Nummer, Titel, Meldung und Text."""
 
 import re
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
-from werkbank.core.models import WorkflowInstance
 from werkbank.core.search import SearchHit
 from werkbank.core.sessions import CurrentUser
-from werkbank.modules.evergreen.models import EvItem
-from werkbank.modules.evergreen.service import ALL_ROLES, visibility
-from werkbank.modules.evergreen.workflow import evergreen_workflow
+from werkbank.modules.evergreen.models import SOFTWARE, EvEntry
+from werkbank.modules.evergreen.service import OPEN_STATES, READER_ROLES
 
 MODULE = "Evergreen"
 MAX_ITEMS = 8
 NUMBER = re.compile(r"^EV-(\d{4})-(\d{1,6})$", re.IGNORECASE)
+STATUS_LABEL = {"neu": "Neu", "bearbeitet": "Bearbeitet", "abgeschlossen": "Abgeschlossen"}
 
 
 def evergreen_search(db: Session, user: CurrentUser, query: str) -> list[SearchHit]:
-    """Sucht in Nummer, Titel, Dienst und Zusammenfassung. Sichtbarkeit wie in der Liste."""
-    if not user.has_any_role(*ALL_ROLES):
+    """Offene Einträge zuerst, dann die neuesten."""
+    if not user.has_any_role(*READER_ROLES):
         return []
     conditions = [
-        EvItem.title.icontains(query, autoescape=True),
-        EvItem.service.icontains(query, autoescape=True),
-        EvItem.summary.icontains(query, autoescape=True),
+        EvEntry.title.icontains(query, autoescape=True),
+        EvEntry.source_ref.icontains(query, autoescape=True),
+        EvEntry.body.icontains(query, autoescape=True),
     ]
     number = NUMBER.match(query)
     if number:
         conditions.append(
-            and_(EvItem.year == int(number.group(1)), EvItem.sequence == int(number.group(2)))
+            and_(EvEntry.year == int(number.group(1)), EvEntry.sequence == int(number.group(2)))
         )
-    rows = db.execute(
-        select(EvItem, WorkflowInstance)
-        .join(WorkflowInstance, WorkflowInstance.id == EvItem.workflow_instance_id)
-        .where(visibility(user), or_(*conditions))
-        .order_by(WorkflowInstance.finished, EvItem.id.desc())
+    rows = db.scalars(
+        select(EvEntry)
+        .where(or_(*conditions))
+        .order_by(EvEntry.status.notin_(OPEN_STATES), EvEntry.id.desc())
         .limit(MAX_ITEMS)
     ).all()
-    flow = evergreen_workflow()
     return [
         SearchHit(
             module=MODULE,
-            kind="Vorgang",
-            title=item.title,
-            subtitle=f"{item.number} · {flow.title_of(instance.step)}",
-            link=f"/evergreen/{item.id}",
+            kind="Eintrag",
+            title=entry.title,
+            subtitle=(
+                f"{entry.number} · {SOFTWARE.get(entry.software, entry.software)}"
+                f" · {STATUS_LABEL.get(entry.status, entry.status)}"
+            ),
+            link=f"/evergreen/{entry.software}/{entry.id}",
         )
-        for item, instance in rows
+        for entry in rows
     ]

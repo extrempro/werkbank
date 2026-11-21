@@ -1,4 +1,4 @@
-# Ablauf eines Evergreen-Vorgangs (docs/spec.md, Kapitel 8.2).
+# Beispiel-Ablauf für die Tests der Ablauf-Engine (früher der Ablauf von Evergreen).
 # kommentar: pflicht  -> die Aktion braucht einen Kommentar
 # im_auftrag          -> diese Rollen dürfen die Entscheidung stellvertretend erfassen
 # automatisch: true   -> nur das System löst die Aktion aus
@@ -13,7 +13,7 @@ endzustaende:
 schritte:
   - id: it_bewertung
     titel: IT-Bewertung
-    rollen: [Evergreen.IT]
+    rollen: [Evergreen.Editor]
     aktionen:
       - { id: pflichtig, titel: Mitbestimmungspflichtig, ziel: fachabteilungen }
       - id: nicht_pflichtig
@@ -23,20 +23,20 @@ schritte:
 
   - id: fachabteilungen
     titel: Fachabteilungen
-    rollen: [Evergreen.Team, Evergreen.IT]
+    rollen: [Projekte.Editor, Evergreen.Editor]
     aktionen:
       - { id: rueckmeldungen_liegen_vor, titel: Rückmeldungen liegen vor, ziel: vorlage_br }
 
   - id: vorlage_br
     titel: Vorlage BR
-    rollen: [Evergreen.Team, Evergreen.IT]
+    rollen: [Projekte.Editor, Evergreen.Editor]
     aktionen:
       - { id: an_br_uebergeben, titel: An den Betriebsrat übergeben, ziel: betriebsrat }
 
   - id: betriebsrat
     titel: Betriebsrat
-    rollen: [Evergreen.Betriebsrat]
-    im_auftrag: [Evergreen.Team, Evergreen.IT]
+    rollen: [Evergreen.Reader]
+    im_auftrag: [Projekte.Editor, Evergreen.Editor]
     aktionen:
       - { id: zustimmen, titel: Zustimmen, ziel: geschaeftsfuehrung }
       - { id: auflagen, titel: Mit Auflagen zustimmen, ziel: geschaeftsfuehrung, kommentar: pflicht }
@@ -44,14 +44,14 @@ schritte:
 
   - id: geschaeftsfuehrung
     titel: Geschäftsführung
-    rollen: [Evergreen.GF]
+    rollen: [Budget.Manager]
     aktionen:
       - { id: abnehmen, titel: Abnehmen, ziel: umsetzung }
       - { id: zurueckgeben, titel: Zurückgeben, ziel: vorlage_br, kommentar: pflicht }
 
   - id: umsetzung
     titel: Umsetzung
-    rollen: [Evergreen.IT]
+    rollen: [Evergreen.Editor]
     aktionen:
       - id: soll_ist_erfuellt
         titel: Alle Soll-Werte sind umgesetzt
