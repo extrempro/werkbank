@@ -25,6 +25,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from werkbank.db import Base
 
+# Verknüpfte Einstellung (setting_id): die Tabelle muss in den Metadaten bekannt sein, auch
+# wenn nur Evergreen geladen ist (z. B. im Worker beim Abruf des Nachrichtencenters).
+from werkbank.modules.m365_config import models as _config_models  # noqa: F401
+
 
 class EntrySource(StrEnum):
     MESSAGE_CENTER = "nachrichtencenter"

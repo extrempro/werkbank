@@ -266,10 +266,10 @@ export const CHAPTERS: readonly Chapter[] = [
                 "Tenant.Reader",
                 "Lizenzen, Benutzerzahlen, Zertifikate, Dienststatus und Nutzung ansehen",
               ],
-              ["Evergreen.Reader", "Evergreen-Einträge und ihre Notizen ansehen"],
+              ["Evergreen.Reader", "Evergreen-Einträge mit Bewertung und Notizen ansehen"],
               [
                 "Evergreen.Editor",
-                "Evergreen-Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen",
+                "Evergreen-Einträge anlegen, bewerten, Notizen anfügen, abschließen und wieder öffnen",
               ],
               ["Budget.Reader", "das IT-Budget ansehen"],
               ["Budget.Editor", "Konten, Posten, Verträge, Partner und Rechnungen pflegen"],
@@ -675,7 +675,7 @@ export const CHAPTERS: readonly Chapter[] = [
   {
     id: "evergreen",
     title: "Evergreen",
-    summary: "Neuerungen von Software sichten, mit Notizen festhalten und abschließen.",
+    summary: "Neuerungen von Software sichten, bewerten, mit Notizen festhalten und abschließen.",
     roles: [EV_READER, EV_EDITOR],
     sections: [
       {
@@ -694,7 +694,7 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "terms",
             items: [
               ["Neu", "noch niemand hat sich den Eintrag angesehen"],
-              ["Bearbeitet", "es gibt mindestens eine Notiz"],
+              ["Bearbeitet", "es gibt mindestens eine Notiz oder eine Bewertung"],
               ["Abgeschlossen", "nichts mehr zu tun; lässt sich wieder öffnen"],
             ],
           },
@@ -707,7 +707,7 @@ export const CHAPTERS: readonly Chapter[] = [
           {
             kind: "list",
             items: [
-              "Jede Meldung aus dem Nachrichtencenter von Microsoft wird automatisch ein Eintrag mit dem Status „Neu“. Ändert Microsoft die Meldung später, übernimmt die Werkbank den neuen Text und vermerkt das im Verlauf. Der Status bleibt.",
+              "Jede Meldung aus dem Nachrichtencenter von Microsoft wird automatisch ein Eintrag mit dem Status „Neu“. Ändert Microsoft die Meldung später, übernimmt die Werkbank den neuen Text und vermerkt das im Verlauf. Der Status bleibt. Verschiebt Microsoft dabei den Zeitplan, siehst du den alten Plan schraffiert im Zeitstrahl und den Hinweis „Zeitplan geändert“.",
               "Bearbeiter legen mit „Neuer Eintrag“ selbst einen an, zum Beispiel für eine Neuerung, die nicht im Nachrichtencenter steht.",
               "Aus einer erkannten Änderung in der M365-Konfiguration machst du mit „Evergreen-Eintrag anlegen“ einen Eintrag.",
             ],
@@ -721,11 +721,65 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Die Einträge stehen in einer Tabelle mit Nummer, Titel, Dienst, Eingang, der Person, die zuletzt etwas eingetragen hat, und dem Status. Oben suchst du nach Nummer, Titel, Kennung der Meldung (z. B. MC123456), Dienst oder Text und wählst den Status. Ein Klick auf eine Zeile öffnet den Eintrag rechts daneben; die Breite stellst du am Trenner dazwischen ein. Auf dem Handy öffnet sich der Eintrag über die ganze Breite, mit „Zur Liste“ geht es zurück.",
+            text: "Links steht die Liste, rechts die Ansicht des gewählten Eintrags. Oben in der Liste suchst du nach Nummer, Titel, Kennung der Meldung (z. B. MC123456), Dienst oder Text und wählst den Status: Offen, Neu, Mit Frist oder Abgeschlossen. Offene Einträge stehen in Gruppen: zuerst die mit einer Frist von Microsoft (die früheste oben), dann neue, dann die in Bearbeitung.",
           },
           {
             kind: "text",
-            text: "Der Text der Meldung steht als reiner Text in der Ansicht. Darunter folgen die Notizen und der Verlauf.",
+            text: "„Reine Info-Meldungen ausblenden“ versteckt Meldungen, die Microsoft nur zur Information schickt und die weder Nutzer noch Admins betreffen. Der Schalter ist anfangs an; dein Browser merkt sich, wie du ihn stellst.",
+          },
+          {
+            kind: "text",
+            text: "Auf mittelgroßen Bildschirmen ist das Seitenmenü eingeklappt, damit der Eintrag Platz hat; mit „Menü ausklappen“ in der Bereichsleiste holst du es zurück. Auf schmalen Bildschirmen siehst du erst nur die Liste. Ein gewählter Eintrag füllt dann die ganze Breite, mit „Zur Liste“ geht es zurück.",
+          },
+        ],
+      },
+      {
+        id: "ansicht",
+        title: "Was die Ansicht zeigt",
+        blocks: [
+          {
+            kind: "text",
+            text: "Oben steht der Steckbrief: Nummer, Kennung der Meldung, Titel und Kennzeichen wie Dienst, Art (zum Beispiel „Neue Funktion“ oder „Abkündigung“), „Betrifft Nutzer“ und „Handlung nötig“. Darunter vier Kacheln: wer betroffen ist, ob die Funktion nach dem Rollout eingeschaltet ist, ob und womit wir sie steuern können und bis wann zu handeln ist. Orange hinterlegt sind Kacheln, die Handlung verlangen.",
+          },
+          {
+            kind: "text",
+            text: "Der Zeitstrahl zeigt die Phasen des Rollouts je Monat und eine Linie für heute. Abgeschlossene Phasen sind gefüllt, kommende umrandet. Dieselben Phasen stehen auch als Liste darunter.",
+          },
+          {
+            kind: "terms",
+            items: [
+              [
+                "Unsere Bewertung",
+                "Kurzfassung, was sich für Mitarbeitende ändert, Schulung, Mitbestimmung und die verknüpfte Einstellung",
+              ],
+              ["Text von Microsoft", "der Originaltext, nach Abschnitten zum Aufklappen"],
+              ["Notizen und Verlauf", "alle Notizen und Änderungen mit Person und Datum"],
+            ],
+          },
+          {
+            kind: "hint",
+            text: "Die Reiter wechselst du auch mit den Pfeiltasten.",
+          },
+        ],
+      },
+      {
+        id: "bewerten",
+        title: "Einen Eintrag bewerten",
+        roles: [EV_EDITOR],
+        blocks: [
+          {
+            kind: "steps",
+            items: [
+              "Öffne den Eintrag. Der Reiter „Unsere Bewertung“ ist schon gewählt.",
+              "Schreib eine Kurzfassung in einfachen Worten, was sich für Mitarbeitende ändert und ob es eine Schulung oder Information braucht.",
+              "Wähle bei „Mitbestimmungsrelevant?“ Ja, Nein oder Noch prüfen und begründe kurz.",
+              "Wenn es passt, verknüpfe die Einstellung aus der M365-Konfiguration: Tipp einen Teil des Pfads ein und wähle den Treffer.",
+              "Ergänze den Steckbrief und die Rollout-Phasen und wähle „Bewertung speichern“.",
+            ],
+          },
+          {
+            kind: "hint",
+            text: "Werte mit „Vorschlag, ungeprüft“ hat die Werkbank aus der Meldung gelesen, zum Beispiel die Rollout-Phasen aus „When this will happen“. Prüf sie kurz; mit dem Speichern gelten sie als geprüft. Jede Änderung steht mit vorher und nachher im Verlauf. Ein neuer Eintrag ist nach dem Speichern „Bearbeitet“.",
           },
         ],
       },
@@ -738,7 +792,7 @@ export const CHAPTERS: readonly Chapter[] = [
             kind: "steps",
             items: [
               "Öffne den Eintrag.",
-              "Schreib unter „Notizen und Verlauf“, was du herausgefunden oder erledigt hast, und wähle „Notiz anfügen“. Ein neuer Eintrag ist danach „Bearbeitet“.",
+              "Wähle den Reiter „Notizen und Verlauf“, schreib, was du herausgefunden oder erledigt hast, und wähle „Notiz anfügen“. Ein neuer Eintrag ist danach „Bearbeitet“.",
               "Weitere Notizen können du und andere Bearbeiter jederzeit anfügen.",
               "Ist nichts mehr zu tun, wähle „Abschließen“. Steht etwas im Feld, wird es die letzte Notiz.",
             ],
@@ -756,7 +810,7 @@ export const CHAPTERS: readonly Chapter[] = [
         blocks: [
           {
             kind: "text",
-            text: "Mit der Rolle Evergreen.Reader siehst du alle Einträge mit ihren Notizen, kannst aber nichts ändern. Aufgaben und Benachrichtigungen aus Evergreen bekommst du nicht.",
+            text: "Mit der Rolle Evergreen.Reader siehst du alle Einträge mit Bewertung und Notizen, kannst aber nichts ändern. Den Link zur verknüpften Einstellung siehst du nur, wenn du auch die M365-Konfiguration ansehen darfst. Aufgaben und Benachrichtigungen aus Evergreen bekommst du nicht.",
           },
         ],
       },

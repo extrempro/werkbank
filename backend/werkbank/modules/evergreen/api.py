@@ -378,6 +378,7 @@ def list_entries(
     ] = "offen",
     q: Annotated[str, Query(max_length=100)] = "",
     hide_info: Annotated[bool, Query()] = False,
+    limit: Annotated[int, Query(ge=1, le=LIST_MAX)] = LIST_MAX,
 ) -> EntryListOut:
     """Einträge einer Software, neueste zuerst (höchstens 500); ``q`` sucht in Nummer, Titel,
     Kennung der Meldung (z. B. MC123456), Diensten und Text. Die Gruppen bildet die Oberfläche."""
@@ -414,7 +415,7 @@ def list_entries(
         )
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     rows = db.scalars(
-        query.order_by(EvEntry.created_at.desc(), EvEntry.id.desc()).limit(LIST_MAX)
+        query.order_by(EvEntry.created_at.desc(), EvEntry.id.desc()).limit(limit)
     ).all()
     counted = base.subquery()
     counts: dict[str, int] = dict(
@@ -635,9 +636,10 @@ def assess(
 def search_settings(
     user: Editor,
     db: DbDep,
-    q: Annotated[str, Query(min_length=2, max_length=100)],
+    q: Annotated[str, Query(max_length=100)] = "",
 ) -> SettingSearchOut:
-    """Einstellungen der M365-Konfiguration zum Verknüpfen suchen (Pfad), höchstens 20."""
+    """Einstellungen der M365-Konfiguration zum Verknüpfen suchen (Pfad), höchstens 20;
+    ohne Suchbegriff die ersten 20 nach Pfad."""
     pattern = f"%{escape_like(q.strip().casefold())}%"
     rows = db.scalars(
         select(CfgSetting)

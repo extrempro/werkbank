@@ -10,7 +10,7 @@ test("Konto zeigt Angaben, Rollen, Sitzung, Darstellung und Version", async ({ p
   await expect(page).toHaveURL(/\/konto$/);
   await expect(page.getByRole("heading", { level: 1, name: "Konto" })).toBeVisible();
   await expect(page.getByText("Evergreen Leser")).toBeVisible();
-  await expect(page.getByText("Evergreen-Einträge und ihre Notizen ansehen")).toBeVisible();
+  await expect(page.getByText("Evergreen-Einträge mit Bewertung und Notizen ansehen")).toBeVisible();
   await expect(page.getByText("Läuft spätestens ab")).toBeVisible();
   await expect(page.getByRole("radio", { name: "Automatisch" })).toBeChecked();
   await expect(page.getByText(/^Version \d+\.\d+\.\d+$/)).toBeVisible();

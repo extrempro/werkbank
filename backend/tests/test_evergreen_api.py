@@ -309,7 +309,8 @@ def test_link_setting_and_search(db: Session) -> None:
     entry_id = new_entry(ina)
     reader = client_for(["Evergreen.Reader"], "ev-leser")
     assert reader.get(f"{BASE}/settings", params={"q": "teams"}).status_code == 403
-    assert ina.get(f"{BASE}/settings", params={"q": "t"}).status_code == 422
+    assert ina.get(f"{BASE}/settings", params={"q": "x" * 101}).status_code == 422
+    assert ina.get(f"{BASE}/settings").json()["settings"]
     found = ina.get(f"{BASE}/settings", params={"q": setting.path[:12]}).json()
     assert setting.id in [hit["id"] for hit in found["settings"]]
 

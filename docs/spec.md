@@ -87,8 +87,8 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Werkbank.Admin` | Kern | Verwaltung: Module, Konnektoren, Kommentarregeln, Benachrichtigungsregeln, Audit-Log vollständig |
 | `Config.Reader` | M365-Konfiguration | Einstellungen, Verlauf, Änderungen, Snapshots ansehen und exportieren |
 | `Config.Reviewer` | M365-Konfiguration | zusätzlich Änderungen bewerten, Beschreibungen und Begründungen pflegen, Soll-Werte setzen |
-| `Evergreen.Reader` | Evergreen | Einträge mit Notizen ansehen; keine Aufgaben und Benachrichtigungen |
-| `Evergreen.Editor` | Evergreen | Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen; Aufgabe und Benachrichtigung bei neuen Einträgen |
+| `Evergreen.Reader` | Evergreen | Einträge mit Bewertung und Notizen ansehen; keine Aufgaben und Benachrichtigungen |
+| `Evergreen.Editor` | Evergreen | Einträge anlegen, bewerten, Notizen anfügen, abschließen und wieder öffnen; Aufgabe und Benachrichtigung bei neuen Einträgen |
 | `Tools.User` | IT-Tools | Bereich IT-Tools öffnen. Die Tools rechnen vollständig im Browser und haben keine Daten auf dem Server; die Rolle steuert deshalb nur, wer den Bereich sieht |
 | `Tenant.Reader` | Tenant | Lizenzen, Benutzerzahlen und Nutzung der Dienste mit Verlauf, Zertifikate und Secrets, Dienststatus ansehen |
 | `Budget.Editor` | IT-Budget | Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen |
@@ -427,8 +427,8 @@ Muster „Liste und Ansicht“ aus `design.md` (seit 0.83; vorher Tabelle mit An
 - Nummer `EV-JJJJ-NNN`. Links eine Liste mit fester Breite (280–360 px) und fester Höhe bis zum unteren Rand; sie scrollt für sich, die Ansicht rechts bleibt stehen.
 - Oben in der Liste: Suche (Nummer, Titel, Kennung der Meldung, Dienste, Text), Status als Chips mit Anzahl – **Offen** (Standard: neu und bearbeitet), **Neu**, **Mit Frist** (offen und „Handeln bis“ gesetzt), **Abgeschlossen** –, bei Platzmangel seitlich scrollbar; darunter der Schalter „Reine Info-Meldungen ausblenden“ (Standard an, `werkbank-evergreen-info` im Browser). Reine Info-Meldung: Kategorie `stayInformed` und weder „User impact“ noch „Admin impact“ in den Kennzeichen. Am Handy wie alle Filter (`design.md`): Status als Auswahl.
 - Offene Einträge stehen in Gruppen mit Zähler, deren Überschriften beim Scrollen oben haften: 1. **Mit Frist** (nach Frist, früheste zuerst), 2. **Neu**, 3. **In Bearbeitung**; innerhalb von 2 und 3 neueste zuerst. Die Filter „Neu“ und „Abgeschlossen“ zeigen eine Liste ohne Gruppen. Die ganze Liste wird geladen (keine Seiten mehr); bei mehr als 500 Treffern Hinweis, die Suche einzugrenzen.
-- Listeneintrag: Nummer (Schrift für Werte) und Status-Badge in einer Zeile, Titel (höchstens zwei Zeilen, dann abgeschnitten), darunter Dienst · Art und gegebenenfalls „bis TT.MM.JJJJ“ in Orange. Der ganze Eintrag ist ein Link (`/evergreen/m365/<Nummer>`), gewählt mit Hintergrund, Balken links und `aria-current`.
-- Ohne Auswahl zeigt die Ansicht den Platzhalter. Unter 1100 px erst nur die Liste, gewählt nur die Ansicht mit „‹ Zur Liste“; unter 1200 px wird das Seitenmenü ausgeblendet, die Bereichsleiste bleibt.
+- Listeneintrag: Nummer (Schrift für Werte) und Status-Badge in einer Zeile, Titel (höchstens zwei Zeilen, dann abgeschnitten), darunter Dienst · Art und gegebenenfalls „bis TT.MM.JJJJ“ in Orange. Der ganze Eintrag ist ein Link (`/evergreen/m365/<ID>`), gewählt mit Hintergrund, Balken links und `aria-current`.
+- Ohne Auswahl zeigt die Ansicht den Platzhalter. Unter 1100 px erst nur die Liste, gewählt nur die Ansicht mit „‹ Zur Liste“; unter 1200 px ist das Seitenmenü eingeklappt (Bereichsleiste bleibt, „Menü ausklappen“ öffnet es wieder).
 - Aufgabe auf der Startseite und Benachrichtigung „Neue Einträge“ nur für `Evergreen.Editor`.
 
 ### 8.4 Ansicht eines Eintrags

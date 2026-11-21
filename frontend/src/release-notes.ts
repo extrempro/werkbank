@@ -24,6 +24,33 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.83.0",
+    date: "2026-11-21",
+    summary:
+      "Evergreen übersichtlicher: Liste mit Gruppen, Steckbrief und Zeitstrahl auf einen Blick, eigene Bewertung getrennt vom Text von Microsoft.",
+    sections: [
+      {
+        area: "Evergreen",
+        entries: [
+          "Links steht jetzt eine Liste, rechts der gewählte Eintrag. Offene Einträge sind gruppiert: zuerst die mit Frist, dann neue, dann die in Bearbeitung.",
+          "Neu sind der Filter „Mit Frist“ und der Schalter „Reine Info-Meldungen ausblenden“. Dein Browser merkt sich, wie du ihn stellst.",
+          "Oben im Eintrag steht ein Steckbrief: wer betroffen ist, ob die Funktion eingeschaltet wird, ob wir sie steuern können und bis wann zu handeln ist.",
+          "Der Rollout erscheint als Zeitstrahl mit einer Linie für heute. Verschiebt Microsoft den Zeitplan, siehst du den alten Plan schraffiert daneben.",
+          "Darunter gibt es drei Reiter: „Unsere Bewertung“, „Text von Microsoft“ (nach Abschnitten zum Aufklappen) und „Notizen und Verlauf“.",
+          "In „Unsere Bewertung“ hältst du Kurzfassung, Änderungen für Mitarbeitende, Schulung und Mitbestimmung fest und kannst eine Einstellung aus der M365-Konfiguration verknüpfen. Jede Änderung steht im Verlauf.",
+          "Rollout-Phasen und Betroffene liest die Werkbank aus der Meldung und markiert sie als „Vorschlag, ungeprüft“, bis du die Bewertung speicherst.",
+        ],
+      },
+      {
+        area: "Alle Bereiche",
+        entries: [
+          "Auf mittelgroßen Bildschirmen haben Seiten mit Liste und Ansicht (Verleih, Evergreen) mehr Platz: Das Seitenmenü ist dort eingeklappt; mit „Menü ausklappen“ in der Bereichsleiste holst du es zurück.",
+          "Blaue Kennzeichen wie „Neu“ haben einen feinen Rahmen und sind dadurch auch in einer gewählten Zeile gut zu sehen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.82.0",
     date: "2026-11-21",
     summary:

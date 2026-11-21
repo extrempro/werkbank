@@ -1,13 +1,14 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { navigate } from "../../router";
-import { entryPath, parseEvergreenPath, type Entry } from "./api";
-import { EntriesPage } from "./EntriesPage";
+import { entryPath, parseEvergreenPath, type Entry, type EntrySummary } from "./api";
+import { EntriesPage, groupEntries } from "./EntriesPage";
 
 vi.mock("../../router", () => ({ navigate: vi.fn() }));
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
   vi.unstubAllGlobals();
   vi.mocked(navigate).mockClear();
 });
@@ -47,11 +48,33 @@ const entry: Entry = {
   created_at: "2026-11-20T10:00:00Z",
   updated_at: "2026-11-20T10:00:00Z",
   last_editor: null,
+  kind: "Neue Funktion",
+  info_only: false,
   category: "planForChange",
   published_at: "2026-11-19T08:00:00Z",
   modified_at: "2026-11-19T08:00:00Z",
-  body: "Erste Zeile\n\nZweite Zeile <b>kein HTML</b>",
+  body: "Erste Zeile",
   closed_at: null,
+  tags: ["User impact", "New feature"],
+  sections: [
+    { head: "What and why", text: "Zweite Zeile <b>kein HTML</b>" },
+    { head: "When this will happen", text: "Targeted Release: January 2027" },
+  ],
+  schedule_previous: "General Availability: December 2026",
+  schedule_changed_at: "2026-11-20T10:00:00Z",
+  affected: "Nutzer",
+  default_state: "an",
+  controllable: true,
+  controllable_how: "Besprechungsrichtlinie",
+  phases: [{ name: "Targeted Release", start: "2027-01", end: "2027-02" }],
+  phases_previous: [{ name: "Allgemein verfügbar", start: "2026-12", end: "2026-12" }],
+  suggested: ["affected", "phases"],
+  summary: null,
+  staff_change: null,
+  training: null,
+  codetermination: null,
+  codetermination_reason: null,
+  setting: null,
   notes: [],
   can_edit: true,
 };
@@ -67,15 +90,44 @@ const worked: Entry = {
       text: "Mit Fachabteilung klären",
       author: "Ina Beispiel",
       created_at: "2026-11-21T08:00:00Z",
+      changes: [],
     },
   ],
 };
 
+function summary(over: Partial<EntrySummary>): EntrySummary {
+  return { ...entry, ...over };
+}
+
+const listed = [
+  summary({ id: 7, number: "EV-2026-007", title: "Ohne Frist neu", action_required_by: null }),
+  summary({
+    id: 8,
+    number: "EV-2026-008",
+    title: "In Arbeit",
+    status: "bearbeitet",
+    action_required_by: null,
+  }),
+  summary({}),
+];
+
+const list = { entries: listed, total: 3, open: 3, new: 2, due: 1, done: 4, can_edit: true };
+
 const routes = {
-  "GET /api/evergreen/entries": { entries: [entry], total: 1, open: 1, new: 1, can_edit: true },
+  "GET /api/evergreen/entries": list,
   "GET /api/evergreen/entries/5": entry,
   "POST /api/evergreen/entries/5/notes": worked,
   "POST /api/evergreen/entries/5/close": { ...worked, status: "abgeschlossen" },
+  "PUT /api/evergreen/entries/5/assessment": {
+    ...entry,
+    status: "bearbeitet",
+    summary: "Kurz und klar",
+    suggested: [],
+  },
+  "GET /api/evergreen/settings": {
+    settings: [{ id: 3, path: "teams/Besprechung/Copilot", value: "true" }],
+    more: false,
+  },
   "POST /api/evergreen/entries": { ...entry, id: 9, source: "manuell" },
 };
 
@@ -88,41 +140,163 @@ describe("Evergreen-Pfade", () => {
     expect(parseEvergreenPath("/evergreen/m365/x")).toBeNull();
     expect(entryPath("m365", 3)).toBe("/evergreen/m365/3");
   });
+
+  it("gruppiert offene Einträge: mit Frist, neu, in Bearbeitung", () => {
+    const later = summary({ id: 11, action_required_by: "2027-03-01T00:00:00Z" });
+    const groups = groupEntries([...listed, later]);
+    expect(groups.map((group) => [group.label, group.entries.map((e) => e.id)])).toEqual([
+      ["Mit Frist", [5, 11]],
+      ["Neu", [7]],
+      ["In Bearbeitung", [8]],
+    ]);
+    expect(groupEntries([listed[0] as EntrySummary]).map((group) => group.label)).toEqual(["Neu"]);
+  });
 });
 
 describe("EntriesPage", () => {
-  it("zeigt die Einträge als Tabelle und öffnet einen per Klick auf die Zeile", async () => {
+  it("zeigt die Liste in Gruppen und öffnet einen Eintrag per Verweis", async () => {
     const calls = stubFetch(routes);
-    render(<EntriesPage software="m365" entryId={null} roles={["Evergreen.Reader"]} />);
+    render(<EntriesPage software="m365" entryId={8} roles={["Evergreen.Reader"]} />);
     expect(screen.getByRole("heading", { level: 1, name: "Microsoft 365" })).toBeVisible();
-    const table = await screen.findByRole("table", { name: "Einträge Microsoft 365" });
-    expect(screen.getByText("1 offen, davon 1 neu")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Neu · 1" })).toBeVisible();
+    const nav = await screen.findByRole("navigation", { name: "Einträge Microsoft 365" });
+    expect(screen.getByText("3 offen, davon 2 neu")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Mit Frist · 1" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Abgeschlossen · 4" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Neuer Eintrag" })).toBeNull();
-    expect(calls[0]?.url).toContain("software=m365");
-    expect(calls[0]?.url).toContain("state=offen");
-    fireEvent.click(table.querySelector("tbody td") as HTMLElement);
-    expect(navigate).toHaveBeenCalledWith("/evergreen/m365/5");
+    const heads = nav.querySelectorAll("h2");
+    expect([...heads].map((head) => head.textContent)).toEqual([
+      "Mit Frist1",
+      "Neu1",
+      "In Bearbeitung1",
+    ]);
+    expect(screen.getByText("bis 01.12.2026")).toBeVisible();
+    const current = screen.getByRole("link", { name: /In Arbeit/ });
+    expect(current).toHaveAttribute("aria-current", "true");
+    const first = calls.find((call) => call.url.includes("state="));
+    expect(first?.url).toContain("state=offen");
+    expect(first?.url).toContain("hide_info=true");
 
-    fireEvent.click(screen.getByRole("button", { name: "Abgeschlossen" }));
+    fireEvent.click(screen.getByRole("link", { name: /Ohne Frist neu/ }));
+    expect(navigate).toHaveBeenCalledWith("/evergreen/m365/7");
+
+    fireEvent.click(screen.getByRole("button", { name: "Abgeschlossen · 4" }));
     await waitFor(() => expect(calls.at(-1)?.url).toContain("state=abgeschlossen"));
+    await waitFor(() => expect(nav.querySelectorAll("h2")).toHaveLength(0));
   });
 
-  it("zeigt Lesern den Eintrag ohne Bearbeitung, den Text als reinen Text", async () => {
+  it("merkt sich den Schalter für Info-Meldungen im Browser", async () => {
+    const calls = stubFetch(routes);
+    render(<EntriesPage software="m365" entryId={null} roles={["Evergreen.Reader"]} />);
+    const toggle = await screen.findByRole("checkbox", { name: "Reine Info-Meldungen ausblenden" });
+    expect(toggle).toBeChecked();
+    expect(screen.getByText(/Wähle links einen Eintrag/)).toBeVisible();
+    fireEvent.click(toggle);
+    await waitFor(() => expect(calls.at(-1)?.url).toContain("hide_info=false"));
+    expect(window.localStorage.getItem("werkbank-evergreen-info")).toBe("aus");
+  });
+
+  it("zeigt Lesern Steckbrief, Rollout und Reiter ohne Formular", async () => {
     stubFetch({ ...routes, "GET /api/evergreen/entries/5": { ...entry, can_edit: false } });
     render(<EntriesPage software="m365" entryId={5} roles={["Evergreen.Reader"]} />);
     expect(await screen.findByRole("heading", { name: "Neue Funktion in Teams" })).toBeVisible();
     expect(screen.getByText("MC100001")).toBeVisible();
-    expect(screen.getByText(/Zweite Zeile <b>kein HTML<\/b>/)).toBeVisible();
+    const badges = screen.getByRole("list", { name: "Kennzeichen" });
+    for (const badge of ["Microsoft Teams", "Neue Funktion", "Betrifft Nutzer", "Handlung nötig"]) {
+      expect(badges).toHaveTextContent(badge);
+    }
+    expect(screen.getByText("Eingeschaltet").closest(".ev-fact")).toHaveClass("ev-fact-warn");
+    expect(screen.getAllByText("Vorschlag, ungeprüft")).toHaveLength(2);
+    expect(screen.getByText("Zeitplan geändert am 20.11.2026")).toBeVisible();
+    const phases = screen.getByRole("list", { name: "Rollout-Phasen" });
+    expect(phases).toHaveTextContent("Targeted Release: Jan 2027 bis Feb 2027");
+    expect(phases).toHaveTextContent("Allgemein verfügbar: Dez 2026 (vorher geplant)");
+
+    expect(screen.getByRole("tab", { name: "Unsere Bewertung" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.queryByRole("button", { name: "Bewertung speichern" })).toBeNull();
+    expect(screen.getAllByText("Noch nicht bewertet.").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Text von Microsoft" }));
+    const text = screen.getByText(/Zweite Zeile <b>kein HTML<\/b>/);
+    expect(text).toBeVisible();
+    expect(text).toHaveAttribute("lang", "en");
+    expect(screen.getByText("What and why")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Notizen und Verlauf" }));
     expect(screen.getByText("Noch keine Notizen.")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Notiz anfügen" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Abschließen" })).toBeNull();
+  });
+
+  it("wechselt die Reiter mit den Pfeiltasten", async () => {
+    stubFetch(routes);
+    render(<EntriesPage software="m365" entryId={5} roles={["Evergreen.Editor"]} />);
+    const first = await screen.findByRole("tab", { name: "Unsere Bewertung" });
+    expect(first).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tab", { name: "Text von Microsoft" })).toHaveAttribute(
+      "tabindex",
+      "-1",
+    );
+    fireEvent.keyDown(first, { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: "Text von Microsoft" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Text von Microsoft" }), { key: "End" });
+    expect(screen.getByRole("tabpanel", { name: "Notizen und Verlauf" })).toBeVisible();
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Notizen und Verlauf" }), {
+      key: "ArrowRight",
+    });
+    expect(screen.getByRole("tab", { name: "Unsere Bewertung" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("speichert als Bearbeiter die Bewertung mit Phasen und Einstellung", async () => {
+    const calls = stubFetch(routes);
+    render(<EntriesPage software="m365" entryId={5} roles={["Evergreen.Editor"]} />);
+    fireEvent.change(await screen.findByLabelText("Kurzfassung"), {
+      target: { value: " Kurz und klar " },
+    });
+    fireEvent.click(screen.getByRole("radio", { name: "Noch prüfen" }));
+    fireEvent.change(screen.getByLabelText("Standard nach dem Rollout"), {
+      target: { value: "aus" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Phase hinzufügen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Bewertung speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Jede Rollout-Phase braucht");
+    fireEvent.click(screen.getByRole("button", { name: "Phase 2 entfernen" }));
+
+    const picker = screen.getByRole("combobox", { name: "Einstellung aus der M365-Konfiguration" });
+    fireEvent.focus(picker);
+    fireEvent.change(picker, { target: { value: "copilot" } });
+    fireEvent.click(await screen.findByRole("option", { name: /teams\/Besprechung\/Copilot/ }));
+    expect(screen.getByText("teams/Besprechung/Copilot")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Bewertung speichern" }));
+    expect(await screen.findByText("Gespeichert.")).toBeVisible();
+    const saved = calls.find((call) => call.method === "PUT");
+    expect(saved?.body).toEqual({
+      summary: "Kurz und klar",
+      staff_change: null,
+      training: null,
+      codetermination: "pruefen",
+      codetermination_reason: null,
+      setting_id: 3,
+      affected: "Nutzer",
+      default_state: "aus",
+      controllable: true,
+      controllable_how: "Besprechungsrichtlinie",
+      phases: [{ name: "Targeted Release", start: "2027-01", end: "2027-02" }],
+    });
   });
 
   it("fügt als Bearbeiter eine Notiz an und schließt ab", async () => {
     const calls = stubFetch(routes);
     render(<EntriesPage software="m365" entryId={5} roles={["Evergreen.Editor"]} />);
-    await screen.findByRole("heading", { name: "Neue Funktion in Teams" });
+    fireEvent.click(await screen.findByRole("tab", { name: "Notizen und Verlauf" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Notiz anfügen" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Bitte eine Notiz eingeben.");

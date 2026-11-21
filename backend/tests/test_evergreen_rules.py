@@ -83,3 +83,22 @@ def test_kind_affected_and_info() -> None:
     assert info_only([], "stayInformed") is True
     assert info_only(["User impact"], "stayInformed") is False
     assert info_only([], "planForChange") is False
+
+
+def test_evergreen_models_load_on_their_own() -> None:
+    """Der Verweis auf die verknüpfte Einstellung braucht die Tabelle der M365-Konfiguration,
+    auch wenn nur Evergreen geladen ist (Worker)."""
+    import subprocess
+    import sys
+
+    code = (
+        "import werkbank.core.models;"
+        "import werkbank.modules.evergreen.models;"
+        "from werkbank.db import Base;"
+        "assert 'cfg_settings' in Base.metadata.tables;"
+        "Base.metadata.sorted_tables"
+    )
+    result = subprocess.run(  # noqa: S603 - fester Code, keine Eingabe von außen
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 0, result.stderr

@@ -71,6 +71,7 @@ import { ProjectPage } from "../modules/projects/ProjectPage";
 import { ProjectsPage } from "../modules/projects/ProjectsPage";
 import { chaptersFor, HANDBOOK_PATH } from "../handbook";
 import { NOTIFICATIONS_PATH } from "../notifications";
+import { useMediaQuery } from "./FilterBar";
 import { NotificationBell } from "./NotificationBell";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { SEARCH_PATH, SearchPage } from "../pages/SearchPage";
@@ -147,6 +148,18 @@ interface LayoutProps {
   me: Me;
 }
 
+/** Breite, in der Seiten mit Liste und Ansicht das Seitenmenü einklappen (design.md). */
+const LIST_VIEW_QUERY = "(min-width: 761px) and (max-width: 1199px)";
+
+/** Seite mit dem Muster „Liste und Ansicht“: Kennung der Seite (ohne gewählten Eintrag). */
+export function listViewPage(path: string): string | null {
+  const evergreen = parseEvergreenPath(path);
+  if (evergreen) {
+    return `/evergreen/${evergreen.software}`;
+  }
+  return parseLoanPath(path) ? INVENTORY_LOANS_PATH : null;
+}
+
 /** Abstand, in dem die Aufgaben für die Zähler nachgeladen werden. */
 const TASK_REFRESH_MS = 5 * 60 * 1000;
 
@@ -157,7 +170,13 @@ export function Layout({ me }: LayoutProps) {
   const sideMenuId = useId();
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [newsUnseen, setNewsUnseen] = useState(hasUnseenRelease);
-  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const [stored, setCollapsed] = useState(readCollapsed);
+  // Liste und Ansicht unter 1200 px: Seitenmenü eingeklappt, bis es jemand auf dieser Seite
+  // wieder aufklappt (gilt nur für diesen Besuch, nicht im Browser gemerkt).
+  const midWidth = useMediaQuery(LIST_VIEW_QUERY);
+  const listView = listViewPage(path);
+  const [openedOn, setOpenedOn] = useState<string | null>(null);
+  const collapsed = stored || (midWidth && listView !== null && openedOn !== listView);
   const [searchOpen, setSearchOpen] = useState(false);
   const closeSearch = useCallback(() => setSearchOpen(false), []);
   const onNewsSeen = useCallback(() => setNewsUnseen(false), []);
@@ -239,9 +258,10 @@ export function Layout({ me }: LayoutProps) {
     event.preventDefault();
     go(target);
   };
-  const setMenu = (next: boolean) => {
+  const setMenu = (next: boolean, target: string = path) => {
     setCollapsed(next);
     saveCollapsed(next);
+    setOpenedOn(next ? null : listViewPage(target));
   };
   // Ein Bereich in der Leiste öffnet seine erste Seite; ein eingeklapptes Menü geht wieder auf.
   // Ist das Menü zu und der Bereich schon offen, klappt nur das Menü auf.
@@ -249,7 +269,7 @@ export function Layout({ me }: LayoutProps) {
     event.preventDefault();
     const reopenOnly = collapsed && area.id === currentArea?.id;
     if (collapsed) {
-      setMenu(false);
+      setMenu(false, reopenOnly ? path : area.home);
     }
     if (!reopenOnly) {
       go(area.home);

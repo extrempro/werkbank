@@ -49,10 +49,13 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
         "Konfiguration Prüfer",
         "Änderungen bewerten, Beschreibungen und Soll-Werte pflegen",
     ),
-    Role.EVERGREEN_READER: ("Evergreen Leser", "Evergreen-Einträge und ihre Notizen ansehen"),
+    Role.EVERGREEN_READER: (
+        "Evergreen Leser",
+        "Evergreen-Einträge mit Bewertung und Notizen ansehen",
+    ),
     Role.EVERGREEN_EDITOR: (
         "Evergreen Bearbeiter",
-        "Evergreen-Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen",
+        "Evergreen-Einträge anlegen, bewerten, Notizen anfügen, abschließen und wieder öffnen",
     ),
     Role.TOOLS_USER: (
         "IT-Tools Nutzer",
