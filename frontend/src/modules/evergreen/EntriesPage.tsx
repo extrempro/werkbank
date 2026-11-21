@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent, type MouseEvent } from "react";
 import { errorText } from "../../api";
 import { FilterBar } from "../../components/FilterBar";
+import { InfoTip } from "../../components/InfoTip";
 import { Placeholder } from "../../components/Placeholder";
 import { navigate } from "../../router";
 import { useDebounced } from "../inventory/paged";
@@ -284,19 +285,22 @@ export function EntriesPage({
                 })),
               }}
             />
-            <label className="check-label ev-info-toggle" htmlFor={infoId}>
-              <input
-                id={infoId}
-                type="checkbox"
-                className="check"
-                checked={hideInfo}
-                onChange={(event) => {
-                  setHideInfo(event.target.checked);
-                  storeHideInfo(event.target.checked);
-                }}
-              />
-              Reine Info-Meldungen ausblenden
-            </label>
+            <div className="ev-info-row">
+              <label className="check-label ev-info-toggle" htmlFor={infoId}>
+                <input
+                  id={infoId}
+                  type="checkbox"
+                  className="check"
+                  checked={hideInfo}
+                  onChange={(event) => {
+                    setHideInfo(event.target.checked);
+                    storeHideInfo(event.target.checked);
+                  }}
+                />
+                Reine Info-Meldungen ausblenden
+              </label>
+              <InfoTip term="evergreen.info-meldungen" />
+            </div>
           </div>
           <div className="case-scroll">
             {!entries && !failed && <p role="status">Wird geladen …</p>}

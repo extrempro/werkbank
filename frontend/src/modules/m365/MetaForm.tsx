@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { ApiError } from "../../api";
+import { InfoTip } from "../../components/InfoTip";
 import { parseTargetInput, targetInputText, updateMeta, type Meta } from "./api";
 
 interface MetaFormProps {
@@ -11,6 +12,7 @@ interface MetaFormProps {
 
 /** Formular für Beschreibung, Begründung, Kritikalität, Verantwortliche, Link und Soll-Wert. */
 export function MetaForm({ settingId, meta, onSaved, onCancel }: MetaFormProps) {
+  const criticalityId = useId();
   const [description, setDescription] = useState(meta.description ?? "");
   const [reasoning, setReasoning] = useState(meta.reasoning ?? "");
   const [criticality, setCriticality] = useState(meta.criticality ?? "");
@@ -74,15 +76,22 @@ export function MetaForm({ settingId, meta, onSaved, onCancel }: MetaFormProps) 
           onChange={(event) => setReasoning(event.target.value)}
         />
       </label>
-      <label>
-        Kritikalität
-        <select value={criticality} onChange={(event) => setCriticality(event.target.value)}>
+      <div className="field-info">
+        <span className="field-info-head">
+          <label htmlFor={criticalityId}>Kritikalität</label>
+          <InfoTip term="m365.kritikalitaet" />
+        </span>
+        <select
+          id={criticalityId}
+          value={criticality}
+          onChange={(event) => setCriticality(event.target.value)}
+        >
           <option value="">Nicht festgelegt</option>
           <option value="niedrig">Niedrig</option>
           <option value="mittel">Mittel</option>
           <option value="hoch">Hoch</option>
         </select>
-      </label>
+      </div>
       <label>
         Verantwortlich
         <input
@@ -102,15 +111,18 @@ export function MetaForm({ settingId, meta, onSaved, onCancel }: MetaFormProps) 
           onChange={(event) => setLearnUrl(event.target.value)}
         />
       </label>
-      <label className="check-label">
-        <input
-          type="checkbox"
-          className="check"
-          checked={targetSet}
-          onChange={(event) => setTargetSet(event.target.checked)}
-        />
-        Soll-Wert festlegen
-      </label>
+      <span className="field-info-head">
+        <label className="check-label">
+          <input
+            type="checkbox"
+            className="check"
+            checked={targetSet}
+            onChange={(event) => setTargetSet(event.target.checked)}
+          />
+          Soll-Wert festlegen
+        </label>
+        <InfoTip term="m365.soll-wert" />
+      </span>
       {targetSet && (
         <>
           <label>

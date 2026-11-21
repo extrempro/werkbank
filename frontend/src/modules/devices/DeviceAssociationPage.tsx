@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { FilterBar } from "../../components/FilterBar";
 import { errorText } from "../../api";
@@ -413,7 +414,9 @@ function DeviceDrawer({ device, admin, onClose, onChanged }: DrawerProps) {
                 <dd>{when(device.enrolled_at)}</dd>
                 <dt>Benutzer</dt>
                 <dd>{device.user_principal_name ?? "–"}</dd>
-                <dt>Konformität</dt>
+                <dt>
+                  Konformität <InfoTip term="geraete.konformitaet" />
+                </dt>
                 <dd>{device.compliance ?? "–"}</dd>
               </dl>
             </section>
@@ -662,7 +665,9 @@ function ScanDialog({ onClose, onDone, onOpenEntry }: ScanDialogProps) {
                 <dd>{when(step.scan.generated_at)}</dd>
                 {step.scan.tenant_name && (
                   <>
-                    <dt>Ziel-Tenant</dt>
+                    <dt>
+                      Ziel-Tenant <InfoTip term="geraete.ziel-tenant" />
+                    </dt>
                     <dd>{step.scan.tenant_name}</dd>
                   </>
                 )}

@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useId, useState } from "react";
 import { errorText } from "../../api";
 import {
@@ -303,7 +304,9 @@ export function InventoryStatisticsPage() {
                   <dd>{data.loans.open}</dd>
                 </div>
                 <div className="kpi">
-                  <dt>Davon überfällig</dt>
+                  <dt>
+                    Davon überfällig <InfoTip term="bestand.ueberfaellig" />
+                  </dt>
                   <dd>{data.loans.overdue}</dd>
                 </div>
               </dl>

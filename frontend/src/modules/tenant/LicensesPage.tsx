@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState } from "react";
 import { ApiError, formatDateTime } from "../../api";
 import { LineChart, formatDay } from "../../components/LineChart";
@@ -240,7 +241,9 @@ function LicenseDetailPage({ id, now }: { id: number; now: number }) {
           <dd className="kpi-number">{formatCount(license.consumed)}</dd>
         </div>
         <div className="kpi">
-          <dt>Frei</dt>
+          <dt>
+            Frei <InfoTip term="tenant.frei" />
+          </dt>
           <dd className="kpi-number">{formatCount(license.free)}</dd>
         </div>
         <div className="kpi">

@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { errorText } from "../../api";
 import {
@@ -223,11 +224,15 @@ export function ContractDetail({
         </div>
         <dl className="budget-facts">
           <div>
-            <dt>Nächster Kündigungstermin</dt>
+            <dt>
+              Nächster Kündigungstermin <InfoTip term="budget.kuendigungstermin" />
+            </dt>
             <dd>{day(contract.notice_deadline, "kein Termin")}</dd>
           </div>
           <div>
-            <dt>Wenn nicht gekündigt</dt>
+            <dt>
+              Wenn nicht gekündigt <InfoTip term="budget.verlaengerung" />
+            </dt>
             <dd>{followUp(contract)}</dd>
           </div>
         </dl>

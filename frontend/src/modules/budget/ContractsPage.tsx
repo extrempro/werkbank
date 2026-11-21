@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { FilterBar } from "../../components/FilterBar";
@@ -242,16 +243,23 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
               onChange={(event) => setNumber(event.target.value)}
             />
           </label>
-          <label>
-            Auftragsverarbeitungsvertrag (AVV)
-            <select value={dpa} onChange={(event) => setDpa(event.target.value as DpaStatus)}>
+          <div className="field-info">
+            <span className="field-info-head">
+              <label htmlFor="vertrag-avv">Auftragsverarbeitungsvertrag (AVV)</label>
+              <InfoTip term="budget.avv" />
+            </span>
+            <select
+              id="vertrag-avv"
+              value={dpa}
+              onChange={(event) => setDpa(event.target.value as DpaStatus)}
+            >
               {(Object.keys(DPA_LABELS) as DpaStatus[]).map((key) => (
                 <option key={key} value={key}>
                   {DPA_LABELS[key]}
                 </option>
               ))}
             </select>
-          </label>
+          </div>
         </FormStep>
         <FormStep number={2} title="Kosten">
           <div className="form-wide form-field">
@@ -671,7 +679,9 @@ export function ContractsPage({
             <dd className="budget-card-sub">{share(actual, target)} % des Solls</dd>
           </div>
           <div className="panel budget-card">
-            <dt>AVV fehlt</dt>
+            <dt>
+              AVV fehlt <InfoTip term="budget.avv" />
+            </dt>
             <dd className="budget-card-value">{missingDpa}</dd>
             <dd className="budget-card-sub">
               {missingDpa > 0 ? "bitte nachreichen" : "bei allen laufenden Verträgen da"}

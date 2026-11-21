@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState } from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
@@ -44,7 +45,9 @@ export function BudgetKpis({ sums }: { sums: BudgetSums }) {
   return (
     <dl className="kpis project-kpis">
       <div className="kpi">
-        <dt>Veranschlagt</dt>
+        <dt>
+          Veranschlagt <InfoTip term="projekte.veranschlagt" />
+        </dt>
         <dd>
           <span className="kpi-number">{money(sums.budget_cents)}</span>
           <span className="small">im Projekt hinterlegt</span>
@@ -58,7 +61,9 @@ export function BudgetKpis({ sums }: { sums: BudgetSums }) {
         </dd>
       </div>
       <div className="kpi">
-        <dt>Ist (gebuchte Rechnungen)</dt>
+        <dt>
+          Ist (gebuchte Rechnungen) <InfoTip term="projekte.ist" />
+        </dt>
         <dd>
           <span className="kpi-number">{formatEuro(sums.actual_cents)}</span>
         </dd>

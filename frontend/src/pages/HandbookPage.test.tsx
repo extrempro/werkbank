@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { HELP } from "../help/terms";
 import { HandbookPage } from "./HandbookPage";
 
 afterEach(() => {
@@ -8,8 +9,8 @@ afterEach(() => {
 });
 
 describe("HandbookPage", () => {
-  it("zeigt nur die Kapitel der eigenen Rollen und sucht darin", () => {
-    render(<HandbookPage roles={["Evergreen.Reader"]} chapterId={null} />);
+  it("zeigt nur die Bereiche der eigenen Rollen und sucht darin", () => {
+    render(<HandbookPage roles={["Evergreen.Reader"]} areaId={null} topicId={null} />);
     expect(screen.getByRole("heading", { level: 1, name: "Handbuch" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Evergreen" })).toHaveAttribute(
       "href",
@@ -23,29 +24,56 @@ describe("HandbookPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Suchen" }));
     expect(screen.getByRole("link", { name: "Benachrichtigungen (Glocke)" })).toHaveAttribute(
       "href",
-      "/handbuch/erste-schritte#benachrichtigungen",
+      "/handbuch/grundlagen/benachrichtigungen",
     );
   });
 
-  it("zeigt ein Kapitel mit Inhalt, Anleitungen und Verweisen", () => {
-    render(<HandbookPage roles={["Budget.Manager"]} chapterId="it-budget" />);
+  it("zeigt einen Bereich mit seinen Teilen und Themen", () => {
+    render(<HandbookPage roles={["Budget.Manager"]} areaId="it-budget" topicId={null} />);
     expect(screen.getByRole("heading", { level: 1, name: "IT-Budget" })).toBeVisible();
-    expect(screen.getByRole("navigation", { name: "Inhalt" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Rechnungen prüfen und buchen" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Zu den Rechnungen" })).toHaveAttribute(
+    const parts = screen.getAllByRole("heading", { level: 2 }).map((head) => head.textContent);
+    expect(parts).toEqual(["Überblick", "Ausgaben", "Stammdaten", "Verwaltung"]);
+    expect(screen.getByRole("link", { name: "Rechnungen prüfen und buchen" })).toHaveAttribute(
+      "href",
+      "/handbuch/it-budget/buchen",
+    );
+  });
+
+  it("zeigt ein Thema mit Pfad, Rollen, Verweis, weiteren Themen und vor/zurück", () => {
+    render(<HandbookPage roles={["Budget.Manager"]} areaId="it-budget" topicId="rechnungen" />);
+    expect(screen.getByRole("heading", { level: 1, name: "Rechnungen erfassen" })).toBeVisible();
+    expect(screen.getByText(/›\s*Ausgaben/)).toBeVisible();
+    expect(screen.getByText(/^Für: .*Budgetverwalter/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Zu den Rechnungen ›" })).toHaveAttribute(
       "href",
       "/budget/rechnungen",
     );
-    expect(screen.getByRole("link", { name: "← Erste Schritte" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Fragen und Hilfe →" })).toBeVisible();
+    const related = screen.getByRole("navigation", { name: "Weitere Themen in Ausgaben" });
+    expect(within(related).getByRole("link", { name: "Verträge" })).toBeVisible();
+    const pager = screen.getByRole("navigation", { name: "Vorheriges und nächstes Thema" });
+    expect(within(pager).getByRole("link", { name: "‹ Budgetposten" })).toBeVisible();
+    expect(
+      within(pager).getByRole("link", { name: "Rechnungen prüfen und buchen ›" }),
+    ).toBeVisible();
   });
 
-  it("blendet Abschnitte anderer Rollen aus und kennt fremde Kapitel nicht", () => {
-    const { unmount } = render(<HandbookPage roles={["Budget.Reader"]} chapterId="it-budget" />);
-    expect(screen.queryByRole("heading", { name: "Rechnungen prüfen und buchen" })).toBeNull();
-    expect(screen.getByRole("heading", { name: "Nur lesen" })).toBeVisible();
-    unmount();
-    const { container } = render(<HandbookPage roles={["Budget.Reader"]} chapterId="evergreen" />);
+  it("blendet Themen anderer Rollen aus und kennt fremde Themen nicht", () => {
+    const { container } = render(
+      <HandbookPage roles={["Budget.Reader"]} areaId="it-budget" topicId="buchen" />,
+    );
     expect(container.textContent).toBe("");
+    cleanup();
+    const other = render(
+      <HandbookPage roles={["Budget.Reader"]} areaId="evergreen" topicId={null} />,
+    );
+    expect(other.container.textContent).toBe("");
+  });
+
+  it("sammelt unter Begriffe A–Z die Erklärungen der sichtbaren Themen", () => {
+    render(<HandbookPage roles={["Budget.Reader"]} areaId="hilfe" topicId="begriffe" />);
+    expect(screen.getByText(HELP["budget.verfuegbar"].text, { exact: false })).toBeVisible();
+    expect(screen.queryByText(HELP["evergreen.steuerbar"].text, { exact: false })).toBeNull();
+    const terms = screen.getAllByRole("term").map((term) => term.textContent);
+    expect(terms).toEqual([...terms].sort((a, b) => (a ?? "").localeCompare(b ?? "", "de")));
   });
 });

@@ -44,6 +44,11 @@
   --farbe-info-flaeche: #e8eefb;
   --farbe-info-text: #163f8f;
   --farbe-info-rand: #9fb8ea;
+  /* Blase der Info-Symbole: hell weiß mit Rahmen, dunkel etwas heller als die Fläche */
+  --farbe-blase: #ffffff;
+  --farbe-blase-rand: #c9ced6;
+  --farbe-blase-text: #171a1f;
+  --schatten-blase: 0 10px 28px rgb(20 33 61 / 22%);
   --farbe-modul: #1f57c3;
   --farbe-diff-alt-flaeche: #fcebea;
   --farbe-diff-alt-text: #8a1c1c;
@@ -94,6 +99,10 @@
   --farbe-info-flaeche: #1d2c4d;
   --farbe-info-text: #b3ccff;
   --farbe-info-rand: #4a6bb0;
+  --farbe-blase: #222a38;
+  --farbe-blase-rand: #3d4758;
+  --farbe-blase-text: #e8ebf0;
+  --schatten-blase: 0 12px 32px rgb(0 0 0 / 55%);
   --farbe-modul: #8fb4ff;
   --farbe-diff-alt-flaeche: #3a1a1a;
   --farbe-diff-alt-text: #f4a6a6;
@@ -834,14 +843,39 @@ a {
 /* Stern am Seitentitel: gleich hinter der Überschrift in derselben Zeile */
 .has-pin {
   display: inline-block;
-  max-width: calc(100% - 52px);
+  max-width: 100%;
   vertical-align: middle;
 }
 
 .title-pin {
   display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-left: 8px;
   vertical-align: middle;
+}
+
+/* „Hilfe“ hinter dem Seitentitel: führt zum Thema im Handbuch */
+.title-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--farbe-link);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.title-help:hover {
+  background: var(--farbe-auswahl);
+}
+
+.title-help .icon {
+  width: 18px;
+  height: 18px;
 }
 
 .title-pin .pin {
@@ -5816,23 +5850,6 @@ html {
   margin: 0;
 }
 
-.handbook-toc {
-  padding: 16px 20px;
-}
-
-.handbook-toc h2 {
-  margin: 0 0 8px;
-  font-size: 1rem;
-}
-
-.handbook-toc ol {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 20px;
-  margin: 0;
-  padding-left: 1.25rem;
-}
-
 .handbook-section {
   scroll-margin-top: calc(var(--kopf-hoehe) + 16px);
 }
@@ -5901,6 +5918,265 @@ html {
   display: flex;
   justify-content: space-between;
   gap: 16px;
+}
+
+.handbook-crumbs a {
+  color: inherit;
+}
+
+.handbook-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.handbook-open {
+  font-weight: 600;
+}
+
+.handbook-all {
+  align-self: flex-start;
+}
+
+.handbook-related,
+.handbook-part {
+  padding: 0;
+}
+
+.handbook-related h2 {
+  margin: 0;
+  padding: 14px 20px 0;
+  font-size: 1rem;
+}
+
+.handbook-related ul,
+.handbook-topic-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 10px 20px 14px;
+  list-style: none;
+}
+
+.handbook-glossary dd a {
+  white-space: nowrap;
+}
+
+/* Seitenmenü des Handbuchs: Bereiche zum Aufklappen, darin Teile mit Überschrift */
+.handbook-menu-search {
+  display: grid;
+  gap: 4px;
+  padding: 0 20px 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--farbe-text-mittel);
+}
+
+.handbook-menu-search input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.handbook-menu-home {
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.handbook-menu .side-group + .side-group {
+  margin-top: 2px;
+}
+
+.handbook-area-toggle {
+  justify-content: flex-start;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 8px;
+  color: var(--farbe-text-mittel);
+  font-size: calc(0.875rem * var(--nav-scale));
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.handbook-area-title {
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.handbook-area-count {
+  color: var(--farbe-text-leise);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.side-subhead {
+  margin: 6px 0 2px;
+  padding: 0 12px 0 30px;
+  color: var(--farbe-text-leise);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.handbook-area .side-item > a {
+  padding-left: 30px;
+  padding-right: 12px;
+}
+
+.handbook-sheet .sheet-body {
+  padding-top: 4px;
+}
+
+.handbook-sheet .handbook-menu-search {
+  padding: 0 8px 8px;
+}
+
+/* Feld mit Info-Symbol: Beschriftung und „i“ in einer Zeile, darunter das Feld */
+.field-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.field-info-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Info-Symbol „i“ (design.md): sichtbar 16 px, Tippfläche 24 px; die Erklärung als Blase */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 2px;
+}
+
+.info-tip-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -4px -2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.info-tip-i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 50%;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text-leise);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10px;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.info-tip-i::before {
+  content: "i";
+}
+
+.info-tip-button:hover .info-tip-i {
+  border-color: var(--farbe-primaer);
+  color: var(--farbe-link);
+}
+
+.info-tip-button[aria-expanded="true"] .info-tip-i {
+  border-color: var(--farbe-primaer);
+  background: var(--farbe-primaer);
+  color: var(--farbe-auf-primaer);
+}
+
+.info-tip-button:focus-visible {
+  outline: 3px solid var(--farbe-primaer);
+  outline-offset: 1px;
+}
+
+.info-bubble {
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 40;
+  display: grid;
+  gap: 6px;
+  width: min(280px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid var(--farbe-blase-rand);
+  border-radius: 10px;
+  background: var(--farbe-blase);
+  box-shadow: var(--schatten-blase);
+  color: var(--farbe-blase-text);
+  font-size: 0.8125rem;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+}
+
+/* Spitze zum „i“ */
+.info-bubble::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid var(--farbe-blase-rand);
+  border-left: 1px solid var(--farbe-blase-rand);
+  background: var(--farbe-blase);
+  transform: rotate(45deg);
+}
+
+.info-bubble-right {
+  left: -16px;
+}
+
+.info-bubble-right::before {
+  left: 20px;
+}
+
+.info-bubble-left {
+  right: -16px;
+}
+
+.info-bubble-left::before {
+  right: 20px;
+}
+
+.info-bubble-link {
+  justify-self: start;
+  font-weight: 600;
 }
 
 /* Konto: Benachrichtigungen je Weg */
@@ -8002,9 +8278,26 @@ html {
   scrollbar-width: thin;
 }
 
-.ev-info-toggle {
+.ev-info-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 0 16px;
+}
+
+.ev-info-toggle {
   font-size: 0.875rem;
+}
+
+.ev-help-row,
+.ev-suggested-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ev-help-row h3 {
+  margin: 0;
 }
 
 .ev-info-toggle input {
@@ -8389,6 +8682,7 @@ html {
   align-items: center;
   gap: 8px;
   min-height: 44px;
+  padding: 0;
 }
 
 /* Mitbestimmung: echte Radioknöpfe, gestaltet wie die Knopfleiste */

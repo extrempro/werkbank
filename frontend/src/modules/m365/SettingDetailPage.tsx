@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState } from "react";
 import { ApiError, formatDateTime, type Me } from "../../api";
 import { Link } from "../../components/Link";
@@ -122,7 +123,9 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
             <dd>{setting.active ? formatDateTime(setting.valid_from) : "–"}</dd>
           </div>
           <div>
-            <dt>Kritikalität</dt>
+            <dt>
+              Kritikalität <InfoTip term="m365.kritikalitaet" />
+            </dt>
             <dd>
               {meta.criticality ? (
                 <span className={meta.criticality === "hoch" ? "pill pill-bad" : "pill pill-todo"}>
@@ -134,7 +137,9 @@ export function SettingDetailPage({ id, me }: SettingDetailPageProps) {
             </dd>
           </div>
           <div>
-            <dt>Soll-Wert</dt>
+            <dt>
+              Soll-Wert <InfoTip term="m365.soll-wert" />
+            </dt>
             <dd>
               {meta.target_set ? (
                 <>

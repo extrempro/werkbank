@@ -1,3 +1,4 @@
+import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState } from "react";
 import { ApiError, formatDateTime, type Me } from "../../api";
 import { Link } from "../../components/Link";
@@ -123,7 +124,9 @@ export function OverviewPage({ me }: OverviewPageProps) {
               </dd>
             </div>
             <div className="kpi">
-              <dt>Überwachte Einstellungen</dt>
+              <dt>
+                Überwachte Einstellungen <InfoTip term="m365.ueberwacht" />
+              </dt>
               <dd>
                 <span className="kpi-number">{numbers.format(overview.settings_total)}</span>
                 <span className="small">
@@ -169,7 +172,9 @@ export function OverviewPage({ me }: OverviewPageProps) {
 
           <dl className="facts panel">
             <div>
-              <dt>Abweichungen vom Soll-Wert</dt>
+              <dt>
+                Abweichungen vom Soll-Wert <InfoTip term="m365.abweichung" />
+              </dt>
               <dd>{numbers.format(overview.deviations)}</dd>
             </div>
             <div>
@@ -181,7 +186,9 @@ export function OverviewPage({ me }: OverviewPageProps) {
               </dd>
             </div>
             <div>
-              <dt>Gelesene Objekte in diesem Monat</dt>
+              <dt>
+                Gelesene Objekte in diesem Monat <InfoTip term="m365.objekte" />
+              </dt>
               <dd>
                 {numbers.format(overview.resources_this_month)} von höchstens{" "}
                 {numbers.format(overview.monthly_limit)} (Grenze von Microsoft)

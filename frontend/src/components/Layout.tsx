@@ -69,9 +69,17 @@ import { MasterDataPage } from "../modules/inventory/MasterDataPage";
 import { parseProjectPath } from "../modules/projects/api";
 import { ProjectPage } from "../modules/projects/ProjectPage";
 import { ProjectsPage } from "../modules/projects/ProjectsPage";
-import { chaptersFor, HANDBOOK_PATH } from "../handbook";
+import {
+  areasFor as areasForHandbook,
+  findTopic,
+  HANDBOOK_PATH,
+  parseHandbookPath,
+} from "../handbook";
+import { HandbookMenu } from "./nav/HandbookMenu";
 import { NOTIFICATIONS_PATH } from "../notifications";
 import { useMediaQuery } from "./FilterBar";
+import { HelpProvider, topicLink } from "../help/HelpContext";
+import { pageTopics } from "../help/terms";
 import { NotificationBell } from "./NotificationBell";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { SEARCH_PATH, SearchPage } from "../pages/SearchPage";
@@ -249,6 +257,8 @@ export function Layout({ me }: LayoutProps) {
   const hasOpen = (area: NavArea): boolean =>
     area.id !== "werkbank" && allNavItems(area.groups).some((item) => badgeFor(item.path) > 0);
   const current = items.find((item) => item.path === path);
+  const pin = current && path !== "/" ? { path: current.path, label: current.label } : null;
+  const helpLink = topicLink(pageTopics(path), me.roles);
 
   const go = (target: string) => {
     navigate(target);
@@ -329,12 +339,13 @@ export function Layout({ me }: LayoutProps) {
   const licenseMatch = /^\/m365\/lizenzen\/(\d{1,9})$/.exec(path);
   const licenseId = licenseMatch ? Number(licenseMatch[1]) : null;
 
-  const handbookMatch = /^\/handbuch(?:\/([a-z0-9-]{1,60}))?$/.exec(path);
-  const handbookChapter = handbookMatch ? (handbookMatch[1] ?? null) : null;
+  const handbookRoute = parseHandbookPath(path);
   const handbookKnown =
-    handbookMatch !== null &&
-    (handbookChapter === null ||
-      chaptersFor(me.roles).some((chapter) => chapter.id === handbookChapter));
+    handbookRoute !== null &&
+    (handbookRoute.area === null ||
+      (handbookRoute.topic === null
+        ? areasForHandbook(me.roles).some((area) => area.id === handbookRoute.area)
+        : findTopic(me.roles, handbookRoute.area, handbookRoute.topic) !== null));
 
   let page: ReactNode;
   if (path === "/") {
@@ -347,9 +358,14 @@ export function Layout({ me }: LayoutProps) {
     page = <NewsPage onSeen={onNewsSeen} />;
   } else if (path === NOTIFICATIONS_PATH) {
     page = <NotificationsPage />;
-  } else if (handbookKnown) {
+  } else if (handbookKnown && handbookRoute) {
     page = (
-      <HandbookPage key={handbookChapter ?? ""} roles={me.roles} chapterId={handbookChapter} />
+      <HandbookPage
+        key={path}
+        roles={me.roles}
+        areaId={handbookRoute.area}
+        topicId={handbookRoute.topic}
+      />
     );
   } else if (path === AUDIT_PATH && current) {
     page = <AuditPage />;
@@ -516,102 +532,115 @@ export function Layout({ me }: LayoutProps) {
   }
 
   return (
-    <div className={collapsed ? "app nav-collapsed" : "app"}>
-      <a className="skip-link" href="#inhalt">
-        Zum Inhalt springen
-      </a>
-      <header className="app-header">
-        <a className="brand" href="/" onClick={(event) => onNavClick(event, "/")}>
-          <BrandMark logoUrl={logoUrl} />
-          {logoUrl && !branding.show_name ? (
-            <span className="visually-hidden">{branding.app_name}</span>
-          ) : (
-            <span className="brand-text">
-              <span className="brand-name">{branding.app_name}</span>
-              <span className="brand-sub">IT-Plattform</span>
-            </span>
-          )}
+    <HelpProvider roles={me.roles}>
+      <div className={collapsed ? "app nav-collapsed" : "app"}>
+        <a className="skip-link" href="#inhalt">
+          Zum Inhalt springen
         </a>
-        <button
-          type="button"
-          className="header-search"
-          aria-haspopup="dialog"
-          aria-expanded={searchOpen}
-          aria-keyshortcuts="Control+K Meta+K"
-          onClick={() => setSearchOpen(true)}
-        >
-          <Icon name="suche" />
-          <span className="header-search-text">Seite suchen</span>
-          <kbd aria-hidden="true">{shortcutLabel()}</kbd>
-        </button>
-        <div className="user">
-          <NotificationBell path={path} />
-          <a
-            className="header-tasks"
-            href="/"
-            aria-label={taskCount > 0 ? `Meine Aufgaben: ${taskCount} offen` : "Meine Aufgaben"}
-            onClick={(event) => {
-              event.preventDefault();
-              onTasks();
-            }}
-          >
-            <Icon name="aufgaben" />
-            {taskCount > 0 && (
-              <span className="header-tasks-count" aria-hidden="true">
-                {taskCount}
+        <header className="app-header">
+          <a className="brand" href="/" onClick={(event) => onNavClick(event, "/")}>
+            <BrandMark logoUrl={logoUrl} />
+            {logoUrl && !branding.show_name ? (
+              <span className="visually-hidden">{branding.app_name}</span>
+            ) : (
+              <span className="brand-text">
+                <span className="brand-name">{branding.app_name}</span>
+                <span className="brand-sub">IT-Plattform</span>
               </span>
             )}
           </a>
-          <AccountMenu me={me} newsUnseen={newsUnseen} onNavigate={go} />
-        </div>
-      </header>
-      <div className="app-body">
-        <div className="app-nav">
-          <AreaBar
-            areas={areas}
-            currentId={currentArea?.id}
-            hasOpen={hasOpen}
-            handbookOpen={path.startsWith(HANDBOOK_PATH)}
-            collapsed={collapsed}
-            sideMenuId={sideMenuId}
-            onArea={onArea}
-            onHandbook={(event) => onNavClick(event, HANDBOOK_PATH)}
-            onExpand={() => setMenu(false)}
-          />
-          {currentArea && (
-            <SideMenu
-              id={sideMenuId}
-              area={currentArea}
+          <button
+            type="button"
+            className="header-search"
+            aria-haspopup="dialog"
+            aria-expanded={searchOpen}
+            aria-keyshortcuts="Control+K Meta+K"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Icon name="suche" />
+            <span className="header-search-text">Seite suchen</span>
+            <kbd aria-hidden="true">{shortcutLabel()}</kbd>
+          </button>
+          <div className="user">
+            <NotificationBell path={path} />
+            <a
+              className="header-tasks"
+              href="/"
+              aria-label={taskCount > 0 ? `Meine Aufgaben: ${taskCount} offen` : "Meine Aufgaben"}
+              onClick={(event) => {
+                event.preventDefault();
+                onTasks();
+              }}
+            >
+              <Icon name="aufgaben" />
+              {taskCount > 0 && (
+                <span className="header-tasks-count" aria-hidden="true">
+                  {taskCount}
+                </span>
+              )}
+            </a>
+            <AccountMenu me={me} newsUnseen={newsUnseen} onNavigate={go} />
+          </div>
+        </header>
+        <div className="app-body">
+          <div className="app-nav">
+            <AreaBar
               areas={areas}
-              activePath={navPath}
-              hidden={collapsed}
-              badgeFor={badgeFor}
-              onNavigate={onNavClick}
-              onCollapse={() => setMenu(true)}
+              currentId={handbookRoute ? undefined : currentArea?.id}
+              hasOpen={hasOpen}
+              handbookOpen={path.startsWith(HANDBOOK_PATH)}
+              collapsed={collapsed}
+              sideMenuId={sideMenuId}
+              onArea={onArea}
+              onHandbook={(event) => onNavClick(event, HANDBOOK_PATH)}
+              onExpand={() => setMenu(false)}
             />
-          )}
+            {handbookRoute && (
+              <HandbookMenu
+                id={sideMenuId}
+                roles={me.roles}
+                areaId={handbookRoute.area}
+                topicId={handbookRoute.topic}
+                hidden={collapsed}
+                onNavigate={onNavClick}
+                onCollapse={() => setMenu(true)}
+              />
+            )}
+            {currentArea && !handbookRoute && (
+              <SideMenu
+                id={sideMenuId}
+                area={currentArea}
+                areas={areas}
+                activePath={navPath}
+                hidden={collapsed}
+                badgeFor={badgeFor}
+                onNavigate={onNavClick}
+                onCollapse={() => setMenu(true)}
+              />
+            )}
+          </div>
+          <main id="inhalt" className="app-main" tabIndex={-1}>
+            {page}
+            {(pin || helpLink) && (
+              <TitlePin containerId="inhalt" path={path} pin={pin} help={helpLink} />
+            )}
+          </main>
         </div>
-        <main id="inhalt" className="app-main" tabIndex={-1}>
-          {page}
-          {current && path !== "/" && (
-            <TitlePin containerId="inhalt" path={current.path} label={current.label} />
-          )}
-        </main>
+        <MobileNav
+          areas={areas}
+          current={currentArea}
+          activePath={navPath}
+          taskCount={taskCount}
+          searchOpen={searchOpen}
+          hasOpen={hasOpen}
+          badgeFor={badgeFor}
+          onNavigate={go}
+          onSearch={() => setSearchOpen(true)}
+          onTasks={onTasks}
+        />
+        {searchOpen && <QuickSearch areas={areas} onClose={closeSearch} onNavigate={go} />}
+        <ScrollTop />
       </div>
-      <MobileNav
-        areas={areas}
-        current={currentArea}
-        activePath={navPath}
-        taskCount={taskCount}
-        searchOpen={searchOpen}
-        hasOpen={hasOpen}
-        badgeFor={badgeFor}
-        onNavigate={go}
-        onSearch={() => setSearchOpen(true)}
-        onTasks={onTasks}
-      />
-      {searchOpen && <QuickSearch areas={areas} onClose={closeSearch} onNavigate={go} />}
-      <ScrollTop />
-    </div>
+    </HelpProvider>
   );
 }

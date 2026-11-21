@@ -1,19 +1,25 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { Icon } from "../Icon";
+import { Link } from "../Link";
 import { PinButton } from "./PinButton";
 
 interface TitlePinProps {
   /** Inhalt der Seite, in dem die Überschrift (h1) gesucht wird. */
   containerId: string;
+  /** Die aktuelle Seite; ein neuer Pfad setzt den Platz neu. */
   path: string;
-  label: string;
+  /** Stern zum Anheften (nur für Seiten aus dem Menü). */
+  pin: { path: string; label: string } | null;
+  /** „Hilfe“: Thema im Handbuch zu dieser Seite. */
+  help: string | null;
 }
 
 /**
- * Stern am Seitentitel: steht hinter der ersten Überschrift (h1) im Inhalt. Die Seiten selbst
- * müssen dafür nichts wissen; lädt eine Seite ihre Überschrift später, folgt der Stern.
+ * Stern und „Hilfe“ am Seitentitel: stehen hinter der ersten Überschrift (h1) im Inhalt. Die
+ * Seiten selbst müssen dafür nichts wissen; lädt eine Seite ihre Überschrift später, folgen sie.
  */
-export function TitlePin({ containerId, path, label }: TitlePinProps) {
+export function TitlePin({ containerId, path, pin, help }: TitlePinProps) {
   const [host, setHost] = useState<{ path: string; slot: HTMLElement } | null>(null);
 
   useEffect(() => {
@@ -58,6 +64,18 @@ export function TitlePin({ containerId, path, label }: TitlePinProps) {
 
   // Nur der Platz zur aktuellen Seite zählt; ein alter ist schon entfernt.
   return host?.path === path
-    ? createPortal(<PinButton path={path} label={label} />, host.slot)
+    ? createPortal(
+        <>
+          {pin && <PinButton path={pin.path} label={pin.label} />}
+          {help && (
+            <Link to={help} className="title-help">
+              <Icon name="hilfe" />
+              <span>Hilfe</span>
+              <span className="visually-hidden"> zu dieser Seite im Handbuch</span>
+            </Link>
+          )}
+        </>,
+        host.slot,
+      )
     : null;
 }
