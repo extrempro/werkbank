@@ -27,8 +27,11 @@ class YearLines:
     actual_cents: int = 0
     # Ob es überhaupt eine Position gibt, gebucht oder nicht
     invoiced: bool = False
-    # Ob eine gebuchte Position den Posten abschließt
+    # Ob der Posten abgeschlossen ist (durch eine Position oder von Hand)
     closed: bool = False
+    # Wodurch: eine gebuchte Position mit „schließt ab“ bzw. „Abschließen“ am Posten
+    closed_by_invoice: bool = False
+    closed_by_hand: bool = False
 
 
 def item_status(item: BudgetItem, year: int, lines: YearLines | None) -> str | None:

@@ -45,6 +45,13 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(page.getByText(`Posten ${number} ist gespeichert.`)).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
+  // Abhaken und wieder öffnen, ohne Rechnung
+  await page.getByRole("button", { name: `Posten ${number} abschließen` }).click();
+  await expect(
+    page.getByText(new RegExp(`Posten ${number} ist im .* abgeschlossen\\.`)),
+  ).toBeVisible();
+  await page.getByRole("button", { name: `Posten ${number} wieder öffnen` }).click();
+  await expect(page.getByText(`Posten ${number} ist wieder offen.`)).toBeVisible();
 
   await page.goto("/budget/partner");
   await expect(page.getByRole("heading", { level: 1, name: "Partner" })).toBeVisible();

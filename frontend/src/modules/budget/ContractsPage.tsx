@@ -23,6 +23,8 @@ import {
   INTERVAL_LABELS,
   parseEuro,
   parseRate,
+  rememberedYear,
+  rememberYear,
   termText,
   updateContract,
   type Contract,
@@ -295,7 +297,11 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
           </div>
           <p className="small" role="status">
             {netPreview !== null && ratePreview !== null
-              ? `Brutto je Zahlung: ${formatEuro(grossCents(netPreview, ratePreview))}. Fürs Budget zählt das Brutto.`
+              ? `Brutto je Zahlung: ${formatEuro(grossCents(netPreview, ratePreview))}${
+                  PAYMENTS_PER_YEAR[interval] > 1
+                    ? `, im Jahr ${formatEuro(grossCents(netPreview, ratePreview) * PAYMENTS_PER_YEAR[interval])} (${PAYMENTS_PER_YEAR[interval]} Zahlungen)`
+                    : ""
+                }. Das ist das Soll im Geschäftsjahr; fürs Budget zählt das Brutto.`
               : "Das Brutto rechnet die Werkbank aus Netto und Steuersatz. Fürs Budget zählt das Brutto."}
           </p>
         </fieldset>
@@ -396,6 +402,15 @@ function ContractForm({ contract, partners, items, onSaved, onCancel }: FormProp
   );
 }
 
+/** Zahlungen in einem vollen Jahr je Turnus (einmalig: keine laufenden). */
+const PAYMENTS_PER_YEAR: Record<ContractInterval, number> = {
+  monatlich: 12,
+  vierteljaehrlich: 4,
+  halbjaehrlich: 2,
+  jaehrlich: 1,
+  einmalig: 0,
+};
+
 interface Loaded {
   list: ContractList;
   partners: Partner[];
@@ -417,6 +432,7 @@ export function ContractsPage({
   const [data, setData] = useState<Loaded | null>(null);
   const [failed, setFailed] = useState(false);
   const [view, setView] = useState<View>("laufend");
+  const [year, setYear] = useState<number | null>(rememberedYear);
   const [editing, setEditing] = useState<Contract | null>(null);
   const [formRound, setFormRound] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
@@ -430,7 +446,7 @@ export function ContractsPage({
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchContracts(), fetchPartners(), fetchItems()])
+    Promise.all([fetchContracts(year), fetchPartners(), fetchItems()])
       .then(([list, partners, items]) => {
         if (active) {
           setData({ list, partners, items });
@@ -444,7 +460,7 @@ export function ContractsPage({
     return () => {
       active = false;
     };
-  }, [round]);
+  }, [round, year]);
 
   const onSaved = (saved: Contract) => {
     setStatus(`${saved.title} ist gespeichert.`);
@@ -464,12 +480,33 @@ export function ContractsPage({
       entry.days_to_deadline <= DEADLINE_WINDOW_DAYS,
   ).length;
   const missingDpa = running.filter((entry) => entry.dpa_status === "fehlt").length;
+  const yearName = data?.list.current_year_name ?? "";
+  const yearChoice = data && (
+    <div className="settings-form">
+      <label className="narrow">
+        Geschäftsjahr
+        <select
+          value={data.list.year}
+          onChange={(event) => {
+            rememberYear(Number(event.target.value));
+            setYear(Number(event.target.value));
+          }}
+        >
+          {data.list.years.map((entry) => (
+            <option key={entry.year} value={entry.year}>
+              {entry.name}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
 
   if (selectedId !== undefined) {
     const selected = all.find((entry) => entry.id === selectedId);
     return (
       <div className="page page-wide budget-page">
-        <BudgetHead title={selected?.title ?? "Vertrag"} />
+        <BudgetHead title={selected?.title ?? "Vertrag"}>{yearChoice}</BudgetHead>
         {failed && (
           <p role="alert" className="panel panel-empty">
             Der Vertrag konnte nicht geladen werden.
@@ -481,9 +518,7 @@ export function ContractsPage({
             Diesen Vertrag gibt es nicht. <Link to={BUDGET_CONTRACTS_PATH}>Zu den Verträgen</Link>
           </p>
         )}
-        {data && selected && (
-          <ContractDetail contract={selected} yearName={data.list.current_year_name} />
-        )}
+        {data && selected && <ContractDetail contract={selected} yearName={yearName} />}
       </div>
     );
   }
@@ -495,11 +530,14 @@ export function ContractsPage({
         sub={
           <>
             Verträge mit Laufzeit und Kündigungstermin, zugeordnet zu einem oder mehreren
-            Budgetposten. Ins Budget gehen ihre Kosten über die Rechnungen. Alle Beträge sind
-            brutto.
+            Budgetposten. Soll: Zahlungen, die im Geschäftsjahr fällig werden (nach einer Kündigung
+            nur noch bis dahin). Ist: Rechnungen der zugeordneten Posten, sobald ein Posten
+            abgeschlossen ist. Alle Beträge sind brutto.
           </>
         }
-      />
+      >
+        {yearChoice}
+      </BudgetHead>
       <ReadOnlyNote roles={roles} />
       {canEdit && data && (
         <div className="budget-toolbar">
@@ -550,8 +588,12 @@ export function ContractsPage({
               {missingDpa} AVV fehlt
             </span>
             <span className="pill pill-neutral">
-              Zahlungen {data.list.current_year_name}:{" "}
+              Soll {yearName}:{" "}
               {formatEuro(all.reduce((sum, entry) => sum + entry.current_year_cents, 0))}
+            </span>
+            <span className="pill pill-neutral">
+              Ist {yearName}:{" "}
+              {formatEuro(all.reduce((sum, entry) => sum + entry.year_actual_cents, 0))}
             </span>
           </p>
           <div className="chips" role="group" aria-label="Verträge filtern">
@@ -589,7 +631,13 @@ export function ContractsPage({
                     <th scope="col">Vertragspartner</th>
                     <th scope="col">Rechnungssteller</th>
                     <th scope="col" className="betrag">
-                      Jahreskosten
+                      Kosten
+                    </th>
+                    <th scope="col" className="betrag">
+                      Soll {yearName}
+                    </th>
+                    <th scope="col" className="betrag">
+                      Ist {yearName}
                     </th>
                     <th scope="col">Nächster Kündigungstermin</th>
                     <th scope="col">AVV</th>
@@ -619,15 +667,22 @@ export function ContractsPage({
                           )}
                         </td>
                         <td className="betrag">
-                          {entry.yearly_cents === null
-                            ? formatEuro(entry.amount_cents)
-                            : formatEuro(entry.yearly_cents)}
+                          {formatEuro(entry.amount_cents)} {INTERVAL_LABELS[entry.interval]}
                           <span className="small budget-muted tenant-part">
-                            {entry.yearly_cents === null
-                              ? "einmalig"
-                              : `${formatEuro(entry.amount_cents)} ${INTERVAL_LABELS[entry.interval]}`}
-                            {` · netto ${formatEuro(entry.net_cents)} + ${formatRate(entry.tax_rate_bp)}`}
+                            {entry.yearly_cents !== null && entry.interval !== "jaehrlich"
+                              ? `${formatEuro(entry.yearly_cents)} im Jahr · `
+                              : ""}
+                            {`netto ${formatEuro(entry.net_cents)} + ${formatRate(entry.tax_rate_bp)}`}
                           </span>
+                        </td>
+                        <td className="betrag">{formatEuro(entry.current_year_cents)}</td>
+                        <td className="betrag">
+                          {formatEuro(entry.year_actual_cents)}
+                          {entry.items.length > 0 && (
+                            <span className="small budget-muted tenant-part">
+                              {entry.closed_items} von {entry.items.length} Posten abgeschlossen
+                            </span>
+                          )}
                         </td>
                         <td>
                           {entry.cancelled_to

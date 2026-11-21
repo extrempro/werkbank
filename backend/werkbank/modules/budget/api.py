@@ -40,6 +40,7 @@ from werkbank.modules.budget.models import (
     BudgetInvoice,
     BudgetInvoiceLine,
     BudgetItem,
+    BudgetItemClosure,
     BudgetPartner,
     BudgetStatistic,
     BudgetTag,
@@ -255,6 +256,9 @@ class ItemRow(BaseModel):
     forecast_cents: int
     # offen, rechnung (Rechnung liegt vor) oder abgeschlossen
     status: str | None
+    # Abgeschlossen von Hand („Abschließen“ am Posten) bzw. durch eine Rechnungsposition
+    closed_by_hand: bool = False
+    closed_by_invoice: bool = False
     # Zahl der laufenden Verträge, die diesem Posten zugeordnet sind
     contracts: int
 
@@ -494,7 +498,13 @@ def _year_lines(db: DbDep, years: list[int], start_month: int) -> dict[tuple[int
         entry.invoiced = True
         if invoice_status == STATUS_BOOKED:
             entry.actual_cents += line.gross_cents
-            entry.closed = entry.closed or line.closes_item
+            if line.closes_item:
+                entry.closed = entry.closed_by_invoice = True
+    for closure in db.scalars(
+        select(BudgetItemClosure).where(BudgetItemClosure.year.between(min(years), max(years)))
+    ).all():
+        entry = by_item.setdefault((closure.item_id, closure.year), YearLines())
+        entry.closed = entry.closed_by_hand = True
     return by_item
 
 
@@ -582,6 +592,8 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
                 actual_cents=spent,
                 forecast_cents=forecast(expected, spent, closed),
                 status=status_text,
+                closed_by_hand=bool(year_lines and year_lines.closed_by_hand),
+                closed_by_invoice=bool(year_lines and year_lines.closed_by_invoice),
                 contracts=contracts.get(item.id, 0),
             )
         )
@@ -840,6 +852,88 @@ def update_item(
     return _one_item(db, row)
 
 
+class ClosureIn(BaseModel):
+    year: int = Field(ge=YEAR_MIN, le=YEAR_MAX)
+
+
+class ClosureOut(BaseModel):
+    item_id: int
+    year: int
+    status: str | None
+    closed_by_hand: bool
+    closed_by_invoice: bool
+
+
+def _closure_out(db: DbDep, row: BudgetItem, year: int) -> ClosureOut:
+    lines = _year_lines(db, [year], load_settings(db).start_month).get((row.id, year))
+    return ClosureOut(
+        item_id=row.id,
+        year=year,
+        status=item_status(row, year, lines),
+        closed_by_hand=bool(lines and lines.closed_by_hand),
+        closed_by_invoice=bool(lines and lines.closed_by_invoice),
+    )
+
+
+@router.post("/items/{item_id}/close")
+def close_item(
+    request: Request, item_id: ItemId, body: ClosureIn, user: Editor, db: DbDep
+) -> ClosureOut:
+    """Hakt einen Budgetposten für ein Geschäftsjahr ab: Er gilt dort als abgeschlossen."""
+    row: BudgetItem | None = db.get(BudgetItem, item_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    current = _closure_out(db, row, body.year)
+    if current.status is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Der Posten läuft in diesem Geschäftsjahr nicht.",
+        )
+    if db.get(BudgetItemClosure, (row.id, body.year)) is None:
+        db.add(BudgetItemClosure(item_id=row.id, year=body.year, closed_by=user.user_id))
+        write_audit(
+            db,
+            module=MODULE,
+            action="budget.posten_abgeschlossen",
+            user_id=user.user_id,
+            object_type="posten",
+            object_id=str(row.id),
+            ip=client_ip(request),
+            details={"jahr": body.year, "name": row.name},
+        )
+        db.commit()
+    return _closure_out(db, row, body.year)
+
+
+@router.post("/items/{item_id}/reopen")
+def reopen_item(
+    request: Request, item_id: ItemId, body: ClosureIn, user: Editor, db: DbDep
+) -> ClosureOut:
+    """Nimmt das Abhaken zurück. Schließt eine Rechnungsposition den Posten, bleibt er zu."""
+    row: BudgetItem | None = db.get(BudgetItem, item_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
+    closure = db.get(BudgetItemClosure, (row.id, body.year))
+    if closure is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Der Posten ist in diesem Geschäftsjahr nicht von Hand abgeschlossen.",
+        )
+    db.delete(closure)
+    write_audit(
+        db,
+        module=MODULE,
+        action="budget.posten_wieder_geoeffnet",
+        user_id=user.user_id,
+        object_type="posten",
+        object_id=str(row.id),
+        ip=client_ip(request),
+        details={"jahr": body.year, "name": row.name},
+    )
+    db.commit()
+    return _closure_out(db, row, body.year)
+
+
 # --- Partner ---
 
 PartnerId = Annotated[int, Path(ge=1)]
@@ -1019,12 +1113,19 @@ class ContractOut(BaseModel):
     days_to_deadline: int | None
     # Der Kündigungstermin liegt in den nächsten Wochen
     deadline_soon: bool
-    # Erwartete Kosten im laufenden Geschäftsjahr
+    # Soll: Zahlungen, die im gewählten Geschäftsjahr fällig werden (bis zur Kündigung)
     current_year_cents: int
+    # Ist: gebuchte Rechnungen der zugeordneten Posten, die im Geschäftsjahr abgeschlossen sind
+    year_actual_cents: int
+    # So viele der zugeordneten Posten sind im Geschäftsjahr abgeschlossen
+    closed_items: int
 
 
 class ContractListOut(BaseModel):
+    # Gewähltes Geschäftsjahr (Vorgabe: das laufende)
+    year: int
     current_year_name: str
+    years: list[YearOut]
     notice_warn_days: int
     entries: list[ContractOut]
 
@@ -1091,6 +1192,7 @@ def contract_out(
     today: date,
     year_range: tuple[date, date],
     item_ids: list[int],
+    actuals: dict[int, int] | None = None,
 ) -> ContractOut:
     deadline = notice_deadline(row, today)
     days = (deadline - today).days if deadline is not None else None
@@ -1139,11 +1241,14 @@ def contract_out(
         days_to_deadline=days,
         deadline_soon=running and days is not None and 0 <= days <= NOTICE_WARN_DAYS,
         current_year_cents=expected_cents(row, *year_range),
+        year_actual_cents=sum((actuals or {}).get(item_id, 0) for item_id in item_ids),
+        closed_items=sum(1 for item_id in item_ids if item_id in (actuals or {})),
     )
 
 
 def _contract_context(
     db: DbDep,
+    year: int | None = None,
 ) -> tuple[
     dict[int, BudgetPartner],
     dict[int, BudgetAccount],
@@ -1154,7 +1259,8 @@ def _contract_context(
 ]:
     settings = load_settings(db)
     today = now_utc().date()
-    year = fiscal_year_of(today, settings.start_month)
+    if year is None:
+        year = fiscal_year_of(today, settings.start_month)
     return (
         {row.id: row for row in db.scalars(select(BudgetPartner)).all()},
         {row.id: row for row in db.scalars(select(BudgetAccount)).all()},
@@ -1173,10 +1279,23 @@ def _contract_items(db: DbDep) -> dict[int, list[int]]:
     return linked
 
 
+def _contract_actuals(db: DbDep, year: int) -> dict[int, int]:
+    """Ist je Budgetposten, der im Geschäftsjahr abgeschlossen ist (gebuchte Rechnungen)."""
+    lines = _year_lines(db, [year], load_settings(db).start_month)
+    return {
+        item_id: entry.actual_cents
+        for (item_id, line_year), entry in lines.items()
+        if line_year == year and entry.closed
+    }
+
+
 def _one_contract(db: DbDep, row: BudgetContract) -> ContractOut:
     partners, accounts, items, today, year_range, _ = _contract_context(db)
     linked = _contract_items(db).get(row.id, [])
-    return contract_out(row, partners, accounts, items, today, year_range, linked)
+    year = fiscal_year_of(today, load_settings(db).start_month)
+    return contract_out(
+        row, partners, accounts, items, today, year_range, linked, _contract_actuals(db, year)
+    )
 
 
 def _check_contract(db: DbDep, body: ContractIn, own_id: int | None) -> None:
@@ -1253,11 +1372,18 @@ def _contract_details(body: ContractIn) -> dict[str, object]:
 
 
 @router.get("/contracts")
-def list_contracts(user: Reader, db: DbDep) -> ContractListOut:
-    partners, accounts, items, today, year_range, year_name = _contract_context(db)
+def list_contracts(user: Reader, db: DbDep, year: YearQuery = None) -> ContractListOut:
+    """Alle Verträge mit Soll und Ist im gewählten Geschäftsjahr (Vorgabe: das laufende)."""
+    start_month = load_settings(db).start_month
+    current = fiscal_year_of(now_utc().date(), start_month)
+    chosen = current if year is None else year
+    partners, accounts, items, today, year_range, year_name = _contract_context(db, chosen)
     linked = _contract_items(db)
+    actuals = _contract_actuals(db, chosen)
     entries = [
-        contract_out(row, partners, accounts, items, today, year_range, linked.get(row.id, []))
+        contract_out(
+            row, partners, accounts, items, today, year_range, linked.get(row.id, []), actuals
+        )
         for row in db.scalars(select(BudgetContract)).all()
     ]
     # Laufende zuerst, darin der nächste Kündigungstermin oben.
@@ -1270,8 +1396,17 @@ def list_contracts(user: Reader, db: DbDep) -> ContractListOut:
             entry.id,
         )
     )
+    years = sorted({*range(current - 5, current + PLAN_AHEAD + 1), chosen}, reverse=True)
     return ContractListOut(
-        current_year_name=year_name, notice_warn_days=NOTICE_WARN_DAYS, entries=entries
+        year=chosen,
+        current_year_name=year_name,
+        years=[
+            YearOut(year=entry, name=fiscal_year_name(entry, start_month))
+            for entry in years
+            if YEAR_MIN <= entry <= YEAR_MAX
+        ],
+        notice_warn_days=NOTICE_WARN_DAYS,
+        entries=entries,
     )
 
 

@@ -29,6 +29,7 @@ from werkbank.modules.budget.models import (
     BudgetInvoice,
     BudgetInvoiceLine,
     BudgetItem,
+    BudgetItemClosure,
     BudgetPartner,
     BudgetStatistic,
     BudgetTag,
@@ -1542,3 +1543,154 @@ def test_tag_list_rename_and_delete(db: Session) -> None:
     db.expire_all()
     actions = set(db.scalars(select(AuditLog.action).where(AuditLog.module == "budget")).all())
     assert {"budget.tag_angelegt", "budget.tag_umbenannt", "budget.tag_geloescht"} <= actions
+
+
+@pytest.mark.db
+def test_items_are_closed_by_hand_and_contracts_show_target_and_actual(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "abhaken-verwalter")
+    editor = client_for(["Budget.Editor"], "abhaken-it")
+    reader = client_for(["Budget.Reader"], "abhaken-leser")
+    account = post(
+        manager, "/accounts", {"number": "6830", "name": "Mobilfunk", "kind": "laufend"}
+    ).json()
+    partner = post(manager, "/partners", {"name": "Beispiel Mobil GmbH"}).json()
+    year = manager.get(f"{BASE}/settings").json()["current_year"]
+
+    def item(name: str) -> Any:
+        body = {
+            "account_id": account["id"],
+            "name": name,
+            "amount_cents": 10_000,
+            "start_year": year,
+            "end_year": year,
+        }
+        return post(editor, "/items", body).json()
+
+    january, february = item("Mobilfunk Januar"), item("Mobilfunk Februar")
+
+    def row(item_id: int) -> Any:
+        data = reader.get(f"{BASE}/overview", params={"year": year}).json()
+        return next(entry for entry in data["items"] if entry["item"]["id"] == item_id)
+
+    # Rechnung ohne „schließt ab“: Rechnung liegt vor, abhaken am Posten schließt ihn ab.
+    invoice = post(
+        editor,
+        "/invoices",
+        {
+            "invoicer_id": partner["id"],
+            "number": "M-1",
+            "invoice_date": f"{year}-01-15",
+            "item_id": january["id"],
+            "net_cents": 9_500,
+            "tax_rate_bp": 0,
+            "closes_item": False,
+        },
+    ).json()
+    post(manager, f"/invoices/{invoice['id']}/book", {})
+    assert row(january["id"])["status"] == "rechnung"
+    close = f"/items/{january['id']}/close"
+    assert reader.post(f"{BASE}{close}", json={"year": year}, headers=HEADERS).status_code == 403
+    closed = post(editor, close, {"year": year})
+    assert closed.status_code == 200, closed.text
+    assert closed.json() == {
+        "item_id": january["id"],
+        "year": year,
+        "status": "abgeschlossen",
+        "closed_by_hand": True,
+        "closed_by_invoice": False,
+    }
+    # Zweimal abhaken ändert nichts; außerhalb der Laufzeit geht es nicht.
+    assert post(editor, close, {"year": year}).status_code == 200
+    assert post(editor, close, {"year": year + 3}).status_code == 422
+    entry = row(january["id"])
+    assert (entry["status"], entry["closed_by_hand"], entry["forecast_cents"]) == (
+        "abgeschlossen",
+        True,
+        9_500,
+    )
+
+    # Monatlicher Vertrag mit je einem Posten pro Monat: Soll im Jahr, Ist aus abgeschlossenen
+    contract = post(
+        manager,
+        "/contracts",
+        {
+            "title": "Mobilfunk",
+            "partner_id": partner["id"],
+            "item_ids": [january["id"], february["id"]],
+            "starts_on": f"{year}-01-01",
+            "net_cents": 10_000,
+            "tax_rate_bp": 0,
+            "interval": "monatlich",
+        },
+    ).json()
+
+    def contract_row(**params: Any) -> Any:
+        data = reader.get(f"{BASE}/contracts", params=params).json()
+        return data, next(entry for entry in data["entries"] if entry["id"] == contract["id"])
+
+    data, listed = contract_row()
+    assert data["year"] == year and any(entry["year"] == year + 1 for entry in data["years"])
+    assert (listed["amount_cents"], listed["yearly_cents"]) == (10_000, 120_000)
+    assert (listed["current_year_cents"], listed["year_actual_cents"], listed["closed_items"]) == (
+        120_000,
+        9_500,
+        1,
+    )
+    # Februar abgeschlossen (ohne Rechnung): ein Posten mehr, Ist unverändert
+    post(editor, f"/items/{february['id']}/close", {"year": year})
+    _, listed = contract_row()
+    assert (listed["year_actual_cents"], listed["closed_items"]) == (9_500, 2)
+    # Anderes Geschäftsjahr: dort ist nichts abgeschlossen
+    _, other = contract_row(year=year + 1)
+    assert (other["current_year_cents"], other["year_actual_cents"]) == (120_000, 0)
+
+    # Gekündigt zum 31.03.: Soll nur bis dahin, im Folgejahr nichts mehr
+    body = {**{key: contract[key] for key in ("title", "partner_id", "starts_on")}}
+    put(
+        manager,
+        f"/contracts/{contract['id']}",
+        {
+            **body,
+            "item_ids": [january["id"], february["id"]],
+            "net_cents": 10_000,
+            "tax_rate_bp": 0,
+            "interval": "monatlich",
+            "cancelled_to": f"{year}-03-31",
+        },
+    )
+    _, listed = contract_row()
+    assert listed["current_year_cents"] == 30_000
+    _, other = contract_row(year=year + 1)
+    assert other["current_year_cents"] == 0
+
+    # Wieder öffnen: nur, was von Hand abgeschlossen ist
+    reopen = f"/items/{february['id']}/reopen"
+    assert post(editor, reopen, {"year": year}).json()["status"] == "offen"
+    assert post(editor, reopen, {"year": year}).status_code == 409
+    _, listed = contract_row()
+    assert listed["closed_items"] == 1
+    # Schließt eine Rechnungsposition ab, bleibt der Posten nach dem Wieder-Öffnen zu.
+    final = post(
+        editor,
+        "/invoices",
+        {
+            "invoicer_id": partner["id"],
+            "number": "M-2",
+            "invoice_date": f"{year}-01-20",
+            "item_id": january["id"],
+            "net_cents": 500,
+            "tax_rate_bp": 0,
+            "closes_item": True,
+        },
+    ).json()
+    post(manager, f"/invoices/{final['id']}/book", {})
+    reopened = post(editor, f"/items/{january['id']}/reopen", {"year": year}).json()
+    assert (reopened["status"], reopened["closed_by_invoice"]) == ("abgeschlossen", True)
+    # Löschen des Postens nimmt das Abhaken mit (keine Waisen)
+    lone = item("Einzelposten")
+    post(editor, f"/items/{lone['id']}/close", {"year": year})
+    assert editor.delete(f"{BASE}/items/{lone['id']}", headers=HEADERS).status_code == 200
+    assert (
+        db.scalars(select(BudgetItemClosure).where(BudgetItemClosure.item_id == lone["id"])).all()
+        == []
+    )
