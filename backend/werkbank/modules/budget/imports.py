@@ -1,9 +1,11 @@
 """Import der bisherigen Budget-Excel-Dateien: je Datei ein Vorgang, je Zeile eine Entscheidung.
 
 Ablauf: Datei hochladen (Entwurf mit den erkannten Zeilen und Konten), prüfen und starten
-(fehlende Konten und je Konto ein Posten „Allgemein <Jahr>“ werden angelegt), dann jede Zeile
-übernehmen (gebuchte Rechnung mit einer Position) oder überspringen. Zeilen mit „Jährlich“ lassen
-sich danach als Budgetposten für das folgende Geschäftsjahr anlegen. Nur `Budget.Manager`.
+(fehlende Konten werden angelegt), dann jede Zeile übernehmen oder überspringen. Übernehmen legt
+je Zeile einen eigenen Budgetposten an (Name aus der Bezeichnung, erwartete Kosten = Betrag) und
+eine gebuchte Rechnung, die ihn abschließt. Zeilen mit „Jährlich“ lassen sich danach in die
+Planung übernehmen: Ihr Posten läuft dann im folgenden Geschäftsjahr weiter. Nur
+`Budget.Manager`.
 """
 
 import difflib
@@ -133,9 +135,6 @@ class AccountOut(BaseModel):
     # Konto in der Werkbank; None: wird beim Start angelegt
     account_id: int | None
     created: bool
-    # Posten „Allgemein <Jahr>“, sobald der Vorgang gestartet ist
-    item_id: int | None
-    item_name: str
     rows: int
 
 
@@ -154,11 +153,13 @@ class RowOut(BaseModel):
     status: str
     invoice_id: int | None
     planned_item_id: int | None
-    # Vorschläge: Partner (entschieden, gefunden, aehnlich, neu) und Budgetposten
+    # Vorschlag für den Partner (entschieden, gefunden, aehnlich, neu)
     partner_match: str
     partner_id: int | None
     partner_name: str | None
+    # Budgetposten, den das Übernehmen angelegt hat
     item_id: int | None
+    item_name: str | None
 
 
 class ImportSummary(BaseModel):
@@ -206,7 +207,8 @@ class TakeIn(BaseModel):
     number: str = Field(min_length=1, max_length=80)
     internal_number: str = Field(default="", max_length=60)
     description: str = Field(default="", max_length=200)
-    item_id: int = Field(ge=1)
+    # Konto des neuen Budgetpostens
+    account_id: int = Field(ge=1)
     gross_cents: int = Field(ge=0, le=AMOUNT_MAX)
     tax_rate_bp: int = 1900
     yearly: bool = False
@@ -241,18 +243,10 @@ class TakeIn(BaseModel):
 
 class PlanEntry(BaseModel):
     row_id: int = Field(ge=1)
-    name: str = Field(min_length=1, max_length=160)
+    # Erwartete Kosten je Geschäftsjahr, gelten für die ganze Laufzeit des Postens
     amount_cents: int = Field(ge=0, le=AMOUNT_MAX)
-    # True: bis auf Weiteres; False: nur im folgenden Geschäftsjahr
+    # True: bis auf Weiteres; False: nur noch im folgenden Geschäftsjahr
     ongoing: bool = True
-
-    @field_validator("name")
-    @classmethod
-    def plain(cls, value: str) -> str:
-        value = _single_line(value)
-        if not value:
-            raise ValueError("Darf nicht leer sein")
-        return value
 
 
 class PlanIn(BaseModel):
@@ -260,8 +254,7 @@ class PlanIn(BaseModel):
 
 
 class PlanOut(BaseModel):
-    created: int
-    existing: list[str]
+    extended: int
     detail: ImportOut
 
 
@@ -294,10 +287,6 @@ def _accounts_by_key(db: Session) -> dict[str, BudgetAccount]:
     return {account_key(row.number): row for row in db.scalars(select(BudgetAccount)).all()}
 
 
-def _item_name(year: int, start_month: int) -> str:
-    return f"Allgemein {fiscal_year_name(year, start_month)}"
-
-
 def _creator_names(db: Session, rows: list[BudgetImport]) -> dict[Any, str]:
     ids = {row.created_by for row in rows if row.created_by is not None}
     if not ids:
@@ -325,26 +314,32 @@ def _summary(
     }
 
 
-def _item_for(
-    db: Session,
-    row: BudgetImport,
-    account_number: str | None,
-    accounts: dict[str, BudgetAccount],
-    start_month: int,
-) -> BudgetItem | None:
-    """Posten „Allgemein <Jahr>“ des Kontos einer Zeile, sofern es ihn gibt."""
-    if account_number is None:
-        return None
-    account = accounts.get(account_key(account_number))
-    if account is None:
-        return None
-    item: BudgetItem | None = db.scalars(
-        select(BudgetItem).where(
-            BudgetItem.account_id == account.id,
-            func.lower(BudgetItem.name) == _item_name(row.year, start_month).lower(),
-        )
-    ).first()
-    return item
+def _unique_item_name(db: Session, account_id: int, name: str) -> str:
+    """Name des Postens im Konto eindeutig machen: „Mobilfunk“, „Mobilfunk (2)“, …"""
+    base = name[:150]
+    taken = {
+        value.lower()
+        for value in db.scalars(select(BudgetItem.name).where(BudgetItem.account_id == account_id))
+    }
+    if base.lower() not in taken:
+        return base
+    number = 2
+    while f"{base} ({number})".lower() in taken:
+        number += 1
+    return f"{base} ({number})"
+
+
+def _row_items(db: Session, rows: list[BudgetImportRow]) -> dict[int, BudgetItem]:
+    """Budgetposten der übernommenen Zeilen (über die Rechnungsposition), je Rechnung."""
+    invoice_ids = [entry.invoice_id for entry in rows if entry.invoice_id is not None]
+    if not invoice_ids:
+        return {}
+    found = db.execute(
+        select(BudgetInvoiceLine.invoice_id, BudgetItem)
+        .join(BudgetItem, BudgetItem.id == BudgetInvoiceLine.item_id)
+        .where(BudgetInvoiceLine.invoice_id.in_(invoice_ids), BudgetInvoiceLine.position == 0)
+    ).all()
+    return {invoice_id: item for invoice_id, item in found}
 
 
 def detail_out(db: Session, row: BudgetImport) -> ImportOut:
@@ -352,20 +347,14 @@ def detail_out(db: Session, row: BudgetImport) -> ImportOut:
     rows = _rows(db, row.id)
     partners = list(db.scalars(select(BudgetPartner).order_by(BudgetPartner.name)).all())
     accounts = _accounts_by_key(db)
-    items_cache: dict[str | None, BudgetItem | None] = {}
-
-    def item_for(number: str | None) -> BudgetItem | None:
-        if number not in items_cache:
-            items_cache[number] = _item_for(db, row, number, accounts, settings.start_month)
-        return items_cache[number]
-
+    row_items = _row_items(db, rows)
     out_rows: list[RowOut] = []
     firms: dict[str, bool] = {}
     for entry in rows:
         match, partner = match_partner(entry.firm, partners, row.partners)
         if entry.firm:
             firms[entry.firm.casefold()] = match == "neu"
-        item = item_for(entry.account_number)
+        item = row_items.get(entry.invoice_id) if entry.invoice_id is not None else None
         out_rows.append(
             RowOut(
                 id=entry.id,
@@ -386,13 +375,13 @@ def detail_out(db: Session, row: BudgetImport) -> ImportOut:
                 partner_id=partner.id if partner else None,
                 partner_name=partner.name if partner else None,
                 item_id=item.id if item else None,
+                item_name=item.name if item else None,
             )
         )
     account_rows: list[AccountOut] = []
     for info in row.accounts:
         number = str(info.get("number", ""))
         existing = accounts.get(account_key(number))
-        item = item_for(number) if existing else None
         account_rows.append(
             AccountOut(
                 number=number,
@@ -400,8 +389,6 @@ def detail_out(db: Session, row: BudgetImport) -> ImportOut:
                 budget_cents=info.get("budget_cents"),
                 account_id=existing.id if existing else None,
                 created=bool(info.get("created")),
-                item_id=item.id if item else None,
-                item_name=_item_name(row.year, settings.start_month),
                 rows=sum(
                     1
                     for entry in rows
@@ -594,7 +581,7 @@ def read_import(import_id: ImportId, user: Manager, db: DbDep) -> ImportOut:
 def start_import(
     request: Request, import_id: ImportId, body: StartIn, user: Manager, db: DbDep
 ) -> ImportOut:
-    """Bestätigt den Entwurf: legt fehlende Konten und je Konto den Posten „Allgemein <Jahr>“ an."""
+    """Bestätigt den Entwurf: legt fehlende Konten an. Budgetposten entstehen erst je Zeile."""
     row = _import(db, import_id)
     if row.status != STATUS_DRAFT or row.created_by != user.user_id:
         raise HTTPException(
@@ -604,9 +591,7 @@ def start_import(
     row.year = body.year
     row.tax_rate_bp = body.tax_rate_bp
     accounts = _accounts_by_key(db)
-    item_name = _item_name(body.year, settings.start_month)
     created_accounts = 0
-    created_items = 0
     infos: list[dict[str, Any]] = []
     for info in row.accounts:
         number = str(info.get("number", ""))
@@ -625,28 +610,7 @@ def start_import(
             accounts[account_key(number)] = account
             created = True
             created_accounts += 1
-        item = db.scalars(
-            select(BudgetItem).where(
-                BudgetItem.account_id == account.id,
-                func.lower(BudgetItem.name) == item_name.lower(),
-            )
-        ).first()
-        if item is None:
-            budget = info.get("budget_cents")
-            item = BudgetItem(
-                account_id=account.id,
-                name=item_name,
-                amount_cents=budget if isinstance(budget, int) and budget > 0 else 0,
-                start_year=body.year,
-                end_year=body.year,
-                note=f"Aus dem Import {row.file_name}"[:500],
-                tags=[],
-                active=True,
-            )
-            db.add(item)
-            db.flush()
-            created_items += 1
-        infos.append({**info, "account_id": account.id, "created": created, "item_id": item.id})
+        infos.append({**info, "account_id": account.id, "created": created})
     row.accounts = infos
     rows = _rows(db, row.id)
     _year_hints(rows, body.year, settings.start_month)
@@ -663,7 +627,6 @@ def start_import(
             "datei": row.file_name,
             "jahr": body.year,
             "konten_angelegt": created_accounts,
-            "posten_angelegt": created_items,
             "zeilen": len(rows),
         },
     )
@@ -691,7 +654,7 @@ def take_row(
     user: Manager,
     db: DbDep,
 ) -> ImportOut:
-    """Übernimmt eine Zeile als gebuchte Rechnung mit einer Position."""
+    """Übernimmt eine Zeile: eigener Budgetposten und eine gebuchte Rechnung, die ihn abschließt."""
     row = _import(db, import_id)
     entry = _row(db, row, row_id)
     if entry.status == ROW_TAKEN:
@@ -703,10 +666,11 @@ def take_row(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Bitte einen Partner wählen oder einen neuen anlegen.",
         )
-    if db.get(BudgetItem, body.item_id) is None:
+    account = db.get(BudgetAccount, body.account_id)
+    if account is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Den Budgetposten gibt es nicht.",
+            detail="Das Konto gibt es nicht.",
         )
     partner: BudgetPartner | None
     created_partner = False
@@ -752,6 +716,21 @@ def take_row(
         )
     net = net_from_gross(body.gross_cents, body.tax_rate_bp)
     now = now_utc()
+    # Je Zeile ein eigener Posten im Geschäftsjahr des Imports; erwartete Kosten = Betrag
+    item = BudgetItem(
+        account_id=account.id,
+        name=_unique_item_name(
+            db, account.id, body.description or partner.name or f"Rechnung {body.number}"
+        ),
+        amount_cents=body.gross_cents,
+        start_year=row.year,
+        end_year=row.year,
+        note=f"Aus dem Import {row.file_name}, Zeile {entry.row_number}"[:500],
+        tags=[],
+        active=True,
+    )
+    db.add(item)
+    db.flush()
     invoice = BudgetInvoice(
         invoicer_id=partner.id,
         number=body.number,
@@ -767,15 +746,15 @@ def take_row(
     invoice.lines = [
         BudgetInvoiceLine(
             position=0,
-            item_id=body.item_id,
+            item_id=item.id,
             net_cents=net,
             tax_rate_bp=body.tax_rate_bp,
             gross_cents=body.gross_cents,
             description=body.description,
             is_project=False,
             is_yearly=body.yearly,
-            # Der Posten „Allgemein“ sammelt viele Rechnungen und bleibt offen.
-            closes_item=False,
+            # Die Rechnung ist die ganze Ausgabe des Postens und schließt ihn ab.
+            closes_item=True,
         )
     ]
     db.add(invoice)
@@ -799,6 +778,7 @@ def take_row(
             "rechnung": invoice.id,
             "partner_id": partner.id,
             "partner_neu": created_partner,
+            "posten": item.id,
             "gross_cents": body.gross_cents,
         },
     )
@@ -851,15 +831,15 @@ def reopen_row(
 def plan_rows(
     request: Request, import_id: ImportId, body: PlanIn, user: Manager, db: DbDep
 ) -> PlanOut:
-    """Legt aus übernommenen Zeilen mit „Jährlich“ Budgetposten ab dem folgenden Jahr an."""
+    """Übernimmt Zeilen mit „Jährlich“ in die Planung: Ihr Posten läuft im folgenden
+    Geschäftsjahr weiter (bis auf Weiteres oder nur dieses eine Jahr)."""
     row = _import(db, import_id)
     if row.status == STATUS_DRAFT:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Der Import ist noch nicht gestartet."
         )
     year = row.year + 1
-    created = 0
-    existing: list[str] = []
+    extended = 0
     for plan in body.entries:
         entry = db.get(BudgetImportRow, plan.row_id)
         if (
@@ -872,49 +852,19 @@ def plan_rows(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Nur übernommene Zeilen lassen sich in die Planung übernehmen.",
             )
-        line = db.scalars(
-            select(BudgetInvoiceLine).where(BudgetInvoiceLine.invoice_id == entry.invoice_id)
-        ).first()
-        source = db.get(BudgetItem, line.item_id) if line is not None else None
-        if source is None:
+        item = _row_items(db, [entry]).get(entry.invoice_id)
+        if item is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Zu dieser Zeile gibt es keine Rechnung mehr.",
             )
-        other = db.scalars(
-            select(BudgetItem).where(
-                BudgetItem.account_id == source.account_id,
-                func.lower(BudgetItem.name) == plan.name.lower(),
-            )
-        ).first()
-        if other is not None:
-            existing.append(plan.name)
-            entry.planned_item_id = entry.planned_item_id or other.id
-            continue
-        item = BudgetItem(
-            account_id=source.account_id,
-            name=plan.name,
-            amount_cents=plan.amount_cents,
-            start_year=year,
-            end_year=None if plan.ongoing else year,
-            note=f"Aus dem Import {row.file_name}, Zeile {entry.row_number}"[:500],
-            tags=[],
-            active=True,
-        )
-        db.add(item)
-        db.flush()
+        item.end_year = None if plan.ongoing else max(year, item.end_year or year)
+        item.amount_cents = plan.amount_cents
         entry.planned_item_id = item.id
-        created += 1
-    _audit(
-        db,
-        request,
-        user,
-        "planung",
-        row.id,
-        {"posten_angelegt": created, "schon_da": len(existing)},
-    )
+        extended += 1
+    _audit(db, request, user, "planung", row.id, {"posten_verlaengert": extended})
     db.commit()
-    return PlanOut(created=created, existing=existing, detail=detail_out(db, row))
+    return PlanOut(extended=extended, detail=detail_out(db, row))
 
 
 @router.delete("/{import_id}")

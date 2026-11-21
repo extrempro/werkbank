@@ -34,6 +34,11 @@ test("Budgetverwalter importiert eine Excel-Datei Zeile für Zeile", async ({
   await expect(page.getByRole("heading", { name: /^Zeile 5:/ })).toBeVisible();
   await expectNoA11yViolations(page);
 
+  // Kein Budgetposten zum Auswählen: Übernehmen legt ihn aus der Zeile an.
+  await expect(
+    page.getByText(/Übernehmen legt den Budgetposten/),
+  ).toBeVisible();
+
   // Eigene Rechnungsnummer je Lauf, sonst erkennt der Import eine doppelte Rechnung.
   await page
     .getByLabel("Rechnungsnummer", { exact: true })

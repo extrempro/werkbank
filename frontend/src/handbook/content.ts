@@ -792,9 +792,9 @@ export const CHAPTERS: readonly Chapter[] = [
             items: [
               "Wähle die Excel-Datei aus. Gelesen wird das erste Blatt; die Datei selbst wird nicht gespeichert.",
               "Prüfe, was erkannt wurde: Geschäftsjahr, Steuersatz als Vorgabe (die Beträge in der Datei sind brutto) und die Konten. Für neue Konten wählst du, ob es laufende Kosten oder eine Investition sind.",
-              "Wähle „Vorgang anlegen und Zeilen abarbeiten“. Fehlende Konten werden angelegt, und je Konto entsteht ein Posten „Allgemein“ für das Geschäftsjahr mit dem Budget aus der Datei.",
-              "Prüfe jede Zeile: den Rechnungssteller (vorhandener, ähnlicher oder neuer Partner), Datum, Nummern, Konto, Budgetposten, Betrag und Steuersatz.",
-              "Wähle „Übernehmen und weiter“ oder „Überspringen“. Übernommene Zeilen werden gebuchte Rechnungen; übersprungene kannst du mit „Zurück auf offen“ wieder öffnen.",
+              "Wähle „Vorgang anlegen und Zeilen abarbeiten“. Fehlende Konten werden angelegt. Budgetposten entstehen erst beim Übernehmen der Zeilen; das Budget je Konto aus der Datei wird nicht übernommen.",
+              "Prüfe jede Zeile: den Rechnungssteller (vorhandener, ähnlicher oder neuer Partner), Datum, Nummern, Bezeichnung, Konto, Betrag und Steuersatz.",
+              "Wähle „Übernehmen und weiter“ oder „Überspringen“. Jede übernommene Zeile wird ein eigener Budgetposten (Name aus der Bezeichnung, der Betrag als erwartete Kosten) mit einer gebuchten Rechnung, die ihn abschließt. Gibt es den Namen im Konto schon, bekommt der neue Posten eine Nummer, z. B. „Mobilfunk (2)“. Übersprungene Zeilen kannst du mit „Zurück auf offen“ wieder öffnen.",
             ],
           },
           {
@@ -803,7 +803,7 @@ export const CHAPTERS: readonly Chapter[] = [
               "Was du bei einer Firma als Partner wählst, schlägt die Werkbank für alle weiteren Zeilen dieser Firma vor.",
               "Hinweise an einer Zeile zeigen zum Beispiel ein Datum außerhalb des Geschäftsjahrs, eine fehlende Rechnungsnummer (dann wird die interne Nummer vorgeschlagen) oder ein fehlendes Konto. Der Filter „Mit Hinweis“ zeigt nur diese Zeilen.",
               "Gibt es dieselbe Rechnungsnummer beim selben Partner schon, übernimmt der Import die Zeile nicht doppelt.",
-              "Zeilen mit „Jährlich“ stehen nach dem Übernehmen unter „Vorschläge für die Planung“. Ausgewählte werden Budgetposten ab dem folgenden Geschäftsjahr.",
+              "Zeilen mit „Jährlich“ stehen nach dem Übernehmen unter „Vorschläge für die Planung“. Wählst du sie aus, läuft ihr Budgetposten im folgenden Geschäftsjahr weiter, bis auf Weiteres oder nur für dieses Jahr, mit den eingetragenen Kosten je Jahr.",
               "Die Spalten Kostenstelle und Projekte werden nicht übernommen.",
             ],
           },

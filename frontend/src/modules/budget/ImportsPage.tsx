@@ -165,9 +165,9 @@ function DraftReview({ draft, onCancel }: { draft: ImportDetail; onCancel: () =>
       </div>
       <div className="detail-body">
         <p className="hint-box">
-          Fehlende Konten legt der Import an. Je Konto entsteht ein einmaliger Budgetposten „
-          {draft.accounts[0]?.item_name ?? "Allgemein"}“ mit dem Budget aus der Datei als erwarteten
-          Kosten. Die Spalten „Kostenstelle“ und „Projekte“ werden nicht übernommen.
+          Fehlende Konten legt der Import an. Budgetposten entstehen erst beim Übernehmen: je Zeile
+          ein eigener Posten mit dem Betrag als erwarteten Kosten. Das Budget je Konto aus der Datei
+          wird nicht übernommen. Die Spalten „Kostenstelle“ und „Projekte“ werden nicht übernommen.
         </p>
         {error && (
           <p role="alert" className="hint-box hint-bad">

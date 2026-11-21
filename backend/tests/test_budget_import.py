@@ -264,13 +264,21 @@ def upload(client: Any, data: bytes, name: str = "Budget%202026.xlsx") -> Any:
     )
 
 
+def with_accounts(detail: dict[str, Any]) -> list[dict[str, Any]]:
+    """Zeilen mit der Kennung ihres Kontos (die Oberfläche wählt es aus der Liste)."""
+    ids = {account["number"]: account["account_id"] for account in detail["accounts"]}
+    return [
+        {**row, "account_id": ids.get(row["account_number"] or "")} for row in detail["rows_detail"]
+    ]
+
+
 def take_body(row: dict[str, Any], **extra: Any) -> dict[str, Any]:
     body: dict[str, Any] = {
         "invoice_date": row["invoice_date"],
         "number": row["number"] or row["internal_number"],
         "internal_number": row["internal_number"],
         "description": row["description"],
-        "item_id": row["item_id"],
+        "account_id": row.get("account_id"),
         "gross_cents": row["gross_cents"],
         "tax_rate_bp": 1900,
         "yearly": row["yearly"],
@@ -323,7 +331,7 @@ def test_import_flow(db: Session) -> None:
     assert other.get(f"{BASE}/{detail['id']}").status_code == 404
     assert other.get(BASE).json() == []
     take = f"{BASE}/{detail['id']}/rows/{rows[0]['id']}/take"
-    draft_take = take_body(rows[0], item_id=1)
+    draft_take = take_body(rows[0], account_id=1)
     assert manager.post(take, json=draft_take, headers=HEADERS).status_code == 409
 
     started = manager.post(
@@ -334,13 +342,11 @@ def test_import_flow(db: Session) -> None:
     assert started["status"] == "offen"
     hardware = db.scalars(select(BudgetAccount).where(BudgetAccount.number == "6050")).one()
     assert (hardware.name, hardware.kind) == ("Hardware", "investition")
-    items = {
-        item.name: item.amount_cents
-        for item in db.scalars(select(BudgetItem).where(BudgetItem.account_id == hardware.id))
-    }
-    assert items == {"Allgemein 2026": 1_500_000}
-    rows = started["rows_detail"]
-    assert all(row["item_id"] for row in rows[:3])
+    # Budgetposten entstehen erst beim Übernehmen, kein „Allgemein“ mehr
+    assert db.scalars(select(BudgetItem).where(BudgetItem.account_id == hardware.id)).all() == []
+    rows = with_accounts(started)
+    assert all(row["account_id"] for row in rows[:3]) and rows[3]["account_id"] is None
+    assert all(row["item_id"] is None for row in rows)
     assert rows[1]["partner_match"] == "aehnlich"
     assert rows[0]["partner_match"] == "neu"
     assert (
@@ -353,12 +359,17 @@ def test_import_flow(db: Session) -> None:
     # Zeile 1: neuer Partner, gebuchte Rechnung mit Netto aus 19 %
     first = manager.post(take, json=take_body(rows[0]), headers=HEADERS)
     assert first.status_code == 200, first.text
-    after = first.json()["rows_detail"]
+    after = with_accounts(first.json())
     assert after[0]["status"] == "uebernommen"
     invoice = db.get(BudgetInvoice, after[0]["invoice_id"])
     assert invoice is not None
     assert (invoice.status, invoice.gross_cents, invoice.net_cents) == ("gebucht", 119_000, 100_000)
-    assert invoice.lines[0].closes_item is False
+    # Eigener Posten je Zeile: Name aus der Bezeichnung, erwartete Kosten = Betrag, abgeschlossen
+    assert invoice.lines[0].closes_item is True
+    item = db.get(BudgetItem, invoice.lines[0].item_id)
+    assert item is not None and after[0]["item_id"] == item.id
+    assert (item.account_id, item.name, item.amount_cents) == (hardware.id, "Notebooks", 119_000)
+    assert (item.start_year, item.end_year, after[0]["item_name"]) == (2026, 2026, "Notebooks")
     # Die Entscheidung gilt für weitere Zeilen derselben Firma
     assert after[2]["partner_match"] == "entschieden"
     # Doppelte Rechnungsnummer beim selben Partner
@@ -380,11 +391,13 @@ def test_import_flow(db: Session) -> None:
         assert response.status_code == 422, body
 
     # Zeile 2 (jährlich) mit dem ähnlichen Partner übernehmen, Zeile 3 überspringen und zurück
-    second = manager.post(
-        f"{BASE}/{detail['id']}/rows/{after[1]['id']}/take",
-        json=take_body(after[1]),
-        headers=HEADERS,
-    ).json()["rows_detail"]
+    second = with_accounts(
+        manager.post(
+            f"{BASE}/{detail['id']}/rows/{after[1]['id']}/take",
+            json=take_body(after[1]),
+            headers=HEADERS,
+        ).json()
+    )
     assert (
         db.scalars(select(BudgetPartner).where(BudgetPartner.name == "Beispiel Soft AG")).first()
         is None
@@ -404,36 +417,53 @@ def test_import_flow(db: Session) -> None:
     tasks = manager.get("/api/tasks").json()["tasks"]
     assert any(task["link"] == "/budget/import" for task in tasks)
 
-    # Zeilen 3 und 4 überspringen: Vorgang ist abgeschlossen
-    for row in second[2:]:
-        manager.post(f"{BASE}/{detail['id']}/rows/{row['id']}/skip", headers=HEADERS)
+    # Zeile 3 mit derselben Bezeichnung wie Zeile 1: Name bekommt eine Nummer
+    third = manager.post(
+        f"{BASE}/{detail['id']}/rows/{second[2]['id']}/take",
+        json=take_body(second[2], description="Notebooks"),
+        headers=HEADERS,
+    )
+    assert third.status_code == 200, third.text
+    assert third.json()["rows_detail"][2]["item_name"] == "Notebooks (2)"
+    # Zeile 4 ohne Konto in der Datei: ohne gewähltes Konto geht es nicht
+    no_account = manager.post(
+        f"{BASE}/{detail['id']}/rows/{second[3]['id']}/take",
+        json=take_body(second[3], account_id=999_999),
+        headers=HEADERS,
+    )
+    assert no_account.status_code == 422
+    manager.post(f"{BASE}/{detail['id']}/rows/{second[3]['id']}/skip", headers=HEADERS)
     summary = manager.get(BASE).json()[0]
     assert (summary["status"], summary["taken"], summary["skipped"], summary["open"]) == (
         "abgeschlossen",
-        2,
-        2,
+        3,
+        1,
         0,
     )
 
-    # Planung aus der Zeile mit „Jährlich“
+    # Planung aus der Zeile mit „Jährlich“: der Posten der Zeile läuft weiter
     plan = manager.post(
         f"{BASE}/{detail['id']}/plan",
-        json={"entries": [{"row_id": second[1]["id"], "name": "Lizenz", "amount_cents": 23_800}]},
+        json={"entries": [{"row_id": second[1]["id"], "amount_cents": 25_000, "ongoing": False}]},
         headers=HEADERS,
     )
     assert plan.status_code == 200, plan.text
-    assert plan.json()["created"] == 1
+    assert plan.json()["extended"] == 1
     planned = db.scalars(select(BudgetItem).where(BudgetItem.name == "Lizenz")).one()
-    assert (planned.start_year, planned.end_year, planned.amount_cents) == (2027, None, 23_800)
+    db.refresh(planned)
+    assert (planned.start_year, planned.end_year, planned.amount_cents) == (2026, 2027, 25_000)
+    assert plan.json()["detail"]["rows_detail"][1]["planned_item_id"] == planned.id
     again = manager.post(
         f"{BASE}/{detail['id']}/plan",
-        json={"entries": [{"row_id": second[1]["id"], "name": "lizenz", "amount_cents": 1}]},
+        json={"entries": [{"row_id": second[1]["id"], "amount_cents": 23_800}]},
         headers=HEADERS,
     ).json()
-    assert (again["created"], again["existing"]) == (0, ["lizenz"])
+    db.refresh(planned)
+    assert again["extended"] == 1 and (planned.end_year, planned.amount_cents) == (None, 23_800)
+    assert db.scalars(select(BudgetItem).where(BudgetItem.name.like("Lizenz%"))).all() == [planned]
     not_taken = manager.post(
         f"{BASE}/{detail['id']}/plan",
-        json={"entries": [{"row_id": second[3]["id"], "name": "X", "amount_cents": 1}]},
+        json={"entries": [{"row_id": second[3]["id"], "amount_cents": 1}]},
         headers=HEADERS,
     )
     assert not_taken.status_code == 422

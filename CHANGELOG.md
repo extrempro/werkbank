@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.78.0] – 2026-11-21
+
+### IT-Budget
+
+- **Import aus Excel: je Zeile ein eigener Budgetposten.** Das Pflichtfeld „Budgetposten“ beim Übernehmen entfällt. Übernehmen legt den Posten aus der Zeile an (Name aus der Bezeichnung, sonst der Partner, im Konto doppelt: mit Nummer wie „Mobilfunk (2)“; erwartete Kosten = Betrag, im Geschäftsjahr des Imports) und eine gebuchte Rechnung, die ihn abschließt. Gewählt wird nur noch das Konto
+- Der Start eines Imports legt keinen Posten „Allgemein <Geschäftsjahr>“ mit dem Konto-Budget mehr an, nur noch fehlende Konten. Bereits angelegte „Allgemein“-Posten bleiben unverändert
+- „Vorschläge für die Planung“ (Zeilen mit „Jährlich“) verlängert den Posten der Zeile ins folgende Geschäftsjahr (bis auf Weiteres oder nur dieses Jahr) mit änderbaren Kosten je Jahr, statt einen zweiten Posten anzulegen
+- API: `take` erwartet `account_id` statt `item_id`; `plan` ohne `name`, Antwort `extended` statt `created`/`existing`; Zeilen liefern den angelegten Posten (`item_id`, `item_name`)
+
 ## [0.76.0] – 2026-11-21
 
 ### Evergreen

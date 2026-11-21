@@ -34,8 +34,6 @@ export interface ImportAccount {
   /** Konto in der Werkbank; null: wird beim Start angelegt. */
   account_id: number | null;
   created: boolean;
-  item_id: number | null;
-  item_name: string;
   rows: number;
 }
 
@@ -57,7 +55,9 @@ export interface ImportRow {
   partner_match: PartnerMatch;
   partner_id: number | null;
   partner_name: string | null;
+  /** Budgetposten, den das Übernehmen für diese Zeile angelegt hat. */
   item_id: number | null;
+  item_name: string | null;
 }
 
 export interface ImportSummary {
@@ -91,7 +91,8 @@ export interface TakeUpdate {
   number: string;
   internal_number: string;
   description: string;
-  item_id: number;
+  /** Konto des neuen Budgetpostens (je Zeile ein eigener Posten). */
+  account_id: number;
   gross_cents: number;
   tax_rate_bp: number;
   yearly: boolean;
@@ -99,10 +100,12 @@ export interface TakeUpdate {
   new_partner?: string;
 }
 
+/** Zeile mit „Jährlich“ in die Planung: ihr Posten läuft im folgenden Geschäftsjahr weiter. */
 export interface PlanEntry {
   row_id: number;
-  name: string;
+  /** Erwartete Kosten je Geschäftsjahr. */
   amount_cents: number;
+  /** true: bis auf Weiteres; false: nur noch im folgenden Geschäftsjahr. */
   ongoing: boolean;
 }
 
@@ -172,7 +175,7 @@ export function reopenRow(id: number, rowId: number): Promise<ImportDetail> {
 export function planRows(
   id: number,
   entries: PlanEntry[],
-): Promise<{ created: number; existing: string[]; detail: ImportDetail }> {
+): Promise<{ extended: number; detail: ImportDetail }> {
   return postJson(`${BASE}/${id}/plan`, { entries });
 }
 

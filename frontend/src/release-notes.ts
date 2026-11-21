@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.78.0",
+    date: "2026-11-21",
+    summary: "IT-Budget: Der Excel-Import legt je Zeile einen eigenen Budgetposten an.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Import aus Excel: Du musst beim Übernehmen keinen Budgetposten mehr auswählen. Jede übernommene Zeile wird ein eigener Posten mit dem Betrag als erwarteten Kosten, die Rechnung schließt ihn ab. Gibt es den Namen im Konto schon, bekommt der neue Posten eine Nummer.",
+          "Beim Start des Imports entsteht kein Posten „Allgemein“ mit dem Konto-Budget mehr.",
+          "„Vorschläge für die Planung“ verlängert den Posten einer Zeile mit „Jährlich“ ins nächste Geschäftsjahr, statt einen zweiten anzulegen. Die Kosten je Jahr kannst du dabei ändern.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.76.0",
     date: "2026-11-21",
     summary: "Evergreen: Einträge je Software mit Notizen, nur für die IT.",
