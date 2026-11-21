@@ -31,7 +31,6 @@ function setting(id: number, workload: string, name: string, extra: object = {})
     criticality: null,
     deviates: false,
     open_changes: 0,
-    from_evergreen: false,
     ...extra,
   };
 }
@@ -138,7 +137,7 @@ function stubFetch() {
         };
       } else if (url.includes("object_id=1")) {
         body = {
-          entries: [setting(1, "teams", "Besprechungsrichtlinie", { from_evergreen: true })],
+          entries: [setting(1, "teams", "Besprechungsrichtlinie")],
           has_more: false,
         };
       }

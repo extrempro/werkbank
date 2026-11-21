@@ -130,7 +130,7 @@ describe("SettingDetailPage", () => {
     });
   });
 
-  it("zeigt den Verlauf als Zeitleiste und den Hinweis auf den Evergreen-Vorgang", async () => {
+  it("zeigt den Verlauf als Zeitleiste", async () => {
     const change = {
       id: 9,
       setting_id: 3,
@@ -160,9 +160,8 @@ describe("SettingDetailPage", () => {
       vi.fn(async () => new Response(JSON.stringify(body), { status: 200 })),
     );
     render(<SettingDetailPage id={3} me={me(["Config.Reader"])} />);
-    expect(await screen.findByText("Geregelt durch Evergreen-Vorgang")).toBeVisible();
-    expect(screen.getByText(/Der Soll-Wert stammt aus Evergreen EV-2026-014/)).toBeVisible();
-    expect(screen.getByText("✗ weicht ab")).toBeVisible();
+    expect(await screen.findByText("✗ weicht ab")).toBeVisible();
+    expect(screen.queryByText("Geregelt durch Evergreen-Vorgang")).toBeNull();
     expect(screen.getByText("1 Änderung")).toBeVisible();
     const entry = screen.getByText(/bewertet von Rita Reviewer · Nicht abgestimmt/);
     expect(entry).toHaveTextContent("von ada@example.com");

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "../components/Link";
-import { fetchItems, formatDate, type Item } from "../modules/evergreen/api";
+import { fetchEntries, type EntryList } from "../modules/evergreen/api";
 import { fetchOverview, type Overview } from "../modules/m365/api";
 import { TOOLS } from "../tools";
 
@@ -14,7 +14,7 @@ interface Tile {
 }
 
 const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
-const EVERGREEN_ROLES = ["Evergreen.IT", "Evergreen.Team", "Evergreen.Betriebsrat", "Evergreen.GF"];
+const EVERGREEN_ROLES = ["Evergreen.Reader", "Evergreen.Editor"];
 
 function count(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -52,23 +52,16 @@ function configTile(overview: Overview): Tile {
   };
 }
 
-function evergreenTile(entries: Item[], hasMore: boolean): Tile {
-  const mine = entries.filter((item) => item.waiting_for_me).length;
-  const rollouts = entries
-    .map((item) => item.rollout_date)
-    .filter((date): date is string => typeof date === "string")
-    .sort();
-  const today = new Date().toISOString().slice(0, 10);
-  const next = rollouts.find((date) => date >= today) ?? null;
+function evergreenTile(list: EntryList): Tile {
+  const fresh = count(list.new);
   return {
     title: "Evergreen",
-    link: "/evergreen",
-    status: mine > 0 ? `${mine} für mich` : "nichts für mich",
-    attention: mine > 0,
+    link: "/evergreen/m365",
+    status: fresh > 0 ? `${fresh} neu` : "nichts Neues",
+    attention: fresh > 0,
     lines: [
-      { label: "Offene Vorgänge", value: hasMore ? `${entries.length}+` : String(entries.length) },
-      { label: "Wartet auf mich", value: String(mine) },
-      { label: "Nächster Rollout", value: next ? formatDate(next) : "–" },
+      { label: "Microsoft 365: offen", value: String(count(list.open)) },
+      { label: "davon neu", value: String(fresh) },
     ],
   };
 }
@@ -92,10 +85,10 @@ export function ModuleTiles({ roles }: { roles: readonly string[] }) {
         .catch(() => undefined);
     }
     if (showEvergreen) {
-      fetchItems("offen", 0)
+      fetchEntries("m365", "offen", "", 0, 1)
         .then((list) => {
-          if (active && list && Array.isArray(list.entries)) {
-            setEvergreen(evergreenTile(list.entries, list.has_more === true));
+          if (active && list && typeof list === "object") {
+            setEvergreen(evergreenTile(list));
           }
         })
         .catch(() => undefined);

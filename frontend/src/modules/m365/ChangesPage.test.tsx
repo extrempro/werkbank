@@ -192,20 +192,20 @@ describe("ChangesPage", () => {
     expect(calls.some((call) => call.init?.method === "POST")).toBe(false);
   });
 
-  it("bietet der Evergreen-IT an, aus einer Änderung einen Vorgang zu machen", async () => {
+  it("bietet Evergreen-Bearbeitern an, aus einer Änderung einen Eintrag zu machen", async () => {
     const calls = stubFetch();
     render(<ChangesPage me={me(["Config.Reader"])} />);
     await screen.findByRole("button", { name: "MFA für alle – State" });
     fireEvent.click(screen.getByRole("button", { name: "MFA für alle – State" }));
-    expect(screen.queryByRole("button", { name: /Vorgang anlegen/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Eintrag anlegen/ })).toBeNull();
     cleanup();
 
-    render(<ChangesPage me={me(["Config.Reader", "Evergreen.IT"])} />);
+    render(<ChangesPage me={me(["Config.Reader", "Evergreen.Editor"])} />);
     fireEvent.click(await screen.findByRole("button", { name: "MFA für alle – State" }));
-    fireEvent.click(screen.getByRole("button", { name: "Evergreen-Vorgang anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Evergreen-Eintrag anlegen" }));
     await waitFor(() => {
       const post = calls.find((call) => call.init?.method === "POST");
-      expect(post?.url).toBe("/api/evergreen/items/from-change");
+      expect(post?.url).toBe("/api/evergreen/entries/from-change");
       expect(JSON.parse(String(post?.init?.body))).toEqual({ change_id: 7 });
     });
   });

@@ -150,8 +150,8 @@ describe("StartPage", () => {
   it("begrüßt nach Tageszeit und nennt Datum und Zahl der Aufgaben", () => {
     mockApi({});
     const tasks = [
-      { module: "Evergreen", title: "A", subtitle: null, link: "/evergreen", count: 2 },
-      { module: "Evergreen", title: "B", subtitle: null, link: "/evergreen/eingang", count: 1 },
+      { module: "Evergreen", title: "A", subtitle: null, link: "/evergreen/m365", count: 2 },
+      { module: "Evergreen", title: "B", subtitle: null, link: "/evergreen/m365", count: 1 },
     ];
     render(<StartPage me={me} tasks={tasks} now={new Date(2026, 10, 14, 8, 30)} />);
     expect(screen.getByRole("heading", { name: "Guten Morgen, Rita Reviewer" })).toBeVisible();
@@ -183,32 +183,14 @@ describe("StartPage", () => {
     expect(screen.queryByRole("region", { name: "Evergreen" })).toBeNull();
   });
 
-  it("zählt in der Evergreen-Kachel, was auf die Person wartet", async () => {
-    const item = (id: number, waiting: boolean, rollout: string | null) => ({
-      id,
-      number: `EV-2026-00${id}`,
-      title: `Vorgang ${id}`,
-      service: null,
-      source: "manuell",
-      major_change: false,
-      rollout_date: rollout,
-      step: "it_bewertung",
-      step_title: "IT-Bewertung",
-      finished: false,
-      waiting_for_me: waiting,
-      created_at: "2026-11-01T08:00:00Z",
-    });
+  it("zählt in der Evergreen-Kachel neue und offene Einträge", async () => {
     mockApi({
-      "/api/evergreen/items": {
-        entries: [item(1, true, "2999-12-01"), item(2, false, null)],
-        has_more: false,
-        can_create: false,
-      },
+      "/api/evergreen/entries": { entries: [], total: 5, open: 5, new: 3, can_edit: false },
     });
-    render(<StartPage me={{ ...me, roles: ["Evergreen.GF"] }} tasks={[]} />);
+    render(<StartPage me={{ ...me, roles: ["Evergreen.Reader"] }} tasks={[]} />);
     const tile = await screen.findByRole("region", { name: "Evergreen" });
-    expect(tile).toHaveTextContent("1 für mich");
-    expect(tile).toHaveTextContent("Offene Vorgänge2");
-    expect(tile).toHaveTextContent("Nächster Rollout01.12.2999");
+    expect(tile).toHaveTextContent("3 neu");
+    expect(tile).toHaveTextContent("Microsoft 365: offen5");
+    expect(tile).toHaveTextContent("davon neu3");
   });
 });

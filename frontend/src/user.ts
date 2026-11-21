@@ -3,10 +3,8 @@
 const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Werkbank.Admin", "Administration"],
   ["Config.Reviewer", "Reviewer"],
-  ["Evergreen.IT", "IT"],
-  ["Evergreen.Team", "Evergreen-Team"],
-  ["Evergreen.Betriebsrat", "Betriebsrat"],
-  ["Evergreen.GF", "Geschäftsführung"],
+  ["Evergreen.Editor", "Evergreen-Bearbeiter"],
+  ["Evergreen.Reader", "Evergreen-Leser"],
   ["Config.Reader", "Lesezugriff"],
   ["Budget.Manager", "Budgetverwaltung"],
   ["Tenant.Reader", "Tenant"],
@@ -33,19 +31,14 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
     label: "Konfiguration Prüfer",
     description: "Änderungen bewerten, Beschreibungen und Soll-Werte pflegen",
   },
-  "Evergreen.IT": {
-    label: "Evergreen IT",
-    description: "Technische Bewertung und Umsetzung von Evergreen-Vorgängen",
+  "Evergreen.Reader": {
+    label: "Evergreen Leser",
+    description: "Evergreen-Einträge und ihre Notizen ansehen",
   },
-  "Evergreen.Team": {
-    label: "Evergreen Team",
-    description: "Rückmeldungen der Fachabteilungen und BR-Vorlagen",
+  "Evergreen.Editor": {
+    label: "Evergreen Bearbeiter",
+    description: "Evergreen-Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen",
   },
-  "Evergreen.Betriebsrat": {
-    label: "Evergreen Betriebsrat",
-    description: "Stellungnahme zu vorgelegten Vorgängen",
-  },
-  "Evergreen.GF": { label: "Evergreen Geschäftsführung", description: "Abnahme von Vorgängen" },
   "Monitoring.Reader": {
     label: "Monitoring Leser",
     description: "Bereich IT-Monitoring ansehen (z. B. DNS-Abgleich mit NetBox)",

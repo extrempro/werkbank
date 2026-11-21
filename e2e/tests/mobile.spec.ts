@@ -10,7 +10,7 @@ test("Handy: Leiste unten, Menü als Blatt mit allen Bereichen", async ({
   page,
 }) => {
   test.skip(!isPhone(page), "nur Handy");
-  await loginAs(page, ["Evergreen.Team", "Budget.Reader"], "Mia Mobil");
+  await loginAs(page, ["Evergreen.Reader", "Budget.Reader"], "Mia Mobil");
   await page.goto("/");
   await expect(page.getByRole("navigation", { name: "Bereiche" })).toBeHidden();
   const bar = page.getByRole("navigation", { name: "Schnellzugriff" });
@@ -38,9 +38,9 @@ test("Handy: Leiste unten, Menü als Blatt mit allen Bereichen", async ({
   await expect(all.getByRole("link", { name: "Handbuch" })).toBeVisible();
   await all.getByRole("button", { name: /^Evergreen/ }).click();
   const evergreen = page.getByRole("dialog", { name: "Evergreen" });
-  await evergreen.getByRole("link", { name: /^Vorgänge/ }).click();
+  await evergreen.getByRole("link", { name: /^Microsoft 365/ }).click();
   await expect(evergreen).toBeHidden();
-  await expect(page).toHaveURL(/\/evergreen$/);
+  await expect(page).toHaveURL(/\/evergreen\/m365$/);
   await expect(page.getByRole("heading", { name: "Vorgänge" })).toBeVisible();
 
   // Das Blatt zeigt jetzt gleich die Seiten von Evergreen; Esc schließt es.
@@ -61,7 +61,7 @@ test("Handy: Logo frei, Kontomenü oben rechts und nichts breiter als der Bildsc
     [
       "Werkbank.Admin",
       "Config.Reviewer",
-      "Evergreen.IT",
+      "Evergreen.Editor",
       "Budget.Manager",
       "Tools.User",
       "Monitoring.Reader",

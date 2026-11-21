@@ -58,7 +58,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 | Verwaltung nach mehr als 15 Minuten | Hinweis „Erneut anmelden“, danach erreichbar. Mit `auth_time` darf eine stille Anmeldung nicht genügen |
 | M365-Konfiguration → Übersicht (Admin mit Config-Rolle) | Kein Hinweis „nicht eingerichtet“; „Jetzt abrufen“ startet einen Abruf |
 | Snapshots nach einigen Minuten | Abruf „Erfolgreich“ mit Objekten; Einstellungen sind gefüllt |
-| Evergreen → Eingang, einige Stunden nach dem Start | Meldungen aus dem Nachrichtencenter sind da; größere Änderungen stehen als Vorgänge unter „Vorgänge“ |
+| Evergreen → Microsoft 365, einige Stunden nach dem Start | Meldungen aus dem Nachrichtencenter der letzten 30 Tage stehen als Einträge mit Status „Neu“ da |
 | Zweiter Abruf nach einer Änderung im Tenant | Änderung erscheint unter „Änderungen“ mit „Geändert von“ |
 | Seite „Konto“ (Klick auf den Namen oben rechts) | Zeigt Rollen, Sitzung und die laufende Version |
 | Update auf eine neue Version | Images holen und neu bereitstellen (siehe [`deploy/README.md`](../deploy/README.md)); danach Banner „Neue Version“, „Neu laden“ lädt sie; auf der Seite „Konto“ steht die neue Version |

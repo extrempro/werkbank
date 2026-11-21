@@ -3023,12 +3023,6 @@ details summary {
   font-weight: 700;
 }
 
-.hint-evergreen {
-  background: var(--farbe-warn-flaeche);
-  border: 1px solid var(--farbe-warn-rand);
-  color: var(--farbe-warn-text);
-}
-
 .setting-section {
   display: flex;
   flex-direction: column;
@@ -7902,6 +7896,52 @@ html {
   container-type: inline-size;
   padding-top: 16px;
   border-top: 1px solid var(--farbe-trenner);
+}
+
+/* Evergreen: Einträge (Tabelle und Ansicht wie bei den Vorgängen im IT-Bestand) */
+.ev-new-button {
+  margin: 0 0 4px auto;
+}
+
+.ev-new {
+  padding: 16px;
+}
+
+.ev-new h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.ev-major {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.ev-body-wrap {
+  margin-top: 12px;
+}
+
+.ev-body-wrap summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Text der Meldung und Notizen: reiner Text, Zeilenumbrüche bleiben */
+.ev-body,
+.ev-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ev-body {
+  margin-top: 8px;
+  max-height: 28rem;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+.ev-note-form {
+  margin-top: 16px;
 }
 
 /* Entscheidung: kompakte Chips, die Erklärung steht hinter „i“ bzw. unter der Auswahl */

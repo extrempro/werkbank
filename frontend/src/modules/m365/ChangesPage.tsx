@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, formatDateTime, type Me } from "../../api";
 import { Placeholder } from "../../components/Placeholder";
 import { navigate } from "../../router";
-import { createItemFromChange } from "../evergreen/api";
+import { createEntryFromChange, entryPath } from "../evergreen/api";
 import {
   areaLabel,
   fetchChanges,
@@ -108,7 +108,7 @@ export function ChangesPage({ me }: ChangesPageProps) {
   const [message, setMessage] = useState<Message | null>(null);
   const detailRef = useRef<HTMLDivElement>(null);
   const canReview = me.roles.includes("Config.Reviewer");
-  const canCreateItem = me.roles.includes("Evergreen.IT");
+  const canCreateItem = me.roles.includes("Evergreen.Editor");
 
   useEffect(() => {
     let active = true;
@@ -185,13 +185,16 @@ export function ChangesPage({ me }: ChangesPageProps) {
 
   const onCreateItem = (entry: Change) => {
     setMessage(null);
-    createItemFromChange(entry.id)
-      .then((item) => {
-        navigate(`/evergreen/${item.id}`);
+    createEntryFromChange(entry.id)
+      .then((created) => {
+        navigate(entryPath(created.software, created.id));
       })
       .catch((error: unknown) => {
         const detail = error instanceof ApiError ? error.detail : null;
-        setMessage({ kind: "alert", text: detail ?? "Der Vorgang konnte nicht angelegt werden." });
+        setMessage({
+          kind: "alert",
+          text: detail ?? "Der Evergreen-Eintrag konnte nicht angelegt werden.",
+        });
       });
   };
 

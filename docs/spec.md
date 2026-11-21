@@ -19,7 +19,7 @@ Die Werkbank ist eine Open-Source-Web-App (installierbar als PWA) für IT-Abteil
 Erste Module:
 
 1. **M365-Konfiguration** – erfasst die Einstellungen des Microsoft-365-Tenants, erkennt Änderungen und führt einen Verlauf je Einstellung.
-2. **Evergreen** – neue Microsoft-Funktionen bewerten, dem Betriebsrat vorlegen, von der Geschäftsführung abnehmen lassen und die Umsetzung im Tenant überwachen.
+2. **Evergreen** – Neuerungen von Software (zunächst Microsoft 365) für die IT sichten, mit Notizen festhalten und abschließen.
 
 Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen später ohne Umbau des Kerns ergänzt werden können.
 
@@ -41,7 +41,7 @@ Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen spä
 | Snapshot | Ein vollständiger Abruf der Tenant-Konfiguration zu einem Zeitpunkt. |
 | Änderung | Ein Unterschied einer Einstellung zwischen zwei Snapshots (neu, geändert, entfernt). |
 | Soll-Wert | Der beschlossene oder gewünschte Wert einer Einstellung. |
-| Vorgang | Ein Evergreen-Fall, der den Freigabe-Workflow durchläuft. |
+| Eintrag (Evergreen) | Eine Neuerung einer Software mit Status neu, bearbeitet oder abgeschlossen und Notizen. |
 | Workflow | Beschriebene Abfolge von Schritten mit Rollen, Aktionen und Regeln. |
 | Konnektor | Zugang zu einem externen System (Graph, Exchange Online PowerShell, …). |
 
@@ -87,10 +87,8 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Werkbank.Admin` | Kern | Verwaltung: Module, Konnektoren, Kommentarregeln, Benachrichtigungsregeln, Audit-Log vollständig |
 | `Config.Reader` | M365-Konfiguration | Einstellungen, Verlauf, Änderungen, Snapshots ansehen und exportieren |
 | `Config.Reviewer` | M365-Konfiguration | zusätzlich Änderungen bewerten, Beschreibungen und Begründungen pflegen, Soll-Werte setzen |
-| `Evergreen.IT` | Evergreen | technische Bewertung (Schritt 1), Umsetzung (Schritt 6), Schritte 2–3 vertretungsweise, BR-Beschluss im Auftrag erfassen |
-| `Evergreen.Team` | Evergreen | Rückmeldungen der Fachabteilungen (Schritt 2), BR-Vorlage (Schritt 3), BR-Beschluss im Auftrag erfassen |
-| `Evergreen.Betriebsrat` | Evergreen | vorgelegte Vorgänge sehen, Stellung nehmen (Schritt 4) |
-| `Evergreen.GF` | Evergreen | Vorgänge nach BR-Zustimmung sehen, abnehmen oder zurückgeben (Schritt 5) |
+| `Evergreen.Reader` | Evergreen | Einträge mit Notizen ansehen; keine Aufgaben und Benachrichtigungen |
+| `Evergreen.Editor` | Evergreen | Einträge anlegen, Notizen anfügen, abschließen und wieder öffnen; Aufgabe und Benachrichtigung bei neuen Einträgen |
 | `Tools.User` | IT-Tools | Bereich IT-Tools öffnen. Die Tools rechnen vollständig im Browser und haben keine Daten auf dem Server; die Rolle steuert deshalb nur, wer den Bereich sieht |
 | `Tenant.Reader` | Tenant | Lizenzen, Benutzerzahlen und Nutzung der Dienste mit Verlauf, Zertifikate und Secrets, Dienststatus ansehen |
 | `Budget.Editor` | IT-Budget | Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen |
@@ -104,8 +102,7 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 
 Sichtbarkeit:
 
-- Personen ohne IT-Rolle (`Evergreen.Team`, `.Betriebsrat`, `.GF`) sehen nur **Start** und **Evergreen**.
-- `Evergreen.Betriebsrat` sieht nur Vorgänge ab Schritt 4, die ihm nicht übersprungen wurden. `Evergreen.GF` nur Vorgänge ab Schritt 5.
+- Wer nur eine Evergreen-Rolle hat, sieht nur **Start** und **Evergreen**.
 - Technische Details (Pfade, Links zu Einstellungen) sind für Nicht-IT-Rollen ausgeblendet.
 
 ---
@@ -188,11 +185,11 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
 - Module melden Aufgaben über eine gemeinsame Schnittstelle: Titel, Untertitel, Modul, Fälligkeit, Ziel-Link, zuständige Rolle bzw. Person.
 - Beispiele: offene Änderung prüfen (Config.Reviewer), Evergreen-Schritt (zuständige Rolle), Konnektor-Fehler (Admin).
 - Zähler in der Kopfzeile und in der Navigation.
-- Stand: Die Aufgaben werden bei jeder Abfrage aus dem Stand der Module ermittelt (`/api/tasks`) und nicht gespeichert; der Zähler steht in der Navigation beim Eintrag „Start“. M365-Konfiguration meldet offene Änderungen und Abweichungen vom Soll-Wert (`Config.Reviewer`) sowie einen fehlgeschlagenen Abruf (`Werkbank.Admin`). Der Zähler steht auch in der Kopfzeile. Die Zähler laden die Aufgaben bei jedem Seitenwechsel, nach jeder Änderung, wenn das Fenster wieder in den Vordergrund kommt, und alle fünf Minuten neu. Evergreen meldet je Rolle die Vorgänge, die in ihrem Schritt warten, und der IT neue Meldungen im Eingang. Eine Tabelle `tasks` für einzeln zugewiesene Aufgaben ist bisher nicht nötig und nicht umgesetzt.
+- Stand: Die Aufgaben werden bei jeder Abfrage aus dem Stand der Module ermittelt (`/api/tasks`) und nicht gespeichert; der Zähler steht in der Navigation beim Eintrag „Start“. M365-Konfiguration meldet offene Änderungen und Abweichungen vom Soll-Wert (`Config.Reviewer`) sowie einen fehlgeschlagenen Abruf (`Werkbank.Admin`). Der Zähler steht auch in der Kopfzeile. Die Zähler laden die Aufgaben bei jedem Seitenwechsel, nach jeder Änderung, wenn das Fenster wieder in den Vordergrund kommt, und alle fünf Minuten neu. Evergreen meldet Bearbeitern je Software die Zahl neuer Einträge. Eine Tabelle `tasks` für einzeln zugewiesene Aufgaben ist bisher nicht nötig und nicht umgesetzt.
 
 ### 6.3 Workflow-Engine
 
-Workflows werden je Modul in YAML beschrieben:
+Workflows werden je Modul in YAML beschrieben. Stand: Die Engine ist im Kern vorhanden, wird aber derzeit von keinem Bereich genutzt (Evergreen kommt seit 0.76 ohne Ablauf aus); die Tests nutzen einen Beispiel-Ablauf (`backend/tests/fixtures/workflow_beispiel.yaml`). Beispiel:
 
 ```yaml
 workflow: evergreen
@@ -237,10 +234,8 @@ Standardregeln:
 | Änderungen | gewollt bei Änderung durch Konto außerhalb der IT | Pflicht |
 | Änderungen | Einstellung durch BR-Beschluss geregelt | Pflicht |
 | Änderungen | gewollt, sonst | optional |
-| Evergreen | nicht mitbestimmungspflichtig | Pflicht |
-| Evergreen | BR: mit Auflagen / ablehnen | Pflicht |
-| Evergreen | GF: zurückgeben | Pflicht |
-| Evergreen | übrige Aktionen | optional |
+| Evergreen | Notiz anfügen | Pflicht (die Notiz selbst) |
+| Evergreen | abschließen, wieder öffnen | optional |
 
 ### 6.5 Anhänge
 
@@ -264,7 +259,6 @@ Standardregeln:
 | Web Push | Name aus dem Branding, Bereich und Anzahl (z. B. „IT-Budget: 2 neue Benachrichtigungen“), **keine fachlichen Inhalte**; Tippen öffnet „Benachrichtigungen“ |
 
 - Push ist pro Person per Opt-in zu aktivieren und jederzeit abschaltbar.
-- Erinnerungen bei Evergreen-Fristen: 14, 7 und 3 Tage vor Rollout, sofern der Vorgang noch offen ist.
 - Stand: Umgesetzt sind die **Glocke** in der Kopfzeile, **Mail und Teams** und **Push** (siehe unten).
 
 **Push (umgesetzt):** Die Verwaltung schaltet Push unter Verwaltung › Mail & Teams ein; beim ersten Einschalten erzeugt der Server ein VAPID-Schlüsselpaar (P-256), der private Teil liegt mit `settings_key` verschlüsselt in der Datenbank (`app_settings`, Schlüssel `push`), nie im Repository und nie in einer Antwort. Jede Person schaltet Push im Konto je Gerät ein (Erlaubnis des Browsers, Abo beim Push-Dienst; höchstens 10 Geräte) und wählt je Art die Spalte „Push“ (Vorgabe: aus). Ein Auftrag (`kern.push_versand`, alle 2 Minuten) schickt je Person eine Sammelnachricht an alle ihre Geräte, nur für ungelesene Benachrichtigungen der eingeschalteten Arten, die nach dem Einschalten und in den letzten 24 Stunden entstanden sind. Inhalt: Titel = Name aus dem Branding, Text = Bereich und Anzahl, Ziel immer `/benachrichtigungen`. Verschlüsselt nach RFC 8291 (aes128gcm), signiert nach RFC 8292 (VAPID, `sub` = `PUBLIC_URL`), TTL 24 Stunden, ohne Zusatzpaket (`core/webpush.py`). Der Server schickt nur an bekannte Push-Dienste (`fcm.googleapis.com`, `*.push.apple.com`, `*.push.services.mozilla.com`, `*.notify.windows.com`); abgelaufene Abos (404/410) löscht er. Audit-Log: `einstellungen.push_geaendert`, `konto.push_geraet_angemeldet`, `konto.push_geraet_abgemeldet`.
@@ -284,10 +278,7 @@ Standardregeln:
 | Störung | M365-Tenant | Tenant.Reader | Störung (nicht Hinweis) beginnt und ist behoben |
 | Zugangsdaten | M365-Tenant | Tenant.Reader | Geheimnis oder Zertifikat erreicht Warnung, dringend, abgelaufen |
 | Lizenzen | M365-Tenant | Tenant.Reader | aufgebraucht, überbucht, Stichtag in 30 Tagen |
-| Schritt | Evergreen | Rollen des Schritts | Vorgang wartet auf den Schritt (ohne die Person, die ihn weitergegeben hat) |
-| Kommentar oder Beschluss | Evergreen | Beteiligte am Vorgang | Kommentar oder Entscheidung im Schritt Betriebsrat (ohne die handelnde Person) |
-| Rollout | Evergreen | Evergreen.IT | 14, 7 und 3 Tage vor dem Rollout offener Vorgänge |
-| Meldung mit Frist | Evergreen | Evergreen.IT | neue Meldung von Microsoft mit „Handeln bis“ |
+| Neue Einträge | Evergreen | Evergreen.Editor | neue Einträge je Software (ein Hinweis mit Anzahl; erneut, sobald weitere dazukommen) |
 | Rechnung prüfen | IT-Budget | Budget.Manager | neue, noch nicht gebuchte Rechnung |
 | Rechnung gebucht | IT-Budget | wer sie erfasst hat | gebucht von einer anderen Person |
 | Kündigung | IT-Budget | Budget.Editor, Budget.Manager | 60, 30 und 7 Tage vor dem Kündigungstermin |
@@ -303,11 +294,11 @@ Standardregeln:
 
 ### 6.9 Beschreibungstexte mit KI (optional)
 
-- Vorschläge für verständliche Beschreibungen von Einstellungen und Evergreen-Vorgängen.
+- Vorschläge für verständliche Beschreibungen von Einstellungen.
 - Übergeben werden nur technische Metadaten (Name, Schema-Text, Wert, Microsoft-Ankündigung), **keine personenbezogenen Daten**.
 - Ergebnis gekennzeichnet als „KI-generiert, ungeprüft“, bis eine berechtigte Person es übernimmt.
 - Abschaltbar in der Verwaltung. Anbieter, Vertrag (AVV) und Freigabe durch den Datenschutz klärt der Betreiber außerhalb der Werkbank.
-- Stand: umgesetzt für Einstellungen der M365-Konfiguration. Anbieter (Art der Schnittstelle: OpenAI-kompatibel über `/chat/completions` oder Anthropic über `/messages` mit adaptivem Mitdenken bei geringem Aufwand (`output_config.effort: low`, `max_tokens` 4000), ohne `temperature`; Adresse, Modell, Schlüssel) und Höchstzahl je Stunde stehen in der Verwaltung; bei Fehlern zeigt die Werkbank die Meldung des Anbieters gekürzt (höchstens 200 Zeichen, einzeilig, nie der Schlüssel), Standard ist ausgeschaltet. Abweichung zum Schutz der Daten: Übergeben werden nur Dienst, Bereich und Name der Eigenschaft, **nicht** der Wert und nicht der Name des Objekts (beides kann Personen- oder Firmennamen enthalten). Ein Text gilt deshalb für alle Einstellungen derselben Art (`cfg_ai_texts`). Der Worker erzeugt die Texte stündlich für Einstellungen ohne eigene Beschreibung; Reviewer geben frei oder verwerfen. Noch offen: Vorschläge für Evergreen-Vorgänge.
+- Stand: umgesetzt für Einstellungen der M365-Konfiguration. Anbieter (Art der Schnittstelle: OpenAI-kompatibel über `/chat/completions` oder Anthropic über `/messages` mit adaptivem Mitdenken bei geringem Aufwand (`output_config.effort: low`, `max_tokens` 4000), ohne `temperature`; Adresse, Modell, Schlüssel) und Höchstzahl je Stunde stehen in der Verwaltung; bei Fehlern zeigt die Werkbank die Meldung des Anbieters gekürzt (höchstens 200 Zeichen, einzeilig, nie der Schlüssel), Standard ist ausgeschaltet. Abweichung zum Schutz der Daten: Übergeben werden nur Dienst, Bereich und Name der Eigenschaft, **nicht** der Wert und nicht der Name des Objekts (beides kann Personen- oder Firmennamen enthalten). Ein Text gilt deshalb für alle Einstellungen derselben Art (`cfg_ai_texts`). Der Worker erzeugt die Texte stündlich für Einstellungen ohne eigene Beschreibung; Reviewer geben frei oder verwerfen.
 
 ### 6.10 Suche
 
@@ -374,7 +365,7 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 - Status: **offen**, **gewollt**, **ungewollt**.
 - Bewertung durch `Config.Reviewer` mit Kommentarregeln (6.4). Sammelbewertung mehrerer Änderungen mit einem Kommentar.
 - Rücksetzen einer Bewertung möglich (protokolliert).
-- Stand der Kommentarregeln: „ungewollt“ verlangt immer einen Kommentar, „gewollt“ bei Kritikalität „Hoch“. Die Regeln zu Konten außerhalb der IT und zum BR-Beschluss folgen mit Evergreen.
+- Stand der Kommentarregeln: „ungewollt“ verlangt immer einen Kommentar, „gewollt“ bei Kritikalität „Hoch“. Die Regel zu Konten außerhalb der IT ist offen; die zum BR-Beschluss entfällt (Evergreen ohne Freigabe-Ablauf).
 
 ### 7.5 Metadaten je Einstellung
 
@@ -383,7 +374,7 @@ Globale Suche über Einstellungen (Pfad, Name, Wert, Beschreibung, Begründung) 
 | Beschreibung | Microsoft-Schema, KI-Vorschlag oder manuell |
 | Begründung „Warum bei uns so“ | manuell |
 | Kritikalität (Niedrig/Mittel/Hoch) | manuell, Vorschlag je Bereich |
-| Soll-Wert | manuell oder aus Evergreen-Beschluss |
+| Soll-Wert | manuell (Soll-Werte, die früher aus Evergreen-Beschlüssen kamen, bleiben stehen) |
 | Empfehlung/Benchmark | Microsoft Secure Score: Empfehlungen („Controls“) mit Stand im Tenant, von Reviewern von Hand den Einstellungen zugeordnet. CIS-Benchmarks werden wegen der Lizenz nicht mitgeliefert |
 | Verantwortlich | Person oder Abteilung |
 | Link Microsoft Learn | je Bereich hinterlegt |
@@ -403,73 +394,36 @@ Entfällt (entschieden im November 2026): Für die M365-Konfiguration gibt es ke
 
 ## 8. Modul Evergreen
 
-### 8.1 Quellen für Vorgänge
+Evergreen ist nur für die IT (seit 0.76; vorher Freigabe-Ablauf mit Betriebsrat und Geschäftsführung, dessen Daten beim Update gelöscht wurden). Je Software gibt es einen Unterabschnitt; zurzeit **Microsoft 365** (`/evergreen/m365`), weitere können folgen (`software` am Eintrag).
 
-1. **Nachrichtencenter** (Graph `admin/serviceAnnouncement/messages`), gefiltert nach Diensten und Kategorien. Felder: ID, Titel, Dienst, Kategorie, „Major Change“, Rollout-Datum, „Action required by“, Text.
-2. **Neue Einstellung** aus dem Modul M365-Konfiguration.
-3. **Manuell** angelegt (z. B. Hinweise aus Fachpresse).
+### 8.1 Quellen für Einträge
 
-Doppelte Vorgänge (gleiche Nachrichten-ID) werden verhindert. Aktualisierungen einer Meldung werden am Vorgang vermerkt.
+1. **Nachrichtencenter** (Graph `admin/serviceAnnouncement/messages`): Der Worker liest alle 6 Stunden (`MESSAGE_CENTER_INTERVAL_HOURS`) die seit dem letzten Abruf geänderten Meldungen, beim ersten Mal die der letzten 30 Tage. Aktiv, sobald der Collector eingerichtet ist; die Collector-App braucht `ServiceMessage.Read.All`. **Jede** Meldung wird ein Eintrag mit Status „neu“. Übernommen werden Titel, Dienste, Kategorie, „Major Change“, „Action required by“, Veröffentlichung, letzte Änderung und der Text ohne HTML. Ändert Microsoft eine Meldung, werden die Angaben überschrieben und im Verlauf vermerkt („Meldung aktualisiert“); der Status bleibt.
+2. **Von Hand** (`Evergreen.Editor`): Titel, optional Dienst und Beschreibung.
+3. **Erkannte Änderung** aus M365-Konfiguration (`Evergreen.Editor`, Seite „Änderungen“): Titel aus Objekt, Eigenschaft und Art, Text mit Pfad, Vorher, Nachher und Urheber. Höchstens ein Eintrag je Änderung.
 
-Stand Nachrichtencenter:
+Doppelte Einträge verhindert die Kombination aus Quelle und Kennung (z. B. `MC123456`, `aenderung:17`).
 
-- Der Worker liest alle 6 Stunden (`MESSAGE_CENTER_INTERVAL_HOURS`) die seit dem letzten Abruf geänderten Meldungen, beim ersten Mal die der letzten 30 Tage. Aktiv, sobald der Collector eingerichtet ist; die Collector-App braucht dafür `ServiceMessage.Read.All`.
-- Alle Meldungen landen im **Eingang** (`Evergreen.IT`, `Evergreen.Team`). Der Text wird ohne HTML gespeichert.
-- **Automatisch zu Vorgängen** werden Meldungen mit „Major Change“ oder mit einer Frist für Handlungsbedarf („Action required by“; sie wird als Rollout-Datum übernommen). Alle anderen lassen sich im Eingang als Vorgang übernehmen oder beiseitelegen. Wird eine Meldung nachträglich zur größeren Änderung, entsteht der Vorgang beim nächsten Abruf.
-- Ändert Microsoft eine Meldung, nachdem der Vorgang angelegt wurde, zeigt der Vorgang einen Hinweis. Titel und Zusammenfassung des Vorgangs werden dabei nicht überschrieben.
-- Ein Filter nach Diensten ist nicht umgesetzt.
+### 8.2 Status und Notizen
 
-Stand Quelle „Einstellung“: Aus einer erkannten Änderung in M365-Konfiguration legt `Evergreen.IT` mit einem Klick einen Vorgang an (Seite „Änderungen“). Das geschieht bewusst nicht automatisch, weil eine neue Richtlinie aus vielen einzelnen Einstellungen besteht. Je Änderung gibt es höchstens einen Vorgang.
+| Status | Bedeutung | Weiter |
+|---|---|---|
+| neu | angelegt, noch nicht gesichtet | erste Notiz → bearbeitet; abschließen |
+| bearbeitet | mindestens eine Notiz | weitere Notizen; abschließen |
+| abgeschlossen | nichts mehr zu tun | wieder öffnen → bearbeitet |
 
-### 8.2 Workflow
+- Notizen (1 bis 4000 Zeichen) fügen Bearbeiter beliebig oft an, auch unterschiedliche Personen. An abgeschlossenen Einträgen erst nach dem Wiederöffnen.
+- „Abschließen“ und „Wieder öffnen“ nehmen optional einen Text als Notiz mit.
+- Verlauf (`ev_notes`): Notiz, Abgeschlossen, Wieder geöffnet, Meldung aktualisiert; mit Person (bzw. „Werkbank“) und Zeitpunkt. Audit-Log: `eintrag.angelegt`, `eintrag.notiz`, `eintrag.abgeschlossen`, `eintrag.wieder_geoeffnet`, `nachrichtencenter.abgerufen`.
+- Texte (Meldung, Notizen) werden nur als Text dargestellt, nie als HTML.
 
-| # | Schritt | Zuständig | Aktionen | Weiter zu |
-|---|---|---|---|---|
-| 0 | Erkannt | automatisch | – | 1 |
-| 1 | IT-Bewertung | Evergreen.IT | mitbestimmungspflichtig / nicht pflichtig* | 2 / Abgeschlossen |
-| 2 | Fachabteilungen | Evergreen.Team (IT vertretungsweise) | Rückmeldungen liegen vor | 3 |
-| 3 | Vorlage BR | Evergreen.Team (IT vertretungsweise) | an BR übergeben | 4 |
-| 4 | Betriebsrat | Evergreen.Betriebsrat (Team/IT im Auftrag) | zustimmen / mit Auflagen* / ablehnen* | 5 / 5 / Abgelehnt |
-| 5 | Geschäftsführung | Evergreen.GF | abnehmen / zurückgeben* | 6 / 3 |
-| 6 | Umsetzung | Evergreen.IT | automatisch bei Soll = Ist | Abgeschlossen |
+### 8.3 Liste und Ansicht
 
-\* Kommentar Pflicht.
+- Nummer `EV-JJJJ-NNN`. Tabelle wie die Vorgänge im IT-Bestand: Nr., Titel (mit Kennzeichen „Größere Änderung“), Dienst, Eingang, Bearbeitet von (wer zuletzt etwas eingetragen hat), Status; Filter Offen, Neu, Bearbeitet, Abgeschlossen, Alle; Suche in Nummer, Titel, Kennung der Meldung, Diensten und Text; 50 je Seite.
+- Ansicht rechts daneben mit einstellbarer Breite (`werkbank-evergreen-breite` im Browser), schmal über die ganze Breite mit „Zur Liste“.
+- Aufgabe auf der Startseite und Benachrichtigung „Neue Einträge“ nur für `Evergreen.Editor`.
 
-Endzustände: **Abgeschlossen**, **Ohne Vorlage abgeschlossen**, **Abgelehnt**.
-
-### 8.3 Inhalte eines Vorgangs
-
-Stand: Vorgänge werden von Hand angelegt (`Evergreen.IT`, `Evergreen.Team`), haben eine Nummer `EV-JJJJ-NNN`, Liste mit den Ansichten „Offen“, „Wartet auf mich“, „Abgeschlossen“, „Alle“ und eine Detailseite mit Schrittleiste, Angaben, Entscheidung und Protokoll. Betriebsrat und Geschäftsführung sehen einen Vorgang erst, wenn er ihnen vorgelegt wurde; für andere antwortet die Werkbank mit „nicht gefunden“. Mitbestimmungs-Einschätzung und Begründung stehen als Entscheidung der IT-Bewertung im Protokoll. Geplante Umsetzung (Soll-Werte) und Anhänge folgen.
-
-ID (`EV-JJJJ-NNN`), Titel, Dienst, Quelle mit Referenz, Major Change, Rollout-Datum, Zusammenfassung (verständlich, ggf. KI-Vorschlag), Einschätzung Mitbestimmung mit Begründung, Rückmeldungen der Fachabteilungen, geplante Umsetzung (Liste von Soll-Werten), Kennzeichen „nicht steuerbar“, Protokoll, Anhänge (z. B. BR-Sitzungsprotokoll).
-
-### 8.4 Fristen
-
-- Anzeige „Rollout in X Tagen“. Rot ab 21 Tagen oder weniger.
-- Erinnerungen siehe 6.7.
-- Hinweis zur **vorläufigen Sperre**, wenn bis zum Rollout kein Beschluss vorliegt und die Funktion steuerbar ist. Die vorläufige Sperre wird als Soll-Wert „vorläufig bis Beschluss“ erfasst.
-
-### 8.5 Umsetzung und Überwachung
-
-- Für jeden Soll-Wert zeigt die Werkbank, wo bzw. mit welchem Befehl die IT ihn setzt (Anleitungstext je Einstellung).
-- Schritt 6 schließt automatisch, sobald der Collector für alle Soll-Werte Übereinstimmung meldet. Manuelles Schließen ist nicht möglich.
-- Danach gilt der Soll-Wert dauerhaft (7.6).
-- Stand:
-  - Die **geplante Umsetzung** pflegt `Evergreen.IT`, solange der Vorgang offen ist: Bezeichnung, Soll-Wert, Anleitung, Kennzeichen „vorläufig“ und optional die Verknüpfung mit einer überwachten Einstellung aus M365-Konfiguration. Betriebsrat, Geschäftsführung und Team sehen Bezeichnung, Soll-Wert und Stand, aber keine Pfade und Ist-Werte.
-  - **Mit Verknüpfung** gilt ein Eintrag als umgesetzt, sobald der Abruf aus dem Tenant den Soll-Wert meldet. **Ohne Verknüpfung** (die Werkbank überwacht die Einstellung nicht) bestätigt die IT die Umsetzung je Eintrag; Person und Zeitpunkt stehen am Eintrag und im Audit-Log. Das ist nötig, solange der Abruf nur einen Teil der Einstellungen abdeckt.
-  - Der Schritt „Umsetzung“ schließt automatisch, wenn alle Einträge umgesetzt sind: sofort nach einer Änderung am Plan und stündlich durch den Worker. Ohne Einträge schließt er nur, wenn der Vorgang als „nicht steuerbar“ gekennzeichnet ist.
-  - Beim Abschluss werden die Soll-Werte verknüpfter Einstellungen dort dauerhaft hinterlegt (Quelle „Evergreen EV-…“). Eine **vorläufige Sperre** wird sofort beim Eintragen hinterlegt (Quelle mit Zusatz „vorläufig bis Beschluss“).
-  - Hinweis auf die vorläufige Sperre: Rollout in höchstens 21 Tagen, noch kein Beschluss, steuerbar und kein vorläufiger Eintrag.
-
-### 8.6 BR-Beschluss im Auftrag
-
-- `Evergreen.Team` und `Evergreen.IT` können in Schritt 4 den Beschluss aus einem Sitzungsprotokoll erfassen.
-- Pflicht: Sitzungsdatum (nicht in der Zukunft) und Inhalt des Beschlusses. Optional: Protokoll als Anhang (folgt mit den Anhängen).
-- Protokolleintrag: „<Person> – im Auftrag des BR“.
-
-### 8.7 Reports
-
-Offene Vorgänge je Schritt (Tagesordnungsvorlage BR), Beschlüsse im Zeitraum, „Beschlossen vs. eingestellt“.
+---
 
 ---
 
@@ -628,9 +582,8 @@ Evergreen:
 
 | Tabelle | Wichtige Felder |
 |---|---|
-| `ev_items` | id, nummer, titel, dienst, quelle, quelle_ref, major, rollout, zusammenfassung, zusammenfassung_ki, mb_status, mb_begruendung, fachabteilungen, nicht_steuerbar, workflow_instance_id |
-| `ev_plan` | id, item_id, setting_id?, bezeichnung, soll_wert, anleitung, vorlaeufig |
-| `ev_br_decisions` | id, item_id, sitzung_datum, entscheidung, inhalt, erfasst_von, im_auftrag |
+| `ev_entries` | id, jahr, nummer, software, titel, quelle, quelle_ref, dienste (JSONB), kategorie, major, handeln_bis, veroeffentlicht, geaendert_ms, text, status, angelegt_von, angelegt, aktualisiert, abgeschlossen |
+| `ev_notes` | id, entry_id, art (notiz, abgeschlossen, geoeffnet, aktualisiert), text, user_id?, zeitpunkt |
 
 ---
 
@@ -660,8 +613,8 @@ Evergreen:
 | IT-Budget › Konten | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Liste der Konten; anlegen, ändern, stilllegen |
 | IT-Budget › Einstellungen | Budget.Manager | Beginn und Bezeichnung des Geschäftsjahrs, Kostenstelle; Liste der Tags anlegen, umbenennen, löschen |
 | M365 › Snapshots | Config.* | Abrufe mit Status; Vergleich zweier Abrufe (neu, geändert, entfernt mit Vorher/Nachher); Stand eines Abrufs als JSON und CSV |
-| Evergreen › Vorgänge | Evergreen.* | Liste mit Filtern (Offen, Wartet auf mich, Abgeschlossen, Alle), Detail: Frist, Schrittleiste, Zusammenfassung, Mitbestimmung, Fachabteilungen, geplante Umsetzung (Soll/Ist), Aktionen, Protokoll |
-| Reports | später, für Evergreen (8.7) | Berichtsvorlagen, Download, geplanter Versand. Noch nicht gebaut; ohne Eintrag in der Navigation |
+| Evergreen › Microsoft 365 | Evergreen.Reader, Evergreen.Editor | Tabelle mit Filtern (Offen, Neu, Bearbeitet, Abgeschlossen, Alle) und Suche, Ansicht rechts: Angaben, Text der Meldung, Notizen und Verlauf; Bearbeiter: Neuer Eintrag, Notiz anfügen, Abschließen, Wieder öffnen |
+| Reports | später | Berichtsvorlagen, Download, geplanter Versand. Noch nicht gebaut; ohne Eintrag in der Navigation |
 | Verwaltung (eigener Bereich in der Navigation) | Admin (mit Step-up) | Seiten **Allgemein** (Branding, Aufbewahrung des Audit-Logs, Vorlauf für ablaufende Zertifikate und Secrets), **Rollen** (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), **Mail & Teams** (SMTP-Server, Teams), **Verbindungen** (KI-Texte, NetBox, Abfragen ins Internet) und **Audit-Log**. Später: Module, Kommentarregeln |
 | Verwaltung › Audit-Log | Admin | Filterbare Tabelle, Export |
 | Konto | alle | Name, E-Mail, Profilbild, Rollen, Sitzung, Darstellung (hell/dunkel) und Schriftgröße im Menü (klein, normal, groß, sehr groß) und Abstände im Menü (kompakt, normal, weiträumig; mit Touch mindestens 44 px; je Browser, nur Navigation), Benachrichtigungen je Art mit Glocke, Mail, Teams und Push, Push je Gerät ein und aus mit Liste der Geräte und Testnachricht, auf iPhone/iPad Hinweis zur Installation, Version |
@@ -678,7 +631,7 @@ Evergreen:
 
 Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz.
 
-**Stand der Umsetzung (Version 0.55):** Alle Seiten der Tabelle sind nach dem Entwurf gebaut, auch das Handbuch, Push und Vergleich und Export der Snapshots. Noch nicht vorhanden: Reports für Evergreen, Kennzeichen „Mitbestimmung“ und PDF der BR-Vorlage in Evergreen.
+**Stand der Umsetzung (Version 0.55):** Alle Seiten der Tabelle sind nach dem Entwurf gebaut, auch das Handbuch, Push und Vergleich und Export der Snapshots. Noch nicht vorhanden: Reports. (Kennzeichen „Mitbestimmung“ und PDF der BR-Vorlage entfallen mit dem Umbau von Evergreen in 0.76.)
 
 ---
 
@@ -801,7 +754,7 @@ werkbank/
 │   ├── werkbank/core/          # Anmeldung, Sitzungen, Rollen, Workflow, Audit, Aufgaben, Profilbild
 │   ├── werkbank/modules/
 │   │   ├── m365_config/
-│   │   └── evergreen/          # inkl. workflow.yaml
+│   │   └── evergreen/
 │   ├── werkbank/worker/
 │   ├── migrations/
 │   └── tests/
@@ -851,7 +804,7 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 0 | Repo-Grundgerüst, CI, Doku-Gerüst | geprüftes Projekt ohne Anwendungscode | ✅ abgeschlossen |
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen |
 | 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e), dazu Baumansicht, KI-Texte und Empfehlungen aus Secure Score. dazu Benachrichtigung bei Abweichung vom Soll und (0.55) Snapshot-Vergleich und -Export |
-| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e). Offen: Anhänge (z. B. BR-Sitzungsprotokoll), Erinnerungen und Benachrichtigungen (Phase 4), KI-Vorschlag für die Zusammenfassung |
+| 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e); in 0.76 umgebaut: nur für die IT, Einträge mit Status und Notizen je Software (Kapitel 8) |
 | – | Oberfläche nach dem Entwurf, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen | ✅ umgesetzt, mit Handbuch und letzten Aktivitäten auf der Startseite |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Benachrichtigungen, Push | Vollumfang v1 | 🔄 weitgehend: Exchange, Teams, Intune und SharePoint (Konfiguration), Benachrichtigungen (Glocke, Mail, Teams, Push) umgesetzt |
 | 5 | weitere Module nach Bedarf | – | offen |

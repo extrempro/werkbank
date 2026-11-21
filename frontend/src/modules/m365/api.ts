@@ -53,8 +53,6 @@ export interface Setting {
   deviates: boolean;
   /** Anzahl noch nicht bewerteter Änderungen. */
   open_changes?: number;
-  /** Der Soll-Wert stammt aus einem Evergreen-Vorgang. */
-  from_evergreen?: boolean;
   /** Angezeigt wird ein KI-Text, den noch niemand geprüft hat. */
   ai_unreviewed?: boolean;
 }

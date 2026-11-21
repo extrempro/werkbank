@@ -56,7 +56,7 @@ test("Unbekannte Einstellung zeigt einen Hinweis und den Weg zurück", async ({ 
 });
 
 test("Ohne Rolle für die Konfiguration bleibt das Modul verschlossen", async ({ page }) => {
-  await loginAs(page, ["Evergreen.Team"], "Tom Team");
+  await loginAs(page, ["Evergreen.Reader"], "Tom Team");
   await page.goto("/m365/einstellungen/1");
   await expect(page.getByRole("heading", { name: "Seite nicht gefunden" })).toBeVisible();
   for (const path of ["overview", "settings", "changes", "snapshots"]) {

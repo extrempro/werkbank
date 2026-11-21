@@ -74,8 +74,8 @@ import { NotFoundPage } from "../pages/NotFoundPage";
 import { SEARCH_PATH, SearchPage } from "../pages/SearchPage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { StartPage } from "../pages/StartPage";
-import { InboxPage } from "../modules/evergreen/InboxPage";
-import { ItemsPage } from "../modules/evergreen/ItemsPage";
+import { parseEvergreenPath } from "../modules/evergreen/api";
+import { EntriesPage } from "../modules/evergreen/EntriesPage";
 import { ChangesPage } from "../modules/m365/ChangesPage";
 import { OverviewPage } from "../modules/m365/OverviewPage";
 import { RecommendationsPage } from "../modules/m365/RecommendationsPage";
@@ -272,8 +272,10 @@ export function Layout({ me }: LayoutProps) {
   const recommendationMatch = /^\/m365\/empfehlungen\/(\d{1,9})$/.exec(path);
   const recommendationId = recommendationMatch ? Number(recommendationMatch[1]) : null;
 
-  const itemMatch = /^\/evergreen\/(\d{1,9})$/.exec(path);
-  const itemId = itemMatch ? Number(itemMatch[1]) : null;
+  const evergreenRoute = parseEvergreenPath(path);
+  const evergreenAllowed =
+    evergreenRoute !== null &&
+    items.some((item) => item.path === `/evergreen/${evergreenRoute.software}`);
 
   const toolMatch = /^\/it-tools\/([a-z0-9-]{1,40})$/.exec(path);
   const toolId = toolMatch ? (toolMatch[1] ?? null) : null;
@@ -475,12 +477,14 @@ export function Layout({ me }: LayoutProps) {
     page = <ToolsHistoryPage />;
   } else if (toolId !== null && toolsAllowed) {
     page = <ToolPage key={toolId} id={toolId} />;
-  } else if (path === "/evergreen" && current) {
-    page = <ItemsPage />;
-  } else if (path === "/evergreen/eingang" && current) {
-    page = <InboxPage />;
-  } else if (itemId !== null && items.some((item) => item.path === "/evergreen")) {
-    page = <ItemsPage selectedId={itemId} />;
+  } else if (evergreenRoute !== null && evergreenAllowed) {
+    page = (
+      <EntriesPage
+        software={evergreenRoute.software}
+        entryId={evergreenRoute.entryId}
+        roles={me.roles}
+      />
+    );
   } else if (current) {
     page = <PlaceholderPage title={current.label} />;
   } else {

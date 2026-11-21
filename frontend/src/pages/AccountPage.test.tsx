@@ -13,7 +13,7 @@ const me: Me = {
   user_id: "11111111-1111-1111-1111-111111111111",
   display_name: "Erika Beispiel",
   email: "erika@example.com",
-  roles: ["Config.Reviewer", "Evergreen.IT"],
+  roles: ["Config.Reviewer", "Evergreen.Editor"],
   authenticated_at: "2026-11-14T08:00:00Z",
   session_expires_at: "2026-11-14T16:00:00Z",
   avatar_url: null,
@@ -27,7 +27,7 @@ describe("AccountPage", () => {
     expect(screen.getByText("erika@example.com")).toBeVisible();
     expect(screen.getByText("EB")).toBeInTheDocument();
     expect(screen.getByText("Konfiguration Prüfer")).toBeVisible();
-    expect(screen.getByText("Evergreen.IT")).toBeVisible();
+    expect(screen.getByText("Evergreen.Editor")).toBeVisible();
     expect(screen.getByText("Läuft spätestens ab")).toBeVisible();
     expect(screen.getByText("0.3.0")).toBeVisible();
     expect(screen.getByRole("link", { name: "Neuigkeiten ansehen" })).toHaveAttribute(

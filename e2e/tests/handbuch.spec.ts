@@ -4,7 +4,7 @@ import { expectNoA11yViolations, loginAs, openHandbook } from "./helpers";
 test("Handbuch zeigt passende Kapitel, führt zu Abschnitten und ist barrierefrei", async ({
   page,
 }) => {
-  await loginAs(page, ["Evergreen.Team"], "Hanna Handbuch");
+  await loginAs(page, ["Evergreen.Reader"], "Hanna Handbuch");
   await page.goto("/");
   await openHandbook(page);
   await expect(page).toHaveURL(/\/handbuch$/);
@@ -20,17 +20,17 @@ test("Handbuch zeigt passende Kapitel, führt zu Abschnitten und ist barrierefre
   ).toHaveCount(0);
   await expectNoA11yViolations(page);
 
-  await page.getByLabel("Im Handbuch suchen").fill("im Auftrag");
+  await page.getByLabel("Im Handbuch suchen").fill("Nachrichtencenter");
   await page.getByRole("button", { name: "Suchen", exact: true }).click();
   await page
     .getByRole("link", {
-      name: "Beschluss des Betriebsrats im Auftrag erfassen",
+      name: "Woher die Einträge kommen",
     })
     .click();
-  await expect(page).toHaveURL(/\/handbuch\/evergreen#im-auftrag$/);
+  await expect(page).toHaveURL(/\/handbuch\/evergreen#eintraege$/);
   await expect(
     page.getByRole("heading", {
-      name: "Beschluss des Betriebsrats im Auftrag erfassen",
+      name: "Woher die Einträge kommen",
     }),
   ).toBeInViewport();
   await expectNoA11yViolations(page);

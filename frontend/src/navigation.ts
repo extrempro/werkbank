@@ -18,7 +18,6 @@ export const NEWS_PATH = "/neuigkeiten";
 
 const ADMIN = "Werkbank.Admin";
 const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
-const EVERGREEN_EDITORS = ["Evergreen.IT", "Evergreen.Team"];
 const TOOLS_USER = "Tools.User";
 const MONITORING_READER = "Monitoring.Reader";
 const PROJECT_ROLES = ["Projekte.Reader", "Projekte.Editor"];
@@ -64,7 +63,8 @@ export const AUDIT_PATH = "/audit";
 export function toolCategoryPath(category: string): string {
   return `${TOOLS_PATH}/kategorie/${category}`;
 }
-const EVERGREEN_ROLES = ["Evergreen.IT", "Evergreen.Team", "Evergreen.Betriebsrat", "Evergreen.GF"];
+const EVERGREEN_ROLES = ["Evergreen.Reader", "Evergreen.Editor"];
+export const EVERGREEN_M365_PATH = "/evergreen/m365";
 
 function hasAny(roles: readonly string[], wanted: readonly string[]): boolean {
   return wanted.some((role) => roles.includes(role));
@@ -149,17 +149,15 @@ export function areasFor(roles: readonly string[]): NavArea[] {
     });
   }
   if (hasAny(roles, EVERGREEN_ROLES)) {
-    const items: NavItem[] = [{ path: "/evergreen", label: "Vorgänge", icon: "vorgaenge" }];
-    if (hasAny(roles, EVERGREEN_EDITORS)) {
-      items.push({ path: "/evergreen/eingang", label: "Eingang", icon: "eingang" });
-    }
+    // Je Software ein Unterabschnitt; weitere kommen später dazu.
+    const items: NavItem[] = [{ path: EVERGREEN_M365_PATH, label: "Microsoft 365", icon: "m365" }];
     areas.push({
       id: "evergreen",
       label: "Evergreen",
       short: "Evergreen",
       icon: "evergreen",
       section: "anwendungen",
-      home: "/evergreen",
+      home: EVERGREEN_M365_PATH,
       // Ohne Überschrift: Der Bereich heißt schon so.
       groups: [{ title: null, items }],
     });

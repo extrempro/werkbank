@@ -4,6 +4,37 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.76.0] – 2026-11-21
+
+### Evergreen
+
+- **Nur noch für die IT:** Der Freigabe-Ablauf mit Fachabteilungen, Betriebsrat und Geschäftsführung, die geplante Umsetzung (Soll-Werte mit Prüfung) und der Eingang entfallen. Rollen jetzt `Evergreen.Reader` und `Evergreen.Editor` statt `Evergreen.IT`, `.Team`, `.Betriebsrat` und `.GF` (**in Entra anlegen und zuweisen**, siehe `docs/entra-setup.md`)
+- **Unterabschnitt je Software:** zunächst „Microsoft 365“ (`/evergreen/m365`); weitere Software lässt sich später ergänzen (`software` am Eintrag). `/evergreen` führt zu Microsoft 365
+- **Einträge statt Eingang und Vorgänge:** Jede Meldung aus dem Nachrichtencenter wird ein Eintrag mit Status „neu“; dazu Einträge von Hand und aus erkannten Änderungen der M365-Konfiguration. Aktualisiert Microsoft eine Meldung, werden die Angaben übernommen und im Verlauf vermerkt; der Status bleibt
+- **Status neu → bearbeitet → abgeschlossen:** Bearbeiter fügen Notizen an (mehrfach, auch verschiedene Personen); die erste Notiz setzt „bearbeitet“. Abschließen und wieder öffnen jeweils mit optionaler Notiz
+- **Liste und Ansicht** wie die Vorgänge im IT-Bestand: Tabelle mit Nr., Titel, Dienst, Eingang, Bearbeitet von, Status; Filter, Suche (auch nach `MC…`), Ansicht rechts mit einstellbarer Breite
+- **Aufgaben und Benachrichtigungen nur für Bearbeiter:** Aufgabe „Microsoft 365: neue Einträge sichten“; eine Benachrichtigung „Neue Einträge“ je Software mit Anzahl (statt einer je Meldung). Leser haben keine Aufgaben aus Evergreen
+- Startseite: Kachel zeigt offene und neue Einträge. M365-Konfiguration: „Evergreen-Eintrag anlegen“ bei einer Änderung (nur `Evergreen.Editor`); der Hinweis „Geregelt durch Evergreen-Vorgang“ entfällt, gesetzte Soll-Werte bleiben
+
+### Daten (Migration 0052)
+
+- **Löscht alle bisherigen Evergreen-Daten** (Vorgänge, Meldungen, geplante Umsetzung, Protokoll des Ablaufs), wie beschlossen. Vor dem Update ein Backup ziehen. Der nächste Abruf holt die Meldungen der letzten 30 Tage neu
+- Neue Tabellen `ev_entries` und `ev_notes`. Entfernt werden auch Benachrichtigungen, Stummschaltungen und Kanäle der alten Arten, offene Aufträge `evergreen.umsetzung_pruefen` und angeheftete oder besuchte Seiten unter `/evergreen`
+- Die Ablauf-Engine (`core/workflow.py`) bleibt im Kern, wird aber von keinem Bereich mehr genutzt; ihre Tests laufen mit einem Beispiel-Ablauf
+
+### Technik
+
+- Trenner zwischen Tabelle und Ansicht als gemeinsame Komponente (`components/SplitHandle.tsx`), genutzt von IT-Bestand › Vorgänge und Evergreen
+
+### Repository
+
+- `CLAUDE.md`: beim Versionssprung `backend/uv.lock` neu erzeugen
+
+### Tests und Dokumentation
+
+- Backend-Tests für Einträge, Statuswechsel, Rechte, Nachrichtencenter, Aufgaben, Benachrichtigungen und Suche neu; Frontend-Tests für die Seite; E2E `evergreen.spec.ts` neu, übrige E2E auf die neuen Rollen umgestellt
+- `docs/spec.md` (Kapitel 8 neu, Rollen, Benachrichtigungen, Datenmodell), `entra-setup.md`, `datenschutz.md`, `security/asvs-l2.md`, `a11y-wcag22.md`, `design.md`, `inbetriebnahme.md` und Handbuch angepasst
+
 ## [0.75.0] – 2026-11-21
 
 ### IT-Bestand

@@ -185,7 +185,7 @@ export function ChangeDetail({
 
         {canCreateItem && (
           <button type="button" className="button button-secondary" onClick={onCreateItem}>
-            Evergreen-Vorgang anlegen
+            Evergreen-Eintrag anlegen
           </button>
         )}
       </div>

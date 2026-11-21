@@ -32,13 +32,12 @@ describe("Handbuch", () => {
   });
 
   it("zeigt allen die allgemeinen Kapitel und sonst nur die der eigenen Rollen", () => {
-    const br = chaptersFor(["Evergreen.Betriebsrat"]).map((chapter) => chapter.id);
-    expect(br).toEqual(["erste-schritte", "evergreen", "hilfe"]);
-    const evergreen = chaptersFor(["Evergreen.Betriebsrat"]).find((c) => c.id === "evergreen");
+    const reader = chaptersFor(["Evergreen.Reader"]).map((chapter) => chapter.id);
+    expect(reader).toEqual(["erste-schritte", "evergreen", "hilfe"]);
+    const evergreen = chaptersFor(["Evergreen.Reader"]).find((c) => c.id === "evergreen");
     const sections = evergreen?.sections.map((section) => section.id) ?? [];
-    expect(sections).toContain("entscheiden");
-    expect(sections).not.toContain("umsetzung");
-    expect(sections).not.toContain("eingang");
+    expect(sections).toContain("lesen");
+    expect(sections).not.toContain("notizen");
   });
 
   it("zeigt Admins alles", () => {
@@ -52,7 +51,7 @@ describe("Handbuch", () => {
   it("sucht nur in sichtbaren Abschnitten, Titel zuerst", () => {
     const hits = searchHandbook("glocke", ["Budget.Reader"]);
     expect(hits[0]?.section.id).toBe("benachrichtigungen");
-    expect(searchHandbook("Kündigungsfrist", ["Evergreen.GF"])).toEqual([]);
+    expect(searchHandbook("Kündigungsfrist", ["Evergreen.Reader"])).toEqual([]);
     expect(
       searchHandbook("rechnungen buchen", ["Budget.Manager"]).map((hit) => hit.section.id),
     ).toContain("buchen");

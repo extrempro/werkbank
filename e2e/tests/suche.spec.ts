@@ -3,10 +3,13 @@ import { expectNoA11yViolations, loginAs, openPage } from "./helpers";
 
 const ORIGIN = "http://localhost:8080";
 
-test("Suche findet Vorgänge und beachtet, wer sie sehen darf", async ({ page, browser }) => {
+test("Suche findet Evergreen-Einträge und beachtet, wer sie sehen darf", async ({
+  page,
+  browser,
+}) => {
   const word = `Suchwort${Date.now()}`;
-  await loginAs(page, ["Evergreen.IT"], "Ina IT");
-  const created = await page.request.post("/api/evergreen/items", {
+  await loginAs(page, ["Evergreen.Editor"], "Ina IT");
+  const created = await page.request.post("/api/evergreen/entries", {
     data: { title: `${word} in Teams` },
     headers: { Origin: ORIGIN },
   });
@@ -24,12 +27,12 @@ test("Suche findet Vorgänge und beachtet, wer sie sehen darf", async ({ page, b
   await expect(page.getByText("1 Treffer")).toBeVisible();
   await expectNoA11yViolations(page);
   await hit.click();
-  await expect(page).toHaveURL(new RegExp(`/evergreen/${id}$`));
+  await expect(page).toHaveURL(new RegExp(`/evergreen/m365/${id}$`));
 
-  // Der Betriebsrat sieht den Vorgang noch nicht, also findet ihn die Suche auch nicht.
+  // Ohne Evergreen-Rolle findet die Suche den Eintrag nicht.
   const context = await browser.newContext();
   const other = await context.newPage();
-  await loginAs(other, ["Evergreen.Betriebsrat"], "Bea BR");
+  await loginAs(other, ["Config.Reader"], "Lea Leser");
   await other.goto(`/suche?q=${word}`);
   await expect(other.getByText(/Keine Treffer für/)).toBeVisible();
   await context.close();
