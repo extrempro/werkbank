@@ -1,6 +1,10 @@
 # Sicherheitsprüfungen bei jedem Pull Request und wöchentlich (Montag 05:00 UTC).
 # Deckt den regelmäßigen Prüfauftrag ab: XSS (Semgrep), Secrets (gitleaks),
 # Abhängigkeiten und Container (Trivy). Service-Worker-Updates prüft der E2E-Job.
+#
+# Trivy ist auf Version und Digest festgelegt: Im März 2026 wurden unter bekannten Tags
+# manipulierte Trivy-Images verteilt (CVE-2026-33634). Update nur nach Prüfung des neuen
+# Releases (mindestens 7 Tage alt), Tag und Digest gemeinsam ändern.
 name: Sicherheit
 
 on:
@@ -14,6 +18,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.76.1
 
 jobs:
   semgrep:
@@ -53,9 +60,29 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Trivy Dateisystem-Scan
-        # TODO: Image-Version festlegen (Tag statt latest)
         run: >
-          docker run --rm -v "$PWD:/repo" aquasec/trivy:latest
+          docker run --rm -v "$PWD:/repo" "$TRIVY_IMAGE"
           fs --scanners vuln,misconfig,secret --severity HIGH,CRITICAL
           --secret-config /repo/trivy-secret.yaml
+          --ignorefile /repo/.trivyignore
           --exit-code 1 /repo
+
+  trivy-image:
+    name: Trivy (Docker-Image)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Image bauen
+        run: docker build -f backend/Dockerfile -t werkbank:scan .
+      - name: Image als Datei
+        # Trivy liest das Image aus der Datei und braucht so keinen Zugriff auf den Docker-Socket.
+        run: docker save werkbank:scan -o werkbank-image.tar
+      - name: Trivy Image-Scan
+        # Bricht nur bei HIGH und CRITICAL ab, für die es schon ein Update gibt. Begründete
+        # Ausnahmen stehen in .trivyignore.
+        run: >
+          docker run --rm -v "$PWD:/repo" "$TRIVY_IMAGE"
+          image --input /repo/werkbank-image.tar
+          --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed
+          --ignorefile /repo/.trivyignore
+          --exit-code 1
