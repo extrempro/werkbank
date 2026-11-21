@@ -216,16 +216,9 @@ def parse_sheet(cells: Sheet) -> ParsedFile:
             account_number=filled[0] if len(filled) == 1 else None,
             yearly=bool(yearly_text) and (yearly_text in YES or yearly_text.isdigit()),
         )
-        if parsed.invoice_date is None:
-            parsed.hints.append("Kein Rechnungsdatum erkannt.")
+        # Rechnungsnummer und -datum stehen nur noch in der Notiz des Postens (keine Rechnung).
         if not firm:
-            parsed.hints.append("Keine Firma angegeben.")
-        if not number:
-            parsed.hints.append(
-                "Ohne Rechnungsnummer: Übernommen wird die interne Nummer."
-                if internal
-                else "Weder Rechnungsnummer noch interne Nummer angegeben."
-            )
+            parsed.hints.append("Keine Firma angegeben; bitte den Partner wählen.")
         if len(filled) > 1:
             parsed.hints.append("Der Betrag steht bei mehreren Konten; bitte das Konto wählen.")
         elif not filled:

@@ -39,10 +39,6 @@ test("Budgetverwalter importiert eine Excel-Datei Zeile für Zeile", async ({
     page.getByText(/Übernehmen legt den Budgetposten/),
   ).toBeVisible();
 
-  // Eigene Rechnungsnummer je Lauf, sonst erkennt der Import eine doppelte Rechnung.
-  await page
-    .getByLabel("Rechnungsnummer", { exact: true })
-    .fill(`E2E-${testInfo.project.name}-${Date.now()}`);
   await page.getByRole("button", { name: "Übernehmen und weiter" }).click();
   await expect(page.getByRole("heading", { name: /^Zeile 6:/ })).toBeVisible();
   await expect(

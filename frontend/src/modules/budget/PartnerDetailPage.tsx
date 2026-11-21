@@ -70,12 +70,16 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
   };
 
   const partner = detail?.partner;
-  // Budgetposten, auf denen Verträge oder Rechnungen dieser Firma liegen
-  const items = new Map<string, { contracts: number; invoices: number }>();
+  // Budgetposten der Firma: als Partner des Postens oder mit ihren Verträgen und Rechnungen
+  const items = new Map<string, { own: boolean; contracts: number; invoices: number }>();
+  for (const item of detail?.items ?? []) {
+    const key = `${item.account_number} ${item.account_name} · ${item.name}`;
+    items.set(key, { own: true, contracts: 0, invoices: 0 });
+  }
   for (const entry of detail?.contracts ?? []) {
     for (const item of entry.items) {
       const key = `${item.account_number} ${item.account_name} · ${item.name}`;
-      const row = items.get(key) ?? { contracts: 0, invoices: 0 };
+      const row = items.get(key) ?? { own: false, contracts: 0, invoices: 0 };
       items.set(key, { ...row, contracts: row.contracts + 1 });
     }
   }
@@ -85,7 +89,7 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
       entry.lines.map((line) => `${line.account_number} ${line.account_name} · ${line.item_name}`),
     );
     for (const key of keys) {
-      const row = items.get(key) ?? { contracts: 0, invoices: 0 };
+      const row = items.get(key) ?? { own: false, contracts: 0, invoices: 0 };
       items.set(key, { ...row, invoices: row.invoices + 1 });
     }
   }
@@ -155,6 +159,7 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
                   <li key={name}>
                     <span>{name}</span>
                     <span className="budget-muted">
+                      {count.own ? "Partner des Postens · " : ""}
                       {count.contracts} {count.contracts === 1 ? "Vertrag" : "Verträge"},{" "}
                       {count.invoices} {count.invoices === 1 ? "Rechnung" : "Rechnungen"}
                     </span>

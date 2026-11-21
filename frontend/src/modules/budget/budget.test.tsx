@@ -76,6 +76,8 @@ const office: Item = {
   account_name: "Softwarewartung",
   kind: "laufend",
   name: "Office-Lizenzen",
+  partner_id: 1,
+  partner_name: "Beispiel Software GmbH",
   amount_cents: 1_190_000,
   start_year: 2025,
   start_year_name: "2025/26",
@@ -244,7 +246,7 @@ describe("Budgetposten", () => {
     );
   });
 
-  it("zeigt die Abweichung von der Erwartung mit Vorzeichen", async () => {
+  it("zeigt Partner und Ist, ohne Prognose und Abweichung", async () => {
     const row = {
       previous_cents: null,
       contracts: 0,
@@ -276,12 +278,16 @@ describe("Budgetposten", () => {
     });
     render(<ItemsPage roles={["Budget.Reader"]} />);
     const table = within(await screen.findByRole("region", { name: "Budgetposten 2026/27" }));
-    expect(plain(table.getByRole("row", { name: /Office-Lizenzen/ }).textContent)).toContain(
-      "+ 1.000,00 €",
-    );
+    expect(table.queryByRole("columnheader", { name: "Prognose" })).toBeNull();
+    expect(table.queryByRole("columnheader", { name: "Abweichung" })).toBeNull();
+    const lizenzen = plain(table.getByRole("row", { name: /Office-Lizenzen/ }).textContent);
+    expect(lizenzen).toContain("Beispiel Software GmbH");
+    expect(lizenzen).toContain("12.900,00 €");
+    expect(lizenzen).not.toContain("+ 1.000,00 €");
     const closed = table.getByRole("row", { name: /Server/ });
     expect(closed).toHaveTextContent("abgeschlossen");
-    expect(plain(closed.textContent)).toContain("− 10.000,50 €");
+    // Ältere Posten ohne Partner: Hinweis
+    expect(closed).toHaveTextContent("Partner fehlt");
   });
 
   it("hakt Posten ab und nimmt das Abhaken zurück", async () => {
@@ -369,6 +375,7 @@ describe("Budgetposten", () => {
         { id: 3, name: "WLAN-Erneuerung", status: "aktiv" },
         { id: 4, name: "Altes Projekt", status: "abgeschlossen" },
       ],
+      "GET /api/budget/partners": [partner, { ...distributor, active: false }],
     });
     render(<ItemsPage roles={["Budget.Editor"]} />);
     await screen.findByRole("region", { name: "Budgetposten 2026/27" });
@@ -399,6 +406,15 @@ describe("Budgetposten", () => {
         .map((option) => option.textContent),
     ).toEqual(["Bitte wählen", "2027/28"]);
     fireEvent.change(screen.getByLabelText(/^Bis Wirtschaftsjahr/), { target: { value: "2027" } });
+    // Der Partner ist Pflicht; stillgelegte stehen nicht zur Wahl.
+    fireEvent.click(screen.getByRole("button", { name: "Posten speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte einen Partner wählen");
+    expect(
+      within(screen.getByLabelText("Partner"))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Bitte wählen", "Beispiel Software GmbH"]);
+    fireEvent.change(screen.getByLabelText("Partner"), { target: { value: "1" } });
     // Den Vertrag wählst du am Posten.
     fireEvent.change(screen.getByLabelText(/^Vertrag/), { target: { value: "1" } });
     // Abgeschlossene Projekte stehen bei einem neuen Posten nicht zur Wahl.
@@ -412,6 +428,7 @@ describe("Budgetposten", () => {
     expect(await screen.findByText("Zeiterfassung Lizenz ist gespeichert.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       account_id: 1,
+      partner_id: 1,
       name: "Zeiterfassung Lizenz",
       amount_cents: 500_000,
       start_year: 2026,
@@ -429,10 +446,14 @@ describe("Budgetposten", () => {
     expect(screen.getByLabelText(/^Erwartete Kosten/)).toHaveValue("50000,50");
     fireEvent.click(screen.getByLabelText("Budgetposten ist aktiv"));
     fireEvent.change(screen.getByLabelText("Laufzeit"), { target: { value: "offen" } });
+    // Älterer Posten ohne Partner: beim Speichern Pflicht
+    expect(screen.getByLabelText("Partner")).toHaveValue("");
+    fireEvent.change(screen.getByLabelText("Partner"), { target: { value: "1" } });
     fireEvent.click(screen.getByRole("button", { name: "Änderungen speichern" }));
     await vi.waitFor(() =>
       expect(calls.find((call) => call.method === "PUT")?.body).toMatchObject({
         account_id: 2,
+        partner_id: 1,
         name: "Server",
         start_year: 2026,
         end_year: null,
@@ -1456,6 +1477,7 @@ describe("Tags", () => {
         { id: 3, tag: "Projekt", items: 2 },
       ],
       "PUT /api/budget/items/11": office,
+      "GET /api/budget/partners": [partner],
     });
     render(<ItemsPage roles={["Budget.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Office-Lizenzen bearbeiten" }));

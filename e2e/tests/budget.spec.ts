@@ -25,6 +25,14 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await expect(page.getByText(`Der Tag „Tag ${number}“ ist angelegt.`)).toBeVisible();
   await expectNoA11yViolations(page);
 
+  await page.goto("/budget/partner");
+  await expect(page.getByRole("heading", { level: 1, name: "Partner" })).toBeVisible();
+  await page.getByRole("button", { name: "Partner anlegen" }).click();
+  await page.getByLabel("Name der Firma", { exact: true }).fill(`Beispiel Partner ${number}`);
+  await page.getByRole("button", { name: "Partner speichern" }).click();
+  await expect(page.getByText(`Beispiel Partner ${number} ist gespeichert.`)).toBeVisible();
+  await expectNoA11yViolations(page);
+
   await page.goto("/budget/posten");
   await expect(page.getByRole("heading", { level: 1, name: "Budgetposten" })).toBeVisible();
   await page.getByRole("button", { name: "Posten hinzufügen" }).click();
@@ -32,6 +40,10 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .getByRole("combobox", { name: /^Konto/ })
     .selectOption({ label: `${number} Testkonto Wartung` });
   await page.getByLabel("Bezeichnung", { exact: true }).fill(`Posten ${number}`);
+  // Der Partner ist am Budgetposten Pflicht.
+  await page
+    .getByRole("combobox", { name: /^Partner/ })
+    .selectOption({ label: `Beispiel Partner ${number}` });
   await page.getByRole("textbox", { name: /^Erwartete Kosten/ }).fill("1.500,00");
   // Tags stehen sichtbar im Formular.
   await page
@@ -52,14 +64,6 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   ).toBeVisible();
   await page.getByRole("button", { name: `Posten ${number} wieder öffnen` }).click();
   await expect(page.getByText(`Posten ${number} ist wieder offen.`)).toBeVisible();
-
-  await page.goto("/budget/partner");
-  await expect(page.getByRole("heading", { level: 1, name: "Partner" })).toBeVisible();
-  await page.getByRole("button", { name: "Partner anlegen" }).click();
-  await page.getByLabel("Name der Firma", { exact: true }).fill(`Beispiel Partner ${number}`);
-  await page.getByRole("button", { name: "Partner speichern" }).click();
-  await expect(page.getByText(`Beispiel Partner ${number} ist gespeichert.`)).toBeVisible();
-  await expectNoA11yViolations(page);
 
   await page.goto("/budget/vertraege");
   await expect(page.getByRole("heading", { level: 1, name: "Verträge" })).toBeVisible();

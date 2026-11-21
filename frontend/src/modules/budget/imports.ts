@@ -86,15 +86,14 @@ export interface ImportDetail extends ImportSummary {
   rows_detail: ImportRow[];
 }
 
+/** Übernehmen einer Zeile: eigener Budgetposten mit Partner, ohne Rechnung. */
 export interface TakeUpdate {
-  invoice_date: string;
-  number: string;
-  internal_number: string;
+  /** Wird der Name des Budgetpostens. */
   description: string;
   /** Konto des neuen Budgetpostens (je Zeile ein eigener Posten). */
   account_id: number;
+  /** Erwartete Kosten brutto. */
   gross_cents: number;
-  tax_rate_bp: number;
   yearly: boolean;
   partner_id?: number;
   new_partner?: string;

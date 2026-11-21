@@ -17,6 +17,7 @@ import {
   fetchAccounts,
   fetchBudgetOverview,
   fetchContracts,
+  fetchPartners,
   fetchTags,
   formatEuro,
   hasTag,
@@ -36,6 +37,7 @@ import {
   type ItemStatus,
   type ItemUpdate,
   type Overview,
+  type Partner,
   type TagCount,
 } from "./api";
 import { DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
@@ -43,20 +45,6 @@ import { fetchProjectChoices, projectPath, type ProjectChoice } from "../project
 
 function amount(cents: number | null): string {
   return cents === null ? "–" : formatEuro(cents);
-}
-
-/** Abweichung der Prognose von der Erwartung mit Vorzeichen; mehr ausgegeben ist positiv. */
-function deviation(expected: number | null, forecast: number): string {
-  const delta = forecast - (expected ?? 0);
-  if (delta === 0) {
-    return formatEuro(0);
-  }
-  return `${delta > 0 ? "+" : "−"} ${formatEuro(Math.abs(delta))}`;
-}
-
-function deviationClass(expected: number | null, forecast: number): string {
-  const delta = forecast - (expected ?? 0);
-  return delta > 0 ? "betrag budget-bad" : delta < 0 ? "betrag budget-ok" : "betrag";
 }
 
 const STATUS_PILLS: Record<ItemStatus, string> = {
@@ -85,6 +73,8 @@ interface FormProps {
   contracts: Contract[];
   /** IT-Projekte zur Auswahl; ein Posten gehört höchstens zu einem. */
   projects: ProjectChoice[];
+  /** Partner zur Auswahl (Pflicht am Posten). */
+  partners: Partner[];
   /** Die Liste der Tags, aus der der Posten wählt. */
   knownTags: TagCount[];
   /** Darf die Liste der Tags pflegen (Budgetverwalter): zeigt den Weg dorthin. */
@@ -103,6 +93,7 @@ function ItemForm({
   accounts,
   contracts,
   projects,
+  partners,
   knownTags,
   canManageTags,
   years,
@@ -113,6 +104,9 @@ function ItemForm({
 }: FormProps) {
   const reveal = useRevealOnMount<HTMLElement>();
   const [accountId, setAccountId] = useState(item ? String(item.account_id) : "");
+  const [partnerId, setPartnerId] = useState(item?.partner_id ? String(item.partner_id) : "");
+  // Stillgelegte Partner nur, wenn der Posten sie schon hat.
+  const partnerChoices = partners.filter((entry) => entry.active || entry.id === item?.partner_id);
   const [name, setName] = useState(item?.name ?? "");
   const [cost, setCost] = useState(item ? euroInput(item.amount_cents) : "");
   const [start, setStart] = useState(String(item?.start_year ?? defaultYear));
@@ -184,6 +178,8 @@ function ItemForm({
       problem = `Bitte wählen, bis zu welchem ${yearLabel} der Posten läuft.`;
     } else if (tags.length > TAGS_MAX) {
       problem = `Es sind höchstens ${TAGS_MAX} Tags je Budgetposten möglich.`;
+    } else if (!partnerId) {
+      problem = "Bitte einen Partner wählen.";
     }
     if (problem !== null || costCents === null) {
       setError(problem);
@@ -191,6 +187,7 @@ function ItemForm({
     }
     const update: ItemUpdate = {
       account_id: Number(accountId),
+      partner_id: Number(partnerId),
       name: name.trim(),
       amount_cents: costCents,
       start_year: Number(start),
@@ -244,6 +241,17 @@ function ItemForm({
                 maxLength={160}
                 onChange={(event) => setName(event.target.value)}
               />
+            </label>
+            <label>
+              Partner
+              <select value={partnerId} onChange={(event) => setPartnerId(event.target.value)}>
+                <option value="">Bitte wählen</option>
+                {partnerChoices.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               Vertrag (freiwillig)
@@ -430,7 +438,7 @@ function ItemForm({
   );
 }
 
-/** IT-Budget › Budgetposten: Vorhaben mit erwarteten Kosten, Status, Ist und Prognose. */
+/** IT-Budget › Budgetposten: Vorhaben mit Partner, erwarteten Kosten, Status und Ist. */
 export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
   const canOpenProjects = roles.includes("Projekte.Reader") || roles.includes("Projekte.Editor");
@@ -440,6 +448,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const [knownTags, setKnownTags] = useState<TagCount[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [projects, setProjects] = useState<ProjectChoice[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [projectFilter, setProjectFilter] = useState("");
   // Suchtext aus der Adresse (Treffer der Suche oben führen mit dem Namen des Postens hierher).
   // Eigene Eingabe gilt, bis ein neuer Suchtext über die Adresse kommt.
@@ -472,14 +481,25 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
       .catch((): Contract[] => []);
     // Ebenso die IT-Projekte für Auswahl und Filter.
     const projectList = fetchProjectChoices().catch((): ProjectChoice[] => []);
-    Promise.all([fetchBudgetOverview(year), fetchAccounts(), tagList, contractList, projectList])
-      .then(([result, list, tags, contractEntries, projectEntries]) => {
+    const partnerList = fetchPartners()
+      .then((list) => [...list].sort((left, right) => left.name.localeCompare(right.name, "de")))
+      .catch((): Partner[] => []);
+    Promise.all([
+      fetchBudgetOverview(year),
+      fetchAccounts(),
+      tagList,
+      contractList,
+      projectList,
+      partnerList,
+    ])
+      .then(([result, list, tags, contractEntries, projectEntries, partnerEntries]) => {
         if (active) {
           setOverview(result);
           setAccounts(list);
           setKnownTags(tags);
           setContracts(contractEntries);
           setProjects(projectEntries);
+          setPartners(partnerEntries);
           setFailed(false);
         }
       })
@@ -508,7 +528,6 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const sums = {
     expected: total((row) => row.expected_cents),
     actual: total((row) => row.actual_cents),
-    forecast: total((row) => row.forecast_cents),
     previous: total((row) => row.previous_cents),
   };
   const yearChoices = [...(overview?.years ?? [])].sort((left, right) => left.year - right.year);
@@ -542,7 +561,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
       );
   };
 
-  const columns = canEdit ? 9 : 8;
+  const columns = canEdit ? 7 : 6;
 
   return (
     <div className="page page-wide budget-page">
@@ -552,8 +571,8 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           <h1>Budgetposten</h1>
           <p className="page-sub">
             Jeder Posten ist ein Vorhaben mit erwarteten Kosten und Laufzeit. Er bleibt offen, bis
-            du ihn mit „Abschließen“ abhakst oder eine Rechnung ihn abschließt. Prognose:
-            abgeschlossen das Ist, sonst das Höhere aus Erwartung und Ist. Alle Beträge sind brutto.
+            du ihn mit „Abschließen“ abhakst oder eine Rechnung ihn abschließt. Alle Beträge sind
+            brutto.
           </p>
         </div>
         {overview && (
@@ -603,6 +622,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
           accounts={accounts}
           contracts={contracts}
           projects={projects}
+          partners={partners}
           knownTags={knownTags}
           canManageTags={roles.includes(BUDGET_MANAGER_ROLE)}
           years={yearChoices}
@@ -635,7 +655,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
             <input
               type="search"
               value={search}
-              placeholder="Name, Konto oder Tag"
+              placeholder="Name, Konto, Partner oder Tag"
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
@@ -733,12 +753,6 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                   Ist
                 </th>
                 <th scope="col" className="betrag">
-                  Prognose
-                </th>
-                <th scope="col" className="betrag">
-                  Abweichung
-                </th>
-                <th scope="col" className="betrag">
                   Vorjahr
                 </th>
                 {canEdit && <th scope="col">Aktion</th>}
@@ -757,9 +771,13 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                       <span className="pill pill-neutral budget-pill">stillgelegt</span>
                     )}
                     <span className="small budget-muted tenant-part">
+                      {row.item.partner_name ? `${row.item.partner_name} · ` : ""}
                       {runtimeText(row.item)}
                       {row.item.contract_title ? ` · Vertrag: ${row.item.contract_title}` : ""}
                     </span>
+                    {!row.item.partner_name && (
+                      <span className="pill pill-todo budget-pill">Partner fehlt</span>
+                    )}
                     {row.item.project_id && row.item.project_name && (
                       <span className="small budget-muted tenant-part">
                         Projekt:{" "}
@@ -794,10 +812,6 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                   </td>
                   <td className="betrag">{amount(row.expected_cents)}</td>
                   <td className="betrag">{formatEuro(row.actual_cents)}</td>
-                  <td className="betrag">{formatEuro(row.forecast_cents)}</td>
-                  <td className={deviationClass(row.expected_cents, row.forecast_cents)}>
-                    {deviation(row.expected_cents, row.forecast_cents)}
-                  </td>
                   <td className="betrag budget-muted">{amount(row.previous_cents)}</td>
                   {canEdit && (
                     <td>
@@ -853,11 +867,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                 </th>
                 <td className="betrag">{formatEuro(sums.expected)}</td>
                 <td className="betrag">{formatEuro(sums.actual)}</td>
-                <td className="betrag">{formatEuro(sums.forecast)}</td>
-                <td className={deviationClass(sums.expected, sums.forecast)}>
-                  {deviation(sums.expected, sums.forecast)}
-                </td>
-                <td className="betrag budget-muted" colSpan={columns - 7}>
+                <td className="betrag budget-muted" colSpan={columns - 5}>
                   {formatEuro(sums.previous)}
                 </td>
               </tr>

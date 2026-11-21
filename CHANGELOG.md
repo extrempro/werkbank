@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.80.0] – 2026-11-21
+
+### IT-Budget
+
+- **Partner am Budgetposten (Pflicht):** neues Feld beim Anlegen und Ändern (`partner_id`, Migration `0055`). Ältere Posten ohne Partner zeigen „Partner fehlt“ und brauchen ihn beim nächsten Speichern. Die Liste zeigt den Partner, die Suche findet ihn. Partner zusammenlegen nimmt Posten mit, ein Partner mit Posten lässt sich nicht löschen, die Partnerseite zeigt seine Posten. Rechnungen behalten ihren eigenen Rechnungssteller
+- **Budgetposten:** Spalten „Prognose“ und „Abweichung“ entfernt (Übersicht unverändert)
+- **Import aus Excel legt keine Rechnung mehr an:** „Übernehmen“ legt nur den Budgetposten mit dem gewählten Partner an; Rechnungsnummer, interne Nummer und Datum aus der Datei stehen in der Notiz des Postens. Rechnungsfelder und Steuersatz entfallen in der Zeile und beim Start, ebenso die Hinweise zu fehlender Rechnungsnummer und fehlendem Datum. Die Zeile merkt sich ihren Posten (`budget_import_rows.item_id`, für frühere Übernahmen aus der Rechnung nachgetragen). API `take`: nur noch `description`, `account_id`, `gross_cents`, `yearly`, Partner
+
 ## [0.79.0] – 2026-11-21
 
 ### IT-Budget

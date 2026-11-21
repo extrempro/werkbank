@@ -193,10 +193,15 @@ class ItemOut(BaseModel):
     # IT-Projekt, zu dem der Posten gehört (höchstens eins)
     project_id: int | None = None
     project_name: str | None = None
+    # Partner (Firma) des Postens; ältere Posten haben noch keinen
+    partner_id: int | None = None
+    partner_name: str | None = None
 
 
 class ItemIn(BaseModel):
     account_id: int = Field(ge=1)
+    # Partner (Firma) des Postens, Pflicht
+    partner_id: int = Field(ge=1)
     name: str = Field(min_length=1, max_length=160)
     amount_cents: int = Field(default=0, ge=0, le=AMOUNT_MAX)
     # Erstes Geschäftsjahr. None: beim Anlegen das laufende, beim Ändern bleibt es.
@@ -477,6 +482,8 @@ def item_out(
             if projects is not None and row.project_id is not None
             else None
         ),
+        partner_id=row.partner_id,
+        partner_name=row.partner.name if row.partner is not None else None,
     )
 
 
@@ -661,6 +668,10 @@ def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Das Konto gibt es nicht."
         )
+    if db.get(BudgetPartner, body.partner_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Den Partner gibt es nicht."
+        )
     if body.contract_id is not None and db.get(BudgetContract, body.contract_id) is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Den Vertrag gibt es nicht."
@@ -769,6 +780,7 @@ def _one_item(db: DbDep, row: BudgetItem) -> ItemOut:
 def _item_details(row: BudgetItem) -> dict[str, object]:
     return {
         "account_id": row.account_id,
+        "partner_id": row.partner_id,
         "name": row.name,
         "amount_cents": row.amount_cents,
         "start_year": row.start_year,
@@ -790,6 +802,9 @@ def _apply_item(db: DbDep, row: BudgetItem, body: ItemIn) -> None:
             detail="Die Laufzeit endet vor ihrem Beginn.",
         )
     row.account_id = body.account_id
+    # Auch die Beziehung setzen, damit der Name gleich in der Antwort steht
+    row.partner_id = body.partner_id
+    row.partner = db.get(BudgetPartner, body.partner_id)
     row.name = body.name
     row.amount_cents = body.amount_cents
     row.end_year = body.end_year
@@ -1851,6 +1866,8 @@ class PartnerDetailOut(BaseModel):
     # Rechnungen der Firma aus allen Jahren, die neueste zuerst (höchstens 500)
     invoices: list[InvoiceOut]
     invoice_total: int
+    # Budgetposten, deren Partner die Firma ist
+    items: list[ItemOut] = Field(default_factory=list)
 
 
 class MergeIn(BaseModel):
@@ -1893,11 +1910,18 @@ def partner_detail(partner_id: PartnerId, user: Reader, db: DbDep) -> PartnerDet
         ).all()
     )
     total = db.scalar(select(func.count()).select_from(BudgetInvoice).where(where)) or 0
+    item_accounts = {entry.id: entry for entry in _accounts(db)}
+    own_items = [
+        item_out(item, item_accounts, load_settings(db).start_month)
+        for item in _items(db, item_accounts)
+        if item.partner_id == row.id
+    ]
     return PartnerDetailOut(
         partner=partner_out(row),
         contracts=contracts,
         invoices=_invoice_rows(db, invoices),
         invoice_total=total,
+        items=own_items,
     )
 
 
@@ -1938,6 +1962,10 @@ def merge_partner(
     ).all():
         invoice.invoicer_id = target.id
         moved_invoices += 1
+    moved_items = 0
+    for item in db.scalars(select(BudgetItem).where(BudgetItem.partner_id == source.id)).all():
+        item.partner_id = target.id
+        moved_items += 1
     # Das Ziel übernimmt, was dem Quellpartner erlaubt war, und fehlende Angaben.
     target.is_contract_partner = target.is_contract_partner or source.is_contract_partner
     target.is_invoicer = target.is_invoicer or source.is_invoicer
@@ -1959,6 +1987,7 @@ def merge_partner(
             "ziel": target.name,
             "vertraege": moved_contracts,
             "rechnungen": moved_invoices,
+            "posten": moved_items,
         },
     )
     db.flush()
@@ -2044,10 +2073,12 @@ def delete_partner(
         (BudgetContract.partner_id == row.id) | (BudgetContract.invoicer_id == row.id),
     )
     invoices = _count(db, BudgetInvoice, BudgetInvoice.invoicer_id == row.id)
-    if contracts or invoices:
+    items = _count(db, BudgetItem, BudgetItem.partner_id == row.id)
+    if contracts or invoices or items:
         raise _blocked(
-            f"Der Partner hat noch {contracts} Vertrag/Verträge und {invoices} Rechnung(en). "
-            "Bitte erst diese umhängen oder löschen, den Partner zusammenlegen oder stilllegen."
+            f"Der Partner hat noch {contracts} Vertrag/Verträge, {invoices} Rechnung(en) und "
+            f"{items} Budgetposten. Bitte erst diese umhängen oder löschen, den Partner "
+            "zusammenlegen oder stilllegen."
         )
     name = row.name
     db.delete(row)

@@ -11,9 +11,7 @@ import {
   IMPORT_STATUS_LABELS,
   importPath,
   percent,
-  rateLabel,
   startImport,
-  TAX_RATES,
   uploadImport,
   type ImportDetail,
   type ImportStatus,
@@ -32,7 +30,6 @@ const PILLS: Record<ImportStatus, string> = {
 /** Schritt 2: Was die Werkbank in der Datei erkannt hat; mit „Vorgang anlegen“ geht es los. */
 function DraftReview({ draft, onCancel }: { draft: ImportDetail; onCancel: () => void }) {
   const [year, setYear] = useState(draft.year);
-  const [tax, setTax] = useState(draft.tax_rate_bp);
   const [kinds, setKinds] = useState<Record<string, AccountKind>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +38,7 @@ function DraftReview({ draft, onCancel }: { draft: ImportDetail; onCancel: () =>
   const onStart = () => {
     setBusy(true);
     setError(null);
-    startImport(draft.id, year, tax, kinds)
+    startImport(draft.id, year, draft.tax_rate_bp, kinds)
       .then((result) => navigate(importPath(result.id)))
       .catch((problem: unknown) => {
         setError(errorText(problem, "Der Vorgang konnte nicht angelegt werden."));
@@ -72,23 +69,14 @@ function DraftReview({ draft, onCancel }: { draft: ImportDetail; onCancel: () =>
               ))}
             </select>
           </label>
-          <label>
-            Steuersatz als Vorgabe
-            <select value={tax} onChange={(event) => setTax(Number(event.target.value))}>
-              {TAX_RATES.map((rate) => (
-                <option key={rate} value={rate}>
-                  {rateLabel(rate)}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
         <p className="small">
-          Die Beträge in der Datei sind brutto. Den Steuersatz kannst du je Zeile ändern.
+          Die Beträge in der Datei sind brutto. Jede übernommene Zeile wird ein Budgetposten mit
+          Partner; Rechnungen legt der Import nicht an.
         </p>
         <dl className="kpis">
           <div className="kpi">
-            <dt>Zeilen mit Rechnung</dt>
+            <dt>Zeilen mit Betrag</dt>
             <dd>
               <span className="kpi-number">{draft.rows}</span>
               {draft.skipped_rows > 0 && (

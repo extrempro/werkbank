@@ -1,6 +1,7 @@
 """IT-Budget: Geschäftsjahr, Einstellungen, Konten, Plan, Übersicht und Rollen."""
 
 import io
+import re
 import zipfile
 from collections.abc import Iterator
 from datetime import date, timedelta
@@ -197,11 +198,32 @@ def with_lines(path: str, body: dict[str, Any]) -> dict[str, Any]:
     return {**head, "lines": [{key: body[key] for key in LINE_KEYS if key in body}]}
 
 
+DEFAULT_PARTNER = "Beispiel Posten GmbH"
+
+
+def with_partner(client: Any, path: str, body: dict[str, Any]) -> dict[str, Any]:
+    """Budgetposten brauchen einen Partner; ohne Angabe ein fester Testpartner."""
+    if not re.fullmatch(r"/items(/\d+)?", path) or "partner_id" in body:
+        return body
+    found = [
+        entry for entry in client.get(f"{BASE}/partners").json() if entry["name"] == DEFAULT_PARTNER
+    ]
+    if found:
+        return {**body, "partner_id": found[0]["id"]}
+    created = client.post(f"{BASE}/partners", json={"name": DEFAULT_PARTNER}, headers=HEADERS)
+    if created.status_code != 201:
+        # Ohne Recht zum Anlegen (z. B. Leser): Anfrage unverändert, der Server lehnt ab.
+        return body
+    return {**body, "partner_id": created.json()["id"]}
+
+
 def post(client: Any, path: str, body: dict[str, Any]) -> Any:
+    body = with_partner(client, path, body)
     return client.post(f"{BASE}{path}", json=with_lines(path, body), headers=HEADERS)
 
 
 def put(client: Any, path: str, body: dict[str, Any]) -> Any:
+    body = with_partner(client, path, body)
     return client.put(f"{BASE}{path}", json=with_lines(path, body), headers=HEADERS)
 
 
@@ -573,7 +595,11 @@ def test_contracts_bind_budget_and_raise_tasks(db: Session) -> None:
 
     # Am Posten lässt sich der Vertrag wählen; das ersetzt seine bisherige Zuordnung.
     item_url = f"{BASE}/items/{item['id']}"
-    item_body = {"account_id": account["id"], "name": "Zeiterfassung"}
+    item_body = {
+        "account_id": account["id"],
+        "partner_id": item["partner_id"],
+        "name": "Zeiterfassung",
+    }
     second_id = created_second.json()["id"]
     moved = manager.put(item_url, json={**item_body, "contract_id": second_id}, headers=HEADERS)
     assert (moved.json()["contract_id"], moved.json()["contract_title"]) == (
@@ -1694,3 +1720,42 @@ def test_items_are_closed_by_hand_and_contracts_show_target_and_actual(db: Sessi
         db.scalars(select(BudgetItemClosure).where(BudgetItemClosure.item_id == lone["id"])).all()
         == []
     )
+
+
+@pytest.mark.db
+def test_items_have_a_partner(db: Session) -> None:
+    manager = client_for(["Budget.Manager"], "posten-partner")
+    account = post(
+        manager, "/accounts", {"number": "6840", "name": "Drucker", "kind": "laufend"}
+    ).json()
+    first = post(manager, "/partners", {"name": "Beispiel Druck GmbH"}).json()
+    second = post(manager, "/partners", {"name": "Beispiel Druck"}).json()
+    body = {"account_id": account["id"], "name": "Druckerwartung", "amount_cents": 50_000}
+    # Ohne Partner: Pflichtfeld; unbekannter Partner: abgelehnt
+    missing = manager.post(f"{BASE}/items", json=body, headers=HEADERS)
+    assert missing.status_code == 422
+    unknown = manager.post(f"{BASE}/items", json={**body, "partner_id": 999_999}, headers=HEADERS)
+    assert unknown.status_code == 422
+    item = post(manager, "/items", {**body, "partner_id": second["id"]}).json()
+    assert (item["partner_id"], item["partner_name"]) == (second["id"], "Beispiel Druck")
+    # Ältere Posten ohne Partner bleiben lesbar; beim Ändern ist er Pflicht
+    db.get(BudgetItem, item["id"]).partner_id = None  # type: ignore[union-attr]
+    db.commit()
+    listed = next(
+        entry for entry in manager.get(f"{BASE}/items").json() if entry["id"] == item["id"]
+    )
+    assert listed["partner_id"] is None and listed["partner_name"] is None
+    item_url = f"{BASE}/items/{item['id']}"
+    assert manager.put(item_url, json=body, headers=HEADERS).status_code == 422
+    saved = manager.put(item_url, json={**body, "partner_id": second["id"]}, headers=HEADERS)
+    assert saved.json()["partner_name"] == "Beispiel Druck"
+    # Der Partner zeigt seine Posten; löschen geht nicht, zusammenlegen nimmt sie mit
+    detail = manager.get(f"{BASE}/partners/{second['id']}").json()
+    assert [entry["name"] for entry in detail["items"]] == ["Druckerwartung"]
+    blocked = manager.delete(f"{BASE}/partners/{second['id']}", headers=HEADERS)
+    assert blocked.status_code == 409 and "Budgetposten" in blocked.json()["detail"]
+    merged = post(manager, f"/partners/{second['id']}/merge", {"into_id": first["id"]})
+    assert merged.status_code == 200, merged.text
+    moved = db.get(BudgetItem, item["id"])
+    db.refresh(moved)
+    assert moved is not None and moved.partner_id == first["id"]
