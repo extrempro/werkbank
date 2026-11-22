@@ -157,8 +157,10 @@ export function fetchOverview(): Promise<Overview> {
   return getJson(`${BASE}/overview?${params.toString()}`);
 }
 
-export function fetchSnapshots(): Promise<Snapshot[]> {
-  return getJson(`${BASE}/snapshots`);
+/** Abrufe seitenweise, neueste zuerst. */
+export function fetchSnapshots(limit = 50, offset = 0): Promise<Snapshot[]> {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return getJson(`${BASE}/snapshots?${params.toString()}`);
 }
 
 export type DifferenceKind = "neu" | "geaendert" | "entfernt";

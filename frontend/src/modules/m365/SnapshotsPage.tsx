@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { formatDateTime } from "../../api";
+import { Feedback } from "../../components/Feedback";
 import {
   areaLabel,
   compareSnapshots,
@@ -12,6 +13,10 @@ import {
   type Snapshot,
   type SnapshotComparison,
 } from "./api";
+import { summarizeSources } from "./snapshotSources";
+
+/** So viele Abrufe zeigt die Seite zuerst und lädt sie je Klick nach. */
+const PAGE = 10;
 
 const KIND_LABELS: Record<DifferenceKind, string> = {
   neu: "Neu",
@@ -24,6 +29,60 @@ function sourceLabel(source: string): string {
     return "SharePoint und OneDrive (Graph)";
   }
   return source.replace(/^utcm:/, "");
+}
+
+/** Quellen eines Abrufs: Zusammenfassung, Fehler gruppiert und aufklappbar. */
+function SourceCell({ snapshot }: { snapshot: Snapshot }) {
+  const summary = summarizeSources(snapshot);
+  const total = summary.complete.length + summary.failed;
+  if (total === 0) {
+    return <>–</>;
+  }
+  return (
+    <div className="snapshot-sources">
+      <p>
+        {summary.complete.length} vollständig
+        {summary.failed > 0 && (
+          <>
+            {" · "}
+            <strong>{summary.failed} mit Fehler</strong>
+          </>
+        )}
+      </p>
+      <details>
+        <summary>{summary.failed > 0 ? "Fehler und Quellen anzeigen" : "Quellen anzeigen"}</summary>
+        {summary.groups.map((group) => (
+          <div className="snapshot-error-group" key={group.sources.join(",")}>
+            {group.scopes.length > 0 ? (
+              <p>
+                Fehlende Berechtigung beim Dienstprinzipal von UTCM (eine davon genügt):{" "}
+                {group.scopes.map((scope, index) => (
+                  <span key={scope}>
+                    {index > 0 && " oder "}
+                    <code>{scope}</code>
+                  </span>
+                ))}
+              </p>
+            ) : (
+              <p className="snapshot-error">{group.message ?? "Fehler ohne nähere Angabe"}</p>
+            )}
+            <p className="small">
+              {group.sources.length === 1
+                ? "Betrifft 1 Typ:"
+                : `Betrifft ${group.sources.length} Typen:`}{" "}
+              <span className="mono">{group.sources.map(sourceLabel).join(", ")}</span>
+            </p>
+          </div>
+        ))}
+        {summary.complete.length > 0 && (
+          <p className="small">
+            Vollständig gelesen:{" "}
+            <span className="mono">{summary.complete.map(sourceLabel).join(", ")}</span>
+          </p>
+        )}
+      </details>
+    </div>
+  );
 }
 
 /** Nur abgeschlossene Abrufe mit eigenem Stand lassen sich vergleichen und exportieren. */
@@ -149,13 +208,16 @@ function SnapshotCompare({ snapshots }: { snapshots: Snapshot[] }) {
 export function SnapshotsPage() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [hasMore, setHasMore] = useState(false);
+  const [more, setMore] = useState<"idle" | "loading" | "error">("idle");
 
   useEffect(() => {
     let active = true;
-    fetchSnapshots()
+    fetchSnapshots(PAGE + 1, 0)
       .then((result) => {
         if (active) {
-          setSnapshots(result);
+          setSnapshots(result.slice(0, PAGE));
+          setHasMore(result.length > PAGE);
           setStatus("ready");
         }
       })
@@ -168,6 +230,17 @@ export function SnapshotsPage() {
       active = false;
     };
   }, []);
+
+  const loadMore = () => {
+    setMore("loading");
+    fetchSnapshots(PAGE + 1, snapshots.length)
+      .then((result) => {
+        setSnapshots((current) => [...current, ...result.slice(0, PAGE)]);
+        setHasMore(result.length > PAGE);
+        setMore("idle");
+      })
+      .catch(() => setMore("error"));
+  };
 
   return (
     <>
@@ -207,19 +280,7 @@ export function SnapshotsPage() {
                     <td data-label="Objekte">{snapshot.resource_count}</td>
                     <td data-label="Änderungen">{snapshot.change_count}</td>
                     <td data-label="Quellen">
-                      <ul className="plain">
-                        {Object.entries(snapshot.source_status).map(([source, ok]) => (
-                          <li key={source}>
-                            <span className="mono">{sourceLabel(source)}</span>:{" "}
-                            {ok ? "vollständig" : "Fehler"}
-                            {!ok && snapshot.source_errors?.[source] && (
-                              <span className="small snapshot-error">
-                                {snapshot.source_errors[source]}
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
+                      <SourceCell snapshot={snapshot} />
                     </td>
                     <td className="nowrap" data-label="Export">
                       {hasState(snapshot) ? (
@@ -247,6 +308,30 @@ export function SnapshotsPage() {
               </tbody>
             </table>
           </div>
+          {hasMore && (
+            <p className="snapshot-more">
+              <button
+                type="button"
+                className="button"
+                onClick={loadMore}
+                disabled={more === "loading"}
+              >
+                {more === "loading" ? "Wird geladen …" : `Weitere ${PAGE} anzeigen`}
+              </button>
+            </p>
+          )}
+          <Feedback
+            message={
+              more === "error"
+                ? { kind: "alert", text: "Weitere Abrufe konnten nicht geladen werden." }
+                : null
+            }
+            onClose={() => setMore("idle")}
+          />
+          <p className="small">
+            Abrufe ohne Änderungen löscht die Werkbank nach einiger Zeit. Abrufe mit Änderungen und
+            die letzten 10 bleiben erhalten.
+          </p>
         </section>
       )}
     </>

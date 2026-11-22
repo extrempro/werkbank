@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.96.0] – 2026-11-22
+
+### M365-Konfiguration
+
+- **Snapshots kürzer:** Die Seite zeigt zuerst die letzten 10 Abrufe, „Weitere 10 anzeigen“ lädt nach (`GET /api/m365-config/snapshots?limit=&offset=`)
+- Quellen je Abruf als Zusammenfassung (vollständig, mit Fehler); die Fehler sind aufklappbar und nach fehlender Berechtigung des Dienstprinzipals von UTCM gruppiert
+- **Aufbewahrung der Abrufe:** Abrufe ohne Änderungen werden nach `COLLECTOR_SNAPSHOT_KEEP_DAYS` Tagen gelöscht (Vorgabe 90, 0 = nie); Abrufe mit Verlauf und die letzten 10 bleiben. Audit `snapshots_bereinigt`
+
+### Dokumentation
+
+- spec.md (7.1), Handbuch (Snapshots), `.env.example`
+
+### Tests
+
+- `test_m365_versioning.py` (Aufbewahrung), `test_m365_api.py` (seitenweise), `SnapshotsPage.test.tsx`, `snapshotSources.test.ts`
+
 ## [0.95.0] – 2026-11-22
 
 ### IT-Bestand

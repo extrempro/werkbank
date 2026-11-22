@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     collector_client_key_file: Path = Path("/run/secrets/collector_client_key.pem")
     collector_client_cert_file: Path = Path("/run/secrets/collector_client_cert.pem")
     collector_interval_hours: int = 24
+    # Abrufe ohne Änderungen nach so vielen Tagen löschen (0 = nie); die letzten 10 bleiben immer
+    collector_snapshot_keep_days: int = 90
     # Empfehlungen aus Microsoft Secure Score (braucht die Berechtigung SecurityEvents.Read.All)
     secure_score_enabled: bool = False
     secure_score_interval_hours: int = 24

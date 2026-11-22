@@ -5176,6 +5176,35 @@ td > .budget-row-actions {
   overflow-wrap: anywhere;
 }
 
+.snapshot-sources p {
+  margin: 0;
+}
+
+.snapshot-sources details {
+  margin-top: 0.25rem;
+  max-width: 70ch;
+}
+
+.snapshot-sources summary {
+  cursor: pointer;
+  min-height: 24px;
+}
+
+.snapshot-error-group {
+  margin-top: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 3px solid var(--farbe-bad-text);
+}
+
+.snapshot-sources .mono,
+.snapshot-sources code {
+  overflow-wrap: anywhere;
+}
+
+.snapshot-more {
+  margin-top: 0.75rem;
+}
+
 /* IT-Budget: Tags und Statistik */
 
 .budget-filter {
