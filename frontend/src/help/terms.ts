@@ -239,6 +239,21 @@ export const HELP = {
     text: "Ob das Gerät einen Datenträger hat; das legt die Art in den Stammdaten fest. Beim Ausmustern bestätigst du dann, dass er gelöscht oder vernichtet ist.",
     topic: ["it-bestand", "ausmustern"],
   },
+  "bestand.hardware-direkt": {
+    term: "Direkt an der Stelle",
+    text: "Geräte, die beim Gerät unter „Zugeordnet zu“ genau dieser Stelle zugeordnet sind, zum Beispiel ein Notebook.",
+    topic: ["it-bestand", "stellen"],
+  },
+  "bestand.hardware-arbeitsplatz": {
+    term: "Über Arbeitsplätze",
+    text: "Geräte, die an einem Arbeitsplatz der Stelle hängen, zum Beispiel Monitor oder Dockingstation. Bei einem geteilten Arbeitsplatz nutzen auch andere Stellen diese Geräte.",
+    topic: ["it-bestand", "stellen"],
+  },
+  "bestand.verleih-start": {
+    term: "Ab (Startdatum)",
+    text: "Liegt das Datum in der Zukunft, ist der Verleih vorab geplant: Die Geräte sind ab sofort reserviert, die Nachricht an die Person geht am Startdatum raus.",
+    topic: ["it-bestand", "verleih"],
+  },
   "bestand.ueberfaellig": {
     term: "Überfälliger Verleih",
     text: "Ein Verleih, dessen Rückgabedatum vorbei ist, obwohl noch nicht alles zurück ist.",

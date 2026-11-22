@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.94.0",
+    date: "2026-11-22",
+    summary: "IT-Bestand: Hardware über Arbeitsplätze bei der Stelle und Verleih mit Startdatum.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Bei einer Stelle siehst du unter „Hardware“ jetzt auch die Geräte an ihren Arbeitsplätzen. Sie stehen getrennt unter „Über Arbeitsplätze“, so erkennst du sofort, was direkt an der Stelle hängt.",
+          "Ein Verleih kann jetzt später beginnen: Unter „Ab“ wählst du das Startdatum. Bis dahin sind die Geräte reserviert, die Nachricht an die Person geht am Startdatum raus.",
+          "Ein geplanter Verleih lässt sich mit „Reservierung aufheben“ wieder lösen.",
+          "Im Standortbaum werden lange Namen nicht mehr mitten im Wort neben der Zahl umgebrochen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.93.0",
     date: "2026-11-22",
     summary: "Meldungen wie „Gespeichert“ siehst du jetzt immer.",

@@ -364,6 +364,12 @@ def test_workplaces_kits_and_equipment(db: Session) -> None:
     assert kim_view["workplaces"] == 1
     assert kim_view["sites"] == "Haus Nord"
     assert kim_view["events"][0]["text"].startswith("Arbeitsplatz verknüpft:")
+    # Hardware des Arbeitsplatzes erscheint bei der Stelle getrennt von der eigenen
+    assert kim_view["hardware_list"] == []
+    via = kim_view["workplace_hardware"]
+    assert [entry["workplace"]["id"] for entry in via] == [workplace["id"]]
+    assert via[0]["positions"] == 2 and via[0]["workplace"]["shared"] is True
+    assert {item["name"] for item in via[0]["devices"]} >= {"Monitor 2"}
 
     assignees = editor.get(f"{BASE}/assignees").json()
     assert {entry["id"] for entry in assignees["workplaces"]} == {workplace["id"]}

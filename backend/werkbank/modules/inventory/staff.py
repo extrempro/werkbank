@@ -189,11 +189,23 @@ class PositionSummary(BaseModel):
     sites: str
 
 
+class WorkplaceHardwareOut(BaseModel):
+    """Hardware an einem Arbeitsplatz der Stelle (nicht direkt an der Stelle)."""
+
+    workplace: WorkplaceBrief
+    # Wie viele Stellen den Arbeitsplatz nutzen (bei geteilten mehr als eine)
+    positions: int
+    devices: list[HardwareSummary]
+
+
 class PositionOut(PositionSummary):
     note: str
     created_at: datetime
     workplace_list: list[WorkplaceBrief]
+    # Nur Hardware, die direkt an der Stelle hängt
     hardware_list: list[HardwareSummary]
+    # Hardware an den Arbeitsplätzen der Stelle, je Arbeitsplatz
+    workplace_hardware: list[WorkplaceHardwareOut]
     events: list[EventOut]
 
 
@@ -473,21 +485,39 @@ def position_out(db: Session, row: InventoryPosition) -> PositionOut:
         .where(InventoryWorkplacePosition.position_id == row.id)
         .order_by(InventoryWorkplace.number)
     ).all()
+    briefs = [
+        WorkplaceBrief(
+            id=entry.id,
+            number=entry.number,
+            name=entry.name,
+            shared=entry.shared,
+            place=places.get(entry.room_id) if entry.room_id else None,
+        )
+        for entry in workplaces
+    ]
+    sharing: dict[int, int] = dict(
+        db.execute(
+            select(InventoryWorkplacePosition.workplace_id, func.count())
+            .where(InventoryWorkplacePosition.workplace_id.in_([entry.id for entry in briefs]))
+            .group_by(InventoryWorkplacePosition.workplace_id)
+        ).all()
+    )
+    via_workplaces = [
+        WorkplaceHardwareOut(
+            workplace=brief,
+            positions=sharing.get(brief.id, 1),
+            devices=devices,
+        )
+        for brief in briefs
+        if (devices := _hardware_of(db, workplace_id=brief.id))
+    ]
     return PositionOut(
         **summary.model_dump(),
         note=row.note,
         created_at=row.created_at,
-        workplace_list=[
-            WorkplaceBrief(
-                id=entry.id,
-                number=entry.number,
-                name=entry.name,
-                shared=entry.shared,
-                place=places.get(entry.room_id) if entry.room_id else None,
-            )
-            for entry in workplaces
-        ],
+        workplace_list=briefs,
         hardware_list=_hardware_of(db, position_id=row.id),
+        workplace_hardware=via_workplaces,
         events=_events(db, position_id=row.id),
     )
 

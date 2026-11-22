@@ -13,6 +13,7 @@ import {
   spotInRoom,
   workplaceName,
   workplacePath,
+  type HardwareSummary,
   type Position,
   type PositionSummary,
   type Workplace,
@@ -72,9 +73,34 @@ const position: Position = {
   workplace_list: [
     { id: 2, number: "AP-002", name: "Fenster", shared: false, place: "0.12 · Haus Nord, EG" },
   ],
-  hardware_list: [],
+  hardware_list: [device(1, "Notebook 1", "Notebook")],
+  workplace_hardware: [
+    {
+      workplace: { id: 3, number: "AP-003", name: "", shared: true, place: "0.14 · Haus Nord, EG" },
+      positions: 3,
+      devices: [device(2, "Monitor links", "Monitor")],
+    },
+  ],
   events: [{ occurred_at: "2026-11-20T08:00:00Z", who: "Bernd Bestand", text: "Stelle angelegt" }],
 };
+
+function device(id: number, name: string, kind: string): HardwareSummary {
+  return {
+    id,
+    name,
+    kind_id: id,
+    kind,
+    maker: null,
+    model: null,
+    serial: `SN-${id}`,
+    inventory_no: null,
+    hostname: "",
+    source: "hand",
+    status: "aktiv",
+    place: null,
+    holder: null,
+  };
+}
 
 const workplaceSummary: WorkplaceSummary = {
   id: 2,
@@ -229,6 +255,23 @@ describe("Stellen: Seiten", () => {
     unmount();
     render(<PositionDetailPage positionId={4} tab="verlauf" roles={["Bestand.Reader"]} />);
     expect(await screen.findByText("Stelle angelegt")).toBeTruthy();
+  });
+
+  it("trennt Hardware direkt an der Stelle von Hardware über Arbeitsplätze", async () => {
+    stubFetch({ "GET /api/inventory/positions/4": position });
+    render(<PositionDetailPage positionId={4} tab="hardware" roles={["Bestand.Reader"]} />);
+    expect(await screen.findByRole("heading", { name: "Hardware (2)" })).toBeTruthy();
+    const direct = screen.getByRole("heading", { name: /Direkt an der Stelle \(1\)/ });
+    const via = screen.getByRole("heading", { name: /Über Arbeitsplätze \(1\)/ });
+    expect(direct.compareDocumentPosition(screen.getByRole("link", { name: "Notebook 1" }))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(via.compareDocumentPosition(screen.getByRole("link", { name: "Monitor links" }))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.getByText("über Arbeitsplatz")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "AP-003" })).toBeTruthy();
+    expect(screen.getByText(/geteilt mit 2 weiteren Stellen/)).toBeTruthy();
   });
 });
 

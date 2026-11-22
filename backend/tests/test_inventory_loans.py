@@ -406,3 +406,82 @@ def test_lists_search_and_pages(db: Session) -> None:
     monitors = client.get(f"{BASE}/cases", params={"state": "alle", "kind": "monitor"}).json()
     assert monitors["total"] == 0
     assert client.get(f"{BASE}/cases", params={"kind": "gibtsnicht"}).status_code == 422
+
+
+@pytest.mark.db
+def test_planned_loan_starts_later(db: Session) -> None:
+    notebook = device(db, "Notebook", "Leih-Notebook 9", "LN-9")
+    headset = device(db, "Headset", "Headset 9", "HS-9")
+    client = editor()
+    today = local_today()
+    start = today + timedelta(days=5)
+    body = {
+        "person": {"oid": OID},
+        "start_on": start.isoformat(),
+        "due_on": (start + timedelta(days=7)).isoformat(),
+        "hardware_ids": [notebook.id],
+    }
+    # Prüfungen: Start nicht in der Vergangenheit, Rückgabe nicht vor dem Start
+    past = {**body, "start_on": (today - timedelta(days=1)).isoformat()}
+    assert client.post(f"{BASE}/loans", json=past, headers=HEADERS).status_code == 422
+    early = {**body, "due_on": (start - timedelta(days=1)).isoformat()}
+    assert client.post(f"{BASE}/loans", json=early, headers=HEADERS).status_code == 422
+    far = {**body, "start_on": (today + timedelta(days=400)).isoformat()}
+    assert client.post(f"{BASE}/loans", json=far, headers=HEADERS).status_code == 422
+
+    loan = client.post(f"{BASE}/loans", json=body, headers=HEADERS).json()
+    assert loan["state"] == "geplant" and loan["issued_on"] == start.isoformat()
+    # Reserviert: nicht noch einmal verleihbar, aber noch keine Nachricht
+    assert notebook.id not in {item["id"] for item in client.get(f"{BASE}/loans/available").json()}
+    assert messages(db, loan["id"]) == []
+    planned = client.get(f"{BASE}/loans", params={"state": "geplant"}).json()
+    assert [entry["id"] for entry in planned["loans"]] == [loan["id"]]
+    # Rückgabedatum nicht vor den Start legen
+    assert (
+        client.put(
+            f"{BASE}/loans/{loan['id']}/due",
+            json={"due_on": (start - timedelta(days=1)).isoformat()},
+            headers=HEADERS,
+        ).status_code
+        == 422
+    )
+
+    # Vor dem Start nichts, am Startdatum geht die Nachricht zur Ausgabe raus (einmal)
+    check_loans(db, at(start - timedelta(days=1)))
+    assert messages(db, loan["id"]) == []
+    check_loans(db, at(start))
+    check_loans(db, at(start + timedelta(days=1)))
+    assert messages(db, loan["id"]) == [("ausgabe", "mail", "offen"), ("ausgabe", "teams", "offen")]
+
+    # Ohne Startdatum wie bisher: heute, Nachricht sofort
+    now_loan = client.post(
+        f"{BASE}/loans",
+        json={**body, "start_on": None, "hardware_ids": [headset.id]},
+        headers=HEADERS,
+    ).json()
+    assert now_loan["state"] == "offen" and now_loan["issued_on"] == today.isoformat()
+    assert len(messages(db, now_loan["id"])) == 2
+
+
+@pytest.mark.db
+def test_cancel_planned_loan_without_case(db: Session) -> None:
+    notebook = device(db, "Notebook", "Leih-Notebook 8", "LN-8")
+    client = editor()
+    start = local_today() + timedelta(days=3)
+    loan = client.post(
+        f"{BASE}/loans",
+        json={
+            "person": {"oid": OID},
+            "start_on": start.isoformat(),
+            "due_on": (start + timedelta(days=2)).isoformat(),
+            "hardware_ids": [notebook.id],
+        },
+        headers=HEADERS,
+    ).json()
+    done = client.post(
+        f"{BASE}/loans/{loan['id']}/return", json={"hardware_ids": [notebook.id]}, headers=HEADERS
+    ).json()
+    assert done["state"] == "zurueck"
+    assert messages(db, loan["id"]) == []
+    assert db.scalars(select(InventoryCase)).all() == []
+    assert notebook.id in {item["id"] for item in client.get(f"{BASE}/loans/available").json()}

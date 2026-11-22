@@ -1,6 +1,8 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
+import { ConfirmButton } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
+import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
 import { INVENTORY_LOANS_PATH } from "../../navigation";
 import { navigate } from "../../router";
@@ -46,8 +48,10 @@ function ErrorText({ text }: { text: string | null }) {
 /** Neuer Verleih: Person aus Entra, Rückgabedatum und ein oder mehrere Geräte. */
 function NewLoanForm({ onCreated }: { onCreated: (loan: Loan) => void }) {
   const searchId = useId();
+  const startId = useId();
   const start = today();
   const [person, setPerson] = useState<Person | null>(null);
+  const [startOn, setStartOn] = useState(start);
   const [dueOn, setDueOn] = useState(daysFrom(start, 14));
   const [note, setNote] = useState("");
   const [devices, setDevices] = useState<LoanableDevice[] | null>(null);
@@ -77,8 +81,12 @@ function NewLoanForm({ onCreated }: { onCreated: (loan: Loan) => void }) {
       setError("Bitte wähle die Person, die ausleiht.");
       return;
     }
-    if (!dueOn || dueOn < start) {
-      setError("Bitte ein Rückgabedatum ab heute wählen.");
+    if (!startOn || startOn < start) {
+      setError("Bitte ein Startdatum ab heute wählen.");
+      return;
+    }
+    if (!dueOn || dueOn < startOn) {
+      setError("Bitte ein Rückgabedatum ab dem Startdatum wählen.");
       return;
     }
     if (picked.length === 0) {
@@ -87,13 +95,16 @@ function NewLoanForm({ onCreated }: { onCreated: (loan: Loan) => void }) {
     }
     setBusy(true);
     setError(null);
-    createLoan({ person: { oid: person.oid }, due_on: dueOn, hardware_ids: picked, note }).then(
-      onCreated,
-      (problem: unknown) => {
-        setError(errorText(problem, "Der Verleih konnte nicht gespeichert werden."));
-        setBusy(false);
-      },
-    );
+    createLoan({
+      person: { oid: person.oid },
+      start_on: startOn,
+      due_on: dueOn,
+      hardware_ids: picked,
+      note,
+    }).then(onCreated, (problem: unknown) => {
+      setError(errorText(problem, "Der Verleih konnte nicht gespeichert werden."));
+      setBusy(false);
+    });
   };
 
   const shown = devices ? filterLoanable(devices, query) : [];
@@ -108,15 +119,42 @@ function NewLoanForm({ onCreated }: { onCreated: (loan: Loan) => void }) {
           onChange={setPerson}
           label="Wer leiht aus? (Person aus Entra)"
         />
-        <label>
-          Rückgabe bis
-          <input
-            type="date"
-            value={dueOn}
-            min={start}
-            onChange={(event) => setDueOn(event.target.value)}
-          />
-        </label>
+        <div className="tool-row">
+          <div className="field-info">
+            <span className="field-info-head">
+              <label htmlFor={startId}>Ab</label>
+              <InfoTip term="bestand.verleih-start" />
+            </span>
+            <input
+              id={startId}
+              type="date"
+              value={startOn}
+              min={start}
+              onChange={(event) => {
+                const next = event.target.value;
+                setStartOn(next);
+                if (next && dueOn < next) {
+                  setDueOn(daysFrom(next, 14));
+                }
+              }}
+            />
+          </div>
+          <label>
+            Rückgabe bis
+            <input
+              type="date"
+              value={dueOn}
+              min={startOn || start}
+              onChange={(event) => setDueOn(event.target.value)}
+            />
+          </label>
+        </div>
+        {startOn > start && (
+          <p className="hint-box">
+            Vorab geplant: Die Geräte sind ab jetzt reserviert. Die Nachricht an die Person geht am{" "}
+            {formatDay(startOn)} raus.
+          </p>
+        )}
         <fieldset className="seg-field">
           <legend>Geräte ({picked.length} gewählt)</legend>
           <label htmlFor={searchId}>Geräte durchsuchen</label>
@@ -270,8 +308,8 @@ function LoanDetail({
 
   const onDue = (event: FormEvent) => {
     event.preventDefault();
-    if (!dueOn || dueOn < today()) {
-      setError("Bitte ein Rückgabedatum ab heute wählen.");
+    if (!dueOn || dueOn < today() || dueOn < loan.issued_on) {
+      setError("Bitte ein Rückgabedatum ab heute und ab dem Startdatum wählen.");
       return;
     }
     setBusy(true);
@@ -287,7 +325,8 @@ function LoanDetail({
         <div className="panel-head case-head">
           <div>
             <p className="small">
-              <span className="mono">{loan.number}</span> · ausgegeben am{" "}
+              <span className="mono">{loan.number}</span> ·{" "}
+              {loan.state === "geplant" ? "geplant ab" : "ausgegeben am"}{" "}
               {formatDay(loan.issued_on)}
             </p>
             <h2 id="verleih-titel">{loan.person_name}</h2>
@@ -371,9 +410,35 @@ function LoanDetail({
                 >
                   Alle wählen
                 </button>
-                <button type="submit" className="button button-primary" disabled={busy}>
-                  Rückgabe eintragen
-                </button>
+                {loan.state === "geplant" ? (
+                  <ConfirmButton
+                    className="button button-primary"
+                    disabled={busy || picked.length === 0}
+                    confirm={{
+                      title: "Reservierung aufheben?",
+                      text: "Die gewählten Geräte sind danach wieder frei. Die Person bekommt keine Nachricht, weil der Verleih noch nicht begonnen hat.",
+                      action: "Aufheben",
+                    }}
+                    onConfirm={() =>
+                      returnLoanItems(loan.id, picked).then(
+                        (next) =>
+                          update(
+                            next,
+                            next.state === "zurueck"
+                              ? "Die Reservierung ist aufgehoben."
+                              : "Die gewählten Geräte sind wieder frei.",
+                          ),
+                        fail,
+                      )
+                    }
+                  >
+                    Reservierung aufheben
+                  </ConfirmButton>
+                ) : (
+                  <button type="submit" className="button button-primary" disabled={busy}>
+                    Rückgabe eintragen
+                  </button>
+                )}
               </div>
             )}
           </form>
@@ -384,7 +449,7 @@ function LoanDetail({
                 <input
                   type="date"
                   value={dueOn}
-                  min={today()}
+                  min={loan.issued_on > today() ? loan.issued_on : today()}
                   onChange={(event) => setDueOn(event.target.value)}
                 />
               </label>
