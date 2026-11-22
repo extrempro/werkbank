@@ -293,7 +293,7 @@ export const HELP = {
   },
   "tickets.rollen": {
     term: "Rollen im Bereich",
-    text: "„Nur lesen“ sieht Tickets und schreibt Notizen, „Bearbeiten“ ändert Status und Zuständigkeit. Die Bereichsverwaltung darf jedes Ticket zuweisen und den Bereich einstellen.",
+    text: "„Bearbeiten“ legt Tickets an, antwortet und ändert Status und Zuständigkeit. Die Bereichsverwaltung darf jedes Ticket zuweisen und den Bereich einstellen.",
     topic: ["tickets", "einstellungen"],
   },
   "tickets.kategorie": {

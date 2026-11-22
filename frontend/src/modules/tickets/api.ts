@@ -6,12 +6,12 @@ import { TICKETS_PATH } from "../../navigation";
 
 export { TICKETS_NEW_PATH, TICKETS_PATH, TICKETS_SETTINGS_PATH } from "../../navigation";
 
-export type AreaRole = "admin" | "edit" | "read";
+export type AreaRole = "admin" | "edit";
 export type TicketStatus =
   "new" | "in_progress" | "waiting" | "reminder" | "solved" | "closed" | "merged";
 export type Priority = "low" | "medium" | "high";
 export type Channel = "mail" | "manual" | "phone";
-export type EntryKind = "inbound" | "reply" | "note" | "system";
+export type EntryKind = "inbound" | "reply" | "note" | "system" | "forward";
 export type View = "open" | "mine" | "unassigned" | "waiting" | "reminder" | "done" | "all";
 
 export const STATUS_LABELS: Record<TicketStatus, string> = {
@@ -44,7 +44,6 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
 export const ROLE_LABELS: Record<AreaRole, string> = {
   admin: "Bereichsverwaltung",
   edit: "Bearbeiten",
-  read: "Nur lesen",
 };
 export const VIEW_LABELS: Record<View, string> = {
   open: "Offen",
@@ -115,6 +114,10 @@ export interface Entry {
   quote: string;
   /** Beim Zusammenführen übernommen: Nummer des Quelltickets. */
   from_number: number | null;
+  /** Eingehende Mails: vom Melder, von Beteiligten oder von außen. */
+  origin: "reporter" | "participant" | "external" | "";
+  /** Empfänger gesendeter Antworten und Weiterleitungen. */
+  recipients: string;
   author_name: string;
   original: boolean;
   created_at: string;
@@ -280,8 +283,29 @@ export function addNote(number: number, body: string): Promise<Ticket> {
 
 export type StatusAfter = "" | "waiting" | "solved";
 
-export function sendReply(number: number, body: string, statusAfter: StatusAfter): Promise<Ticket> {
-  return postJson(`${BASE}/${number}/replies`, { body, status_after: statusAfter });
+export function sendReply(
+  number: number,
+  body: string,
+  statusAfter: StatusAfter,
+  replyAll = false,
+): Promise<Ticket> {
+  return postJson(`${BASE}/${number}/replies`, {
+    body,
+    status_after: statusAfter,
+    reply_all: replyAll,
+  });
+}
+
+export interface ForwardInput {
+  to: string[];
+  text: string;
+  /** Eintrag, der weitergeleitet wird; null = die ursprüngliche Meldung. */
+  entry_id: string | null;
+  attachments: boolean;
+}
+
+export function forwardTicket(number: number, body: ForwardInput): Promise<Ticket> {
+  return postJson(`${BASE}/${number}/forward`, body);
 }
 
 export function attachmentUrl(number: number, id: string): string {

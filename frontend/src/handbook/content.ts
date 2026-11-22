@@ -1145,7 +1145,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "In jedem Bereich hast du eine von drei Rollen: Mit „Nur lesen“ siehst du die Tickets und schreibst interne Notizen. Mit „Bearbeiten“ legst du Tickets an, änderst den Status, nimmst dir freie Tickets und übergibst deine eigenen. Die Bereichsverwaltung darf zusätzlich jedes Ticket zuweisen und die Einstellungen des Bereichs pflegen.",
+                text: "In jedem Bereich hast du eine von zwei Rollen: Mit „Bearbeiten“ legst du Tickets an, schreibst Antworten und interne Notizen, änderst den Status, nimmst dir freie Tickets und übergibst deine eigenen. Die Bereichsverwaltung darf zusätzlich jedes Ticket zuweisen und die Einstellungen des Bereichs pflegen.",
               },
               {
                 kind: "text",
@@ -1184,7 +1184,11 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Unten auf der Seite schreibst du entweder eine Antwort an den Melder (blau, mit Briefsymbol) oder eine interne Notiz (gelb, mit Schloss). Bei der Antwort steht, an wen die Mail geht und wer eine Kopie bekommt. Mit „Status danach“ setzt du beim Senden gleich „Wartet auf Rückmeldung“ oder „Gelöst“. Ein Entwurf bleibt erhalten, wenn du das Feld einklappst.",
+                text: "Unten auf der Seite wählst du „Antworten“ (nur an den Melder), „Antworten an alle“ (Melder und Beteiligte in Kopie) oder „Interne Notiz“. Im offenen Antwortfeld wechselst du mit „Nur Melder“ und „An alle“, ohne dass der Text verloren geht; darüber steht, an wen die Mail geht. Mit „Status danach“ setzt du beim Senden gleich „Wartet auf Rückmeldung“ oder „Gelöst“. Ein Entwurf bleibt erhalten, wenn du das Feld einklappst. Automatische Mails wie die Eingangsbestätigung gehen nur an den Melder.",
+              },
+              {
+                kind: "text",
+                text: "Mit „Weiterleiten“ im Kopf schickst du die ursprüngliche Meldung weiter, mit „Weiterleiten“ an einer Nachricht genau diese, zum Beispiel an einen Dienstleister. Du trägst Empfänger und einen Text ein und wählst, ob die Anhänge mitgehen. Die Mail geht aus dem Postfach des Bereichs, der Melder bekommt davon nichts mit, und im Verlauf steht ein interner Eintrag. Antwortet der Empfänger, landet das im Ticket als „Antwort von extern“; der Status ändert sich dadurch nicht. Antworten von Beteiligten heißen „von Beteiligten“.",
               },
               {
                 kind: "text",
@@ -1267,7 +1271,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Die Ticket-Verwaltung legt Bereiche an, trägt das Postfach ein und vergibt die Rollen, auch die Bereichsverwaltung. Sie selbst sieht dadurch keine Tickets. Die Bereichsverwaltung vergibt in ihrem Bereich „Bearbeiten“ und „Nur lesen“ und legt fest, wie neue Tickets zugewiesen werden.",
+                text: "Die Ticket-Verwaltung legt Bereiche an, trägt das Postfach ein und vergibt die Rollen, auch die Bereichsverwaltung. Sie selbst sieht dadurch keine Tickets. Die Bereichsverwaltung vergibt in ihrem Bereich „Bearbeiten“ und legt fest, wie neue Tickets zugewiesen werden.",
               },
               {
                 kind: "text",
@@ -1275,7 +1279,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Bei „Wer zuerst übernimmt“ bleiben neue Tickets frei, bis sich jemand eins nimmt. Bei „Reihum“ bekommt die Person mit „Bearbeiten“, die gerade die wenigsten offenen Tickets hat, das neue Ticket. „Nur lesen“ und die Bereichsverwaltung zählen dabei nicht mit.",
+                text: "Bei „Wer zuerst übernimmt“ bleiben neue Tickets frei, bis sich jemand eins nimmt. Bei „Reihum“ bekommt die Person mit „Bearbeiten“, die gerade die wenigsten offenen Tickets hat, das neue Ticket. Die Bereichsverwaltung zählt dabei nicht mit.",
               },
             ],
             links: [{ to: "/tickets/einstellungen", label: "Zu den Einstellungen" }],

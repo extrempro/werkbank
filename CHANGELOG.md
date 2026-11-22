@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.103.0] – 2026-11-22
+
+### Tickets
+
+- **Ticketseite nach neuem Entwurf:** Kopf mit Status-Kennzeichen und den Aktionen Mir zuweisen, Zusammenführen (jetzt eigener Knopf) und Weiterleiten; Angaben als Karten Ticket · Melder · Im IT-Bestand · Aufbewahrung, am PC rechts, auf Tablet und Handy als eingeklappter Block „Angaben“ mit Kurzfassung
+- **Antworten** nur an den Melder oder **an alle** (Beteiligte in Kopie); Wechsel im offenen Antwortfeld; Empfänger stehen am Eintrag; automatische Mails gehen nur an den Melder
+- **Weiterleiten** einer Nachricht oder der ursprünglichen Meldung aus dem Postfach des Bereichs, mit Text und wählbaren Anhängen; interner Eintrag im Verlauf; Antworten darauf als „Antwort von extern“ (Status bleibt, keine neuen Beteiligten); Antworten von Beteiligten als „von Beteiligten“
+- Rolle **„Nur lesen“ entfernt**; bestehende Einträge dieser Rolle werden gelöscht (Migration `0070`)
+- **„Gerät verknüpfen“ entfernt**; die Verknüpfung wird aus der Datenbank gelöscht (Migration `0069`), Geräte des Melders stehen weiter unter „Im IT-Bestand“
+- Am Handy kurze Beschriftungen der Knöpfe unten („Antworten“, „An alle“, „Notiz“)
+
+### Dokumentation
+
+- spec.md, datenschutz.md, Handbuch (Ticketseite, Rollen), Info-Symbole
+
+### Tests
+
+- `test_tickets_mail.py` (an alle, Weiterleiten, Antworten von außen), `tickets.test.tsx`, E2E `tickets.spec.ts`
+
 ## [0.102.0] – 2026-11-22
 
 ### Tickets

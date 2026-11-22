@@ -99,7 +99,7 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
         <p className="module-label">Tickets</p>
         <h1>Neues Ticket</h1>
         <p className="hint-box">
-          Du kannst in keinem Bereich Tickets bearbeiten. Mit „Nur lesen“ legst du keine Tickets an.
+          Du bist in keinem Bereich Mitglied und kannst deshalb keine Tickets anlegen.
         </p>
       </div>
     );

@@ -15,7 +15,7 @@ import {
   type TicketSettings,
 } from "./api";
 
-const ROLES: AreaRole[] = ["admin", "edit", "read"];
+const ROLES: AreaRole[] = ["admin", "edit"];
 
 /** Übersicht: wer in welchem Bereich welche Rolle hat (alle Bereiche, die du einstellen darfst). */
 export function RolesOverview({ settings }: { settings: TicketSettings }) {

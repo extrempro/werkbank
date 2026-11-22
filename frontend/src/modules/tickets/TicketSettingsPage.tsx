@@ -38,7 +38,7 @@ import {
 import { AuditLog, RolesOverview } from "./TicketsRoles";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
 
-const ROLES: AreaRole[] = ["admin", "edit", "read"];
+const ROLES: AreaRole[] = ["admin", "edit"];
 
 /** Gruppe oder Person aus Entra suchen und wählen. */
 function EntraPicker({

@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.103.0",
+    date: "2026-11-22",
+    summary: "Tickets: neue Ticketseite, Antworten an alle und Weiterleiten.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Die Ticketseite ist neu aufgebaut: Oben stehen Status, Zuständig und die Aktionen, rechts die Angaben in Karten. Auf Tablet und Handy klappst du die Angaben unter dem Kopf auf.",
+          "Du antwortest nur dem Melder oder mit „Antworten an alle“ auch den Beteiligten in Kopie. Beim Eintrag im Verlauf steht, an wen die Antwort ging.",
+          "Mit „Weiterleiten“ schickst du eine Nachricht weiter, zum Beispiel an einen Dienstleister. Der Melder bekommt davon nichts mit, und die Antwort landet im Ticket.",
+          "Die Rolle „Nur lesen“ gibt es nicht mehr.",
+          "Geräte werden nicht mehr mit Tickets verknüpft. Die Geräte des Melders siehst du weiterhin unter „Im IT-Bestand“.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.102.0",
     date: "2026-11-22",
     summary: "Tickets: Einstellungen in Reitern, Melder im IT-Bestand und Melder aus Entra.",

@@ -12717,3 +12717,89 @@ input[type="file"] {
 .ticket-facts-title {
   font-weight: 600;
 }
+
+/* Ticketseite: Angaben als Karten, Weiterleitung, Antworten von außen */
+.ticket-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ticket-card-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--farbe-text-leise);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ticket-side {
+  max-height: calc(100vh - var(--kopf-hoehe) - 160px);
+  overflow-y: auto;
+}
+
+.ticket-entry-forward {
+  border-left: 4px solid var(--farbe-warn-rand-stark);
+  background: var(--farbe-warn-flaeche);
+}
+
+.ticket-entry-external {
+  border-left: 4px solid var(--farbe-rand-kontrast);
+  background: var(--farbe-neutral-flaeche);
+}
+
+.ticket-recipients {
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+
+.ticket-reply-all {
+  background: var(--farbe-flaeche);
+}
+
+@media (max-width: 1000px) {
+  .ticket-side {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .ticket-facts-toggle .ticket-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .ticket-facts-toggle .ticket-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.label-narrow {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .label-wide {
+    display: none;
+  }
+
+  .label-narrow {
+    display: inline;
+  }
+
+  .ticket-composer-buttons {
+    flex-wrap: nowrap;
+  }
+
+  .ticket-composer-buttons .button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+}
