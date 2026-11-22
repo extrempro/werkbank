@@ -120,6 +120,22 @@ export const HELP = {
     text: "Eine Funktion ist mitbestimmungsrelevant, wenn sie sich zur Leistungs- oder Verhaltenskontrolle eignet oder neue personenbezogene Daten verarbeitet. Dann ist der Betriebsrat zu beteiligen.",
     topic: ["evergreen", "bewerten"],
   },
+  // IT-Monitoring
+  "zabbix.nicht-erreichbar": {
+    term: "Nicht erreichbar",
+    text: "Keine Schnittstelle des Hosts antwortet Zabbix. Hosts in Wartung zählen hier nicht mit.",
+    topic: ["it-monitoring", "zabbix-uebersicht"],
+  },
+  "zabbix.lange-offen": {
+    term: "Lange offen",
+    text: "Probleme, die seit mehr als 7 Tagen offen sind. Hier hilft meist eine Entscheidung mehr als Warten.",
+    topic: ["it-monitoring", "zabbix-uebersicht"],
+  },
+  "zabbix.wartung": {
+    term: "In Wartung",
+    text: "Der Host steckt gerade in einer Wartung aus Zabbix. Seine Probleme blendet Zabbix dann meist aus.",
+    topic: ["it-monitoring", "zabbix-uebersicht"],
+  },
   // IT-Budget
   "budget.geplant": {
     term: "Geplant",
@@ -228,6 +244,11 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/m365/geraete/zuordnung": [["m365", "worum-es-geht"]],
   "/evergreen": [["evergreen", "liste"]],
   "/monitoring/dns": [["it-monitoring", "dns-abgleich"]],
+  "/monitoring/zabbix/verbindung": [
+    ["it-monitoring", "zabbix-einrichten"],
+    ["it-monitoring", "zabbix-uebersicht"],
+  ],
+  "/monitoring/zabbix": [["it-monitoring", "zabbix-uebersicht"]],
   "/bestand/vorgaenge": [["it-bestand", "vorgaenge"]],
   "/bestand/statistik": [["it-bestand", "statistik"]],
   "/bestand/hardware": [["it-bestand", "hardware"]],

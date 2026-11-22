@@ -118,7 +118,7 @@ export function AdminPage({ section = "allgemein" }: { section?: AdminSection })
           <GeneralSettings
             settings={general}
             onChange={setGeneral}
-            parts={["netbox", "internet"]}
+            parts={["netbox", "zabbix", "internet"]}
           />
           <NinjaSettings />
         </div>

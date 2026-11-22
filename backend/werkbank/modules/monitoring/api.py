@@ -177,6 +177,34 @@ def dns_overview(user: MonitoringUser, db: DbDep) -> DnsOut:
     )
 
 
+class DnsSummaryOut(BaseModel):
+    """Kennzahlen für die Startseite von IT-Monitoring."""
+
+    enabled: bool
+    last_run_at: datetime | None
+    last_status: str | None
+    result_at: datetime | None
+    deviations: int
+    next_run_at: datetime | None
+
+
+@router.get("/dns/summary")
+def dns_summary(user: MonitoringUser, db: DbDep) -> DnsSummaryOut:
+    """Abweichungen (alle Zeilen außer „in Ordnung“) und Zeit des letzten Abgleichs."""
+    last = db.scalars(select(MonDnsRun).order_by(MonDnsRun.id.desc()).limit(1)).first()
+    ok_runs = latest_ok_runs(db, 1)
+    result = ok_runs[0] if ok_runs else None
+    counts = result.counts if result is not None and isinstance(result.counts, dict) else {}
+    return DnsSummaryOut(
+        enabled=_enabled(db),
+        last_run_at=last.started_at if last else None,
+        last_status=last.status if last else None,
+        result_at=result.finished_at or result.started_at if result else None,
+        deviations=sum(int(v) for k, v in counts.items() if k != "ok" and isinstance(v, int)),
+        next_run_at=_next_run(db),
+    )
+
+
 class RunNowOut(BaseModel):
     scheduled_at: datetime
 

@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.90.0] – 2026-11-22
+
+### IT-Monitoring
+
+- **Quelle Zabbix, Stufe 1 (nur lesen)** (spec.md 8b): neues Modul `backend/werkbank/modules/monitoring/zabbix/` mit API-Client für Zabbix 7.x und 8.0 (`client.py`: nur API-Token im Header `Authorization: Bearer`, `apiinfo.version` ohne Token, keine `hostinterface.*`-Methoden, Zustand der Wartungen selbst errechnet, weil 8.0 „Approaching“ in „Upcoming“ umbenennt und die API ihn nicht liefert), Collector im Worker (Auftrag `monitoring.zabbix` jede Minute: Probleme und Zustand jede Minute, Wartungen alle 15 Minuten, Hosts mit Gruppen, Templates und Inventar sowie Prüfung des Dienstkontos stündlich; ein Ausfall von Zabbix lässt den Auftrag nie scheitern, der letzte Stand bleibt sichtbar)
+- Tabellen `mon_zbx_hosts`, `mon_zbx_problems`, `mon_zbx_maintenances`, `mon_zbx_group_sites`, `mon_zbx_runs`, `mon_zbx_status` (Migration `0060`); keine Werte von Items, keine Quittierungs-Kommentare, keine Benutzernamen, aus dem Inventar nur Seriennummer, Modell und Typ
+- Seiten `/monitoring/zabbix` (Übersicht mit „Zu erledigen“, Kennzahlen, Problemen mit Filter nach Standort und Mindest-Schweregrad, nicht erreichbaren Hosts und Wartungen), `/monitoring/zabbix/hosts` (Tabelle mit Ansicht rechts), `/monitoring/zabbix/wartungen` und `/monitoring/zabbix/verbindung` (nur Admins: Zustand, Version, Ablauf des Tokens, Abfragen, Rolle des Dienstkontos mit Warnungen, Zuordnung Hostgruppe → Standort des IT-Bestands, Tag für Zertifikate); „In Zabbix öffnen“ an Host und Problem
+- Verwaltung › Verbindungen › Zabbix: Adresse, API-Token (verschlüsselt), CA-Zertifikat, Ein/Aus, „Verbindung prüfen“
+- Glocke für Admins: Zabbix dreimal hintereinander nicht abfragbar, Token läuft in 30 Tagen ab, Rolle erlaubt zu viel
+- Seitenmenü von IT-Monitoring mit den Gruppen „Zabbix“ und „NetBox“; der Bereich öffnet mit der Zabbix-Übersicht. Für die spätere Startseite liefert der DNS-Abgleich `GET /api/monitoring/dns/summary`
+- Schweregrade mit Farben, die sich auch in der Helligkeit unterscheiden, immer mit Text
+
+### Dokumentation
+
+- spec.md 8b (Quellen als Module, Monitoring-Start, Zabbix), Rolle `Monitoring.Berichte` in Abschnitt 4 (kommt mit den Berichten), ASVS- und Datenschutz-Nachweis, Handbuch „Übersicht, Hosts und Wartungen“ und „Zabbix einrichten“ (Dienstkonto in Zabbix 7 und 8.0)
+
+### Tests
+
+- `test_monitoring_zabbix.py` mit nachgebildeten Antworten für Zabbix 7.0 und 8.0 (`tests/fixtures/zabbix/`), `zabbix.test.tsx`, E2E in `monitoring.spec.ts`
+
 ## [0.89.0] – 2026-11-22
 
 ### IT-Tools

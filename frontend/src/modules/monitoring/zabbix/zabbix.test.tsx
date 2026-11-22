@@ -1,0 +1,299 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ZabbixSettings } from "../../../pages/ZabbixSettings";
+import type { DataState, ZbxConnection, ZbxHostDetail, ZbxHostRow, ZbxOverview } from "./api";
+import { severityClass, severityLabel } from "./api";
+import {
+  age,
+  ZabbixConnectionPage,
+  ZabbixHostsPage,
+  ZabbixMaintenancesPage,
+  ZabbixOverviewPage,
+} from "./ZabbixPages";
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  window.history.replaceState(null, "", "/");
+});
+
+const state: DataState = {
+  configured: true,
+  data_at: "2026-11-22T08:00:00Z",
+  stale: false,
+  error: null,
+  failures: 0,
+  next_at: "2026-11-22T08:01:00Z",
+  zabbix_url: "https://zabbix.example.com/",
+};
+
+const problem = {
+  eventid: "5001",
+  name: "Switch B ist nicht erreichbar <b>fett</b>",
+  severity: 4,
+  since: "2026-11-01T08:00:00Z",
+  acknowledged: false,
+  suppressed: false,
+  tags: ["scope: availability"],
+  hostid: "10102",
+  host: "Switch B",
+  site: "Gebäude A (Beispielstadt)",
+  link: "https://zabbix.example.com/tr_events.php?triggerid=9001&eventid=5001",
+};
+
+const overview: ZbxOverview = {
+  state,
+  kpis: { problems: 2, by_severity: { "4": 1, "2": 1 }, hosts: 3, unreachable: 1, maintenance: 1 },
+  problems: [
+    problem,
+    { ...problem, eventid: "5002", name: "Zertifikat läuft ab", severity: 2, site: null },
+  ],
+  unreachable: [{ hostid: "10102", name: "Switch B", site: null, since: null, link: null }],
+  maintenances: [
+    {
+      maintenanceid: "301",
+      name: "Firmware Strom",
+      state: "laeuft",
+      with_data: true,
+      active_since: "2026-11-01T00:00:00Z",
+      active_till: "2027-11-01T00:00:00Z",
+      windows: [["2026-11-22T07:00:00Z", "2026-11-22T09:00:00Z"]],
+      recurring: [],
+      hosts: 1,
+      host_names: ["USV C"],
+      groups: [],
+    },
+  ],
+  todo: { long_open: 1, certificates: [], certificate_tag: null },
+  sites: ["Gebäude A (Beispielstadt)"],
+};
+
+function stubFetch(handler: (url: string, init?: RequestInit) => unknown) {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const body = handler(String(input), init);
+    return new Response(JSON.stringify(body), { status: 200 });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+describe("Hilfen", () => {
+  it("benennt Schweregrade und Alter", () => {
+    expect(severityLabel(5)).toBe("Katastrophe");
+    expect(severityLabel(0)).toBe("Nicht klassifiziert");
+    expect(severityClass(0)).toBe("zbx-sev zbx-sev-1");
+    const now = new Date("2026-11-22T10:00:00Z").getTime();
+    expect(age("2026-11-22T09:58:00Z", now)).toBe("2 Min.");
+    expect(age("2026-11-22T07:00:00Z", now)).toBe("3 Std.");
+    expect(age("2026-11-12T10:00:00Z", now)).toBe("10 Tagen");
+    expect(age(null, now)).toBe("–");
+  });
+});
+
+describe("ZabbixOverviewPage", () => {
+  it("zeigt Kennzahlen, Probleme als Text und filtert nach Schweregrad und Standort", async () => {
+    stubFetch(() => overview);
+    render(<ZabbixOverviewPage />);
+    expect(await screen.findByText("Switch B ist nicht erreichbar <b>fett</b>")).toBeVisible();
+    // Problem-Name bleibt Text, kein HTML
+    expect(document.querySelector("b")).toBeNull();
+    expect(screen.getByText("Zertifikat läuft ab")).toBeVisible();
+    expect(screen.getAllByRole("link", { name: /In Zabbix öffnen/ })[0]).toHaveAttribute(
+      "target",
+      "_blank",
+    );
+    fireEvent.change(screen.getByLabelText("Ab Schweregrad"), { target: { value: "4" } });
+    expect(screen.queryByText("Zertifikat läuft ab")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Ab Schweregrad"), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText("Standort"), { target: { value: "" } });
+    expect(screen.getByText("Zertifikat läuft ab")).toBeVisible();
+    expect(screen.queryByText("Switch B ist nicht erreichbar <b>fett</b>")).toBeNull();
+    expect(screen.getByText("Firmware Strom")).toBeVisible();
+    expect(screen.getByText(/^Stand /)).toBeVisible();
+  });
+
+  it("meldet einen Ausfall und den nicht eingerichteten Zustand", async () => {
+    stubFetch(() => ({
+      ...overview,
+      state: { ...state, error: "Zabbix antwortet nicht rechtzeitig.", stale: true },
+    }));
+    render(<ZabbixOverviewPage />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Zabbix antwortet nicht rechtzeitig. Angezeigt wird der letzte Stand.",
+    );
+    cleanup();
+    stubFetch(() => ({ ...overview, state: { ...state, configured: false } }));
+    render(<ZabbixOverviewPage />);
+    expect(await screen.findByText(/noch nicht eingerichtet/)).toBeVisible();
+  });
+});
+
+const rows: ZbxHostRow[] = [
+  {
+    hostid: "10101",
+    name: "Server A",
+    host: "srv-a",
+    monitored: true,
+    reachable: true,
+    in_maintenance: false,
+    site: "Gebäude A (Beispielstadt)",
+    groups: ["Server"],
+    problems: 0,
+    worst: null,
+    serial: "SN-1001",
+  },
+  {
+    hostid: "10102",
+    name: "Switch B",
+    host: "sw-b",
+    monitored: true,
+    reachable: false,
+    in_maintenance: false,
+    site: null,
+    groups: ["Netzwerk"],
+    problems: 1,
+    worst: 4,
+    serial: "",
+  },
+];
+
+const detail: ZbxHostDetail = {
+  hostid: "10102",
+  name: "Switch B",
+  host: "sw-b",
+  monitored: true,
+  reachable: false,
+  in_maintenance: false,
+  maintenance: null,
+  site: null,
+  groups: ["Netzwerk"],
+  templates: [],
+  interfaces: [
+    { type: "snmp", address: "sw-b.example.com", port: "161", main: true, available: false },
+  ],
+  serial: "",
+  model: "",
+  kind: "",
+  last_seen_at: null,
+  updated_at: "2026-11-22T08:00:00Z",
+  problems: [problem],
+  link: "https://zabbix.example.com/zabbix.php?action=problem.view",
+};
+
+describe("ZabbixHostsPage", () => {
+  it("filtert Hosts und zeigt die Ansicht eines Hosts", async () => {
+    stubFetch((url) => (url.endsWith("/hosts") ? rows : detail));
+    render(<ZabbixHostsPage hostId={null} />);
+    expect(await screen.findByRole("link", { name: "Server A" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Nicht erreichbar · 1" }));
+    expect(screen.queryByRole("link", { name: "Server A" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Switch B" })).toBeVisible();
+    cleanup();
+    render(<ZabbixHostsPage hostId="10102" />);
+    expect(await screen.findByRole("heading", { name: "Switch B" })).toBeVisible();
+    expect(screen.getByText("fehlt im Inventar")).toBeVisible();
+    expect(screen.getByText("SNMP sw-b.example.com:161")).toBeVisible();
+  });
+});
+
+describe("ZabbixMaintenancesPage", () => {
+  it("ordnet Wartungen nach Zustand", async () => {
+    stubFetch(() => overview.maintenances);
+    render(<ZabbixMaintenancesPage />);
+    expect(await screen.findByText("Firmware Strom")).toBeVisible();
+    expect(screen.getByText("läuft")).toBeVisible();
+  });
+});
+
+const connection: ZbxConnection = {
+  state,
+  enabled: true,
+  url: "https://zabbix.example.com",
+  version: "8.0.0",
+  checked_at: "2026-11-22T08:00:00Z",
+  role: "Werkbank lesen",
+  methods: ["*"],
+  needed: ["problem.get"],
+  findings: ["Die Rolle erlaubt Methoden mit Platzhalter („*“)."],
+  token_expires_at: "2026-12-01T00:00:00Z",
+  token_never_expires: false,
+  token_warning: true,
+  tasks: [
+    {
+      task: "schnell",
+      label: "Probleme und Zustand",
+      methods: ["problem.get"],
+      interval_minutes: 1,
+      last_at: "2026-11-22T08:00:00Z",
+      duration_ms: 600,
+      ok: false,
+      error: "Zabbix antwortet nicht rechtzeitig.",
+      counts: {},
+    },
+  ],
+  groups: [{ groupid: "21", name: "Standort A/Server", hosts: 2, site_id: null, position: null }],
+  sites: [{ id: 3, name: "Gebäude A (Beispielstadt)" }],
+  certificate_tag: "",
+  certificate_value: "",
+};
+
+describe("ZabbixConnectionPage", () => {
+  it("warnt vor Rolle und Token und speichert die Zuordnung", async () => {
+    const fetchMock = stubFetch(() => connection);
+    render(<ZabbixConnectionPage />);
+    expect(await screen.findByText(/Platzhalter/)).toBeVisible();
+    expect(screen.getByText(/weniger als 30 Tagen ab/)).toBeVisible();
+    expect(screen.getAllByText("Zabbix antwortet nicht rechtzeitig.").length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByLabelText("Standort für Standort A/Server"), {
+      target: { value: "3" },
+    });
+    fireEvent.change(screen.getByLabelText("Tag"), { target: { value: "component" } });
+    fireEvent.click(screen.getByRole("button", { name: "Zuordnung speichern" }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true),
+    );
+    const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")!;
+    expect(JSON.parse(String(put[1]!.body))).toEqual({
+      mapping: [{ groupid: "21", group_name: "Standort A/Server", site_id: 3 }],
+      certificate_tag: "component",
+      certificate_value: "",
+    });
+  });
+});
+
+describe("ZabbixSettings (Verwaltung)", () => {
+  it("speichert Adresse und Token, ohne das Token zu zeigen", async () => {
+    const fetchMock = stubFetch((_url, init) =>
+      init?.method === "PUT"
+        ? {
+            enabled: true,
+            url: "https://zabbix.example.com",
+            token_set: true,
+            token_storage_available: true,
+            ca_set: false,
+          }
+        : {
+            enabled: false,
+            url: "",
+            token_set: false,
+            token_storage_available: true,
+            ca_set: false,
+          },
+    );
+    render(<ZabbixSettings />);
+    fireEvent.change(await screen.findByLabelText("Adresse von Zabbix"), {
+      target: { value: "https://zabbix.example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("API-Token"), { target: { value: "zbx-geheim" } });
+    fireEvent.click(screen.getByLabelText("Abfrage von Zabbix einschalten"));
+    fireEvent.click(screen.getByRole("button", { name: "Zabbix speichern" }));
+    expect(await screen.findByText("Die Anbindung an Zabbix ist gespeichert.")).toBeVisible();
+    const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")!;
+    expect(JSON.parse(String(put[1]!.body))).toEqual({
+      enabled: true,
+      url: "https://zabbix.example.com",
+      token: "zbx-geheim",
+    });
+    expect(screen.getByText("eingeschaltet")).toBeVisible();
+  });
+});

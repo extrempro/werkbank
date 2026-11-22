@@ -46,6 +46,10 @@ export const BUDGET_INVOICES_PATH = "/budget/rechnungen";
 export const BUDGET_PLANNING_PATH = "/budget/planung";
 export const BUDGET_STATISTICS_PATH = "/budget/statistik";
 export const MONITORING_DNS_PATH = "/monitoring/dns";
+export const MONITORING_ZABBIX_PATH = "/monitoring/zabbix";
+export const MONITORING_ZABBIX_HOSTS_PATH = "/monitoring/zabbix/hosts";
+export const MONITORING_ZABBIX_MAINTENANCE_PATH = "/monitoring/zabbix/wartungen";
+export const MONITORING_ZABBIX_CONNECTION_PATH = "/monitoring/zabbix/verbindung";
 export const PROJECTS_PATH = "/projekte";
 export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
 export const INVENTORY_MASTER_PATH = "/bestand/stammdaten";
@@ -181,13 +185,28 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       short: "Monitoring",
       icon: "monitoring",
       section: "betrieb",
-      home: MONITORING_DNS_PATH,
+      home: MONITORING_ZABBIX_PATH,
       groups: [
         {
-          title: null,
+          title: "Zabbix",
           items: [
-            { path: MONITORING_DNS_PATH, label: "DNS-Abgleich mit NetBox", icon: "netzwerk" },
+            { path: MONITORING_ZABBIX_PATH, label: "Übersicht", icon: "uebersicht" },
+            { path: MONITORING_ZABBIX_HOSTS_PATH, label: "Hosts", icon: "geraet" },
+            { path: MONITORING_ZABBIX_MAINTENANCE_PATH, label: "Wartungen", icon: "kalender" },
+            ...(roles.includes(ADMIN)
+              ? [
+                  {
+                    path: MONITORING_ZABBIX_CONNECTION_PATH,
+                    label: "Verbindung",
+                    icon: "einstellungen" as const,
+                  },
+                ]
+              : []),
           ],
+        },
+        {
+          title: "NetBox",
+          items: [{ path: MONITORING_DNS_PATH, label: "DNS-Abgleich", icon: "netzwerk" }],
         },
       ],
     });

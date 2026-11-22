@@ -94,7 +94,8 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Budget.Editor` | IT-Budget | Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen |
 | `Budget.Manager` | IT-Budget | wie `Budget.Editor`, dazu Rechnungen buchen, Partner zusammenlegen und die Einstellungen des Budgets festlegen |
 | `Budget.Reader` | IT-Budget | Budget ansehen (z. B. Geschäftsführung, Controlling) |
-| `Monitoring.Reader` | IT-Monitoring | Bereich IT-Monitoring ansehen |
+| `Monitoring.Reader` | IT-Monitoring | Bereich IT-Monitoring ansehen (Start, alle Quellen mit Hostdetails, Berichte) |
+| `Monitoring.Berichte` | IT-Monitoring | Nur die Berichte von IT-Monitoring ansehen und exportieren, ohne Hostdetails (z. B. Geschäftsführung, Controlling) |
 | `Projekte.Reader` | IT-Projekte | Projekte ansehen: Übersicht, Budget, Jour Fixe mit Anhängen, Aufgaben |
 | `Projekte.Editor` | IT-Projekte | Projekte anlegen, ändern und löschen; Jour Fixe, Anhänge und Aufgaben pflegen |
 | `Bestand.Reader` | IT-Bestand | Hardware mit Verlauf und Stammdaten ansehen |
@@ -563,7 +564,97 @@ Kleine Werkzeuge für den Alltag in der IT (Rechner, Generatoren, Konverter), ü
 
 ## 8b. Bereich IT-Monitoring
 
-Regelmäßige Prüfungen der IT. Zugriff: Rolle `Monitoring.Reader` und `Werkbank.Admin` (serverseitig geprüft).
+Regelmäßige Prüfungen und Überwachung der IT aus mehreren **Quellen**. Zugriff: `Monitoring.Reader` und `Werkbank.Admin` für alles, `Monitoring.Berichte` nur für die Berichte (serverseitig geprüft).
+
+### Aufbau: Quellen als Module
+
+- Jede Quelle ist ein eigenes Modul unter `backend/werkbank/modules/monitoring/<quelle>/` bzw. `frontend/src/modules/monitoring/<quelle>/` mit eigenen Tabellen (`mon_<quelle>_…`), eigenem Collector, eigenen Seiten und einer Gruppe im Seitenmenü. Quellen sind zurzeit **Zabbix** und **NetBox** (DNS-Abgleich); weitere kommen ebenso dazu.
+- Jede Quelle meldet sich mit einer schmalen **Zusammenfassung** für die Startseite an (Schnittstelle `MonitoringSource` im Backend): Name, eingerichtet ja/nein, Zustand (in Ordnung, Warnung, Fehler, unbekannt), Stand der Daten, zwei bis vier Kennzahlen, wichtigste Probleme (höchstens 20, mit Schweregrad, Standort und Link) und Einträge für „Zu erledigen“. Die Startseite kennt keine Einzelheiten einer Quelle.
+- Seitenmenü: **Start** oben; darunter je Quelle eine Gruppe: **Zabbix** (Übersicht, Hosts, Wartungen, Berichte, Verbindung) und **NetBox** (DNS-Abgleich). Wer nur `Monitoring.Berichte` hat, sieht nur die Berichte.
+
+### Monitoring-Start (`/monitoring`)
+
+Klick auf „Monitoring“ in der Bereichsleiste.
+
+- Kennzahlen über alle Quellen: offene Probleme (davon Katastrophe und Hoch), nicht erreichbare Hosts, Abweichungen im DNS, Quellen mit Fehler.
+- Je Quelle eine Karte mit Zustand, Stand der Daten und Kennzahlen:
+  - **Zabbix:** Zustand der Verbindung, Probleme nach Schweregrad, Hosts (gesamt, nicht erreichbar, in Wartung), Verfügbarkeit des laufenden Monats; Links in Übersicht, Hosts und Berichte.
+  - **DNS-Abgleich mit NetBox:** Zahl der Abweichungen (alle Zeilen außer „in Ordnung“) und Zeit des letzten Abgleichs aus dem bestehenden Modul, Link auf `/monitoring/dns`.
+- Wichtigste Probleme aus allen Quellen, nach Schweregrad und Alter, filterbar nach Quelle.
+- „Zu erledigen“ aus allen Quellen.
+- Übersicht nach Standort: je Standort Hosts, Probleme und nicht erreichbare Hosts; dazu „ohne Standort“.
+- „Stand der Daten“ je Quelle sichtbar; fällt eine Quelle aus, zeigt die Karte den letzten Stand mit Zeit und einen Hinweis.
+
+### Zabbix
+
+Liest Daten aus Zabbix über die JSON-RPC-API. **Erst einmal nur lesen.**
+
+#### Verbindung und Collector
+
+- **Nur der Server spricht mit der API von Zabbix.** Ein Collector im Worker fragt ab und speichert in der Werkbank-Datenbank. Der Browser sieht nie das Token; Seiten lesen nur aus der Werkbank. Für den Sprung nach Zabbix (siehe Seiten) bekommt der Browser nur die Adresse der Oberfläche.
+- Konfiguration in der **Verwaltung › Verbindungen › Zabbix** (wie NetBox, nur `Werkbank.Admin`): https-Adresse von Zabbix (die Werkbank hängt `api_jsonrpc.php` an), API-Token (verschlüsselt gespeichert, nie ausgegeben), optional CA-Zertifikat (PEM) einer eigenen PKI, Ein/Aus, „Verbindung prüfen“ (Version, Dienstkonto, erlaubte Methoden, Ablauf des Tokens). TLS-Prüfung immer an, keine Weiterleitungen, nur diese eine eingetragene Adresse, Zeitlimit 10 s je Anfrage, Antworten höchstens 20 MB. Ohne Adresse und Token ist die Quelle „nicht eingerichtet“.
+- Anmeldung nur per API-Token im Header `Authorization: Bearer …`, nie per `auth` im Body. `apiinfo.version` wird ohne Token abgefragt (Zabbix verlangt das so).
+- Takt (Aufträge im Worker, je Auftrag höchstens ein Lauf gleichzeitig):
+  - jede Minute: `problem.get` (offene Probleme, ohne unterdrückte in den Zahlen), `trigger.get` (Host zu den Problemen), `host.get` (Verfügbarkeit der Schnittstellen und des aktiven Agenten, Wartungsstatus)
+  - alle 15 Minuten: `maintenance.get`
+  - stündlich: `apiinfo.version`, `host.get` mit `selectInterfaces`, `selectHostGroups`, `selectParentTemplates`, `selectInventory` (nur Seriennummer und wenige Felder), `hostgroup.get`, dazu Prüfung von Token und Rolle (siehe Sicherheit; Dienstkonto über `user.checkAuthentication` mit dem Token, dann `role.get` und `token.get`). Die Namen der Templates kommen mit `host.get`, `template.get` ist nicht nötig
+  - täglich: `event.get` für den Vortag (Beginn und Ende der Probleme), verdichtet zu Ausfallzeiten je Host und Tag für die Berichte
+- **Versionen 7.x und 8.0:** Die Version kommt aus `apiinfo.version` (beim Start und stündlich) und steht auf der Verbindungsseite. Alle Unterschiede liegen in einem API-Client (`zabbix/client.py`), nicht im übrigen Code. Keine `hostinterface.*`-Methoden; Schnittstellen nur über `host.get` mit `selectInterfaces`. Den Zustand eines Wartungszeitraums (aktiv, demnächst, abgelaufen; in Zabbix 8.0 „Upcoming“ statt früher „Approaching“) errechnet die Werkbank selbst aus `active_since`, `active_till` und den Zeitfenstern; die API liefert ihn nicht. Unbekannte Hauptversionen: Abruf läuft weiter, Hinweis auf der Verbindungsseite.
+- **Ausfall von Zabbix** blockiert die Werkbank nicht: Fehler werden je Auftrag festgehalten, die Seiten zeigen den letzten Stand mit Zeit und den Fehler in einfachen Worten. Nach drei fehlgeschlagenen Läufen in Folge eine Benachrichtigung an `Werkbank.Admin` (ohne fachliche Inhalte).
+- **Zabbix bleibt die Quelle:** keine Rohverläufe, keine Werte von Items. Gespeichert wird nur, was Übersicht, Verknüpfung und Berichte brauchen:
+  - `mon_zbx_hosts` (Host-ID, technischer und sichtbarer Name, Status überwacht/nicht, Verfügbarkeit, in Wartung, Schnittstellen mit Typ/Adresse/Port/Verfügbarkeit, Hostgruppen, Templates, Seriennummer aus dem Inventar, zuletzt gesehen, Standort, verknüpftes Gerät),
+  - `mon_zbx_problems` (offene Probleme: Event-ID, Trigger-ID, Host, Name, Schweregrad, seit, quittiert ja/nein, unterdrückt ja/nein, Tags),
+  - `mon_zbx_maintenances` (Name, Zeitraum, Zeitfenster, Hosts und Hostgruppen, mit/ohne Datensammlung),
+  - `mon_zbx_downtime` (Ausfallzeit je Host und Tag in Sekunden, ohne Zeiten in Wartung) und `mon_zbx_trigger_stats` (je Monat und Trigger: Anzahl und Dauer),
+  - `mon_zbx_runs` (je Auftrag: Zeit, Dauer, Ergebnis, Fehler; 30 Tage).
+  Hosts und Probleme, die in Zabbix verschwinden, werden gelöscht; Berichtsdaten bleiben 3 Jahre.
+- **Keine personenbezogenen Daten:** keine Quittierungs-Kommentare, keine Benutzernamen aus Zabbix, keine Inventarfelder außer Seriennummer, Modell und Typ.
+
+#### Schweregrade
+
+Wie in Zabbix: Katastrophe, Hoch, Durchschnitt, Warnung, Information (und „Nicht klassifiziert“ wie Information). Die Farben unterscheiden sich auch in der Helligkeit und stehen nie allein: immer mit Text bzw. Symbol. Hell und dunkel getrennt festgelegt, Kontrast nach WCAG 2.2 AA.
+
+#### Standorte
+
+- **Standort aus der Hostgruppe.** Auf der Verbindungsseite ordnet ein Admin Hostgruppen einem Standort des IT-Bestands zu (Ebene „Standort“ unter Stadt). Ein Host mit mehreren passenden Gruppen nimmt die erste nach Reihenfolge der Zuordnung; ohne passende Gruppe erscheint er unter „ohne Standort“.
+- Die Namen der Standorte stehen nur in der Datenbank, nicht im Code.
+
+#### Abgleich mit dem IT-Bestand
+
+- **Nur über die Seriennummer** aus dem Zabbix-Inventar gegen die Seriennummer im IT-Bestand (befüllt aus NinjaOne oder von Hand); Vergleich ohne Leerzeichen, Groß- und Kleinschreibung egal. Kein Abgleich über Hostnamen.
+- Listen: **Nicht überwacht** (aktives Gerät im Bestand, Seriennummer in keinem Zabbix-Host), **Ohne Bestandseintrag** (Zabbix-Host mit Seriennummer, die im Bestand fehlt), **Seriennummer fehlt** (Zabbix-Host ohne Seriennummer im Inventar).
+- Geräte lassen sich als **„bewusst nicht überwacht“** markieren (mit kurzer Begründung, im Verlauf des Geräts); sie fallen aus „Nicht überwacht“ heraus. Für „Nicht überwacht“ zählen nur Geräte der Hardware-Arten, die der Admin auf der Verbindungsseite festlegt (z. B. Server, Switch, Firewall), damit Notebooks und Monitore die Liste nicht füllen.
+- Hosts ohne Seriennummer lassen sich **von Hand einem Gerät zuordnen** (Suche im Bestand); die Zuordnung gilt, bis Zabbix eine Seriennummer liefert. Markieren und Zuordnen: `Monitoring.Reader` mit `Bestand.Editor`.
+
+#### Seiten
+
+- **Übersicht** (`/monitoring/zabbix`): „Zu erledigen“ (Lücken zum IT-Bestand, Probleme länger als 7 Tage offen, ablaufende Zertifikate: offene Probleme mit einem Tag, den der Admin auf der Verbindungsseite festlegt, z. B. `component: certificate`; ohne Festlegung entfällt der Punkt), Kennzahlen, aktuelle Probleme mit Filter Standort und Mindest-Schweregrad, nicht erreichbare Hosts, laufende und kommende Wartungen. „Stand der Daten“ immer sichtbar.
+- **Hosts** (`/monitoring/zabbix/hosts`): Tabelle mit Ansicht rechts (wie die Vorgänge im IT-Bestand). Filter: Alle, Mit Problemen, Nicht erreichbar, In Wartung, Ohne Bestandseintrag, Nicht überwacht, Seriennummer fehlt; Suche und Standort. Ansicht: offene Probleme, Angaben aus Zabbix (Schnittstellen, Hostgruppen, Templates, zuletzt gesehen), verknüpftes Gerät im IT-Bestand mit Link oder Zuordnung von Hand. „Nicht überwacht“ zeigt Geräte statt Hosts.
+- **Wartungen** (`/monitoring/zabbix/wartungen`): laufende, kommende und abgelaufene (letzte 30 Tage) mit Zeitraum, Zeitfenstern, betroffenen Hosts und Gruppen.
+- **Berichte** (`/monitoring/zabbix/berichte`, auch `Monitoring.Berichte`): Verfügbarkeit je Geschäftsjahr (Beginn und Bezeichnung aus den Einstellungen des IT-Budgets), aufgeteilt nach Standort oder Hostgruppe, Monatsübersicht, Zielwert 99,5 % (auf der Verbindungsseite änderbar), häufigste Auslöser, längste Ausfälle; Export als CSV und PDF. Für `Monitoring.Berichte` nur Summen je Standort und Gruppe, keine Hostnamen und keine Auslöser.
+- **Sprung nach Zabbix:** Knopf „In Zabbix öffnen“ an Host und Problem (öffnet in neuem Tab die Probleme des Hosts bzw. das Ereignis in der Oberfläche von Zabbix; nur für `Monitoring.Reader` und `Werkbank.Admin`, nicht in den Berichten). Die Adresse baut der Server aus der eingetragenen Adresse und den Kennungen aus Zabbix (nur Ziffern); dort meldet sich die Person mit ihrem eigenen Zabbix-Konto an.
+- **Verbindung** (`/monitoring/zabbix/verbindung`, nur `Werkbank.Admin`): Zustand, Zabbix-Version, Adresse, Ablauf des Tokens, je Auftrag Takt, letzter Lauf und Ergebnis, Dienstkonto, erlaubte API-Methoden der Rolle mit Warnung, Zuordnung Hostgruppe → Standort, Hardware-Arten für „Nicht überwacht“, Tag für Zertifikate, Zielwert. Keine Auswahl für die Quelle des Standorts und das Merkmal des Abgleichs: beides ist festgelegt (Hostgruppe, Seriennummer). Adresse, Token und CA pflegt der Admin in der Verwaltung; die Seite verlinkt dorthin.
+
+#### Verfügbarkeit
+
+- Ausfall = Zeit, in der an einem Host ein Problem mit Schweregrad Hoch oder Katastrophe eines Triggers mit dem Tag `scope: availability` offen war (so markieren die Vorlagen von Zabbix „nicht erreichbar“, z. B. ICMP-Ping und Agent). Überlappende Probleme zählen einmal.
+- **Geplante Wartungen zählen nicht als Ausfall** (Zeiten mit `maintenance_status` bzw. innerhalb eines Wartungszeitfensters des Hosts werden abgezogen).
+- Verfügbarkeit = 1 − Ausfall / (Zeitraum − Wartung). Hosts, die im Zeitraum nicht überwacht waren, zählen nur für die überwachte Zeit.
+
+#### Sicherheit und Datenschutz (OWASP ASVS 5.0 L2)
+
+- **Dienstkonto** in Zabbix mit eigener Benutzerrolle: API-Zugriff an, Allow-Liste nur mit `problem.get`, `trigger.get`, `host.get`, `hostgroup.get`, `maintenance.get`, `event.get`, `role.get`, `token.get` (die letzten beiden nur, damit die Werkbank Rolle und Ablauf des eigenen Tokens prüfen kann); Leserechte nur auf die nötigen Hostgruppen; Token mit Ablaufdatum. In Zabbix 8.0 sperrt eine leere Allow-Liste jeden Zugriff, und neue Rollen haben standardmäßig keinen API-Zugriff: Die Einrichtung im Handbuch beschreibt beides für 7.x und 8.0.
+- Die Werkbank **warnt** auf der Verbindungsseite und in der Glocke (`Werkbank.Admin`): 30 Tage vor Ablauf des Tokens; wenn die Rolle `*`, eine Ablehn-Liste oder mehr als die nötigen Methoden erlaubt; wenn sie Schreibmethoden erlaubt. Lassen sich Rolle oder Token nicht lesen, steht das dort als Hinweis.
+- Alle Texte aus Zabbix (Trigger-, Host-, Gruppen-, Template-, Wartungsnamen, Inventarfelder, Tags) sind nicht vertrauenswürdig: nur als Text ausgegeben (React), in CSV gegen Formel-Einschleusung geschützt, Länge begrenzt beim Speichern.
+- Audit: Markieren „bewusst nicht überwacht“, Zuordnung von Hand, Änderungen der Verbindungsseite, Export.
+
+#### Stufen
+
+1. Collector, Verbindungsseite, Übersicht, Hosts, Wartungen (nur lesen)
+2. Abgleich mit dem IT-Bestand über die Seriennummer und Anzeige der Lücken
+3. Berichte mit Export, Rolle `Monitoring.Berichte`
+4. Monitoring-Start über alle Quellen: Zabbix und der bestehende DNS-Abgleich mit NetBox
+5. Optional, später: Quittieren und Wartungen anlegen, dann mit zusätzlicher Bestätigung durch das Admin-Konto (wie bei der Gerätezuordnung) und eigener Spec-Ergänzung
 
 ### DNS-Abgleich mit NetBox (`/monitoring/dns`)
 
@@ -574,6 +665,7 @@ Regelmäßige Prüfungen der IT. Zugriff: Rolle `Monitoring.Reader` und `Werkban
 - Seite: Kennzahlen, Verlauf der letzten 90 Tage (je Tag der letzte Lauf), Ansichten „Probleme“, „Neu seit dem letzten Lauf“, „Alle“, Suche, Tabelle je Zone mit Werten aus NetBox und öffentlich, Hinweisen und Link in NetBox; Liste des nicht Geprüften.
 - Gespeichert: Läufe 90 Tage (Zahlen), Zeilen nur der letzten beiden erfolgreichen Läufe. Schlägt das Lesen von NetBox fehl, gilt der Lauf als fehlgeschlagen; das letzte Ergebnis bleibt sichtbar.
 - Glocke: neue Probleme gegenüber dem vorletzten Lauf (eine Benachrichtigung je Lauf) und ein fehlgeschlagener Lauf (`Monitoring.Reader`, `Werkbank.Admin`).
+- Für den Monitoring-Start: `GET /api/monitoring/dns/summary` (eingeschaltet, Zeit und Status des letzten Laufs, Zahl der Abweichungen = alle Zeilen außer „in Ordnung“, nächster Termin). Sonst bleibt das Modul unverändert; im Seitenmenü steht es in der Gruppe „NetBox“.
 - Verwaltung › Allgemein › NetBox: https-Adresse, API-Token (verschlüsselt, nie ausgegeben), optional CA-Zertifikat (PEM) für eine eigene PKI, View, Resolver, TTL-Vergleich, Ein/Aus, „Verbindung prüfen“ (Version, Plugin, Views, Zahl der Zonen). Der Server erreicht NetBox auch im internen Netz, aber nur diese eine eingetragene https-Adresse, ohne Weiterleitungen.
 
 ## 8c. Bereich IT-Projekte

@@ -429,6 +429,9 @@ def test_api_for_readers_only(db: Session, tmp_path: Path) -> None:
     assert mail["new"] is True and mail["missing"] == ["192.0.2.5"]
     assert len(data["history"]) == 1
     assert "geheimer-token" not in str(data)
+    summary = client.get("/api/monitoring/dns/summary").json()
+    assert summary["enabled"] is True and summary["last_status"] == "ok"
+    assert summary["deviations"] == 2 and summary["result_at"] is not None
     # Nur Admins ziehen den Lauf vor
     assert client.post("/api/monitoring/dns/run", headers=HEADERS).status_code == 403
 
