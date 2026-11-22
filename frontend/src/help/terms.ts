@@ -323,13 +323,18 @@ export const HELP = {
   },
   "tickets.geraet": {
     term: "Gerät",
-    text: "Verknüpft das Ticket mit einem Gerät aus dem IT-Bestand. Auf der Seite des Geräts siehst du dann alle Tickets dazu.",
+    text: "Verknüpft das Ticket mit einem Gerät aus dem IT-Bestand. Das geht nur mit Rechten im IT-Bestand; auf der Seite des Geräts stehen dann die Tickets dazu.",
     topic: ["tickets", "arbeitshilfen"],
   },
   "tickets.aufbewahrung": {
     term: "Aufbewahrung",
     text: "Wie lange geschlossene Tickets bleiben, bevor ein täglicher Lauf sie anonymisiert oder löscht. Ausgeschaltet bleibt alles erhalten.",
     topic: ["tickets", "betrieb"],
+  },
+  "tickets.melder-bestand": {
+    term: "Melder im IT-Bestand",
+    text: "Stellen, Arbeitsplätze, Geräte und offene Verleihe der Person, gefunden über ihre Mailadresse. Das siehst du nur mit Rechten im IT-Bestand.",
+    topic: ["tickets", "arbeitshilfen"],
   },
   "tickets.export": {
     term: "Export",
@@ -400,7 +405,15 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/tickets/neu": [["tickets", "uebersicht"]],
   "/tickets/einstellungen": [["tickets", "einstellungen"]],
   "/tickets/uebersicht": [["tickets", "uebersicht"]],
-  "/tickets/protokoll": [["tickets", "betrieb"]],
+  "/tickets/einstellungen/aufbewahrung": [["tickets", "betrieb"]],
+  "/tickets/einstellungen/rollen": [
+    ["tickets", "einstellungen"],
+    ["tickets", "betrieb"],
+  ],
+  "/tickets/einstellungen/email": [["tickets", "email"]],
+  "/tickets/einstellungen/gestaltung": [["tickets", "email"]],
+  "/tickets/einstellungen/textbausteine": [["tickets", "arbeitshilfen"]],
+  "/tickets/einstellungen/kategorien": [["tickets", "arbeitshilfen"]],
   "/bestand/vorgaenge": [["it-bestand", "vorgaenge"]],
   "/bestand/statistik": [["it-bestand", "statistik"]],
   "/bestand/hardware": [["it-bestand", "hardware"]],

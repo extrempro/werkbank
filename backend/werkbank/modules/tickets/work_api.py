@@ -3,6 +3,7 @@ IT-Bestand, Textbausteine; dazu ihre Einstellungen je Bereich (Kategorien, Frist
 Textbausteine). Alles mit Prüfung von Bereich und Recht auf dem Server."""
 
 import re
+from collections.abc import Sequence
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
@@ -191,14 +192,10 @@ class DeviceOut(BaseModel):
     reporter: bool
 
 
-def _device_area(db: Session, access: TicketAccess, ticket: Ticket) -> TicketArea:
-    area = db.get(TicketArea, ticket.area_id)
-    if area is None or not area.devices_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Geräte sind im Bereich nicht eingeschaltet.",
-        )
-    return area
+def _require_inventory(access: TicketAccess) -> None:
+    """Geräte am Ticket nur mit Rechten im IT-Bestand (lesen oder bearbeiten)."""
+    if not access.inventory:
+        raise forbidden("Geräte siehst du nur mit Rechten im IT-Bestand.")
 
 
 def _reporter_devices(db: Session, mail: str) -> set[int]:
@@ -246,18 +243,14 @@ def search_devices(
     db: DbDep,
     q: Annotated[str, Query(max_length=60)] = "",
 ) -> list[DeviceOut]:
-    """Geräte aus dem IT-Bestand (erlaubte Arten, aktiv), höchstens 5. Ohne Suche: Geräte des
-    Melders (wenn eingeschaltet)."""
+    """Aktive Geräte aus dem IT-Bestand, höchstens 5. Ohne Suche: Geräte des Melders."""
     ticket = _visible_ticket(db, access, number)
     if not access.can_edit(ticket.area_id):
         raise forbidden("Mit „Nur lesen“ kannst du kein Gerät verknüpfen.")
-    area = _device_area(db, access, ticket)
+    _require_inventory(access)
     kinds = dict(db.execute(select(InventoryKind.id, InventoryKind.name)).tuples().all())
-    allowed = [k for k in (area.device_kinds or []) if isinstance(k, int)]
     query = select(InventoryHardware).where(InventoryHardware.status == "aktiv")
-    if allowed:
-        query = query.where(InventoryHardware.kind_id.in_(allowed))
-    reporter = _reporter_devices(db, ticket.reporter_mail) if area.device_suggest else set()
+    reporter = _reporter_devices(db, ticket.reporter_mail)
     text = q.strip()
     if text:
         pattern = f"%{escape_like(text)}%"
@@ -294,7 +287,7 @@ def set_device(
     ticket = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(ticket.area_id):
         raise forbidden("Mit „Nur lesen“ kannst du kein Gerät verknüpfen.")
-    area = _device_area(db, access, ticket)
+    _require_inventory(access)
     me = actor(access)
     if body.hardware_id is None:
         if ticket.hardware_id is not None:
@@ -302,8 +295,7 @@ def set_device(
             system_entry(db, ticket, "Gerät gelöst", me)
     else:
         hw = db.get(InventoryHardware, body.hardware_id)
-        allowed = [k for k in (area.device_kinds or []) if isinstance(k, int)]
-        if hw is None or hw.status != "aktiv" or (allowed and hw.kind_id not in allowed):
+        if hw is None or hw.status != "aktiv":
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Dieses Gerät lässt sich hier nicht verknüpfen.",
@@ -341,19 +333,22 @@ class HardwareTicketsOut(BaseModel):
 
 @router.get("/by-hardware/{hardware_id}")
 def tickets_for_hardware(hardware_id: ItemId, access: AccessDep, db: DbDep) -> HardwareTicketsOut:
-    """Tickets zu einem Gerät (für die Seite im IT-Bestand), nur aus Bereichen mit dieser Option."""
-    rows = db.execute(
-        select(Ticket, TicketArea.device_in_inventory)
-        .join(TicketArea, TicketArea.id == Ticket.area_id)
+    """Tickets zu einem Gerät (für die Seite im IT-Bestand); nur mit Rechten im IT-Bestand."""
+    _require_inventory(access)
+    rows = db.scalars(
+        select(Ticket)
         .where(Ticket.hardware_id == hardware_id)
         .order_by(Ticket.updated_at.desc())
         .limit(50)
     ).all()
+    return _ticket_refs(access, rows)
+
+
+def _ticket_refs(access: TicketAccess, rows: Sequence[Ticket]) -> HardwareTicketsOut:
+    """Tickets aus eigenen Bereichen einzeln, die übrigen nur als Anzahl."""
     items: list[HardwareTicketOut] = []
     hidden = 0
-    for ticket, show in rows:
-        if not show:
-            continue
+    for ticket in rows:
         if access.can_read(ticket.area_id):
             items.append(
                 HardwareTicketOut(
@@ -363,6 +358,25 @@ def tickets_for_hardware(hardware_id: ItemId, access: AccessDep, db: DbDep) -> H
         else:
             hidden += 1
     return HardwareTicketsOut(items=items, hidden=hidden)
+
+
+@router.get("/by-position/{position_id}")
+def tickets_for_position(position_id: ItemId, access: AccessDep, db: DbDep) -> HardwareTicketsOut:
+    """Tickets der Person an einer Stelle (Melder-Mail = UPN); nur mit Rechten im IT-Bestand."""
+    _require_inventory(access)
+    position = db.get(InventoryPosition, position_id)
+    if position is None:
+        raise not_found()
+    upn = position.person_upn.strip().lower()
+    if not upn:
+        return HardwareTicketsOut(items=[], hidden=0)
+    rows = db.scalars(
+        select(Ticket)
+        .where(func.lower(Ticket.reporter_mail) == upn)
+        .order_by(Ticket.updated_at.desc())
+        .limit(50)
+    ).all()
+    return _ticket_refs(access, rows)
 
 
 # --- Textbausteine (Auswahl im Ticket) ------------------------------------------------------
@@ -529,10 +543,6 @@ class WorkSettings(BaseModel):
     work_start: int = Field(ge=0, le=24 * 60)
     work_end: int = Field(ge=0, le=24 * 60)
     sla: list[SlaRow] = Field(max_length=3)
-    devices_enabled: bool
-    device_kinds: list[int] = Field(max_length=200)
-    device_suggest: bool
-    device_in_inventory: bool
 
     @field_validator("work_days")
     @classmethod
@@ -542,13 +552,8 @@ class WorkSettings(BaseModel):
         return sorted(set(value))
 
 
-class KindOut(BaseModel):
-    id: int
-    name: str
-
-
 class WorkSettingsOut(WorkSettings):
-    kinds: list[KindOut]
+    pass
 
 
 def _work_out(db: Session, area: TicketArea) -> WorkSettingsOut:
@@ -569,20 +574,12 @@ def _work_out(db: Session, area: TicketArea) -> WorkSettingsOut:
             )
             for p in ("high", "medium", "low")
         ],
-        devices_enabled=area.devices_enabled,
-        device_kinds=[k for k in (area.device_kinds or []) if isinstance(k, int)],
-        device_suggest=area.device_suggest,
-        device_in_inventory=area.device_in_inventory,
-        kinds=[
-            KindOut(id=k.id, name=k.name)
-            for k in db.scalars(select(InventoryKind).order_by(InventoryKind.name))
-        ],
     )
 
 
 @router.get("/settings/areas/{area_id}/work")
 def read_work_settings(area_id: AreaId, access: AccessDep, db: DbDep) -> WorkSettingsOut:
-    """Fristen und Geräte eines Bereichs."""
+    """Fristen eines Bereichs."""
     return _work_out(db, _area_for_settings(db, access, area_id))
 
 
@@ -606,17 +603,9 @@ def update_work_settings(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Die Lösung darf nicht vor der ersten Reaktion fällig sein.",
         )
-    known = set(db.scalars(select(InventoryKind.id)))
-    if any(k not in known for k in body.device_kinds):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannte Hardware-Art."
-        )
     area.sla_enabled = body.sla_enabled
     area.work_days = body.work_days
     area.work_start, area.work_end = body.work_start, body.work_end
-    area.devices_enabled = body.devices_enabled
-    area.device_kinds = sorted(set(body.device_kinds))
-    area.device_suggest, area.device_in_inventory = body.device_suggest, body.device_in_inventory
     save_sla(
         db,
         area,
@@ -629,9 +618,9 @@ def update_work_settings(
     protocol(
         db,
         actor(access),
-        "bereich_fristen_geraete",
+        "bereich_fristen",
         area_id=area.id,
-        details={"fristen": body.sla_enabled, "geraete": body.devices_enabled},
+        details={"fristen": body.sla_enabled},
     )
     db.commit()
     return _work_out(db, area)

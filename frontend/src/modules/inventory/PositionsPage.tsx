@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { fetchPositionTickets } from "../tickets/api";
+import { RelatedTickets } from "../tickets/RelatedTickets";
 import { errorText } from "../../api";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { InfoTip } from "../../components/InfoTip";
@@ -466,7 +468,14 @@ export function PositionDetailPage({
             ))}
           </nav>
           {tab === "uebersicht" && (
-            <Overview position={position} canEdit={canEdit} onChange={setPosition} />
+            <>
+              <Overview position={position} canEdit={canEdit} onChange={setPosition} />
+              <RelatedTickets
+                key={position.id}
+                title="Tickets der Person"
+                load={() => fetchPositionTickets(position.id)}
+              />
+            </>
           )}
           {tab === "arbeitsplaetze" && (
             <section className="panel" aria-labelledby="stelle-plaetze">

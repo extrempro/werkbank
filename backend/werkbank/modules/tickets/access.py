@@ -333,6 +333,16 @@ class TicketAccess:
         return sorted(a for a, r in self.roles.items() if r == AREA_ADMIN)
 
     @property
+    def inventory(self) -> bool:
+        """Rechte im IT-Bestand (lesen oder bearbeiten): Geräte und Stellen am Ticket sehen."""
+        return self.user.has_any_role(Role.INVENTORY_READER, Role.INVENTORY_EDITOR)
+
+    @property
+    def can_create(self) -> bool:
+        """Darf in mindestens einem Bereich Tickets anlegen (Bearbeiten oder Verwaltung)."""
+        return any(r in (AREA_ADMIN, AREA_EDIT) for r in self.roles.values())
+
+    @property
     def settings_visible(self) -> bool:
         return self.manager or bool(self.admin_areas)
 

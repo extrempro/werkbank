@@ -1,11 +1,6 @@
 import { useConfirm } from "../../components/ConfirmDialog";
-import {
-  fetchHardwareTickets,
-  STATUS_LABELS,
-  ticketLabel,
-  ticketPath,
-  type HardwareTickets,
-} from "../tickets/api";
+import { fetchHardwareTickets } from "../tickets/api";
+import { RelatedTickets } from "../tickets/RelatedTickets";
 import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
@@ -598,50 +593,6 @@ function History({ device }: { device: Hardware }) {
   );
 }
 
-/** Tickets zum Gerät (nur aus Bereichen, die das zeigen; ohne Zugriff auf Tickets: nichts). */
-function DeviceTickets({ hardwareId }: { hardwareId: number }) {
-  const [data, setData] = useState<HardwareTickets | null>(null);
-  useEffect(() => {
-    let active = true;
-    fetchHardwareTickets(hardwareId).then(
-      (result) => active && setData(result),
-      () => active && setData(null),
-    );
-    return () => {
-      active = false;
-    };
-  }, [hardwareId]);
-  if (!data || (data.items.length === 0 && data.hidden === 0)) {
-    return null;
-  }
-  return (
-    <section className="panel" aria-labelledby="geraet-tickets">
-      <div className="panel-head">
-        <h2 id="geraet-tickets">Tickets</h2>
-      </div>
-      <div className="detail-body">
-        <ul className="plain ticket-pick-list">
-          {data.items.map((t) => (
-            <li key={t.number}>
-              <Link to={ticketPath(t.number)}>
-                {ticketLabel(t.number)} {t.subject}
-              </Link>
-              <span className="small"> · {STATUS_LABELS[t.status]}</span>
-            </li>
-          ))}
-        </ul>
-        {data.hidden > 0 && (
-          <p className="small">
-            {data.hidden === 1
-              ? "Ein weiteres Ticket liegt in einem Bereich, den du nicht siehst."
-              : `${data.hidden} weitere Tickets liegen in Bereichen, die du nicht siehst.`}
-          </p>
-        )}
-      </div>
-    </section>
-  );
-}
-
 /** Reiter Technik: Kenndaten aus NinjaOne, nur lesend. */
 /** Technische Daten des Modells aus Lenovo PSREF, mit Link und Abruf auf Zuruf. */
 function PsrefSection({
@@ -933,7 +884,7 @@ export function HardwareDetailPage({
           {tab === "verlauf" && (
             <>
               <History device={device} />
-              <DeviceTickets hardwareId={device.id} />
+              <RelatedTickets key={device.id} load={() => fetchHardwareTickets(device.id)} />
             </>
           )}
         </>

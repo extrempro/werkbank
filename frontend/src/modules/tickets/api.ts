@@ -143,8 +143,10 @@ export interface Ticket extends TicketItem {
   categories: Category[];
   reminder_note: string;
   sla: Sla | null;
-  devices_enabled: boolean;
+  /** Rechte im IT-Bestand: Gerät und Angaben zum Melder sichtbar. */
+  inventory: boolean;
   device: Device | null;
+  reporter_inventory: ReporterInventory | null;
   merged_into: number | null;
   retention: TicketRetention;
   anonymized_at: string | null;
@@ -174,6 +176,18 @@ export interface Sla {
   response_met: boolean | null;
   solution_met: boolean | null;
   paused: boolean;
+}
+
+export interface ReporterInventory {
+  positions: {
+    id: number;
+    number: string;
+    name: string;
+    department: string;
+    workplaces: { id: number; number: string; room: string }[];
+    devices: { id: number; name: string; kind: string; inventory_no: string }[];
+  }[];
+  loans: { id: number; number: string; due_on: string; overdue: boolean; items: number }[];
 }
 
 export interface Device {
@@ -631,15 +645,9 @@ export interface WorkSettings {
   work_start: number;
   work_end: number;
   sla: { priority: Priority; response_minutes: number; solution_minutes: number }[];
-  devices_enabled: boolean;
-  device_kinds: number[];
-  device_suggest: boolean;
-  device_in_inventory: boolean;
 }
 
-export interface WorkSettingsOut extends WorkSettings {
-  kinds: { id: number; name: string }[];
-}
+export type WorkSettingsOut = WorkSettings;
 
 export function fetchWorkSettings(areaId: number): Promise<WorkSettingsOut> {
   return getJson(`${SETTINGS}/areas/${areaId}/work`);
@@ -829,6 +837,11 @@ export const AUDIT_LABELS: Record<string, string> = {
   bereich_zuweisung: "Zuweisung geändert",
   bereich_mail_geaendert: "E-Mail-Einstellungen geändert",
   bereich_fristen_geraete: "Fristen und Geräte geändert",
+  bereich_fristen: "Fristen geändert",
+  pruefen_anlegen: "Zu prüfen: als Ticket angelegt",
+  pruefen_verwerfen: "Zu prüfen: verworfen",
+  pruefen_sperren: "Zu prüfen: Absender gesperrt",
+  pruefen_verfallen: "Zu prüfen: nach Frist verworfen",
   rolle_vergeben: "Rolle vergeben",
   rolle_entzogen: "Rolle entzogen",
   kategorie_angelegt: "Kategorie angelegt",
@@ -877,4 +890,20 @@ export function auditDetails(details: Record<string, unknown>): string {
   return Object.entries(details)
     .map(([key, value]) => `${key}: ${show(value)}`)
     .join(" · ");
+}
+
+// --- IT-Bestand und Melder aus Entra --------------------------------------------------------
+
+export function fetchPositionTickets(positionId: number): Promise<HardwareTickets> {
+  return getJson(`${BASE}/by-position/${positionId}`);
+}
+
+export interface ReporterHit {
+  name: string;
+  mail: string;
+  detail: string;
+}
+
+export function searchReporters(q: string): Promise<ReporterHit[]> {
+  return getJson(`${BASE}/people?${new URLSearchParams({ q }).toString()}`);
 }

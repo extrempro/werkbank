@@ -1,12 +1,15 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
 import { navigate } from "../../router";
+import { useDebounced } from "../inventory/paged";
 import {
   createTicket,
   fetchAreaCategories,
   PRIORITY_LABELS,
+  searchReporters,
   type Category,
+  type ReporterHit,
   ticketPath,
   type Priority,
   type TicketAccess,
@@ -30,6 +33,12 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
   const [subject, setSubject] = useState("");
   const [reporterName, setReporterName] = useState("");
   const [reporterMail, setReporterMail] = useState("");
+  // Vorschläge aus Entra zum Namen; nach einer Auswahl erst wieder beim Weitertippen
+  const [picked, setPicked] = useState<string | null>(null);
+  const [hits, setHits] = useState<{ query: string; items: ReporterHit[] } | null>(null);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const nameQuery = useDebounced(reporterName.trim());
+  const reporterHintId = useId();
   const [participants, setParticipants] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [channel, setChannel] = useState<"manual" | "phone">("phone");
@@ -55,6 +64,34 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
       active = false;
     };
   }, [areaId]);
+
+  useEffect(() => {
+    if (nameQuery.length < 2 || nameQuery === picked) {
+      return;
+    }
+    let active = true;
+    searchReporters(nameQuery).then(
+      (items) => {
+        if (active) {
+          setHits({ query: nameQuery, items });
+          setSearchFailed(false);
+        }
+      },
+      () => active && setSearchFailed(true),
+    );
+    return () => {
+      active = false;
+    };
+  }, [nameQuery, picked]);
+
+  const suggestions =
+    hits && hits.query === reporterName.trim() && reporterName.trim() !== picked ? hits.items : [];
+
+  const pick = (hit: ReporterHit) => {
+    setReporterName(hit.name);
+    setReporterMail(hit.mail);
+    setPicked(hit.name);
+  };
 
   if (areas.length === 0) {
     return (
@@ -186,16 +223,43 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
           />
         </label>
         <div className="form-grid">
-          <label>
-            Name des Melders
-            <input
-              required
-              maxLength={200}
-              autoComplete="off"
-              value={reporterName}
-              onChange={(event) => setReporterName(event.target.value)}
-            />
-          </label>
+          <div className="ticket-reporter">
+            <label>
+              Name des Melders
+              <input
+                required
+                maxLength={200}
+                autoComplete="off"
+                aria-describedby={reporterHintId}
+                value={reporterName}
+                onChange={(event) => setReporterName(event.target.value)}
+              />
+            </label>
+            <p className="small" id={reporterHintId}>
+              {searchFailed
+                ? "Die Suche in Entra ist gerade nicht verfügbar. Trag Name und Mailadresse selbst ein."
+                : "Ab zwei Buchstaben erscheinen Vorschläge aus Entra; du kannst den Namen auch frei eintragen."}
+            </p>
+            {suggestions.length > 0 && (
+              <ul className="ticket-pick-list" aria-label="Vorschläge aus Entra">
+                {suggestions.map((hit) => (
+                  <li key={`${hit.mail}-${hit.name}`}>
+                    <button type="button" className="button button-link" onClick={() => pick(hit)}>
+                      {hit.name}
+                    </button>
+                    <span className="small">
+                      {" "}
+                      · {hit.mail}
+                      {hit.detail && ` · ${hit.detail}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="visually-hidden" aria-live="polite">
+              {suggestions.length > 0 ? `${suggestions.length} Vorschläge aus Entra.` : ""}
+            </p>
+          </div>
           <label>
             Mailadresse des Melders (freiwillig)
             <input

@@ -204,10 +204,6 @@ export function WorkSection({ areaId, onMessage }: { areaId: number; onMessage: 
       work_start: result.work_start,
       work_end: result.work_end,
       sla: result.sla,
-      devices_enabled: result.devices_enabled,
-      device_kinds: result.device_kinds,
-      device_suggest: result.device_suggest,
-      device_in_inventory: result.device_in_inventory,
     });
   };
 
@@ -243,7 +239,7 @@ export function WorkSection({ areaId, onMessage }: { areaId: number; onMessage: 
     saveWorkSettings(areaId, form)
       .then((result) => {
         accept(result);
-        onMessage({ kind: "status", text: "Fristen und Geräte wurden gespeichert." });
+        onMessage({ kind: "status", text: "Die Fristen wurden gespeichert." });
       })
       .catch(failed(onMessage, "Die Einstellungen konnten nicht gespeichert werden."))
       .finally(() => setBusy(false));
@@ -356,59 +352,6 @@ export function WorkSection({ areaId, onMessage }: { areaId: number; onMessage: 
             <p className="small">
               Gezählt wird nur Arbeitszeit. Bei „Wartet auf Rückmeldung“ ruht die Frist.
             </p>
-          </>
-        )}
-      </fieldset>
-      <fieldset>
-        <legend>
-          Geräte
-          <InfoTip term="tickets.geraet" />
-        </legend>
-        <label className="check-label">
-          <input
-            type="checkbox"
-            checked={form.devices_enabled}
-            onChange={(event) => set({ devices_enabled: event.target.checked })}
-          />{" "}
-          Tickets mit Geräten aus dem IT-Bestand verknüpfen
-        </label>
-        {form.devices_enabled && (
-          <>
-            <fieldset className="ticket-days">
-              <legend>Nur diese Arten (keine Auswahl: alle)</legend>
-              {data.kinds.map((kind) => (
-                <label key={kind.id} className="check-label">
-                  <input
-                    type="checkbox"
-                    checked={form.device_kinds.includes(kind.id)}
-                    onChange={(event) =>
-                      set({
-                        device_kinds: event.target.checked
-                          ? [...form.device_kinds, kind.id]
-                          : form.device_kinds.filter((k) => k !== kind.id),
-                      })
-                    }
-                  />{" "}
-                  {kind.name}
-                </label>
-              ))}
-            </fieldset>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={form.device_suggest}
-                onChange={(event) => set({ device_suggest: event.target.checked })}
-              />{" "}
-              Geräte des Melders vorschlagen
-            </label>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={form.device_in_inventory}
-                onChange={(event) => set({ device_in_inventory: event.target.checked })}
-              />{" "}
-              Tickets auf der Seite des Geräts im IT-Bestand zeigen
-            </label>
           </>
         )}
       </fieldset>

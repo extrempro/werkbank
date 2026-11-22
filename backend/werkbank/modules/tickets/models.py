@@ -120,17 +120,6 @@ class TicketArea(Base):
     )
     work_start: Mapped[int] = mapped_column(Integer, default=480, server_default=text("480"))
     work_end: Mapped[int] = mapped_column(Integer, default=1020, server_default=text("1020"))
-    # Geräte aus dem IT-Bestand (Phase 3)
-    devices_enabled: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default=text("false")
-    )
-    device_kinds: Mapped[list[int]] = mapped_column(
-        JSONB, default=list, server_default=text("'[]'::jsonb")
-    )
-    device_suggest: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
-    device_in_inventory: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default=text("false")
-    )
     # Aufbewahrung (Phase 4): eigene Abweichung von der Vorgabe; 0 Monate = aus
     retention_custom: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=text("false")

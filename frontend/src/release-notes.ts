@@ -24,6 +24,24 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.102.0",
+    date: "2026-11-22",
+    summary: "Tickets: Einstellungen in Reitern, Melder im IT-Bestand und Melder aus Entra.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Die Einstellungen sind jetzt in Reiter aufgeteilt: Bereiche, Kategorien und Fristen, E-Mail-Eingang, E-Mail-Gestaltung, Textbausteine, Aufbewahrung und Rollen. Den Bereich wählst du oben.",
+          "Rollen und Protokoll findest du jetzt im Reiter „Rollen“ der Einstellungen.",
+          "Mit Rechten im IT-Bestand siehst du am Ticket die Stelle des Melders mit Arbeitsplatz, Geräten und offenen Verleihen.",
+          "Auf der Seite einer Stelle im IT-Bestand stehen die Tickets der Person.",
+          "Geräte verknüpfst du jetzt in jedem Bereich, sobald du Rechte im IT-Bestand hast; die Einstellung je Bereich entfällt.",
+          "Beim Anlegen eines Tickets schlägt die Werkbank Melder aus Entra vor und trägt die Mailadresse mit ein. Du kannst Name und Mailadresse auch frei eintragen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.101.0",
     date: "2026-11-22",
     summary: "Tickets: Übersicht, Excel-Export, Aufbewahrung und Protokoll.",

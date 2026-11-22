@@ -3,6 +3,9 @@ import { errorText } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
 import { InfoTip } from "../../components/InfoTip";
+import { Link } from "../../components/Link";
+import type { HelpKey } from "../../help/terms";
+import { TICKETS_SETTINGS_PATH } from "../../navigation";
 import {
   addGrant,
   createArea,
@@ -32,25 +35,8 @@ import {
   TemplatesSection,
   WorkSection,
 } from "./TicketWorkSettings";
+import { AuditLog, RolesOverview } from "./TicketsRoles";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
-
-/** Aufklappbarer Abschnitt; der Inhalt lädt erst beim ersten Öffnen. */
-function LazySection({ title, children }: { title: string; children: () => ReactNode }) {
-  const [opened, setOpened] = useState(false);
-  return (
-    <details
-      className="ticket-mail-section"
-      onToggle={(event) => {
-        if (event.currentTarget.open) {
-          setOpened(true);
-        }
-      }}
-    >
-      <summary>{title}</summary>
-      {opened && children()}
-    </details>
-  );
-}
 
 const ROLES: AreaRole[] = ["admin", "edit", "read"];
 
@@ -234,7 +220,6 @@ function AreaPanel({
   onSaved: (area: AreaSettings) => void;
   onMessage: (message: FeedbackMessage) => void;
 }) {
-  const [ask, dialog] = useConfirm();
   const [name, setName] = useState(area.name);
   const [mailbox, setMailbox] = useState(area.mailbox);
   const [active, setActive] = useState(area.active);
@@ -336,10 +321,32 @@ function AreaPanel({
             <option value="round_robin">Reihum</option>
           </select>
         </label>
-        <h3>
-          Rollen
-          <InfoTip term="tickets.rollen" />
-        </h3>
+      </div>
+    </section>
+  );
+}
+
+/** Rollen eines Bereichs: je Rolle die Einträge mit „Entziehen“, darunter „Rolle vergeben“. */
+function AreaRoles({
+  area,
+  manager,
+  onSaved,
+  onMessage,
+}: {
+  area: AreaSettings;
+  manager: boolean;
+  onSaved: (area: AreaSettings) => void;
+  onMessage: (message: FeedbackMessage) => void;
+}) {
+  const [ask, dialog] = useConfirm();
+  const headingId = useId();
+  return (
+    <section className="panel ticket-area" aria-labelledby={headingId}>
+      <div className="panel-head">
+        <h2 id={headingId}>Rollen im Bereich „{area.name}“</h2>
+        <InfoTip term="tickets.rollen" />
+      </div>
+      <div className="detail-body settings-form">
         {ROLES.map((role) => {
           const grants = area.grants.filter((g) => g.role === role);
           return (
@@ -403,30 +410,6 @@ function AreaPanel({
           );
         })}
         <GrantForm area={area} manager={manager} onSaved={onSaved} onMessage={onMessage} />
-        <LazySection title="E-Mail-Eingang und Mails an den Melder">
-          {() => <MailSettingsSection areaId={area.id} onMessage={onMessage} />}
-        </LazySection>
-        <LazySection title="Zu prüfen">
-          {() => <ReviewSection areaId={area.id} onMessage={onMessage} />}
-        </LazySection>
-        <LazySection title="Sperrliste">
-          {() => <BlocksSection areaId={area.id} onMessage={onMessage} />}
-        </LazySection>
-        <LazySection title="Letzte Eingänge">
-          {() => <IntakeSection areaId={area.id} />}
-        </LazySection>
-        <LazySection title="Kategorien">
-          {() => <CategoriesSection areaId={area.id} onMessage={onMessage} />}
-        </LazySection>
-        <LazySection title="Fristen und Geräte">
-          {() => <WorkSection areaId={area.id} onMessage={onMessage} />}
-        </LazySection>
-        <LazySection title="Textbausteine">
-          {() => <TemplatesSection areaId={area.id} onMessage={onMessage} />}
-        </LazySection>
-        <LazySection title="Aufbewahrung">
-          {() => <RetentionSection areaId={area.id} onMessage={onMessage} />}
-        </LazySection>
       </div>
       {dialog}
     </section>
@@ -548,10 +531,53 @@ function NewAreaForm({
   );
 }
 
-export function TicketSettingsPage() {
+export const SETTINGS_TABS = [
+  { id: "bereiche", label: "Bereiche" },
+  { id: "kategorien", label: "Kategorien und Fristen" },
+  { id: "email", label: "E-Mail-Eingang" },
+  { id: "gestaltung", label: "E-Mail-Gestaltung" },
+  { id: "textbausteine", label: "Textbausteine" },
+  { id: "aufbewahrung", label: "Aufbewahrung" },
+  { id: "rollen", label: "Rollen" },
+] as const;
+export type SettingsTab = (typeof SETTINGS_TABS)[number]["id"];
+
+/** Reiter aus dem Pfad: `/tickets/einstellungen` → Bereiche, `/tickets/einstellungen/email` → … */
+export function parseSettingsPath(path: string): SettingsTab | null {
+  if (path === TICKETS_SETTINGS_PATH) {
+    return "bereiche";
+  }
+  const rest = path.startsWith(`${TICKETS_SETTINGS_PATH}/`)
+    ? path.slice(TICKETS_SETTINGS_PATH.length + 1)
+    : null;
+  return SETTINGS_TABS.find((t) => t.id === rest)?.id ?? null;
+}
+
+export function settingsPath(tab: SettingsTab, area: number | null = null): string {
+  const base = tab === "bereiche" ? TICKETS_SETTINGS_PATH : `${TICKETS_SETTINGS_PATH}/${tab}`;
+  return area === null ? base : `${base}?bereich=${area}`;
+}
+
+/** Reiter, die je Bereich gelten (mit Auswahl des Bereichs). */
+const AREA_TABS: readonly SettingsTab[] = [
+  "kategorien",
+  "email",
+  "textbausteine",
+  "aufbewahrung",
+  "rollen",
+];
+
+function areaFromUrl(): number | null {
+  const value = Number(new URLSearchParams(window.location.search).get("bereich"));
+  return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
   const [data, setData] = useState<TicketSettings | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [message, setMessage] = useState<FeedbackMessage | null>(null);
+  const [wanted, setWanted] = useState<number | null>(() => areaFromUrl());
+  const areaSelectId = useId();
 
   useEffect(() => {
     let active = true;
@@ -579,6 +605,17 @@ export function TicketSettingsPage() {
     window.dispatchEvent(new Event(TICKET_ACCESS_CHANGED));
   };
 
+  const tabs = SETTINGS_TABS.filter((t) => t.id !== "gestaltung" || data?.manager);
+  const current = tabs.some((t) => t.id === tab) ? tab : "bereiche";
+  const area = data?.areas.find((a) => a.id === wanted) ?? data?.areas[0] ?? null;
+  const perArea = AREA_TABS.includes(current);
+
+  const chooseArea = (id: number) => {
+    setWanted(id);
+    // Bereich in der Adresse merken (ohne neuen Eintrag im Verlauf)
+    window.history.replaceState(null, "", settingsPath(current, id));
+  };
+
   return (
     <div className="page page-wide">
       <header className="page-head">
@@ -586,35 +623,160 @@ export function TicketSettingsPage() {
           <p className="module-label">Tickets</p>
           <h1>Einstellungen</h1>
           <p className="page-sub">
-            Bereiche und wer darin welche Rolle hat. Jeder Bereich braucht mindestens eine
-            Bereichsverwaltung.
+            Bereiche, Kategorien und Fristen, E-Mail, Textbausteine, Aufbewahrung und Rollen.
           </p>
         </div>
       </header>
+      <nav className="project-tabs" aria-label="Einstellungen der Tickets">
+        {tabs.map((t) => (
+          <Link
+            key={t.id}
+            to={settingsPath(t.id, AREA_TABS.includes(t.id) && area ? area.id : null)}
+            className={t.id === current ? "project-tab project-tab-on" : "project-tab"}
+            aria-current={t.id === current ? "page" : undefined}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
       {failed && (
         <p role="alert" className="hint-box hint-bad">
           {failed}
         </p>
       )}
       {!failed && !data && <p role="status">Wird geladen …</p>}
-      {data?.manager && <NewAreaForm onCreated={replace} onMessage={setMessage} />}
-      {data?.manager && <DesignSection onMessage={setMessage} />}
-      {data?.manager && <RetentionDefaultSection onMessage={setMessage} />}
-      {data && data.areas.length === 0 && (
+
+      {data && perArea && data.areas.length === 0 && (
         <p className="panel panel-empty">
-          Es gibt noch keinen Bereich.{data.manager ? " Lege oben den ersten an." : ""}
+          Es gibt noch keinen Bereich.
+          {data.manager ? " Leg ihn unter „Bereiche“ an." : ""}
         </p>
       )}
-      {data?.areas.map((area) => (
-        <AreaPanel
-          key={area.id}
-          area={area}
-          manager={data.manager}
-          onSaved={replace}
-          onMessage={setMessage}
-        />
-      ))}
+      {data && perArea && area && data.areas.length > 1 && (
+        <section className="panel stat-filters" aria-label="Bereich wählen">
+          <label htmlFor={areaSelectId} className="filter-field">
+            Bereich
+            <select
+              id={areaSelectId}
+              value={area.id}
+              onChange={(event) => chooseArea(Number(event.target.value))}
+            >
+              {data.areas.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                  {a.active ? "" : " (inaktiv)"}
+                </option>
+              ))}
+            </select>
+          </label>
+        </section>
+      )}
+
+      {data && current === "bereiche" && (
+        <>
+          {data.manager && <NewAreaForm onCreated={replace} onMessage={setMessage} />}
+          {data.areas.length === 0 && (
+            <p className="panel panel-empty">
+              Es gibt noch keinen Bereich.{data.manager ? " Lege oben den ersten an." : ""}
+            </p>
+          )}
+          {data.areas.map((a) => (
+            <AreaPanel
+              key={a.id}
+              area={a}
+              manager={data.manager}
+              onSaved={replace}
+              onMessage={setMessage}
+            />
+          ))}
+        </>
+      )}
+      {data && current === "gestaltung" && data.manager && <DesignSection onMessage={setMessage} />}
+      {data && area && current === "kategorien" && (
+        <div key={area.id}>
+          <SettingsPanel title="Kategorien" term="tickets.kategorie">
+            <CategoriesSection areaId={area.id} onMessage={setMessage} />
+          </SettingsPanel>
+          <SettingsPanel title="Fristen" term="tickets.frist">
+            <WorkSection areaId={area.id} onMessage={setMessage} />
+          </SettingsPanel>
+        </div>
+      )}
+      {data && area && current === "email" && (
+        <div key={area.id}>
+          <SettingsPanel title="Postfach und Mails an den Melder">
+            <MailSettingsSection areaId={area.id} onMessage={setMessage} />
+          </SettingsPanel>
+          <SettingsPanel title="Zu prüfen" id="pruefen">
+            <ReviewSection areaId={area.id} onMessage={setMessage} />
+          </SettingsPanel>
+          <SettingsPanel title="Sperrliste">
+            <BlocksSection areaId={area.id} onMessage={setMessage} />
+          </SettingsPanel>
+          <SettingsPanel title="Letzte Eingänge">
+            <IntakeSection areaId={area.id} />
+          </SettingsPanel>
+        </div>
+      )}
+      {data && area && current === "textbausteine" && (
+        <SettingsPanel key={area.id} title="Textbausteine" term="tickets.textbausteine">
+          <TemplatesSection areaId={area.id} onMessage={setMessage} />
+        </SettingsPanel>
+      )}
+      {data && current === "aufbewahrung" && (
+        <>
+          {data.manager && <RetentionDefaultSection onMessage={setMessage} />}
+          {area && (
+            <SettingsPanel
+              key={area.id}
+              title={`Aufbewahrung im Bereich „${area.name}“`}
+              term="tickets.aufbewahrung"
+            >
+              <RetentionSection areaId={area.id} onMessage={setMessage} />
+            </SettingsPanel>
+          )}
+        </>
+      )}
+      {data && current === "rollen" && (
+        <>
+          {area && (
+            <AreaRoles
+              key={area.id}
+              area={area}
+              manager={data.manager}
+              onSaved={replace}
+              onMessage={setMessage}
+            />
+          )}
+          <RolesOverview settings={data} />
+          <AuditLog areas={data.areas} />
+        </>
+      )}
       <Feedback message={message} onClose={() => setMessage(null)} />
     </div>
+  );
+}
+
+/** Abschnitt einer Einstellungsseite mit Überschrift. */
+function SettingsPanel({
+  title,
+  term,
+  id,
+  children,
+}: {
+  title: string;
+  term?: HelpKey;
+  id?: string;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <section className="panel" aria-labelledby={headingId} id={id}>
+      <div className="panel-head">
+        <h2 id={headingId}>{title}</h2>
+        {term && <InfoTip term={term} />}
+      </div>
+      <div className="detail-body">{children}</div>
+    </section>
   );
 }

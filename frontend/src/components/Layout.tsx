@@ -23,7 +23,6 @@ import {
   TICKETS_PATH,
   TICKETS_SETTINGS_PATH,
   TICKETS_OVERVIEW_PATH,
-  TICKETS_LOG_PATH,
   BUDGET_ACCOUNTS_PATH,
   BUDGET_IMPORT_PATH,
   BUDGET_CONTRACTS_PATH,
@@ -88,9 +87,8 @@ import { CasesPage } from "../modules/inventory/CasesPage";
 import { parseTicketPath } from "../modules/tickets/api";
 import { NewTicketPage } from "../modules/tickets/NewTicketPage";
 import { TicketPage } from "../modules/tickets/TicketPage";
-import { TicketSettingsPage } from "../modules/tickets/TicketSettingsPage";
+import { parseSettingsPath, TicketSettingsPage } from "../modules/tickets/TicketSettingsPage";
 import { TicketsPage } from "../modules/tickets/TicketsPage";
-import { TicketsLogPage } from "../modules/tickets/TicketsLogPage";
 import { TicketsOverviewPage } from "../modules/tickets/TicketsOverviewPage";
 import { ticketNavRoles, useTicketAccess } from "../modules/tickets/useTicketAccess";
 import { LoansPage } from "../modules/inventory/LoansPage";
@@ -373,6 +371,7 @@ export function Layout({ me }: LayoutProps) {
   const positionRoute = parsePositionPath(path);
   const caseRoute = parseCasePath(path);
   const ticketRoute = parseTicketPath(path);
+  const settingsTab = parseSettingsPath(path);
   const zabbixHost = parseZabbixHostPath(path);
   const loanRoute = parseLoanPath(path);
   const workplaceRoute = parseWorkplacePath(path);
@@ -594,12 +593,10 @@ export function Layout({ me }: LayoutProps) {
     page = <TicketsPage access={ticketAccess} />;
   } else if (path === TICKETS_NEW_PATH && current && ticketAccess) {
     page = <NewTicketPage access={ticketAccess} />;
-  } else if (path === TICKETS_SETTINGS_PATH && current) {
-    page = <TicketSettingsPage />;
+  } else if (settingsTab !== null && items.some((item) => item.path === TICKETS_SETTINGS_PATH)) {
+    page = <TicketSettingsPage key={settingsTab} tab={settingsTab} />;
   } else if (path === TICKETS_OVERVIEW_PATH && current && ticketAccess) {
     page = <TicketsOverviewPage access={ticketAccess} />;
-  } else if (path === TICKETS_LOG_PATH && current) {
-    page = <TicketsLogPage />;
   } else if (current) {
     page = <PlaceholderPage title={current.label} />;
   } else {
