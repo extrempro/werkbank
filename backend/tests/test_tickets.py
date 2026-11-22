@@ -32,6 +32,7 @@ BASE = "/api/tickets"
 SETTINGS = f"{BASE}/settings"
 KEY_FILE = Path(tempfile.mkdtemp()) / "settings_key"
 KEY_FILE.write_text("nur-fuer-tests-" + "x" * 40, encoding="utf-8")
+FILES_DIR = Path(tempfile.mkdtemp())
 
 IT_GROUP = "11111111-1111-1111-1111-111111111111"
 HT_GROUP = "22222222-2222-2222-2222-222222222222"
@@ -41,7 +42,11 @@ pytestmark = pytest.mark.db
 
 def client_for(name: str, roles: list[str] | None = None) -> TestClient:
     settings = Settings(
-        public_url=ORIGIN, environment="test", enable_test_login=True, settings_key_file=KEY_FILE
+        public_url=ORIGIN,
+        environment="test",
+        enable_test_login=True,
+        settings_key_file=KEY_FILE,
+        tickets_files_dir=FILES_DIR,
     )
     client = TestClient(
         create_app(settings), base_url=ORIGIN, follow_redirects=False, headers=HEADERS
@@ -388,7 +393,12 @@ def test_create_validates_input(areas: dict[str, int]) -> None:
 
 
 def test_test_membership_endpoint_only_in_test() -> None:
-    settings = Settings(public_url=ORIGIN, environment="production", settings_key_file=KEY_FILE)
+    settings = Settings(
+        public_url=ORIGIN,
+        environment="production",
+        settings_key_file=KEY_FILE,
+        tickets_files_dir=FILES_DIR,
+    )
     client = TestClient(create_app(settings), base_url=ORIGIN, headers=HEADERS)
     response = client.post(f"{BASE}/test/membership", json={"group_oid": "g", "oid": "o"})
     assert response.status_code in (401, 403, 404)
