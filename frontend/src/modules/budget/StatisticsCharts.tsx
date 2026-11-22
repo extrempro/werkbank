@@ -61,7 +61,7 @@ function Grid({ max }: { max: number }) {
       {ticks(max).map((value) => (
         <span
           key={value}
-          className="stat-grid"
+          className="stat-gridline"
           style={{ bottom: `${share(value, max)}%` }}
           aria-hidden="true"
         />
@@ -247,7 +247,7 @@ export function GroupChart({
                   {back.map((year, index) => (
                     <span
                       key={year.year}
-                      className={`stat-bar ${yearClass(year)}`}
+                      className={`stat-yearbar ${yearClass(year)}`}
                       style={{
                         top: index * 8,
                         width: `${Math.max(1, share(value(group, year), max))}%`,
@@ -357,7 +357,7 @@ export function CumulativeChart({
   const planY = H - (expected / max) * H;
   return (
     <div className="stat-cumulative">
-      <ul className="stat-legend">
+      <ul className="stat-keys">
         <li>
           <span className="stat-key stat-c0" aria-hidden="true" />
           Ist {yearName}

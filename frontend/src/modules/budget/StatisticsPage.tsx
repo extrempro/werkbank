@@ -539,7 +539,7 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
               <div className="stat-cards">
                 <section className="panel budget-section" aria-labelledby="statistik-monate">
                   <h2 id="statistik-monate">Ausgaben je Monat</h2>
-                  <ul className="stat-legend">
+                  <ul className="stat-keys">
                     <li>
                       <span className="stat-key stat-c0" aria-hidden="true" />
                       {summary.year_name}

@@ -267,26 +267,30 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
                   </td>
                   {canEdit && (
                     <td>
-                      <button
-                        type="button"
-                        className="button button-secondary"
-                        aria-label={`${partner.name} bearbeiten`}
-                        onClick={() => {
-                          setStatus(null);
-                          setEditing(partner);
-                        }}
-                      >
-                        Bearbeiten
-                      </button>
-                      <DeleteButton
-                        what={`Partner ${partner.name}`}
-                        run={() => deletePartner(partner.id)}
-                        onDeleted={() => {
-                          setPartners((partners ?? []).filter((entry) => entry.id !== partner.id));
-                          closeForm();
-                          setStatus(`${partner.name} ist gelöscht.`);
-                        }}
-                      />
+                      <span className="budget-row-actions">
+                        <button
+                          type="button"
+                          className="button button-secondary"
+                          aria-label={`${partner.name} bearbeiten`}
+                          onClick={() => {
+                            setStatus(null);
+                            setEditing(partner);
+                          }}
+                        >
+                          Bearbeiten
+                        </button>
+                        <DeleteButton
+                          what={`Partner ${partner.name}`}
+                          run={() => deletePartner(partner.id)}
+                          onDeleted={() => {
+                            setPartners(
+                              (partners ?? []).filter((entry) => entry.id !== partner.id),
+                            );
+                            closeForm();
+                            setStatus(`${partner.name} ist gelöscht.`);
+                          }}
+                        />
+                      </span>
                     </td>
                   )}
                 </tr>

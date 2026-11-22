@@ -240,7 +240,7 @@ export function BrandingSettings() {
       </form>
 
       <div className="detail-body settings-form">
-        <label className="narrow">
+        <label className="narrow-auto">
           Größe beim Hochladen
           <select
             value={mode}
