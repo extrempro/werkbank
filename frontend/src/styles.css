@@ -2470,7 +2470,7 @@ details summary {
   }
 }
 
-/* Seiten nach dem Entwurf: gemeinsame Bausteine */
+/* Seiten: gemeinsame Bausteine */
 
 .page {
   display: flex;
@@ -4843,7 +4843,7 @@ html {
   margin-top: 12px;
 }
 
-/* IT-Budget: Aufbau nach dem Entwurf (Karten, Balken, Listen) in den Farben der Werkbank */
+/* IT-Budget: Aufbau mit Karten, Balken und Listen in den Farben der Werkbank */
 
 .budget-head {
   display: flex;
