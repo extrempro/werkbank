@@ -59,6 +59,7 @@ function ZabbixForm({
 }) {
   const [enabled, setEnabled] = useState(stored.enabled);
   const [url, setUrl] = useState(stored.url);
+  const [linkUrl, setLinkUrl] = useState(stored.link_url);
   const [token, setToken] = useState("");
   const [removeToken, setRemoveToken] = useState(false);
   const [ca, setCa] = useState("");
@@ -68,10 +69,15 @@ function ZabbixForm({
   const [busy, setBusy] = useState(false);
   const tokenHint = useId();
   const caHint = useId();
+  const linkHint = useId();
 
   const onSave = (event: FormEvent) => {
     event.preventDefault();
-    const update: ZabbixSettingsUpdate = { enabled, url: url.trim() };
+    const update: ZabbixSettingsUpdate = {
+      enabled,
+      url: url.trim(),
+      link_url: linkUrl.trim(),
+    };
     if (removeToken) {
       update.token = "";
     } else if (token.trim()) {
@@ -149,6 +155,23 @@ function ZabbixForm({
             onChange={(event) => setUrl(event.target.value)}
           />
         </label>
+        <label>
+          Adresse für „In Zabbix öffnen“ (optional)
+          <input
+            type="url"
+            value={linkUrl}
+            maxLength={300}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="leer: dieselbe Adresse"
+            aria-describedby={linkHint}
+            onChange={(event) => setLinkUrl(event.target.value)}
+          />
+        </label>
+        <p className="small" id={linkHint}>
+          Nur nötig, wenn die Werkbank Zabbix über eine andere Adresse erreicht als die Menschen,
+          zum Beispiel über einen eigenen Zugang nur für den Server der Werkbank.
+        </p>
         <label>
           {stored.token_set ? "Neues API-Token" : "API-Token"}
           <input

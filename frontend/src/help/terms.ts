@@ -146,6 +146,21 @@ export const HELP = {
     text: "Hosts, in deren Zabbix-Inventar keine Seriennummer steht. In der Host-Ansicht lässt sich so ein Host von Hand einem Gerät zuordnen.",
     topic: ["it-monitoring", "zabbix-bestand"],
   },
+  "zabbix.verfuegbarkeit": {
+    term: "Verfügbarkeit",
+    text: "Anteil der überwachten Zeit, in der kein Ausfall offen war. Geplante Wartungen zählen nicht mit.",
+    topic: ["it-monitoring", "zabbix-berichte"],
+  },
+  "zabbix.zielwert": {
+    term: "Zielwert",
+    text: "So hoch soll die Verfügbarkeit mindestens sein. Ein Admin legt ihn auf der Seite Verbindung fest.",
+    topic: ["it-monitoring", "zabbix-berichte"],
+  },
+  "zabbix.ausfall": {
+    term: "Ausfall",
+    text: "Zeit, in der ein Problem mit dem Tag scope: availability ab Schweregrad Hoch offen war, zum Beispiel „nicht erreichbar“. Überlappende Probleme zählen einmal.",
+    topic: ["it-monitoring", "zabbix-berichte"],
+  },
   "zabbix.wartung": {
     term: "In Wartung",
     text: "Der Host steckt gerade in einer Wartung aus Zabbix. Seine Probleme blendet Zabbix dann meist aus.",
@@ -263,6 +278,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
     ["it-monitoring", "zabbix-einrichten"],
     ["it-monitoring", "zabbix-uebersicht"],
   ],
+  "/monitoring/zabbix/berichte": [["it-monitoring", "zabbix-berichte"]],
   "/monitoring/zabbix/hosts": [
     ["it-monitoring", "zabbix-uebersicht"],
     ["it-monitoring", "zabbix-bestand"],

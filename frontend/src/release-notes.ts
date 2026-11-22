@@ -24,6 +24,28 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.92.0",
+    date: "2026-11-22",
+    summary: "IT-Monitoring: Berichte zur Verfügbarkeit aus Zabbix.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Neu: Berichte zeigen, wie verfügbar die überwachten Hosts im Geschäftsjahr waren, je Standort oder Hostgruppe und je Monat, mit Zielwert.",
+          "Die Berichte lassen sich als CSV herunterladen oder drucken und als PDF speichern.",
+          "Mit der neuen Rolle „Monitoring Berichte“ siehst du nur die Berichte, ohne Hostnamen.",
+          "Die Werkbank sammelt die Daten ab jetzt; ältere Zeiträume bleiben leer.",
+          "Klappt die Verbindung zu Zabbix nicht, erklärt die Meldung jetzt besser, ob ein Proxy davor die Anfrage umleitet oder ablehnt.",
+          "Admins können für „In Zabbix öffnen“ eine eigene Adresse eintragen, falls die Werkbank Zabbix über einen anderen Weg erreicht.",
+        ],
+      },
+      {
+        area: "Bedienung",
+        entries: ["Auf dem Handy wird der gewählte Filter nicht mehr abgeschnitten."],
+      },
+    ],
+  },
+  {
     version: "0.91.0",
     date: "2026-11-22",
     summary: "IT-Monitoring: Zabbix und IT-Bestand werden über die Seriennummer abgeglichen.",

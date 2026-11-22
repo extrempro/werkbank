@@ -42,6 +42,7 @@ TransportDep = Annotated[Transport, Depends(get_zabbix_transport)]
 class ZabbixSettingsOut(BaseModel):
     enabled: bool
     url: str
+    link_url: str
     token_set: bool
     token_storage_available: bool
     ca_set: bool
@@ -50,6 +51,9 @@ class ZabbixSettingsOut(BaseModel):
 class ZabbixSettingsIn(BaseModel):
     enabled: bool
     url: str = Field(default="", max_length=300)
+    # Adresse für „In Zabbix öffnen“, wenn Menschen Zabbix unter einer anderen Adresse
+    # erreichen als die Werkbank. Leer: dieselbe wie url.
+    link_url: str = Field(default="", max_length=300)
     # None: unverändert. Leerer Text: löschen.
     token: str | None = Field(default=None, max_length=500)
     ca_pem: str | None = Field(default=None, max_length=PEM_MAX)
@@ -60,6 +64,7 @@ def _out(db: DbDep, key_available: bool) -> ZabbixSettingsOut:
     return ZabbixSettingsOut(
         enabled=data.get("enabled") is True,
         url=str(data.get("url") or ""),
+        link_url=str(data.get("link_url") or ""),
         token_set=bool(data.get("token_encrypted")),
         token_storage_available=key_available,
         ca_set=bool(data.get("ca_pem")),
@@ -85,6 +90,12 @@ def put_zabbix(
         raise HTTPException(
             status_code=422,
             detail="Bitte die https-Adresse von Zabbix eintragen, z. B. https://zabbix.example.com.",
+        )
+    link_url = body.link_url.strip().rstrip("/")
+    if link_url and not valid_zabbix_url(link_url):
+        raise HTTPException(
+            status_code=422,
+            detail="Bitte für die Links die https-Adresse der Zabbix-Oberfläche eintragen.",
         )
     token = previous.get("token_encrypted") or None
     if body.token == "":
@@ -113,7 +124,13 @@ def put_zabbix(
     set_setting(
         db,
         ZABBIX_KEY,
-        {"enabled": body.enabled, "url": url, "token_encrypted": token, "ca_pem": ca_pem},
+        {
+            "enabled": body.enabled,
+            "url": url,
+            "link_url": link_url or None,
+            "token_encrypted": token,
+            "ca_pem": ca_pem,
+        },
         user.user_id,
     )
     write_audit(
@@ -126,6 +143,7 @@ def put_zabbix(
         ip=client_ip(request),
         details={
             "eingeschaltet": body.enabled,
+            "eigene_link_adresse": bool(link_url),
             "token_geaendert": body.token is not None,
             "zertifikat_geaendert": body.ca_pem is not None,
         },

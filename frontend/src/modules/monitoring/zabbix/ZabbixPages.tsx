@@ -1346,13 +1346,25 @@ function OptionsForm({
     Object.fromEntries(data.groups.map((group) => [group.groupid, group.site_id])),
   );
   const [kindIds, setKindIds] = useState<number[]>(data.kind_ids);
+  const [target, setTarget] = useState(String(data.target).replace(".", ","));
   const [tag, setTag] = useState(data.certificate_tag);
   const [value, setValue] = useState(data.certificate_value);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
+  const targetNumber = Number(target.trim().replace(",", "."));
+  const targetValue =
+    target.trim() !== "" &&
+    Number.isFinite(targetNumber) &&
+    targetNumber >= 90 &&
+    targetNumber <= 100
+      ? targetNumber
+      : null;
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (targetValue === null) {
+      return;
+    }
     // Reihenfolge: zuerst die bisherige, neue Zuordnungen hinten an
     const ordered = [...data.groups].sort(
       (a, b) => (a.position ?? 10_000) - (b.position ?? 10_000) || a.name.localeCompare(b.name),
@@ -1370,6 +1382,7 @@ function OptionsForm({
       certificate_tag: tag.trim(),
       certificate_value: value.trim(),
       kind_ids: kindIds,
+      target: targetValue ?? data.target,
     })
       .then((saved) => {
         onSaved(saved);
@@ -1463,6 +1476,31 @@ function OptionsForm({
                 </label>
               ))}
             </div>
+          )}
+        </fieldset>
+        <fieldset className="zbx-tag">
+          <legend>
+            Zielwert der Verfügbarkeit <InfoTip term="zabbix.zielwert" />
+          </legend>
+          <p className="small">
+            Die Berichte zeigen, ob ein Standort oder eine Gruppe diesen Wert erreicht. Zwischen 90
+            und 100 %.
+          </p>
+          <label className="zbx-target">
+            Zielwert in %
+            <input
+              type="text"
+              inputMode="decimal"
+              value={target}
+              aria-invalid={targetValue === null}
+              aria-describedby={targetValue === null ? "zbx-target-fehler" : undefined}
+              onChange={(event) => setTarget(event.target.value)}
+            />
+          </label>
+          {targetValue === null && (
+            <p id="zbx-target-fehler" className="field-error">
+              Bitte eine Zahl zwischen 90 und 100 eintragen, z. B. 99,5.
+            </p>
           )}
         </fieldset>
         <fieldset className="zbx-tag">

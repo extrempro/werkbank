@@ -17,6 +17,7 @@ class Role(StrEnum):
     BUDGET_MANAGER = "Budget.Manager"
     BUDGET_READER = "Budget.Reader"
     MONITORING_READER = "Monitoring.Reader"
+    MONITORING_REPORTS = "Monitoring.Berichte"
     PROJECTS_READER = "Projekte.Reader"
     PROJECTS_EDITOR = "Projekte.Editor"
     INVENTORY_READER = "Bestand.Reader"
@@ -77,6 +78,10 @@ ROLE_INFO: dict[str, tuple[str, str]] = {
     Role.MONITORING_READER: (
         "Monitoring Leser",
         "Bereich IT-Monitoring ansehen (z. B. DNS-Abgleich mit NetBox)",
+    ),
+    Role.MONITORING_REPORTS: (
+        "Monitoring Berichte",
+        "Nur die Berichte von IT-Monitoring ansehen und exportieren, ohne Hostdetails",
     ),
     Role.PROJECTS_READER: (
         "Projekte Leser",

@@ -12,6 +12,7 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Budget.Reader", "IT-Budget"],
   ["Tools.User", "IT-Tools"],
   ["Monitoring.Reader", "IT-Monitoring"],
+  ["Monitoring.Berichte", "Monitoring-Berichte"],
   ["Projekte.Editor", "IT-Projekte"],
   ["Projekte.Reader", "IT-Projekte"],
   ["Bestand.Editor", "IT-Bestand"],
@@ -49,6 +50,10 @@ const ROLE_INFO: Record<string, { label: string; description: string }> = {
   "Monitoring.Reader": {
     label: "Monitoring Leser",
     description: "Bereich IT-Monitoring ansehen (z. B. DNS-Abgleich mit NetBox)",
+  },
+  "Monitoring.Berichte": {
+    label: "Monitoring Berichte",
+    description: "Nur die Berichte von IT-Monitoring ansehen und exportieren, ohne Hostdetails",
   },
   "Tools.User": {
     label: "IT-Tools Nutzer",

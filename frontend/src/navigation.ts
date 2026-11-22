@@ -20,6 +20,7 @@ const ADMIN = "Werkbank.Admin";
 const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
 const TOOLS_USER = "Tools.User";
 const MONITORING_READER = "Monitoring.Reader";
+const MONITORING_REPORTS = "Monitoring.Berichte";
 const PROJECT_ROLES = ["Projekte.Reader", "Projekte.Editor"];
 const INVENTORY_ROLES = ["Bestand.Reader", "Bestand.Editor"];
 const TENANT_READER = "Tenant.Reader";
@@ -50,6 +51,7 @@ export const MONITORING_ZABBIX_PATH = "/monitoring/zabbix";
 export const MONITORING_ZABBIX_HOSTS_PATH = "/monitoring/zabbix/hosts";
 export const MONITORING_ZABBIX_MAINTENANCE_PATH = "/monitoring/zabbix/wartungen";
 export const MONITORING_ZABBIX_CONNECTION_PATH = "/monitoring/zabbix/verbindung";
+export const MONITORING_ZABBIX_REPORTS_PATH = "/monitoring/zabbix/berichte";
 export const PROJECTS_PATH = "/projekte";
 export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
 export const INVENTORY_MASTER_PATH = "/bestand/stammdaten";
@@ -178,7 +180,25 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       groups: [{ title: null, items }],
     });
   }
-  if (roles.includes(MONITORING_READER) || roles.includes(ADMIN)) {
+  const monitoringFull = roles.includes(MONITORING_READER) || roles.includes(ADMIN);
+  const reportsItem = {
+    path: MONITORING_ZABBIX_REPORTS_PATH,
+    label: "Berichte",
+    icon: "statistik" as const,
+  };
+  if (!monitoringFull && roles.includes(MONITORING_REPORTS)) {
+    // Nur die Berichte, ohne Hostdetails
+    areas.push({
+      id: "monitoring",
+      label: "IT-Monitoring",
+      short: "Monitoring",
+      icon: "monitoring",
+      section: "betrieb",
+      home: MONITORING_ZABBIX_REPORTS_PATH,
+      groups: [{ title: "Zabbix", items: [reportsItem] }],
+    });
+  }
+  if (monitoringFull) {
     areas.push({
       id: "monitoring",
       label: "IT-Monitoring",
@@ -193,6 +213,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
             { path: MONITORING_ZABBIX_PATH, label: "Übersicht", icon: "uebersicht" },
             { path: MONITORING_ZABBIX_HOSTS_PATH, label: "Hosts", icon: "geraet" },
             { path: MONITORING_ZABBIX_MAINTENANCE_PATH, label: "Wartungen", icon: "kalender" },
+            reportsItem,
             ...(roles.includes(ADMIN)
               ? [
                   {

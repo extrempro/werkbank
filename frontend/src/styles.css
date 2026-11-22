@@ -10061,8 +10061,11 @@ td > .budget-row-actions {
   max-width: none;
 }
 
+/* Natürliche Breite: Ist der gewählte Zustand zu lang, rutscht „Weitere Filter“ in die
+   nächste Zeile, statt den Text abzuschneiden. */
 .filter-bar-phone .filter-status {
-  flex: 1 1 0;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .filter-bar-phone .filter-status select {
@@ -11613,4 +11616,74 @@ input[type="file"] {
 
 .zbx-link-form {
   margin-top: 12px;
+}
+
+.zbx-target {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 12rem;
+}
+
+.zbx-target input {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+}
+
+.zbx-report .kpi .pill {
+  align-self: flex-start;
+}
+
+.zbx-report .kpis {
+  margin-bottom: 16px;
+}
+
+.zbx-report-filter {
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.print-only {
+  display: none;
+}
+
+/* Druck und „Als PDF speichern“: nur der Inhalt, ohne Menüs und Bedienelemente */
+@media print {
+  .app-header,
+  .app-nav,
+  .mobile-bar,
+  .title-pin,
+  .skip-link,
+  .info-tip,
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .app-body {
+    display: block;
+    min-height: 0;
+  }
+
+  .app-main {
+    padding: 0;
+  }
+
+  .zbx-report .panel,
+  .zbx-report .kpi {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  .zbx-report .table-cards {
+    font-size: 0.8125rem;
+  }
 }

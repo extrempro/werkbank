@@ -348,6 +348,7 @@ const connection: ZbxConnection = {
     { id: 2, name: "USV" },
   ],
   kind_ids: [1],
+  target: 99.5,
 };
 
 describe("ZabbixConnectionPage", () => {
@@ -362,6 +363,9 @@ describe("ZabbixConnectionPage", () => {
     });
     fireEvent.change(screen.getByLabelText("Tag"), { target: { value: "component" } });
     fireEvent.click(screen.getByLabelText("USV"));
+    fireEvent.change(screen.getByLabelText("Zielwert in %"), { target: { value: "101" } });
+    expect(screen.getByText(/zwischen 90 und 100 eintragen/)).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Zielwert in %"), { target: { value: "99,9" } });
     fireEvent.click(screen.getByRole("button", { name: "Zuordnung speichern" }));
     await waitFor(() =>
       expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true),
@@ -372,6 +376,7 @@ describe("ZabbixConnectionPage", () => {
       certificate_tag: "component",
       certificate_value: "",
       kind_ids: [1, 2],
+      target: 99.9,
     });
   });
 });
@@ -383,6 +388,7 @@ describe("ZabbixSettings (Verwaltung)", () => {
         ? {
             enabled: true,
             url: "https://zabbix.example.com",
+            link_url: "",
             token_set: true,
             token_storage_available: true,
             ca_set: false,
@@ -390,6 +396,7 @@ describe("ZabbixSettings (Verwaltung)", () => {
         : {
             enabled: false,
             url: "",
+            link_url: "",
             token_set: false,
             token_storage_available: true,
             ca_set: false,
@@ -400,6 +407,9 @@ describe("ZabbixSettings (Verwaltung)", () => {
       target: { value: "https://zabbix.example.com" },
     });
     fireEvent.change(screen.getByLabelText("API-Token"), { target: { value: "zbx-geheim" } });
+    fireEvent.change(screen.getByLabelText("Adresse für „In Zabbix öffnen“ (optional)"), {
+      target: { value: "https://monitor.example.com" },
+    });
     fireEvent.click(screen.getByLabelText("Abfrage von Zabbix einschalten"));
     fireEvent.click(screen.getByRole("button", { name: "Zabbix speichern" }));
     expect(await screen.findByText("Die Anbindung an Zabbix ist gespeichert.")).toBeVisible();
@@ -407,6 +417,7 @@ describe("ZabbixSettings (Verwaltung)", () => {
     expect(JSON.parse(String(put[1]!.body))).toEqual({
       enabled: true,
       url: "https://zabbix.example.com",
+      link_url: "https://monitor.example.com",
       token: "zbx-geheim",
     });
     expect(screen.getByText("eingeschaltet")).toBeVisible();

@@ -114,6 +114,7 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | Budgetverwalter | `Budget.Manager` | Wie Bearbeiter, dazu Rechnungen buchen und die Einstellungen festlegen |
 | Budget Leser | `Budget.Reader` | IT-Budget ansehen |
 | Monitoring Leser | `Monitoring.Reader` | Bereich IT-Monitoring ansehen (z. B. DNS-Abgleich mit NetBox) |
+| Monitoring Berichte | `Monitoring.Berichte` | Nur die Berichte von IT-Monitoring ansehen und exportieren, ohne Hostdetails |
 | Projekte Leser | `Projekte.Reader` | IT-Projekte ansehen: Übersicht, Budget, Jour Fixe und Aufgaben |
 | Projekte Bearbeiter | `Projekte.Editor` | IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe mit Anhängen und Aufgaben |
 | IT-Bestand Leser | `Bestand.Reader` | IT-Bestand ansehen: Hardware, Stellen, Arbeitsplätze, Standorte und Stammdaten |
@@ -150,6 +151,7 @@ Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wä
 | `GG-Werkbank-Budget-IT` | Budget.Editor |
 | `GG-Werkbank-Budget-Verwaltung` | Budget.Manager |
 | `GG-Werkbank-Monitoring` | Monitoring.Reader |
+| `GG-Werkbank-Monitoring-Berichte` | Monitoring.Berichte |
 | `GG-Werkbank-Projekte-Lesen` | Projekte.Reader |
 | `GG-Werkbank-Projekte` | Projekte.Editor |
 | `GG-Werkbank-Bestand-Lesen` | Bestand.Reader |

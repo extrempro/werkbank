@@ -192,6 +192,7 @@ export interface ZbxConnection {
   certificate_value: string;
   kinds: { id: number; name: string }[];
   kind_ids: number[];
+  target: number;
 }
 
 export interface ZbxOptionsUpdate {
@@ -199,6 +200,7 @@ export interface ZbxOptionsUpdate {
   certificate_tag: string;
   certificate_value: string;
   kind_ids: number[];
+  target: number;
 }
 
 export interface UnmonitoredRow extends DeviceRef {
@@ -241,6 +243,7 @@ export const saveZabbixOptions = (update: ZbxOptionsUpdate): Promise<ZbxConnecti
 export interface ZabbixSettings {
   enabled: boolean;
   url: string;
+  link_url: string;
   token_set: boolean;
   token_storage_available: boolean;
   ca_set: boolean;
@@ -249,6 +252,7 @@ export interface ZabbixSettings {
 export interface ZabbixSettingsUpdate {
   enabled: boolean;
   url: string;
+  link_url: string;
   token?: string;
   ca_pem?: string;
 }
@@ -269,3 +273,79 @@ export const fetchZabbixSettings = (): Promise<ZabbixSettings> =>
 export const saveZabbixSettings = (update: ZabbixSettingsUpdate): Promise<ZabbixSettings> =>
   putJson("/api/admin/settings/zabbix", update);
 export const testZabbix = (): Promise<ZabbixTest> => postJson("/api/admin/settings/zabbix/test");
+
+// ---------- Berichte ----------
+
+export type ReportSplit = "standort" | "gruppe";
+
+export interface ZbxReportMonth {
+  month: string;
+  label: string;
+  availability: number | null;
+  downtime_s: number;
+}
+
+export interface ZbxReportRow {
+  name: string;
+  hosts: number;
+  availability: number | null;
+  downtime_s: number;
+  maintenance_s: number;
+  months: (number | null)[];
+}
+
+export interface ZbxReportTrigger {
+  name: string;
+  host: string;
+  count: number;
+  duration_s: number;
+}
+
+export interface ZbxReportOutage {
+  host: string;
+  site: string | null;
+  name: string;
+  started_at: string;
+  ended_at: string | null;
+  duration_s: number;
+}
+
+export interface ZbxReport {
+  year_label: string;
+  years: { year: number; name: string }[];
+  year: number;
+  name: string;
+  first_day: string;
+  last_day: string;
+  since: string | null;
+  days: number;
+  target: number;
+  split: ReportSplit;
+  availability: number | null;
+  downtime_s: number;
+  maintenance_s: number;
+  hosts: number;
+  months: ZbxReportMonth[];
+  rows: ZbxReportRow[];
+  detail: boolean;
+  triggers: ZbxReportTrigger[] | null;
+  outages: ZbxReportOutage[] | null;
+}
+
+function reportQuery(year: number | null, split: ReportSplit): string {
+  const params = new URLSearchParams({ split });
+  if (year !== null) {
+    params.set("year", String(year));
+  }
+  return params.toString();
+}
+
+export const fetchZabbixReport = (year: number | null, split: ReportSplit): Promise<ZbxReport> =>
+  getJson(`/api/monitoring/zabbix/reports?${reportQuery(year, split)}`);
+
+export const reportCsvUrl = (year: number, split: ReportSplit): string =>
+  `/api/monitoring/zabbix/reports/export.csv?${reportQuery(year, split)}`;
+
+/** Hält den Druck (oder „als PDF speichern“) im Audit fest. */
+export const reportPrinted = (year: number, split: ReportSplit): Promise<{ ok: boolean }> =>
+  postJson("/api/monitoring/zabbix/reports/printed", { year, split }, { quiet: true });

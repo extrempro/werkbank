@@ -4,6 +4,31 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.92.0] – 2026-11-22
+
+### IT-Monitoring
+
+- **Quelle Zabbix, Stufe 3: Berichte** (spec.md 8b): Seite `/monitoring/zabbix/berichte` mit Verfügbarkeit je Geschäftsjahr (aus den Budget-Einstellungen), aufgeteilt nach Standort oder Hostgruppe, Monatsübersicht, Zielwert (Vorgabe 99,5 %, auf der Verbindungsseite änderbar), häufigsten Auslösern und längsten Ausfällen; Export als CSV und über die Druckansicht als PDF, beides im Audit
+- Neue App-Rolle `Monitoring.Berichte`: nur die Berichte, nur Summen ohne Hostnamen und Auslöser (serverseitig)
+- Collector-Aufgabe „berichte“ (`zabbix/reports.py`): je abgeschlossenem Tag `event.get` für Ausfälle (Tag `scope: availability` ab Hoch) und alle Probleme, verdichtet zu Ausfallzeiten je Host und Tag, Auslösern je Monat und Ausfällen; Wartungszeiten beobachtet die Werkbank jede Minute selbst. Nicht rückwirkend, ab dem ersten Lauf
+- Tabellen `mon_zbx_downtime`, `mon_zbx_trigger_stats`, `mon_zbx_outages`, `mon_zbx_report_days`, `mon_zbx_maint_log`, Spalte `mon_zbx_status.reports_since` (Migration `0062`)
+- Verbindung zu Zabbix: Bei einer Weiterleitung nennt die Meldung das Ziel (ohne Abfrage); HTTP 401/403 von einem Proxy davor wird nicht mehr als ungültiges Token gemeldet
+- Zabbix-Seiten lassen sich anheften (Navigation)
+- Verwaltung › Zabbix: optionale eigene Adresse für „In Zabbix öffnen“, wenn die Werkbank Zabbix über einen anderen Zugang erreicht als die Menschen
+
+### Oberfläche
+
+- Filterleiste auf dem Handy: Das Feld „Zustand“ bekommt seine nötige Breite, „Weitere Filter“ rutscht bei Bedarf in die nächste Zeile; lange Einträge werden nicht mehr abgeschnitten
+- Druckansicht ohne Kopfzeile, Menüs, Info-Symbole und Bedienelemente
+
+### Dokumentation
+
+- spec.md 8b, ASVS- und Datenschutz-Nachweis, Entra-Einrichtung (Rolle und Gruppe), Handbuch „Berichte zur Verfügbarkeit“ und Hinweise zur Fehlersuche bei „Zabbix einrichten“, Info-Symbole für Verfügbarkeit, Zielwert und Ausfall
+
+### Tests
+
+- `test_monitoring_zabbix.py` (Berichtsdaten, Rechte, CSV, Weiterleitung, 403), `test_navigation.py`, `reports.test.tsx`, `zabbix.test.tsx`, `navigation.test.ts`, E2E in `monitoring.spec.ts`
+
 ## [0.91.0] – 2026-11-22
 
 ### IT-Monitoring
