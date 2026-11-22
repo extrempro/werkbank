@@ -89,8 +89,10 @@ class Settings(BaseSettings):
     # Tickets: App-Registrierung „Werkbank Tickets“ für die Postfächer (Mail lesen, verschieben,
     # senden; in Exchange per RBAC auf die Ticket-Postfächer beschränkt), nur Zertifikat
     tickets_mail_client_id: str = ""
-    tickets_mail_client_key_file: Path = Path("/run/secrets/tickets_mail_client_key.pem")
-    tickets_mail_client_cert_file: Path = Path("/run/secrets/tickets_mail_client_cert.pem")
+    # Vorgabe: dasselbe Zertifikat wie die Collector-App (in beiden App-Registrierungen
+    # hochladen); für ein eigenes Zertifikat die Pfade und Docker-Secrets anpassen
+    tickets_mail_client_key_file: Path = Path("/run/secrets/collector_client_key.pem")
+    tickets_mail_client_cert_file: Path = Path("/run/secrets/collector_client_cert.pem")
     # Eigene Maildomänen, kommagetrennt; Absender anderer Domänen gelten als extern
     tickets_internal_domains: str = ""
     # Ablage der Anhänge und Originale (.eml), Unterordner im Volume der Belege

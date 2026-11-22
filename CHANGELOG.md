@@ -4,6 +4,29 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.99.0] – 2026-11-22
+
+### Tickets (Phase 2: E-Mail)
+
+- **E-Mail-Eingang** je Bereich über Microsoft Graph (App „Werkbank Tickets“, per RBAC auf die Ticket-Postfächer beschränkt), Abruf alle 5 Minuten (`tickets.postfaecher`): neue Mail → neues Ticket, Antworten über `[#T-…]` im Betreff oder `In-Reply-To`/`References`, Personen in Kopie werden Beteiligte
+- Nur der neue Teil einer Antwort; Zitate eingeklappt; HTML wird in Text umgewandelt; Original als .eml am Ticket
+- Filter: Abwesenheit, Unzustellbar, Newsletter, Sperrliste, Schleifenschutz (10 je Absender und Stunde); externe Absender annehmen, unbekannte prüfen („Zu prüfen“) oder ablehnen
+- Anhänge: Positivliste je Bereich, Prüfung am Inhalt, Größengrenze; entfernte Anhänge mit Hinweis; Download nur als Anhang
+- Ordner „Verarbeitet“ und „Ignoriert“, endgültiges Löschen nach 30 bzw. 7 Tagen; Message-ID gegen doppelte Verarbeitung
+- Antwort auf geschlossene Tickets: wieder öffnen innerhalb von X Tagen, immer, oder neues Ticket mit Bezug
+- **Antworten an den Melder** aus dem Postfach des Bereichs mit „Status danach“; Eingangsbestätigung und automatische Mails je Bereich; HTML und Text, Logo eingebettet, „Bitte oberhalb dieser Zeile antworten.“
+- **E-Mail-Gestaltung** (Ticket-Verwaltung): Akzentfarbe, Logo, Fußzeile, Datenschutz-Link; je Bereich Absendername, Titel, Signatur
+- Protokoll „Letzte Eingänge“; Migration `0065`
+- Worker bindet das Volume der Belege ein (Anhänge)
+
+### Dokumentation
+
+- entra-setup.md (4b: App „Werkbank Tickets“, RBAC für Anwendungen), spec.md, datenschutz.md, Handbuch (E-Mail), Info-Symbole, `.env.example`, `docker-compose.yml`
+
+### Tests
+
+- `test_tickets_mail.py`, `tickets.test.tsx`, E2E `tickets.spec.ts` (Mail → Ticket, Antwort, geschlossenes Ticket, Notiz ohne Mail, Einstellungen)
+
 ## [0.98.0] – 2026-11-22
 
 ### Verwaltung

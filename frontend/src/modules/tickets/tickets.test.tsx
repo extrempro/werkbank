@@ -20,6 +20,8 @@ function entry(id: string, kind: Entry["kind"], original = false): Entry {
     author_name: "Ina Beispiel",
     original,
     created_at: "2026-11-22T08:00:00Z",
+    quote: "",
+    attachments: [],
   };
 }
 
@@ -47,6 +49,8 @@ function ticket(extra: Partial<Ticket> = {}): Ticket {
     ],
     move_targets: [],
     me_oid: "oid-ina",
+    can_reply: true,
+    reply_hint: "",
     ...extra,
   };
 }
@@ -197,6 +201,94 @@ describe("TicketPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Interne Notiz speichern" }));
     await waitFor(() => expect(bodies).toEqual([{ body: "Toner bestellt" }]));
+  });
+});
+
+describe("Antwort an den Melder", () => {
+  it("zeigt Empfänger, Kopie und sendet mit „Status danach“", async () => {
+    const bodies: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST" && url.endsWith("/replies")) {
+          bodies.push(JSON.parse(String(init.body)));
+        }
+        return new Response(
+          JSON.stringify(ticket({ participants: [{ name: "", mail: "kopie@example.com" }] })),
+          { status: 200 },
+        );
+      }),
+    );
+    render(<TicketPage number={1042} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Antwort an M. Muster schreiben/ }));
+    expect(
+      screen.getByText("Geht per E-Mail an: m.muster@example.com (Kopie an kopie@example.com)"),
+    ).toBeTruthy();
+    fireEvent.change(screen.getByRole("textbox", { name: /Antwort an M. Muster/ }), {
+      target: { value: "Bitte neu starten." },
+    });
+    fireEvent.change(screen.getByLabelText("Status danach"), { target: { value: "waiting" } });
+    // Einklappen behält den Entwurf
+    fireEvent.click(screen.getByRole("button", { name: "Einklappen" }));
+    fireEvent.click(screen.getByRole("button", { name: /Antwort an M. Muster schreiben/ }));
+    expect(
+      (screen.getByRole("textbox", { name: /Antwort an M. Muster/ }) as HTMLTextAreaElement).value,
+    ).toBe("Bitte neu starten.");
+    fireEvent.click(screen.getByRole("button", { name: "An M. Muster senden" }));
+    await waitFor(() =>
+      expect(bodies).toEqual([{ body: "Bitte neu starten.", status_after: "waiting" }]),
+    );
+  });
+
+  it("erklärt, warum keine Antwort möglich ist, und zeigt Anhänge und Zitate", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify(
+              ticket({
+                can_reply: false,
+                reply_hint: "Für den Melder ist keine Mailadresse eingetragen.",
+                entries: [
+                  {
+                    ...entry("a", "inbound", true),
+                    quote: "> alt",
+                    attachments: [
+                      {
+                        id: "f1",
+                        filename: "a.pdf",
+                        size: 2048,
+                        original: false,
+                        removed_reason: "",
+                      },
+                      {
+                        id: "f2",
+                        filename: "b.exe",
+                        size: 10,
+                        original: false,
+                        removed_reason: "Dateityp nicht erlaubt",
+                      },
+                    ],
+                  },
+                ],
+              }),
+            ),
+            { status: 200 },
+          ),
+      ),
+    );
+    render(<TicketPage number={1042} />);
+    expect(await screen.findByText(/keine Mailadresse eingetragen/)).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: /Antwort an M. Muster schreiben/ }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(screen.getByRole("link", { name: /a.pdf/ }).getAttribute("href")).toBe(
+      "/api/tickets/1042/attachments/f1",
+    );
+    expect(screen.getByText(/b.exe: entfernt/)).toBeTruthy();
+    expect(screen.getByText("Zitat aus früheren Mails anzeigen")).toBeTruthy();
   });
 });
 

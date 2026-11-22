@@ -67,6 +67,9 @@ services:
       - source: collector_client_cert
         target: collector_client_cert.pem
       - settings_key
+    volumes:
+      # Tickets: Anhänge und Originale eingehender Mails (Abruf der Postfächer im Worker)
+      - belege:/data/belege
     depends_on:
       # web spielt beim Start die Datenbank-Migrationen ein
       web:
