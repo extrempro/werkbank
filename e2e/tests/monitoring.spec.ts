@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { expectNoA11yViolations, loginAs, openPage } from "./helpers";
+import { BASE_URL, expectNoA11yViolations, loginAs, openPage } from "./helpers";
+
+const ORIGIN = new URL(BASE_URL).origin;
 
 test("IT-Monitoring zeigt den DNS-Abgleich und ist barrierefrei", async ({
   page,
@@ -50,6 +52,28 @@ test("IT-Monitoring: Zabbix ohne Verbindung, Hosts und Wartungen", async ({
   await expect(page.getByRole("heading", { level: 1, name: "Hosts" })).toBeVisible();
   await expect(page.getByText("Kein Host passt zur Auswahl.")).toBeVisible();
   await expectNoA11yViolations(page);
+  // Abgleich mit dem IT-Bestand: Geräte statt Hosts, ohne Bestand.Editor keine Aktionen
+  await page.goto("/monitoring/zabbix/hosts?filter=nicht-ueberwacht");
+  await expect(page.getByText(/keine Hardware-Arten festgelegt/)).toBeVisible();
+  await expect(page.getByText("Kein Gerät fehlt in Zabbix.")).toBeVisible();
+  await expectNoA11yViolations(page);
+  const headers = { Origin: ORIGIN };
+  expect(
+    (
+      await page.request.put("/api/monitoring/zabbix/devices/1/unmonitored", {
+        data: { reason: "Test" },
+        headers,
+      })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await page.request.post("/api/monitoring/zabbix/hosts/1/link", {
+        data: { hardware_id: 1 },
+        headers,
+      })
+    ).status(),
+  ).toBe(403);
   await page.goto("/monitoring/zabbix/wartungen");
   await expect(
     page.getByRole("heading", { level: 1, name: "Wartungen" }),

@@ -11554,3 +11554,63 @@ input[type="file"] {
   min-width: 15rem;
   max-width: 100%;
 }
+
+.zbx-device-row {
+  flex-wrap: wrap;
+}
+
+.zbx-device-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.zbx-device-actions input {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+}
+
+.zbx-device-row {
+  flex-wrap: wrap;
+}
+
+.zbx-device-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.zbx-device-actions input {
+  min-height: 44px;
+  min-width: 14rem;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+}
+
+.zbx-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+
+.settings-form .zbx-kinds label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  font-weight: 400;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.zbx-link-form {
+  margin-top: 12px;
+}

@@ -905,7 +905,7 @@ export const AREAS: readonly Area[] = [
                 kind: "list",
                 items: [
                   "Übersicht: oben „Zu erledigen“, dann die Kennzahlen, die aktuellen Probleme mit Filter nach Standort und Mindest-Schweregrad, die nicht erreichbaren Hosts und die laufenden und kommenden Wartungen.",
-                  "Hosts: Tabelle mit Suche nach Name, Gruppe oder Seriennummer und den Filtern Alle, Mit Problemen, Nicht erreichbar, In Wartung und In Zabbix abgeschaltet. Ein Klick öffnet den Host rechts daneben mit offenen Problemen, Schnittstellen, Hostgruppen, Templates und Seriennummer.",
+                  "Hosts: Tabelle mit Suche nach Name, Gruppe oder Seriennummer und den Filtern Alle, Mit Problemen, Nicht erreichbar, In Wartung, Ohne Bestandseintrag, Seriennummer fehlt, Nicht überwacht und In Zabbix abgeschaltet. Die Spalte IT-Bestand zeigt das verknüpfte Gerät. Ein Klick öffnet den Host rechts daneben mit offenen Problemen, Schnittstellen, Hostgruppen, Templates und Seriennummer.",
                   "Wartungen: laufend, kommend und in den letzten 30 Tagen abgelaufen, mit Zeitraum und Zahl der Hosts.",
                   "„In Zabbix öffnen“ führt in einem neuen Tab zum Host oder zum Problem in Zabbix. Dort meldest du dich mit deinem eigenen Zabbix-Konto an.",
                 ],
@@ -918,6 +918,49 @@ export const AREAS: readonly Area[] = [
             links: [
               { to: "/monitoring/zabbix", label: "Zur Übersicht" },
               { to: "/monitoring/zabbix/hosts", label: "Zu den Hosts" },
+            ],
+          },
+          {
+            id: "zabbix-bestand",
+            title: "Abgleich mit dem IT-Bestand",
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Werkbank verknüpft jeden Host mit dem Gerät im IT-Bestand, das dieselbe Seriennummer hat. Leerzeichen und Groß- oder Kleinschreibung zählen nicht. Den Namen oder die Adresse vergleicht sie nicht. Berücksichtigt werden nur aktive Geräte; ausgemusterte zählen nicht.",
+              },
+              {
+                kind: "terms",
+                items: [
+                  [
+                    "Nicht überwacht",
+                    "ein aktives Gerät einer festgelegten Hardware-Art hat in Zabbix keinen Host mit seiner Seriennummer",
+                  ],
+                  [
+                    "Ohne Bestandseintrag",
+                    "der Host hat eine Seriennummer, aber im IT-Bestand gibt es dazu kein aktives Gerät",
+                  ],
+                  ["Seriennummer fehlt", "im Zabbix-Inventar des Hosts steht keine Seriennummer"],
+                ],
+              },
+              {
+                kind: "list",
+                items: [
+                  "Welche Hardware-Arten in Zabbix einen Host haben sollten, legt ein Admin auf der Seite Verbindung fest. Solange keine Art gewählt ist, bleibt „Nicht überwacht“ leer.",
+                  "Soll ein Gerät bewusst nicht überwacht werden, zum Beispiel ein Ersatzgerät im Lager, markierst du es unter Hosts › Nicht überwacht mit einer Begründung. Es steht dann unter „Bewusst nicht überwacht“ und lässt sich dort wieder zurücknehmen.",
+                  "Fehlt in Zabbix die Seriennummer, ordnest du den Host in seiner Ansicht von Hand einem Gerät zu. Sobald Zabbix eine Seriennummer liefert, gilt wieder der Abgleich über die Seriennummer.",
+                  "Jede dieser Aktionen steht im Verlauf des Geräts.",
+                ],
+              },
+              {
+                kind: "hint",
+                text: "Markieren und Zuordnen dürfen alle, die das Monitoring sehen und zusätzlich die Rolle Bestand.Editor haben.",
+              },
+            ],
+            links: [
+              {
+                to: "/monitoring/zabbix/hosts?filter=nicht-ueberwacht",
+                label: "Nicht überwachte Geräte",
+              },
             ],
           },
           {

@@ -1,4 +1,17 @@
-import { getJson, postJson, putJson } from "../../../api";
+import { deleteJson, getJson, postJson, putJson } from "../../../api";
+
+export interface DeviceRef {
+  id: number;
+  name: string;
+  inventory_no: string | null;
+  serial: string;
+  kind: string;
+}
+
+/** Verknüpfung mit dem IT-Bestand: über die Seriennummer oder von Hand. */
+export type DeviceMatch = "seriennummer" | "hand";
+/** Lücke zwischen Zabbix und IT-Bestand. */
+export type InventoryGap = "ohne_bestand" | "seriennummer_fehlt";
 
 /** Schweregrade wie in Zabbix: 0 nicht klassifiziert … 5 Katastrophe. */
 export const SEVERITIES = [
@@ -82,7 +95,14 @@ export interface ZbxOverview {
     link: string | null;
   }[];
   maintenances: ZbxMaintenance[];
-  todo: { long_open: number; certificates: ZbxProblem[]; certificate_tag: string | null };
+  todo: {
+    long_open: number;
+    unmonitored: number;
+    no_inventory: number;
+    no_serial: number;
+    certificates: ZbxProblem[];
+    certificate_tag: string | null;
+  };
   sites: string[];
 }
 
@@ -98,6 +118,9 @@ export interface ZbxHostRow {
   problems: number;
   worst: number | null;
   serial: string;
+  device: DeviceRef | null;
+  match: DeviceMatch | null;
+  gap: InventoryGap | null;
 }
 
 export interface ZbxHostDetail {
@@ -125,6 +148,10 @@ export interface ZbxHostDetail {
   updated_at: string;
   problems: ZbxProblem[];
   link: string | null;
+  device: DeviceRef | null;
+  match: DeviceMatch | null;
+  gap: InventoryGap | null;
+  can_link: boolean;
 }
 
 export interface ZbxTask {
@@ -163,13 +190,39 @@ export interface ZbxConnection {
   sites: { id: number; name: string }[];
   certificate_tag: string;
   certificate_value: string;
+  kinds: { id: number; name: string }[];
+  kind_ids: number[];
 }
 
 export interface ZbxOptionsUpdate {
   mapping: { groupid: string; group_name: string; site_id: number }[];
   certificate_tag: string;
   certificate_value: string;
+  kind_ids: number[];
 }
+
+export interface UnmonitoredRow extends DeviceRef {
+  reason: string | null;
+}
+
+export interface ZbxUnmonitored {
+  missing: UnmonitoredRow[];
+  excluded: UnmonitoredRow[];
+  kinds_set: boolean;
+}
+
+export const fetchZabbixUnmonitored = (): Promise<ZbxUnmonitored> =>
+  getJson("/api/monitoring/zabbix/unmonitored");
+export const markUnmonitored = (hardwareId: number, reason: string): Promise<ZbxUnmonitored> =>
+  putJson(`/api/monitoring/zabbix/devices/${hardwareId}/unmonitored`, { reason });
+export const unmarkUnmonitored = (hardwareId: number): Promise<ZbxUnmonitored> =>
+  deleteJson(`/api/monitoring/zabbix/devices/${hardwareId}/unmonitored`);
+export const linkHost = (hostid: string, hardwareId: number): Promise<ZbxHostDetail> =>
+  postJson(`/api/monitoring/zabbix/hosts/${encodeURIComponent(hostid)}/link`, {
+    hardware_id: hardwareId,
+  });
+export const unlinkHost = (hostid: string): Promise<ZbxHostDetail> =>
+  deleteJson(`/api/monitoring/zabbix/hosts/${encodeURIComponent(hostid)}/link`);
 
 export const fetchZabbixOverview = (): Promise<ZbxOverview> => getJson("/api/monitoring/zabbix");
 export const fetchZabbixHosts = (): Promise<ZbxHostRow[]> =>

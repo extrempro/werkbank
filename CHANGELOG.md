@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.91.0] – 2026-11-22
+
+### IT-Monitoring
+
+- **Quelle Zabbix, Stufe 2: Abgleich mit dem IT-Bestand** (spec.md 8b): `zabbix/inventory.py` verknüpft Hosts und aktive Geräte nur über die Seriennummer (ohne Leerzeichen, Groß- und Kleinschreibung egal; bei doppelter Seriennummer zählt das Gerät mit der kleinsten ID). Lücken: „Nicht überwacht“ (nur Geräte der Hardware-Arten, die der Admin auf der Verbindungsseite wählt), „Ohne Bestandseintrag“, „Seriennummer fehlt“ (nur überwachte Hosts)
+- Tabellen `mon_zbx_unmonitored` (bewusst nicht überwacht, mit Begründung) und `mon_zbx_host_links` (Zuordnung von Hand für Hosts ohne Seriennummer) (Migration `0061`)
+- Neue Endpunkte `GET /api/monitoring/zabbix/unmonitored`, `PUT`/`DELETE /devices/{id}/unmonitored`, `POST`/`DELETE /hosts/{id}/link`; nur mit `Bestand.Editor` zusätzlich, jede Aktion im Audit und im Verlauf des Geräts
+- Übersicht: drei neue Zeilen unter „Zu erledigen“ mit Sprung in die Hosts. Hosts: Filter für die Lücken, Spalte IT-Bestand, Ansicht „Nicht überwacht“ mit Geräten, Begründung und Bestätigung; Host-Ansicht mit dem Gerät im IT-Bestand, Zuordnen und Lösen. Verbindung: Auswahl der Hardware-Arten. Der Filter für abgeschaltete Hosts heißt in der Adresse jetzt `abgeschaltet`
+
+### Dokumentation
+
+- spec.md 8b, ASVS-Nachweis, Handbuch „Abgleich mit dem IT-Bestand“, Info-Symbole für die drei Lücken
+
+### Tests
+
+- `test_monitoring_zabbix.py` (Abgleich, Rechte, Aktionen), `zabbix.test.tsx`, E2E in `monitoring.spec.ts`
+
 ## [0.90.0] – 2026-11-22
 
 ### IT-Monitoring

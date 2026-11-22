@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEven
 import { errorText, formatDateTime } from "../../../api";
 import { FilterBar } from "../../../components/FilterBar";
 import { InfoTip } from "../../../components/InfoTip";
+import type { HelpKey } from "../../../help/terms";
 import { Link } from "../../../components/Link";
 import { SplitHandle, useSplit } from "../../../components/SplitHandle";
 import {
@@ -10,25 +11,53 @@ import {
   MONITORING_ZABBIX_MAINTENANCE_PATH,
 } from "../../../navigation";
 import { navigate } from "../../../router";
+import { ConfirmButton } from "../../../components/ConfirmDialog";
+import { hardwarePath, type LookupItem } from "../../inventory/api";
+import { LookupPicker } from "../../inventory/LookupPicker";
 import {
   fetchZabbixConnection,
   fetchZabbixHost,
   fetchZabbixHosts,
   fetchZabbixMaintenances,
   fetchZabbixOverview,
+  fetchZabbixUnmonitored,
+  linkHost,
+  markUnmonitored,
+  unlinkHost,
+  unmarkUnmonitored,
   MAINTENANCE_STATES,
   saveZabbixOptions,
   SEVERITIES,
   severityClass,
   severityLabel,
   type DataState,
+  type DeviceRef,
+  type InventoryGap,
   type ZbxConnection,
   type ZbxHostDetail,
   type ZbxHostRow,
   type ZbxMaintenance,
   type ZbxOverview,
   type ZbxProblem,
+  type ZbxUnmonitored,
 } from "./api";
+
+const MONITORING_ROLES = ["Monitoring.Reader", "Werkbank.Admin"];
+const INVENTORY_EDITOR = "Bestand.Editor";
+
+/** Verknüpfen mit dem IT-Bestand: Monitoring sehen und den Bestand pflegen. */
+function canLinkInventory(roles: readonly string[]): boolean {
+  return roles.includes(INVENTORY_EDITOR) && MONITORING_ROLES.some((role) => roles.includes(role));
+}
+
+const GAP_LABELS: Record<InventoryGap, string> = {
+  ohne_bestand: "kein Bestandseintrag",
+  seriennummer_fehlt: "Seriennummer fehlt",
+};
+
+function deviceLabel(device: DeviceRef): string {
+  return device.inventory_no ? `${device.inventory_no} ${device.name}` : device.name;
+}
 
 // Die Seiten laden ihre Daten jede Minute neu, wie der Collector abfragt
 const REFRESH_MS = 60_000;
@@ -228,6 +257,32 @@ function MaintenanceList({ items }: { items: ZbxMaintenance[] }) {
 
 // ---------- Übersicht ----------
 
+function TodoRow({
+  title,
+  term,
+  text,
+  count,
+  to,
+}: {
+  title: string;
+  term: HelpKey;
+  text: string;
+  count: number;
+  to: string;
+}) {
+  return (
+    <li className="row">
+      <span className="row-main">
+        <span className="row-title">
+          {count > 0 ? <Link to={to}>{title}</Link> : title} <InfoTip term={term} />
+        </span>
+        <span className="small">{text}</span>
+      </span>
+      <span className={count > 0 ? "pill pill-todo" : "pill pill-neutral"}>{count}</span>
+    </li>
+  );
+}
+
 export function ZabbixOverviewPage() {
   const { data, error } = useLoaded<ZbxOverview>(
     fetchZabbixOverview,
@@ -274,6 +329,27 @@ export function ZabbixOverviewPage() {
                 </span>
                 <span className="pill pill-neutral">{data.todo.long_open}</span>
               </li>
+              <TodoRow
+                title="Nicht überwacht"
+                term="zabbix.nicht-ueberwacht"
+                text="Geräte im IT-Bestand ohne passenden Host in Zabbix"
+                count={data.todo.unmonitored}
+                to={`${MONITORING_ZABBIX_HOSTS_PATH}?filter=nicht-ueberwacht`}
+              />
+              <TodoRow
+                title="Ohne Bestandseintrag"
+                term="zabbix.ohne-bestand"
+                text="Hosts, deren Seriennummer im IT-Bestand fehlt"
+                count={data.todo.no_inventory}
+                to={`${MONITORING_ZABBIX_HOSTS_PATH}?filter=ohne-bestand`}
+              />
+              <TodoRow
+                title="Seriennummer fehlt"
+                term="zabbix.seriennummer-fehlt"
+                text="Hosts ohne Seriennummer im Zabbix-Inventar"
+                count={data.todo.no_serial}
+                to={`${MONITORING_ZABBIX_HOSTS_PATH}?filter=seriennummer-fehlt`}
+              />
               {data.todo.certificate_tag ? (
                 <li className="row">
                   <span className="row-main">
@@ -405,7 +481,15 @@ export function ZabbixOverviewPage() {
 
 // ---------- Hosts ----------
 
-type HostFilter = "alle" | "probleme" | "nicht-erreichbar" | "wartung" | "nicht-ueberwacht";
+type HostFilter =
+  | "alle"
+  | "probleme"
+  | "nicht-erreichbar"
+  | "wartung"
+  | "ohne-bestand"
+  | "seriennummer-fehlt"
+  | "nicht-ueberwacht"
+  | "abgeschaltet";
 
 const HOST_FILTERS: { value: HostFilter; label: string; test: (host: ZbxHostRow) => boolean }[] = [
   { value: "alle", label: "Alle", test: (host) => host.monitored },
@@ -417,7 +501,19 @@ const HOST_FILTERS: { value: HostFilter; label: string; test: (host: ZbxHostRow)
   },
   { value: "wartung", label: "In Wartung", test: (host) => host.in_maintenance },
   {
-    value: "nicht-ueberwacht",
+    value: "ohne-bestand",
+    label: "Ohne Bestandseintrag",
+    test: (host) => host.gap === "ohne_bestand",
+  },
+  {
+    value: "seriennummer-fehlt",
+    label: "Seriennummer fehlt",
+    test: (host) => host.gap === "seriennummer_fehlt",
+  },
+  // zeigt Geräte aus dem IT-Bestand statt Hosts
+  { value: "nicht-ueberwacht", label: "Nicht überwacht", test: () => false },
+  {
+    value: "abgeschaltet",
     label: "In Zabbix abgeschaltet",
     test: (host) => !host.monitored,
   },
@@ -450,11 +546,22 @@ function initialFilter(): HostFilter {
   return HOST_FILTERS.some((entry) => entry.value === value) ? (value as HostFilter) : "alle";
 }
 
-export function ZabbixHostsPage({ hostId }: { hostId: string | null }) {
+export function ZabbixHostsPage({
+  hostId,
+  roles,
+}: {
+  hostId: string | null;
+  roles: readonly string[];
+}) {
   const { data, error } = useLoaded<ZbxHostRow[]>(
     fetchZabbixHosts,
     "Die Hosts konnten nicht geladen werden.",
   );
+  const unmonitored = useLoaded<ZbxUnmonitored>(
+    fetchZabbixUnmonitored,
+    "Die Geräte ohne Host konnten nicht geladen werden.",
+  );
+  const canLink = canLinkInventory(roles);
   const [filter, setFilter] = useState<HostFilter>(initialFilter);
   const [search, setSearch] = useState("");
   const [site, setSite] = useState("alle");
@@ -499,7 +606,12 @@ export function ZabbixHostsPage({ hostId }: { hostId: string | null }) {
           options: HOST_FILTERS.map((entry) => ({
             value: entry.value,
             label: entry.label,
-            count: data ? data.filter(entry.test).length : null,
+            count:
+              entry.value === "nicht-ueberwacht"
+                ? (unmonitored.data?.missing.length ?? null)
+                : data
+                  ? data.filter(entry.test).length
+                  : null,
           })),
         }}
         moreActive={site !== "alle" ? 1 : 0}
@@ -538,29 +650,50 @@ export function ZabbixHostsPage({ hostId }: { hostId: string | null }) {
       >
         <div className="panel case-list">
           <div className="case-scroll">
-            {!data && !error && <p role="status">Wird geladen …</p>}
-            {data && shown.length === 0 && <p className="empty">Kein Host passt zur Auswahl.</p>}
-            {shown.length > 0 && (
-              <table className="case-table" aria-label="Hosts">
-                <thead>
-                  <tr>
-                    <th scope="col">Host</th>
-                    <th scope="col" className="col-extra">
-                      Standort
-                    </th>
-                    <th scope="col" className="col-extra">
-                      Gruppen
-                    </th>
-                    <th scope="col">Zustand</th>
-                    <th scope="col">Probleme</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.map((host) => (
-                    <HostRowView key={host.hostid} host={host} selected={host.hostid === hostId} />
-                  ))}
-                </tbody>
-              </table>
+            {filter === "nicht-ueberwacht" ? (
+              <UnmonitoredList
+                state={unmonitored.data}
+                error={unmonitored.error}
+                canLink={canLink}
+                onChanged={unmonitored.setData}
+                needle={needle}
+              />
+            ) : (
+              <>
+                {!data && !error && <p role="status">Wird geladen …</p>}
+                {data && shown.length === 0 && (
+                  <p className="empty">Kein Host passt zur Auswahl.</p>
+                )}
+                {shown.length > 0 && (
+                  <table className="case-table" aria-label="Hosts">
+                    <thead>
+                      <tr>
+                        <th scope="col">Host</th>
+                        <th scope="col" className="col-extra">
+                          Standort
+                        </th>
+                        <th scope="col" className="col-extra">
+                          Gruppen
+                        </th>
+                        <th scope="col">Zustand</th>
+                        <th scope="col">Probleme</th>
+                        <th scope="col" className="col-extra">
+                          IT-Bestand
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shown.map((host) => (
+                        <HostRowView
+                          key={host.hostid}
+                          host={host}
+                          selected={host.hostid === hostId}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -580,7 +713,7 @@ export function ZabbixHostsPage({ hostId }: { hostId: string | null }) {
               >
                 ‹ Zur Liste
               </a>
-              <HostDetail key={hostId} hostId={hostId} onClose={backToList} />
+              <HostDetail key={hostId} hostId={hostId} canLink={canLink} onClose={backToList} />
             </>
           )}
         </div>
@@ -635,12 +768,156 @@ function HostRowView({ host, selected }: { host: ZbxHostRow; selected: boolean }
           "–"
         )}
       </td>
+      <td className="col-extra">
+        {host.device ? deviceLabel(host.device) : host.gap ? GAP_LABELS[host.gap] : "–"}
+      </td>
     </tr>
   );
 }
 
-function HostDetail({ hostId, onClose }: { hostId: string; onClose: () => void }) {
-  const { data, error } = useLoaded<ZbxHostDetail>(
+function UnmonitoredList({
+  state,
+  error,
+  canLink,
+  onChanged,
+  needle,
+}: {
+  state: ZbxUnmonitored | null;
+  error: string | null;
+  canLink: boolean;
+  onChanged: (state: ZbxUnmonitored) => void;
+  needle: string;
+}) {
+  const [reasons, setReasons] = useState<Record<number, string>>({});
+  const [message, setMessage] = useState<string | null>(null);
+  if (error) {
+    return (
+      <p role="alert" className="hint-box hint-bad">
+        {error}
+      </p>
+    );
+  }
+  if (!state) {
+    return <p role="status">Wird geladen …</p>;
+  }
+  const matches = (device: DeviceRef) =>
+    !needle ||
+    [device.name, device.serial, device.inventory_no ?? "", device.kind].some((text) =>
+      text.toLowerCase().includes(needle),
+    );
+  const missing = state.missing.filter(matches);
+  const excluded = state.excluded.filter(matches);
+  const run = (promise: Promise<ZbxUnmonitored>) =>
+    promise.then(
+      (next) => {
+        setMessage(null);
+        onChanged(next);
+      },
+      (caught: unknown) => setMessage(errorText(caught, "Das hat nicht geklappt.")),
+    );
+  const reasonOf = (id: number) => (reasons[id] ?? "").trim();
+  return (
+    <div className="detail-body">
+      <p className="small">
+        Geräte aus dem IT-Bestand ohne passenden Host in Zabbix, abgeglichen über die Seriennummer.
+        {!state.kinds_set &&
+          " Noch sind keine Hardware-Arten festgelegt. Das macht ein Admin auf der Seite Verbindung."}
+      </p>
+      {message && (
+        <p role="alert" className="hint-box hint-bad">
+          {message}
+        </p>
+      )}
+      {missing.length === 0 ? (
+        <p className="empty">Kein Gerät fehlt in Zabbix.</p>
+      ) : (
+        <ul className="rows" aria-label="Nicht überwachte Geräte">
+          {missing.map((device) => (
+            <li key={device.id} className="row zbx-device-row">
+              <span className="row-main">
+                <Link to={hardwarePath(device.id)}>{deviceLabel(device)}</Link>
+                <span className="small">
+                  {device.kind} · Seriennummer{" "}
+                  {device.serial ? <span className="mono">{device.serial}</span> : "fehlt"}
+                </span>
+              </span>
+              {canLink && (
+                <span className="zbx-device-actions">
+                  <label className="visually-hidden" htmlFor={`zbx-grund-${device.id}`}>
+                    Begründung für {deviceLabel(device)}
+                  </label>
+                  <input
+                    id={`zbx-grund-${device.id}`}
+                    type="text"
+                    maxLength={200}
+                    placeholder="Begründung, z. B. Ersatzgerät"
+                    value={reasons[device.id] ?? ""}
+                    onChange={(event) =>
+                      setReasons({ ...reasons, [device.id]: event.target.value })
+                    }
+                  />
+                  <ConfirmButton
+                    className="button button-secondary"
+                    disabled={!reasonOf(device.id)}
+                    confirm={{
+                      title: "Bewusst nicht überwachen?",
+                      text: `${deviceLabel(device)} steht danach nicht mehr unter „Nicht überwacht“. Die Begründung kommt in den Verlauf des Geräts.`,
+                      action: "Nicht überwachen",
+                    }}
+                    onConfirm={() => run(markUnmonitored(device.id, reasonOf(device.id)))}
+                  >
+                    Nicht überwachen
+                  </ConfirmButton>
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {excluded.length > 0 && (
+        <>
+          <h3 className="sub-head">Bewusst nicht überwacht</h3>
+          <ul className="rows" aria-label="Bewusst nicht überwachte Geräte">
+            {excluded.map((device) => (
+              <li key={device.id} className="row zbx-device-row">
+                <span className="row-main">
+                  <Link to={hardwarePath(device.id)}>{deviceLabel(device)}</Link>
+                  <span className="small">
+                    {device.kind} · {device.reason}
+                  </span>
+                </span>
+                {canLink && (
+                  <ConfirmButton
+                    className="button button-secondary"
+                    confirm={{
+                      title: "Wieder überwachen?",
+                      text: `${deviceLabel(device)} steht wieder unter „Nicht überwacht“, solange es in Zabbix keinen passenden Host gibt.`,
+                      action: "Wieder überwachen",
+                    }}
+                    onConfirm={() => run(unmarkUnmonitored(device.id))}
+                  >
+                    Wieder überwachen
+                  </ConfirmButton>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+function HostDetail({
+  hostId,
+  canLink,
+  onClose,
+}: {
+  hostId: string;
+  canLink: boolean;
+  onClose: () => void;
+}) {
+  const { data, error, setData } = useLoaded<ZbxHostDetail>(
     () => fetchZabbixHost(hostId),
     "Der Host konnte nicht geladen werden.",
     [hostId],
@@ -753,11 +1030,108 @@ function HostDetail({ hostId, onClose }: { hostId: string; onClose: () => void }
             </div>
           )}
         </dl>
-        <p className="small">
-          Die Verknüpfung mit dem IT-Bestand über die Seriennummer kommt in der nächsten Stufe.
-        </p>
+        <InventoryLink host={data} canLink={canLink} onChanged={setData} />
       </div>
     </section>
+  );
+}
+
+function InventoryLink({
+  host,
+  canLink,
+  onChanged,
+}: {
+  host: ZbxHostDetail;
+  canLink: boolean;
+  onChanged: (host: ZbxHostDetail) => void;
+}) {
+  const [choice, setChoice] = useState<LookupItem | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const run = (promise: Promise<ZbxHostDetail>) =>
+    promise.then(
+      (next) => {
+        setChoice(null);
+        setMessage(null);
+        onChanged(next);
+      },
+      (caught: unknown) => setMessage(errorText(caught, "Das hat nicht geklappt.")),
+    );
+  const allowed = canLink && host.can_link;
+  return (
+    <>
+      <h3 className="sub-head">Im IT-Bestand</h3>
+      {host.device ? (
+        <dl className="facts">
+          <div>
+            <dt>Gerät</dt>
+            <dd>
+              <Link to={hardwarePath(host.device.id)}>{deviceLabel(host.device)}</Link>
+            </dd>
+          </div>
+          <div>
+            <dt>Art</dt>
+            <dd>{host.device.kind}</dd>
+          </div>
+          <div>
+            <dt>Abgleich</dt>
+            <dd>{host.match === "hand" ? "von Hand zugeordnet" : "über die Seriennummer"}</dd>
+          </div>
+        </dl>
+      ) : (
+        <p className="hint-box">
+          {host.gap === "ohne_bestand"
+            ? "Zu dieser Seriennummer gibt es im IT-Bestand kein aktives Gerät. Lege es im Bestand an oder trage dort die Seriennummer nach."
+            : host.gap === "seriennummer_fehlt"
+              ? "Im Zabbix-Inventar fehlt die Seriennummer. Trage sie in Zabbix nach oder ordne das Gerät hier von Hand zu."
+              : "Mit keinem Gerät im IT-Bestand verknüpft."}
+        </p>
+      )}
+      {message && (
+        <p role="alert" className="hint-box hint-bad">
+          {message}
+        </p>
+      )}
+      {allowed && host.match === "hand" && (
+        <div className="actions">
+          <ConfirmButton
+            className="button button-secondary"
+            confirm={{
+              title: "Zuordnung lösen?",
+              text: `${host.name} ist danach mit keinem Gerät im IT-Bestand verknüpft. Das steht im Verlauf des Geräts.`,
+              action: "Lösen",
+            }}
+            onConfirm={() => run(unlinkHost(host.hostid))}
+          >
+            Zuordnung lösen
+          </ConfirmButton>
+        </div>
+      )}
+      {allowed && host.match !== "hand" && (
+        <div className="form-stack zbx-link-form">
+          <LookupPicker
+            kind="hardware"
+            label="Gerät im IT-Bestand"
+            value={choice}
+            onChange={setChoice}
+            placeholder="Inventarnummer, Name oder Seriennummer"
+          />
+          <div className="actions">
+            <ConfirmButton
+              className="button button-primary"
+              disabled={choice === null}
+              confirm={{
+                title: "Gerät zuordnen?",
+                text: `${host.name} wird mit ${choice?.label ?? "dem Gerät"} verknüpft. Das gilt, bis Zabbix eine Seriennummer liefert.`,
+                action: "Zuordnen",
+              }}
+              onConfirm={() => (choice ? run(linkHost(host.hostid, choice.id)) : undefined)}
+            >
+              Zuordnen
+            </ConfirmButton>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -971,6 +1345,7 @@ function OptionsForm({
   const [sites, setSites] = useState<Record<string, number | null>>(() =>
     Object.fromEntries(data.groups.map((group) => [group.groupid, group.site_id])),
   );
+  const [kindIds, setKindIds] = useState<number[]>(data.kind_ids);
   const [tag, setTag] = useState(data.certificate_tag);
   const [value, setValue] = useState(data.certificate_value);
   const [busy, setBusy] = useState(false);
@@ -994,6 +1369,7 @@ function OptionsForm({
         })),
       certificate_tag: tag.trim(),
       certificate_value: value.trim(),
+      kind_ids: kindIds,
     })
       .then((saved) => {
         onSaved(saved);
@@ -1058,6 +1434,37 @@ function OptionsForm({
             </table>
           </div>
         )}
+        <fieldset className="zbx-tag">
+          <legend>
+            Hardware-Arten für „Nicht überwacht“ <InfoTip term="zabbix.nicht-ueberwacht" />
+          </legend>
+          <p className="small">
+            Aktive Geräte dieser Arten aus dem IT-Bestand sollten in Zabbix einen Host haben.
+          </p>
+          {data.kinds.length === 0 ? (
+            <p className="empty">Im IT-Bestand gibt es noch keine Hardware-Arten.</p>
+          ) : (
+            <div className="zbx-kinds">
+              {data.kinds.map((kind) => (
+                <label key={kind.id}>
+                  <input
+                    type="checkbox"
+                    className="check"
+                    checked={kindIds.includes(kind.id)}
+                    onChange={(event) =>
+                      setKindIds(
+                        event.target.checked
+                          ? [...kindIds, kind.id]
+                          : kindIds.filter((entry) => entry !== kind.id),
+                      )
+                    }
+                  />
+                  {kind.name}
+                </label>
+              ))}
+            </div>
+          )}
+        </fieldset>
         <fieldset className="zbx-tag">
           <legend>Tag für ablaufende Zertifikate</legend>
           <p className="small">

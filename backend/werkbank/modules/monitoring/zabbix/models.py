@@ -117,3 +117,29 @@ class ZbxStatus(Base):
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # {"rolle", "methoden", "modus", "hinweise", "token_ablauf"}
     account: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+
+class ZbxUnmonitored(Base):
+    """Gerät im IT-Bestand, das bewusst nicht in Zabbix überwacht wird."""
+
+    __tablename__ = "mon_zbx_unmonitored"
+
+    hardware_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_hardware.id", ondelete="CASCADE"), primary_key=True
+    )
+    reason: Mapped[str] = mapped_column(String(200), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ZbxHostLink(Base):
+    """Von Hand zugeordnetes Gerät für einen Host ohne Seriennummer im Zabbix-Inventar.
+
+    Gilt nur, solange Zabbix keine Seriennummer liefert."""
+
+    __tablename__ = "mon_zbx_host_links"
+
+    hostid: Mapped[str] = mapped_column(String(20), primary_key=True)
+    hardware_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_hardware.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.91.0",
+    date: "2026-11-22",
+    summary: "IT-Monitoring: Zabbix und IT-Bestand werden über die Seriennummer abgeglichen.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Neu: Jeder Host aus Zabbix zeigt das passende Gerät aus dem IT-Bestand, erkannt über die Seriennummer.",
+          "Unter „Zu erledigen“ und als Filter bei den Hosts: Geräte, die in Zabbix fehlen, Hosts ohne Bestandseintrag und Hosts ohne Seriennummer.",
+          "Wer den IT-Bestand pflegt, kann ein Gerät mit Begründung als „bewusst nicht überwacht“ markieren und einen Host ohne Seriennummer von Hand einem Gerät zuordnen. Beides steht im Verlauf des Geräts.",
+          "Admins legen auf der Seite „Verbindung“ fest, welche Hardware-Arten in Zabbix überwacht werden sollen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.90.0",
     date: "2026-11-22",
     summary: "IT-Monitoring: Zabbix ist da, mit Übersicht, Hosts und Wartungen.",

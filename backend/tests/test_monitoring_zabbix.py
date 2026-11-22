@@ -20,7 +20,13 @@ from werkbank.core.app_settings import (
 )
 from werkbank.core.models import AppSetting
 from werkbank.core.sessions import now_utc
-from werkbank.modules.inventory.models import InventoryCity, InventorySite
+from werkbank.modules.inventory.models import (
+    InventoryCity,
+    InventoryEvent,
+    InventoryHardware,
+    InventoryKind,
+    InventorySite,
+)
 from werkbank.modules.monitoring.notifications import zabbix_notifications
 from werkbank.modules.monitoring.zabbix import collector
 from werkbank.modules.monitoring.zabbix.admin import get_zabbix_transport
@@ -34,13 +40,16 @@ from werkbank.modules.monitoring.zabbix.client import (
     role_findings,
     valid_zabbix_url,
 )
+from werkbank.modules.monitoring.zabbix.inventory import norm_serial
 from werkbank.modules.monitoring.zabbix.models import (
     ZbxGroupSite,
     ZbxHost,
+    ZbxHostLink,
     ZbxMaintenance,
     ZbxProblem,
     ZbxRun,
     ZbxStatus,
+    ZbxUnmonitored,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures" / "zabbix"
@@ -216,7 +225,17 @@ def test_maintenance_state() -> None:
 
 @pytest.fixture
 def db(migrated_db: None, db_session: Session) -> Session:
-    for table in (ZbxGroupSite, ZbxProblem, ZbxMaintenance, ZbxHost, ZbxRun, ZbxStatus, AppSetting):
+    for table in (
+        ZbxHostLink,
+        ZbxUnmonitored,
+        ZbxGroupSite,
+        ZbxProblem,
+        ZbxMaintenance,
+        ZbxHost,
+        ZbxRun,
+        ZbxStatus,
+        AppSetting,
+    ):
         db_session.execute(delete(table))
     db_session.commit()
     return db_session
@@ -429,3 +448,106 @@ def test_admin_settings_and_mapping(db: Session, tmp_path: Path) -> None:
         headers=HEADERS,
     )
     assert unknown.status_code == 422
+
+
+def test_norm_serial() -> None:
+    assert norm_serial(" sn-1001 ") == "SN-1001"
+    assert norm_serial("SN 10 01") == "SN1001"
+    assert norm_serial("") == ""
+
+
+def kind(db: Session, name: str) -> int:
+    entry = db.scalar(select(InventoryKind).where(InventoryKind.name == name))
+    if entry is None:
+        entry = InventoryKind(name=name)
+        db.add(entry)
+        db.flush()
+    return entry.id
+
+
+@pytest.mark.db
+def test_inventory_gaps_and_actions(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    configure(db, settings)
+    collector.collect(db, settings, FakeZabbix("zabbix-7.0"))
+    for serial in ("SN-1001", " sn-1001", "ZBX-SRV-2", "ZBX-SRV-3", "ZBX-NB-1"):
+        for row in db.scalars(select(InventoryHardware).where(InventoryHardware.serial == serial)):
+            db.delete(row)
+    db.commit()
+    server = kind(db, "Server (Zabbix-Test)")
+    notebook = kind(db, "Notebook (Zabbix-Test)")
+    matched_device = InventoryHardware(kind_id=server, name="Server A", serial=" sn-1001")
+    missing = InventoryHardware(kind_id=server, name="Server ohne Host", serial="ZBX-SRV-2")
+    spare = InventoryHardware(kind_id=server, name="Ersatzserver", serial="ZBX-SRV-3")
+    laptop = InventoryHardware(kind_id=notebook, name="Notebook", serial="ZBX-NB-1")
+    db.add_all([matched_device, missing, spare, laptop])
+    db.commit()
+    set_setting(db, ZABBIX_OPTIONS_KEY, {"certificate_tag": None, "kind_ids": [server]}, None)
+    db.commit()
+
+    client = client_for(make_app(settings))
+    login_as(client, ["Monitoring.Reader"], oid="zbx-nur-lesen")
+    rows = {row["hostid"]: row for row in client.get("/api/monitoring/zabbix/hosts").json()}
+    assert rows["10101"]["device"]["id"] == matched_device.id
+    assert rows["10101"]["match"] == "seriennummer"
+    assert rows["10103"]["gap"] == "seriennummer_fehlt"
+    assert rows["10102"]["gap"] == "seriennummer_fehlt"
+    assert rows["10104"]["gap"] is None  # abgeschaltet
+    data = client.get("/api/monitoring/zabbix/unmonitored").json()
+    missing_ids = {row["id"] for row in data["missing"]}
+    assert {missing.id, spare.id} <= missing_ids
+    assert laptop.id not in missing_ids and matched_device.id not in missing_ids
+    todo = client.get("/api/monitoring/zabbix").json()["todo"]
+    assert todo["no_serial"] == 2 and todo["unmonitored"] >= 2
+    # Ohne Bestand.Editor kein Markieren und Zuordnen
+    assert (
+        client.put(
+            f"/api/monitoring/zabbix/devices/{spare.id}/unmonitored",
+            json={"reason": "Ersatzgerät im Lager"},
+            headers=HEADERS,
+        ).status_code
+        == 403
+    )
+
+    login_as(client, ["Monitoring.Reader", "Bestand.Editor"], oid="zbx-bestand")
+    marked = client.put(
+        f"/api/monitoring/zabbix/devices/{spare.id}/unmonitored",
+        json={"reason": "Ersatzgerät im Lager"},
+        headers=HEADERS,
+    ).json()
+    assert spare.id not in {row["id"] for row in marked["missing"]}
+    assert [row["reason"] for row in marked["excluded"] if row["id"] == spare.id] == [
+        "Ersatzgerät im Lager"
+    ]
+    events = [
+        event.text
+        for event in db.scalars(
+            select(InventoryEvent).where(InventoryEvent.hardware_id == spare.id)
+        )
+    ]
+    assert "Bewusst nicht in Zabbix überwacht: Ersatzgerät im Lager" in events
+
+    # Host ohne Seriennummer von Hand zuordnen; mit Seriennummer geht das nicht
+    linked = client.post(
+        "/api/monitoring/zabbix/hosts/10103/link",
+        json={"hardware_id": missing.id},
+        headers=HEADERS,
+    ).json()
+    assert linked["device"]["id"] == missing.id and linked["match"] == "hand"
+    assert linked["gap"] is None
+    assert (
+        client.post(
+            "/api/monitoring/zabbix/hosts/10101/link",
+            json={"hardware_id": missing.id},
+            headers=HEADERS,
+        ).status_code
+        == 409
+    )
+    data = client.get("/api/monitoring/zabbix/unmonitored").json()
+    assert missing.id not in {row["id"] for row in data["missing"]}
+    unlinked = client.delete("/api/monitoring/zabbix/hosts/10103/link", headers=HEADERS).json()
+    assert unlinked["device"] is None and unlinked["gap"] == "seriennummer_fehlt"
+    back = client.delete(
+        f"/api/monitoring/zabbix/devices/{spare.id}/unmonitored", headers=HEADERS
+    ).json()
+    assert spare.id in {row["id"] for row in back["missing"]}
