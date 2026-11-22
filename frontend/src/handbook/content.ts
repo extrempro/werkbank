@@ -1169,14 +1169,32 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Unter „Statistik“ siehst du Zahlen zum aktiven Bestand: Geräte je Art, je Modell, nach Alter, je Standort, wo die Geräte gerade sind, Betriebssysteme, den Verleih und die Ausmusterungen je Jahr. Ausgemusterte Geräte zählen nur bei den Ausmusterungen.",
+                text: "Unter „Statistik“ stehen oben sechs Kennzahlen: aktive Geräte, freie Geräte im Lager, Verleih, fällige Erneuerung, Arbeitsplätze mit Lücke und fehlende Angaben. Ein Klick auf eine Kennzahl öffnet den passenden Bereich. Darunter sind die Auswertungen in Bereiche aufgeteilt: Überblick, Alter & Erneuerung, Standorte & Arbeitsplätze, Verleih, Ausmusterung und Datenqualität. Ausgemusterte Geräte zählen nur unter „Ausmusterung“.",
               },
               {
                 kind: "steps",
                 items: [
-                  "Oben unter „Hersteller“ einen Hersteller wählen, um nur seine Geräte zu sehen.",
-                  "Bei jeder Auswertung mit „Balken“ oder „Kreis“ die Darstellung wechseln.",
-                  "Unter „Als Tabelle“ stehen dieselben Zahlen mit Anteil zum Nachlesen.",
+                  "Oben nach Hersteller, Art, Standort oder Abteilung filtern. Die Zahl hinter jedem Eintrag zeigt, wie viele Geräte unter den übrigen Filtern dazu passen.",
+                  "Bei Art, Hersteller, Standort und freien Geräten im Lager filtert ein Klick auf einen Balken die ganze Seite; ein zweiter Klick hebt den Filter wieder auf.",
+                  "Bei jeder Auswertung mit „Balken“ oder „Tabelle“ die Darstellung wechseln. Die Tabelle zeigt auch den Anteil.",
+                  "„Drucken oder als PDF“ druckt den gewählten Bereich ohne Menüs.",
+                ],
+              },
+              {
+                kind: "terms",
+                items: [
+                  [
+                    "Erneuerung fällig",
+                    "Geräte, die älter sind als die Nutzungsdauer ihrer Art. Die Nutzungsdauer trägst du in den Stammdaten bei den Hardware-Arten ein; ohne sie bleibt die Auswertung leer.",
+                  ],
+                  [
+                    "Im Lager, frei",
+                    "Geräte ohne Stelle, ohne Arbeitsplatz und ohne Verleih oder Reservierung",
+                  ],
+                  [
+                    "Hervorgehobene Balken",
+                    "Werte, die du dir ansehen solltest, etwa ein Betriebssystem ohne Sicherheitsupdates; in der Tabelle steht dann „beachten“",
+                  ],
                 ],
               },
               {
@@ -1436,7 +1454,7 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "list",
                 items: [
-                  "Hardware-Arten: zum Beispiel Notebook, PC, Monitor. Bei jeder Art legst du fest, ob sie einen Datenträger hat.",
+                  "Hardware-Arten: zum Beispiel Notebook, PC, Monitor. Bei jeder Art legst du fest, ob sie einen Datenträger hat und wie lange sie genutzt wird (Nutzungsdauer in Jahren, für den Erneuerungsbedarf in der Statistik).",
                   "Hersteller und Modelle: je Hersteller beliebig viele Modelle.",
                   "Gründe fürs Ausmustern: zum Beispiel defekt, veraltet, verloren oder gestohlen, Garantietausch.",
                   "Abteilungen: Auswahl bei der Stelle.",

@@ -11792,3 +11792,188 @@ input[type="file"] {
 .via-workplace-head {
   margin: 0 0 6px;
 }
+
+/* IT-Bestand › Statistik: Kennzahlen, Bereiche und klickbare Balken */
+.stat-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.stat-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+}
+
+.stat-loading {
+  margin: 0 0 12px auto;
+  min-height: 1.2em;
+}
+
+.stat-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.stat-kpi-grid li {
+  position: relative;
+}
+
+.stat-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 12px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stat-kpi:hover {
+  border-color: var(--farbe-primaer);
+}
+
+.stat-kpi-label {
+  padding-right: 28px;
+  color: var(--farbe-text-leise);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.stat-kpi-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.stat-kpi-warn {
+  color: var(--farbe-zaehler);
+}
+
+.stat-kpi-sub {
+  color: var(--farbe-text-leise);
+  font-size: 0.8125rem;
+}
+
+.stat-kpi-tip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.stat-page .project-tabs button.project-tab {
+  border-top: 0;
+  border-right: 0;
+  border-left: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.stat-page .project-tabs button.project-tab-on {
+  font-weight: 600;
+}
+
+.stat-intro {
+  margin: 12px 0 16px;
+  color: var(--farbe-text-mittel);
+}
+
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.stat-bar-button {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 3.5rem;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 32px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stat-bars li:has(> .stat-bar-button) {
+  display: block;
+}
+
+.stat-bar-button:hover,
+.stat-bar-button[aria-pressed="true"] {
+  background: var(--farbe-auswahl);
+}
+
+.stat-bar-button[aria-pressed="true"] .stat-bar-label {
+  font-weight: 600;
+}
+
+.stat-bar-warn {
+  background: var(--chart-2);
+}
+
+.stat-warn {
+  margin-left: 8px;
+}
+
+.stat-note {
+  margin: 10px 0 0;
+}
+
+.master-lifetime input {
+  width: 5rem;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+}
+
+.master-lifetime label {
+  min-width: 10rem;
+}
+
+.stat-page-head > div {
+  flex: 1 1 30rem;
+  min-width: 0;
+}
+
+.stat-page-head > button {
+  flex: none;
+}
+
+.stat-filters .filter-field {
+  flex: 0 1 14rem;
+  min-width: 0;
+}
+
+.stat-filters .filter-field select {
+  width: 100%;
+  min-width: 0;
+}

@@ -254,6 +254,16 @@ export const HELP = {
     text: "Liegt das Datum in der Zukunft, ist der Verleih vorab geplant: Die Geräte sind ab sofort reserviert, die Nachricht an die Person geht am Startdatum raus.",
     topic: ["it-bestand", "verleih"],
   },
+  "bestand.erneuerung": {
+    term: "Erneuerung fällig",
+    text: "Geräte, die älter sind als die Nutzungsdauer ihrer Art. Die Nutzungsdauer legst du in den Stammdaten bei den Hardware-Arten fest.",
+    topic: ["it-bestand", "statistik"],
+  },
+  "bestand.nutzungsdauer": {
+    term: "Nutzungsdauer",
+    text: "Nach so vielen Jahren gilt ein Gerät dieser Art in der Statistik als „Erneuerung fällig“. Leer lassen, wenn es für die Art keine gibt.",
+    topic: ["it-bestand", "statistik"],
+  },
   "bestand.ueberfaellig": {
     term: "Überfälliger Verleih",
     text: "Ein Verleih, dessen Rückgabedatum vorbei ist, obwohl noch nicht alles zurück ist.",

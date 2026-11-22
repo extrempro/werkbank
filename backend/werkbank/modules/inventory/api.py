@@ -116,6 +116,12 @@ class KindOut(BaseModel):
     name: str
     has_storage: bool
     used: int
+    lifetime_years: int | None = None
+
+
+class LifetimeIn(BaseModel):
+    # Nutzungsdauer in Jahren; None = keine
+    years: int | None = Field(default=None, ge=1, le=20)
 
 
 class ModelOut(BaseModel):
@@ -1018,7 +1024,11 @@ def master_data(db: Session) -> MasterDataOut:
     return MasterDataOut(
         kinds=[
             KindOut(
-                id=row.id, name=row.name, has_storage=row.has_storage, used=kind_use.get(row.id, 0)
+                id=row.id,
+                name=row.name,
+                has_storage=row.has_storage,
+                used=kind_use.get(row.id, 0),
+                lifetime_years=row.lifetime_years,
             )
             for row in db.scalars(
                 select(InventoryKind).order_by(func.lower(InventoryKind.name), InventoryKind.id)
@@ -1141,6 +1151,29 @@ def update_kind(
         "art",
         row.id,
         {"vorher": before, "nachher": {"name": row.name, "datentraeger": row.has_storage}},
+    )
+    db.commit()
+    return master_data(db)
+
+
+@router.put("/kinds/{kind_id}/lifetime")
+def update_kind_lifetime(
+    request: Request, kind_id: ObjectId, body: LifetimeIn, user: Editor, db: DbDep
+) -> MasterDataOut:
+    """Nutzungsdauer einer Art für den Erneuerungsbedarf in der Statistik."""
+    row = db.get(InventoryKind, kind_id)
+    if row is None:
+        raise _not_found()
+    before = row.lifetime_years
+    row.lifetime_years = body.years
+    _audit(
+        db,
+        request,
+        user,
+        "art_nutzungsdauer",
+        "art",
+        row.id,
+        {"name": row.name, "vorher": before, "nachher": row.lifetime_years},
     )
     db.commit()
     return master_data(db)

@@ -335,7 +335,7 @@ describe("Stammdaten", () => {
       },
     });
     render(<MasterDataPage roles={["Bestand.Editor"]} />);
-    expect(await screen.findByText("Notebook")).toBeTruthy();
+    expect((await screen.findAllByText("Notebook")).length).toBeGreaterThan(0);
     const deletes = screen.getAllByRole("button", { name: "Löschen" });
     expect(deletes.every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
 
@@ -346,10 +346,32 @@ describe("Stammdaten", () => {
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({ name: "veraltet" });
   });
 
+  it("speichert die Nutzungsdauer einer Art", async () => {
+    const calls = stubFetch({
+      "GET /api/inventory/master-data": master,
+      "PUT /api/inventory/kinds/1/lifetime": {
+        ...master,
+        kinds: master.kinds.map((entry) =>
+          entry.id === 1 ? { ...entry, lifetime_years: 5 } : entry,
+        ),
+      },
+    });
+    render(<MasterDataPage roles={["Bestand.Editor"]} />);
+    const field = await screen.findByLabelText("Notebook", { selector: "input" });
+    fireEvent.change(field, { target: { value: "25" } });
+    const form = field.closest("form")!;
+    fireEvent.submit(form);
+    expect(await screen.findByText(/ganze Zahl von 1 bis 20/)).toBeTruthy();
+    fireEvent.change(field, { target: { value: "5" } });
+    fireEvent.submit(form);
+    expect(await screen.findByText(/Nutzungsdauer 5 Jahre/)).toBeTruthy();
+    expect(calls.find((call) => call.method === "PUT")?.body).toEqual({ years: 5 });
+  });
+
   it("zeigt Lesern keine Bearbeitung", async () => {
     stubFetch({ "GET /api/inventory/master-data": master });
     render(<MasterDataPage roles={["Bestand.Reader"]} />);
-    expect(await screen.findByText("Notebook")).toBeTruthy();
+    expect((await screen.findAllByText("Notebook")).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Löschen" })).toBeNull();
     expect(screen.queryByLabelText("Neue Art")).toBeNull();
   });

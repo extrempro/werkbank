@@ -1,5 +1,6 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { ConfirmButton } from "../../components/ConfirmDialog";
+import { InfoTip } from "../../components/InfoTip";
 import { errorText } from "../../api";
 import {
   createEntry,
@@ -9,6 +10,7 @@ import {
   fetchNumberRanges,
   INVENTORY_EDITOR_ROLE,
   saveKit,
+  setKindLifetime,
   updateEntry,
   updateModel,
   updateNumberRange,
@@ -40,6 +42,69 @@ function usedText(count: number, one = "Gerät", many = "Geräte"): string {
 }
 
 /** Eine Zeile mit Name, Verwendung, Umbenennen und Löschen. */
+/** Nutzungsdauer einer Art: Zahl der Jahre, leer = keine. */
+function LifetimeRow({
+  kind,
+  onSave,
+}: {
+  kind: Kind;
+  onSave: (years: number | null) => Promise<unknown>;
+}) {
+  const inputId = useId();
+  const stored = kind.lifetime_years ? String(kind.lifetime_years) : "";
+  const [value, setValue] = useState(stored);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const trimmed = value.trim();
+  const years = trimmed === "" ? null : Number(trimmed);
+  const valid = years === null || (Number.isInteger(years) && years >= 1 && years <= 20);
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!valid) {
+      setError("Bitte eine ganze Zahl von 1 bis 20 eintragen oder das Feld leeren.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    onSave(years).then(
+      () => setBusy(false),
+      (problem: unknown) => {
+        setError(errorText(problem, "Die Nutzungsdauer konnte nicht gespeichert werden."));
+        setBusy(false);
+      },
+    );
+  };
+  return (
+    <li className="master-row">
+      <form className="tool-row master-lifetime" onSubmit={onSubmit} noValidate>
+        <label htmlFor={inputId}>{kind.name}</label>
+        <input
+          id={inputId}
+          type="text"
+          inputMode="numeric"
+          value={value}
+          aria-invalid={!valid}
+          aria-describedby={error ? `${inputId}-fehler` : undefined}
+          onChange={(event) => setValue(event.target.value)}
+        />
+        <span className="small">Jahre</span>
+        <button
+          type="submit"
+          className="button button-secondary"
+          disabled={busy || trimmed === stored}
+        >
+          Speichern
+        </button>
+      </form>
+      {error && (
+        <p id={`${inputId}-fehler`} className="field-error">
+          {error}
+        </p>
+      )}
+    </li>
+  );
+}
+
 function EntryRow({
   name,
   used,
@@ -516,7 +581,14 @@ export function MasterDataPage({ roles }: { roles: readonly string[] }) {
                       name={kind.name}
                       used={kind.used}
                       canEdit={canEdit}
-                      extra={kind.has_storage ? "mit Datenträger" : undefined}
+                      extra={
+                        [
+                          kind.has_storage ? "mit Datenträger" : "",
+                          kind.lifetime_years ? `Nutzungsdauer ${kind.lifetime_years} Jahre` : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || undefined
+                      }
                       onRename={(name) =>
                         apply(
                           updateEntry("kinds", kind.id, { name, has_storage: kind.has_storage }),
@@ -548,6 +620,24 @@ export function MasterDataPage({ roles }: { roles: readonly string[] }) {
                             {kind.name} hat einen Datenträger
                           </label>
                         </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                {canEdit && (
+                  <details className="master-storage">
+                    <summary>Nutzungsdauer je Art festlegen</summary>
+                    <p className="small">
+                      In Jahren, für den Erneuerungsbedarf in der Statistik. Leer heißt: keine
+                      Nutzungsdauer. <InfoTip term="bestand.nutzungsdauer" />
+                    </p>
+                    <ul className="master-list">
+                      {data.kinds.map((kind) => (
+                        <LifetimeRow
+                          key={kind.id}
+                          kind={kind}
+                          onSave={(years) => apply(setKindLifetime(kind.id, years))}
+                        />
                       ))}
                     </ul>
                   </details>

@@ -42,6 +42,8 @@ class InventoryKind(Base):
     has_storage: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=sql_text("false")
     )
+    # Nutzungsdauer in Jahren: danach ist ein Gerät zur Erneuerung fällig (Statistik)
+    lifetime_years: Mapped[int | None] = mapped_column(Integer)
 
 
 class InventoryMaker(Base):

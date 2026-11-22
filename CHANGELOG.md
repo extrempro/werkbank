@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.95.0] – 2026-11-22
+
+### IT-Bestand
+
+- **Statistik neu aufgebaut** (nach dem klickbaren Entwurf): sechs Kennzahlen, die ihren Bereich öffnen; Bereiche Überblick, Alter & Erneuerung, Standorte & Arbeitsplätze, Verleih, Ausmusterung und Datenqualität; Filter nach Hersteller, Art, Standort und Abteilung; Klick auf einen Balken filtert die Seite; je Auswertung Balken oder Tabelle statt Kreis; Druckansicht
+- Neue Auswertungen: Hersteller, Erneuerungsbedarf je Geschäftsjahr und überfällig nach Art, Ausstattung der Arbeitsplätze, freie Geräte im Lager, Stellen mit und ohne Hardware, am häufigsten verliehene Arten, Pünktlichkeit der Rückgabe und Dauer, Verbleib und Datenträger-Löschung bei der Ausmusterung, fehlende Angaben, nicht online in NinjaOne, Lücken aus dem Zabbix-Abgleich; Betriebssysteme ohne Herstellersupport hervorgehoben
+- **Nutzungsdauer je Hardware-Art** in den Stammdaten (`PUT /api/inventory/kinds/{id}/lifetime`, Migration `0063`)
+- API `GET /api/inventory/statistics` liefert jetzt Kennzahlen und Bereiche (`kpis`, `sections`) statt der bisherigen Felder `charts`, `loans`, `retired`
+
+### Dokumentation
+
+- spec.md (Statistik), Handbuch (Statistik, Stammdaten), Info-Symbole
+
+### Tests
+
+- `test_inventory_statistics.py` (Filter, Nutzungsdauer, Verleih), `statistics.test.tsx`, `inventory.test.tsx`, E2E in `bestand.spec.ts`
+
 ## [0.94.0] – 2026-11-22
 
 ### IT-Bestand

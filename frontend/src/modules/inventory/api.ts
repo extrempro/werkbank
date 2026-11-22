@@ -128,6 +128,8 @@ export interface Kind {
   name: string;
   has_storage: boolean;
   used: number;
+  /** Nutzungsdauer in Jahren (Erneuerungsbedarf in der Statistik); null = keine */
+  lifetime_years?: number | null;
 }
 
 export interface Model {
@@ -1881,28 +1883,86 @@ export const CASE_KIND_SHORT: Record<CaseKind, string> = {
 export interface StatCount {
   label: string;
   count: number;
+  /** Wert für den Filter, wenn ein Klick auf den Balken die Seite filtert */
+  value?: number | null;
+  /** hervorheben (z. B. Betriebssystem ohne Support); steht immer auch im Text */
+  warn?: boolean;
 }
+
+export type StatFilterKey = "maker" | "kind" | "site" | "department";
 
 export interface StatChart {
   key: string;
   title: string;
-  /** feste Reihenfolge (z. B. Altersgruppen) statt nach Größe */
-  ordered: boolean;
   items: StatCount[];
+  filter: StatFilterKey | null;
+  note: string;
+  unit: string;
+}
+
+export interface StatSection {
+  key: string;
+  title: string;
+  intro: string;
+  charts: StatChart[];
+}
+
+export interface StatOption {
+  /** 0 = ohne */
+  id: number;
+  name: string;
+  count: number;
+}
+
+export interface StatFilters {
+  maker: number | null;
+  kind: number | null;
+  site: number | null;
+  department: number | null;
 }
 
 export interface InventoryStatistics {
-  /** Hersteller für den Filter; id 0 = ohne Hersteller */
-  makers: { id: number; name: string; count: number }[];
+  makers: StatOption[];
+  kinds: StatOption[];
+  sites: StatOption[];
+  departments: StatOption[];
   maker_id: number | null;
-  total: number;
-  charts: StatChart[];
-  loans: { open: number; overdue: number; months: StatCount[] };
-  retired: { year: number; count: number; reasons: StatCount[] }[];
+  kind_id: number | null;
+  site_id: number | null;
+  department_id: number | null;
+  year_label: string;
+  kpis: {
+    total: number;
+    new_this_month: number;
+    free: number;
+    loans_open: number;
+    loans_overdue: number;
+    /** null: für keine Art ist eine Nutzungsdauer eingetragen */
+    renewal_due: number | null;
+    workplaces_gap: number;
+    missing: number;
+  };
+  sections: StatSection[];
 }
 
-export function fetchInventoryStatistics(makerId: number | null): Promise<InventoryStatistics> {
-  return getJson(`${BASE}/statistics${makerId === null ? "" : `?maker=${makerId}`}`);
+export function statisticsQuery(filters: StatFilters): string {
+  const params = new URLSearchParams();
+  for (const key of ["maker", "kind", "site", "department"] as const) {
+    const value = filters[key];
+    if (value !== null) {
+      params.set(key, String(value));
+    }
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+export function fetchInventoryStatistics(filters: StatFilters): Promise<InventoryStatistics> {
+  return getJson(`${BASE}/statistics${statisticsQuery(filters)}`);
+}
+
+export function setKindLifetime(kindId: number, years: number | null): Promise<MasterData> {
+  return putJson(`${BASE}/kinds/${kindId}/lifetime`, { years });
 }
 
 /** „2026-03“ → „03/26“ */
