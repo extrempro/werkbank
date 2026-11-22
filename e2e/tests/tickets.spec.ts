@@ -373,6 +373,8 @@ test("Tickets: Mail an ein geschlossenes Ticket je nach Einstellung", async ({
     "allowed_types",
     "processed_days",
     "ignored_days",
+    "intake_log_days",
+    "review_days",
     "reopen_policy",
     "reopen_days",
     "sender_name",
