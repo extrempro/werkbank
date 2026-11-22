@@ -1,9 +1,20 @@
-/** Bildformate: Erkennung anhand der Dateisignatur, Bezeichnungen, Dateinamen. */
+/** Bildformate und PDF: Erkennung anhand der Dateisignatur, Bezeichnungen, Dateinamen. */
 
 export type InputFormat =
-  "png" | "jpeg" | "gif" | "webp" | "bmp" | "ico" | "svg" | "avif" | "heic" | "tiff" | "unknown";
+  | "png"
+  | "jpeg"
+  | "gif"
+  | "webp"
+  | "bmp"
+  | "ico"
+  | "svg"
+  | "avif"
+  | "heic"
+  | "tiff"
+  | "pdf"
+  | "unknown";
 
-export type OutputFormat = "png" | "jpeg" | "webp" | "avif" | "ico" | "svg" | "favicon";
+export type OutputFormat = "png" | "jpeg" | "webp" | "avif" | "ico" | "svg" | "favicon" | "pdf";
 
 export const inputLabels: Record<InputFormat, string> = {
   png: "PNG",
@@ -16,6 +27,7 @@ export const inputLabels: Record<InputFormat, string> = {
   avif: "AVIF",
   heic: "HEIC",
   tiff: "TIFF",
+  pdf: "PDF",
   unknown: "unbekannt",
 };
 
@@ -87,6 +99,14 @@ export const outputInfo: Record<OutputFormat, OutputInfo> = {
     alpha: true,
     hint: "favicon.ico, apple-touch-icon, Android-Symbole und HTML-Schnipsel",
   },
+  pdf: {
+    label: "PDF",
+    extension: "pdf",
+    mime: "application/pdf",
+    lossy: true,
+    alpha: false,
+    hint: "ein Bild je Seite, als JPEG eingebettet – mehrere Bilder ergeben eine PDF",
+  },
 };
 
 const startsWith = (b: Uint8Array, sig: number[], offset = 0) =>
@@ -99,6 +119,7 @@ export function detectFormat(bytes: Uint8Array): InputFormat {
   if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "png";
   if (startsWith(bytes, [0xff, 0xd8, 0xff])) return "jpeg";
   if (ascii(bytes, 0, 6) === "GIF87a" || ascii(bytes, 0, 6) === "GIF89a") return "gif";
+  if (ascii(bytes, 0, 5) === "%PDF-") return "pdf";
   if (ascii(bytes, 0, 4) === "RIFF" && ascii(bytes, 8, 12) === "WEBP") return "webp";
   if (ascii(bytes, 0, 2) === "BM") return "bmp";
   if (startsWith(bytes, [0x00, 0x00, 0x01, 0x00]) || startsWith(bytes, [0x00, 0x00, 0x02, 0x00]))

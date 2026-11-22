@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.89.0] – 2026-11-22
+
+### IT-Tools
+
+- **Bild-Konverter mit PDF in beide Richtungen** (`tools/image-convert/`): neues Zielformat „PDF“ – alle Bilder und PDF-Seiten der Liste ergeben eine PDF, je Seite ein Bild als JPEG (eigener Schreiber `pdf.ts`, ohne Zusatzpaket); wahlweise je Datei eine eigene PDF. Seitengröße A4 (hoch oder quer nach dem Bild, 1 cm Rand, kleine Bilder nicht vergrößert) oder so groß wie das Bild (96 dpi, höchstens 200 Zoll); Qualität und Hintergrund für Transparenz wie bei JPEG
+- **PDF als Eingabe:** PDFs lassen sich wie Bilder hinzufügen (Erkennung an `%PDF-`, Vorschau der ersten Seite). Jede gewählte Seite wird ein Bild in jedem Zielformat, mehrere Seiten kommen als ZIP (`name-seite-01.png` …), eine einzelne Seite direkt; Auflösung 72, 150 oder 300 dpi (höchstens 10 000 px je Seite und 40 Megapixel), Seitenangabe wie „1-3, 5“ für alle PDFs der Liste; ICO und Favicon-Paket aus der ersten gewählten Seite. Höchstens 500 Seiten je PDF; kennwortgeschützte PDFs werden mit Hinweis abgelehnt
+- **pdf.js** (`pdfjs-dist` 6.5.438, Apache-2.0) zeichnet die Seiten im Browser, wird erst beim Öffnen einer PDF geladen (`pdfread.ts`). Schriften, CMaps und WebAssembly-Dekoder liefert die Werkbank unter `/pdfjs/` selbst aus (Vite-Plugin `pdfjsAssets` in `vite.config.ts`, ohne QuickJS); die Sicherheitsrichtlinie bleibt unverändert. Optionale Abhängigkeit `@napi-rs/canvas` per `overrides` auf 1.1.1 festgelegt, weil 1.2.0 jünger als 7 Tage ist. Lizenzhinweise in `THIRD_PARTY_NOTICES.md`
+
+### Dokumentation
+
+- Regel 6 in `CLAUDE.md` und `CONTRIBUTING.md`: nichts ins Repo, was Rückschlüsse auf Betreiber, Personen oder Orte erlaubt; Testdaten und Verweise auf den externen Entwurf neutralisiert (#163)
+
+### Tests
+
+- `pdf.test.ts` (Seitenlage, Aufbau und Querverweise der PDF, Seitenangaben, Grenzen beim Zeichnen), Erkennung von PDF; E2E Bild-Konverter mit Bild und PDF zu einer PDF und einer PDF-Seite als PNG (`fixtures/drei-seiten.pdf`)
+
 ## [0.88.1] – 2026-11-22
 
 ### Behoben

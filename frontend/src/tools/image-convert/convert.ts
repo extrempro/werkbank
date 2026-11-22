@@ -8,6 +8,7 @@ import {
   type OutputFormat,
 } from "./formats";
 import { buildIco } from "./ico";
+import { buildPdf, pageLayout, type PdfPage, type PdfPageSize } from "./pdf";
 import { fitSquare, targetSize, type ResizeOptions } from "./resize";
 import { bytesToBase64, embedRasterInSvg, svgIntrinsicSize } from "./svg";
 import { createZip, type ZipEntry } from "./zip";
@@ -20,6 +21,8 @@ export interface ConvertSettings {
   /** Hintergrundfarbe für Formate ohne Transparenz (JPEG) und das Apple-Touch-Icon */
   background: string;
   icoSizes: number[];
+  /** Seitengröße beim Umwandeln in PDF */
+  pageSize: PdfPageSize;
 }
 
 export interface LoadedImage {
@@ -42,7 +45,7 @@ export interface ConvertResult {
 
 /** Welche Formate kann dieser Browser per Canvas erzeugen? (Chrome/Firefox: WebP ja; AVIF meist nein) */
 export async function detectEncoders(): Promise<Set<OutputFormat>> {
-  const supported = new Set<OutputFormat>(["png", "jpeg", "ico", "svg", "favicon"]);
+  const supported = new Set<OutputFormat>(["png", "jpeg", "ico", "svg", "favicon", "pdf"]);
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 2;
   for (const f of ["webp", "avif"] as const) {
@@ -132,6 +135,20 @@ export async function loadImage(file: Blob): Promise<LoadedImage> {
       );
     }
   }
+}
+
+/** Eine gezeichnete PDF-Seite als Bild für die weitere Umwandlung. */
+export function canvasImage(canvas: HTMLCanvasElement): LoadedImage {
+  return {
+    source: canvas,
+    width: canvas.width,
+    height: canvas.height,
+    format: "pdf",
+    release: () => {
+      canvas.width = 0;
+      canvas.height = 0;
+    },
+  };
 }
 
 // ---------- Zeichnen & Kodieren ----------
@@ -227,6 +244,29 @@ function squareIcon(img: LoadedImage, size: number, background?: string): HTMLCa
 
 // ---------- Umwandeln ----------
 
+/** Ein Bild als PDF-Seite: Größe wie eingestellt, Transparenz gefüllt, als JPEG. */
+export async function pdfPage(img: LoadedImage, s: ConvertSettings): Promise<PdfPage> {
+  const { width, height } = targetSize(img.width, img.height, s.resize);
+  const canvas = drawScaled(img, width, height);
+  fillBackground(canvas, s.background);
+  const jpeg = await canvasToBlob(
+    canvas,
+    "image/jpeg",
+    Math.min(1, Math.max(0.01, s.quality / 100)),
+  );
+  return {
+    jpeg: new Uint8Array(await jpeg.arrayBuffer()),
+    pixelWidth: width,
+    pixelHeight: height,
+    ...pageLayout(width, height, s.pageSize),
+  };
+}
+
+/** Mehrere Seiten zu einer PDF. */
+export function pdfBlob(pages: PdfPage[]): Blob {
+  return new Blob([buildPdf(pages) as BlobPart], { type: "application/pdf" });
+}
+
 export async function convertImage(
   img: LoadedImage,
   s: ConvertSettings,
@@ -253,6 +293,17 @@ export async function convertImage(
 
   if (s.format === "favicon") {
     return faviconPackage(img, s, original, notes);
+  }
+
+  if (s.format === "pdf") {
+    const page = await pdfPage(img, s);
+    return {
+      blob: pdfBlob([page]),
+      extension: "pdf",
+      width: page.pixelWidth,
+      height: page.pixelHeight,
+      notes,
+    };
   }
 
   const { width, height } = targetSize(img.width, img.height, s.resize);

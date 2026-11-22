@@ -2,7 +2,17 @@ import { useCallback, useEffect, useRef, useState, type DragEvent } from "react"
 import { downloadBlob } from "../download";
 import { clampInt, useToolParams } from "../params";
 import { ErrorBox, ToolSection } from "../ui";
-import { convertImage, dataUrl, detectEncoders, loadImage, type ConvertSettings } from "./convert";
+import {
+  canvasImage,
+  convertImage,
+  dataUrl,
+  detectEncoders,
+  loadImage,
+  pdfBlob,
+  pdfPage,
+  type ConvertSettings,
+  type LoadedImage,
+} from "./convert";
 import {
   detectFormat,
   formatBytes,
@@ -14,8 +24,9 @@ import {
   type OutputFormat,
 } from "./formats";
 import { ICO_SIZES } from "./ico";
+import { parsePageRange, pdfPageSizeLabels, type PdfPage, type PdfPageSize } from "./pdf";
 import { resizeLabels, type ResizeMode } from "./resize";
-import { createZip } from "./zip";
+import { createZip, type ZipEntry } from "./zip";
 
 interface Item {
   id: number;
@@ -24,6 +35,8 @@ interface Item {
   format?: InputFormat;
   width?: number;
   height?: number;
+  /** Seitenzahl bei PDFs */
+  pages?: number;
   error?: string;
   status: "loading" | "ready" | "converting" | "error";
   /** Ergebnis samt den Einstellungen, mit denen es entstand. */
@@ -37,7 +50,20 @@ interface Item {
   };
 }
 
-const OUTPUT_ORDER: OutputFormat[] = ["png", "jpeg", "webp", "avif", "ico", "favicon", "svg"];
+const OUTPUT_ORDER: OutputFormat[] = [
+  "png",
+  "jpeg",
+  "webp",
+  "avif",
+  "pdf",
+  "ico",
+  "favicon",
+  "svg",
+];
+const PAGE_SIZES = Object.keys(pdfPageSizeLabels) as PdfPageSize[];
+const DPI_OPTIONS = ["72", "150", "300"];
+/** Vorschau der ersten PDF-Seite: etwa so breit wie das Vorschaubild in der Liste */
+const PREVIEW_DPI = 24;
 const RESIZE_MODES = Object.keys(resizeLabels) as ResizeMode[];
 const MAX_FILE_BYTES = 200 * 1024 * 1024;
 /** Größere Dateien bekommen keine Vorschau, damit der Speicher nicht volläuft. */
@@ -51,7 +77,45 @@ const DEFAULTS = {
   vergroessern: "0",
   hintergrund: "ffffff",
   ico: "16,32,48,256",
+  seite: "a4",
+  einzeln: "0",
+  dpi: "150",
+  seiten: "",
 };
+
+interface Combined {
+  settings: string;
+  blob: Blob;
+  name: string;
+  pages: number;
+}
+
+/** Lädt pdf.js erst, wenn wirklich eine PDF kommt. */
+const pdfReader = () => import("./pdfread");
+
+/** Bilder eines Eintrags: ein Bild oder die gewählten Seiten einer PDF, nacheinander. */
+async function* imagesOf(
+  item: Item,
+  pageNumbers: number[],
+  dpi: number,
+): AsyncGenerator<{ image: LoadedImage; page?: number }> {
+  if (item.format !== "pdf") {
+    yield { image: await loadImage(item.file) };
+    return;
+  }
+  const { openPdf, renderPage } = await pdfReader();
+  const pdf = await openPdf(item.file);
+  try {
+    for (const page of pageNumbers) {
+      yield { image: canvasImage(await renderPage(pdf.document, page, dpi)), page };
+    }
+  } finally {
+    pdf.close();
+  }
+}
+
+const pageSuffix = (page: number, count: number) =>
+  `-seite-${String(page).padStart(String(count).length, "0")}`;
 
 let nextId = 1;
 
@@ -72,8 +136,15 @@ export default function ImageConvertTool() {
     .map(Number)
     .filter((value) => ICO_SIZES.includes(value));
   const icoSizes = parsedIco.length > 0 ? parsedIco : [16, 32, 48, 256];
+  const pageSize: PdfPageSize = PAGE_SIZES.includes(params.seite as PdfPageSize)
+    ? (params.seite as PdfPageSize)
+    : "a4";
+  const separate = params.einzeln === "1";
+  const dpi = DPI_OPTIONS.includes(params.dpi) ? Number(params.dpi) : 150;
+  const pageText = params.seiten.slice(0, 200);
 
   const [items, setItems] = useState<Item[]>([]);
+  const [combined, setCombined] = useState<Combined | null>(null);
   const [encoders, setEncoders] = useState<Set<OutputFormat> | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -88,8 +159,9 @@ export default function ImageConvertTool() {
     resize: { mode: resize, value: size, noUpscale: params.vergroessern !== "1" },
     background: `#${background}`,
     icoSizes,
+    pageSize,
   };
-  const settingsKey = JSON.stringify(settings);
+  const settingsKey = JSON.stringify({ settings, separate, dpi, pageText });
   const info = outputInfo[format];
   const formatUnsupported = encoders !== null && !encoders.has(format);
 
@@ -112,6 +184,29 @@ export default function ImageConvertTool() {
         continue;
       }
       const detected = detectFormat(new Uint8Array(await item.file.slice(0, 1024).arrayBuffer()));
+      if (detected === "pdf") {
+        try {
+          const { openPdf, renderPage } = await pdfReader();
+          const pdf = await openPdf(item.file);
+          try {
+            const first = await renderPage(pdf.document, 1, PREVIEW_DPI);
+            update(item.id, {
+              status: "ready",
+              format: detected,
+              pages: pdf.pages,
+              // Maße der ersten Seite bei 96 dpi, wie ein Bild auf dem Bildschirm
+              width: Math.round((pdf.width * 96) / 72),
+              height: Math.round((pdf.height * 96) / 72),
+              preview: first.toDataURL("image/png"),
+            });
+          } finally {
+            pdf.close();
+          }
+        } catch (caught) {
+          update(item.id, { status: "error", format: detected, error: (caught as Error).message });
+        }
+        continue;
+      }
       try {
         const image = await loadImage(item.file);
         const preview =
@@ -139,8 +234,8 @@ export default function ImageConvertTool() {
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
         return;
       }
-      const files = [...(event.clipboardData?.files ?? [])].filter((file) =>
-        file.type.startsWith("image/"),
+      const files = [...(event.clipboardData?.files ?? [])].filter(
+        (file) => file.type.startsWith("image/") || file.type === "application/pdf",
       );
       if (files.length === 0) {
         return;
@@ -170,42 +265,147 @@ export default function ImageConvertTool() {
     void addFiles([...event.dataTransfer.files]);
   };
 
+  /** Gewählte Seiten einer PDF oder null, wenn die Angabe nicht passt. */
+  const pagesFor = (item: Item): number[] | null =>
+    item.format === "pdf" ? parsePageRange(pageText, item.pages ?? 1) : [1];
+
   const convertAll = async () => {
     setBusy(true);
-    const taken = new Set<string>();
+    setCombined(null);
     const queue = itemsRef.current.filter((item) => item.status === "ready");
+    if (format === "pdf" && !separate) await convertToOnePdf(queue);
+    else await convertEach(queue);
+    setBusy(false);
+  };
+
+  /** Alle Bilder und PDF-Seiten der Liste nacheinander in eine PDF. */
+  const convertToOnePdf = async (queue: Item[]) => {
+    const pages: PdfPage[] = [];
     for (const item of queue) {
+      const numbers = pagesFor(item);
+      if (!numbers) {
+        update(item.id, { status: "error", error: pageRangeError(item) });
+        continue;
+      }
+      update(item.id, { status: "converting", result: undefined });
+      try {
+        for await (const { image } of imagesOf(item, numbers, dpi)) {
+          try {
+            pages.push(await pdfPage(image, settings));
+          } finally {
+            image.release();
+          }
+        }
+        update(item.id, { status: "ready" });
+      } catch (caught) {
+        update(item.id, { status: "error", error: (caught as Error).message });
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    }
+    if (pages.length > 0) {
+      const first = queue[0]?.file.name ?? "dokument";
+      setCombined({
+        settings: settingsKey,
+        blob: pdfBlob(pages),
+        name: queue.length === 1 ? outputName(first, "pdf", new Set()) : "bilder.pdf",
+        pages: pages.length,
+      });
+    }
+  };
+
+  /** Jede Datei für sich; mehrere Seiten einer PDF werden ein ZIP. */
+  const convertEach = async (queue: Item[]) => {
+    const taken = new Set<string>();
+    const singleImage = format === "ico" || format === "favicon";
+    for (const item of queue) {
+      const selected = pagesFor(item);
+      if (!selected) {
+        update(item.id, { status: "error", error: pageRangeError(item) });
+        continue;
+      }
+      // Symbole entstehen aus einem Bild: bei PDFs aus der ersten gewählten Seite
+      const numbers = singleImage ? selected.slice(0, 1) : selected;
       update(item.id, { status: "converting" });
       try {
-        const image = await loadImage(item.file);
-        try {
-          const converted = await convertImage(image, settings, item.file);
-          const base =
-            format === "favicon"
-              ? item.file.name.replace(/(\.[^.]+)?$/, "-favicon$1")
-              : item.file.name;
-          update(item.id, {
-            status: "ready",
-            result: {
-              settings: settingsKey,
-              blob: converted.blob,
-              name: outputName(base, converted.extension, taken),
-              width: converted.width,
-              height: converted.height,
-              notes: converted.notes,
-            },
-          });
-        } finally {
-          image.release();
+        const onePageOfMany =
+          item.format === "pdf" && (item.pages ?? 1) > 1 && numbers.length === 1;
+        const named = onePageOfMany
+          ? item.file.name.replace(/(\.[^.]+)?$/, `${pageSuffix(numbers[0]!, item.pages ?? 1)}$1`)
+          : item.file.name;
+        const base = format === "favicon" ? named.replace(/(\.[^.]+)?$/, "-favicon$1") : named;
+        const entries: ZipEntry[] = [];
+        const pdfPages: PdfPage[] = [];
+        const notes = new Set<string>();
+        let last: { blob: Blob; extension: string; width: number; height: number } | null = null;
+        let first: { width: number; height: number } | null = null;
+        const inner = new Set<string>();
+        for await (const { image, page } of imagesOf(item, numbers, dpi)) {
+          try {
+            if (format === "pdf") {
+              const converted = await pdfPage(image, settings);
+              pdfPages.push(converted);
+              first ??= { width: converted.pixelWidth, height: converted.pixelHeight };
+              continue;
+            }
+            const converted = await convertImage(image, settings, item.file);
+            converted.notes.forEach((note) => notes.add(note));
+            first ??= converted;
+            last = converted;
+            if (page !== undefined && numbers.length > 1) {
+              entries.push({
+                name: outputName(
+                  base.replace(/(\.[^.]+)?$/, `${pageSuffix(page, item.pages ?? 1)}$1`),
+                  converted.extension,
+                  inner,
+                ),
+                data: new Uint8Array(await converted.blob.arrayBuffer()),
+              });
+            }
+          } finally {
+            image.release();
+          }
+          await new Promise((resolve) => window.setTimeout(resolve, 0));
         }
+        if (singleImage && item.format === "pdf" && (item.pages ?? 1) > 1) {
+          notes.add(`Aus Seite ${numbers[0]} der PDF.`);
+        }
+        let blob: Blob;
+        let extension: string;
+        if (format === "pdf") {
+          blob = pdfBlob(pdfPages);
+          extension = "pdf";
+          if (item.format === "pdf") {
+            notes.add("Seiten als Bild übernommen – Text lässt sich nicht mehr markieren.");
+          }
+        } else if (entries.length > 0) {
+          blob = new Blob([createZip(entries) as BlobPart], { type: "application/zip" });
+          extension = "zip";
+          notes.add(`${entries.length} Seiten als einzelne Bilder im ZIP.`);
+        } else {
+          blob = last!.blob;
+          extension = last!.extension;
+        }
+        update(item.id, {
+          status: "ready",
+          result: {
+            settings: settingsKey,
+            blob,
+            name: outputName(base, extension, taken),
+            width: first!.width,
+            height: first!.height,
+            notes: [...notes],
+          },
+        });
       } catch (caught) {
         update(item.id, { status: "error", error: (caught as Error).message });
       }
       // Dem Browser zwischen großen Bildern Luft lassen
       await new Promise((resolve) => window.setTimeout(resolve, 0));
     }
-    setBusy(false);
   };
+
+  const pageRangeError = (item: Item) =>
+    `Die Seitenangabe „${pageText}“ passt nicht zu dieser PDF (${item.pages ?? 1} Seiten).`;
 
   const downloadAll = async () => {
     const done = itemsRef.current.filter((item) => item.result?.settings === settingsKey);
@@ -228,6 +428,12 @@ export default function ImageConvertTool() {
   const totalBefore = results.reduce((sum, item) => sum + item.file.size, 0);
   const totalAfter = results.reduce((sum, item) => sum + (current(item)?.blob.size ?? 0), 0);
   const converting = items.some((item) => item.status === "converting");
+  const hasPdf = items.some((item) => item.format === "pdf");
+  const pageTextInvalid =
+    pageText.trim() !== "" &&
+    items.some((item) => item.format === "pdf" && pagesFor(item) === null);
+  const oneFile = format === "pdf" && !separate;
+  const currentCombined = combined?.settings === settingsKey ? combined : null;
 
   const toggleIco = (value: number) => {
     const next = icoSizes.includes(value)
@@ -249,11 +455,11 @@ export default function ImageConvertTool() {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
-        Bilder auswählen oder hierher ziehen
+        Bilder oder PDFs auswählen oder hierher ziehen
         <input
           type="file"
           multiple
-          accept="image/*,.svg,.ico,.heic,.heif,.avif"
+          accept="image/*,.svg,.ico,.heic,.heif,.avif,application/pdf,.pdf"
           onChange={(event) => {
             void addFiles([...(event.target.files ?? [])]);
             event.target.value = "";
@@ -261,8 +467,8 @@ export default function ImageConvertTool() {
         />
       </label>
       <p className="small">
-        PNG, JPEG, WebP, GIF, BMP, SVG, ICO und AVIF, mehrere Dateien auf einmal. Ein Screenshot
-        lässt sich mit Strg+V einfügen.
+        PNG, JPEG, WebP, GIF, BMP, SVG, ICO, AVIF und PDF, mehrere Dateien auf einmal. Ein
+        Screenshot lässt sich mit Strg+V einfügen.
       </p>
 
       <ToolSection title="Zielformat">
@@ -353,11 +559,43 @@ export default function ImageConvertTool() {
             </div>
           )}
 
-          {(format === "jpeg" || format === "favicon") && (
+          {format === "pdf" && (
+            <div className="tool-field">
+              <label>
+                Seitengröße
+                <select
+                  value={pageSize}
+                  onChange={(event) => setParams({ seite: event.target.value })}
+                >
+                  {PAGE_SIZES.map((key) => (
+                    <option key={key} value={key}>
+                      {pdfPageSizeLabels[key]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  className="check"
+                  checked={separate}
+                  onChange={(event) => setParams({ einzeln: event.target.checked ? "1" : "0" })}
+                />
+                Je Datei eine eigene PDF
+              </label>
+              <p className="small">
+                {pageSize === "a4"
+                  ? "Hoch oder quer wie das Bild, mit 1 cm Rand; kleine Bilder werden nicht vergrößert."
+                  : "Jede Seite so groß wie ihr Bild, ohne Rand."}
+              </p>
+            </div>
+          )}
+
+          {(format === "jpeg" || format === "favicon" || format === "pdf") && (
             <label>
-              {format === "jpeg"
-                ? "Hintergrund für transparente Bereiche"
-                : "Hintergrund des Apple-Touch-Icons"}
+              {format === "favicon"
+                ? "Hintergrund des Apple-Touch-Icons"
+                : "Hintergrund für transparente Bereiche"}
               <input
                 type="color"
                 value={`#${background}`}
@@ -387,6 +625,47 @@ export default function ImageConvertTool() {
         </div>
       </ToolSection>
 
+      {hasPdf && (
+        <ToolSection title="PDF-Seiten">
+          <div className="tool-columns">
+            <label>
+              Auflösung
+              <select
+                value={String(dpi)}
+                onChange={(event) => setParams({ dpi: event.target.value })}
+              >
+                {DPI_OPTIONS.map((value) => (
+                  <option key={value} value={value}>
+                    {value} dpi
+                    {value === "72" ? " (Bildschirm)" : value === "300" ? " (Druck)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Seiten (leer = alle)
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="z. B. 1-3, 5"
+                maxLength={200}
+                value={params.seiten}
+                aria-invalid={pageTextInvalid || undefined}
+                aria-describedby="pdf-seiten-hinweis"
+                onChange={(event) => setParams({ seiten: event.target.value })}
+              />
+            </label>
+          </div>
+          <p id="pdf-seiten-hinweis" className="small">
+            Jede Seite wird ein eigenes Bild, mehrere Seiten kommen als ZIP. Die Seitenangabe gilt
+            für alle PDFs in der Liste.
+          </p>
+          {pageTextInvalid && (
+            <ErrorBox>Die Seitenangabe passt nicht zu jeder PDF in der Liste.</ErrorBox>
+          )}
+        </ToolSection>
+      )}
+
       {items.length > 0 && (
         <ToolSection title={`Dateien (${items.length})`}>
           <div className="tool-row">
@@ -396,9 +675,13 @@ export default function ImageConvertTool() {
               disabled={busy || ready === 0 || formatUnsupported}
               onClick={() => void convertAll()}
             >
-              {busy ? "Wandle um …" : `${ready} ${ready === 1 ? "Bild" : "Bilder"} umwandeln`}
+              {busy
+                ? "Wandle um …"
+                : oneFile
+                  ? `${ready} ${ready === 1 ? "Datei" : "Dateien"} in eine PDF`
+                  : `${ready} ${ready === 1 ? "Datei" : "Dateien"} umwandeln`}
             </button>
-            {results.length > 1 && (
+            {results.length > 1 && !oneFile && (
               <button
                 type="button"
                 className="button button-secondary"
@@ -417,7 +700,23 @@ export default function ImageConvertTool() {
               Liste leeren
             </button>
           </div>
-          {results.length > 0 && !converting && (
+          {currentCombined && !converting && (
+            <div className="hint-box tool-result" role="status">
+              <span>
+                <span className="mono tool-break">{currentCombined.name}</span> ·{" "}
+                {currentCombined.pages} {currentCombined.pages === 1 ? "Seite" : "Seiten"} ·{" "}
+                {formatBytes(currentCombined.blob.size)}
+              </span>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => downloadBlob(currentCombined.blob, currentCombined.name)}
+              >
+                PDF herunterladen
+              </button>
+            </div>
+          )}
+          {results.length > 0 && !converting && !oneFile && (
             <p className="small" role="status">
               Gesamt {formatBytes(totalBefore)} → {formatBytes(totalAfter)} (
               {sizeChange(totalBefore, totalAfter)})
@@ -438,8 +737,12 @@ export default function ImageConvertTool() {
                     <strong className="tool-break">{item.file.name}</strong>
                     <span className="small">
                       {item.format ? inputLabels[item.format] : "…"}
-                      {item.width ? ` · ${item.width} × ${item.height} px` : ""} ·{" "}
-                      {formatBytes(item.file.size)}
+                      {item.pages
+                        ? ` · ${item.pages} ${item.pages === 1 ? "Seite" : "Seiten"}`
+                        : item.width
+                          ? ` · ${item.width} × ${item.height} px`
+                          : ""}{" "}
+                      · {formatBytes(item.file.size)}
                     </span>
                     {item.error && <span className="hint-box hint-bad">{item.error}</span>}
                     {item.status === "converting" && (
@@ -496,9 +799,10 @@ export default function ImageConvertTool() {
       )}
 
       <p className="small">
-        Alle Bilder werden nur in deinem Browser verarbeitet und nirgends hochgeladen. Beim
+        Alle Dateien werden nur in deinem Browser verarbeitet und nirgends hochgeladen. Beim
         Umwandeln gehen Metadaten wie EXIF, Kameradaten und GPS-Position verloren; Handyfotos werden
-        dabei richtig herum gedreht.
+        dabei richtig herum gedreht. PDF-Seiten werden als Bild übernommen, Text und Links gehen
+        dabei verloren.
       </p>
     </div>
   );

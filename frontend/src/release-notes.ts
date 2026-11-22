@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.89.0",
+    date: "2026-11-22",
+    summary: "IT-Tools: Der Bild-Konverter kann jetzt auch PDF, in beide Richtungen.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Bilder zu einer PDF: Wähle als Zielformat „PDF“, dann werden alle Bilder der Liste eine PDF mit einem Bild je Seite. Die Seite ist A4 oder so groß wie das Bild; auf Wunsch gibt es je Bild eine eigene PDF.",
+          "PDF zu Bildern: Füge eine PDF wie ein Bild hinzu. Jede Seite wird ein Bild, mehrere Seiten kommen als ZIP. Auflösung und Seiten (zum Beispiel „1-3, 5“) wählst du selbst.",
+          "Auch PDFs werden nur in deinem Browser verarbeitet und nirgends hochgeladen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.88.1",
     date: "2026-11-22",
     summary: "Info-Blasen, Abstände und lange Texte an vielen Stellen korrigiert.",

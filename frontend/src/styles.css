@@ -3993,6 +3993,15 @@ p.badges {
 
 /* IT-Tools: Übersicht und einzelne Tools */
 
+/* Ergebnis mit Knopf, z. B. die fertige PDF im Bild-Konverter */
+.tool-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
 .tool-search {
   display: flex;
   flex-direction: column;

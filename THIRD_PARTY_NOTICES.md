@@ -50,3 +50,14 @@ Werkbank selbst aus, ohne CDN.
   (Lizenztext im Paket unter `node_modules/zxing-wasm/LICENSE`).
 - ZXing-C++, https://github.com/zxing-cpp/zxing-cpp, in der WebAssembly-Datei enthalten –
   Apache License 2.0, https://www.apache.org/licenses/LICENSE-2.0
+
+## pdf.js
+
+PDF-Seiten als Bild im Bild-Konverter (Paket `pdfjs-dist`). Bibliothek, Worker, Schriften, CMaps
+und WebAssembly-Dekoder liefert die Werkbank selbst aus (unter `/assets/` und `/pdfjs/`), ohne CDN.
+Die Lizenztexte der Dekoder liegen mit unter `/pdfjs/wasm/`.
+
+- pdf.js, https://github.com/mozilla/pdf.js – Apache License 2.0, Copyright Mozilla Foundation
+  (Lizenztext im Paket unter `node_modules/pdfjs-dist/LICENSE`).
+- OpenJPEG (JPEG 2000) – BSD-Lizenz mit 2 Klauseln; PDFium JBIG2 – BSD-Lizenz mit 3 Klauseln;
+  qcms (Farbprofile) – MIT-Lizenz. Lizenztexte im Paket unter `node_modules/pdfjs-dist/wasm/`.
