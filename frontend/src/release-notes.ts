@@ -24,6 +24,25 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.100.0",
+    date: "2026-11-22",
+    summary: "Tickets: Kategorien, Fristen, Erinnerungen, Textbausteine und mehr.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Tickets lassen sich einer Kategorie zuordnen. Beim Anlegen schlägt die Kategorie eine Priorität vor.",
+          "Bereiche können Fristen einschalten. Am Ticket steht dann, bis wann es gelöst sein soll, und in der Liste siehst du, was überfällig ist. Kurz vorher bekommst du eine Benachrichtigung.",
+          "Mit dem Status „Erinnerung“ legst du ein Ticket bis zu einem Zeitpunkt beiseite. Dann meldet es sich wieder.",
+          "Gibst du ein Ticket an jemand anderen, wird die Person auf Wunsch benachrichtigt.",
+          "Doppelte Tickets führst du zusammen. Der Verlauf landet im anderen Ticket.",
+          "Im Antwortfeld fügst du Textbausteine mit einem Schrägstrich und dem Kürzel ein, zum Beispiel /drucker.",
+          "Tickets lassen sich mit einem Gerät aus dem IT-Bestand verknüpfen. Beim Gerät siehst du dann seine Tickets.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.99.0",
     date: "2026-11-22",
     summary: "Tickets: Mails werden zu Tickets, und du antwortest direkt aus dem Ticket.",

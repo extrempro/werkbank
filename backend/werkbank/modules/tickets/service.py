@@ -16,6 +16,7 @@ from werkbank.modules.tickets.models import (
     ENTRY_SYSTEM,
     OPEN_STATUSES,
     STATUS_CLOSED,
+    STATUS_REMINDER,
     STATUS_SOLVED,
     Ticket,
     TicketArea,
@@ -142,13 +143,21 @@ def assign_new(db: Session, ticket: Ticket, area: TicketArea) -> None:
     member = next_round_robin(db, area.id)
     if member is None:
         return
-    ticket.assignee_oid = member.oid
-    ticket.assignee_name = member.name
+    assign(ticket, member.oid, member.name, None)
     system_entry(db, ticket, f"Zuständig: {member.name} (reihum)", SYSTEM)
 
 
-def set_status(ticket: Ticket, new_status: str) -> None:
+def set_status(ticket: Ticket, new_status: str, db: Session | None = None) -> None:
+    """Status setzen; mit `db` auch Fristen (Pause bei „Wartet“, eingehalten) und Erinnerung."""
     now = now_utc()
+    old = ticket.status
+    if db is not None:
+        from werkbank.modules.tickets.sla import on_status
+
+        on_status(db, ticket, old, new_status, now)
+    if new_status != STATUS_REMINDER:
+        ticket.reminder_at = None
+        ticket.reminder_note = ""
     ticket.status = new_status
     ticket.updated_at = now
     ticket.solved_at = now if new_status == STATUS_SOLVED else None
@@ -166,7 +175,7 @@ def auto_close(db: Session) -> int:
     ).all()
     for ticket in tickets:
         solved_at = ticket.solved_at
-        set_status(ticket, STATUS_CLOSED)
+        set_status(ticket, STATUS_CLOSED, db)
         ticket.solved_at = solved_at
         system_entry(
             db,
@@ -182,3 +191,95 @@ def auto_close(db: Session) -> int:
             details={"von": "solved", "nach": "closed", "automatisch": True},
         )
     return len(tickets)
+
+
+def assign(
+    ticket: Ticket, oid: str | None, name: str, by_oid: str | None, *, notify: bool = True
+) -> None:
+    """Zuständigkeit setzen und vermerken, wer und wann (für die Benachrichtigung)."""
+    ticket.assignee_oid = oid
+    ticket.assignee_name = name if oid else ""
+    ticket.assigned_at = now_utc() if oid else None
+    ticket.assigned_by_oid = by_oid
+    ticket.assign_notify = notify
+
+
+def fire_reminders(db: Session) -> int:
+    """Fällige Erinnerungen: Ticket auf „In Arbeit“; die zuständige Person wird benachrichtigt."""
+    now = now_utc()
+    tickets = db.scalars(
+        select(Ticket).where(Ticket.status == STATUS_REMINDER, Ticket.reminder_at <= now)
+    ).all()
+    for ticket in tickets:
+        note = ticket.reminder_note
+        set_status(ticket, "in_progress", db)
+        ticket.reminder_fired_at = now
+        ticket.updated_at = now
+        system_entry(
+            db,
+            ticket,
+            "Erinnerung fällig: Status → In Arbeit" + (f" ({note})" if note else ""),
+            SYSTEM,
+        )
+        protocol(
+            db,
+            SYSTEM,
+            "ticket_status",
+            ticket=ticket,
+            details={"von": "reminder", "nach": "in_progress"},
+        )
+    return len(tickets)
+
+
+def merge(db: Session, source: Ticket, target: Ticket, actor: Actor) -> None:
+    """Quelle ins Ziel einsortieren: Verlauf und Anhänge („aus T-…“), Melder der Quelle wird
+    Beteiligter, Quelle bekommt „Zusammengeführt“ und verweist aufs Ziel."""
+    from werkbank.modules.tickets.models import STATUS_MERGED, TicketAttachment, TicketParticipant
+
+    for entry in db.scalars(select(TicketEntry).where(TicketEntry.ticket_id == source.id)):
+        entry.ticket_id = target.id
+        entry.from_number = entry.from_number or source.number
+        entry.original = False
+    for att in db.scalars(select(TicketAttachment).where(TicketAttachment.ticket_id == source.id)):
+        att.ticket_id = target.id
+    existing = set(
+        db.scalars(select(TicketParticipant.mail).where(TicketParticipant.ticket_id == target.id))
+    )
+    candidates = [(source.reporter_name, source.reporter_mail)] + [
+        (p.name, p.mail)
+        for p in db.scalars(
+            select(TicketParticipant).where(TicketParticipant.ticket_id == source.id)
+        )
+    ]
+    for name, mail in candidates:
+        if mail and mail != target.reporter_mail and mail not in existing:
+            existing.add(mail)
+            db.add(TicketParticipant(ticket_id=target.id, name=name, mail=mail))
+    db.flush()
+    old = source.status
+    set_status(source, STATUS_MERGED, db)
+    source.merged_into_id = target.id
+    source.updated_at = target.updated_at = now_utc()
+    db.flush()
+    system_entry(db, source, f"Zusammengeführt in T-{target.number}", actor)
+    system_entry(db, target, f"T-{source.number} hierher zusammengeführt", actor)
+    protocol(
+        db,
+        actor,
+        "ticket_zusammengefuehrt",
+        ticket=source,
+        details={"ziel": target.number, "status_vorher": old},
+    )
+
+
+def follow_merged(db: Session, ticket: Ticket) -> Ticket:
+    """Bei zusammengeführten Tickets dem Verweis folgen (höchstens 10 Schritte)."""
+    current = ticket
+    for _ in range(10):
+        if current.merged_into_id is None:
+            return current
+        nxt = db.get(Ticket, current.merged_into_id)
+        if nxt is None:
+            return current
+        current = nxt
+    return current

@@ -97,6 +97,8 @@ class Settings(BaseSettings):
     tickets_internal_domains: str = ""
     # Ablage der Anhänge und Originale (.eml), Unterordner im Volume der Belege
     tickets_files_dir: Path = Path("/data/belege/tickets")
+    # Zeitzone für die Arbeitszeit der Fristen und für Erinnerungen
+    tickets_timezone: str = "Europe/Berlin"
 
     # Höchstzahl Anfragen pro Minute und Absender-IP (0 = aus), siehe core/ratelimit.py
     rate_limit_login_per_minute: int = 60

@@ -104,6 +104,24 @@ class TicketArea(Base):
     reopen_days: Mapped[int] = mapped_column(Integer, default=14, server_default=text("14"))
     mailbox_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     mailbox_error: Mapped[str] = mapped_column(Text, default="", server_default="")
+    # Fristen (Phase 3): an/aus, Arbeitstage (0 = Montag) und Arbeitszeit in Minuten ab 0 Uhr
+    sla_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    work_days: Mapped[list[int]] = mapped_column(
+        JSONB, default=lambda: [0, 1, 2, 3, 4], server_default=text("'[0, 1, 2, 3, 4]'::jsonb")
+    )
+    work_start: Mapped[int] = mapped_column(Integer, default=480, server_default=text("480"))
+    work_end: Mapped[int] = mapped_column(Integer, default=1020, server_default=text("1020"))
+    # Geräte aus dem IT-Bestand (Phase 3)
+    devices_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+    device_kinds: Mapped[list[int]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    device_suggest: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    device_in_inventory: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
 
     __table_args__ = (
         CheckConstraint("assignment IN ('first', 'round_robin')", name="ck_ticket_area_assignment"),
@@ -182,6 +200,31 @@ class Ticket(Base):
     created_by: Mapped[str] = mapped_column(String(256), default="", server_default="")
     # Erste Antwort an den Melder (für Fristen)
     first_response_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Phase 3: Kategorie, Gerät, Erinnerung, Zusammenführen, Zuständigkeit
+    category_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ticket_categories.id", ondelete="SET NULL"), index=True
+    )
+    hardware_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_hardware.id", ondelete="SET NULL"), index=True
+    )
+    reminder_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    reminder_note: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    # Zeitpunkt, zu dem die Erinnerung zuletzt ausgelöst hat (für die Benachrichtigung)
+    reminder_fired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    merged_into_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tickets.id", ondelete="SET NULL")
+    )
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    assigned_by_oid: Mapped[str | None] = mapped_column(String(64))
+    # Bei einer Übergabe: die neue Person benachrichtigen?
+    assign_notify: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    # Fristen: fällig (berechnet), ruhende Arbeitsminuten (Wartet), seit wann es ruht, eingehalten
+    sla_response_due: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sla_solution_due: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    sla_paused_minutes: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    sla_paused_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sla_response_met: Mapped[bool | None] = mapped_column(Boolean)
+    sla_solution_met: Mapped[bool | None] = mapped_column(Boolean)
 
     __table_args__ = (
         CheckConstraint(
@@ -191,6 +234,66 @@ class Ticket(Base):
         CheckConstraint("priority IN ('low', 'medium', 'high')", name="ck_ticket_priority"),
         CheckConstraint("channel IN ('mail', 'manual', 'phone')", name="ck_ticket_channel"),
         Index("ix_tickets_area_status", "area_id", "status"),
+    )
+
+
+class TicketCategory(Base):
+    """Kategorie je Bereich mit Standard-Priorität."""
+
+    __tablename__ = "ticket_categories"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    area_id: Mapped[int] = mapped_column(
+        ForeignKey("ticket_areas.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+    default_priority: Mapped[str] = mapped_column(
+        String(10), default="medium", server_default="medium"
+    )
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+
+    __table_args__ = (
+        UniqueConstraint("area_id", "name", name="uq_ticket_category"),
+        CheckConstraint(
+            "default_priority IN ('low', 'medium', 'high')", name="ck_ticket_category_priority"
+        ),
+    )
+
+
+class TicketSla(Base):
+    """Frist je Bereich und Priorität in Arbeitsminuten."""
+
+    __tablename__ = "ticket_sla"
+
+    area_id: Mapped[int] = mapped_column(
+        ForeignKey("ticket_areas.id", ondelete="CASCADE"), primary_key=True
+    )
+    priority: Mapped[str] = mapped_column(String(10), primary_key=True)
+    response_minutes: Mapped[int] = mapped_column(Integer)
+    solution_minutes: Mapped[int] = mapped_column(Integer)
+
+
+class TicketTemplate(Base):
+    """Textbaustein je Bereich (gemeinsam, keine persönlichen)."""
+
+    __tablename__ = "ticket_templates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    area_id: Mapped[int] = mapped_column(
+        ForeignKey("ticket_areas.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+    shortcut: Mapped[str] = mapped_column(String(30))
+    kind: Mapped[str] = mapped_column(String(10))  # reply | note
+    status_after: Mapped[str] = mapped_column(String(10), default="", server_default="")
+    body: Mapped[str] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint("area_id", "shortcut", name="uq_ticket_template_shortcut"),
+        CheckConstraint("kind IN ('reply', 'note')", name="ck_ticket_template_kind"),
+        CheckConstraint(
+            "status_after IN ('', 'waiting', 'solved')", name="ck_ticket_template_status"
+        ),
     )
 
 
@@ -226,6 +329,8 @@ class TicketEntry(Base):
     # Zitat aus früheren Mails (eingeklappt angezeigt) und Message-ID der Mail
     quote: Mapped[str] = mapped_column(Text, default="", server_default="")
     message_id: Mapped[str | None] = mapped_column(String(998), index=True)
+    # Beim Zusammenführen übernommen: Nummer des Quelltickets („aus T-…“)
+    from_number: Mapped[int | None] = mapped_column(BigInteger)
 
     __table_args__ = (
         CheckConstraint(

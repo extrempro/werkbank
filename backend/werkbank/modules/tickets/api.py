@@ -20,6 +20,7 @@ from werkbank.core.admin_settings import ADDRESS_PATTERN
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, SettingsDep
 from werkbank.core.sessions import now_utc
+from werkbank.modules.inventory.models import InventoryHardware, InventoryKind
 from werkbank.modules.inventory.search import escape_like
 from werkbank.modules.tickets.access import (
     AccessDep,
@@ -39,11 +40,13 @@ from werkbank.modules.tickets.models import (
     OPEN_STATUSES,
     STATUS_CLOSED,
     STATUS_IN_PROGRESS,
+    STATUS_REMINDER,
     STATUS_SOLVED,
     STATUS_WAITING,
     Ticket,
     TicketArea,
     TicketAttachment,
+    TicketCategory,
     TicketEntry,
     TicketParticipant,
 )
@@ -52,11 +55,13 @@ from werkbank.modules.tickets.service import (
     PRIORITY_LABELS,
     STATUS_LABELS,
     Actor,
+    assign,
     assign_new,
     protocol,
     set_status,
     system_entry,
 )
+from werkbank.modules.tickets.sla import on_first_response, recalc, work_zone
 
 router = APIRouter(prefix="/api/tickets")
 
@@ -65,7 +70,13 @@ PAGE_SIZE = 50
 BODY_MAX = 20_000
 PARTICIPANTS_MAX = 20
 # Status, die man im Ticketkopf von Hand wählen kann (Erinnerung folgt in Phase 3)
-SETTABLE_STATUSES = (STATUS_IN_PROGRESS, STATUS_WAITING, STATUS_SOLVED, STATUS_CLOSED)
+SETTABLE_STATUSES = (
+    STATUS_IN_PROGRESS,
+    STATUS_WAITING,
+    STATUS_REMINDER,
+    STATUS_SOLVED,
+    STATUS_CLOSED,
+)
 _NUMBER = re.compile(r"^\s*(?:t-?)?(\d{1,12})\s*$", re.IGNORECASE)
 
 
@@ -112,6 +123,11 @@ class TicketItem(BaseModel):
     channel: str
     created_at: datetime
     updated_at: datetime
+    category: str
+    reminder_at: datetime | None
+    # Frist: nur bei Bereichen mit Fristen (sonst None und kein Feld in der Oberfläche)
+    sla_solution_due: datetime | None
+    sla_overdue: bool
 
 
 class TicketListOut(BaseModel):
@@ -137,6 +153,8 @@ class AttachmentOut(BaseModel):
 class EntryOut(BaseModel):
     id: str
     kind: str
+    # Beim Zusammenführen übernommen: Nummer des Quelltickets
+    from_number: int | None
     body: str
     quote: str
     author_name: str
@@ -148,6 +166,28 @@ class EntryOut(BaseModel):
 class PersonOut(BaseModel):
     oid: str
     name: str
+
+
+class CategoryRef(BaseModel):
+    id: int
+    name: str
+    default_priority: str
+
+
+class SlaOut(BaseModel):
+    response_due: datetime | None
+    solution_due: datetime | None
+    response_met: bool | None
+    solution_met: bool | None
+    paused: bool
+
+
+class DeviceRef(BaseModel):
+    id: int
+    name: str
+    kind: str
+    inventory_no: str
+    serial: str
 
 
 class PermissionsOut(BaseModel):
@@ -171,13 +211,31 @@ class TicketOut(TicketItem):
     # Antwort an den Melder möglich? Sonst der Grund
     can_reply: bool
     reply_hint: str
+    category_id: int | None
+    categories: list[CategoryRef]
+    reminder_note: str
+    sla: SlaOut | None
+    devices_enabled: bool
+    device: DeviceRef | None
+    merged_into: int | None
 
 
 def _area_names(db: Session) -> dict[int, str]:
     return dict(db.execute(select(TicketArea.id, TicketArea.name)).tuples().all())
 
 
-def _item(ticket: Ticket, names: dict[int, str], access: TicketAccess) -> TicketItem:
+def _category_names(db: Session) -> dict[int, str]:
+    return dict(db.execute(select(TicketCategory.id, TicketCategory.name)).tuples().all())
+
+
+def _item(
+    ticket: Ticket,
+    names: dict[int, str],
+    access: TicketAccess,
+    categories: dict[int, str] | None = None,
+) -> TicketItem:
+    now = now_utc()
+    open_ = ticket.status in OPEN_STATUSES
     return TicketItem(
         number=ticket.number,
         subject=ticket.subject,
@@ -192,6 +250,15 @@ def _item(ticket: Ticket, names: dict[int, str], access: TicketAccess) -> Ticket
         channel=ticket.channel,
         created_at=ticket.created_at,
         updated_at=ticket.updated_at,
+        category=(categories or {}).get(ticket.category_id or 0, ""),
+        reminder_at=ticket.reminder_at,
+        sla_solution_due=ticket.sla_solution_due,
+        sla_overdue=bool(
+            open_
+            and ticket.sla_solution_due is not None
+            and ticket.sla_paused_since is None
+            and ticket.sla_solution_due < now
+        ),
     )
 
 
@@ -217,7 +284,7 @@ def reply_problem(settings: Settings, area: TicketArea | None, ticket: Ticket) -
 
 def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticket) -> TicketOut:
     names = _area_names(db)
-    item = _item(ticket, names, access)
+    item = _item(ticket, names, access, _category_names(db))
     entries = db.scalars(
         select(TicketEntry)
         .where(TicketEntry.ticket_id == ticket.id)
@@ -263,6 +330,7 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
                 kind=e.kind,
                 body=e.body,
                 quote=e.quote,
+                from_number=e.from_number,
                 author_name=e.author_name,
                 original=e.original,
                 created_at=e.created_at,
@@ -285,6 +353,52 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
             for a in active
             if a.id != ticket.area_id
         ],
+        category_id=ticket.category_id,
+        categories=[
+            CategoryRef(id=c.id, name=c.name, default_priority=c.default_priority)
+            for c in db.scalars(
+                select(TicketCategory)
+                .where(TicketCategory.area_id == ticket.area_id, TicketCategory.active.is_(True))
+                .order_by(TicketCategory.name)
+            )
+        ],
+        reminder_note=ticket.reminder_note,
+        sla=SlaOut(
+            response_due=ticket.sla_response_due,
+            solution_due=ticket.sla_solution_due,
+            response_met=ticket.sla_response_met,
+            solution_met=ticket.sla_solution_met,
+            paused=ticket.sla_paused_since is not None,
+        )
+        if area is not None and area.sla_enabled and ticket.sla_solution_due is not None
+        else None,
+        devices_enabled=bool(area and area.devices_enabled),
+        device=_device_ref(db, ticket.hardware_id)
+        if area is not None and area.devices_enabled
+        else None,
+        merged_into=_merged_number(db, ticket),
+    )
+
+
+def _merged_number(db: Session, ticket: Ticket) -> int | None:
+    if ticket.merged_into_id is None:
+        return None
+    return db.scalar(select(Ticket.number).where(Ticket.id == ticket.merged_into_id))
+
+
+def _device_ref(db: Session, hardware_id: int | None) -> DeviceRef | None:
+    if hardware_id is None:
+        return None
+    hw = db.get(InventoryHardware, hardware_id)
+    if hw is None:
+        return None
+    kind = db.get(InventoryKind, hw.kind_id)
+    return DeviceRef(
+        id=hw.id,
+        name=hw.name,
+        kind=kind.name if kind else "",
+        inventory_no=hw.inventory_no or "",
+        serial=hw.serial,
     )
 
 
@@ -359,7 +473,7 @@ def list_tickets(
     ).all()
     names = _area_names(db)
     return TicketListOut(
-        items=[_item(t, names, access) for t in rows],
+        items=[_item(t, names, access, _category_names(db)) for t in rows],
         total=total,
         has_more=offset + len(rows) < total,
     )
@@ -385,6 +499,7 @@ class TicketIn(BaseModel):
     body: str = Field(min_length=1, max_length=BODY_MAX)
     participants: list[ParticipantIn] = Field(default_factory=list, max_length=PARTICIPANTS_MAX)
     assign_to_me: bool = False
+    category_id: int | None = Field(default=None, ge=1, le=2_000_000_000)
 
     @field_validator("subject", "reporter_name", "body")
     @classmethod
@@ -393,6 +508,19 @@ class TicketIn(BaseModel):
         if not value:
             raise ValueError("Darf nicht leer sein.")
         return value
+
+
+def _category_of(db: Session, area_id: int, category_id: int | None) -> int | None:
+    """Kategorie muss zum Bereich gehören und aktiv sein."""
+    if category_id is None:
+        return None
+    category = db.get(TicketCategory, category_id)
+    if category is None or category.area_id != area_id or not category.active:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Diese Kategorie gibt es im Bereich nicht.",
+        )
+    return category.id
 
 
 def _set_participants(db: Session, ticket: Ticket, participants: list[ParticipantIn]) -> None:
@@ -422,10 +550,12 @@ def create_ticket(body: TicketIn, access: AccessDep, db: DbDep, settings: Settin
         priority=body.priority,
         channel=body.channel,
         created_by=me_actor.name,
+        category_id=_category_of(db, area.id, body.category_id),
     )
     db.add(ticket)
     db.flush()
     db.refresh(ticket)
+    recalc(db, ticket, area)
     db.add(
         TicketEntry(
             ticket_id=ticket.id,
@@ -438,8 +568,7 @@ def create_ticket(body: TicketIn, access: AccessDep, db: DbDep, settings: Settin
     )
     _set_participants(db, ticket, body.participants)
     if body.assign_to_me:
-        ticket.assignee_oid = access.oid
-        ticket.assignee_name = me_actor.name
+        assign(ticket, access.oid, me_actor.name, access.oid)
         system_entry(db, ticket, f"Zuständig: {me_actor.name}", me_actor)
     else:
         assign_new(db, ticket, area)
@@ -468,6 +597,11 @@ class ChangeIn(BaseModel):
     change_assignee: bool = False
     assignee_oid: str | None = Field(default=None, max_length=64)
     handover_note: str = Field(default="", max_length=BODY_MAX)
+    # Bei einer Übergabe: neue Person benachrichtigen (Glocke, Mail, Teams, Push je Einstellung)
+    notify_assignee: bool = True
+    # Für „Erinnerung“: Zeitpunkt (in der Zukunft) und optionales Stichwort
+    reminder_at: datetime | None = None
+    reminder_note: str = Field(default="", max_length=120)
 
 
 @router.patch("/{number}")
@@ -501,10 +635,23 @@ def change_ticket(
                 detail="Ein zusammengeführtes Ticket lässt sich nicht mehr ändern.",
             )
         old = ticket.status
-        set_status(ticket, body.status)
-        system_entry(
-            db, ticket, f"Status: {STATUS_LABELS[old]} → {STATUS_LABELS[body.status]}", me_actor
-        )
+        if body.status == STATUS_REMINDER:
+            when = body.reminder_at
+            if when is None or when.tzinfo is None or when <= now_utc():
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Für die Erinnerung brauchst du einen Zeitpunkt in der Zukunft.",
+                )
+        set_status(ticket, body.status, db)
+        label = STATUS_LABELS[body.status]
+        if body.status == STATUS_REMINDER and body.reminder_at is not None:
+            ticket.reminder_at = body.reminder_at
+            ticket.reminder_note = " ".join(body.reminder_note.split())
+            local = body.reminder_at.astimezone(work_zone())
+            label += f" am {local:%d.%m.%Y um %H:%M}" + (
+                f" ({ticket.reminder_note})" if ticket.reminder_note else ""
+            )
+        system_entry(db, ticket, f"Status: {STATUS_LABELS[old]} → {label}", me_actor)
         protocol(
             db, me_actor, "ticket_status", ticket=ticket, details={"von": old, "nach": body.status}
         )
@@ -523,8 +670,7 @@ def change_ticket(
                 new_name = next(
                     m.name for m, _ in area_people(db, ticket.area_id) if m.oid == new_oid
                 )
-            ticket.assignee_oid = new_oid
-            ticket.assignee_name = new_name
+            assign(ticket, new_oid, new_name, access.oid, notify=body.notify_assignee)
             if new_oid is not None:
                 events.append(("assignee", new_name))
             ticket.updated_at = now_utc()
@@ -620,6 +766,7 @@ def _check_handover(db: Session, access: TicketAccess, ticket: Ticket, new_oid: 
 class DetailsIn(BaseModel):
     priority: Priority
     participants: list[ParticipantIn] = Field(default_factory=list, max_length=PARTICIPANTS_MAX)
+    category_id: int | None = Field(default=None, ge=1, le=2_000_000_000)
 
 
 @router.put("/{number}/details")
@@ -639,6 +786,18 @@ def change_details(
             me_actor,
         )
         ticket.priority = body.priority
+        recalc(db, ticket)
+    category_id = _category_of(db, ticket.area_id, body.category_id)
+    if category_id != ticket.category_id:
+        names = _category_names(db)
+        system_entry(
+            db,
+            ticket,
+            f"Kategorie: {names.get(ticket.category_id or 0, 'keine')} → "
+            f"{names.get(category_id or 0, 'keine')}",
+            me_actor,
+        )
+        ticket.category_id = category_id
     db.query(TicketParticipant).filter(TicketParticipant.ticket_id == ticket.id).delete()
     _set_participants(db, ticket, body.participants)
     ticket.updated_at = now_utc()
@@ -673,8 +832,8 @@ def move_ticket(
     names = _area_names(db)
     old_area = ticket.area_id
     ticket.area_id = target.id
-    ticket.assignee_oid = None
-    ticket.assignee_name = ""
+    assign(ticket, None, "", access.oid)
+    ticket.category_id = None
     ticket.updated_at = now_utc()
     system_entry(db, ticket, f"Verschoben: {names.get(old_area, '')} → {target.name}", me_actor)
     protocol(
@@ -685,6 +844,7 @@ def move_ticket(
         details={"von": old_area, "nach": target.id},
     )
     db.flush()
+    recalc(db, ticket, target)
     assign_new(db, ticket, target)
     db.commit()
     db.refresh(ticket)
@@ -782,9 +942,10 @@ def send_reply(
     now = now_utc()
     if ticket.first_response_at is None:
         ticket.first_response_at = now
+        on_first_response(ticket)
     if body.status_after and body.status_after != ticket.status:
         old = ticket.status
-        set_status(ticket, body.status_after)
+        set_status(ticket, body.status_after, db)
         system_entry(
             db,
             ticket,
@@ -800,7 +961,7 @@ def send_reply(
         )
     elif ticket.status == "new":
         old = ticket.status
-        set_status(ticket, STATUS_IN_PROGRESS)
+        set_status(ticket, STATUS_IN_PROGRESS, db)
         system_entry(db, ticket, f"Status: {STATUS_LABELS[old]} → In Arbeit", me_actor)
     ticket.updated_at = now
     protocol(db, me_actor, "ticket_antwort", ticket=ticket)

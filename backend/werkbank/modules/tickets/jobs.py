@@ -16,7 +16,7 @@ from werkbank.modules.tickets.models import (
     TicketGroupMember,
     TicketMembershipCache,
 )
-from werkbank.modules.tickets.service import AUDIT_KEEP_DAYS, auto_close
+from werkbank.modules.tickets.service import AUDIT_KEEP_DAYS, auto_close, fire_reminders
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,8 @@ GROUP_SYNC = "tickets.gruppen"
 GROUP_SYNC_INTERVAL = timedelta(hours=1)
 HOUSEKEEPING = "tickets.wartung"
 HOUSEKEEPING_INTERVAL = timedelta(hours=1)
+REMINDERS = "tickets.erinnerungen"
+REMINDERS_INTERVAL = timedelta(minutes=5)
 
 
 def sync_groups(db: Session, settings: Settings) -> int:
@@ -85,3 +87,71 @@ def housekeeping(db: Session) -> None:
 
 def housekeeping_job(db: Session, settings: Settings, payload: dict[str, Any]) -> None:
     housekeeping(db)
+
+
+def sla_missed_mails(db: Session, settings: Settings) -> int:
+    """Mail „Frist nicht eingehalten“ an den Melder (je Bereich zuschaltbar), je Ticket einmal."""
+    from werkbank.modules.tickets.mail_texts import DEFAULT_EVENTS
+    from werkbank.modules.tickets.mailbox import MailboxError, available, new_http, open_mailbox
+    from werkbank.modules.tickets.models import OPEN_STATUSES, Ticket, TicketArea, TicketMailOut
+    from werkbank.modules.tickets.outbound import event_text, send_to_reporter
+    from werkbank.modules.tickets.service import SYSTEM, system_entry
+
+    if not available(settings):
+        return 0
+    now = now_utc()
+    areas = {
+        a.id: a
+        for a in db.scalars(
+            select(TicketArea).where(TicketArea.sla_enabled.is_(True), TicketArea.mailbox != "")
+        )
+        if {**DEFAULT_EVENTS, **(a.mail_events or {})}.get("sla_missed")
+    }
+    if not areas:
+        return 0
+    sent_before = set(
+        db.scalars(select(TicketMailOut.ticket_id).where(TicketMailOut.kind == "sla_missed"))
+    )
+    due = db.scalars(
+        select(Ticket).where(
+            Ticket.area_id.in_(list(areas)),
+            Ticket.status.in_(OPEN_STATUSES),
+            Ticket.sla_solution_due < now,
+            Ticket.sla_paused_since.is_(None),
+            Ticket.reporter_mail != "",
+        )
+    ).all()
+    count = 0
+    with new_http() as http:
+        try:
+            mailbox = open_mailbox(settings, http)
+        except MailboxError:
+            return 0
+        for ticket in due:
+            if ticket.id in sent_before:
+                continue
+            message_id, error = send_to_reporter(
+                db,
+                mailbox,
+                areas[ticket.area_id],
+                ticket,
+                event_text("sla_missed", ticket),
+                kind="sla_missed",
+                auto=True,
+            )
+            system_entry(
+                db,
+                ticket,
+                "Mail „Frist nicht eingehalten“ an den Melder "
+                + ("gesendet" if message_id else f"nicht gesendet: {error}"),
+                SYSTEM,
+            )
+            count += 1
+    db.commit()
+    return count
+
+
+def reminders_job(db: Session, settings: Settings, payload: dict[str, Any]) -> None:
+    fire_reminders(db)
+    db.commit()
+    sla_missed_mails(db, settings)

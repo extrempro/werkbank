@@ -54,9 +54,13 @@ from werkbank.modules.tickets.jobs import (
     GROUP_SYNC_INTERVAL,
     HOUSEKEEPING,
     HOUSEKEEPING_INTERVAL,
+    REMINDERS,
+    REMINDERS_INTERVAL,
     group_sync_job,
     housekeeping_job,
+    reminders_job,
 )
+from werkbank.modules.tickets.notifications import tickets_notifications
 from werkbank.worker.jobs import JobType
 
 CLEANUP = "kern.aufraeumen"
@@ -136,6 +140,7 @@ NOTIFICATION_SOURCES = (
     monitoring_notifications,
     zabbix_notifications,
     inventory_notifications,
+    tickets_notifications,
     devices_notifications,
 )
 
@@ -152,6 +157,7 @@ REGISTRY: dict[str, JobType] = {
     ENTRA_SYNC: JobType(handler=entra_sync_job, interval=ENTRA_SYNC_INTERVAL),
     GROUP_SYNC: JobType(handler=group_sync_job, interval=GROUP_SYNC_INTERVAL),
     HOUSEKEEPING: JobType(handler=housekeeping_job, interval=HOUSEKEEPING_INTERVAL),
+    REMINDERS: JobType(handler=reminders_job, interval=REMINDERS_INTERVAL),
     STATUS_JOB: JobType(handler=status_job, interval=STATUS_JOB_INTERVAL),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
     GENERATE_AI_SUGGESTIONS: JobType(handler=generate_suggestions_job, interval=timedelta(hours=1)),

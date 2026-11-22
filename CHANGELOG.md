@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.100.0] – 2026-11-22
+
+### Tickets (Phase 3: Arbeitshilfen)
+
+- **Kategorien** je Bereich mit vorgeschlagener Priorität; Auswahl beim Anlegen und am Ticket; Endpunkt für Mitglieder `GET /api/tickets/areas/{id}/categories`
+- **Fristen (optional)** je Bereich und Priorität für erste Reaktion und Lösung, in Arbeitszeit (Wochentage, Uhrzeiten, `TICKETS_TIMEZONE`); Pause bei „Wartet auf Rückmeldung“; Benachrichtigung bei 80 % an die zuständige Person, bei Überschreitung an die Bereichsverwaltung; auf Wunsch Mail an den Melder bei verpasster Frist; ohne Fristen erscheint nirgends eine Frist
+- **Erinnerung** als Status mit Zeitpunkt (Vorgabe 08:00) und Stichwort, erst nach „Bestätigen“; Auftrag `tickets.erinnerungen` alle 5 Minuten
+- **Übergabe:** „Person benachrichtigen“ beim Zuweisen an andere; Benachrichtigungen `tickets.neu`, `zugewiesen`, `antwort`, `erinnerung`, `frist_bald`, `frist_ueberschritten` über Glocke, Mail, Teams und Push, nur mit Nr. und Link
+- **Zusammenführen** mit Vorschlägen und Suche, Bestätigung, optional Mail an den Melder; Einträge mit „aus T-…“; spätere Mails landen im Ziel
+- **Geräte (optional):** Ticket mit Hardware aus dem IT-Bestand verknüpfen (Suche, Geräte des Melders zuerst); Tickets zum Gerät im IT-Bestand
+- **Textbausteine** für Antworten und Notizen mit Platzhaltern und „Status danach“; Einfügen im Antwortfeld über `/kürzel`; Vorschau samt Signatur in den Einstellungen
+- Liste mit Spalten Kategorie und Frist (nur wenn vorhanden) und Hinweis „überfällig“
+- Migration `0066`
+
+### Dokumentation
+
+- spec.md (Stand T3), datenschutz.md, Handbuch (Arbeitshilfen), Info-Symbole, `deploy/.env.example` (`TICKETS_TIMEZONE`)
+
+### Tests
+
+- `test_tickets_work.py`, `tickets.test.tsx`, E2E `tickets.spec.ts` (Zusammenführen, Textbaustein, ohne Fristen keine Frist, Einstellungen)
+
 ## [0.99.0] – 2026-11-22
 
 ### Tickets (Phase 2: E-Mail)

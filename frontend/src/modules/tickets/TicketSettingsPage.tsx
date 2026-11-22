@@ -25,6 +25,7 @@ import {
   MailSettingsSection,
   ReviewSection,
 } from "./TicketMailSettings";
+import { CategoriesSection, TemplatesSection, WorkSection } from "./TicketWorkSettings";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
 
 /** Aufklappbarer Abschnitt; der Inhalt lädt erst beim ersten Öffnen. */
@@ -407,6 +408,15 @@ function AreaPanel({
         </LazySection>
         <LazySection title="Letzte Eingänge">
           {() => <IntakeSection areaId={area.id} />}
+        </LazySection>
+        <LazySection title="Kategorien">
+          {() => <CategoriesSection areaId={area.id} onMessage={onMessage} />}
+        </LazySection>
+        <LazySection title="Fristen und Geräte">
+          {() => <WorkSection areaId={area.id} onMessage={onMessage} />}
+        </LazySection>
+        <LazySection title="Textbausteine">
+          {() => <TemplatesSection areaId={area.id} onMessage={onMessage} />}
         </LazySection>
       </div>
       {dialog}

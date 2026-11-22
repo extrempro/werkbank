@@ -55,7 +55,15 @@ from werkbank.modules.tickets.models import (
     TicketReview,
 )
 from werkbank.modules.tickets.outbound import ack_text, send_to_reporter
-from werkbank.modules.tickets.service import SYSTEM, assign_new, protocol, set_status, system_entry
+from werkbank.modules.tickets.service import (
+    SYSTEM,
+    assign_new,
+    follow_merged,
+    protocol,
+    set_status,
+    system_entry,
+)
+from werkbank.modules.tickets.sla import recalc
 
 logger = logging.getLogger(__name__)
 
@@ -287,9 +295,11 @@ def _process(
         )
 
     ticket = _find_ticket(db, mail)
+    if ticket is not None and ticket.status == STATUS_MERGED:
+        # Antworten auf Mails eines zusammengeführten Tickets landen im Ziel
+        ticket = follow_merged(db, ticket)
     if ticket is not None:
         # Geschlossen: je nach Einstellung wieder öffnen oder neues Ticket mit Bezug.
-        # Zusammengeführte Tickets (Phase 3) werden bis dahin wie geschlossene behandelt.
         if ticket.status not in (STATUS_CLOSED, STATUS_MERGED) or (
             ticket.status == STATUS_CLOSED and _reopen(area, ticket)
         ):
@@ -343,7 +353,7 @@ def _reply(
     _participants(db, ticket, mail, mailboxes)
     old = ticket.status
     if old in (STATUS_WAITING, STATUS_SOLVED, STATUS_CLOSED, STATUS_REMINDER):
-        set_status(ticket, STATUS_IN_PROGRESS)
+        set_status(ticket, STATUS_IN_PROGRESS, db)
         label = "wieder geöffnet" if old == STATUS_CLOSED else "Antwort des Melders"
         system_entry(db, ticket, f"Status: {_label(old)} → In Arbeit ({label})", SYSTEM)
         protocol(
@@ -387,6 +397,7 @@ def _new_ticket(
     db.add(ticket)
     db.flush()
     db.refresh(ticket)
+    recalc(db, ticket, area)
     entry = _entry(db, ticket, mail, original=True)
     removed = _add_attachments(db, settings, area, ticket, entry, raw, mail)
     _participants(db, ticket, mail, mailboxes)

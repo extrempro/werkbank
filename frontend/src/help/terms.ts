@@ -296,6 +296,36 @@ export const HELP = {
     text: "„Nur lesen“ sieht Tickets und schreibt Notizen, „Bearbeiten“ ändert Status und Zuständigkeit. Die Bereichsverwaltung darf jedes Ticket zuweisen und den Bereich einstellen.",
     topic: ["tickets", "einstellungen"],
   },
+  "tickets.kategorie": {
+    term: "Kategorie",
+    text: "Ordnet das Ticket ein, zum Beispiel Drucker oder Zugang. Eine Kategorie kann eine Priorität vorschlagen; du kannst sie danach ändern.",
+    topic: ["tickets", "arbeitshilfen"],
+  },
+  "tickets.frist": {
+    term: "Frist",
+    text: "Bis wann das Ticket gelöst sein soll, gezählt in Arbeitszeit des Bereichs. Solange das Ticket auf eine Rückmeldung wartet, ruht die Frist.",
+    topic: ["tickets", "arbeitshilfen"],
+  },
+  "tickets.erinnerung": {
+    term: "Erinnerung",
+    text: "Das Ticket ruht bis zum gewählten Zeitpunkt. Dann wird es wieder „In Arbeit“ und die zuständige Person bekommt eine Benachrichtigung.",
+    topic: ["tickets", "arbeitshilfen"],
+  },
+  "tickets.zusammenfuehren": {
+    term: "Zusammenführen",
+    text: "Verschiebt den Verlauf in ein anderes Ticket und schließt dieses; spätere Mails landen im Ziel. Das lässt sich nicht rückgängig machen.",
+    topic: ["tickets", "arbeitshilfen"],
+  },
+  "tickets.textbausteine": {
+    term: "Textbausteine",
+    text: "Vorgefertigte Antworten und Notizen, die du im Antwortfeld mit Schrägstrich und Kürzel einfügst, zum Beispiel /drucker. Platzhalter wie {Vorname} werden ersetzt.",
+    topic: ["tickets", "arbeitshilfen"],
+  },
+  "tickets.geraet": {
+    term: "Gerät",
+    text: "Verknüpft das Ticket mit einem Gerät aus dem IT-Bestand. Auf der Seite des Geräts siehst du dann alle Tickets dazu.",
+    topic: ["tickets", "arbeitshilfen"],
+  },
   "bestand.erneuerung": {
     term: "Erneuerung fällig",
     text: "Geräte, die älter sind als die Nutzungsdauer ihrer Art. Die Nutzungsdauer legst du in den Stammdaten bei den Hardware-Arten fest.",

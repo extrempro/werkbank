@@ -180,47 +180,7 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
               : `${items.length} von ${total} Tickets`}
           </p>
         )}
-        {items && items.length > 0 && (
-          <div className="table-wrap card-wrap" tabIndex={0} role="region" aria-label="Ticketliste">
-            <table className="table-cards ticket-table">
-              <caption className="visually-hidden">Tickets, zuletzt geändert zuerst</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Ticket</th>
-                  <th scope="col">Status</th>
-                  {showArea && <th scope="col">Bereich</th>}
-                  <th scope="col">Priorität</th>
-                  <th scope="col">Zuständig</th>
-                  <th scope="col">Melder</th>
-                  <th scope="col">Geändert</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((ticket) => (
-                  <tr key={ticket.number}>
-                    <th scope="row">
-                      <Link to={ticketPath(ticket.number)}>
-                        <span className="mono">{ticketLabel(ticket.number)}</span> {ticket.subject}
-                      </Link>
-                    </th>
-                    <td data-label="Status">
-                      <span className={STATUS_PILLS[ticket.status]}>
-                        {STATUS_LABELS[ticket.status]}
-                      </span>
-                    </td>
-                    {showArea && <td data-label="Bereich">{ticket.area.name}</td>}
-                    <td data-label="Priorität">{PRIORITY_LABELS[ticket.priority]}</td>
-                    <td data-label="Zuständig">{ticket.assignee_name || "–"}</td>
-                    <td data-label="Melder">{ticket.reporter_name || "–"}</td>
-                    <td className="nowrap" data-label="Geändert">
-                      {formatDateTime(ticket.updated_at)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {items && items.length > 0 && <TicketTable items={items} showArea={showArea} />}
         {hasMore && (
           <p className="detail-body">
             <button type="button" className="button" onClick={loadMore} disabled={loadingMore}>
@@ -229,6 +189,63 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
           </p>
         )}
       </section>
+    </div>
+  );
+}
+
+/** Tabelle der Tickets; Kategorie und Frist nur, wenn ein Ticket sie hat. */
+export function TicketTable({ items, showArea }: { items: TicketItem[]; showArea: boolean }) {
+  const showCategory = items.some((t) => t.category);
+  const showDue = items.some((t) => t.sla_solution_due);
+  return (
+    <div className="table-wrap card-wrap" tabIndex={0} role="region" aria-label="Ticketliste">
+      <table className="table-cards ticket-table">
+        <caption className="visually-hidden">Tickets, zuletzt geändert zuerst</caption>
+        <thead>
+          <tr>
+            <th scope="col">Ticket</th>
+            <th scope="col">Status</th>
+            {showArea && <th scope="col">Bereich</th>}
+            {showCategory && <th scope="col">Kategorie</th>}
+            <th scope="col">Priorität</th>
+            {showDue && <th scope="col">Frist</th>}
+            <th scope="col">Zuständig</th>
+            <th scope="col">Melder</th>
+            <th scope="col">Geändert</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((ticket) => (
+            <tr key={ticket.number}>
+              <th scope="row">
+                <Link to={ticketPath(ticket.number)}>
+                  <span className="mono">{ticketLabel(ticket.number)}</span> {ticket.subject}
+                </Link>
+              </th>
+              <td data-label="Status">
+                <span className={STATUS_PILLS[ticket.status]}>{STATUS_LABELS[ticket.status]}</span>
+                {ticket.status === "reminder" && ticket.reminder_at && (
+                  <span className="small"> bis {formatDateTime(ticket.reminder_at)}</span>
+                )}
+              </td>
+              {showArea && <td data-label="Bereich">{ticket.area.name}</td>}
+              {showCategory && <td data-label="Kategorie">{ticket.category || "–"}</td>}
+              <td data-label="Priorität">{PRIORITY_LABELS[ticket.priority]}</td>
+              {showDue && (
+                <td className="nowrap" data-label="Frist">
+                  {ticket.sla_solution_due ? formatDateTime(ticket.sla_solution_due) : "–"}
+                  {ticket.sla_overdue && <span className="pill pill-bad">überfällig</span>}
+                </td>
+              )}
+              <td data-label="Zuständig">{ticket.assignee_name || "–"}</td>
+              <td data-label="Melder">{ticket.reporter_name || "–"}</td>
+              <td className="nowrap" data-label="Geändert">
+                {formatDateTime(ticket.updated_at)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
