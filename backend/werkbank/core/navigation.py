@@ -83,6 +83,11 @@ PAGES: dict[str, tuple[str, ...]] = {
     "/verwaltung/mail-teams": (Role.WERKBANK_ADMIN,),
     "/verwaltung/verbindungen": (Role.WERKBANK_ADMIN,),
     "/audit": (Role.WERKBANK_ADMIN,),
+    # Tickets: Zugriff hängt an den Rollen je Bereich (Datenbank und Graph), nicht an App-Rollen.
+    # Die Seiten zeigen ohne Rolle im Bereich nichts; deshalb hier für alle Angemeldeten.
+    "/tickets": EVERYONE,
+    "/tickets/neu": EVERYONE,
+    "/tickets/einstellungen": EVERYONE,
 }
 # Kategorien der IT-Tools (wie frontend/src/tools/index.ts)
 TOOL_CATEGORIES = (

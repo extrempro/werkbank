@@ -84,6 +84,8 @@ class Settings(BaseSettings):
     # braucht DeviceManagementServiceConfig.Read.All und DeviceManagementManagedDevices.Read.All)
     devices_monitor_enabled: bool = False
     collector_poll_seconds: int = 20
+    # Tickets: so lange gilt die abgefragte Gruppenmitgliedschaft einer Person (Minuten)
+    tickets_membership_cache_minutes: int = 5
 
     # Höchstzahl Anfragen pro Minute und Absender-IP (0 = aus), siehe core/ratelimit.py
     rate_limit_login_per_minute: int = 60
