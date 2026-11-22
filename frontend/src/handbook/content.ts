@@ -1276,6 +1276,10 @@ export const AREAS: readonly Area[] = [
                 text: "Unter „Stellen“ steht jede Stelle mit Nummer, Abteilung und der Person, die sie besetzt. Hardware und Arbeitsplätze hängen an der Stelle, nicht an der Person: Wechselt die Person, bleibt alles an der Stelle.",
               },
               {
+                kind: "text",
+                text: "Im Reiter „Hardware“ einer Stelle stehen zwei Teile: „Direkt an der Stelle“ sind Geräte, die der Stelle selbst zugeordnet sind. „Über Arbeitsplätze“ sind Geräte an den Arbeitsplätzen der Stelle, je Arbeitsplatz mit dem Hinweis „über Arbeitsplatz“ und, bei geteilten Plätzen, mit wie vielen weiteren Stellen er geteilt ist. Die Zahl in der Liste der Stellen zählt nur die direkt zugeordnete Hardware.",
+              },
+              {
                 kind: "steps",
                 items: [
                   "Unter „Stellen“ auf „Stelle anlegen“ tippen.",
@@ -1388,13 +1392,17 @@ export const AREAS: readonly Area[] = [
                 items: [
                   "Unter „Verleih“ auf „Neuer Verleih“ tippen.",
                   "Unter „Wer leiht aus?“ mindestens zwei Buchstaben des Namens tippen und die Person aus der Liste wählen.",
-                  "Das Rückgabedatum wählen und die Geräte ankreuzen. Verleihen kannst du Geräte, die keiner Stelle und keinem Arbeitsplatz zugeordnet und nicht schon verliehen sind.",
+                  "Bei „Ab“ steht heute. Soll der Verleih erst später beginnen, ein Datum in der Zukunft wählen. Dann das Rückgabedatum wählen und die Geräte ankreuzen. Verleihen kannst du Geräte, die keiner Stelle und keinem Arbeitsplatz zugeordnet und nicht schon verliehen sind.",
                   "„Verleihen“ tippen. Die Nummer vergibt die Werkbank.",
                 ],
               },
               {
                 kind: "text",
-                text: "Die Person bekommt per Mail und Teams eine Nachricht: bei der Ausgabe, zwei Tage vor dem Rückgabedatum, wenn der Verleih überfällig ist (am Tag danach und dann jede Woche) und wenn alles zurück ist. Darin stehen nur die Verleihnummer und das Datum, keine Gerätedaten. Welche Nachrichten verschickt wurden, steht beim Verleih.",
+                text: "Ein Verleih mit Startdatum in der Zukunft ist „Geplant“: Die Geräte sind ab sofort reserviert und lassen sich nicht anders verleihen. Brauchst du sie doch nicht, wählst du beim Verleih die Geräte und „Reservierung aufheben“; dann entsteht kein Vorgang und die Person bekommt keine Nachricht. Am Startdatum wird aus „Geplant“ ein normaler Verleih.",
+              },
+              {
+                kind: "text",
+                text: "Die Person bekommt per Mail und Teams eine Nachricht: bei der Ausgabe (bei einem geplanten Verleih am Startdatum), zwei Tage vor dem Rückgabedatum, wenn der Verleih überfällig ist (am Tag danach und dann jede Woche) und wenn alles zurück ist. Darin stehen nur die Verleihnummer und das Datum, keine Gerätedaten. Welche Nachrichten verschickt wurden, steht beim Verleih.",
               },
               {
                 kind: "steps",

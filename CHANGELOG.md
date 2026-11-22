@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.94.0] – 2026-11-22
+
+### IT-Bestand
+
+- **Stelle › Hardware:** zeigt neben der Hardware direkt an der Stelle auch die Hardware an den Arbeitsplätzen der Stelle, deutlich getrennt („Direkt an der Stelle“, „Über Arbeitsplätze“ je Arbeitsplatz mit Hinweis „über Arbeitsplatz“ und Zahl der weiteren Stellen bei geteilten Plätzen); API `workplace_hardware`
+- **Verleih mit Startdatum:** neues Feld „Ab“ (`start_on`). Liegt es in der Zukunft, ist der Verleih „Geplant“: Geräte sofort reserviert, Nachricht zur Ausgabe am Startdatum (Auftrag `bestand.verleih`), Filter „Geplant“, „Reservierung aufheben“ mit Bestätigung ohne Vorgang und ohne Nachricht; Rückgabedatum nie vor dem Start
+- **Standortbaum:** Namen stehen in voller Breite, die Zahl darunter; dadurch kein Umbruch mehr mitten im Namen neben der Zahl
+
+### Dokumentation
+
+- spec.md (Stellen, Verleih), Handbuch (Stellen, Verleih), Info-Symbole
+
+### Tests
+
+- `test_inventory_staff.py`, `test_inventory_loans.py` (geplanter Verleih, Reservierung aufheben), `staff.test.tsx`, `loans.test.tsx`, E2E in `bestand.spec.ts`
+
 ## [0.93.0] – 2026-11-22
 
 ### Oberfläche

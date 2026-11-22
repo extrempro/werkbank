@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   daysFrom,
@@ -164,10 +164,64 @@ describe("Verleih", () => {
     await vi.waitFor(() => expect(calls.some((call) => call.method === "POST")).toBe(true));
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       person: { oid: OID },
+      start_on: today(),
       due_on: daysFrom(today(), 7),
       hardware_ids: [7, 8],
       note: "",
     });
+  });
+
+  it("plant einen Verleih vorab mit späterem Startdatum", async () => {
+    const calls = stubFetch({
+      "GET /api/inventory/loans/available": [
+        { id: 7, name: "Leih-Notebook 1", kind: "Notebook", serial: "LN-1", inventory_no: null },
+      ],
+      "GET /api/inventory/people": [{ oid: OID, name: "Pia Beispiel", upn: "pia@example.com" }],
+      "POST /api/inventory/loans": { ...loan, state: "geplant" },
+      "GET /api/inventory/loans": { loans: [], open: 0, overdue: 0, total: 0 },
+      "GET /api/inventory/loans/4": { ...loan, state: "geplant" },
+    });
+    render(<LoansPage loanId="neu" roles={["Bestand.Editor"]} />);
+    fireEvent.change(await screen.findByLabelText(/Wer leiht aus/), { target: { value: "pia" } });
+    fireEvent.click(await screen.findByRole("button", { name: /Pia Beispiel/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /Leih-Notebook 1/ }));
+    const start = daysFrom(today(), 20);
+    fireEvent.change(screen.getByLabelText("Ab"), { target: { value: start } });
+    expect(screen.getByText(/Vorab geplant/)).toBeTruthy();
+    // Das Rückgabedatum rückt hinter den Start
+    expect((screen.getByLabelText("Rückgabe bis") as HTMLInputElement).value).toBe(
+      daysFrom(start, 14),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Verleihen" }));
+    await vi.waitFor(() => expect(calls.some((call) => call.method === "POST")).toBe(true));
+    expect(calls.find((call) => call.method === "POST")?.body).toMatchObject({
+      start_on: start,
+      due_on: daysFrom(start, 14),
+    });
+  });
+
+  it("hebt die Reservierung eines geplanten Verleihs erst nach Rückfrage auf", async () => {
+    const planned = { ...loan, state: "geplant" as const, issued_on: daysFrom(today(), 3) };
+    const calls = stubFetch({
+      "GET /api/inventory/loans": list,
+      "GET /api/inventory/loans/4": planned,
+      "POST /api/inventory/loans/4/return": {
+        ...planned,
+        state: "zurueck",
+        returned_on: today(),
+        items_open: 0,
+      },
+    });
+    render(<LoansPage loanId={4} roles={["Bestand.Editor"]} />);
+    expect(await screen.findByText(/geplant ab/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Rückgabe eintragen" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Alle wählen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reservierung aufheben" }));
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Aufheben" }),
+    );
+    expect(await screen.findByText("Die Reservierung ist aufgehoben.")).toBeTruthy();
   });
 
   it("trägt die Rückgabe einzelner Geräte ein", async () => {

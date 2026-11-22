@@ -213,6 +213,7 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: `Stelle ${stamp}` }),
   ).toBeVisible();
+  const positionUrl = new URL(page.url()).pathname;
   await expect(
     page.getByText("Unbesetzt", { exact: false }).first(),
   ).toBeVisible();
@@ -292,6 +293,26 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
 
   await page.getByRole("link", { name: "Ausstattung", exact: true }).click();
   await expect(page.getByText(/Keine Vorlage gewählt/)).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Ein Monitor am Arbeitsplatz steht bei der Stelle unter „Über Arbeitsplätze“
+  const workplaceId = Number(new URL(page.url()).pathname.split("/")[3]);
+  const master = await (await page.request.get("/api/inventory/master-data")).json();
+  const kind = master.kinds.find((entry: { name: string }) => entry.name === "Monitor");
+  await post("hardware", {
+    kind_id: kind.id,
+    name: `Monitor ${stamp}`,
+    workplace_id: workplaceId,
+  });
+  await page.goto(positionUrl);
+  await page
+    .getByRole("navigation", { name: "Bereiche der Stelle" })
+    .getByRole("link", { name: "Hardware", exact: true })
+    .click();
+  await expect(page.getByRole("heading", { name: /Direkt an der Stelle \(0\)/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Über Arbeitsplätze \(1\)/ })).toBeVisible();
+  await expect(page.getByText("über Arbeitsplatz", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: `Monitor ${stamp}` })).toBeVisible();
   await expectNoA11yViolations(page);
 });
 

@@ -7463,11 +7463,21 @@ td > .budget-row-actions {
 
 /* Namen nur an Leerzeichen und Bindestrichen umbrechen; die Zahl rutscht bei Platzmangel
    in die nächste Zeile statt den Namen zu zerteilen */
+/* Name in voller Breite, die Zahl darunter: So bricht der Name nur, wenn er wirklich
+   nicht in die Zeile passt, und dann an Wortgrenzen. */
 .lt-name {
   flex: 1 1 8rem;
   min-width: 0;
   overflow-wrap: break-word;
   hyphens: manual;
+}
+
+.lt-list .lt-name {
+  flex-basis: 100%;
+}
+
+.lt-list .lt-count {
+  margin-left: 0;
 }
 
 .lt-count {
@@ -11768,4 +11778,17 @@ input[type="file"] {
   .feedback-region {
     display: none;
   }
+}
+
+/* Stelle › Hardware: Geräte über einen Arbeitsplatz, deutlich von direkter Hardware getrennt */
+.via-workplace {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-left: 4px solid var(--farbe-rand-kontrast);
+  border-radius: 0 10px 10px 0;
+  background: var(--farbe-grund);
+}
+
+.via-workplace-head {
+  margin: 0 0 6px;
 }

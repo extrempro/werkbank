@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { ConfirmButton } from "../../components/ConfirmDialog";
+import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
 import { INVENTORY_MASTER_PATH, INVENTORY_POSITIONS_PATH } from "../../navigation";
 import { navigate } from "../../router";
@@ -411,6 +412,9 @@ export function PositionDetailPage({
 }) {
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
   const [position, setPosition] = useState<Position | null>(null);
+  const viaCount = position
+    ? position.workplace_hardware.reduce((sum, entry) => sum + entry.devices.length, 0)
+    : 0;
   const [failed, setFailed] = useState<string | null>(null);
 
   useEffect(() => {
@@ -494,16 +498,50 @@ export function PositionDetailPage({
           {tab === "hardware" && (
             <section className="panel" aria-labelledby="stelle-hardware">
               <div className="panel-head">
-                <h2 id="stelle-hardware">Hardware ({position.hardware_list.length})</h2>
+                <h2 id="stelle-hardware">Hardware ({position.hardware_list.length + viaCount})</h2>
               </div>
               <div className="detail-body">
+                <h3 className="sub-head">
+                  Direkt an der Stelle ({position.hardware_list.length}){" "}
+                  <InfoTip term="bestand.hardware-direkt" />
+                </h3>
                 <DeviceList
                   devices={position.hardware_list}
                   empty="Keine Hardware direkt an der Stelle. Ein Gerät ordnest du beim Gerät unter „Bearbeiten“ zu."
                 />
-                <p className="small">
-                  Hardware an den Arbeitsplätzen der Stelle steht beim jeweiligen Arbeitsplatz.
-                </p>
+                <h3 className="sub-head">
+                  Über Arbeitsplätze ({viaCount}) <InfoTip term="bestand.hardware-arbeitsplatz" />
+                </h3>
+                {position.workplace_hardware.length === 0 ? (
+                  <p className="empty">
+                    {position.workplace_list.length === 0
+                      ? "Die Stelle hat keinen Arbeitsplatz."
+                      : "An den Arbeitsplätzen der Stelle hängt keine Hardware."}
+                  </p>
+                ) : (
+                  position.workplace_hardware.map((entry) => (
+                    <div key={entry.workplace.id} className="via-workplace">
+                      <p className="via-workplace-head">
+                        <span className="pill pill-neutral">über Arbeitsplatz</span>{" "}
+                        <Link to={workplacePath(entry.workplace.id)}>
+                          {workplaceName(entry.workplace)}
+                        </Link>
+                        <span className="small">
+                          {" · "}
+                          {[
+                            entry.workplace.place ?? "ohne Raum",
+                            entry.positions > 1
+                              ? `geteilt mit ${entry.positions - 1} ${entry.positions === 2 ? "weiteren Stelle" : "weiteren Stellen"}`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </p>
+                      <DeviceList devices={entry.devices} empty="" />
+                    </div>
+                  ))
+                )}
               </div>
             </section>
           )}

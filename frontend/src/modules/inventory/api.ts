@@ -749,11 +749,21 @@ export interface PositionSummary {
   sites: string;
 }
 
+/** Hardware an einem Arbeitsplatz der Stelle (nicht direkt an der Stelle). */
+export interface WorkplaceHardware {
+  workplace: WorkplaceBrief;
+  /** Wie viele Stellen den Arbeitsplatz nutzen */
+  positions: number;
+  devices: HardwareSummary[];
+}
+
 export interface Position extends PositionSummary {
   note: string;
   created_at: string;
   workplace_list: WorkplaceBrief[];
+  /** Nur Hardware, die direkt an der Stelle hängt */
   hardware_list: HardwareSummary[];
+  workplace_hardware: WorkplaceHardware[];
   events: HardwareEvent[];
 }
 
@@ -1671,8 +1681,8 @@ export function ninjaFactRows(
 
 // --- Verleih ------------------------------------------------------------------------------
 
-export type LoanState = "offen" | "ueberfaellig" | "zurueck";
-export type LoanFilter = "offen" | "ueberfaellig" | "zurueck" | "alle";
+export type LoanState = "geplant" | "offen" | "ueberfaellig" | "zurueck";
+export type LoanFilter = "offen" | "geplant" | "ueberfaellig" | "zurueck" | "alle";
 
 export interface LoanRef {
   id: number;
@@ -1741,6 +1751,8 @@ export interface LoanableDevice {
 
 export interface LoanInput {
   person: { oid: string };
+  /** Beginn; später als heute plant den Verleih vor (Geräte reserviert). */
+  start_on: string;
   due_on: string;
   hardware_ids: number[];
   note: string;
@@ -1748,12 +1760,14 @@ export interface LoanInput {
 
 export const LOAN_FILTERS: { id: LoanFilter; label: string }[] = [
   { id: "offen", label: "Ausgeliehen" },
+  { id: "geplant", label: "Geplant" },
   { id: "ueberfaellig", label: "Überfällig" },
   { id: "zurueck", label: "Zurück" },
   { id: "alle", label: "Alle" },
 ];
 
 export const LOAN_STATES: Record<LoanState, { label: string; pill: string }> = {
+  geplant: { label: "Geplant", pill: "pill-neutral" },
   offen: { label: "Ausgeliehen", pill: "pill-info" },
   ueberfaellig: { label: "Überfällig", pill: "pill-bad" },
   zurueck: { label: "Zurück", pill: "pill-ok" },

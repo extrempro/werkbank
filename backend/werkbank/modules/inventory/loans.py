@@ -134,6 +134,9 @@ class LoanPersonIn(BaseModel):
 
 class LoanIn(BaseModel):
     person: LoanPersonIn
+    # Beginn; leer = heute. Ein späterer Beginn plant den Verleih vor: Die Geräte sind ab
+    # sofort reserviert, die Nachricht an die Person geht am Startdatum raus.
+    start_on: date | None = None
     due_on: date
     hardware_ids: list[int] = Field(min_length=1, max_length=ITEMS_MAX)
     note: str = Field(default="", max_length=300)
@@ -216,6 +219,8 @@ class AvailableOut(BaseModel):
 def loan_state(loan: InventoryLoan, today: date) -> str:
     if loan.returned_on is not None:
         return "zurueck"
+    if loan.issued_on > today:
+        return "geplant"
     return "ueberfaellig" if loan.due_on < today else "offen"
 
 
@@ -326,6 +331,13 @@ def queue_messages(db: Session, loan: InventoryLoan, kind: str) -> None:
         db.add(InventoryLoanMessage(loan_id=loan.id, kind=kind, channel=channel))
 
 
+def _check_start(start_on: date, today: date) -> None:
+    if start_on < today:
+        raise _invalid("Das Startdatum darf nicht in der Vergangenheit liegen.")
+    if start_on > today + timedelta(days=DUE_MAX_DAYS):
+        raise _invalid("Das Startdatum darf höchstens ein Jahr in der Zukunft liegen.")
+
+
 def _check_due(due_on: date, today: date) -> None:
     if due_on < today:
         raise _invalid("Das Rückgabedatum darf nicht in der Vergangenheit liegen.")
@@ -364,7 +376,9 @@ def close_overdue_cases(db: Session, loan: InventoryLoan, user: CurrentUser | No
 def list_loans(
     user: Reader,
     db: DbDep,
-    state: Annotated[Literal["offen", "ueberfaellig", "zurueck", "alle"], Query()] = "offen",
+    state: Annotated[
+        Literal["offen", "geplant", "ueberfaellig", "zurueck", "alle"], Query()
+    ] = "offen",
     q: Annotated[str, Query(max_length=100)] = "",
     offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
     limit: Annotated[int, Query(ge=1, le=PAGE_MAX)] = PAGE_SIZE,
@@ -374,6 +388,8 @@ def list_loans(
     query = select(InventoryLoan)
     if state == "offen":
         query = query.where(InventoryLoan.returned_on.is_(None))
+    elif state == "geplant":
+        query = query.where(InventoryLoan.returned_on.is_(None), InventoryLoan.issued_on > today)
     elif state == "ueberfaellig":
         query = query.where(InventoryLoan.returned_on.is_(None), InventoryLoan.due_on < today)
     elif state == "zurueck":
@@ -473,7 +489,11 @@ def create_loan(
 ) -> LoanOut:
     """Verleiht Geräte. Die Person und ihre Mailadresse liest der Server aus Entra."""
     today = local_today()
+    start_on = body.start_on or today
+    _check_start(start_on, today)
     _check_due(body.due_on, today)
+    if body.due_on < start_on:
+        raise _invalid("Das Rückgabedatum darf nicht vor dem Startdatum liegen.")
     ids = list(dict.fromkeys(body.hardware_ids))
     devices = []
     for hardware_id in ids:
@@ -501,7 +521,7 @@ def create_loan(
         person_name=person.name or person.upn,
         person_upn=person.upn,
         person_mail=person.mail,
-        issued_on=today,
+        issued_on=start_on,
         due_on=body.due_on,
         note=body.note,
         created_by=user.user_id,
@@ -514,9 +534,13 @@ def create_loan(
             db,
             device.id,
             user,
-            f"Verliehen an {loan.person_name} ({loan.number}), Rückgabe bis {loan.due_on:%d.%m.%Y}",
+            f"Verliehen an {loan.person_name} ({loan.number}), Rückgabe bis {loan.due_on:%d.%m.%Y}"
+            if start_on <= today
+            else f"Verleih an {loan.person_name} geplant ({loan.number}), "
+            f"ab {start_on:%d.%m.%Y} bis {loan.due_on:%d.%m.%Y}; bis dahin reserviert",
         )
-    queue_messages(db, loan, MSG_ISSUE)
+    if start_on <= today:
+        queue_messages(db, loan, MSG_ISSUE)
     _audit(
         db,
         request,
@@ -528,6 +552,7 @@ def create_loan(
             "nummer": loan.number,
             "geraete": [device.id for device in devices],
             "rueckgabe_bis": loan.due_on.isoformat(),
+            "start": start_on.isoformat(),
         },
     )
     db.commit()
@@ -558,6 +583,8 @@ def change_due(
 
 def set_due(db: Session, loan: InventoryLoan, due_on: date, user: CurrentUser) -> None:
     _check_due(due_on, local_today())
+    if due_on < loan.issued_on:
+        raise _invalid("Das Rückgabedatum darf nicht vor dem Startdatum liegen.")
     if due_on == loan.due_on:
         return
     before = loan.due_on
@@ -584,6 +611,8 @@ def return_items(
     wanted = list(dict.fromkeys(body.hardware_ids))
     returned: list[InventoryHardware] = []
     today = local_today()
+    # Vor dem Startdatum: Die Geräte waren nur reserviert; kein Vorgang, keine Nachricht.
+    planned = loan.issued_on > today
     for hardware_id in wanted:
         item = items.get(hardware_id)
         if item is None:
@@ -595,9 +624,34 @@ def return_items(
         device = db.get(InventoryHardware, hardware_id)
         if device is not None:
             returned.append(device)
-            add_event(db, device.id, user, f"Zurückgegeben ({loan.number})")
+            add_event(
+                db,
+                device.id,
+                user,
+                f"Reservierung aufgehoben ({loan.number})"
+                if planned
+                else f"Zurückgegeben ({loan.number})",
+            )
     complete = all(item.returned_on is not None for item in items.values())
     names = ", ".join(device.name for device in returned)
+    if planned:
+        if complete:
+            loan.returned_on = today
+        _audit(
+            db,
+            request,
+            user,
+            "reservierung_aufgehoben",
+            "verleih",
+            loan.id,
+            {
+                "nummer": loan.number,
+                "geraete": [device.id for device in returned],
+                "vollstaendig": complete,
+            },
+        )
+        db.commit()
+        return loan_out(db, loan)
     case = _new_case(
         db,
         CASE_RETURN,
@@ -800,9 +854,17 @@ def check_loans(db: Session, now: datetime | None = None) -> tuple[int, int]:
     """Erinnerungen und Überfälligkeit: Nachrichten vormerken, Vorgänge anlegen."""
     today = local_today(now)
     reminders = overdue = 0
+    issued = set(
+        db.scalars(
+            select(InventoryLoanMessage.loan_id).where(InventoryLoanMessage.kind == MSG_ISSUE)
+        ).all()
+    )
     for loan in db.scalars(
         select(InventoryLoan).where(InventoryLoan.returned_on.is_(None)).order_by(InventoryLoan.id)
     ).all():
+        # Vorab geplant: Die Nachricht zur Ausgabe geht am Startdatum raus
+        if loan.issued_on <= today and loan.id not in issued:
+            queue_messages(db, loan, MSG_ISSUE)
         remind_on = loan.due_on - timedelta(days=REMIND_DAYS_BEFORE)
         if (
             loan.reminded_on is None
