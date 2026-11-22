@@ -76,7 +76,7 @@ def merge_candidates(
     (Nr., Betreff, Melder) bis zu 5 Treffer."""
     ticket = _visible_ticket(db, access, number)
     if not access.can_edit(ticket.area_id):
-        raise forbidden("Mit „Nur lesen“ kannst du nicht zusammenführen.")
+        raise forbidden("Dafür brauchst du im Bereich die Rolle „Bearbeiten“.")
     base = select(Ticket).where(
         Ticket.area_id == ticket.area_id,
         Ticket.status.in_(OPEN_STATUSES),
@@ -121,7 +121,7 @@ def merge_ticket(
     """Dieses Ticket in ein offenes Ticket desselben Bereichs zusammenführen (ohne Rückgängig)."""
     source = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(source.area_id):
-        raise forbidden("Mit „Nur lesen“ kannst du nicht zusammenführen.")
+        raise forbidden("Dafür brauchst du im Bereich die Rolle „Bearbeiten“.")
     if source.status == STATUS_MERGED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Das Ticket ist schon zusammengeführt."

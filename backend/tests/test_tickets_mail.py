@@ -361,10 +361,10 @@ def test_reply_status_mails_and_note_without_mail(db: Session, areas: dict[str, 
         max_, areas["it"], mail(subject=f"AW: [#T-{number}] Drucker", message_id="r9@example.com")
     )
     assert max_.get(f"{BASE}/{number}").json()["status"] == "in_progress"
-    # Nur lesen darf nicht antworten
+    # Ohne Rolle im Bereich: nicht gefunden
     assert (
         client_for("Lea Lesen").post(f"{BASE}/{number}/replies", json={"body": "x"}).status_code
-        == 403
+        == 404
     )
     # Ohne Mailadresse keine Antwort
     manual = new_ticket(max_, areas["it"], reporter_mail=None)
@@ -390,3 +390,88 @@ def test_design_only_for_manager(areas: dict[str, int]) -> None:
         == 422
     )
     assert ina.get(f"{SETTINGS}/design").json()["footer"] == "Firma A"
+
+
+@pytest.mark.db
+def test_reply_all_forward_and_external_answer(db: Session, areas: dict[str, int]) -> None:
+    max_ = client_for("Max Muster")
+    number = inbound(max_, areas["it"], mail(cc="kopie@example.com"))["ticket_number"]
+    # Antworten: nur der Melder; an alle: Beteiligte in Kopie
+    one = max_.post(f"{BASE}/{number}/replies", json={"body": "Nur an dich"}).json()
+    every = max_.post(
+        f"{BASE}/{number}/replies", json={"body": "An alle", "reply_all": True}
+    ).json()
+    replies = [e for e in every["entries"] if e["kind"] == "reply"]
+    assert [r["recipients"] for r in replies] == [
+        "m.muster@example.com",
+        "m.muster@example.com, kopie@example.com",
+    ]
+    assert one["entries"][0]["origin"] == "reporter"
+    outbox = max_.get(f"{BASE}/test/outbox", params={"ticket": number}).json()
+    assert [o["recipients"] for o in outbox] == [
+        "m.muster@example.com",
+        "m.muster@example.com, kopie@example.com",
+    ]
+    # Weiterleiten: an andere, Melder bekommt nichts, interner Eintrag
+    original = every["entries"][0]["id"]
+    forwarded = max_.post(
+        f"{BASE}/{number}/forward",
+        json={"to": ["Service@Example.com"], "text": "Bitte prüfen.", "entry_id": original},
+    )
+    assert forwarded.status_code == 201, forwarded.text
+    entry = next(e for e in forwarded.json()["entries"] if e["kind"] == "forward")
+    assert entry["recipients"] == "service@example.com"
+    assert entry["body"] == "Bitte prüfen."
+    outbox = max_.get(f"{BASE}/test/outbox", params={"ticket": number}).json()
+    assert outbox[-1] == {
+        "kind": "weiterleitung",
+        "recipients": "service@example.com",
+        "error": "",
+    }
+    assert max_.post(f"{BASE}/{number}/forward", json={"to": []}).status_code == 422
+    assert (
+        max_.post(
+            f"{BASE}/{number}/forward",
+            json={"to": ["a@example.com"], "entry_id": "00000000-0000-0000-0000-000000000000"},
+        ).status_code
+        == 404
+    )
+    assert (
+        client_for("Hans Haus")
+        .post(f"{BASE}/{number}/forward", json={"to": ["a@example.com"]})
+        .status_code
+        == 404
+    )
+    # Status auf „Wartet“, dann antwortet der Dienstleister: Antwort von außen, Status bleibt
+    max_.patch(
+        f"{BASE}/{number}",
+        json={"expected_status": "in_progress", "expected_assignee_oid": None, "status": "waiting"},
+    )
+    inbound(
+        max_,
+        areas["it"],
+        mail(
+            subject=f"AW: WG: [#T-{number}] Drucker",
+            sender="service@example.com",
+            message_id="svc1@example.com",
+            cc="dritte@example.com",
+        ),
+    )
+    data = max_.get(f"{BASE}/{number}").json()
+    assert data["status"] == "waiting"
+    assert data["entries"][-1]["origin"] == "external"
+    assert "dritte@example.com" not in [p["mail"] for p in data["participants"]]
+    # Antwort einer beteiligten Person
+    inbound(
+        max_,
+        areas["it"],
+        mail(
+            subject=f"AW: [#T-{number}] Drucker",
+            sender="kopie@example.com",
+            message_id="cc1@example.com",
+        ),
+    )
+    data = max_.get(f"{BASE}/{number}").json()
+    inbound_entries = [e for e in data["entries"] if e["kind"] == "inbound"]
+    assert [e["origin"] for e in inbound_entries] == ["reporter", "external", "participant"]
+    assert data["status"] == "in_progress"

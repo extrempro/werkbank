@@ -2,7 +2,7 @@
 
 - Ticket-Verwaltung (App-Rolle `Tickets.Verwaltung`): Bereiche anlegen und ändern, Postfach,
   alle Rollen vergeben, auch die Bereichsverwaltung. Kein Zugriff auf Tickets.
-- Bereichsverwaltung: im eigenen Bereich „Bearbeiten“ und „Nur lesen“ vergeben, Zuweisungsart.
+- Bereichsverwaltung: im eigenen Bereich „Bearbeiten“ vergeben, Zuweisungsart.
 - Jeder Bereich behält mindestens einen Eintrag mit Bereichsverwaltung.
 """
 
@@ -41,7 +41,7 @@ router = APIRouter(prefix="/api/tickets/settings")
 AreaId = Annotated[int, Path(ge=1, le=2_000_000_000)]
 GROUP_SYNC = "tickets.gruppen"
 
-ROLE_LABELS = {"admin": "Bereichsverwaltung", "edit": "Bearbeiten", "read": "Nur lesen"}
+ROLE_LABELS = {"admin": "Bereichsverwaltung", "edit": "Bearbeiten"}
 
 
 class GrantOut(BaseModel):
@@ -136,7 +136,7 @@ def read_settings(access: AccessDep, db: DbDep) -> SettingsOut:
 
 
 class GrantIn(BaseModel):
-    role: Literal["admin", "edit", "read"]
+    role: Literal["admin", "edit"]
     kind: Literal["group", "person"]
     oid: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=256)

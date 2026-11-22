@@ -299,10 +299,10 @@ def test_merge(db: Session, areas: dict[str, int]) -> None:
     assert len(suggestions) <= 3
     hits = max_.get(f"{BASE}/{source}/merge-candidates", params={"q": f"T-{target}"}).json()
     assert [h["number"] for h in hits] == [target]
-    # Nur lesen darf nicht
+    # Ohne Rolle im Bereich: nicht gefunden
     assert (
         client_for("Lea Lesen").post(f"{BASE}/{source}/merge", json={"target": target}).status_code
-        == 403
+        == 404
     )
     merged = max_.post(f"{BASE}/{source}/merge", json={"target": target, "notify_reporter": True})
     assert merged.status_code == 200, merged.text
@@ -354,8 +354,7 @@ def test_templates(db: Session, areas: dict[str, int]) -> None:
     assert {t["shortcut"] for t in data["templates"]} == {"neustart", "intern"}
     assert data["values"]["Vorname"] == "M."
     assert data["values"]["Nr"] == f"T-{ticket['number']}"
-    lea = client_for("Lea Lesen").get(f"{BASE}/{ticket['number']}/templates").json()
-    assert [t["kind"] for t in lea["templates"]] == ["note"]
+    assert client_for("Lea Lesen").get(f"{BASE}/{ticket['number']}/templates").status_code == 404
     assert max_.post(f"{SETTINGS}/areas/{areas['it']}/templates", json=note).status_code == 404
     deleted = ina.delete(f"{SETTINGS}/areas/{areas['it']}/templates/{created[0]['id']}").json()
     assert [t["shortcut"] for t in deleted] == ["intern"]

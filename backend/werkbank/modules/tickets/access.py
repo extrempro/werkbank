@@ -30,7 +30,6 @@ from werkbank.modules.m365_config.utcm import GRAPH_URL, UtcmClient, UtcmError
 from werkbank.modules.tickets.models import (
     AREA_ADMIN,
     AREA_EDIT,
-    AREA_READ,
     AREA_ROLES,
     TicketArea,
     TicketAreaGrant,
@@ -407,7 +406,6 @@ def area_people(
 
 
 __all__ = [
-    "AREA_READ",
     "AccessDep",
     "GroupSource",
     "TicketAccess",

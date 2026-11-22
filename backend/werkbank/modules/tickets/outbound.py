@@ -164,8 +164,10 @@ def build_message(
     body: str,
     *,
     auto: bool,
+    cc_all: bool = False,
 ) -> tuple[EmailMessage, str, list[str]]:
-    """MIME-Nachricht an Melder und Beteiligte; liefert (Nachricht, Message-ID, Empfänger)."""
+    """MIME-Nachricht an den Melder, mit `cc_all` auch an die Beteiligten in Kopie; liefert
+    (Nachricht, Message-ID, Empfänger). Automatische Mails gehen nur an den Melder."""
     design = load_design(db)
     participants = db.scalars(
         select(TicketParticipant.mail).where(TicketParticipant.ticket_id == ticket.id)
@@ -175,7 +177,7 @@ def build_message(
     message = EmailMessage()
     message["From"] = formataddr((one_line(area.sender_name or area.name), area.mailbox))
     message["To"] = formataddr((one_line(ticket.reporter_name), ticket.reporter_mail))
-    cc = [p for p in participants if p and p != ticket.reporter_mail]
+    cc = [p for p in participants if p and p != ticket.reporter_mail] if cc_all else []
     if cc:
         message["Cc"] = ", ".join(cc)
     message["Subject"] = subject_for(ticket)
@@ -209,15 +211,22 @@ def send_to_reporter(
     *,
     kind: str,
     auto: bool,
+    cc_all: bool = False,
+    sent_to: list[str] | None = None,
 ) -> tuple[str | None, str]:
-    """Senden und im Ausgang vermerken. Liefert (Message-ID oder None, Fehlertext)."""
+    """Senden und im Ausgang vermerken. Liefert (Message-ID oder None, Fehlertext); die
+    Empfänger landen in `sent_to`, wenn angegeben."""
     if not ticket.reporter_mail:
         return None, "Für den Melder ist keine Mailadresse eingetragen."
     if not area.mailbox:
         return None, "Für den Bereich ist kein Postfach eingetragen."
     if mailbox is None:
         return None, "Die Postfächer der Tickets sind nicht eingerichtet."
-    message, message_id, recipients = build_message(db, area, ticket, body, auto=auto)
+    message, message_id, recipients = build_message(
+        db, area, ticket, body, auto=auto, cc_all=cc_all and not auto
+    )
+    if sent_to is not None:
+        sent_to.extend(recipients)
     error = ""
     try:
         mailbox.send(area.mailbox, message.as_bytes())
@@ -242,3 +251,36 @@ def ack_text(area: TicketArea, ticket: Ticket) -> str:
 
 def event_text(event: str, ticket: Ticket, worker: str = "") -> str:
     return fill(EVENT_TEXTS[event], values_for(ticket, worker))
+
+
+def build_forward(
+    db: Session,
+    area: TicketArea,
+    ticket: Ticket,
+    to: list[str],
+    text: str,
+    quoted: str,
+    files: list[tuple[str, str, bytes]],
+) -> tuple[EmailMessage, str]:
+    """Weiterleitung (nur Text) aus dem Postfach des Bereichs; die Nummer bleibt im Betreff,
+    damit eine Antwort im Ticket landet. Liefert (Nachricht, Message-ID)."""
+    domain = area.mailbox.rsplit("@", 1)[-1] if "@" in area.mailbox else "werkbank.invalid"
+    message_id = make_msgid(domain=domain)
+    message = EmailMessage()
+    message["From"] = formataddr((one_line(area.sender_name or area.name), area.mailbox))
+    message["To"] = ", ".join(to)
+    message["Subject"] = one_line(f"WG: {subject_for(ticket)}")
+    message["Message-ID"] = message_id
+    message["Date"] = format_datetime(now_utc())
+    parts = [text.strip()] if text.strip() else []
+    parts.append("---------- Weitergeleitete Nachricht ----------\n" + quoted.strip())
+    message.set_content("\n\n".join(parts) + "\n")
+    for filename, content_type, data in files:
+        maintype, _, subtype = content_type.partition("/")
+        message.add_attachment(
+            data,
+            maintype=maintype or "application",
+            subtype=subtype or "octet-stream",
+            filename=filename,
+        )
+    return message, message_id.strip("<>").lower()

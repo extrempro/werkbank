@@ -121,10 +121,7 @@ def areas(db: Session) -> dict[str, int]:
     )
     assert ht.status_code == 201, ht.text
     it_id, ht_id = it.json()["id"], ht.json()["id"]
-    for grant in (
-        {"role": "edit", "kind": "group", "oid": IT_GROUP, "name": "IT-Team"},
-        {"role": "read", "kind": "person", "oid": oid_of("Lea Lesen"), "name": "Lea Lesen"},
-    ):
+    for grant in ({"role": "edit", "kind": "group", "oid": IT_GROUP, "name": "IT-Team"},):
         assert manager.post(f"{SETTINGS}/areas/{it_id}/grants", json=grant).status_code == 201
     for name in ("Max Muster", "Olga Ober"):
         join(db, IT_GROUP, name)
@@ -191,32 +188,16 @@ def test_losing_group_membership_removes_access(db: Session, areas: dict[str, in
     assert max_.get(f"{BASE}/{ticket['number']}").status_code == 404
 
 
-def test_read_only_can_note_but_not_change(areas: dict[str, int]) -> None:
+def test_no_read_only_role(areas: dict[str, int]) -> None:
+    """Die Rolle „Nur lesen“ gibt es nicht mehr; wer keine Rolle hat, sieht nichts."""
+    manager = client_for("Vera Verwaltung", ["Tickets.Verwaltung"])
+    grant = {"role": "read", "kind": "person", "oid": oid_of("Lea Lesen"), "name": "Lea Lesen"}
+    assert manager.post(f"{SETTINGS}/areas/{areas['it']}/grants", json=grant).status_code == 422
     max_ = client_for("Max Muster")
+    number = new_ticket(max_, areas["it"])["number"]
     lea = client_for("Lea Lesen")
-    ticket = new_ticket(max_, areas["it"])
-    number = ticket["number"]
-    assert (
-        lea.post(
-            BASE, json={"area_id": areas["it"], "subject": "x", "reporter_name": "y", "body": "z"}
-        ).status_code
-        == 403
-    )
-    assert (
-        lea.patch(
-            f"{BASE}/{number}", json={"expected_status": "new", "status": "solved"}
-        ).status_code
-        == 403
-    )
-    note = lea.post(f"{BASE}/{number}/notes", json={"body": "Nur zur Info"})
-    assert note.status_code == 201
-    assert note.json()["permissions"] == {
-        "edit": False,
-        "note": True,
-        "assign_any": False,
-        "move": False,
-    }
-    assert note.json()["entries"][-1]["kind"] == "note"
+    assert lea.get(f"{BASE}/{number}").status_code == 404
+    assert lea.post(f"{BASE}/{number}/notes", json={"body": "x"}).status_code == 404
 
 
 def test_status_and_handover_rules(db: Session, areas: dict[str, int]) -> None:
