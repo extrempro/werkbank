@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useId, useState, type MouseEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { fetchTasks, TASKS_CHANGED, type Me, type Task } from "../api";
 import {
   activeNavPath,
@@ -11,6 +19,9 @@ import {
   ADMIN_ROLES_PATH,
   areasFor,
   AUDIT_PATH,
+  TICKETS_NEW_PATH,
+  TICKETS_PATH,
+  TICKETS_SETTINGS_PATH,
   BUDGET_ACCOUNTS_PATH,
   BUDGET_IMPORT_PATH,
   BUDGET_CONTRACTS_PATH,
@@ -72,6 +83,12 @@ import {
 import { HardwareDetailPage } from "../modules/inventory/HardwareDetailPage";
 import { HardwarePage } from "../modules/inventory/HardwarePage";
 import { CasesPage } from "../modules/inventory/CasesPage";
+import { parseTicketPath } from "../modules/tickets/api";
+import { NewTicketPage } from "../modules/tickets/NewTicketPage";
+import { TicketPage } from "../modules/tickets/TicketPage";
+import { TicketSettingsPage } from "../modules/tickets/TicketSettingsPage";
+import { TicketsPage } from "../modules/tickets/TicketsPage";
+import { ticketNavRoles, useTicketAccess } from "../modules/tickets/useTicketAccess";
 import { LoansPage } from "../modules/inventory/LoansPage";
 import { InventoryStatisticsPage } from "../modules/inventory/StatisticsPage";
 import { LocationsPage } from "../modules/inventory/LocationsPage";
@@ -201,6 +218,12 @@ export function Layout({ me }: LayoutProps) {
   const closeSearch = useCallback(() => setSearchOpen(false), []);
   const onNewsSeen = useCallback(() => setNewsUnseen(false), []);
   const taskCount = (tasks ?? []).reduce((sum, task) => sum + task.count, 0);
+  // Tickets: Rechte je Bereich kommen vom Server, nicht aus den App-Rollen
+  const ticketAccess = useTicketAccess();
+  const navRoles = useMemo(
+    () => [...me.roles, ...ticketNavRoles(ticketAccess)],
+    [me.roles, ticketAccess],
+  );
 
   // Aufgaben neu laden: bei jedem Seitenwechsel, nach jeder Änderung (z. B. Rechnung gebucht),
   // wenn das Fenster wieder in den Vordergrund kommt und alle fünf Minuten. So stehen in der
@@ -262,7 +285,7 @@ export function Layout({ me }: LayoutProps) {
           .filter((task) => task.link === target)
           .reduce((sum, task) => sum + task.count, 0);
   // Geprüft wird gegen alle Seiten; angezeigt werden nur die des gewählten Bereichs.
-  const areas = areasFor(me.roles);
+  const areas = areasFor(navRoles);
   const items = allNavItems(areas.flatMap((area) => area.groups));
   const currentArea = areaForPath(areas, path);
   // Punkt in der Bereichsleiste: Es gibt Aufgaben auf einer Seite des Bereichs (nicht bei Start).
@@ -270,7 +293,7 @@ export function Layout({ me }: LayoutProps) {
     area.id !== "werkbank" && allNavItems(area.groups).some((item) => badgeFor(item.path) > 0);
   const current = items.find((item) => item.path === path);
   const pin = current && path !== "/" ? { path: current.path, label: current.label } : null;
-  const helpLink = topicLink(pageTopics(path), me.roles);
+  const helpLink = topicLink(pageTopics(path), navRoles);
 
   const go = (target: string) => {
     navigate(target);
@@ -345,6 +368,7 @@ export function Layout({ me }: LayoutProps) {
   const locationRoute = parseLocationPath(path);
   const positionRoute = parsePositionPath(path);
   const caseRoute = parseCasePath(path);
+  const ticketRoute = parseTicketPath(path);
   const zabbixHost = parseZabbixHostPath(path);
   const loanRoute = parseLoanPath(path);
   const workplaceRoute = parseWorkplacePath(path);
@@ -357,8 +381,8 @@ export function Layout({ me }: LayoutProps) {
     handbookRoute !== null &&
     (handbookRoute.area === null ||
       (handbookRoute.topic === null
-        ? areasForHandbook(me.roles).some((area) => area.id === handbookRoute.area)
-        : findTopic(me.roles, handbookRoute.area, handbookRoute.topic) !== null));
+        ? areasForHandbook(navRoles).some((area) => area.id === handbookRoute.area)
+        : findTopic(navRoles, handbookRoute.area, handbookRoute.topic) !== null));
 
   let page: ReactNode;
   if (path === "/") {
@@ -551,6 +575,23 @@ export function Layout({ me }: LayoutProps) {
         roles={me.roles}
       />
     );
+  } else if (
+    ticketAccess === undefined &&
+    (path === TICKETS_PATH || path.startsWith(`${TICKETS_PATH}/`))
+  ) {
+    page = (
+      <p className="page-message" role="status">
+        Wird geladen …
+      </p>
+    );
+  } else if (ticketRoute !== null && items.some((item) => item.path === TICKETS_PATH)) {
+    page = <TicketPage key={ticketRoute} number={ticketRoute} />;
+  } else if (path === TICKETS_PATH && current && ticketAccess) {
+    page = <TicketsPage access={ticketAccess} />;
+  } else if (path === TICKETS_NEW_PATH && current && ticketAccess) {
+    page = <NewTicketPage access={ticketAccess} />;
+  } else if (path === TICKETS_SETTINGS_PATH && current) {
+    page = <TicketSettingsPage />;
   } else if (current) {
     page = <PlaceholderPage title={current.label} />;
   } else {
@@ -558,7 +599,7 @@ export function Layout({ me }: LayoutProps) {
   }
 
   return (
-    <HelpProvider roles={me.roles}>
+    <HelpProvider roles={navRoles}>
       <div className={collapsed ? "app nav-collapsed" : "app"}>
         <a className="skip-link" href="#inhalt">
           Zum Inhalt springen
@@ -624,7 +665,7 @@ export function Layout({ me }: LayoutProps) {
             {handbookRoute && (
               <HandbookMenu
                 id={sideMenuId}
-                roles={me.roles}
+                roles={navRoles}
                 areaId={handbookRoute.area}
                 topicId={handbookRoute.topic}
                 hidden={collapsed}

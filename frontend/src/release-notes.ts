@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.97.0",
+    date: "2026-11-22",
+    summary: "Neu: Tickets für Anliegen aus den Abteilungen, zuerst von Hand erfasst.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Neuer Bereich „Tickets“: Jede Abteilung kann einen eigenen Bereich mit eigenen Mitgliedern bekommen. Du siehst nur die Tickets deiner Bereiche.",
+          "Unter „Neues Ticket“ erfasst du Anliegen, die zum Beispiel per Telefon ankommen.",
+          "Status und Zuständigkeit änderst du oben im Ticket. Gespeichert wird erst mit „Bestätigen“; vorher siehst du, was sich ändert.",
+          "Interne Notizen sieht nur, wer im Bereich Mitglied ist.",
+          "Unter „Einstellungen“ legst du fest, wer in einem Bereich mitarbeitet und wie neue Tickets verteilt werden.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.96.0",
     date: "2026-11-22",
     summary: "M365-Konfiguration: Die Snapshot-Seite ist übersichtlicher.",

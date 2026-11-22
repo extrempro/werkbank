@@ -47,6 +47,7 @@ describe("Handbuch", () => {
       "m365",
       "evergreen",
       "it-monitoring",
+      "tickets",
       "it-bestand",
       "it-budget",
       "it-projekte",

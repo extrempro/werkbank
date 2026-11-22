@@ -254,6 +254,32 @@ export const HELP = {
     text: "Liegt das Datum in der Zukunft, ist der Verleih vorab geplant: Die Geräte sind ab sofort reserviert, die Nachricht an die Person geht am Startdatum raus.",
     topic: ["it-bestand", "verleih"],
   },
+  // Tickets
+  "tickets.bereich": {
+    term: "Bereich",
+    text: "Eine Abteilung mit eigenem Postfach, zum Beispiel die IT. Du siehst nur Tickets der Bereiche, in denen du Mitglied bist.",
+    topic: ["tickets", "uebersicht"],
+  },
+  "tickets.notiz": {
+    term: "Interne Notiz",
+    text: "Nur für Mitglieder des Bereichs. Der Melder sieht sie nicht und bekommt keine Mail.",
+    topic: ["tickets", "ticket"],
+  },
+  "tickets.beteiligte": {
+    term: "Beteiligte",
+    text: "Personen, die Antworten an den Melder in Kopie bekommen.",
+    topic: ["tickets", "ticket"],
+  },
+  "tickets.zuweisung": {
+    term: "Zuweisung neuer Tickets",
+    text: "„Wer zuerst übernimmt“ lässt neue Tickets frei. „Reihum“ gibt sie der Person mit „Bearbeiten“, die die wenigsten offenen Tickets hat.",
+    topic: ["tickets", "einstellungen"],
+  },
+  "tickets.rollen": {
+    term: "Rollen im Bereich",
+    text: "„Nur lesen“ sieht Tickets und schreibt Notizen, „Bearbeiten“ ändert Status und Zuständigkeit. Die Bereichsverwaltung darf jedes Ticket zuweisen und den Bereich einstellen.",
+    topic: ["tickets", "einstellungen"],
+  },
   "bestand.erneuerung": {
     term: "Erneuerung fällig",
     text: "Geräte, die älter sind als die Nutzungsdauer ihrer Art. Die Nutzungsdauer legst du in den Stammdaten bei den Hardware-Arten fest.",
@@ -309,6 +335,9 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
     ["it-monitoring", "zabbix-bestand"],
   ],
   "/monitoring/zabbix": [["it-monitoring", "zabbix-uebersicht"]],
+  "/tickets": [["tickets", "uebersicht"]],
+  "/tickets/neu": [["tickets", "uebersicht"]],
+  "/tickets/einstellungen": [["tickets", "einstellungen"]],
   "/bestand/vorgaenge": [["it-bestand", "vorgaenge"]],
   "/bestand/statistik": [["it-bestand", "statistik"]],
   "/bestand/hardware": [["it-bestand", "hardware"]],

@@ -72,6 +72,15 @@ export function toolCategoryPath(category: string): string {
   return `${TOOLS_PATH}/kategorie/${category}`;
 }
 const EVERGREEN_ROLES = ["Evergreen.Reader", "Evergreen.Editor"];
+/**
+ * Tickets hängen nicht an App-Rollen, sondern an den Rollen je Bereich (Server, Graph). Die
+ * Oberfläche fragt sie bei /api/tickets/me ab und gibt sie als diese zwei Kennzeichen weiter.
+ */
+export const TICKETS_MEMBER = "tickets:bereich";
+export const TICKETS_SETTINGS = "tickets:einstellungen";
+export const TICKETS_PATH = "/tickets";
+export const TICKETS_NEW_PATH = "/tickets/neu";
+export const TICKETS_SETTINGS_PATH = "/tickets/einstellungen";
 export const EVERGREEN_M365_PATH = "/evergreen/m365";
 
 function hasAny(roles: readonly string[], wanted: readonly string[]): boolean {
@@ -230,6 +239,34 @@ export function areasFor(roles: readonly string[]): NavArea[] {
           items: [{ path: MONITORING_DNS_PATH, label: "DNS-Abgleich", icon: "netzwerk" }],
         },
       ],
+    });
+  }
+  if (hasAny(roles, [TICKETS_MEMBER, TICKETS_SETTINGS])) {
+    const groups: NavGroup[] = [];
+    if (roles.includes(TICKETS_MEMBER)) {
+      groups.push({
+        title: null,
+        items: [
+          { path: TICKETS_PATH, label: "Alle Tickets", icon: "tickets" },
+          { path: TICKETS_NEW_PATH, label: "Neues Ticket", icon: "plus" },
+        ],
+      });
+    }
+    if (roles.includes(TICKETS_SETTINGS)) {
+      groups.push({
+        title: "Verwaltung",
+        collapsed: roles.includes(TICKETS_MEMBER),
+        items: [{ path: TICKETS_SETTINGS_PATH, label: "Einstellungen", icon: "einstellungen" }],
+      });
+    }
+    areas.push({
+      id: "tickets",
+      label: "Tickets",
+      short: "Tickets",
+      icon: "tickets",
+      section: "betrieb",
+      home: roles.includes(TICKETS_MEMBER) ? TICKETS_PATH : TICKETS_SETTINGS_PATH,
+      groups,
     });
   }
   if (hasAny(roles, INVENTORY_ROLES)) {

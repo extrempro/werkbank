@@ -23,6 +23,8 @@ class Role(StrEnum):
     INVENTORY_READER = "Bestand.Reader"
     INVENTORY_EDITOR = "Bestand.Editor"
     DEVICES_ASSOCIATION = "Geraete.Zuordnung"
+    TICKETS_USER = "Tickets.Nutzer"
+    TICKETS_MANAGER = "Tickets.Verwaltung"
 
 
 KNOWN_ROLES: frozenset[str] = frozenset(role.value for role in Role)
@@ -37,6 +39,14 @@ def filter_known_roles(roles: object) -> list[str]:
 
 # Anzeigename und Beschreibung je Rolle (wie in docs/entra-setup.md, Abschnitt 1.6)
 ROLE_INFO: dict[str, tuple[str, str]] = {
+    Role.TICKETS_USER: (
+        "Tickets Nutzer",
+        "Anmeldung für Mitglieder von Ticket-Bereichen; den Zugriff regeln die Rollen je Bereich",
+    ),
+    Role.TICKETS_MANAGER: (
+        "Ticket-Verwaltung",
+        "Ticket-Bereiche anlegen, Postfächer anbinden, Rollen der Bereiche vergeben",
+    ),
     Role.DEVICES_ASSOCIATION: (
         "Gerätezuordnung",
         "Neue Windows-Geräte per QR-Code scannen, zur Freigabe senden, freigeben, verwerfen",

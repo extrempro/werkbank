@@ -17,6 +17,9 @@ const PROJECTS_EDITOR = "Projekte.Editor";
 const INVENTORY_READER = "Bestand.Reader";
 const INVENTORY_EDITOR = "Bestand.Editor";
 const DEVICES = "Geraete.Zuordnung";
+// Tickets: Kennzeichen aus den Rollen je Bereich (siehe navigation.ts)
+const TICKETS_MEMBER = "tickets:bereich";
+const TICKETS_SETTINGS = "tickets:einstellungen";
 
 /**
  * Das Handbuch der Werkbank: Bereiche wie in der Bereichsleiste, darin Teile wie im Seitenmenü
@@ -1116,6 +1119,89 @@ export const AREAS: readonly Area[] = [
                 text: "Den Bereich sehen Personen mit der Rolle Monitoring.Reader und alle Admins. Der Token liegt verschlüsselt in der Datenbank und wird nie angezeigt.",
               },
             ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "tickets",
+    title: "Tickets",
+    summary:
+      "Anliegen aus den Bereichen, z. B. der IT: Liste, Ticketseite mit Verlauf, Status und Zuständigkeit, interne Notizen und die Einstellungen der Bereiche.",
+    roles: [TICKETS_MEMBER, TICKETS_SETTINGS],
+    parts: [
+      {
+        title: "Arbeiten mit Tickets",
+        topics: [
+          {
+            id: "uebersicht",
+            title: "Bereiche, Rollen und die Liste",
+            roles: [TICKETS_MEMBER],
+            blocks: [
+              {
+                kind: "text",
+                text: "Jedes Ticket gehört zu einem Bereich, zum Beispiel einer Abteilung. Du siehst nur die Tickets der Bereiche, in denen du Mitglied bist. Ein Ticket aus einem anderen Bereich gibt es für dich nicht, auch nicht über seine Nummer.",
+              },
+              {
+                kind: "text",
+                text: "In jedem Bereich hast du eine von drei Rollen: Mit „Nur lesen“ siehst du die Tickets und schreibst interne Notizen. Mit „Bearbeiten“ legst du Tickets an, änderst den Status, nimmst dir freie Tickets und übergibst deine eigenen. Die Bereichsverwaltung darf zusätzlich jedes Ticket zuweisen und die Einstellungen des Bereichs pflegen.",
+              },
+              {
+                kind: "text",
+                text: "„Alle Tickets“ zeigt zuerst die offenen Tickets, zuletzt geänderte oben. Über die Auswahl wechselst du zu „Mir zugewiesen“, „Nicht zugewiesen“, „Wartet“, „Gelöst und geschlossen“ oder „Alle“. Die Suche findet Nummer, Betreff und Melder. Ein Ticket von Hand legst du unter „Neues Ticket“ an, zum Beispiel nach einem Anruf.",
+              },
+            ],
+            links: [{ to: "/tickets", label: "Zu allen Tickets" }],
+          },
+          {
+            id: "ticket",
+            title: "Die Ticketseite",
+            roles: [TICKETS_MEMBER],
+            blocks: [
+              {
+                kind: "text",
+                text: "Oben stehen Nummer, Betreff, Status, Zuständigkeit und der Melder. Status und Zuständigkeit änderst du direkt in den Auswahlfeldern. Gespeichert wird erst mit „Bestätigen“; vorher zeigt die Seite, was sich ändert. „Verwerfen“ nimmt die Änderung zurück. Wechselst du zu einem anderen Ticket, verfällt eine nicht bestätigte Änderung.",
+              },
+              {
+                kind: "text",
+                text: "Ein freies Ticket nimmst du dir mit „Mir zuweisen“. Dein eigenes Ticket kannst du an eine andere Person des Bereichs übergeben und dabei eine Übergabenotiz schreiben. Andere Tickets übergibt nur die Bereichsverwaltung. Gelöste Tickets schließt die Werkbank nach 5 Tagen von selbst.",
+              },
+              {
+                kind: "text",
+                text: "Im Verlauf steht die ursprüngliche Meldung immer oben, darunter die letzten vier Einträge. Ältere Einträge klappst du mit „ältere Einträge anzeigen“ auf. Jeder Eintrag ist gekennzeichnet, zum Beispiel „vom Melder“, „Anruf erfasst“ oder „Intern“. Änderungen an Status und Zuständigkeit stehen als kurze Zeile dazwischen.",
+              },
+              {
+                kind: "text",
+                text: "Eine interne Notiz sieht nur, wer im Bereich Mitglied ist. Der Melder sieht sie nicht und bekommt keine Mail. Rechts stehen Bereich, Priorität und Beteiligte. Über „Verschieben nach“ gibst du ein Ticket an einen anderen Bereich ab; bist du dort nicht Mitglied, siehst du es danach nicht mehr.",
+              },
+            ],
+            links: [{ to: "/tickets", label: "Zu allen Tickets" }],
+          },
+        ],
+      },
+      {
+        title: "Verwaltung",
+        topics: [
+          {
+            id: "einstellungen",
+            title: "Bereiche und Rollen einstellen",
+            roles: [TICKETS_SETTINGS],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Ticket-Verwaltung legt Bereiche an, trägt das Postfach ein und vergibt die Rollen, auch die Bereichsverwaltung. Sie selbst sieht dadurch keine Tickets. Die Bereichsverwaltung vergibt in ihrem Bereich „Bearbeiten“ und „Nur lesen“ und legt fest, wie neue Tickets zugewiesen werden.",
+              },
+              {
+                kind: "text",
+                text: "Eine Rolle bekommt eine Gruppe aus Entra oder eine einzelne Person. Bei Gruppen zählen auch Mitglieder verschachtelter Gruppen. Wer aus einer Gruppe entfernt wird, verliert den Zugriff nach wenigen Minuten. Jeder Bereich behält mindestens einen Eintrag mit Bereichsverwaltung.",
+              },
+              {
+                kind: "text",
+                text: "Bei „Wer zuerst übernimmt“ bleiben neue Tickets frei, bis sich jemand eins nimmt. Bei „Reihum“ bekommt die Person mit „Bearbeiten“, die gerade die wenigsten offenen Tickets hat, das neue Ticket. „Nur lesen“ und die Bereichsverwaltung zählen dabei nicht mit.",
+              },
+            ],
+            links: [{ to: "/tickets/einstellungen", label: "Zu den Einstellungen" }],
           },
         ],
       },

@@ -48,6 +48,14 @@ from werkbank.modules.tenant.health import FETCH_HEALTH, fetch_health_job
 from werkbank.modules.tenant.inventory import FETCH_TENANT, fetch_inventory_job
 from werkbank.modules.tenant.notifications import tenant_notifications
 from werkbank.modules.tenant.usage import FETCH_USAGE, USAGE_INTERVAL, fetch_usage_job
+from werkbank.modules.tickets.jobs import (
+    GROUP_SYNC,
+    GROUP_SYNC_INTERVAL,
+    HOUSEKEEPING,
+    HOUSEKEEPING_INTERVAL,
+    group_sync_job,
+    housekeeping_job,
+)
 from werkbank.worker.jobs import JobType
 
 CLEANUP = "kern.aufraeumen"
@@ -141,6 +149,8 @@ REGISTRY: dict[str, JobType] = {
     PSREF_SYNC: JobType(handler=psref_job, interval=PSREF_SYNC_INTERVAL),
     LOAN_JOB: JobType(handler=loan_job, interval=LOAN_JOB_INTERVAL),
     ENTRA_SYNC: JobType(handler=entra_sync_job, interval=ENTRA_SYNC_INTERVAL),
+    GROUP_SYNC: JobType(handler=group_sync_job, interval=GROUP_SYNC_INTERVAL),
+    HOUSEKEEPING: JobType(handler=housekeeping_job, interval=HOUSEKEEPING_INTERVAL),
     STATUS_JOB: JobType(handler=status_job, interval=STATUS_JOB_INTERVAL),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
     GENERATE_AI_SUGGESTIONS: JobType(handler=generate_suggestions_job, interval=timedelta(hours=1)),
