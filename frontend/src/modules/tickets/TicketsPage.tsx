@@ -5,6 +5,7 @@ import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
 import { useDebounced } from "../inventory/paged";
 import {
+  exportUrl,
   fetchTickets,
   PRIORITY_LABELS,
   STATUS_LABELS,
@@ -31,8 +32,14 @@ export const STATUS_PILLS: Record<TicketStatus, string> = {
   merged: "pill pill-neutral",
 };
 
+/** Ansicht aus der Adresszeile, z. B. `/tickets?ansicht=mine` (von der Übersicht). */
+export function viewFromUrl(search = window.location.search): View {
+  const value = new URLSearchParams(search).get("ansicht");
+  return VIEWS.find((v) => v === value) ?? "open";
+}
+
 export function TicketsPage({ access }: { access: TicketAccess }) {
-  const [view, setView] = useState<View>("open");
+  const [view, setView] = useState<View>(() => viewFromUrl());
   const [area, setArea] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const query = useDebounced(search);
@@ -51,6 +58,10 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
   const hasMore = current ? current.hasMore : false;
   const [loadingMore, setLoadingMore] = useState(false);
   const canCreate = access.areas.some((a) => a.role === "edit" || a.role === "admin");
+  // Export nur für die Bereichsverwaltung, nur aus deren Bereichen
+  const adminAreas = access.areas.filter((a) => a.role === "admin");
+  const canExport =
+    adminAreas.length > 0 && (area === null || adminAreas.some((a) => a.id === area));
 
   useEffect(() => {
     let active = true;
@@ -107,12 +118,30 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
             <InfoTip term="tickets.bereich" />
           </p>
         </div>
-        {canCreate && (
-          <Link className="button button-primary" to={TICKETS_NEW_PATH}>
-            Neues Ticket
-          </Link>
-        )}
+        <div className="actions">
+          {canExport && (
+            <a
+              className="button button-secondary"
+              href={exportUrl(view, area, query)}
+              download
+              aria-describedby={adminAreas.length < access.areas.length ? "export-hint" : undefined}
+            >
+              Als Excel exportieren
+            </a>
+          )}
+          {canCreate && (
+            <Link className="button button-primary" to={TICKETS_NEW_PATH}>
+              Neues Ticket
+            </Link>
+          )}
+        </div>
       </header>
+      {canExport && adminAreas.length < access.areas.length && (
+        <p className="small" id="export-hint">
+          Der Export enthält nur Tickets aus Bereichen, die du verwaltest.
+          <InfoTip term="tickets.export" />
+        </p>
+      )}
 
       <section className="panel" aria-labelledby="tickets-liste">
         <div className="panel-head">

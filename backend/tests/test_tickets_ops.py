@@ -171,6 +171,16 @@ def test_anonymize_with_hold_and_expiry(db: Session, areas: dict[str, int]) -> N
 def test_area_override_delete_and_hold_lifecycle(db: Session, areas: dict[str, int]) -> None:
     ina = client_for("Ina Beispiel")
     max_ = client_for("Max Muster")
+    old_first = new_ticket(max_, areas["it"])["number"]
+    close(db, old_first, 30)
+    rule = {"custom": True, "months": 24, "action": "delete"}
+    preview = ina.post(f"{SETTINGS}/areas/{areas['it']}/retention/preview", json=rule)
+    assert preview.json() == {"due": 1}
+    assert (
+        max_.post(f"{SETTINGS}/areas/{areas['it']}/retention/preview", json=rule).status_code == 404
+    )
+    # Vorschau speichert nichts
+    assert ina.get(f"{SETTINGS}/areas/{areas['it']}/retention").json()["custom"] is False
     out = ina.put(
         f"{SETTINGS}/areas/{areas['it']}/retention",
         json={"custom": True, "months": 24, "action": "delete"},
@@ -184,7 +194,7 @@ def test_area_override_delete_and_hold_lifecycle(db: Session, areas: dict[str, i
     renewed = ina.put(f"{BASE}/{held}/hold", json={"reason": "Prüfung läuft"}).json()
     assert renewed["retention"]["hold_reason"] == "Prüfung läuft"
     run = run_retention(db, settings())
-    assert run.deleted == 1
+    assert run.deleted == 2
     assert max_.get(f"{BASE}/{old}").status_code == 404
     assert (
         db.scalar(

@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.101.0",
+    date: "2026-11-22",
+    summary: "Tickets: Übersicht, Excel-Export, Aufbewahrung und Protokoll.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Die neue Übersicht zeigt auf einen Blick, was ansteht: offene, dir zugewiesene und neue freie Tickets, dazu Eingang und Kategorien.",
+          "Die Bereichsverwaltung lädt die Ticketliste als Excel-Datei herunter, ohne Nachrichten.",
+          "Geschlossene Tickets können nach einer Frist automatisch anonymisiert oder gelöscht werden. Ausgeschaltet bleibt alles erhalten. Vor dem Speichern siehst du, welche Tickets betroffen wären.",
+          "Muss ein Ticket länger bleiben, setzt die Bereichsverwaltung eine Ausnahme mit Begründung.",
+          "Unter „Rollen und Protokoll“ siehst du, wer welche Rolle hat und was in den Bereichen geändert wurde.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.100.0",
     date: "2026-11-22",
     summary: "Tickets: Kategorien, Fristen, Erinnerungen, Textbausteine und mehr.",

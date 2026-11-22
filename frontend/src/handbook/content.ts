@@ -1149,10 +1149,17 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
+                text: "Die „Übersicht“ zeigt oben Kennzahlen: offen, dir zugewiesen, neu und frei, wartet, Erinnerung und gelöst in den letzten 30 Tagen; mit Fristen auch überfällig und wie oft die Frist eingehalten wurde. Ein Klick auf eine Kennzahl öffnet die passende Liste. Darunter stehen deine Tickets, neue freie Tickets, der Eingang der letzten 30 Tage nach Weg und die offenen Tickets nach Kategorie. Mit mehreren Bereichen wählst du oben einen aus.",
+              },
+              {
+                kind: "text",
                 text: "„Alle Tickets“ zeigt zuerst die offenen Tickets, zuletzt geänderte oben. Über die Auswahl wechselst du zu „Mir zugewiesen“, „Nicht zugewiesen“, „Wartet“, „Gelöst und geschlossen“ oder „Alle“. Die Suche findet Nummer, Betreff und Melder. Ein Ticket von Hand legst du unter „Neues Ticket“ an, zum Beispiel nach einem Anruf.",
               },
             ],
-            links: [{ to: "/tickets", label: "Zu allen Tickets" }],
+            links: [
+              { to: "/tickets/uebersicht", label: "Zur Übersicht" },
+              { to: "/tickets", label: "Zu allen Tickets" },
+            ],
           },
           {
             id: "ticket",
@@ -1268,6 +1275,37 @@ export const AREAS: readonly Area[] = [
               },
             ],
             links: [{ to: "/tickets/einstellungen", label: "Zu den Einstellungen" }],
+          },
+          {
+            id: "betrieb",
+            title: "Aufbewahrung, Export und Protokoll",
+            roles: [TICKETS_MEMBER, TICKETS_SETTINGS],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Aufbewahrung legt fest, wie lange geschlossene Tickets bleiben. Die Ticket-Verwaltung stellt eine Vorgabe für alle Bereiche ein; ausgeschaltet bleibt alles erhalten. Die Bereichsverwaltung übernimmt die Vorgabe oder stellt für ihren Bereich eine eigene Regel ein: nach so vielen Monaten oder Jahren ab dem Schließen anonymisieren oder vollständig löschen. Wird ein Ticket wieder geöffnet, beginnt die Frist beim nächsten Schließen neu.",
+              },
+              {
+                kind: "text",
+                text: "Anonymisieren entfernt Melder, Mailadressen, Betreff, alle Texte, Anhänge und die Namen der Bearbeiter. Nummer, Bereich, Kategorie, Priorität, Zeitpunkte und ob die Frist eingehalten wurde bleiben für die Kennzahlen. Vollständig löschen entfernt das Ticket ganz. Beides passiert einmal am Tag und lässt sich nicht rückgängig machen. In den Einstellungen des Bereichs siehst du vorher, welche Tickets beim nächsten Lauf betroffen sind, und darunter die letzten Läufe.",
+              },
+              {
+                kind: "text",
+                text: "Muss ein Ticket länger bleiben, setzt die Bereichsverwaltung auf der Ticketseite eine Ausnahme mit Begründung. Sie gilt ein Jahr. 30 Tage vor dem Ende kommt eine Benachrichtigung; wer die Ausnahme dann nicht bestätigt, lässt sie verfallen, und das Ticket ist beim nächsten Lauf dran.",
+              },
+              {
+                kind: "text",
+                text: "Unter „Alle Tickets“ lädt die Bereichsverwaltung die gefilterte Liste mit „Als Excel exportieren“ herunter. Die Datei enthält Nummer, Betreff, Bereich, Status, Kategorie, Priorität, Zuständig, Melder, Eingang und die Zeitpunkte, aber keine Nachrichten. Es kommen nur Tickets aus Bereichen hinein, die du verwaltest.",
+              },
+              {
+                kind: "text",
+                text: "„Rollen und Protokoll“ zeigt, wer in welchem Bereich welche Rolle hat, und darunter das Protokoll: Änderungen an Einstellungen und Rollen, Zuständigkeit, Status, Zusammenführen, Exporte, Ausnahmen und Aufbewahrungsläufe, jeweils mit Person und Zeitpunkt, aber ohne Texte. Die Ticket-Verwaltung sieht alle Bereiche, die Bereichsverwaltung ihre eigenen. Einträge bleiben drei Jahre.",
+              },
+            ],
+            links: [
+              { to: "/tickets/einstellungen", label: "Zu den Einstellungen" },
+              { to: "/tickets/protokoll", label: "Zu Rollen und Protokoll" },
+            ],
           },
         ],
       },

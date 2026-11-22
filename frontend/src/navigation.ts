@@ -81,6 +81,8 @@ export const TICKETS_SETTINGS = "tickets:einstellungen";
 export const TICKETS_PATH = "/tickets";
 export const TICKETS_NEW_PATH = "/tickets/neu";
 export const TICKETS_SETTINGS_PATH = "/tickets/einstellungen";
+export const TICKETS_OVERVIEW_PATH = "/tickets/uebersicht";
+export const TICKETS_LOG_PATH = "/tickets/protokoll";
 export const EVERGREEN_M365_PATH = "/evergreen/m365";
 
 function hasAny(roles: readonly string[], wanted: readonly string[]): boolean {
@@ -247,6 +249,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       groups.push({
         title: null,
         items: [
+          { path: TICKETS_OVERVIEW_PATH, label: "Übersicht", icon: "uebersicht" },
           { path: TICKETS_PATH, label: "Alle Tickets", icon: "tickets" },
           { path: TICKETS_NEW_PATH, label: "Neues Ticket", icon: "plus" },
         ],
@@ -256,7 +259,10 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       groups.push({
         title: "Verwaltung",
         collapsed: roles.includes(TICKETS_MEMBER),
-        items: [{ path: TICKETS_SETTINGS_PATH, label: "Einstellungen", icon: "einstellungen" }],
+        items: [
+          { path: TICKETS_SETTINGS_PATH, label: "Einstellungen", icon: "einstellungen" },
+          { path: TICKETS_LOG_PATH, label: "Rollen und Protokoll", icon: "audit" },
+        ],
       });
     }
     areas.push({
@@ -265,7 +271,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       short: "Tickets",
       icon: "tickets",
       section: "betrieb",
-      home: roles.includes(TICKETS_MEMBER) ? TICKETS_PATH : TICKETS_SETTINGS_PATH,
+      home: roles.includes(TICKETS_MEMBER) ? TICKETS_OVERVIEW_PATH : TICKETS_SETTINGS_PATH,
       groups,
     });
   }

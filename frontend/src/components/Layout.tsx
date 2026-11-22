@@ -22,6 +22,8 @@ import {
   TICKETS_NEW_PATH,
   TICKETS_PATH,
   TICKETS_SETTINGS_PATH,
+  TICKETS_OVERVIEW_PATH,
+  TICKETS_LOG_PATH,
   BUDGET_ACCOUNTS_PATH,
   BUDGET_IMPORT_PATH,
   BUDGET_CONTRACTS_PATH,
@@ -88,6 +90,8 @@ import { NewTicketPage } from "../modules/tickets/NewTicketPage";
 import { TicketPage } from "../modules/tickets/TicketPage";
 import { TicketSettingsPage } from "../modules/tickets/TicketSettingsPage";
 import { TicketsPage } from "../modules/tickets/TicketsPage";
+import { TicketsLogPage } from "../modules/tickets/TicketsLogPage";
+import { TicketsOverviewPage } from "../modules/tickets/TicketsOverviewPage";
 import { ticketNavRoles, useTicketAccess } from "../modules/tickets/useTicketAccess";
 import { LoansPage } from "../modules/inventory/LoansPage";
 import { InventoryStatisticsPage } from "../modules/inventory/StatisticsPage";
@@ -592,6 +596,10 @@ export function Layout({ me }: LayoutProps) {
     page = <NewTicketPage access={ticketAccess} />;
   } else if (path === TICKETS_SETTINGS_PATH && current) {
     page = <TicketSettingsPage />;
+  } else if (path === TICKETS_OVERVIEW_PATH && current && ticketAccess) {
+    page = <TicketsOverviewPage access={ticketAccess} />;
+  } else if (path === TICKETS_LOG_PATH && current) {
+    page = <TicketsLogPage />;
   } else if (current) {
     page = <PlaceholderPage title={current.label} />;
   } else {

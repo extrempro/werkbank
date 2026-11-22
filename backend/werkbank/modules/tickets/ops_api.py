@@ -40,8 +40,10 @@ from werkbank.modules.tickets.models import (
     TicketRetentionRun,
 )
 from werkbank.modules.tickets.retention import (
+    Policy,
     clear_hold,
     default_policy,
+    due_query,
     preview,
     set_hold,
 )
@@ -436,6 +438,29 @@ def update_area_retention(
     )
     db.commit()
     return _retention_out(db, area)
+
+
+class DueOut(BaseModel):
+    due: int
+
+
+@router.post("/settings/areas/{area_id}/retention/preview")
+def preview_area_retention(
+    area_id: int, body: RetentionAreaIn, access: AccessDep, db: DbDep
+) -> DueOut:
+    """Wie viele Tickets wären mit dieser Regel beim nächsten Lauf dran? (ohne zu speichern)"""
+    area = _area_for_settings(db, access, area_id)
+    default = default_policy(db)
+    policy = (
+        Policy(body.months, body.action, True)
+        if body.custom
+        else Policy(default.months, default.action, False)
+    )
+    db.rollback()
+    if not policy.active:
+        return DueOut(due=0)
+    query = due_query(area.id, policy, now_utc())
+    return DueOut(due=db.scalar(select(func.count()).select_from(query.subquery())) or 0)
 
 
 class HoldIn(BaseModel):
