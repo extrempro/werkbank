@@ -570,6 +570,8 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
   await expect(
     panel.getByRole("textbox", { name: "Lösung bei Hoch in Stunden" }),
   ).toBeVisible();
+  // Felder nicht unter der festen Kopfzeile prüfen
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
   await panel.getByRole("button", { name: "Speichern" }).last().click();
   await expect(
@@ -586,6 +588,7 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
     .getByLabel("Text", { exact: true })
     .fill("Hallo {Vorname}, erledigt.");
   await expect(panel.getByText("Hallo Max, erledigt.")).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
   await panel.getByRole("button", { name: "Speichern" }).last().click();
   await expect(panel.getByText("/drucker")).toBeVisible();
