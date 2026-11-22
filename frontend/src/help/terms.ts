@@ -254,6 +254,12 @@ export const HELP = {
     text: "Liegt das Datum in der Zukunft, ist der Verleih vorab geplant: Die Geräte sind ab sofort reserviert, die Nachricht an die Person geht am Startdatum raus.",
     topic: ["it-bestand", "verleih"],
   },
+  // Verwaltung
+  "verwaltung.rechtepruefung": {
+    term: "Berechtigungen für den Abruf",
+    text: "Vergleicht die vergebenen Rechte mit dem, was die eingetragenen Typen laut Microsoft brauchen. So siehst du vor dem nächsten Abruf, was fehlt.",
+    topic: ["verwaltung", "einstellungen"],
+  },
   // Tickets
   "tickets.bereich": {
     term: "Bereich",

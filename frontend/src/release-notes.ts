@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.98.0",
+    date: "2026-11-22",
+    summary: "Verwaltung: Berechtigungen für den Abruf aus dem Tenant prüfen.",
+    sections: [
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter „Verbindungen“ prüft „Berechtigungen prüfen“, ob für den Abruf aus dem Tenant alle Rechte vergeben sind. Fehlt etwas, steht dabei, welche Typen betroffen sind.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.97.0",
     date: "2026-11-22",
     summary: "Neu: Tickets für Anliegen aus den Abteilungen, zuerst von Hand erfasst.",

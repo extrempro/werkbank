@@ -2105,7 +2105,7 @@ export const AREAS: readonly Area[] = [
                   ],
                   [
                     "Verbindungen",
-                    "KI-Texte (Art der Schnittstelle: OpenAI-kompatibel oder Anthropic, Adresse, Modell, Schlüssel, Höchstzahl je Stunde; je ein Schalter für die Beschreibungen in M365 und die Vorschläge in Evergreen, Vorgabe: aus; „Verbindung testen“ zeigt bei Fehlern die Meldung des Anbieters), NetBox für den DNS-Abgleich, Abfragen der IT-Tools ins Internet (Vorgabe: erlaubt)",
+                    "„Berechtigungen für den Abruf“ prüft, ob die Collector-App und der Dienstprinzipal von UTCM die Rechte für die eingetragenen Typen und eingeschalteten Funktionen haben, und nennt je fehlendem Recht die betroffenen Typen; Entra-Rollen wie „Globaler Leser“ prüft sie nicht. KI-Texte (Art der Schnittstelle: OpenAI-kompatibel oder Anthropic, Adresse, Modell, Schlüssel, Höchstzahl je Stunde; je ein Schalter für die Beschreibungen in M365 und die Vorschläge in Evergreen, Vorgabe: aus; „Verbindung testen“ zeigt bei Fehlern die Meldung des Anbieters), NetBox für den DNS-Abgleich, Abfragen der IT-Tools ins Internet (Vorgabe: erlaubt)",
                   ],
                   ["Audit-Log", "das Protokoll aller Aktionen (siehe oben)"],
                 ],

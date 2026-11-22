@@ -12395,3 +12395,14 @@ input[type="file"] {
     padding-bottom: 10px;
   }
 }
+
+/* Verwaltung: Berechtigungen für den Abruf */
+
+.collector-check h3 {
+  margin: 16px 0 8px;
+}
+
+.collector-types,
+.collector-check code {
+  overflow-wrap: anywhere;
+}

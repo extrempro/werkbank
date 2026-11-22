@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.98.0] – 2026-11-22
+
+### Verwaltung
+
+- **Berechtigungen für den Abruf prüfen** (Verwaltung › Verbindungen, `POST /api/admin/collector/check`): Rechte der Collector-App aus ihrem Token und die Anwendungsberechtigungen des Dienstprinzipals von UTCM je Typ aus `COLLECTOR_RESOURCES`; fehlende Rechte mit den betroffenen Typen. Entra-Rollen werden nicht geprüft (Hinweis). Audit `rechte_geprueft`
+
+### Dokumentation
+
+- spec.md (7.1), entra-setup.md (`Application.Read.All`), Handbuch (Verwaltung), Info-Symbol
+
+### Tests
+
+- `test_m365_permissions.py`, `CollectorCheck.test.tsx`, E2E in `verwaltung.spec.ts`
+
 ## [0.97.0] – 2026-11-22
 
 ### Tickets (neu, Phase 1)
