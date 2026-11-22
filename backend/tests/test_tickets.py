@@ -134,7 +134,8 @@ def new_ticket(client: TestClient, area: int, **extra: Any) -> dict[str, Any]:
     }
     response = client.post(BASE, json=body)
     assert response.status_code == 201, response.text
-    return response.json()
+    data: dict[str, Any] = response.json()
+    return data
 
 
 def test_manager_sees_settings_but_no_tickets(areas: dict[str, int]) -> None:
