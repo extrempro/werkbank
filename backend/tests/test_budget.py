@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from tests.test_m365_api import ORIGIN, client_for
 from werkbank.core.models import AppSetting, AuditLog
 from werkbank.core.sessions import now_utc
+from werkbank.core.xlsx import Money, Sheet, workbook
 from werkbank.modules.budget.contracts import (
     add_months,
     due_dates,
@@ -44,7 +45,6 @@ from werkbank.modules.budget.settings import (
     load_settings,
 )
 from werkbank.modules.budget.tags import adopt_spelling, clean_tags, matches
-from werkbank.modules.budget.xlsx import Money, Sheet, workbook
 
 BASE = "/api/budget"
 HEADERS = {"Origin": ORIGIN}

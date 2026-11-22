@@ -22,6 +22,7 @@ from werkbank.modules.tickets.models import (
     TicketArea,
     TicketEntry,
 )
+from werkbank.modules.tickets.retention import HOLD_WARN_DAYS
 from werkbank.modules.tickets.sla import consumed_share
 
 RECENT = timedelta(days=7)
@@ -110,6 +111,25 @@ def tickets_notifications(db: Session, settings: Settings, now: datetime) -> Ite
                         link=_link(t.number),
                         user_ids=frozenset({assignee}),
                     )
+
+    # Ausnahmen von der Aufbewahrung, die in den nächsten 30 Tagen enden (Bereichsverwaltung)
+    holds = db.execute(
+        select(Ticket.id, Ticket.number, Ticket.area_id, Ticket.hold_until).where(
+            Ticket.hold_until > now,
+            Ticket.hold_until <= now + timedelta(days=HOLD_WARN_DAYS),
+            Ticket.area_id.in_(list(areas)),
+        )
+    ).all()
+    for ticket_id, number, area_id, until in holds:
+        admins = members(area_id, (AREA_ADMIN,))
+        if admins:
+            yield Event(
+                kind="tickets.ausnahme",
+                key=f"{ticket_id}:{until.isoformat() if until else ''}",
+                title=f"T-{number}: Ausnahme von der Aufbewahrung endet bald",
+                link=_link(number),
+                user_ids=admins,
+            )
 
     replies = db.execute(
         select(TicketEntry.id, Ticket.number, Ticket.assignee_oid)

@@ -114,8 +114,9 @@ def _find_ticket(db: Session, mail: ParsedMail) -> Ticket | None:
     number = ticket_number(mail.subject)
     if number is not None:
         ticket = db.scalar(select(Ticket).where(Ticket.number == number))
+        # Anonymisierte Tickets nehmen nichts mehr an: dann ein neues Ticket
         if ticket is not None:
-            return ticket
+            return ticket if ticket.anonymized_at is None else None
     if mail.references:
         ticket_id = db.scalar(
             select(TicketEntry.ticket_id)
@@ -298,6 +299,8 @@ def _process(
     if ticket is not None and ticket.status == STATUS_MERGED:
         # Antworten auf Mails eines zusammengeführten Tickets landen im Ziel
         ticket = follow_merged(db, ticket)
+    if ticket is not None and ticket.anonymized_at is not None:
+        ticket = None
     if ticket is not None:
         # Geschlossen: je nach Einstellung wieder öffnen oder neues Ticket mit Bezug.
         if ticket.status not in (STATUS_CLOSED, STATUS_MERGED) or (

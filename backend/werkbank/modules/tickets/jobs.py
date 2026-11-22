@@ -16,6 +16,7 @@ from werkbank.modules.tickets.models import (
     TicketGroupMember,
     TicketMembershipCache,
 )
+from werkbank.modules.tickets.retention import run_retention
 from werkbank.modules.tickets.service import AUDIT_KEEP_DAYS, auto_close, fire_reminders
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,8 @@ HOUSEKEEPING = "tickets.wartung"
 HOUSEKEEPING_INTERVAL = timedelta(hours=1)
 REMINDERS = "tickets.erinnerungen"
 REMINDERS_INTERVAL = timedelta(minutes=5)
+RETENTION = "tickets.aufbewahrung"
+RETENTION_INTERVAL = timedelta(days=1)
 
 
 def sync_groups(db: Session, settings: Settings) -> int:
@@ -155,3 +158,7 @@ def reminders_job(db: Session, settings: Settings, payload: dict[str, Any]) -> N
     fire_reminders(db)
     db.commit()
     sla_missed_mails(db, settings)
+
+
+def retention_job(db: Session, settings: Settings, payload: dict[str, Any]) -> None:
+    run_retention(db, settings)

@@ -14,6 +14,7 @@ from werkbank.core.deps import DbDep, SettingsDep, require_roles
 from werkbank.core.models import User
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
+from werkbank.core.xlsx import XLSX_TYPE, Cell, Money, Sheet, workbook
 from werkbank.db import Base
 from werkbank.modules.budget.contracts import (
     INTERVALS,
@@ -82,7 +83,6 @@ from werkbank.modules.budget.tags import (
     clean_tags,
     matches,
 )
-from werkbank.modules.budget.xlsx import XLSX_TYPE, Cell, Money, Sheet, workbook
 from werkbank.modules.projects.models import Project
 
 router = APIRouter(prefix="/api/budget")

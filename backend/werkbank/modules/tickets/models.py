@@ -59,6 +59,12 @@ OPEN_STATUSES = (STATUS_NEW, STATUS_IN_PROGRESS, STATUS_WAITING, STATUS_REMINDER
 PRIORITIES = ("low", "medium", "high")
 CHANNELS = ("mail", "manual", "phone")
 
+RETENTION_ANONYMIZE = "anonymize"
+RETENTION_DELETE = "delete"
+RETENTION_ACTIONS = (RETENTION_ANONYMIZE, RETENTION_DELETE)
+# Text, der nach dem Anonymisieren als Betreff stehen bleibt
+ANONYMIZED_SUBJECT = "(anonymisiert)"
+
 ENTRY_INBOUND = "inbound"  # Nachricht vom Melder
 ENTRY_REPLY = "reply"  # Antwort an den Melder
 ENTRY_NOTE = "note"  # interne Notiz
@@ -122,6 +128,14 @@ class TicketArea(Base):
     device_in_inventory: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default=text("false")
     )
+    # Aufbewahrung (Phase 4): eigene Abweichung von der Vorgabe; 0 Monate = aus
+    retention_custom: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+    retention_months: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    retention_action: Mapped[str] = mapped_column(
+        String(10), default=RETENTION_ANONYMIZE, server_default=RETENTION_ANONYMIZE
+    )
 
     __table_args__ = (
         CheckConstraint("assignment IN ('first', 'round_robin')", name="ck_ticket_area_assignment"),
@@ -129,6 +143,13 @@ class TicketArea(Base):
             "external_policy IN ('accept', 'review', 'reject')", name="ck_ticket_area_external"
         ),
         CheckConstraint("reopen_policy IN ('days', 'always', 'new')", name="ck_ticket_area_reopen"),
+        CheckConstraint(
+            "retention_action IN ('anonymize', 'delete')", name="ck_ticket_area_retention_action"
+        ),
+        CheckConstraint(
+            "retention_months >= 0 AND retention_months <= 1200",
+            name="ck_ticket_area_retention_months",
+        ),
     )
 
 
@@ -225,6 +246,11 @@ class Ticket(Base):
     sla_paused_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sla_response_met: Mapped[bool | None] = mapped_column(Boolean)
     sla_solution_met: Mapped[bool | None] = mapped_column(Boolean)
+    # Aufbewahrung (Phase 4): Ausnahme mit Begründung bis zu einem Zeitpunkt; anonymisiert am
+    hold_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    hold_reason: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    hold_by_name: Mapped[str] = mapped_column(String(256), default="", server_default="")
+    anonymized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint(
@@ -462,3 +488,38 @@ class TicketAudit(Base):
     action: Mapped[str] = mapped_column(String(60))
     ticket_number: Mapped[int | None] = mapped_column(BigInteger)
     details: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+
+
+class TicketRetention(Base):
+    """Vorgabe der Aufbewahrung für alle Bereiche (eine Zeile, id = 1; Ticket-Verwaltung).
+    0 Monate = aus."""
+
+    __tablename__ = "ticket_retention"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    months: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    action: Mapped[str] = mapped_column(
+        String(10), default=RETENTION_ANONYMIZE, server_default=RETENTION_ANONYMIZE
+    )
+
+    __table_args__ = (
+        CheckConstraint("action IN ('anonymize', 'delete')", name="ck_ticket_retention_action"),
+        CheckConstraint("months >= 0 AND months <= 1200", name="ck_ticket_retention_months"),
+    )
+
+
+class TicketRetentionRun(Base):
+    """Protokoll der Aufbewahrungsläufe (Anzahl je Bereich, ohne Inhalte)."""
+
+    __tablename__ = "ticket_retention_runs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    anonymized: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    deleted: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    holds_expired: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    # Je Bereich: {"<id>": {"anonymized": n, "deleted": n, "holds_expired": n}}
+    areas: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
+    error: Mapped[str] = mapped_column(String(500), default="", server_default="")
