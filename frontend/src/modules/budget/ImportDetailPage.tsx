@@ -39,6 +39,7 @@ import {
 } from "./imports";
 import { BudgetHead, DeleteButton } from "./shared";
 import { navigate } from "../../router";
+import { Feedback } from "../../components/Feedback";
 
 type PartnerChoice = "vorschlag" | "neu" | "andere";
 
@@ -456,14 +457,7 @@ function PlanPanel({
         </div>
       )}
       <div className="detail-body">
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
         {candidates.length > 0 && (
           <div className="budget-toolbar">
             <button

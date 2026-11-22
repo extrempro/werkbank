@@ -17,6 +17,7 @@ import {
   type DnsStatus,
   type DnsView,
 } from "./api";
+import { Feedback } from "../../components/Feedback";
 
 const numbers = new Intl.NumberFormat("de-DE");
 
@@ -225,14 +226,7 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
           </button>
         )}
       </div>
-      {message && (
-        <p
-          role={message.kind}
-          className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-        >
-          {message.text}
-        </p>
-      )}
+      <Feedback message={message} onClose={() => setMessage(null)} />
 
       {run && (
         <div className="kpis dns-kpis" role="group" aria-label="Einträge nach Status filtern">

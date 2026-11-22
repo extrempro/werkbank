@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { errorText, saveToolsInternet, type AdminSettings } from "../api";
+import { Feedback } from "../components/Feedback";
 
 interface Props {
   settings: AdminSettings;
@@ -59,14 +60,7 @@ export function ToolsInternetSettings({ settings, onChange }: Props) {
           des Hashs) und die Subdomain-Suche (crt.sh). Der Server ruft nur diese Ziele auf, nur über
           https und nie interne Adressen. Angefragte Namen werden nicht gespeichert.
         </p>
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </div>
     </section>
   );

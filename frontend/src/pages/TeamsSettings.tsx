@@ -7,6 +7,7 @@ import {
   type TeamsSettings as Teams,
   type TeamsUpdate,
 } from "../api";
+import { Feedback } from "../components/Feedback";
 
 type Message = { kind: "status" | "alert"; text: string };
 
@@ -141,14 +142,7 @@ export function TeamsSettings({ teams, onChange }: Props) {
             Testnachricht an mich senden
           </button>
         </div>
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </form>
     </section>
   );

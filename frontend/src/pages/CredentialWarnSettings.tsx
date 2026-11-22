@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import { errorText, saveCredentialWarnDays, type AdminSettings } from "../api";
+import { Feedback } from "../components/Feedback";
 
 const DEFAULT_DAYS = [60, 30, 7];
 const LABELS = ["Hinweis ab (Tage)", "Warnung ab (Tage)", "Dringend ab (Tage)"];
@@ -87,14 +88,7 @@ export function CredentialWarnSettings({ settings, onChange }: Props) {
             Vorlauf speichern
           </button>
         </div>
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </form>
     </section>
   );

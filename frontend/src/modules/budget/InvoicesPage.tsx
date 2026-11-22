@@ -51,6 +51,7 @@ import {
   type Partner,
 } from "./api";
 import { BudgetHead, DeleteButton, FormStep, ReadOnlyNote } from "./shared";
+import { Feedback } from "../../components/Feedback";
 
 interface FormProps {
   /** null: neue Rechnung erfassen. */
@@ -1041,14 +1042,7 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
           {entries.length === 1 ? "Rechnung" : "Rechnungen"} · {open} zu prüfen
         </p>
       )}
-      {message && (
-        <p
-          role={message.kind}
-          className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-        >
-          {message.text}
-        </p>
-      )}
+      <Feedback message={message} onClose={() => setMessage(null)} />
       {data && entries.length === 0 && !paneOpen && (
         <p className="panel panel-empty">
           Im {data.list.year_name} ist noch keine Rechnung erfasst.

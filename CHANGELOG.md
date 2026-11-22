@@ -4,9 +4,21 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.93.0] – 2026-11-22
+
+### Oberfläche
+
+- **Rückmeldungen immer sichtbar:** neue gemeinsame Komponente `components/Feedback.tsx`. Meldungen nach einer Aktion erscheinen unten mittig fest am Bildschirmrand (auf dem Handy über der Leiste unten), auch auf langen Seiten. Erfolg (`role="status"`) verschwindet nach 6 Sekunden, pausiert bei Maus oder Fokus; Fehler (`role="alert"`) bleiben bis zum Schließen
+- Umgestellt: Verwaltung (KI, Branding, Ablaufwarnungen, NetBox, NinjaOne, Push, Teams, Internet für IT-Tools, Zabbix), Konto (Sitzungen, Geräte für Push, Benachrichtigungen), M365 (Übersicht, Änderungen), Gerätezuordnung, Evergreen-Steckbrief, IT-Budget (Konten, Partner, Verträge, Budgetposten, Rechnungen, Statistik, Einstellungen, Import), IT-Projekte (Einstellungen, Aufgaben, Jour Fixe), IT-Bestand (Vorgänge, Verleih, Arbeitsplätze, Standorte), IT-Monitoring (DNS-Abgleich, Zabbix), Verlauf der IT-Tools
+- Meldungen, die zu einem einzelnen Feld gehören, bleiben am Feld
+
 ### Dokumentation
 
-- Neue Regel: Rückmeldungen nach einer Aktion stehen auf PC, Tablet und Handy immer im sichtbaren Bereich (`CLAUDE.md`, `docs/design.md` › Rückmeldungen)
+- Neue Regel: Rückmeldungen nach einer Aktion stehen auf PC, Tablet und Handy immer im sichtbaren Bereich (`CLAUDE.md`, `docs/design.md` › Rückmeldungen); WCAG-Nachweis ergänzt
+
+### Tests
+
+- `Feedback.test.tsx`; E2E in `budget.spec.ts` prüft, dass die Meldung im sichtbaren Bereich steht und sich schließen lässt
 
 ## [0.92.0] – 2026-11-22
 

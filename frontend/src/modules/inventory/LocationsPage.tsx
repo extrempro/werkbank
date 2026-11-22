@@ -33,6 +33,7 @@ import {
   type Room,
   type RoomRect,
 } from "./api";
+import { Feedback } from "../../components/Feedback";
 
 function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
@@ -1141,11 +1142,10 @@ export function LocationsPage({
                         />
                       </div>
                     )}
-                    {notice && (
-                      <p role="alert" className="hint-box hint-bad">
-                        {notice}
-                      </p>
-                    )}
+                    <Feedback
+                      message={notice ? { kind: "alert", text: notice } : null}
+                      onClose={() => setNotice(null)}
+                    />
                     {editing && (
                       <p className="hint-box">
                         Auf freier Fläche ein Rechteck aufziehen legt einen Raum an. Räume ziehen

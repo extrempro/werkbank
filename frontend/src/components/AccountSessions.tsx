@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { deleteJson, errorText, formatDateTime, getJson, postJson } from "../api";
 import { ConfirmButton } from "./ConfirmDialog";
+import { Feedback } from "./Feedback";
 
 export interface AccountSession {
   id: string;
@@ -151,14 +152,7 @@ export function AccountSessions() {
             </ConfirmButton>
           </div>
         )}
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
         <form id="konto-abmelden" method="post" action="/auth/logout" hidden />
       </div>
     </section>

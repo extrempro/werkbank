@@ -20,6 +20,7 @@ import {
   type ImportSummary,
 } from "./imports";
 import { BudgetHead } from "./shared";
+import { Feedback } from "../../components/Feedback";
 
 type View = "arbeit" | "fertig" | "alle";
 
@@ -281,11 +282,10 @@ export function ImportsPage() {
               darunter die Konten mit ihrem Budget. Die Datei selbst wird nicht gespeichert.
             </p>
             {busy && <p role="status">Die Datei wird gelesen …</p>}
-            {message && (
-              <p role="alert" className="hint-box hint-bad">
-                {message}
-              </p>
-            )}
+            <Feedback
+              message={message ? { kind: "alert", text: message } : null}
+              onClose={() => setMessage(null)}
+            />
           </div>
         </section>
       )}

@@ -13,6 +13,7 @@ import {
   type PushState,
 } from "../notifications";
 import { ConfirmButton } from "./ConfirmDialog";
+import { Feedback } from "./Feedback";
 
 type Message = { kind: "status" | "alert"; text: string };
 
@@ -147,14 +148,7 @@ export function PushDevices() {
           ))}
         </ul>
       )}
-      {message && (
-        <p
-          role={message.kind}
-          className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-        >
-          {message.text}
-        </p>
-      )}
+      <Feedback message={message} onClose={() => setMessage(null)} />
     </div>
   );
 }

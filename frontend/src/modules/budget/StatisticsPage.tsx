@@ -36,6 +36,7 @@ import {
   type ChartLayout,
   type ChartYear,
 } from "./StatisticsCharts";
+import { Feedback } from "../../components/Feedback";
 
 type Tab = "ueberblick" | "konten" | "tags";
 type Measure = "stichtag" | "ganz";
@@ -960,14 +961,7 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
                   )}
                 </section>
               )}
-              {message && (
-                <p
-                  role={message.kind}
-                  className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-                >
-                  {message.text}
-                </p>
-              )}
+              <Feedback message={message} onClose={() => setMessage(null)} />
             </div>
           )}
         </>

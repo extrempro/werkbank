@@ -16,6 +16,7 @@ import {
   type ResizeMode,
   type Size,
 } from "../imageResize";
+import { Feedback } from "../components/Feedback";
 
 type Message = { kind: "status" | "alert"; text: string };
 
@@ -229,14 +230,7 @@ export function BrandingSettings() {
             Name und Farbe speichern
           </button>
         </div>
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </form>
 
       <div className="detail-body settings-form">

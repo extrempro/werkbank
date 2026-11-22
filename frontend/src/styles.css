@@ -11687,3 +11687,85 @@ input[type="file"] {
     font-size: 0.8125rem;
   }
 }
+
+/* Rückmeldungen nach einer Aktion (components/Feedback.tsx): immer sichtbar, unten mittig,
+   auf dem Handy über der Leiste unten (docs/design.md › Rückmeldungen). */
+.feedback-region {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 65;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(36rem, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .feedback-region {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+}
+
+.feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 8px 10px 14px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 12px;
+  background: var(--farbe-ok-flaeche);
+  color: var(--farbe-ok-text);
+  font-size: 0.9375rem;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
+  pointer-events: auto;
+}
+
+.feedback-bad {
+  background: var(--farbe-bad-flaeche);
+  color: var(--farbe-bad-text);
+}
+
+.feedback-icon {
+  flex: 0 0 auto;
+  font-weight: 700;
+  line-height: 44px;
+}
+
+.feedback-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 11px 0;
+  overflow-wrap: anywhere;
+}
+
+.feedback-close {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.feedback-close:hover {
+  background: rgb(0 0 0 / 6%);
+}
+
+.feedback-close:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 2px;
+}
+
+@media print {
+  .feedback-region {
+    display: none;
+  }
+}

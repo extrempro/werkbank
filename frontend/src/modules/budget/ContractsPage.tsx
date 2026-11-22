@@ -41,6 +41,7 @@ import {
 } from "./api";
 import { ContractDetail } from "./ContractDetail";
 import { BudgetHead, FormStep, ReadOnlyNote } from "./shared";
+import { Feedback } from "../../components/Feedback";
 
 interface FormProps {
   /** null: neuen Vertrag anlegen. */
@@ -764,11 +765,10 @@ export function ContractsPage({
           }
         />
       )}
-      {status && (
-        <p role="status" className="hint-box">
-          {status}
-        </p>
-      )}
+      <Feedback
+        message={status ? { kind: "status", text: status } : null}
+        onClose={() => setStatus(null)}
+      />
       {data && all.length === 0 && !paneOpen && (
         <p className="panel panel-empty">Es sind noch keine Verträge angelegt.</p>
       )}

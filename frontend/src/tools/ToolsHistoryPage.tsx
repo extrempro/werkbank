@@ -12,6 +12,7 @@ import {
   useToolPrefs,
 } from "./account";
 import { findTool } from "./index";
+import { Feedback } from "../components/Feedback";
 
 /** IT-Tools › Verlauf: eigene Einstellungen der letzten 90 Tage, wieder öffnen oder löschen. */
 export function ToolsHistoryPage() {
@@ -91,14 +92,7 @@ export function ToolsHistoryPage() {
               Ganzen Verlauf löschen
             </ConfirmButton>
           </div>
-          {message && (
-            <p
-              role={message.kind}
-              className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-            >
-              {message.text}
-            </p>
-          )}
+          <Feedback message={message} onClose={() => setMessage(null)} />
         </div>
       </section>
 
