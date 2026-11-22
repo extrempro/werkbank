@@ -126,7 +126,7 @@ def tickets_notifications(db: Session, settings: Settings, now: datetime) -> Ite
                 kind="tickets.pruefen",
                 key=str(review_id),
                 title=f"Neue Mail zu prüfen im Bereich {areas[area_id].name}",
-                link="/tickets/einstellungen",
+                link=f"/tickets/einstellungen/email?bereich={area_id}",
                 user_ids=admins,
             )
 

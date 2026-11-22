@@ -30,6 +30,7 @@ from werkbank.modules.tickets.access import (
     not_found,
 )
 from werkbank.modules.tickets.files import file_path
+from werkbank.modules.tickets.inventory_link import ReporterInventory, reporter_inventory
 from werkbank.modules.tickets.mail_texts import DEFAULT_EVENTS
 from werkbank.modules.tickets.mailbox import MailboxError, available, new_http, open_mailbox
 from werkbank.modules.tickets.models import (
@@ -227,8 +228,10 @@ class TicketOut(TicketItem):
     categories: list[CategoryRef]
     reminder_note: str
     sla: SlaOut | None
-    devices_enabled: bool
+    # Rechte im IT-Bestand: Gerät und Angaben zum Melder sichtbar
+    inventory: bool
     device: DeviceRef | None
+    reporter_inventory: ReporterInventory | None
     merged_into: int | None
     retention: RetentionOut
     anonymized_at: datetime | None
@@ -395,9 +398,10 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
         )
         if area is not None and area.sla_enabled and ticket.sla_solution_due is not None
         else None,
-        devices_enabled=bool(area and area.devices_enabled),
-        device=_device_ref(db, ticket.hardware_id)
-        if area is not None and area.devices_enabled
+        inventory=access.inventory,
+        device=_device_ref(db, ticket.hardware_id) if access.inventory else None,
+        reporter_inventory=reporter_inventory(db, ticket.reporter_mail)
+        if access.inventory and ticket.reporter_mail
         else None,
         merged_into=_merged_number(db, ticket),
         retention=_retention(db, access, area, ticket),

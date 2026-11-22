@@ -6,13 +6,14 @@ Alles nur für die eigenen Bereiche; der Export nur für die Bereichsverwaltung.
 from datetime import date, datetime, timedelta
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, or_, select
 
 from werkbank.core.deps import DbDep, SettingsDep
 from werkbank.core.sessions import now_utc
 from werkbank.core.xlsx import XLSX_TYPE, Cell, Sheet, workbook
+from werkbank.modules.inventory.people import PeopleError, PeopleFinder, get_people_finder
 from werkbank.modules.tickets.access import AccessDep, forbidden, not_found
 from werkbank.modules.tickets.api import (
     TicketItem,
@@ -193,6 +194,39 @@ def stats(access: AccessDep, db: DbDep, area: AreaQuery = None) -> StatsOut:
         mine_list=short(*mine),
         unassigned_list=short(*unassigned_new),
     )
+
+
+# --- Melder aus Entra ----------------------------------------------------------------------
+
+
+class PersonOut(BaseModel):
+    name: str
+    mail: str
+    detail: str
+
+
+@router.get("/people")
+def search_reporters(
+    access: AccessDep,
+    finder: Annotated[PeopleFinder, Depends(get_people_finder)],
+    q: Annotated[str, Query(max_length=60)] = "",
+) -> list[PersonOut]:
+    """Personen in Entra für das Feld „Melder“ (wer in einem Bereich Tickets anlegen darf)."""
+    if not access.can_create:
+        raise forbidden("Tickets anlegen darf, wer in einem Bereich „Bearbeiten“ hat.")
+    if len(q.strip()) < 2:
+        return []
+    try:
+        people = finder(q.strip())
+    except PeopleError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    return [
+        PersonOut(name=p.name, mail=p.mail or p.upn, detail=p.department)
+        for p in people
+        if p.enabled
+    ][:8]
 
 
 # --- Export --------------------------------------------------------------------------------
