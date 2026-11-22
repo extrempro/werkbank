@@ -705,7 +705,7 @@ describe("Hilfen für Verträge", () => {
   });
 });
 
-describe("Übersicht nach dem Entwurf", () => {
+describe("Übersicht mit Karten und Balken", () => {
   it("zeigt Kennzahlen, Balken, Termine und Handlungsbedarf", async () => {
     stubFetch({
       "GET /api/budget/overview": overview({

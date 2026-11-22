@@ -71,7 +71,7 @@ function Grid({ max }: { max: number }) {
 }
 
 /**
- * Gruppen (Konten, Arten oder Tags) mit einem Wert je Spielzeit: als knapp überlappende Säulen,
+ * Gruppen (Konten, Arten oder Tags) mit einem Wert je Geschäftsjahr: als knapp überlappende Säulen,
  * überlappende Balken oder Balken nebeneinander. Die gewählte Gruppe steht mit allen Beträgen
  * darüber; dieselben Zahlen gibt es als Tabelle.
  */

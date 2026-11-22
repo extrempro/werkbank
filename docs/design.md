@@ -1,6 +1,6 @@
 # Designrichtlinie
 
-Ziel: Jeder Screen sieht gleich aufgebaut aus und wird gleich bedient. Visuelle Referenz ist der klickbare Entwurf „Werkbank – Oberfläche“.
+Ziel: Jeder Screen sieht gleich aufgebaut aus und wird gleich bedient. Maßstab sind die Regeln in diesem Dokument und die bestehenden Seiten.
 
 ## 1. Seitenaufbau
 

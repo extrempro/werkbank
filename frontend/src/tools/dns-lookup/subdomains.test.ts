@@ -15,14 +15,14 @@ describe("Eingabe → abfragbarer Name", () => {
   });
 
   it("Umlaute als Punycode", () => {
-    expect(toAscii("bürger.hamburg")).toBe("xn--brger-kva.hamburg");
-    const q = toQueryName("*.Bürger.hamburg");
-    expect(q.name).toBe("*.xn--brger-kva.hamburg");
+    expect(toAscii("bücher.example")).toBe("xn--bcher-kva.example");
+    const q = toQueryName("*.Bücher.example");
+    expect(q.name).toBe("*.xn--bcher-kva.example");
     expect(q.note).toMatch(/Umlaute umgewandelt/);
   });
 
   it("lehnt Unsinn ab", () => {
-    expect(() => toQueryName(".hamburg")).toThrow();
+    expect(() => toQueryName(".example")).toThrow();
     expect(() => toQueryName("a b.de")).toThrow();
     expect(() => toQueryName("")).toThrow();
   });

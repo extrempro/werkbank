@@ -6,7 +6,7 @@ Beiträge sind willkommen: Fehlermeldungen, Ideen, Dokumentation und Code. Bitte
 - **Sicherheitslücken:** nie als Issue, siehe [`SECURITY.md`](SECURITY.md)
 - **Größere Änderungen:** bitte zuerst ein Issue öffnen und abstimmen, bevor du Zeit investierst
 - **Lizenz:** Mit deinem Beitrag stimmst du zu, dass er unter der [MIT-Lizenz](LICENSE) dieses Projekts veröffentlicht wird.
-- **Keine internen Daten:** keine echten Hostnamen, Tenant-IDs, Firmen- oder Personennamen in Code, Tests oder Screenshots
+- **Keine internen Daten:** keine echten Hostnamen, Tenant-IDs, Firmen- oder Personennamen in Code, Tests oder Screenshots, und nichts, was Rückschlüsse auf Betreiber, Personen oder Standorte erlaubt (Orte, Gebäude, Hausbegriffe, Verweise auf interne Entwürfe oder Dokumente)
 
 ## Ablauf
 

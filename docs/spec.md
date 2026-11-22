@@ -709,9 +709,9 @@ Evergreen:
 | Handbuch | alle | Bereiche, Teile und je Thema eine Seite nach Rollen; eigenes Seitenmenü mit Suche (am Handy „Alle Themen“); Begriffe A–Z; Themenseite mit Rollen, Verweis, weiteren Themen und vor/zurück |
 | Offline | alle | Hinweis „Keine Verbindung“, erneut versuchen |
 
-Der klickbare Entwurf („Werkbank – Oberfläche“) ist die visuelle Referenz.
+Maßstab für das Aussehen sind `docs/design.md` und die bestehenden Seiten.
 
-**Stand der Umsetzung (Version 0.55):** Alle Seiten der Tabelle sind nach dem Entwurf gebaut, auch das Handbuch, Push und Vergleich und Export der Snapshots. Noch nicht vorhanden: Reports. (Kennzeichen „Mitbestimmung“ und PDF der BR-Vorlage entfallen mit dem Umbau von Evergreen in 0.76.)
+**Stand der Umsetzung (Version 0.55):** Alle Seiten der Tabelle sind gebaut, auch das Handbuch, Push und Vergleich und Export der Snapshots. Noch nicht vorhanden: Reports. (Kennzeichen „Mitbestimmung“ und PDF der BR-Vorlage entfallen mit dem Umbau von Evergreen in 0.76.)
 
 ---
 
@@ -885,7 +885,7 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 1 | Kern: Login, Rollen, Layout, Aufgaben-Gerüst, Audit-Log, Offline-Seite, Service Worker | Anmeldung und leere Module sichtbar | ✅ abgeschlossen |
 | 2 | M365-Konfiguration: Collector Entra, Versionierung, Änderungen, Bewertung, Einstellungen, Verlauf | erster echter Nutzen | ✅ umgesetzt (2a bis 2e), dazu Baumansicht, KI-Texte und Empfehlungen aus Secure Score. dazu Benachrichtigung bei Abweichung vom Soll und (0.55) Snapshot-Vergleich und -Export |
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e); in 0.76 umgebaut: nur für die IT, Einträge mit Status und Notizen je Software (Kapitel 8) |
-| – | Oberfläche nach dem Entwurf, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen | ✅ umgesetzt, mit Handbuch und letzten Aktivitäten auf der Startseite |
+| – | Einheitliche Oberfläche, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen | ✅ umgesetzt, mit Handbuch und letzten Aktivitäten auf der Startseite |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Benachrichtigungen, Push | Vollumfang v1 | 🔄 weitgehend: Exchange, Teams, Intune und SharePoint (Konfiguration), Benachrichtigungen (Glocke, Mail, Teams, Push) umgesetzt |
 | 5 | weitere Module nach Bedarf | – | offen |
 
