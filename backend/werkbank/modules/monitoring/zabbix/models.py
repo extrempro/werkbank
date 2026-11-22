@@ -1,10 +1,10 @@
 """Tabellen der Quelle Zabbix. Gespeichert wird nur, was Übersicht, Verknüpfung und Berichte
 brauchen; Zabbix bleibt die Quelle (keine Werte von Items, keine Rohverläufe)."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -117,6 +117,8 @@ class ZbxStatus(Base):
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # {"rolle", "methoden", "modus", "hinweise", "token_ablauf"}
     account: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    # Ab diesem Tag sammelt die Werkbank Daten für die Berichte (nicht rückwirkend)
+    reports_since: Mapped[date | None] = mapped_column(Date)
 
 
 class ZbxUnmonitored(Base):
@@ -143,3 +145,68 @@ class ZbxHostLink(Base):
         ForeignKey("inventory_hardware.id", ondelete="CASCADE"), index=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ZbxMaintLog(Base):
+    """Zeitraum, in dem ein Host laut Zabbix in Wartung war (eigene Beobachtung, 40 Tage)."""
+
+    __tablename__ = "mon_zbx_maint_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    hostid: Mapped[str] = mapped_column(String(20), index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ended_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class ZbxReportDay(Base):
+    """Ein Tag, für den die Berichtsdaten erzeugt sind."""
+
+    __tablename__ = "mon_zbx_report_days"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ZbxDowntime(Base):
+    """Überwachte Zeit, Wartung und Ausfall eines Hosts an einem Tag in Sekunden (3 Jahre).
+
+    Name, Standort und Gruppen sind der Stand des Tages, damit Berichte stabil bleiben."""
+
+    __tablename__ = "mon_zbx_downtime"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    hostid: Mapped[str] = mapped_column(String(20), primary_key=True)
+    host: Mapped[str] = mapped_column(String(255))
+    site: Mapped[str | None] = mapped_column(String(255))
+    groups: Mapped[list[Any]] = mapped_column(JSONB, default=list)
+    monitored_s: Mapped[int] = mapped_column(Integer, default=0)
+    maintenance_s: Mapped[int] = mapped_column(Integer, default=0)
+    downtime_s: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ZbxTriggerStat(Base):
+    """Probleme je Monat, Trigger und Host: Anzahl und Dauer (3 Jahre)."""
+
+    __tablename__ = "mon_zbx_trigger_stats"
+
+    month: Mapped[date] = mapped_column(Date, primary_key=True)
+    triggerid: Mapped[str] = mapped_column(String(20), primary_key=True)
+    hostid: Mapped[str] = mapped_column(String(20), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255))
+    host: Mapped[str] = mapped_column(String(255))
+    count: Mapped[int] = mapped_column(Integer, default=0)
+    duration_s: Mapped[int] = mapped_column(BigInteger, default=0)
+
+
+class ZbxOutage(Base):
+    """Ein Ausfall: Problem eines Triggers mit Tag scope: availability ab Schweregrad Hoch."""
+
+    __tablename__ = "mon_zbx_outages"
+
+    eventid: Mapped[str] = mapped_column(String(20), primary_key=True)
+    hostid: Mapped[str] = mapped_column(String(20))
+    host: Mapped[str] = mapped_column(String(255))
+    site: Mapped[str | None] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(String(255))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

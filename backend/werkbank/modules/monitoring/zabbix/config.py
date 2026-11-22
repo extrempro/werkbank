@@ -15,6 +15,9 @@ from werkbank.core.app_settings import (
 from werkbank.modules.monitoring.zabbix.client import ZabbixConfig
 
 TAG_MAX = 100
+TARGET_DEFAULT = 99.5
+TARGET_MIN = 90.0
+TARGET_MAX = 100.0
 
 
 def stored_connection(db: Session) -> dict[str, Any]:
@@ -45,9 +48,12 @@ def load_config(
 
 
 def frontend_url(db: Session) -> str | None:
-    """Adresse der Oberfläche für den Sprung nach Zabbix (ohne Token)."""
+    """Adresse der Oberfläche für den Sprung nach Zabbix (ohne Token).
+
+    Eigene Adresse für Links, wenn die Werkbank Zabbix über einen anderen Weg erreicht als
+    die Menschen (z. B. einen eigenen Proxy-Eintrag nur für den Werkbank-Server)."""
     stored = stored_connection(db)
-    url = stored.get("url")
+    url = stored.get("link_url") or stored.get("url")
     if stored.get("enabled") is not True or not isinstance(url, str) or not url:
         return None
     return url.rstrip("/")
@@ -59,6 +65,8 @@ class Options:
     certificate_tag: tuple[str, str] | None
     # Hardware-Arten des IT-Bestands, die in Zabbix überwacht sein sollen
     kind_ids: tuple[int, ...] = ()
+    # Zielwert der Verfügbarkeit in Prozent
+    target: float = TARGET_DEFAULT
 
 
 def load_options(db: Session) -> Options:
@@ -72,4 +80,8 @@ def load_options(db: Session) -> Options:
     kind_ids = tuple(
         value for value in (kinds if isinstance(kinds, list) else []) if isinstance(value, int)
     )[:200]
-    return Options(certificate_tag=certificate, kind_ids=kind_ids)
+    target = data.get("target")
+    if isinstance(target, bool) or not isinstance(target, int | float):
+        target = TARGET_DEFAULT
+    target = float(target) if TARGET_MIN <= target <= TARGET_MAX else TARGET_DEFAULT
+    return Options(certificate_tag=certificate, kind_ids=kind_ids, target=target)

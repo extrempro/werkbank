@@ -98,6 +98,19 @@ describe("areasFor", () => {
     expect(areasFor(["Projekte.Reader"]).map((area) => area.id)).not.toContain("bestand");
   });
 
+  it("zeigt mit Monitoring.Berichte nur die Berichte", () => {
+    const reports = areasFor(["Monitoring.Berichte"]).find((area) => area.id === "monitoring")!;
+    expect(reports.home).toBe("/monitoring/zabbix/berichte");
+    expect(reports.groups.flatMap((group) => group.items.map((item) => item.path))).toEqual([
+      "/monitoring/zabbix/berichte",
+    ]);
+    const full = areasFor(["Monitoring.Reader", "Monitoring.Berichte"]).filter(
+      (area) => area.id === "monitoring",
+    );
+    expect(full).toHaveLength(1);
+    expect(full[0]!.home).toBe("/monitoring/zabbix");
+  });
+
   it("ordnet die Seiten eines Projekts dem Bereich IT-Projekte zu", () => {
     const areas = areasFor(["Projekte.Editor"]);
     const id = (path: string) => areaForPath(areas, path)?.id;

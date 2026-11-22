@@ -28,6 +28,7 @@ import {
   MONITORING_ZABBIX_HOSTS_PATH,
   MONITORING_ZABBIX_MAINTENANCE_PATH,
   MONITORING_ZABBIX_PATH,
+  MONITORING_ZABBIX_REPORTS_PATH,
   PROJECTS_PATH,
   INVENTORY_CASES_PATH,
   INVENTORY_LOANS_PATH,
@@ -59,6 +60,7 @@ import {
   ZabbixMaintenancesPage,
   ZabbixOverviewPage,
 } from "../modules/monitoring/zabbix/ZabbixPages";
+import { ZabbixReportsPage } from "../modules/monitoring/zabbix/ZabbixReports";
 import {
   parseCasePath,
   parseLoanPath,
@@ -507,6 +509,8 @@ export function Layout({ me }: LayoutProps) {
     page = <ZabbixHostsPage hostId={zabbixHost} roles={me.roles} />;
   } else if (path === MONITORING_ZABBIX_MAINTENANCE_PATH && current) {
     page = <ZabbixMaintenancesPage />;
+  } else if (path === MONITORING_ZABBIX_REPORTS_PATH && current) {
+    page = <ZabbixReportsPage />;
   } else if (path === MONITORING_ZABBIX_CONNECTION_PATH && current) {
     page = <ZabbixConnectionPage />;
   } else if (path === BUDGET_PATH && current) {

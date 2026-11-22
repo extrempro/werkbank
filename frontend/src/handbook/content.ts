@@ -11,6 +11,7 @@ const BUDGET_EDITOR = "Budget.Editor";
 const BUDGET_MANAGER = "Budget.Manager";
 const TOOLS = "Tools.User";
 const MONITORING = "Monitoring.Reader";
+const MONITORING_REPORTS = "Monitoring.Berichte";
 const PROJECTS_READER = "Projekte.Reader";
 const PROJECTS_EDITOR = "Projekte.Editor";
 const INVENTORY_READER = "Bestand.Reader";
@@ -866,10 +867,11 @@ export const AREAS: readonly Area[] = [
     id: "it-monitoring",
     title: "IT-Monitoring",
     summary: "Überwachung der IT aus Zabbix und der DNS-Abgleich mit NetBox.",
-    roles: [MONITORING],
+    roles: [MONITORING, MONITORING_REPORTS],
     parts: [
       {
         title: "Zabbix",
+        roles: [MONITORING],
         topics: [
           {
             id: "zabbix-uebersicht",
@@ -964,6 +966,44 @@ export const AREAS: readonly Area[] = [
             ],
           },
           {
+            id: "zabbix-berichte",
+            title: "Berichte zur Verfügbarkeit",
+            roles: [MONITORING, MONITORING_REPORTS],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Berichte zeigen, wie verfügbar die überwachten Hosts in einem Geschäftsjahr waren, aufgeteilt nach Standort oder Hostgruppe und je Monat. Beginn und Bezeichnung des Geschäftsjahrs kommen aus den Einstellungen des IT-Budgets. Die Werkbank sammelt die Daten ab dem ersten Abruf von Zabbix, nicht rückwirkend. Die Daten eines Tages kommen am Folgetag dazu.",
+              },
+              {
+                kind: "terms",
+                items: [
+                  [
+                    "Ausfall",
+                    "Zeit, in der an einem Host ein Problem mit dem Tag scope: availability ab Schweregrad Hoch offen war, zum Beispiel „nicht erreichbar“; überlappende Probleme zählen einmal",
+                  ],
+                  [
+                    "Verfügbarkeit",
+                    "überwachte Zeit ohne Ausfall, geteilt durch die überwachte Zeit; Zeiten in einer Wartung zählen weder als Ausfall noch zur überwachten Zeit",
+                  ],
+                  [
+                    "Zielwert",
+                    "so hoch soll die Verfügbarkeit mindestens sein (Vorgabe 99,5 %); ein Admin legt ihn auf der Seite Verbindung fest",
+                  ],
+                ],
+              },
+              {
+                kind: "list",
+                items: [
+                  "Oben wählst du das Geschäftsjahr und ob nach Standort oder nach Hostgruppe aufgeteilt wird. Ein Host in mehreren Gruppen zählt in jeder.",
+                  "„Als CSV exportieren“ lädt die Tabelle mit allen Monaten herunter, zum Beispiel für eine Tabellenkalkulation.",
+                  "„Drucken oder als PDF“ öffnet den Druckdialog; dort kannst du auch „Als PDF speichern“ wählen. Menüs und Knöpfe erscheinen im Ausdruck nicht.",
+                  "Wer das ganze IT-Monitoring sehen darf, findet darunter die häufigsten Auslöser und die längsten Ausfälle mit Host. Mit der Rolle nur für Berichte siehst du die Summen ohne Hostnamen.",
+                ],
+              },
+            ],
+            links: [{ to: "/monitoring/zabbix/berichte", label: "Zu den Berichten" }],
+          },
+          {
             id: "zabbix-einrichten",
             title: "Zabbix einrichten",
             roles: [ADMIN],
@@ -991,7 +1031,15 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Den Bereich sehen Personen mit der Rolle Monitoring.Reader und alle Admins; die Seite „Verbindung“ nur Admins. Die Werkbank übernimmt keine Quittierungs-Kommentare und keine Benutzernamen aus Zabbix.",
+                text: "Den Bereich sehen Personen mit der Rolle Monitoring.Reader und alle Admins; die Seite „Verbindung“ nur Admins. Mit der Rolle Monitoring.Berichte sieht man nur die Berichte. Die Werkbank übernimmt keine Quittierungs-Kommentare und keine Benutzernamen aus Zabbix.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "Zabbix leitet weiter: Die Werkbank folgt keiner Weiterleitung, damit das Token nur bei Zabbix landet. Die Meldung nennt das Ziel. Ist es die Anmeldeseite eines Reverse Proxys, braucht die Werkbank einen Zugang ohne diese Anmeldung, zum Beispiel einen eigenen Eintrag im Proxy, den nur der Server der Werkbank erreichen darf. Die Knöpfe „In Zabbix öffnen“ führen dann über das Feld „Adresse für ‚In Zabbix öffnen‘“ weiter zur gewohnten Adresse.",
+                  "Abgelehnt mit HTTP 401 oder 403: Die Anfrage kommt gar nicht bei Zabbix an, ein Proxy, eine Zugriffsregel oder der Webserver davor lehnt sie ab.",
+                  "Zabbix lehnt das Token ab, obwohl es gültig ist: Oft geht der Header „Authorization“ unterwegs verloren, zum Beispiel bei Apache mit PHP-FPM ohne „CGIPassAuth On“. Prüfe außerdem, ob in der Rolle der API-Zugriff eingeschaltet und das Dienstkonto aktiv ist.",
+                ],
               },
             ],
             links: [{ to: "/monitoring/zabbix/verbindung", label: "Zur Verbindung" }],
@@ -1000,6 +1048,7 @@ export const AREAS: readonly Area[] = [
       },
       {
         title: "NetBox",
+        roles: [MONITORING],
         topics: [
           {
             id: "dns-abgleich",

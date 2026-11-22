@@ -33,6 +33,9 @@ from werkbank.modules.monitoring.zabbix.collector import (
 )
 from werkbank.modules.monitoring.zabbix.config import (
     TAG_MAX,
+    TARGET_DEFAULT,
+    TARGET_MAX,
+    TARGET_MIN,
     frontend_url,
     load_options,
     stored_connection,
@@ -622,6 +625,7 @@ class ConnectionOut(BaseModel):
     certificate_value: str
     kinds: list[SiteOut]
     kind_ids: list[int]
+    target: float
 
 
 @router.get("/connection")
@@ -703,6 +707,7 @@ def connection(user: AdminReader, db: DbDep) -> ConnectionOut:
             ).tuples()
         ],
         kind_ids=list(options.kind_ids),
+        target=options.target,
     )
 
 
@@ -717,6 +722,7 @@ class OptionsIn(BaseModel):
     certificate_tag: str = Field(default="", max_length=TAG_MAX)
     certificate_value: str = Field(default="", max_length=TAG_MAX)
     kind_ids: list[int] = Field(default_factory=list, max_length=200)
+    target: float = Field(default=TARGET_DEFAULT, ge=TARGET_MIN, le=TARGET_MAX)
 
 
 @router.put("/connection")
@@ -751,6 +757,7 @@ def save_connection_options(
             if tag
             else None,
             "kind_ids": sorted(set(body.kind_ids)),
+            "target": round(body.target, 2),
         },
         user.user_id,
     )
@@ -768,6 +775,7 @@ def save_connection_options(
             "zuordnungen": len(body.mapping),
             "zertifikat_tag": bool(tag),
             "hardware_arten": len(set(body.kind_ids)),
+            "zielwert": round(body.target, 2),
         },
     )
     db.commit()

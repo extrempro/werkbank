@@ -86,6 +86,24 @@ def _verify(config: ZabbixConfig) -> ssl.SSLContext | bool:
     return context
 
 
+def redirect_message(status: int, location: str | None) -> str:
+    """Weiterleitung: die Werkbank folgt ihr nie (das Token bliebe sonst nicht bei Zabbix).
+
+    Genannt wird nur Host und Pfad des Ziels, ohne Abfrage (dort stehen oft Sitzungsdaten
+    einer Anmeldeseite)."""
+    target = ""
+    if location:
+        parts = urlsplit(location.strip()[:URL_MAX])
+        target = f"{parts.netloc}{parts.path}" if parts.netloc else parts.path
+    hint = (
+        "Steht davor ein Reverse Proxy mit Anmeldung, muss die Werkbank Zabbix ohne diese "
+        "Anmeldung erreichen. Sonst die Adresse eintragen, auf die weitergeleitet wird."
+    )
+    if target:
+        return f"Zabbix leitet weiter (HTTP {status}) nach „{_text(target, 150)}“. {hint}"
+    return f"Zabbix leitet weiter (HTTP {status}). {hint}"
+
+
 def http_transport(config: ZabbixConfig, body: dict[str, Any], with_token: bool) -> Any:
     headers = {"Content-Type": "application/json-rpc", "Accept": "application/json"}
     if with_token:
@@ -97,8 +115,16 @@ def http_transport(config: ZabbixConfig, body: dict[str, Any], with_token: bool)
             ) as client,
             client.stream("POST", config.api_url, content=json.dumps(body), headers=headers) as res,
         ):
+            if 300 <= res.status_code < 400:
+                raise ZabbixError(redirect_message(res.status_code, res.headers.get("location")))
             if res.status_code in (401, 403):
-                raise ZabbixError("Zabbix lehnt die Anfrage ab (Token ungültig oder gesperrt).")
+                # Zabbix selbst antwortet auch bei falschem Token mit HTTP 200 und einem
+                # JSON-Fehler; 401/403 kommen meist von einem Proxy oder Webserver davor.
+                raise ZabbixError(
+                    f"Die Anfrage wird mit HTTP {res.status_code} abgelehnt, bevor sie Zabbix "
+                    "erreicht, meist von einem Reverse Proxy, einer Zugriffsregel oder dem "
+                    "Webserver davor. Das Token wurde dabei nicht geprüft."
+                )
             if res.status_code != 200:
                 raise ZabbixError(f"Zabbix antwortet mit HTTP {res.status_code}.")
             data = bytearray()
@@ -193,6 +219,26 @@ class Problem:
     acknowledged: bool
     suppressed: bool
     tags: list[tuple[str, str]]
+
+
+@dataclass(frozen=True)
+class Event:
+    """Beginn eines Problems aus event.get; r_eventid ist das Ende ("0": noch offen)."""
+
+    eventid: str
+    triggerid: str
+    name: str
+    severity: int
+    clock: int
+    r_eventid: str
+    hostids: list[str]
+
+
+# Tag, mit dem die Vorlagen von Zabbix „nicht erreichbar“ markieren
+AVAILABILITY_TAG = ("scope", "availability")
+# Ab Schweregrad Hoch zählt ein Problem als Ausfall
+AVAILABILITY_SEVERITIES = (4, 5)
+EVENTS_LIMIT = 20000
 
 
 @dataclass(frozen=True)
@@ -362,6 +408,63 @@ class ZabbixClient:
                     for host in row.get("hosts") or []
                     if isinstance(host, dict)
                 ]
+        return out
+
+    # ---------- Ereignisse (für die Berichte) ----------
+
+    def problem_events(
+        self, time_from: int, time_till: int, *, availability: bool = False
+    ) -> list[Event]:
+        """Probleme von Triggern, die in [time_from, time_till] begonnen haben.
+
+        availability: nur Ausfälle (Tag scope: availability, ab Schweregrad Hoch)."""
+        params: dict[str, Any] = {
+            "output": ["eventid", "objectid", "name", "severity", "clock", "r_eventid"],
+            "source": 0,
+            "object": 0,
+            "value": 1,
+            "time_from": time_from,
+            "time_till": time_till,
+            "selectHosts": ["hostid"],
+            "sortfield": ["clock", "eventid"],
+            "sortorder": "ASC",
+            "limit": EVENTS_LIMIT,
+        }
+        if availability:
+            params["severities"] = list(AVAILABILITY_SEVERITIES)
+            params["tags"] = [
+                {"tag": AVAILABILITY_TAG[0], "value": AVAILABILITY_TAG[1], "operator": 1}
+            ]
+        rows = self._list("event.get", params)
+        if len(rows) >= EVENTS_LIMIT:
+            raise ZabbixError(
+                f"Zabbix liefert mehr als {EVENTS_LIMIT} Probleme an einem Tag; "
+                "die Berichte für diesen Tag wären unvollständig."
+            )
+        return [
+            Event(
+                eventid=_text(row.get("eventid"), 20),
+                triggerid=_text(row.get("objectid"), 20),
+                name=_text(row.get("name")),
+                severity=min(max(_int(row.get("severity")), 0), 5),
+                clock=_int(row.get("clock")),
+                r_eventid=_text(row.get("r_eventid"), 20) or "0",
+                hostids=[
+                    _text(host.get("hostid"), 20)
+                    for host in row.get("hosts") or []
+                    if isinstance(host, dict)
+                ],
+            )
+            for row in rows
+        ]
+
+    def event_clocks(self, eventids: list[str]) -> dict[str, int]:
+        """Zeitpunkt von Ereignissen (hier: Ende der Probleme)."""
+        out: dict[str, int] = {}
+        for start in range(0, len(eventids), 1000):
+            chunk = eventids[start : start + 1000]
+            for row in self._list("event.get", {"eventids": chunk, "output": ["eventid", "clock"]}):
+                out[_text(row.get("eventid"), 20)] = _int(row.get("clock"))
         return out
 
     # ---------- Hosts ----------

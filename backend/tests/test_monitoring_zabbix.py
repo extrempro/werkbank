@@ -1,7 +1,7 @@
 """IT-Monitoring: Quelle Zabbix (API-Client 7.x und 8.0, Collector, API, Verwaltung)."""
 
 import json
-from datetime import timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +28,7 @@ from werkbank.modules.inventory.models import (
     InventorySite,
 )
 from werkbank.modules.monitoring.notifications import zabbix_notifications
-from werkbank.modules.monitoring.zabbix import collector
+from werkbank.modules.monitoring.zabbix import collector, reports
 from werkbank.modules.monitoring.zabbix.admin import get_zabbix_transport
 from werkbank.modules.monitoring.zabbix.api import maintenance_state
 from werkbank.modules.monitoring.zabbix.client import (
@@ -40,15 +40,21 @@ from werkbank.modules.monitoring.zabbix.client import (
     role_findings,
     valid_zabbix_url,
 )
+from werkbank.modules.monitoring.zabbix.config import frontend_url
 from werkbank.modules.monitoring.zabbix.inventory import norm_serial
 from werkbank.modules.monitoring.zabbix.models import (
+    ZbxDowntime,
     ZbxGroupSite,
     ZbxHost,
     ZbxHostLink,
     ZbxMaintenance,
+    ZbxMaintLog,
+    ZbxOutage,
     ZbxProblem,
+    ZbxReportDay,
     ZbxRun,
     ZbxStatus,
+    ZbxTriggerStat,
     ZbxUnmonitored,
 )
 
@@ -65,6 +71,8 @@ class FakeZabbix:
         self.calls: list[tuple[str, Any, bool]] = []
         self.fail: str | None = None
         self.errors: dict[str, dict[str, Any]] = {}
+        # Antworten, die von den Parametern abhängen (z. B. event.get)
+        self.handlers: dict[str, Any] = {}
 
     def __call__(self, config: ZabbixConfig, body: dict[str, Any], with_token: bool) -> Any:
         assert "auth" not in body
@@ -74,6 +82,12 @@ class FakeZabbix:
             raise ZabbixError(self.fail)
         if method in self.errors:
             return {"jsonrpc": "2.0", "error": self.errors[method], "id": body["id"]}
+        if method in self.handlers:
+            return {
+                "jsonrpc": "2.0",
+                "result": self.handlers[method](body["params"]),
+                "id": body["id"],
+            }
         return {"jsonrpc": "2.0", "result": self.data[method], "id": body["id"]}
 
 
@@ -226,6 +240,11 @@ def test_maintenance_state() -> None:
 @pytest.fixture
 def db(migrated_db: None, db_session: Session) -> Session:
     for table in (
+        ZbxOutage,
+        ZbxTriggerStat,
+        ZbxDowntime,
+        ZbxReportDay,
+        ZbxMaintLog,
         ZbxHostLink,
         ZbxUnmonitored,
         ZbxGroupSite,
@@ -279,7 +298,7 @@ def test_collect_stores_state(db: Session, tmp_path: Path, name: str) -> None:
     configure(db, settings)
     fake = FakeZabbix(name)
     runs = collector.collect(db, settings, fake)
-    assert [run.task for run in runs] == ["stammdaten", "wartungen", "schnell"]
+    assert [run.task for run in runs] == ["stammdaten", "wartungen", "schnell", "berichte"]
     assert all(run.ok for run in runs)
     hosts = {row.hostid: row for row in db.scalars(select(ZbxHost))}
     assert set(hosts) == {"10101", "10102", "10103", "10104"}
@@ -296,7 +315,7 @@ def test_collect_stores_state(db: Session, tmp_path: Path, name: str) -> None:
     db.execute(delete(ZbxRun))
     db.commit()
     fake.fail = "Zabbix ist nicht erreichbar. Bitte die Adresse prüfen."
-    failed = collector.collect(db, settings, fake)
+    failed = [run for run in collector.collect(db, settings, fake) if run.task != "berichte"]
     assert failed and not any(run.ok for run in failed)
     assert db.scalar(select(ZbxProblem).where(ZbxProblem.eventid == "5001")) is not None
     assert failed[-1].error == fake.fail
@@ -418,6 +437,26 @@ def test_admin_settings_and_mapping(db: Session, tmp_path: Path) -> None:
     ).json()
     assert saved["url"] == "https://zabbix.example.com" and saved["token_set"] is True
     assert "zbx-geheim" not in json.dumps(saved)
+    assert saved["link_url"] == ""
+    assert frontend_url(db) == "https://zabbix.example.com"
+    bad_link = client.put(
+        base,
+        json={"enabled": True, "url": "https://zabbix.example.com", "link_url": "javascript:x"},
+        headers=HEADERS,
+    )
+    assert bad_link.status_code == 422
+    linked = client.put(
+        base,
+        json={
+            "enabled": True,
+            "url": "https://zabbix.example.com",
+            "link_url": "https://monitor.example.com/zabbix/",
+        },
+        headers=HEADERS,
+    ).json()
+    assert linked["link_url"] == "https://monitor.example.com/zabbix" and linked["token_set"]
+    db.expire_all()
+    assert frontend_url(db) == "https://monitor.example.com/zabbix"
     test = client.post(f"{base}/test", headers=HEADERS).json()
     assert test["version"] == "7.0.21" and test["hosts"] == 4 and test["findings"] == []
     assert test["role"] == "Werkbank lesen" and test["token_never_expires"] is False
@@ -427,7 +466,12 @@ def test_admin_settings_and_mapping(db: Session, tmp_path: Path) -> None:
     page = client.get("/api/monitoring/zabbix/connection").json()
     assert page["version"] == "7.0.21"
     assert {group["groupid"] for group in page["groups"]} == {"21", "22", "23"}
-    assert [task["task"] for task in page["tasks"]] == ["schnell", "wartungen", "stammdaten"]
+    assert [task["task"] for task in page["tasks"]] == [
+        "schnell",
+        "wartungen",
+        "stammdaten",
+        "berichte",
+    ]
     assert all(task["ok"] for task in page["tasks"])
     saved_options = client.put(
         "/api/monitoring/zabbix/connection",
@@ -435,10 +479,18 @@ def test_admin_settings_and_mapping(db: Session, tmp_path: Path) -> None:
             "mapping": [{"groupid": "23", "group_name": "Strom", "site_id": site_id}],
             "certificate_tag": "component",
             "certificate_value": "certificate",
+            "target": 99.9,
         },
         headers=HEADERS,
     )
     assert saved_options.status_code == 200, saved_options.text
+    assert saved_options.json()["target"] == 99.9
+    too_high = client.put(
+        "/api/monitoring/zabbix/connection",
+        json={"mapping": [], "target": 101},
+        headers=HEADERS,
+    )
+    assert too_high.status_code == 422
     assert db.get(ZbxHost, "10103").site_id == site_id  # type: ignore[union-attr]
     db.expire_all()
     assert db.get(ZbxHost, "10101").site_id is None  # type: ignore[union-attr]
@@ -551,3 +603,204 @@ def test_inventory_gaps_and_actions(db: Session, tmp_path: Path) -> None:
         f"/api/monitoring/zabbix/devices/{spare.id}/unmonitored", headers=HEADERS
     ).json()
     assert spare.id in {row["id"] for row in back["missing"]}
+
+
+# --- Berichte -------------------------------------------------------------------------
+
+
+def test_intervals_and_days() -> None:
+    assert reports.merge([(5, 8), (1, 3), (2, 4), (8, 9)]) == [(1, 4), (5, 9)]
+    assert reports.subtract([(0, 10)], [(2, 3), (5, 12)]) == [(0, 2), (3, 5)]
+    assert reports.subtract([(0, 10)], []) == [(0, 10)]
+    assert reports.total([(0, 2), (3, 5)]) == 4
+    start, end = reports.day_bounds(date(2026, 3, 29))  # Zeitumstellung: 23 Stunden
+    assert end - start == 23 * 3600
+
+
+def at(day: date, hour: float) -> int:
+    start, _ = reports.day_bounds(day)
+    return int(start + hour * 3600)
+
+
+def event(
+    eventid: str, hostid: str, clock: int, r_eventid: str = "0", name: str = ""
+) -> dict[str, Any]:
+    return {
+        "eventid": eventid,
+        "objectid": f"90{eventid}",
+        "name": name or f"Ausfall {eventid}",
+        "severity": "4",
+        "clock": str(clock),
+        "r_eventid": r_eventid,
+        "hosts": [{"hostid": hostid}],
+    }
+
+
+@pytest.mark.db
+def test_reports_downtime_and_rights(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    configure(db, settings)
+    fake = FakeZabbix("zabbix-8.0")
+    collector.collect(db, settings, fake)
+    site_id = site(db)
+    db.add(ZbxGroupSite(groupid="21", group_name="Standort A/Server", site_id=site_id, position=0))
+    db.commit()
+    collector.assign_sites(db)
+    db.commit()
+
+    day = reports.local_day(now_utc()) - timedelta(days=1)
+    status = db.get(ZbxStatus, 1)
+    assert status is not None and status.reports_since == day + timedelta(days=1)
+    status.reports_since = day
+    # Wartung von Server A 10 bis 11 Uhr (eigene Beobachtung)
+    db.add(
+        ZbxMaintLog(
+            hostid="10101",
+            started_at=datetime.fromtimestamp(at(day, 10), UTC),
+            ended_at=datetime.fromtimestamp(at(day, 11), UTC),
+        )
+    )
+    db.commit()
+    outages = [
+        event("701", "10102", at(day, 8)),  # Switch B: seit 8 Uhr offen
+        event("702", "10101", at(day, 10.5), "801"),  # bis 12 Uhr, teils in Wartung
+        event("703", "10101", at(day, 11.5), "802"),  # bis 12:30, überlappt
+        event("704", "10101", at(day, -30), "803"),  # vor dem Tag beendet
+    ]
+    other = event("705", "10101", at(day, 9), "804", name="Hohe Last")
+    clocks = {"801": at(day, 12), "802": at(day, 12.5), "803": at(day, -29), "804": at(day, 9.25)}
+
+    def events(params: dict[str, Any]) -> list[dict[str, Any]]:
+        if "eventids" in params:
+            return [
+                {"eventid": eventid, "clock": str(clocks[eventid])}
+                for eventid in params["eventids"]
+            ]
+        if "tags" in params:
+            assert params["tags"][0]["tag"] == "scope" and params["severities"] == [4, 5]
+            return outages
+        return [*outages[:3], other]
+
+    fake.handlers["event.get"] = events
+    now = datetime.fromtimestamp(at(day, 30), UTC)
+    assert reports.run_reports(db, ZabbixClient(CONFIG, fake), now) == {"tage": 1}
+    rows = {row.hostid: row for row in db.scalars(select(ZbxDowntime))}
+    _, end = reports.day_bounds(day)
+    assert rows["10101"].maintenance_s == 3600
+    assert rows["10101"].downtime_s == 5400  # 11:00 bis 12:30
+    assert rows["10102"].downtime_s == end - at(day, 8)
+    assert rows["10104"].monitored_s == 0  # in Zabbix abgeschaltet
+    assert rows["10101"].site == "Gebäude A (Beispielstadt)"
+    assert db.get(ZbxOutage, "701") is not None and db.get(ZbxOutage, "704") is None
+    # Nichts mehr offen
+    assert reports.run_reports(db, ZabbixClient(CONFIG, fake), now) == {"tage": 0}
+
+    client = client_for(make_app(settings))
+    login_as(client, ["Monitoring.Reader"], oid="zbx-bericht-leser")
+    data = client.get("/api/monitoring/zabbix/reports").json()
+    assert data["detail"] is True and data["target"] == 99.5
+    assert data["days"] == 1 and data["since"] == day.isoformat()
+    names = {row["name"]: row for row in data["rows"]}
+    assert names["Gebäude A (Beispielstadt)"]["downtime_s"] == 5400
+    assert data["triggers"][0]["count"] >= 1
+    assert data["outages"][0]["host"] == "Switch B"
+    by_group = client.get("/api/monitoring/zabbix/reports?split=gruppe").json()
+    assert {row["name"] for row in by_group["rows"]} >= {"Standort A/Server"}
+    assert client.get("/api/monitoring/zabbix/reports?split=host").status_code == 422
+
+    # Nur Berichte: Summen, keine Hostnamen und Auslöser, keine anderen Seiten
+    reporter = client_for(make_app(settings))
+    login_as(reporter, ["Monitoring.Berichte"], oid="zbx-bericht-gf")
+    limited = reporter.get("/api/monitoring/zabbix/reports").json()
+    assert limited["detail"] is False
+    assert limited["triggers"] is None and limited["outages"] is None
+    assert "Switch B" not in json.dumps(limited)
+    assert reporter.get("/api/monitoring/zabbix/hosts").status_code == 403
+    assert reporter.get("/api/monitoring/zabbix").status_code == 403
+    csv_response = reporter.get("/api/monitoring/zabbix/reports/export.csv")
+    assert csv_response.status_code == 200
+    text = csv_response.content.decode("utf-8-sig")
+    assert text.startswith("Standort;Hosts;Verfügbarkeit %") and "Gesamt" in text
+    assert "Switch B" not in text
+    assert (
+        reporter.post(
+            "/api/monitoring/zabbix/reports/printed",
+            json={"year": data["year"], "split": "standort"},
+            headers=HEADERS,
+        ).status_code
+        == 200
+    )
+    nobody = client_for(make_app(settings))
+    login_as(nobody, ["Budget.Reader"], oid="zbx-bericht-niemand")
+    assert nobody.get("/api/monitoring/zabbix/reports").status_code == 403
+
+
+def test_csv_cells_are_safe() -> None:
+    from werkbank.core.audit_api import safe_cell
+
+    assert safe_cell("=SUMME(A1)") == "'=SUMME(A1)"
+
+
+@pytest.mark.db
+def test_maintenance_is_observed(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    configure(db, settings)
+    collector.collect(db, settings, FakeZabbix("zabbix-8.0"))
+    logs = list(db.scalars(select(ZbxMaintLog)))
+    assert [log.hostid for log in logs] == ["10103"]
+    host = db.get(ZbxHost, "10103")
+    assert host is not None
+    later = logs[0].ended_at + timedelta(minutes=1)
+    reports.observe_maintenance(db, [host], later)
+    db.commit()
+    assert [log.ended_at for log in db.scalars(select(ZbxMaintLog))] == [later]
+    much_later = later + timedelta(minutes=30)
+    reports.observe_maintenance(db, [host], much_later)
+    db.commit()
+    assert len(list(db.scalars(select(ZbxMaintLog)))) == 2
+
+
+def test_redirect_is_explained_not_followed() -> None:
+    from werkbank.modules.monitoring.zabbix.client import redirect_message
+
+    text = redirect_message(302, "https://login.example.com/authorize?state=geheim&x=1")
+    assert "login.example.com/authorize" in text and "geheim" not in text
+    assert "HTTP 302" in redirect_message(302, None)
+
+
+def test_transport_does_not_follow_redirect(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(302, headers={"location": "https://sso.example.com/login?rd=x"})
+
+    transport = httpx.MockTransport(handler)
+    original = httpx.Client
+
+    def client(*args: Any, **kwargs: Any) -> httpx.Client:
+        kwargs["transport"] = transport
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "Client", client)
+    with pytest.raises(ZabbixError, match=r"sso\.example\.com/login"):
+        ZabbixClient(CONFIG).call("host.get", {})
+    assert len(seen) == 1
+
+
+def test_proxy_403_does_not_blame_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    transport = httpx.MockTransport(lambda request: httpx.Response(403, text="Forbidden"))
+    original = httpx.Client
+
+    def client(*args: Any, **kwargs: Any) -> httpx.Client:
+        kwargs["transport"] = transport
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "Client", client)
+    with pytest.raises(ZabbixError, match=r"bevor sie Zabbix erreicht") as caught:
+        ZabbixClient(CONFIG).call("host.get", {})
+    assert "Token ungültig" not in str(caught.value)

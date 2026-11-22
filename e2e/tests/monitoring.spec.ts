@@ -93,3 +93,45 @@ test("IT-Monitoring: Admins sehen die Verbindung zu Zabbix", async ({ page }) =>
   await expect(page.getByText(/noch nicht eingerichtet/)).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test("IT-Monitoring: Berichte für die Rolle nur mit Berichten", async ({ page }) => {
+  await loginAs(page, ["Monitoring.Berichte"], "Gerd Bericht");
+  await page.goto("/");
+  await openPage(page, "IT-Monitoring", "Berichte");
+  await expect(page).toHaveURL(/\/monitoring\/zabbix\/berichte$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Berichte" }),
+  ).toBeVisible();
+  await expect(page.getByText("99,50 %")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Als CSV exportieren" }),
+  ).toBeVisible();
+  // Ohne Hostdetails: keine Auslöser, keine anderen Zabbix-Seiten
+  await expect(
+    page.getByRole("heading", { name: "Häufigste Auslöser" }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Hosts", exact: true })).toHaveCount(0);
+  await expectNoA11yViolations(page);
+  await page.goto("/monitoring/zabbix/hosts");
+  await expect(
+    page.getByRole("heading", { name: "Seite nicht gefunden" }),
+  ).toBeVisible();
+  expect((await page.request.get("/api/monitoring/zabbix/hosts")).status()).toBe(403);
+  const csv = await page.request.get("/api/monitoring/zabbix/reports/export.csv");
+  expect(csv.status()).toBe(200);
+  expect(await csv.text()).toContain("Gesamt");
+});
+
+test("IT-Monitoring: Berichte mit Auslösern für Monitoring.Reader", async ({ page }) => {
+  await loginAs(page, ["Monitoring.Reader"], "Mona Monitoring");
+  await page.goto("/monitoring/zabbix/berichte");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Berichte" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Häufigste Auslöser" }),
+  ).toBeVisible();
+  await page.getByLabel("Aufteilen nach").selectOption("gruppe");
+  await expect(page.getByRole("heading", { name: "Nach Hostgruppe" })).toBeVisible();
+  await expectNoA11yViolations(page);
+});

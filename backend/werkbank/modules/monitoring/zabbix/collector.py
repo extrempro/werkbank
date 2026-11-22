@@ -4,6 +4,7 @@
 - wartungen (alle 15 Minuten)
 - stammdaten (stündlich): Version, Hosts mit Gruppen, Templates und Inventar, Prüfung des
   Dienstkontos
+- berichte (stündlich geprüft): Ausfallzeiten und Auslöser der abgeschlossenen Tage
 
 Ein ausgefallenes Zabbix blockiert die Werkbank nicht: Fehler landen im Lauf, die Seiten
 zeigen den letzten Stand mit Zeit. Der Auftrag selbst schlägt deshalb nie fehl.
@@ -37,6 +38,7 @@ from werkbank.modules.monitoring.zabbix.models import (
     ZbxRun,
     ZbxStatus,
 )
+from werkbank.modules.monitoring.zabbix.reports import observe_maintenance, run_reports
 
 logger = logging.getLogger(__name__)
 
@@ -45,20 +47,24 @@ ZABBIX_JOB_INTERVAL = timedelta(minutes=1)
 TASK_FAST = "schnell"
 TASK_MAINTENANCE = "wartungen"
 TASK_MASTER = "stammdaten"
+TASK_REPORTS = "berichte"
 TASK_INTERVALS: dict[str, timedelta] = {
     TASK_FAST: timedelta(minutes=1),
     TASK_MAINTENANCE: timedelta(minutes=15),
     TASK_MASTER: timedelta(hours=1),
+    TASK_REPORTS: timedelta(hours=1),
 }
 TASK_LABELS = {
     TASK_FAST: "Probleme und Zustand",
     TASK_MAINTENANCE: "Wartungen",
     TASK_MASTER: "Hosts, Gruppen und Dienstkonto",
+    TASK_REPORTS: "Ausfallzeiten für die Berichte",
 }
 TASK_METHODS = {
     TASK_FAST: ["problem.get", "trigger.get", "host.get"],
     TASK_MAINTENANCE: ["maintenance.get"],
     TASK_MASTER: ["apiinfo.version", "host.get", "hostgroup.get", "role.get", "token.get"],
+    TASK_REPORTS: ["event.get"],
 }
 KEEP_RUNS_DAYS = 30
 # Kleiner Vorlauf, damit ein Auftrag, der ein paar Sekunden früher startet, nicht ausfällt
@@ -94,7 +100,7 @@ def due_tasks(db: Session, now: datetime, *, force_master: bool = False) -> list
     """Fällige Abfragen: Stammdaten zuerst, damit neue Hosts gleich Gruppen bekommen."""
     runs = last_runs(db)
     due: list[str] = []
-    for task in (TASK_MASTER, TASK_MAINTENANCE, TASK_FAST):
+    for task in (TASK_MASTER, TASK_MAINTENANCE, TASK_FAST, TASK_REPORTS):
         last = runs.get(task)
         if (
             last is None
@@ -151,6 +157,7 @@ def run_fast(db: Session, client: ZabbixClient, now: datetime) -> dict[str, int]
             db.add(row)
             existing[host.hostid] = row
         _apply_state(row, host, now)
+    observe_maintenance(db, existing.values(), now)
     problems = client.problems()
     trigger_hosts = client.trigger_hosts(sorted({problem.triggerid for problem in problems}))
     db.execute(delete(ZbxProblem))
@@ -256,6 +263,7 @@ TASKS: dict[str, Callable[[Session, ZabbixClient, datetime], dict[str, int]]] = 
     TASK_MASTER: run_master,
     TASK_MAINTENANCE: run_maintenances,
     TASK_FAST: run_fast,
+    TASK_REPORTS: run_reports,
 }
 
 
