@@ -326,6 +326,21 @@ export const HELP = {
     text: "Verknüpft das Ticket mit einem Gerät aus dem IT-Bestand. Auf der Seite des Geräts siehst du dann alle Tickets dazu.",
     topic: ["tickets", "arbeitshilfen"],
   },
+  "tickets.aufbewahrung": {
+    term: "Aufbewahrung",
+    text: "Wie lange geschlossene Tickets bleiben, bevor ein täglicher Lauf sie anonymisiert oder löscht. Ausgeschaltet bleibt alles erhalten.",
+    topic: ["tickets", "betrieb"],
+  },
+  "tickets.export": {
+    term: "Export",
+    text: "Lädt die gefilterte Liste als Excel-Datei herunter, ohne Nachrichten. Exportieren darf nur die Bereichsverwaltung, und jeder Export steht im Protokoll.",
+    topic: ["tickets", "betrieb"],
+  },
+  "tickets.protokoll": {
+    term: "Protokoll",
+    text: "Wer wann was an Einstellungen, Rollen, Zuständigkeit oder Status geändert hat, ohne Texte. Einträge bleiben drei Jahre.",
+    topic: ["tickets", "betrieb"],
+  },
   "bestand.erneuerung": {
     term: "Erneuerung fällig",
     text: "Geräte, die älter sind als die Nutzungsdauer ihrer Art. Die Nutzungsdauer legst du in den Stammdaten bei den Hardware-Arten fest.",
@@ -384,6 +399,8 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/tickets": [["tickets", "uebersicht"]],
   "/tickets/neu": [["tickets", "uebersicht"]],
   "/tickets/einstellungen": [["tickets", "einstellungen"]],
+  "/tickets/uebersicht": [["tickets", "uebersicht"]],
+  "/tickets/protokoll": [["tickets", "betrieb"]],
   "/bestand/vorgaenge": [["it-bestand", "vorgaenge"]],
   "/bestand/statistik": [["it-bestand", "statistik"]],
   "/bestand/hardware": [["it-bestand", "hardware"]],

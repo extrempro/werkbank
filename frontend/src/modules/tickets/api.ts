@@ -146,6 +146,20 @@ export interface Ticket extends TicketItem {
   devices_enabled: boolean;
   device: Device | null;
   merged_into: number | null;
+  retention: TicketRetention;
+  anonymized_at: string | null;
+}
+
+export interface TicketRetention {
+  /** Gilt im Bereich eine Aufbewahrungsfrist? */
+  active: boolean;
+  months: number;
+  action: RetentionAction | "";
+  hold_until: string | null;
+  hold_reason: string;
+  hold_by: string;
+  /** Darf Ausnahmen setzen (Bereichsverwaltung). */
+  can_manage: boolean;
 }
 
 export interface Category {
@@ -395,6 +409,10 @@ export interface MailSettings {
   allowed_types: string[];
   processed_days: number;
   ignored_days: number;
+  /** „Letzte Eingänge“ ohne Ticket löschen nach (Tagen) */
+  intake_log_days: number;
+  /** „Zu prüfen“ ohne Entscheidung verwerfen nach (Tagen) */
+  review_days: number;
   reopen_policy: "days" | "always" | "new";
   reopen_days: number;
   sender_name: string;
@@ -657,4 +675,206 @@ export function updateTemplate(
 
 export function deleteTemplate(areaId: number, id: number): Promise<Template[]> {
   return deleteJson(`${SETTINGS}/areas/${areaId}/templates/${id}`);
+}
+
+// --- Betrieb (Phase 4) ---------------------------------------------------------------------
+
+export type RetentionAction = "anonymize" | "delete";
+
+export const RETENTION_ACTION_LABELS: Record<RetentionAction, string> = {
+  anonymize: "anonymisieren",
+  delete: "vollständig löschen",
+};
+
+/** Frist als Text, z. B. 24 → „2 Jahre“, 18 → „18 Monate“, 0 → „aus“. */
+export function retentionText(months: number): string {
+  if (months <= 0) {
+    return "aus";
+  }
+  if (months % 12 === 0) {
+    const years = months / 12;
+    return years === 1 ? "1 Jahr" : `${years} Jahre`;
+  }
+  return months === 1 ? "1 Monat" : `${months} Monate`;
+}
+
+export interface Count {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface Stats {
+  open: number;
+  mine: number;
+  unassigned_new: number;
+  waiting: number;
+  reminder: number;
+  overdue: number | null;
+  sla: { met: number; total: number } | null;
+  solved_recent: number;
+  created_by_channel: Count[];
+  open_by_category: Count[];
+  mine_list: TicketItem[];
+  unassigned_list: TicketItem[];
+}
+
+export function fetchStats(area: number | null): Promise<Stats> {
+  const query = area === null ? "" : `?area=${area}`;
+  return getJson(`${BASE}/stats${query}`);
+}
+
+/** Adresse des Excel-Exports (Download über den Browser, mit Sitzung). */
+export function exportUrl(view: View, area: number | null, q: string): string {
+  const params = new URLSearchParams({ view });
+  if (area !== null) {
+    params.set("area", String(area));
+  }
+  if (q.trim()) {
+    params.set("q", q.trim());
+  }
+  return `${BASE}/export?${params.toString()}`;
+}
+
+export interface RetentionDefault {
+  months: number;
+  action: RetentionAction;
+}
+
+export function fetchRetentionDefault(): Promise<RetentionDefault> {
+  return getJson(`${SETTINGS}/retention`);
+}
+
+export function saveRetentionDefault(body: RetentionDefault): Promise<RetentionDefault> {
+  return putJson(`${SETTINGS}/retention`, body);
+}
+
+export interface RetentionRun {
+  started_at: string;
+  anonymized: number;
+  deleted: number;
+  holds_expired: number;
+}
+
+export interface AreaRetention {
+  custom: boolean;
+  months: number;
+  action: RetentionAction;
+  default: RetentionDefault;
+  effective_months: number;
+  effective_action: RetentionAction;
+  due: number;
+  due_numbers: number[];
+  holds: number;
+  holds_expiring: number[];
+  runs: RetentionRun[];
+}
+
+export interface AreaRetentionInput {
+  custom: boolean;
+  months: number;
+  action: RetentionAction;
+}
+
+export function fetchAreaRetention(areaId: number): Promise<AreaRetention> {
+  return getJson(`${SETTINGS}/areas/${areaId}/retention`);
+}
+
+export function saveAreaRetention(
+  areaId: number,
+  body: AreaRetentionInput,
+): Promise<AreaRetention> {
+  return putJson(`${SETTINGS}/areas/${areaId}/retention`, body);
+}
+
+export function previewAreaRetention(
+  areaId: number,
+  body: AreaRetentionInput,
+): Promise<{ due: number }> {
+  return postJson(`${SETTINGS}/areas/${areaId}/retention/preview`, body);
+}
+
+export function setHold(number: number, reason: string): Promise<Ticket> {
+  return putJson(`${BASE}/${number}/hold`, { reason });
+}
+
+export function clearHold(number: number): Promise<Ticket> {
+  return deleteJson(`${BASE}/${number}/hold`);
+}
+
+export interface AuditEntry {
+  occurred_at: string;
+  actor_name: string;
+  area: string;
+  action: string;
+  ticket_number: number | null;
+  details: Record<string, unknown>;
+}
+
+export function fetchAudit(
+  area: number | null,
+  offset: number,
+): Promise<{ items: AuditEntry[]; has_more: boolean }> {
+  const params = new URLSearchParams({ offset: String(offset) });
+  if (area !== null) {
+    params.set("area", String(area));
+  }
+  return getJson(`${SETTINGS}/audit?${params.toString()}`);
+}
+
+/** Bezeichnung einer Aktion im Protokoll (unbekannte bleiben, wie sie sind). */
+export const AUDIT_LABELS: Record<string, string> = {
+  bereich_angelegt: "Bereich angelegt",
+  bereich_geaendert: "Bereich geändert",
+  bereich_zuweisung: "Zuweisung geändert",
+  bereich_mail_geaendert: "E-Mail-Einstellungen geändert",
+  bereich_fristen_geraete: "Fristen und Geräte geändert",
+  rolle_vergeben: "Rolle vergeben",
+  rolle_entzogen: "Rolle entzogen",
+  kategorie_angelegt: "Kategorie angelegt",
+  kategorie_geaendert: "Kategorie geändert",
+  baustein_angelegt: "Textbaustein angelegt",
+  baustein_geaendert: "Textbaustein geändert",
+  baustein_geloescht: "Textbaustein gelöscht",
+  gestaltung_geaendert: "Mail-Gestaltung geändert",
+  gestaltung_logo: "Logo hochgeladen",
+  gestaltung_logo_entfernt: "Logo entfernt",
+  absender_gesperrt: "Absender gesperrt",
+  absender_freigegeben: "Sperre aufgehoben",
+  ticket_angelegt: "Ticket angelegt",
+  ticket_antwort: "Antwort gesendet",
+  ticket_status: "Status geändert",
+  ticket_zustaendig: "Zuständigkeit geändert",
+  ticket_verschoben: "Ticket verschoben",
+  ticket_zusammengefuehrt: "Tickets zusammengeführt",
+  ticket_geraet: "Gerät geändert",
+  export: "Export als Excel",
+  aufbewahrung_vorgabe: "Vorgabe der Aufbewahrung geändert",
+  aufbewahrung_bereich: "Aufbewahrung des Bereichs geändert",
+  aufbewahrung_lauf: "Aufbewahrungslauf",
+  aufbewahrung_ausnahme: "Ausnahme gesetzt",
+  aufbewahrung_ausnahme_bestaetigt: "Ausnahme bestätigt",
+  aufbewahrung_ausnahme_aufgehoben: "Ausnahme aufgehoben",
+  aufbewahrung_ausnahme_verfallen: "Ausnahme verfallen",
+};
+
+/** Angaben eines Protokolleintrags als kurzer Text (ohne Verschachtelung über eine Ebene hinaus). */
+export function auditDetails(details: Record<string, unknown>): string {
+  const show = (value: unknown): string => {
+    if (value === null || value === undefined || value === "") {
+      return "–";
+    }
+    if (typeof value === "boolean") {
+      return value ? "ja" : "nein";
+    }
+    if (typeof value === "object") {
+      return Object.entries(value as Record<string, unknown>)
+        .map(([k, v]) => `${k} ${typeof v === "object" ? "…" : show(v)}`)
+        .join(", ");
+    }
+    return String(value);
+  };
+  return Object.entries(details)
+    .map(([key, value]) => `${key}: ${show(value)}`)
+    .join(" · ");
 }

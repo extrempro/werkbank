@@ -16,6 +16,10 @@ import {
   fetchTicketTemplates,
   fillTemplate,
   mergeTicket,
+  clearHold,
+  RETENTION_ACTION_LABELS,
+  retentionText,
+  setHold,
   searchDevices,
   setDevice,
   ticketPath,
@@ -797,9 +801,146 @@ function Facts({
         {ticket.permissions.edit && ticket.status !== "merged" && (
           <MergeSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
         )}
+        {(ticket.retention.active || ticket.retention.hold_until !== null) && (
+          <RetentionSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
+        )}
       </div>
       {dialog}
     </aside>
+  );
+}
+
+/** Aufbewahrung am Ticket: Frist des Bereichs, Ausnahme setzen, bestätigen, aufheben. */
+function RetentionSection({
+  ticket,
+  onSaved,
+  onMessage,
+}: {
+  ticket: Ticket;
+  onSaved: (ticket: Ticket) => void;
+  onMessage: (message: FeedbackMessage) => void;
+}) {
+  const [ask, dialog] = useConfirm();
+  const [editing, setEditing] = useState(false);
+  const [reason, setReason] = useState("");
+  const reasonId = useId();
+  const r = ticket.retention;
+  const held = r.hold_until !== null;
+  const rule =
+    r.active && r.action
+      ? `${retentionText(r.months)} nach dem Schließen ${RETENTION_ACTION_LABELS[r.action]}`
+      : "keine Frist im Bereich";
+
+  const save = (event: FormEvent) => {
+    event.preventDefault();
+    setHold(ticket.number, reason)
+      .then((result) => {
+        onSaved(result);
+        setEditing(false);
+        onMessage({
+          kind: "status",
+          text: held
+            ? "Die Ausnahme wurde für ein weiteres Jahr bestätigt."
+            : "Die Ausnahme wurde gesetzt.",
+        });
+      })
+      .catch((problem: unknown) =>
+        onMessage({
+          kind: "alert",
+          text: errorText(problem, "Die Ausnahme konnte nicht gespeichert werden."),
+        }),
+      );
+  };
+
+  const remove = () =>
+    ask(
+      {
+        title: "Ausnahme aufheben?",
+        text: r.active
+          ? `Danach gilt wieder die Frist des Bereichs (${rule}). Ist sie schon abgelaufen, ist das Ticket beim nächsten Lauf dran.`
+          : "Danach gilt wieder die Regel des Bereichs.",
+        action: "Aufheben",
+      },
+      () =>
+        clearHold(ticket.number)
+          .then((result) => {
+            onSaved(result);
+            onMessage({ kind: "status", text: "Die Ausnahme wurde aufgehoben." });
+          })
+          .catch((problem: unknown) =>
+            onMessage({
+              kind: "alert",
+              text: errorText(problem, "Die Ausnahme konnte nicht aufgehoben werden."),
+            }),
+          ),
+    );
+
+  return (
+    <div className="ticket-fact">
+      <span className="ticket-fact-label">
+        Aufbewahrung
+        <InfoTip term="tickets.aufbewahrung" />
+      </span>
+      <span className="small">{rule}</span>
+      {held && (
+        <span>
+          Ausnahme bis {formatDateTime(r.hold_until)}
+          <span className="small">
+            {" "}
+            · {r.hold_reason}
+            {r.hold_by && ` (${r.hold_by})`}
+          </span>
+        </span>
+      )}
+      {r.can_manage && !editing && (
+        <div className="actions">
+          <button
+            type="button"
+            className="button"
+            onClick={() => {
+              setReason(r.hold_reason);
+              setEditing(true);
+            }}
+          >
+            {held ? "Ausnahme bestätigen" : "Ausnahme setzen"}
+          </button>
+          {held && (
+            <button type="button" className="button button-secondary" onClick={remove}>
+              Aufheben
+            </button>
+          )}
+        </div>
+      )}
+      {r.can_manage && editing && (
+        <form className="ticket-template-form" onSubmit={save}>
+          <label htmlFor={reasonId}>Begründung (Pflicht)</label>
+          <textarea
+            id={reasonId}
+            rows={2}
+            required
+            maxLength={500}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
+          <p className="small">
+            Gilt ein Jahr; danach muss sie bestätigt werden, sonst verfällt sie.
+          </p>
+          <div className="actions">
+            <button type="submit" className="button button-primary" disabled={!reason.trim()}>
+              Speichern
+            </button>
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => setEditing(false)}
+            >
+              Abbrechen
+            </button>
+          </div>
+        </form>
+      )}
+      {dialog}
+    </div>
   );
 }
 
@@ -1275,6 +1416,12 @@ export function TicketPage({ number }: { number: number }) {
             {CHANNEL_LABELS[ticket.channel]} · {formatDateTime(ticket.created_at)}
           </p>
         </div>
+        {ticket.anonymized_at !== null && (
+          <p className="hint-box" role="note">
+            Dieses Ticket wurde am {formatDateTime(ticket.anonymized_at)} nach der
+            Aufbewahrungsfrist anonymisiert. Melder, Texte und Anhänge sind gelöscht.
+          </p>
+        )}
         {ticket.merged_into !== null && (
           <p className="hint-box" role="note">
             Zusammengeführt in{" "}

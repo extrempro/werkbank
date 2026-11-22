@@ -4,6 +4,32 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.101.0] – 2026-11-22
+
+### Tickets (Phase 4: Betrieb)
+
+- **Übersicht** (`/tickets/uebersicht`, Startseite des Bereichs) mit Kennzahlen (offen, mir zugewiesen, neu und frei, wartet, Erinnerung, gelöst in 30 Tagen; mit Fristen überfällig und eingehalten), Listen „Mir zugewiesen“ und „Neu und nicht zugewiesen“, Eingang nach Weg und offen nach Kategorie; `GET /api/tickets/stats`
+- **Export als Excel** der gefilterten Liste, nur für die Bereichsverwaltung und nur aus ihren Bereichen, ohne Texte; jeder Export im Protokoll; `GET /api/tickets/export`
+- **Aufbewahrung:** Vorgabe der Ticket-Verwaltung (Standard aus), Abweichung je Bereich, anonymisieren oder vollständig löschen nach Monaten oder Jahren ab dem Schließen; Vorschau „Beim nächsten Lauf betroffen“ vor dem Speichern; täglicher Auftrag `tickets.aufbewahrung` mit Protokoll der Läufe
+- **Ausnahmen** je Ticket mit Begründung durch die Bereichsverwaltung, ein Jahr gültig, Benachrichtigung 30 Tage vor Ende (`tickets.ausnahme`), ohne Bestätigung verfallen
+- Anonymisierte Tickets lassen sich nicht mehr ändern; eine Mail mit ihrer Nummer wird ein neues Ticket
+- **Rollen und Protokoll** (`/tickets/protokoll`): Rollen je Bereich und Protokoll des Moduls
+- **Fristen je Bereich** für „Letzte Eingänge“ ohne Ticket (Vorgabe 90 Tage, Wartungslauf) und „Zu prüfen“ ohne Entscheidung (Vorgabe 30 Tage, beim Abruf in „Ignoriert“ verschoben)
+- Benachrichtigung `tickets.pruefen` an die Bereichsverwaltung bei neuen Mails unter „Zu prüfen“ (nur Bereich und Link)
+- Migration `0067`
+
+### Intern
+
+- Excel-Schreiber von `modules/budget/xlsx.py` nach `core/xlsx.py` verschoben (gemeinsam für IT-Budget und Tickets); kein neues Paket
+
+### Dokumentation
+
+- spec.md (Stand T4, Entscheidungen), datenschutz.md, Handbuch (Übersicht; Aufbewahrung, Export und Protokoll), Info-Symbole
+
+### Tests
+
+- `test_tickets_ops.py`, `tickets.test.tsx`, E2E `tickets.spec.ts` (Übersicht, Aufbewahrung mit Ausnahme, Export, Protokoll)
+
 ## [0.100.0] – 2026-11-22
 
 ### Tickets (Phase 3: Arbeitshilfen)

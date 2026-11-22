@@ -198,6 +198,18 @@ class PermissionsOut(BaseModel):
     move: bool
 
 
+class RetentionOut(BaseModel):
+    """Aufbewahrung am Ticket: Ausnahme (bis, Begründung, von wem) und ob eine Frist gilt."""
+
+    active: bool
+    months: int
+    action: str
+    hold_until: datetime | None
+    hold_reason: str
+    hold_by: str
+    can_manage: bool
+
+
 class TicketOut(TicketItem):
     reporter_mail: str
     created_by: str
@@ -218,6 +230,8 @@ class TicketOut(TicketItem):
     devices_enabled: bool
     device: DeviceRef | None
     merged_into: int | None
+    retention: RetentionOut
+    anonymized_at: datetime | None
 
 
 def _area_names(db: Session) -> dict[int, str]:
@@ -262,10 +276,18 @@ def _item(
     )
 
 
-def _visible_ticket(db: Session, access: TicketAccess, number: int) -> Ticket:
+def _visible_ticket(
+    db: Session, access: TicketAccess, number: int, *, write: bool = False
+) -> Ticket:
+    """Ticket aus den eigenen Bereichen (sonst 404); zum Ändern nicht anonymisiert (409)."""
     ticket = db.scalar(select(Ticket).where(Ticket.number == number))
     if ticket is None or not access.can_read(ticket.area_id):
         raise not_found()
+    if write and ticket.anonymized_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Das Ticket ist anonymisiert und lässt sich nicht mehr ändern.",
+        )
     return ticket
 
 
@@ -295,7 +317,8 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
         .where(TicketParticipant.ticket_id == ticket.id)
         .order_by(TicketParticipant.id)
     ).all()
-    can_edit = access.can_edit(ticket.area_id)
+    # Anonymisierte Tickets lassen sich nicht mehr bearbeiten
+    can_edit = access.can_edit(ticket.area_id) and ticket.anonymized_at is None
     files: dict[object, list[AttachmentOut]] = {}
     for att in db.scalars(
         select(TicketAttachment)
@@ -340,7 +363,7 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
         ],
         permissions=PermissionsOut(
             edit=can_edit,
-            note=access.can_read(ticket.area_id),
+            note=access.can_read(ticket.area_id) and ticket.anonymized_at is None,
             assign_any=access.is_area_admin(ticket.area_id),
             move=can_edit,
         ),
@@ -377,6 +400,25 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
         if area is not None and area.devices_enabled
         else None,
         merged_into=_merged_number(db, ticket),
+        retention=_retention(db, access, area, ticket),
+        anonymized_at=ticket.anonymized_at,
+    )
+
+
+def _retention(
+    db: Session, access: TicketAccess, area: TicketArea | None, ticket: Ticket
+) -> RetentionOut:
+    from werkbank.modules.tickets.retention import default_policy, policy_for
+
+    policy = policy_for(area, default_policy(db)) if area is not None else None
+    return RetentionOut(
+        active=bool(policy and policy.active),
+        months=policy.months if policy else 0,
+        action=policy.action if policy else "",
+        hold_until=ticket.hold_until,
+        hold_reason=ticket.hold_reason,
+        hold_by=ticket.hold_by_name,
+        can_manage=access.is_area_admin(ticket.area_id) and ticket.anonymized_at is None,
     )
 
 
@@ -609,7 +651,7 @@ def change_ticket(
     number: TicketNumber, body: ChangeIn, access: AccessDep, db: DbDep, settings: SettingsDep
 ) -> TicketOut:
     """Status und/oder Zuständigkeit ändern (mit Prüfung der Rechte)."""
-    ticket = _visible_ticket(db, access, number)
+    ticket = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(ticket.area_id):
         raise forbidden("Mit „Nur lesen“ kannst du Status und Zuständigkeit nicht ändern.")
     if ticket.status != body.expected_status or (ticket.assignee_oid or None) != (
@@ -774,7 +816,7 @@ def change_details(
     number: TicketNumber, body: DetailsIn, access: AccessDep, db: DbDep, settings: SettingsDep
 ) -> TicketOut:
     """Priorität und Beteiligte."""
-    ticket = _visible_ticket(db, access, number)
+    ticket = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(ticket.area_id):
         raise forbidden("Mit „Nur lesen“ kannst du die Angaben nicht ändern.")
     me_actor = actor(access)
@@ -820,7 +862,7 @@ def move_ticket(
     number: TicketNumber, body: MoveIn, access: AccessDep, db: DbDep, settings: SettingsDep
 ) -> MoveOut:
     """In einen anderen Bereich verschieben. Wer das Ziel nicht sieht, verliert den Zugriff."""
-    ticket = _visible_ticket(db, access, number)
+    ticket = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(ticket.area_id):
         raise forbidden("Mit „Nur lesen“ kannst du Tickets nicht verschieben.")
     target = db.get(TicketArea, body.area_id)
@@ -870,7 +912,7 @@ def add_note(
     number: TicketNumber, body: NoteIn, access: AccessDep, db: DbDep, settings: SettingsDep
 ) -> TicketOut:
     """Interne Notiz (auch mit „Nur lesen“). Der Melder sieht sie nicht und bekommt keine Mail."""
-    ticket = _visible_ticket(db, access, number)
+    ticket = _visible_ticket(db, access, number, write=True)
     db.add(
         TicketEntry(
             ticket_id=ticket.id,
@@ -905,7 +947,7 @@ def send_reply(
     number: TicketNumber, body: ReplyIn, access: AccessDep, db: DbDep, settings: SettingsDep
 ) -> TicketOut:
     """Antwort an den Melder (Mail aus dem Postfach des Bereichs, Beteiligte in Kopie)."""
-    ticket = _visible_ticket(db, access, number)
+    ticket = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(ticket.area_id):
         raise forbidden("Mit „Nur lesen“ kannst du nicht antworten.")
     area = db.get(TicketArea, ticket.area_id)

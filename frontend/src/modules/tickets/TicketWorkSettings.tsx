@@ -1,10 +1,22 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { errorText } from "../../api";
+import { errorText, formatDateTime } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
 import type { FeedbackMessage } from "../../components/Feedback";
 import { InfoTip } from "../../components/InfoTip";
 import {
   addCategory,
+  fetchAreaRetention,
+  fetchRetentionDefault,
+  previewAreaRetention,
+  RETENTION_ACTION_LABELS,
+  retentionText,
+  saveAreaRetention,
+  saveRetentionDefault,
+  ticketLabel,
+  type AreaRetention,
+  type AreaRetentionInput,
+  type RetentionAction,
+  type RetentionDefault,
   addTemplate,
   deleteTemplate,
   fetchCategories,
@@ -617,5 +629,336 @@ export function TemplatesSection({ areaId, onMessage }: { areaId: number; onMess
       )}
       {dialog}
     </div>
+  );
+}
+
+// --- Aufbewahrung --------------------------------------------------------------------------
+
+type Unit = "months" | "years";
+
+/** Monate in Zahl und Einheit für das Formular: 24 → 2 Jahre, 18 → 18 Monate. */
+export function splitMonths(months: number): { amount: number; unit: Unit } {
+  if (months > 0 && months % 12 === 0) {
+    return { amount: months / 12, unit: "years" };
+  }
+  return { amount: months, unit: "months" };
+}
+
+export function joinMonths(amount: number, unit: Unit): number {
+  const value = Math.max(0, Math.round(amount));
+  return Math.min(1200, unit === "years" ? value * 12 : value);
+}
+
+/** Frist und Aktion: Zahl, Einheit, „anonymisieren“ oder „vollständig löschen“. */
+function RuleFields({
+  months,
+  action,
+  onChange,
+  idPrefix,
+}: {
+  months: number;
+  action: RetentionAction;
+  onChange: (months: number, action: RetentionAction) => void;
+  idPrefix: string;
+}) {
+  const start = splitMonths(months || 36);
+  const [amount, setAmount] = useState(String(start.amount));
+  const [unit, setUnit] = useState<Unit>(start.unit);
+  const update = (nextAmount: string, nextUnit: Unit) => {
+    setAmount(nextAmount);
+    setUnit(nextUnit);
+    const parsed = Number(nextAmount);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      onChange(joinMonths(parsed, nextUnit), action);
+    }
+  };
+  return (
+    <div className="ticket-reminder-row">
+      <label htmlFor={`${idPrefix}-amount`}>Nach</label>
+      <input
+        id={`${idPrefix}-amount`}
+        type="number"
+        min={1}
+        max={unit === "years" ? 100 : 1200}
+        inputMode="numeric"
+        value={amount}
+        onChange={(event) => update(event.target.value, unit)}
+      />
+      <label htmlFor={`${idPrefix}-unit`} className="visually-hidden">
+        Einheit
+      </label>
+      <select
+        id={`${idPrefix}-unit`}
+        value={unit}
+        onChange={(event) => update(amount, event.target.value as Unit)}
+      >
+        <option value="months">Monaten</option>
+        <option value="years">Jahren</option>
+      </select>
+      <span>ab dem Schließen</span>
+      <label htmlFor={`${idPrefix}-action`} className="visually-hidden">
+        Was dann passiert
+      </label>
+      <select
+        id={`${idPrefix}-action`}
+        value={action}
+        onChange={(event) => onChange(months, event.target.value as RetentionAction)}
+      >
+        <option value="anonymize">anonymisieren</option>
+        <option value="delete">vollständig löschen</option>
+      </select>
+    </div>
+  );
+}
+
+function ruleText(months: number, action: RetentionAction): string {
+  return months > 0
+    ? `${retentionText(months)} nach dem Schließen ${RETENTION_ACTION_LABELS[action]}`
+    : "aus";
+}
+
+/** Vorgabe für alle Bereiche (nur Ticket-Verwaltung). */
+export function RetentionDefaultSection({ onMessage }: { onMessage: OnMessage }) {
+  const [saved, setSaved] = useState<RetentionDefault | null>(null);
+  const [form, setForm] = useState<RetentionDefault | null>(null);
+  const [ask, dialog] = useConfirm();
+  const idPrefix = useId();
+
+  useEffect(() => {
+    let active = true;
+    fetchRetentionDefault().then(
+      (result) => {
+        if (active) {
+          setSaved(result);
+          setForm(result);
+        }
+      },
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!form || !saved) {
+    return null;
+  }
+  const on = form.months > 0;
+  const changed = form.months !== saved.months || form.action !== saved.action;
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    ask(
+      {
+        title: on ? "Vorgabe der Aufbewahrung speichern?" : "Aufbewahrung ausschalten?",
+        text: on
+          ? `Gilt für alle Bereiche ohne eigene Regel: Tickets werden ${ruleText(form.months, form.action)}. Der tägliche Lauf führt das aus; das lässt sich nicht rückgängig machen.`
+          : "Bereiche ohne eigene Regel löschen dann nichts mehr automatisch.",
+        action: "Speichern",
+      },
+      () =>
+        saveRetentionDefault(form)
+          .then((result) => {
+            setSaved(result);
+            setForm(result);
+            onMessage({ kind: "status", text: "Die Vorgabe der Aufbewahrung wurde gespeichert." });
+          })
+          .catch(failed(onMessage, "Die Vorgabe konnte nicht gespeichert werden.")),
+    );
+  };
+
+  return (
+    <section className="panel" aria-labelledby={`${idPrefix}-title`}>
+      <div className="panel-head">
+        <h2 id={`${idPrefix}-title`}>
+          Aufbewahrung (Vorgabe)
+          <InfoTip term="tickets.aufbewahrung" />
+        </h2>
+      </div>
+      <form className="detail-body settings-form" onSubmit={submit}>
+        <p>
+          Gilt für alle Bereiche, die keine eigene Regel haben. Ausgeschaltet wird nichts gelöscht.
+        </p>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            checked={on}
+            onChange={(event) =>
+              setForm({ ...form, months: event.target.checked ? saved.months || 36 : 0 })
+            }
+          />{" "}
+          Tickets nach einer Frist anonymisieren oder löschen
+        </label>
+        {on && (
+          <RuleFields
+            months={form.months}
+            action={form.action}
+            idPrefix={idPrefix}
+            onChange={(months, action) => setForm({ months, action })}
+          />
+        )}
+        <p className="small">Jetzt gespeichert: {ruleText(saved.months, saved.action)}</p>
+        <div className="actions">
+          <button type="submit" className="button button-primary" disabled={!changed}>
+            Speichern
+          </button>
+        </div>
+      </form>
+      {dialog}
+    </section>
+  );
+}
+
+/** Aufbewahrung eines Bereichs: Vorgabe übernehmen oder eigene Regel, Vorschau, Läufe. */
+export function RetentionSection({ areaId, onMessage }: { areaId: number; onMessage: OnMessage }) {
+  const [data, setData] = useState<AreaRetention | null>(null);
+  const [form, setForm] = useState<AreaRetentionInput | null>(null);
+  const [ask, dialog] = useConfirm();
+  const idPrefix = useId();
+
+  const accept = (result: AreaRetention) => {
+    setData(result);
+    setForm({
+      custom: result.custom,
+      months: result.custom ? result.months : result.default.months,
+      action: result.custom ? result.action : result.default.action,
+    });
+  };
+
+  useEffect(() => {
+    let active = true;
+    fetchAreaRetention(areaId).then(
+      (result) => active && accept(result),
+      (problem: unknown) =>
+        active && failed(onMessage, "Die Aufbewahrung konnte nicht geladen werden.")(problem),
+    );
+    return () => {
+      active = false;
+    };
+    // onMessage ändert sich nicht inhaltlich
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areaId]);
+
+  if (!data || !form) {
+    return <p className="small">Wird geladen …</p>;
+  }
+
+  const store = () =>
+    saveAreaRetention(areaId, form)
+      .then((result) => {
+        accept(result);
+        onMessage({ kind: "status", text: "Die Aufbewahrung des Bereichs wurde gespeichert." });
+      })
+      .catch(failed(onMessage, "Die Aufbewahrung konnte nicht gespeichert werden."));
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    previewAreaRetention(areaId, form)
+      .then(({ due }) => {
+        const months = form.custom ? form.months : data.default.months;
+        const action = form.custom ? form.action : data.default.action;
+        ask(
+          {
+            title: "Aufbewahrung speichern?",
+            text:
+              months > 0
+                ? `Tickets werden ${ruleText(months, action)}. Beim nächsten Lauf betroffen: ${due === 1 ? "1 Ticket" : `${due} Tickets`}. Das lässt sich nicht rückgängig machen.`
+                : "In diesem Bereich wird dann nichts mehr automatisch gelöscht.",
+            action: "Speichern",
+          },
+          () => void store(),
+        );
+      })
+      .catch(failed(onMessage, "Die Vorschau konnte nicht berechnet werden."));
+  };
+
+  return (
+    <form className="settings-form" onSubmit={submit}>
+      <p className="small">
+        Wirksam jetzt: {ruleText(data.effective_months, data.effective_action)}
+        {data.custom ? " (eigene Regel)" : " (Vorgabe)"}.
+        <InfoTip term="tickets.aufbewahrung" />
+      </p>
+      <fieldset className="ticket-days">
+        <legend className="visually-hidden">Regel</legend>
+        <label className="check-label">
+          <input
+            type="radio"
+            name={`${idPrefix}-mode`}
+            checked={!form.custom}
+            onChange={() => setForm({ ...form, custom: false })}
+          />{" "}
+          Vorgabe übernehmen ({ruleText(data.default.months, data.default.action)})
+        </label>
+        <label className="check-label">
+          <input
+            type="radio"
+            name={`${idPrefix}-mode`}
+            checked={form.custom}
+            onChange={() => setForm({ ...form, custom: true })}
+          />{" "}
+          Eigene Regel
+        </label>
+      </fieldset>
+      {form.custom && (
+        <>
+          <label className="check-label">
+            <input
+              type="checkbox"
+              checked={form.months > 0}
+              onChange={(event) =>
+                setForm({ ...form, months: event.target.checked ? data.months || 36 : 0 })
+              }
+            />{" "}
+            Nach einer Frist anonymisieren oder löschen
+          </label>
+          {form.months > 0 && (
+            <RuleFields
+              months={form.months}
+              action={form.action}
+              idPrefix={idPrefix}
+              onChange={(months, action) => setForm({ ...form, months, action })}
+            />
+          )}
+        </>
+      )}
+      <div className="actions">
+        <button type="submit" className="button button-primary">
+          Speichern
+        </button>
+      </div>
+
+      <h3>Beim nächsten Lauf betroffen</h3>
+      <p>
+        {data.effective_months > 0
+          ? data.due === 0
+            ? "Keine Tickets."
+            : `${data.due === 1 ? "1 Ticket" : `${data.due} Tickets`}: ${data.due_numbers.map(ticketLabel).join(", ")}${data.due > data.due_numbers.length ? " …" : ""}`
+          : "Nichts, die Aufbewahrung ist aus."}
+      </p>
+      <p className="small">
+        Ausnahmen: {data.holds}
+        {data.holds_expiring.length > 0 &&
+          ` · enden in den nächsten 30 Tagen: ${data.holds_expiring.map(ticketLabel).join(", ")}`}
+      </p>
+
+      <h3>Letzte Läufe</h3>
+      {data.runs.length === 0 ? (
+        <p className="small">Noch kein Lauf.</p>
+      ) : (
+        <ul className="plain ticket-category-list">
+          {data.runs.map((run) => (
+            <li key={run.started_at}>
+              <span>{formatDateTime(run.started_at)}</span>
+              <span className="small">
+                anonymisiert {run.anonymized} · gelöscht {run.deleted} · Ausnahmen verfallen{" "}
+                {run.holds_expired}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {dialog}
+    </form>
   );
 }

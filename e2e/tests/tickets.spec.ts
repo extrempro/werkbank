@@ -373,6 +373,8 @@ test("Tickets: Mail an ein geschlossenes Ticket je nach Einstellung", async ({
     "allowed_types",
     "processed_days",
     "ignored_days",
+    "intake_log_days",
+    "review_days",
     "reopen_policy",
     "reopen_days",
     "sender_name",
@@ -444,11 +446,21 @@ test("Tickets: Einstellungen zur E-Mail und „Letzte Eingänge“", async ({
   await panel
     .getByRole("combobox", { name: /^Externe Absender/ })
     .selectOption({ label: "unbekannte erst prüfen" });
+  await expect(
+    panel.getByRole("spinbutton", {
+      name: "„Zu prüfen“ verwerfen nach (Tagen ohne Entscheidung)",
+    }),
+  ).toHaveValue("30");
+  await panel
+    .getByRole("spinbutton", {
+      name: "„Letzte Eingänge“ ohne Ticket löschen nach (Tagen)",
+    })
+    .fill("60");
   await panel.getByRole("button", { name: "Speichern" }).last().click();
   await expect(
     page.getByText("Die Einstellungen zur E-Mail wurden gespeichert."),
   ).toBeVisible();
-  await panel.getByText("Letzte Eingänge").click();
+  await panel.getByText("Letzte Eingänge", { exact: true }).click();
   await expect(
     panel.getByText("Abwesenheitsnotiz oder automatische Antwort", {
       exact: false,
@@ -596,4 +608,97 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
   // Mit Fristen zeigt das Ticket eine Frist
   await page.goto(`/tickets/${s.number}`);
   await expect(page.getByText(/Lösung bis/)).toBeVisible();
+});
+
+test("Tickets: Übersicht, Aufbewahrung mit Ausnahme, Export und Protokoll", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+
+  // Übersicht für Mitglieder
+  await loginAs(page, ["Tickets.Nutzer"], s.editor);
+  await page.goto("/tickets/uebersicht");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Übersicht" }),
+  ).toBeVisible();
+  const tiles = page.getByRole("list", { name: "Kennzahlen" });
+  await expect(tiles.getByRole("link", { name: /^Offen/ })).toBeVisible();
+  await expect(tiles.getByText("Überfällig")).toHaveCount(0);
+  await expectNoA11yViolations(page);
+  await expect(
+    page.getByRole("link", { name: "Als Excel exportieren" }),
+  ).toHaveCount(0);
+
+  // Bereichsverwaltung: eigene Regel mit Vorschau und Bestätigung
+  await loginAs(page, ["Tickets.Nutzer"], `Ina ${stamp}`);
+  await page.goto("/tickets/einstellungen");
+  const panel = page.getByRole("region", { name: s.areaName });
+  await panel.getByText("Aufbewahrung", { exact: true }).click();
+  await panel.getByRole("radio", { name: "Eigene Regel" }).check();
+  await panel
+    .getByRole("checkbox", {
+      name: "Nach einer Frist anonymisieren oder löschen",
+    })
+    .check();
+  await panel.getByRole("spinbutton", { name: "Nach" }).fill("2");
+  await panel.getByRole("combobox", { name: "Einheit" }).selectOption("years");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expectNoA11yViolations(page);
+  await panel.getByRole("button", { name: "Speichern" }).last().click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText(
+    "2 Jahre nach dem Schließen anonymisieren",
+  );
+  await expect(dialog).toContainText("Beim nächsten Lauf betroffen: 0 Tickets");
+  await dialog.getByRole("button", { name: "Speichern" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Die Aufbewahrung des Bereichs wurde gespeichert." }),
+  ).toBeVisible();
+  await expect(panel.getByText(/Wirksam jetzt: 2 Jahre/)).toBeVisible();
+
+  // Ausnahme am Ticket
+  await page.goto(`/tickets/${s.number}`);
+  await expect(
+    page.getByText("2 Jahre nach dem Schließen anonymisieren"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Ausnahme setzen" }).click();
+  await page.getByLabel("Begründung (Pflicht)").fill("Gewährleistung");
+  await page
+    .getByRole("complementary", { name: "Angaben zum Ticket" })
+    .getByRole("button", { name: "Speichern" })
+    .click();
+  await expect(page.getByText(/Ausnahme bis/)).toBeVisible();
+  await expect(page.getByText(/Gewährleistung/)).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Export nur für die Bereichsverwaltung
+  await page.goto("/tickets?ansicht=all");
+  const link = page.getByRole("link", { name: "Als Excel exportieren" });
+  await expect(link).toHaveAttribute(
+    "href",
+    /\/api\/tickets\/export\?view=all/,
+  );
+  const file = await page.request.get((await link.getAttribute("href")) ?? "");
+  expect(file.status()).toBe(200);
+  expect(file.headers()["content-disposition"]).toContain("attachment");
+
+  // Rollen und Protokoll
+  await page.goto("/tickets/protokoll");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Rollen und Protokoll" }),
+  ).toBeVisible();
+  const log = page.getByRole("region", { name: "Protokoll" });
+  await expect(log.getByText("Export als Excel").first()).toBeVisible();
+  await expect(log.getByText("Ausnahme gesetzt").first()).toBeVisible();
+  await expect(
+    log.getByText("Aufbewahrung des Bereichs geändert").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Rollen" }).getByText(s.areaName),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
 });

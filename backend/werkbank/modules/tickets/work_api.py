@@ -122,7 +122,7 @@ def merge_ticket(
     number: TicketNumber, body: MergeIn, access: AccessDep, db: DbDep, settings: SettingsDep
 ) -> TicketOut:
     """Dieses Ticket in ein offenes Ticket desselben Bereichs zusammenführen (ohne Rückgängig)."""
-    source = _visible_ticket(db, access, number)
+    source = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(source.area_id):
         raise forbidden("Mit „Nur lesen“ kannst du nicht zusammenführen.")
     if source.status == STATUS_MERGED:
@@ -291,7 +291,7 @@ def set_device(
     number: TicketNumber, body: DeviceIn, access: AccessDep, db: DbDep, settings: SettingsDep
 ) -> TicketOut:
     """Gerät verknüpfen oder lösen."""
-    ticket = _visible_ticket(db, access, number)
+    ticket = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(ticket.area_id):
         raise forbidden("Mit „Nur lesen“ kannst du kein Gerät verknüpfen.")
     area = _device_area(db, access, ticket)

@@ -1,7 +1,17 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { areasFor, TICKETS_MEMBER, TICKETS_SETTINGS } from "../../navigation";
-import { fillTemplate, parseTicketPath, type Entry, type Template, type Ticket } from "./api";
+import {
+  auditDetails,
+  exportUrl,
+  fillTemplate,
+  parseTicketPath,
+  retentionText,
+  type Entry,
+  type Stats,
+  type Template,
+  type Ticket,
+} from "./api";
 import { parseMails } from "./NewTicketPage";
 import {
   changeSummary,
@@ -13,8 +23,9 @@ import {
   splitEntries,
   TicketPage,
 } from "./TicketPage";
-import { TicketsPage, TicketTable } from "./TicketsPage";
-import { fromClock, toClock } from "./TicketWorkSettings";
+import { shareText, tilesOf, TicketsOverviewPage } from "./TicketsOverviewPage";
+import { TicketsPage, TicketTable, viewFromUrl } from "./TicketsPage";
+import { fromClock, joinMonths, splitMonths, toClock } from "./TicketWorkSettings";
 import { ticketNavRoles } from "./useTicketAccess";
 
 afterEach(() => {
@@ -73,6 +84,16 @@ function ticket(extra: Partial<Ticket> = {}): Ticket {
     devices_enabled: false,
     device: null,
     merged_into: null,
+    retention: {
+      active: false,
+      months: 0,
+      action: "",
+      hold_until: null,
+      hold_reason: "",
+      hold_by: "",
+      can_manage: false,
+    },
+    anonymized_at: null,
     ...extra,
   };
 }
@@ -136,6 +157,7 @@ describe("Hilfsfunktionen", () => {
     expect(roles).toEqual([TICKETS_MEMBER]);
     const area = areasFor(roles).find((a) => a.id === "tickets");
     expect(area?.groups.flatMap((g) => g.items.map((i) => i.path))).toEqual([
+      "/tickets/uebersicht",
       "/tickets",
       "/tickets/neu",
     ]);
@@ -529,5 +551,211 @@ describe("TicketPage: Arbeitshilfen", () => {
     fireEvent.keyDown(field, { key: "Enter" });
     expect(field.value).toBe("Danke! Hallo Max, zu T-1042: drucker");
     expect((screen.getByLabelText("Status danach") as HTMLSelectElement).value).toBe("solved");
+  });
+});
+
+function stats(extra: Partial<Stats> = {}): Stats {
+  return {
+    open: 5,
+    mine: 2,
+    unassigned_new: 1,
+    waiting: 1,
+    reminder: 0,
+    overdue: null,
+    sla: null,
+    solved_recent: 7,
+    created_by_channel: [
+      { key: "mail", label: "E-Mail", count: 3 },
+      { key: "manual", label: "Von Hand", count: 1 },
+      { key: "phone", label: "Telefon", count: 0 },
+    ],
+    open_by_category: [{ key: "0", label: "Ohne Kategorie", count: 5 }],
+    mine_list: [ticket({ number: 1050, subject: "Monitor flackert" })],
+    unassigned_list: [],
+    ...extra,
+  };
+}
+
+describe("Betrieb: Hilfsfunktionen", () => {
+  it("zeigt Frist-Kacheln nur mit Fristen", () => {
+    expect(tilesOf(stats()).map((t) => t.label)).not.toContain("Überfällig");
+    const labels = tilesOf(stats({ overdue: 2, sla: { met: 7, total: 8 } })).map(
+      (t) => `${t.label}=${t.value}`,
+    );
+    expect(labels).toContain("Überfällig=2");
+    expect(labels).toContain("Frist eingehalten=88 %");
+    expect(shareText(1, 0)).toBe("–");
+  });
+
+  it("liest die Ansicht aus der Adresse", () => {
+    expect(viewFromUrl("?ansicht=mine")).toBe("mine");
+    expect(viewFromUrl("?ansicht=kaputt")).toBe("open");
+    expect(viewFromUrl("")).toBe("open");
+  });
+
+  it("rechnet Fristen der Aufbewahrung um", () => {
+    expect(retentionText(0)).toBe("aus");
+    expect(retentionText(12)).toBe("1 Jahr");
+    expect(retentionText(36)).toBe("3 Jahre");
+    expect(retentionText(18)).toBe("18 Monate");
+    expect(splitMonths(24)).toEqual({ amount: 2, unit: "years" });
+    expect(splitMonths(18)).toEqual({ amount: 18, unit: "months" });
+    expect(joinMonths(3, "years")).toBe(36);
+    expect(joinMonths(5000, "months")).toBe(1200);
+  });
+
+  it("zeigt Angaben im Protokoll ohne Verschachtelung", () => {
+    expect(auditDetails({ anzahl: 3, suche: false })).toBe("anzahl: 3 · suche: nein");
+    expect(auditDetails({ nachher: { monate: 12, aktion: "delete" } })).toBe(
+      "nachher: monate 12, aktion delete",
+    );
+  });
+
+  it("baut die Adresse des Exports", () => {
+    expect(exportUrl("done", 2, " Drucker ")).toBe(
+      "/api/tickets/export?view=done&area=2&q=Drucker",
+    );
+  });
+});
+
+describe("Übersicht und Export", () => {
+  it("zeigt Kennzahlen, Listen und Balken", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(stats()), { status: 200 })),
+    );
+    render(
+      <TicketsOverviewPage
+        access={{ manager: false, settings: false, areas: [{ id: 1, name: "IT", role: "edit" }] }}
+      />,
+    );
+    const tiles = await screen.findByRole("list", { name: "Kennzahlen" });
+    const links = within(tiles).getAllByRole("link");
+    const mine = links.find((l) => l.textContent?.startsWith("Mir zugewiesen"));
+    expect(mine?.textContent).toBe("Mir zugewiesen: 2, offen");
+    expect(mine?.getAttribute("href")).toBe("/tickets?ansicht=mine");
+    expect(screen.getByRole("link", { name: /T-1050 Monitor flackert/ })).toBeTruthy();
+    expect(screen.getByText("Keine freien neuen Tickets.")).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Neue Tickets nach Eingangsweg" })).toBeTruthy();
+  });
+
+  it("bietet den Export nur der Bereichsverwaltung an", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ items: [], total: 0, has_more: false }), { status: 200 }),
+      ),
+    );
+    const { unmount } = render(
+      <TicketsPage
+        access={{ manager: false, settings: false, areas: [{ id: 1, name: "IT", role: "edit" }] }}
+      />,
+    );
+    await screen.findByText("Keine Tickets für diese Auswahl.");
+    expect(screen.queryByRole("link", { name: "Als Excel exportieren" })).toBeNull();
+    unmount();
+    render(
+      <TicketsPage
+        access={{
+          manager: false,
+          settings: true,
+          areas: [
+            { id: 1, name: "IT", role: "admin" },
+            { id: 2, name: "Haustechnik", role: "read" },
+          ],
+        }}
+      />,
+    );
+    const link = await screen.findByRole("link", { name: "Als Excel exportieren" });
+    expect(link.getAttribute("href")).toBe("/api/tickets/export?view=open");
+    expect(screen.getByText(/nur Tickets aus Bereichen, die du verwaltest/)).toBeTruthy();
+  });
+});
+
+describe("TicketPage: Aufbewahrung", () => {
+  it("setzt eine Ausnahme mit Begründung und hebt sie mit Bestätigung auf", async () => {
+    const calls: { method: string; body: unknown }[] = [];
+    const held = ticket({
+      status: "closed",
+      retention: {
+        active: true,
+        months: 36,
+        action: "anonymize",
+        hold_until: "2027-11-22T10:00:00Z",
+        hold_reason: "Prüfung",
+        hold_by: "Ina Beispiel",
+        can_manage: true,
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const method = init?.method ?? "GET";
+        if (url.endsWith("/hold")) {
+          calls.push({ method, body: init?.body ? JSON.parse(String(init.body)) : null });
+          return new Response(
+            JSON.stringify(
+              method === "PUT"
+                ? held
+                : ticket({ status: "closed", retention: { ...held.retention, hold_until: null } }),
+            ),
+            { status: 200 },
+          );
+        }
+        return new Response(
+          JSON.stringify(
+            ticket({
+              status: "closed",
+              retention: { ...held.retention, hold_until: null, hold_reason: "", hold_by: "" },
+            }),
+          ),
+          { status: 200 },
+        );
+      }),
+    );
+    render(<TicketPage number={1042} />);
+    expect(await screen.findByText("3 Jahre nach dem Schließen anonymisieren")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Ausnahme setzen" }));
+    const save = screen.getByRole("button", { name: "Speichern" }) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Begründung (Pflicht)"), {
+      target: { value: "Prüfung" },
+    });
+    fireEvent.click(save);
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ method: "PUT", body: { reason: "Prüfung" } });
+    expect(await screen.findByText(/Ausnahme bis/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Aufheben" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText(/gilt wieder die Frist des Bereichs/)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Aufheben" }));
+    await waitFor(() => expect(calls).toHaveLength(2));
+    expect(calls[1]?.method).toBe("DELETE");
+  });
+
+  it("zeigt anonymisierte Tickets ohne Bearbeitung", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify(
+              ticket({
+                status: "closed",
+                subject: "(anonymisiert)",
+                entries: [],
+                anonymized_at: "2026-11-01T03:00:00Z",
+                permissions: { edit: false, note: false, assign_any: false, move: false },
+              }),
+            ),
+            { status: 200 },
+          ),
+      ),
+    );
+    render(<TicketPage number={1042} />);
+    expect(await screen.findByText(/nach der Aufbewahrungsfrist/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Interne Notiz schreiben/ })).toBeNull();
+    expect((screen.getByLabelText("Status") as HTMLSelectElement).disabled).toBe(true);
   });
 });

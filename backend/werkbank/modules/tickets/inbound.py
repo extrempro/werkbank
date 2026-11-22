@@ -114,8 +114,9 @@ def _find_ticket(db: Session, mail: ParsedMail) -> Ticket | None:
     number = ticket_number(mail.subject)
     if number is not None:
         ticket = db.scalar(select(Ticket).where(Ticket.number == number))
+        # Anonymisierte Tickets nehmen nichts mehr an: dann ein neues Ticket
         if ticket is not None:
-            return ticket
+            return ticket if ticket.anonymized_at is None else None
     if mail.references:
         ticket_id = db.scalar(
             select(TicketEntry.ticket_id)
@@ -298,6 +299,8 @@ def _process(
     if ticket is not None and ticket.status == STATUS_MERGED:
         # Antworten auf Mails eines zusammengeführten Tickets landen im Ziel
         ticket = follow_merged(db, ticket)
+    if ticket is not None and ticket.anonymized_at is not None:
+        ticket = None
     if ticket is not None:
         # Geschlossen: je nach Einstellung wieder öffnen oder neues Ticket mit Bezug.
         if ticket.status not in (STATUS_CLOSED, STATUS_MERGED) or (
@@ -427,9 +430,41 @@ def _new_ticket(
     return Outcome("processed", "neu", detail, ticket)
 
 
+def expire_reviews(db: Session, mailbox: Mailbox | None, area: TicketArea) -> int:
+    """Mails unter „Zu prüfen“, über die nach `review_days` niemand entschieden hat, verwerfen:
+    erst in „Ignoriert“ verschieben, dann den Eintrag löschen (klappt das Verschieben nicht,
+    bleibt der Eintrag, damit die Mail nicht erneut eingelesen wird)."""
+    limit = now_utc() - timedelta(days=max(area.review_days, 1))
+    expired = db.scalars(
+        select(TicketReview).where(
+            TicketReview.area_id == area.id, TicketReview.received_at < limit
+        )
+    ).all()
+    count = 0
+    for review in expired:
+        if mailbox is not None and review.graph_id:
+            try:
+                mailbox.move(area.mailbox, review.graph_id, FOLDER_IGNORED)
+            except MailboxError:
+                continue
+        _log(
+            db,
+            area,
+            None,
+            "ignoriert",
+            f"Zu prüfen: nach {area.review_days} Tagen ohne Entscheidung verworfen",
+            None,
+        )
+        protocol(db, SYSTEM, "pruefen_verfallen", area_id=area.id)
+        db.delete(review)
+        count += 1
+    db.commit()
+    return count
+
+
 def poll_area(db: Session, settings: Settings, mailbox: Mailbox, area: TicketArea) -> int:
     """Posteingang eines Bereichs abarbeiten, danach alte Mails in den Ordnern löschen."""
-    count = 0
+    count = expire_reviews(db, mailbox, area)
     reviewing = set(
         db.scalars(select(TicketReview.graph_id).where(TicketReview.area_id == area.id))
     )

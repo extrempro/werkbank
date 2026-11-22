@@ -1,7 +1,7 @@
 """Aufträge des Moduls Tickets für den Worker."""
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -11,11 +11,14 @@ from werkbank.config import Settings
 from werkbank.core.sessions import now_utc
 from werkbank.modules.tickets.access import GroupSourceError, TestGroupSource, group_source
 from werkbank.modules.tickets.models import (
+    TicketArea,
     TicketAreaGrant,
     TicketAudit,
     TicketGroupMember,
+    TicketMailLog,
     TicketMembershipCache,
 )
+from werkbank.modules.tickets.retention import run_retention
 from werkbank.modules.tickets.service import AUDIT_KEEP_DAYS, auto_close, fire_reminders
 
 logger = logging.getLogger(__name__)
@@ -26,6 +29,8 @@ HOUSEKEEPING = "tickets.wartung"
 HOUSEKEEPING_INTERVAL = timedelta(hours=1)
 REMINDERS = "tickets.erinnerungen"
 REMINDERS_INTERVAL = timedelta(minutes=5)
+RETENTION = "tickets.aufbewahrung"
+RETENTION_INTERVAL = timedelta(days=1)
 
 
 def sync_groups(db: Session, settings: Settings) -> int:
@@ -82,7 +87,24 @@ def housekeeping(db: Session) -> None:
     db.execute(
         delete(TicketAudit).where(TicketAudit.occurred_at < now - timedelta(days=AUDIT_KEEP_DAYS))
     )
+    prune_intake_log(db, now)
     db.commit()
+
+
+def prune_intake_log(db: Session, now: datetime) -> int:
+    """„Letzte Eingänge“ ohne Ticket je Bereich nach `intake_log_days` löschen. Zeilen zu einem
+    Ticket gehen mit dessen Aufbewahrung."""
+    removed = 0
+    for area_id, days in db.execute(select(TicketArea.id, TicketArea.intake_log_days)).tuples():
+        result = db.execute(
+            delete(TicketMailLog).where(
+                TicketMailLog.area_id == area_id,
+                TicketMailLog.ticket_number.is_(None),
+                TicketMailLog.created_at < now - timedelta(days=max(days, 1)),
+            )
+        )
+        removed += result.rowcount or 0  # type: ignore[attr-defined]
+    return removed
 
 
 def housekeeping_job(db: Session, settings: Settings, payload: dict[str, Any]) -> None:
@@ -155,3 +177,7 @@ def reminders_job(db: Session, settings: Settings, payload: dict[str, Any]) -> N
     fire_reminders(db)
     db.commit()
     sla_missed_mails(db, settings)
+
+
+def retention_job(db: Session, settings: Settings, payload: dict[str, Any]) -> None:
+    run_retention(db, settings)

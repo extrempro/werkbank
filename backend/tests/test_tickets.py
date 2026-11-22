@@ -24,6 +24,8 @@ from werkbank.modules.tickets.models import (
     TicketGroupMember,
     TicketMembershipCache,
     TicketParticipant,
+    TicketRetention,
+    TicketRetentionRun,
 )
 
 ORIGIN = "https://testserver"
@@ -84,6 +86,8 @@ def db(db_session: Session) -> Session:
         TicketGroupMember,
         TicketMembershipCache,
         TicketAudit,
+        TicketRetention,
+        TicketRetentionRun,
     ):
         db_session.execute(delete(table))
     db_session.commit()

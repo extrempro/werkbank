@@ -70,6 +70,8 @@ class MailSettings(BaseModel):
     allowed_types: list[str] = Field(max_length=len(ALL_TYPES))
     processed_days: int = Field(ge=1, le=365)
     ignored_days: int = Field(ge=1, le=365)
+    intake_log_days: int = Field(ge=7, le=3650)
+    review_days: int = Field(ge=1, le=365)
     reopen_policy: Literal["days", "always", "new"]
     reopen_days: int = Field(ge=0, le=365)
     sender_name: str = Field(max_length=120)
@@ -125,6 +127,8 @@ def _out(area: TicketArea, settings_ok: bool, domains: list[str]) -> MailSetting
         allowed_types=list(area.allowed_types or []),
         processed_days=area.processed_days,
         ignored_days=area.ignored_days,
+        intake_log_days=area.intake_log_days,
+        review_days=area.review_days,
         reopen_policy=area.reopen_policy,  # type: ignore[arg-type]
         reopen_days=area.reopen_days,
         sender_name=area.sender_name,

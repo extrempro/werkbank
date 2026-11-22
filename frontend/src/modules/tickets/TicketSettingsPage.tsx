@@ -25,7 +25,13 @@ import {
   MailSettingsSection,
   ReviewSection,
 } from "./TicketMailSettings";
-import { CategoriesSection, TemplatesSection, WorkSection } from "./TicketWorkSettings";
+import {
+  CategoriesSection,
+  RetentionDefaultSection,
+  RetentionSection,
+  TemplatesSection,
+  WorkSection,
+} from "./TicketWorkSettings";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
 
 /** Aufklappbarer Abschnitt; der Inhalt lädt erst beim ersten Öffnen. */
@@ -418,6 +424,9 @@ function AreaPanel({
         <LazySection title="Textbausteine">
           {() => <TemplatesSection areaId={area.id} onMessage={onMessage} />}
         </LazySection>
+        <LazySection title="Aufbewahrung">
+          {() => <RetentionSection areaId={area.id} onMessage={onMessage} />}
+        </LazySection>
       </div>
       {dialog}
     </section>
@@ -590,6 +599,7 @@ export function TicketSettingsPage() {
       {!failed && !data && <p role="status">Wird geladen …</p>}
       {data?.manager && <NewAreaForm onCreated={replace} onMessage={setMessage} />}
       {data?.manager && <DesignSection onMessage={setMessage} />}
+      {data?.manager && <RetentionDefaultSection onMessage={setMessage} />}
       {data && data.areas.length === 0 && (
         <p className="panel panel-empty">
           Es gibt noch keinen Bereich.{data.manager ? " Lege oben den ersten an." : ""}
