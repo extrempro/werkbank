@@ -12261,6 +12261,11 @@ input[type="file"] {
   justify-content: center;
 }
 
+/* Fokus und Sprungziele landen nicht unter der Antwortleiste. */
+html:has(.ticket-composer) {
+  scroll-padding-bottom: 96px;
+}
+
 .ticket-composer {
   position: sticky;
   bottom: 0;

@@ -343,6 +343,8 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
   const panel = page.getByRole("region", { name: /Weiterleiten:/ });
   await panel.getByLabel(/^An/).fill("service@example.com");
   await panel.getByLabel(/Text dazu/).fill("Bitte prüfen.");
+  // Am Seitenende liegt die Antwortleiste an ihrem Platz und verdeckt keine Knöpfe.
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expectNoA11yViolations(page);
   await panel.getByRole("button", { name: "Weiterleiten" }).click();
   await expect(
