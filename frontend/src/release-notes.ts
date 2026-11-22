@@ -24,6 +24,24 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.88.1",
+    date: "2026-11-22",
+    summary: "Info-Blasen, Abstände und lange Texte an vielen Stellen korrigiert.",
+    sections: [
+      {
+        area: "Behoben",
+        entries: [
+          "Info-Blasen werden nicht mehr abgeschnitten, zum Beispiel im IT-Budget auf der Übersicht. Ist unten kein Platz, öffnen sie nach oben.",
+          "Die Statistik im IT-Bestand wird wieder richtig angezeigt.",
+          "In der Verwaltung stehen die Felder für Logos und Favicon wieder ordentlich in ihrer Karte.",
+          "Das Suchfeld in den IT-Tools sieht wieder wie ein Eingabefeld aus.",
+          "Auf dem Handy stehen „Bearbeiten“ und „Löschen“ nebeneinander unter dem Titel statt übereinander.",
+          "Lange Namen und Begriffe laufen nicht mehr aus ihren Kästen, etwa bei Räumen, im Audit-Log und in „Begriffe A–Z“.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.88.0",
     date: "2026-11-21",
     summary:

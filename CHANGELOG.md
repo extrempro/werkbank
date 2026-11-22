@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.88.1] – 2026-11-22
+
+### Behoben
+
+- **Info-Blasen** (`components/InfoTip.tsx`): Die Blase liegt jetzt fest im Fenster (`position: fixed`), misst ihren Platz und bleibt mit 8 px Abstand im sichtbaren Bereich; ist unten kein Platz, öffnet sie nach oben, der Pfeil zeigt weiter auf das „i“. Vorher wurde sie in Karten mit `overflow` abgeschnitten, z. B. im IT-Budget auf der Übersicht. Text „Geplant“ in `help/terms.ts` an die Übersicht angepasst
+- **IT-Bestand › Statistik**: Die Seite war seit 0.86.0 kaputt, weil die Budget-Statistik die Klassen `.stat-grid`, `.stat-bar` und `.stat-legend` neu belegt hatte (Karten lagen übereinander und über dem Kopf). Die Klassen der Budget-Statistik heißen jetzt `.stat-gridline`, `.stat-yearbar` und `.stat-keys`
+- **Verwaltung › Allgemein**: Die drei Bildfelder für Logos und Favicon liefen aus der Karte und übereinander (`fieldset` mit `min-width: min-content`); jetzt `fieldset { min-width: 0 }` und `input[type="file"] { max-width: 100% }`. Auswahl „Größe beim Hochladen“ breit genug für ihren Text
+- **IT-Tools**: Das Suchfeld „Tool suchen“ war nur eine dünne Linie; jetzt wie die anderen Eingabefelder
+- **Kartenköpfe** (`.panel-head`): Titel und Knöpfe brechen bei wenig Platz um, die Knöpfe stehen dann gemeinsam in einer Zeile unter dem Titel statt übereinander (z. B. Arbeitsplatz, Stelle, Jour Fixe, Rollen und Ansprechpartner)
+- **Listen mit Knöpfen** im IT-Budget (Tags, Partner): „Umbenennen/Bearbeiten“ und „Löschen“ stehen nebeneinander
+- **Standorte**: Lange Raumnamen brechen im Grundriss um, die Raum-Seite neben dem Grundriss bleibt in ihrer Karte
+- **Handbuch › Begriffe A–Z**: Begriffe, Erklärungen und Links laufen nicht mehr aus der Seite (Handy, Tablet und PC)
+- **Audit-Log** in der Kartenansicht (Handy, Tablet): Aktion und Details brechen um
+- Kurzname „Verwaltung“ in der Bereichsleiste nicht mehr abgeschnitten; lange Wörter in Hinweisen der Verwaltung brechen um
+
 ## [0.88.0] – 2026-11-21
 
 ### Bedienung

@@ -343,6 +343,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
   margin: 0;
   padding: 12px;
   border: 1px solid var(--farbe-rand);
@@ -614,7 +615,7 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.6875rem;
+  font-size: 0.65rem;
   font-weight: 600;
   line-height: 1.2;
 }
@@ -2013,6 +2014,7 @@ section + section {
 
 .panel-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -3632,6 +3634,14 @@ p.badges {
   max-width: 16rem;
 }
 
+.settings-form p {
+  overflow-wrap: anywhere;
+}
+
+.settings-form .narrow-auto {
+  max-width: 22rem;
+}
+
 .settings-form input:not([type="checkbox"]),
 .settings-form select {
   min-height: 44px;
@@ -3990,6 +4000,18 @@ p.badges {
   max-width: 28rem;
   font-size: 0.875rem;
   font-weight: 600;
+}
+
+.tool-search input {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
 }
 
 .tool-cards {
@@ -4999,6 +5021,7 @@ html {
 
 .budget-list li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -5093,6 +5116,12 @@ html {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.budget-list li > .budget-row-actions,
+td > .budget-row-actions {
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 
 .budget-merge {
@@ -5896,21 +5925,27 @@ html {
 
 .handbook-terms > div {
   display: grid;
-  grid-template-columns: minmax(10rem, 14rem) 1fr;
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
   gap: 12px;
 }
 
 .handbook-terms dt {
+  min-width: 0;
   font-weight: 600;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .handbook-terms dd {
+  min-width: 0;
   margin: 0;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 @media (max-width: 640px) {
   .handbook-terms > div {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
   }
 }
@@ -5976,7 +6011,7 @@ html {
 }
 
 .handbook-glossary dd a {
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* Seitenmenü des Handbuchs: Bereiche zum Aufklappen, darin Teile mit Überschrift */
@@ -6137,9 +6172,8 @@ html {
 }
 
 .info-bubble {
-  position: absolute;
-  top: calc(100% + 6px);
-  z-index: 40;
+  position: fixed;
+  z-index: 60;
   display: grid;
   gap: 6px;
   width: min(280px, calc(100vw - 32px));
@@ -6160,11 +6194,12 @@ html {
   white-space: normal;
 }
 
-/* Spitze zum „i“ */
+/* Spitze zum „i“ (Lage aus InfoTip.tsx) */
 .info-bubble::before {
   content: "";
   position: absolute;
   top: -7px;
+  left: calc(var(--pfeil-x, 20px) - 6px);
   width: 12px;
   height: 12px;
   border-top: 1px solid var(--farbe-blase-rand);
@@ -6173,20 +6208,10 @@ html {
   transform: rotate(45deg);
 }
 
-.info-bubble-right {
-  left: -16px;
-}
-
-.info-bubble-right::before {
-  left: 20px;
-}
-
-.info-bubble-left {
-  right: -16px;
-}
-
-.info-bubble-left::before {
-  right: 20px;
+.info-bubble-above::before {
+  top: auto;
+  bottom: -7px;
+  transform: rotate(225deg);
 }
 
 .info-bubble-link {
@@ -6270,6 +6295,12 @@ html {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+/* Knöpfe im Kopf einer Karte: lieber gemeinsam unter den Titel als übereinander */
+.panel-head > .project-actions {
+  flex-shrink: 0;
+  max-width: 100%;
 }
 
 .project-tabs {
@@ -7017,6 +7048,7 @@ html {
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+    overflow-wrap: anywhere;
     padding: 0;
     border: 0;
     background: none;
@@ -7031,6 +7063,10 @@ html {
     padding-bottom: 10px;
     border-bottom: 1px solid var(--farbe-trenner);
     font-size: 1rem;
+  }
+
+  .table-cards .details {
+    min-width: 0;
   }
 
   .table-cards td[data-label]::before {
@@ -7255,10 +7291,17 @@ html {
 
 .room-side > p {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .room-back {
   justify-self: start;
+}
+
+.room-side input:not([type="checkbox"]),
+.room-side select {
+  width: 100%;
+  min-width: 0;
 }
 
 .room-side .room-rect label {
@@ -7439,7 +7482,8 @@ html {
   align-items: start;
 }
 
-.plan-main {
+.plan-main,
+.room-side {
   min-width: 0;
 }
 
@@ -7528,6 +7572,7 @@ html {
   line-height: 1.2;
   text-align: left;
   text-overflow: ellipsis;
+  overflow-wrap: anywhere;
   cursor: inherit;
 }
 
@@ -10604,7 +10649,7 @@ html {
   background: none;
 }
 
-.stat-legend {
+.stat-keys {
   display: flex;
   flex: none;
   flex-wrap: wrap;
@@ -10616,7 +10661,7 @@ html {
   font-size: 0.875rem;
 }
 
-.stat-legend li {
+.stat-keys li {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -10719,7 +10764,7 @@ html {
   border-bottom: 1px solid var(--farbe-rand-kontrast);
 }
 
-.stat-grid {
+.stat-gridline {
   position: absolute;
   right: 0;
   left: 0;
@@ -10789,7 +10834,7 @@ html {
 }
 
 .stat-plan.stat-column,
-.stat-plan.stat-bar,
+.stat-plan.stat-yearbar,
 .stat-plan.stat-bar-side,
 .stat-plan.stat-fill {
   border-style: dashed;
@@ -10847,7 +10892,7 @@ html {
   display: block;
 }
 
-.stat-bar {
+.stat-yearbar {
   position: absolute;
   left: 0;
   height: 13px;
@@ -11173,7 +11218,7 @@ html {
 
 @media (forced-colors: active) {
   .stat-column,
-  .stat-bar,
+  .stat-yearbar,
   .stat-bar-side,
   .stat-fill,
   .stat-key {
@@ -11359,4 +11404,13 @@ html {
   .confirm-dialog {
     border: 1px solid CanvasText;
   }
+}
+
+/* Dateiauswahl und Feldgruppen bleiben in ihrer Karte */
+fieldset {
+  min-width: 0;
+}
+
+input[type="file"] {
+  max-width: 100%;
 }

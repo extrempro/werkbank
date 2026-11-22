@@ -123,7 +123,7 @@ export const HELP = {
   // IT-Budget
   "budget.geplant": {
     term: "Geplant",
-    text: "Was für die Spielzeit vorgesehen ist, als Bruttobetrag.",
+    text: "Was für das gewählte Jahr vorgesehen ist, als Bruttobetrag.",
     topic: ["it-budget", "begriffe"],
   },
   "budget.ist": {
