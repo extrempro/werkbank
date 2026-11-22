@@ -138,7 +138,7 @@ def inbound(client: TestClient, area: int, raw: str) -> dict[str, Any]:
 
 
 @pytest.mark.db
-def test_new_mail_and_replies(db: Session, areas: dict[str, int]) -> None:  # noqa: F811
+def test_new_mail_and_replies(db: Session, areas: dict[str, int]) -> None:
     max_ = client_for("Max Muster")
     first = inbound(max_, areas["it"], mail(cc="kopie@example.com, it@example.com"))
     assert first["result"] == "neu"
@@ -172,7 +172,7 @@ def test_new_mail_and_replies(db: Session, areas: dict[str, int]) -> None:  # no
 
 
 @pytest.mark.db
-def test_filters_and_loop_protection(db: Session, areas: dict[str, int]) -> None:  # noqa: F811
+def test_filters_and_loop_protection(db: Session, areas: dict[str, int]) -> None:
     max_ = client_for("Max Muster")
     assert (
         inbound(max_, areas["it"], mail(headers="Auto-Submitted: auto-replied\r\n"))["result"]
@@ -197,7 +197,7 @@ def test_filters_and_loop_protection(db: Session, areas: dict[str, int]) -> None
 
 
 @pytest.mark.db
-def test_closed_ticket_policies(db: Session, areas: dict[str, int]) -> None:  # noqa: F811
+def test_closed_ticket_policies(db: Session, areas: dict[str, int]) -> None:
     max_ = client_for("Max Muster")
     number = inbound(max_, areas["it"], mail())["ticket_number"]
     db.execute(
@@ -311,7 +311,7 @@ def test_external_review_accept_and_block(
 
 
 @pytest.mark.db
-def test_attachments_and_download(db: Session, areas: dict[str, int]) -> None:  # noqa: F811
+def test_attachments_and_download(db: Session, areas: dict[str, int]) -> None:
     max_ = client_for("Max Muster")
     number = inbound(max_, areas["it"], mail_with_attachments())["ticket_number"]
     ticket = max_.get(f"{BASE}/{number}").json()
@@ -330,7 +330,7 @@ def test_attachments_and_download(db: Session, areas: dict[str, int]) -> None:  
 
 
 @pytest.mark.db
-def test_reply_status_mails_and_note_without_mail(db: Session, areas: dict[str, int]) -> None:  # noqa: F811
+def test_reply_status_mails_and_note_without_mail(db: Session, areas: dict[str, int]) -> None:
     max_ = client_for("Max Muster")
     number = inbound(max_, areas["it"], mail())["ticket_number"]
     max_.post(f"{BASE}/{number}/notes", json={"body": "Nur intern"})
@@ -373,7 +373,7 @@ def test_reply_status_mails_and_note_without_mail(db: Session, areas: dict[str, 
 
 
 @pytest.mark.db
-def test_design_only_for_manager(areas: dict[str, int]) -> None:  # noqa: F811
+def test_design_only_for_manager(areas: dict[str, int]) -> None:
     manager = client_for("Vera Verwaltung", ["Tickets.Verwaltung"])
     ina = client_for("Ina Beispiel")
     body = {
