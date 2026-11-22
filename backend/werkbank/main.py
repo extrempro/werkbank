@@ -57,6 +57,8 @@ from werkbank.modules.tenant.api import router as tenant_router
 from werkbank.modules.tenant.tasks import tenant_tasks
 from werkbank.modules.tenant.usage_api import router as tenant_usage_router
 from werkbank.modules.tickets.api import router as tickets_router
+from werkbank.modules.tickets.mail_api import router as tickets_mail_router
+from werkbank.modules.tickets.mail_api import test_router as tickets_mail_test_router
 from werkbank.modules.tickets.settings_api import router as tickets_settings_router
 from werkbank.modules.tickets.settings_api import test_router as tickets_test_router
 from werkbank.modules.tools.account import router as tools_account_router
@@ -141,6 +143,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(devices_router)
     # Einstellungen vor den Tickets, damit /api/tickets/settings nicht als Ticket-Nr. gilt
     app.include_router(tickets_settings_router)
+    app.include_router(tickets_mail_router)
+    app.include_router(tickets_mail_test_router)
     app.include_router(tickets_test_router)
     app.include_router(tickets_router)
 

@@ -48,6 +48,7 @@ from werkbank.modules.tenant.health import FETCH_HEALTH, fetch_health_job
 from werkbank.modules.tenant.inventory import FETCH_TENANT, fetch_inventory_job
 from werkbank.modules.tenant.notifications import tenant_notifications
 from werkbank.modules.tenant.usage import FETCH_USAGE, USAGE_INTERVAL, fetch_usage_job
+from werkbank.modules.tickets.inbound import POLL, POLL_INTERVAL, poll_job
 from werkbank.modules.tickets.jobs import (
     GROUP_SYNC,
     GROUP_SYNC_INTERVAL,
@@ -160,6 +161,8 @@ REGISTRY: dict[str, JobType] = {
 def build_registry(settings: Settings) -> dict[str, JobType]:
     """Auftragsarten dieser Installation: Kern und, wenn eingerichtet, der Abruf aus dem Tenant."""
     registry = dict(REGISTRY)
+    if settings.tickets_mail_configured:
+        registry[POLL] = JobType(handler=poll_job, interval=POLL_INTERVAL)
     if settings.collector_configured:
         registry[COLLECT] = JobType(
             handler=collect_job, interval=timedelta(hours=max(settings.collector_interval_hours, 1))

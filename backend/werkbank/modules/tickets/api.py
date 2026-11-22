@@ -5,16 +5,20 @@ Bereichen gibt es für sie nicht: 404 statt 403 (spec.md 8e, „Sichtbarkeit“)
 """
 
 import re
+import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
+from fastapi.responses import FileResponse
 from pydantic import AfterValidator, BaseModel, Field, field_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from werkbank.config import Settings
 from werkbank.core.admin_settings import ADDRESS_PATTERN
-from werkbank.core.deps import DbDep
+from werkbank.core.audit import write_audit
+from werkbank.core.deps import DbDep, SettingsDep
 from werkbank.core.sessions import now_utc
 from werkbank.modules.inventory.search import escape_like
 from werkbank.modules.tickets.access import (
@@ -24,6 +28,9 @@ from werkbank.modules.tickets.access import (
     forbidden,
     not_found,
 )
+from werkbank.modules.tickets.files import file_path
+from werkbank.modules.tickets.mail_texts import DEFAULT_EVENTS
+from werkbank.modules.tickets.mailbox import MailboxError, available, new_http, open_mailbox
 from werkbank.modules.tickets.models import (
     AREA_ADMIN,
     AREA_EDIT,
@@ -36,9 +43,11 @@ from werkbank.modules.tickets.models import (
     STATUS_WAITING,
     Ticket,
     TicketArea,
+    TicketAttachment,
     TicketEntry,
     TicketParticipant,
 )
+from werkbank.modules.tickets.outbound import event_text, send_to_reporter
 from werkbank.modules.tickets.service import (
     PRIORITY_LABELS,
     STATUS_LABELS,
@@ -116,13 +125,24 @@ class ParticipantOut(BaseModel):
     mail: str
 
 
+class AttachmentOut(BaseModel):
+    id: str
+    filename: str
+    size: int
+    original: bool
+    # Grund, warum der Anhang entfernt wurde (dann ohne Download)
+    removed_reason: str
+
+
 class EntryOut(BaseModel):
     id: str
     kind: str
     body: str
+    quote: str
     author_name: str
     original: bool
     created_at: datetime
+    attachments: list[AttachmentOut]
 
 
 class PersonOut(BaseModel):
@@ -148,6 +168,9 @@ class TicketOut(TicketItem):
     move_targets: list[AreaRef]
     # Eigene Objekt-ID (für „Mir zuweisen“)
     me_oid: str
+    # Antwort an den Melder möglich? Sonst der Grund
+    can_reply: bool
+    reply_hint: str
 
 
 def _area_names(db: Session) -> dict[int, str]:
@@ -179,7 +202,20 @@ def _visible_ticket(db: Session, access: TicketAccess, number: int) -> Ticket:
     return ticket
 
 
-def _detail(db: Session, access: TicketAccess, ticket: Ticket) -> TicketOut:
+def reply_problem(settings: Settings, area: TicketArea | None, ticket: Ticket) -> str:
+    """Warum (noch) keine Antwort per Mail möglich ist; leer, wenn alles passt."""
+    if not ticket.reporter_mail:
+        return "Für den Melder ist keine Mailadresse eingetragen."
+    if area is None or not area.mailbox:
+        return "Für den Bereich ist kein Postfach eingetragen."
+    if not available(settings):
+        return "Die Postfächer der Tickets sind noch nicht eingerichtet."
+    if ticket.status == "merged":
+        return "Das Ticket ist zusammengeführt."
+    return ""
+
+
+def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticket) -> TicketOut:
     names = _area_names(db)
     item = _item(ticket, names, access)
     entries = db.scalars(
@@ -193,6 +229,23 @@ def _detail(db: Session, access: TicketAccess, ticket: Ticket) -> TicketOut:
         .order_by(TicketParticipant.id)
     ).all()
     can_edit = access.can_edit(ticket.area_id)
+    files: dict[object, list[AttachmentOut]] = {}
+    for att in db.scalars(
+        select(TicketAttachment)
+        .where(TicketAttachment.ticket_id == ticket.id)
+        .order_by(TicketAttachment.original, TicketAttachment.created_at)
+    ):
+        files.setdefault(att.entry_id, []).append(
+            AttachmentOut(
+                id=str(att.id),
+                filename=att.filename,
+                size=att.size,
+                original=att.original,
+                removed_reason=att.removed_reason,
+            )
+        )
+    area = db.get(TicketArea, ticket.area_id)
+    hint = reply_problem(settings, area, ticket)
     assignees = [PersonOut(oid=m.oid, name=m.name) for m, _ in area_people(db, ticket.area_id)]
     if ticket.assignee_oid and all(p.oid != ticket.assignee_oid for p in assignees):
         assignees.append(PersonOut(oid=ticket.assignee_oid, name=ticket.assignee_name))
@@ -209,9 +262,11 @@ def _detail(db: Session, access: TicketAccess, ticket: Ticket) -> TicketOut:
                 id=str(e.id),
                 kind=e.kind,
                 body=e.body,
+                quote=e.quote,
                 author_name=e.author_name,
                 original=e.original,
                 created_at=e.created_at,
+                attachments=files.get(e.id, []),
             )
             for e in entries
         ],
@@ -223,6 +278,8 @@ def _detail(db: Session, access: TicketAccess, ticket: Ticket) -> TicketOut:
         ),
         assignees=assignees,
         me_oid=access.oid,
+        can_reply=can_edit and not hint,
+        reply_hint=hint,
         move_targets=[
             AreaRef(id=a.id, name=a.name, role=access.role(a.id))
             for a in active
@@ -235,7 +292,7 @@ def _detail(db: Session, access: TicketAccess, ticket: Ticket) -> TicketOut:
 
 
 @router.get("/me")
-def me(access: AccessDep, db: DbDep) -> MeOut:
+def me(access: AccessDep, db: DbDep, settings: SettingsDep) -> MeOut:
     """Eigene Rechte im Modul: Bereiche mit Rolle, Ticket-Verwaltung, Einstellungen sichtbar."""
     names = _area_names(db)
     return MeOut(
@@ -349,7 +406,7 @@ def _set_participants(db: Session, ticket: Ticket, participants: list[Participan
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_ticket(body: TicketIn, access: AccessDep, db: DbDep) -> TicketOut:
+def create_ticket(body: TicketIn, access: AccessDep, db: DbDep, settings: SettingsDep) -> TicketOut:
     """Ticket von Hand erfassen (Bearbeiten oder Bereichsverwaltung im gewählten Bereich)."""
     area = db.get(TicketArea, body.area_id)
     if area is None or not area.active or not access.can_read(area.id):
@@ -388,12 +445,14 @@ def create_ticket(body: TicketIn, access: AccessDep, db: DbDep) -> TicketOut:
         assign_new(db, ticket, area)
     protocol(db, me_actor, "ticket_angelegt", ticket=ticket, details={"eingang": body.channel})
     db.commit()
-    return _detail(db, access, ticket)
+    return _detail(db, settings, access, ticket)
 
 
 @router.get("/{number}")
-def read_ticket(number: TicketNumber, access: AccessDep, db: DbDep) -> TicketOut:
-    return _detail(db, access, _visible_ticket(db, access, number))
+def read_ticket(
+    number: TicketNumber, access: AccessDep, db: DbDep, settings: SettingsDep
+) -> TicketOut:
+    return _detail(db, settings, access, _visible_ticket(db, access, number))
 
 
 class ChangeIn(BaseModel):
@@ -412,7 +471,9 @@ class ChangeIn(BaseModel):
 
 
 @router.patch("/{number}")
-def change_ticket(number: TicketNumber, body: ChangeIn, access: AccessDep, db: DbDep) -> TicketOut:
+def change_ticket(
+    number: TicketNumber, body: ChangeIn, access: AccessDep, db: DbDep, settings: SettingsDep
+) -> TicketOut:
     """Status und/oder Zuständigkeit ändern (mit Prüfung der Rechte)."""
     ticket = _visible_ticket(db, access, number)
     if not access.can_edit(ticket.area_id):
@@ -426,6 +487,8 @@ def change_ticket(number: TicketNumber, body: ChangeIn, access: AccessDep, db: D
         )
     me_actor = actor(access)
     changed = False
+    # Ereignisse für automatische Mails an den Melder: (Art, Bearbeiter)
+    events: list[tuple[str, str]] = []
     if body.status is not None and body.status != ticket.status:
         if body.status not in SETTABLE_STATUSES:
             raise HTTPException(
@@ -445,6 +508,7 @@ def change_ticket(number: TicketNumber, body: ChangeIn, access: AccessDep, db: D
         protocol(
             db, me_actor, "ticket_status", ticket=ticket, details={"von": old, "nach": body.status}
         )
+        events.append((body.status, me_actor.name))
         changed = True
     if body.change_assignee:
         new_oid = (body.assignee_oid or "").lower() or None
@@ -461,6 +525,8 @@ def change_ticket(number: TicketNumber, body: ChangeIn, access: AccessDep, db: D
                 )
             ticket.assignee_oid = new_oid
             ticket.assignee_name = new_name
+            if new_oid is not None:
+                events.append(("assignee", new_name))
             ticket.updated_at = now_utc()
             system_entry(db, ticket, f"Zuständig: {old_name} → {new_name or 'niemand'}", me_actor)
             protocol(
@@ -483,9 +549,49 @@ def change_ticket(number: TicketNumber, body: ChangeIn, access: AccessDep, db: D
                 )
             changed = True
     if changed:
+        _status_mails(db, settings, ticket, events)
         db.commit()
         db.refresh(ticket)
-    return _detail(db, access, ticket)
+    return _detail(db, settings, access, ticket)
+
+
+def _status_mails(
+    db: Session, settings: Settings, ticket: Ticket, events: list[tuple[str, str]]
+) -> None:
+    """Automatische Mails an den Melder nach Status- oder Zuständigkeitswechsel (je Bereich)."""
+    area = db.get(TicketArea, ticket.area_id)
+    if area is None or not events or reply_problem(settings, area, ticket):
+        return
+    wanted = {**DEFAULT_EVENTS, **(area.mail_events or {})}
+    todo = [(event, worker) for event, worker in events if wanted.get(event)]
+    if not todo:
+        return
+    with new_http() as http:
+        try:
+            mailbox = open_mailbox(settings, http)
+        except MailboxError as exc:
+            system_entry(
+                db, ticket, f"Mail an den Melder nicht gesendet: {exc}", Actor(None, "Werkbank")
+            )
+            return
+        for event, worker in todo:
+            message_id, error = send_to_reporter(
+                db, mailbox, area, ticket, event_text(event, ticket, worker), kind=event, auto=True
+            )
+            text = (
+                f"Mail an den Melder gesendet ({STATUS_LABELS.get(event, 'Zuständigkeit')})"
+                if message_id
+                else f"Mail an den Melder nicht gesendet: {error}"
+            )
+            db.add(
+                TicketEntry(
+                    ticket_id=ticket.id,
+                    kind="system",
+                    body=text,
+                    author_name="Werkbank",
+                    message_id=message_id,
+                )
+            )
 
 
 def _check_handover(db: Session, access: TicketAccess, ticket: Ticket, new_oid: str | None) -> None:
@@ -518,7 +624,7 @@ class DetailsIn(BaseModel):
 
 @router.put("/{number}/details")
 def change_details(
-    number: TicketNumber, body: DetailsIn, access: AccessDep, db: DbDep
+    number: TicketNumber, body: DetailsIn, access: AccessDep, db: DbDep, settings: SettingsDep
 ) -> TicketOut:
     """Priorität und Beteiligte."""
     ticket = _visible_ticket(db, access, number)
@@ -538,7 +644,7 @@ def change_details(
     ticket.updated_at = now_utc()
     db.commit()
     db.refresh(ticket)
-    return _detail(db, access, ticket)
+    return _detail(db, settings, access, ticket)
 
 
 class MoveIn(BaseModel):
@@ -551,7 +657,9 @@ class MoveOut(BaseModel):
 
 
 @router.post("/{number}/move")
-def move_ticket(number: TicketNumber, body: MoveIn, access: AccessDep, db: DbDep) -> MoveOut:
+def move_ticket(
+    number: TicketNumber, body: MoveIn, access: AccessDep, db: DbDep, settings: SettingsDep
+) -> MoveOut:
     """In einen anderen Bereich verschieben. Wer das Ziel nicht sieht, verliert den Zugriff."""
     ticket = _visible_ticket(db, access, number)
     if not access.can_edit(ticket.area_id):
@@ -582,7 +690,7 @@ def move_ticket(number: TicketNumber, body: MoveIn, access: AccessDep, db: DbDep
     db.refresh(ticket)
     if not access.can_read(target.id):
         return MoveOut(visible=False, ticket=None)
-    return MoveOut(visible=True, ticket=_detail(db, access, ticket))
+    return MoveOut(visible=True, ticket=_detail(db, settings, access, ticket))
 
 
 class NoteIn(BaseModel):
@@ -598,7 +706,9 @@ class NoteIn(BaseModel):
 
 
 @router.post("/{number}/notes", status_code=status.HTTP_201_CREATED)
-def add_note(number: TicketNumber, body: NoteIn, access: AccessDep, db: DbDep) -> TicketOut:
+def add_note(
+    number: TicketNumber, body: NoteIn, access: AccessDep, db: DbDep, settings: SettingsDep
+) -> TicketOut:
     """Interne Notiz (auch mit „Nur lesen“). Der Melder sieht sie nicht und bekommt keine Mail."""
     ticket = _visible_ticket(db, access, number)
     db.add(
@@ -613,4 +723,127 @@ def add_note(number: TicketNumber, body: NoteIn, access: AccessDep, db: DbDep) -
     ticket.updated_at = now_utc()
     db.commit()
     db.refresh(ticket)
-    return _detail(db, access, ticket)
+    return _detail(db, settings, access, ticket)
+
+
+class ReplyIn(BaseModel):
+    body: str = Field(min_length=1, max_length=BODY_MAX)
+    # Status danach: "" = unverändert
+    status_after: Literal["", "waiting", "solved"] = ""
+
+    @field_validator("body")
+    @classmethod
+    def _not_blank(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Darf nicht leer sein.")
+        return value
+
+
+@router.post("/{number}/replies", status_code=status.HTTP_201_CREATED)
+def send_reply(
+    number: TicketNumber, body: ReplyIn, access: AccessDep, db: DbDep, settings: SettingsDep
+) -> TicketOut:
+    """Antwort an den Melder (Mail aus dem Postfach des Bereichs, Beteiligte in Kopie)."""
+    ticket = _visible_ticket(db, access, number)
+    if not access.can_edit(ticket.area_id):
+        raise forbidden("Mit „Nur lesen“ kannst du nicht antworten.")
+    area = db.get(TicketArea, ticket.area_id)
+    problem = reply_problem(settings, area, ticket)
+    if problem or area is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=problem)
+    me_actor = actor(access)
+    with new_http() as http:
+        try:
+            mailbox = open_mailbox(settings, http)
+        except MailboxError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+            ) from exc
+        message_id, error = send_to_reporter(
+            db, mailbox, area, ticket, body.body, kind="antwort", auto=False
+        )
+    if message_id is None:
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Die Antwort konnte nicht gesendet werden: {error}",
+        )
+    db.add(
+        TicketEntry(
+            ticket_id=ticket.id,
+            kind="reply",
+            body=body.body,
+            author_oid=access.oid,
+            author_name=me_actor.name,
+            message_id=message_id,
+        )
+    )
+    now = now_utc()
+    if ticket.first_response_at is None:
+        ticket.first_response_at = now
+    if body.status_after and body.status_after != ticket.status:
+        old = ticket.status
+        set_status(ticket, body.status_after)
+        system_entry(
+            db,
+            ticket,
+            f"Status: {STATUS_LABELS[old]} → {STATUS_LABELS[body.status_after]}",
+            me_actor,
+        )
+        protocol(
+            db,
+            me_actor,
+            "ticket_status",
+            ticket=ticket,
+            details={"von": old, "nach": body.status_after},
+        )
+    elif ticket.status == "new":
+        old = ticket.status
+        set_status(ticket, STATUS_IN_PROGRESS)
+        system_entry(db, ticket, f"Status: {STATUS_LABELS[old]} → In Arbeit", me_actor)
+    ticket.updated_at = now
+    protocol(db, me_actor, "ticket_antwort", ticket=ticket)
+    db.commit()
+    db.refresh(ticket)
+    return _detail(db, settings, access, ticket)
+
+
+@router.get("/{number}/attachments/{attachment_id}")
+def download_attachment(
+    number: TicketNumber,
+    attachment_id: Annotated[str, Path(min_length=36, max_length=36)],
+    access: AccessDep,
+    db: DbDep,
+    settings: SettingsDep,
+) -> FileResponse:
+    """Anhang oder Original herunterladen (immer als Download, nie im Browser angezeigt)."""
+    ticket = _visible_ticket(db, access, number)
+    try:
+        att_uuid = uuid.UUID(attachment_id)
+    except ValueError as exc:
+        raise not_found() from exc
+    att = db.get(TicketAttachment, att_uuid)
+    if att is None or att.ticket_id != ticket.id or not att.key:
+        raise not_found()
+    path = file_path(settings.tickets_files_dir, att.key)
+    if path is None or not path.is_file():
+        raise not_found()
+    write_audit(
+        db,
+        module="tickets",
+        action="anhang_geladen",
+        object_type="ticket",
+        object_id=f"T-{ticket.number}",
+        user_id=access.user.user_id,
+    )
+    db.commit()
+    return FileResponse(
+        path,
+        media_type=att.content_type
+        if not att.content_type.startswith("text/")
+        else "application/octet-stream",
+        filename=att.filename,
+        content_disposition_type="attachment",
+        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"},
+    )
