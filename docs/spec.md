@@ -100,6 +100,7 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Projekte.Editor` | IT-Projekte | Projekte anlegen, ändern und löschen; Jour Fixe, Anhänge und Aufgaben pflegen |
 | `Bestand.Reader` | IT-Bestand | Hardware mit Verlauf und Stammdaten ansehen |
 | `Bestand.Editor` | IT-Bestand | Hardware erfassen und ändern, Inventurnummern setzen, ausmustern und wieder in Betrieb nehmen, Stammdaten pflegen |
+| `Tickets.Verwaltung` | Tickets | Bereiche anlegen, Postfächer anbinden, Rollen der Bereiche vergeben, globale Mail-Gestaltung und Vorgabe der Aufbewahrung. Kein Zugriff auf Tickets; die Rollen je Bereich (Bereichsverwaltung, Bearbeiten, Nur lesen) liegen in der Werkbank, nicht in Entra (8e) |
 | `Geraete.Zuordnung` | Gerätezuordnung | Neue Windows-Geräte per QR-Code scannen, zur Freigabe senden, verwerfen; mit verbundenem Admin-Konto freigeben (dem Tenant zuordnen) |
 
 Sichtbarkeit:
@@ -720,6 +721,157 @@ Bestand der IT-Hardware. Schritte 1 bis 8 sind umgesetzt. Zugriff: `Bestand.Read
 - **Benachrichtigungen:** `bestand.vorgang_neu` (Bestand.Editor) und `bestand.abgleich_fehlgeschlagen` (Bestand.Editor, Admin), nur Nummer und Link.
 - **Audit:** alle Änderungen an Geräten, Stellen, Arbeitsplätzen, Standorten, Grundrissen und Stammdaten (Modul `bestand`), ohne Namen von Personen (bei Stellen nur „besetzt ja/nein“).
 
+## 8e. Modul Tickets
+
+Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Eigener Bereich „Tickets“ in der Navigation (`/tickets`). Tickets entstehen nur per E-Mail oder von Hand; kein Self-Service-Portal, keine Anbindung an Zabbix (vorerst). Stand: geplant, Umsetzung in vier Phasen (siehe unten).
+
+### Begriffe
+
+- **Bereich (Ticket-Bereich):** eine Abteilung, z. B. „IT“ oder „Haustechnik“. Es gibt keine Warteschlangen; Zugriff, Zuweisung und Benachrichtigung hängen nur am Bereich. Nicht zu verwechseln mit den Bereichen der Navigation (IT-Bestand, IT-Budget usw.).
+- **Postfach:** genau ein freigegebenes Postfach je Bereich (z. B. `it@example.com`, `haustechnik@example.com`). Das Postfach allein entscheidet, in welchen Bereich ein Ticket kommt; Eingangsregeln gibt es nicht.
+- **Melder:** wer das Anliegen gemeldet hat (Name, Mailadresse; auch extern möglich). **Beteiligte:** Personen in Kopie.
+
+### Rollen
+
+| Rolle | Gilt für | Technik | Darf |
+|---|---|---|---|
+| **Ticket-Verwaltung** | alle Bereiche | Entra-App-Rolle `Tickets.Verwaltung` (Claim `roles`, wirkt ab der nächsten Anmeldung) | Bereiche anlegen, Postfächer anbinden oder wechseln, Rollen vergeben, globale Mail-Gestaltung, Vorgabe der Aufbewahrung. **Kein** Zugriff auf Tickets, außer sie ist im Bereich zusätzlich Bereichsverwaltung oder Mitglied. |
+| **Bereichsverwaltung** | je Bereich | Werkbank-Datenbank (Gruppe und/oder Personen) | Einstellungen des Bereichs: Mitglieder, Kategorien, Fristen, Geräte, Textbausteine, Filter, Texte und Melder-Mails des eigenen Postfachs, Abweichung der Aufbewahrung, Ausnahmen. Sieht **alle** Tickets des Bereichs, darf jedes zuweisen und umverteilen, bekommt die Eskalationen. |
+| **Bearbeiten** | je Bereich | wie oben | Tickets sehen, antworten, Status ändern, freies Ticket nehmen, eigene Tickets übergeben, interne Notizen. |
+| **Nur lesen** | je Bereich | wie oben | Tickets sehen und interne Notizen schreiben. Wird bei „reihum“ übersprungen. |
+
+- Eine Rolle „Leitung“ gibt es nicht; das übernimmt die Bereichsverwaltung.
+- **Bereichsrollen sind keine App-Rollen**, weil Bereiche in der Werkbank angelegt werden. Je Bereich und Rolle speichert die Werkbank eine oder mehrere Entra-Gruppen (**Objekt-ID**, Name nur zur Anzeige) und/oder einzelne Personen (Objekt-ID).
+- **Prüfung serverseitig über Microsoft Graph:** `GET /users/{id}/transitiveMemberOf/microsoft.graph.group?$select=id` (auch verschachtelte Gruppen). Ergebnis je Person zwischengespeichert (`TICKETS_MEMBERSHIP_CACHE_MINUTES`, Vorgabe 5). Zusätzlich gleicht ein Auftrag die Mitglieder der Gruppen regelmäßig ab (`GET /groups/{id}/transitiveMembers`, stündlich), z. B. für „reihum“, Benachrichtigungen und die Liste der zuweisbaren Personen. Der Gruppen-Claim im Token wird **nicht** verwendet (ab 200 Gruppen unvollständig, „Overage“).
+- Anwendungsberechtigung `GroupMember.Read.All` (Begründung und Einrichtung in `entra-setup.md`).
+- **Deny by default:** ohne passende Rolle kein Zugriff. Wer eine Gruppenmitgliedschaft verliert, verliert den Zugriff spätestens nach Ablauf des Zwischenspeichers. Ist Graph nicht erreichbar und der Zwischenspeicher abgelaufen, gilt die Person als nicht berechtigt.
+- Hat eine Person mehrere Rollen im selben Bereich, gilt die stärkste (Bereichsverwaltung > Bearbeiten > Nur lesen).
+- Den Menüpunkt „Einstellungen“ sieht nur, wer `Tickets.Verwaltung` hat oder in mindestens einem Bereich Bereichsverwaltung ist. Die Ticket-Verwaltung muss immer mindestens einen Eintrag behalten (in der Werkbank: mindestens eine Gruppe oder Person mit Bereichsverwaltung je Bereich; die App-Rolle selbst wird in Entra gepflegt).
+- **Protokoll:** jede Änderung an Einstellungen (wer, wann, welcher Bereich, was; ohne Inhalte von Texten), dazu Zuständigkeit, Status, Zusammenführen, Löschläufe und Ausnahmen.
+
+### Sichtbarkeit
+
+- Wer nicht Mitglied eines Bereichs ist (Bearbeiten, Nur lesen oder Bereichsverwaltung), sieht dessen Tickets nicht: nicht in Listen, Suche, Kennzahlen, Export, Anhängen und nicht per Direktaufruf. Eine Ticket-Nr. aus einem fremden Bereich ergibt **404 „nicht gefunden“**, nicht 403.
+- Jede Abfrage filtert serverseitig auf die Bereiche der Person; Anhänge und Originale werden nur über das Ticket ausgeliefert.
+
+### Datenmodell (Überblick)
+
+| Tabelle | Inhalt |
+|---|---|
+| `ticket_areas` | Name, Postfach, Absendername, Kopfzeilen-Titel, Signatur, Zuweisungsart (`first`, `round_robin`), „Abwesende überspringen“, Fristen an/aus mit Arbeitszeit, Geräte an/aus mit erlaubten Hardware-Arten und Optionen, Eingangsbestätigung mit Text, Schalter der automatischen Mails, Einstellungen des Postfachs (Abruf, externe Absender, Anhänge, Ordner, Löschfristen, Antwort auf geschlossene Tickets), Abweichung der Aufbewahrung |
+| `ticket_area_grants` | Bereich, Rolle (`admin`, `edit`, `read`), Art (`group`, `person`), Objekt-ID, Anzeigename |
+| `ticket_membership_cache` | Person, Liste der Gruppen-IDs, Zeitpunkt |
+| `ticket_group_members` | Gruppe, Person (Objekt-ID, Name, Mail), Stand des Abgleichs |
+| `ticket_categories` | Bereich, Name, Standard-Priorität, aktiv |
+| `ticket_sla` | Bereich, Priorität, erste Reaktion und Lösung (Arbeitsminuten) |
+| `tickets` | Nr. (fortlaufend über alle Bereiche, Anzeige `T-1042`), Bereich, Betreff, Melder (Name, Mail), Kategorie, Priorität (`low`, `medium`, `high`), Status, zuständige Person, Eingangsweg (`mail`, `manual`, `phone`), angelegt, erste Reaktion, gelöst, geschlossen, Erinnerung (Zeitpunkt, Stichwort), Frist (Reaktion, Lösung, verbrauchte Zeit, eingehalten), Gerät (IT-Bestand), Zusammengeführt in, Aufbewahrungs-Ausnahme |
+| `ticket_participants` | Ticket, Name, Mail |
+| `ticket_entries` | Ticket, Art (`inbound`, `reply`, `note`, `system`), Text (bereinigt), Zitat-Teil, Person, Zeitpunkt, „aus T-…“, Message-ID |
+| `ticket_attachments` | Eintrag, Dateiname, Typ, Größe, Ablage (Volume, außerhalb des Webroots), Original (.eml) ja/nein, entfernt (gesperrt) |
+| `ticket_mail_seen` | Postfach, Message-ID, Ergebnis, Zeitpunkt (doppelte Verarbeitung ausschließen; Protokoll „Letzte Eingänge“) |
+| `ticket_mail_review` | Mails unter „Zu prüfen“ (Absender, Betreff, Eingang, Graph-ID) |
+| `ticket_sender_blocks` | Postfach, Adresse oder Domain |
+| `ticket_templates` | Bereich, Name, Kürzel, Art (Antwort, Notiz), Status danach, Text |
+| `ticket_mail_design` | global: Logo, Akzentfarbe, Fußzeile, Datenschutz-Link |
+| `ticket_retention` | Vorgabe: Frist (Monate), Art (`anonymize`, `delete`), Anhänge früher löschen (Monate) |
+| `ticket_retention_runs` | Lauf mit Zahlen je Bereich |
+| `ticket_graph_subscriptions` | Postfach, Abo-ID, Ablauf, `clientState` (verschlüsselt) |
+| `ticket_audit` | Protokoll (siehe oben) |
+
+### Ticket
+
+- **Status:** Neu, In Arbeit, Wartet auf Rückmeldung, Erinnerung, Gelöst, Geschlossen, Zusammengeführt.
+  - **Erinnerung:** Datum und Uhrzeit (Vorgabe 08:00), optionales Stichwort. Zum Zeitpunkt setzt der Worker das Ticket auf „In Arbeit“ und benachrichtigt die zuständige Person. Die Frist läuft weiter.
+  - **Gelöst → Geschlossen:** automatisch nach 5 Tagen ohne Rückmeldung des Melders.
+  - Antwort des Melders bei „Wartet auf Rückmeldung“ → „In Arbeit“.
+- **Status und Zuständigkeit nur mit Bestätigung:** im Ticketkopf über Auswahlfelder; gelten erst nach „Bestätigen“, „Verwerfen“ nimmt sie zurück. Vorher eine Zusammenfassung („Status: In Arbeit → Gelöst · Zuständig: A → B“). Übergeben darf die zuständige Person oder die Bereichsverwaltung; ein freies Ticket nehmen darf jede Person mit „Bearbeiten“. Bei Übergabe optionale Übergabenotiz (wird interne Notiz) und „Person benachrichtigen“ (Push und Mail). Ungespeicherte Änderungen verfallen beim Wechsel des Tickets. Ausnahme: „Status danach“ am Senden-Knopf greift beim Senden.
+- **Zuweisung neuer Tickets** je Bereich: „wer zuerst übernimmt“ oder „reihum“ (Person mit „Bearbeiten“ und den wenigsten offenen Tickets; „Nur lesen“ übersprungen; bei Gleichstand wer am längsten kein neues Ticket bekam). Option „Abwesende überspringen“ (automatische Antwort in Outlook aktiv, über `GET /users/{id}/mailboxSettings/automaticRepliesSetting`); sind alle abwesend, bleibt das Ticket frei und die Bereichsverwaltung wird benachrichtigt.
+- **Verlauf:** Nachricht vom Melder, Antwort an Melder, interne Notiz, Systemeintrag (Status, Zuständigkeit, Erinnerung, Verschieben, Zusammenführen, Gerät).
+- **Verschieben** in einen anderen Bereich (Bearbeiten oder Bereichsverwaltung im Quellbereich). Kategorie wird geleert, Zuständigkeit folgt der Zuweisungsart des Ziels. Wer den Zielbereich nicht sieht, verliert den Zugriff und bekommt einen Hinweis.
+- **Zusammenführen:** Ziel ist ein offenes Ticket desselben Bereichs; Suche nach Nr., Betreff oder Melder (ohne Suchbegriff höchstens 3 Vorschläge mit ähnlichem Betreff, mit Suchbegriff höchstens 5 Treffer). Verlauf und Anhänge der Quelle werden zeitlich ins Ziel einsortiert und mit „aus T-…“ gekennzeichnet. Der Melder der Quelle wird Beteiligter im Ziel, optional mit Mail über die neue Nummer. Die Quelle bekommt „Zusammengeführt“ und verweist aufs Ziel; Antworten auf alte Mails der Quelle landen im Ziel. Kein Rückgängig.
+
+### Kategorien, Fristen, Geräte (je Bereich)
+
+- **Kategorien** mit Standard-Priorität.
+- **Fristen (SLA), optional:** erste Reaktion und Lösung je Priorität, Arbeitszeit (Wochentage und Uhrzeiten; Feiertage nicht in Phase 3). Die Frist ruht bei „Wartet auf Rückmeldung“, läuft bei „Erinnerung“ weiter. Erste Reaktion = erste Antwort an den Melder. **Ist die Frist im Bereich aus, erscheint sie nirgends:** keine Spalte, kein Feld, keine Kennzahl, keine Warnung, keine Melder-Mail. Bei gemischten Listen ist das Feld bei Tickets ohne Frist leer. Warnung an die zuständige Person bei 80 %, Eskalation an die Bereichsverwaltung bei Überschreitung.
+- **Geräte, optional:** erlaubte Hardware-Arten aus dem IT-Bestand (keine eigene Typenliste). Optionen „Geräte des Melders zuerst vorschlagen“ (über die Mailadresse: Stelle bzw. offener Verleih im IT-Bestand) und „Ticket auch beim Gerät im IT-Bestand anzeigen“ (dort nur Nr., Betreff, Status und Link – für Personen mit Zugriff auf den Bereich; sonst nur die Anzahl). Suche höchstens 5 Treffer, Gerät lässt sich lösen.
+
+### E-Mail-Eingang (je Postfach)
+
+- **Anbindung über Microsoft Graph** mit eigener App-Registrierung „Werkbank Tickets“, Anmeldung per Zertifikat. Anwendungsberechtigungen `Mail.ReadWrite` (lesen, verschieben, löschen in den eigenen Ordnern) und `Mail.Send` (senden als Postfach). In Exchange Online auf die Ticket-Postfächer beschränkt (RBAC für Anwendungen: Verwaltungsbereich über eine Gruppe der Ticket-Postfächer, Rollen „Application Mail.ReadWrite“ und „Application Mail.Send“). Einrichtung in `entra-setup.md`.
+- **Abruf je Postfach wählbar:** sofort per Graph-Änderungsbenachrichtigung (Webhook `POST /api/tickets/graph/notify`, `clientState` geprüft, Validierungsanfrage beantwortet, Abo vor Ablauf erneuert, stündlicher Abgleich zur Sicherheit) oder alle 5 Minuten. Der Webhook braucht eine aus dem Internet per HTTPS erreichbare Adresse.
+- **Neue Mail → neues Ticket.** Antworten über `[#T-1042]` im Betreff, zusätzlich über `In-Reply-To` und `References` (gespeicherte Message-IDs). Personen in Kopie werden Beteiligte (ohne das eigene Postfach).
+- **Externe Absender** (extern = Domain nicht in `TICKETS_INTERNAL_DOMAINS`): annehmen, unbekannte erst prüfen („Zu prüfen“ mit „Als Ticket anlegen“, „Verwerfen“, „Absender sperren“) oder ablehnen.
+- **Ausfiltern:** Abwesenheitsnotizen und Unzustellbarkeitsberichte (`Auto-Submitted`, `X-Auto-Response-Suppress`, `Content-Type: multipart/report`, typische Absender), Newsletter (`List-Unsubscribe`, `Precedence: bulk/list`), Schleifenschutz (höchstens 10 Mails je Absender und Stunde), Sperrliste.
+- **Anhänge:** Größengrenze und Dateitypen je Postfach; Typ über den Inhalt geprüft. Nicht erlaubte Anhänge werden entfernt, im Ticket steht ein Hinweis.
+- **Nach der Verarbeitung:** verarbeitet → Ordner „Verarbeitet“, ignoriert → „Ignoriert“; die Werkbank löscht dort nach 30 bzw. 7 Tagen (je Postfach einstellbar). „Zu prüfen“ bleibt im Posteingang. Alles im Posteingang gilt als unverarbeitet; eine zurückgezogene Mail wird erneut verarbeitet, die gespeicherte Message-ID verhindert ein doppeltes Ticket (dann nur Ablage). Das Original (.eml) bleibt am Ticket.
+- **Protokoll „Letzte Eingänge“** je Postfach: Zeitpunkt, Absender, Betreff, Ergebnis (neues Ticket, Antwort zu T-…, zu prüfen, ignoriert mit Grund, Fehler).
+- **Antwort auf ein geschlossenes Ticket:** wieder öffnen innerhalb von X Tagen (Vorgabe 14), danach neues Ticket mit Verweis; immer wieder öffnen; immer neues Ticket.
+- **Nur der neue Teil:** Beim Einlesen von Antworten übernimmt die Werkbank nur den Text oberhalb der Zeile „Bitte oberhalb dieser Zeile antworten.“ bzw. vor erkannten Zitaten (`>`, „Am … schrieb …“, „Von: … Gesendet: …“, Outlook-Trennlinie). Der Rest wird als eingeklapptes Zitat gespeichert.
+
+### Mails an den Melder
+
+- Absender ist immer das Postfach des Bereichs (Graph `sendMail` als Postfach). Betreff `[#{Nr}] {Betreff}`. Antworten gehen an den Melder, Beteiligte in Kopie.
+- **Eingangsbestätigung** optional, eigener Text je Bereich, Platzhalter {Nr}, {Betreff}, {Name}.
+- **Automatische Mails** je Bereich: In Arbeit (aus), Wechsel der Zuständigkeit (aus), Wartet auf Rückmeldung (an, zusammen mit der Rückfrage), Gelöst (an), Geschlossen (aus), Frist nicht eingehalten (aus; nur sichtbar bei Bereichen mit Fristen).
+- **Gestaltung:** global (Ticket-Verwaltung) Logo, Akzentfarbe, Fußzeile, Datenschutz-Link; je Bereich Absendername, Titel der Kopfzeile, Signatur.
+- **Technik:** HTML mit Tabellenlayout und Inline-CSS, immer zusätzlich Text; Logo per CID eingebettet; keine Zählpixel, keine externen Ressourcen; lesbar im dunklen Modus. Oben „Bitte oberhalb dieser Zeile antworten.“. Platzhalter werden beim Einsetzen escaped.
+
+### Textbausteine (je Bereich)
+
+- Name, Kürzel (`/kürzel` im Antwortfeld), Art (Antwort, interne Notiz), Status danach (unverändert, Wartet auf Rückmeldung, Gelöst), Text. Platzhalter {Vorname}, {Name}, {Nr}, {Betreff}, {Bearbeiter}, {Datum}. Vorschau mit Signatur. Nur gemeinsame Bausteine.
+
+### Aufbewahrung
+
+- Vorgabe für alle Bereiche (Ticket-Verwaltung), Abweichung je Bereich (Bereichsverwaltung).
+- Frist in Monaten oder Jahren ab dem Schließen; nach Wiederöffnen beginnt sie neu. Danach **anonymisieren** (entfernt Melder, Adressen, Betreff, Texte, Anhänge, Namen der Bearbeiter; erhalten bleiben Nr., Bereich, Kategorie, Priorität, Zeitpunkte und ob die Frist eingehalten wurde) oder **vollständig löschen**.
+- Anhänge und Originale optional früher löschen (z. B. nach 12 Monaten).
+- Ausnahmen je Ticket durch die Bereichsverwaltung mit Begründung; jährlich zu bestätigen, sonst verfällt sie (Hinweis 30 Tage vorher).
+- Täglicher Auftrag `tickets.aufbewahrung` mit Vorschau „Beim nächsten Lauf betroffen“ und Protokoll der Läufe.
+
+### Benachrichtigungen an Mitarbeitende
+
+Über die vorhandenen Kanäle (Glocke, Mail, Teams, Push; 6.7), ohne fachliche Inhalte (nur Nr. und Link): neues freies Ticket im Bereich (Bearbeiten), Ticket zugewiesen bzw. übergeben, Antwort des Melders auf eigenes Ticket, Erinnerung fällig, Frist bald erreicht (zuständige Person), Frist überschritten und „alle abwesend“ (Bereichsverwaltung).
+
+### Oberfläche
+
+- **Menü „Tickets“:** Übersicht (Kennzahlen, „Mir zugewiesen“, „Neu und nicht zugewiesen“, Eingang nach Kanal, offen nach Kategorie) · Alle Tickets (Suche; Filter Offen, Mir zugewiesen, Nicht zugewiesen, Wartet, Erinnerung, Gelöst und geschlossen, Alle; nach Bereich; Export) · Neues Ticket (Bereich wählen, dann Kategorien) · Einstellungen (Bereiche · Kategorien, Fristen, Geräte · E-Mail-Eingang · E-Mail-Gestaltung · Textbausteine · Aufbewahrung · Rollen).
+- **Ticketseite** für lange Verläufe:
+  - Kompakter fester Kopf: Zurück, Nr., gekürzter Betreff, Status, Zuständig, „Mir zuweisen“, Melder, Eingangsweg, Datum, Bestätigen/Verwerfen.
+  - Verlauf: ursprüngliche Meldung oben, dann „N ältere Einträge anzeigen“, dann die letzten 4 Einträge. Systemeinträge einzeilig und klein. Filter Alles · Nur Nachrichten · Nur intern. Lange Nachrichten gekürzt („Ganze Nachricht anzeigen“), Zitate eingeklappt. Markierung „vom Melder“, „an Melder gesendet“, „Intern“, „Anruf erfasst“ (Text und Symbol, nie nur Farbe).
+  - Antwortfeld unten festgehalten, eingeklappt als „Antwort an … schreiben“ und „Interne Notiz schreiben“. Antwort: blau, Briefsymbol, „Geht per E-Mail an: … (Kopie an …)“, Knopf „An … senden“. Notiz: gelb, Schlosssymbol, „… sieht diesen Text nicht und bekommt keine Mail“, Knopf „Interne Notiz speichern“. Entwurf bleibt beim Einklappen.
+  - Rechte Spalte, bleibt beim Scrollen stehen: Angaben ohne Überschrift (Bereich zum Verschieben, Priorität, Kategorie, Frist nur mit SLA, Beteiligte); „Gerät“ einklappbar, nur wenn im Bereich aktiviert. Auf dem Handy unter dem Kopf als einklappbarer Block.
+- Rückmeldungen über `components/Feedback.tsx`, Aktionen mit Folgen über `ConfirmDialog`, Info-Symbole und Handbuchkapitel „Tickets“.
+
+### Sicherheit (OWASP ASVS 5.0 L2)
+
+- **Mail-Inhalte gelten als feindlich.** HTML wird serverseitig mit einer Positivliste bereinigt (keine Skripte, Formulare, Stile mit URLs, externe Ressourcen, Ereignis-Attribute); Bilder aus Mails werden nicht nachgeladen (eingebettete nur auf Klick). Anzeige in der Oberfläche zusätzlich in einer CSP ohne Skripte.
+- **Anhänge:** Typ über den Inhalt, Größenlimit, Download nur mit `Content-Disposition: attachment` und `X-Content-Type-Options: nosniff`, Ablage im Volume außerhalb des Webroots, Zugriff nur über das Ticket mit Bereichsprüfung.
+- **Rechte** für jeden Endpunkt und jede Aktion serverseitig (App-Rolle aus der Sitzung, Bereichsrolle über die zwischengespeicherte Graph-Prüfung), auch für Export, Suche und Anhänge. Fremde Tickets 404. Anhänge und Einträge über zufällige IDs (UUID).
+- **Webhook:** `clientState` (zufällig, verschlüsselt gespeichert) in konstanter Zeit geprüft, nur bekannte Abos, Wiederholungen ohne doppelte Verarbeitung (Message-ID), keine Auswertung des Inhalts der Benachrichtigung außer der Nachricht-ID; Abruf der Mail immer selbst über Graph.
+- **Ausgehende Mails** nur über das Postfach des Bereichs; Platzhalter escaped; Kopfzeilen gegen Zeilenumbrüche geschützt.
+- **Protokoll** wie oben; Exporte im Audit-Log.
+
+### Datenschutz
+
+Neu verarbeitet werden Melder und Beteiligte (Name, Mailadresse, auch extern), Inhalte der Mails und Anhänge, Bearbeiter. Zweckbindung: Bearbeitung von Anliegen. Löschung über die Aufbewahrung; Mails im Postfach nach 30/7 Tagen. Die Abwesenheit wird nur geprüft, nicht gespeichert. Ergänzung in `datenschutz.md`.
+
+### Phasen
+
+| Phase | Inhalt |
+|---|---|
+| T1 Grundgerüst | Datenmodell, Bereiche, Rollen (Ticket-Verwaltung, Bereichsverwaltung, Bearbeiten, Nur lesen) mit Graph-Prüfung, Ticket von Hand anlegen, Liste, Ticketseite, Status und Zuständigkeit mit Bestätigung, Verlauf, interne Notizen |
+| T2 E-Mail | Postfach-Anbindung, Eingang, Antwort-Erkennung, Filter, „Zu prüfen“, Ordner und Löschfristen, Antworten senden, Mails an den Melder, Mail-Gestaltung |
+| T3 Arbeitshilfen | Kategorien, Fristen (optional), Geräte (optional), Textbausteine, Erinnerung, Zusammenführen, Übergabe |
+| T4 Betrieb | Rollen-Seite mit Protokoll, Aufbewahrung mit täglichem Lauf, Kennzahlen, Export, Handbuchkapitel |
+
+Nach jeder Phase ein Halt mit Zusammenfassung, Testergebnis und Entwurf der Neuigkeiten.
+
+### Tests
+
+- **E2E:** Mail → Ticket; Antwort im selben Ticket; Mail an geschlossenes Ticket je nach Einstellung; Status und Übergabe erst nach „Bestätigen“; fremder Bereich unsichtbar, auch per Direktaufruf; ohne App-Rolle keine Einstellungen der Ticket-Verwaltung; Zugriff weg nach Entzug der Gruppenmitgliedschaft; interne Notiz erzeugt keine Mail; Zusammenführen; ohne SLA nirgends eine Frist; Aufbewahrungslauf anonymisiert bzw. löscht. Graph wird in den E2E-Tests durch einen Stub ersetzt.
+- **Unit:** Antwort-Erkennung, Filter, Zitat-Erkennung, Platzhalter, Fristberechnung (Arbeitszeit, Pause bei „Wartet“).
+
 ## 9. Datenmodell (Überblick)
 
 Kern:
@@ -983,6 +1135,7 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | – | Einheitliche Oberfläche, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen | ✅ umgesetzt, mit Handbuch und letzten Aktivitäten auf der Startseite |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Benachrichtigungen, Push | Vollumfang v1 | 🔄 weitgehend: Exchange, Teams, Intune und SharePoint (Konfiguration), Benachrichtigungen (Glocke, Mail, Teams, Push) umgesetzt |
 | 5 | weitere Module nach Bedarf | – | offen |
+| T1–T4 | Modul Tickets (8e) | Ticketsystem für Bereiche mit eigenem Postfach | 🔄 geplant |
 
 ---
 
