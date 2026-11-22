@@ -236,3 +236,15 @@ test("Betriebsrat kommt nicht an Audit-Log und Verwaltung", async ({ page }) => 
   const roles = await page.request.get("/api/admin/roles");
   expect(roles.status()).toBe(403);
 });
+
+test("Verbindungen: Berechtigungen für den Abruf prüfen", async ({ page }) => {
+  await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
+  await page.goto("/verwaltung/verbindungen");
+  await expect(
+    page.getByRole("heading", { level: 2, name: /Berechtigungen für den Abruf/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Berechtigungen prüfen" }).click();
+  // In der Testumgebung ist keine Collector-App eingerichtet
+  await expect(page.getByText("Die Verbindung zur Collector-App ist nicht eingerichtet.")).toBeVisible();
+  await expectNoA11yViolations(page);
+});

@@ -41,6 +41,7 @@ from werkbank.modules.inventory.statistics import router as inventory_statistics
 from werkbank.modules.inventory.tasks import inventory_tasks
 from werkbank.modules.inventory.whereabouts import router as inventory_whereabouts_router
 from werkbank.modules.m365_config.api import router as m365_config_router
+from werkbank.modules.m365_config.permissions import router as collector_check_router
 from werkbank.modules.m365_config.recommendations_api import router as recommendations_router
 from werkbank.modules.m365_config.search import m365_config_search
 from werkbank.modules.m365_config.snapshots_api import router as m365_snapshots_router
@@ -112,6 +113,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(m365_snapshots_router)
     app.include_router(m365_config_router)
     app.include_router(recommendations_router)
+    app.include_router(collector_check_router)
     app.include_router(tenant_router)
     app.include_router(tenant_usage_router)
     app.include_router(budget_router)

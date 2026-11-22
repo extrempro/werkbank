@@ -11,6 +11,7 @@ import {
 } from "../api";
 import { AiSettings } from "./AiSettings";
 import { BrandingSettings } from "./BrandingSettings";
+import { CollectorCheckPanel } from "./CollectorCheck";
 import { GeneralSettings } from "./GeneralSettings";
 import { NinjaSettings } from "./NinjaSettings";
 import { PeopleRoles } from "./PeopleRoles";
@@ -114,6 +115,7 @@ export function AdminPage({ section = "allgemein" }: { section?: AdminSection })
       )}
       {ready && section === "verbindungen" && (
         <div className="admin-section">
+          <CollectorCheckPanel />
           {general.ai && <AiSettings ai={general.ai} onChange={setGeneral} />}
           <GeneralSettings
             settings={general}
