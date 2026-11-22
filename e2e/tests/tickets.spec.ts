@@ -437,9 +437,8 @@ test("Tickets: Einstellungen zur E-Mail und „Letzte Eingänge“", async ({
     headers: HEADERS,
   });
   await loginAs(page, ["Tickets.Nutzer"], `Ina ${stamp}`);
-  await page.goto("/tickets/einstellungen");
-  const panel = page.getByRole("region", { name: s.areaName });
-  await panel.getByText("E-Mail-Eingang und Mails an den Melder").click();
+  await page.goto("/tickets/einstellungen/email");
+  const panel = page.locator("#inhalt");
   await expect(
     panel.getByRole("combobox", { name: /^Externe Absender/ }),
   ).toBeVisible();
@@ -456,11 +455,10 @@ test("Tickets: Einstellungen zur E-Mail und „Letzte Eingänge“", async ({
       name: "„Letzte Eingänge“ ohne Ticket löschen nach (Tagen)",
     })
     .fill("60");
-  await panel.getByRole("button", { name: "Speichern" }).last().click();
+  await panel.getByRole("button", { name: "Speichern" }).first().click();
   await expect(
     page.getByText("Die Einstellungen zur E-Mail wurden gespeichert."),
   ).toBeVisible();
-  await panel.getByText("Letzte Eingänge", { exact: true }).click();
   await expect(
     panel.getByText("Abwesenheitsnotiz oder automatische Antwort", {
       exact: false,
@@ -563,10 +561,9 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
   const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
   const s = await setup(browser, stamp);
   await loginAs(page, ["Tickets.Nutzer"], `Ina ${stamp}`);
-  await page.goto("/tickets/einstellungen");
-  const panel = page.getByRole("region", { name: s.areaName });
+  await page.goto("/tickets/einstellungen/kategorien");
+  const panel = page.locator("#inhalt");
 
-  await panel.getByText("Kategorien", { exact: true }).click();
   await panel.getByRole("textbox", { name: "Neue Kategorie" }).fill("Drucker");
   await panel.getByRole("button", { name: "Anlegen" }).click();
   await expect(
@@ -575,7 +572,6 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
       .filter({ hasText: "Die Kategorie wurde angelegt." }),
   ).toBeVisible();
 
-  await panel.getByText("Fristen und Geräte", { exact: true }).click();
   await panel
     .getByRole("checkbox", { name: "Fristen in diesem Bereich verwenden" })
     .check();
@@ -589,10 +585,11 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
   await expect(
     page
       .getByRole("status")
-      .filter({ hasText: "Fristen und Geräte wurden gespeichert." }),
+      .filter({ hasText: "Die Fristen wurden gespeichert." }),
   ).toBeVisible();
 
-  await panel.getByText("Textbausteine", { exact: true }).click();
+  await page.getByRole("link", { name: "Textbausteine", exact: true }).click();
+  await expect(page).toHaveURL(/\/tickets\/einstellungen\/textbausteine/);
   await panel.getByRole("button", { name: "Textbaustein anlegen" }).click();
   await panel.getByLabel("Name", { exact: true }).fill("Drucker gelöst");
   await panel.getByLabel("Kürzel (ohne Schrägstrich)").fill("drucker");
@@ -633,9 +630,8 @@ test("Tickets: Übersicht, Aufbewahrung mit Ausnahme, Export und Protokoll", asy
 
   // Bereichsverwaltung: eigene Regel mit Vorschau und Bestätigung
   await loginAs(page, ["Tickets.Nutzer"], `Ina ${stamp}`);
-  await page.goto("/tickets/einstellungen");
-  const panel = page.getByRole("region", { name: s.areaName });
-  await panel.getByText("Aufbewahrung", { exact: true }).click();
+  await page.goto("/tickets/einstellungen/aufbewahrung");
+  const panel = page.locator("#inhalt");
   await panel.getByRole("radio", { name: "Eigene Regel" }).check();
   await panel
     .getByRole("checkbox", {
@@ -686,10 +682,10 @@ test("Tickets: Übersicht, Aufbewahrung mit Ausnahme, Export und Protokoll", asy
   expect(file.status()).toBe(200);
   expect(file.headers()["content-disposition"]).toContain("attachment");
 
-  // Rollen und Protokoll
-  await page.goto("/tickets/protokoll");
+  // Rollen und Protokoll im Reiter „Rollen“
+  await page.goto("/tickets/einstellungen/rollen");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Rollen und Protokoll" }),
+    page.getByRole("heading", { level: 1, name: "Einstellungen" }),
   ).toBeVisible();
   const log = page.getByRole("region", { name: "Protokoll" });
   await expect(log.getByText("Export als Excel").first()).toBeVisible();
@@ -698,7 +694,39 @@ test("Tickets: Übersicht, Aufbewahrung mit Ausnahme, Export und Protokoll", asy
     log.getByText("Aufbewahrung des Bereichs geändert").first(),
   ).toBeVisible();
   await expect(
-    page.getByRole("region", { name: "Rollen" }).getByText(s.areaName),
+    page
+      .getByRole("region", { name: "Rollen", exact: true })
+      .getByText(s.areaName),
   ).toBeVisible();
+  await expectNoA11yViolations(page);
+});
+
+test("Tickets: Melder im IT-Bestand nur mit Rechten dort; Melder frei eintragbar", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+
+  await loginAs(page, ["Tickets.Nutzer"], s.editor);
+  await page.goto(`/tickets/${s.number}`);
+  await expect(page.getByText("Anruf erfasst")).toBeVisible();
+  await expect(page.getByText("Im IT-Bestand", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Gerät verknüpfen")).toHaveCount(0);
+
+  await loginAs(page, ["Tickets.Nutzer", "Bestand.Reader"], s.editor);
+  await page.goto(`/tickets/${s.number}`);
+  await expect(page.getByText("Im IT-Bestand", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Keine Stelle im IT-Bestand gefunden."),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Neues Ticket: Name frei eintragbar, auch ohne Vorschläge aus Entra
+  await page.goto("/tickets/neu");
+  await page.getByLabel("Name des Melders").fill("Paul Beispiel");
+  await expect(page.getByLabel("Name des Melders")).toHaveValue(
+    "Paul Beispiel",
+  );
   await expectNoA11yViolations(page);
 });

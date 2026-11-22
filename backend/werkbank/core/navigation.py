@@ -89,7 +89,6 @@ PAGES: dict[str, tuple[str, ...]] = {
     "/tickets/neu": EVERYONE,
     "/tickets/einstellungen": EVERYONE,
     "/tickets/uebersicht": EVERYONE,
-    "/tickets/protokoll": EVERYONE,
 }
 # Kategorien der IT-Tools (wie frontend/src/tools/index.ts)
 TOOL_CATEGORIES = (

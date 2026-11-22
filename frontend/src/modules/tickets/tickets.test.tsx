@@ -12,7 +12,9 @@ import {
   type Template,
   type Ticket,
 } from "./api";
-import { parseMails } from "./NewTicketPage";
+import { NewTicketPage, parseMails } from "./NewTicketPage";
+import { RelatedTickets } from "./RelatedTickets";
+import { parseSettingsPath, settingsPath, TicketSettingsPage } from "./TicketSettingsPage";
 import {
   changeSummary,
   entryMarker,
@@ -81,8 +83,9 @@ function ticket(extra: Partial<Ticket> = {}): Ticket {
     categories: [],
     reminder_note: "",
     sla: null,
-    devices_enabled: false,
+    inventory: false,
     device: null,
+    reporter_inventory: null,
     merged_into: null,
     retention: {
       active: false,
@@ -757,5 +760,150 @@ describe("TicketPage: Aufbewahrung", () => {
     expect(await screen.findByText(/nach der Aufbewahrungsfrist/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Interne Notiz schreiben/ })).toBeNull();
     expect((screen.getByLabelText("Status") as HTMLSelectElement).disabled).toBe(true);
+  });
+});
+
+describe("Einstellungen in Reitern", () => {
+  it("liest den Reiter aus dem Pfad", () => {
+    expect(parseSettingsPath("/tickets/einstellungen")).toBe("bereiche");
+    expect(parseSettingsPath("/tickets/einstellungen/email")).toBe("email");
+    expect(parseSettingsPath("/tickets/einstellungen/unbekannt")).toBeNull();
+    expect(parseSettingsPath("/tickets")).toBeNull();
+    expect(settingsPath("bereiche")).toBe("/tickets/einstellungen");
+    expect(settingsPath("aufbewahrung", 3)).toBe("/tickets/einstellungen/aufbewahrung?bereich=3");
+  });
+
+  it("zeigt die E-Mail-Gestaltung nur der Ticket-Verwaltung", async () => {
+    const settings = (manager: boolean) =>
+      new Response(
+        JSON.stringify({
+          manager,
+          areas: [
+            {
+              id: 1,
+              name: "IT",
+              mailbox: "it@example.com",
+              assignment: "first",
+              active: true,
+              manage: true,
+              grants: [],
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => settings(false)),
+    );
+    const { unmount } = render(<TicketSettingsPage tab="bereiche" />);
+    const nav = await screen.findByRole("navigation", { name: "Einstellungen der Tickets" });
+    await screen.findByRole("heading", { name: "IT" });
+    expect(within(nav).queryByRole("link", { name: "E-Mail-Gestaltung" })).toBeNull();
+    expect(within(nav).getByRole("link", { name: "Bereiche" }).getAttribute("aria-current")).toBe(
+      "page",
+    );
+    expect(within(nav).getByRole("link", { name: "Aufbewahrung" }).getAttribute("href")).toBe(
+      "/tickets/einstellungen/aufbewahrung?bereich=1",
+    );
+    unmount();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => settings(true)),
+    );
+    render(<TicketSettingsPage tab="bereiche" />);
+    const nav2 = await screen.findByRole("navigation", { name: "Einstellungen der Tickets" });
+    await screen.findByRole("heading", { name: "IT" });
+    expect(within(nav2).getByRole("link", { name: "E-Mail-Gestaltung" })).toBeTruthy();
+  });
+});
+
+describe("Melder und IT-Bestand", () => {
+  it("schlägt Melder aus Entra vor und übernimmt die Mailadresse", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("/people?")) {
+          return new Response(
+            JSON.stringify([{ name: "Ina Beispiel", mail: "ina@example.com", detail: "IT" }]),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify([]), { status: 200 });
+      }),
+    );
+    render(
+      <NewTicketPage
+        access={{ manager: false, settings: false, areas: [{ id: 1, name: "IT", role: "edit" }] }}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Name des Melders"), { target: { value: "Ina" } });
+    const list = await screen.findByRole(
+      "list",
+      { name: "Vorschläge aus Entra" },
+      { timeout: 2000 },
+    );
+    fireEvent.click(within(list).getByRole("button", { name: "Ina Beispiel" }));
+    expect((screen.getByLabelText("Name des Melders") as HTMLInputElement).value).toBe(
+      "Ina Beispiel",
+    );
+    expect(
+      (screen.getByLabelText("Mailadresse des Melders (freiwillig)") as HTMLInputElement).value,
+    ).toBe("ina@example.com");
+    expect(screen.queryByRole("list", { name: "Vorschläge aus Entra" })).toBeNull();
+  });
+
+  it("zeigt Stelle, Geräte und Verleih des Melders nur mit Angaben aus dem IT-Bestand", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify(
+              ticket({
+                inventory: true,
+                reporter_inventory: {
+                  positions: [
+                    {
+                      id: 7,
+                      number: "ST-007",
+                      name: "Sachbearbeitung",
+                      department: "Verwaltung",
+                      workplaces: [{ id: 3, number: "AP-003", room: "Raum 1" }],
+                      devices: [{ id: 9, name: "NB-9", kind: "Notebook", inventory_no: "INV-9" }],
+                    },
+                  ],
+                  loans: [
+                    { id: 4, number: "V-004", due_on: "2026-11-01", overdue: true, items: 2 },
+                  ],
+                },
+              }),
+            ),
+            { status: 200 },
+          ),
+      ),
+    );
+    render(<TicketPage number={1042} />);
+    expect(await screen.findByText("Im IT-Bestand")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /ST-007 Sachbearbeitung/ })).toBeTruthy();
+    expect(screen.getByText(/AP-003 \(Raum 1\)/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "NB-9" })).toBeTruthy();
+    expect(screen.getByText(/2 Geräte/)).toBeTruthy();
+  });
+
+  it("zeigt Tickets zur Stelle, fremde nur als Anzahl", async () => {
+    render(
+      <RelatedTickets
+        title="Tickets der Person"
+        load={async () => ({
+          items: [{ number: 1042, subject: "Drucker", status: "new" }],
+          hidden: 2,
+        })}
+      />,
+    );
+    expect(await screen.findByRole("link", { name: "T-1042 Drucker" })).toBeTruthy();
+    expect(
+      screen.getByText("2 weitere Tickets liegen in Bereichen, die du nicht siehst."),
+    ).toBeTruthy();
   });
 });

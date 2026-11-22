@@ -1153,7 +1153,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "„Alle Tickets“ zeigt zuerst die offenen Tickets, zuletzt geänderte oben. Über die Auswahl wechselst du zu „Mir zugewiesen“, „Nicht zugewiesen“, „Wartet“, „Gelöst und geschlossen“ oder „Alle“. Die Suche findet Nummer, Betreff und Melder. Ein Ticket von Hand legst du unter „Neues Ticket“ an, zum Beispiel nach einem Anruf.",
+                text: "„Alle Tickets“ zeigt zuerst die offenen Tickets, zuletzt geänderte oben. Über die Auswahl wechselst du zu „Mir zugewiesen“, „Nicht zugewiesen“, „Wartet“, „Gelöst und geschlossen“ oder „Alle“. Die Suche findet Nummer, Betreff und Melder. Ein Ticket von Hand legst du unter „Neues Ticket“ an, zum Beispiel nach einem Anruf. Beim Namen des Melders erscheinen ab zwei Buchstaben Vorschläge aus Entra; wählst du einen, trägt die Werkbank die Mailadresse mit ein. Du kannst Name und Mailadresse auch frei eintragen.",
               },
             ],
             links: [
@@ -1242,7 +1242,11 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Ist es eingeschaltet, verknüpfst du ein Ticket mit einem Gerät aus dem IT-Bestand. Geräte des Melders stehen oben. Auf der Seite des Geräts im IT-Bestand stehen dann die Tickets dazu.",
+                text: "Hast du Rechte im IT-Bestand, verknüpfst du ein Ticket mit einem Gerät aus dem IT-Bestand. Geräte des Melders stehen oben. Auf der Seite des Geräts im IT-Bestand stehen dann die Tickets dazu.",
+              },
+              {
+                kind: "text",
+                text: "Mit Rechten im IT-Bestand siehst du rechts außerdem „Im IT-Bestand“: die Stelle des Melders mit Abteilung, Arbeitsplatz und Geräten und seine offenen Verleihe. Die Werkbank findet die Stelle über die Mailadresse des Melders. Umgekehrt stehen auf der Seite einer Stelle im IT-Bestand die Tickets der Person; Tickets aus Bereichen, die du nicht siehst, nur als Anzahl. Ohne Rechte im IT-Bestand erscheint davon nichts.",
               },
               {
                 kind: "text",
@@ -1261,6 +1265,10 @@ export const AREAS: readonly Area[] = [
             title: "Bereiche und Rollen einstellen",
             roles: [TICKETS_SETTINGS],
             blocks: [
+              {
+                kind: "text",
+                text: "Die Einstellungen haben Reiter: Bereiche, Kategorien und Fristen, E-Mail-Eingang, E-Mail-Gestaltung (nur die Ticket-Verwaltung), Textbausteine, Aufbewahrung und Rollen. In den Reitern, die je Bereich gelten, wählst du oben den Bereich. Du siehst nur Bereiche, die du einstellen darfst.",
+              },
               {
                 kind: "text",
                 text: "Die Ticket-Verwaltung legt Bereiche an, trägt das Postfach ein und vergibt die Rollen, auch die Bereichsverwaltung. Sie selbst sieht dadurch keine Tickets. Die Bereichsverwaltung vergibt in ihrem Bereich „Bearbeiten“ und „Nur lesen“ und legt fest, wie neue Tickets zugewiesen werden.",
@@ -1299,12 +1307,12 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "„Rollen und Protokoll“ zeigt, wer in welchem Bereich welche Rolle hat, und darunter das Protokoll: Änderungen an Einstellungen und Rollen, Zuständigkeit, Status, Zusammenführen, Exporte, Ausnahmen und Aufbewahrungsläufe, jeweils mit Person und Zeitpunkt, aber ohne Texte. Die Ticket-Verwaltung sieht alle Bereiche, die Bereichsverwaltung ihre eigenen. Einträge bleiben drei Jahre.",
+                text: "Der Reiter „Rollen“ zeigt die Rollen des gewählten Bereichs, darunter alle Bereiche im Überblick und das Protokoll: Änderungen an Einstellungen und Rollen, Zuständigkeit, Status, Zusammenführen, Exporte, Ausnahmen und Aufbewahrungsläufe, jeweils mit Person und Zeitpunkt, aber ohne Texte. Die Ticket-Verwaltung sieht alle Bereiche, die Bereichsverwaltung ihre eigenen. Einträge bleiben drei Jahre.",
               },
             ],
             links: [
-              { to: "/tickets/einstellungen", label: "Zu den Einstellungen" },
-              { to: "/tickets/protokoll", label: "Zu Rollen und Protokoll" },
+              { to: "/tickets/einstellungen/aufbewahrung", label: "Zur Aufbewahrung" },
+              { to: "/tickets/einstellungen/rollen", label: "Zu den Rollen" },
             ],
           },
         ],

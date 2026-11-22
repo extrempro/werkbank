@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.102.0] – 2026-11-22
+
+### Tickets
+
+- **Einstellungen in Reitern** wie im Entwurf: Bereiche · Kategorien und Fristen · E-Mail-Eingang · E-Mail-Gestaltung (nur Ticket-Verwaltung) · Textbausteine · Aufbewahrung · Rollen; eigene Adressen je Reiter (`/tickets/einstellungen/<reiter>?bereich=`); Bereichsauswahl statt langer Seite; „Rollen und Protokoll“ ist jetzt der Reiter „Rollen“ (Menüpunkt entfällt)
+- **Melder im IT-Bestand:** Block „Im IT-Bestand“ am Ticket mit Stelle, Abteilung, Arbeitsplätzen, Geräten und offenen Verleihen (Zuordnung Mailadresse = UPN), nur mit Rechten im IT-Bestand
+- **Tickets der Person** auf der Seite einer Stelle im IT-Bestand (`GET /api/tickets/by-position/{id}`), fremde Bereiche nur als Anzahl
+- **Geräte ohne Schalter je Bereich:** sichtbar mit Rechten im IT-Bestand, verknüpfen zusätzlich mit „Bearbeiten“; Optionen „Nur diese Arten“, „Geräte des Melders vorschlagen“, „Tickets beim Gerät zeigen“ entfallen; Migration `0068`
+- **Melder aus Entra** beim Anlegen (`GET /api/tickets/people`): Vorschläge ab zwei Buchstaben, Auswahl übernimmt die Mailadresse; freie Eingabe bleibt
+- Link der Benachrichtigung „Neue Mail zu prüfen“ führt direkt zum Reiter E-Mail-Eingang des Bereichs
+
+### Dokumentation
+
+- spec.md, datenschutz.md, Handbuch (Einstellungen, Arbeitshilfen, Liste), Info-Symbole
+
+### Tests
+
+- `test_tickets_inventory.py`, `tickets.test.tsx`, E2E `tickets.spec.ts` (Reiter, Melder im IT-Bestand)
+
 ## [0.101.0] – 2026-11-22
 
 ### Tickets (Phase 4: Betrieb)

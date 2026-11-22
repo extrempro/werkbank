@@ -32,6 +32,7 @@ import {
   TICKETS_PATH,
   sendReply,
   type Candidate,
+  type ReporterInventory,
   type Entry,
   type StatusAfter,
   type Participant,
@@ -42,7 +43,7 @@ import {
   type Ticket,
   type TicketStatus,
 } from "./api";
-import { hardwarePath } from "../inventory/api";
+import { formatDate, hardwarePath, positionPath } from "../inventory/api";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
 
 /** So viele Einträge stehen nach der ursprünglichen Meldung, der Rest ist eingeklappt. */
@@ -795,9 +796,10 @@ function Facts({
         )}
         {ticket.sla && <SlaFact sla={ticket.sla} />}
         <Participants ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
-        {ticket.devices_enabled && (
+        {ticket.inventory && (
           <DeviceSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
         )}
+        {ticket.reporter_inventory && <ReporterInventorySection data={ticket.reporter_inventory} />}
         {ticket.permissions.edit && ticket.status !== "merged" && (
           <MergeSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
         )}
@@ -973,6 +975,78 @@ function useSearch<T>(load: (q: string) => Promise<T[]>, active: boolean) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, active]);
   return { query, setQuery, items, failed };
+}
+
+/** Melder im IT-Bestand: Stellen, Arbeitsplätze, Geräte, offene Verleihe (nur lesen). */
+function ReporterInventorySection({ data }: { data: ReporterInventory }) {
+  const [open, setOpen] = useState(true);
+  const empty = data.positions.length === 0 && data.loans.length === 0;
+  return (
+    <div className="ticket-fact">
+      <details
+        className="ticket-device"
+        open={open}
+        onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
+      >
+        <summary>Im IT-Bestand</summary>
+        <p className="small">
+          Zugeordnet über die Mailadresse des Melders.
+          <InfoTip term="tickets.melder-bestand" />
+        </p>
+        {empty && <p className="small">Keine Stelle im IT-Bestand gefunden.</p>}
+        {data.positions.map((pos) => (
+          <div key={pos.id} className="ticket-inventory-position">
+            <Link to={positionPath(pos.id)}>
+              <span className="mono">{pos.number}</span> {pos.name}
+            </Link>
+            {pos.department && <span className="small"> · {pos.department}</span>}
+            {pos.workplaces.length > 0 && (
+              <p className="small">
+                Arbeitsplatz:{" "}
+                {pos.workplaces
+                  .map((w) => (w.room ? `${w.number} (${w.room})` : w.number))
+                  .join(", ")}
+              </p>
+            )}
+            {pos.devices.length > 0 ? (
+              <ul className="ticket-pick-list">
+                {pos.devices.map((d) => (
+                  <li key={d.id}>
+                    <Link to={hardwarePath(d.id)}>{d.name}</Link>
+                    <span className="small">
+                      {" "}
+                      · {d.kind}
+                      {d.inventory_no && ` · ${d.inventory_no}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="small">Keine Geräte an dieser Stelle.</p>
+            )}
+          </div>
+        ))}
+        {data.loans.length > 0 && (
+          <div>
+            <p className="small">Offene Verleihe:</p>
+            <ul className="ticket-pick-list">
+              {data.loans.map((loan) => (
+                <li key={loan.id}>
+                  <span className="mono">{loan.number}</span>
+                  <span className="small">
+                    {" "}
+                    · {loan.items === 1 ? "1 Gerät" : `${loan.items} Geräte`} · bis{" "}
+                    {formatDate(loan.due_on)}
+                  </span>
+                  {loan.overdue && <span className="pill pill-bad">überfällig</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </details>
+    </div>
+  );
 }
 
 /** Gerät aus dem IT-Bestand verknüpfen (höchstens 5 Treffer, Vorschläge des Melders zuerst). */

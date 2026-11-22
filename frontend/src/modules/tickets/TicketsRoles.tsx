@@ -4,9 +4,9 @@ import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
 import {
   AUDIT_LABELS,
+  type AreaSettings,
   auditDetails,
   fetchAudit,
-  fetchTicketSettings,
   ROLE_LABELS,
   ticketLabel,
   ticketPath,
@@ -17,9 +17,65 @@ import {
 
 const ROLES: AreaRole[] = ["admin", "edit", "read"];
 
-/** Tickets › Rollen und Protokoll: wer in welchem Bereich welche Rolle hat, und was passiert ist. */
-export function TicketsLogPage() {
-  const [settings, setSettings] = useState<TicketSettings | null>(null);
+/** Übersicht: wer in welchem Bereich welche Rolle hat (alle Bereiche, die du einstellen darfst). */
+export function RolesOverview({ settings }: { settings: TicketSettings }) {
+  return (
+    <section className="panel" aria-labelledby="ticket-rollen">
+      <div className="panel-head">
+        <h2 id="ticket-rollen">Alle Bereiche</h2>
+      </div>
+      {settings.areas.length === 0 && (
+        <p className="detail-body empty">Es gibt noch keinen Bereich.</p>
+      )}
+      {settings.areas.length > 0 && (
+        <div className="table-wrap card-wrap" tabIndex={0} role="region" aria-label="Rollen">
+          <table className="table-cards">
+            <caption className="visually-hidden">Rollen je Bereich</caption>
+            <thead>
+              <tr>
+                <th scope="col">Bereich</th>
+                {ROLES.map((role) => (
+                  <th key={role} scope="col">
+                    {ROLE_LABELS[role]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {settings.areas.map((a) => (
+                <tr key={a.id}>
+                  <th scope="row">
+                    {a.name}
+                    {!a.active && <span className="small"> (inaktiv)</span>}
+                  </th>
+                  {ROLES.map((role) => {
+                    const grants = a.grants.filter((g) => g.role === role);
+                    return (
+                      <td key={role} data-label={ROLE_LABELS[role]}>
+                        {grants.length === 0
+                          ? "–"
+                          : grants
+                              .map((g) =>
+                                g.kind === "group"
+                                  ? `Gruppe ${g.name}${g.members === null ? "" : ` (${g.members})`}`
+                                  : g.name,
+                              )
+                              .join(", ")}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Protokoll des Moduls: Ticket-Verwaltung alles, Bereichsverwaltung ihre Bereiche. */
+export function AuditLog({ areas }: { areas: AreaSettings[] }) {
   const [area, setArea] = useState<number | null>(null);
   const [audit, setAudit] = useState<{
     key: number | null;
@@ -29,18 +85,6 @@ export function TicketsLogPage() {
   const [failed, setFailed] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const areaId = useId();
-
-  useEffect(() => {
-    let active = true;
-    fetchTicketSettings().then(
-      (result) => active && setSettings(result),
-      (problem: unknown) =>
-        active && setFailed(errorText(problem, "Die Rollen konnten nicht geladen werden.")),
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -72,86 +116,18 @@ export function TicketsLogPage() {
   };
 
   return (
-    <div className="page page-wide">
-      <header className="page-head">
-        <div>
-          <p className="module-label">Tickets</p>
-          <h1>Rollen und Protokoll</h1>
-          <p className="page-sub">
-            Wer in welchem Bereich welche Rolle hat und was in den Bereichen geändert wurde.
-            <InfoTip term="tickets.rollen" />
-          </p>
-        </div>
-      </header>
+    <>
       {failed && (
         <p role="alert" className="hint-box hint-bad">
           {failed}
         </p>
       )}
-
-      <section className="panel" aria-labelledby="ticket-rollen">
-        <div className="panel-head">
-          <h2 id="ticket-rollen">Rollen</h2>
-        </div>
-        {!settings && !failed && (
-          <p className="detail-body" role="status">
-            Wird geladen …
-          </p>
-        )}
-        {settings && settings.areas.length === 0 && (
-          <p className="detail-body empty">Es gibt noch keinen Bereich.</p>
-        )}
-        {settings && settings.areas.length > 0 && (
-          <div className="table-wrap card-wrap" tabIndex={0} role="region" aria-label="Rollen">
-            <table className="table-cards">
-              <caption className="visually-hidden">Rollen je Bereich</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Bereich</th>
-                  {ROLES.map((role) => (
-                    <th key={role} scope="col">
-                      {ROLE_LABELS[role]}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {settings.areas.map((a) => (
-                  <tr key={a.id}>
-                    <th scope="row">
-                      {a.name}
-                      {!a.active && <span className="small"> (inaktiv)</span>}
-                    </th>
-                    {ROLES.map((role) => {
-                      const grants = a.grants.filter((g) => g.role === role);
-                      return (
-                        <td key={role} data-label={ROLE_LABELS[role]}>
-                          {grants.length === 0
-                            ? "–"
-                            : grants
-                                .map((g) =>
-                                  g.kind === "group"
-                                    ? `Gruppe ${g.name}${g.members === null ? "" : ` (${g.members})`}`
-                                    : g.name,
-                                )
-                                .join(", ")}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
       <section className="panel" aria-labelledby="ticket-protokoll">
         <div className="panel-head">
           <h2 id="ticket-protokoll">Protokoll</h2>
           <InfoTip term="tickets.protokoll" />
         </div>
-        {settings && settings.areas.length > 1 && (
+        {areas.length > 1 && (
           <div className="detail-body">
             <label htmlFor={areaId} className="filter-field">
               Bereich
@@ -163,7 +139,7 @@ export function TicketsLogPage() {
                 }
               >
                 <option value="">Alle</option>
-                {settings.areas.map((a) => (
+                {areas.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
                   </option>
@@ -229,6 +205,6 @@ export function TicketsLogPage() {
           </p>
         )}
       </section>
-    </div>
+    </>
   );
 }
