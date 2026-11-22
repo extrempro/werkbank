@@ -242,7 +242,7 @@ def member_groups(db: Session, settings: Settings, source: GroupSource, oid: str
     """
     now = now_utc()
     cached = db.get(TicketMembershipCache, oid)
-    max_age = timedelta(minutes=settings.tickets_membership_cache_minutes)
+    max_age = timedelta(minutes=min(max(settings.tickets_membership_cache_minutes, 1), 60))
     if cached is not None and now - cached.checked_at < max_age:
         return set(cached.group_ids)
     try:

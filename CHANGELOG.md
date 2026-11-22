@@ -4,6 +4,27 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.97.0] – 2026-11-22
+
+### Tickets (neu, Phase 1)
+
+- Neues Modul **Tickets** (spec.md 8e): Bereiche (z. B. Abteilungen) mit Rollen je Bereich: Bereichsverwaltung, Bearbeiten, Nur lesen; vergeben an Entra-Gruppen (Objekt-ID) oder einzelne Personen
+- Gruppenmitgliedschaft serverseitig über Microsoft Graph (`transitiveMemberOf`, Zwischenspeicher `TICKETS_MEMBERSHIP_CACHE_MINUTES`, Vorgabe 5); stündlicher Abgleich der Gruppenmitglieder (`tickets.gruppen`); kein Gruppen-Claim
+- Neue App-Rollen `Tickets.Nutzer` (nur Anmeldung) und `Tickets.Verwaltung` (Bereiche, Postfächer, Rollen; kein Zugriff auf Tickets)
+- Tickets von Hand erfassen (Anruf, von Hand), Liste mit Suche und Auswahl, Ticketseite mit festem Kopf, Verlauf (Meldung oben, letzte vier Einträge), interne Notizen, Priorität, Beteiligte, Verschieben in einen anderen Bereich
+- Status und Zuständigkeit gelten erst nach „Bestätigen“ (Zusammenfassung, „Verwerfen“, Übergabenotiz); Schutz vor gleichzeitigen Änderungen (409)
+- Zuweisung neuer Tickets „wer zuerst übernimmt“ oder „reihum“; Gelöst → Geschlossen nach 5 Tagen (`tickets.wartung`)
+- Fremde Tickets ergeben 404; Protokoll des Moduls (`ticket_audit`, 3 Jahre) und Audit-Log
+- Migration `0064`
+
+### Dokumentation
+
+- spec.md (8e, Rollen, Phasen), entra-setup.md (App-Rollen, `GroupMember.Read.All`), datenschutz.md, Handbuch „Tickets“, Info-Symbole, `.env.example`
+
+### Tests
+
+- `test_tickets.py`, `tickets.test.tsx`, E2E `tickets.spec.ts`
+
 ## [0.96.0] – 2026-11-22
 
 ### M365-Konfiguration

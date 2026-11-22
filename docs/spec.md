@@ -724,7 +724,7 @@ Bestand der IT-Hardware. Schritte 1 bis 8 sind umgesetzt. Zugriff: `Bestand.Read
 
 ## 8e. Modul Tickets
 
-Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Eigener Bereich „Tickets“ in der Navigation (`/tickets`). Tickets entstehen nur per E-Mail oder von Hand; kein Self-Service-Portal, keine Anbindung an Zabbix (vorerst). Stand: geplant, Umsetzung in vier Phasen (siehe unten).
+Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Eigener Bereich „Tickets“ in der Navigation (`/tickets`). Tickets entstehen nur per E-Mail oder von Hand; kein Self-Service-Portal, keine Anbindung an Zabbix (vorerst). Stand: Phase T1 umgesetzt (`modules/tickets`, Migration 0064, `GET/POST /api/tickets`, `GET/PATCH /api/tickets/{nr}`, `PUT …/details`, `POST …/move`, `POST …/notes`, `/api/tickets/me`, `/api/tickets/settings…`; Aufträge `tickets.gruppen` stündlich und `tickets.wartung` stündlich: Schließen nach 5 Tagen, alter Zwischenspeicher, Protokoll nach 3 Jahren). In T1 sind „Erinnerung“ und „Zusammengeführt“ noch nicht wählbar; Antworten an den Melder kommen mit Phase T2. Testquelle für Gruppen nur mit Test-Login (`/api/tickets/test/membership`, sonst 404).
 
 ### Begriffe
 
@@ -1136,7 +1136,7 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | – | Einheitliche Oberfläche, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen | ✅ umgesetzt, mit Handbuch und letzten Aktivitäten auf der Startseite |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Benachrichtigungen, Push | Vollumfang v1 | 🔄 weitgehend: Exchange, Teams, Intune und SharePoint (Konfiguration), Benachrichtigungen (Glocke, Mail, Teams, Push) umgesetzt |
 | 5 | weitere Module nach Bedarf | – | offen |
-| T1–T4 | Modul Tickets (8e) | Ticketsystem für Bereiche mit eigenem Postfach | 🔄 geplant |
+| T1–T4 | Modul Tickets (8e) | Ticketsystem für Bereiche mit eigenem Postfach | 🔄 T1 umgesetzt (Bereiche, Rollen je Bereich, Tickets von Hand, Liste, Ticketseite, Status und Zuständigkeit mit Bestätigung, Verlauf, Notizen, Verschieben) |
 
 ---
 

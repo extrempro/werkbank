@@ -146,6 +146,8 @@ class TicketOut(TicketItem):
     permissions: PermissionsOut
     assignees: list[PersonOut]
     move_targets: list[AreaRef]
+    # Eigene Objekt-ID (für „Mir zuweisen“)
+    me_oid: str
 
 
 def _area_names(db: Session) -> dict[int, str]:
@@ -220,6 +222,7 @@ def _detail(db: Session, access: TicketAccess, ticket: Ticket) -> TicketOut:
             move=can_edit,
         ),
         assignees=assignees,
+        me_oid=access.oid,
         move_targets=[
             AreaRef(id=a.id, name=a.name, role=access.role(a.id))
             for a in active
