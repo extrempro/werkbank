@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.95.0",
+    date: "2026-11-22",
+    summary: "IT-Bestand: Die Statistik ist neu aufgebaut.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Die Statistik beginnt mit sechs Kennzahlen; ein Klick darauf öffnet den passenden Bereich.",
+          "Die Auswertungen sind in Bereiche aufgeteilt: Überblick, Alter & Erneuerung, Standorte & Arbeitsplätze, Verleih, Ausmusterung und Datenqualität.",
+          "Du kannst nach Hersteller, Art, Standort und Abteilung filtern. Ein Klick auf einen Balken bei Art, Hersteller oder Standort filtert die ganze Seite.",
+          "Neu sind unter anderem der Erneuerungsbedarf je Geschäftsjahr, die Ausstattung der Arbeitsplätze, freie Geräte im Lager, die Pünktlichkeit beim Verleih und fehlende Angaben.",
+          "In den Stammdaten legst du bei den Hardware-Arten fest, nach wie vielen Jahren ein Gerät erneuert werden sollte.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.94.0",
     date: "2026-11-22",
     summary: "IT-Bestand: Hardware über Arbeitsplätze bei der Stelle und Verleih mit Startdatum.",

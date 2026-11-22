@@ -1,225 +1,197 @@
-import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useId, useState } from "react";
 import { errorText } from "../../api";
+import { InfoTip } from "../../components/InfoTip";
+import type { HelpKey } from "../../help/terms";
 import {
   fetchInventoryStatistics,
-  monthLabel,
   percentText,
-  pieSlices,
   type InventoryStatistics,
   type StatChart,
   type StatCount,
+  type StatFilterKey,
+  type StatFilters,
+  type StatOption,
 } from "./api";
 
-type ChartForm = "balken" | "kreis";
+type ChartForm = "balken" | "tabelle";
 
-const OTHER = "Andere";
+const SECTION_KEYS = ["ueberblick", "alter", "orte", "verleih", "ausmusterung", "daten"] as const;
+type SectionKey = (typeof SECTION_KEYS)[number];
 
-function sliceColor(item: StatCount, index: number): string {
-  return item.label === OTHER ? "var(--chart-andere)" : `var(--chart-${(index % 8) + 1})`;
+const NO_FILTERS: StatFilters = { maker: null, kind: null, site: null, department: null };
+
+const FILTER_LABELS: Record<StatFilterKey, { label: string; all: string }> = {
+  maker: { label: "Hersteller", all: "Alle Hersteller" },
+  kind: { label: "Art", all: "Alle Arten" },
+  site: { label: "Standort", all: "Alle Standorte" },
+  department: { label: "Abteilung", all: "Alle Abteilungen" },
+};
+
+const OPTIONS_OF: Record<StatFilterKey, keyof InventoryStatistics> = {
+  maker: "makers",
+  kind: "kinds",
+  site: "sites",
+  department: "departments",
+};
+
+function initialSection(): SectionKey {
+  const value = new URLSearchParams(window.location.search).get("bereich");
+  return SECTION_KEYS.find((key) => key === value) ?? "ueberblick";
 }
 
-/** Waagerechte Balken: Name, Balken, Zahl. Eine Farbe, die Zahl steht daneben. */
-function Bars({ items, total }: { items: StatCount[]; total: number }) {
+/** Waagerechte Balken: Name, Balken, Zahl. Mit Filter ist jeder Balken ein Knopf. */
+function Bars({
+  items,
+  total,
+  onPick,
+  picked,
+}: {
+  items: StatCount[];
+  total: number;
+  onPick: ((item: StatCount) => void) | null;
+  picked: number | null;
+}) {
   const max = Math.max(1, ...items.map((item) => item.count));
   return (
     <ul className="stat-bars">
-      {items.map((item) => (
-        <li
-          key={item.label}
-          title={`${item.label}: ${item.count} (${percentText(item.count, total)})`}
-        >
-          <span className="stat-bar-label">{item.label}</span>
-          <span className="stat-bar-track" aria-hidden="true">
-            <span
-              className="stat-bar"
-              style={{ width: `${Math.max(1, (item.count / max) * 100)}%` }}
-            />
-          </span>
-          <span className="stat-bar-value">{item.count}</span>
-        </li>
-      ))}
+      {items.map((item) => {
+        const content = (
+          <>
+            <span className="stat-bar-label">
+              {item.label}
+              {item.warn && <span className="visually-hidden"> (hervorgehoben)</span>}
+            </span>
+            <span className="stat-bar-track" aria-hidden="true">
+              <span
+                className={item.warn ? "stat-bar stat-bar-warn" : "stat-bar"}
+                style={{ width: `${Math.max(1, (item.count / max) * 100)}%` }}
+              />
+            </span>
+            <span className="stat-bar-value">{item.count}</span>
+          </>
+        );
+        const title = `${item.label}: ${item.count} (${percentText(item.count, total)})`;
+        const canPick = onPick !== null && item.value !== null && item.value !== undefined;
+        return (
+          <li key={item.label} title={title}>
+            {canPick ? (
+              <button
+                type="button"
+                className="stat-bar-button"
+                aria-pressed={picked === item.value}
+                onClick={() => onPick(item)}
+              >
+                {content}
+              </button>
+            ) : (
+              content
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
 
-/** Ring mit höchstens acht Stücken; daneben die Legende mit Zahl und Anteil. */
-function Pie({ items, total, label }: { items: StatCount[]; total: number; label: string }) {
-  const slices = pieSlices(items);
-  const radius = 70;
-  const width = 26;
-  const circumference = 2 * Math.PI * radius;
-  const gap = slices.length > 1 ? 2 : 0;
-  const lengths = slices.map((item) => (total > 0 ? (item.count / total) * circumference : 0));
-  const offsets = lengths.map((_, index) =>
-    lengths.slice(0, index).reduce((sum, value) => sum + value, 0),
-  );
-  return (
-    <div className="stat-pie">
-      <svg viewBox="0 0 180 180" width="180" height="180" role="img" aria-label={label}>
-        <circle
-          cx="90"
-          cy="90"
-          r={radius}
-          fill="none"
-          stroke="var(--farbe-trenner)"
-          strokeWidth={width}
-        />
-        {slices.map((item, index) => {
-          const dash = Math.max(0, (lengths[index] ?? 0) - gap);
-          return (
-            <circle
-              key={item.label}
-              cx="90"
-              cy="90"
-              r={radius}
-              fill="none"
-              stroke={sliceColor(item, index)}
-              strokeWidth={width}
-              strokeDasharray={`${dash} ${circumference - dash}`}
-              strokeDashoffset={-(offsets[index] ?? 0)}
-              transform="rotate(-90 90 90)"
-            >
-              <title>{`${item.label}: ${item.count} (${percentText(item.count, total)})`}</title>
-            </circle>
-          );
-        })}
-        <text x="90" y="88" textAnchor="middle" className="stat-pie-total">
-          {total}
-        </text>
-        <text x="90" y="106" textAnchor="middle" className="stat-pie-unit">
-          gesamt
-        </text>
-      </svg>
-      <ul className="stat-legend">
-        {slices.map((item, index) => (
-          <li key={item.label}>
-            <span
-              className="stat-swatch"
-              style={{ background: sliceColor(item, index) }}
-              aria-hidden="true"
-            />
-            <span className="stat-legend-label">{item.label}</span>
-            <span className="stat-legend-value">
-              {item.count} · {percentText(item.count, total)}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/** Umschalter Balken/Kreis. */
-function FormSwitch({
-  value,
-  onChange,
-}: {
-  value: ChartForm;
-  onChange: (value: ChartForm) => void;
-}) {
-  return (
-    <div className="chips" role="group" aria-label="Darstellung">
-      {(["balken", "kreis"] as const).map((form) => (
-        <button
-          key={form}
-          type="button"
-          className="chip chip-filter"
-          aria-pressed={value === form}
-          onClick={() => onChange(form)}
-        >
-          {form === "balken" ? "Balken" : "Kreis"}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/** Eine Auswertung: Titel, Umschalter, Diagramm und dieselben Zahlen als Tabelle. */
+/** Eine Auswertung: Titel, Umschalter Balken/Tabelle, Hinweis. */
 function ChartCard({
-  title,
-  items,
+  chart,
   form,
   onForm,
-  unit = "Geräte",
+  onPick,
+  picked,
 }: {
-  title: string;
-  items: StatCount[];
+  chart: StatChart;
   form: ChartForm;
   onForm: (value: ChartForm) => void;
-  unit?: string;
+  onPick: ((item: StatCount) => void) | null;
+  picked: number | null;
 }) {
   const headingId = useId();
-  const total = items.reduce((sum, item) => sum + item.count, 0);
+  const total = chart.items.reduce((sum, item) => sum + item.count, 0);
   return (
     <section className="panel stat-card" aria-labelledby={headingId}>
       <div className="panel-head stat-head">
-        <h2 id={headingId}>{title}</h2>
-        <FormSwitch value={form} onChange={onForm} />
+        <h2 id={headingId}>{chart.title}</h2>
+        <div className="chips" role="group" aria-label={`Darstellung: ${chart.title}`}>
+          {(["balken", "tabelle"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              className="chip chip-filter"
+              aria-pressed={form === value}
+              onClick={() => onForm(value)}
+            >
+              {value === "balken" ? "Balken" : "Tabelle"}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="detail-body">
         {total === 0 ? (
           <p className="empty">Keine Daten.</p>
         ) : form === "balken" ? (
-          <Bars items={items} total={total} />
+          <Bars items={chart.items} total={total} onPick={onPick} picked={picked} />
         ) : (
-          <Pie items={items} total={total} label={`${title}: ${total} ${unit}`} />
-        )}
-        {total > 0 && (
-          <details className="stat-table">
-            <summary>Als Tabelle</summary>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">{title}</th>
-                    <th scope="col" className="num">
-                      {unit}
-                    </th>
-                    <th scope="col" className="num">
-                      Anteil
-                    </th>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{chart.title}</th>
+                  <th scope="col" className="num">
+                    {chart.unit}
+                  </th>
+                  <th scope="col" className="num">
+                    Anteil
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {chart.items.map((item) => (
+                  <tr key={item.label}>
+                    <td>
+                      {item.label}
+                      {item.warn && <span className="pill pill-todo stat-warn">beachten</span>}
+                    </td>
+                    <td className="num">{item.count}</td>
+                    <td className="num">{percentText(item.count, total)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {items.map((item) => (
-                    <tr key={item.label}>
-                      <td>{item.label}</td>
-                      <td className="num">{item.count}</td>
-                      <td className="num">{percentText(item.count, total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </details>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
+        {chart.note && <p className="small stat-note">{chart.note}</p>}
       </div>
     </section>
   );
 }
 
-/** IT-Bestand › Statistik: Zählungen über den aktiven Bestand, auf Wunsch je Hersteller. */
+interface Kpi {
+  label: string;
+  value: string;
+  sub: string;
+  section: SectionKey;
+  warn?: boolean;
+  term?: HelpKey;
+}
+
+/** IT-Bestand › Statistik: Kennzahlen und Auswertungen in Bereichen, mit Filtern. */
 export function InventoryStatisticsPage() {
-  const selectId = useId();
-  const [maker, setMaker] = useState<number | null>(null);
-  const [loaded, setLoaded] = useState<{ maker: number | null; data: InventoryStatistics } | null>(
-    null,
-  );
+  const [filters, setFilters] = useState<StatFilters>(NO_FILTERS);
+  const [section, setSection] = useState<SectionKey>(initialSection);
+  const [loaded, setLoaded] = useState<{ key: string; data: InventoryStatistics } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [forms, setForms] = useState<Record<string, ChartForm>>({});
-  const [makers, setMakers] = useState<InventoryStatistics["makers"]>([]);
+  const filterKey = JSON.stringify(filters);
 
   useEffect(() => {
     let active = true;
-    fetchInventoryStatistics(maker).then(
+    fetchInventoryStatistics(filters).then(
       (result) => {
         if (active) {
           setFailed(null);
-          setLoaded({ maker, data: result });
-          if (maker === null) {
-            setMakers(result.makers);
-          }
+          setLoaded({ key: filterKey, data: result });
         }
       },
       (problem: unknown) =>
@@ -228,136 +200,203 @@ export function InventoryStatisticsPage() {
     return () => {
       active = false;
     };
-  }, [maker]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterKey]);
 
-  const data = loaded && loaded.maker === maker ? loaded.data : null;
-  const formOf = (key: string): ChartForm => forms[key] ?? "balken";
-  const setForm = (key: string) => (value: ChartForm) => setForms({ ...forms, [key]: value });
-  const options = makers.length > 0 ? makers : (data?.makers ?? []);
+  // Beim Neuladen bleibt der alte Stand stehen, damit die Seite nicht springt
+  const data = loaded?.data ?? null;
+  const loading = loaded?.key !== filterKey;
 
-  const charts: StatChart[] = data ? data.charts : [];
-  const retiredItems: StatCount[] = data
-    ? data.retired.map((year) => ({ label: String(year.year), count: year.count }))
+  const chooseSection = (key: SectionKey) => {
+    setSection(key);
+    const url = new URL(window.location.href);
+    url.searchParams.set("bereich", key);
+    window.history.replaceState(window.history.state, "", url);
+  };
+  const setFilter = (key: StatFilterKey, value: number | null) =>
+    setFilters({ ...filters, [key]: value });
+  const active = (Object.keys(filters) as StatFilterKey[]).filter((key) => filters[key] !== null);
+
+  const kpis: Kpi[] = data
+    ? [
+        {
+          label: "Aktive Geräte",
+          value: String(data.kpis.total),
+          sub: `${data.kpis.new_this_month} neu in diesem Monat`,
+          section: "ueberblick",
+        },
+        {
+          label: "Im Lager, frei",
+          value: String(data.kpis.free),
+          sub: "sofort ausgebbar",
+          section: "orte",
+        },
+        {
+          label: "Verliehen",
+          value: String(data.kpis.loans_open),
+          sub:
+            data.kpis.loans_overdue === 1
+              ? "1 überfällig"
+              : `${data.kpis.loans_overdue} überfällig`,
+          section: "verleih",
+          warn: data.kpis.loans_overdue > 0,
+        },
+        {
+          label: "Erneuerung fällig",
+          value: data.kpis.renewal_due === null ? "–" : String(data.kpis.renewal_due),
+          sub:
+            data.kpis.renewal_due === null
+              ? "Nutzungsdauer fehlt"
+              : `${percentText(data.kpis.renewal_due, data.kpis.total)} des Bestands`,
+          section: "alter",
+          warn: (data.kpis.renewal_due ?? 0) > 0,
+          term: "bestand.erneuerung",
+        },
+        {
+          label: "Arbeitsplätze mit Lücke",
+          value: String(data.kpis.workplaces_gap),
+          sub: "laut Vorlage",
+          section: "orte",
+        },
+        {
+          label: "Fehlende Angaben",
+          value: String(data.kpis.missing),
+          sub: "über alle Felder",
+          section: "daten",
+        },
+      ]
     : [];
-  const loanItems: StatCount[] = data
-    ? data.loans.months.map((month) => ({ label: monthLabel(month.label), count: month.count }))
-    : [];
+
+  const current = data?.sections.find((entry) => entry.key === section) ?? data?.sections[0];
 
   return (
-    <div className="page page-wide">
-      <header className="page-head">
-        <p className="module-label">IT-Bestand</p>
-        <h1>Statistik</h1>
-        <p className="page-sub">
-          Zahlen zum aktiven Bestand. Ausgemusterte Geräte zählen nur bei „Ausmusterungen je Jahr“.
-        </p>
-      </header>
-      <div className="settings-form stat-filter">
-        <label htmlFor={selectId} className="narrow">
-          Hersteller
-          <select
-            id={selectId}
-            value={maker === null ? "" : String(maker)}
-            onChange={(event) =>
-              setMaker(event.target.value === "" ? null : Number(event.target.value))
-            }
-          >
-            <option value="">Alle Hersteller</option>
-            {options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name} ({option.count})
-              </option>
-            ))}
-          </select>
-        </label>
-        {data && (
-          <p className="stat-total" role="status">
-            {data.total === 1 ? "1 aktives Gerät" : `${data.total} aktive Geräte`}
+    <div className="page page-wide stat-page">
+      <header className="page-head stat-page-head">
+        <div>
+          <p className="module-label">IT-Bestand</p>
+          <h1>Statistik</h1>
+          <p className="page-sub">
+            Wie der Bestand aussieht, was ersetzt werden muss und wo Daten fehlen. Gezählt werden
+            aktive Geräte; ausgemusterte nur unter „Ausmusterung“.
           </p>
-        )}
-      </div>
+        </div>
+        <button
+          type="button"
+          className="button button-secondary no-print"
+          onClick={() => window.print()}
+        >
+          Drucken oder als PDF
+        </button>
+      </header>
+
+      {data && (
+        <section className="panel stat-filters no-print" aria-label="Filter">
+          {(Object.keys(FILTER_LABELS) as StatFilterKey[]).map((key) => (
+            <label key={key} className="filter-field">
+              {FILTER_LABELS[key].label}
+              <select
+                value={filters[key] === null ? "" : String(filters[key])}
+                onChange={(event) =>
+                  setFilter(key, event.target.value === "" ? null : Number(event.target.value))
+                }
+              >
+                <option value="">{FILTER_LABELS[key].all}</option>
+                {(data[OPTIONS_OF[key]] as StatOption[]).map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name} ({option.count})
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+          {active.length > 0 && (
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => setFilters(NO_FILTERS)}
+            >
+              Filter aufheben
+            </button>
+          )}
+          <p className="small stat-loading" role="status">
+            {loading ? "Wird aktualisiert …" : ""}
+          </p>
+        </section>
+      )}
+
       {failed && (
         <p role="alert" className="hint-box hint-bad">
           {failed}
         </p>
       )}
       {!data && !failed && <p role="status">Wird geladen …</p>}
-      {data && (
-        <div className="stat-grid">
-          {charts.map((chart) => (
-            <ChartCard
-              key={chart.key}
-              title={chart.title}
-              items={chart.items}
-              form={formOf(chart.key)}
-              onForm={setForm(chart.key)}
-            />
-          ))}
-          <section className="panel stat-card" aria-labelledby="stat-verleih">
-            <div className="panel-head stat-head">
-              <h2 id="stat-verleih">Verleih</h2>
-            </div>
-            <div className="detail-body">
-              <dl className="kpis stat-kpis">
-                <div className="kpi">
-                  <dt>Gerade verliehen</dt>
-                  <dd>{data.loans.open}</dd>
-                </div>
-                <div className="kpi">
-                  <dt>
-                    Davon überfällig <InfoTip term="bestand.ueberfaellig" />
-                  </dt>
-                  <dd>{data.loans.overdue}</dd>
-                </div>
-              </dl>
-              <h3 className="sub-head">Neue Verleihe je Monat</h3>
-              {loanItems.some((item) => item.count > 0) ? (
-                <Bars items={loanItems} total={loanItems.reduce((s, i) => s + i.count, 0)} />
-              ) : (
-                <p className="empty">In den letzten zwölf Monaten nichts verliehen.</p>
-              )}
-            </div>
-          </section>
-          <ChartCard
-            title="Ausmusterungen je Jahr"
-            items={retiredItems}
-            form={formOf("ausmusterung")}
-            onForm={setForm("ausmusterung")}
-          />
-          {data.retired.length > 0 && (
-            <section className="panel stat-card" aria-labelledby="stat-gruende">
-              <div className="panel-head">
-                <h2 id="stat-gruende">Gründe der Ausmusterung</h2>
-              </div>
-              <div className="detail-body">
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th scope="col">Jahr</th>
-                        <th scope="col">Grund</th>
-                        <th scope="col" className="num">
-                          Geräte
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.retired.flatMap((year) =>
-                        year.reasons.map((reason, index) => (
-                          <tr key={`${year.year}-${reason.label}`}>
-                            <td>{index === 0 ? year.year : ""}</td>
-                            <td>{reason.label}</td>
-                            <td className="num">{reason.count}</td>
-                          </tr>
-                        )),
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-          )}
-        </div>
+
+      {data && current && (
+        <>
+          <ul className="stat-kpi-grid" aria-label="Kennzahlen">
+            {kpis.map((kpi) => (
+              <li key={kpi.label}>
+                <button
+                  type="button"
+                  className="stat-kpi"
+                  onClick={() => chooseSection(kpi.section)}
+                >
+                  <span className="stat-kpi-label">
+                    {kpi.label}
+                    <span className="visually-hidden">: </span>
+                  </span>
+                  <span className={kpi.warn ? "stat-kpi-value stat-kpi-warn" : "stat-kpi-value"}>
+                    {kpi.value}
+                    <span className="visually-hidden">, </span>
+                  </span>
+                  <span className="stat-kpi-sub">{kpi.sub}</span>
+                </button>
+                {kpi.term && (
+                  <span className="stat-kpi-tip">
+                    <InfoTip term={kpi.term} />
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <nav className="project-tabs no-print" aria-label="Bereiche der Statistik">
+            {data.sections.map((entry) => (
+              <button
+                key={entry.key}
+                type="button"
+                className={entry.key === current.key ? "project-tab project-tab-on" : "project-tab"}
+                aria-current={entry.key === current.key ? "page" : undefined}
+                onClick={() => chooseSection(entry.key as SectionKey)}
+              >
+                {entry.title}
+              </button>
+            ))}
+          </nav>
+          <h2 className="print-only">{current.title}</h2>
+          <p className="stat-intro">{current.intro}</p>
+
+          <div className="stat-cards">
+            {current.charts.map((chart) => {
+              const key = chart.filter;
+              return (
+                <ChartCard
+                  key={chart.key}
+                  chart={chart}
+                  form={forms[chart.key] ?? "balken"}
+                  onForm={(value) => setForms({ ...forms, [chart.key]: value })}
+                  picked={key ? filters[key] : null}
+                  onPick={
+                    key
+                      ? (item) =>
+                          setFilter(key, filters[key] === item.value ? null : (item.value ?? null))
+                      : null
+                  }
+                />
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );

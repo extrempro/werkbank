@@ -371,9 +371,30 @@ test("IT-Bestand: Statistik", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: "Statistik" }),
   ).toBeVisible();
-  await expect(page.getByLabel("Hersteller")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Hersteller" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Abteilung" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Verleih", exact: true }),
+    page.getByRole("button", { name: /^Aktive Geräte\s*:\s*\d+/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Geräte je Art" }),
   ).toBeVisible();
   await expectNoA11yViolations(page);
+  // Eine Kennzahl öffnet ihren Bereich
+  await page.getByRole("button", { name: /^Verliehen\s*:/ }).click();
+  await expect(page.getByRole("heading", { name: "Rückgabe" })).toBeVisible();
+  await expect(page).toHaveURL(/bereich=verleih/);
+  for (const name of [
+    "Alter & Erneuerung",
+    "Standorte & Arbeitsplätze",
+    "Ausmusterung",
+    "Datenqualität",
+  ]) {
+    await page
+      .getByRole("navigation", { name: "Bereiche der Statistik" })
+      .getByRole("button", { name })
+      .click();
+    await expectNoA11yViolations(page);
+  }
+  await expect(page.getByRole("heading", { name: "Fehlende Angaben" })).toBeVisible();
 });
