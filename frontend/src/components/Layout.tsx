@@ -24,6 +24,10 @@ import {
   CREDENTIALS_PATH,
   HEALTH_PATH,
   MONITORING_DNS_PATH,
+  MONITORING_ZABBIX_CONNECTION_PATH,
+  MONITORING_ZABBIX_HOSTS_PATH,
+  MONITORING_ZABBIX_MAINTENANCE_PATH,
+  MONITORING_ZABBIX_PATH,
   PROJECTS_PATH,
   INVENTORY_CASES_PATH,
   INVENTORY_LOANS_PATH,
@@ -49,6 +53,12 @@ import { NotificationsPage } from "../pages/NotificationsPage";
 import { HandbookPage } from "../pages/HandbookPage";
 import { DeviceAssociationPage } from "../modules/devices/DeviceAssociationPage";
 import { DnsCheckPage } from "../modules/monitoring/DnsCheckPage";
+import {
+  ZabbixConnectionPage,
+  ZabbixHostsPage,
+  ZabbixMaintenancesPage,
+  ZabbixOverviewPage,
+} from "../modules/monitoring/zabbix/ZabbixPages";
 import {
   parseCasePath,
   parseLoanPath,
@@ -333,6 +343,7 @@ export function Layout({ me }: LayoutProps) {
   const locationRoute = parseLocationPath(path);
   const positionRoute = parsePositionPath(path);
   const caseRoute = parseCasePath(path);
+  const zabbixHost = parseZabbixHostPath(path);
   const loanRoute = parseLoanPath(path);
   const workplaceRoute = parseWorkplacePath(path);
 
@@ -487,6 +498,17 @@ export function Layout({ me }: LayoutProps) {
     page = <MasterDataPage roles={me.roles} />;
   } else if (path === MONITORING_DNS_PATH && current) {
     page = <DnsCheckPage isAdmin={me.roles.includes("Werkbank.Admin")} />;
+  } else if (path === MONITORING_ZABBIX_PATH && current) {
+    page = <ZabbixOverviewPage />;
+  } else if (
+    zabbixHost !== undefined &&
+    items.some((item) => item.path === MONITORING_ZABBIX_HOSTS_PATH)
+  ) {
+    page = <ZabbixHostsPage hostId={zabbixHost} />;
+  } else if (path === MONITORING_ZABBIX_MAINTENANCE_PATH && current) {
+    page = <ZabbixMaintenancesPage />;
+  } else if (path === MONITORING_ZABBIX_CONNECTION_PATH && current) {
+    page = <ZabbixConnectionPage />;
   } else if (path === BUDGET_PATH && current) {
     page = <BudgetOverviewPage roles={me.roles} />;
   } else if (path === BUDGET_ACCOUNTS_PATH && current) {
@@ -643,4 +665,13 @@ export function Layout({ me }: LayoutProps) {
       </div>
     </HelpProvider>
   );
+}
+
+/** /monitoring/zabbix/hosts → null (Liste), /monitoring/zabbix/hosts/123 → "123". */
+function parseZabbixHostPath(path: string): string | null | undefined {
+  if (path === MONITORING_ZABBIX_HOSTS_PATH) {
+    return null;
+  }
+  const match = /^\/monitoring\/zabbix\/hosts\/(\d{1,20})$/.exec(path);
+  return match ? match[1]! : undefined;
 }

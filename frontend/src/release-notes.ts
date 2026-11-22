@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.90.0",
+    date: "2026-11-22",
+    summary: "IT-Monitoring: Zabbix ist da, mit Übersicht, Hosts und Wartungen.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Neu: Zabbix im IT-Monitoring. Die Übersicht zeigt offene Probleme nach Schweregrad, nicht erreichbare Hosts, Wartungen und was zu erledigen ist, zum Beispiel lange offene Probleme.",
+          "Unter „Hosts“ findest du alle Hosts mit Zustand, Standort und Problemen; ein Klick zeigt die Einzelheiten. „In Zabbix öffnen“ springt direkt in Zabbix.",
+          "Oben steht immer, wie aktuell die Daten sind. Ist Zabbix nicht erreichbar, siehst du den letzten Stand.",
+          "Das Menü von IT-Monitoring hat jetzt die Gruppen „Zabbix“ und „NetBox“; der DNS-Abgleich steht unter NetBox.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.89.0",
     date: "2026-11-22",
     summary: "IT-Tools: Der Bild-Konverter kann jetzt auch PDF, in beide Richtungen.",

@@ -47,6 +47,8 @@ from werkbank.modules.m365_config.snapshots_api import router as m365_snapshots_
 from werkbank.modules.m365_config.tasks import m365_config_tasks
 from werkbank.modules.monitoring.admin import router as monitoring_admin_router
 from werkbank.modules.monitoring.api import router as monitoring_router
+from werkbank.modules.monitoring.zabbix.admin import router as zabbix_admin_router
+from werkbank.modules.monitoring.zabbix.api import router as zabbix_router
 from werkbank.modules.projects.api import router as projects_router
 from werkbank.modules.projects.search import projects_search
 from werkbank.modules.tenant.api import router as tenant_router
@@ -125,6 +127,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tools_account_router)
     app.include_router(monitoring_router)
     app.include_router(monitoring_admin_router)
+    app.include_router(zabbix_router)
+    app.include_router(zabbix_admin_router)
     app.include_router(evergreen_router)
     app.include_router(devices_admin_router)
     app.include_router(devices_router)

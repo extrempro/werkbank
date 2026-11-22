@@ -34,7 +34,15 @@ from werkbank.modules.m365_config.jobs import COLLECT, collect_job
 from werkbank.modules.m365_config.notifications import m365_config_notifications
 from werkbank.modules.m365_config.secure_score import FETCH_SECURE_SCORE, fetch_secure_score_job
 from werkbank.modules.monitoring.dns_check import DNS_CHECK, DNS_CHECK_INTERVAL, dns_check_job
-from werkbank.modules.monitoring.notifications import monitoring_notifications
+from werkbank.modules.monitoring.notifications import (
+    monitoring_notifications,
+    zabbix_notifications,
+)
+from werkbank.modules.monitoring.zabbix.collector import (
+    ZABBIX_JOB,
+    ZABBIX_JOB_INTERVAL,
+    zabbix_job,
+)
 from werkbank.modules.tenant.credentials import FETCH_CREDENTIALS, fetch_credentials_job
 from werkbank.modules.tenant.health import FETCH_HEALTH, fetch_health_job
 from werkbank.modules.tenant.inventory import FETCH_TENANT, fetch_inventory_job
@@ -117,6 +125,7 @@ NOTIFICATION_SOURCES = (
     evergreen_notifications,
     budget_notifications,
     monitoring_notifications,
+    zabbix_notifications,
     inventory_notifications,
     devices_notifications,
 )
@@ -127,6 +136,7 @@ REGISTRY: dict[str, JobType] = {
     DELIVER: JobType(handler=deliver_job, interval=DELIVER_INTERVAL),
     PUSH_DELIVER: JobType(handler=push_job, interval=PUSH_DELIVER_INTERVAL),
     DNS_CHECK: JobType(handler=dns_check_job, interval=DNS_CHECK_INTERVAL),
+    ZABBIX_JOB: JobType(handler=zabbix_job, interval=ZABBIX_JOB_INTERVAL),
     NINJA_SYNC: JobType(handler=ninja_sync_job, interval=NINJA_SYNC_INTERVAL),
     PSREF_SYNC: JobType(handler=psref_job, interval=PSREF_SYNC_INTERVAL),
     LOAN_JOB: JobType(handler=loan_job, interval=LOAN_JOB_INTERVAL),

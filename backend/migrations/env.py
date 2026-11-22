@@ -14,6 +14,7 @@ from werkbank.modules.evergreen import models as evergreen_models  # noqa: F401
 from werkbank.modules.inventory import models as inventory_models  # noqa: F401
 from werkbank.modules.m365_config import models as m365_config_models  # noqa: F401
 from werkbank.modules.monitoring import models as monitoring_models  # noqa: F401
+from werkbank.modules.monitoring.zabbix import models as zabbix_models  # noqa: F401
 from werkbank.modules.projects import models as projects_models  # noqa: F401
 from werkbank.modules.tenant import models as tenant_models  # noqa: F401
 from werkbank.modules.tools import models as tools_models  # noqa: F401

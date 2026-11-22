@@ -1,0 +1,303 @@
+{
+ "apiinfo.version": "7.0.21",
+ "user.checkAuthentication": {
+  "userid": "7",
+  "username": "dienstkonto",
+  "roleid": "5",
+  "type": "1",
+  "sessionid": "x"
+ },
+ "role.get": [
+  {
+   "roleid": "5",
+   "name": "Werkbank lesen",
+   "rules": {
+    "api.access": "1",
+    "api.mode": "1",
+    "api": [
+     "problem.get",
+     "trigger.get",
+     "host.get",
+     "hostgroup.get",
+     "maintenance.get",
+     "event.get",
+     "role.get",
+     "token.get"
+    ]
+   }
+  }
+ ],
+ "token.get": [
+  {
+   "tokenid": "1",
+   "expires_at": "1893456000",
+   "status": "0"
+  },
+  {
+   "tokenid": "2",
+   "expires_at": "0",
+   "status": "1"
+  }
+ ],
+ "host.get": [
+  {
+   "hostid": "10101",
+   "host": "srv-a",
+   "name": "Server A",
+   "status": "0",
+   "maintenance_status": "0",
+   "maintenanceid": "0",
+   "active_available": "0",
+   "interfaces": [
+    {
+     "type": "1",
+     "ip": "192.0.2.10",
+     "dns": "",
+     "useip": "1",
+     "port": "10050",
+     "main": "1",
+     "available": "1"
+    }
+   ],
+   "hostgroups": [
+    {
+     "groupid": "21",
+     "name": "Standort A/Server"
+    }
+   ],
+   "parentTemplates": [
+    {
+     "name": "Linux by Zabbix agent"
+    }
+   ],
+   "inventory": {
+    "serialno_a": " SN-1001 ",
+    "model": "Modell X",
+    "type": "Server"
+   }
+  },
+  {
+   "hostid": "10102",
+   "host": "sw-b",
+   "name": "Switch B",
+   "status": "0",
+   "maintenance_status": "0",
+   "maintenanceid": "0",
+   "active_available": "0",
+   "interfaces": [
+    {
+     "type": "2",
+     "ip": "",
+     "dns": "sw-b.example.com",
+     "useip": "0",
+     "port": "161",
+     "main": "1",
+     "available": "2"
+    }
+   ],
+   "hostgroups": [
+    {
+     "groupid": "22",
+     "name": "Standort B/Netzwerk"
+    }
+   ],
+   "parentTemplates": [],
+   "inventory": []
+  },
+  {
+   "hostid": "10103",
+   "host": "usv-c",
+   "name": "USV C",
+   "status": "0",
+   "maintenance_status": "1",
+   "maintenanceid": "301",
+   "active_available": "0",
+   "interfaces": [
+    {
+     "type": "2",
+     "ip": "192.0.2.30",
+     "dns": "",
+     "useip": "1",
+     "port": "161",
+     "main": "1",
+     "available": "2"
+    }
+   ],
+   "hostgroups": [
+    {
+     "groupid": "21",
+     "name": "Standort A/Server"
+    },
+    {
+     "groupid": "23",
+     "name": "Strom"
+    }
+   ],
+   "parentTemplates": [],
+   "inventory": {
+    "serialno_a": "",
+    "model": "",
+    "type": ""
+   }
+  },
+  {
+   "hostid": "10104",
+   "host": "alt",
+   "name": "Alt",
+   "status": "1",
+   "maintenance_status": "0",
+   "maintenanceid": "0",
+   "active_available": "0",
+   "interfaces": [],
+   "hostgroups": [],
+   "parentTemplates": [],
+   "inventory": []
+  }
+ ],
+ "hostgroup.get": [
+  {
+   "groupid": "21",
+   "name": "Standort A/Server"
+  },
+  {
+   "groupid": "22",
+   "name": "Standort B/Netzwerk"
+  },
+  {
+   "groupid": "23",
+   "name": "Strom"
+  }
+ ],
+ "problem.get": [
+  {
+   "eventid": "5001",
+   "objectid": "9001",
+   "name": "Switch B ist nicht erreichbar <script>",
+   "severity": "4",
+   "clock": "1700000000",
+   "acknowledged": "0",
+   "suppressed": "0",
+   "tags": [
+    {
+     "tag": "scope",
+     "value": "availability"
+    }
+   ]
+  },
+  {
+   "eventid": "5002",
+   "objectid": "9002",
+   "name": "Zertifikat läuft in 10 Tagen ab",
+   "severity": "2",
+   "clock": "1790000000",
+   "acknowledged": "1",
+   "suppressed": "0",
+   "tags": [
+    {
+     "tag": "component",
+     "value": "certificate"
+    }
+   ]
+  },
+  {
+   "eventid": "5003",
+   "objectid": "9003",
+   "name": "Unterdrückt",
+   "severity": "3",
+   "clock": "1790000000",
+   "acknowledged": "0",
+   "suppressed": "1",
+   "tags": []
+  }
+ ],
+ "trigger.get": [
+  {
+   "triggerid": "9001",
+   "hosts": [
+    {
+     "hostid": "10102"
+    }
+   ]
+  },
+  {
+   "triggerid": "9002",
+   "hosts": [
+    {
+     "hostid": "10101"
+    }
+   ]
+  },
+  {
+   "triggerid": "9003",
+   "hosts": [
+    {
+     "hostid": "10101"
+    }
+   ]
+  }
+ ],
+ "maintenance.get": [
+  {
+   "maintenanceid": "301",
+   "name": "Firmware Strom",
+   "maintenance_type": "0",
+   "active_since": "1700000000",
+   "active_till": "2000000000",
+   "hosts": [
+    {
+     "hostid": "10103"
+    }
+   ],
+   "hostgroups": [],
+   "timeperiods": [
+    {
+     "timeperiod_type": "0",
+     "start_date": "1700000000",
+     "period": "3600"
+    }
+   ]
+  },
+  {
+   "maintenanceid": "302",
+   "name": "Patchtag Server",
+   "maintenance_type": "1",
+   "active_since": "1700000000",
+   "active_till": "2000000000",
+   "hosts": [],
+   "hostgroups": [
+    {
+     "groupid": "21"
+    }
+   ],
+   "timeperiods": [
+    {
+     "timeperiod_type": "3",
+     "every": "1",
+     "dayofweek": "2",
+     "start_time": "72000",
+     "period": "10800"
+    }
+   ]
+  },
+  {
+   "maintenanceid": "303",
+   "name": "Kommt noch",
+   "maintenance_type": "0",
+   "active_since": "1999000000",
+   "active_till": "2000000000",
+   "hosts": [
+    {
+     "hostid": "10101"
+    }
+   ],
+   "hostgroups": [],
+   "timeperiods": [
+    {
+     "timeperiod_type": "0",
+     "start_date": "1999000000",
+     "period": "3600"
+    }
+   ]
+  }
+ ]
+}

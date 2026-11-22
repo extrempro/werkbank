@@ -66,7 +66,7 @@ describe("areasFor", () => {
       "/",
       "/m365",
       "/evergreen/m365",
-      "/monitoring/dns",
+      "/monitoring/zabbix",
       "/verwaltung",
     ]);
     const paths = (index: number) => allNavItems(areas[index]?.groups ?? []).map((i) => i.path);

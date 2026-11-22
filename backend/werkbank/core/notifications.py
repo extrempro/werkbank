@@ -128,6 +128,16 @@ KINDS: dict[str, KindInfo] = {
         "DNS-Abgleich mit NetBox ist fehlgeschlagen",
         (Role.MONITORING_READER, Role.WERKBANK_ADMIN),
     ),
+    "monitoring.zabbix_fehler": KindInfo(
+        "IT-Monitoring",
+        "Zabbix lässt sich mehrmals hintereinander nicht abfragen",
+        (Role.WERKBANK_ADMIN,),
+    ),
+    "monitoring.zabbix_dienstkonto": KindInfo(
+        "IT-Monitoring",
+        "Token für Zabbix läuft ab oder die Rolle des Dienstkontos erlaubt zu viel",
+        (Role.WERKBANK_ADMIN,),
+    ),
     "bestand.vorgang_neu": KindInfo(
         "IT-Bestand",
         "Neuer Vorgang im Eingang, z. B. ein neues Gerät in NinjaOne",

@@ -9,6 +9,7 @@ import {
 } from "../api";
 import { CredentialWarnSettings } from "./CredentialWarnSettings";
 import { NetboxSettings } from "./NetboxSettings";
+import { ZabbixSettings } from "./ZabbixSettings";
 import { PushSettings } from "./PushSettings";
 import { TeamsSettings } from "./TeamsSettings";
 import { ToolsInternetSettings } from "./ToolsInternetSettings";
@@ -23,7 +24,7 @@ const SECURITY_OPTIONS = [
 
 /** Teile, die eine Seite der Verwaltung zeigt. */
 export type SettingsPart =
-  "smtp" | "aufbewahrung" | "teams" | "push" | "ablauf" | "netbox" | "internet";
+  "smtp" | "aufbewahrung" | "teams" | "push" | "ablauf" | "netbox" | "zabbix" | "internet";
 
 const ALL_PARTS: SettingsPart[] = [
   "smtp",
@@ -32,6 +33,7 @@ const ALL_PARTS: SettingsPart[] = [
   "push",
   "ablauf",
   "netbox",
+  "zabbix",
   "internet",
 ];
 
@@ -324,6 +326,7 @@ export function GeneralSettings({ settings, onChange, parts = ALL_PARTS }: Gener
         <CredentialWarnSettings settings={settings} onChange={onChange} />
       )}
       {parts.includes("netbox") && <NetboxSettings />}
+      {parts.includes("zabbix") && <ZabbixSettings />}
       {parts.includes("internet") && (
         <ToolsInternetSettings settings={settings} onChange={onChange} />
       )}

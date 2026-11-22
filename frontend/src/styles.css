@@ -7078,6 +7078,12 @@ td > .budget-row-actions {
     min-width: 0;
   }
 
+  /* Kennzeichen behalten in der Karte ihre Breite */
+  .table-cards td > .pill,
+  .table-cards td > .zbx-sev {
+    align-self: flex-start;
+  }
+
   .table-cards td[data-label]::before {
     content: attr(data-label);
     color: var(--farbe-text-leise);
@@ -11421,5 +11427,130 @@ fieldset {
 }
 
 input[type="file"] {
+  max-width: 100%;
+}
+
+/* IT-Monitoring › Zabbix
+   Schweregrade wie in Zabbix. Die Farben unterscheiden sich auch in der Helligkeit (dunkel → hell:
+   Katastrophe, Hoch, Durchschnitt, Warnung, Information) und stehen nie allein: immer mit Text. */
+.zbx-sev {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.zbx-sev-5 {
+  background: #6e0f0f;
+  color: #ffffff;
+}
+
+.zbx-sev-4 {
+  background: #b3261e;
+  color: #ffffff;
+}
+
+.zbx-sev-3 {
+  background: #f0a43a;
+  color: #2b1700;
+}
+
+.zbx-sev-2 {
+  background: #f2cf4a;
+  color: #3d2e00;
+  border-color: #d9be5f;
+}
+
+.zbx-sev-1 {
+  background: #e3ecfb;
+  color: #1e3a8a;
+  border-color: #b8c9ee;
+}
+
+:root[data-theme="dunkel"] .zbx-sev-2 {
+  border-color: transparent;
+}
+
+:root[data-theme="dunkel"] .zbx-sev-1 {
+  border-color: transparent;
+}
+
+@media (forced-colors: active) {
+  .zbx-sev {
+    border-color: CanvasText;
+  }
+}
+
+.zbx-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.zbx-state {
+  margin: 0 0 12px;
+}
+
+.zbx-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.zbx-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+.zbx-problems th[scope="row"] {
+  overflow-wrap: anywhere;
+}
+
+.zbx-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.zbx-iface {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.zbx-error {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.zbx-tag {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.zbx-tag legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.zbx-findings {
+  margin: 0;
+  padding-left: 2rem;
+}
+
+.zbx-site-select {
+  min-width: 15rem;
   max-width: 100%;
 }

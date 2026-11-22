@@ -865,11 +865,98 @@ export const AREAS: readonly Area[] = [
   {
     id: "it-monitoring",
     title: "IT-Monitoring",
-    summary: "Regelmäßige Prüfungen der IT, zum Beispiel der DNS-Abgleich mit NetBox.",
+    summary: "Überwachung der IT aus Zabbix und der DNS-Abgleich mit NetBox.",
     roles: [MONITORING],
     parts: [
       {
-        title: null,
+        title: "Zabbix",
+        topics: [
+          {
+            id: "zabbix-uebersicht",
+            title: "Übersicht, Hosts und Wartungen",
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Werkbank zeigt, was Zabbix gerade meldet: offene Probleme, nicht erreichbare Hosts und Wartungen. Sie liest nur, quittieren und Wartungen anlegen geht weiter in Zabbix. Probleme fragt sie jede Minute ab, Wartungen alle 15 Minuten, Hosts mit Gruppen und Inventar stündlich. Oben auf jeder Seite steht, wann die Daten zuletzt kamen. Ist Zabbix nicht erreichbar, siehst du den letzten Stand mit Zeit und einen Hinweis.",
+              },
+              {
+                kind: "terms",
+                items: [
+                  [
+                    "Katastrophe, Hoch, Durchschnitt, Warnung, Information",
+                    "die Schweregrade wie in Zabbix, von dunkel nach hell",
+                  ],
+                  [
+                    "Nicht erreichbar",
+                    "keine Schnittstelle des Hosts antwortet; Hosts in Wartung zählen nicht mit",
+                  ],
+                  ["Lange offen", "Probleme, die seit mehr als 7 Tagen offen sind"],
+                  [
+                    "In Wartung",
+                    "der Host steckt gerade in einer Wartung; Zabbix blendet seine Probleme dann meist aus",
+                  ],
+                  [
+                    "ohne Standort",
+                    "der Host ist in keiner Hostgruppe, die einem Standort zugeordnet ist",
+                  ],
+                ],
+              },
+              {
+                kind: "list",
+                items: [
+                  "Übersicht: oben „Zu erledigen“, dann die Kennzahlen, die aktuellen Probleme mit Filter nach Standort und Mindest-Schweregrad, die nicht erreichbaren Hosts und die laufenden und kommenden Wartungen.",
+                  "Hosts: Tabelle mit Suche nach Name, Gruppe oder Seriennummer und den Filtern Alle, Mit Problemen, Nicht erreichbar, In Wartung und In Zabbix abgeschaltet. Ein Klick öffnet den Host rechts daneben mit offenen Problemen, Schnittstellen, Hostgruppen, Templates und Seriennummer.",
+                  "Wartungen: laufend, kommend und in den letzten 30 Tagen abgelaufen, mit Zeitraum und Zahl der Hosts.",
+                  "„In Zabbix öffnen“ führt in einem neuen Tab zum Host oder zum Problem in Zabbix. Dort meldest du dich mit deinem eigenen Zabbix-Konto an.",
+                ],
+              },
+              {
+                kind: "hint",
+                text: "Lässt sich Zabbix mehrmals hintereinander nicht abfragen, läuft das Token bald ab oder erlaubt die Rolle zu viel, meldet die Glocke das den Admins.",
+              },
+            ],
+            links: [
+              { to: "/monitoring/zabbix", label: "Zur Übersicht" },
+              { to: "/monitoring/zabbix/hosts", label: "Zu den Hosts" },
+            ],
+          },
+          {
+            id: "zabbix-einrichten",
+            title: "Zabbix einrichten",
+            roles: [ADMIN],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Werkbank braucht in Zabbix ein eigenes Dienstkonto mit einer eigenen Benutzerrolle, die nur lesen darf, und ein API-Token mit Ablaufdatum. Nur der Server der Werkbank spricht mit Zabbix; das Token sieht im Browser niemand.",
+              },
+              {
+                kind: "steps",
+                items: [
+                  "Lege in Zabbix unter Benutzer › Benutzerrollen eine neue Rolle an, Typ „Benutzer“.",
+                  "Schalte in der Rolle unter „API“ den Zugriff ein. In Zabbix 8.0 ist er bei neuen Rollen aus.",
+                  "Wähle bei „API-Methoden“ die Allow-Liste und trage genau diese Methoden ein: problem.get, trigger.get, host.get, hostgroup.get, maintenance.get, event.get, role.get, token.get. Ab Zabbix 8.0 sperrt eine leere Allow-Liste jeden Zugriff. Keine Platzhalter wie „*“ und keine Ablehn-Liste.",
+                  "Lege eine Benutzergruppe an, die nur Leserechte auf die nötigen Hostgruppen hat, und darin ein Dienstkonto mit der neuen Rolle.",
+                  "Erzeuge für das Dienstkonto ein API-Token mit Ablaufdatum, zum Beispiel zum Ende des Geschäftsjahrs.",
+                  "Öffne in der Werkbank Verwaltung › Verbindungen › Zabbix (IT-Monitoring). Trage die https-Adresse von Zabbix und das Token ein; stammt das Zertifikat aus einer eigenen Zertifizierungsstelle, füge deren CA-Zertifikat im PEM-Format ein.",
+                  "Speichere, wähle „Verbindung prüfen“ und schalte die Abfrage ein. Die Prüfung zeigt Version, Rolle, Ablauf des Tokens und ob die Rolle mehr erlaubt als nötig.",
+                  "Ordne unter IT-Monitoring › Zabbix › Verbindung die Hostgruppen den Standorten aus dem IT-Bestand zu. Hat ein Host mehrere passende Gruppen, gilt die erste in der Liste.",
+                ],
+              },
+              {
+                kind: "hint",
+                text: "Nach dem Wechsel von Zabbix 7 auf 8.0 kann eine Rolle den Platzhalter „*“ enthalten. Die Verbindungsseite warnt dann; kürze die Allow-Liste wieder auf die Methoden oben. 30 Tage vor Ablauf des Tokens erinnert die Werkbank dich.",
+              },
+              {
+                kind: "text",
+                text: "Den Bereich sehen Personen mit der Rolle Monitoring.Reader und alle Admins; die Seite „Verbindung“ nur Admins. Die Werkbank übernimmt keine Quittierungs-Kommentare und keine Benutzernamen aus Zabbix.",
+              },
+            ],
+            links: [{ to: "/monitoring/zabbix/verbindung", label: "Zur Verbindung" }],
+          },
+        ],
+      },
+      {
+        title: "NetBox",
         topics: [
           {
             id: "dns-abgleich",
@@ -913,18 +1000,18 @@ export const AREAS: readonly Area[] = [
           },
           {
             id: "einrichten",
-            title: "Einrichten",
+            title: "DNS-Abgleich einrichten",
             roles: [ADMIN],
             blocks: [
               {
                 kind: "steps",
                 items: [
                   "Lege in NetBox einen API-Token mit Leserecht an.",
-                  "Öffne Verwaltung › Einstellungen › Allgemein › NetBox (IT-Monitoring).",
+                  "Öffne Verwaltung › Verbindungen › NetBox (IT-Monitoring).",
                   "Trage die https-Adresse von NetBox und den Token ein. Stammt das Zertifikat von NetBox aus einer eigenen Zertifizierungsstelle, füge deren CA-Zertifikat im PEM-Format ein.",
                   "Speichere und wähle „Verbindung prüfen“. Danach kannst du eine View wählen; sonst gelten alle Views.",
                   "Wähle den öffentlichen Resolver, lege fest, ob die TTL verglichen wird, hake „DNS-Abgleich einschalten“ an und speichere.",
-                  "Auf der Seite „DNS-Abgleich mit NetBox“ ziehst du mit „Jetzt prüfen“ den nächsten Lauf vor.",
+                  "Auf der Seite „DNS-Abgleich“ (Gruppe NetBox) ziehst du mit „Jetzt prüfen“ den nächsten Lauf vor.",
                 ],
               },
               {
