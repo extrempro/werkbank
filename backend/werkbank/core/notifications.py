@@ -58,6 +58,8 @@ class KindInfo:
     roles: tuple[str, ...]
 
 
+ALL_ROLES: tuple[str, ...] = tuple(role.value for role in Role)
+
 KINDS: dict[str, KindInfo] = {
     "config.aenderung_kritisch": KindInfo(
         "M365-Konfiguration",
@@ -137,6 +139,20 @@ KINDS: dict[str, KindInfo] = {
         "IT-Monitoring",
         "Token für Zabbix läuft ab oder die Rolle des Dienstkontos erlaubt zu viel",
         (Role.WERKBANK_ADMIN,),
+    ),
+    # Tickets: Empfänger sind einzelne Personen (Rollen je Bereich liegen nicht in Entra);
+    # deshalb hier alle App-Rollen, die Auswahl trifft das Ereignis über user_ids.
+    "tickets.neu": KindInfo(
+        "Tickets", "Neues, noch nicht zugewiesenes Ticket in deinem Bereich", ALL_ROLES
+    ),
+    "tickets.zugewiesen": KindInfo(
+        "Tickets", "Ein Ticket wurde dir zugewiesen oder übergeben", ALL_ROLES
+    ),
+    "tickets.antwort": KindInfo("Tickets", "Antwort des Melders auf dein Ticket", ALL_ROLES),
+    "tickets.erinnerung": KindInfo("Tickets", "Erinnerung zu deinem Ticket ist fällig", ALL_ROLES),
+    "tickets.frist_bald": KindInfo("Tickets", "Frist deines Tickets ist bald erreicht", ALL_ROLES),
+    "tickets.frist_ueberschritten": KindInfo(
+        "Tickets", "Frist eines Tickets überschritten (Bereichsverwaltung)", ALL_ROLES
     ),
     "bestand.vorgang_neu": KindInfo(
         "IT-Bestand",

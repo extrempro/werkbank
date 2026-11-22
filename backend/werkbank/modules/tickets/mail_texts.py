@@ -21,13 +21,15 @@ ALL_TYPES = (
 )
 DEFAULT_TYPES = list(ALL_TYPES)
 
-EVENTS = ("in_progress", "assignee", "waiting", "solved", "closed")
+EVENTS = ("in_progress", "assignee", "waiting", "solved", "closed", "sla_missed")
 DEFAULT_EVENTS = {
     "in_progress": False,
     "assignee": False,
     "waiting": True,
     "solved": True,
     "closed": False,
+    # nur bei Bereichen mit Fristen
+    "sla_missed": False,
 }
 
 DEFAULT_ACK = (
@@ -49,6 +51,10 @@ EVENT_TEXTS = {
         "passt, antworte einfach auf diese Mail."
     ),
     "closed": "Hallo {Name},\n\ndein Anliegen „{Betreff}“ ({Nr}) ist abgeschlossen.",
+    "sla_missed": (
+        "Hallo {Name},\n\ndein Anliegen „{Betreff}“ ({Nr}) dauert leider länger als geplant. "
+        "Wir sind dran und melden uns."
+    ),
 }
 
 REPLY_ABOVE = "Bitte oberhalb dieser Zeile antworten."
