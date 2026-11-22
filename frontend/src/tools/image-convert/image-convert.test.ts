@@ -21,6 +21,7 @@ describe("detectFormat", () => {
     expect(detectFormat(bytes([0, 0, 0, 0x1c], "ftypavif"))).toBe("avif");
     expect(detectFormat(bytes([0, 0, 0, 0x18], "ftypheic"))).toBe("heic");
     expect(detectFormat(bytes([0x49, 0x49, 0x2a, 0x00]))).toBe("tiff");
+    expect(detectFormat(bytes("%PDF-1.7\n"))).toBe("pdf");
   });
 
   it("erkennt SVG auch mit XML-Kopf, Kommentar und BOM", () => {

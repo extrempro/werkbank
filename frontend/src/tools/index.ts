@@ -780,7 +780,7 @@ export const TOOLS: readonly ToolDefinition[] = [
     name: "Bild-Konverter",
     category: "konverter",
     description:
-      "Bilder umwandeln und verkleinern: PNG, JPEG, WebP, SVG, GIF, BMP, AVIF in PNG, JPEG, WebP, ICO oder ein Favicon-Paket. Mehrere Dateien auf einmal.",
+      "Bilder umwandeln und verkleinern: PNG, JPEG, WebP, SVG, GIF, BMP, AVIF in PNG, JPEG, WebP, ICO oder ein Favicon-Paket. Bilder zu einer PDF zusammenfassen und PDF-Seiten als Bilder speichern. Mehrere Dateien auf einmal.",
     tags: [
       "bild",
       "image",
@@ -796,6 +796,7 @@ export const TOOLS: readonly ToolDefinition[] = [
       "verkleinern",
       "resize",
       "komprimieren",
+      "pdf",
     ],
     component: lazy(() => import("./image-convert/ImageConvertTool")),
   },
