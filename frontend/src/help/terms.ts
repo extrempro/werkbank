@@ -131,6 +131,21 @@ export const HELP = {
     text: "Probleme, die seit mehr als 7 Tagen offen sind. Hier hilft meist eine Entscheidung mehr als Warten.",
     topic: ["it-monitoring", "zabbix-uebersicht"],
   },
+  "zabbix.nicht-ueberwacht": {
+    term: "Nicht überwacht",
+    text: "Aktive Geräte der festgelegten Hardware-Arten aus dem IT-Bestand, zu deren Seriennummer es in Zabbix keinen Host gibt. Geräte, die bewusst nicht überwacht werden, zählen nicht mit.",
+    topic: ["it-monitoring", "zabbix-bestand"],
+  },
+  "zabbix.ohne-bestand": {
+    term: "Ohne Bestandseintrag",
+    text: "Hosts in Zabbix mit Seriennummer, zu der es im IT-Bestand kein aktives Gerät gibt.",
+    topic: ["it-monitoring", "zabbix-bestand"],
+  },
+  "zabbix.seriennummer-fehlt": {
+    term: "Seriennummer fehlt",
+    text: "Hosts, in deren Zabbix-Inventar keine Seriennummer steht. In der Host-Ansicht lässt sich so ein Host von Hand einem Gerät zuordnen.",
+    topic: ["it-monitoring", "zabbix-bestand"],
+  },
   "zabbix.wartung": {
     term: "In Wartung",
     text: "Der Host steckt gerade in einer Wartung aus Zabbix. Seine Probleme blendet Zabbix dann meist aus.",
@@ -247,6 +262,10 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/monitoring/zabbix/verbindung": [
     ["it-monitoring", "zabbix-einrichten"],
     ["it-monitoring", "zabbix-uebersicht"],
+  ],
+  "/monitoring/zabbix/hosts": [
+    ["it-monitoring", "zabbix-uebersicht"],
+    ["it-monitoring", "zabbix-bestand"],
   ],
   "/monitoring/zabbix": [["it-monitoring", "zabbix-uebersicht"]],
   "/bestand/vorgaenge": [["it-bestand", "vorgaenge"]],

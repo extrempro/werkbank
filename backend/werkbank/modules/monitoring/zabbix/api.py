@@ -15,7 +15,13 @@ from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, require_roles
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
-from werkbank.modules.inventory.models import InventoryCity, InventorySite
+from werkbank.modules.inventory.api import add_event
+from werkbank.modules.inventory.models import (
+    InventoryCity,
+    InventoryHardware,
+    InventoryKind,
+    InventorySite,
+)
 from werkbank.modules.monitoring.zabbix.client import NEEDED_METHODS
 from werkbank.modules.monitoring.zabbix.collector import (
     TASK_FAST,
@@ -31,13 +37,16 @@ from werkbank.modules.monitoring.zabbix.config import (
     load_options,
     stored_connection,
 )
+from werkbank.modules.monitoring.zabbix.inventory import Match, match_inventory
 from werkbank.modules.monitoring.zabbix.models import (
     ZbxGroupSite,
     ZbxHost,
+    ZbxHostLink,
     ZbxMaintenance,
     ZbxProblem,
     ZbxRun,
     ZbxStatus,
+    ZbxUnmonitored,
 )
 
 router = APIRouter(prefix="/api/monitoring/zabbix")
@@ -47,6 +56,18 @@ ReaderUser = Annotated[
     CurrentUser, Depends(require_roles(Role.MONITORING_READER, Role.WERKBANK_ADMIN))
 ]
 AdminReader = Annotated[CurrentUser, Depends(require_roles(Role.WERKBANK_ADMIN))]
+
+
+def _require_linker(user: ReaderUser) -> CurrentUser:
+    """Verknüpfen mit dem IT-Bestand: Monitoring lesen und den Bestand pflegen."""
+    if not user.has_any_role(Role.INVENTORY_EDITOR):
+        raise HTTPException(
+            status_code=403, detail="Dafür brauchst du zusätzlich die Rolle Bestand.Editor."
+        )
+    return user
+
+
+LinkUser = Annotated[CurrentUser, Depends(_require_linker)]
 
 # Probleme, die so lange offen sind, stehen unter „Zu erledigen“
 LONG_OPEN = timedelta(days=7)
@@ -88,6 +109,34 @@ def problem_link(db: Session, user: CurrentUser, problem: ZbxProblem) -> str | N
     if not (_ID.match(problem.triggerid) and _ID.match(problem.eventid)):
         return None
     return _link(db, user, f"tr_events.php?triggerid={problem.triggerid}&eventid={problem.eventid}")
+
+
+class DeviceRef(BaseModel):
+    id: int
+    name: str
+    inventory_no: str | None
+    serial: str
+    kind: str
+
+
+def _devices(db: Session, ids: set[int]) -> dict[int, DeviceRef]:
+    if not ids:
+        return {}
+    rows = db.execute(
+        select(
+            InventoryHardware.id,
+            InventoryHardware.name,
+            InventoryHardware.inventory_no,
+            InventoryHardware.serial,
+            InventoryKind.name,
+        )
+        .join(InventoryKind, InventoryKind.id == InventoryHardware.kind_id)
+        .where(InventoryHardware.id.in_(ids))
+    )
+    return {
+        device_id: DeviceRef(id=device_id, name=name, inventory_no=number, serial=serial, kind=kind)
+        for device_id, name, number, serial, kind in rows
+    }
 
 
 class DataState(BaseModel):
@@ -278,6 +327,9 @@ class HostBrief(BaseModel):
 
 class TodoOut(BaseModel):
     long_open: int
+    unmonitored: int
+    no_inventory: int
+    no_serial: int
     certificates: list[ProblemOut]
     certificate_tag: str | None
 
@@ -310,6 +362,7 @@ def overview(user: ReaderUser, db: DbDep) -> OverviewOut:
         host for host in monitored if host.reachable is False and not host.in_maintenance
     ]
     options = load_options(db)
+    matched = match_inventory(db)
     certificates: list[ProblemOut] = []
     if options.certificate_tag is not None:
         tag, value = options.certificate_tag
@@ -349,6 +402,9 @@ def overview(user: ReaderUser, db: DbDep) -> OverviewOut:
         ][:10],
         todo=TodoOut(
             long_open=sum(1 for problem in visible if now - problem.since > LONG_OPEN),
+            unmonitored=len(matched.unmonitored),
+            no_inventory=sum(1 for gap in matched.gaps.values() if gap == "ohne_bestand"),
+            no_serial=sum(1 for gap in matched.gaps.values() if gap == "seriennummer_fehlt"),
             certificates=certificates[:50],
             certificate_tag=(
                 f"{options.certificate_tag[0]}: {options.certificate_tag[1]}"
@@ -375,12 +431,22 @@ class HostRow(BaseModel):
     problems: int
     worst: int | None
     serial: str
+    device: DeviceRef | None
+    match: str | None
+    gap: str | None
+
+
+def _device_of(matched: Match, devices: dict[int, DeviceRef], hostid: str) -> DeviceRef | None:
+    link = matched.linked.get(hostid)
+    return devices.get(link[0]) if link else None
 
 
 @router.get("/hosts")
 def hosts_list(user: ReaderUser, db: DbDep) -> list[HostRow]:
     """Alle Hosts mit Zustand und Zahl der offenen Probleme."""
     sites = _site_names(db)
+    matched = match_inventory(db)
+    devices = _devices(db, {device for device, _ in matched.linked.values()})
     counts: dict[str, list[int]] = {}
     for problem in db.scalars(select(ZbxProblem).where(ZbxProblem.suppressed.is_(False))):
         if problem.hostid:
@@ -400,6 +466,9 @@ def hosts_list(user: ReaderUser, db: DbDep) -> list[HostRow]:
             problems=len(counts.get(host.hostid, [])),
             worst=max(counts[host.hostid]) if counts.get(host.hostid) else None,
             serial=host.serial,
+            device=_device_of(matched, devices, host.hostid),
+            match=matched.linked[host.hostid][1] if host.hostid in matched.linked else None,
+            gap=matched.gaps.get(host.hostid),
         )
         for host in db.scalars(select(ZbxHost).order_by(ZbxHost.name))
     ]
@@ -436,6 +505,11 @@ class HostDetail(BaseModel):
     updated_at: datetime
     problems: list[ProblemOut]
     link: str | None
+    device: DeviceRef | None
+    match: str | None
+    gap: str | None
+    # Gerät von Hand zuordnen geht nur ohne Seriennummer im Inventar
+    can_link: bool
 
 
 @router.get("/hosts/{hostid}")
@@ -444,6 +518,8 @@ def host_detail(hostid: str, user: ReaderUser, db: DbDep) -> HostDetail:
     if host is None:
         raise HTTPException(status_code=404, detail="Diesen Host gibt es nicht (mehr).")
     sites = _site_names(db)
+    matched = match_inventory(db)
+    devices = _devices(db, {device for device, _ in matched.linked.values()})
     maintenance = db.get(ZbxMaintenance, host.maintenanceid) if host.maintenanceid else None
     problems = db.scalars(
         select(ZbxProblem)
@@ -479,6 +555,10 @@ def host_detail(hostid: str, user: ReaderUser, db: DbDep) -> HostDetail:
         updated_at=host.updated_at,
         problems=[_problem_out(db, user, problem, {hostid: host}, sites) for problem in problems],
         link=host_link(db, user, host.hostid),
+        device=_device_of(matched, devices, hostid),
+        match=matched.linked[hostid][1] if hostid in matched.linked else None,
+        gap=matched.gaps.get(hostid),
+        can_link=not host.serial.strip(),
     )
 
 
@@ -540,6 +620,8 @@ class ConnectionOut(BaseModel):
     sites: list[SiteOut]
     certificate_tag: str
     certificate_value: str
+    kinds: list[SiteOut]
+    kind_ids: list[int]
 
 
 @router.get("/connection")
@@ -614,6 +696,13 @@ def connection(user: AdminReader, db: DbDep) -> ConnectionOut:
         ],
         certificate_tag=options.certificate_tag[0] if options.certificate_tag else "",
         certificate_value=options.certificate_tag[1] if options.certificate_tag else "",
+        kinds=[
+            SiteOut(id=kind_id, name=name)
+            for kind_id, name in db.execute(
+                select(InventoryKind.id, InventoryKind.name).order_by(InventoryKind.name)
+            ).tuples()
+        ],
+        kind_ids=list(options.kind_ids),
     )
 
 
@@ -627,6 +716,7 @@ class OptionsIn(BaseModel):
     mapping: list[MappingEntry] = Field(max_length=500)
     certificate_tag: str = Field(default="", max_length=TAG_MAX)
     certificate_value: str = Field(default="", max_length=TAG_MAX)
+    kind_ids: list[int] = Field(default_factory=list, max_length=200)
 
 
 @router.put("/connection")
@@ -649,11 +739,19 @@ def save_connection_options(
                 position=position,
             )
         )
+    known_kinds = set(db.scalars(select(InventoryKind.id)))
+    if any(kind_id not in known_kinds for kind_id in body.kind_ids):
+        raise HTTPException(status_code=422, detail="Unbekannte Hardware-Art.")
     tag = body.certificate_tag.strip()
     set_setting(
         db,
         ZABBIX_OPTIONS_KEY,
-        {"certificate_tag": {"tag": tag, "value": body.certificate_value.strip()} if tag else None},
+        {
+            "certificate_tag": {"tag": tag, "value": body.certificate_value.strip()}
+            if tag
+            else None,
+            "kind_ids": sorted(set(body.kind_ids)),
+        },
         user.user_id,
     )
     db.flush()
@@ -666,7 +764,169 @@ def save_connection_options(
         object_type="einstellung",
         object_id=ZABBIX_OPTIONS_KEY,
         ip=client_ip(request),
-        details={"zuordnungen": len(body.mapping), "zertifikat_tag": bool(tag)},
+        details={
+            "zuordnungen": len(body.mapping),
+            "zertifikat_tag": bool(tag),
+            "hardware_arten": len(set(body.kind_ids)),
+        },
     )
     db.commit()
     return connection(user, db)
+
+
+# ---------- Abgleich mit dem IT-Bestand ----------
+
+
+class UnmonitoredRow(DeviceRef):
+    reason: str | None
+
+
+class UnmonitoredOut(BaseModel):
+    # Geräte der festgelegten Arten ohne passenden Host
+    missing: list[UnmonitoredRow]
+    # bewusst nicht überwacht
+    excluded: list[UnmonitoredRow]
+    kinds_set: bool
+
+
+@router.get("/unmonitored")
+def unmonitored(user: ReaderUser, db: DbDep) -> UnmonitoredOut:
+    """Geräte im IT-Bestand, die in Zabbix fehlen, und die bewusst nicht überwachten."""
+    matched = match_inventory(db)
+    devices = _devices(db, set(matched.unmonitored) | set(matched.excluded))
+    return UnmonitoredOut(
+        missing=[
+            UnmonitoredRow(**devices[device_id].model_dump(), reason=None)
+            for device_id in matched.unmonitored
+            if device_id in devices
+        ],
+        excluded=sorted(
+            (
+                UnmonitoredRow(**devices[device_id].model_dump(), reason=reason)
+                for device_id, reason in matched.excluded.items()
+                if device_id in devices
+            ),
+            key=lambda row: row.name.lower(),
+        ),
+        kinds_set=bool(load_options(db).kind_ids),
+    )
+
+
+class LinkIn(BaseModel):
+    hardware_id: int = Field(ge=1)
+
+
+def _active_device(db: Session, hardware_id: int) -> InventoryHardware:
+    device = db.get(InventoryHardware, hardware_id)
+    if device is None or device.status != "aktiv":
+        raise HTTPException(status_code=404, detail="Dieses Gerät gibt es im Bestand nicht.")
+    return device
+
+
+@router.post("/hosts/{hostid}/link")
+def link_host(hostid: str, body: LinkIn, request: Request, user: LinkUser, db: DbDep) -> HostDetail:
+    """Ordnet einem Host ohne Seriennummer ein Gerät von Hand zu."""
+    host = db.get(ZbxHost, hostid) if _ID.match(hostid) else None
+    if host is None:
+        raise HTTPException(status_code=404, detail="Diesen Host gibt es nicht (mehr).")
+    if host.serial.strip():
+        raise HTTPException(
+            status_code=409,
+            detail="Der Host hat eine Seriennummer; er wird darüber verknüpft.",
+        )
+    device = _active_device(db, body.hardware_id)
+    existing = db.get(ZbxHostLink, hostid)
+    if existing is None:
+        db.add(ZbxHostLink(hostid=hostid, hardware_id=device.id))
+    else:
+        existing.hardware_id = device.id
+    add_event(db, device.id, user, f"In Zabbix dem Host „{host.name}“ zugeordnet")
+    write_audit(
+        db,
+        module=MODULE,
+        action="zabbix.host_zugeordnet",
+        user_id=user.user_id,
+        object_type="zabbix_host",
+        object_id=hostid,
+        ip=client_ip(request),
+        details={"geraet": device.id},
+    )
+    db.commit()
+    return host_detail(hostid, user, db)
+
+
+@router.delete("/hosts/{hostid}/link")
+def unlink_host(hostid: str, request: Request, user: LinkUser, db: DbDep) -> HostDetail:
+    """Löst die Zuordnung von Hand."""
+    link = db.get(ZbxHostLink, hostid) if _ID.match(hostid) else None
+    host = db.get(ZbxHost, hostid) if _ID.match(hostid) else None
+    if link is None or host is None:
+        raise HTTPException(status_code=404, detail="Für diesen Host gibt es keine Zuordnung.")
+    add_event(db, link.hardware_id, user, f"In Zabbix vom Host „{host.name}“ gelöst")
+    db.delete(link)
+    write_audit(
+        db,
+        module=MODULE,
+        action="zabbix.zuordnung_geloest",
+        user_id=user.user_id,
+        object_type="zabbix_host",
+        object_id=hostid,
+        ip=client_ip(request),
+    )
+    db.commit()
+    return host_detail(hostid, user, db)
+
+
+class UnmonitoredIn(BaseModel):
+    reason: str = Field(min_length=1, max_length=200)
+
+
+@router.put("/devices/{hardware_id}/unmonitored")
+def mark_unmonitored(
+    hardware_id: int, body: UnmonitoredIn, request: Request, user: LinkUser, db: DbDep
+) -> UnmonitoredOut:
+    """Markiert ein Gerät als „bewusst nicht überwacht“ (mit Begründung, im Verlauf)."""
+    device = _active_device(db, hardware_id)
+    reason = body.reason.strip()[:200]
+    if not reason:
+        raise HTTPException(status_code=422, detail="Bitte kurz begründen.")
+    entry = db.get(ZbxUnmonitored, device.id)
+    if entry is None:
+        db.add(ZbxUnmonitored(hardware_id=device.id, reason=reason))
+    else:
+        entry.reason = reason
+    add_event(db, device.id, user, f"Bewusst nicht in Zabbix überwacht: {reason}")
+    write_audit(
+        db,
+        module=MODULE,
+        action="zabbix.nicht_ueberwacht",
+        user_id=user.user_id,
+        object_type="geraet",
+        object_id=str(device.id),
+        ip=client_ip(request),
+    )
+    db.commit()
+    return unmonitored(user, db)
+
+
+@router.delete("/devices/{hardware_id}/unmonitored")
+def unmark_unmonitored(
+    hardware_id: int, request: Request, user: LinkUser, db: DbDep
+) -> UnmonitoredOut:
+    """Hebt „bewusst nicht überwacht“ auf."""
+    entry = db.get(ZbxUnmonitored, hardware_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Das Gerät ist nicht markiert.")
+    db.delete(entry)
+    add_event(db, hardware_id, user, "Soll wieder in Zabbix überwacht werden")
+    write_audit(
+        db,
+        module=MODULE,
+        action="zabbix.wieder_ueberwachen",
+        user_id=user.user_id,
+        object_type="geraet",
+        object_id=str(hardware_id),
+        ip=client_ip(request),
+    )
+    db.commit()
+    return unmonitored(user, db)

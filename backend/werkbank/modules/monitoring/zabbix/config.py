@@ -57,6 +57,8 @@ def frontend_url(db: Session) -> str | None:
 class Options:
     # Tag für ablaufende Zertifikate, z. B. ("component", "certificate"); None: aus
     certificate_tag: tuple[str, str] | None
+    # Hardware-Arten des IT-Bestands, die in Zabbix überwacht sein sollen
+    kind_ids: tuple[int, ...] = ()
 
 
 def load_options(db: Session) -> Options:
@@ -66,4 +68,8 @@ def load_options(db: Session) -> Options:
     certificate: tuple[str, str] | None = None
     if isinstance(tag, dict) and isinstance(tag.get("tag"), str) and tag["tag"]:
         certificate = (tag["tag"][:TAG_MAX], str(tag.get("value") or "")[:TAG_MAX])
-    return Options(certificate_tag=certificate)
+    kinds = data.get("kind_ids")
+    kind_ids = tuple(
+        value for value in (kinds if isinstance(kinds, list) else []) if isinstance(value, int)
+    )[:200]
+    return Options(certificate_tag=certificate, kind_ids=kind_ids)

@@ -504,7 +504,7 @@ export function Layout({ me }: LayoutProps) {
     zabbixHost !== undefined &&
     items.some((item) => item.path === MONITORING_ZABBIX_HOSTS_PATH)
   ) {
-    page = <ZabbixHostsPage hostId={zabbixHost} />;
+    page = <ZabbixHostsPage hostId={zabbixHost} roles={me.roles} />;
   } else if (path === MONITORING_ZABBIX_MAINTENANCE_PATH && current) {
     page = <ZabbixMaintenancesPage />;
   } else if (path === MONITORING_ZABBIX_CONNECTION_PATH && current) {
