@@ -730,3 +730,11 @@ def delete_template(
     db.delete(template)
     db.commit()
     return _templates(db, area_id)
+
+
+@router.get("/areas/{area_id}/categories")
+def categories_for_members(area_id: AreaId, access: AccessDep, db: DbDep) -> list[CategoryOut]:
+    """Aktive Kategorien eines Bereichs für Mitglieder (z. B. beim Anlegen eines Tickets)."""
+    if not access.can_read(area_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bereich nicht gefunden.")
+    return [c for c in _categories(db, area_id) if c.active]

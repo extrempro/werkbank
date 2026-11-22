@@ -1,8 +1,16 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
 import { navigate } from "../../router";
-import { createTicket, PRIORITY_LABELS, ticketPath, type Priority, type TicketAccess } from "./api";
+import {
+  createTicket,
+  fetchAreaCategories,
+  PRIORITY_LABELS,
+  type Category,
+  ticketPath,
+  type Priority,
+  type TicketAccess,
+} from "./api";
 
 /** Mailadressen aus einem Freitext (Komma, Semikolon, Zeilenumbruch). */
 export function parseMails(text: string): string[] {
@@ -29,6 +37,24 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
   const [assignToMe, setAssignToMe] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<FeedbackMessage | null>(null);
+  // Kategorien des gewählten Bereichs (mit dem Bereich, für den sie gelten)
+  const [loaded, setLoaded] = useState<{ area: number; items: Category[] } | null>(null);
+  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const categories = loaded && loaded.area === areaId ? loaded.items : [];
+
+  useEffect(() => {
+    if (areaId === "") {
+      return;
+    }
+    let active = true;
+    fetchAreaCategories(areaId).then(
+      (items) => active && setLoaded({ area: areaId, items }),
+      () => active && setLoaded({ area: areaId, items: [] }),
+    );
+    return () => {
+      active = false;
+    };
+  }, [areaId]);
 
   if (areas.length === 0) {
     return (
@@ -59,6 +85,7 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
       body,
       participants: parseMails(participants).map((mail) => ({ name: "", mail })),
       assign_to_me: assignToMe,
+      category_id: categories.some((c) => c.id === categoryId) ? categoryId : null,
     })
       .then((ticket) => {
         // Die Ticketseite selbst ist die Rückmeldung
@@ -89,7 +116,10 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
             <select
               required
               value={areaId}
-              onChange={(event) => setAreaId(event.target.value ? Number(event.target.value) : "")}
+              onChange={(event) => {
+                setAreaId(event.target.value ? Number(event.target.value) : "");
+                setCategoryId(null);
+              }}
             >
               {areas.length > 1 && <option value="">Bitte wählen …</option>}
               {areas.map((a) => (
@@ -99,6 +129,29 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
               ))}
             </select>
           </label>
+          {categories.length > 0 && (
+            <label>
+              Kategorie
+              <select
+                value={categoryId ?? ""}
+                onChange={(event) => {
+                  const id = event.target.value ? Number(event.target.value) : null;
+                  setCategoryId(id);
+                  const chosen = categories.find((c) => c.id === id);
+                  if (chosen) {
+                    setPriority(chosen.default_priority);
+                  }
+                }}
+              >
+                <option value="">Keine</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             Eingangsweg
             <select

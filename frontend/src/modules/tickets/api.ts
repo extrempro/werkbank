@@ -23,8 +23,14 @@ export const STATUS_LABELS: Record<TicketStatus, string> = {
   closed: "Geschlossen",
   merged: "Zusammengeführt",
 };
-/** Status, die man im Ticketkopf von Hand wählen kann (Erinnerung folgt später). */
-export const SETTABLE_STATUSES: TicketStatus[] = ["in_progress", "waiting", "solved", "closed"];
+/** Status, die man im Ticketkopf von Hand wählen kann. */
+export const SETTABLE_STATUSES: TicketStatus[] = [
+  "in_progress",
+  "waiting",
+  "reminder",
+  "solved",
+  "closed",
+];
 export const PRIORITY_LABELS: Record<Priority, string> = {
   low: "Niedrig",
   medium: "Mittel",
@@ -74,6 +80,11 @@ export interface TicketItem {
   channel: Channel;
   created_at: string;
   updated_at: string;
+  category: string;
+  reminder_at: string | null;
+  /** Frist (nur bei Bereichen mit Fristen). */
+  sla_solution_due: string | null;
+  sla_overdue: boolean;
 }
 
 export interface TicketList {
@@ -102,6 +113,8 @@ export interface Entry {
   body: string;
   /** Zitat aus früheren Mails (eingeklappt). */
   quote: string;
+  /** Beim Zusammenführen übernommen: Nummer des Quelltickets. */
+  from_number: number | null;
   author_name: string;
   original: boolean;
   created_at: string;
@@ -126,6 +139,37 @@ export interface Ticket extends TicketItem {
   /** Antwort an den Melder möglich? Sonst der Grund. */
   can_reply: boolean;
   reply_hint: string;
+  category_id: number | null;
+  categories: Category[];
+  reminder_note: string;
+  sla: Sla | null;
+  devices_enabled: boolean;
+  device: Device | null;
+  merged_into: number | null;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  default_priority: Priority;
+}
+
+export interface Sla {
+  response_due: string | null;
+  solution_due: string | null;
+  response_met: boolean | null;
+  solution_met: boolean | null;
+  paused: boolean;
+}
+
+export interface Device {
+  id: number;
+  name: string;
+  kind: string;
+  inventory_no: string;
+  serial: string;
+  /** Gehört laut IT-Bestand dem Melder. */
+  reporter?: boolean;
 }
 
 export function ticketLabel(number: number): string {
@@ -172,6 +216,7 @@ export interface NewTicket {
   body: string;
   participants: Participant[];
   assign_to_me: boolean;
+  category_id: number | null;
 }
 
 export function createTicket(body: NewTicket): Promise<Ticket> {
@@ -189,6 +234,9 @@ export interface TicketChange {
   change_assignee: boolean;
   assignee_oid: string | null;
   handover_note: string;
+  notify_assignee: boolean;
+  reminder_at: string | null;
+  reminder_note: string;
 }
 
 export function changeTicket(number: number, body: TicketChange): Promise<Ticket> {
@@ -197,7 +245,7 @@ export function changeTicket(number: number, body: TicketChange): Promise<Ticket
 
 export function changeDetails(
   number: number,
-  body: { priority: Priority; participants: Participant[] },
+  body: { priority: Priority; participants: Participant[]; category_id: number | null },
 ): Promise<Ticket> {
   return putJson(`${BASE}/${number}/details`, body);
 }
@@ -316,13 +364,14 @@ export function searchEntra(kind: "group" | "person", q: string): Promise<Found[
 
 // --- E-Mail ---------------------------------------------------------------------------------
 
-export type MailEvent = "in_progress" | "assignee" | "waiting" | "solved" | "closed";
+export type MailEvent = "in_progress" | "assignee" | "waiting" | "solved" | "closed" | "sla_missed";
 export const MAIL_EVENT_LABELS: Record<MailEvent, string> = {
   in_progress: "In Arbeit",
   assignee: "Wechsel der Zuständigkeit",
   waiting: "Wartet auf Rückmeldung",
   solved: "Gelöst",
   closed: "Geschlossen",
+  sla_missed: "Frist nicht eingehalten",
 };
 export const TYPE_LABELS: Record<string, string> = {
   pdf: "PDF",
@@ -462,4 +511,150 @@ export function uploadDesignLogo(contentBase64: string): Promise<MailDesign> {
 
 export function deleteDesignLogo(): Promise<MailDesign> {
   return deleteJson(`${SETTINGS}/design/logo`);
+}
+
+// --- Arbeitshilfen (Phase 3) ---------------------------------------------------------------
+
+export function fetchAreaCategories(areaId: number): Promise<(Category & { active: boolean })[]> {
+  return getJson(`${BASE}/areas/${areaId}/categories`);
+}
+
+export interface Candidate {
+  number: number;
+  subject: string;
+  reporter_name: string;
+  status: TicketStatus;
+}
+
+export function fetchMergeCandidates(number: number, q: string): Promise<Candidate[]> {
+  return getJson(`${BASE}/${number}/merge-candidates?${new URLSearchParams({ q }).toString()}`);
+}
+
+export function mergeTicket(
+  number: number,
+  target: number,
+  notifyReporter: boolean,
+): Promise<Ticket> {
+  return postJson(`${BASE}/${number}/merge`, { target, notify_reporter: notifyReporter });
+}
+
+export function searchDevices(number: number, q: string): Promise<Device[]> {
+  return getJson(`${BASE}/${number}/devices?${new URLSearchParams({ q }).toString()}`);
+}
+
+export function setDevice(number: number, hardwareId: number | null): Promise<Ticket> {
+  return putJson(`${BASE}/${number}/device`, { hardware_id: hardwareId });
+}
+
+export interface HardwareTickets {
+  items: { number: number; subject: string; status: TicketStatus }[];
+  hidden: number;
+}
+
+export function fetchHardwareTickets(hardwareId: number): Promise<HardwareTickets> {
+  return getJson(`${BASE}/by-hardware/${hardwareId}`);
+}
+
+export interface Template {
+  id: number;
+  name: string;
+  shortcut: string;
+  kind: "reply" | "note";
+  status_after: StatusAfter;
+  body: string;
+}
+
+export interface TemplatesForTicket {
+  templates: Template[];
+  values: Record<string, string>;
+  signature: string;
+}
+
+export function fetchTicketTemplates(number: number): Promise<TemplatesForTicket> {
+  return getJson(`${BASE}/${number}/templates`);
+}
+
+/** Platzhalter einsetzen; unbekannte bleiben stehen. */
+export function fillTemplate(text: string, values: Record<string, string>): string {
+  return text.replace(/\{(Nr|Betreff|Name|Vorname|Bearbeiter|Datum)\}/g, (match, key: string) =>
+    key in values ? (values[key] ?? match) : match,
+  );
+}
+
+export interface CategorySetting {
+  id: number;
+  name: string;
+  default_priority: Priority;
+  active: boolean;
+}
+
+export function fetchCategories(areaId: number): Promise<CategorySetting[]> {
+  return getJson(`${SETTINGS}/areas/${areaId}/categories`);
+}
+
+export function addCategory(
+  areaId: number,
+  body: { name: string; default_priority: Priority; active: boolean },
+): Promise<CategorySetting[]> {
+  return postJson(`${SETTINGS}/areas/${areaId}/categories`, body);
+}
+
+export function updateCategory(
+  areaId: number,
+  id: number,
+  body: { name: string; default_priority: Priority; active: boolean },
+): Promise<CategorySetting[]> {
+  return putJson(`${SETTINGS}/areas/${areaId}/categories/${id}`, body);
+}
+
+export interface WorkSettings {
+  sla_enabled: boolean;
+  work_days: number[];
+  work_start: number;
+  work_end: number;
+  sla: { priority: Priority; response_minutes: number; solution_minutes: number }[];
+  devices_enabled: boolean;
+  device_kinds: number[];
+  device_suggest: boolean;
+  device_in_inventory: boolean;
+}
+
+export interface WorkSettingsOut extends WorkSettings {
+  kinds: { id: number; name: string }[];
+}
+
+export function fetchWorkSettings(areaId: number): Promise<WorkSettingsOut> {
+  return getJson(`${SETTINGS}/areas/${areaId}/work`);
+}
+
+export function saveWorkSettings(areaId: number, body: WorkSettings): Promise<WorkSettingsOut> {
+  return putJson(`${SETTINGS}/areas/${areaId}/work`, body);
+}
+
+export interface TemplateInput {
+  name: string;
+  shortcut: string;
+  kind: "reply" | "note";
+  status_after: StatusAfter;
+  body: string;
+}
+
+export function fetchTemplates(areaId: number): Promise<Template[]> {
+  return getJson(`${SETTINGS}/areas/${areaId}/templates`);
+}
+
+export function addTemplate(areaId: number, body: TemplateInput): Promise<Template[]> {
+  return postJson(`${SETTINGS}/areas/${areaId}/templates`, body);
+}
+
+export function updateTemplate(
+  areaId: number,
+  id: number,
+  body: TemplateInput,
+): Promise<Template[]> {
+  return putJson(`${SETTINGS}/areas/${areaId}/templates/${id}`, body);
+}
+
+export function deleteTemplate(areaId: number, id: number): Promise<Template[]> {
+  return deleteJson(`${SETTINGS}/areas/${areaId}/templates/${id}`);
 }

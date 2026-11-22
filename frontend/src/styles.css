@@ -12538,3 +12538,136 @@ input[type="file"] {
   border-bottom: 1px solid var(--farbe-trenner);
   overflow-wrap: anywhere;
 }
+
+/* Tickets: Arbeitshilfen */
+.ticket-reminder {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.875rem;
+}
+
+.ticket-reminder-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  font-weight: 600;
+}
+
+.ticket-reminder input {
+  max-width: 20rem;
+}
+
+.ticket-reminder-info {
+  margin: 0;
+}
+
+.ticket-device summary,
+.ticket-merge summary {
+  cursor: pointer;
+  color: var(--farbe-link);
+  font-size: 0.875rem;
+}
+
+.ticket-merge summary {
+  font-weight: 600;
+}
+
+.ticket-device[open],
+.ticket-merge[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ticket-device input,
+.ticket-merge input[type="search"] {
+  width: 100%;
+}
+
+.ticket-pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+
+.ticket-from {
+  color: var(--farbe-text-leise);
+}
+
+.ticket-template-list {
+  position: absolute;
+  z-index: 5;
+  max-height: 14rem;
+  margin: 2px 0 0;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  list-style: none;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
+
+.ticket-template-list li {
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ticket-template-list li[aria-selected="true"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+.ticket-template-anchor {
+  position: relative;
+}
+
+.ticket-template-anchor .ticket-template-list {
+  right: 0;
+  left: 0;
+}
+
+.ticket-category-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 4px 0;
+}
+
+.ticket-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.ticket-sla-table input {
+  width: 6rem;
+}
+
+.ticket-template-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ticket-template-preview {
+  padding: 8px 10px;
+  border: 1px dashed var(--farbe-rand-kontrast);
+  border-radius: 8px;
+}
+
+.ticket-template-preview .ticket-entry-body {
+  white-space: pre-wrap;
+}

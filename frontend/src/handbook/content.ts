@@ -1213,6 +1213,37 @@ export const AREAS: readonly Area[] = [
             ],
             links: [{ to: "/tickets/einstellungen", label: "Zu den Einstellungen" }],
           },
+          {
+            id: "arbeitshilfen",
+            title: "Arbeitshilfen: Kategorie, Frist, Erinnerung, Geräte, Textbausteine",
+            blocks: [
+              {
+                kind: "text",
+                text: "Kategorien ordnen ein Ticket ein, zum Beispiel Drucker oder Zugang. Wählst du beim Anlegen eine Kategorie, schlägt sie eine Priorität vor. Die Bereichsverwaltung legt die Kategorien in den Einstellungen an.",
+              },
+              {
+                kind: "text",
+                text: "Hat der Bereich Fristen eingeschaltet, steht am Ticket, bis wann es gelöst sein soll. Gezählt wird nur die Arbeitszeit des Bereichs. Solange das Ticket auf eine Rückmeldung wartet, ruht die Frist. Kurz vor Ablauf und bei Überschreitung bekommt die zuständige Person eine Benachrichtigung; in der Liste steht dann „überfällig“. Ohne Fristen erscheint im Bereich nirgends eine Frist.",
+              },
+              {
+                kind: "text",
+                text: "Mit dem Status „Erinnerung“ legst du ein Ticket bis zu einem Zeitpunkt beiseite, auf Wunsch mit Stichwort. Zum Zeitpunkt wird es wieder „In Arbeit“ und die zuständige Person bekommt eine Benachrichtigung. Wie jeder Statuswechsel gilt das erst nach „Bestätigen“. Gibst du ein Ticket an jemand anderen, kannst du die Person benachrichtigen lassen.",
+              },
+              {
+                kind: "text",
+                text: "Meldet jemand dasselbe zweimal, führst du die Tickets zusammen. Der Verlauf wandert ins Ziel und ist dort mit „aus T-…“ gekennzeichnet; das alte Ticket wird geschlossen. Spätere Mails dazu landen im Ziel. Das lässt sich nicht rückgängig machen.",
+              },
+              {
+                kind: "text",
+                text: "Ist es eingeschaltet, verknüpfst du ein Ticket mit einem Gerät aus dem IT-Bestand. Geräte des Melders stehen oben. Auf der Seite des Geräts im IT-Bestand stehen dann die Tickets dazu.",
+              },
+              {
+                kind: "text",
+                text: "Textbausteine sind vorgefertigte Antworten und Notizen. Tippe im Antwortfeld einen Schrägstrich und das Kürzel, wähle mit den Pfeiltasten und übernimm mit der Eingabetaste. Platzhalter wie {Vorname} oder {Nr} werden ersetzt. Ein Baustein kann den Status danach vorschlagen.",
+              },
+            ],
+            links: [{ to: "/tickets", label: "Zu den Tickets" }],
+          },
         ],
       },
       {

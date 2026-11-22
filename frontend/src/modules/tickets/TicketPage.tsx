@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ApiError, errorText, formatDateTime } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
@@ -11,7 +11,14 @@ import {
   changeDetails,
   changeTicket,
   CHANNEL_LABELS,
+  fetchMergeCandidates,
   fetchTicket,
+  fetchTicketTemplates,
+  fillTemplate,
+  mergeTicket,
+  searchDevices,
+  setDevice,
+  ticketPath,
   formatSize,
   moveTicket,
   PRIORITY_LABELS,
@@ -20,13 +27,18 @@ import {
   ticketLabel,
   TICKETS_PATH,
   sendReply,
+  type Candidate,
   type Entry,
   type StatusAfter,
   type Participant,
   type Priority,
+  type Sla,
+  type Template,
+  type TemplatesForTicket,
   type Ticket,
   type TicketStatus,
 } from "./api";
+import { hardwarePath } from "../inventory/api";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
 
 /** So viele Einträge stehen nach der ursprünglichen Meldung, der Rest ist eingeklappt. */
@@ -104,6 +116,9 @@ function EntryItem({ entry, ticket }: { entry: Entry; ticket: Ticket }) {
           {entry.kind === "note" && <Icon name="schloss" />}
           {entry.kind === "reply" && <Icon name="brief" />}
           {marker}
+          {entry.from_number !== null && (
+            <span className="small ticket-from"> · aus T-{entry.from_number}</span>
+          )}
         </span>
         <span className="small">
           {entry.kind === "inbound" ? ticket.reporter_name || entry.author_name : entry.author_name}{" "}
@@ -193,6 +208,26 @@ const STATUS_AFTER_LABELS: Record<StatusAfter, string> = {
   solved: "Gelöst",
 };
 
+/** Kürzel direkt vor der Schreibmarke, z. B. „/druck“ → „druck“ (sonst null). */
+export function shortcutAt(text: string, caret: number): { start: number; word: string } | null {
+  const match = /(^|\s)\/([\p{L}\p{N}_-]{0,30})$/u.exec(text.slice(0, caret));
+  if (!match) {
+    return null;
+  }
+  const word = match[2] ?? "";
+  return { start: caret - word.length - 1, word };
+}
+
+/** Bausteine zum Kürzel: zuerst Treffer am Anfang, dann im Namen. Höchstens 8. */
+export function matchTemplates(templates: Template[], word: string): Template[] {
+  const q = word.toLowerCase();
+  const starts = templates.filter((t) => t.shortcut.toLowerCase().startsWith(q));
+  const rest = templates.filter(
+    (t) => !starts.includes(t) && `${t.shortcut} ${t.name}`.toLowerCase().includes(q),
+  );
+  return [...starts, ...rest].slice(0, 8);
+}
+
 function Composer({
   ticket,
   onSaved,
@@ -208,8 +243,81 @@ function Composer({
   const [note, setNote] = useState("");
   const [statusAfter, setStatusAfter] = useState<StatusAfter>("");
   const [busy, setBusy] = useState(false);
+  const [templates, setTemplates] = useState<TemplatesForTicket | null>(null);
+  const [slash, setSlash] = useState<{ start: number; word: string } | null>(null);
+  const [active, setActive] = useState(0);
   const fieldId = useId();
   const afterId = useId();
+  const listId = useId();
+
+  useEffect(() => {
+    if (mode === null || templates !== null) {
+      return;
+    }
+    let alive = true;
+    fetchTicketTemplates(ticket.number).then(
+      (result) => alive && setTemplates(result),
+      // Ohne Bausteine geht das Schreiben trotzdem
+      () => alive && setTemplates({ templates: [], values: {}, signature: "" }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [mode, templates, ticket.number]);
+
+  const kindTemplates = (templates?.templates ?? []).filter((t) => t.kind === mode);
+  const suggestions = slash ? matchTemplates(kindTemplates, slash.word) : [];
+  const showList = slash !== null && suggestions.length > 0;
+
+  const track = (element: HTMLTextAreaElement) => {
+    const next = shortcutAt(element.value, element.selectionStart);
+    setSlash(next);
+    if (next?.word !== slash?.word) {
+      setActive(0);
+    }
+  };
+
+  const insert = (template: Template, element: HTMLTextAreaElement | null) => {
+    if (!slash) {
+      return;
+    }
+    const current = mode === "reply" ? reply : note;
+    const text = fillTemplate(template.body, templates?.values ?? {});
+    const end = slash.start + 1 + slash.word.length;
+    const next = current.slice(0, slash.start) + text + current.slice(end);
+    (mode === "reply" ? setReply : setNote)(next);
+    if (mode === "reply" && template.status_after) {
+      setStatusAfter(template.status_after);
+    }
+    setSlash(null);
+    if (element) {
+      const caret = slash.start + text.length;
+      window.requestAnimationFrame(() => {
+        element.focus();
+        element.setSelectionRange(caret, caret);
+      });
+    }
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!showList) {
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      setActive((i) => (i + step + suggestions.length) % suggestions.length);
+    } else if (event.key === "Enter" || event.key === "Tab") {
+      const chosen = suggestions[active];
+      if (chosen) {
+        event.preventDefault();
+        insert(chosen, event.currentTarget);
+      }
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setSlash(null);
+    }
+  };
   const reporter = ticket.reporter_name || ticket.reporter_mail || "Der Melder";
   const copies = ticket.participants.map((p) => p.mail);
 
@@ -306,13 +414,63 @@ function Composer({
             ? `Geht per E-Mail an: ${ticket.reporter_mail}${copies.length > 0 ? ` (Kopie an ${copies.join(", ")})` : ""}`
             : `${reporter} sieht diesen Text nicht und bekommt keine Mail.`}
         </p>
-        <textarea
-          id={fieldId}
-          rows={5}
-          value={isReply ? reply : note}
-          maxLength={20000}
-          onChange={(event) => (isReply ? setReply : setNote)(event.target.value)}
-        />
+        <div className="ticket-template-anchor">
+          <textarea
+            id={fieldId}
+            rows={5}
+            value={isReply ? reply : note}
+            maxLength={20000}
+            aria-describedby={kindTemplates.length > 0 ? `${fieldId}-tpl` : undefined}
+            aria-controls={showList ? listId : undefined}
+            aria-autocomplete="list"
+            onChange={(event) => {
+              (isReply ? setReply : setNote)(event.target.value);
+              track(event.target);
+            }}
+            onKeyDown={onKeyDown}
+            onClick={(event) => track(event.currentTarget)}
+            onBlur={() => window.setTimeout(() => setSlash(null), 150)}
+          />
+          {showList && (
+            <ul
+              id={listId}
+              role="listbox"
+              aria-label="Textbausteine"
+              className="ticket-template-list"
+            >
+              {suggestions.map((t, index) => (
+                <li
+                  key={t.id}
+                  id={`${listId}-${t.id}`}
+                  role="option"
+                  aria-selected={index === active}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    insert(t, document.getElementById(fieldId) as HTMLTextAreaElement | null);
+                  }}
+                >
+                  <span className="mono">/{t.shortcut}</span> {t.name}
+                  {t.status_after && (
+                    <span className="small"> · danach {STATUS_AFTER_LABELS[t.status_after]}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <p className="visually-hidden" aria-live="polite">
+          {showList
+            ? `${suggestions.length} Textbausteine passen. Pfeiltasten wählen, Eingabe übernimmt, Escape schließt.`
+            : ""}
+        </p>
+        {kindTemplates.length > 0 && (
+          <p className="small" id={`${fieldId}-tpl`}>
+            Textbausteine: Schrägstrich und Kürzel tippen, zum Beispiel /
+            {kindTemplates[0]?.shortcut}
+            .
+            <InfoTip term="tickets.textbausteine" />
+          </p>
+        )}
         <div className="actions ticket-composer-actions">
           {isReply && (
             <label htmlFor={afterId} className="ticket-after">
@@ -366,7 +524,11 @@ function Participants({
   const mailId = useId();
   const save = (participants: Participant[], done: string) => {
     setBusy(true);
-    changeDetails(ticket.number, { priority: ticket.priority, participants })
+    changeDetails(ticket.number, {
+      priority: ticket.priority,
+      participants,
+      category_id: ticket.category_id,
+    })
       .then((result) => {
         onSaved(result);
         setMail("");
@@ -443,6 +605,49 @@ function Participants({
   );
 }
 
+/** Frist (nur bei Bereichen mit Fristen): fällig am, eingehalten, ruht. Text, nicht nur Farbe. */
+function SlaFact({ sla }: { sla: Sla }) {
+  const due = sla.solution_due ? new Date(sla.solution_due) : null;
+  const overdue = due !== null && sla.solution_met === null && !sla.paused && due < new Date();
+  let state = "";
+  if (sla.paused) {
+    state = "ruht (Wartet auf Rückmeldung)";
+  } else if (sla.solution_met === true) {
+    state = "eingehalten";
+  } else if (sla.solution_met === false) {
+    state = "nicht eingehalten";
+  } else if (overdue) {
+    state = "überschritten";
+  }
+  return (
+    <div className="ticket-fact">
+      <span className="ticket-fact-label">
+        Frist
+        <InfoTip term="tickets.frist" />
+      </span>
+      <span>
+        Lösung bis {formatDateTime(sla.solution_due)}
+        {state && (
+          <span
+            className={
+              overdue || sla.solution_met === false ? "pill pill-bad" : "pill pill-neutral"
+            }
+          >
+            {state}
+          </span>
+        )}
+      </span>
+      {sla.response_due && (
+        <span className="small">
+          Erste Reaktion bis {formatDateTime(sla.response_due)}
+          {sla.response_met === true && " · eingehalten"}
+          {sla.response_met === false && " · nicht eingehalten"}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function Facts({
   ticket,
   onSaved,
@@ -456,22 +661,29 @@ function Facts({
 }) {
   const [ask, dialog] = useConfirm();
   const priorityId = useId();
+  const categoryId = useId();
   const areaId = useId();
   const [target, setTarget] = useState("");
 
-  const changePriority = (priority: Priority) => {
-    changeDetails(ticket.number, { priority, participants: ticket.participants })
+  const changeFacts = (priority: Priority, categoryId: number | null, what: string) => {
+    changeDetails(ticket.number, {
+      priority,
+      participants: ticket.participants,
+      category_id: categoryId,
+    })
       .then((result) => {
         onSaved(result);
-        onMessage({ kind: "status", text: "Die Priorität wurde geändert." });
+        onMessage({ kind: "status", text: `${what} wurde geändert.` });
       })
       .catch((problem: unknown) =>
         onMessage({
           kind: "alert",
-          text: errorText(problem, "Die Priorität konnte nicht geändert werden."),
+          text: errorText(problem, `${what} konnte nicht geändert werden.`),
         }),
       );
   };
+  const changePriority = (priority: Priority) =>
+    changeFacts(priority, ticket.category_id, "Die Priorität");
 
   const move = () => {
     const area = ticket.move_targets.find((a) => String(a.id) === target);
@@ -548,10 +760,282 @@ function Facts({
             <span id={priorityId}>{PRIORITY_LABELS[ticket.priority]}</span>
           )}
         </div>
+        {(ticket.categories.length > 0 || ticket.category_id !== null) && (
+          <div className="ticket-fact">
+            <label htmlFor={categoryId} className="ticket-fact-label">
+              Kategorie
+            </label>
+            {ticket.permissions.edit ? (
+              <select
+                id={categoryId}
+                value={ticket.category_id ?? ""}
+                onChange={(event) =>
+                  changeFacts(
+                    ticket.priority,
+                    event.target.value ? Number(event.target.value) : null,
+                    "Die Kategorie",
+                  )
+                }
+              >
+                <option value="">Keine</option>
+                {ticket.categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span id={categoryId}>{ticket.category || "–"}</span>
+            )}
+          </div>
+        )}
+        {ticket.sla && <SlaFact sla={ticket.sla} />}
         <Participants ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
+        {ticket.devices_enabled && (
+          <DeviceSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
+        )}
+        {ticket.permissions.edit && ticket.status !== "merged" && (
+          <MergeSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
+        )}
       </div>
       {dialog}
     </aside>
+  );
+}
+
+/** Suche mit kurzer Verzögerung, damit nicht jeder Tastendruck eine Anfrage auslöst. */
+function useSearch<T>(load: (q: string) => Promise<T[]>, active: boolean) {
+  const [query, setQuery] = useState("");
+  const [items, setItems] = useState<T[]>([]);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+    let alive = true;
+    const timer = window.setTimeout(() => {
+      load(query.trim()).then(
+        (result) => {
+          if (alive) {
+            setItems(result);
+            setFailed(false);
+          }
+        },
+        () => alive && setFailed(true),
+      );
+    }, 250);
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+    };
+    // load ändert sich mit dem Ticket; die Suche hängt nur an Text und Sichtbarkeit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, active]);
+  return { query, setQuery, items, failed };
+}
+
+/** Gerät aus dem IT-Bestand verknüpfen (höchstens 5 Treffer, Vorschläge des Melders zuerst). */
+function DeviceSection({
+  ticket,
+  onSaved,
+  onMessage,
+}: {
+  ticket: Ticket;
+  onSaved: (ticket: Ticket) => void;
+  onMessage: (message: FeedbackMessage) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const searchId = useId();
+  const canEdit = ticket.permissions.edit && ticket.status !== "merged";
+  const search = useSearch((q) => searchDevices(ticket.number, q), open && canEdit);
+
+  const save = (hardwareId: number | null) =>
+    setDevice(ticket.number, hardwareId)
+      .then((result) => {
+        onSaved(result);
+        setOpen(false);
+        onMessage({
+          kind: "status",
+          text: hardwareId === null ? "Das Gerät wurde gelöst." : "Das Gerät wurde verknüpft.",
+        });
+      })
+      .catch((problem: unknown) =>
+        onMessage({
+          kind: "alert",
+          text: errorText(problem, "Das Gerät konnte nicht gespeichert werden."),
+        }),
+      );
+
+  const device = ticket.device;
+  return (
+    <div className="ticket-fact">
+      <span className="ticket-fact-label">
+        Gerät
+        <InfoTip term="tickets.geraet" />
+      </span>
+      {device ? (
+        <span>
+          <Link to={hardwarePath(device.id)}>{device.name}</Link>
+          <span className="small">
+            {" "}
+            · {device.kind}
+            {device.inventory_no && ` · ${device.inventory_no}`}
+          </span>
+        </span>
+      ) : (
+        <span>–</span>
+      )}
+      {canEdit && (
+        <details
+          className="ticket-device"
+          open={open}
+          onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
+        >
+          <summary>{device ? "Anderes Gerät wählen" : "Gerät verknüpfen"}</summary>
+          <label htmlFor={searchId}>Name, Inventar- oder Seriennummer</label>
+          <input
+            id={searchId}
+            type="search"
+            value={search.query}
+            maxLength={100}
+            onChange={(event) => search.setQuery(event.target.value)}
+          />
+          {search.failed && (
+            <p className="small" role="alert">
+              Die Suche hat nicht geklappt.
+            </p>
+          )}
+          <ul className="ticket-pick-list" aria-live="polite">
+            {search.items.map((d) => (
+              <li key={d.id}>
+                <button
+                  type="button"
+                  className="button button-link"
+                  onClick={() => void save(d.id)}
+                >
+                  {d.name}
+                </button>
+                <span className="small">
+                  {" "}
+                  · {d.kind}
+                  {d.inventory_no && ` · ${d.inventory_no}`}
+                  {d.reporter && " · gehört dem Melder"}
+                </span>
+              </li>
+            ))}
+            {!search.failed && search.items.length === 0 && (
+              <li className="small">Keine passenden Geräte.</li>
+            )}
+          </ul>
+          {device && (
+            <button type="button" className="button" onClick={() => void save(null)}>
+              Gerät lösen
+            </button>
+          )}
+        </details>
+      )}
+    </div>
+  );
+}
+
+/** In ein anderes Ticket zusammenführen: Vorschläge, Suche, Bestätigung. */
+function MergeSection({
+  ticket,
+  onSaved,
+  onMessage,
+}: {
+  ticket: Ticket;
+  onSaved: (ticket: Ticket) => void;
+  onMessage: (message: FeedbackMessage) => void;
+}) {
+  const [ask, dialog] = useConfirm();
+  const [open, setOpen] = useState(false);
+  const [notify, setNotify] = useState(true);
+  const searchId = useId();
+  const search = useSearch((q) => fetchMergeCandidates(ticket.number, q), open);
+
+  const merge = (target: Candidate) =>
+    ask(
+      {
+        title: `${ticketLabel(ticket.number)} in ${ticketLabel(target.number)} zusammenführen?`,
+        text: `Der Verlauf wandert nach ${ticketLabel(target.number)} („${target.subject}“), dieses Ticket wird geschlossen. Das lässt sich nicht rückgängig machen.${notify ? " Der Melder bekommt eine Mail." : ""}`,
+        action: "Zusammenführen",
+      },
+      () =>
+        mergeTicket(ticket.number, target.number, notify)
+          // Der Server liefert das Ziel; hier bleibt das alte Ticket mit Hinweis auf das Ziel.
+          .then(() => fetchTicket(ticket.number))
+          .then((result) => {
+            onSaved(result);
+            setOpen(false);
+            onMessage({
+              kind: "status",
+              text: `Das Ticket wurde in ${ticketLabel(target.number)} zusammengeführt.`,
+            });
+          })
+          .catch((problem: unknown) =>
+            onMessage({
+              kind: "alert",
+              text: errorText(problem, "Die Tickets konnten nicht zusammengeführt werden."),
+            }),
+          ),
+    );
+
+  return (
+    <div className="ticket-fact">
+      <details
+        className="ticket-merge"
+        open={open}
+        onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
+      >
+        <summary>Zusammenführen</summary>
+        <p className="small">
+          Verlauf in ein anderes Ticket verschieben; dieses wird geschlossen.
+          <InfoTip term="tickets.zusammenfuehren" />
+        </p>
+        <label htmlFor={searchId}>Ticketnummer oder Betreff</label>
+        <input
+          id={searchId}
+          type="search"
+          value={search.query}
+          maxLength={200}
+          onChange={(event) => search.setQuery(event.target.value)}
+        />
+        <p className="small">
+          {search.query.trim() ? "Treffer" : "Vorschläge (gleicher Melder oder ähnlicher Betreff)"}
+        </p>
+        {search.failed && (
+          <p className="small" role="alert">
+            Die Suche hat nicht geklappt.
+          </p>
+        )}
+        <ul className="ticket-pick-list" aria-live="polite">
+          {search.items.map((c) => (
+            <li key={c.number}>
+              <button type="button" className="button button-link" onClick={() => merge(c)}>
+                {ticketLabel(c.number)} {c.subject}
+              </button>
+              <span className="small">
+                {" "}
+                · {c.reporter_name} · {STATUS_LABELS[c.status]}
+              </span>
+            </li>
+          ))}
+          {!search.failed && search.items.length === 0 && (
+            <li className="small">Keine passenden Tickets.</li>
+          )}
+        </ul>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            checked={notify}
+            onChange={(event) => setNotify(event.target.checked)}
+          />{" "}
+          Melder benachrichtigen
+        </label>
+      </details>
+      {dialog}
+    </div>
   );
 }
 
@@ -560,10 +1044,12 @@ export function changeSummary(
   ticket: Ticket,
   status: TicketStatus,
   assignee: string | null,
+  reminderAt = "",
 ): string {
   const parts: string[] = [];
   if (status !== ticket.status) {
-    parts.push(`Status: ${STATUS_LABELS[ticket.status]} → ${STATUS_LABELS[status]}`);
+    const when = status === "reminder" && reminderAt ? ` am ${formatDateTime(reminderAt)}` : "";
+    parts.push(`Status: ${STATUS_LABELS[ticket.status]} → ${STATUS_LABELS[status]}${when}`);
   }
   if ((assignee ?? null) !== (ticket.assignee_oid ?? null)) {
     const name = (oid: string | null) =>
@@ -571,6 +1057,17 @@ export function changeSummary(
     parts.push(`Zuständig: ${name(ticket.assignee_oid)} → ${name(assignee)}`);
   }
   return parts.join(" · ");
+}
+
+/** Liegt der Zeitpunkt in der Zukunft? (Leer zählt als nein.) */
+export function inFuture(iso: string): boolean {
+  return iso !== "" && new Date(iso).getTime() > Date.now();
+}
+
+/** Datum (JJJJ-MM-TT) und Uhrzeit (HH:MM) in Ortszeit als ISO-Zeitpunkt. */
+export function reminderIso(date: string, time: string): string {
+  const local = new Date(`${date}T${time || "08:00"}:00`);
+  return Number.isNaN(local.getTime()) ? "" : local.toISOString();
 }
 
 export function TicketPage({ number }: { number: number }) {
@@ -582,8 +1079,15 @@ export function TicketPage({ number }: { number: number }) {
   const [status, setStatus] = useState<TicketStatus>("new");
   const [assignee, setAssignee] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [notifyAssignee, setNotifyAssignee] = useState(true);
+  const [reminderDate, setReminderDate] = useState("");
+  const [reminderTime, setReminderTime] = useState("08:00");
+  const [reminderNote, setReminderNote] = useState("");
   const [busy, setBusy] = useState(false);
   const statusId = useId();
+  const reminderDateId = useId();
+  const reminderTimeId = useId();
+  const reminderNoteId = useId();
   const assigneeId = useId();
   const noteId = useId();
   // Eigene Objekt-ID kommt vom Server (für „Mir zuweisen“)
@@ -594,6 +1098,10 @@ export function TicketPage({ number }: { number: number }) {
     setStatus(next.status);
     setAssignee(next.assignee_oid);
     setNote("");
+    setNotifyAssignee(true);
+    setReminderDate("");
+    setReminderTime("08:00");
+    setReminderNote("");
   };
 
   useEffect(() => {
@@ -613,12 +1121,18 @@ export function TicketPage({ number }: { number: number }) {
     };
   }, [number]);
 
-  const summary = ticket ? changeSummary(ticket, status, assignee) : "";
+  const reminderAt = reminderDate ? reminderIso(reminderDate, reminderTime) : "";
+  const summary = ticket ? changeSummary(ticket, status, assignee, reminderAt) : "";
   const handover =
     ticket !== null &&
     assignee !== null &&
     assignee !== ticket.assignee_oid &&
     ticket.assignee_oid !== null;
+  // Jemand anderes bekommt das Ticket: auf Wunsch benachrichtigen
+  const assigningOther =
+    ticket !== null && assignee !== null && assignee !== ticket.assignee_oid && assignee !== meOid;
+  const wantsReminder = ticket !== null && status === "reminder" && status !== ticket.status;
+  const reminderMissing = wantsReminder && !inFuture(reminderAt);
 
   const statusOptions = useMemo(() => {
     if (!ticket) {
@@ -682,6 +1196,9 @@ export function TicketPage({ number }: { number: number }) {
       change_assignee: assignee !== ticket.assignee_oid,
       assignee_oid: assignee,
       handover_note: handover ? note : "",
+      notify_assignee: assigningOther && notifyAssignee,
+      reminder_at: wantsReminder ? reminderAt : null,
+      reminder_note: wantsReminder ? reminderNote.trim() : "",
     })
       .then((result) => {
         accept(result);
@@ -758,11 +1275,73 @@ export function TicketPage({ number }: { number: number }) {
             {CHANNEL_LABELS[ticket.channel]} · {formatDateTime(ticket.created_at)}
           </p>
         </div>
+        {ticket.merged_into !== null && (
+          <p className="hint-box" role="note">
+            Zusammengeführt in{" "}
+            <Link to={ticketPath(ticket.merged_into)}>{ticketLabel(ticket.merged_into)}</Link>. Neue
+            Nachrichten landen dort.
+          </p>
+        )}
+        {ticket.status === "reminder" && ticket.reminder_at && !summary && (
+          <p className="small ticket-reminder-info">
+            Erinnerung am {formatDateTime(ticket.reminder_at)}
+            {ticket.reminder_note && ` · ${ticket.reminder_note}`}
+          </p>
+        )}
         {summary && (
           <div className="ticket-pending" role="status">
             <p>
               <strong>Noch nicht gespeichert:</strong> {summary}
             </p>
+            {wantsReminder && (
+              <div className="ticket-reminder">
+                <div className="ticket-reminder-row">
+                  <label htmlFor={reminderDateId}>
+                    Erinnern am
+                    <InfoTip term="tickets.erinnerung" />
+                  </label>
+                  <input
+                    id={reminderDateId}
+                    type="date"
+                    required
+                    value={reminderDate}
+                    aria-invalid={reminderMissing}
+                    aria-describedby={reminderMissing ? `${reminderDateId}-hint` : undefined}
+                    onChange={(event) => setReminderDate(event.target.value)}
+                  />
+                  <label htmlFor={reminderTimeId}>um</label>
+                  <input
+                    id={reminderTimeId}
+                    type="time"
+                    value={reminderTime}
+                    onChange={(event) => setReminderTime(event.target.value || "08:00")}
+                  />
+                </div>
+                {reminderMissing && (
+                  <p id={`${reminderDateId}-hint`} className="small">
+                    Wähle einen Zeitpunkt in der Zukunft.
+                  </p>
+                )}
+                <label htmlFor={reminderNoteId}>Stichwort (freiwillig)</label>
+                <input
+                  id={reminderNoteId}
+                  type="text"
+                  maxLength={200}
+                  value={reminderNote}
+                  onChange={(event) => setReminderNote(event.target.value)}
+                />
+              </div>
+            )}
+            {assigningOther && (
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  checked={notifyAssignee}
+                  onChange={(event) => setNotifyAssignee(event.target.checked)}
+                />{" "}
+                Person benachrichtigen
+              </label>
+            )}
             {handover && (
               <div className="ticket-handover">
                 <label htmlFor={noteId}>Übergabenotiz (freiwillig, wird interne Notiz)</label>
@@ -779,7 +1358,7 @@ export function TicketPage({ number }: { number: number }) {
               <button
                 type="button"
                 className="button button-primary"
-                disabled={busy}
+                disabled={busy || reminderMissing}
                 onClick={confirm}
               >
                 {busy ? "Wird gespeichert …" : "Bestätigen"}
@@ -792,6 +1371,8 @@ export function TicketPage({ number }: { number: number }) {
                   setStatus(ticket.status);
                   setAssignee(ticket.assignee_oid);
                   setNote("");
+                  setReminderDate("");
+                  setReminderNote("");
                 }}
               >
                 Verwerfen

@@ -456,3 +456,141 @@ test("Tickets: Einstellungen zur E-Mail und „Letzte Eingänge“", async ({
   ).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test("Tickets: Zusammenführen, Textbaustein, ohne Fristen keine Frist", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const admin = await apiAs(browser, ["Tickets.Nutzer"], `Ina ${stamp}`);
+  const editorApi = await apiAs(browser, ["Tickets.Nutzer"], s.editor);
+  const id = await areaId(admin, s.areaName);
+  const tpl = await admin.post(`/api/tickets/settings/areas/${id}/templates`, {
+    data: {
+      name: "Drucker gelöst",
+      shortcut: "drucker",
+      kind: "reply",
+      status_after: "solved",
+      body: "Hallo {Vorname}, der Drucker läuft wieder.",
+    },
+    headers: HEADERS,
+  });
+  expect(tpl.status()).toBe(201);
+  const second = await editorApi.post("/api/tickets", {
+    data: {
+      area_id: id,
+      subject: `Drucker immer noch ${stamp}`,
+      reporter_name: "M. Muster",
+      reporter_mail: "m.muster@example.com",
+      channel: "phone",
+      body: "Immer noch leere Seiten.",
+    },
+    headers: HEADERS,
+  });
+  expect(second.status()).toBe(201);
+  const { number: dup } = (await second.json()) as { number: number };
+
+  await loginAs(page, ["Tickets.Nutzer"], s.editor);
+  await page.goto(`/tickets/${dup}`);
+  await expect(page.getByText("Anruf erfasst")).toBeVisible();
+  // Bereich ohne Fristen: nirgends eine Frist
+  await expect(page.getByText("Frist", { exact: false })).toHaveCount(0);
+
+  // Textbaustein über /kürzel
+  await page
+    .getByRole("button", { name: /Antwort an M. Muster schreiben/ })
+    .click();
+  const field = page.getByRole("textbox", { name: /^Antwort an M. Muster/ });
+  await field.fill("/dru");
+  await expect(
+    page.getByRole("listbox", { name: "Textbausteine" }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+  await field.press("Enter");
+  await expect(field).toHaveValue("Hallo M., der Drucker läuft wieder.");
+  await expect(page.getByLabel("Status danach")).toHaveValue("solved");
+  await page
+    .locator("form.ticket-reply-form")
+    .getByRole("button", { name: "Einklappen" })
+    .click();
+
+  // Zusammenführen mit Bestätigung
+  await page.getByText("Zusammenführen", { exact: true }).click();
+  const candidate = page.getByRole("button", {
+    name: new RegExp(`T-${s.number} Drucker druckt nicht`),
+  });
+  await expect(candidate).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: "Melder benachrichtigen" })
+    .uncheck();
+  await expectNoA11yViolations(page);
+  await candidate.click();
+  const dialog = page.getByRole("alertdialog").or(page.getByRole("dialog"));
+  await expect(dialog).toContainText("nicht rückgängig");
+  await dialog.getByRole("button", { name: "Zusammenführen" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "wurde in" }),
+  ).toBeVisible();
+  await expect(page.getByRole("note")).toContainText("Zusammengeführt in");
+  // Abgeschlossen: weder Zusammenführen noch Status ändern
+  await expect(page.getByText("Zusammenführen", { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(page.getByLabel("Status")).toBeDisabled();
+  await page.getByRole("link", { name: `T-${s.number}`, exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/tickets/${s.number}$`));
+  await expect(page.getByText(`aus T-${dup}`).first()).toBeVisible();
+  await expect(page.getByText("Immer noch leere Seiten.")).toBeVisible();
+});
+
+test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  await loginAs(page, ["Tickets.Nutzer"], `Ina ${stamp}`);
+  await page.goto("/tickets/einstellungen");
+  const panel = page.getByRole("region", { name: s.areaName });
+
+  await panel.getByText("Kategorien", { exact: true }).click();
+  await panel.getByRole("textbox", { name: "Neue Kategorie" }).fill("Drucker");
+  await panel.getByRole("button", { name: "Anlegen" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Die Kategorie wurde angelegt." }),
+  ).toBeVisible();
+
+  await panel.getByText("Fristen und Geräte", { exact: true }).click();
+  await panel
+    .getByRole("checkbox", { name: "Fristen in diesem Bereich verwenden" })
+    .check();
+  await expect(
+    panel.getByRole("textbox", { name: "Lösung bei Hoch in Stunden" }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+  await panel.getByRole("button", { name: "Speichern" }).last().click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Fristen und Geräte wurden gespeichert." }),
+  ).toBeVisible();
+
+  await panel.getByText("Textbausteine", { exact: true }).click();
+  await panel.getByRole("button", { name: "Textbaustein anlegen" }).click();
+  await panel.getByLabel("Name", { exact: true }).fill("Drucker gelöst");
+  await panel.getByLabel("Kürzel (ohne Schrägstrich)").fill("drucker");
+  await panel
+    .getByLabel("Text", { exact: true })
+    .fill("Hallo {Vorname}, erledigt.");
+  await expect(panel.getByText("Hallo Max, erledigt.")).toBeVisible();
+  await expectNoA11yViolations(page);
+  await panel.getByRole("button", { name: "Speichern" }).last().click();
+  await expect(panel.getByText("/drucker")).toBeVisible();
+
+  // Mit Fristen zeigt das Ticket eine Frist
+  await page.goto(`/tickets/${s.number}`);
+  await expect(page.getByText(/Lösung bis/)).toBeVisible();
+});

@@ -180,6 +180,10 @@ def test_categories(db: Session, areas: dict[str, int]) -> None:
         .json()
     )
     max_ = client_for("Max Muster")
+    # Mitglieder sehen die aktiven Kategorien ihres Bereichs, fremde Bereiche nicht
+    member = max_.get(f"{BASE}/areas/{areas['it']}/categories")
+    assert [c["name"] for c in member.json()] == ["Drucker"]
+    assert max_.get(f"{BASE}/areas/{areas['ht']}/categories").status_code == 404
     ticket = new_ticket(max_, areas["it"], category_id=cats[0]["id"])
     assert ticket["category"] == "Drucker"
     assert [c["name"] for c in ticket["categories"]] == ["Drucker"]
