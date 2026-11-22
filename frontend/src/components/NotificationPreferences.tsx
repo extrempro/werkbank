@@ -10,6 +10,7 @@ import {
   type NotificationKind,
 } from "../notifications";
 import { PushDevices } from "./PushDevices";
+import { Feedback } from "./Feedback";
 
 const COLUMNS: { channel: Channel; label: string }[] = [
   { channel: "enabled", label: "Glocke" },
@@ -169,14 +170,7 @@ export function NotificationPreferences() {
             </table>
           </div>
         )}
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </div>
     </section>
   );

@@ -10,6 +10,7 @@ import {
   type Task,
   type TaskUpdate,
 } from "./api";
+import { Feedback } from "../../components/Feedback";
 
 function asUpdate(task: Task, done: boolean): TaskUpdate {
   return { text: task.text, owner: task.owner, due_on: task.due_on, done };
@@ -160,14 +161,7 @@ export function TasksTab({ projectId, canEdit }: { projectId: number; canEdit: b
             </div>
           </form>
         )}
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "small"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
         {failed && (
           <p role="alert" className="hint-box hint-bad">
             {failed}

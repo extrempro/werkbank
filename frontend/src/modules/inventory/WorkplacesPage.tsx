@@ -42,6 +42,7 @@ import {
   type WorkplaceSummary,
   type WorkplaceTab,
 } from "./api";
+import { Feedback } from "../../components/Feedback";
 
 interface Choices {
   assignees: Assignees;
@@ -410,11 +411,10 @@ export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
           </button>
         )}
       </header>
-      {notice && (
-        <p role="alert" className="hint-box hint-bad">
-          {notice}
-        </p>
-      )}
+      <Feedback
+        message={notice ? { kind: "alert", text: notice } : null}
+        onClose={() => setNotice(null)}
+      />
       {canEdit && choices && (
         <section className="panel" aria-labelledby="platz-neu">
           <div className="panel-head">

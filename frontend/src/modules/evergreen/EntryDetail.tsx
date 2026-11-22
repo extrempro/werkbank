@@ -30,6 +30,7 @@ import {
   type Entry,
   type Phase,
 } from "./api";
+import { Feedback } from "../../components/Feedback";
 
 const NOTE_MAX = 4000;
 const TEXT_MAX = 4000;
@@ -551,11 +552,10 @@ function AssessmentForm({ entry, onSaved }: { entry: Entry; onSaved: (entry: Ent
           Bewertung speichern
         </button>
       </div>
-      {saved && (
-        <p role="status" className="small">
-          Gespeichert.
-        </p>
-      )}
+      <Feedback
+        message={saved ? { kind: "status", text: "Gespeichert." } : null}
+        onClose={() => setSaved(false)}
+      />
     </form>
   );
 }
@@ -669,11 +669,10 @@ function History({ entry, onChanged }: { entry: Entry; onChanged: (entry: Entry)
 
   return (
     <>
-      {notice && (
-        <p role="alert" className="hint-box hint-bad">
-          {notice}
-        </p>
-      )}
+      <Feedback
+        message={notice ? { kind: "alert", text: notice } : null}
+        onClose={() => setNotice(null)}
+      />
       {entry.notes.length === 0 ? (
         <p className="empty">Noch keine Notizen.</p>
       ) : (

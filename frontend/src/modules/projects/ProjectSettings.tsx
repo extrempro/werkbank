@@ -14,6 +14,7 @@ import {
   type ProjectLink,
   type ProjectStatus,
 } from "./api";
+import { Feedback } from "../../components/Feedback";
 
 const PEOPLE_MAX = 50;
 const LINKS_MAX = 30;
@@ -404,14 +405,7 @@ export function SettingsTab({ project, onSaved }: Props) {
         </div>
       </section>
 
-      {message && (
-        <p
-          role={message.kind}
-          className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-        >
-          {message.text}
-        </p>
-      )}
+      <Feedback message={message} onClose={() => setMessage(null)} />
       <div className="project-actions">
         <button type="submit" className="button button-primary" disabled={busy}>
           Einstellungen speichern

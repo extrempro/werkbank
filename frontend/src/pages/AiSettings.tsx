@@ -8,6 +8,7 @@ import {
   type AiSettings as AiSettingsData,
   type AiUpdate,
 } from "../api";
+import { Feedback } from "../components/Feedback";
 
 type Message = { kind: "status" | "alert"; text: string };
 
@@ -233,14 +234,7 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
         {(!ai.base_url || !ai.model) && (
           <p className="small">Der Test geht erst, wenn Adresse und Modell gespeichert sind.</p>
         )}
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </form>
     </section>
   );

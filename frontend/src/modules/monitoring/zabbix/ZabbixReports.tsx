@@ -8,6 +8,7 @@ import {
   type ReportSplit,
   type ZbxReport,
 } from "./api";
+import { Feedback } from "../../../components/Feedback";
 
 const percent = new Intl.NumberFormat("de-DE", {
   minimumFractionDigits: 2,
@@ -153,11 +154,10 @@ export function ZabbixReportsPage() {
               </div>
             </div>
           </div>
-          {message && (
-            <p role="alert" className="hint-box hint-bad">
-              {message}
-            </p>
-          )}
+          <Feedback
+            message={message ? { kind: "alert", text: message } : null}
+            onClose={() => setMessage(null)}
+          />
           <p className="print-only small">
             Ausgedruckt am {formatDateTime(new Date().toISOString())} · aufgeteilt nach {splitLabel}
           </p>

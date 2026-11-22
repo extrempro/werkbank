@@ -17,6 +17,8 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await page.getByLabel("Bezeichnung", { exact: true }).fill("Testkonto Wartung");
   await page.getByRole("button", { name: "Konto speichern" }).click();
   await expect(page.getByText(`Konto ${number} ist gespeichert.`)).toBeVisible();
+  // Rückmeldungen stehen immer im sichtbaren Bereich (docs/design.md › Rückmeldungen)
+  await expect(page.getByRole("status").filter({ hasText: "ist gespeichert" })).toBeInViewport();
   await expect(page.getByRole("row", { name: new RegExp(number) })).toContainText("aktiv");
   await expectNoA11yViolations(page);
 
@@ -25,6 +27,8 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await page.getByLabel("Neuer Tag", { exact: true }).fill(`Tag ${number}`);
   await page.getByRole("button", { name: "Tag anlegen" }).click();
   await expect(page.getByText(`Der Tag „Tag ${number}“ ist angelegt.`)).toBeVisible();
+  await page.getByRole("button", { name: "Meldung schließen" }).first().click();
+  await expect(page.getByText(`Der Tag „Tag ${number}“ ist angelegt.`)).toHaveCount(0);
   await expectNoA11yViolations(page);
 
   await page.goto("/budget/partner");

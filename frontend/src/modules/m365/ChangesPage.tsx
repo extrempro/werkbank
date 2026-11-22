@@ -19,6 +19,7 @@ import {
   type ReviewStatus,
 } from "./api";
 import { ChangeDetail } from "./ChangeDetail";
+import { Feedback } from "../../components/Feedback";
 
 interface ChangesPageProps {
   me: Me;
@@ -306,11 +307,7 @@ export function ChangesPage({ me }: ChangesPageProps) {
         }
       />
 
-      {message && (
-        <p role={message.kind} className={message.kind === "alert" ? "hint-box hint-bad" : ""}>
-          {message.text}
-        </p>
-      )}
+      <Feedback message={message} onClose={() => setMessage(null)} />
 
       {status === "error" && <p role="alert">Die Änderungen konnten nicht geladen werden.</p>}
       {status === "loading" && <p role="status">Wird geladen …</p>}

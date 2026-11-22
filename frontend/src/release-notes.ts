@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.93.0",
+    date: "2026-11-22",
+    summary: "Meldungen wie „Gespeichert“ siehst du jetzt immer.",
+    sections: [
+      {
+        area: "Bedienung",
+        entries: [
+          "Meldungen nach dem Speichern, Löschen oder bei Fehlern erscheinen jetzt unten am Bildschirm, auch wenn die Seite lang ist und du gerade woanders bist.",
+          "Erfolgsmeldungen verschwinden nach ein paar Sekunden von selbst. Fehler bleiben stehen, bis du sie mit „×“ schließt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.92.0",
     date: "2026-11-22",
     summary: "IT-Monitoring: Berichte zur Verfügbarkeit aus Zabbix.",

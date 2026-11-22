@@ -33,6 +33,7 @@ import {
   type ScanResult,
 } from "./api";
 import { Scanner } from "./Scanner";
+import { Feedback } from "../../components/Feedback";
 
 const PAGE = "/m365/geraete/zuordnung";
 const shortDateTime = new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "short" });
@@ -991,14 +992,10 @@ export function DeviceAssociationPage() {
         </div>
       </header>
 
-      {message && (
-        <p
-          role={message.bad ? "alert" : "status"}
-          className={message.bad ? "hint-box hint-bad" : "hint-box"}
-        >
-          {message.text}
-        </p>
-      )}
+      <Feedback
+        message={message ? { kind: message.bad ? "alert" : "status", text: message.text } : null}
+        onClose={() => setMessage(null)}
+      />
       {error && (
         <p role="alert" className="hint-box hint-bad">
           {error}

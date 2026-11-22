@@ -33,6 +33,7 @@ import {
   type LoanSummary,
   type Person,
 } from "./api";
+import { Feedback } from "../../components/Feedback";
 
 function ErrorText({ text }: { text: string | null }) {
   return text ? (
@@ -301,11 +302,10 @@ function LoanDetail({
           </div>
         </div>
         <div className="detail-body">
-          {notice && (
-            <p role="status" className="hint-box">
-              {notice}
-            </p>
-          )}
+          <Feedback
+            message={notice ? { kind: "status", text: notice } : null}
+            onClose={() => setNotice(null)}
+          />
           {!loan.has_address && (
             <p className="hint-box hint-warn">
               In Entra ist für diese Person keine Mailadresse eingetragen. Nachrichten gehen deshalb

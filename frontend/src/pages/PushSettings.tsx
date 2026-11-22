@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { errorText, savePushSettings, type AdminSettings, type PushAdminSettings } from "../api";
+import { Feedback } from "../components/Feedback";
 
 type Message = { kind: "status" | "alert"; text: string };
 
@@ -78,14 +79,7 @@ export function PushSettings({ push, onChange }: Props) {
             </button>
           )}
         </div>
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </div>
     </section>
   );

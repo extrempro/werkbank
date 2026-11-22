@@ -16,6 +16,7 @@ import {
   type Overview,
 } from "./api";
 import { ChangesChart } from "./ChangesChart";
+import { Feedback } from "../../components/Feedback";
 
 interface OverviewPageProps {
   me: Me;
@@ -209,7 +210,7 @@ export function OverviewPage({ me }: OverviewPageProps) {
               {overview.collect_pending && <span className="small"> Ein Abruf läuft gerade.</span>}
             </p>
           )}
-          {message && <p role={message.kind}>{message.text}</p>}
+          <Feedback message={message} onClose={() => setMessage(null)} />
         </>
       )}
     </div>

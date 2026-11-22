@@ -83,6 +83,7 @@ Gilt auf PC, Tablet und Handy.
 - Fehler: `role="alert"`, bleibt stehen, bis man sie schließt oder die Aktion wiederholt; sagt, was passiert ist und was man tun kann.
 - Feldfehler bleiben zusätzlich am Feld (mit `aria-describedby`), damit man weiß, was zu korrigieren ist.
 - Kontrast, Fokus und Tastaturbedienung wie überall (WCAG 2.2 AA); die Meldung nimmt nicht den Fokus weg.
+- Umsetzung: `components/Feedback.tsx` (`<Feedback message={message} onClose={() => setMessage(null)} />`, Meldung als `{ kind: "status" | "alert", text }`). Nicht je Seite nachbauen. Erfolg verschwindet nach 6 Sekunden. Rückmeldungen innerhalb eines offenen Dialogs bleiben im Dialog, weil er ohnehin sichtbar ist.
 
 ## 4. Status-Badges
 

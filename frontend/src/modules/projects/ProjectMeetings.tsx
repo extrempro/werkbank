@@ -18,6 +18,7 @@ import {
   type MeetingSummary,
 } from "./api";
 import { Markdown, MarkdownEditor } from "./Markdown";
+import { Feedback } from "../../components/Feedback";
 
 const BODY_MAX = 50_000;
 
@@ -236,11 +237,7 @@ function Files({ projectId, meeting, canEdit, onChanged }: FilesProps) {
           />
         </div>
       )}
-      {message && (
-        <p role={message.kind} className={message.kind === "alert" ? "hint-box hint-bad" : "small"}>
-          {message.text}
-        </p>
-      )}
+      <Feedback message={message} onClose={() => setMessage(null)} />
     </div>
   );
 }
@@ -474,16 +471,7 @@ export function MeetingsTab({ projectId, canEdit }: { projectId: number; canEdit
             </p>
           </div>
         )}
-        {message && (
-          <div className="detail-body">
-            <p
-              role={message.kind}
-              className={message.kind === "alert" ? "hint-box hint-bad" : "small"}
-            >
-              {message.text}
-            </p>
-          </div>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </section>
     </div>
   );

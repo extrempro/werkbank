@@ -58,6 +58,7 @@ import {
 } from "./api";
 import { DeleteButton, FormStep, ReadOnlyNote } from "./shared";
 import { fetchProjectChoices, projectPath, type ProjectChoice } from "../projects/api";
+import { Feedback } from "../../components/Feedback";
 
 function amount(cents: number | null): string {
   return cents === null ? "–" : formatEuro(cents);
@@ -1187,14 +1188,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
             : `${filtered ? `${rows.length} von ${all.length}` : rows.length} Budgetposten · geplant ${formatEuro(sums.expected)} · Ist ${formatEuro(sums.actual)}`}
         </p>
       )}
-      {message && (
-        <p
-          role={message.kind}
-          className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-        >
-          {message.text}
-        </p>
-      )}
+      <Feedback message={message} onClose={() => setMessage(null)} />
       {overview && (all.length > 0 || paneOpen) && (
         <div
           ref={layoutRef}

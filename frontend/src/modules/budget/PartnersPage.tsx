@@ -12,6 +12,7 @@ import {
   type Partner,
 } from "./api";
 import { BudgetHead, DeleteButton, ReadOnlyNote, useRevealOnMount } from "./shared";
+import { Feedback } from "../../components/Feedback";
 
 interface FormProps {
   /** null: neuen Partner anlegen. */
@@ -299,11 +300,10 @@ export function PartnersPage({ roles }: { roles: readonly string[] }) {
           </table>
         </div>
       )}
-      {status && (
-        <p role="status" className="hint-box">
-          {status}
-        </p>
-      )}
+      <Feedback
+        message={status ? { kind: "status", text: status } : null}
+        onClose={() => setStatus(null)}
+      />
     </div>
   );
 }

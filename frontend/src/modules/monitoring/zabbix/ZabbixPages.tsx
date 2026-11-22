@@ -41,6 +41,7 @@ import {
   type ZbxProblem,
   type ZbxUnmonitored,
 } from "./api";
+import { Feedback } from "../../../components/Feedback";
 
 const MONITORING_ROLES = ["Monitoring.Reader", "Werkbank.Admin"];
 const INVENTORY_EDITOR = "Bestand.Editor";
@@ -823,11 +824,10 @@ function UnmonitoredList({
         {!state.kinds_set &&
           " Noch sind keine Hardware-Arten festgelegt. Das macht ein Admin auf der Seite Verbindung."}
       </p>
-      {message && (
-        <p role="alert" className="hint-box hint-bad">
-          {message}
-        </p>
-      )}
+      <Feedback
+        message={message ? { kind: "alert", text: message } : null}
+        onClose={() => setMessage(null)}
+      />
       {missing.length === 0 ? (
         <p className="empty">Kein Gerät fehlt in Zabbix.</p>
       ) : (
@@ -1086,11 +1086,10 @@ function InventoryLink({
               : "Mit keinem Gerät im IT-Bestand verknüpft."}
         </p>
       )}
-      {message && (
-        <p role="alert" className="hint-box hint-bad">
-          {message}
-        </p>
-      )}
+      <Feedback
+        message={message ? { kind: "alert", text: message } : null}
+        onClose={() => setMessage(null)}
+      />
       {allowed && host.match === "hand" && (
         <div className="actions">
           <ConfirmButton
@@ -1537,14 +1536,7 @@ function OptionsForm({
             Zuordnung speichern
           </button>
         </div>
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </form>
     </section>
   );

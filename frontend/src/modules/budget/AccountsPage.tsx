@@ -10,6 +10,7 @@ import {
   type AccountKind,
 } from "./api";
 import { BudgetHead, ReadOnlyNote, useRevealOnMount } from "./shared";
+import { Feedback } from "../../components/Feedback";
 
 interface FormProps {
   /** null: neues Konto anlegen. */
@@ -263,11 +264,10 @@ export function AccountsPage({ roles }: { roles: readonly string[] }) {
           </table>
         </div>
       )}
-      {status && (
-        <p role="status" className="hint-box">
-          {status}
-        </p>
-      )}
+      <Feedback
+        message={status ? { kind: "status", text: status } : null}
+        onClose={() => setStatus(null)}
+      />
     </div>
   );
 }

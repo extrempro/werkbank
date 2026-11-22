@@ -9,6 +9,7 @@ import {
   type NinjaSettings as Settings,
   type NinjaUpdate,
 } from "../modules/inventory/api";
+import { Feedback } from "../components/Feedback";
 
 type Message = { kind: "status" | "alert"; text: string };
 
@@ -296,14 +297,7 @@ function NinjaForm({
             Verbindung prüfen
           </button>
         </div>
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </form>
     </section>
   );

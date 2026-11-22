@@ -13,6 +13,7 @@ import {
   type TagCount,
 } from "./api";
 import { BudgetHead, DeleteButton } from "./shared";
+import { Feedback } from "../../components/Feedback";
 
 function SettingsForm({ initial }: { initial: BudgetSettings }) {
   const [settings, setSettings] = useState(initial);
@@ -105,14 +106,7 @@ function SettingsForm({ initial }: { initial: BudgetSettings }) {
             Einstellungen speichern
           </button>
         </div>
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </form>
     </section>
   );
@@ -302,14 +296,7 @@ function TagsSection() {
             ))}
           </ul>
         )}
-        {message && (
-          <p
-            role={message.kind}
-            className={message.kind === "alert" ? "hint-box hint-bad" : "hint-box"}
-          >
-            {message.text}
-          </p>
-        )}
+        <Feedback message={message} onClose={() => setMessage(null)} />
       </div>
     </section>
   );

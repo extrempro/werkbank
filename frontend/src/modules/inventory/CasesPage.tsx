@@ -41,6 +41,7 @@ import {
   type LookupItem,
   type SyncStatus,
 } from "./api";
+import { Feedback } from "../../components/Feedback";
 
 function formatMoment(value: string): string {
   const date = new Date(value);
@@ -114,11 +115,10 @@ function SyncBar({ canEdit }: { canEdit: boolean }) {
           Jetzt abgleichen
         </button>
       )}
-      {notice && (
-        <p role="status" className="small">
-          {notice}
-        </p>
-      )}
+      <Feedback
+        message={notice ? { kind: "status", text: notice } : null}
+        onClose={() => setNotice(null)}
+      />
     </div>
   );
 }
@@ -489,11 +489,10 @@ function CaseDetail({
           </button>
         </div>
         <div className="detail-body">
-          {notice && (
-            <p role="alert" className="hint-box hint-bad">
-              {notice}
-            </p>
-          )}
+          <Feedback
+            message={notice ? { kind: "alert", text: notice } : null}
+            onClose={() => setNotice(null)}
+          />
           {shown.hint && (
             <p className="hint-box hint-warn">
               <strong>Möglicherweise dasselbe Gerät.</strong> Der Hostname gehört schon zu{" "}
