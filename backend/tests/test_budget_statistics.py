@@ -56,7 +56,7 @@ def test_summary_compare_and_tags(db: Session, monkeypatch: pytest.MonkeyPatch) 
     assert (
         manager.put(
             f"{BASE}/settings",
-            json={"start_month": 8, "year_label": "Spielzeit"},
+            json={"start_month": 8, "year_label": "Wirtschaftsjahr"},
             headers=HEADERS,
         ).status_code
         == 200
@@ -118,7 +118,7 @@ def test_summary_compare_and_tags(db: Session, monkeypatch: pytest.MonkeyPatch) 
 
     data = reader.get(f"{BASE}/statistics/summary", params={"compare": 2025}).json()
     assert data["year"] == 2026 and data["year_name"] == "2026/27"
-    assert data["year_label"] == "Spielzeit" and data["elapsed_months"] == 4
+    assert data["year_label"] == "Wirtschaftsjahr" and data["elapsed_months"] == 4
     assert data["expected_cents"] == 170_000
     assert data["actual_cents"] == 47_600
     assert data["compare_name"] == "2025/26"

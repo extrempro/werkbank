@@ -11,7 +11,8 @@ die jeder lesen darf: keine Hostnamen, IP-Adressen, Tenant-IDs, Zugangsdaten, Fi
 3. **Nie direkt auf `main` arbeiten.** Jede Änderung auf einem eigenen Branch (`feature/…`, `fix/…`, `docs/…`, `chore/…`, `security/…`).
 4. **Keine Tags und Releases von Hand.** Tag und GitHub Release legt der Workflow `release.yml` an, sobald ein PR mit einer neuen Version in `main` gemergt wird. Das Mergen durch den Menschen ist die Freigabe.
 5. **Keine Secrets und keine internen Informationen.** Niemals Zugangsdaten, Zertifikate, Tokens, echte Hostnamen, Domains, Tenant-IDs, Firmen- oder Personennamen in Code, Tests, Beispieldaten, Doku, Commits oder Issues. Beispiele nur mit `example.com` und erfundenen, neutralen Daten. Konfiguration nur über Umgebungsvariablen bzw. Docker-Secrets.
-6. **Nichts Destruktives ohne Rückfrage.** Kein `git push --force`, kein Löschen von Branches, Daten oder Migrationen ohne ausdrückliche Zustimmung.
+6. **Keine Rückschlüsse auf Betreiber, Menschen oder Orte.** Nichts ins Repo, was – allein oder zusammen mit anderem – erkennen lässt, wer die Werkbank betreibt, wo sie läuft oder wer damit arbeitet. Dazu zählen personenbezogene Daten (echte Namen, Kürzel, Mailadressen, Kennungen), Standorte, Gebäude, Städte, Netz- und Raumbezeichnungen, Branche oder Hausbegriffe des Betreibers (z. B. ein eigener Name für das Geschäftsjahr), Organisationsstruktur sowie Verweise auf interne oder private Entwürfe, Dokumente und Links. Das gilt auch für Testdaten, Beispiele, Kommentare, Commit-Texte, Branch-Namen, PR- und Issue-Texte und Screenshots. Stattdessen erfundene, neutrale Angaben (`example.com`, „Ina Beispiel“, „Gebäude A“). Im Zweifel weglassen oder nachfragen.
+7. **Nichts Destruktives ohne Rückfrage.** Kein `git push --force`, kein Löschen von Branches, Daten oder Migrationen ohne ausdrückliche Zustimmung.
 
 ## Grundlagen
 

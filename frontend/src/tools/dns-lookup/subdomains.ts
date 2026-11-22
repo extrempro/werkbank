@@ -10,7 +10,7 @@ import { queryResolver, type Resolver } from "./resolvers";
 
 // ---------- Namen ----------
 
-/** Umlaute → Punycode (bürger.hamburg → xn--brger-kva.hamburg) über die URL-API des Browsers */
+/** Umlaute → Punycode (bücher.example → xn--bcher-kva.example) über die URL-API des Browsers */
 export function toAscii(name: string): string {
   // Nur ASCII: nichts umzuwandeln
   if (![...name].some((char) => char.charCodeAt(0) > 0x7f)) return name;
