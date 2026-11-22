@@ -41,6 +41,8 @@ function toSettings(data: MailSettingsOut): MailSettings {
     allowed_types: data.allowed_types,
     processed_days: data.processed_days,
     ignored_days: data.ignored_days,
+    intake_log_days: data.intake_log_days,
+    review_days: data.review_days,
     reopen_policy: data.reopen_policy,
     reopen_days: data.reopen_days,
     sender_name: data.sender_name,
@@ -241,6 +243,28 @@ export function MailSettingsSection({
             max={365}
             value={form.ignored_days}
             onChange={(event) => set("ignored_days", numberField(event.target.value, 7))}
+          />
+        </label>
+        <label htmlFor={`${ids.ignored}-log`}>
+          „Letzte Eingänge“ ohne Ticket löschen nach (Tagen)
+          <input
+            id={`${ids.ignored}-log`}
+            type="number"
+            min={7}
+            max={3650}
+            value={form.intake_log_days}
+            onChange={(event) => set("intake_log_days", numberField(event.target.value, 90))}
+          />
+        </label>
+        <label htmlFor={`${ids.ignored}-review`}>
+          „Zu prüfen“ verwerfen nach (Tagen ohne Entscheidung)
+          <input
+            id={`${ids.ignored}-review`}
+            type="number"
+            min={1}
+            max={365}
+            value={form.review_days}
+            onChange={(event) => set("review_days", numberField(event.target.value, 30))}
           />
         </label>
       </div>

@@ -409,6 +409,10 @@ export interface MailSettings {
   allowed_types: string[];
   processed_days: number;
   ignored_days: number;
+  /** „Letzte Eingänge“ ohne Ticket löschen nach (Tagen) */
+  intake_log_days: number;
+  /** „Zu prüfen“ ohne Entscheidung verwerfen nach (Tagen) */
+  review_days: number;
   reopen_policy: "days" | "always" | "new";
   reopen_days: number;
   sender_name: string;

@@ -1,7 +1,7 @@
 """Aufträge des Moduls Tickets für den Worker."""
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -11,9 +11,11 @@ from werkbank.config import Settings
 from werkbank.core.sessions import now_utc
 from werkbank.modules.tickets.access import GroupSourceError, TestGroupSource, group_source
 from werkbank.modules.tickets.models import (
+    TicketArea,
     TicketAreaGrant,
     TicketAudit,
     TicketGroupMember,
+    TicketMailLog,
     TicketMembershipCache,
 )
 from werkbank.modules.tickets.retention import run_retention
@@ -85,7 +87,24 @@ def housekeeping(db: Session) -> None:
     db.execute(
         delete(TicketAudit).where(TicketAudit.occurred_at < now - timedelta(days=AUDIT_KEEP_DAYS))
     )
+    prune_intake_log(db, now)
     db.commit()
+
+
+def prune_intake_log(db: Session, now: datetime) -> int:
+    """„Letzte Eingänge“ ohne Ticket je Bereich nach `intake_log_days` löschen. Zeilen zu einem
+    Ticket gehen mit dessen Aufbewahrung."""
+    removed = 0
+    for area_id, days in db.execute(select(TicketArea.id, TicketArea.intake_log_days)).tuples():
+        result = db.execute(
+            delete(TicketMailLog).where(
+                TicketMailLog.area_id == area_id,
+                TicketMailLog.ticket_number.is_(None),
+                TicketMailLog.created_at < now - timedelta(days=max(days, 1)),
+            )
+        )
+        removed += result.rowcount or 0  # type: ignore[attr-defined]
+    return removed
 
 
 def housekeeping_job(db: Session, settings: Settings, payload: dict[str, Any]) -> None:

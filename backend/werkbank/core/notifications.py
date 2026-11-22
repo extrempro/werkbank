@@ -154,6 +154,9 @@ KINDS: dict[str, KindInfo] = {
     "tickets.frist_ueberschritten": KindInfo(
         "Tickets", "Frist eines Tickets überschritten (Bereichsverwaltung)", ALL_ROLES
     ),
+    "tickets.pruefen": KindInfo(
+        "Tickets", "Neue Mail unter „Zu prüfen“ (Bereichsverwaltung)", ALL_ROLES
+    ),
     "tickets.ausnahme": KindInfo(
         "Tickets", "Ausnahme von der Aufbewahrung endet bald (Bereichsverwaltung)", ALL_ROLES
     ),

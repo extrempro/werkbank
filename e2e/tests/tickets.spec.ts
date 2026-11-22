@@ -444,11 +444,21 @@ test("Tickets: Einstellungen zur E-Mail und „Letzte Eingänge“", async ({
   await panel
     .getByRole("combobox", { name: /^Externe Absender/ })
     .selectOption({ label: "unbekannte erst prüfen" });
+  await expect(
+    panel.getByRole("spinbutton", {
+      name: "„Zu prüfen“ verwerfen nach (Tagen ohne Entscheidung)",
+    }),
+  ).toHaveValue("30");
+  await panel
+    .getByRole("spinbutton", {
+      name: "„Letzte Eingänge“ ohne Ticket löschen nach (Tagen)",
+    })
+    .fill("60");
   await panel.getByRole("button", { name: "Speichern" }).last().click();
   await expect(
     page.getByText("Die Einstellungen zur E-Mail wurden gespeichert."),
   ).toBeVisible();
-  await panel.getByText("Letzte Eingänge").click();
+  await panel.getByText("Letzte Eingänge", { exact: true }).click();
   await expect(
     panel.getByText("Abwesenheitsnotiz oder automatische Antwort", {
       exact: false,

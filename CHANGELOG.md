@@ -14,6 +14,8 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 - **Ausnahmen** je Ticket mit Begründung durch die Bereichsverwaltung, ein Jahr gültig, Benachrichtigung 30 Tage vor Ende (`tickets.ausnahme`), ohne Bestätigung verfallen
 - Anonymisierte Tickets lassen sich nicht mehr ändern; eine Mail mit ihrer Nummer wird ein neues Ticket
 - **Rollen und Protokoll** (`/tickets/protokoll`): Rollen je Bereich und Protokoll des Moduls
+- **Fristen je Bereich** für „Letzte Eingänge“ ohne Ticket (Vorgabe 90 Tage, Wartungslauf) und „Zu prüfen“ ohne Entscheidung (Vorgabe 30 Tage, beim Abruf in „Ignoriert“ verschoben)
+- Benachrichtigung `tickets.pruefen` an die Bereichsverwaltung bei neuen Mails unter „Zu prüfen“ (nur Bereich und Link)
 - Migration `0067`
 
 ### Intern

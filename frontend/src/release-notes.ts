@@ -36,6 +36,8 @@ export const RELEASES: readonly Release[] = [
           "Geschlossene Tickets können nach einer Frist automatisch anonymisiert oder gelöscht werden. Ausgeschaltet bleibt alles erhalten. Vor dem Speichern siehst du, welche Tickets betroffen wären.",
           "Muss ein Ticket länger bleiben, setzt die Bereichsverwaltung eine Ausnahme mit Begründung.",
           "Unter „Rollen und Protokoll“ siehst du, wer welche Rolle hat und was in den Bereichen geändert wurde.",
+          "Landet eine Mail unter „Zu prüfen“, bekommt die Bereichsverwaltung eine Benachrichtigung. Bleibt sie liegen, wird sie nach einer einstellbaren Zahl von Tagen verworfen.",
+          "Einträge in „Letzte Eingänge“, die zu keinem Ticket gehören, werden nach einer einstellbaren Zahl von Tagen gelöscht.",
         ],
       },
     ],

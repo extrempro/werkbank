@@ -1207,7 +1207,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Für externe Absender stellt die Bereichsverwaltung ein: annehmen, unbekannte erst prüfen oder ablehnen. Unbekannt heißt: In diesem Bereich gibt es noch kein Ticket von ihnen. Solche Mails stehen unter „Zu prüfen“; dort legst du sie als Ticket an, verwirfst sie oder sperrst den Absender. Was mit jeder Mail passiert ist, zeigt „Letzte Eingänge“.",
+                text: "Für externe Absender stellt die Bereichsverwaltung ein: annehmen, unbekannte erst prüfen oder ablehnen. Unbekannt heißt: In diesem Bereich gibt es noch kein Ticket von ihnen. Solche Mails stehen unter „Zu prüfen“; dort legst du sie als Ticket an, verwirfst sie oder sperrst den Absender. Kommt eine neue Mail dorthin, bekommt die Bereichsverwaltung eine Benachrichtigung. Entscheidet niemand, verwirft die Werkbank die Mail nach der eingestellten Zahl von Tagen (Vorgabe 30). Was mit jeder Mail passiert ist, zeigt „Letzte Eingänge“. Einträge dort, die zu keinem Ticket gehören, löscht die Werkbank nach der eingestellten Zahl von Tagen (Vorgabe 90); Einträge zu einem Ticket gehen mit dessen Aufbewahrung.",
               },
               {
                 kind: "text",

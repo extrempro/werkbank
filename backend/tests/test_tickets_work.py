@@ -131,6 +131,8 @@ def test_sla_missed_mail_once(db: Session, areas: dict[str, int]) -> None:
             "allowed_types",
             "processed_days",
             "ignored_days",
+            "intake_log_days",
+            "review_days",
             "reopen_policy",
             "reopen_days",
             "sender_name",

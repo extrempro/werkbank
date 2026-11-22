@@ -1,4 +1,5 @@
-"""Tickets: Aufbewahrung (Vorgabe, Abweichung je Bereich, Ausnahmen, Läufe)
+"""Tickets: Aufbewahrung (Vorgabe, Abweichung je Bereich, Ausnahmen, Läufe), Fristen für
+„Letzte Eingänge“ und „Zu prüfen“
 
 Revision ID: 0067
 Revises: 0066
@@ -81,6 +82,14 @@ def upgrade() -> None:
         "ticket_areas",
         "retention_months >= 0 AND retention_months <= 1200",
     )
+    op.add_column(
+        "ticket_areas",
+        sa.Column("intake_log_days", sa.Integer(), server_default=sa.text("90"), nullable=False),
+    )
+    op.add_column(
+        "ticket_areas",
+        sa.Column("review_days", sa.Integer(), server_default=sa.text("30"), nullable=False),
+    )
     op.add_column("tickets", sa.Column("hold_until", sa.DateTime(timezone=True), nullable=True))
     op.add_column(
         "tickets",
@@ -106,6 +115,8 @@ def downgrade() -> None:
     op.drop_constraint(
         op.f("ck_ticket_areas_ck_ticket_area_retention_action"), "ticket_areas", type_="check"
     )
+    op.drop_column("ticket_areas", "review_days")
+    op.drop_column("ticket_areas", "intake_log_days")
     op.drop_column("ticket_areas", "retention_action")
     op.drop_column("ticket_areas", "retention_months")
     op.drop_column("ticket_areas", "retention_custom")

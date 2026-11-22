@@ -15,12 +15,18 @@ from tests.test_tickets_mail import inbound, mail, mail_with_attachments
 from werkbank.config import Settings
 from werkbank.core.sessions import now_utc
 from werkbank.modules.tickets.files import file_path
+from werkbank.modules.tickets.inbound import expire_reviews
+from werkbank.modules.tickets.jobs import housekeeping
+from werkbank.modules.tickets.mail_api import MailSettings
+from werkbank.modules.tickets.mailbox import MailboxError, TestMailbox
 from werkbank.modules.tickets.models import (
     Ticket,
+    TicketArea,
     TicketAttachment,
     TicketEntry,
     TicketMailLog,
     TicketRetentionRun,
+    TicketReview,
 )
 from werkbank.modules.tickets.notifications import tickets_notifications
 from werkbank.modules.tickets.retention import months_before, run_retention
@@ -257,3 +263,78 @@ def test_export_only_area_admin_without_texts(db: Session, areas: dict[str, int]
     assert all(e["area"] != "IT" for e in hans.get(f"{SETTINGS}/audit").json()["items"])
     assert hans.get(f"{SETTINGS}/audit?area={areas['it']}").status_code == 404
     assert max_.get(f"{SETTINGS}/audit").status_code == 404
+
+
+@pytest.mark.db
+def test_intake_log_and_review_expire_per_area(db: Session, areas: dict[str, int]) -> None:
+    ina = client_for("Ina Beispiel")
+    mail_settings = ina.get(f"{SETTINGS}/areas/{areas['it']}/mail").json()
+    assert (mail_settings["intake_log_days"], mail_settings["review_days"]) == (90, 30)
+    payload = {k: v for k, v in mail_settings.items() if k in MailSettings.model_fields}
+    payload.update(intake_log_days=10, review_days=5)
+    assert ina.put(f"{SETTINGS}/areas/{areas['it']}/mail", json=payload).status_code == 200
+    payload["intake_log_days"] = 3
+    assert ina.put(f"{SETTINGS}/areas/{areas['it']}/mail", json=payload).status_code == 422
+    now = now_utc()
+    old, young = now - timedelta(days=11), now - timedelta(days=2)
+    db.add_all(
+        [
+            TicketMailLog(
+                area_id=areas["it"], result="ignoriert", sender="a@x.example", created_at=old
+            ),
+            TicketMailLog(
+                area_id=areas["it"], result="ignoriert", sender="b@x.example", created_at=young
+            ),
+            TicketMailLog(
+                area_id=areas["it"],
+                result="neu",
+                sender="c@x.example",
+                created_at=old,
+                ticket_number=4711,
+            ),
+            # Haustechnik behält die Vorgabe von 90 Tagen
+            TicketMailLog(
+                area_id=areas["ht"], result="ignoriert", sender="d@x.example", created_at=old
+            ),
+            TicketReview(
+                area_id=areas["it"],
+                graph_id="g1",
+                message_id="r1@example.com",
+                sender="x@fremd.example",
+                raw=b"x",
+                received_at=now - timedelta(days=6),
+            ),
+            TicketReview(
+                area_id=areas["it"],
+                graph_id="g2",
+                message_id="r2@example.com",
+                sender="y@fremd.example",
+                raw=b"x",
+                received_at=now - timedelta(days=1),
+            ),
+        ]
+    )
+    db.commit()
+    # Benachrichtigung an die Bereichsverwaltung, ohne Absender
+    events = [
+        e for e in tickets_notifications(db, Settings(), now_utc()) if e.kind == "tickets.pruefen"
+    ]
+    assert len(events) == 2
+    assert {e.title for e in events} == {"Neue Mail zu prüfen im Bereich IT"}
+    assert all("fremd" not in e.title for e in events)
+    housekeeping(db)
+    senders = set(db.scalars(select(TicketMailLog.sender)))
+    assert senders == {"b@x.example", "c@x.example", "d@x.example"}
+
+    class Broken(TestMailbox):
+        def move(self, mailbox: str, graph_id: str, folder: str) -> None:
+            raise MailboxError("weg")
+
+    area = db.get(TicketArea, areas["it"])
+    assert area is not None
+    # Klappt das Verschieben nicht, bleibt der Eintrag
+    assert expire_reviews(db, Broken(), area) == 0
+    assert expire_reviews(db, TestMailbox(), area) == 1
+    assert list(db.scalars(select(TicketReview.message_id))) == ["r2@example.com"]
+    actions = [e["action"] for e in ina.get(f"{SETTINGS}/audit").json()["items"]]
+    assert "pruefen_verfallen" in actions

@@ -430,9 +430,41 @@ def _new_ticket(
     return Outcome("processed", "neu", detail, ticket)
 
 
+def expire_reviews(db: Session, mailbox: Mailbox | None, area: TicketArea) -> int:
+    """Mails unter „Zu prüfen“, über die nach `review_days` niemand entschieden hat, verwerfen:
+    erst in „Ignoriert“ verschieben, dann den Eintrag löschen (klappt das Verschieben nicht,
+    bleibt der Eintrag, damit die Mail nicht erneut eingelesen wird)."""
+    limit = now_utc() - timedelta(days=max(area.review_days, 1))
+    expired = db.scalars(
+        select(TicketReview).where(
+            TicketReview.area_id == area.id, TicketReview.received_at < limit
+        )
+    ).all()
+    count = 0
+    for review in expired:
+        if mailbox is not None and review.graph_id:
+            try:
+                mailbox.move(area.mailbox, review.graph_id, FOLDER_IGNORED)
+            except MailboxError:
+                continue
+        _log(
+            db,
+            area,
+            None,
+            "ignoriert",
+            f"Zu prüfen: nach {area.review_days} Tagen ohne Entscheidung verworfen",
+            None,
+        )
+        protocol(db, SYSTEM, "pruefen_verfallen", area_id=area.id)
+        db.delete(review)
+        count += 1
+    db.commit()
+    return count
+
+
 def poll_area(db: Session, settings: Settings, mailbox: Mailbox, area: TicketArea) -> int:
     """Posteingang eines Bereichs abarbeiten, danach alte Mails in den Ordnern löschen."""
-    count = 0
+    count = expire_reviews(db, mailbox, area)
     reviewing = set(
         db.scalars(select(TicketReview.graph_id).where(TicketReview.area_id == area.id))
     )

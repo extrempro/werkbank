@@ -106,6 +106,9 @@ class TicketArea(Base):
     )
     processed_days: Mapped[int] = mapped_column(Integer, default=30, server_default=text("30"))
     ignored_days: Mapped[int] = mapped_column(Integer, default=7, server_default=text("7"))
+    # Protokoll „Letzte Eingänge“ ohne Ticket und „Zu prüfen“ nach so vielen Tagen löschen
+    intake_log_days: Mapped[int] = mapped_column(Integer, default=90, server_default=text("90"))
+    review_days: Mapped[int] = mapped_column(Integer, default=30, server_default=text("30"))
     reopen_policy: Mapped[str] = mapped_column(String(10), default="days", server_default="days")
     reopen_days: Mapped[int] = mapped_column(Integer, default=14, server_default=text("14"))
     mailbox_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
