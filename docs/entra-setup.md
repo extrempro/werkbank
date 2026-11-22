@@ -446,6 +446,53 @@ App-Rolle `Geraete.Zuordnung` (1.6) einer Gruppe zuweisen (1.8). Das Recht in In
 
 ---
 
+## 4b. App-Registrierung „Werkbank Tickets“ (Postfächer, freiwillig)
+
+Das Modul Tickets liest die Postfächer der Bereiche (z. B. `it@example.com`), verschiebt und löscht dort Mails und sendet Antworten **als** dieses Postfach. Dafür gibt es eine eigene App-Registrierung, deren Rechte in Exchange Online **nur für die Ticket-Postfächer** gelten (RBAC für Anwendungen). Ohne diese App bleiben Tickets von Hand möglich.
+
+### 4b.1 App-Registrierung anlegen
+
+1. **App-Registrierungen → Neue Registrierung**, Name `Werkbank Tickets`, nur dieses Verzeichnis, keine Umleitungs-URI.
+2. **Zertifikate & Geheimnisse → Zertifikate:** dasselbe Zertifikat wie bei der Collector-App hochladen (`collector_client_cert.pem`). Die Werkbank nutzt es dann ohne weitere Docker-Secrets. Für ein eigenes Zertifikat die Pfade `TICKETS_MAIL_CLIENT_KEY_FILE` und `TICKETS_MAIL_CLIENT_CERT_FILE` setzen und die Dateien als Docker-Secrets einbinden (Dienste `web` und `worker`).
+3. **Keine** Graph-Berechtigungen `Mail.*` in Entra vergeben und keine Administratorzustimmung dafür. Eine in Entra erteilte Berechtigung gilt für **alle** Postfächer und hebt die Beschränkung unten auf.
+
+### 4b.2 Rechte in Exchange Online auf die Ticket-Postfächer beschränken
+
+Eine E-Mail-aktivierte Sicherheitsgruppe (oder Verteilergruppe) anlegen, z. B. `Ticket-Postfaecher`, und die freigegebenen Postfächer der Bereiche als Mitglieder eintragen. Dann mit einem Exchange-Administrator:
+
+```powershell
+Connect-ExchangeOnline
+$appId    = '<Anwendungs-ID der App „Werkbank Tickets“>'
+$objectId = '<Objekt-ID der Unternehmensanwendung „Werkbank Tickets“>'
+New-ServicePrincipal -AppId $appId -ObjectId $objectId -DisplayName 'Werkbank Tickets'
+
+$group = Get-DistributionGroup 'Ticket-Postfaecher'
+New-ManagementScope -Name 'Werkbank Ticket-Postfaecher' `
+    -RecipientRestrictionFilter "MemberOfGroup -eq '$($group.DistinguishedName)'"
+
+foreach ($role in 'Application Mail.ReadWrite', 'Application Mail.Send') {
+    New-ManagementRoleAssignment -App $appId -Role $role `
+        -CustomResourceScope 'Werkbank Ticket-Postfaecher'
+}
+
+# Prüfen: erlaubt für ein Ticket-Postfach, verweigert für ein anderes
+Test-ServicePrincipalAuthorization -Identity $appId -Resource it@example.com
+Test-ServicePrincipalAuthorization -Identity $appId -Resource person@example.com
+```
+
+| Rolle | Wofür |
+|---|---|
+| `Application Mail.ReadWrite` | Posteingang lesen, Mails als MIME abholen, Ordner „Verarbeitet“ und „Ignoriert“ anlegen, Mails dorthin verschieben und nach der Frist endgültig löschen |
+| `Application Mail.Send` | Antworten und Mails an den Melder **als** Postfach des Bereichs senden |
+
+Änderungen an der Gruppe wirken nach einiger Zeit (Exchange speichert die Rechte zwischen). Ein neues Ticket-Postfach braucht nur die Mitgliedschaft in der Gruppe.
+
+### 4b.3 Werte und Einstellungen
+
+- `.env`: `TICKETS_MAIL_CLIENT_ID` (Anwendungs-ID) und `TICKETS_INTERNAL_DOMAINS` (eigene Maildomänen, kommagetrennt; andere Absender gelten als extern). Danach die Werkbank neu starten; der Worker ruft die Postfächer alle 5 Minuten ab.
+- Die Postfächer trägt die Ticket-Verwaltung je Bereich unter Tickets › Einstellungen ein.
+- Änderungsbenachrichtigungen (Webhook) nutzt die Werkbank nicht; sie bräuchten eine aus dem Internet erreichbare Adresse.
+
 ## 5. Werte für die Umgebungsvariablen
 
 ```dotenv

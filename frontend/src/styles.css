@@ -12311,6 +12311,85 @@ input[type="file"] {
   font-weight: 700;
 }
 
+.ticket-reply-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ticket-reply-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: var(--farbe-info-rand);
+}
+
+.ticket-reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--farbe-info-rand);
+  border-radius: 10px;
+  background: var(--farbe-info-flaeche);
+  color: var(--farbe-info-text);
+}
+
+.ticket-reply-form p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ticket-reply-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+}
+
+.ticket-composer-actions {
+  align-items: flex-end;
+}
+
+.ticket-after {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.ticket-after select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+}
+
+.ticket-quote {
+  margin-top: 8px;
+  color: var(--farbe-text-mittel);
+}
+
+.ticket-quote summary {
+  min-height: 24px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.ticket-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+
 /* Tickets: Einstellungen */
 
 .ticket-area h2 {
@@ -12404,5 +12483,58 @@ input[type="file"] {
 
 .collector-types,
 .collector-check code {
+  overflow-wrap: anywhere;
+}
+
+.ticket-mail-section > summary {
+  padding: 10px 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ticket-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ticket-types legend,
+.ticket-events legend {
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.ticket-events {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.settings-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+}
+
+.ticket-review li,
+.ticket-blocks li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--farbe-trenner);
   overflow-wrap: anywhere;
 }

@@ -231,3 +231,228 @@ test("Tickets: Einstellungen nur mit Rolle; Ticket-Verwaltung sieht keine Ticket
   const editor = await apiAs(browser, ["Tickets.Nutzer"], s.editor);
   expect((await editor.get("/api/tickets/settings")).status()).toBe(403);
 });
+
+function rawMail(subject: string, messageId: string, extra = ""): string {
+  return (
+    `From: M. Muster <m.muster@example.com>\r\nTo: it@example.com\r\nSubject: ${subject}\r\n` +
+    `Message-ID: <${messageId}>\r\n${extra}Content-Type: text/plain; charset=utf-8\r\n\r\n` +
+    "Seit heute früh kommen nur leere Seiten.\r\n"
+  );
+}
+
+async function areaId(api: APIRequestContext, name: string): Promise<number> {
+  const me = (await (await api.get("/api/tickets/me")).json()) as {
+    areas: { id: number; name: string }[];
+  };
+  const found = me.areas.find((area) => area.name === name);
+  expect(found).toBeTruthy();
+  return found?.id ?? 0;
+}
+
+test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt keine Mail", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const editor = await apiAs(browser, ["Tickets.Nutzer"], s.editor);
+  const area = await areaId(editor, s.areaName);
+
+  const first = await editor.post("/api/tickets/test/mail", {
+    data: {
+      area_id: area,
+      raw: rawMail(`Bildschirm flackert ${stamp}`, `m1-${stamp}@example.com`),
+    },
+    headers: HEADERS,
+  });
+  const created = (await first.json()) as {
+    result: string;
+    ticket_number: number;
+  };
+  expect(created.result).toBe("neu");
+  const number = created.ticket_number;
+
+  // Antwort über die Nummer im Betreff
+  const reply = await editor.post("/api/tickets/test/mail", {
+    data: {
+      area_id: area,
+      raw: rawMail(`AW: [#T-${number}] Bildschirm`, `m2-${stamp}@example.com`),
+    },
+    headers: HEADERS,
+  });
+  expect(
+    ((await reply.json()) as { ticket_number: number }).ticket_number,
+  ).toBe(number);
+
+  await loginAs(page, ["Tickets.Nutzer"], s.editor);
+  await page.goto(`/tickets/${number}`);
+  await expect(page.getByText("vom Melder").first()).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Original-Mail/ }).first(),
+  ).toBeVisible();
+
+  // Interne Notiz: keine Mail
+  await page.getByRole("button", { name: /Interne Notiz schreiben/ }).click();
+  await page
+    .getByRole("textbox", { name: /^Interne Notiz/ })
+    .fill("Nur für uns");
+  await page.getByRole("button", { name: "Interne Notiz speichern" }).click();
+  await expect(page.getByText("Nur für uns")).toBeVisible();
+  let outbox = (await (
+    await editor.get("/api/tickets/test/outbox", { params: { ticket: number } })
+  ).json()) as { kind: string }[];
+  expect(outbox).toEqual([]);
+
+  // Antwort an den Melder
+  await page
+    .getByRole("button", { name: /Antwort an M. Muster schreiben/ })
+    .click();
+  await expect(
+    page.getByText("Geht per E-Mail an: m.muster@example.com"),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page
+    .getByRole("textbox", { name: /Antwort an M. Muster/ })
+    .fill("Bitte einmal neu starten.");
+  await page
+    .getByLabel("Status danach")
+    .selectOption({ label: "Wartet auf Rückmeldung" });
+  await page.getByRole("button", { name: "An M. Muster senden" }).click();
+  await expect(page.getByText("an Melder gesendet")).toBeVisible();
+  await expect(page.getByLabel("Status")).toHaveValue("waiting");
+  outbox = (await (
+    await editor.get("/api/tickets/test/outbox", { params: { ticket: number } })
+  ).json()) as { kind: string }[];
+  expect(outbox.map((mail) => mail.kind)).toEqual(["antwort"]);
+});
+
+test("Tickets: Mail an ein geschlossenes Ticket je nach Einstellung", async ({
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const editor = await apiAs(browser, ["Tickets.Nutzer"], s.editor);
+  const area = await areaId(editor, s.areaName);
+  const number = s.number;
+  // Ticket schließen
+  const closed = await editor.patch(`/api/tickets/${number}`, {
+    data: {
+      expected_status: "new",
+      expected_assignee_oid: null,
+      status: "closed",
+    },
+    headers: HEADERS,
+  });
+  expect(closed.ok()).toBe(true);
+  // Vorgabe: innerhalb von 14 Tagen wieder öffnen
+  const reopened = await editor.post("/api/tickets/test/mail", {
+    data: {
+      area_id: area,
+      raw: rawMail(`AW: [#T-${number}] x`, `z1-${stamp}@example.com`),
+    },
+    headers: HEADERS,
+  });
+  expect(
+    ((await reopened.json()) as { ticket_number: number }).ticket_number,
+  ).toBe(number);
+  expect(
+    (
+      (await (await editor.get(`/api/tickets/${number}`)).json()) as {
+        status: string;
+      }
+    ).status,
+  ).toBe("in_progress");
+  // Einstellung „immer neues Ticket“ (Bereichsverwaltung)
+  const admin = await apiAs(browser, ["Tickets.Nutzer"], `Ina ${stamp}`);
+  const current = (await (
+    await admin.get(`/api/tickets/settings/areas/${area}/mail`)
+  ).json()) as Record<string, unknown>;
+  const keys = [
+    "external_policy",
+    "max_attachment_mb",
+    "allowed_types",
+    "processed_days",
+    "ignored_days",
+    "reopen_policy",
+    "reopen_days",
+    "sender_name",
+    "header_title",
+    "signature",
+    "ack_enabled",
+    "ack_text",
+    "mail_events",
+  ];
+  const body = Object.fromEntries(keys.map((key) => [key, current[key]]));
+  body.reopen_policy = "new";
+  expect(
+    (
+      await admin.put(`/api/tickets/settings/areas/${area}/mail`, {
+        data: body,
+        headers: HEADERS,
+      })
+    ).ok(),
+  ).toBe(true);
+  await editor.patch(`/api/tickets/${number}`, {
+    data: {
+      expected_status: "in_progress",
+      expected_assignee_oid: null,
+      status: "closed",
+    },
+    headers: HEADERS,
+  });
+  const fresh = await editor.post("/api/tickets/test/mail", {
+    data: {
+      area_id: area,
+      raw: rawMail(`AW: [#T-${number}] x`, `z2-${stamp}@example.com`),
+    },
+    headers: HEADERS,
+  });
+  const result = (await fresh.json()) as {
+    ticket_number: number;
+    detail: string;
+  };
+  expect(result.ticket_number).not.toBe(number);
+  expect(result.detail).toBe(`Bezug auf T-${number}`);
+});
+
+test("Tickets: Einstellungen zur E-Mail und „Letzte Eingänge“", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const editor = await apiAs(browser, ["Tickets.Nutzer"], s.editor);
+  const area = await areaId(editor, s.areaName);
+  await editor.post("/api/tickets/test/mail", {
+    data: {
+      area_id: area,
+      raw: rawMail(
+        `Abwesend ${stamp}`,
+        `o1-${stamp}@example.com`,
+        "Auto-Submitted: auto-replied\r\n",
+      ),
+    },
+    headers: HEADERS,
+  });
+  await loginAs(page, ["Tickets.Nutzer"], `Ina ${stamp}`);
+  await page.goto("/tickets/einstellungen");
+  const panel = page.getByRole("region", { name: s.areaName });
+  await panel.getByText("E-Mail-Eingang und Mails an den Melder").click();
+  await expect(
+    panel.getByRole("combobox", { name: /^Externe Absender/ }),
+  ).toBeVisible();
+  await panel
+    .getByRole("combobox", { name: /^Externe Absender/ })
+    .selectOption({ label: "unbekannte erst prüfen" });
+  await panel.getByRole("button", { name: "Speichern" }).last().click();
+  await expect(
+    page.getByText("Die Einstellungen zur E-Mail wurden gespeichert."),
+  ).toBeVisible();
+  await panel.getByText("Letzte Eingänge").click();
+  await expect(
+    panel.getByText("Abwesenheitsnotiz oder automatische Antwort", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+});

@@ -86,6 +86,17 @@ class Settings(BaseSettings):
     collector_poll_seconds: int = 20
     # Tickets: so lange gilt die abgefragte Gruppenmitgliedschaft einer Person (Minuten)
     tickets_membership_cache_minutes: int = 5
+    # Tickets: App-Registrierung „Werkbank Tickets“ für die Postfächer (Mail lesen, verschieben,
+    # senden; in Exchange per RBAC auf die Ticket-Postfächer beschränkt), nur Zertifikat
+    tickets_mail_client_id: str = ""
+    # Vorgabe: dasselbe Zertifikat wie die Collector-App (in beiden App-Registrierungen
+    # hochladen); für ein eigenes Zertifikat die Pfade und Docker-Secrets anpassen
+    tickets_mail_client_key_file: Path = Path("/run/secrets/collector_client_key.pem")
+    tickets_mail_client_cert_file: Path = Path("/run/secrets/collector_client_cert.pem")
+    # Eigene Maildomänen, kommagetrennt; Absender anderer Domänen gelten als extern
+    tickets_internal_domains: str = ""
+    # Ablage der Anhänge und Originale (.eml), Unterordner im Volume der Belege
+    tickets_files_dir: Path = Path("/data/belege/tickets")
 
     # Höchstzahl Anfragen pro Minute und Absender-IP (0 = aus), siehe core/ratelimit.py
     rate_limit_login_per_minute: int = 60
@@ -138,6 +149,17 @@ class Settings(BaseSettings):
         """Der Abruf läuft nur, wenn Mandant und Collector-App eingetragen sind."""
         empty = ("", "00000000-0000-0000-0000-000000000000")
         return self.collector_client_id not in empty and self.entra_tenant_id not in empty
+
+    @property
+    def tickets_mail_configured(self) -> bool:
+        """Postfächer der Tickets sind nur mit eigener App-Registrierung angebunden."""
+        empty = ("", "00000000-0000-0000-0000-000000000000")
+        return self.tickets_mail_client_id not in empty and self.entra_tenant_id not in empty
+
+    def tickets_internal_domain_list(self) -> list[str]:
+        """Eigene Maildomänen in Kleinbuchstaben, ohne „@“."""
+        names = [n.strip().lower().lstrip("@") for n in self.tickets_internal_domains.split(",")]
+        return [n for n in names if n]
 
     def collector_resource_list(self) -> list[str]:
         """Ressourcentypen in Kleinbuchstaben, ohne Doppelte, in der angegebenen Reihenfolge."""

@@ -281,6 +281,16 @@ export const HELP = {
     text: "„Wer zuerst übernimmt“ lässt neue Tickets frei. „Reihum“ gibt sie der Person mit „Bearbeiten“, die die wenigsten offenen Tickets hat.",
     topic: ["tickets", "einstellungen"],
   },
+  "tickets.extern": {
+    term: "Externe Absender",
+    text: "Absender, deren Maildomäne nicht zu den eigenen gehört. „Unbekannt“ heißt: In diesem Bereich gibt es noch kein Ticket von ihnen.",
+    topic: ["tickets", "email"],
+  },
+  "tickets.automails": {
+    term: "Automatische Mails",
+    text: "Der Melder bekommt eine kurze Mail, wenn ein Ticket diesen Status bekommt. Antwortest du selbst mit „Status danach“, geht keine zusätzliche Mail raus.",
+    topic: ["tickets", "email"],
+  },
   "tickets.rollen": {
     term: "Rollen im Bereich",
     text: "„Nur lesen“ sieht Tickets und schreibt Notizen, „Bearbeiten“ ändert Status und Zuständigkeit. Die Bereichsverwaltung darf jedes Ticket zuweisen und den Bereich einstellen.",

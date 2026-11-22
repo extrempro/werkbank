@@ -7,17 +7,21 @@ import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
 import {
   addNote,
+  attachmentUrl,
   changeDetails,
   changeTicket,
   CHANNEL_LABELS,
   fetchTicket,
+  formatSize,
   moveTicket,
   PRIORITY_LABELS,
   SETTABLE_STATUSES,
   STATUS_LABELS,
   ticketLabel,
   TICKETS_PATH,
+  sendReply,
   type Entry,
+  type StatusAfter,
   type Participant,
   type Priority,
   type Ticket,
@@ -113,6 +117,30 @@ function EntryItem({ entry, ticket }: { entry: Entry; ticket: Ticket }) {
           {full ? "Nachricht kürzen" : "Ganze Nachricht anzeigen"}
         </button>
       )}
+      {entry.quote && (
+        <details className="ticket-quote">
+          <summary>Zitat aus früheren Mails anzeigen</summary>
+          <p className="ticket-entry-body">{entry.quote}</p>
+        </details>
+      )}
+      {entry.attachments.length > 0 && (
+        <ul className="plain ticket-attachments" aria-label="Anhänge">
+          {entry.attachments.map((att) => (
+            <li key={att.id}>
+              {att.removed_reason ? (
+                <span className="small">
+                  {att.filename}: entfernt ({att.removed_reason})
+                </span>
+              ) : (
+                <a href={attachmentUrl(ticket.number, att.id)} download>
+                  {att.original ? "Original-Mail (.eml)" : att.filename}
+                  <span className="small"> · {formatSize(att.size)}</span>
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </li>
   );
 }
@@ -157,6 +185,14 @@ function Timeline({ ticket }: { ticket: Ticket }) {
   );
 }
 
+type ComposerMode = "reply" | "note" | null;
+
+const STATUS_AFTER_LABELS: Record<StatusAfter, string> = {
+  "": "unverändert",
+  waiting: "Wartet auf Rückmeldung",
+  solved: "Gelöst",
+};
+
 function Composer({
   ticket,
   onSaved,
@@ -166,29 +202,53 @@ function Composer({
   onSaved: (ticket: Ticket) => void;
   onMessage: (message: FeedbackMessage) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState("");
+  const [mode, setMode] = useState<ComposerMode>(null);
+  // Entwürfe bleiben beim Einklappen erhalten
+  const [reply, setReply] = useState("");
+  const [note, setNote] = useState("");
+  const [statusAfter, setStatusAfter] = useState<StatusAfter>("");
   const [busy, setBusy] = useState(false);
   const fieldId = useId();
-  const reporter = ticket.reporter_name || "Der Melder";
+  const afterId = useId();
+  const reporter = ticket.reporter_name || ticket.reporter_mail || "Der Melder";
+  const copies = ticket.participants.map((p) => p.mail);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!draft.trim()) {
+    const text = mode === "reply" ? reply : note;
+    if (!text.trim()) {
       return;
     }
     setBusy(true);
-    addNote(ticket.number, draft)
+    const request =
+      mode === "reply" ? sendReply(ticket.number, text, statusAfter) : addNote(ticket.number, text);
+    request
       .then((result) => {
-        setDraft("");
-        setOpen(false);
+        if (mode === "reply") {
+          setReply("");
+          setStatusAfter("");
+        } else {
+          setNote("");
+        }
+        setMode(null);
         onSaved(result);
-        onMessage({ kind: "status", text: "Die interne Notiz wurde gespeichert." });
+        onMessage({
+          kind: "status",
+          text:
+            mode === "reply"
+              ? `Die Antwort an ${reporter} wurde gesendet.`
+              : "Die interne Notiz wurde gespeichert.",
+        });
       })
       .catch((problem: unknown) =>
         onMessage({
           kind: "alert",
-          text: errorText(problem, "Die Notiz konnte nicht gespeichert werden."),
+          text: errorText(
+            problem,
+            mode === "reply"
+              ? "Die Antwort konnte nicht gesendet werden."
+              : "Die Notiz konnte nicht gespeichert werden.",
+          ),
         }),
       )
       .finally(() => setBusy(false));
@@ -197,49 +257,97 @@ function Composer({
   if (!ticket.permissions.note) {
     return null;
   }
-  return (
-    <div className="ticket-composer">
-      {!open ? (
+  if (mode === null) {
+    return (
+      <div className="ticket-composer">
         <div className="ticket-composer-buttons">
-          <button type="button" className="button ticket-note-button" onClick={() => setOpen(true)}>
-            <Icon name="schloss" />
-            Interne Notiz schreiben
-            {draft.trim() && <span className="small"> (Entwurf)</span>}
-          </button>
-        </div>
-      ) : (
-        <form className="ticket-note-form" onSubmit={submit}>
-          <label htmlFor={fieldId} className="ticket-note-label">
-            <Icon name="schloss" />
-            Interne Notiz
-            <InfoTip term="tickets.notiz" />
-          </label>
-          <p className="small">{reporter} sieht diesen Text nicht und bekommt keine Mail.</p>
-          <textarea
-            id={fieldId}
-            rows={4}
-            value={draft}
-            maxLength={20000}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          <div className="actions">
-            <button
-              type="submit"
-              className="button button-primary"
-              disabled={busy || !draft.trim()}
-            >
-              {busy ? "Wird gespeichert …" : "Interne Notiz speichern"}
-            </button>
+          {ticket.permissions.edit && (
             <button
               type="button"
-              className="button button-secondary"
-              onClick={() => setOpen(false)}
+              className="button ticket-reply-button"
+              disabled={!ticket.can_reply}
+              aria-describedby={ticket.can_reply ? undefined : `${fieldId}-hint`}
+              onClick={() => setMode("reply")}
             >
-              Einklappen
+              <Icon name="brief" />
+              Antwort an {reporter} schreiben
+              {reply.trim() && <span className="small"> (Entwurf)</span>}
             </button>
-          </div>
-        </form>
-      )}
+          )}
+          <button
+            type="button"
+            className="button ticket-note-button"
+            onClick={() => setMode("note")}
+          >
+            <Icon name="schloss" />
+            Interne Notiz schreiben
+            {note.trim() && <span className="small"> (Entwurf)</span>}
+          </button>
+        </div>
+        {ticket.permissions.edit && !ticket.can_reply && ticket.reply_hint && (
+          <p className="small" id={`${fieldId}-hint`}>
+            Antwort per Mail nicht möglich: {ticket.reply_hint}
+          </p>
+        )}
+      </div>
+    );
+  }
+  const isReply = mode === "reply";
+  return (
+    <div className="ticket-composer">
+      <form className={isReply ? "ticket-reply-form" : "ticket-note-form"} onSubmit={submit}>
+        <label htmlFor={fieldId} className="ticket-note-label">
+          <Icon name={isReply ? "brief" : "schloss"} />
+          {isReply ? `Antwort an ${reporter}` : "Interne Notiz"}
+          {!isReply && <InfoTip term="tickets.notiz" />}
+        </label>
+        <p className="small">
+          {isReply
+            ? `Geht per E-Mail an: ${ticket.reporter_mail}${copies.length > 0 ? ` (Kopie an ${copies.join(", ")})` : ""}`
+            : `${reporter} sieht diesen Text nicht und bekommt keine Mail.`}
+        </p>
+        <textarea
+          id={fieldId}
+          rows={5}
+          value={isReply ? reply : note}
+          maxLength={20000}
+          onChange={(event) => (isReply ? setReply : setNote)(event.target.value)}
+        />
+        <div className="actions ticket-composer-actions">
+          {isReply && (
+            <label htmlFor={afterId} className="ticket-after">
+              <span>Status danach</span>
+              <select
+                id={afterId}
+                value={statusAfter}
+                onChange={(event) => setStatusAfter(event.target.value as StatusAfter)}
+              >
+                {(Object.keys(STATUS_AFTER_LABELS) as StatusAfter[]).map((key) => (
+                  <option key={key} value={key}>
+                    {STATUS_AFTER_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <button
+            type="submit"
+            className="button button-primary"
+            disabled={busy || !(isReply ? reply : note).trim()}
+          >
+            {busy
+              ? isReply
+                ? "Wird gesendet …"
+                : "Wird gespeichert …"
+              : isReply
+                ? `An ${reporter} senden`
+                : "Interne Notiz speichern"}
+          </button>
+          <button type="button" className="button button-secondary" onClick={() => setMode(null)}>
+            Einklappen
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -725,7 +725,7 @@ Bestand der IT-Hardware. Schritte 1 bis 8 sind umgesetzt. Zugriff: `Bestand.Read
 
 ## 8e. Modul Tickets
 
-Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Eigener Bereich „Tickets“ in der Navigation (`/tickets`). Tickets entstehen nur per E-Mail oder von Hand; kein Self-Service-Portal, keine Anbindung an Zabbix (vorerst). Stand: Phase T1 umgesetzt (`modules/tickets`, Migration 0064, `GET/POST /api/tickets`, `GET/PATCH /api/tickets/{nr}`, `PUT …/details`, `POST …/move`, `POST …/notes`, `/api/tickets/me`, `/api/tickets/settings…`; Aufträge `tickets.gruppen` stündlich und `tickets.wartung` stündlich: Schließen nach 5 Tagen, alter Zwischenspeicher, Protokoll nach 3 Jahren). In T1 sind „Erinnerung“ und „Zusammengeführt“ noch nicht wählbar; Antworten an den Melder kommen mit Phase T2. Testquelle für Gruppen nur mit Test-Login (`/api/tickets/test/membership`, sonst 404).
+Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Eigener Bereich „Tickets“ in der Navigation (`/tickets`). Tickets entstehen nur per E-Mail oder von Hand; kein Self-Service-Portal, keine Anbindung an Zabbix (vorerst). Stand: Phase T1 umgesetzt (`modules/tickets`, Migration 0064, `GET/POST /api/tickets`, `GET/PATCH /api/tickets/{nr}`, `PUT …/details`, `POST …/move`, `POST …/notes`, `/api/tickets/me`, `/api/tickets/settings…`; Aufträge `tickets.gruppen` stündlich und `tickets.wartung` stündlich: Schließen nach 5 Tagen, alter Zwischenspeicher, Protokoll nach 3 Jahren). In T1 sind „Erinnerung“ und „Zusammengeführt“ noch nicht wählbar. **T2 (E-Mail)** umgesetzt: `mailparse.py` (Einlesen, Antwort-Erkennung, Zitate, Filter, Dateitypen), `mailbox.py` (Graph mit App „Werkbank Tickets“; Zertifikat standardmäßig das der Collector-App), `inbound.py` (Auftrag `tickets.postfaecher` alle 5 Minuten), `outbound.py` (MIME mit Text und HTML, Logo per CID, Senden als Postfach über `sendMail`), `mail_api.py`; Migration 0065; Anzeige der Mails **nur als Text** (entschieden; HTML wird serverseitig in Text umgewandelt, Original als .eml), Anrede in Mails an den Melder „du“ (entschieden), „unbekannt“ = extern und noch kein Ticket im Bereich (entschieden), Mails in „Verarbeitet“/„Ignoriert“ werden endgültig gelöscht (entschieden). Test-Endpunkte `/api/tickets/test/mail` und `/api/tickets/test/outbox` nur mit Test-Login. Testquelle für Gruppen nur mit Test-Login (`/api/tickets/test/membership`, sonst 404).
 
 ### Begriffe
 
@@ -847,7 +847,7 @@ Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Ei
 
 ### Sicherheit (OWASP ASVS 5.0 L2)
 
-- **Mail-Inhalte gelten als feindlich.** HTML wird serverseitig mit einer Positivliste bereinigt (Paket `nh3`) (keine Skripte, Formulare, Stile mit URLs, externe Ressourcen, Ereignis-Attribute); Bilder aus Mails werden nicht nachgeladen (eingebettete nur auf Klick). Anzeige in der Oberfläche zusätzlich in einer CSP ohne Skripte.
+- **Mail-Inhalte gelten als feindlich.** HTML wird serverseitig in reinen Text umgewandelt (entschieden: keine HTML-Darstellung, kein Zusatzpaket); Skripte, Formulare, Stile und externe Ressourcen fallen damit weg, Bilder werden nicht nachgeladen. Das Original gibt es nur als Download (.eml).
 - **Anhänge:** Typ über den Inhalt, Größenlimit, Download nur mit `Content-Disposition: attachment` und `X-Content-Type-Options: nosniff`, Ablage im Volume außerhalb des Webroots, Zugriff nur über das Ticket mit Bereichsprüfung.
 - **Rechte** für jeden Endpunkt und jede Aktion serverseitig (App-Rolle aus der Sitzung, Bereichsrolle über die zwischengespeicherte Graph-Prüfung), auch für Export, Suche und Anhänge. Fremde Tickets 404. Anhänge und Einträge über zufällige IDs (UUID).
 - **Kein eingehender Webhook:** Die Werkbank holt Mails selbst ab; es gibt keinen von außen erreichbaren Endpunkt für Graph.
@@ -1137,7 +1137,7 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | – | Einheitliche Oberfläche, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen | ✅ umgesetzt, mit Handbuch und letzten Aktivitäten auf der Startseite |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Benachrichtigungen, Push | Vollumfang v1 | 🔄 weitgehend: Exchange, Teams, Intune und SharePoint (Konfiguration), Benachrichtigungen (Glocke, Mail, Teams, Push) umgesetzt |
 | 5 | weitere Module nach Bedarf | – | offen |
-| T1–T4 | Modul Tickets (8e) | Ticketsystem für Bereiche mit eigenem Postfach | 🔄 T1 umgesetzt (Bereiche, Rollen je Bereich, Tickets von Hand, Liste, Ticketseite, Status und Zuständigkeit mit Bestätigung, Verlauf, Notizen, Verschieben) |
+| T1–T4 | Modul Tickets (8e) | Ticketsystem für Bereiche mit eigenem Postfach | 🔄 T1 und T2 umgesetzt (T1: Bereiche, Rollen je Bereich, Tickets von Hand, Liste, Ticketseite, Status und Zuständigkeit mit Bestätigung, Verlauf, Notizen, Verschieben; T2: E-Mail-Eingang, Antworten, Mails an den Melder, Gestaltung) |
 
 ---
 

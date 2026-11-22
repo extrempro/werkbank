@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { errorText } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
@@ -18,7 +18,32 @@ import {
   type GrantInput,
   type TicketSettings,
 } from "./api";
+import {
+  BlocksSection,
+  DesignSection,
+  IntakeSection,
+  MailSettingsSection,
+  ReviewSection,
+} from "./TicketMailSettings";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
+
+/** Aufklappbarer Abschnitt; der Inhalt lädt erst beim ersten Öffnen. */
+function LazySection({ title, children }: { title: string; children: () => ReactNode }) {
+  const [opened, setOpened] = useState(false);
+  return (
+    <details
+      className="ticket-mail-section"
+      onToggle={(event) => {
+        if (event.currentTarget.open) {
+          setOpened(true);
+        }
+      }}
+    >
+      <summary>{title}</summary>
+      {opened && children()}
+    </details>
+  );
+}
 
 const ROLES: AreaRole[] = ["admin", "edit", "read"];
 
@@ -371,6 +396,18 @@ function AreaPanel({
           );
         })}
         <GrantForm area={area} manager={manager} onSaved={onSaved} onMessage={onMessage} />
+        <LazySection title="E-Mail-Eingang und Mails an den Melder">
+          {() => <MailSettingsSection areaId={area.id} onMessage={onMessage} />}
+        </LazySection>
+        <LazySection title="Zu prüfen">
+          {() => <ReviewSection areaId={area.id} onMessage={onMessage} />}
+        </LazySection>
+        <LazySection title="Sperrliste">
+          {() => <BlocksSection areaId={area.id} onMessage={onMessage} />}
+        </LazySection>
+        <LazySection title="Letzte Eingänge">
+          {() => <IntakeSection areaId={area.id} />}
+        </LazySection>
       </div>
       {dialog}
     </section>
@@ -542,6 +579,7 @@ export function TicketSettingsPage() {
       )}
       {!failed && !data && <p role="status">Wird geladen …</p>}
       {data?.manager && <NewAreaForm onCreated={replace} onMessage={setMessage} />}
+      {data?.manager && <DesignSection onMessage={setMessage} />}
       {data && data.areas.length === 0 && (
         <p className="panel panel-empty">
           Es gibt noch keinen Bereich.{data.manager ? " Lege oben den ersten an." : ""}

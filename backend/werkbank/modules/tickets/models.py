@@ -16,6 +16,7 @@ from sqlalchemy import (
     Identity,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -26,6 +27,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from werkbank.db import Base
+from werkbank.modules.tickets.mail_texts import DEFAULT_EVENTS, DEFAULT_TYPES
 
 # Rollen je Bereich, von stark nach schwach
 AREA_ADMIN = "admin"  # Bereichsverwaltung
@@ -78,9 +80,37 @@ class TicketArea(Base):
     )
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Mails an den Melder (Phase 2)
+    sender_name: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    header_title: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    signature: Mapped[str] = mapped_column(Text, default="", server_default="")
+    ack_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    ack_text: Mapped[str] = mapped_column(Text, default="", server_default="")
+    # Automatische Mails: in_progress, assignee, waiting, solved, closed (siehe mail_texts.py)
+    mail_events: Mapped[dict[str, bool]] = mapped_column(
+        JSONB, default=lambda: dict(DEFAULT_EVENTS), server_default=text("'{}'::jsonb")
+    )
+    # E-Mail-Eingang
+    external_policy: Mapped[str] = mapped_column(
+        String(10), default="accept", server_default="accept"
+    )
+    max_attachment_mb: Mapped[int] = mapped_column(Integer, default=15, server_default=text("15"))
+    allowed_types: Mapped[list[str]] = mapped_column(
+        JSONB, default=lambda: list(DEFAULT_TYPES), server_default=text("'[]'::jsonb")
+    )
+    processed_days: Mapped[int] = mapped_column(Integer, default=30, server_default=text("30"))
+    ignored_days: Mapped[int] = mapped_column(Integer, default=7, server_default=text("7"))
+    reopen_policy: Mapped[str] = mapped_column(String(10), default="days", server_default="days")
+    reopen_days: Mapped[int] = mapped_column(Integer, default=14, server_default=text("14"))
+    mailbox_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    mailbox_error: Mapped[str] = mapped_column(Text, default="", server_default="")
 
     __table_args__ = (
         CheckConstraint("assignment IN ('first', 'round_robin')", name="ck_ticket_area_assignment"),
+        CheckConstraint(
+            "external_policy IN ('accept', 'review', 'reject')", name="ck_ticket_area_external"
+        ),
+        CheckConstraint("reopen_policy IN ('days', 'always', 'new')", name="ck_ticket_area_reopen"),
     )
 
 
@@ -150,6 +180,8 @@ class Ticket(Base):
     solved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[str] = mapped_column(String(256), default="", server_default="")
+    # Erste Antwort an den Melder (für Fristen)
+    first_response_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint(
@@ -191,12 +223,123 @@ class TicketEntry(Base):
     # Ursprüngliche Meldung (steht im Verlauf immer oben)
     original: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Zitat aus früheren Mails (eingeklappt angezeigt) und Message-ID der Mail
+    quote: Mapped[str] = mapped_column(Text, default="", server_default="")
+    message_id: Mapped[str | None] = mapped_column(String(998), index=True)
 
     __table_args__ = (
         CheckConstraint(
             "kind IN ('inbound', 'reply', 'note', 'system')", name="ck_ticket_entry_kind"
         ),
     )
+
+
+class TicketAttachment(Base):
+    """Anhang eines Eintrags; Datei im Volume (nicht in der Datenbank, nicht im Webroot)."""
+
+    __tablename__ = "ticket_attachments"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    ticket_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tickets.id", ondelete="CASCADE"), index=True
+    )
+    entry_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("ticket_entries.id", ondelete="CASCADE"), index=True
+    )
+    filename: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(
+        String(100), default="application/octet-stream", server_default="application/octet-stream"
+    )
+    size: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    # Schlüssel der Datei; leer, wenn der Anhang entfernt wurde (gesperrter Typ, zu groß)
+    key: Mapped[str | None] = mapped_column(String(64))
+    original: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    removed_reason: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TicketMailLog(Base):
+    """Protokoll „Letzte Eingänge“: was mit jeder Mail passiert ist."""
+
+    __tablename__ = "ticket_mail_log"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    area_id: Mapped[int] = mapped_column(ForeignKey("ticket_areas.id", ondelete="CASCADE"))
+    message_id: Mapped[str] = mapped_column(String(998), default="", server_default="")
+    sender: Mapped[str] = mapped_column(String(320), default="", server_default="")
+    subject: Mapped[str] = mapped_column(String(250), default="", server_default="")
+    result: Mapped[str] = mapped_column(String(20))
+    detail: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    ticket_number: Mapped[int | None] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+    __table_args__ = (Index("ix_ticket_mail_log_area_message", "area_id", "message_id"),)
+
+
+class TicketReview(Base):
+    """Mail eines unbekannten externen Absenders unter „Zu prüfen“ (bleibt im Posteingang)."""
+
+    __tablename__ = "ticket_review"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    area_id: Mapped[int] = mapped_column(
+        ForeignKey("ticket_areas.id", ondelete="CASCADE"), index=True
+    )
+    graph_id: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    message_id: Mapped[str] = mapped_column(String(998))
+    sender: Mapped[str] = mapped_column(String(320))
+    sender_name: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    subject: Mapped[str] = mapped_column(String(250), default="", server_default="")
+    raw: Mapped[bytes] = mapped_column(LargeBinary)
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (UniqueConstraint("area_id", "message_id", name="uq_ticket_review"),)
+
+
+class TicketBlock(Base):
+    """Gesperrter Absender (Adresse oder @domain) je Bereich."""
+
+    __tablename__ = "ticket_blocks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    area_id: Mapped[int] = mapped_column(ForeignKey("ticket_areas.id", ondelete="CASCADE"))
+    value: Mapped[str] = mapped_column(String(320))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("area_id", "value", name="uq_ticket_block"),)
+
+
+class TicketMailOut(Base):
+    """Gesendete Mails an Melder (ohne Inhalt): Art, Empfänger, Ergebnis."""
+
+    __tablename__ = "ticket_mail_out"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    ticket_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("tickets.id", ondelete="CASCADE"), index=True
+    )
+    area_id: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(String(20))
+    recipients: Mapped[str] = mapped_column(String(2000))
+    message_id: Mapped[str] = mapped_column(String(998), default="", server_default="")
+    error: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TicketMailDesign(Base):
+    """Gestaltung aller Mails an Melder (eine Zeile, id = 1; Ticket-Verwaltung)."""
+
+    __tablename__ = "ticket_mail_design"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    accent: Mapped[str] = mapped_column(String(7), default="", server_default="")
+    footer: Mapped[str] = mapped_column(Text, default="", server_default="")
+    privacy_url: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    logo_png: Mapped[bytes | None] = mapped_column(LargeBinary)
 
 
 class TicketAudit(Base):

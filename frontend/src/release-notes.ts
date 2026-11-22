@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.99.0",
+    date: "2026-11-22",
+    summary: "Tickets: Mails werden zu Tickets, und du antwortest direkt aus dem Ticket.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Mails an das Postfach eines Bereichs werden automatisch zu Tickets. Antworten landen im selben Ticket.",
+          "Unten im Ticket schreibst du eine Antwort an den Melder. Sie geht aus dem Postfach des Bereichs raus; mit „Status danach“ setzt du gleich „Wartet auf Rückmeldung“ oder „Gelöst“.",
+          "Im Verlauf steht nur der neue Text einer Mail. Zitate klappst du bei Bedarf auf, Anhänge lädst du herunter.",
+          "In den Einstellungen legst du je Bereich fest, wie mit externen Absendern und Anhängen umgegangen wird, und welche Mails der Melder bekommt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.98.0",
     date: "2026-11-22",
     summary: "Verwaltung: Berechtigungen für den Abruf aus dem Tenant prüfen.",

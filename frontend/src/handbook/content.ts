@@ -1175,8 +1175,43 @@ export const AREAS: readonly Area[] = [
                 kind: "text",
                 text: "Eine interne Notiz sieht nur, wer im Bereich Mitglied ist. Der Melder sieht sie nicht und bekommt keine Mail. Rechts stehen Bereich, Priorität und Beteiligte. Über „Verschieben nach“ gibst du ein Ticket an einen anderen Bereich ab; bist du dort nicht Mitglied, siehst du es danach nicht mehr.",
               },
+              {
+                kind: "text",
+                text: "Unten auf der Seite schreibst du entweder eine Antwort an den Melder (blau, mit Briefsymbol) oder eine interne Notiz (gelb, mit Schloss). Bei der Antwort steht, an wen die Mail geht und wer eine Kopie bekommt. Mit „Status danach“ setzt du beim Senden gleich „Wartet auf Rückmeldung“ oder „Gelöst“. Ein Entwurf bleibt erhalten, wenn du das Feld einklappst.",
+              },
+              {
+                kind: "text",
+                text: "Bei Mails steht im Verlauf nur der neue Text. Zitate aus früheren Mails klappst du bei Bedarf auf. Anhänge lädst du herunter; nicht erlaubte Anhänge entfernt die Werkbank und vermerkt das im Ticket. Die ganze Mail gibt es als „Original-Mail (.eml)“.",
+              },
             ],
             links: [{ to: "/tickets", label: "Zu allen Tickets" }],
+          },
+          {
+            id: "email",
+            title: "E-Mail: Eingang und Mails an den Melder",
+            blocks: [
+              {
+                kind: "text",
+                text: "Jeder Bereich hat ein eigenes Postfach. Die Werkbank schaut alle 5 Minuten hinein. Eine neue Mail wird ein neues Ticket; eine Antwort auf ein Ticket landet im selben Ticket. Personen in Kopie werden Beteiligte. Erkannt werden Antworten an der Nummer im Betreff, zum Beispiel [#T-1042], und an den Angaben der Mail selbst.",
+              },
+              {
+                kind: "text",
+                text: "Abwesenheitsnotizen, Unzustellbarkeitsberichte, Newsletter und gesperrte Absender landen im Ordner „Ignoriert“. Schickt jemand mehr als 10 Mails in einer Stunde, werden weitere ignoriert. Verarbeitete Mails kommen in den Ordner „Verarbeitet“. Die Werkbank löscht sie dort nach der eingestellten Frist endgültig; das Original bleibt am Ticket.",
+              },
+              {
+                kind: "text",
+                text: "Für externe Absender stellt die Bereichsverwaltung ein: annehmen, unbekannte erst prüfen oder ablehnen. Unbekannt heißt: In diesem Bereich gibt es noch kein Ticket von ihnen. Solche Mails stehen unter „Zu prüfen“; dort legst du sie als Ticket an, verwirfst sie oder sperrst den Absender. Was mit jeder Mail passiert ist, zeigt „Letzte Eingänge“.",
+              },
+              {
+                kind: "text",
+                text: "Antwortet der Melder auf ein geschlossenes Ticket, öffnet die Werkbank es je nach Einstellung wieder oder legt ein neues Ticket mit Verweis an. Auf ein Ticket mit „Wartet auf Rückmeldung“ oder „Gelöst“ geht es mit seiner Antwort wieder auf „In Arbeit“.",
+              },
+              {
+                kind: "text",
+                text: "Alle Mails an den Melder kommen aus dem Postfach des Bereichs, nie von deiner eigenen Adresse. Je Bereich lassen sich eine Eingangsbestätigung und kurze automatische Mails bei Statuswechseln einschalten, dazu Absendername, Titel und Signatur. Farbe, Logo, Fußzeile und Datenschutz-Link legt die Ticket-Verwaltung für alle fest.",
+              },
+            ],
+            links: [{ to: "/tickets/einstellungen", label: "Zu den Einstellungen" }],
           },
         ],
       },

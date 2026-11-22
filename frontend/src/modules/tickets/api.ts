@@ -87,13 +87,25 @@ export interface Participant {
   mail: string;
 }
 
+export interface Attachment {
+  id: string;
+  filename: string;
+  size: number;
+  original: boolean;
+  /** Grund, warum der Anhang entfernt wurde (dann ohne Download). */
+  removed_reason: string;
+}
+
 export interface Entry {
   id: string;
   kind: EntryKind;
   body: string;
+  /** Zitat aus früheren Mails (eingeklappt). */
+  quote: string;
   author_name: string;
   original: boolean;
   created_at: string;
+  attachments: Attachment[];
 }
 
 export interface Person {
@@ -111,6 +123,9 @@ export interface Ticket extends TicketItem {
   move_targets: AreaRef[];
   /** Eigene Objekt-ID (für „Mir zuweisen“). */
   me_oid: string;
+  /** Antwort an den Melder möglich? Sonst der Grund. */
+  can_reply: boolean;
+  reply_hint: string;
 }
 
 export function ticketLabel(number: number): string {
@@ -198,6 +213,24 @@ export function addNote(number: number, body: string): Promise<Ticket> {
   return postJson(`${BASE}/${number}/notes`, { body });
 }
 
+export type StatusAfter = "" | "waiting" | "solved";
+
+export function sendReply(number: number, body: string, statusAfter: StatusAfter): Promise<Ticket> {
+  return postJson(`${BASE}/${number}/replies`, { body, status_after: statusAfter });
+}
+
+export function attachmentUrl(number: number, id: string): string {
+  return `${BASE}/${number}/attachments/${id}`;
+}
+
+/** Größe lesbar: „12 KB“, „1,4 MB“. */
+export function formatSize(bytes: number): string {
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
+  return `${(bytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB`;
+}
+
 // --- Einstellungen ------------------------------------------------------------------------
 
 export interface Grant {
@@ -279,4 +312,154 @@ export function removeGrant(id: number, grantId: number): Promise<AreaSettings> 
 export function searchEntra(kind: "group" | "person", q: string): Promise<Found[]> {
   const path = kind === "group" ? "groups" : "people";
   return getJson(`${SETTINGS}/${path}?${new URLSearchParams({ q }).toString()}`);
+}
+
+// --- E-Mail ---------------------------------------------------------------------------------
+
+export type MailEvent = "in_progress" | "assignee" | "waiting" | "solved" | "closed";
+export const MAIL_EVENT_LABELS: Record<MailEvent, string> = {
+  in_progress: "In Arbeit",
+  assignee: "Wechsel der Zuständigkeit",
+  waiting: "Wartet auf Rückmeldung",
+  solved: "Gelöst",
+  closed: "Geschlossen",
+};
+export const TYPE_LABELS: Record<string, string> = {
+  pdf: "PDF",
+  png: "PNG",
+  jpg: "JPG",
+  gif: "GIF",
+  webp: "WebP",
+  docx: "Word (.docx)",
+  xlsx: "Excel (.xlsx)",
+  pptx: "PowerPoint (.pptx)",
+  txt: "Text",
+  csv: "CSV",
+  eml: "Mail (.eml)",
+  msg: "Outlook-Mail (.msg)",
+  zip: "ZIP",
+};
+
+export interface MailSettings {
+  external_policy: "accept" | "review" | "reject";
+  max_attachment_mb: number;
+  allowed_types: string[];
+  processed_days: number;
+  ignored_days: number;
+  reopen_policy: "days" | "always" | "new";
+  reopen_days: number;
+  sender_name: string;
+  header_title: string;
+  signature: string;
+  ack_enabled: boolean;
+  ack_text: string;
+  mail_events: Record<MailEvent, boolean>;
+}
+
+export interface MailSettingsOut extends MailSettings {
+  area_id: number;
+  mailbox: string;
+  mail_configured: boolean;
+  internal_domains: string[];
+  checked_at: string | null;
+  error: string;
+  default_ack: string;
+  event_texts: Record<MailEvent, string>;
+  all_types: string[];
+}
+
+export function fetchMailSettings(areaId: number): Promise<MailSettingsOut> {
+  return getJson(`${SETTINGS}/areas/${areaId}/mail`);
+}
+
+export function saveMailSettings(areaId: number, body: MailSettings): Promise<MailSettingsOut> {
+  return putJson(`${SETTINGS}/areas/${areaId}/mail`, body);
+}
+
+export interface Block {
+  id: number;
+  value: string;
+}
+
+export function fetchBlocks(areaId: number): Promise<Block[]> {
+  return getJson(`${SETTINGS}/areas/${areaId}/blocks`);
+}
+
+export function addBlock(areaId: number, value: string): Promise<Block[]> {
+  return postJson(`${SETTINGS}/areas/${areaId}/blocks`, { value });
+}
+
+export function removeBlock(areaId: number, id: number): Promise<Block[]> {
+  return deleteJson(`${SETTINGS}/areas/${areaId}/blocks/${id}`);
+}
+
+export interface Intake {
+  created_at: string;
+  sender: string;
+  subject: string;
+  result: string;
+  detail: string;
+  ticket_number: number | null;
+}
+
+export const INTAKE_LABELS: Record<string, string> = {
+  neu: "Neues Ticket",
+  antwort: "Antwort",
+  doppelt: "Schon verarbeitet",
+  ignoriert: "Ignoriert",
+  abgelehnt: "Abgelehnt",
+  zu_pruefen: "Zu prüfen",
+  fehler: "Fehler",
+};
+
+export function fetchIntake(areaId: number): Promise<Intake[]> {
+  return getJson(`${SETTINGS}/areas/${areaId}/intake`);
+}
+
+export interface Review {
+  id: number;
+  sender: string;
+  sender_name: string;
+  subject: string;
+  received_at: string;
+}
+
+export function fetchReview(areaId: number): Promise<Review[]> {
+  return getJson(`${SETTINGS}/areas/${areaId}/review`);
+}
+
+export function actOnReview(
+  areaId: number,
+  id: number,
+  action: "anlegen" | "verwerfen" | "sperren",
+): Promise<{ items: Review[]; ticket_number: number | null }> {
+  return postJson(`${SETTINGS}/areas/${areaId}/review/${id}/${action}`, {});
+}
+
+export interface MailDesign {
+  accent: string;
+  footer: string;
+  privacy_url: string;
+  has_logo: boolean;
+  default_accent: string;
+}
+
+export function fetchDesign(): Promise<MailDesign> {
+  return getJson(`${SETTINGS}/design`);
+}
+
+export function saveDesign(body: {
+  accent: string;
+  footer: string;
+  privacy_url: string;
+}): Promise<MailDesign> {
+  return putJson(`${SETTINGS}/design`, body);
+}
+
+export function uploadDesignLogo(contentBase64: string): Promise<MailDesign> {
+  return putJson(`${SETTINGS}/design/logo`, { content_base64: contentBase64 });
+}
+
+export function deleteDesignLogo(): Promise<MailDesign> {
+  return deleteJson(`${SETTINGS}/design/logo`);
 }
