@@ -100,6 +100,17 @@ Kopfzeile, Navigation, Seitentitel, Filter-Chips, Tabelle, Listeneintrag, Detail
 - **Branding:** In der Verwaltung lassen sich Name, Akzentfarbe, Logos (für hellen und dunklen Hintergrund) und Favicon festlegen. Die Kopfzeile ist in beiden Darstellungen dunkel und zeigt deshalb das Logo für dunklen Hintergrund. Aus der Akzentfarbe leitet `frontend/src/branding.ts` Primärfarbe, Links und Auswahl ab und passt sie je Darstellung an, bis die Kontraste oben eingehalten sind. Text in der Kopfzeile nutzt `--farbe-auf-kopf`, Text auf der Primärfarbe `--farbe-auf-primaer`.
 - Die Werte stehen als CSS-Variablen am Anfang von `frontend/src/styles.css`.
 
+## Rückmeldungen
+
+Gilt auf PC, Tablet und Handy.
+
+- Jede Rückmeldung nach einer Aktion (gespeichert, gelöscht, gesendet, Fehler) erscheint **immer im sichtbaren Bereich**, unabhängig davon, wie lang die Seite ist und wo gerade gescrollt ist. Eine Meldung nur an der Stelle im Formular reicht nicht, wenn sie außerhalb des Bildschirms liegen kann.
+- Ort: fest am Bildschirmrand, nicht über der Kopfzeile und nicht unter der Leiste unten auf dem Handy; sie verdeckt keine Knöpfe dauerhaft.
+- Erfolg: `role="status"`, verschwindet nach einigen Sekunden von selbst und lässt sich vorher schließen.
+- Fehler: `role="alert"`, bleibt stehen, bis man sie schließt oder die Aktion wiederholt; sagt, was passiert ist und was man tun kann.
+- Feldfehler bleiben zusätzlich am Feld (mit `aria-describedby`), damit man weiß, was zu korrigieren ist.
+- Kontrast, Fokus und Tastaturbedienung wie überall (WCAG 2.2 AA); die Meldung nimmt nicht den Fokus weg.
+
 ## 7. Texte
 
 - Deutsch. Anrede überall „du“, auch in den Ansichten für Betriebsrat und Geschäftsführung (entschieden).
