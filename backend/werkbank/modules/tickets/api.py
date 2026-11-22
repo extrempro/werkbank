@@ -20,7 +20,6 @@ from werkbank.core.admin_settings import ADDRESS_PATTERN
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, SettingsDep
 from werkbank.core.sessions import now_utc
-from werkbank.modules.inventory.models import InventoryHardware, InventoryKind
 from werkbank.modules.inventory.search import escape_like
 from werkbank.modules.tickets.access import (
     AccessDep,
@@ -183,14 +182,6 @@ class SlaOut(BaseModel):
     paused: bool
 
 
-class DeviceRef(BaseModel):
-    id: int
-    name: str
-    kind: str
-    inventory_no: str
-    serial: str
-
-
 class PermissionsOut(BaseModel):
     edit: bool
     note: bool
@@ -228,9 +219,8 @@ class TicketOut(TicketItem):
     categories: list[CategoryRef]
     reminder_note: str
     sla: SlaOut | None
-    # Rechte im IT-Bestand: Gerät und Angaben zum Melder sichtbar
+    # Rechte im IT-Bestand: Angaben zum Melder sichtbar
     inventory: bool
-    device: DeviceRef | None
     reporter_inventory: ReporterInventory | None
     merged_into: int | None
     retention: RetentionOut
@@ -399,7 +389,6 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
         if area is not None and area.sla_enabled and ticket.sla_solution_due is not None
         else None,
         inventory=access.inventory,
-        device=_device_ref(db, ticket.hardware_id) if access.inventory else None,
         reporter_inventory=reporter_inventory(db, ticket.reporter_mail)
         if access.inventory and ticket.reporter_mail
         else None,
@@ -430,22 +419,6 @@ def _merged_number(db: Session, ticket: Ticket) -> int | None:
     if ticket.merged_into_id is None:
         return None
     return db.scalar(select(Ticket.number).where(Ticket.id == ticket.merged_into_id))
-
-
-def _device_ref(db: Session, hardware_id: int | None) -> DeviceRef | None:
-    if hardware_id is None:
-        return None
-    hw = db.get(InventoryHardware, hardware_id)
-    if hw is None:
-        return None
-    kind = db.get(InventoryKind, hw.kind_id)
-    return DeviceRef(
-        id=hw.id,
-        name=hw.name,
-        kind=kind.name if kind else "",
-        inventory_no=hw.inventory_no or "",
-        serial=hw.serial,
-    )
 
 
 # --- Endpunkte -----------------------------------------------------------------------------

@@ -1222,7 +1222,7 @@ export const AREAS: readonly Area[] = [
           },
           {
             id: "arbeitshilfen",
-            title: "Arbeitshilfen: Kategorie, Frist, Erinnerung, Geräte, Textbausteine",
+            title: "Arbeitshilfen: Kategorie, Frist, Erinnerung, IT-Bestand, Textbausteine",
             blocks: [
               {
                 kind: "text",
@@ -1239,10 +1239,6 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "text",
                 text: "Meldet jemand dasselbe zweimal, führst du die Tickets zusammen. Der Verlauf wandert ins Ziel und ist dort mit „aus T-…“ gekennzeichnet; das alte Ticket wird geschlossen. Spätere Mails dazu landen im Ziel. Das lässt sich nicht rückgängig machen.",
-              },
-              {
-                kind: "text",
-                text: "Hast du Rechte im IT-Bestand, verknüpfst du ein Ticket mit einem Gerät aus dem IT-Bestand. Geräte des Melders stehen oben. Auf der Seite des Geräts im IT-Bestand stehen dann die Tickets dazu.",
               },
               {
                 kind: "text",

@@ -213,12 +213,9 @@ class Ticket(Base):
     created_by: Mapped[str] = mapped_column(String(256), default="", server_default="")
     # Erste Antwort an den Melder (für Fristen)
     first_response_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Phase 3: Kategorie, Gerät, Erinnerung, Zusammenführen, Zuständigkeit
+    # Phase 3: Kategorie, Erinnerung, Zusammenführen, Zuständigkeit
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("ticket_categories.id", ondelete="SET NULL"), index=True
-    )
-    hardware_id: Mapped[int | None] = mapped_column(
-        ForeignKey("inventory_hardware.id", ondelete="SET NULL"), index=True
     )
     reminder_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     reminder_note: Mapped[str] = mapped_column(String(120), default="", server_default="")

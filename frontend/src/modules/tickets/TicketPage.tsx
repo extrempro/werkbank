@@ -1,4 +1,13 @@
-import { useEffect, useId, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { ApiError, errorText, formatDateTime } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
@@ -20,8 +29,6 @@ import {
   RETENTION_ACTION_LABELS,
   retentionText,
   setHold,
-  searchDevices,
-  setDevice,
   ticketPath,
   formatSize,
   moveTicket,
@@ -718,95 +725,93 @@ function Facts({
 
   return (
     <aside className="ticket-side" aria-label="Angaben zum Ticket">
-      <div className="ticket-facts">
-        <div className="ticket-fact">
-          <span className="ticket-fact-label">Bereich</span>
-          <span>{ticket.area.name}</span>
-          {ticket.permissions.move && ticket.move_targets.length > 0 && (
-            <div className="ticket-move">
-              <label htmlFor={areaId} className="visually-hidden">
-                Verschieben nach
-              </label>
-              <select
-                id={areaId}
-                value={target}
-                onChange={(event) => setTarget(event.target.value)}
-              >
-                <option value="">Verschieben nach …</option>
-                {ticket.move_targets.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="button" disabled={!target} onClick={move}>
-                Verschieben
-              </button>
-            </div>
-          )}
-        </div>
-        <div className="ticket-fact">
-          <label htmlFor={priorityId} className="ticket-fact-label">
-            Priorität
-          </label>
-          {ticket.permissions.edit ? (
-            <select
-              id={priorityId}
-              value={ticket.priority}
-              onChange={(event) => changePriority(event.target.value as Priority)}
-            >
-              {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
-                <option key={p} value={p}>
-                  {PRIORITY_LABELS[p]}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span id={priorityId}>{PRIORITY_LABELS[ticket.priority]}</span>
-          )}
-        </div>
-        {(ticket.categories.length > 0 || ticket.category_id !== null) && (
+      <FactsFrame summary={factsSummary(ticket)}>
+        <div className="ticket-facts">
           <div className="ticket-fact">
-            <label htmlFor={categoryId} className="ticket-fact-label">
-              Kategorie
+            <span className="ticket-fact-label">Bereich</span>
+            <span>{ticket.area.name}</span>
+            {ticket.permissions.move && ticket.move_targets.length > 0 && (
+              <div className="ticket-move">
+                <label htmlFor={areaId} className="visually-hidden">
+                  Verschieben nach
+                </label>
+                <select
+                  id={areaId}
+                  value={target}
+                  onChange={(event) => setTarget(event.target.value)}
+                >
+                  <option value="">Verschieben nach …</option>
+                  {ticket.move_targets.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="button" disabled={!target} onClick={move}>
+                  Verschieben
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="ticket-fact">
+            <label htmlFor={priorityId} className="ticket-fact-label">
+              Priorität
             </label>
             {ticket.permissions.edit ? (
               <select
-                id={categoryId}
-                value={ticket.category_id ?? ""}
-                onChange={(event) =>
-                  changeFacts(
-                    ticket.priority,
-                    event.target.value ? Number(event.target.value) : null,
-                    "Die Kategorie",
-                  )
-                }
+                id={priorityId}
+                value={ticket.priority}
+                onChange={(event) => changePriority(event.target.value as Priority)}
               >
-                <option value="">Keine</option>
-                {ticket.categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
+                {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
+                  <option key={p} value={p}>
+                    {PRIORITY_LABELS[p]}
                   </option>
                 ))}
               </select>
             ) : (
-              <span id={categoryId}>{ticket.category || "–"}</span>
+              <span id={priorityId}>{PRIORITY_LABELS[ticket.priority]}</span>
             )}
           </div>
-        )}
-        {ticket.sla && <SlaFact sla={ticket.sla} />}
-        <Participants ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
-        {ticket.inventory && (
-          <DeviceSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
-        )}
-        {ticket.reporter_inventory && <ReporterInventorySection data={ticket.reporter_inventory} />}
-        {ticket.permissions.edit && ticket.status !== "merged" && (
-          <MergeSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
-        )}
-        {(ticket.retention.active || ticket.retention.hold_until !== null) && (
-          <RetentionSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
-        )}
-      </div>
+          {(ticket.categories.length > 0 || ticket.category_id !== null) && (
+            <div className="ticket-fact">
+              <label htmlFor={categoryId} className="ticket-fact-label">
+                Kategorie
+              </label>
+              {ticket.permissions.edit ? (
+                <select
+                  id={categoryId}
+                  value={ticket.category_id ?? ""}
+                  onChange={(event) =>
+                    changeFacts(
+                      ticket.priority,
+                      event.target.value ? Number(event.target.value) : null,
+                      "Die Kategorie",
+                    )
+                  }
+                >
+                  <option value="">Keine</option>
+                  {ticket.categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span id={categoryId}>{ticket.category || "–"}</span>
+              )}
+            </div>
+          )}
+          {ticket.sla && <SlaFact sla={ticket.sla} />}
+          <Participants ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
+          {ticket.reporter_inventory && (
+            <ReporterInventorySection data={ticket.reporter_inventory} />
+          )}
+          {(ticket.retention.active || ticket.retention.hold_until !== null) && (
+            <RetentionSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
+          )}
+        </div>
+      </FactsFrame>
       {dialog}
     </aside>
   );
@@ -977,6 +982,59 @@ function useSearch<T>(load: (q: string) => Promise<T[]>, active: boolean) {
   return { query, setQuery, items, failed };
 }
 
+const NARROW = "(max-width: 1000px)";
+
+/** Schmale Ansicht (Handy, Tablet hochkant): Angaben stehen dann unter dem Kopf. */
+export function useNarrow(): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      if (typeof window.matchMedia !== "function") {
+        return () => undefined;
+      }
+      const query = window.matchMedia(NARROW);
+      query.addEventListener("change", notify);
+      return () => query.removeEventListener("change", notify);
+    },
+    () => typeof window.matchMedia === "function" && window.matchMedia(NARROW).matches,
+  );
+}
+
+/** Kurzfassung der Angaben für den eingeklappten Block, z. B. „IT · Mittel · Drucker“. */
+export function factsSummary(ticket: Ticket): string {
+  const parts = [ticket.area.name, PRIORITY_LABELS[ticket.priority]];
+  if (ticket.category) {
+    parts.push(ticket.category);
+  }
+  if (ticket.sla_overdue) {
+    parts.push("Frist überschritten");
+  }
+  if (ticket.reporter_inventory?.positions[0]) {
+    parts.push(ticket.reporter_inventory.positions[0].number);
+  }
+  return parts.join(" · ");
+}
+
+/** Auf dem Handy ein eingeklappter Block „Angaben“ mit Kurzfassung, sonst die Spalte rechts. */
+function FactsFrame({ summary, children }: { summary: string; children: ReactNode }) {
+  const narrow = useNarrow();
+  const [open, setOpen] = useState(false);
+  if (!narrow) {
+    return <>{children}</>;
+  }
+  return (
+    <details
+      className="ticket-facts-toggle"
+      open={open}
+      onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
+    >
+      <summary>
+        <span className="ticket-facts-title">Angaben</span> <span className="small">{summary}</span>
+      </summary>
+      {children}
+    </details>
+  );
+}
+
 /** Melder im IT-Bestand: Stellen, Arbeitsplätze, Geräte, offene Verleihe (nur lesen). */
 function ReporterInventorySection({ data }: { data: ReporterInventory }) {
   const [open, setOpen] = useState(true);
@@ -1049,125 +1107,23 @@ function ReporterInventorySection({ data }: { data: ReporterInventory }) {
   );
 }
 
-/** Gerät aus dem IT-Bestand verknüpfen (höchstens 5 Treffer, Vorschläge des Melders zuerst). */
-function DeviceSection({
-  ticket,
-  onSaved,
-  onMessage,
-}: {
-  ticket: Ticket;
-  onSaved: (ticket: Ticket) => void;
-  onMessage: (message: FeedbackMessage) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const searchId = useId();
-  const canEdit = ticket.permissions.edit && ticket.status !== "merged";
-  const search = useSearch((q) => searchDevices(ticket.number, q), open && canEdit);
-
-  const save = (hardwareId: number | null) =>
-    setDevice(ticket.number, hardwareId)
-      .then((result) => {
-        onSaved(result);
-        setOpen(false);
-        onMessage({
-          kind: "status",
-          text: hardwareId === null ? "Das Gerät wurde gelöst." : "Das Gerät wurde verknüpft.",
-        });
-      })
-      .catch((problem: unknown) =>
-        onMessage({
-          kind: "alert",
-          text: errorText(problem, "Das Gerät konnte nicht gespeichert werden."),
-        }),
-      );
-
-  const device = ticket.device;
-  return (
-    <div className="ticket-fact">
-      <span className="ticket-fact-label">
-        Gerät
-        <InfoTip term="tickets.geraet" />
-      </span>
-      {device ? (
-        <span>
-          <Link to={hardwarePath(device.id)}>{device.name}</Link>
-          <span className="small">
-            {" "}
-            · {device.kind}
-            {device.inventory_no && ` · ${device.inventory_no}`}
-          </span>
-        </span>
-      ) : (
-        <span>–</span>
-      )}
-      {canEdit && (
-        <details
-          className="ticket-device"
-          open={open}
-          onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
-        >
-          <summary>{device ? "Anderes Gerät wählen" : "Gerät verknüpfen"}</summary>
-          <label htmlFor={searchId}>Name, Inventar- oder Seriennummer</label>
-          <input
-            id={searchId}
-            type="search"
-            value={search.query}
-            maxLength={100}
-            onChange={(event) => search.setQuery(event.target.value)}
-          />
-          {search.failed && (
-            <p className="small" role="alert">
-              Die Suche hat nicht geklappt.
-            </p>
-          )}
-          <ul className="ticket-pick-list" aria-live="polite">
-            {search.items.map((d) => (
-              <li key={d.id}>
-                <button
-                  type="button"
-                  className="button button-link"
-                  onClick={() => void save(d.id)}
-                >
-                  {d.name}
-                </button>
-                <span className="small">
-                  {" "}
-                  · {d.kind}
-                  {d.inventory_no && ` · ${d.inventory_no}`}
-                  {d.reporter && " · gehört dem Melder"}
-                </span>
-              </li>
-            ))}
-            {!search.failed && search.items.length === 0 && (
-              <li className="small">Keine passenden Geräte.</li>
-            )}
-          </ul>
-          {device && (
-            <button type="button" className="button" onClick={() => void save(null)}>
-              Gerät lösen
-            </button>
-          )}
-        </details>
-      )}
-    </div>
-  );
-}
-
 /** In ein anderes Ticket zusammenführen: Vorschläge, Suche, Bestätigung. */
-function MergeSection({
+function MergePanel({
   ticket,
   onSaved,
   onMessage,
+  onClose,
 }: {
   ticket: Ticket;
   onSaved: (ticket: Ticket) => void;
   onMessage: (message: FeedbackMessage) => void;
+  onClose: () => void;
 }) {
   const [ask, dialog] = useConfirm();
-  const [open, setOpen] = useState(false);
   const [notify, setNotify] = useState(true);
   const searchId = useId();
-  const search = useSearch((q) => fetchMergeCandidates(ticket.number, q), open);
+  const headingId = useId();
+  const search = useSearch((q) => fetchMergeCandidates(ticket.number, q), true);
 
   const merge = (target: Candidate) =>
     ask(
@@ -1182,7 +1138,7 @@ function MergeSection({
           .then(() => fetchTicket(ticket.number))
           .then((result) => {
             onSaved(result);
-            setOpen(false);
+            onClose();
             onMessage({
               kind: "status",
               text: `Das Ticket wurde in ${ticketLabel(target.number)} zusammengeführt.`,
@@ -1197,13 +1153,14 @@ function MergeSection({
     );
 
   return (
-    <div className="ticket-fact">
-      <details
-        className="ticket-merge"
-        open={open}
-        onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
-      >
-        <summary>Zusammenführen</summary>
+    <section className="ticket-merge-panel" aria-labelledby={headingId}>
+      <div className="ticket-merge-head">
+        <h2 id={headingId}>Zusammenführen</h2>
+        <button type="button" className="button button-secondary" onClick={onClose}>
+          Abbrechen
+        </button>
+      </div>
+      <div className="ticket-merge">
         <p className="small">
           Verlauf in ein anderes Ticket verschieben; dieses wird geschlossen.
           <InfoTip term="tickets.zusammenfuehren" />
@@ -1212,6 +1169,7 @@ function MergeSection({
         <input
           id={searchId}
           type="search"
+          autoFocus
           value={search.query}
           maxLength={200}
           onChange={(event) => search.setQuery(event.target.value)}
@@ -1248,9 +1206,9 @@ function MergeSection({
           />{" "}
           Melder benachrichtigen
         </label>
-      </details>
+      </div>
       {dialog}
-    </div>
+    </section>
   );
 }
 
@@ -1305,6 +1263,7 @@ export function TicketPage({ number }: { number: number }) {
   const reminderNoteId = useId();
   const assigneeId = useId();
   const noteId = useId();
+  const [merging, setMerging] = useState(false);
   // Eigene Objekt-ID kommt vom Server (für „Mir zuweisen“)
   const meOid = ticket?.me_oid || null;
 
@@ -1484,12 +1443,30 @@ export function TicketPage({ number }: { number: number }) {
               Mir zuweisen
             </button>
           )}
+          {canEdit && (
+            <button
+              type="button"
+              className="button button-secondary"
+              aria-expanded={merging}
+              onClick={() => setMerging((value) => !value)}
+            >
+              Zusammenführen
+            </button>
+          )}
           <p className="ticket-head-meta small">
             {ticket.reporter_name}
             {ticket.reporter_mail && ` (${ticket.reporter_mail})`} ·{" "}
             {CHANNEL_LABELS[ticket.channel]} · {formatDateTime(ticket.created_at)}
           </p>
         </div>
+        {merging && canEdit && (
+          <MergePanel
+            ticket={ticket}
+            onSaved={accept}
+            onMessage={setMessage}
+            onClose={() => setMerging(false)}
+          />
+        )}
         {ticket.anonymized_at !== null && (
           <p className="hint-box" role="note">
             Dieses Ticket wurde am {formatDateTime(ticket.anonymized_at)} nach der

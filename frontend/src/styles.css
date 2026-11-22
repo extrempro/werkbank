@@ -12671,3 +12671,49 @@ input[type="file"] {
 .ticket-template-preview .ticket-entry-body {
   white-space: pre-wrap;
 }
+
+.ticket-merge-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+}
+
+.ticket-merge-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ticket-merge-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ticket-merge {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ticket-facts-toggle > summary {
+  padding: 10px 14px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+  background: var(--farbe-flaeche);
+  cursor: pointer;
+}
+
+.ticket-facts-toggle[open] > summary {
+  margin-bottom: 8px;
+}
+
+.ticket-facts-title {
+  font-weight: 600;
+}

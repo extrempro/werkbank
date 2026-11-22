@@ -15,10 +15,6 @@ from sqlalchemy.orm import Session
 from werkbank.core.deps import DbDep, SettingsDep
 from werkbank.core.sessions import now_utc
 from werkbank.modules.inventory.models import (
-    InventoryHardware,
-    InventoryKind,
-    InventoryLoan,
-    InventoryLoanItem,
     InventoryPosition,
 )
 from werkbank.modules.inventory.search import escape_like
@@ -179,17 +175,7 @@ def merge_ticket(
     return _detail(db, settings, access, target)
 
 
-# --- Geräte ---------------------------------------------------------------------------------
-
-
-class DeviceOut(BaseModel):
-    id: int
-    name: str
-    kind: str
-    inventory_no: str
-    serial: str
-    # Gehört laut IT-Bestand dem Melder (Stelle oder Verleih)
-    reporter: bool
+# --- IT-Bestand: Tickets der Person an einer Stelle -----------------------------------------
 
 
 def _require_inventory(access: TicketAccess) -> None:
@@ -198,170 +184,34 @@ def _require_inventory(access: TicketAccess) -> None:
         raise forbidden("Geräte siehst du nur mit Rechten im IT-Bestand.")
 
 
-def _reporter_devices(db: Session, mail: str) -> set[int]:
-    if not mail:
-        return set()
-    lower = mail.lower()
-    ids = set(
-        db.scalars(
-            select(InventoryHardware.id)
-            .join(InventoryPosition, InventoryPosition.id == InventoryHardware.position_id)
-            .where(func.lower(InventoryPosition.person_upn) == lower)
-        )
-    )
-    ids |= set(
-        db.scalars(
-            select(InventoryLoanItem.hardware_id)
-            .join(InventoryLoan, InventoryLoan.id == InventoryLoanItem.loan_id)
-            .where(
-                InventoryLoanItem.returned_on.is_(None),
-                or_(
-                    func.lower(InventoryLoan.person_mail) == lower,
-                    func.lower(InventoryLoan.person_upn) == lower,
-                ),
-            )
-        )
-    )
-    return ids
-
-
-def _device_out(hw: InventoryHardware, kinds: dict[int, str], reporter: set[int]) -> DeviceOut:
-    return DeviceOut(
-        id=hw.id,
-        name=hw.name,
-        kind=kinds.get(hw.kind_id, ""),
-        inventory_no=hw.inventory_no or "",
-        serial=hw.serial,
-        reporter=hw.id in reporter,
-    )
-
-
-@router.get("/{number}/devices")
-def search_devices(
-    number: TicketNumber,
-    access: AccessDep,
-    db: DbDep,
-    q: Annotated[str, Query(max_length=60)] = "",
-) -> list[DeviceOut]:
-    """Aktive Geräte aus dem IT-Bestand, höchstens 5. Ohne Suche: Geräte des Melders."""
-    ticket = _visible_ticket(db, access, number)
-    if not access.can_edit(ticket.area_id):
-        raise forbidden("Mit „Nur lesen“ kannst du kein Gerät verknüpfen.")
-    _require_inventory(access)
-    kinds = dict(db.execute(select(InventoryKind.id, InventoryKind.name)).tuples().all())
-    query = select(InventoryHardware).where(InventoryHardware.status == "aktiv")
-    reporter = _reporter_devices(db, ticket.reporter_mail)
-    text = q.strip()
-    if text:
-        pattern = f"%{escape_like(text)}%"
-        query = query.where(
-            or_(
-                InventoryHardware.name.ilike(pattern, escape="\\"),
-                InventoryHardware.serial.ilike(pattern, escape="\\"),
-                InventoryHardware.inventory_no.ilike(pattern, escape="\\"),
-                InventoryHardware.hostname.ilike(pattern, escape="\\"),
-            )
-        )
-        rows = db.scalars(query.order_by(InventoryHardware.name).limit(HITS)).all()
-        return sorted(
-            (_device_out(hw, kinds, reporter) for hw in rows),
-            key=lambda d: (not d.reporter, d.name.lower()),
-        )
-    if not reporter:
-        return []
-    rows = db.scalars(
-        query.where(InventoryHardware.id.in_(reporter)).order_by(InventoryHardware.name).limit(HITS)
-    ).all()
-    return [_device_out(hw, kinds, reporter) for hw in rows]
-
-
-class DeviceIn(BaseModel):
-    hardware_id: int | None = Field(default=None, ge=1, le=2_000_000_000)
-
-
-@router.put("/{number}/device")
-def set_device(
-    number: TicketNumber, body: DeviceIn, access: AccessDep, db: DbDep, settings: SettingsDep
-) -> TicketOut:
-    """Gerät verknüpfen oder lösen."""
-    ticket = _visible_ticket(db, access, number, write=True)
-    if not access.can_edit(ticket.area_id):
-        raise forbidden("Mit „Nur lesen“ kannst du kein Gerät verknüpfen.")
-    _require_inventory(access)
-    me = actor(access)
-    if body.hardware_id is None:
-        if ticket.hardware_id is not None:
-            ticket.hardware_id = None
-            system_entry(db, ticket, "Gerät gelöst", me)
-    else:
-        hw = db.get(InventoryHardware, body.hardware_id)
-        if hw is None or hw.status != "aktiv":
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Dieses Gerät lässt sich hier nicht verknüpfen.",
-            )
-        ticket.hardware_id = hw.id
-        system_entry(
-            db,
-            ticket,
-            f"Gerät: {hw.name}" + (f" ({hw.inventory_no})" if hw.inventory_no else ""),
-            me,
-        )
-    protocol(
-        db,
-        me,
-        "ticket_geraet",
-        ticket=ticket,
-        details={"verknuepft": ticket.hardware_id is not None},
-    )
-    db.commit()
-    db.refresh(ticket)
-    return _detail(db, settings, access, ticket)
-
-
-class HardwareTicketOut(BaseModel):
+class TicketRefOut(BaseModel):
     number: int | None
     subject: str
     status: str
 
 
-class HardwareTicketsOut(BaseModel):
-    items: list[HardwareTicketOut]
+class TicketRefsOut(BaseModel):
+    items: list[TicketRefOut]
     # Tickets in Bereichen, die die Person nicht sieht (nur die Anzahl)
     hidden: int
 
 
-@router.get("/by-hardware/{hardware_id}")
-def tickets_for_hardware(hardware_id: ItemId, access: AccessDep, db: DbDep) -> HardwareTicketsOut:
-    """Tickets zu einem Gerät (für die Seite im IT-Bestand); nur mit Rechten im IT-Bestand."""
-    _require_inventory(access)
-    rows = db.scalars(
-        select(Ticket)
-        .where(Ticket.hardware_id == hardware_id)
-        .order_by(Ticket.updated_at.desc())
-        .limit(50)
-    ).all()
-    return _ticket_refs(access, rows)
-
-
-def _ticket_refs(access: TicketAccess, rows: Sequence[Ticket]) -> HardwareTicketsOut:
+def _ticket_refs(access: TicketAccess, rows: Sequence[Ticket]) -> TicketRefsOut:
     """Tickets aus eigenen Bereichen einzeln, die übrigen nur als Anzahl."""
-    items: list[HardwareTicketOut] = []
+    items: list[TicketRefOut] = []
     hidden = 0
     for ticket in rows:
         if access.can_read(ticket.area_id):
             items.append(
-                HardwareTicketOut(
-                    number=ticket.number, subject=ticket.subject, status=ticket.status
-                )
+                TicketRefOut(number=ticket.number, subject=ticket.subject, status=ticket.status)
             )
         else:
             hidden += 1
-    return HardwareTicketsOut(items=items, hidden=hidden)
+    return TicketRefsOut(items=items, hidden=hidden)
 
 
 @router.get("/by-position/{position_id}")
-def tickets_for_position(position_id: ItemId, access: AccessDep, db: DbDep) -> HardwareTicketsOut:
+def tickets_for_position(position_id: ItemId, access: AccessDep, db: DbDep) -> TicketRefsOut:
     """Tickets der Person an einer Stelle (Melder-Mail = UPN); nur mit Rechten im IT-Bestand."""
     _require_inventory(access)
     position = db.get(InventoryPosition, position_id)
@@ -369,7 +219,7 @@ def tickets_for_position(position_id: ItemId, access: AccessDep, db: DbDep) -> H
         raise not_found()
     upn = position.person_upn.strip().lower()
     if not upn:
-        return HardwareTicketsOut(items=[], hidden=0)
+        return TicketRefsOut(items=[], hidden=0)
     rows = db.scalars(
         select(Ticket)
         .where(func.lower(Ticket.reporter_mail) == upn)

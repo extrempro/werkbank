@@ -321,11 +321,6 @@ export const HELP = {
     text: "Vorgefertigte Antworten und Notizen, die du im Antwortfeld mit Schrägstrich und Kürzel einfügst, zum Beispiel /drucker. Platzhalter wie {Vorname} werden ersetzt.",
     topic: ["tickets", "arbeitshilfen"],
   },
-  "tickets.geraet": {
-    term: "Gerät",
-    text: "Verknüpft das Ticket mit einem Gerät aus dem IT-Bestand. Das geht nur mit Rechten im IT-Bestand; auf der Seite des Geräts stehen dann die Tickets dazu.",
-    topic: ["tickets", "arbeitshilfen"],
-  },
   "tickets.aufbewahrung": {
     term: "Aufbewahrung",
     text: "Wie lange geschlossene Tickets bleiben, bevor ein täglicher Lauf sie anonymisiert oder löscht. Ausgeschaltet bleibt alles erhalten.",

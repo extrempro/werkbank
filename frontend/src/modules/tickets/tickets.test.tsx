@@ -84,7 +84,6 @@ function ticket(extra: Partial<Ticket> = {}): Ticket {
     reminder_note: "",
     sla: null,
     inventory: false,
-    device: null,
     reporter_inventory: null,
     merged_into: null,
     retention: {

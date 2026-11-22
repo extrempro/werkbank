@@ -1,6 +1,4 @@
 import { useConfirm } from "../../components/ConfirmDialog";
-import { fetchHardwareTickets } from "../tickets/api";
-import { RelatedTickets } from "../tickets/RelatedTickets";
 import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
@@ -881,12 +879,7 @@ export function HardwareDetailPage({
             />
           )}
           {tab === "technik" && <TechTab device={device} canEdit={canEdit} onChange={setDevice} />}
-          {tab === "verlauf" && (
-            <>
-              <History device={device} />
-              <RelatedTickets key={device.id} load={() => fetchHardwareTickets(device.id)} />
-            </>
-          )}
+          {tab === "verlauf" && <History device={device} />}
         </>
       )}
     </div>

@@ -143,9 +143,8 @@ export interface Ticket extends TicketItem {
   categories: Category[];
   reminder_note: string;
   sla: Sla | null;
-  /** Rechte im IT-Bestand: Gerät und Angaben zum Melder sichtbar. */
+  /** Rechte im IT-Bestand: Angaben zum Melder sichtbar. */
   inventory: boolean;
-  device: Device | null;
   reporter_inventory: ReporterInventory | null;
   merged_into: number | null;
   retention: TicketRetention;
@@ -188,16 +187,6 @@ export interface ReporterInventory {
     devices: { id: number; name: string; kind: string; inventory_no: string }[];
   }[];
   loans: { id: number; number: string; due_on: string; overdue: boolean; items: number }[];
-}
-
-export interface Device {
-  id: number;
-  name: string;
-  kind: string;
-  inventory_no: string;
-  serial: string;
-  /** Gehört laut IT-Bestand dem Melder. */
-  reporter?: boolean;
 }
 
 export function ticketLabel(number: number): string {
@@ -570,21 +559,9 @@ export function mergeTicket(
   return postJson(`${BASE}/${number}/merge`, { target, notify_reporter: notifyReporter });
 }
 
-export function searchDevices(number: number, q: string): Promise<Device[]> {
-  return getJson(`${BASE}/${number}/devices?${new URLSearchParams({ q }).toString()}`);
-}
-
-export function setDevice(number: number, hardwareId: number | null): Promise<Ticket> {
-  return putJson(`${BASE}/${number}/device`, { hardware_id: hardwareId });
-}
-
-export interface HardwareTickets {
+export interface TicketRefs {
   items: { number: number; subject: string; status: TicketStatus }[];
   hidden: number;
-}
-
-export function fetchHardwareTickets(hardwareId: number): Promise<HardwareTickets> {
-  return getJson(`${BASE}/by-hardware/${hardwareId}`);
 }
 
 export interface Template {
@@ -894,7 +871,7 @@ export function auditDetails(details: Record<string, unknown>): string {
 
 // --- IT-Bestand und Melder aus Entra --------------------------------------------------------
 
-export function fetchPositionTickets(positionId: number): Promise<HardwareTickets> {
+export function fetchPositionTickets(positionId: number): Promise<TicketRefs> {
   return getJson(`${BASE}/by-position/${positionId}`);
 }
 
