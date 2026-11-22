@@ -505,9 +505,13 @@ def start_collect(request: Request, user: Admin, db: DbDep, settings: SettingsDe
 
 
 @router.get("/snapshots")
-def list_snapshots(user: Reader, db: DbDep, limit: Limit = 50) -> list[SnapshotOut]:
-    """Abrufe, neueste zuerst."""
-    rows = db.scalars(select(CfgSnapshot).order_by(CfgSnapshot.id.desc()).limit(limit)).all()
+def list_snapshots(
+    user: Reader, db: DbDep, limit: Limit = 50, offset: Offset = 0
+) -> list[SnapshotOut]:
+    """Abrufe, neueste zuerst (seitenweise)."""
+    rows = db.scalars(
+        select(CfgSnapshot).order_by(CfgSnapshot.id.desc()).offset(offset).limit(limit)
+    ).all()
     return [_snapshot_out(row) for row in rows]
 
 

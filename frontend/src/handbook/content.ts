@@ -490,7 +490,11 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Jeder Abruf ist ein Snapshot mit Zeitpunkt, Status und Zahl der Änderungen. Schlägt ein Abruf fehl, zeigt die Liste den Fehler, und die Verwaltung bekommt eine Aufgabe. Fehlt dabei eine Quelle, gelten ihre Einstellungen nicht als entfernt.",
+                text: "Jeder Abruf ist ein Snapshot mit Zeitpunkt, Status und Zahl der Änderungen. Schlägt ein Abruf fehl, bekommt die Verwaltung eine Aufgabe. Fehlt dabei eine Quelle, gelten ihre Einstellungen nicht als entfernt.",
+              },
+              {
+                kind: "text",
+                text: "Die Liste zeigt zuerst die letzten 10 Abrufe; über „Weitere 10 anzeigen“ holst du ältere dazu. Bei den Quellen steht nur, wie viele vollständig gelesen wurden und wie viele einen Fehler hatten. Aufgeklappt siehst du die Fehler, zusammengefasst nach der fehlenden Berechtigung, und welche Typen betroffen sind. Abrufe ohne Änderungen löscht die Werkbank nach einiger Zeit (Vorgabe 90 Tage); Abrufe mit Änderungen und die letzten 10 bleiben immer erhalten.",
               },
               {
                 kind: "text",

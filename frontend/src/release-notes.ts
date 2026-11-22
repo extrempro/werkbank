@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.96.0",
+    date: "2026-11-22",
+    summary: "M365-Konfiguration: Die Snapshot-Seite ist übersichtlicher.",
+    sections: [
+      {
+        area: "M365-Konfiguration",
+        entries: [
+          "Die Snapshots zeigen zuerst die letzten 10 Abrufe. Ältere holst du mit „Weitere 10 anzeigen“ dazu.",
+          "Bei den Quellen steht nur noch, wie viele vollständig gelesen wurden und wie viele einen Fehler hatten. Aufgeklappt siehst du die Fehler, zusammengefasst nach der fehlenden Berechtigung.",
+          "Alte Abrufe ohne Änderungen löscht die Werkbank nach einiger Zeit. Abrufe mit Änderungen und die letzten 10 bleiben erhalten.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.95.0",
     date: "2026-11-22",
     summary: "IT-Bestand: Die Statistik ist neu aufgebaut.",

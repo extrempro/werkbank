@@ -619,3 +619,13 @@ def test_snapshot_export_needs_config_role(db: Session) -> None:
         client.get(f"{BASE}/snapshots/compare", params={"from": first, "to": first}).status_code
         == 403
     )
+
+
+def test_snapshot_list_is_paged(db: Session) -> None:
+    first, second = snapshot_ids(db)
+    client = client_for(["Config.Reader"], "oid-paged")
+    page = client.get(f"{BASE}/snapshots", params={"limit": 1}).json()
+    assert [item["id"] for item in page] == [second]
+    page = client.get(f"{BASE}/snapshots", params={"limit": 1, "offset": 1}).json()
+    assert [item["id"] for item in page] == [first]
+    assert client.get(f"{BASE}/snapshots", params={"offset": -1}).status_code == 422

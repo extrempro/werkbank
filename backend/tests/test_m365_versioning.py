@@ -276,3 +276,37 @@ def test_new_source_later_is_its_own_baseline(db: Session) -> None:
     )
     db.commit()
     assert (result.baseline, result.changes) == (1, 0)
+
+
+@pytest.mark.db
+def test_prune_keeps_history_and_latest(db: Session) -> None:
+    from datetime import timedelta
+
+    from werkbank.config import Settings
+    from werkbank.core.sessions import now_utc
+    from werkbank.modules.m365_config.retention import KEEP_LATEST, prune_snapshots
+
+    # Ausgangsstand: hängt am Verlauf (Versionen), bleibt immer
+    apply_snapshot(db, policy("p1", "MFA", state="enabled"), {SOURCE: True})
+    # Viele Abrufe ohne Änderung
+    for _ in range(KEEP_LATEST + 5):
+        apply_snapshot(db, policy("p1", "MFA", state="enabled"), {SOURCE: True})
+    db.commit()
+    old = now_utc() - timedelta(days=200)
+    for snapshot in db.scalars(select(CfgSnapshot)):
+        snapshot.started_at = old
+    db.commit()
+    total = len(db.scalars(select(CfgSnapshot.id)).all())
+
+    settings = Settings(collector_snapshot_keep_days=90)
+    removed = prune_snapshots(db, settings)
+    db.commit()
+    left = db.scalars(select(CfgSnapshot.id).order_by(CfgSnapshot.id)).all()
+    assert removed == total - KEEP_LATEST - 1
+    assert len(left) == KEEP_LATEST + 1
+    # Der Abruf mit dem Ausgangsstand ist noch da
+    first_version = db.scalars(select(CfgSettingVersion.snapshot_id)).first()
+    assert first_version in left
+
+    # 0 = nie löschen
+    assert prune_snapshots(db, Settings(collector_snapshot_keep_days=0)) == 0
