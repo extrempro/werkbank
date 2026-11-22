@@ -73,6 +73,17 @@ Jede Aktion mit Folgen fragt vorher in einem **Bestätigungsdialog** nach (`comp
 - **Gerät:** PC und Tablet ein Fenster in der Mitte, Handy ein Blatt von unten mit großen Knöpfen untereinander (Aktion oben).
 - **Bedienung:** Der Fokus startet auf „Abbrechen“; Esc, Klick daneben und am Handy Wischen nach unten brechen ab. Während die Aktion läuft, bleibt der Dialog offen und gesperrt; Fehler zeigt die Seite danach an.
 
+### Rückmeldungen
+
+Gilt auf PC, Tablet und Handy.
+
+- Jede Rückmeldung nach einer Aktion (gespeichert, gelöscht, gesendet, Fehler) erscheint **immer im sichtbaren Bereich**, unabhängig davon, wie lang die Seite ist und wo gerade gescrollt ist. Eine Meldung nur an der Stelle im Formular reicht nicht, wenn sie außerhalb des Bildschirms liegen kann.
+- Ort: fest am Bildschirmrand, nicht über der Kopfzeile und nicht unter der Leiste unten auf dem Handy; sie verdeckt keine Knöpfe dauerhaft.
+- Erfolg: `role="status"`, verschwindet nach einigen Sekunden von selbst und lässt sich vorher schließen.
+- Fehler: `role="alert"`, bleibt stehen, bis man sie schließt oder die Aktion wiederholt; sagt, was passiert ist und was man tun kann.
+- Feldfehler bleiben zusätzlich am Feld (mit `aria-describedby`), damit man weiß, was zu korrigieren ist.
+- Kontrast, Fokus und Tastaturbedienung wie überall (WCAG 2.2 AA); die Meldung nimmt nicht den Fokus weg.
+
 ## 4. Status-Badges
 
 Einheitlich für die ganze App, immer mit Text (nie nur Farbe):

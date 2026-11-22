@@ -4,6 +4,10 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+### Dokumentation
+
+- Neue Regel: Rückmeldungen nach einer Aktion stehen auf PC, Tablet und Handy immer im sichtbaren Bereich (`CLAUDE.md`, `docs/design.md` › Rückmeldungen)
+
 ## [0.92.0] – 2026-11-22
 
 ### IT-Monitoring
