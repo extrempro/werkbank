@@ -809,7 +809,7 @@ Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Ei
 - **Protokoll „Letzte Eingänge“** je Postfach: Zeitpunkt, Absender, Betreff, Ergebnis (neues Ticket, Antwort zu T-…, zu prüfen, ignoriert mit Grund, Fehler). Einträge ohne Ticket löscht der stündliche Wartungslauf nach `intake_log_days` (je Bereich, Vorgabe 90, 7 bis 3650); Einträge zu einem Ticket gehen mit dessen Aufbewahrung.
 - **„Zu prüfen“:** Neue Einträge melden sich bei der Bereichsverwaltung (`tickets.pruefen`, nur Bereich und Link). Ohne Entscheidung verwirft der Abruf sie nach `review_days` (je Bereich, Vorgabe 30, 1 bis 365): erst in „Ignoriert“ verschieben, dann löschen; klappt das Verschieben nicht, bleibt der Eintrag. Protokoll `pruefen_verfallen`.
 - **Antwort auf ein geschlossenes Ticket:** wieder öffnen innerhalb von X Tagen (Vorgabe 14), danach neues Ticket mit Verweis; immer wieder öffnen; immer neues Ticket.
-- **Nur der neue Teil:** Beim Einlesen von Antworten übernimmt die Werkbank nur den Text oberhalb der Zeile „Bitte oberhalb dieser Zeile antworten.“ bzw. vor erkannten Zitaten (`>`, „Am … schrieb …“, „Von: … Gesendet: …“, Outlook-Trennlinie). Der Rest wird als eingeklapptes Zitat gespeichert.
+- **Nur der neue Teil:** Beim Einlesen von Antworten übernimmt die Werkbank nur den Text oberhalb der Zeile „Bitte antworte oberhalb dieser Zeile.“ bzw. vor erkannten Zitaten (`>`, „Am … schrieb …“, „Von: … Gesendet: …“, Outlook-Trennlinie). Der Rest wird als eingeklapptes Zitat gespeichert.
 
 ### Mails an den Melder
 
@@ -817,7 +817,7 @@ Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Ei
 - **Eingangsbestätigung** optional, eigener Text je Bereich, Platzhalter {Nr}, {Betreff}, {Name}.
 - **Automatische Mails** je Bereich: In Arbeit (aus), Wechsel der Zuständigkeit (aus), Wartet auf Rückmeldung (an, zusammen mit der Rückfrage), Gelöst (an), Geschlossen (aus), Frist nicht eingehalten (aus; nur sichtbar bei Bereichen mit Fristen).
 - **Gestaltung:** global (Ticket-Verwaltung) Logo, Akzentfarbe, Fußzeile, Datenschutz-Link; je Bereich Absendername, Titel der Kopfzeile, Signatur.
-- **Technik:** HTML mit Tabellenlayout und Inline-CSS, immer zusätzlich Text; Logo per CID eingebettet; keine Zählpixel, keine externen Ressourcen; lesbar im dunklen Modus. Oben „Bitte oberhalb dieser Zeile antworten.“. Platzhalter werden beim Einsetzen escaped.
+- **Technik:** HTML mit Tabellenlayout und Inline-CSS, immer zusätzlich Text; Logo per CID eingebettet; keine Zählpixel, keine externen Ressourcen; lesbar im dunklen Modus. Oben „Bitte antworte oberhalb dieser Zeile.“. Platzhalter werden beim Einsetzen escaped.
 
 ### Textbausteine (je Bereich)
 

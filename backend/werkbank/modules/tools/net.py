@@ -257,7 +257,7 @@ def valid_rdap(kind: str, value: str) -> str:
     if kind == "domain":
         name = valid_name(clean)
         if "." not in name:
-            raise NetError("Bitte eine Domain mit Endung angeben, z. B. example.com.")
+            raise NetError("Bitte gib eine Domain mit Endung an, z. B. example.com.")
         return name
     if kind == "autnum":
         digits = clean.upper().removeprefix("AS").strip()
@@ -302,7 +302,7 @@ def rdap_lookup(fetch: Fetcher, kind: str, value: str) -> tuple[str, Any]:
         if result.status == 404:
             raise NetError("Nicht gefunden: Die Domain ist vermutlich nicht registriert.")
         if result.status == 429:
-            raise NetError("Zu viele Anfragen: Der RDAP-Server bremst. Bitte kurz warten.")
+            raise NetError("Zu viele Anfragen: Der RDAP-Server bremst. Bitte warte kurz.")
         if result.status != 200:
             raise NetError(f"{host} antwortet mit HTTP {result.status}.")
         try:
@@ -345,7 +345,7 @@ def crtsh_names(fetch: Fetcher, domain: str) -> list[dict[str, str]]:
     url = f"{CRTSH_URL}?q={quote('%.' + clean)}&output=json&deduplicate=Y"
     result = fetch("GET", url, None, {"Accept": "application/json"}, CRTSH_TIMEOUT, CRTSH_MAX_BYTES)
     if result.status in (502, 503, 504):
-        raise NetError("crt.sh ist gerade überlastet. Bitte später erneut versuchen.")
+        raise NetError("crt.sh ist gerade überlastet. Bitte versuch es später erneut.")
     if result.status != 200:
         raise NetError(f"crt.sh antwortet mit HTTP {result.status}.")
     try:

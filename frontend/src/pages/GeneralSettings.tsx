@@ -89,7 +89,7 @@ export function GeneralSettings({ settings, onChange, parts = ALL_PARTS }: Gener
       .catch((error: unknown) => {
         setSmtpMessage({
           kind: "alert",
-          text: errorText(error, "Die Angaben konnten nicht gespeichert werden. Bitte prüfen."),
+          text: errorText(error, "Die Angaben konnten nicht gespeichert werden. Bitte prüf sie."),
         });
       })
       .finally(() => setBusy(false));
@@ -102,7 +102,7 @@ export function GeneralSettings({ settings, onChange, parts = ALL_PARTS }: Gener
       .then((result) => {
         setSmtpMessage({
           kind: "status",
-          text: `Die Testmail ist an ${result.recipient} unterwegs. Bitte im Postfach nachsehen.`,
+          text: `Die Testmail ist an ${result.recipient} unterwegs. Bitte sieh im Postfach nach.`,
         });
       })
       .catch((error: unknown) => {
@@ -128,7 +128,7 @@ export function GeneralSettings({ settings, onChange, parts = ALL_PARTS }: Gener
           kind: "alert",
           text: errorText(
             error,
-            `Bitte eine Zahl zwischen ${settings.audit_retention_min} und ${settings.audit_retention_max} eintragen.`,
+            `Bitte trag eine Zahl zwischen ${settings.audit_retention_min} und ${settings.audit_retention_max} ein.`,
           ),
         });
       })

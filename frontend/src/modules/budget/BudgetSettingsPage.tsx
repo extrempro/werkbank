@@ -28,7 +28,7 @@ function SettingsForm({ initial }: { initial: BudgetSettings }) {
     if (!yearLabel.trim()) {
       setMessage({
         kind: "alert",
-        text: "Bitte eine Bezeichnung für das Geschäftsjahr eintragen.",
+        text: "Bitte trag eine Bezeichnung für das Geschäftsjahr ein.",
       });
       return;
     }
@@ -122,7 +122,7 @@ function TagRow({ tag, onChanged }: { tag: TagCount; onChanged: (text: string) =
   const onRename = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Bitte einen Namen eintragen.");
+      setError("Bitte trag einen Namen ein.");
       return;
     }
     setBusy(true);
@@ -237,7 +237,7 @@ function TagsSection() {
   const onAdd = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setMessage({ kind: "alert", text: "Bitte einen Namen für den Tag eintragen." });
+      setMessage({ kind: "alert", text: "Bitte trag einen Namen für den Tag ein." });
       return;
     }
     setBusy(true);

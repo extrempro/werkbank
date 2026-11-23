@@ -85,7 +85,7 @@ _NUMBER = re.compile(r"^\s*(?:t-?)?(\d{1,12})\s*$", re.IGNORECASE)
 def _mail(value: str) -> str:
     value = value.strip().lower()
     if not ADDRESS_PATTERN.match(value):
-        raise ValueError("Bitte eine gültige Mailadresse angeben.")
+        raise ValueError("Bitte gib eine gültige Mailadresse an.")
     return value
 
 

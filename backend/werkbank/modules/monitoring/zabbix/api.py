@@ -897,7 +897,7 @@ def mark_unmonitored(
     device = _active_device(db, hardware_id)
     reason = body.reason.strip()[:200]
     if not reason:
-        raise HTTPException(status_code=422, detail="Bitte kurz begründen.")
+        raise HTTPException(status_code=422, detail="Bitte begründe kurz.")
     entry = db.get(ZbxUnmonitored, device.id)
     if entry is None:
         db.add(ZbxUnmonitored(hardware_id=device.id, reason=reason))

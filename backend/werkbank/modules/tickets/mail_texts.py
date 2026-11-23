@@ -57,7 +57,9 @@ EVENT_TEXTS = {
     ),
 }
 
-REPLY_ABOVE = "Bitte oberhalb dieser Zeile antworten."
+REPLY_ABOVE = "Bitte antworte oberhalb dieser Zeile."
+# Frühere Fassung der Zeile; Antworten auf ältere Mails tragen sie noch im Zitat
+REPLY_ABOVE_OLD = "Bitte oberhalb dieser Zeile antworten."
 
 _PLACEHOLDER = re.compile(r"\{(Nr|Betreff|Name|Vorname|Bearbeiter|Datum)\}")
 

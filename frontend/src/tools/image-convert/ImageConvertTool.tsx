@@ -492,7 +492,7 @@ export default function ImageConvertTool() {
         <p className="small">{info.hint}</p>
         {formatUnsupported && (
           <ErrorBox>
-            Dieser Browser kann {info.label} nicht erzeugen. Bitte ein anderes Format wählen.
+            Dieser Browser kann {info.label} nicht erzeugen. Bitte wähle ein anderes Format.
           </ErrorBox>
         )}
       </ToolSection>

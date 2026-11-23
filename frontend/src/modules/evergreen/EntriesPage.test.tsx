@@ -322,7 +322,7 @@ describe("EntriesPage", () => {
     fireEvent.click(await screen.findByRole("tab", { name: "Notizen und Verlauf" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Notiz anfügen" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Bitte eine Notiz eingeben.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte gib eine Notiz ein.");
 
     fireEvent.change(screen.getByLabelText("Notiz"), {
       target: { value: "  Mit Fachabteilung klären " },
@@ -344,7 +344,7 @@ describe("EntriesPage", () => {
     render(<EntriesPage software="m365" entryId={null} roles={["Evergreen.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Neuer Eintrag" }));
     fireEvent.click(screen.getByRole("button", { name: "Anlegen" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Bitte einen Titel eingeben.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte gib einen Titel ein.");
     fireEvent.change(screen.getByLabelText("Titel"), {
       target: { value: "Neuerung aus der Presse" },
     });

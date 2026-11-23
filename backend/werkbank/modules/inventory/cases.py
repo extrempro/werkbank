@@ -305,7 +305,9 @@ def _kind_by_name(db: Session, name: str) -> InventoryKind:
         select(InventoryKind).where(func.lower(InventoryKind.name) == name.casefold())
     ).first()
     if kind is None:
-        raise _conflict(f"Die Hardware-Art „{name}“ fehlt in den Stammdaten. Bitte zuerst anlegen.")
+        raise _conflict(
+            f"Die Hardware-Art „{name}“ fehlt in den Stammdaten. Bitte leg sie zuerst an."
+        )
     return kind
 
 
@@ -335,11 +337,11 @@ def _create_from_case(
     room = None
     if body.decision == "stelle":
         if body.position_id is None:
-            raise _invalid("Bitte eine Stelle wählen.")
+            raise _invalid("Bitte wähle eine Stelle.")
         position, workplace = _holder(db, body.position_id, None)
     elif body.decision == "arbeitsplatz":
         if body.workplace_id is None:
-            raise _invalid("Bitte einen Arbeitsplatz wählen.")
+            raise _invalid("Bitte wähle einen Arbeitsplatz.")
         position, workplace = _holder(db, None, body.workplace_id)
     else:
         room = _room(db, body.room_id)
@@ -422,11 +424,11 @@ def _decide_monitor(
         raise _conflict("Ein Gerät mit dieser Seriennummer ist schon im Bestand.")
     if body.decision == "arbeitsplatz":
         if body.workplace_id is None:
-            raise _invalid("Bitte einen Arbeitsplatz wählen.")
+            raise _invalid("Bitte wähle einen Arbeitsplatz.")
         position, workplace = _holder(db, None, body.workplace_id)
     else:
         if body.position_id is None:
-            raise _invalid("Bitte eine Stelle wählen.")
+            raise _invalid("Bitte wähle eine Stelle.")
         position, workplace = _holder(db, body.position_id, None)
     host_id = facts.get("host_id")
     host = db.get(InventoryHardware, host_id) if isinstance(host_id, int) else None
@@ -440,7 +442,7 @@ def _decide_monitor(
         )
     except LookupError as exc:
         raise _conflict(
-            "Die Hardware-Art „Monitor“ fehlt in den Stammdaten. Bitte zuerst anlegen."
+            "Die Hardware-Art „Monitor“ fehlt in den Stammdaten. Bitte leg sie zuerst an."
         ) from exc
     add_event(
         db,
@@ -494,7 +496,7 @@ def _decide_loan(
         if loan is None or loan.returned_on is not None:
             raise _conflict("Der Verleih ist schon zurück.")
         if body.due_on is None:
-            raise _invalid("Bitte ein neues Rückgabedatum wählen.")
+            raise _invalid("Bitte wähle ein neues Rückgabedatum.")
         set_due(db, loan, body.due_on, user)
         details["rueckgabe_bis"] = body.due_on.isoformat()
         _close(
@@ -544,7 +546,7 @@ def _decide_person(
         _close(db, user, row, "frei", "Entschieden: Stelle frei gemacht")
         return
     if body.person_oid is None:
-        raise _invalid("Bitte die neue Person wählen.")
+        raise _invalid("Bitte wähle die neue Person.")
     try:
         person = lookup(body.person_oid.lower())
     except PeopleError as exc:
@@ -697,7 +699,7 @@ def decide_case(
         elif body.decision == "gleich":
             target = db.get(InventoryHardware, body.hardware_id) if body.hardware_id else None
             if target is None:
-                raise _invalid("Bitte das vorhandene Gerät wählen.")
+                raise _invalid("Bitte wähle das vorhandene Gerät.")
             if target.ninja_id is not None and target.ninja_id != row.ninja_id:
                 # Das alte Gerät war mit einem anderen NinjaOne-Eintrag verknüpft, etwa vor einem
                 # Mainboardtausch. Dessen offener Vorgang „fehlt“ erledigt sich damit.

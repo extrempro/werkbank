@@ -236,11 +236,11 @@ describe("Import", () => {
       target: { value: "10,00" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und weiter" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Bitte einen Partner wählen");
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte wähle einen Partner");
     fireEvent.click(screen.getByLabelText("Als neuen Partner anlegen"));
     fireEvent.change(screen.getByLabelText("Konto"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und weiter" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Bitte ein Konto wählen");
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte wähle ein Konto");
   });
 
   it("übernimmt Zeilen mit „Jährlich“ in die Planung, ihr Posten läuft weiter", async () => {

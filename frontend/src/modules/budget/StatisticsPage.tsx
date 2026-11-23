@@ -288,7 +288,7 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
   const onSave = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setMessage({ kind: "alert", text: "Bitte einen Namen für die Statistik eintragen." });
+      setMessage({ kind: "alert", text: "Bitte trag einen Namen für die Statistik ein." });
       return;
     }
     setBusy(true);
@@ -854,7 +854,7 @@ export function StatisticsPage({ roles }: { roles: readonly string[] }) {
                     Alle gewählten Tags müssen am Posten stehen (sonst je Tag einzeln)
                   </label>
                   {chosen.length === 0 ? (
-                    <p className="small budget-muted">Bitte mindestens einen Tag wählen.</p>
+                    <p className="small budget-muted">Bitte wähle mindestens einen Tag.</p>
                   ) : (
                     <>
                       {comparisonControls(false)}

@@ -336,7 +336,7 @@ function NewEntryForm({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Bitte einen Namen eintragen.");
+      setError("Bitte trag einen Namen ein.");
       return;
     }
     setError(null);
@@ -421,7 +421,7 @@ function RenameDelete({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!value.trim()) {
-      setError("Bitte einen Namen eintragen.");
+      setError("Bitte trag einen Namen ein.");
       return;
     }
     onRename(value.trim(), extraValue).then(
@@ -611,7 +611,7 @@ function RoomPanel({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Bitte einen Namen eintragen.");
+      setError("Bitte trag einen Namen ein.");
       return;
     }
     const numbers = {
@@ -621,7 +621,7 @@ function RoomPanel({
       h: Number(rect.h.replace(",", ".")),
     };
     if (Object.values(numbers).some((value) => !Number.isFinite(value))) {
-      setError("Bitte Zahlen für die Lage eintragen.");
+      setError("Bitte trag Zahlen für die Lage ein.");
       return;
     }
     setError(null);
@@ -744,7 +744,7 @@ function NewRoomForm({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Bitte einen Namen für den Raum eintragen.");
+      setError("Bitte trag einen Namen für den Raum ein.");
       return;
     }
     onSave(name.trim()).catch((problem: unknown) =>

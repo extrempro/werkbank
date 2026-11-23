@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { greeting, initials, roleLabel } from "./user";
+import { firstName, greeting, initials, roleLabel } from "./user";
 
 describe("initials", () => {
   it("nimmt den ersten und den letzten Namensteil", () => {
@@ -26,7 +26,10 @@ describe("roleLabel", () => {
 describe("greeting", () => {
   it("richtet sich nach der Tageszeit", () => {
     expect(greeting(new Date(2026, 10, 14, 8, 0))).toBe("Guten Morgen");
-    expect(greeting(new Date(2026, 10, 14, 13, 0))).toBe("Guten Tag");
+    expect(greeting(new Date(2026, 10, 14, 13, 0))).toBe("Hallo");
     expect(greeting(new Date(2026, 10, 14, 19, 30))).toBe("Guten Abend");
+    expect(firstName("Ina Beispiel")).toBe("Ina");
+    expect(firstName("Beispiel, Ina (IT)")).toBe("Ina");
+    expect(firstName("Ina")).toBe("Ina");
   });
 });

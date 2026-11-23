@@ -19,7 +19,7 @@ export default function AmortizationTool() {
   try {
     const returns = num(params.rueckfluss);
     if (Number.isNaN(returns)) {
-      throw new Error("Bitte den jährlichen Rückfluss angeben.");
+      throw new Error("Bitte gib den jährlichen Rückfluss an.");
     }
     result = amortization({
       investment: num(params.invest),

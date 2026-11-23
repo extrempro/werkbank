@@ -47,7 +47,7 @@ EntryId = Annotated[int, Path(ge=1)]
 JOB_TYPE = "geraete.status"
 KEY_MISSING = (
     "Der Schlüssel für verschlüsselte Daten fehlt (Docker-Secret settings_key). "
-    "Bitte die Verwaltung informieren."
+    "Bitte informiere die Verwaltung."
 )
 
 
@@ -241,7 +241,7 @@ def _require_admin(
     if found is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Bitte zuerst mit dem Admin-Konto anmelden.",
+            detail="Bitte melde dich zuerst mit dem Admin-Konto an.",
         )
     return found
 
@@ -519,7 +519,7 @@ def approve(
     if row.device_link_enc is None or (row.link_expires_at and row.link_expires_at < now_utc()):
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
-            detail="Die Gerätedaten sind abgelaufen. Bitte neu scannen.",
+            detail="Die Gerätedaten sind abgelaufen. Bitte scanne neu.",
         )
     link = decrypt_secret(settings, row.device_link_enc)
     if not link:

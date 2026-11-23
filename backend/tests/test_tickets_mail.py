@@ -73,6 +73,8 @@ def test_ticket_number_and_subject() -> None:
 @pytest.mark.parametrize(
     ("text", "new"),
     [
+        ("Danke!\n\nBitte antworte oberhalb dieser Zeile.\nAlter Text", "Danke!"),
+        # frühere Fassung der Zeile in Antworten auf ältere Mails
         ("Danke!\n\nBitte oberhalb dieser Zeile antworten.\nAlter Text", "Danke!"),
         (
             "Geht wieder.\n\nAm 22.11.2026 um 08:00 schrieb IT <it@example.com>:\n> alt",
@@ -124,7 +126,7 @@ def test_placeholders_are_escaped_in_html() -> None:
     assert "<b>Ina</b>" not in html and "&lt;b&gt;Ina&lt;/b&gt;" in html
     assert "&lt;IT&gt;" in html
     assert "javascript:" not in html
-    assert "Bitte oberhalb dieser Zeile antworten." in html
+    assert "Bitte antworte oberhalb dieser Zeile." in html
 
 
 # --- mit Datenbank --------------------------------------------------------------------------
@@ -416,12 +418,12 @@ def test_reply_all_forward_and_external_answer(db: Session, areas: dict[str, int
     original = every["entries"][0]["id"]
     forwarded = max_.post(
         f"{BASE}/{number}/forward",
-        json={"to": ["Service@Example.com"], "text": "Bitte prüfen.", "entry_id": original},
+        json={"to": ["Service@Example.com"], "text": "Bitte prüf sie.", "entry_id": original},
     )
     assert forwarded.status_code == 201, forwarded.text
     entry = next(e for e in forwarded.json()["entries"] if e["kind"] == "forward")
     assert entry["recipients"] == "service@example.com"
-    assert entry["body"] == "Bitte prüfen."
+    assert entry["body"] == "Bitte prüf sie."
     outbox = max_.get(f"{BASE}/test/outbox", params={"ticket": number}).json()
     assert outbox[-1] == {
         "kind": "weiterleitung",

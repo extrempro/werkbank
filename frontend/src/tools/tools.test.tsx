@@ -704,7 +704,7 @@ describe("ToolPage", () => {
     expect(window.location.search).toBe("?wert=514");
     expect(screen.getByRole("button", { name: /^514/ })).toHaveAttribute("aria-pressed", "true");
     fireEvent.change(input, { target: { value: "xyz" } });
-    expect(screen.getByRole("alert")).toHaveTextContent("Bitte eine Zahl eingeben");
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte gib eine Zahl ein");
   });
 
   it("Prüfsummen: berechnet Hashes und vergleicht mit einem erwarteten Wert", async () => {
@@ -753,7 +753,7 @@ describe("ToolPage", () => {
     render(<ToolPage id="passwort-hash" />);
     fireEvent.change(await screen.findByLabelText("Format"), { target: { value: "apr1" } });
     fireEvent.click(screen.getByRole("button", { name: "Hash erzeugen" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Bitte ein Kennwort eingeben");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Bitte gib ein Kennwort ein");
     fireEvent.change(screen.getByLabelText("Kennwort"), { target: { value: "ein-testwert" } });
     fireEvent.click(screen.getByRole("button", { name: "Hash erzeugen" }));
     const output = await screen.findByLabelText("Hash", {}, { timeout: 5000 });

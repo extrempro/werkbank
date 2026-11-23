@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.104.1] – 2026-11-23
+
+### Behoben
+
+- **Anrede durchgehend per du:** Begrüßung auf der Startseite mit Vornamen („Guten Morgen“, „Hallo“, „Guten Abend“ statt „Guten Tag“ mit vollem Namen); Hinweise und Fehlermeldungen in Oberfläche und Backend von der Grundform („Bitte einen Namen eintragen.“) auf du („Bitte trag einen Namen ein.“); Schritte im Handbuch auf du
+- **Ticket-Mails:** Die Zeile über der Antwort heißt jetzt „Bitte antworte oberhalb dieser Zeile.“; Antworten auf ältere Mails mit der früheren Zeile werden weiter richtig abgeschnitten
+
+### Tests
+
+- `user.test.ts` (Vorname), `test_tickets_mail.py` (frühere Zeile), angepasste Texte in Unit- und E2E-Tests
+
 ## [0.104.0] – 2026-11-23
 
 ### Listen

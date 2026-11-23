@@ -118,11 +118,22 @@ export function initials(displayName: string): string {
   return (first.charAt(0) + (last ? last.charAt(0) : "")).toUpperCase();
 }
 
-/** Begrüßung nach Tageszeit. */
+/** Begrüßung nach Tageszeit, per du. */
 export function greeting(now: Date): string {
   const hour = now.getHours();
   if (hour < 11) {
     return "Guten Morgen";
   }
-  return hour < 18 ? "Guten Tag" : "Guten Abend";
+  return hour < 18 ? "Hallo" : "Guten Abend";
+}
+
+/**
+ * Vorname für die Begrüßung: aus „Vorname Nachname“ das erste Wort, aus „Nachname, Vorname“
+ * das Wort nach dem Komma; Zusätze in Klammern fallen weg.
+ */
+export function firstName(displayName: string): string {
+  const clean = displayName.replace(/\(.*?\)/g, " ").trim();
+  const comma = clean.indexOf(",");
+  const part = comma >= 0 ? clean.slice(comma + 1) : clean;
+  return part.trim().split(/\s+/)[0] || displayName.trim();
 }

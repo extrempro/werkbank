@@ -69,7 +69,7 @@ function Create({
   const run = async () => {
     setError(null);
     if (!password) {
-      setError("Bitte ein Kennwort eingeben.");
+      setError("Bitte gib ein Kennwort ein.");
       return;
     }
     if (repeat && password !== repeat) {
@@ -78,7 +78,7 @@ function Create({
     }
     if (format === "bcrypt" && new TextEncoder().encode(password).length > 72) {
       setError(
-        "bcrypt verwendet nur die ersten 72 Bytes. Bitte ein kürzeres Kennwort oder $6$ wählen.",
+        "bcrypt verwendet nur die ersten 72 Bytes. Bitte wähle ein kürzeres Kennwort oder $6$.",
       );
       return;
     }

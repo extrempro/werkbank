@@ -154,7 +154,7 @@ describe("StartPage", () => {
       { module: "Evergreen", title: "B", subtitle: null, link: "/evergreen/m365", count: 1 },
     ];
     render(<StartPage me={me} tasks={tasks} now={new Date(2026, 10, 14, 8, 30)} />);
-    expect(screen.getByRole("heading", { name: "Guten Morgen, Rita Reviewer" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Guten Morgen, Rita" })).toBeVisible();
     expect(screen.getByText("Samstag, 14. November 2026 · 3 offene Aufgaben")).toBeVisible();
   });
 

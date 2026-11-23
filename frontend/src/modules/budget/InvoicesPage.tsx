@@ -233,11 +233,11 @@ function InvoiceForm({
     event.preventDefault();
     let problem: string | null = null;
     if (!invoicerId) {
-      problem = "Bitte den Rechnungssteller wählen.";
+      problem = "Bitte wähle den Rechnungssteller.";
     } else if (!number.trim()) {
-      problem = "Bitte die Rechnungsnummer eintragen.";
+      problem = "Bitte trag die Rechnungsnummer ein.";
     } else if (!date) {
-      problem = "Bitte das Rechnungsdatum eintragen.";
+      problem = "Bitte trag das Rechnungsdatum ein.";
     }
     const parsed: InvoiceLineUpdate[] = [];
     lines.forEach((line, index) => {
@@ -250,7 +250,7 @@ function InvoiceForm({
       const grossText = line.gross.trim();
       const grossValue = grossText === "" ? null : parseEuro(grossText);
       if (!line.itemId) {
-        problem = `${where}Bitte den Budgetposten wählen.`;
+        problem = `${where}Bitte wähle den Budgetposten.`;
       } else if (netCents === null) {
         problem = `${where}Der Nettobetrag ist nicht lesbar. Bitte so eintragen: 1000,00`;
       } else if (taxRate === null) {

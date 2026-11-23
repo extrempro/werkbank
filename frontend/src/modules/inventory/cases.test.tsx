@@ -146,7 +146,7 @@ describe("Vorgänge: Seite", () => {
     );
     expect(screen.getByText(/Nicht zugeordnet/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
-    expect(await screen.findByText("Bitte eine Stelle wählen.")).toBeTruthy();
+    expect(await screen.findByText("Bitte wähle eine Stelle.")).toBeTruthy();
     // Die Stelle wird gesucht: Der Server liefert die Treffer.
     fireEvent.change(await screen.findByRole("combobox", { name: /^Stelle/ }), {
       target: { value: "einkauf" },

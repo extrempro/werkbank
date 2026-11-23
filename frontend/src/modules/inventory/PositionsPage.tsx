@@ -58,7 +58,7 @@ function PositionForm({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Bitte eine Bezeichnung eintragen.");
+      setError("Bitte trag eine Bezeichnung ein.");
       return;
     }
     setBusy(true);

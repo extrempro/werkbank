@@ -83,7 +83,7 @@ def load_ai_config(
     if token and api_key is None:
         raise AiError(
             "Der gespeicherte Schlüssel lässt sich nicht lesen. "
-            "Bitte in der Verwaltung neu eintragen."
+            "Bitte trag es in der Verwaltung neu ein."
         )
     return AiConfig(
         base_url=base_url.rstrip("/"),
@@ -132,7 +132,7 @@ def _request(
         suffix = f" Meldung des Anbieters: {detail}" if detail else ""
         if response.status_code in (401, 403):
             raise AiError(
-                "Der Anbieter hat die Anmeldung abgelehnt. Bitte den Schlüssel prüfen." + suffix
+                "Der Anbieter hat die Anmeldung abgelehnt. Bitte prüf den Schlüssel." + suffix
             )
         if response.status_code == 404:
             raise AiError("Adresse oder Modell sind dem Anbieter nicht bekannt (404)." + suffix)

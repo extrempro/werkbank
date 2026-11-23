@@ -49,7 +49,7 @@ export default function BackupPlanTool() {
   try {
     if (!size) {
       throw new Error(
-        "Bitte die Datenmenge mit Einheit angeben, zum Beispiel „2 TB“ oder „500 GB“.",
+        "Bitte gib die Datenmenge mit Einheit an, zum Beispiel „2 TB“ oder „500 GB“.",
       );
     }
     input = {

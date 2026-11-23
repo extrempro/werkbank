@@ -115,7 +115,7 @@ export default function MailCheckTool() {
     try {
       const query = toQueryName(input);
       if (query.name.startsWith("*.")) {
-        throw new Error("Bitte eine Domain ohne * eingeben.");
+        throw new Error("Bitte gib eine Domain ohne * ein.");
       }
       setProgress("Starte");
       const checked = await runMailCheck({

@@ -139,11 +139,11 @@ def http_transport(config: ZabbixConfig, body: dict[str, Any], with_token: bool)
         if "CERTIFICATE_VERIFY_FAILED" in text or "certificate" in text.lower():
             raise ZabbixError(
                 "Das Zertifikat von Zabbix ist nicht vertrauenswürdig. "
-                "Bitte das CA-Zertifikat in der Verwaltung hinterlegen."
+                "Bitte hinterlege das CA-Zertifikat in der Verwaltung."
             ) from error
-        raise ZabbixError("Zabbix ist nicht erreichbar. Bitte die Adresse prüfen.") from error
+        raise ZabbixError("Zabbix ist nicht erreichbar. Bitte prüf die Adresse.") from error
     except httpx.HTTPError as error:
-        raise ZabbixError("Zabbix ist nicht erreichbar. Bitte die Adresse prüfen.") from error
+        raise ZabbixError("Zabbix ist nicht erreichbar. Bitte prüf die Adresse.") from error
     try:
         return json.loads(bytes(data))
     except ValueError as error:
@@ -331,7 +331,7 @@ class ZabbixClient:
                 raise ZabbixError("Zabbix lehnt das Token ab (ungültig oder abgelaufen).")
             if "permission" in lower:
                 raise ZabbixError(
-                    f"Zabbix erlaubt „{method}“ nicht. Bitte die Rolle des Dienstkontos prüfen."
+                    f"Zabbix erlaubt „{method}“ nicht. Bitte prüf die Rolle des Dienstkontos."
                 )
             raise ZabbixError(f"Zabbix meldet bei „{method}“: {detail}")
         if "result" not in data:
@@ -651,7 +651,7 @@ def role_findings(check: RoleCheck) -> list[str]:
     if check.mode == "deny":
         return [
             "Die Rolle arbeitet mit einer Ablehn-Liste und erlaubt damit fast alle Methoden. "
-            "Bitte eine Allow-Liste mit den nötigen Methoden einrichten."
+            "Bitte richte eine Allow-Liste mit den nötigen Methoden ein."
         ]
     if not check.methods:
         return ["Die Allow-Liste der Rolle ist leer; ab Zabbix 8.0 sperrt das jeden Zugriff."]

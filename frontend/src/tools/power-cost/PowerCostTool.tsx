@@ -28,7 +28,7 @@ export default function PowerCostTool() {
   try {
     const watts = num(params.watt);
     if ([watts, base.hoursPerDay, base.daysPerYear, base.price, base.pue].some(Number.isNaN)) {
-      throw new Error("Bitte alle Felder mit Zahlen füllen.");
+      throw new Error("Bitte füll alle Felder mit Zahlen.");
     }
     result = powerCost({ ...base, watts });
     if (params.alternative.trim() && !Number.isNaN(num(params.alternative))) {

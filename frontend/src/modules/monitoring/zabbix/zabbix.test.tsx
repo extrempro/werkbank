@@ -364,7 +364,7 @@ describe("ZabbixConnectionPage", () => {
     fireEvent.change(screen.getByLabelText("Tag"), { target: { value: "component" } });
     fireEvent.click(screen.getByLabelText("USV"));
     fireEvent.change(screen.getByLabelText("Zielwert in %"), { target: { value: "101" } });
-    expect(screen.getByText(/zwischen 90 und 100 eintragen/)).toBeVisible();
+    expect(screen.getByText(/zwischen 90 und 100 ein/)).toBeVisible();
     fireEvent.change(screen.getByLabelText("Zielwert in %"), { target: { value: "99,9" } });
     fireEvent.click(screen.getByRole("button", { name: "Zuordnung speichern" }));
     await waitFor(() =>

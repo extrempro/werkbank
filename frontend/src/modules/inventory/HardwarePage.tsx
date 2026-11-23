@@ -215,14 +215,14 @@ export function DeviceFormFields({
 export function deviceProblem(value: DeviceFields): string | null {
   if (value.holderKind !== "" && !value.holder) {
     return value.holderKind === "stelle"
-      ? "Bitte die Stelle wählen oder „Niemandem“."
-      : "Bitte den Arbeitsplatz wählen oder „Niemandem“.";
+      ? "Bitte wähle die Stelle oder „Niemandem“."
+      : "Bitte wähle den Arbeitsplatz oder „Niemandem“.";
   }
   if (!value.name.trim()) {
-    return "Bitte eine Bezeichnung eintragen.";
+    return "Bitte trag eine Bezeichnung ein.";
   }
   if (!value.kindId) {
-    return "Bitte die Art wählen.";
+    return "Bitte wähle die Art.";
   }
   if (value.purchasedOn && (value.purchasedOn < "1990-01-01" || value.purchasedOn > today())) {
     return "Das Anschaffungsdatum liegt nicht in einem sinnvollen Bereich.";
@@ -276,7 +276,7 @@ function NewDeviceForm({ master, onCancel }: { master: MasterData; onCancel: () 
       ask(
         {
           title: `Inventurnummer ${inventoryNo.trim()} eintragen?`,
-          text: "Bitte mit dem Aufkleber am Gerät vergleichen. Später lässt sie sich nur mit Bestätigung ändern.",
+          text: "Bitte vergleiche sie mit dem Aufkleber am Gerät. Später lässt sie sich nur mit Bestätigung ändern.",
           action: "Gerät anlegen",
         },
         save,

@@ -19,7 +19,7 @@ export default function StorageNeedTool() {
   let error: string | null = null;
   try {
     if (!size) {
-      throw new Error("Datenmenge mit Einheit angeben, z. B. „10 TB“ oder „500 GB“.");
+      throw new Error("Gib die Datenmenge mit Einheit an, z. B. „10 TB“ oder „500 GB“.");
     }
     const [compression, dedup, growth, reserve] = [
       num(params.komprimierung),
@@ -28,7 +28,7 @@ export default function StorageNeedTool() {
       num(params.reserve),
     ];
     if ([compression, dedup, growth, reserve].some(Number.isNaN)) {
-      throw new Error("Bitte alle Felder mit Zahlen füllen.");
+      throw new Error("Bitte füll alle Felder mit Zahlen.");
     }
     rows = storageNeed({ data: size.bits / 8, compression, dedup, growth, years, reserve });
   } catch (caught) {

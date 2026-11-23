@@ -46,7 +46,7 @@ export function TeamsSettings({ teams, onChange }: Props) {
       .catch((error: unknown) =>
         setMessage({
           kind: "alert",
-          text: errorText(error, "Die Angaben konnten nicht gespeichert werden. Bitte prüfen."),
+          text: errorText(error, "Die Angaben konnten nicht gespeichert werden. Bitte prüf sie."),
         }),
       )
       .finally(() => setBusy(false));
@@ -59,7 +59,7 @@ export function TeamsSettings({ teams, onChange }: Props) {
       .then((result) =>
         setMessage({
           kind: "status",
-          text: `Die Testnachricht ist an ${result.recipient} unterwegs. Bitte im Teams-Chat nachsehen.`,
+          text: `Die Testnachricht ist an ${result.recipient} unterwegs. Bitte sieh im Teams-Chat nach.`,
         }),
       )
       .catch((error: unknown) =>

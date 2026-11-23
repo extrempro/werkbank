@@ -1046,7 +1046,7 @@ def create_workplace(request: Request, body: WorkplaceNew, user: Editor, db: DbD
     if (body.spot_x is None) != (body.spot_y is None):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Bitte beide Werte für den Platz angeben oder beide leer lassen.",
+            detail="Bitte gib beide Werte für den Platz an oder lass beide leer.",
         )
     positions, room_id, kit_id = _check_workplace(db, body)
     row = InventoryWorkplace(
@@ -1150,7 +1150,7 @@ def set_workplace_spot(
     if (body.x is None) != (body.y is None):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Bitte beide Werte angeben oder beide leer lassen.",
+            detail="Bitte gib beide Werte an oder lass beide leer.",
         )
     if body.x is not None and row.room_id is None:
         raise HTTPException(

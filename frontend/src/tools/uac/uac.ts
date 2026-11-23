@@ -81,7 +81,7 @@ export function parseUac(input: string): number {
   else if (/^[0-9a-f]+h$/.test(v)) n = parseInt(v.slice(0, -1), 16);
   else if (/^\d+$/.test(v)) n = Number(v);
   else if (/^-\d+$/.test(v)) n = Number(v) >>> 0;
-  else throw new Error("Bitte eine Zahl eingeben (dezimal oder hexadezimal mit 0x)");
+  else throw new Error("Bitte gib eine Zahl ein (dezimal oder hexadezimal mit 0x)");
   if (!Number.isSafeInteger(n) || n < 0 || n > 0xffffffff)
     throw new Error("Wert liegt außerhalb von 32 Bit");
   return n;

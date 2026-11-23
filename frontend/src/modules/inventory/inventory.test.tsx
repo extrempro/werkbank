@@ -159,7 +159,7 @@ describe("Hardware-Liste", () => {
     render(<HardwarePage roles={["Bestand.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Gerät erfassen" }));
     fireEvent.click(screen.getByRole("button", { name: "Gerät anlegen" }));
-    expect(await screen.findByText("Bitte eine Bezeichnung eintragen.")).toBeTruthy();
+    expect(await screen.findByText("Bitte trag eine Bezeichnung ein.")).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Bezeichnung"), {
       target: { value: "Notebook 14 Zoll" },

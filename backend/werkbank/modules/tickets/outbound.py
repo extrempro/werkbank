@@ -2,7 +2,7 @@
 
 Absender ist immer das Postfach des Bereichs. Betreff `[#T-1042] Betreff`. HTML mit
 Tabellenlayout und Inline-CSS, immer zusätzlich eine Textfassung; Logo eingebettet (CID), keine
-externen Ressourcen, keine Zählpixel. Oben steht „Bitte oberhalb dieser Zeile antworten.“.
+externen Ressourcen, keine Zählpixel. Oben steht „Bitte antworte oberhalb dieser Zeile.“.
 Eingesetzte Werte werden für HTML kodiert; Kopfzeilen sind gegen Zeilenumbrüche geschützt.
 """
 

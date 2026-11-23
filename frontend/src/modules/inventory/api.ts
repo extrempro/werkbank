@@ -1052,7 +1052,7 @@ export function draftRows(rows: KitRow[]): DraftRow[] {
 /** Prüft eine Vorlage; liefert einen Fehlertext oder die Zeilen zum Speichern. */
 export function kitProblem(name: string, rows: DraftRow[]): string | KitRow[] {
   if (!name.trim()) {
-    return "Bitte einen Namen für die Vorlage eintragen.";
+    return "Bitte trag einen Namen für die Vorlage ein.";
   }
   if (rows.length === 0) {
     return "Eine Vorlage braucht mindestens eine Zeile.";
@@ -1061,10 +1061,10 @@ export function kitProblem(name: string, rows: DraftRow[]): string | KitRow[] {
   for (const [index, row] of rows.entries()) {
     const count = Number(row.count);
     if (!row.label.trim()) {
-      return `Zeile ${index + 1}: Bitte eine Bezeichnung eintragen.`;
+      return `Zeile ${index + 1}: Bitte trag eine Bezeichnung ein.`;
     }
     if (row.kindIds.length === 0) {
-      return `Zeile ${index + 1}: Bitte mindestens eine passende Hardware-Art wählen.`;
+      return `Zeile ${index + 1}: Bitte wähle mindestens eine passende Hardware-Art.`;
     }
     if (!Number.isInteger(count) || count < 1 || count > 9) {
       return `Zeile ${index + 1}: Die Anzahl muss zwischen 1 und 9 liegen.`;

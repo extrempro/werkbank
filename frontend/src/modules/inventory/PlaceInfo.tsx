@@ -123,11 +123,11 @@ function SpotEditor({
     const left = Number(x.replace(",", "."));
     const top = Number(y.replace(",", "."));
     if (x === "" || y === "" || !Number.isFinite(left) || !Number.isFinite(top)) {
-      setError("Bitte beide Werte zwischen 0 und 100 eintragen.");
+      setError("Bitte trag beide Werte zwischen 0 und 100 ein.");
       return;
     }
     if (left < 0 || left > 100 || top < 0 || top > 100) {
-      setError("Bitte beide Werte zwischen 0 und 100 eintragen.");
+      setError("Bitte trag beide Werte zwischen 0 und 100 ein.");
       return;
     }
     save({ x: left, y: top });
@@ -277,7 +277,7 @@ export function LocationPanel({
     const room = shown.rooms.find((entry) => entry.id === workplace.room_id);
     const spot = room ? spotInRoom(point, room) : null;
     if (!spot) {
-      setPlaceError(`Bitte innerhalb von Raum ${room?.name ?? ""} klicken.`);
+      setPlaceError(`Bitte klicke innerhalb von Raum ${room?.name ?? ""}.`);
       return;
     }
     setPlaceError(null);

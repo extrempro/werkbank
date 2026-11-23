@@ -661,7 +661,7 @@ function History({ entry, onChanged }: { entry: Entry; onChanged: (entry: Entry)
   const submitNote = (event: FormEvent) => {
     event.preventDefault();
     if (!note.trim()) {
-      setNotice("Bitte eine Notiz eingeben.");
+      setNotice("Bitte gib eine Notiz ein.");
       return;
     }
     run(() => addNote(entry.id, note.trim()));

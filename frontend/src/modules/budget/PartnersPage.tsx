@@ -35,11 +35,11 @@ function PartnerForm({ partner, onSaved, onCancel }: FormProps) {
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Bitte einen Namen eintragen.");
+      setError("Bitte trag einen Namen ein.");
       return;
     }
     if (!contractPartner && !invoicer) {
-      setError("Bitte Vertragspartner, Rechnungssteller oder beides ankreuzen.");
+      setError("Bitte kreuz Vertragspartner, Rechnungssteller oder beides an.");
       return;
     }
     const update = {

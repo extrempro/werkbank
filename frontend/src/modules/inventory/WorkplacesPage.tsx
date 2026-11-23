@@ -139,7 +139,7 @@ function SpotPicker({
         onPlace={(point) => {
           const inside = spotInRoom(point, target);
           if (!inside) {
-            setHint(`Bitte innerhalb von ${room.label} klicken.`);
+            setHint(`Bitte klicke innerhalb von ${room.label}.`);
             return;
           }
           setHint(null);

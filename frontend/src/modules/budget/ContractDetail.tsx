@@ -66,7 +66,7 @@ function MonthlyItems({
   const choices = accounts.filter((entry) => entry.active);
   const run = () => {
     if (!accountId) {
-      setError("Bitte das Konto für die Posten wählen.");
+      setError("Bitte wähle das Konto für die Posten.");
       return;
     }
     setBusy(true);

@@ -638,12 +638,12 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Am neuen Gerät in der Einrichtung (bei der Auswahl der Region) fünfmal die Windows-Taste drücken und „Scan QR code“ wählen.",
-                  "In der Werkbank „QR-Code scannen“ wählen und den Code ins Feld halten. Geht die Kamera nicht, nimm „Foto auswählen“ und fotografiere den Code.",
-                  "Gerätedaten prüfen: Hersteller, Modell, Seriennummer. Gibt es das Gerät schon, ist eine zweite Zuordnung gesperrt; „Eintrag öffnen“ zeigt den vorhandenen Eintrag.",
-                  "Richtlinie wählen, falls nötig, und bestätigen, dass das Gerät in den angezeigten Tenant gehört.",
-                  "„Jetzt freigeben“ (mit Admin-Konto) oder „Zur Freigabe senden“.",
-                  "Nach „Vorab zugeordnet“ am Gerät auf „Weiter“ klicken. Den Rest prüft die Werkbank von selbst.",
+                  "Drück am neuen Gerät in der Einrichtung (bei der Auswahl der Region) fünfmal die Windows-Taste und wähle „Scan QR code“.",
+                  "Wähle in der Werkbank „QR-Code scannen“ und halte den Code ins Feld. Geht die Kamera nicht, nimm „Foto auswählen“ und fotografiere den Code.",
+                  "Prüf die Gerätedaten: Hersteller, Modell, Seriennummer. Gibt es das Gerät schon, ist eine zweite Zuordnung gesperrt; „Eintrag öffnen“ zeigt den vorhandenen Eintrag.",
+                  "Wähle, falls nötig, eine Richtlinie und bestätige, dass das Gerät in den angezeigten Tenant gehört.",
+                  "Wähle „Jetzt freigeben“ (mit Admin-Konto) oder „Zur Freigabe senden“.",
+                  "Klick nach „Vorab zugeordnet“ am Gerät auf „Weiter“. Den Rest prüft die Werkbank von selbst.",
                 ],
               },
             ],
@@ -659,7 +659,7 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "list",
                 items: [
-                  "Freigeben: Eintrag öffnen, mit dem Admin-Konto angemeldet „Jetzt freigeben“ wählen. Das kann auch eine andere Person sein.",
+                  "Freigeben: Öffne den Eintrag und wähle, mit dem Admin-Konto angemeldet, „Jetzt freigeben“. Das kann auch eine andere Person sein.",
                   "Verwerfen: Eintrag öffnen, „Verwerfen“ und bestätigen. Eintrag und Gerätedaten sind dann gelöscht; das Gerät muss neu gescannt werden.",
                   "Wartende Geräte stehen als Aufgabe auf deiner Startseite.",
                 ],
@@ -1344,10 +1344,10 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Unter „Vorgänge“ einen Vorgang wählen.",
-                  "Auf „Ich übernehme“ tippen, damit alle sehen, dass du dich kümmerst.",
-                  "Bei einem neuen Gerät wählen: einer Stelle zuordnen, einem Arbeitsplatz zuordnen, ins Lager, „Ist dasselbe Gerät“ oder nicht in den Bestand aufnehmen. Je nach Wahl Stelle, Arbeitsplatz, Raum oder das vorhandene Gerät suchen: ein paar Buchstaben oder Ziffern tippen (Nummer, Name der Person, Raum, Hostname oder Seriennummer) und den Treffer wählen. Mit „Ändern“ wählst du neu.",
-                  "„Übernehmen und abschließen“ tippen. Die Werkbank legt das Gerät an oder verknüpft es.",
+                  "Wähle unter „Vorgänge“ einen Vorgang.",
+                  "Tippe auf „Ich übernehme“, damit alle sehen, dass du dich kümmerst.",
+                  "Wähle bei einem neuen Gerät: einer Stelle zuordnen, einem Arbeitsplatz zuordnen, ins Lager, „Ist dasselbe Gerät“ oder nicht in den Bestand aufnehmen. Such je nach Wahl Stelle, Arbeitsplatz, Raum oder das vorhandene Gerät: Tippe ein paar Buchstaben oder Ziffern (Nummer, Name der Person, Raum, Hostname oder Seriennummer) und wähle den Treffer. Mit „Ändern“ wählst du neu.",
+                  "Tippe auf „Übernehmen und abschließen“. Die Werkbank legt das Gerät an oder verknüpft es.",
                 ],
               },
               {
@@ -1376,9 +1376,9 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Oben nach Hersteller, Art, Standort oder Abteilung filtern. Die Zahl hinter jedem Eintrag zeigt, wie viele Geräte unter den übrigen Filtern dazu passen.",
+                  "Filtere oben nach Hersteller, Art, Standort oder Abteilung. Die Zahl hinter jedem Eintrag zeigt, wie viele Geräte unter den übrigen Filtern dazu passen.",
                   "Bei Art, Hersteller, Standort und freien Geräten im Lager filtert ein Klick auf einen Balken die ganze Seite; ein zweiter Klick hebt den Filter wieder auf.",
-                  "Bei jeder Auswertung mit „Balken“ oder „Tabelle“ die Darstellung wechseln. Die Tabelle zeigt auch den Anteil.",
+                  "Wechsle bei jeder Auswertung mit „Balken“ oder „Tabelle“ die Darstellung. Die Tabelle zeigt auch den Anteil.",
                   "„Drucken oder als PDF“ druckt den gewählten Bereich ohne Menüs.",
                 ],
               },
@@ -1438,11 +1438,11 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Unter „Hardware“ auf „Gerät erfassen“ tippen.",
-                  "Bezeichnung und Art eintragen, auf Wunsch Hersteller und Modell, Seriennummer, Hostname und eine Notiz.",
-                  "Hat das Gerät schon einen Aufkleber mit Inventurnummer, sie gleich mit eintragen.",
-                  "Den Raum und bei „Zugeordnet zu“ eine Stelle oder einen Arbeitsplatz wählst du über die Suche: Nummer, Name, Person oder Raum tippen und aus der Liste wählen. Beides ist freiwillig.",
-                  "„Gerät anlegen“ tippen. Mit Inventurnummer fragt die Werkbank noch einmal nach: Vergleiche die Nummer mit dem Aufkleber und bestätige.",
+                  "Tippe unter „Hardware“ auf „Gerät erfassen“.",
+                  "Trag Bezeichnung und Art ein, auf Wunsch Hersteller und Modell, Seriennummer, Hostname und eine Notiz.",
+                  "Hat das Gerät schon einen Aufkleber mit Inventurnummer, trag sie gleich mit ein.",
+                  "Den Raum und bei „Zugeordnet zu“ eine Stelle oder einen Arbeitsplatz wählst du über die Suche: Tippe Nummer, Name, Person oder Raum und wähle aus der Liste. Beides ist freiwillig.",
+                  "Tippe auf „Gerät anlegen“. Mit Inventurnummer fragt die Werkbank noch einmal nach: Vergleiche die Nummer mit dem Aufkleber und bestätige.",
                 ],
               },
               {
@@ -1467,11 +1467,11 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Im Gerät auf „Ausmustern“ tippen.",
-                  "Grund, Verbleib und Datum wählen. Verbleib ist entsorgt, verkauft oder abgegeben, an Leasing zurück oder beim Hersteller.",
-                  "Bei Geräten mit Datenträger (zum Beispiel Notebook und PC) bestätigen, dass er gelöscht oder vernichtet ist. Ohne diesen Haken geht es nicht weiter.",
-                  "Auf Wunsch eine Notiz eintragen, etwa die Nummer des Entsorgungsnachweises.",
-                  "„Weiter“ und dann „Ja, ausmustern“ tippen.",
+                  "Tippe im Gerät auf „Ausmustern“.",
+                  "Wähle Grund, Verbleib und Datum. Verbleib ist entsorgt, verkauft oder abgegeben, an Leasing zurück oder beim Hersteller.",
+                  "Bestätige bei Geräten mit Datenträger (zum Beispiel Notebook und PC), dass er gelöscht oder vernichtet ist. Ohne diesen Haken geht es nicht weiter.",
+                  "Trag auf Wunsch eine Notiz ein, etwa die Nummer des Entsorgungsnachweises.",
+                  "Tippe auf „Weiter“ und dann auf „Ja, ausmustern“.",
                 ],
               },
               {
@@ -1503,10 +1503,10 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Unter „Stellen“ auf „Stelle anlegen“ tippen.",
-                  "Bezeichnung eintragen und auf Wunsch die Abteilung wählen.",
-                  "Unter „Wer besetzt die Stelle?“ mindestens zwei Buchstaben des Namens oder Anmeldenamens tippen und die Person aus der Liste wählen. Ist die Stelle frei, das Feld leer lassen.",
-                  "„Stelle anlegen“ tippen. Die Nummer vergibt die Werkbank.",
+                  "Tippe unter „Stellen“ auf „Stelle anlegen“.",
+                  "Trag die Bezeichnung ein und wähle auf Wunsch die Abteilung.",
+                  "Tippe unter „Wer besetzt die Stelle?“ mindestens zwei Buchstaben des Namens oder Anmeldenamens und wähle die Person aus der Liste. Ist die Stelle frei, lass das Feld leer.",
+                  "Tippe auf „Stelle anlegen“. Die Nummer vergibt die Werkbank.",
                 ],
               },
               {
@@ -1527,12 +1527,12 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Unter „Arbeitsplätze“ auf „Arbeitsplatz anlegen“ tippen.",
-                  "Den Raum suchen und wählen; er ist Pflicht. Hat die Etage einen Grundriss, erscheint er gleich darunter: Ein Klick in den Raum setzt den Platz des Arbeitsplatzes. Das ist freiwillig und geht auch später.",
-                  "Den Typ wählen: Einzelarbeitsplatz oder geteilter Arbeitsplatz. Einen Namen braucht der Arbeitsplatz nicht; er heißt nach seiner Nummer.",
-                  "Auf Wunsch eine Vorlage für die Ausstattung wählen.",
-                  "Unter „Stelle hinzufügen“ nach Nummer, Stelle, Person oder Abteilung suchen und den Treffer wählen; bei einem geteilten Arbeitsplatz auch mehrere.",
-                  "„Arbeitsplatz anlegen“ tippen.",
+                  "Tippe unter „Arbeitsplätze“ auf „Arbeitsplatz anlegen“.",
+                  "Such den Raum und wähle ihn; er ist Pflicht. Hat die Etage einen Grundriss, erscheint er gleich darunter: Ein Klick in den Raum setzt den Platz des Arbeitsplatzes. Das ist freiwillig und geht auch später.",
+                  "Wähle den Typ: Einzelarbeitsplatz oder geteilter Arbeitsplatz. Einen Namen braucht der Arbeitsplatz nicht; er heißt nach seiner Nummer.",
+                  "Wähle auf Wunsch eine Vorlage für die Ausstattung.",
+                  "Such unter „Stelle hinzufügen“ nach Nummer, Stelle, Person oder Abteilung und wähle den Treffer; bei einem geteilten Arbeitsplatz auch mehrere.",
+                  "Tippe auf „Arbeitsplatz anlegen“.",
                 ],
               },
               {
@@ -1546,9 +1546,9 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Den Arbeitsplatz öffnen und zum Reiter „Standort“ wechseln.",
-                  "„Platz im Grundriss setzen“ tippen und im hervorgehobenen Raum auf die Stelle klicken, an der der Arbeitsplatz steht.",
-                  "Ohne Maus: „Platz mit Zahlen eingeben“ öffnen und eintragen, wie weit von links und von oben im Raum der Platz liegt (in Prozent).",
+                  "Öffne den Arbeitsplatz und wechsle zum Reiter „Standort“.",
+                  "Tippe auf „Platz im Grundriss setzen“ und klick im hervorgehobenen Raum auf die Stelle, an der der Arbeitsplatz steht.",
+                  "Ohne Maus: Öffne „Platz mit Zahlen eingeben“ und trag ein, wie weit von links und von oben im Raum der Platz liegt (in Prozent).",
                 ],
               },
               {
@@ -1582,10 +1582,10 @@ export const AREAS: readonly Area[] = [
                 kind: "steps",
                 items: [
                   "Eine neue Stadt legst du unten im Baum unter „Neue Stadt“ an. Den Standort legst du in der Stadt an, den Gebäudeabschnitt im Standort und die Etage im Abschnitt, jeweils rechts unter „Neuer …“.",
-                  "In der Etage „Etage bearbeiten“ tippen und „Grundriss hochladen“ wählen (PNG, JPEG oder WebP). Dort benennst du die Etage auch um, änderst die Reihenfolge oder löschst sie.",
-                  "„Räume bearbeiten“ tippen und auf freier Fläche ein Rechteck aufziehen. Danach den Namen des Raums eintragen und „Raum anlegen“ tippen.",
+                  "Tippe in der Etage auf „Etage bearbeiten“ und wähle „Grundriss hochladen“ (PNG, JPEG oder WebP). Dort benennst du die Etage auch um, änderst die Reihenfolge oder löschst sie.",
+                  "Tippe auf „Räume bearbeiten“ und zieh auf freier Fläche ein Rechteck auf. Trag danach den Namen des Raums ein und tippe auf „Raum anlegen“.",
                   "Räume verschiebst du durch Ziehen; der Griff unten rechts ändert die Größe. Ohne Maus wählst du den Raum und trägst die Lage in Prozent ein.",
-                  "„Fertig“ tippen.",
+                  "Tippe auf „Fertig“.",
                 ],
               },
               {
@@ -1611,10 +1611,10 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Unter „Verleih“ auf „Neuer Verleih“ tippen.",
-                  "Unter „Wer leiht aus?“ mindestens zwei Buchstaben des Namens tippen und die Person aus der Liste wählen.",
-                  "Bei „Ab“ steht heute. Soll der Verleih erst später beginnen, ein Datum in der Zukunft wählen. Dann das Rückgabedatum wählen und die Geräte ankreuzen. Verleihen kannst du Geräte, die keiner Stelle und keinem Arbeitsplatz zugeordnet und nicht schon verliehen sind.",
-                  "„Verleihen“ tippen. Die Nummer vergibt die Werkbank.",
+                  "Tippe unter „Verleih“ auf „Neuer Verleih“.",
+                  "Tippe unter „Wer leiht aus?“ mindestens zwei Buchstaben des Namens und wähle die Person aus der Liste.",
+                  "Bei „Ab“ steht heute. Soll der Verleih erst später beginnen, wähle ein Datum in der Zukunft. Wähle dann das Rückgabedatum und kreuz die Geräte an. Verleihen kannst du Geräte, die keiner Stelle und keinem Arbeitsplatz zugeordnet und nicht schon verliehen sind.",
+                  "Tippe auf „Verleihen“. Die Nummer vergibt die Werkbank.",
                 ],
               },
               {
@@ -1628,10 +1628,10 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Den Verleih öffnen.",
-                  "Die Geräte ankreuzen, die zurück sind. Einzelne Geräte gehen auch.",
-                  "„Rückgabe eintragen“ tippen. Für jede Rückgabe entsteht ein Vorgang „Rückgabe prüfen“.",
-                  "Im Vorgang „Geprüft, zurück ins Lager“ oder „Defekt oder unvollständig“ wählen.",
+                  "Öffne den Verleih.",
+                  "Kreuz die Geräte an, die zurück sind. Einzelne Geräte gehen auch.",
+                  "Tippe auf „Rückgabe eintragen“. Für jede Rückgabe entsteht ein Vorgang „Rückgabe prüfen“.",
+                  "Wähle im Vorgang „Geprüft, zurück ins Lager“ oder „Defekt oder unvollständig“.",
                 ],
               },
               {
@@ -1798,8 +1798,8 @@ export const AREAS: readonly Area[] = [
                 kind: "steps",
                 items: [
                   "Wähle „Posten hinzufügen“. Die Maske öffnet rechts neben der Tabelle.",
-                  "Abschnitt 1: Bezeichnung, Konto und Partner (die Firma) eintragen; alle drei sind Pflicht.",
-                  "Abschnitt 2: den Betrag (brutto) eintragen und die Laufzeit wählen: einmalig in einem Geschäftsjahr, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres. Darunter steht der Plan in Worten.",
+                  "Abschnitt 1: Trag Bezeichnung, Konto und Partner (die Firma) ein; alle drei sind Pflicht.",
+                  "Abschnitt 2: Trag den Betrag (brutto) ein und wähle die Laufzeit: einmalig in einem Geschäftsjahr, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres. Darunter steht der Plan in Worten.",
                   "Abschnitt 3 (freiwillig): Vertrag, IT-Projekt, Tags und Notiz. Tags legt der Budgetverwalter unter Einstellungen › Tags an.",
                   "Speichere. Die Nummer bekommt der Posten beim Speichern.",
                 ],
@@ -1826,10 +1826,10 @@ export const AREAS: readonly Area[] = [
                   "Wähle auf der Seite „Rechnungen“ „Rechnung erfassen“. Die Maske öffnet rechts neben der Tabelle.",
                   "Wähle zuerst den Rechnungssteller. Seine Budgetposten stehen danach oben in der Auswahl.",
                   "Trage Rechnungsnummer, interne Nummer und Rechnungsdatum ein. Das Datum bestimmt das Geschäftsjahr.",
-                  "Lege für jeden Budgetposten eine Position an: Budgetposten aus der Liste wählen, Netto und Steuersatz eintragen. Das Brutto rechnet die Werkbank.",
+                  "Lege für jeden Budgetposten eine Position an: Wähle den Budgetposten aus der Liste und trag Netto und Steuersatz ein. Das Brutto rechnet die Werkbank.",
                   "Prüfe das Kennzeichen „schließt den Posten ab“; bei Posten mit Vertrag ist es anfangs aus.",
-                  "Optional: den Rechnungsbetrag laut Beleg eintragen; er muss zur Summe passen. Den Beleg als PDF anhängen (höchstens 15 MB).",
-                  "„Rechnung speichern“.",
+                  "Optional: Trag den Rechnungsbetrag laut Beleg ein; er muss zur Summe passen. Häng den Beleg als PDF an (höchstens 15 MB).",
+                  "Tippe auf „Rechnung speichern“.",
                 ],
               },
               {
@@ -2272,7 +2272,7 @@ export const AREAS: readonly Area[] = [
                   ],
                   [
                     "Ein Zähler stimmt nicht.",
-                    "Die Zähler laden alle fünf Minuten, bei jedem Seitenwechsel und beim Zurückkehren in die Werkbank neu. Ein Wechsel der Seite hilft sofort. Am Handy: App schließen und neu öffnen.",
+                    "Die Zähler laden alle fünf Minuten, bei jedem Seitenwechsel und beim Zurückkehren in die Werkbank neu. Ein Wechsel der Seite hilft sofort. Am Handy: Schließ die App und öffne sie neu.",
                   ],
                   [
                     "Die Glocke bleibt leer.",

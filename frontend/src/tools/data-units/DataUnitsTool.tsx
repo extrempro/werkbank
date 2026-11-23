@@ -57,7 +57,7 @@ export default function DataUnitsTool() {
           </select>
         </label>
       </div>
-      {value === null && <ErrorBox>Bitte eine Zahl eingeben.</ErrorBox>}
+      {value === null && <ErrorBox>Bitte gib eine Zahl ein.</ErrorBox>}
       {table("dezimal", "Dezimal (Hersteller, macOS, Netzwerk), Faktor 1000")}
       {table("binär", "Binär (Windows, RAM, Linux-Tools), Faktor 1024")}
       {table("bit", "Bit (Bandbreite)")}

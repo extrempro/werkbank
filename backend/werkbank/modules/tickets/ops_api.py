@@ -505,7 +505,7 @@ class HoldIn(BaseModel):
     def _reason(cls, value: str) -> str:
         value = " ".join(value.split())
         if not value:
-            raise ValueError("Bitte eine Begründung angeben.")
+            raise ValueError("Bitte gib eine Begründung an.")
         return value
 
 

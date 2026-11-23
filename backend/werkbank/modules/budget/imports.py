@@ -656,7 +656,7 @@ def take_row(
     if (body.partner_id is None) == (not body.new_partner):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Bitte einen Partner wählen oder einen neuen anlegen.",
+            detail="Bitte wähle einen Partner oder leg einen neuen an.",
         )
     account = db.get(BudgetAccount, body.account_id)
     if account is None:

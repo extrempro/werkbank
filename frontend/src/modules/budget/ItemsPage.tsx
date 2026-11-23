@@ -214,15 +214,15 @@ function ItemForm({
     event.preventDefault();
     let problem: string | null = null;
     if (!name.trim()) {
-      problem = "Bitte eine Bezeichnung eintragen.";
+      problem = "Bitte trag eine Bezeichnung ein.";
     } else if (!accountId) {
-      problem = "Bitte ein Konto wählen.";
+      problem = "Bitte wähle ein Konto.";
     } else if (!partnerId) {
-      problem = "Bitte einen Partner wählen.";
+      problem = "Bitte wähle einen Partner.";
     } else if (costCents === null) {
       problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 15000,00";
     } else if (runtime === "bis" && (!end || Number(end) <= Number(start))) {
-      problem = `Bitte wählen, bis zu welchem ${yearLabel} der Posten läuft.`;
+      problem = `Bitte wähle, bis zu welchem ${yearLabel} der Posten läuft.`;
     } else if (tags.length > TAGS_MAX) {
       problem = `Es sind höchstens ${TAGS_MAX} Tags je Budgetposten möglich.`;
     }

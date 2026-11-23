@@ -406,18 +406,18 @@ describe("Budgetposten", () => {
     fireEvent.click(screen.getByRole("button", { name: "Posten hinzufügen" }));
     const form = within(screen.getByRole("region", { name: "Posten hinzufügen" }));
     fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Bitte eine Bezeichnung eintragen.");
+    expect(form.getByRole("alert")).toHaveTextContent("Bitte trag eine Bezeichnung ein.");
     fireEvent.change(form.getByLabelText(/^Bezeichnung/), {
       target: { value: "Zeiterfassung Lizenz" },
     });
     fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Bitte ein Konto wählen.");
+    expect(form.getByRole("alert")).toHaveTextContent("Bitte wähle ein Konto.");
     // Stillgelegte Konten stehen bei einem neuen Posten nicht zur Wahl.
     expect(within(form.getByLabelText(/^Konto/)).getAllByRole("option")).toHaveLength(2);
     fireEvent.change(form.getByLabelText(/^Konto/), { target: { value: "1" } });
     // Der Partner ist Pflicht; stillgelegte stehen nicht zur Wahl.
     fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Bitte einen Partner wählen.");
+    expect(form.getByRole("alert")).toHaveTextContent("Bitte wähle einen Partner.");
     fireEvent.focus(form.getByRole("combobox", { name: /^Partner/ }));
     const partnerList = await form.findByRole("listbox", { name: "Partner" });
     expect(
@@ -803,7 +803,7 @@ describe("Partner", () => {
     fireEvent.click(screen.getByLabelText("Vertragspartner"));
     fireEvent.click(screen.getByLabelText("Rechnungssteller"));
     fireEvent.click(screen.getByRole("button", { name: "Partner speichern" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("oder beides ankreuzen");
+    expect(screen.getByRole("alert")).toHaveTextContent("oder beides an");
     fireEvent.click(screen.getByLabelText("Rechnungssteller"));
     fireEvent.click(screen.getByRole("button", { name: "Partner speichern" }));
     expect(await screen.findByText("Beispiel Distribution AG ist gespeichert.")).toBeVisible();
@@ -1153,7 +1153,7 @@ describe("Rechnungen", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Rechnung erfassen" }));
     const form = within(screen.getByRole("region", { name: "Rechnung erfassen" }));
     fireEvent.click(form.getByRole("button", { name: "Rechnung speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Bitte den Rechnungssteller wählen");
+    expect(form.getByRole("alert")).toHaveTextContent("Bitte wähle den Rechnungssteller");
 
     // Erst der Rechnungssteller: seine Posten stehen oben in der Auswahl.
     await pick(form, /^Rechnungssteller/, "Beispiel Software GmbH");
@@ -1187,7 +1187,7 @@ describe("Rechnungen", () => {
     fireEvent.click(form.getByRole("button", { name: "Position hinzufügen" }));
     const second = within(form.getByRole("group", { name: "Position 2" }));
     fireEvent.click(form.getByRole("button", { name: "Rechnung speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Position 2: Bitte den Budgetposten");
+    expect(form.getByRole("alert")).toHaveTextContent("Position 2: Bitte wähle den Budgetposten");
     // Stillgelegte Posten stehen nicht zur Wahl; zwei Positionen dürfen denselben Posten haben.
     expect(
       within(second.getByLabelText("Budgetposten")).queryByRole("option", { name: /Server/ }),
@@ -1896,7 +1896,7 @@ describe("Statistik", () => {
     const calls = stubFetch(routes);
     render(<StatisticsPage roles={["Budget.Reader"]} />);
     fireEvent.click(await screen.findByRole("tab", { name: "Nach Tags" }));
-    expect(await screen.findByText("Bitte mindestens einen Tag wählen.")).toBeVisible();
+    expect(await screen.findByText("Bitte wähle mindestens einen Tag.")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Cloud (1)" }));
     await vi.waitFor(() =>
       expect(calls.find((call) => call.url.endsWith("/query"))?.body).toEqual({
@@ -1937,7 +1937,7 @@ describe("Statistik", () => {
       }),
     );
     fireEvent.click(await screen.findByRole("button", { name: "Statistik speichern" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Bitte einen Namen");
+    expect(screen.getByRole("alert")).toHaveTextContent("Bitte trag einen Namen");
     fireEvent.change(screen.getByLabelText("Auswahl speichern unter"), {
       target: { value: " Lizenzen genau " },
     });

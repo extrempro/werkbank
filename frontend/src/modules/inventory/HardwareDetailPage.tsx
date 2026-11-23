@@ -142,7 +142,7 @@ function InventoryNoForm({
     ask(
       {
         title: question,
-        text: "Bitte mit dem Aufkleber am Gerät vergleichen. Die Änderung steht danach im Verlauf.",
+        text: "Bitte vergleiche sie mit dem Aufkleber am Gerät. Die Änderung steht danach im Verlauf.",
         action: next ? "Übernehmen" : "Entfernen",
       },
       save,
@@ -208,15 +208,15 @@ function RetireForm({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!reasonId) {
-      setError("Bitte einen Grund wählen.");
+      setError("Bitte wähle einen Grund.");
       return;
     }
     if (!whereabouts) {
-      setError("Bitte den Verbleib wählen.");
+      setError("Bitte wähle den Verbleib.");
       return;
     }
     if (!day) {
-      setError("Bitte ein Datum eintragen.");
+      setError("Bitte trag ein Datum ein.");
       return;
     }
     if (device.has_storage && !wiped) {

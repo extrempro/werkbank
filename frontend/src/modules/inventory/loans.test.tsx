@@ -237,7 +237,7 @@ describe("Verleih", () => {
     });
     render(<LoansPage loanId={4} roles={["Bestand.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Rückgabe eintragen" }));
-    expect(screen.getByRole("alert").textContent).toContain("Geräte wählen");
+    expect(screen.getByRole("alert").textContent).toContain("wähle die Geräte");
     fireEvent.click(screen.getByRole("checkbox", { name: /Headset 7/ }));
     fireEvent.click(screen.getByRole("button", { name: "Rückgabe eintragen" }));
     expect(await screen.findByText(/Rückgabe eingetragen/)).toBeTruthy();
