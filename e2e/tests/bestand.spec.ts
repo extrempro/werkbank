@@ -297,8 +297,12 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
 
   // Ein Monitor am Arbeitsplatz steht bei der Stelle unter „Über Arbeitsplätze“
   const workplaceId = Number(new URL(page.url()).pathname.split("/")[3]);
-  const master = await (await page.request.get("/api/inventory/master-data")).json();
-  const kind = master.kinds.find((entry: { name: string }) => entry.name === "Monitor");
+  const master = await (
+    await page.request.get("/api/inventory/master-data")
+  ).json();
+  const kind = master.kinds.find(
+    (entry: { name: string }) => entry.name === "Monitor",
+  );
   await post("hardware", {
     kind_id: kind.id,
     name: `Monitor ${stamp}`,
@@ -309,10 +313,18 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
     .getByRole("navigation", { name: "Bereiche der Stelle" })
     .getByRole("link", { name: "Hardware", exact: true })
     .click();
-  await expect(page.getByRole("heading", { name: /Direkt an der Stelle \(0\)/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Über Arbeitsplätze \(1\)/ })).toBeVisible();
-  await expect(page.getByText("über Arbeitsplatz", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: `Monitor ${stamp}` })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Direkt an der Stelle \(0\)/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Über Arbeitsplätze \(1\)/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("über Arbeitsplatz", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: `Monitor ${stamp}` }),
+  ).toBeVisible();
   await expectNoA11yViolations(page);
 });
 
@@ -338,7 +350,9 @@ test("IT-Bestand: Vorgänge und Technik ohne NinjaOne", async ({ page }) => {
   await chooseFilter(page, "Art", "Rückgabe prüfen");
   await expect(
     page
-      .getByRole("button", { name: /^(Weitere Filter 1 geändert|Filter aufheben)$/ })
+      .getByRole("button", {
+        name: /^(Weitere Filter 1 geändert|Filter aufheben)$/,
+      })
       .first(),
   ).toBeVisible();
   await expectNoA11yViolations(page);
@@ -371,7 +385,9 @@ test("IT-Bestand: Statistik", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: "Statistik" }),
   ).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Hersteller" })).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Hersteller" }),
+  ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Abteilung" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: /^Aktive Geräte\s*:\s*\d+/ }),
@@ -396,5 +412,7 @@ test("IT-Bestand: Statistik", async ({ page }) => {
       .click();
     await expectNoA11yViolations(page);
   }
-  await expect(page.getByRole("heading", { name: "Fehlende Angaben" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Fehlende Angaben" }),
+  ).toBeVisible();
 });

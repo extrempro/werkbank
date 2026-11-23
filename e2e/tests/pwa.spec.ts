@@ -23,7 +23,11 @@ test.describe("PWA und Service Worker", () => {
       await navigator.serviceWorker.ready;
     });
     await page.reload();
-    await expect(page.getByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Otto Offline$/ })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: /^Guten (Morgen|Tag|Abend), Otto Offline$/,
+      }),
+    ).toBeVisible();
 
     const cachedUrls = await page.evaluate(async () => {
       const urls: string[] = [];
@@ -36,13 +40,17 @@ test.describe("PWA und Service Worker", () => {
       return urls;
     });
     expect(cachedUrls).toContain("/offline.html");
-    expect(cachedUrls.filter((url) => url.startsWith("/api/") || url.startsWith("/auth/"))).toEqual(
-      [],
-    );
+    expect(
+      cachedUrls.filter(
+        (url) => url.startsWith("/api/") || url.startsWith("/auth/"),
+      ),
+    ).toEqual([]);
 
     await context.setOffline(true);
     await page.goto("/evergreen").catch(() => undefined);
-    await expect(page.getByRole("heading", { name: "Keine Verbindung" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Keine Verbindung" }),
+    ).toBeVisible();
     await context.setOffline(false);
   });
 });

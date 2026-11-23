@@ -40,6 +40,7 @@ import {
 import { BudgetHead, DeleteButton } from "./shared";
 import { navigate } from "../../router";
 import { Feedback } from "../../components/Feedback";
+import { ListPicker } from "../inventory/LookupPicker";
 
 type PartnerChoice = "vorschlag" | "neu" | "andere";
 
@@ -203,17 +204,13 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
           Anderen vorhandenen Partner wählen
         </label>
         {choice === "andere" && (
-          <label>
-            Partner
-            <select value={otherId} onChange={(event) => setOtherId(event.target.value)}>
-              <option value="">Bitte wählen</option>
-              {partners.map((partner) => (
-                <option key={partner.id} value={partner.id}>
-                  {partner.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ListPicker
+            label="Partner"
+            placeholder="Name des Partners …"
+            options={partners.map((partner) => ({ id: partner.id, label: partner.name }))}
+            value={otherId}
+            onChange={setOtherId}
+          />
         )}
         <p className="small">Die Entscheidung gilt auch für weitere Zeilen dieser Firma.</p>
       </fieldset>

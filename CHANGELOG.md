@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.104.0] – 2026-11-23
+
+### Listen
+
+- **IT-Bestand: Hardware, Stellen und Arbeitsplätze seitenweise:** Suche und Filter im Backend, je Abruf 50 Einträge mit „Mehr anzeigen“; die stille Obergrenze von 5000 Einträgen entfällt. Arbeitsplätze bekommen eine Suche. `GET /api/inventory/hardware|positions|workplaces` liefern `{items, total}` (Hardware dazu `kinds`), Löschen von Stelle und Arbeitsplatz liefert nur noch `{id}`
+- **Auswahl mit Suche statt langer Auswahllisten:** am Gerät Raum und „Zugeordnet zu“ (Stelle oder Arbeitsplatz), im Budget Vertragspartner, Rechnungssteller, Vertrag am Posten und Partner beim Import (neue Komponente `ListPicker`); die Gerätemaske lädt nicht mehr alle Standorte, Stellen und Arbeitsplätze
+- **Tabellen ohne eigenen Scrollbalken:** Listen mit Ansicht daneben (Vorgänge, Verleih, Evergreen, Zabbix-Hosts, Budgetposten, Rechnungen, Verträge) stehen in voller Länge und scrollen mit der Seite; Spaltenköpfe haften unter der Kopfzeile, die Ansicht daneben bleibt stehen
+- **Gerätezuordnung:** Hinweis, wenn nur die neuesten 500 von mehr Geräten angezeigt werden (`total` in der Liste)
+- **Weitere anzeigen** (neue Komponente `ShowMore`): Rollen je Person (50), Budget-Importe (20), Subdomains im DNS-Werkzeug (200, dazu „Alle anzeigen“; Kopieren und CSV weiter mit allen)
+
+### Dokumentation
+
+- design.md und spec.md (Liste scrollt mit der Seite), Handbuch (Hardware, Gerät erfassen, Arbeitsplätze)
+
+### Tests
+
+- `test_inventory.py`, `test_inventory_staff.py`, `test_devices_api.py`, `inventory.test.tsx`, `staff.test.tsx`, `budget.test.tsx`, `devices.test.tsx`, `ShowMore.test.tsx`
+
 ## [0.103.0] – 2026-11-22
 
 ### Tickets

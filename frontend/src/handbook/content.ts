@@ -1417,7 +1417,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Unter „Hardware“ stehen alle Geräte mit Art, Hersteller und Modell, Seriennummer, Inventurnummer und Herkunft. Die Suche findet Geräte über Bezeichnung, Seriennummer, Inventurnummer, Hostname, Art und Modell; daneben filterst du nach Art. Vorgabe ist die Ansicht „Im Bestand“; ausgemusterte Geräte findest du unter „Ausgemustert“ oder „Alle“.",
+                text: "Unter „Hardware“ stehen alle Geräte mit Art, Hersteller und Modell, Seriennummer, Inventurnummer und Herkunft. Die Suche findet Geräte über Bezeichnung, Seriennummer, Inventurnummer, Hostname, Art und Modell; daneben filterst du nach Art. Vorgabe ist die Ansicht „Im Bestand“; ausgemusterte Geräte findest du unter „Ausgemustert“ oder „Alle“. Es werden zuerst 50 Geräte gezeigt, mit „Mehr anzeigen“ kommen weitere dazu; die Suche durchsucht immer den ganzen Bestand. Genauso sind die Listen „Stellen“ und „Arbeitsplätze“ aufgebaut.",
               },
               {
                 kind: "text",
@@ -1441,6 +1441,7 @@ export const AREAS: readonly Area[] = [
                   "Unter „Hardware“ auf „Gerät erfassen“ tippen.",
                   "Bezeichnung und Art eintragen, auf Wunsch Hersteller und Modell, Seriennummer, Hostname und eine Notiz.",
                   "Hat das Gerät schon einen Aufkleber mit Inventurnummer, sie gleich mit eintragen.",
+                  "Den Raum und bei „Zugeordnet zu“ eine Stelle oder einen Arbeitsplatz wählst du über die Suche: Nummer, Name, Person oder Raum tippen und aus der Liste wählen. Beides ist freiwillig.",
                   "„Gerät anlegen“ tippen. Mit Inventurnummer fragt die Werkbank noch einmal nach: Vergleiche die Nummer mit dem Aufkleber und bestätige.",
                 ],
               },
@@ -1521,7 +1522,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Ein Arbeitsplatz steht in einem Raum. Ein Einzelarbeitsplatz gehört zu genau einer Stelle, ein geteilter Arbeitsplatz zu mehreren. Mit den Filtern über der Liste findest du zum Beispiel freie Plätze oder Plätze, an denen Ausstattung fehlt.",
+                text: "Ein Arbeitsplatz steht in einem Raum. Ein Einzelarbeitsplatz gehört zu genau einer Stelle, ein geteilter Arbeitsplatz zu mehreren. Über der Liste suchst du nach Nummer, Raum oder Stelle; mit den Filtern findest du zum Beispiel freie Plätze oder Plätze, an denen Ausstattung fehlt.",
               },
               {
                 kind: "steps",

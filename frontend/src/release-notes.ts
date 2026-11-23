@@ -24,6 +24,38 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.104.0",
+    date: "2026-11-23",
+    summary: "Lange Listen laden schneller, Tabellen ohne eigenen Scrollbalken, Auswahl mit Suche.",
+    sections: [
+      {
+        area: "Allgemein",
+        entries: [
+          "Tabellen mit einer Ansicht daneben, zum Beispiel die Vorgänge, stehen jetzt in voller Länge und scrollen mit der Seite. Die Spaltenköpfe bleiben oben stehen.",
+          "Lange Listen zeigen zuerst einen Teil, mit „Weitere anzeigen“ kommt der Rest dazu, zum Beispiel bei den Rollen je Person, den Importen im Budget und den Subdomains im DNS-Werkzeug.",
+        ],
+      },
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Hardware, Stellen und Arbeitsplätze zeigen zuerst 50 Einträge, mit „Mehr anzeigen“ kommen weitere dazu. Die Suche durchsucht immer den ganzen Bestand.",
+          "Arbeitsplätze lassen sich jetzt durchsuchen, nach Nummer, Raum oder Stelle.",
+          "Am Gerät wählst du Raum, Stelle und Arbeitsplatz über eine Suche statt aus einer langen Liste.",
+        ],
+      },
+      {
+        area: "IT-Budget",
+        entries: [
+          "Vertragspartner, Rechnungssteller, Vertrag am Posten und Partner beim Import wählst du über eine Suche.",
+        ],
+      },
+      {
+        area: "Geräte",
+        entries: ["Die Gerätezuordnung sagt, wenn nur die neuesten 500 Geräte angezeigt werden."],
+      },
+    ],
+  },
+  {
     version: "0.103.0",
     date: "2026-11-22",
     summary: "Tickets: neue Ticketseite, Antworten an alle und Weiterleiten.",

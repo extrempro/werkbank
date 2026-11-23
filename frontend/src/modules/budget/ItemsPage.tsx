@@ -59,6 +59,7 @@ import {
 import { DeleteButton, FormStep, ReadOnlyNote } from "./shared";
 import { fetchProjectChoices, projectPath, type ProjectChoice } from "../projects/api";
 import { Feedback } from "../../components/Feedback";
+import { ListPicker } from "../inventory/LookupPicker";
 
 function amount(cents: number | null): string {
   return cents === null ? "–" : formatEuro(cents);
@@ -314,28 +315,17 @@ function ItemForm({
               ))}
             </select>
           </label>
-          <label>
-            <span>
-              Partner <span aria-hidden="true">*</span>
-            </span>
-            <select
-              value={partnerId}
+          <div>
+            <ListPicker
+              label="Partner"
               required
-              aria-required="true"
-              aria-describedby="posten-partner-hinweis"
-              onChange={(event) => setPartnerId(event.target.value)}
-            >
-              <option value="">Bitte wählen</option>
-              {partnerChoices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-            <span id="posten-partner-hinweis" className="form-hint">
-              Die Firma, um die es geht.
-            </span>
-          </label>
+              placeholder="Name des Partners …"
+              options={partnerChoices.map((entry) => ({ id: entry.id, label: entry.name }))}
+              value={partnerId}
+              onChange={setPartnerId}
+            />
+            <span className="form-hint">Die Firma, um die es geht.</span>
+          </div>
         </FormStep>
         <FormStep number={2} title="Kosten und Laufzeit">
           <label>
@@ -401,17 +391,17 @@ function ItemForm({
           )}
         </FormStep>
         <FormStep number={3} title="Verknüpfen" hint="freiwillig">
-          <label>
-            Vertrag
-            <select value={contractId} onChange={(event) => setContractId(event.target.value)}>
-              <option value="">Kein Vertrag</option>
-              {contracts.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.title} · {entry.partner_name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ListPicker
+            label="Vertrag (leer: kein Vertrag)"
+            placeholder="Bezeichnung oder Partner …"
+            options={contracts.map((entry) => ({
+              id: entry.id,
+              label: entry.title,
+              detail: entry.partner_name,
+            }))}
+            value={contractId}
+            onChange={setContractId}
+          />
           {projectChoices.length > 0 && (
             <label>
               IT-Projekt

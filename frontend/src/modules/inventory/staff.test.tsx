@@ -2,11 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   equipmentLabel,
-  filterPositions,
-  filterWorkplaces,
-  holderValue,
   kitProblem,
-  parseHolder,
   parsePositionPath,
   parseWorkplacePath,
   positionPath,
@@ -150,29 +146,11 @@ describe("Stellen und Arbeitsplätze: Hilfsfunktionen", () => {
     expect(parseWorkplacePath("/bestand/arbeitsplaetze/2")).toEqual({ id: 2, tab: "uebersicht" });
   });
 
-  it("filtert und beschriftet", () => {
-    expect(filterPositions([summary], "alex")).toHaveLength(1);
-    expect(filterPositions([summary], "nord")).toHaveLength(1);
-    expect(filterPositions([summary], "lager")).toHaveLength(0);
-    const free = { ...workplaceSummary, id: 3, positions: [], shared: true, complete: null };
-    expect(filterWorkplaces([workplaceSummary, free], "frei")).toEqual([free]);
-    expect(filterWorkplaces([workplaceSummary, free], "unvollstaendig")).toEqual([
-      workplaceSummary,
-    ]);
-    expect(filterWorkplaces([workplaceSummary, free], "geteilt")).toEqual([free]);
+  it("beschriftet", () => {
     expect(equipmentLabel({ complete: null, missing: 0 })).toBe("keine Vorlage");
     expect(equipmentLabel({ complete: true, missing: 0 })).toBe("vollständig");
     expect(equipmentLabel({ complete: false, missing: 2 })).toBe("2 fehlen");
     expect(workplaceName({ number: "AP-003" })).toBe("AP-003");
-  });
-
-  it("liest die Zuordnung eines Geräts", () => {
-    expect(holderValue(4, null)).toBe("s:4");
-    expect(holderValue(null, 2)).toBe("w:2");
-    expect(holderValue(null, null)).toBe("");
-    expect(parseHolder("s:4")).toEqual({ position_id: 4, workplace_id: null });
-    expect(parseHolder("w:2")).toEqual({ position_id: null, workplace_id: 2 });
-    expect(parseHolder("x:1")).toEqual({ position_id: null, workplace_id: null });
   });
 
   it("prüft Vorlagen", () => {
@@ -190,16 +168,31 @@ describe("Stellen und Arbeitsplätze: Hilfsfunktionen", () => {
 
 describe("Stellen: Seiten", () => {
   it("zeigt die Liste ohne Anlegen für Lesende", async () => {
-    stubFetch({ "GET /api/inventory/positions": [summary] });
+    stubFetch({ "GET /api/inventory/positions": { items: [summary], total: 1 } });
     render(<PositionsPage roles={["Bestand.Reader"]} />);
     expect(await screen.findByRole("link", { name: "Sachbearbeitung Einkauf" })).toBeTruthy();
     expect(screen.getByText("Alex Beispiel")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Stelle anlegen" })).toBeNull();
   });
 
+  it("lädt weitere Stellen nach", async () => {
+    const second = { ...summary, id: 5, number: "ST-005", name: "Lager" };
+    const calls = stubFetch({
+      "GET /api/inventory/positions": { items: [summary], total: 2 },
+      "GET /api/inventory/positions?offset=1": { items: [second], total: 2 },
+    });
+    render(<PositionsPage roles={["Bestand.Reader"]} />);
+    expect(await screen.findByText("1 von 2")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Mehr anzeigen" }));
+    expect(await screen.findByRole("link", { name: "Lager" })).toBeTruthy();
+    expect(screen.getByText("2 von 2")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Mehr anzeigen" })).toBeNull();
+    expect(calls.map((call) => call.url)).toContain("/api/inventory/positions?offset=1");
+  });
+
   it("sucht eine Person in Entra und legt die Stelle an", async () => {
     const calls = stubFetch({
-      "GET /api/inventory/positions": [],
+      "GET /api/inventory/positions": { items: [], total: 0 },
       "GET /api/inventory/master-data": {
         kinds: [],
         makers: [],
@@ -360,7 +353,7 @@ describe("Arbeitsplätze: anlegen", () => {
 
   it("verlangt einen Raum, zeigt den Grundriss und sucht Stellen", async () => {
     const calls = stubFetch({
-      "GET /api/inventory/workplaces": [],
+      "GET /api/inventory/workplaces": { items: [], total: 0 },
       "GET /api/inventory/assignees": { positions: [], workplaces: [] },
       "GET /api/inventory/locations": { cities: [] },
       "GET /api/inventory/master-data": {

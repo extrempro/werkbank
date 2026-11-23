@@ -1139,6 +1139,12 @@ export function DeviceAssociationPage() {
                 </li>
               ))}
             </ul>
+            {list && list.total > entries.length && (
+              <p className="small panel-note" role="status">
+                Angezeigt werden die neuesten {entries.length} von {list.total} Geräten. Grenze mit
+                Suche oder Ansicht weiter ein.
+              </p>
+            )}
           </>
         )}
       </div>

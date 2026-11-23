@@ -55,7 +55,10 @@ test("IT-Projekte: Projekt anlegen, einstellen, Jour Fixe und Aufgaben", async (
   await expectNoA11yViolations(page);
 
   // Aufgaben
-  await page.getByRole("main").getByRole("link", { name: "Aufgaben", exact: true }).click();
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "Aufgaben", exact: true })
+    .click();
   await page.getByLabel("Neue Aufgabe").fill("Angebote vergleichen");
   await page.getByRole("button", { name: "Hinzufügen", exact: true }).click();
   await expect(

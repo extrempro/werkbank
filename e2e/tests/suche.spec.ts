@@ -18,7 +18,9 @@ test("Suche findet Evergreen-Einträge und beachtet, wer sie sehen darf", async 
 
   await page.goto("/");
   await openPage(page, "Start", "Suche");
-  await expect(page.getByRole("heading", { level: 1, name: "Suche" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Suche" }),
+  ).toBeVisible();
   await page.getByLabel("Suchbegriff").fill(word);
   await page.getByRole("button", { name: "Suchen", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/suche\\?q=${word}$`));
@@ -41,7 +43,10 @@ test("Suche findet Evergreen-Einträge und beachtet, wer sie sehen darf", async 
 test("Suchfeld in der Kopfzeile führt über die Schnellsuche zur Suche", async ({
   page,
 }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Das Feld steht nur auf breiten Bildschirmen");
+  test.skip(
+    testInfo.project.name !== "desktop",
+    "Das Feld steht nur auf breiten Bildschirmen",
+  );
   await loginAs(page, ["Config.Reader"], "Lea Leser");
   await page.goto("/");
   await page.getByRole("button", { name: "Seite suchen" }).click();

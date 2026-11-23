@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import { Avatar } from "../components/Avatar";
+import { ShowMore, useShowMore } from "../components/ShowMore";
+
+/** So viele Personen stehen zuerst da; der Rest mit „Weitere anzeigen“. */
+const PEOPLE_STEP = 50;
 import { errorText, fetchPeople, filterPeople, formatDateTime, type PersonRoles } from "../api";
 
 /** Verwaltung › Rollen je Person: wer Zugriff hat und mit welchen Rollen (letzte Anmeldung). */
@@ -8,6 +12,7 @@ export function PeopleRoles() {
   const [failed, setFailed] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [withoutRole, setWithoutRole] = useState(false);
+  const paging = useShowMore(PEOPLE_STEP, `${query}|${withoutRole}`);
 
   useEffect(() => {
     let active = true;
@@ -72,7 +77,7 @@ export function PeopleRoles() {
               </tr>
             </thead>
             <tbody>
-              {shown.map((person, index) => (
+              {shown.slice(0, paging.limit).map((person, index) => (
                 <tr key={`${person.display_name}-${person.email ?? ""}-${index}`}>
                   <th scope="row">
                     <Avatar name={person.display_name} url={person.avatar_url} />{" "}
@@ -101,6 +106,11 @@ export function PeopleRoles() {
           </table>
         </div>
       )}
+      <ShowMore
+        shown={Math.min(paging.limit, shown.length)}
+        total={shown.length}
+        onMore={paging.more}
+      />
     </>
   );
 }

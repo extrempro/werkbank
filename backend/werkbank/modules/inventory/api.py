@@ -49,8 +49,10 @@ WHEREABOUTS: dict[str, str] = {
     "leasing": "an Leasing zurück",
     "hersteller": "beim Hersteller",
 }
-# Obergrenze der Liste und des Verlaufs je Abruf
-LIST_MAX = 5000
+# Seitenweise Listen: so viele Einträge je Abruf, höchstens PAGE_MAX
+PAGE_SIZE = 50
+PAGE_MAX = 200
+# Obergrenze des Verlaufs je Abruf
 EVENTS_MAX = 500
 
 Reader = Annotated[
@@ -728,23 +730,76 @@ def _model_label(db: Session, model: InventoryModel | None) -> str:
 # --- Hardware --------------------------------------------------------------------------------
 
 
+class KindChoice(BaseModel):
+    id: int
+    name: str
+
+
+class HardwareListOut(BaseModel):
+    items: list[HardwareSummary]
+    # Treffer insgesamt (Status, Art, Suche), für „Mehr anzeigen“
+    total: int
+    # Arten, die es mit diesem Status gibt (für den Filter)
+    kinds: list[KindChoice]
+
+
+def _matches(needle: str, values: list[str | None]) -> bool:
+    return any(needle in (value or "").casefold() for value in values)
+
+
 @router.get("/hardware")
 def list_hardware(
     user: Reader,
     db: DbDep,
     state: Annotated[Literal["aktiv", "ausgemustert", "alle"], Query()] = "aktiv",
-) -> list[HardwareSummary]:
-    """Geräte nach Status. Suche und weitere Filter übernimmt die Oberfläche."""
+    q: Annotated[str, Query(max_length=100)] = "",
+    kind: Annotated[int | None, Query(ge=1, le=2_000_000_000)] = None,
+    offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=PAGE_MAX)] = PAGE_SIZE,
+) -> HardwareListOut:
+    """Geräte seitenweise nach Status; ``q`` sucht in Bezeichnung, Art, Hersteller, Modell,
+    Serien- und Inventurnummer, Hostname, Standort und Zuordnung."""
     query = select(InventoryHardware)
     if state != "alle":
         query = query.where(InventoryHardware.status == state)
     rows = db.scalars(
-        query.order_by(func.lower(InventoryHardware.name), InventoryHardware.id).limit(LIST_MAX)
+        query.order_by(func.lower(InventoryHardware.name), InventoryHardware.id)
     ).all()
     kinds, models = _names(db)
     places = _places(db)
     known = holders(db)
-    return [_summary(row, kinds, models, places, known) for row in rows]
+    summaries = [_summary(row, kinds, models, places, known) for row in rows]
+    present = {entry.kind_id: entry.kind for entry in summaries}
+    if kind is not None:
+        summaries = [entry for entry in summaries if entry.kind_id == kind]
+    needle = q.strip().casefold()
+    if needle:
+        summaries = [
+            entry
+            for entry in summaries
+            if _matches(
+                needle,
+                [
+                    entry.name,
+                    entry.kind,
+                    entry.maker,
+                    entry.model,
+                    entry.serial,
+                    entry.inventory_no,
+                    entry.hostname,
+                    entry.place,
+                    entry.holder,
+                ],
+            )
+        ]
+    return HardwareListOut(
+        items=summaries[offset : offset + limit],
+        total=len(summaries),
+        kinds=[
+            KindChoice(id=key, name=name)
+            for key, name in sorted(present.items(), key=lambda item: item[1].casefold())
+        ],
+    )
 
 
 @router.post("/hardware", status_code=status.HTTP_201_CREATED)

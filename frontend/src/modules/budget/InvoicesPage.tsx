@@ -52,6 +52,7 @@ import {
 } from "./api";
 import { BudgetHead, DeleteButton, FormStep, ReadOnlyNote } from "./shared";
 import { Feedback } from "../../components/Feedback";
+import { ListPicker } from "../inventory/LookupPicker";
 
 interface FormProps {
   /** null: neue Rechnung erfassen. */
@@ -324,28 +325,17 @@ function InvoiceForm({
           <span className="visually-hidden">Stern</span> markiert.
         </p>
         <FormStep number={1} title="Von wem">
-          <label>
-            <span>
-              Rechnungssteller <span aria-hidden="true">*</span>
-            </span>
-            <select
-              value={invoicerId}
+          <div>
+            <ListPicker
+              label="Rechnungssteller"
               required
-              aria-required="true"
-              aria-describedby="rechnung-steller-hinweis"
-              onChange={(event) => setInvoicerId(event.target.value)}
-            >
-              <option value="">Bitte wählen</option>
-              {partnerChoices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-            <span id="rechnung-steller-hinweis" className="form-hint">
-              Danach stehen seine Budgetposten oben in der Auswahl.
-            </span>
-          </label>
+              placeholder="Name des Rechnungsstellers …"
+              options={partnerChoices.map((entry) => ({ id: entry.id, label: entry.name }))}
+              value={invoicerId}
+              onChange={setInvoicerId}
+            />
+            <span className="form-hint">Danach stehen seine Budgetposten oben in der Auswahl.</span>
+          </div>
         </FormStep>
         <FormStep number={2} title="Rechnung">
           <label>

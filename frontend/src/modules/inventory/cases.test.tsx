@@ -89,7 +89,7 @@ const routes = {
     workplaces: [],
   },
   "GET /api/inventory/locations": { cities: [] },
-  "GET /api/inventory/hardware": [],
+  "GET /api/inventory/hardware": { items: [], total: 0, kinds: [] },
   "GET /api/inventory/lookup": {
     items: [{ id: 4, label: "ST-004 Einkauf", detail: "Alex Beispiel" }],
     total: 1,

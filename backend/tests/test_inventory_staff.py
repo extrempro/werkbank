@@ -214,7 +214,14 @@ def test_positions_numbers_and_people(db: Session) -> None:
     assert vacant["person"] is None
     assert reader.get(url).json()["number"] == position["number"]
     listed = reader.get(f"{BASE}/positions").json()
-    assert {entry["id"] for entry in listed} == {position["id"], second["id"]}
+    assert listed["total"] == 2
+    assert {entry["id"] for entry in listed["items"]} == {position["id"], second["id"]}
+    # Suche und Seiten im Backend
+    found = reader.get(f"{BASE}/positions", params={"q": "einkauf"}).json()
+    assert [entry["id"] for entry in found["items"]] == [position["id"]]
+    paged = reader.get(f"{BASE}/positions", params={"limit": 1, "offset": 1}).json()
+    assert paged["total"] == 2 and len(paged["items"]) == 1
+    assert reader.get(f"{BASE}/positions", params={"limit": 201}).status_code == 422
 
     # Audit ohne Namen der Personen
     details = db.scalars(
@@ -397,9 +404,16 @@ def test_workplaces_kits_and_equipment(db: Session) -> None:
         f"{BASE}/workplaces", json={"position_ids": [], "room_id": room["id"]}, headers=HEADERS
     ).json()
     assert empty["complete"] is None
+    lists = editor.get(f"{BASE}/workplaces", params={"filter": "frei"}).json()
+    assert [entry["id"] for entry in lists["items"]] == [empty["id"]]
+    found = editor.get(f"{BASE}/workplaces", params={"q": "stelle a"}).json()
+    assert [entry["id"] for entry in found["items"]] == [workplace["id"]]
+    assert editor.get(f"{BASE}/workplaces", params={"filter": "x"}).status_code == 422
     gone = editor.delete(f"{BASE}/workplaces/{empty['id']}", headers=HEADERS)
     assert gone.status_code == 200
-    assert {entry["id"] for entry in gone.json()} == {workplace["id"]}
+    assert gone.json() == {"id": empty["id"]}
+    left = editor.get(f"{BASE}/workplaces").json()
+    assert {entry["id"] for entry in left["items"]} == {workplace["id"]}
 
     # Suche findet Arbeitsplätze
     hits = editor.get("/api/search", params={"q": workplace["number"]}).json()["hits"]

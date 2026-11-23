@@ -7,24 +7,21 @@ import { INVENTORY_MASTER_PATH } from "../../navigation";
 import { navigate } from "../../router";
 import {
   createHardware,
-  fetchAssignees,
   fetchHardwareList,
-  fetchLocations,
   fetchMasterData,
-  filterHardware,
   hardwarePath,
   INVENTORY_EDITOR_ROLE,
   modelLabel,
-  parseHolder,
-  roomChoices,
   SOURCE_LABELS,
   today,
-  type Assignees,
+  type HardwareList,
   type HardwareSummary,
+  type LookupItem,
   type ListState,
-  type Locations,
   type MasterData,
 } from "./api";
+import { LookupPicker } from "./LookupPicker";
+import { MoreButton, useDebounced, usePagedList } from "./paged";
 
 const STATES: { id: ListState; label: string }[] = [
   { id: "aktiv", label: "Im Bestand" },
@@ -41,16 +38,37 @@ export interface DeviceFields {
   note: string;
   /** Anschaffungsdatum JJJJ-MM-TT, leer = unbekannt */
   purchasedOn: string;
-  roomId: string;
-  /** „s:4“ für Stelle 4, „w:2“ für Arbeitsplatz 2, leer ohne Zuordnung */
-  holder: string;
+  room: LookupItem | null;
+  /** Zuordnung: an eine Stelle, an einen Arbeitsplatz oder an niemanden */
+  holderKind: HolderKind;
+  holder: LookupItem | null;
 }
+
+export type HolderKind = "" | "stelle" | "arbeitsplatz";
+
+const HOLDER_KINDS: { value: HolderKind; label: string }[] = [
+  { value: "", label: "Niemandem" },
+  { value: "stelle", label: "Stelle" },
+  { value: "arbeitsplatz", label: "Arbeitsplatz" },
+];
+
+/** Leere Felder für ein neues Gerät. */
+export const EMPTY_DEVICE: DeviceFields = {
+  kindId: "",
+  modelId: "",
+  name: "",
+  serial: "",
+  hostname: "",
+  note: "",
+  purchasedOn: "",
+  room: null,
+  holderKind: "",
+  holder: null,
+};
 
 /** Felder eines Geräts; beim Anlegen und Bearbeiten gleich. */
 export function DeviceFormFields({
   master,
-  locations,
-  assignees,
   value,
   onChange,
   fromNinja = false,
@@ -58,15 +76,10 @@ export function DeviceFormFields({
   master: MasterData;
   /** Hostname und Seriennummer kommen aus NinjaOne und sind dann nur lesbar. */
   fromNinja?: boolean;
-  /** Standorte für die Raumauswahl; null, solange sie laden oder fehlen. */
-  locations: Locations | null;
-  /** Stellen und Arbeitsplätze für „Zugeordnet zu“; null, solange sie laden oder fehlen. */
-  assignees: Assignees | null;
   value: DeviceFields;
   onChange: (next: DeviceFields) => void;
 }) {
   const set = (patch: Partial<DeviceFields>) => onChange({ ...value, ...patch });
-  const groups = locations ? roomChoices(locations) : [];
   return (
     <>
       <div className="tool-row">
@@ -157,56 +170,54 @@ export function DeviceFormFields({
           />
         </label>
       </div>
-      <label>
-        Raum (freiwillig)
-        <select value={value.roomId} onChange={(event) => set({ roomId: event.target.value })}>
-          <option value="">kein Raum</option>
-          {groups.map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.rooms.map((room) => (
-                <option key={room.id} value={String(room.id)}>
-                  {room.name}
-                </option>
-              ))}
-            </optgroup>
+      <LookupPicker
+        kind="room"
+        label="Raum (freiwillig)"
+        placeholder="Raum, Etage oder Standort …"
+        value={value.room}
+        onChange={(room) => set({ room })}
+      />
+      <fieldset className="seg-field">
+        <legend>Zugeordnet zu (freiwillig)</legend>
+        <div className="chips">
+          {HOLDER_KINDS.map((entry) => (
+            <button
+              key={entry.label}
+              type="button"
+              className="chip chip-filter"
+              aria-pressed={value.holderKind === entry.value}
+              onClick={() =>
+                value.holderKind !== entry.value && set({ holderKind: entry.value, holder: null })
+              }
+            >
+              {entry.label}
+            </button>
           ))}
-        </select>
-      </label>
-      {locations && groups.length === 0 && (
-        <p className="small">Räume lassen sich unter Standorte auf einem Grundriss anlegen.</p>
+        </div>
+      </fieldset>
+      {value.holderKind !== "" && (
+        <LookupPicker
+          kind={value.holderKind === "stelle" ? "position" : "workplace"}
+          label={value.holderKind === "stelle" ? "Stelle" : "Arbeitsplatz"}
+          required
+          placeholder={
+            value.holderKind === "stelle" ? "Nummer, Name oder Person …" : "Nummer oder Raum …"
+          }
+          value={value.holder}
+          onChange={(holder) => set({ holder })}
+        />
       )}
-      <label>
-        Zugeordnet zu (freiwillig)
-        <select value={value.holder} onChange={(event) => set({ holder: event.target.value })}>
-          <option value="">niemandem</option>
-          {assignees && assignees.positions.length > 0 && (
-            <optgroup label="Stellen">
-              {assignees.positions.map((entry) => (
-                <option key={entry.id} value={`s:${entry.id}`}>
-                  {entry.number} {entry.name}
-                  {entry.person_name ? ` (${entry.person_name})` : ""}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {assignees && assignees.workplaces.length > 0 && (
-            <optgroup label="Arbeitsplätze">
-              {assignees.workplaces.map((entry) => (
-                <option key={entry.id} value={`w:${entry.id}`}>
-                  {entry.number}
-                  {entry.place ? ` (${entry.place})` : ""}
-                </option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-      </label>
     </>
   );
 }
 
 /** Prüft die Felder; liefert einen Fehlertext oder null. */
 export function deviceProblem(value: DeviceFields): string | null {
+  if (value.holderKind !== "" && !value.holder) {
+    return value.holderKind === "stelle"
+      ? "Bitte die Stelle wählen oder „Niemandem“."
+      : "Bitte den Arbeitsplatz wählen oder „Niemandem“.";
+  }
   if (!value.name.trim()) {
     return "Bitte eine Bezeichnung eintragen.";
   }
@@ -228,34 +239,15 @@ export function deviceInput(value: DeviceFields) {
     hostname: value.hostname.trim(),
     note: value.note.trim(),
     purchased_on: value.purchasedOn || null,
-    room_id: value.roomId ? Number(value.roomId) : null,
-    ...parseHolder(value.holder),
+    room_id: value.room ? value.room.id : null,
+    position_id: value.holderKind === "stelle" && value.holder ? value.holder.id : null,
+    workplace_id: value.holderKind === "arbeitsplatz" && value.holder ? value.holder.id : null,
   };
 }
 
 /** Neues Gerät von Hand; mit Inventurnummer erst nach einer Rückfrage. */
-function NewDeviceForm({
-  master,
-  locations,
-  assignees,
-  onCancel,
-}: {
-  master: MasterData;
-  locations: Locations | null;
-  assignees: Assignees | null;
-  onCancel: () => void;
-}) {
-  const [fields, setFields] = useState<DeviceFields>({
-    kindId: "",
-    modelId: "",
-    name: "",
-    serial: "",
-    hostname: "",
-    note: "",
-    purchasedOn: "",
-    roomId: "",
-    holder: "",
-  });
+function NewDeviceForm({ master, onCancel }: { master: MasterData; onCancel: () => void }) {
+  const [fields, setFields] = useState<DeviceFields>(EMPTY_DEVICE);
   const [inventoryNo, setInventoryNo] = useState("");
   const [ask, dialog] = useConfirm();
   const [error, setError] = useState<string | null>(null);
@@ -300,13 +292,7 @@ function NewDeviceForm({
         <h2 id="geraet-neu-titel">Gerät erfassen</h2>
       </div>
       <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-        <DeviceFormFields
-          master={master}
-          locations={locations}
-          assignees={assignees}
-          value={fields}
-          onChange={setFields}
-        />
+        <DeviceFormFields master={master} value={fields} onChange={setFields} />
         <label className="narrow">
           Inventurnummer (freiwillig)
           <input
@@ -342,12 +328,7 @@ function NewDeviceForm({
 export function HardwarePage({ roles }: { roles: readonly string[] }) {
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
   const [state, setState] = useState<ListState>("aktiv");
-  // Geladene Liste mit dem Status, für den sie gilt; beim Umschalten zählt sie als „lädt“.
-  const [loaded, setLoaded] = useState<{ state: ListState; items: HardwareSummary[] } | null>(null);
-  const list = loaded && loaded.state === state ? loaded.items : null;
   const [master, setMaster] = useState<MasterData | null>(null);
-  const [locations, setLocations] = useState<Locations | null>(null);
-  const [assignees, setAssignees] = useState<Assignees | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [kindId, setKindId] = useState<number | null>(null);
@@ -360,36 +341,26 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
       (error: unknown) =>
         active && setFailed(errorText(error, "Die Stammdaten konnten nicht geladen werden.")),
     );
-    // Ohne Standorte bleibt die Raumauswahl leer; das ist kein Fehler der Seite.
-    fetchLocations().then(
-      (result) => active && setLocations(result),
-      () => undefined,
-    );
-    fetchAssignees().then(
-      (result) => active && setAssignees(result),
-      () => undefined,
-    );
     return () => {
       active = false;
     };
   }, []);
 
-  useEffect(() => {
-    let active = true;
-    fetchHardwareList(state).then(
-      (result) => active && setLoaded({ state, items: result }),
-      (error: unknown) =>
-        active && setFailed(errorText(error, "Die Hardware konnte nicht geladen werden.")),
-    );
-    return () => {
-      active = false;
-    };
-  }, [state]);
-
-  const shown = list ? filterHardware(list, query, kindId) : [];
-  const kindsInList = master
-    ? master.kinds.filter((kind) => list?.some((device) => device.kind_id === kind.id))
-    : [];
+  const search = useDebounced(query);
+  const paged = usePagedList<HardwareSummary, { kinds: HardwareList["kinds"] }>(
+    `${state}|${kindId ?? ""}|${search}`,
+    0,
+    (offset, limit) =>
+      fetchHardwareList(state, search, kindId, offset, limit).then((result) => ({
+        items: result.items,
+        total: result.total,
+        extra: { kinds: result.kinds },
+      })),
+    "Die Hardware konnte nicht geladen werden.",
+  );
+  const shown = paged.items;
+  const kindsInList = paged.extra?.kinds ?? [];
+  const listFailed = paged.error;
 
   return (
     <div className="page page-wide">
@@ -421,12 +392,7 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
         </p>
       )}
       {canEdit && creating && master && master.kinds.length > 0 && (
-        <NewDeviceForm
-          master={master}
-          locations={locations}
-          assignees={assignees}
-          onCancel={() => setCreating(false)}
-        />
+        <NewDeviceForm master={master} onCancel={() => setCreating(false)} />
       )}
 
       {failed && (
@@ -483,16 +449,19 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
           }
         />
         <div className="detail-body settings-form">
-          {!failed && !list && <p role="status">Wird geladen …</p>}
-          {list && (
+          {listFailed && (
+            <p role="alert" className="hint-box hint-bad">
+              {listFailed}
+            </p>
+          )}
+          {!listFailed && !shown && <p role="status">Wird geladen …</p>}
+          {shown && shown.length === 0 && (
             <p className="small" role="status">
-              {shown.length === 0
-                ? "Keine Geräte für diese Auswahl."
-                : `${shown.length} von ${list.length} Geräten`}
+              Keine Geräte für diese Auswahl.
             </p>
           )}
         </div>
-        {list && shown.length > 0 && (
+        {shown && shown.length > 0 && (
           <div className="table-wrap card-wrap">
             <table className="table-cards" role="table">
               <caption className="visually-hidden">Geräte im IT-Bestand</caption>
@@ -556,6 +525,14 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
               </tbody>
             </table>
           </div>
+        )}
+        {shown && (
+          <MoreButton
+            shown={shown.length}
+            total={paged.total}
+            loading={paged.loadingMore}
+            onMore={paged.more}
+          />
         )}
       </section>
     </div>

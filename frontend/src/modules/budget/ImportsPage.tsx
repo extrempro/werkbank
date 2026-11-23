@@ -21,6 +21,10 @@ import {
 } from "./imports";
 import { BudgetHead } from "./shared";
 import { Feedback } from "../../components/Feedback";
+import { ShowMore, useShowMore } from "../../components/ShowMore";
+
+/** So viele Vorgänge stehen zuerst da; ältere mit „Weitere anzeigen“. */
+const IMPORTS_STEP = 20;
 
 type View = "arbeit" | "fertig" | "alle";
 
@@ -191,6 +195,7 @@ export function ImportsPage() {
   const [imports, setImports] = useState<ImportSummary[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [view, setView] = useState<View>("arbeit");
+  const paging = useShowMore(IMPORTS_STEP, view);
   const [draft, setDraft] = useState<ImportDetail | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -352,7 +357,7 @@ export function ImportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {shown.map((entry) => (
+                {shown.slice(0, paging.limit).map((entry) => (
                   <tr key={entry.id}>
                     <th scope="row">
                       <Link to={importPath(entry.id)}>{entry.file_name}</Link>
@@ -393,6 +398,11 @@ export function ImportsPage() {
             </table>
           </div>
         )}
+        <ShowMore
+          shown={Math.min(paging.limit, shown.length)}
+          total={shown.length}
+          onMore={paging.more}
+        />
       </section>
       <p className="hint-box">
         Ein Vorgang lässt sich jederzeit unterbrechen und später weiter bearbeiten. Offene Vorgänge
