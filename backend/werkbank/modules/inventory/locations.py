@@ -75,10 +75,17 @@ class FloorIn(NameIn):
 
 
 class RoomIn(NameIn):
+    # None: Beschreibung bleibt (z. B. beim Verschieben im Grundriss); leer: löschen
+    description: str | None = Field(default=None, max_length=120)
     x: float = Field(ge=0, le=100)
     y: float = Field(ge=0, le=100)
     w: float = Field(ge=ROOM_MIN, le=100)
     h: float = Field(ge=ROOM_MIN, le=100)
+
+    @field_validator("description")
+    @classmethod
+    def plain_description(cls, value: str | None) -> str | None:
+        return None if value is None else single_line(value)
 
     @model_validator(mode="after")
     def inside(self) -> RoomIn:
@@ -132,11 +139,16 @@ class PlanOut(BaseModel):
 class RoomOut(BaseModel):
     id: int
     name: str
+    description: str
     x: float
     y: float
     w: float
     h: float
     hardware: int
+    # Arbeitsplätze im Raum, davon ohne Stelle; Personen der Stellen an diesen Plätzen
+    workplaces: int
+    workplaces_free: int
+    people: list[str]
 
 
 class SpotPosition(BaseModel):
@@ -265,6 +277,7 @@ def floor_out(db: Session, floor: InventoryFloor) -> FloorOut:
         .where(InventoryRoom.floor_id == floor.id)
         .order_by(func.lower(InventoryRoom.name), InventoryRoom.id)
     ).all()
+    occupancy = room_occupancy(db, [room.id for room in rooms])
     return FloorOut(
         id=floor.id,
         name=floor.name,
@@ -282,16 +295,57 @@ def floor_out(db: Session, floor: InventoryFloor) -> FloorOut:
             RoomOut(
                 id=room.id,
                 name=room.name,
+                description=room.description,
                 x=room.x,
                 y=room.y,
                 w=room.w,
                 h=room.h,
                 hardware=counts.get(room.id, 0),
+                workplaces=occupancy.get(room.id, (0, 0, []))[0],
+                workplaces_free=occupancy.get(room.id, (0, 0, []))[1],
+                people=occupancy.get(room.id, (0, 0, []))[2],
             )
             for room in rooms
         ],
         workplaces=floor_spots(db, list(rooms)),
     )
+
+
+# höchstens so viele Personen je Raum in der Liste (für Anzeige und Suche)
+ROOM_PEOPLE = 20
+
+
+def room_occupancy(db: Session, room_ids: list[int]) -> dict[int, tuple[int, int, list[str]]]:
+    """Je Raum: Zahl der Arbeitsplätze, davon ohne Stelle, und Personen der Stellen dort."""
+    if not room_ids:
+        return {}
+    places = db.execute(
+        select(InventoryWorkplace.id, InventoryWorkplace.room_id).where(
+            InventoryWorkplace.room_id.in_(room_ids)
+        )
+    ).all()
+    if not places:
+        return {}
+    room_of: dict[int, int] = {
+        place_id: room_id for place_id, room_id in places if room_id is not None
+    }
+    staffed: set[int] = set()
+    people: dict[int, list[str]] = {}
+    for place_id, person in db.execute(
+        select(InventoryWorkplacePosition.workplace_id, InventoryPosition.person_name)
+        .join(InventoryPosition, InventoryPosition.id == InventoryWorkplacePosition.position_id)
+        .where(InventoryWorkplacePosition.workplace_id.in_(list(room_of)))
+        .order_by(InventoryPosition.person_name)
+    ).all():
+        staffed.add(place_id)
+        names = people.setdefault(room_of[place_id], [])
+        if person and person not in names and len(names) < ROOM_PEOPLE:
+            names.append(person)
+    result: dict[int, tuple[int, int, list[str]]] = {}
+    for place_id, room_id in room_of.items():
+        total, free, _ = result.get(room_id, (0, 0, []))
+        result[room_id] = (total + 1, free + (place_id not in staffed), people.get(room_id, []))
+    return result
 
 
 def floor_spots(db: Session, rooms: list[InventoryRoom]) -> list[SpotOut]:
@@ -764,7 +818,9 @@ def create_room(
 ) -> FloorOut:
     floor = _floor(db, floor_id)
     _room_name_free(db, floor.id, body.name, None)
-    row = InventoryRoom(floor_id=floor.id, name=body.name, **_rect(body))
+    row = InventoryRoom(
+        floor_id=floor.id, name=body.name, description=body.description or "", **_rect(body)
+    )
     db.add(row)
     db.flush()
     _audit(
@@ -780,8 +836,17 @@ def update_room(
 ) -> FloorOut:
     row = _room(db, room_id)
     _room_name_free(db, row.floor_id, body.name, row.id)
-    before = {"name": row.name, "x": row.x, "y": row.y, "w": row.w, "h": row.h}
+    before = {
+        "name": row.name,
+        "beschreibung": row.description,
+        "x": row.x,
+        "y": row.y,
+        "w": row.w,
+        "h": row.h,
+    }
     row.name = body.name
+    if body.description is not None:
+        row.description = body.description
     for key, value in _rect(body).items():
         setattr(row, key, value)
     _audit(
@@ -791,7 +856,10 @@ def update_room(
         "raum_geaendert",
         "raum",
         row.id,
-        {"vorher": before, "nachher": {"name": row.name, **_rect(body)}},
+        {
+            "vorher": before,
+            "nachher": {"name": row.name, "beschreibung": row.description, **_rect(body)},
+        },
     )
     db.commit()
     return floor_out(db, _floor(db, row.floor_id))

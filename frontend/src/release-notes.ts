@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.109.0",
+    date: "2026-11-23",
+    summary: "IT-Bestand: übersichtlichere Raumliste neben dem Grundriss.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Neben dem Grundriss siehst du je Raum Beschreibung, belegte und freie Arbeitsplätze und Geräte.",
+          "Mit „Raum suchen“ findest du Räume auch über die Person am Arbeitsplatz, mit „Zeigen“ nur Räume mit freien Plätzen, mit Geräten oder ohne Geräte.",
+          "Bei vielen Räumen ordnet die Werkbank sie nach der Raumnummer in Gruppen, die du zuklappen kannst.",
+          "Am Raum kannst du eine Nutzung oder Beschreibung eintragen, zum Beispiel Besprechung oder Technik.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.108.0",
     date: "2026-11-23",
     summary: "IT-Bestand: PSREF wieder abrufbar, und du siehst, warum ein Abruf scheitert.",

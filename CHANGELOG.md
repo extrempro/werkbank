@@ -4,9 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.109.0] – 2026-11-23
+
+### IT-Bestand
+
+- **Neue Raumliste neben dem Grundriss** (`modules/inventory/RoomList.tsx`): Je Raum stehen Name, Beschreibung, belegte und freie Arbeitsplätze und Geräte. Gesucht wird über Name, Beschreibung und Personen. Statt Filter-Chips gibt es die Auswahl „Zeigen“ mit Anzahl. Ab 13 Räumen bildet die Liste zuklappbare Gruppen nach dem Anfang der Raumnummer. Die Liste hat keinen eigenen Scrollbalken mehr und ist breiter (22 rem).
+- **Beschreibung am Raum** (`description`, Migration `0074`), freiwillig, im Raum zu bearbeiten. Beim Verschieben im Grundriss bleibt sie erhalten.
+- `RoomOut` mit `workplaces`, `workplaces_free` und `people`
+
 ### Dokumentation
 
 - design.md: Regel „Filter-Chips nie seitlich scrollen“ (passt eine Reihe nicht in eine Zeile, wird der Filter zur Auswahl mit Anzahl)
+- spec.md und Handbuch (Standorte)
+
+### Tests
+
+- `test_inventory_staff.py` (Beschreibung, Belegung je Raum), `roomlist.test.tsx` (Raumnummer, Gruppen, Suche, Auswahl), `locations.test.tsx`
 
 ## [0.108.0] – 2026-11-23
 

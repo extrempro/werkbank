@@ -365,11 +365,18 @@ export interface Locations {
 export interface Room {
   id: number;
   name: string;
+  /** freiwillig: Nutzung oder Beschreibung */
+  description: string;
   x: number;
   y: number;
   w: number;
   h: number;
   hardware: number;
+  /** Arbeitsplätze im Raum, davon ohne Stelle */
+  workplaces: number;
+  workplaces_free: number;
+  /** Personen der Stellen an den Arbeitsplätzen im Raum */
+  people: string[];
 }
 
 export interface RoomRect {
@@ -508,11 +515,18 @@ export function updateFloor(id: number, body: { name: string; position: number }
   return putJson(`${BASE}/floors/${id}`, body, { quiet: true });
 }
 
-export function createRoom(floorId: number, body: RoomRect & { name: string }): Promise<Floor> {
+export function createRoom(
+  floorId: number,
+  body: RoomRect & { name: string; description?: string },
+): Promise<Floor> {
   return postJson(`${BASE}/floors/${floorId}/rooms`, body, { quiet: true });
 }
 
-export function updateRoom(id: number, body: RoomRect & { name: string }): Promise<Floor> {
+/** Ohne ``description`` bleibt die Beschreibung, wie sie ist (z. B. beim Verschieben). */
+export function updateRoom(
+  id: number,
+  body: RoomRect & { name: string; description?: string },
+): Promise<Floor> {
   return putJson(`${BASE}/rooms/${id}`, body, { quiet: true });
 }
 

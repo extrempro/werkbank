@@ -90,8 +90,32 @@ const floor: Floor = {
   city: "Musterstadt",
   plan: { url: "/api/inventory/floors/4/plan?v=abc", width: 1600, height: 1000 },
   rooms: [
-    { id: 9, name: "Büro 0.12", x: 10, y: 10, w: 20, h: 15, hardware: 1 },
-    { id: 10, name: "Lager", x: 50, y: 40, w: 10, h: 10, hardware: 0 },
+    {
+      id: 9,
+      name: "Büro 0.12",
+      description: "Büro",
+      x: 10,
+      y: 10,
+      w: 20,
+      h: 15,
+      hardware: 1,
+      workplaces: 1,
+      workplaces_free: 0,
+      people: ["Ina Beispiel"],
+    },
+    {
+      id: 10,
+      name: "Lager",
+      description: "",
+      x: 50,
+      y: 40,
+      w: 10,
+      h: 10,
+      hardware: 0,
+      workplaces: 0,
+      workplaces_free: 0,
+      people: [],
+    },
   ],
   workplaces: [
     {
@@ -182,7 +206,7 @@ describe("Standorte: Seite", () => {
     fireEvent.click(screen.getByRole("button", { name: "Raum speichern" }));
     await vi.waitFor(() => expect(calls.some((call) => call.method === "PUT")).toBe(true));
     const put = calls.find((call) => call.method === "PUT");
-    expect(put?.body).toEqual({ name: "Lager", x: 90, y: 40, w: 10, h: 10 });
+    expect(put?.body).toEqual({ name: "Lager", description: "", x: 90, y: 40, w: 10, h: 10 });
   });
 });
 
