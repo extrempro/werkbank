@@ -16,7 +16,6 @@ import {
   fetchMasterData,
   fetchPosition,
   fetchPositions,
-  filterPositions,
   formatDate,
   INVENTORY_EDITOR_ROLE,
   POSITION_TABS,
@@ -31,6 +30,7 @@ import {
   type PositionSummary,
   type PositionTab,
 } from "./api";
+import { MoreButton, useDebounced, usePagedList } from "./paged";
 
 /** Formular für eine Stelle; beim Anlegen und Bearbeiten gleich. */
 function PositionForm({
@@ -137,19 +137,12 @@ const EMPTY_POSITION: PositionInput = { name: "", department_id: null, person: n
 /** IT-Bestand › Stellen: Liste mit Suche, neue Stelle. */
 export function PositionsPage({ roles }: { roles: readonly string[] }) {
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
-  const [list, setList] = useState<PositionSummary[] | null>(null);
   const [departments, setDepartments] = useState<Department[] | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     let active = true;
-    fetchPositions().then(
-      (result) => active && setList(result),
-      (error: unknown) =>
-        active && setFailed(errorText(error, "Die Stellen konnten nicht geladen werden.")),
-    );
     if (canEdit) {
       fetchMasterData().then(
         (result) => active && setDepartments(result.departments),
@@ -161,7 +154,16 @@ export function PositionsPage({ roles }: { roles: readonly string[] }) {
     };
   }, [canEdit]);
 
-  const shown = list ? filterPositions(list, query) : [];
+  const search = useDebounced(query);
+  const paged = usePagedList<PositionSummary, null>(
+    search,
+    0,
+    (offset, limit) =>
+      fetchPositions(search, offset, limit).then((result) => ({ ...result, extra: null })),
+    "Die Stellen konnten nicht geladen werden.",
+  );
+  const list = paged.items;
+  const listFailed = paged.error;
 
   return (
     <div className="page page-wide">
@@ -199,12 +201,6 @@ export function PositionsPage({ roles }: { roles: readonly string[] }) {
         </section>
       )}
 
-      {failed && (
-        <p role="alert" className="hint-box hint-bad">
-          {failed}
-        </p>
-      )}
-
       <section className="panel" aria-labelledby="stellen-liste">
         <div className="panel-head">
           <h2 id="stellen-liste">Alle Stellen</h2>
@@ -221,16 +217,19 @@ export function PositionsPage({ roles }: { roles: readonly string[] }) {
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
-          {!failed && !list && <p role="status">Wird geladen …</p>}
-          {list && (
+          {listFailed && (
+            <p role="alert" className="hint-box hint-bad">
+              {listFailed}
+            </p>
+          )}
+          {!listFailed && !list && <p role="status">Wird geladen …</p>}
+          {list && list.length === 0 && (
             <p className="small" role="status">
-              {shown.length === 0
-                ? "Keine Stellen für diese Suche."
-                : `${shown.length} von ${list.length} Stellen`}
+              {search.trim() ? "Keine Stellen für diese Suche." : "Noch keine Stellen angelegt."}
             </p>
           )}
         </div>
-        {shown.length > 0 && (
+        {list && list.length > 0 && (
           <div className="table-wrap card-wrap">
             <table className="table-cards">
               <caption className="visually-hidden">Stellen im IT-Bestand</caption>
@@ -245,7 +244,7 @@ export function PositionsPage({ roles }: { roles: readonly string[] }) {
                 </tr>
               </thead>
               <tbody>
-                {shown.map((entry) => (
+                {list.map((entry) => (
                   <tr key={entry.id}>
                     <th scope="row">
                       <Link to={positionPath(entry.id)}>{entry.name}</Link>
@@ -267,6 +266,14 @@ export function PositionsPage({ roles }: { roles: readonly string[] }) {
               </tbody>
             </table>
           </div>
+        )}
+        {list && (
+          <MoreButton
+            shown={list.length}
+            total={paged.total}
+            loading={paged.loadingMore}
+            onMore={paged.more}
+          />
         )}
       </section>
     </div>

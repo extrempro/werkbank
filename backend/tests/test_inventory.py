@@ -123,13 +123,40 @@ def test_plan_images_are_checked_by_content() -> None:
 
 
 @pytest.mark.db
+def test_hardware_list_is_paged_and_searched_on_the_server(db: Session) -> None:
+    editor = client_for(["Bestand.Editor"], "bestand-seiten")
+    for number in range(3):
+        body = hardware_body(editor, name=f"Monitor {number}", serial=f"SN-SEITE-{number}")
+        assert editor.post(f"{BASE}/hardware", json=body, headers=HEADERS).status_code == 201
+    notebook = hardware_body(
+        editor, kind_id=kind_id(editor, "Notebook"), name="Notebook", serial="NB-SEITE"
+    )
+    assert editor.post(f"{BASE}/hardware", json=notebook, headers=HEADERS).status_code == 201
+
+    first = editor.get(f"{BASE}/hardware", params={"limit": 2}).json()
+    assert first["total"] == 4
+    assert [entry["name"] for entry in first["items"]] == ["Monitor 0", "Monitor 1"]
+    assert [entry["name"] for entry in first["kinds"]] == ["Monitor", "Notebook"]
+    rest = editor.get(f"{BASE}/hardware", params={"limit": 2, "offset": 2}).json()
+    assert [entry["name"] for entry in rest["items"]] == ["Monitor 2", "Notebook"]
+
+    found = editor.get(f"{BASE}/hardware", params={"q": "nb-seite"}).json()
+    assert [entry["name"] for entry in found["items"]] == ["Notebook"]
+    only = editor.get(f"{BASE}/hardware", params={"kind": kind_id(editor, "Monitor")}).json()
+    assert only["total"] == 3
+    # Der Filter zeigt weiterhin alle Arten mit diesem Status
+    assert len(only["kinds"]) == 2
+    assert editor.get(f"{BASE}/hardware", params={"limit": 201}).status_code == 422
+
+
+@pytest.mark.db
 def test_inventory_needs_its_roles(db: Session) -> None:
     stranger = client_for(["Projekte.Editor"], "bestand-fremd")
     assert stranger.get(f"{BASE}/hardware").status_code == 403
     assert stranger.get(f"{BASE}/master-data").status_code == 403
 
     reader = client_for(["Bestand.Reader"], "bestand-leser")
-    assert reader.get(f"{BASE}/hardware").json() == []
+    assert reader.get(f"{BASE}/hardware").json() == {"items": [], "total": 0, "kinds": []}
     kinds = {kind["name"]: kind for kind in reader.get(f"{BASE}/master-data").json()["kinds"]}
     assert kinds["Notebook"]["has_storage"] is True
     assert kinds["Monitor"]["has_storage"] is False
@@ -284,10 +311,10 @@ def test_retire_and_reactivate(db: Session) -> None:
     assert again.status_code == 409
 
     # Aus der normalen Liste verschwunden, unter „ausgemustert“ zu finden
-    assert editor.get(f"{BASE}/hardware").json() == []
-    retired = editor.get(f"{BASE}/hardware?state=ausgemustert").json()
+    assert editor.get(f"{BASE}/hardware").json()["total"] == 0
+    retired = editor.get(f"{BASE}/hardware?state=ausgemustert").json()["items"]
     assert [entry["id"] for entry in retired] == [notebook["id"]]
-    assert len(editor.get(f"{BASE}/hardware?state=alle").json()) == 1
+    assert editor.get(f"{BASE}/hardware?state=alle").json()["total"] == 1
     assert editor.get(f"{BASE}/hardware?state=kaputt").status_code == 422
 
     # Grund in Gebrauch lässt sich nicht löschen.
@@ -458,7 +485,7 @@ def test_locations_rooms_and_plan(db: Session) -> None:
     assert device["location"]["room"] == "1.12 Büro Nord"
     assert device["location"]["floor_id"] == floor_id
     assert any(event["text"].startswith("Standort: Raum 1.12") for event in device["events"])
-    listed = reader.get(f"{BASE}/hardware").json()[0]
+    listed = reader.get(f"{BASE}/hardware").json()["items"][0]
     assert listed["place"] == "1.12 Büro Nord · Verwaltung Nord, 1. Obergeschoss"
     assert reader.get(url).json()["rooms"][0]["hardware"] == 1
     bad_room = hardware_body(editor, serial="SN-X", room_id=999999)

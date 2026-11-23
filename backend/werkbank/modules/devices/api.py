@@ -149,6 +149,8 @@ class CountsOut(BaseModel):
 
 class ListOut(BaseModel):
     entries: list[EntryOut]
+    # Treffer insgesamt; die Liste zeigt höchstens LIST_MAX, die neuesten zuerst
+    total: int
     counts: CountsOut
     last_run: str | None
     monitor: bool
@@ -606,6 +608,9 @@ def refresh_all(
     return {"checked": checked}
 
 
+# Höchstens so viele Einträge je Abruf; darüber hinaus grenzen Suche und Filter ein
+LIST_MAX = 500
+
 FILTERS: dict[str, tuple[str, ...]] = {
     "freigabe": (AssociationStatus.PENDING,),
     "offen": (AssociationStatus.PREASSOCIATED, AssociationStatus.ASSOCIATED),
@@ -640,7 +645,8 @@ def list_entries(
                 ),
             )
         )
-    rows = db.scalars(query.order_by(DeviceAssociation.scanned_at.desc()).limit(500)).all()
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    rows = db.scalars(query.order_by(DeviceAssociation.scanned_at.desc()).limit(LIST_MAX)).all()
     counts = dict(
         db.execute(
             select(DeviceAssociation.status, func.count()).group_by(DeviceAssociation.status)
@@ -652,6 +658,7 @@ def list_entries(
     names = _names(db, list(rows))
     return ListOut(
         entries=[_out(row, names) for row in rows],
+        total=total,
         counts=CountsOut(**{key.value: int(counts.get(key, 0)) for key in AssociationStatus}),
         last_run=_iso(last_run),
         monitor=bool(settings.collector_configured and settings.devices_monitor_enabled),

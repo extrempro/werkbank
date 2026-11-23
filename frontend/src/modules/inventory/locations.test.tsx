@@ -7,7 +7,6 @@ import {
   locationPath,
   parseLocationPath,
   rectFromPoints,
-  roomChoices,
   searchLocations,
   type Floor,
   type Hardware,
@@ -150,9 +149,6 @@ describe("Standorte: Hilfsfunktionen", () => {
     expect(searchLocations(tree, " ")).toEqual([]);
     expect(firstFloorId(tree)).toBe(4);
     expect(firstFloorId({ cities: [] })).toBeNull();
-    const groups = roomChoices(tree);
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.label).toContain("Erdgeschoss");
   });
 });
 

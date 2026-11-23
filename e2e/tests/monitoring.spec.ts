@@ -49,7 +49,9 @@ test("IT-Monitoring: Zabbix ohne Verbindung, Hosts und Wartungen", async ({
     page.getByRole("link", { name: "Verbindung", exact: true }),
   ).toHaveCount(0);
   await page.goto("/monitoring/zabbix/hosts");
-  await expect(page.getByRole("heading", { level: 1, name: "Hosts" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Hosts" }),
+  ).toBeVisible();
   await expect(page.getByText("Kein Host passt zur Auswahl.")).toBeVisible();
   await expectNoA11yViolations(page);
   // Abgleich mit dem IT-Bestand: Geräte statt Hosts, ohne Bestand.Editor keine Aktionen
@@ -83,7 +85,9 @@ test("IT-Monitoring: Zabbix ohne Verbindung, Hosts und Wartungen", async ({
   expect(api.status()).toBe(403);
 });
 
-test("IT-Monitoring: Admins sehen die Verbindung zu Zabbix", async ({ page }) => {
+test("IT-Monitoring: Admins sehen die Verbindung zu Zabbix", async ({
+  page,
+}) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
   await page.goto("/monitoring/zabbix/verbindung");
   await expect(
@@ -94,7 +98,9 @@ test("IT-Monitoring: Admins sehen die Verbindung zu Zabbix", async ({ page }) =>
   await expectNoA11yViolations(page);
 });
 
-test("IT-Monitoring: Berichte für die Rolle nur mit Berichten", async ({ page }) => {
+test("IT-Monitoring: Berichte für die Rolle nur mit Berichten", async ({
+  page,
+}) => {
   await loginAs(page, ["Monitoring.Berichte"], "Gerd Bericht");
   await page.goto("/");
   await openPage(page, "IT-Monitoring", "Berichte");
@@ -110,19 +116,27 @@ test("IT-Monitoring: Berichte für die Rolle nur mit Berichten", async ({ page }
   await expect(
     page.getByRole("heading", { name: "Häufigste Auslöser" }),
   ).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Hosts", exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Hosts", exact: true }),
+  ).toHaveCount(0);
   await expectNoA11yViolations(page);
   await page.goto("/monitoring/zabbix/hosts");
   await expect(
     page.getByRole("heading", { name: "Seite nicht gefunden" }),
   ).toBeVisible();
-  expect((await page.request.get("/api/monitoring/zabbix/hosts")).status()).toBe(403);
-  const csv = await page.request.get("/api/monitoring/zabbix/reports/export.csv");
+  expect(
+    (await page.request.get("/api/monitoring/zabbix/hosts")).status(),
+  ).toBe(403);
+  const csv = await page.request.get(
+    "/api/monitoring/zabbix/reports/export.csv",
+  );
   expect(csv.status()).toBe(200);
   expect(await csv.text()).toContain("Gesamt");
 });
 
-test("IT-Monitoring: Berichte mit Auslösern für Monitoring.Reader", async ({ page }) => {
+test("IT-Monitoring: Berichte mit Auslösern für Monitoring.Reader", async ({
+  page,
+}) => {
   await loginAs(page, ["Monitoring.Reader"], "Mona Monitoring");
   await page.goto("/monitoring/zabbix/berichte");
   await expect(
@@ -132,6 +146,8 @@ test("IT-Monitoring: Berichte mit Auslösern für Monitoring.Reader", async ({ p
     page.getByRole("heading", { name: "Häufigste Auslöser" }),
   ).toBeVisible();
   await page.getByLabel("Aufteilen nach").selectOption("gruppe");
-  await expect(page.getByRole("heading", { name: "Nach Hostgruppe" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Nach Hostgruppe" }),
+  ).toBeVisible();
   await expectNoA11yViolations(page);
 });

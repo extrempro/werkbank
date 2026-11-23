@@ -20,6 +20,8 @@ from werkbank.core.models import User
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.modules.inventory.api import (
     EVENTS_MAX,
+    PAGE_MAX,
+    PAGE_SIZE,
     STATUS_ACTIVE,
     Editor,
     EventOut,
@@ -73,7 +75,6 @@ RANGE_LABELS = {
 }
 _PREFIX = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,9}$")
 _OID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
-LIST_MAX = 5000
 POSITIONS_PER_WORKPLACE = 50
 
 
@@ -189,6 +190,16 @@ class PositionSummary(BaseModel):
     sites: str
 
 
+class PositionListOut(BaseModel):
+    items: list[PositionSummary]
+    # Treffer insgesamt (Suche), für „Mehr anzeigen“
+    total: int
+
+
+class DeletedOut(BaseModel):
+    id: int
+
+
 class WorkplaceHardwareOut(BaseModel):
     """Hardware an einem Arbeitsplatz der Stelle (nicht direkt an der Stelle)."""
 
@@ -264,6 +275,12 @@ class WorkplaceSummary(BaseModel):
     # None ohne Vorlage
     complete: bool | None
     missing: int
+
+
+class WorkplaceListOut(BaseModel):
+    items: list[WorkplaceSummary]
+    # Treffer insgesamt (Filter, Suche), für „Mehr anzeigen“
+    total: int
 
 
 class WorkplaceOut(WorkplaceSummary):
@@ -437,9 +454,7 @@ def position_summaries(db: Session, only: int | None = None) -> list[PositionSum
     query = select(InventoryPosition)
     if only is not None:
         query = query.where(InventoryPosition.id == only)
-    rows = db.scalars(
-        query.order_by(InventoryPosition.number, InventoryPosition.id).limit(LIST_MAX)
-    ).all()
+    rows = db.scalars(query.order_by(InventoryPosition.number, InventoryPosition.id)).all()
     departments = {row.id: row.name for row in db.scalars(select(InventoryDepartment)).all()}
     rooms_of_workplace = dict(
         db.execute(select(InventoryWorkplace.id, InventoryWorkplace.room_id)).all()
@@ -578,9 +593,7 @@ def workplace_summaries(db: Session, only: int | None = None) -> list[WorkplaceS
     query = select(InventoryWorkplace)
     if only is not None:
         query = query.where(InventoryWorkplace.id == only)
-    rows = db.scalars(
-        query.order_by(InventoryWorkplace.number, InventoryWorkplace.id).limit(LIST_MAX)
-    ).all()
+    rows = db.scalars(query.order_by(InventoryWorkplace.number, InventoryWorkplace.id)).all()
     places = _places(db)
     kits = {row.id: row.name for row in db.scalars(select(InventoryKit)).all()}
     positions = {row.id: row for row in db.scalars(select(InventoryPosition)).all()}
@@ -718,9 +731,38 @@ def _position_details(row: InventoryPosition) -> dict[str, object]:
     }
 
 
+def _found(needle: str, values: list[str | None]) -> bool:
+    return any(needle in (value or "").casefold() for value in values)
+
+
 @router.get("/positions")
-def list_positions(user: Reader, db: DbDep) -> list[PositionSummary]:
-    return position_summaries(db)
+def list_positions(
+    user: Reader,
+    db: DbDep,
+    q: Annotated[str, Query(max_length=100)] = "",
+    offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=PAGE_MAX)] = PAGE_SIZE,
+) -> PositionListOut:
+    """Stellen seitenweise; ``q`` sucht in Nummer, Name, Person, Abteilung und Standorten."""
+    rows = position_summaries(db)
+    needle = q.strip().casefold()
+    if needle:
+        rows = [
+            entry
+            for entry in rows
+            if _found(
+                needle,
+                [
+                    entry.number,
+                    entry.name,
+                    entry.person.name if entry.person else "",
+                    entry.person.upn if entry.person else "",
+                    entry.department,
+                    entry.sites,
+                ],
+            )
+        ]
+    return PositionListOut(items=rows[offset : offset + limit], total=len(rows))
 
 
 @router.post("/positions", status_code=status.HTTP_201_CREATED)
@@ -799,9 +841,7 @@ def update_position(
 
 
 @router.delete("/positions/{position_id}")
-def delete_position(
-    request: Request, position_id: ObjectId, user: Editor, db: DbDep
-) -> list[PositionSummary]:
+def delete_position(request: Request, position_id: ObjectId, user: Editor, db: DbDep) -> DeletedOut:
     """Löscht eine Stelle ohne Hardware; Verknüpfungen zu Arbeitsplätzen entfallen."""
     row = _position(db, position_id)
     devices = db.scalar(
@@ -826,7 +866,7 @@ def delete_position(
     db.delete(row)
     _audit(db, request, user, "stelle_geloescht", "stelle", position_id, details)
     db.commit()
-    return position_summaries(db)
+    return DeletedOut(id=position_id)
 
 
 # --- Arbeitsplätze ----------------------------------------------------------------------------
@@ -922,9 +962,51 @@ def _set_positions(
     return texts
 
 
+def _workplace_filter(entry: WorkplaceSummary, filter_: str) -> bool:
+    if filter_ == "einzeln":
+        return not entry.shared
+    if filter_ == "geteilt":
+        return entry.shared
+    if filter_ == "frei":
+        return not entry.positions
+    if filter_ == "unvollstaendig":
+        return entry.complete is False
+    return True
+
+
 @router.get("/workplaces")
-def list_workplaces(user: Reader, db: DbDep) -> list[WorkplaceSummary]:
-    return workplace_summaries(db)
+def list_workplaces(
+    user: Reader,
+    db: DbDep,
+    filter_: Annotated[
+        Literal["alle", "einzeln", "geteilt", "frei", "unvollstaendig"], Query(alias="filter")
+    ] = "alle",
+    q: Annotated[str, Query(max_length=100)] = "",
+    offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=PAGE_MAX)] = PAGE_SIZE,
+) -> WorkplaceListOut:
+    """Arbeitsplätze seitenweise; ``q`` sucht in Nummer, Name, Raum, Vorlage und Stellen."""
+    rows = [entry for entry in workplace_summaries(db) if _workplace_filter(entry, filter_)]
+    needle = q.strip().casefold()
+    if needle:
+        rows = [
+            entry
+            for entry in rows
+            if _found(
+                needle,
+                [
+                    entry.number,
+                    entry.name,
+                    entry.place,
+                    entry.kit,
+                    *(
+                        f"{brief.number} {brief.name} {brief.person_name}"
+                        for brief in entry.positions
+                    ),
+                ],
+            )
+        ]
+    return WorkplaceListOut(items=rows[offset : offset + limit], total=len(rows))
 
 
 @router.get("/assignees")
@@ -1103,7 +1185,7 @@ def set_workplace_spot(
 @router.delete("/workplaces/{workplace_id}")
 def delete_workplace(
     request: Request, workplace_id: ObjectId, user: Editor, db: DbDep
-) -> list[WorkplaceSummary]:
+) -> DeletedOut:
     row = _workplace(db, workplace_id)
     devices = db.scalar(
         select(func.count())
@@ -1123,4 +1205,4 @@ def delete_workplace(
     db.delete(row)
     _audit(db, request, user, "arbeitsplatz_geloescht", "arbeitsplatz", workplace_id, details)
     db.commit()
-    return workplace_summaries(db)
+    return DeletedOut(id=workplace_id)

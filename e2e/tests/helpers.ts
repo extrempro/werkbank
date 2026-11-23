@@ -218,7 +218,11 @@ export async function chooseFilter(page: Page, label: string, option: string) {
 }
 
 /** Bestätigungsdialog abwarten, optional auf Barrierefreiheit prüfen und mit `action` bestätigen. */
-export async function confirmDialog(page: Page, action: string, checkA11y = false) {
+export async function confirmDialog(
+  page: Page,
+  action: string,
+  checkA11y = false,
+) {
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toBeVisible();
   if (checkA11y) {
@@ -226,4 +230,21 @@ export async function confirmDialog(page: Page, action: string, checkA11y = fals
   }
   await dialog.getByRole("button", { name: action, exact: true }).click();
   await expect(dialog).toBeHidden();
+}
+
+/** Eintrag in einer Auswahl mit Suche wählen (Raum, Stelle, Partner …). */
+export async function pickFromList(
+  scope: Locator,
+  label: RegExp,
+  text: string,
+) {
+  const box = scope.getByRole("combobox", { name: label });
+  await box.fill(text);
+  await scope
+    .getByRole("option", { name: new RegExp(escapeRegExp(text)) })
+    .click();
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

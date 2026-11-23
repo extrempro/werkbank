@@ -205,8 +205,23 @@ export function parseHardwarePath(path: string): { id: number; tab: HardwareTab 
 
 export type ListState = HardwareStatus | "alle";
 
-export function fetchHardwareList(state: ListState): Promise<HardwareSummary[]> {
-  return getJson(`${BASE}/hardware?state=${state}`);
+export interface HardwareList {
+  items: HardwareSummary[];
+  /** Treffer insgesamt (Status, Art, Suche) */
+  total: number;
+  /** Arten, die es mit diesem Status gibt */
+  kinds: { id: number; name: string }[];
+}
+
+export function fetchHardwareList(
+  state: ListState,
+  query = "",
+  kindId: number | null = null,
+  offset = 0,
+  limit = PAGE_SIZE,
+): Promise<HardwareList> {
+  const params = pageQuery(state, query, offset, limit);
+  return getJson(`${BASE}/hardware?${params}${kindId === null ? "" : `&kind=${kindId}`}`);
 }
 
 export function fetchHardware(id: number): Promise<Hardware> {
@@ -288,33 +303,6 @@ export function modelLabel(device: Pick<HardwareSummary, "maker" | "model">): st
 }
 
 /** Suche über Bezeichnung, Art, Modell, Seriennummer, Inventurnummer, Hostname und Standort. */
-export function filterHardware(
-  list: readonly HardwareSummary[],
-  query: string,
-  kindId: number | null,
-): HardwareSummary[] {
-  const needle = query.trim().toLocaleLowerCase("de");
-  return list.filter((device) => {
-    if (kindId !== null && device.kind_id !== kindId) {
-      return false;
-    }
-    if (!needle) {
-      return true;
-    }
-    return [
-      device.name,
-      device.kind,
-      device.maker ?? "",
-      device.model ?? "",
-      device.serial,
-      device.inventory_no ?? "",
-      device.hostname,
-      device.place ?? "",
-      device.holder ?? "",
-    ].some((value) => value.toLocaleLowerCase("de").includes(needle));
-  });
-}
-
 /** Datum als „TT.MM.JJJJ“. */
 export function formatDay(value: string | null): string {
   if (!value) {
@@ -668,6 +656,16 @@ export function firstFloorId(tree: Locations): number | null {
 }
 
 /** Raum als Eintrag für die Auswahl mit Suche (z. B. beim Bearbeiten eines Arbeitsplatzes). */
+/** Standort eines Geräts als Eintrag für die Raumauswahl (wie die Suche ihn liefert). */
+export function locationItem(location: DeviceLocation): LookupItem {
+  return {
+    id: location.room_id,
+    label: `Raum ${location.room}`,
+    detail: `${location.city} / ${location.site} / ${location.section} / ${location.floor}`,
+    floor_id: location.floor_id,
+  };
+}
+
 export function roomItem(tree: Locations, roomId: number | null): LookupItem | null {
   if (roomId === null) {
     return null;
@@ -690,26 +688,6 @@ export function roomItem(tree: Locations, roomId: number | null): LookupItem | n
     }
   }
   return null;
-}
-
-/** Alle Räume mit Ort, z. B. für die Auswahl am Gerät. */
-export function roomChoices(tree: Locations): { label: string; rooms: RoomBrief[] }[] {
-  const groups: { label: string; rooms: RoomBrief[] }[] = [];
-  for (const city of tree.cities) {
-    for (const site of city.sites) {
-      for (const section of site.sections) {
-        for (const floor of section.floors) {
-          if (floor.rooms.length > 0) {
-            groups.push({
-              label: `${city.name} › ${site.name} › ${section.name} › ${floor.name}`,
-              rooms: floor.rooms,
-            });
-          }
-        }
-      }
-    }
-  }
-  return groups;
 }
 
 // --- Stellen und Arbeitsplätze ---------------------------------------------------------------
@@ -901,8 +879,17 @@ export function searchPeople(query: string): Promise<Person[]> {
   return getJson(`${BASE}/people?q=${encodeURIComponent(query)}`);
 }
 
-export function fetchPositions(): Promise<PositionSummary[]> {
-  return getJson(`${BASE}/positions`);
+export interface PageOf<T> {
+  items: T[];
+  total: number;
+}
+
+export function fetchPositions(
+  query = "",
+  offset = 0,
+  limit = PAGE_SIZE,
+): Promise<PageOf<PositionSummary>> {
+  return getJson(`${BASE}/positions?${listQuery({}, query, offset, limit)}`);
 }
 
 export function fetchPosition(id: number): Promise<Position> {
@@ -917,12 +904,18 @@ export function updatePosition(id: number, body: PositionInput): Promise<Positio
   return putJson(`${BASE}/positions/${id}`, body, { quiet: true });
 }
 
-export function deletePosition(id: number): Promise<PositionSummary[]> {
+export function deletePosition(id: number): Promise<{ id: number }> {
   return deleteJson(`${BASE}/positions/${id}`, { quiet: true });
 }
 
-export function fetchWorkplaces(): Promise<WorkplaceSummary[]> {
-  return getJson(`${BASE}/workplaces`);
+export function fetchWorkplaces(
+  filter: WorkplaceFilter = "alle",
+  query = "",
+  offset = 0,
+  limit = PAGE_SIZE,
+): Promise<PageOf<WorkplaceSummary>> {
+  const base: Record<string, string> = filter === "alle" ? {} : { filter };
+  return getJson(`${BASE}/workplaces?${listQuery(base, query, offset, limit)}`);
 }
 
 export function fetchWorkplace(id: number): Promise<Workplace> {
@@ -990,7 +983,7 @@ export function placeLine(location: DeviceLocation): string {
   ].join(" · ");
 }
 
-export function deleteWorkplace(id: number): Promise<WorkplaceSummary[]> {
+export function deleteWorkplace(id: number): Promise<{ id: number }> {
   return deleteJson(`${BASE}/workplaces/${id}`, { quiet: true });
 }
 
@@ -1018,26 +1011,6 @@ export function workplaceInput(workplace: WorkplaceSummary & { note?: string }):
 }
 
 /** Suche in Stellen über Nummer, Bezeichnung, Person, Abteilung und Standorte. */
-export function filterPositions(
-  list: readonly PositionSummary[],
-  query: string,
-): PositionSummary[] {
-  const needle = query.trim().toLocaleLowerCase("de");
-  if (!needle) {
-    return [...list];
-  }
-  return list.filter((entry) =>
-    [
-      entry.number,
-      entry.name,
-      entry.person?.name ?? "",
-      entry.person?.upn ?? "",
-      entry.department,
-      entry.sites,
-    ].some((value) => value.toLocaleLowerCase("de").includes(needle)),
-  );
-}
-
 export type WorkplaceFilter = "alle" | "einzeln" | "geteilt" | "frei" | "unvollstaendig";
 
 export const WORKPLACE_FILTERS: { id: WorkplaceFilter; label: string }[] = [
@@ -1047,26 +1020,6 @@ export const WORKPLACE_FILTERS: { id: WorkplaceFilter; label: string }[] = [
   { id: "frei", label: "Frei" },
   { id: "unvollstaendig", label: "Ausstattung fehlt" },
 ];
-
-export function filterWorkplaces(
-  list: readonly WorkplaceSummary[],
-  filter: WorkplaceFilter,
-): WorkplaceSummary[] {
-  return list.filter((entry) => {
-    switch (filter) {
-      case "einzeln":
-        return !entry.shared;
-      case "geteilt":
-        return entry.shared;
-      case "frei":
-        return entry.positions.length === 0;
-      case "unvollstaendig":
-        return entry.complete === false;
-      default:
-        return true;
-    }
-  });
-}
 
 /** Text zur Ausstattung, z. B. „vollständig“, „2 fehlen“ oder „keine Vorlage“. */
 export function equipmentLabel(entry: Pick<WorkplaceSummary, "complete" | "missing">): string {
@@ -1082,28 +1035,6 @@ export function equipmentLabel(entry: Pick<WorkplaceSummary, "complete" | "missi
 /** Arbeitsplätze heißen nach ihrer Nummer; der Raum steht jeweils daneben. */
 export function workplaceName(entry: Pick<WorkplaceSummary, "number">): string {
   return entry.number;
-}
-
-/** Wert im Auswahlfeld „Zugeordnet zu“: „s:4“ für Stelle 4, „w:2“ für Arbeitsplatz 2. */
-export function holderValue(positionId: number | null, workplaceId: number | null): string {
-  if (positionId !== null) {
-    return `s:${positionId}`;
-  }
-  return workplaceId !== null ? `w:${workplaceId}` : "";
-}
-
-export function parseHolder(value: string): {
-  position_id: number | null;
-  workplace_id: number | null;
-} {
-  const match = /^([sw]):(\d{1,9})$/.exec(value);
-  if (!match) {
-    return { position_id: null, workplace_id: null };
-  }
-  const id = Number(match[2]);
-  return match[1] === "s"
-    ? { position_id: id, workplace_id: null }
-    : { position_id: null, workplace_id: id };
 }
 
 // --- Ausstattungsvorlagen ---------------------------------------------------------------------
@@ -1561,11 +1492,21 @@ export function parseCasePath(path: string): { id: number | null } | null {
   return match ? { id: Number(match[1]) } : null;
 }
 
-/** Einträge je Seite in den Listen „Vorgänge“ und „Verleih“ */
+/** Einträge je Seite in den seitenweisen Listen (Hardware, Stellen, Arbeitsplätze, Vorgänge, Verleih) */
 export const PAGE_SIZE = 50;
 
 function pageQuery(filter: string, query: string, offset: number, limit: number): string {
-  const params = new URLSearchParams({ state: filter });
+  return listQuery({ state: filter }, query, offset, limit);
+}
+
+/** Suche und Seite als Abfrage, dazu feste Filter wie ``state``. */
+function listQuery(
+  base: Record<string, string>,
+  query: string,
+  offset: number,
+  limit: number,
+): string {
+  const params = new URLSearchParams(base);
   if (query.trim()) {
     params.set("q", query.trim().slice(0, 100));
   }

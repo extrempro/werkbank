@@ -42,6 +42,7 @@ import {
 import { ContractDetail } from "./ContractDetail";
 import { BudgetHead, FormStep, ReadOnlyNote } from "./shared";
 import { Feedback } from "../../components/Feedback";
+import { ListPicker } from "../inventory/LookupPicker";
 
 interface FormProps {
   /** null: neuen Vertrag anlegen. */
@@ -206,35 +207,21 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
               onChange={(event) => setTitle(event.target.value)}
             />
           </label>
-          <label>
-            <span>
-              Vertragspartner <span aria-hidden="true">*</span>
-            </span>
-            <select
-              value={partnerId}
-              required
-              aria-required="true"
-              onChange={(event) => setPartnerId(event.target.value)}
-            >
-              <option value="">Bitte wählen</option>
-              {partnerChoices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Rechnungssteller
-            <select value={invoicerId} onChange={(event) => setInvoicerId(event.target.value)}>
-              <option value="">wie Vertragspartner</option>
-              {invoicerChoices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ListPicker
+            label="Vertragspartner"
+            required
+            placeholder="Name des Partners …"
+            options={partnerChoices.map((entry) => ({ id: entry.id, label: entry.name }))}
+            value={partnerId}
+            onChange={setPartnerId}
+          />
+          <ListPicker
+            label="Rechnungssteller (leer: wie Vertragspartner)"
+            placeholder="Name des Rechnungsstellers …"
+            options={invoicerChoices.map((entry) => ({ id: entry.id, label: entry.name }))}
+            value={invoicerId}
+            onChange={setInvoicerId}
+          />
           <label>
             Vertragsnummer
             <input

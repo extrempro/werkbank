@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { areaNames, expectNoA11yViolations, itemName, loginAs, openMenu, openPage, confirmDialog } from "./helpers";
+import {
+  areaNames,
+  expectNoA11yViolations,
+  itemName,
+  loginAs,
+  openMenu,
+  openPage,
+  confirmDialog,
+} from "./helpers";
 
 test("IT-Tools: Übersicht mit Suche und Favoriten", async ({
   page,
@@ -614,11 +622,16 @@ test("IT-Tools: QR-Code, Bild-Konverter und Zertifikate", async ({ page }) => {
   // PDF in beide Richtungen: Bild und PDF zu einer PDF, eine PDF-Seite als PNG
   await page
     .getByLabel("Bilder oder PDFs auswählen oder hierher ziehen")
-    .setInputFiles(["tests/fixtures/drei-seiten.pdf", "tests/fixtures/logo.png"]);
+    .setInputFiles([
+      "tests/fixtures/drei-seiten.pdf",
+      "tests/fixtures/logo.png",
+    ]);
   await expect(page.getByText("PDF · 3 Seiten")).toBeVisible();
   await page.getByRole("button", { name: "PDF", exact: true }).click();
   await page.getByRole("button", { name: "2 Dateien in eine PDF" }).click();
-  await expect(page.getByRole("button", { name: "PDF herunterladen" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "PDF herunterladen" }),
+  ).toBeVisible();
   await expect(page.getByText("bilder.pdf · 4 Seiten")).toBeVisible();
   await expectNoA11yViolations(page);
   await page.getByRole("button", { name: "PNG", exact: true }).click();

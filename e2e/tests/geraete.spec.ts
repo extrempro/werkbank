@@ -1,5 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
-import { BASE_URL, expectNoA11yViolations, loginAs, confirmDialog } from "./helpers";
+import {
+  BASE_URL,
+  expectNoA11yViolations,
+  loginAs,
+  confirmDialog,
+} from "./helpers";
 
 // Gerätezuordnung mit nachgestelltem Microsoft Graph (ENVIRONMENT=test): Das Admin-Konto
 // verbindet der Test über /api/devices/admin/test-login. Die QR-Codes in fixtures/ enthalten
@@ -100,7 +105,9 @@ test("Wartendes Gerät verwerfen", async ({ page }) => {
     .click();
   const drawer = page.getByRole("dialog", { name: "Modell 1" });
   await drawer.getByRole("button", { name: "Verwerfen" }).click();
-  await expect(page.getByRole("alertdialog")).toContainText("Eintrag und Gerätedaten");
+  await expect(page.getByRole("alertdialog")).toContainText(
+    "Eintrag und Gerätedaten",
+  );
   await confirmDialog(page, "Verwerfen", true);
   await expect(page.getByText(/Gerätedaten gelöscht/)).toBeVisible();
   await expect(page.getByRole("button", { name: /E2E-VERWERFEN/ })).toHaveCount(

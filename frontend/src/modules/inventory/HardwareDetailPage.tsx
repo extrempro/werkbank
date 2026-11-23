@@ -5,9 +5,7 @@ import { errorText } from "../../api";
 import { Link } from "../../components/Link";
 import { INVENTORY_HARDWARE_PATH } from "../../navigation";
 import {
-  fetchAssignees,
   fetchHardware,
-  fetchLocations,
   fetchMasterData,
   formatDate,
   formatDay,
@@ -16,7 +14,6 @@ import {
   INVENTORY_EDITOR_ROLE,
   loanPath,
   locationPath,
-  holderValue,
   modelLabel,
   ninjaFactRows,
   positionPath,
@@ -32,13 +29,12 @@ import {
   updateHardware,
   WHEREABOUTS_LABELS,
   workplacePath,
-  type Assignees,
   type Hardware,
   type PsrefInfo,
   type HardwareTab,
-  type Locations,
   type MasterData,
   type Whereabouts,
+  locationItem,
 } from "./api";
 import { deviceInput, DeviceFormFields, deviceProblem, type DeviceFields } from "./HardwarePage";
 import { LocationPanel, PlaceLine } from "./PlaceInfo";
@@ -56,14 +52,10 @@ function ErrorBox({ text }: { text: string | null }) {
 function EditForm({
   device,
   master,
-  locations,
-  assignees,
   onDone,
 }: {
   device: Hardware;
   master: MasterData;
-  locations: Locations | null;
-  assignees: Assignees | null;
   onDone: (next: Hardware | null) => void;
 }) {
   const [fields, setFields] = useState<DeviceFields>({
@@ -74,8 +66,11 @@ function EditForm({
     hostname: device.hostname,
     note: device.note,
     purchasedOn: device.purchased_on ?? "",
-    roomId: device.location ? String(device.location.room_id) : "",
-    holder: holderValue(device.position_id, device.workplace_id),
+    room: device.location ? locationItem(device.location) : null,
+    holderKind: device.holder_ref?.kind ?? "",
+    holder: device.holder_ref
+      ? { id: device.holder_ref.id, label: device.holder_ref.label, detail: "" }
+      : null,
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -98,8 +93,6 @@ function EditForm({
     <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
       <DeviceFormFields
         master={master}
-        locations={locations}
-        assignees={assignees}
         fromNinja={device.ninja?.ninja_id != null}
         value={fields}
         onChange={setFields}
@@ -340,15 +333,11 @@ function RetireForm({
 function Overview({
   device,
   master,
-  locations,
-  assignees,
   canEdit,
   onChange,
 }: {
   device: Hardware;
   master: MasterData | null;
-  locations: Locations | null;
-  assignees: Assignees | null;
   canEdit: boolean;
   onChange: (next: Hardware) => void;
 }) {
@@ -547,13 +536,7 @@ function Overview({
           </dl>
         )}
         {mode === "bearbeiten" && master && (
-          <EditForm
-            device={device}
-            master={master}
-            locations={locations}
-            assignees={assignees}
-            onDone={done}
-          />
+          <EditForm device={device} master={master} onDone={done} />
         )}
         {mode === "inventur" && <InventoryNoForm device={device} onDone={done} />}
         {mode === "ausmustern" && master && (
@@ -778,8 +761,6 @@ export function HardwareDetailPage({
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
   const [device, setDevice] = useState<Hardware | null>(null);
   const [master, setMaster] = useState<MasterData | null>(null);
-  const [locations, setLocations] = useState<Locations | null>(null);
-  const [assignees, setAssignees] = useState<Assignees | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
 
   useEffect(() => {
@@ -792,14 +773,6 @@ export function HardwareDetailPage({
     if (canEdit) {
       fetchMasterData().then(
         (result) => active && setMaster(result),
-        () => undefined,
-      );
-      fetchLocations().then(
-        (result) => active && setLocations(result),
-        () => undefined,
-      );
-      fetchAssignees().then(
-        (result) => active && setAssignees(result),
         () => undefined,
       );
     }
@@ -860,14 +833,7 @@ export function HardwareDetailPage({
             ))}
           </nav>
           {tab === "uebersicht" && (
-            <Overview
-              device={device}
-              master={master}
-              locations={locations}
-              assignees={assignees}
-              canEdit={canEdit}
-              onChange={setDevice}
-            />
+            <Overview device={device} master={master} canEdit={canEdit} onChange={setDevice} />
           )}
           {tab === "standort" && (
             <LocationPanel

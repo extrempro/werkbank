@@ -247,7 +247,10 @@ def test_status_steps_unknown_states_and_stale(db: Session) -> None:
 
     listed = ina.get(f"{BASE}/entries").json()
     assert listed["counts"]["registriert"] == 1 and listed["counts"]["nicht_abgeschlossen"] == 1
-    only = ina.get(f"{BASE}/entries", params={"view": "nicht_abgeschlossen"}).json()["entries"]
+    assert listed["total"] == len(listed["entries"])
+    view = ina.get(f"{BASE}/entries", params={"view": "nicht_abgeschlossen"}).json()
+    assert view["total"] == 1
+    only = view["entries"]
     assert [e["serial_number"] for e in only] == ["SNSTATUS2"]
     found = ina.get(f"{BASE}/entries", params={"q": "pc-0001"}).json()["entries"]
     assert [e["serial_number"] for e in found] == ["SNSTATUS1"]

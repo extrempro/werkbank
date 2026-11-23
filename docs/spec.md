@@ -442,7 +442,7 @@ Doppelte Einträge verhindert die Kombination aus Quelle und Kennung (z. B. `MC1
 
 Muster „Liste und Ansicht“ aus `design.md` (seit 0.83; vorher Tabelle mit Ansicht rechts).
 
-- Nummer `EV-JJJJ-NNN`. Links eine Liste mit fester Breite (280–360 px) und fester Höhe bis zum unteren Rand; sie scrollt für sich, die Ansicht rechts bleibt stehen.
+- Nummer `EV-JJJJ-NNN`. Links eine Liste mit fester Breite (280–360 px); sie scrollt mit der Seite, die Ansicht rechts bleibt stehen.
 - Oben in der Liste: Suche (Nummer, Titel, Kennung der Meldung, Dienste, Text), Status als Chips mit Anzahl – **Offen** (Standard: neu und bearbeitet), **Neu**, **Mit Frist** (offen und „Handeln bis“ gesetzt), **Abgeschlossen** –, bei Platzmangel seitlich scrollbar; darunter der Schalter „Reine Info-Meldungen ausblenden“ (Standard an, `werkbank-evergreen-info` im Browser). Reine Info-Meldung: Kategorie `stayInformed` und weder „User impact“ noch „Admin impact“ in den Kennzeichen. Am Handy wie alle Filter (`design.md`): Status als Auswahl.
 - Offene Einträge stehen in Gruppen mit Zähler, deren Überschriften beim Scrollen oben haften: 1. **Mit Frist** (nach Frist, früheste zuerst), 2. **Neu**, 3. **In Bearbeitung**; innerhalb von 2 und 3 neueste zuerst. Die Filter „Neu“ und „Abgeschlossen“ zeigen eine Liste ohne Gruppen. Die ganze Liste wird geladen (keine Seiten mehr); bei mehr als 500 Treffern Hinweis, die Suche einzugrenzen.
 - Listeneintrag: Nummer (Schrift für Werte) und Status-Badge in einer Zeile, Titel (höchstens zwei Zeilen, dann abgeschnitten), darunter Dienst · Art und gegebenenfalls „bis TT.MM.JJJJ“ in Orange. Der ganze Eintrag ist ein Link (`/evergreen/m365/<ID>`), gewählt mit Hintergrund, Balken links und `aria-current`.

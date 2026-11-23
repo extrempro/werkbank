@@ -19,7 +19,6 @@ import {
   fetchMasterData,
   fetchWorkplace,
   fetchWorkplaces,
-  filterWorkplaces,
   INVENTORY_EDITOR_ROLE,
   positionPath,
   roomItem,
@@ -42,6 +41,7 @@ import {
   type WorkplaceSummary,
   type WorkplaceTab,
 } from "./api";
+import { MoreButton, useDebounced, usePagedList } from "./paged";
 import { Feedback } from "../../components/Feedback";
 
 interface Choices {
@@ -367,23 +367,24 @@ const EMPTY_WORKPLACE: WorkplaceInput = {
 /** IT-Bestand › Arbeitsplätze: Liste mit Filtern, neuer Arbeitsplatz. */
 export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
   const canEdit = roles.includes(INVENTORY_EDITOR_ROLE);
-  const [list, setList] = useState<WorkplaceSummary[] | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
   const [filter, setFilter] = useState<WorkplaceFilter>("alle");
+  const [query, setQuery] = useState("");
   const [choices, setChoices] = useState<Choices | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    fetchWorkplaces().then(
-      (result) => active && setList(result),
-      (error: unknown) =>
-        active && setFailed(errorText(error, "Die Arbeitsplätze konnten nicht geladen werden.")),
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
+  const search = useDebounced(query);
+  const paged = usePagedList<WorkplaceSummary, null>(
+    `${filter}|${search}`,
+    0,
+    (offset, limit) =>
+      fetchWorkplaces(filter, search, offset, limit).then((result) => ({
+        ...result,
+        extra: null,
+      })),
+    "Die Arbeitsplätze konnten nicht geladen werden.",
+  );
+  const list = paged.items;
+  const failed = paged.error;
 
   const startCreate = () => {
     setNotice(null);
@@ -391,8 +392,6 @@ export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
       setNotice(errorText(problem, "Die Auswahllisten konnten nicht geladen werden.")),
     );
   };
-
-  const shown = list ? filterWorkplaces(list, filter) : [];
 
   return (
     <div className="page page-wide">
@@ -444,6 +443,12 @@ export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
         </div>
         <FilterBar
           plain
+          search={{
+            label: "Arbeitsplätze durchsuchen",
+            value: query,
+            placeholder: "Nummer, Raum, Stelle …",
+            onChange: setQuery,
+          }}
           status={{
             label: "Filter",
             value: filter,
@@ -453,15 +458,13 @@ export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
         />
         <div className="detail-body">
           {!failed && !list && <p role="status">Wird geladen …</p>}
-          {list && (
+          {list && list.length === 0 && (
             <p className="small" role="status">
-              {shown.length === 0
-                ? "Keine Arbeitsplätze mit diesem Filter."
-                : `${shown.length} von ${list.length} Arbeitsplätzen`}
+              Keine Arbeitsplätze für diese Auswahl.
             </p>
           )}
         </div>
-        {shown.length > 0 && (
+        {list && list.length > 0 && (
           <div className="table-wrap card-wrap">
             <table className="table-cards">
               <caption className="visually-hidden">Arbeitsplätze im IT-Bestand</caption>
@@ -475,7 +478,7 @@ export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
                 </tr>
               </thead>
               <tbody>
-                {shown.map((entry) => (
+                {list.map((entry) => (
                   <tr key={entry.id}>
                     <th scope="row">
                       <Link to={workplacePath(entry.id)}>{workplaceName(entry)}</Link>
@@ -495,6 +498,14 @@ export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
               </tbody>
             </table>
           </div>
+        )}
+        {list && (
+          <MoreButton
+            shown={list.length}
+            total={paged.total}
+            loading={paged.loadingMore}
+            onMore={paged.more}
+          />
         )}
       </section>
     </div>

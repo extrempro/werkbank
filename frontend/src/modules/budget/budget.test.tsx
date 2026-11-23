@@ -33,6 +33,14 @@ import { BudgetSettingsPage } from "./BudgetSettingsPage";
 import { ContractsPage } from "./ContractsPage";
 import { InvoicesPage } from "./InvoicesPage";
 import { ItemsPage } from "./ItemsPage";
+
+/** Eintrag in einer Auswahl mit Suche wählen (Partner, Vertrag). */
+async function pick(scope: ReturnType<typeof within>, label: RegExp, text: string) {
+  const box = scope.getByRole("combobox", { name: label });
+  fireEvent.focus(box);
+  fireEvent.change(box, { target: { value: text } });
+  fireEvent.click(await scope.findByRole("option", { name: new RegExp(text) }));
+}
 import { PartnerDetailPage } from "./PartnerDetailPage";
 import { PartnersPage } from "./PartnersPage";
 import { PlanningPage } from "./PlanningPage";
@@ -410,12 +418,14 @@ describe("Budgetposten", () => {
     // Der Partner ist Pflicht; stillgelegte stehen nicht zur Wahl.
     fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
     expect(form.getByRole("alert")).toHaveTextContent("Bitte einen Partner wählen.");
+    fireEvent.focus(form.getByRole("combobox", { name: /^Partner/ }));
+    const partnerList = await form.findByRole("listbox", { name: "Partner" });
     expect(
-      within(form.getByLabelText(/^Partner/))
+      within(partnerList)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["Bitte wählen", "Beispiel Software GmbH"]);
-    fireEvent.change(form.getByLabelText(/^Partner/), { target: { value: "1" } });
+    ).toEqual(["Beispiel Software GmbH"]);
+    await pick(form, /^Partner/, "Beispiel Software GmbH");
     fireEvent.change(form.getByLabelText(/^Betrag \(Brutto\)/), { target: { value: "viel" } });
     fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
     expect(form.getByRole("alert")).toHaveTextContent("Der Betrag ist nicht lesbar");
@@ -441,7 +451,7 @@ describe("Budgetposten", () => {
     expect(plain(form.getByText(/^Plan: 5.000,00 € je Wirtschaftsjahr/).textContent)).toContain(
       "zusammen 10.000,00 €",
     );
-    fireEvent.change(form.getByLabelText("Vertrag"), { target: { value: "1" } });
+    await pick(form, /^Vertrag/, "Wartung Zeiterfassung");
     // Abgeschlossene Projekte stehen bei einem neuen Posten nicht zur Wahl.
     expect(
       within(form.getByLabelText("IT-Projekt"))
@@ -476,8 +486,8 @@ describe("Budgetposten", () => {
     fireEvent.click(edit.getByLabelText("Budgetposten ist aktiv"));
     fireEvent.click(edit.getByRole("button", { name: "Bis auf Weiteres" }));
     // Älterer Posten ohne Partner: beim Speichern Pflicht
-    expect(edit.getByLabelText(/^Partner/)).toHaveValue("");
-    fireEvent.change(edit.getByLabelText(/^Partner/), { target: { value: "1" } });
+    expect(edit.getByRole("combobox", { name: /^Partner/ })).toHaveValue("");
+    await pick(edit, /^Partner/, "Beispiel Software GmbH");
     fireEvent.click(edit.getByRole("button", { name: "Änderungen speichern" }));
     await vi.waitFor(() =>
       expect(calls.find((call) => call.method === "PUT")?.body).toMatchObject({
@@ -921,8 +931,8 @@ describe("Verträge", () => {
     expect(form.getByRole("alert")).toHaveTextContent("Bezeichnung");
 
     fireEvent.change(form.getByLabelText(/^Bezeichnung/), { target: { value: "Neuer Vertrag" } });
-    fireEvent.change(form.getByLabelText(/^Vertragspartner/), { target: { value: "1" } });
-    fireEvent.change(form.getByLabelText("Rechnungssteller"), { target: { value: "2" } });
+    await pick(form, /^Vertragspartner/, "Beispiel Software GmbH");
+    await pick(form, /^Rechnungssteller/, "Beispiel Distribution AG");
     // Turnus zuerst; das Betragsfeld heißt passend.
     expect(form.getByRole("button", { name: "Jährlich" })).toHaveAttribute("aria-pressed", "true");
     expect(form.getByLabelText(/^Jahresbetrag \(netto\)/)).toBeVisible();
@@ -1146,13 +1156,14 @@ describe("Rechnungen", () => {
     expect(form.getByRole("alert")).toHaveTextContent("Bitte den Rechnungssteller wählen");
 
     // Erst der Rechnungssteller: seine Posten stehen oben in der Auswahl.
-    fireEvent.change(form.getByLabelText(/^Rechnungssteller/), { target: { value: "1" } });
+    await pick(form, /^Rechnungssteller/, "Beispiel Software GmbH");
     expect(
       within(form.getByLabelText("Budgetposten")).getByRole("group", {
         name: "Posten von Beispiel Software GmbH",
       }),
     ).toBeInTheDocument();
-    fireEvent.change(form.getByLabelText(/^Rechnungssteller/), { target: { value: "2" } });
+    fireEvent.click(form.getByRole("button", { name: /^Rechnungssteller ändern/ }));
+    await pick(form, /^Rechnungssteller/, "Beispiel Distribution AG");
     // Rechnungen hängen nur am Posten; dessen Vertrag wird angezeigt und lässt den Posten offen.
     expect(form.queryByLabelText(/^Vertrag/)).toBeNull();
     fireEvent.change(form.getByLabelText("Budgetposten"), { target: { value: "11" } });

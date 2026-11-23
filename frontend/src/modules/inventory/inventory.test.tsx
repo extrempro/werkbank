@@ -1,7 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  filterHardware,
   formatDay,
   hardwarePath,
   modelLabel,
@@ -115,16 +114,6 @@ describe("Hilfsfunktionen", () => {
     expect(parseHardwarePath("/bestand/hardware/7/unbekannt")).toBeNull();
   });
 
-  it("sucht in allen Kennungen und filtert nach Art", () => {
-    const list = [notebook, monitor];
-    expect(filterHardware(list, "inv-24", null)).toEqual([notebook]);
-    expect(filterHardware(list, "cn0f3", null)).toEqual([monitor]);
-    expect(filterHardware(list, "nb-0142", null)).toEqual([notebook]);
-    expect(filterHardware(list, "hersteller a", null)).toEqual([notebook]);
-    expect(filterHardware(list, "", 2)).toEqual([monitor]);
-    expect(filterHardware(list, "notebook", 2)).toEqual([]);
-  });
-
   it("formatiert Modell und Datum", () => {
     expect(modelLabel(notebook)).toBe("Hersteller A Notebook 14 G10");
     expect(modelLabel(monitor)).toBe("–");
@@ -135,14 +124,19 @@ describe("Hilfsfunktionen", () => {
 });
 
 describe("Hardware-Liste", () => {
-  it("zeigt Geräte, filtert und blendet Anlegen für Leser aus", async () => {
-    stubFetch({
-      "GET /api/inventory/hardware": [notebook, monitor],
+  it("zeigt Geräte, sucht im Backend und blendet Anlegen für Leser aus", async () => {
+    const kinds = [
+      { id: 1, name: "Notebook" },
+      { id: 2, name: "Monitor" },
+    ];
+    const calls = stubFetch({
+      "GET /api/inventory/hardware": { items: [notebook, monitor], total: 2, kinds },
+      "GET /api/inventory/hardware?state=aktiv&q=cn0f3": { items: [monitor], total: 1, kinds },
       "GET /api/inventory/master-data": master,
     });
     render(<HardwarePage roles={["Bestand.Reader"]} />);
     expect(await screen.findByRole("link", { name: "Notebook 14 Zoll" })).toBeTruthy();
-    expect(screen.getByText("2 von 2 Geräten")).toBeTruthy();
+    expect(screen.getByText("2 von 2")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Gerät erfassen" })).toBeNull();
     // Jede Zelle trägt ihren Spaltennamen für die Kartenansicht.
     const cell = screen.getByText("5CG3291XYZ");
@@ -151,13 +145,14 @@ describe("Hardware-Liste", () => {
     fireEvent.change(screen.getByLabelText("Geräte durchsuchen"), {
       target: { value: "cn0f3" },
     });
-    expect(screen.getByText("1 von 2 Geräten")).toBeTruthy();
+    expect(await screen.findByText("1 von 1")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Notebook 14 Zoll" })).toBeNull();
+    expect(calls.some((call) => call.url.includes("q=cn0f3"))).toBe(true);
   });
 
   it("fragt vor dem Anlegen mit Inventurnummer nach", async () => {
     const calls = stubFetch({
-      "GET /api/inventory/hardware": [],
+      "GET /api/inventory/hardware": { items: [], total: 0, kinds: [] },
       "GET /api/inventory/master-data": master,
       "POST /api/inventory/hardware": { ...detail, id: 11 },
     });

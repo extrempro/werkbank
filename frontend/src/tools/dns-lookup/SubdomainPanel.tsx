@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ShowMore, useShowMore } from "../../components/ShowMore";
 import { downloadBlob } from "../download";
 import { CopyButton, ErrorBox } from "../ui";
 import type { Resolver } from "./resolvers";
@@ -28,6 +29,9 @@ const FILTERS: readonly (readonly [Filter, string])[] = [
 ];
 
 /** Subdomains finden. `trigger` wechselt bei jedem Klick auf „Subdomains suchen“. */
+/** So viele Namen stehen zuerst da; der Rest mit „Weitere anzeigen“ oder „Alle anzeigen“. */
+const ROWS_STEP = 200;
+
 export function SubdomainPanel({
   domain,
   trigger,
@@ -113,6 +117,11 @@ export function SubdomainPanel({
     counts[classify(entry)]++;
   }
   const shown = (result?.items ?? []).filter((entry) => filters.has(classify(entry)));
+  // Lange Ergebnisse stückweise; Kopieren und CSV nehmen immer alle Treffer.
+  const paging = useShowMore(
+    ROWS_STEP,
+    `${result?.domain ?? ""}|${result?.items.length ?? 0}|${[...filters].join(",")}`,
+  );
   const toggle = (filter: Filter) =>
     setFilters((previous) => {
       const next = new Set(previous);
@@ -229,7 +238,7 @@ export function SubdomainPanel({
             </p>
           ) : (
             <ul className="image-list">
-              {shown.map((entry) => {
+              {shown.slice(0, paging.limit).map((entry) => {
                 const kind = classify(entry);
                 return (
                   <li key={entry.name} className="image-item">
@@ -272,6 +281,12 @@ export function SubdomainPanel({
               })}
             </ul>
           )}
+          <ShowMore
+            shown={Math.min(paging.limit, shown.length)}
+            total={shown.length}
+            onMore={paging.more}
+            onAll={paging.all}
+          />
         </>
       )}
     </>

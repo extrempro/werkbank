@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { errorText } from "../../api";
 import { lookup, type LookupItem, type LookupKind, type LookupResult } from "./api";
 import { useDebounced } from "./paged";
@@ -194,5 +194,69 @@ export function LookupPicker({
         </p>
       )}
     </div>
+  );
+}
+
+/** Höchstens so viele Treffer zeigt die Auswahl aus einer geladenen Liste */
+const LIST_HITS = 20;
+
+export interface ListOption {
+  id: number;
+  label: string;
+  detail?: string;
+}
+
+/**
+ * Auswahl mit Suche über eine schon geladene Liste (z. B. Partner oder Verträge im Budget).
+ * Ersetzt ein langes Auswahlfeld; der Wert ist die Nummer als Text, leer ohne Auswahl.
+ */
+export function ListPicker({
+  label,
+  options,
+  value,
+  onChange,
+  placeholder,
+  required = false,
+  error = null,
+}: {
+  label: string;
+  options: readonly ListOption[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  required?: boolean;
+  error?: string | null;
+}) {
+  // Die Suche bleibt dieselbe Funktion, auch wenn die Liste bei jedem Rendern neu entsteht;
+  // sonst sucht die Auswahl in einer Schleife.
+  const latest = useRef(options);
+  useEffect(() => {
+    latest.current = options;
+  });
+  const search = useCallback((query: string): Promise<LookupResult> => {
+    const needle = query.trim().toLocaleLowerCase("de");
+    const hits = latest.current.filter(
+      (option) =>
+        !needle ||
+        `${option.label} ${option.detail ?? ""}`.toLocaleLowerCase("de").includes(needle),
+    );
+    return Promise.resolve({
+      items: hits
+        .slice(0, LIST_HITS)
+        .map((option) => ({ id: option.id, label: option.label, detail: option.detail ?? "" })),
+      total: hits.length,
+    });
+  }, []);
+  const chosen = options.find((option) => String(option.id) === value) ?? null;
+  return (
+    <LookupPicker
+      search={search}
+      label={label}
+      required={required}
+      placeholder={placeholder}
+      error={error}
+      value={chosen ? { id: chosen.id, label: chosen.label, detail: chosen.detail ?? "" } : null}
+      onChange={(item) => onChange(item ? String(item.id) : "")}
+    />
   );
 }

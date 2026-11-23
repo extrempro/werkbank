@@ -13,7 +13,9 @@ test("Automatisch folgt der Einstellung des Geräts", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", "hell");
 });
 
-test("Dunkel bleibt nach dem Neuladen und ist auf allen Seiten gut lesbar", async ({ page }) => {
+test("Dunkel bleibt nach dem Neuladen und ist auf allen Seiten gut lesbar", async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: "light" });
   await loginAs(page, ROLES, "Dana Dunkel");
   await page.goto("/konto");
@@ -21,7 +23,13 @@ test("Dunkel bleibt nach dem Neuladen und ist auf allen Seiten gut lesbar", asyn
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dunkel");
   await expectNoA11yViolations(page);
 
-  for (const path of ["/m365", "/m365/aenderungen", "/m365/einstellungen", "/evergreen/m365", "/audit"]) {
+  for (const path of [
+    "/m365",
+    "/m365/aenderungen",
+    "/m365/einstellungen",
+    "/evergreen/m365",
+    "/audit",
+  ]) {
     await page.goto(path);
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dunkel");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();

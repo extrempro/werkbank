@@ -101,6 +101,8 @@ export interface Counts {
 
 export interface DeviceList {
   entries: Device[];
+  /** Treffer insgesamt; angezeigt werden höchstens die neuesten 500 */
+  total: number;
   counts: Counts;
   last_run: string | null;
   monitor: boolean;

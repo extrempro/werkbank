@@ -90,9 +90,10 @@ const enrolled: Device = {
   link_expires_at: null,
 };
 
-function list(entries: Device[]): DeviceList {
+function list(entries: Device[], total = entries.length): DeviceList {
   return {
     entries,
+    total,
     counts: { freigabe: 1, vorab: 0, zugeordnet: 0, registriert: 1, nicht_abgeschlossen: 0 },
     last_run: "2026-11-21T08:55:00Z",
     monitor: true,
@@ -152,6 +153,18 @@ describe("Gerätezuordnung", () => {
     const table = screen.getByRole("table", { name: "Geräte" });
     expect(within(table).getByText("TEST-0001")).toBeInTheDocument();
     expect(within(table).getAllByText("In Intune registriert").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Angezeigt werden die neuesten/)).toBeNull();
+  });
+
+  it("sagt, wenn nur die neuesten Geräte angezeigt werden", async () => {
+    stubFetch({
+      "GET /api/devices/admin": ADMIN_OFF,
+      "GET /api/devices/entries": list([base, enrolled], 612),
+    });
+    render(<DeviceAssociationPage />);
+    expect(
+      await screen.findByText(/Angezeigt werden die neuesten 2 von 612 Geräten/),
+    ).toBeInTheDocument();
   });
 
   it("meldet die Rückkehr von der Anmeldung und räumt die Adresse auf", async () => {
