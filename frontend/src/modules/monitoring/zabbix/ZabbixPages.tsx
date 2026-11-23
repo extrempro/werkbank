@@ -30,6 +30,8 @@ import {
   SEVERITIES,
   severityClass,
   severityLabel,
+  cellLabel,
+  overviewHeadline,
   type DataState,
   type DeviceRef,
   type InventoryGap,
@@ -38,7 +40,9 @@ import {
   type ZbxHostRow,
   type ZbxMaintenance,
   type ZbxOverview,
+  type ZbxHour,
   type ZbxProblem,
+  type ZbxSiteHealth,
   type ZbxUnmonitored,
 } from "./api";
 import { Feedback } from "../../../components/Feedback";
@@ -284,27 +288,192 @@ function TodoRow({
   );
 }
 
+/** Filter der Übersicht: „alle“, ein Standortname oder "" für Hosts ohne Standort. */
+const ALL_SITES = "alle";
+
+function SeverityBar({
+  counts,
+  chosen,
+  onPick,
+}: {
+  counts: { value: number; label: string; count: number }[];
+  chosen: number | null;
+  onPick: (value: number | null) => void;
+}) {
+  const shown = counts.filter((entry) => entry.count > 0);
+  if (shown.length === 0) {
+    return <p className="empty">Keine offenen Probleme.</p>;
+  }
+  return (
+    <>
+      <div className="zbx-sevbar">
+        {shown.map((entry) => (
+          <button
+            key={entry.value}
+            type="button"
+            className={`${severityClass(entry.value)} zbx-sevbar-part${chosen !== null && chosen !== entry.value ? " zbx-dim" : ""}`}
+            style={{ flexGrow: entry.count }}
+            aria-pressed={chosen === entry.value}
+            aria-label={`${entry.label}: ${entry.count} ${entry.count === 1 ? "Problem" : "Probleme"}`}
+            onClick={() => onPick(chosen === entry.value ? null : entry.value)}
+          >
+            {entry.count}
+          </button>
+        ))}
+      </div>
+      <div className="chips">
+        {shown.map((entry) => (
+          <button
+            key={entry.value}
+            type="button"
+            className="chip chip-filter"
+            aria-pressed={chosen === entry.value}
+            onClick={() => onPick(chosen === entry.value ? null : entry.value)}
+          >
+            <span className={`zbx-swatch ${severityClass(entry.value)}`} aria-hidden="true" />
+            {entry.label} · {entry.count}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function SiteTile({
+  site,
+  chosen,
+  onPick,
+}: {
+  site: ZbxSiteHealth;
+  chosen: boolean;
+  onPick: () => void;
+}) {
+  const state =
+    site.worst !== null
+      ? severityLabel(site.worst)
+      : site.unreachable > 0
+        ? "nicht erreichbar"
+        : "in Ordnung";
+  const dot =
+    site.worst !== null
+      ? `zbx-cell-${site.worst}`
+      : site.unreachable > 0
+        ? "zbx-cell-down"
+        : "zbx-cell-ok";
+  return (
+    <button type="button" className="zbx-site" aria-pressed={chosen} onClick={onPick}>
+      <span className="zbx-site-head">
+        <span className={`zbx-cell zbx-dot ${dot}`} aria-hidden="true" />
+        <strong>{site.name ?? "Ohne Standort"}</strong>
+        <span className="small">{state}</span>
+      </span>
+      <span className="small">
+        {site.hosts} {site.hosts === 1 ? "Host" : "Hosts"} · {site.unreachable} nicht erreichbar ·{" "}
+        {site.problems} {site.problems === 1 ? "Problem" : "Probleme"}
+        {site.maintenance > 0 && ` · ${site.maintenance} in Wartung`}
+      </span>
+      <span className="zbx-cells" aria-hidden="true">
+        {site.cells.map((cell) => (
+          <span
+            key={cell.hostid}
+            className={`zbx-cell zbx-cell-${cell.state}`}
+            title={cellLabel(cell)}
+          />
+        ))}
+      </span>
+    </button>
+  );
+}
+
+const CELL_LEGEND: { state: string; label: string }[] = [
+  { state: "ok", label: "in Ordnung" },
+  { state: "1", label: "Information" },
+  { state: "2", label: "Warnung" },
+  { state: "3", label: "Durchschnitt" },
+  { state: "4", label: "Hoch" },
+  { state: "5", label: "Katastrophe" },
+  { state: "down", label: "nicht erreichbar" },
+  { state: "wartung", label: "in Wartung" },
+];
+
+function HistoryChart({ hours }: { hours: ZbxHour[] }) {
+  const values = hours.map((entry) => entry.open ?? 0);
+  const max = Math.max(1, ...values);
+  const known = hours.filter((entry) => entry.open !== null);
+  const last = known[known.length - 1];
+  const peak = known.reduce<ZbxHour | null>(
+    (best, entry) => (best === null || (entry.open ?? 0) > (best.open ?? 0) ? entry : best),
+    null,
+  );
+  const clock = (iso: string) =>
+    new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  if (known.length === 0) {
+    return <p className="empty">Der Verlauf beginnt mit dem nächsten Abruf.</p>;
+  }
+  const label = `Offene Probleme je Stunde: zuletzt ${last?.open ?? 0}${
+    peak ? `, höchstens ${peak.open ?? 0} um ${clock(peak.hour)} Uhr` : ""
+  }.`;
+  return (
+    <>
+      <div className="zbx-hours" role="img" aria-label={label}>
+        {hours.map((entry, index) => (
+          <span
+            key={entry.hour}
+            className={
+              entry.open === null
+                ? "zbx-hour zbx-hour-empty"
+                : index === hours.length - 1
+                  ? "zbx-hour zbx-hour-now"
+                  : "zbx-hour"
+            }
+            style={{ height: `${Math.max(2, Math.round(((entry.open ?? 0) / max) * 100))}%` }}
+            title={`${clock(entry.hour)} Uhr: ${entry.open === null ? "kein Abruf" : `${entry.open} offen`}`}
+          />
+        ))}
+      </div>
+      <span className="zbx-hours-axis small">
+        <span>vor 24 Stunden</span>
+        <span>jetzt</span>
+      </span>
+      <p className="small">{label}</p>
+    </>
+  );
+}
+
 export function ZabbixOverviewPage() {
   const { data, error } = useLoaded<ZbxOverview>(
     fetchZabbixOverview,
     "Die Übersicht konnte nicht geladen werden.",
   );
-  const [site, setSite] = useState("alle");
-  const [minimum, setMinimum] = useState(2);
-  const problems = useMemo(
+  const [site, setSite] = useState(ALL_SITES);
+  const [severity, setSeverity] = useState<number | null>(null);
+  const inSite = useMemo(
     () =>
       (data?.problems ?? []).filter(
-        (problem) =>
-          problem.severity >= minimum && (site === "alle" || (problem.site ?? "") === site),
+        (problem) => site === ALL_SITES || (problem.site ?? "") === site,
       ),
-    [data, site, minimum],
+    [data, site],
   );
+  const problems = inSite.filter((problem) => severity === null || problem.severity === severity);
+  const counts = SEVERITIES.filter((entry) => entry.value > 0).map((entry) => ({
+    value: entry.value,
+    label: entry.label,
+    count: inSite.filter((problem) => Math.max(1, problem.severity) === entry.value).length,
+  }));
+  const headline = data ? overviewHeadline(data) : null;
+  const filters = [
+    site === ALL_SITES ? null : site || "Ohne Standort",
+    severity === null ? null : `nur ${severityLabel(severity)}`,
+  ].filter(Boolean);
+  const todoCount = data
+    ? data.todo.long_open + data.todo.unmonitored + data.todo.no_inventory + data.todo.no_serial
+    : 0;
 
   return (
     <div className="page page-wide">
       <ZabbixHead
         title="Übersicht"
-        sub="Was gerade nicht in Ordnung ist. Daten aus Zabbix, nur lesend."
+        sub="Der aktuelle Stand auf einen Blick. Daten aus Zabbix, nur lesend."
         state={data?.state}
       />
       {error && (
@@ -313,12 +482,168 @@ export function ZabbixOverviewPage() {
         </p>
       )}
       {!data && !error && <p role="status">Wird geladen …</p>}
-      {data && (
+      {data && <DataStateBar state={data.state} />}
+      {data && headline && data.state.configured && (
         <>
-          <DataStateBar state={data.state} />
-          <section className="panel" aria-labelledby="zbx-todo">
+          <section className="zbx-summary" aria-label="Gesamtstand">
+            <div className={`zbx-hero zbx-hero-${headline.tone}`}>
+              <span className="zbx-hero-ring" aria-hidden="true" />
+              <div>
+                <h2>
+                  {headline.title} <InfoTip term="zabbix.gesamtstand" />
+                </h2>
+                <p>{headline.text}</p>
+              </div>
+            </div>
+            <div className="zbx-card">
+              <span className="zbx-card-title">
+                Hosts erreichbar <InfoTip term="zabbix.nicht-erreichbar" />
+              </span>
+              <strong className="zbx-card-number">
+                {data.kpis.hosts - data.kpis.unreachable}{" "}
+                <span className="small">von {data.kpis.hosts}</span>
+              </strong>
+              <meter
+                className="zbx-meter"
+                min={0}
+                max={Math.max(1, data.kpis.hosts)}
+                value={data.kpis.hosts - data.kpis.unreachable}
+                aria-label="Anteil erreichbarer Hosts"
+              />
+              {data.kpis.maintenance > 0 && (
+                <span className="small">
+                  {data.kpis.maintenance} in Wartung <InfoTip term="zabbix.wartung" />
+                </span>
+              )}
+            </div>
+            <div className="zbx-card">
+              <span className="zbx-card-title">Zu erledigen</span>
+              <strong className="zbx-card-number">{todoCount}</strong>
+              <span className="small">
+                {data.todo.long_open} lange offen · {data.todo.unmonitored} nicht überwacht
+              </span>
+              <a href="#zbx-todo">Zur Liste</a>
+            </div>
+          </section>
+
+          <section className="panel" aria-labelledby="zbx-sev">
             <div className="panel-head">
-              <h2 id="zbx-todo">Zu erledigen</h2>
+              <h2 id="zbx-sev">Offene Probleme nach Schweregrad</h2>
+              <span className="small">Ein Klick filtert die Liste unten</span>
+            </div>
+            <div className="detail-body zbx-sev-body">
+              <SeverityBar counts={counts} chosen={severity} onPick={setSeverity} />
+            </div>
+          </section>
+
+          {data.site_health.length > 0 && (
+            <section className="zbx-sites-wrap" aria-labelledby="zbx-sites">
+              <div className="zbx-sites-head">
+                <h2 id="zbx-sites">Standorte</h2>
+                <span className="small">
+                  Jedes Kästchen ist ein Host, die Farbe zeigt seinen schlimmsten Zustand
+                </span>
+              </div>
+              <div className="zbx-sites">
+                {data.site_health.map((entry) => {
+                  const value = entry.name ?? "";
+                  return (
+                    <SiteTile
+                      key={value || "ohne"}
+                      site={entry}
+                      chosen={site === value}
+                      onPick={() => setSite(site === value ? ALL_SITES : value)}
+                    />
+                  );
+                })}
+              </div>
+              <ul className="zbx-legend small" aria-label="Legende der Kästchen">
+                {CELL_LEGEND.map((entry) => (
+                  <li key={entry.state}>
+                    <span className={`zbx-cell zbx-cell-${entry.state}`} aria-hidden="true" />
+                    {entry.label}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section className="panel" aria-labelledby="zbx-probleme">
+            <div className="panel-head">
+              <h2 id="zbx-probleme">Aktuelle Probleme</h2>
+              <span className="small" role="status">
+                {filters.length > 0 ? `${filters.join(" · ")} · ` : ""}
+                {problems.length} {problems.length === 1 ? "Problem" : "Probleme"}
+              </span>
+              {filters.length > 0 && (
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => {
+                    setSite(ALL_SITES);
+                    setSeverity(null);
+                  }}
+                >
+                  Filter zurücksetzen
+                </button>
+              )}
+            </div>
+            <ProblemTable problems={problems} empty="Keine Probleme für diese Auswahl." />
+          </section>
+
+          <div className="zbx-main">
+            <div className="zbx-side">
+              <section className="panel" aria-labelledby="zbx-verlauf">
+                <div className="panel-head">
+                  <h2 id="zbx-verlauf">
+                    Letzte 24 Stunden <InfoTip term="zabbix.verlauf" />
+                  </h2>
+                </div>
+                <div className="detail-body">
+                  <HistoryChart hours={data.history} />
+                </div>
+              </section>
+              <section className="panel" aria-labelledby="zbx-down">
+                <div className="panel-head">
+                  <h2 id="zbx-down">Nicht erreichbar</h2>
+                  <Link to={`${MONITORING_ZABBIX_HOSTS_PATH}?filter=nicht-erreichbar`}>
+                    Alle Hosts
+                  </Link>
+                </div>
+                {data.unreachable.length === 0 ? (
+                  <p className="empty">Alle überwachten Hosts sind erreichbar.</p>
+                ) : (
+                  <ul className="rows">
+                    {data.unreachable.map((host) => (
+                      <li key={host.hostid} className="row">
+                        <span className="row-main">
+                          <Link to={`${MONITORING_ZABBIX_HOSTS_PATH}/${host.hostid}`}>
+                            {host.name}
+                          </Link>
+                          <span className="small">
+                            {host.site ?? "ohne Standort"}
+                            {host.since
+                              ? ` · zuletzt erreichbar vor ${age(host.since)}`
+                              : " · noch nie erreichbar gesehen"}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section className="panel" aria-labelledby="zbx-wartungen">
+                <div className="panel-head">
+                  <h2 id="zbx-wartungen">Wartungen</h2>
+                  <Link to={MONITORING_ZABBIX_MAINTENANCE_PATH}>Alle</Link>
+                </div>
+                <MaintenanceList items={data.maintenances} />
+              </section>
+            </div>
+          </div>
+          <section className="panel" aria-labelledby="zbx-todo-titel" id="zbx-todo" tabIndex={-1}>
+            <div className="panel-head">
+              <h2 id="zbx-todo-titel">Zu erledigen</h2>
             </div>
             <ul className="rows">
               <li className="row">
@@ -369,107 +694,6 @@ export function ZabbixOverviewPage() {
               ) : null}
             </ul>
           </section>
-          <dl className="kpis">
-            <div className="kpi">
-              <dt>Offene Probleme</dt>
-              <dd className="kpi-number">{data.kpis.problems}</dd>
-              <dd className="small">
-                {SEVERITIES.filter((entry) => data.kpis.by_severity[String(entry.value)])
-                  .map((entry) => `${data.kpis.by_severity[String(entry.value)]} ${entry.label}`)
-                  .join(" · ") || "keine"}
-              </dd>
-            </div>
-            <div className="kpi">
-              <dt>
-                Hosts nicht erreichbar <InfoTip term="zabbix.nicht-erreichbar" />
-              </dt>
-              <dd className="kpi-number">{data.kpis.unreachable}</dd>
-              <dd className="small">von {data.kpis.hosts} überwachten</dd>
-            </div>
-            <div className="kpi">
-              <dt>
-                In Wartung <InfoTip term="zabbix.wartung" />
-              </dt>
-              <dd className="kpi-number">{data.kpis.maintenance}</dd>
-              <dd className="small">Hosts</dd>
-            </div>
-          </dl>
-          <section className="panel" aria-labelledby="zbx-probleme">
-            <div className="panel-head">
-              <h2 id="zbx-probleme">Aktuelle Probleme</h2>
-            </div>
-            <div className="detail-body">
-              <div className="settings-form zbx-filters">
-                <label>
-                  Standort
-                  <select value={site} onChange={(event) => setSite(event.target.value)}>
-                    <option value="alle">Alle Standorte</option>
-                    {data.sites.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                    <option value="">Ohne Standort</option>
-                  </select>
-                </label>
-                <label>
-                  Ab Schweregrad
-                  <select
-                    value={String(minimum)}
-                    onChange={(event) => setMinimum(Number(event.target.value))}
-                  >
-                    {SEVERITIES.filter((entry) => entry.value > 0)
-                      .slice()
-                      .reverse()
-                      .map((entry) => (
-                        <option key={entry.value} value={String(entry.value)}>
-                          {entry.label}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              </div>
-              <ProblemTable problems={problems} empty="Keine Probleme für diese Auswahl." />
-            </div>
-          </section>
-          <div className="zbx-columns">
-            <section className="panel" aria-labelledby="zbx-down">
-              <div className="panel-head">
-                <h2 id="zbx-down">Nicht erreichbar</h2>
-                <Link to={`${MONITORING_ZABBIX_HOSTS_PATH}?filter=nicht-erreichbar`}>
-                  Alle Hosts
-                </Link>
-              </div>
-              {data.unreachable.length === 0 ? (
-                <p className="empty">Alle überwachten Hosts sind erreichbar.</p>
-              ) : (
-                <ul className="rows">
-                  {data.unreachable.map((host) => (
-                    <li key={host.hostid} className="row">
-                      <span className="row-main">
-                        <Link to={`${MONITORING_ZABBIX_HOSTS_PATH}/${host.hostid}`}>
-                          {host.name}
-                        </Link>
-                        <span className="small">
-                          {host.site ?? "ohne Standort"}
-                          {host.since
-                            ? ` · zuletzt erreichbar vor ${age(host.since)}`
-                            : " · noch nie erreichbar gesehen"}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-            <section className="panel" aria-labelledby="zbx-wartungen">
-              <div className="panel-head">
-                <h2 id="zbx-wartungen">Wartungen</h2>
-                <Link to={MONITORING_ZABBIX_MAINTENANCE_PATH}>Alle</Link>
-              </div>
-              <MaintenanceList items={data.maintenances} />
-            </section>
-          </div>
           <p className="small">
             Nur lesend. Quittieren und Wartungen anlegen kommen in einer späteren Stufe, dann mit
             Bestätigung durch das Admin-Konto.

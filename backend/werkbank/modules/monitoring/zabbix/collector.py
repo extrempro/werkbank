@@ -23,6 +23,7 @@ from werkbank.config import Settings
 from werkbank.core.sessions import now_utc
 from werkbank.modules.monitoring.zabbix.client import (
     Host,
+    Problem,
     Transport,
     ZabbixClient,
     ZabbixError,
@@ -35,6 +36,7 @@ from werkbank.modules.monitoring.zabbix.models import (
     ZbxHost,
     ZbxMaintenance,
     ZbxProblem,
+    ZbxProblemHour,
     ZbxRun,
     ZbxStatus,
 )
@@ -69,6 +71,8 @@ TASK_METHODS = {
 KEEP_RUNS_DAYS = 30
 # Kleiner Vorlauf, damit ein Auftrag, der ein paar Sekunden früher startet, nicht ausfällt
 SLACK = timedelta(seconds=5)
+# Verlauf der Übersicht: offene Probleme je Stunde, so lange aufbewahrt
+KEEP_HOURS = timedelta(hours=48)
 ERROR_MAX = 500
 
 # Dient in Tests als Ersatz für http_transport
@@ -178,7 +182,22 @@ def run_fast(db: Session, client: ZabbixClient, now: datetime) -> dict[str, int]
                 tags=[list(tag) for tag in problem.tags],
             )
         )
+    record_hour(db, problems, now)
     return {"hosts": len(hosts), "probleme": len(problems)}
+
+
+def record_hour(db: Session, problems: list[Problem], now: datetime) -> None:
+    """Merkt die Zahl der offenen (nicht unterdrückten) Probleme für die laufende Stunde;
+    der letzte Abruf der Stunde zählt. Ältere Stunden als ``KEEP_HOURS`` fallen weg."""
+    hour = now.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
+    visible = [problem for problem in problems if not problem.suppressed]
+    row = db.get(ZbxProblemHour, hour)
+    if row is None:
+        row = ZbxProblemHour(hour=hour)
+        db.add(row)
+    row.open = len(visible)
+    row.high = sum(1 for problem in visible if problem.severity >= 4)
+    db.execute(delete(ZbxProblemHour).where(ZbxProblemHour.hour < hour - KEEP_HOURS))
 
 
 def run_maintenances(db: Session, client: ZabbixClient, now: datetime) -> dict[str, int]:

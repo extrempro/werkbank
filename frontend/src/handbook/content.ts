@@ -914,7 +914,7 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "list",
                 items: [
-                  "Übersicht: oben „Zu erledigen“, dann die Kennzahlen, die aktuellen Probleme mit Filter nach Standort und Mindest-Schweregrad, die nicht erreichbaren Hosts und die laufenden und kommenden Wartungen.",
+                  "Übersicht: oben eine farbige Karte mit dem Gesamtstand (grün: alles in Ordnung, gelb: Probleme ohne schwere, rot: schwere Probleme), daneben wie viele Hosts erreichbar sind und was zu erledigen ist. Darunter die offenen Probleme als Balken nach Schweregrad und je Standort eine Kachel mit einem Kästchen je Host: Die Farbe zeigt den schlimmsten offenen Zustand, schwarz umrandet heißt nicht erreichbar, grau in Wartung. Ein Klick auf einen Schweregrad oder eine Kachel filtert die Liste „Aktuelle Probleme“; „Filter zurücksetzen“ zeigt wieder alles. Rechts daneben stehen die offenen Probleme der letzten 24 Stunden, die nicht erreichbaren Hosts und die Wartungen, ganz unten „Zu erledigen“.",
                   "Hosts: Tabelle mit Suche nach Name, Gruppe oder Seriennummer und den Filtern Alle, Mit Problemen, Nicht erreichbar, In Wartung, Ohne Bestandseintrag, Seriennummer fehlt, Nicht überwacht und In Zabbix abgeschaltet. Die Spalte IT-Bestand zeigt das verknüpfte Gerät. Ein Klick öffnet den Host rechts daneben mit offenen Problemen, Schnittstellen, Hostgruppen, Templates und Seriennummer.",
                   "Wartungen: laufend, kommend und in den letzten 30 Tagen abgelaufen, mit Zeitraum und Zahl der Hosts.",
                   "„In Zabbix öffnen“ führt in einem neuen Tab zum Host oder zum Problem in Zabbix. Dort meldest du dich mit deinem eigenen Zabbix-Konto an.",
