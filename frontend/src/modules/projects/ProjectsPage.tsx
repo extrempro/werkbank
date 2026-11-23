@@ -42,7 +42,7 @@ function NewProjectForm({ onCancel }: { onCancel: () => void }) {
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Bitte einen Namen eintragen.");
+      setError("Bitte trag einen Namen ein.");
       return;
     }
     setBusy(true);

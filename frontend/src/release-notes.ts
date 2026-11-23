@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.104.1",
+    date: "2026-11-23",
+    summary: "Die Werkbank spricht dich überall mit du an.",
+    sections: [
+      {
+        area: "Allgemein",
+        entries: [
+          "Die Startseite begrüßt dich mit deinem Vornamen.",
+          "Hinweise, Fehlermeldungen und die Schritte im Handbuch sprechen dich jetzt durchgehend mit du an.",
+          "In Ticket-Mails steht über dem Text „Bitte antworte oberhalb dieser Zeile.“",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.104.0",
     date: "2026-11-23",
     summary: "Lange Listen laden schneller, Tabellen ohne eigenen Scrollbalken, Auswahl mit Suche.",

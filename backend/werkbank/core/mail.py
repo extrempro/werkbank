@@ -43,7 +43,7 @@ def load_smtp_config(db: Session, settings: Settings) -> SmtpConfig | None:
     if token and password is None:
         raise MailError(
             "Das gespeicherte Passwort lässt sich nicht lesen. "
-            "Bitte in der Verwaltung neu eintragen."
+            "Bitte trag es in der Verwaltung neu ein."
         )
     return SmtpConfig(
         host=str(stored["host"]),

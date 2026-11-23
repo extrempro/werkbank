@@ -25,7 +25,7 @@ test.describe("PWA und Service Worker", () => {
     await page.reload();
     await expect(
       page.getByRole("heading", {
-        name: /^Guten (Morgen|Tag|Abend), Otto Offline$/,
+        name: /^(Guten Morgen|Hallo|Guten Abend), Otto$/,
       }),
     ).toBeVisible();
 

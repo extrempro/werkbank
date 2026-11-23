@@ -120,15 +120,15 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
     const noticeMonths = wholeNumber(notice);
     let problem: string | null = null;
     if (!title.trim()) {
-      problem = "Bitte eine Bezeichnung eintragen.";
+      problem = "Bitte trag eine Bezeichnung ein.";
     } else if (!partnerId) {
-      problem = "Bitte den Vertragspartner wählen.";
+      problem = "Bitte wähle den Vertragspartner.";
     } else if (cents === null) {
       problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 1000,00";
     } else if (taxRate === null) {
       problem = "Der Steuersatz ist nicht lesbar. Bitte so eintragen: 19";
     } else if (!startsOn) {
-      problem = "Bitte den Beginn eintragen.";
+      problem = "Bitte trag den Beginn ein.";
     } else if (endsOn && endsOn < startsOn) {
       problem = "Das Ende der Laufzeit liegt vor dem Beginn.";
     } else if (Number.isNaN(renewalMonths) || Number.isNaN(noticeMonths)) {

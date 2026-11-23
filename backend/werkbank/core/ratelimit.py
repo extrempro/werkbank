@@ -131,7 +131,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "Anfragerate überschritten: Regel %s, Absender %s", rule.name, truncate_ip(ip)
                 )
             return JSONResponse(
-                {"detail": "Zu viele Anfragen. Bitte später erneut versuchen."},
+                {"detail": "Zu viele Anfragen. Bitte versuch es später erneut."},
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 headers={"Retry-After": str(math.ceil(decision.retry_after))},
             )

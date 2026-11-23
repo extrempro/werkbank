@@ -5,7 +5,7 @@ import { entriesFor } from "../components/nav/menuGroups";
 import { PinButton } from "../components/nav/PinButton";
 import { areasFor, type NavEntry } from "../navigation";
 import { RECENT_SHOWN, useNavPrefs } from "../navPrefs";
-import { greeting } from "../user";
+import { firstName, greeting } from "../user";
 import { ModuleTiles } from "./ModuleTiles";
 import { RecentActivity } from "./RecentActivity";
 
@@ -68,7 +68,7 @@ export function StartPage({ me, tasks, now = new Date() }: StartPageProps) {
     <div className="start">
       <header className="page-head">
         <h1>
-          {greeting(now)}, {me.display_name}
+          {greeting(now)}, {firstName(me.display_name)}
         </h1>
         <p className="page-sub">
           {date}

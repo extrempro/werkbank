@@ -45,7 +45,7 @@ export function TasksTab({ projectId, canEdit }: { projectId: number; canEdit: b
   const onAdd = (event: FormEvent) => {
     event.preventDefault();
     if (!text.trim()) {
-      setMessage({ kind: "alert", text: "Bitte eine Aufgabe eintragen." });
+      setMessage({ kind: "alert", text: "Bitte trag eine Aufgabe ein." });
       return;
     }
     setBusy(true);

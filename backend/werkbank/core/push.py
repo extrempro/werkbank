@@ -304,7 +304,7 @@ def subscribe(
         if count >= DEVICES_MAX:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Höchstens {DEVICES_MAX} Geräte. Bitte zuerst ein altes entfernen.",
+                detail=f"Höchstens {DEVICES_MAX} Geräte. Bitte entferne zuerst ein altes.",
             )
         db.add(
             PushSubscription(

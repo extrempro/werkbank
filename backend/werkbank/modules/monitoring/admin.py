@@ -110,7 +110,7 @@ def put_netbox(
     if url and not valid_netbox_url(url):
         raise HTTPException(
             status_code=422,
-            detail="Bitte die https-Adresse von NetBox eintragen, z. B. https://netbox.example.com.",
+            detail="Bitte trag die https-Adresse von NetBox ein, z. B. https://netbox.example.com.",
         )
     if body.resolver not in RESOLVERS:
         raise HTTPException(status_code=422, detail="Unbekannter Resolver.")
@@ -133,7 +133,7 @@ def put_netbox(
         pem = body.ca_pem.strip()
         if "-----BEGIN CERTIFICATE-----" not in pem or "-----END CERTIFICATE-----" not in pem:
             raise HTTPException(
-                status_code=422, detail="Bitte ein CA-Zertifikat im PEM-Format einfügen."
+                status_code=422, detail="Bitte füge ein CA-Zertifikat im PEM-Format ein."
             )
         ca_pem = pem
     if body.enabled and (not url or not token):
@@ -191,7 +191,7 @@ def test_netbox(
     failure: str | None = None
     result: NetboxTestOut | None = None
     if config is None:
-        failure = "Bitte zuerst Adresse und Token speichern."
+        failure = "Bitte speichere zuerst Adresse und Token."
     else:
         try:
             version, plugin = netbox_status(get, config.netbox)

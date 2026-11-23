@@ -140,7 +140,7 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!choice) {
-      setError("Bitte eine Entscheidung wählen.");
+      setError("Bitte wähle eine Entscheidung.");
       return;
     }
     const body: DecisionInput = { decision: choice };
@@ -148,10 +148,10 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
       if (!target) {
         setError(
           choice === "stelle"
-            ? "Bitte eine Stelle wählen."
+            ? "Bitte wähle eine Stelle."
             : choice === "arbeitsplatz"
-              ? "Bitte einen Arbeitsplatz wählen."
-              : "Bitte das vorhandene Gerät wählen.",
+              ? "Bitte wähle einen Arbeitsplatz."
+              : "Bitte wähle das vorhandene Gerät.",
         );
         return;
       }
@@ -168,14 +168,14 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
     }
     if (choice === "nachfolge") {
       if (!person) {
-        setError("Bitte die neue Person wählen.");
+        setError("Bitte wähle die neue Person.");
         return;
       }
       body.person_oid = person.oid;
     }
     if (choice === "verlaengert") {
       if (!dueOn || dueOn < today()) {
-        setError("Bitte ein neues Rückgabedatum ab heute wählen.");
+        setError("Bitte wähle ein neues Rückgabedatum ab heute.");
         return;
       }
       body.due_on = dueOn;
@@ -350,7 +350,7 @@ function NoteForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => void
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!text.trim()) {
-      setError("Bitte einen Text eintragen.");
+      setError("Bitte trag einen Text ein.");
       return;
     }
     addCaseNote(entry.id, text.trim()).then(

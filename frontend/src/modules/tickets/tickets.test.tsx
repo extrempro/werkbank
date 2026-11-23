@@ -276,7 +276,7 @@ describe("Antwort an den Melder", () => {
       screen.getByText("Geht per E-Mail an: m.muster@example.com · Kopie an kopie@example.com"),
     ).toBeTruthy();
     fireEvent.change(screen.getByRole("textbox", { name: /Antwort an alle/ }), {
-      target: { value: "Bitte neu starten." },
+      target: { value: "Bitte starte neu." },
     });
     fireEvent.change(screen.getByLabelText("Status danach"), { target: { value: "waiting" } });
     // Einklappen behält den Entwurf
@@ -284,11 +284,11 @@ describe("Antwort an den Melder", () => {
     fireEvent.click(screen.getByRole("button", { name: "Antworten an alle" }));
     expect(
       (screen.getByRole("textbox", { name: /Antwort an alle/ }) as HTMLTextAreaElement).value,
-    ).toBe("Bitte neu starten.");
+    ).toBe("Bitte starte neu.");
     fireEvent.click(screen.getByRole("button", { name: "An M. Muster senden" }));
     await waitFor(() =>
       expect(bodies).toEqual([
-        { body: "Bitte neu starten.", status_after: "waiting", reply_all: true },
+        { body: "Bitte starte neu.", status_after: "waiting", reply_all: true },
       ]),
     );
   });
@@ -952,13 +952,13 @@ describe("Weiterleiten und Kennzeichnung", () => {
       target: { value: "Service@Example.com, b@example.com" },
     });
     fireEvent.change(within(panel).getByLabelText(/Text dazu/), {
-      target: { value: "Bitte prüfen." },
+      target: { value: "Bitte prüf sie." },
     });
     fireEvent.click(send);
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual({
       to: ["service@example.com", "b@example.com"],
-      text: "Bitte prüfen.",
+      text: "Bitte prüf sie.",
       entry_id: null,
       attachments: true,
     });

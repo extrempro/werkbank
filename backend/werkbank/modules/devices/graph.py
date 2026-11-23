@@ -283,7 +283,7 @@ def explain(error: GraphError) -> dict[str, Any]:
         return {
             "kind": "abgelehnt",
             "title": "Daten nicht akzeptiert",
-            "detail": "Microsoft hat die Gerätedaten nicht angenommen. Bitte neu scannen.",
+            "detail": "Microsoft hat die Gerätedaten nicht angenommen. Bitte scanne neu.",
         }
     if error.status >= 500:
         return {
@@ -297,7 +297,7 @@ def explain(error: GraphError) -> dict[str, Any]:
         return {
             "kind": "gedrosselt",
             "title": "Zu viele Anfragen",
-            "detail": "Microsoft bremst gerade. Bitte in einer Minute noch einmal versuchen.",
+            "detail": "Microsoft bremst gerade. Bitte versuch es in einer Minute noch einmal.",
         }
     if error.code == "ConfirmTimeout":
         return {"kind": "unbestaetigt", "title": "Noch nicht bestätigt", "detail": str(error)}

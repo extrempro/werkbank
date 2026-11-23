@@ -85,11 +85,11 @@ def http_get(config: NetboxConfig, path: str, params: list[tuple[str, str]]) -> 
         if "CERTIFICATE_VERIFY_FAILED" in text or "certificate" in text.lower():
             raise NetboxError(
                 "Das Zertifikat von NetBox ist nicht vertrauenswürdig. "
-                "Bitte das CA-Zertifikat in der Verwaltung hinterlegen."
+                "Bitte hinterlege das CA-Zertifikat in der Verwaltung."
             ) from error
-        raise NetboxError("NetBox ist nicht erreichbar. Bitte die Adresse prüfen.") from error
+        raise NetboxError("NetBox ist nicht erreichbar. Bitte prüf die Adresse.") from error
     except httpx.HTTPError as error:
-        raise NetboxError("NetBox ist nicht erreichbar. Bitte die Adresse prüfen.") from error
+        raise NetboxError("NetBox ist nicht erreichbar. Bitte prüf die Adresse.") from error
     if response.status_code in (401, 403):
         raise NetboxError("NetBox lehnt den Token ab (ungültig, abgelaufen oder ohne Leserecht).")
     if response.status_code == 404:

@@ -192,6 +192,6 @@ export async function prepareImage(
     plan = planResize(before, kind, longest);
   }
   throw new ImageProblem(
-    "Das Bild bleibt auch verkleinert zu groß. Bitte ein einfacheres Bild wählen.",
+    "Das Bild bleibt auch verkleinert zu groß. Bitte wähle ein einfacheres Bild.",
   );
 }

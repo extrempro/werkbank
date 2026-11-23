@@ -61,7 +61,7 @@ function LifetimeRow({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!valid) {
-      setError("Bitte eine ganze Zahl von 1 bis 20 eintragen oder das Feld leeren.");
+      setError("Bitte trag eine ganze Zahl von 1 bis 20 ein oder leere das Feld.");
       return;
     }
     setBusy(true);
@@ -130,7 +130,7 @@ function EntryRow({
   const rename = (event: FormEvent) => {
     event.preventDefault();
     if (!value.trim()) {
-      setError("Bitte einen Namen eintragen.");
+      setError("Bitte trag einen Namen ein.");
       return;
     }
     onRename(value.trim()).then(
@@ -229,7 +229,7 @@ function AddForm({
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Bitte einen Namen eintragen.");
+      setError("Bitte trag einen Namen ein.");
       return;
     }
     setBusy(true);

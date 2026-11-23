@@ -168,7 +168,7 @@ class SmtpIn(BaseModel):
     def address_is_valid(cls, value: str) -> str:
         value = value.strip()
         if not ADDRESS_PATTERN.match(value):
-            raise ValueError("Bitte eine gültige E-Mail-Adresse angeben")
+            raise ValueError("Bitte gib eine gültige E-Mail-Adresse an")
         return value
 
     @field_validator("username", "sender_name")
@@ -428,7 +428,7 @@ def update_teams(
         if not valid_workflow_url(url):
             raise HTTPException(
                 status_code=422,
-                detail="Bitte die https-Adresse des Workflows aus Power Automate eintragen "
+                detail="Bitte trag die https-Adresse des Workflows aus Power Automate ein "
                 "(…logic.azure.com oder …api.powerplatform.com).",
             )
         try:

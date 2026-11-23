@@ -89,13 +89,13 @@ def put_zabbix(
     if url and not valid_zabbix_url(url):
         raise HTTPException(
             status_code=422,
-            detail="Bitte die https-Adresse von Zabbix eintragen, z. B. https://zabbix.example.com.",
+            detail="Bitte trag die https-Adresse von Zabbix ein, z. B. https://zabbix.example.com.",
         )
     link_url = body.link_url.strip().rstrip("/")
     if link_url and not valid_zabbix_url(link_url):
         raise HTTPException(
             status_code=422,
-            detail="Bitte für die Links die https-Adresse der Zabbix-Oberfläche eintragen.",
+            detail="Bitte trag für die Links die https-Adresse der Zabbix-Oberfläche ein.",
         )
     token = previous.get("token_encrypted") or None
     if body.token == "":
@@ -116,7 +116,7 @@ def put_zabbix(
         pem = body.ca_pem.strip()
         if "-----BEGIN CERTIFICATE-----" not in pem or "-----END CERTIFICATE-----" not in pem:
             raise HTTPException(
-                status_code=422, detail="Bitte ein CA-Zertifikat im PEM-Format einfügen."
+                status_code=422, detail="Bitte füge ein CA-Zertifikat im PEM-Format ein."
             )
         ca_pem = pem
     if body.enabled and (not url or not token):
@@ -176,7 +176,7 @@ def test_zabbix(
     failure: str | None = None
     result: ZabbixTestOut | None = None
     if config is None:
-        failure = "Bitte zuerst Adresse und Token speichern."
+        failure = "Bitte speichere zuerst Adresse und Token."
     else:
         client = ZabbixClient(config, transport)
         try:

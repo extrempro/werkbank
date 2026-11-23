@@ -254,7 +254,7 @@ describe("Seiten", () => {
     expect(screen.getByRole("button", { name: "Neues Projekt" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Neues Projekt" }));
     fireEvent.click(screen.getByRole("button", { name: "Projekt anlegen" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Namen eintragen");
+    expect(screen.getByRole("alert")).toHaveTextContent("trag einen Namen ein");
   });
 
   it("zeigt Lesenden keinen Knopf für neue Projekte", async () => {

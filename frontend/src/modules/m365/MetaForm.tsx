@@ -32,7 +32,7 @@ export function MetaForm({ settingId, meta, onSaved, onCancel }: MetaFormProps) 
       return;
     }
     if (targetSet && target.trim() === "") {
-      setError("Bitte einen Soll-Wert eintragen oder das Häkchen entfernen.");
+      setError("Bitte trag einen Soll-Wert ein oder entferne das Häkchen.");
       return;
     }
     setError(null);

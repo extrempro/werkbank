@@ -30,7 +30,7 @@ export function CredentialWarnSettings({ settings, onChange }: Props) {
     ) {
       setMessage({
         kind: "alert",
-        text: `Bitte drei absteigende ganze Zahlen zwischen ${min} und ${max} eintragen, z. B. 60, 30 und 7.`,
+        text: `Bitte trag drei absteigende ganze Zahlen zwischen ${min} und ${max} ein, z. B. 60, 30 und 7.`,
       });
       return;
     }

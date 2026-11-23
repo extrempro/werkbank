@@ -118,11 +118,11 @@ export default function QrCodeTool() {
       return;
     }
     if (!/^image\/(png|jpeg|webp|svg\+xml|gif)$/.test(file.type)) {
-      setLogoError("Bitte ein Bild wählen (PNG, JPG, WebP, SVG oder GIF).");
+      setLogoError("Bitte wähle ein Bild (PNG, JPG, WebP, SVG oder GIF).");
       return;
     }
     if (file.size > LOGO_MAX_BYTES) {
-      setLogoError("Das Bild ist größer als 1 MB. Bitte ein kleineres Logo verwenden.");
+      setLogoError("Das Bild ist größer als 1 MB. Bitte nimm ein kleineres Logo.");
       return;
     }
     const reader = new FileReader();
@@ -200,7 +200,7 @@ export default function QrCodeTool() {
   const warnings = colorWarnings(fg, bg);
   if (center && qr && !centerSafe) {
     warnings.push(
-      "Die Mitte verdeckt bei diesem Inhalt zu viel. Bitte kleiner stellen, sonst ist der Code womöglich nicht lesbar.",
+      "Die Mitte verdeckt bei diesem Inhalt zu viel. Bitte stell sie kleiner, sonst ist der Code womöglich nicht lesbar.",
     );
   }
   if (margin < 4) {

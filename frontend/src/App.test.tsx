@@ -34,7 +34,7 @@ describe("App", () => {
     });
     render(<App />);
     expect(
-      await screen.findByRole("heading", { name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/ }),
+      await screen.findByRole("heading", { name: /^(Guten Morgen|Hallo|Guten Abend), Erika$/ }),
     ).toBeVisible();
     // Auf der Startseite zeigt die Navigation den Start-Bereich; Evergreen ist ein eigener.
     const bar = screen.getByRole("navigation", { name: "Bereiche" });
@@ -172,7 +172,7 @@ describe("App", () => {
       authenticated_at: "2026-11-14T08:00:00Z",
     });
     render(<App />);
-    await screen.findByRole("heading", { name: /Erika Beispiel$/ });
+    await screen.findByRole("heading", { name: /, Erika$/ });
     act(() => {
       window.dispatchEvent(new CustomEvent(AUTH_EVENT, { detail: "abgemeldet" }));
     });

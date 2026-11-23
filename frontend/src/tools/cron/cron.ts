@@ -112,7 +112,7 @@ function parseField(
 
 export function parseCron(expr: string): Cron {
   let text = expr.trim().replace(/\s+/g, " ");
-  if (!text) throw new Error("Bitte einen Cron-Ausdruck eingeben");
+  if (!text) throw new Error("Bitte gib einen Cron-Ausdruck ein");
   if (text.toLowerCase() === "@reboot") {
     const all = (min: number, max: number): CronField => ({
       values: Array.from({ length: max - min + 1 }, (_, i) => min + i),

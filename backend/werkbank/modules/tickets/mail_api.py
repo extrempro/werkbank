@@ -190,7 +190,7 @@ class BlockIn(BaseModel):
     def _check(cls, value: str) -> str:
         value = value.strip().lower()
         if not _BLOCK.match(value):
-            raise ValueError("Bitte eine Mailadresse oder @domain angeben.")
+            raise ValueError("Bitte gib eine Mailadresse oder @domain an.")
         return value
 
 

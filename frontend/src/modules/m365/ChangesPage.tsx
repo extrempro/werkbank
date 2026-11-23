@@ -225,7 +225,7 @@ export function ChangesPage({ me }: ChangesPageProps) {
 
   const reviewSelection = (target: ReviewStatus) => {
     if (selected.length === 0) {
-      setMessage({ kind: "alert", text: "Bitte zuerst mindestens eine Änderung auswählen." });
+      setMessage({ kind: "alert", text: "Bitte wähle zuerst mindestens eine Änderung aus." });
       return;
     }
     if (target === "ungewollt" && bulkComment.trim() === "") {

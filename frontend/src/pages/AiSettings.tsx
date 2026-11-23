@@ -62,7 +62,7 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
       .catch((error: unknown) => {
         setMessage({
           kind: "alert",
-          text: errorText(error, "Die Angaben konnten nicht gespeichert werden. Bitte prüfen."),
+          text: errorText(error, "Die Angaben konnten nicht gespeichert werden. Bitte prüf sie."),
         });
       })
       .finally(() => setBusy(false));

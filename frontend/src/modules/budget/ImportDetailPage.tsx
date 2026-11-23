@@ -87,13 +87,13 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
     event.preventDefault();
     let problem: string | null = null;
     if (!accountId) {
-      problem = "Bitte ein Konto wählen.";
+      problem = "Bitte wähle ein Konto.";
     } else if (grossCents === null) {
       problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 1190,00";
     } else if (choice === "neu" && !newName.trim()) {
-      problem = "Bitte einen Namen für den neuen Partner eintragen.";
+      problem = "Bitte trag einen Namen für den neuen Partner ein.";
     } else if (choice === "andere" && !otherId) {
-      problem = "Bitte einen Partner wählen.";
+      problem = "Bitte wähle einen Partner.";
     }
     if (problem !== null || grossCents === null) {
       setError(problem);
@@ -346,7 +346,7 @@ function PlanPanel({
   const onPlan = () => {
     const picked = candidates.filter((row) => chosen[row.id]);
     if (picked.length === 0) {
-      setMessage({ kind: "alert", text: "Bitte mindestens eine Zeile auswählen." });
+      setMessage({ kind: "alert", text: "Bitte wähle mindestens eine Zeile aus." });
       return;
     }
     const unreadable = picked.find((row) => parseEuro(amountOf(row)) === null);

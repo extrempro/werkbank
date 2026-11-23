@@ -133,7 +133,7 @@ export function Scanner({ onCode }: ScannerProps) {
         onCode(text.trim());
       } else {
         setPhotoHint(
-          "Auf dem Foto ist kein QR-Code aus der Einrichtung zu erkennen. Bitte näher heran und ohne Spiegelung.",
+          "Auf dem Foto ist kein QR-Code aus der Einrichtung zu erkennen. Bitte geh näher heran und vermeide Spiegelungen.",
         );
       }
     } catch {

@@ -82,15 +82,15 @@ function NewLoanForm({ onCreated }: { onCreated: (loan: Loan) => void }) {
       return;
     }
     if (!startOn || startOn < start) {
-      setError("Bitte ein Startdatum ab heute wählen.");
+      setError("Bitte wähle ein Startdatum ab heute.");
       return;
     }
     if (!dueOn || dueOn < startOn) {
-      setError("Bitte ein Rückgabedatum ab dem Startdatum wählen.");
+      setError("Bitte wähle ein Rückgabedatum ab dem Startdatum.");
       return;
     }
     if (picked.length === 0) {
-      setError("Bitte mindestens ein Gerät wählen.");
+      setError("Bitte wähle mindestens ein Gerät.");
       return;
     }
     setBusy(true);
@@ -290,7 +290,7 @@ function LoanDetail({
   const onReturn = (event: FormEvent) => {
     event.preventDefault();
     if (picked.length === 0) {
-      setError("Bitte die Geräte wählen, die zurück sind.");
+      setError("Bitte wähle die Geräte, die zurück sind.");
       return;
     }
     setBusy(true);
@@ -309,7 +309,7 @@ function LoanDetail({
   const onDue = (event: FormEvent) => {
     event.preventDefault();
     if (!dueOn || dueOn < today() || dueOn < loan.issued_on) {
-      setError("Bitte ein Rückgabedatum ab heute und ab dem Startdatum wählen.");
+      setError("Bitte wähle ein Rückgabedatum ab heute und ab dem Startdatum.");
       return;
     }
     setBusy(true);

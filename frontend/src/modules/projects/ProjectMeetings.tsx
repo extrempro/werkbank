@@ -50,7 +50,7 @@ function MeetingForm({ projectId, meeting, onSaved, onCancel }: FormProps) {
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!heldOn || !title.trim()) {
-      setError("Bitte Datum und Titel eintragen.");
+      setError("Bitte trag Datum und Titel ein.");
       return;
     }
     setBusy(true);

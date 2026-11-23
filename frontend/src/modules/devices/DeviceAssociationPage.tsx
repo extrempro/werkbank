@@ -46,11 +46,11 @@ function when(iso: string | null): string {
 const ADMIN_MESSAGES: Record<string, { text: string; bad: boolean }> = {
   verbunden: { text: "Admin-Konto verbunden.", bad: false },
   fehler: {
-    text: "Die Anmeldung mit dem Admin-Konto hat nicht geklappt. Bitte noch einmal versuchen, mit einem Konto aus diesem Tenant.",
+    text: "Die Anmeldung mit dem Admin-Konto hat nicht geklappt. Bitte versuch es noch einmal, mit einem Konto aus diesem Tenant.",
     bad: true,
   },
   schluessel: {
-    text: "Die Anmeldung ging, aber die Werkbank kann das Admin-Konto gerade nicht sicher ablegen. Bitte der Verwaltung Bescheid geben.",
+    text: "Die Anmeldung ging, aber die Werkbank kann das Admin-Konto gerade nicht sicher ablegen. Bitte gib der Verwaltung Bescheid.",
     bad: true,
   },
 };
@@ -543,7 +543,7 @@ function ScanDialog({ onClose, onDone, onOpenEntry }: ScanDialogProps) {
           kind: "pruefen",
           qr,
           scan: null,
-          error: errorText(failure, "Der QR-Code ließ sich nicht prüfen. Bitte neu scannen."),
+          error: errorText(failure, "Der QR-Code ließ sich nicht prüfen. Bitte scanne neu."),
         }),
       );
   }, []);

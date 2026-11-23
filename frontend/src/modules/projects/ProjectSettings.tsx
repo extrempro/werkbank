@@ -79,15 +79,15 @@ export function SettingsTab({ project, onSaved }: Props) {
       .filter((entry) => entry.label || entry.url);
     let problem: string | null = null;
     if (!name.trim()) {
-      problem = "Bitte einen Namen eintragen.";
+      problem = "Bitte trag einen Namen ein.";
     } else if (startsOn && endsOn && endsOn < startsOn) {
       problem = "Das Ende liegt vor dem Beginn.";
     } else if (budget.trim() !== "" && budgetCents === null) {
       problem = "Das Budget ist nicht lesbar. Bitte so eintragen: 150000,00";
     } else if (cleanPeople.some((entry) => !entry.name)) {
-      problem = "Bitte bei jeder Person einen Namen eintragen.";
+      problem = "Bitte trag bei jeder Person einen Namen ein.";
     } else if (cleanLinks.some((entry) => !entry.label)) {
-      problem = "Bitte jedem Link eine Bezeichnung geben.";
+      problem = "Bitte gib jedem Link eine Bezeichnung.";
     } else if (cleanLinks.some((entry) => !isHttpsUrl(entry.url))) {
       problem = "Links müssen vollständige Adressen mit https:// sein.";
     }

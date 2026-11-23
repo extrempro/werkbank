@@ -314,7 +314,7 @@ def test_collect_stores_state(db: Session, tmp_path: Path, name: str) -> None:
     # Zabbix fällt aus: Lauf fehlgeschlagen, alter Stand bleibt
     db.execute(delete(ZbxRun))
     db.commit()
-    fake.fail = "Zabbix ist nicht erreichbar. Bitte die Adresse prüfen."
+    fake.fail = "Zabbix ist nicht erreichbar. Bitte prüf die Adresse."
     failed = [run for run in collector.collect(db, settings, fake) if run.task != "berichte"]
     assert failed and not any(run.ok for run in failed)
     assert db.scalar(select(ZbxProblem).where(ZbxProblem.eventid == "5001")) is not None

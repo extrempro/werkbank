@@ -24,7 +24,7 @@ export function parseTimestamp(
 ): { date: Date; unit: Unit; fraction: string } {
   const v = input.trim().replace(/[\s_']/g, "");
   const m = /^(-?\d+)(?:[.,](\d+))?$/.exec(v);
-  if (!m) throw new Error("Bitte eine Zahl eingeben, z. B. 1762516800");
+  if (!m) throw new Error("Bitte gib eine Zahl ein, z. B. 1762516800");
   const whole = BigInt(m[1]!);
   const u = unit ?? guessUnit(whole);
   const div = { s: 1n, ms: 1000n, us: 1_000_000n, ns: 1_000_000_000n }[u];

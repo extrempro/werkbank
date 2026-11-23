@@ -118,7 +118,7 @@ function NewEntryForm({ software, onCancel }: { software: SoftwareKey; onCancel:
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!title.trim()) {
-      setError("Bitte einen Titel eingeben.");
+      setError("Bitte gib einen Titel ein.");
       return;
     }
     setBusy(true);

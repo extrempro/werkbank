@@ -147,7 +147,7 @@ class SettingsIn(BaseModel):
     @classmethod
     def not_empty(cls, value: str) -> str:
         if not value:
-            raise ValueError("Bitte eine Bezeichnung angeben")
+            raise ValueError("Bitte gib eine Bezeichnung an")
         return value
 
 
@@ -1799,7 +1799,7 @@ def _invoice_gross(db: DbDep, body: InvoiceIn) -> list[int]:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Die Positionen ergeben nicht den Rechnungsbetrag. "
-            "Bitte den ganzen Betrag auf Positionen verteilen.",
+            "Bitte verteil den ganzen Betrag auf Positionen.",
         )
     return gross
 
@@ -2072,7 +2072,7 @@ def merge_partner(
     if target is None or target.id == source.id:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Bitte einen anderen vorhandenen Partner als Ziel wählen.",
+            detail="Bitte wähle einen anderen vorhandenen Partner als Ziel.",
         )
     moved_contracts = 0
     for contract in db.scalars(

@@ -14,7 +14,7 @@ from email.parser import BytesParser
 from email.utils import getaddresses, parseaddr
 
 from werkbank.core.text import html_to_text
-from werkbank.modules.tickets.mail_texts import REPLY_ABOVE
+from werkbank.modules.tickets.mail_texts import REPLY_ABOVE, REPLY_ABOVE_OLD
 
 BODY_MAX = 20_000
 QUOTE_MAX = 20_000
@@ -185,13 +185,15 @@ def parse(raw: bytes) -> ParsedMail:
 
 
 def split_reply(text: str) -> tuple[str, str]:
-    """(neuer Teil, Zitat). Schneidet an „Bitte oberhalb dieser Zeile antworten.“ oder am
+    """(neuer Teil, Zitat). Schneidet an „Bitte antworte oberhalb dieser Zeile.“ (oder der
+    früheren Fassung) oder am
     ersten Kennzeichen eines Zitats. Ist der neue Teil leer, bleibt der ganze Text."""
     lines = text.replace("\r\n", "\n").split("\n")
     cut: int | None = None
     for index, line in enumerate(lines):
         stripped = line.strip()
-        if REPLY_ABOVE.lower() in stripped.lower():
+        lowered = stripped.lower()
+        if REPLY_ABOVE.lower() in lowered or REPLY_ABOVE_OLD.lower() in lowered:
             cut = index
             break
         if any(p.match(stripped) for p in _QUOTE_STARTS):

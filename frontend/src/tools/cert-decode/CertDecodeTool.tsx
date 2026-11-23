@@ -324,7 +324,7 @@ function ExportPanel({ result }: { result: LoadResult }) {
   };
   const needPassword = () => {
     if (!password) {
-      throw new Error("Bitte oben ein Kennwort für den Export eingeben oder erzeugen lassen.");
+      throw new Error("Bitte gib oben ein Kennwort für den Export ein oder lass eins erzeugen.");
     }
   };
 

@@ -137,7 +137,7 @@ export function SearchPage({ roles = [] }: { roles?: readonly string[] }) {
       {loading && <p role="status">Wird gesucht …</p>}
       {failed && (
         <p role="alert">
-          Die Suche in den Modulen ist fehlgeschlagen. Bitte noch einmal versuchen.
+          Die Suche in den Modulen ist fehlgeschlagen. Bitte versuch es noch einmal.
           {withTools
             ? " Die Treffer unter den IT-Tools und im Handbuch stehen trotzdem da."
             : " Die Treffer im Handbuch stehen trotzdem da."}

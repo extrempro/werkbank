@@ -203,7 +203,7 @@ class NinjaClient:
         except httpx.HTTPError as exc:
             raise NinjaError(f"NinjaOne nicht erreichbar: {type(exc).__name__}") from exc
         if response.status_code in (400, 401, 403):
-            raise NinjaError("Anmeldung bei NinjaOne abgelehnt. Bitte Client-ID und Secret prüfen.")
+            raise NinjaError("Anmeldung bei NinjaOne abgelehnt. Bitte prüf Client-ID und Secret.")
         if response.status_code >= 400:
             raise NinjaError(f"NinjaOne antwortet bei der Anmeldung mit {response.status_code}.")
         try:

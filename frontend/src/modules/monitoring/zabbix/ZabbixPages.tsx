@@ -1236,8 +1236,8 @@ function ConnectionView({
       {(data.token_warning || data.token_never_expires) && (
         <p className="hint-box hint-warn">
           {data.token_never_expires
-            ? "Das Token hat kein Ablaufdatum. Bitte in Zabbix ein Token mit Ablaufdatum anlegen."
-            : "Das Token läuft in weniger als 30 Tagen ab. Bitte rechtzeitig ein neues anlegen und in der Verwaltung eintragen."}
+            ? "Das Token hat kein Ablaufdatum. Bitte leg in Zabbix ein Token mit Ablaufdatum an."
+            : "Das Token läuft in weniger als 30 Tagen ab. Bitte leg rechtzeitig ein neues an und trag es in der Verwaltung ein."}
         </p>
       )}
       <p className="small">
@@ -1498,7 +1498,7 @@ function OptionsForm({
           </label>
           {targetValue === null && (
             <p id="zbx-target-fehler" className="field-error">
-              Bitte eine Zahl zwischen 90 und 100 eintragen, z. B. 99,5.
+              Bitte trag eine Zahl zwischen 90 und 100 ein, z. B. 99,5.
             </p>
           )}
         </fieldset>

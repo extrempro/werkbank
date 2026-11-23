@@ -218,14 +218,15 @@ def parse_sheet(cells: Sheet) -> ParsedFile:
         )
         # Rechnungsnummer und -datum stehen nur noch in der Notiz des Postens (keine Rechnung).
         if not firm:
-            parsed.hints.append("Keine Firma angegeben; bitte den Partner wählen.")
+            parsed.hints.append("Keine Firma angegeben; bitte wähle den Partner.")
         if len(filled) > 1:
-            parsed.hints.append("Der Betrag steht bei mehreren Konten; bitte das Konto wählen.")
+            parsed.hints.append("Der Betrag steht bei mehreren Konten; bitte wähle das Konto.")
         elif not filled:
-            parsed.hints.append("Kein Konto erkannt; bitte das Konto wählen.")
+            parsed.hints.append("Kein Konto erkannt; bitte wähle das Konto.")
         if gross < 0:
             parsed.hints.append(
-                "Negativer Betrag (Gutschrift?): Bitte prüfen; übernommen wird nur ein Betrag ab 0."
+                "Negativer Betrag (Gutschrift?): Bitte prüf ihn; "
+                "übernommen wird nur ein Betrag ab 0."
             )
         rows.append(parsed)
         row += 1

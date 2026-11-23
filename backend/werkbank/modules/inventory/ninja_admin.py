@@ -242,7 +242,7 @@ def test_ninja(
     failure: str | None = None
     result: NinjaTestOut | None = None
     if config is None:
-        failure = "Bitte zuerst Region, Client-ID und Client-Secret speichern."
+        failure = "Bitte speichere zuerst Region, Client-ID und Client-Secret."
     else:
         try:
             devices = fetch(config)
@@ -287,7 +287,7 @@ def ninja_options(
     if config is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Bitte zuerst Region, Client-ID und Client-Secret speichern.",
+            detail="Bitte speichere zuerst Region, Client-ID und Client-Secret.",
         )
     try:
         organizations, roles = load(config)

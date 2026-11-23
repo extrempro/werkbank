@@ -35,7 +35,7 @@ export function toQueryName(input: string): QueryName {
     .replace(/\.$/, "")
     .replace(/^https?:\/\//i, "")
     .replace(/\/.*$/, "");
-  if (!raw) throw new Error("Bitte eine Domain eingeben");
+  if (!raw) throw new Error("Bitte gib eine Domain ein");
   const wildcard = raw.startsWith("*.");
   const rest = wildcard ? raw.slice(2) : raw;
   const ascii = toAscii(rest.toLowerCase());

@@ -32,7 +32,7 @@ function AccountForm({ account, onSaved, onCancel }: FormProps) {
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!number.trim() || !name.trim()) {
-      setError("Bitte Kontonummer und Bezeichnung eintragen.");
+      setError("Bitte trag Kontonummer und Bezeichnung ein.");
       return;
     }
     const update = { number: number.trim(), name: name.trim(), kind, note: note.trim(), active };
