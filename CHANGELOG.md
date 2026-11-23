@@ -4,6 +4,10 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+### Dokumentation
+
+- design.md: Regel „Filter-Chips nie seitlich scrollen“ (passt eine Reihe nicht in eine Zeile, wird der Filter zur Auswahl mit Anzahl)
+
 ## [0.108.0] – 2026-11-23
 
 ### IT-Bestand
