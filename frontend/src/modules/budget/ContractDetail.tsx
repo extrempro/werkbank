@@ -15,6 +15,14 @@ import {
   type Contract,
 } from "./api";
 import { DeleteButton } from "./shared";
+import {
+  contractPath,
+  CopyLinkBar,
+  invoicePath,
+  itemPath,
+  LinkedBlock,
+  type LinkedEntry,
+} from "./links";
 
 function day(value: string | null, fallback: string): string {
   return value ? formatBudgetDay(value) : fallback;
@@ -145,6 +153,26 @@ export function ContractDetail({
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), [contract.id]);
   const badge = deadlineBadge(contract);
+  // Verknüpft: die Budgetposten des Vertrags und ihre Rechnungen
+  const linkedEntries: LinkedEntry[] = [
+    ...contract.items.map((item) => ({
+      key: `posten-${item.id}`,
+      kind: "Budgetposten",
+      label: `${item.number} ${item.name}`,
+      path: itemPath(item.id, year),
+      extra: `${item.account_number} ${item.account_name}`,
+    })),
+    ...contract.items.flatMap((item) =>
+      (item.invoices ?? []).map((ref) => ({
+        key: `rechnung-${ref.id}-${item.id}`,
+        kind: "Rechnung",
+        label: ref.number,
+        path: invoicePath(ref.id, ref.year),
+        extra: `für ${item.number} · ${ref.status === "gebucht" ? "gebucht" : "zu prüfen"}`,
+        pdf: ref.has_document ? { invoiceId: ref.id, number: ref.number } : undefined,
+      })),
+    ),
+  ];
   const facts: [string, ReactNode][] = [
     ["Vertragspartner", contract.partner_name],
     ["Rechnungssteller", contract.invoicer_name ?? contract.partner_name],
@@ -200,6 +228,7 @@ export function ContractDetail({
         </button>
       </div>
       <div className="detail-body">
+        <CopyLinkBar path={contractPath(contract.id)} />
         <dl className="budget-cards budget-cards-small">
           <div className="panel budget-card">
             <dt>Soll {yearName}</dt>
@@ -236,26 +265,11 @@ export function ContractDetail({
             <dd>{followUp(contract)}</dd>
           </div>
         </dl>
-        <div className="budget-section-head">
-          <h3>Budgetposten</h3>
-        </div>
-        {contract.items.length === 0 ? (
+        <LinkedBlock id="vertrag-verknuepft" entries={linkedEntries} />
+        {contract.items.length === 0 && (
           <p className="small budget-muted">
             Diesem Vertrag ist noch kein Budgetposten zugeordnet.
           </p>
-        ) : (
-          <ul className="budget-list">
-            {contract.items.map((item) => (
-              <li key={item.id}>
-                <span>
-                  <span className="mono">{item.number}</span> · {item.name}
-                  <span className="small budget-muted tenant-part">
-                    {item.account_number} {item.account_name}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
         )}
         <p className="small budget-muted">
           Soll: Zahlungen, die {yearName} fällig werden

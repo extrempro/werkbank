@@ -15,8 +15,9 @@ from tests.test_budget import BASE as BUDGET
 from tests.test_budget import HEADERS
 from tests.test_m365_api import client_for
 from werkbank.core.models import AppSetting
+from werkbank.modules.budget.contracts import net_from_gross
 from werkbank.modules.budget.excel_import import SheetError, cents_of, parse_sheet
-from werkbank.modules.budget.imports import firm_key, match_partner, net_from_gross
+from werkbank.modules.budget.imports import firm_key, match_partner
 from werkbank.modules.budget.models import (
     BudgetAccount,
     BudgetImport,

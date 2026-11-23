@@ -182,6 +182,11 @@ export const HELP = {
     text: "Was für das gewählte Jahr vorgesehen ist, als Bruttobetrag.",
     topic: ["it-budget", "begriffe"],
   },
+  "budget.betrag": {
+    term: "Netto oder Brutto",
+    text: "Trag den Betrag so ein, wie er dir vorliegt; den anderen Wert rechnet die Werkbank aus dem Steuersatz. Fürs Budget zählt immer das Brutto.",
+    topic: ["it-budget", "begriffe"],
+  },
   "budget.ist": {
     term: "Ist",
     text: "Summe der gebuchten Rechnungen.",
@@ -430,13 +435,20 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/budget": [["it-budget", "uebersicht"]],
   "/budget/planung": [["it-budget", "auswertung"]],
   "/budget/statistik": [["it-budget", "auswertung"]],
-  "/budget/posten": [["it-budget", "posten"]],
+  "/budget/posten": [
+    ["it-budget", "posten"],
+    ["it-budget", "verknuepft"],
+  ],
   "/budget/rechnungen": [
     ["it-budget", "buchen"],
     ["it-budget", "rechnungen"],
+    ["it-budget", "verknuepft"],
     ["it-budget", "begriffe"],
   ],
-  "/budget/vertraege": [["it-budget", "vertraege"]],
+  "/budget/vertraege": [
+    ["it-budget", "vertraege"],
+    ["it-budget", "verknuepft"],
+  ],
   "/budget/partner": [["it-budget", "partner"]],
   "/budget/konten": [["it-budget", "konten"]],
   "/budget/import": [["it-budget", "import"]],

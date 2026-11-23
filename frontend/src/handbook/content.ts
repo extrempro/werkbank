@@ -1725,7 +1725,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Alle Beträge im Budget sind brutto. Das auf einer Seite gewählte Geschäftsjahr gilt auch auf den anderen Seiten.",
+                text: "Gezählt wird im Budget immer brutto. Beträge trägst du am Budgetposten, am Vertrag und an der Rechnungsposition wahlweise netto oder brutto ein, dazu den Steuersatz (19 %, 7 %, 0 % oder einen anderen); den anderen Wert rechnet die Werkbank und zeigt ihn gleich darunter. Das auf einer Seite gewählte Geschäftsjahr gilt auch auf den anderen Seiten.",
               },
             ],
           },
@@ -1792,14 +1792,14 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Je Geschäftsjahr hat ein Posten einen Status: „offen“, „Rechnung liegt vor“ oder „abgeschlossen“. Abgeschlossen ist er, sobald du ihn mit „Abschließen“ abhakst (gilt für das oben gewählte Geschäftsjahr) oder eine gebuchte Rechnungsposition mit „schließt den Posten ab“ auf ihm liegt. „Wieder öffnen“ nimmt das Abhaken zurück; schließt eine Rechnung den Posten ab, entfernst du dafür den Haken an der Rechnungsposition. Die Tabelle zeigt je Posten Nummer, Konto, Partner, Geplant, Ist, Status und Vorjahr. Ein Klick auf eine Spaltenüberschrift sortiert, unter „Gruppieren“ wählst du nach Konto, nach Partner oder ohne Gruppen; auf dem Handy sortierst du unter „Weitere Filter“. Ein Klick auf einen Posten öffnet ihn rechts daneben mit Status, Beträgen, Angaben und den Rechnungen auf dem Posten; dort findest du auch „Abschließen“, „Bearbeiten“ und „Löschen“. Ältere Posten ohne Partner tragen den Hinweis „Partner fehlt“; beim nächsten Bearbeiten wählst du ihn. Suche (auch nach Nummer und Partner), Status, Tag und IT-Projekt helfen beim Finden.",
+                text: "Je Geschäftsjahr hat ein Posten einen Status: „offen“, „Rechnung liegt vor“ oder „abgeschlossen“. Abgeschlossen ist er, sobald du ihn mit „Abschließen“ abhakst (gilt für das oben gewählte Geschäftsjahr) oder eine gebuchte Rechnungsposition mit „schließt den Posten ab“ auf ihm liegt. „Wieder öffnen“ nimmt das Abhaken zurück; schließt eine Rechnung den Posten ab, entfernst du dafür den Haken an der Rechnungsposition. Die Tabelle zeigt je Posten Nummer, Konto, Partner, Geplant, Ist, Status und Vorjahr. Ein Klick auf eine Spaltenüberschrift sortiert, unter „Gruppieren“ wählst du nach Konto, nach Partner oder ohne Gruppen; auf dem Handy sortierst du unter „Weitere Filter“. Der Status hängt nur daran, ob eine Rechnung angelegt ist, nicht an einem PDF. Gibt es zu einer Rechnung ein PDF, steht in der Zeile ein rotes Symbol, das es direkt öffnet. Ein Klick auf einen Posten öffnet ihn rechts daneben mit Status, Beträgen, Angaben, den Rechnungen auf dem Posten und „Verknüpft“; dort findest du auch „Abschließen“, „Bearbeiten“ und „Löschen“. Ältere Posten ohne Partner tragen den Hinweis „Partner fehlt“; beim nächsten Bearbeiten wählst du ihn. Suche (auch nach Nummer und Partner), Status, Tag und IT-Projekt helfen beim Finden.",
               },
               {
                 kind: "steps",
                 items: [
                   "Wähle „Posten hinzufügen“. Die Maske öffnet rechts neben der Tabelle.",
                   "Abschnitt 1: Trag Bezeichnung, Konto und Partner (die Firma) ein; alle drei sind Pflicht.",
-                  "Abschnitt 2: Trag den Betrag (brutto) ein und wähle die Laufzeit: einmalig in einem Geschäftsjahr, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres. Darunter steht der Plan in Worten.",
+                  "Abschnitt 2: Wähle „Netto“ oder „Brutto“, trag den Betrag und den Steuersatz ein und wähle die Laufzeit: einmalig in einem Geschäftsjahr, mehrere Jahre bis zu einem Geschäftsjahr oder bis auf Weiteres. Darunter stehen der andere Wert und der Plan in Worten.",
                   "Abschnitt 3 (freiwillig): Vertrag, IT-Projekt, Tags und Notiz. Tags legt der Budgetverwalter unter Einstellungen › Tags an.",
                   "Speichere. Die Nummer bekommt der Posten beim Speichern.",
                 ],
@@ -1826,7 +1826,7 @@ export const AREAS: readonly Area[] = [
                   "Wähle auf der Seite „Rechnungen“ „Rechnung erfassen“. Die Maske öffnet rechts neben der Tabelle.",
                   "Wähle zuerst den Rechnungssteller. Seine Budgetposten stehen danach oben in der Auswahl.",
                   "Trage Rechnungsnummer, interne Nummer und Rechnungsdatum ein. Das Datum bestimmt das Geschäftsjahr.",
-                  "Lege für jeden Budgetposten eine Position an: Wähle den Budgetposten aus der Liste und trag Netto und Steuersatz ein. Das Brutto rechnet die Werkbank.",
+                  "Lege für jeden Budgetposten eine Position an: Wähle den Budgetposten aus der Liste, dann „Netto“ oder „Brutto“, und trag Betrag und Steuersatz ein. Den anderen Wert rechnet die Werkbank. Weicht das Brutto auf der Rechnung um ein paar Cent ab, trag bei „Netto“ zusätzlich das Brutto laut Rechnung ein.",
                   "Prüfe das Kennzeichen „schließt den Posten ab“; bei Posten mit Vertrag ist es anfangs aus.",
                   "Optional: Trag den Rechnungsbetrag laut Beleg ein; er muss zur Summe passen. Häng den Beleg als PDF an (höchstens 15 MB).",
                   "Tippe auf „Rechnung speichern“.",
@@ -1851,12 +1851,31 @@ export const AREAS: readonly Area[] = [
             ],
           },
           {
+            id: "verknuepft",
+            title: "Links und Verknüpfungen",
+            blocks: [
+              {
+                kind: "text",
+                text: "Jeder Budgetposten, jede Rechnung und jeder Vertrag hat eine eigene Adresse. Oben in der Ansicht steht sie mit „Link kopieren“; den Link kannst du jemandem schicken. Wer ihn öffnet, landet direkt in dieser Ansicht und im passenden Geschäftsjahr, braucht aber eine Rolle im IT-Budget.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "Budgetposten: „Verknüpft“ führt zum Vertrag und zu den Rechnungen auf dem Posten.",
+                  "Rechnung: „Verknüpft“ führt zu den Budgetposten der Positionen und zu deren Verträgen.",
+                  "Vertrag: „Verknüpft“ führt zu den zugeordneten Budgetposten und deren Rechnungen.",
+                  "Das Link-Symbol neben einem Eintrag kopiert dessen Link, das rote Symbol öffnet das PDF der Rechnung.",
+                ],
+              },
+            ],
+          },
+          {
             id: "vertraege",
             title: "Verträge",
             blocks: [
               {
                 kind: "text",
-                text: "Ein Vertrag hat Partner, Turnus, Betrag je Zahlung (netto mit Steuersatz), Beginn, Laufzeit, Verlängerung, Kündigungsfrist und den Stand des Auftragsverarbeitungsvertrags (AVV). In der Maske wählst du zuerst den Turnus; das Betragsfeld heißt dann passend, zum Beispiel „Monatsbetrag“ oder „Jahresbetrag“, und darunter steht das Soll in Worten. Die Zuordnung zu Budgetposten pflegst du am Vertrag oder am Posten. Oben stehen die Kennzahlen, darunter die Tabelle mit den Filtern Laufend, Kündigung bald, Gekündigt, AVV fehlt und Alle; ein Klick öffnet den Vertrag rechts daneben.",
+                text: "Ein Vertrag hat Partner, Turnus, Betrag je Zahlung (netto oder brutto mit Steuersatz), Beginn, Laufzeit, Verlängerung, Kündigungsfrist und den Stand des Auftragsverarbeitungsvertrags (AVV). In der Maske wählst du zuerst den Turnus; das Betragsfeld heißt dann passend, zum Beispiel „Monatsbetrag“ oder „Jahresbetrag“, und darunter steht das Soll in Worten. Die Zuordnung zu Budgetposten pflegst du am Vertrag oder am Posten. Posten, die schon zu einem anderen Vertrag gehören, stehen in der Maske nicht zur Wahl; ein Hinweis nennt, wie viele es sind. Oben stehen die Kennzahlen, darunter die Tabelle mit den Filtern Laufend, Kündigung bald, Gekündigt, AVV fehlt und Alle; ein Klick öffnet den Vertrag rechts daneben.",
               },
               {
                 kind: "list",

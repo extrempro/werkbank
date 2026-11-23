@@ -1258,6 +1258,11 @@ def test_invoice_documents(db: Session, tmp_path: Path) -> None:
     assert files[0].suffix == ".pdf"
     assert "Rechnung" not in files[0].name
 
+    # Am Budgetposten stehen die Rechnungen mit Kennzeichen für den Beleg (PDF-Symbol).
+    listed = {entry["id"]: entry for entry in reader.get(f"{BASE}/items").json()}
+    refs = {ref["number"]: ref for ref in listed[item["id"]]["invoices"]}
+    assert refs["RE-1"]["has_document"] is True and refs["RE-2"]["has_document"] is False
+    assert refs["RE-2"]["status"] == "gebucht"
     # Lesende laden herunter; der Browser soll die Datei speichern, nicht anzeigen.
     download = reader.get(url)
     assert download.status_code == 200
@@ -1735,6 +1740,69 @@ def test_items_are_closed_by_hand_and_contracts_show_target_and_actual(db: Sessi
         db.scalars(select(BudgetItemClosure).where(BudgetItemClosure.item_id == lone["id"])).all()
         == []
     )
+
+
+@pytest.mark.db
+def test_items_and_contracts_take_net_or_gross_with_free_tax_rate(db: Session) -> None:
+    editor = client_for(["Budget.Editor"], "betrag-it")
+    account = post(
+        editor, "/accounts", {"number": "6815", "name": "Software", "kind": "laufend"}
+    ).json()
+    body = {"account_id": account["id"], "name": "Fachbuch", "amount_cents": 5_350}
+    # Ohne Netto: aus Brutto und Steuersatz gerechnet
+    created = post(editor, "/items", {**body, "tax_rate_bp": 700}).json()
+    assert (created["net_cents"], created["tax_rate_bp"]) == (5_000, 700)
+    # Mit Netto: muss zum Brutto passen (ein Cent Rundung erlaubt)
+    exact = {**body, "name": "Schulung", "amount_cents": 119_000, "net_cents": 100_000}
+    assert post(editor, "/items", exact).json()["net_cents"] == 100_000
+    wrong = {**body, "name": "Falsch", "amount_cents": 119_000, "net_cents": 90_000}
+    assert post(editor, "/items", wrong).status_code == 422
+    free = {**body, "name": "Steuersatz frei", "amount_cents": 10_550, "tax_rate_bp": 550}
+    assert post(editor, "/items", free).json()["net_cents"] == 10_000
+    assert (
+        post(editor, "/items", {**free, "name": "Zu hoch", "tax_rate_bp": 10_001}).status_code
+        == 422
+    )
+
+    partner = post(editor, "/partners", {"name": "Beispiel Vertrag GmbH"}).json()
+    contract = {
+        "title": "Wartung",
+        "partner_id": partner["id"],
+        "starts_on": "2026-01-01",
+        "net_cents": 8_403,
+        "tax_rate_bp": 1900,
+        "interval": "jaehrlich",
+    }
+    # Brutto eingegeben: es bleibt genau so stehen
+    with_gross = post(editor, "/contracts", {**contract, "gross_cents": 10_000}).json()
+    assert (with_gross["net_cents"], with_gross["amount_cents"]) == (8_403, 10_000)
+    assert (
+        post(editor, "/contracts", {**contract, "title": "X", "gross_cents": 12_000}).status_code
+        == 422
+    )
+    plain = post(editor, "/contracts", {**contract, "title": "Ohne Brutto"}).json()
+    # 84,03 € netto + 19 % = 100,00 €
+    assert plain["amount_cents"] == 10_000
+    # Am Vertrag stehen die Rechnungen seiner Posten (für die Links)
+    linked = put(
+        editor,
+        f"/contracts/{plain['id']}",
+        {**contract, "title": "Ohne Brutto", "item_ids": [created["id"]]},
+    )
+    assert linked.status_code == 200, linked.text
+    year = editor.get(f"{BASE}/settings").json()["current_year"]
+    invoice = {
+        "invoicer_id": partner["id"],
+        "number": "RE-V1",
+        "invoice_date": f"{year}-03-01",
+        "item_id": created["id"],
+        "net_cents": 5_000,
+        "tax_rate_bp": 700,
+    }
+    assert post(editor, "/invoices", invoice).status_code == 201
+    entries = editor.get(f"{BASE}/contracts").json()["entries"]
+    shown = next(entry for entry in entries if entry["id"] == plain["id"])
+    assert [ref["number"] for ref in shown["items"][0]["invoices"]] == ["RE-V1"]
 
 
 @pytest.mark.db

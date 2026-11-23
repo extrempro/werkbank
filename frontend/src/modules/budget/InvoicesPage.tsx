@@ -11,7 +11,8 @@ import { ConfirmButton } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
 import { Link } from "../../components/Link";
 import { SplitHandle, useSplit } from "../../components/SplitHandle";
-import { BUDGET_CONTRACTS_PATH } from "../../navigation";
+import { BUDGET_INVOICES_PATH } from "../../navigation";
+import { navigate, useSearchParam } from "../../router";
 import {
   bookInvoice,
   BUDGET_EDITOR_ROLES,
@@ -34,7 +35,6 @@ import {
   formatRate,
   grossCents,
   parseEuro,
-  parseRate,
   rememberedYear,
   rememberYear,
   STATUS_LABELS,
@@ -50,9 +50,20 @@ import {
   type ItemStatus,
   type Partner,
 } from "./api";
+import { AmountFields, amountValue, readAmount, type AmountValue } from "./AmountFields";
 import { BudgetHead, DeleteButton, FormStep, ReadOnlyNote } from "./shared";
 import { Feedback } from "../../components/Feedback";
 import { ListPicker } from "../inventory/LookupPicker";
+import {
+  contractPath,
+  CopyLinkBar,
+  invoicePath,
+  itemPath,
+  LinkedBlock,
+  linkedYear,
+  PdfLink,
+  type LinkedEntry,
+} from "./links";
 
 interface FormProps {
   /** null: neue Rechnung erfassen. */
@@ -71,9 +82,9 @@ interface FormProps {
 interface LineDraft {
   key: number;
   itemId: string;
-  net: string;
-  rate: string;
-  /** Leer: Brutto wird gerechnet. Gefüllt: Brutto laut Rechnung. */
+  /** Betrag netto oder brutto mit Steuersatz */
+  amount: AmountValue;
+  /** Nur bei Netto: leer, dann wird Brutto gerechnet; gefüllt, dann Brutto laut Rechnung. */
   gross: string;
   description: string;
   project: boolean;
@@ -88,8 +99,7 @@ function emptyLine(key: number): LineDraft {
   return {
     key,
     itemId: "",
-    net: "",
-    rate: "19",
+    amount: amountValue(null),
     gross: "",
     description: "",
     project: false,
@@ -103,8 +113,7 @@ function draftOf(line: InvoiceLine, key: number): LineDraft {
   return {
     key,
     itemId: String(line.item_id),
-    net: euroInput(line.net_cents),
-    rate: (line.tax_rate_bp / 100).toLocaleString("de-DE"),
+    amount: amountValue(line.net_cents, line.tax_rate_bp),
     gross:
       line.gross_cents !== grossCents(line.net_cents, line.tax_rate_bp)
         ? euroInput(line.gross_cents)
@@ -133,12 +142,17 @@ function groupLabel(status: ItemStatus | null, yearName: string): string {
 /** Brutto einer Position, solange Netto und Steuersatz lesbar sind; sonst null. */
 function lineGross(line: LineDraft): number | null {
   const typed = line.gross.trim();
-  if (typed !== "") {
+  if (line.amount.mode === "netto" && typed !== "") {
     return parseEuro(typed);
   }
-  const net = parseEuro(line.net);
-  const rate = parseRate(line.rate);
-  return net === null || rate === null ? null : grossCents(net, rate);
+  const read = readAmount(line.amount);
+  return "problem" in read ? null : read.gross_cents;
+}
+
+/** Netto einer Position, solange es lesbar ist; sonst null. */
+function lineNet(line: LineDraft): number | null {
+  const read = readAmount(line.amount);
+  return "problem" in read ? null : read.net_cents;
 }
 
 function InvoiceForm({
@@ -222,7 +236,7 @@ function InvoiceForm({
     ? sums.reduce<number>((sum, value) => sum + (value ?? 0), 0)
     : null;
   const netSum = lines.reduce<number | null>((sum, line) => {
-    const net = parseEuro(line.net);
+    const net = lineNet(line);
     return sum === null || net === null ? null : sum + net;
   }, 0);
   const totalText = total.trim();
@@ -245,24 +259,22 @@ function InvoiceForm({
         return;
       }
       const where = lines.length > 1 ? `Position ${index + 1}: ` : "";
-      const netCents = parseEuro(line.net);
-      const taxRate = parseRate(line.rate);
-      const grossText = line.gross.trim();
+      const read = readAmount(line.amount);
+      const byGross = line.amount.mode === "brutto";
+      const grossText = byGross ? "" : line.gross.trim();
       const grossValue = grossText === "" ? null : parseEuro(grossText);
       if (!line.itemId) {
         problem = `${where}Bitte wähle den Budgetposten.`;
-      } else if (netCents === null) {
-        problem = `${where}Der Nettobetrag ist nicht lesbar. Bitte so eintragen: 1000,00`;
-      } else if (taxRate === null) {
-        problem = `${where}Der Steuersatz ist nicht lesbar. Bitte so eintragen: 19`;
+      } else if ("problem" in read) {
+        problem = `${where}${read.problem}`;
       } else if (grossText !== "" && grossValue === null) {
         problem = `${where}Das Brutto ist nicht lesbar. Bitte so eintragen: 1190,00`;
       } else {
         parsed.push({
           item_id: Number(line.itemId),
-          net_cents: netCents,
-          tax_rate_bp: taxRate,
-          gross_cents: grossValue,
+          net_cents: read.net_cents,
+          tax_rate_bp: read.tax_rate_bp,
+          gross_cents: byGross ? read.gross_cents : grossValue,
           description: line.description.trim(),
           is_project: line.project,
           is_yearly: line.yearly,
@@ -441,49 +453,42 @@ function InvoiceForm({
                     Vertrag des Postens: {itemById(line.itemId)?.contract_title}
                   </p>
                 )}
-                <div className="tool-row">
-                  <label className="narrow">
-                    Betrag netto (Euro)
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={line.net}
-                      onChange={(event) => change(line.key, { net: event.target.value })}
-                    />
-                  </label>
-                  <label className="narrow">
-                    Steuersatz (%)
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={line.rate}
-                      onChange={(event) => change(line.key, { rate: event.target.value })}
-                    />
-                  </label>
-                  <label className="narrow">
-                    Brutto laut Rechnung (freiwillig)
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={line.gross}
-                      onChange={(event) => change(line.key, { gross: event.target.value })}
-                    />
-                  </label>
-                  <label>
-                    Bezeichnung (freiwillig)
-                    <input
-                      type="text"
-                      value={line.description}
-                      maxLength={200}
-                      onChange={(event) => change(line.key, { description: event.target.value })}
-                    />
-                  </label>
-                </div>
-                <p className="small">
-                  {gross !== null
-                    ? `Brutto der Position: ${formatEuro(gross)}`
-                    : "Das Brutto rechnet die Werkbank aus Netto und Steuersatz."}
-                </p>
+                <AmountFields
+                  legend="Betrag der Position"
+                  value={line.amount}
+                  onChange={(amount) => change(line.key, { amount })}
+                  summaryText={
+                    gross !== null
+                      ? `Brutto der Position: ${formatEuro(gross)}${
+                          line.amount.mode === "brutto"
+                            ? ` · netto ${formatEuro(lineNet(line) ?? 0)}`
+                            : ""
+                        }`
+                      : null
+                  }
+                  extra={
+                    line.amount.mode === "netto" && (
+                      <label>
+                        Brutto laut Rechnung (freiwillig)
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={line.gross}
+                          onChange={(event) => change(line.key, { gross: event.target.value })}
+                        />
+                      </label>
+                    )
+                  }
+                />
+                <label className="form-wide">
+                  Bezeichnung (freiwillig)
+                  <input
+                    type="text"
+                    value={line.description}
+                    maxLength={200}
+                    onChange={(event) => change(line.key, { description: event.target.value })}
+                  />
+                </label>
                 <div className="budget-checks">
                   <label className="check-label">
                     <input
@@ -591,6 +596,7 @@ interface Loaded {
 /** Ansicht einer Rechnung rechts neben der Tabelle: Kopf, Positionen, Beleg und Aktionen. */
 function InvoiceDetail({
   entry,
+  year,
   canBook,
   mayChange,
   onBook,
@@ -601,6 +607,8 @@ function InvoiceDetail({
   onClose,
 }: {
   entry: Invoice;
+  /** Geschäftsjahr der Liste, für die Links */
+  year: number;
   canBook: boolean;
   mayChange: boolean;
   onBook: () => unknown;
@@ -624,6 +632,31 @@ function InvoiceDetail({
   if (entry.booked_by_name) {
     facts.push(["Geprüft von", entry.booked_by_name]);
   }
+  // Verknüpft: je Position der Budgetposten und dessen Vertrag, jeder nur einmal
+  const linkedEntries: LinkedEntry[] = [];
+  const known = new Set<string>();
+  for (const line of entry.lines) {
+    if (!known.has(`posten-${line.item_id}`)) {
+      known.add(`posten-${line.item_id}`);
+      linkedEntries.push({
+        key: `posten-${line.item_id}`,
+        kind: "Budgetposten",
+        label: `${line.item_number} ${line.item_name}`,
+        path: itemPath(line.item_id, year),
+        extra: `${line.account_number} ${line.account_name}`,
+      });
+    }
+    if (line.contract_id !== null && !known.has(`vertrag-${line.contract_id}`)) {
+      known.add(`vertrag-${line.contract_id}`);
+      linkedEntries.push({
+        key: `vertrag-${line.contract_id}`,
+        kind: "Vertrag des Postens",
+        label: line.contract_title ?? "Vertrag",
+        path: contractPath(line.contract_id),
+      });
+    }
+  }
+  const hasPdf = entry.doc_name !== null;
   return (
     <section className="panel budget-pane" aria-labelledby="rechnung-ansicht-titel">
       <div className="panel-head case-head">
@@ -650,6 +683,7 @@ function InvoiceDetail({
         </button>
       </div>
       <div className="detail-body">
+        <CopyLinkBar path={invoicePath(entry.id, year)} />
         <dl className="budget-facts">
           {facts.map(([term, value]) => (
             <div key={term}>
@@ -665,8 +699,10 @@ function InvoiceDetail({
           {entry.lines.map((line) => (
             <li key={line.id}>
               <span>
-                <span className="mono">{line.item_number}</span> · {line.account_number}{" "}
-                {line.item_name}
+                <Link to={itemPath(line.item_id, year)}>
+                  <span className="mono">{line.item_number}</span> {line.item_name}
+                </Link>{" "}
+                · {line.account_number}
                 <span className="small budget-muted tenant-part">
                   {[
                     `${formatRate(line.tax_rate_bp)} Steuer`,
@@ -680,17 +716,19 @@ function InvoiceDetail({
                   {line.contract_id !== null && (
                     <>
                       {" · "}
-                      <Link to={`${BUDGET_CONTRACTS_PATH}/${line.contract_id}`}>
-                        {line.contract_title}
-                      </Link>
+                      <Link to={contractPath(line.contract_id)}>{line.contract_title}</Link>
                     </>
                   )}
                 </span>
               </span>
-              <span className="betrag">{formatEuro(line.gross_cents)}</span>
+              <span className="budget-linked-actions">
+                <span className="betrag">{formatEuro(line.gross_cents)}</span>
+                {hasPdf && <PdfLink invoiceId={entry.id} number={entry.number} small />}
+              </span>
             </li>
           ))}
         </ul>
+        <LinkedBlock id="rechnung-verknuepft" entries={linkedEntries} />
         <div className="budget-section-head">
           <h3>Beleg</h3>
         </div>
@@ -783,18 +821,58 @@ const SPLIT_KEY = "werkbank-rechnungen-breite";
 
 /** IT-Budget › Rechnungen: erfassen, prüfen und buchen. Erst Gebuchtes zählt zum Ist.
  *  Tabelle mit Ansicht rechts; erfassen und bearbeiten ebenfalls in der Ansicht. */
-export function InvoicesPage({ roles }: { roles: readonly string[] }) {
+type InvoiceView =
+  | { kind: "rechnung"; id: number }
+  | { kind: "neu"; round: number }
+  | { kind: "bearbeiten"; id: number }
+  | null;
+
+export function InvoicesPage({
+  roles,
+  selectedId: linkedId,
+}: {
+  roles: readonly string[];
+  /** Gesetzt (eigene Adresse /budget/rechnungen/{id}): diese Rechnung steht in der Ansicht. */
+  selectedId?: number;
+}) {
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
   const canBook = roles.includes(BUDGET_MANAGER_ROLE);
-  const [year, setYear] = useState<number | null>(rememberedYear);
+  // Geschäftsjahr aus der Adresse (?jahr=), etwa aus einem weitergegebenen Link
+  const linkedYearText = useSearchParam("jahr");
+  const [year, setYear] = useState<number | null>(
+    () => linkedYear(linkedYearText) ?? rememberedYear(),
+  );
   const [data, setData] = useState<Loaded | null>(null);
   const [failed, setFailed] = useState(false);
-  const [view, setView] = useState<
-    | { kind: "rechnung"; id: number }
-    | { kind: "neu"; round: number }
-    | { kind: "bearbeiten"; id: number }
-    | null
-  >(null);
+  const [view, setViewState] = useState<InvoiceView>(
+    linkedId === undefined ? null : { kind: "rechnung", id: linkedId },
+  );
+  // Wechselt die Adresse (Link, Zurück im Browser), folgt die Ansicht ihr.
+  const [seen, setSeen] = useState({ id: linkedId, year: linkedYearText });
+  if (seen.id !== linkedId || seen.year !== linkedYearText) {
+    setSeen({ id: linkedId, year: linkedYearText });
+    if (seen.id !== linkedId) {
+      setViewState(linkedId === undefined ? null : { kind: "rechnung", id: linkedId });
+    }
+    const fromAddress = linkedYear(linkedYearText);
+    if (
+      fromAddress !== null &&
+      seen.year !== linkedYearText &&
+      fromAddress !== (data?.list.year ?? year)
+    ) {
+      rememberYear(fromAddress);
+      setYear(fromAddress);
+    }
+  }
+  /** Ansicht wechseln; die Adresse folgt, damit sich der Link einer Rechnung weitergeben lässt. */
+  const setView = (next: InvoiceView) => {
+    setViewState(next);
+    navigate(
+      next !== null && next.kind !== "neu"
+        ? invoicePath(next.id, data?.list.year)
+        : BUDGET_INVOICES_PATH,
+    );
+  };
   const [round, setRound] = useState(0);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<InvoiceFilter>("alle");
@@ -829,7 +907,7 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
     };
   }, [year, round]);
 
-  const done = (text: string, next: typeof view = null) => {
+  const done = (text: string, next: InvoiceView = null) => {
     setMessage({ kind: "status", text });
     setView(next);
     setRound(round + 1);
@@ -1137,6 +1215,9 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
                             >
                               {STATUS_LABELS[entry.status]}
                             </span>
+                            {entry.doc_name !== null && (
+                              <PdfLink invoiceId={entry.id} number={entry.number} small />
+                            )}
                             <span className="case-meta small betrag">
                               {formatEuro(entry.gross_cents)}
                             </span>
@@ -1170,6 +1251,7 @@ export function InvoicesPage({ roles }: { roles: readonly string[] }) {
                   <InvoiceDetail
                     key={selected.id}
                     entry={selected}
+                    year={data.list.year}
                     canBook={canBook}
                     mayChange={mayChange(selected)}
                     onBook={() => onBook(selected)}

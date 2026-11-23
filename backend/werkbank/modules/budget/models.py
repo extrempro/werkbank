@@ -63,6 +63,10 @@ class BudgetItem(Base):
     name: Mapped[str] = mapped_column(String(160))
     # Erwartete Kosten je Geschäftsjahr (brutto, in Cent); gelten in jedem Jahr der Laufzeit
     amount_cents: Mapped[int] = mapped_column(BigInteger, default=0, server_default=text("0"))
+    # Dasselbe netto und der Steuersatz in Hundertstel Prozent (1900 = 19 %); fürs Budget zählt
+    # das Brutto. Ältere Posten wurden mit 19 % aus dem Brutto zurückgerechnet.
+    net_cents: Mapped[int] = mapped_column(BigInteger, default=0, server_default=text("0"))
+    tax_rate_bp: Mapped[int] = mapped_column(Integer, default=1900, server_default=text("1900"))
     # Laufzeit in Geschäftsjahren (Kalenderjahr des Beginns). Ohne Ende: bis auf Weiteres.
     start_year: Mapped[int] = mapped_column(Integer, index=True)
     end_year: Mapped[int | None] = mapped_column(Integer)

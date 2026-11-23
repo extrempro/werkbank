@@ -89,6 +89,8 @@ const office: Item = {
   partner_id: 1,
   partner_name: "Beispiel Software GmbH",
   amount_cents: 1_190_000,
+  net_cents: 1_000_000,
+  tax_rate_bp: 1900,
   start_year: 2025,
   start_year_name: "2025/26",
   end_year: null,
@@ -108,6 +110,8 @@ const server: Item = {
   kind: "investition",
   name: "Server",
   amount_cents: 5_000_050,
+  net_cents: 4_201_723,
+  tax_rate_bp: 1900,
   start_year: 2026,
   start_year_name: "2026/27",
   end_year: 2026,
@@ -426,12 +430,15 @@ describe("Budgetposten", () => {
         .map((option) => option.textContent),
     ).toEqual(["Beispiel Software GmbH"]);
     await pick(form, /^Partner/, "Beispiel Software GmbH");
-    fireEvent.change(form.getByLabelText(/^Betrag \(Brutto\)/), { target: { value: "viel" } });
+    // Betrag wahlweise netto oder brutto, Steuersatz frei
+    fireEvent.click(form.getByRole("button", { name: "Brutto" }));
+    fireEvent.change(form.getByLabelText(/^Betrag brutto/), { target: { value: "viel" } });
     fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
     expect(form.getByRole("alert")).toHaveTextContent("Der Betrag ist nicht lesbar");
-    fireEvent.change(form.getByLabelText(/^Betrag \(Brutto\)/), {
+    fireEvent.change(form.getByLabelText(/^Betrag brutto/), {
       target: { value: "5.000,00" },
     });
+    expect(form.getByText(/Netto: 4\.201,68\s€ \(5\.000,00\s€ brutto mit 19 %\)/)).toBeVisible();
     // Einmalig: nur das Jahr; Beginn ist das gezeigte Jahr.
     expect(form.getByRole("button", { name: "Einmalig" })).toHaveAttribute("aria-pressed", "true");
     expect(form.getByLabelText("Wirtschaftsjahr")).toHaveValue("2026");
@@ -468,6 +475,8 @@ describe("Budgetposten", () => {
       partner_id: 1,
       name: "Zeiterfassung Lizenz",
       amount_cents: 500_000,
+      net_cents: 420_168,
+      tax_rate_bp: 1900,
       start_year: 2026,
       end_year: 2027,
       note: "",
@@ -482,7 +491,8 @@ describe("Budgetposten", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     const edit = within(screen.getByRole("region", { name: "Server bearbeiten" }));
     expect(edit.getByRole("button", { name: "Einmalig" })).toHaveAttribute("aria-pressed", "true");
-    expect(edit.getByLabelText(/^Betrag \(Brutto\)/)).toHaveValue("50000,50");
+    expect(edit.getByLabelText(/^Betrag netto/)).toHaveValue("42017,23");
+    expect(edit.getByLabelText("Steuersatz (%)")).toHaveValue("19");
     fireEvent.click(edit.getByLabelText("Budgetposten ist aktiv"));
     fireEvent.click(edit.getByRole("button", { name: "Bis auf Weiteres" }));
     // Älterer Posten ohne Partner: beim Speichern Pflicht
@@ -500,6 +510,80 @@ describe("Budgetposten", () => {
         contract_id: null,
       }),
     );
+  });
+});
+
+describe("Links und PDF", () => {
+  it("öffnet einen Posten über seine Adresse, zeigt das PDF und kopiert den Link", async () => {
+    const writeText = vi.fn(async () => undefined);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    window.history.replaceState(null, "", "/budget/posten/11?jahr=2026");
+    const ref = {
+      id: 7,
+      number: "RE-7",
+      invoice_date: "2026-10-01",
+      year: 2026,
+      status: "gebucht" as const,
+      has_document: true,
+    };
+    stubFetch({
+      "GET /api/budget/overview": overview({
+        items: [
+          {
+            item: { ...office, invoices: [ref] },
+            previous_cents: null,
+            contracts: 1,
+            actual_cents: 119_000,
+            closed_by_invoice: false,
+            expected_cents: 1_190_000,
+            forecast_cents: 1_190_000,
+            status: "rechnung",
+            closed_by_hand: false,
+          },
+        ],
+      }),
+      "GET /api/budget/accounts": [software],
+      "GET /api/budget/invoices": {
+        year: 2026,
+        year_name: "2026/27",
+        years: [],
+        entries: [invoice({ id: 7, number: "RE-7", doc_name: "re-7.pdf", lines: [invoiceLine()] })],
+      },
+    });
+    render(<ItemsPage roles={["Budget.Reader"]} selectedId={11} />);
+    const pane = within(await screen.findByRole("region", { name: "Office-Lizenzen" }));
+    // Status hängt an der Rechnung, das PDF-Symbol öffnet den Beleg direkt.
+    const row = screen.getByRole("row", { name: /Office-Lizenzen/ });
+    expect(within(row).getByRole("link", { name: "PDF von Rechnung RE-7 öffnen" })).toHaveAttribute(
+      "href",
+      "/api/budget/invoices/7/document",
+    );
+    const linked = within(pane.getByRole("region", { name: "Verknüpft" }));
+    expect(linked.getByRole("link", { name: "Wartung Zeiterfassung" })).toHaveAttribute(
+      "href",
+      "/budget/vertraege/1",
+    );
+    expect(linked.getByRole("link", { name: "RE-7" })).toHaveAttribute(
+      "href",
+      "/budget/rechnungen/7?jahr=2026",
+    );
+    expect(linked.getByRole("link", { name: "PDF von Rechnung RE-7 öffnen" })).toBeVisible();
+
+    fireEvent.click(pane.getByRole("button", { name: "Link kopieren" }));
+    expect(await pane.findByText(/^Link kopiert/)).toBeVisible();
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/budget/posten/11?jahr=2026`);
+    fireEvent.click(linked.getByRole("button", { name: "Link zu RE-7 kopieren" }));
+    await vi.waitFor(() =>
+      expect(writeText).toHaveBeenLastCalledWith(
+        `${window.location.origin}/budget/rechnungen/7?jahr=2026`,
+      ),
+    );
+
+    // Schließen führt zurück zur Liste; die Adresse folgt.
+    fireEvent.click(pane.getByRole("button", { name: "Ansicht schließen" }));
+    expect(window.location.pathname).toBe("/budget/posten");
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, "", "/");
   });
 });
 
@@ -905,7 +989,13 @@ describe("Verträge", () => {
     expect(plain(pane.getByText(/^Verlängert sich um 12 Monate/).textContent)).toContain(
       "6.000,00 € im Jahr",
     );
-    expect(pane.getByText(/Office-Lizenzen/)).toBeVisible();
+    // Verknüpft: Sprung zum Budgetposten, eigener Link des Vertrags
+    expect(
+      within(pane.getByRole("region", { name: "Verknüpft" })).getByRole("link", {
+        name: /Office-Lizenzen/,
+      }),
+    ).toHaveAttribute("href", "/budget/posten/11?jahr=2026");
+    expect(pane.getByText(/\/budget\/vertraege\/1$/)).toBeVisible();
     expect(pane.getByText("Kündigung: noch 15 Tage")).toBeVisible();
     // Monatlicher Vertrag: Vorschlag „Monatsposten anlegen“ mit dem Konto der Posten
     expect(pane.getByLabelText("Konto der Posten")).toHaveValue("1");
@@ -935,31 +1025,35 @@ describe("Verträge", () => {
     await pick(form, /^Rechnungssteller/, "Beispiel Distribution AG");
     // Turnus zuerst; das Betragsfeld heißt passend.
     expect(form.getByRole("button", { name: "Jährlich" })).toHaveAttribute("aria-pressed", "true");
-    expect(form.getByLabelText(/^Jahresbetrag \(netto\)/)).toBeVisible();
+    expect(form.getByRole("group", { name: /^Jahresbetrag/ })).toBeVisible();
     fireEvent.click(form.getByRole("button", { name: "Monatlich" }));
-    expect(form.getByLabelText(/^Monatsbetrag \(netto\)/)).toBeVisible();
+    expect(form.getByRole("group", { name: /^Monatsbetrag/ })).toBeVisible();
     fireEvent.click(form.getByRole("button", { name: "Jährlich" }));
-    fireEvent.change(form.getByLabelText(/^Jahresbetrag/), { target: { value: "abc" } });
+    const yearly = within(form.getByRole("group", { name: /^Jahresbetrag/ }));
+    fireEvent.change(yearly.getByLabelText(/^Betrag netto/), { target: { value: "abc" } });
     // Stillgelegte Posten stehen nicht zur Wahl; die Suche grenzt ein.
     expect(form.queryByLabelText(/Server/)).toBeNull();
     fireEvent.change(form.getByLabelText("Budgetposten suchen"), { target: { value: "xyz" } });
     expect(form.getByText("Kein Budgetposten passt zur Suche.")).toBeVisible();
     fireEvent.change(form.getByLabelText("Budgetposten suchen"), { target: { value: "office" } });
-    // Ein Posten mit einem anderen Vertrag ist nicht wählbar; ein Vertrag geht auch ohne Posten.
-    expect(form.getByLabelText(/^BP-2025-003 · 6815 · Office-Lizenzen/)).toBeDisabled();
-    expect(form.getByText("(Vertrag: Wartung Zeiterfassung)", { exact: false })).toBeVisible();
+    // Ein Posten mit einem anderen Vertrag steht nicht zur Wahl; ein Hinweis sagt, wie viele.
+    expect(form.queryByLabelText(/^BP-2025-003 · 6815 · Office-Lizenzen/)).toBeNull();
+    expect(
+      form.getByText("1 Budgetposten hat schon einen anderen Vertrag", { exact: false }),
+    ).toBeVisible();
     expect(form.getByText("Budgetposten (0 zugeordnet)")).toBeVisible();
     fireEvent.click(form.getByRole("button", { name: "Vertrag speichern" }));
     expect(form.getByRole("alert")).toHaveTextContent("Betrag ist nicht lesbar");
 
-    fireEvent.change(form.getByLabelText(/^Jahresbetrag/), { target: { value: "500,00" } });
+    fireEvent.change(yearly.getByLabelText(/^Betrag netto/), { target: { value: "500,00" } });
+    expect(yearly.getByText(/^Brutto: 595,00 €/)).toBeVisible();
     expect(plain(form.getByText(/^Brutto 595,00 € im Jahr/).textContent)).toContain(
       "Soll je Geschäftsjahr",
     );
-    fireEvent.change(form.getByLabelText(/^Steuersatz/), { target: { value: "x" } });
+    fireEvent.change(yearly.getByLabelText("Steuersatz (%)"), { target: { value: "x" } });
     fireEvent.click(form.getByRole("button", { name: "Vertrag speichern" }));
     expect(form.getByRole("alert")).toHaveTextContent("Steuersatz ist nicht lesbar");
-    fireEvent.change(form.getByLabelText(/^Steuersatz/), { target: { value: "7" } });
+    fireEvent.change(yearly.getByLabelText("Steuersatz (%)"), { target: { value: "7" } });
     fireEvent.change(form.getByLabelText(/^Beginn/), { target: { value: "2026-01-01" } });
     fireEvent.change(form.getByLabelText(/^Verlängert sich um/), { target: { value: "12" } });
     fireEvent.click(form.getByRole("button", { name: "Vertrag speichern" }));
@@ -989,6 +1083,7 @@ describe("Verträge", () => {
       notice_months: 3,
       cancelled_to: null,
       net_cents: 50_000,
+      gross_cents: null,
       tax_rate_bp: 700,
       interval: "jaehrlich",
       note: "",
@@ -1103,13 +1198,28 @@ describe("Rechnungen", () => {
     fireEvent.click(table.getByRole("button", { name: "RE-1" }));
     const one = within(screen.getByRole("region", { name: "Rechnung RE-1" }));
     expect(one.getByText("Ida IT")).toBeVisible();
-    expect(one.getByRole("link", { name: "Wartung Zeiterfassung" })).toBeVisible();
+    expect(one.getAllByRole("link", { name: "Wartung Zeiterfassung" })[0]).toBeVisible();
     expect(one.getByText(/jährlich/)).toBeVisible();
+    // Eigener Link der Rechnung und Sprünge zu Posten und Vertrag
+    expect(window.location.pathname).toBe("/budget/rechnungen/1");
+    expect(one.getByText(/\/budget\/rechnungen\/1\?jahr=2026$/)).toBeVisible();
+    const linked = within(one.getByRole("region", { name: "Verknüpft" }));
+    expect(linked.getByRole("link", { name: "BP-2025-003 Office-Lizenzen" })).toHaveAttribute(
+      "href",
+      "/budget/posten/11?jahr=2026",
+    );
+    expect(linked.getByRole("link", { name: "Wartung Zeiterfassung" })).toHaveAttribute(
+      "href",
+      "/budget/vertraege/1",
+    );
+    expect(
+      linked.getByRole("button", { name: "Link zu Wartung Zeiterfassung kopieren" }),
+    ).toBeVisible();
     expect(one.queryByRole("button", { name: "Prüfen und buchen" })).toBeNull();
     expect(one.queryByRole("button", { name: "Bearbeiten" })).toBeNull();
     fireEvent.click(table.getByRole("button", { name: "RE-2" }));
     const split = within(screen.getByRole("region", { name: "Rechnung RE-2" }));
-    expect(split.getAllByRole("listitem")).toHaveLength(2);
+    expect(split.getAllByText(/€$/, { selector: ".betrag" })).toHaveLength(2);
     expect(plain(split.getByText(/7 % Steuer/).textContent)).toContain("Schulung");
     expect(split.getByText("Bodo Budget")).toBeVisible();
   });
@@ -1193,8 +1303,12 @@ describe("Rechnungen", () => {
       within(second.getByLabelText("Budgetposten")).queryByRole("option", { name: /Server/ }),
     ).toBeNull();
     fireEvent.change(second.getByLabelText("Budgetposten"), { target: { value: "11" } });
-    fireEvent.change(second.getByLabelText(/^Betrag netto/), { target: { value: "200,00" } });
-    fireEvent.change(second.getByLabelText(/^Steuersatz/), { target: { value: "7" } });
+    // Die zweite Position wird brutto eingetragen; das Netto rechnet die Werkbank.
+    fireEvent.click(second.getByRole("button", { name: "7 %" }));
+    fireEvent.click(second.getByRole("button", { name: "Brutto" }));
+    expect(second.queryByLabelText(/^Brutto laut Rechnung/)).toBeNull();
+    fireEvent.change(second.getByLabelText(/^Betrag brutto/), { target: { value: "214,00" } });
+    expect(plain(second.getByText(/^Brutto der Position/).textContent)).toContain("netto 200,00 €");
     expect(plain(form.getByText(/^Summe der Positionen/).textContent)).toContain(
       "brutto 1.404,02 €",
     );
@@ -1233,7 +1347,7 @@ describe("Rechnungen", () => {
           item_id: 11,
           net_cents: 20_000,
           tax_rate_bp: 700,
-          gross_cents: null,
+          gross_cents: 21_400,
           description: "",
           is_project: false,
           is_yearly: false,

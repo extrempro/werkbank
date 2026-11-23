@@ -23,6 +23,7 @@ from werkbank.core.deps import DbDep, require_roles
 from werkbank.core.models import User
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
+from werkbank.modules.budget.contracts import net_from_gross
 from werkbank.modules.budget.documents import clean_name
 from werkbank.modules.budget.excel_import import SheetError, account_key, parse_sheet
 from werkbank.modules.budget.models import (
@@ -87,12 +88,6 @@ def firm_key(name: str) -> str:
     """Vergleichsform eines Firmennamens: klein, ohne Rechtsform, Satzzeichen und Leerraum."""
     lowered = LEGAL_FORMS.sub(" ", name.casefold().replace("&", " und "))
     return " ".join(re.sub(r"[^\w]+", " ", lowered).split())
-
-
-def net_from_gross(gross_cents: int, tax_rate_bp: int) -> int:
-    """Netto aus Brutto, kaufmännisch gerundet."""
-    divisor = 10_000 + tax_rate_bp
-    return (gross_cents * 10_000 * 2 + divisor) // (2 * divisor)
 
 
 def match_partner(
@@ -709,6 +704,8 @@ def take_row(
             db, account.id, body.description or partner.name or f"Zeile {entry.row_number}"
         ),
         amount_cents=body.gross_cents,
+        net_cents=net_from_gross(body.gross_cents, row.tax_rate_bp),
+        tax_rate_bp=row.tax_rate_bp,
         start_year=row.year,
         end_year=row.year,
         note=(
@@ -816,6 +813,7 @@ def plan_rows(
             )
         item.end_year = None if plan.ongoing else max(year, item.end_year or year)
         item.amount_cents = plan.amount_cents
+        item.net_cents = net_from_gross(plan.amount_cents, item.tax_rate_bp)
         entry.planned_item_id = item.id
         extended += 1
     _audit(db, request, user, "planung", row.id, {"posten_verlaengert": extended})

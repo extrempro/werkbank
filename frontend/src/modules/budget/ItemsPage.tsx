@@ -16,6 +16,7 @@ import { SplitHandle, useSplit } from "../../components/SplitHandle";
 import {
   BUDGET_ACCOUNTS_PATH,
   BUDGET_INVOICES_PATH,
+  BUDGET_ITEMS_PATH,
   BUDGET_SETTINGS_PATH,
   BUDGET_STATISTICS_PATH,
 } from "../../navigation";
@@ -26,7 +27,6 @@ import {
   closeItem,
   createItem,
   deleteItem,
-  euroInput,
   fetchAccounts,
   fetchBudgetOverview,
   fetchContracts,
@@ -38,7 +38,6 @@ import {
   hasTag,
   ITEM_STATUS_LABELS,
   itemMatches,
-  parseEuro,
   TAGS_MAX,
   rememberedYear,
   rememberYear,
@@ -57,9 +56,20 @@ import {
   type TagCount,
 } from "./api";
 import { DeleteButton, FormStep, ReadOnlyNote } from "./shared";
+import { AmountFields, amountValue, readAmount, type AmountValue } from "./AmountFields";
 import { fetchProjectChoices, projectPath, type ProjectChoice } from "../projects/api";
 import { Feedback } from "../../components/Feedback";
 import { ListPicker } from "../inventory/LookupPicker";
+import {
+  contractPath,
+  CopyLinkBar,
+  invoicePath,
+  itemPath,
+  LinkedBlock,
+  linkedYear,
+  PdfLink,
+  type LinkedEntry,
+} from "./links";
 
 function amount(cents: number | null): string {
   return cents === null ? "–" : formatEuro(cents);
@@ -137,7 +147,9 @@ function ItemForm({
   // Stillgelegte Partner nur, wenn der Posten sie schon hat.
   const partnerChoices = partners.filter((entry) => entry.active || entry.id === item?.partner_id);
   const [name, setName] = useState(item?.name ?? "");
-  const [cost, setCost] = useState(item ? euroInput(item.amount_cents) : "");
+  const [cost, setCost] = useState<AmountValue>(
+    item ? amountValue(item.net_cents, item.tax_rate_bp) : amountValue(null),
+  );
   const [start, setStart] = useState(String(item?.start_year ?? defaultYear));
   const [runtime, setRuntime] = useState<Runtime>(
     !item || item.end_year === item.start_year
@@ -196,9 +208,10 @@ function ItemForm({
     yearChoices.find((entry) => String(entry.year) === value)?.name ?? value;
 
   // Zusammenfassung in Worten unter Kosten und Laufzeit
-  const costCents = parseEuro(cost);
+  const costRead = readAmount(cost);
+  const costCents = "problem" in costRead ? null : costRead.gross_cents;
   let summary: string | null = null;
-  if (costCents !== null && cost.trim() !== "") {
+  if (costCents !== null && cost.amount.trim() !== "") {
     const each = formatEuro(costCents);
     if (runtime === "einmalig") {
       summary = `Plan: ${each} nur für ${yearLabel} ${yearName(start)}.`;
@@ -219,14 +232,14 @@ function ItemForm({
       problem = "Bitte wähle ein Konto.";
     } else if (!partnerId) {
       problem = "Bitte wähle einen Partner.";
-    } else if (costCents === null) {
-      problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 15000,00";
+    } else if ("problem" in costRead) {
+      problem = costRead.problem;
     } else if (runtime === "bis" && (!end || Number(end) <= Number(start))) {
       problem = `Bitte wähle, bis zu welchem ${yearLabel} der Posten läuft.`;
     } else if (tags.length > TAGS_MAX) {
       problem = `Es sind höchstens ${TAGS_MAX} Tags je Budgetposten möglich.`;
     }
-    if (problem !== null || costCents === null) {
+    if (problem !== null || "problem" in costRead) {
       setError(problem);
       return;
     }
@@ -234,7 +247,9 @@ function ItemForm({
       account_id: Number(accountId),
       partner_id: Number(partnerId),
       name: name.trim(),
-      amount_cents: costCents,
+      amount_cents: costRead.gross_cents,
+      net_cents: costRead.net_cents,
+      tax_rate_bp: costRead.tax_rate_bp,
       start_year: Number(start),
       end_year: runtime === "einmalig" ? Number(start) : runtime === "bis" ? Number(end) : null,
       note: note.trim(),
@@ -328,19 +343,12 @@ function ItemForm({
           </div>
         </FormStep>
         <FormStep number={2} title="Kosten und Laufzeit">
-          <label>
-            <span>
-              Betrag (Brutto) <span aria-hidden="true">*</span>
-            </span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={cost}
-              required
-              aria-required="true"
-              onChange={(event) => setCost(event.target.value)}
-            />
-          </label>
+          <AmountFields
+            legend="Erwartete Kosten"
+            value={cost}
+            onChange={setCost}
+            hint="Fürs Budget zählt das Brutto."
+          />
           <label>
             {runtime === "einmalig" ? yearLabel : `Ab ${yearLabel}`}
             <select value={start} onChange={(event) => setStart(event.target.value)}>
@@ -522,6 +530,7 @@ const STEPS: { status: ItemStatus; label: string }[] = [
 /** Ansicht eines Budgetpostens rechts neben der Tabelle. */
 function ItemDetail({
   row,
+  year,
   yearLabel,
   yearName,
   invoices,
@@ -533,6 +542,8 @@ function ItemDetail({
   onClose,
 }: {
   row: ItemRow;
+  /** Gezeigtes Geschäftsjahr, für den eigenen Link */
+  year: number;
   yearLabel: string;
   yearName: string;
   /** Rechnungen des Jahres mit einer Position auf diesem Posten; null: noch nicht geladen. */
@@ -562,8 +573,34 @@ function ItemDetail({
     ],
     ["Konto", `${item.account_number} ${item.account_name}`],
     ["Laufzeit", runtimeText(item)],
-    ["Vertrag", item.contract_title ?? "–"],
+    [
+      "Vertrag",
+      item.contract_id && item.contract_title ? (
+        <Link to={contractPath(item.contract_id)}>{item.contract_title}</Link>
+      ) : (
+        "–"
+      ),
+    ],
   ];
+  const linkedEntries: LinkedEntry[] = [];
+  if (item.contract_id && item.contract_title) {
+    linkedEntries.push({
+      key: `vertrag-${item.contract_id}`,
+      kind: "Vertrag",
+      label: item.contract_title,
+      path: contractPath(item.contract_id),
+    });
+  }
+  for (const ref of item.invoices ?? []) {
+    linkedEntries.push({
+      key: `rechnung-${ref.id}`,
+      kind: "Rechnung",
+      label: ref.number,
+      path: invoicePath(ref.id, ref.year),
+      extra: `${formatBudgetDay(ref.invoice_date)} · ${ref.status === "gebucht" ? "gebucht" : "zu prüfen"}`,
+      pdf: ref.has_document ? { invoiceId: ref.id, number: ref.number } : undefined,
+    });
+  }
   if (item.project_id && item.project_name) {
     facts.push([
       "IT-Projekt",
@@ -605,6 +642,7 @@ function ItemDetail({
         </button>
       </div>
       <div className="detail-body">
+        <CopyLinkBar path={itemPath(item.id, year)} />
         {row.status && (
           <div className="stepper-wrap">
             <ol className="stepper" aria-label={`Status für ${yearLabel} ${yearName}`}>
@@ -676,16 +714,23 @@ function ItemDetail({
             {lines.map(({ invoice, line }) => (
               <li key={line.id}>
                 <span>
-                  {invoice.number} · {formatBudgetDay(invoice.invoice_date)}
+                  <Link to={invoicePath(invoice.id, year)}>{invoice.number}</Link> ·{" "}
+                  {formatBudgetDay(invoice.invoice_date)}
                   <span className="small budget-muted tenant-part">
                     {invoice.status === "gebucht" ? "gebucht" : "zu prüfen"}
                   </span>
                 </span>
-                <span className="betrag">{formatEuro(line.gross_cents)}</span>
+                <span className="budget-linked-actions">
+                  <span className="betrag">{formatEuro(line.gross_cents)}</span>
+                  {invoice.doc_name !== null && (
+                    <PdfLink invoiceId={invoice.id} number={invoice.number} small />
+                  )}
+                </span>
               </li>
             ))}
           </ul>
         )}
+        <LinkedBlock id="posten-verknuepft" entries={linkedEntries} />
         {canEdit && (
           <div className="actions">
             {canClose && (
@@ -776,11 +821,33 @@ const NARROW_QUERY = "(max-width: 1023px)";
 
 /** IT-Budget › Budgetposten: Tabelle mit Ansicht rechts. Ein gewählter Posten oder die Maske
  *  öffnet neben der Tabelle; schmal steht nur die Ansicht mit „Zur Liste“. */
-export function ItemsPage({ roles }: { roles: readonly string[] }) {
+/** Adresse der Ansicht; ein Suchtext aus der Adresse bleibt dabei erhalten. */
+function itemsAddress(path: string): string {
+  const query = new URLSearchParams(window.location.search);
+  const target = new URL(path, window.location.origin);
+  const text = query.get("suche");
+  if (text) {
+    target.searchParams.set("suche", text);
+  }
+  return target.pathname + target.search;
+}
+
+export function ItemsPage({
+  roles,
+  selectedId: linkedId,
+}: {
+  roles: readonly string[];
+  /** Gesetzt (eigene Adresse /budget/posten/{id}): dieser Posten steht in der Ansicht. */
+  selectedId?: number;
+}) {
   const canEdit = BUDGET_EDITOR_ROLES.some((role) => roles.includes(role));
   const canOpenProjects = roles.includes("Projekte.Reader") || roles.includes("Projekte.Editor");
   const narrow = useMediaQuery(NARROW_QUERY);
-  const [year, setYear] = useState<number | null>(rememberedYear);
+  // Geschäftsjahr aus der Adresse (?jahr=), etwa aus einem weitergegebenen Link
+  const linkedYearText = useSearchParam("jahr");
+  const [year, setYear] = useState<number | null>(
+    () => linkedYear(linkedYearText) ?? rememberedYear(),
+  );
   const [overview, setOverview] = useState<Overview | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [knownTags, setKnownTags] = useState<TagCount[]>([]);
@@ -806,7 +873,24 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
     | { kind: "neu"; round: number }
     | { kind: "bearbeiten"; id: number }
     | null
-  >(null);
+  >(linkedId === undefined ? null : { kind: "posten", id: linkedId });
+  // Wechselt die Adresse (Link, Zurück im Browser), folgt die Ansicht ihr.
+  const [seen, setSeen] = useState({ id: linkedId, year: linkedYearText });
+  if (seen.id !== linkedId || seen.year !== linkedYearText) {
+    setSeen({ id: linkedId, year: linkedYearText });
+    if (seen.id !== linkedId) {
+      setView(linkedId === undefined ? null : { kind: "posten", id: linkedId });
+    }
+    const fromAddress = linkedYear(linkedYearText);
+    if (
+      fromAddress !== null &&
+      seen.year !== linkedYearText &&
+      fromAddress !== (overview?.year ?? year)
+    ) {
+      rememberYear(fromAddress);
+      setYear(fromAddress);
+    }
+  }
   const [round, setRound] = useState(0);
   const [message, setMessage] = useState<{ kind: "status" | "alert"; text: string } | null>(null);
   const layoutRef = useRef<HTMLDivElement>(null);
@@ -938,14 +1022,19 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
   const selectedRow =
     selectedId === null ? null : (all.find((row) => row.item.id === selectedId) ?? null);
   const paneOpen = view !== null && (view.kind === "neu" || selectedRow !== null);
+  /** Posten in der Ansicht zeigen; die Adresse folgt, damit sich der Link weitergeben lässt. */
+  const showItem = (id: number | null) => {
+    setView(id === null ? null : { kind: "posten", id });
+    navigate(itemsAddress(id === null ? BUDGET_ITEMS_PATH : itemPath(id, overview?.year)));
+  };
   const closeView = () => {
-    setView(null);
+    showItem(null);
     setDismissed(linked);
   };
 
   const onItemSaved = (saved: Item) => {
     setMessage({ kind: "status", text: `${saved.name} (${saved.number}) ist gespeichert.` });
-    setView({ kind: "posten", id: saved.id });
+    showItem(saved.id);
     setRound(round + 1);
   };
 
@@ -1018,7 +1107,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                 value={overview.year}
                 onChange={(event) => {
                   setMessage(null);
-                  setView(null);
+                  showItem(null);
                   rememberYear(Number(event.target.value));
                   setYear(Number(event.target.value));
                 }}
@@ -1230,7 +1319,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                           selected={row.item.id === selectedId}
                           onOpen={() => {
                             setMessage(null);
-                            setView({ kind: "posten", id: row.item.id });
+                            showItem(row.item.id);
                           }}
                         />
                       ))}
@@ -1259,6 +1348,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                 {view?.kind === "posten" && selectedRow && (
                   <ItemDetail
                     row={selectedRow}
+                    year={overview.year}
                     yearLabel={label}
                     yearName={overview.year_name}
                     invoices={invoices}
@@ -1271,7 +1361,7 @@ export function ItemsPage({ roles }: { roles: readonly string[] }) {
                         kind: "status",
                         text: `${selectedRow.item.name} ist gelöscht.`,
                       });
-                      setView(null);
+                      showItem(null);
                       setRound(round + 1);
                     }}
                     onClose={closeView}
@@ -1317,6 +1407,8 @@ function ItemTableRow({
   onOpen: () => void;
 }) {
   const { item } = row;
+  // Das PDF der neuesten Rechnung mit Beleg, zum direkten Öffnen
+  const pdf = (item.invoices ?? []).find((ref) => ref.has_document);
   return (
     <tr
       className={selected ? "case-row is-selected" : "case-row"}
@@ -1353,6 +1445,7 @@ function ItemTableRow({
       <td className="col-extra betrag">{formatEuro(row.actual_cents)}</td>
       <td className="nowrap budget-status-cell">
         <StatusPill status={row.status} />
+        {pdf && <PdfLink invoiceId={pdf.id} number={pdf.number} small />}
         <span className="case-meta small betrag">{amount(row.expected_cents)}</span>
       </td>
       <td className="col-extra betrag budget-muted">{amount(row.previous_cents)}</td>

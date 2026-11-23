@@ -13,7 +13,6 @@ import {
   deadlineBadge,
   DPA_LABELS,
   dpaTone,
-  euroInput,
   fetchAccounts,
   fetchBudgetSettings,
   fetchItems,
@@ -22,10 +21,7 @@ import {
   formatBudgetDay,
   formatEuro,
   itemMatches,
-  grossCents,
   INTERVAL_LABELS,
-  parseEuro,
-  parseRate,
   rememberedYear,
   rememberYear,
   share,
@@ -43,6 +39,7 @@ import { ContractDetail } from "./ContractDetail";
 import { BudgetHead, FormStep, ReadOnlyNote } from "./shared";
 import { Feedback } from "../../components/Feedback";
 import { ListPicker } from "../inventory/LookupPicker";
+import { AmountFields, amountValue, readAmount, type AmountValue } from "./AmountFields";
 
 interface FormProps {
   /** null: neuen Vertrag anlegen. */
@@ -75,9 +72,8 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
   );
   const [dpa, setDpa] = useState<DpaStatus>(contract?.dpa_status ?? "nicht_erforderlich");
   const [number, setNumber] = useState(contract?.number ?? "");
-  const [amount, setAmount] = useState(contract ? euroInput(contract.net_cents) : "");
-  const [rate, setRate] = useState(
-    contract ? (contract.tax_rate_bp / 100).toLocaleString("de-DE") : "19",
+  const [amount, setAmount] = useState<AmountValue>(
+    contract ? amountValue(contract.net_cents, contract.tax_rate_bp) : amountValue(null),
   );
   const [interval, setInterval] = useState<ContractInterval>(contract?.interval ?? "jaehrlich");
   const [startsOn, setStartsOn] = useState(contract?.starts_on ?? "");
@@ -96,9 +92,14 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
   const invoicerChoices = partners.filter(
     (entry) => (entry.active && entry.is_invoicer) || entry.id === contract?.invoicer_id,
   );
+  // Posten mit einem anderen Vertrag stehen nicht zur Wahl (ein Posten hat höchstens einen).
+  const otherContract = (entry: Item) =>
+    !!entry.contract_id && entry.contract_id !== contract?.id && !itemIds.includes(entry.id);
+  const hiddenItems = items.filter((entry) => entry.active && otherContract(entry));
   // Aktive Posten und die schon zugeordneten; der Suchtext grenzt ein, Gewählte bleiben sichtbar.
   const itemChoices = items.filter(
     (entry) =>
+      !otherContract(entry) &&
       (entry.active || itemIds.includes(entry.id)) &&
       (itemIds.includes(entry.id) || itemMatches(entry, itemSearch)),
   );
@@ -109,13 +110,10 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
   if (contract?.notice_months && contract.notice_months > 12) {
     noticeChoices.push(contract.notice_months);
   }
-  const netPreview = parseEuro(amount);
-  const ratePreview = parseRate(rate);
+  const amountRead = readAmount(amount);
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    const cents = parseEuro(amount);
-    const taxRate = parseRate(rate);
     const renewalMonths = wholeNumber(renewal);
     const noticeMonths = wholeNumber(notice);
     let problem: string | null = null;
@@ -123,10 +121,8 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
       problem = "Bitte trag eine Bezeichnung ein.";
     } else if (!partnerId) {
       problem = "Bitte wähle den Vertragspartner.";
-    } else if (cents === null) {
-      problem = "Der Betrag ist nicht lesbar. Bitte so eintragen: 1000,00";
-    } else if (taxRate === null) {
-      problem = "Der Steuersatz ist nicht lesbar. Bitte so eintragen: 19";
+    } else if ("problem" in amountRead) {
+      problem = amountRead.problem;
     } else if (!startsOn) {
       problem = "Bitte trag den Beginn ein.";
     } else if (endsOn && endsOn < startsOn) {
@@ -136,7 +132,7 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
     } else if (renewalMonths !== null && !endsOn) {
       problem = "Eine Verlängerung gibt es nur bei einem Ende der Laufzeit.";
     }
-    if (problem !== null || cents === null || taxRate === null) {
+    if (problem !== null || "problem" in amountRead) {
       setError(problem);
       return;
     }
@@ -152,8 +148,10 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
       renewal_months: renewalMonths,
       notice_months: noticeMonths,
       cancelled_to: cancelledTo || null,
-      net_cents: cents,
-      tax_rate_bp: taxRate,
+      net_cents: amountRead.net_cents,
+      tax_rate_bp: amountRead.tax_rate_bp,
+      // Brutto eingetragen: genau so übernehmen (das Netto ist daraus gerechnet)
+      gross_cents: amount.mode === "brutto" ? amountRead.gross_cents : null,
       interval,
       note: note.trim(),
     };
@@ -167,8 +165,7 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
       });
   };
 
-  const gross =
-    netPreview !== null && ratePreview !== null ? grossCents(netPreview, ratePreview) : null;
+  const gross = "problem" in amountRead ? null : amountRead.gross_cents;
   const perYear = PAYMENTS_PER_YEAR[interval];
   return (
     <section className="panel budget-pane" aria-labelledby="vertrag-formular-titel">
@@ -267,28 +264,7 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
               ))}
             </div>
           </div>
-          <label>
-            <span>
-              {AMOUNT_LABELS[interval]} (netto) <span aria-hidden="true">*</span>
-            </span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={amount}
-              required
-              aria-required="true"
-              onChange={(event) => setAmount(event.target.value)}
-            />
-          </label>
-          <label>
-            Steuersatz (%)
-            <input
-              type="text"
-              inputMode="decimal"
-              value={rate}
-              onChange={(event) => setRate(event.target.value)}
-            />
-          </label>
+          <AmountFields legend={AMOUNT_LABELS[interval]} value={amount} onChange={setAmount} />
           <p className="form-wide form-summary" role="status">
             {gross !== null
               ? interval === "einmalig"
@@ -298,7 +274,7 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
                       ? ` · im Jahr ${formatEuro(gross * perYear)} (${perYear} Zahlungen)`
                       : ""
                   } = Soll je ${yearLabel}, nach einer Kündigung nur bis zum Kündigungstag.`
-              : "Das Brutto rechnet die Werkbank aus Netto und Steuersatz. Fürs Budget zählt das Brutto."}
+              : "Fürs Budget zählt das Brutto."}
           </p>
         </FormStep>
         <FormStep number={3} title="Laufzeit und Kündigung">
@@ -392,31 +368,27 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
             <p className="small budget-muted form-wide">Kein Budgetposten passt zur Suche.</p>
           ) : (
             <ul className="budget-choices form-wide">
-              {itemChoices.map((entry) => {
-                // Ein Posten mit einem anderen Vertrag ist hier nicht wählbar.
-                const other =
-                  entry.contract_id && entry.contract_id !== contract?.id
-                    ? entry.contract_title
-                    : null;
-                return (
-                  <li key={entry.id}>
-                    <label className="check-label">
-                      <input
-                        type="checkbox"
-                        className="check"
-                        checked={itemIds.includes(entry.id)}
-                        disabled={other !== null && !itemIds.includes(entry.id)}
-                        onChange={() => toggleItem(entry.id)}
-                      />
-                      {entry.number} · {entry.account_number} · {entry.name}
-                      {other !== null && (
-                        <span className="small budget-muted"> (Vertrag: {other})</span>
-                      )}
-                    </label>
-                  </li>
-                );
-              })}
+              {itemChoices.map((entry) => (
+                <li key={entry.id}>
+                  <label className="check-label">
+                    <input
+                      type="checkbox"
+                      className="check"
+                      checked={itemIds.includes(entry.id)}
+                      onChange={() => toggleItem(entry.id)}
+                    />
+                    {entry.number} · {entry.account_number} · {entry.name}
+                  </label>
+                </li>
+              ))}
             </ul>
+          )}
+          {hiddenItems.length > 0 && (
+            <p className="small budget-muted form-wide">
+              {hiddenItems.length === 1
+                ? "1 Budgetposten hat schon einen anderen Vertrag und steht deshalb nicht zur Wahl."
+                : `${hiddenItems.length} Budgetposten haben schon einen anderen Vertrag und stehen deshalb nicht zur Wahl.`}
+            </p>
           )}
         </FormStep>
         {error && (

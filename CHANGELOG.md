@@ -4,6 +4,27 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.106.0] – 2026-11-23
+
+### IT-Budget
+
+- **Beträge einheitlich netto oder brutto:** Budgetposten, Vertrag und Rechnungsposition haben dieselbe Eingabe (`AmountFields`): Umschalter „Ich trage ein: Netto | Brutto“, freier Steuersatz mit Schnellwahl 19/7/0 %, der andere Wert steht sofort darunter
+  - Budgetposten speichern Netto und Steuersatz (`net_cents`, `tax_rate_bp`, Migration `0072`; bestehende Posten: 19 %, Netto aus dem Brutto gerechnet); Netto, Steuersatz und Brutto müssen auf 1 Cent passen
+  - Vertrag nimmt wahlweise `gross_cents`; das Netto rechnet der Server
+  - `net_from_gross` liegt jetzt in `contracts.py` und wird auch vom Import genutzt
+- **Vertragsmaske:** Posten mit einem anderen Vertrag stehen nicht mehr zur Wahl; ein Hinweis nennt die Zahl
+- **PDF-Symbol** an Budgetposten (Liste, Ansicht), Rechnungen (Liste) und Rechnungspositionen; Posten und die Posten eines Vertrags liefern dafür `invoices` mit
+- **Eigene Adressen** `/budget/posten/{id}` und `/budget/rechnungen/{id}` (mit `?jahr=`); die Ansicht folgt der Adresse
+- **„Link kopieren“** in den Ansichten von Posten, Rechnung und Vertrag und **„Verknüpft“** mit Sprüngen: Posten → Vertrag, Rechnungen; Rechnung → Posten, deren Verträge; Vertrag → Posten, deren Rechnungen; je Eintrag Link kopieren und PDF
+
+### Dokumentation
+
+- spec.md (Budgetposten netto, Verträge, Rechnungen, Links und Verknüpfungen, Beleg), Handbuch (Begriffe, Budgetposten, Rechnungen, Verträge, neues Thema „Links und Verknüpfungen“), Info-Symbol „Netto oder Brutto“
+
+### Tests
+
+- `test_budget.py` (Netto/Brutto mit freiem Steuersatz an Posten und Vertrag, `invoices` am Posten), `budget.test.tsx` (Betragseingabe, Vertragsmaske, Links, PDF, Link kopieren), E2E `budget.spec.ts` angepasst
+
 ## [0.105.0] – 2026-11-23
 
 ### IT-Monitoring

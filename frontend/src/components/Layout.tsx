@@ -364,6 +364,10 @@ export function Layout({ me }: LayoutProps) {
   const importMatch = /^\/budget\/import\/(\d{1,9})$/.exec(path);
   const importId = importMatch ? Number(importMatch[1]) : null;
   const contractId = contractMatch ? Number(contractMatch[1]) : null;
+  const budgetItemMatch = /^\/budget\/posten\/(\d{1,9})$/.exec(path);
+  const budgetItemId = budgetItemMatch ? Number(budgetItemMatch[1]) : null;
+  const invoiceMatch = /^\/budget\/rechnungen\/(\d{1,9})$/.exec(path);
+  const invoiceId = invoiceMatch ? Number(invoiceMatch[1]) : null;
 
   const projectRoute = parseProjectPath(path);
   const hardwareRoute = parseHardwarePath(path);
@@ -546,6 +550,8 @@ export function Layout({ me }: LayoutProps) {
     page = <AccountsPage roles={me.roles} />;
   } else if (path === BUDGET_ITEMS_PATH && current) {
     page = <BudgetItemsPage roles={me.roles} />;
+  } else if (budgetItemId !== null && items.some((item) => item.path === BUDGET_ITEMS_PATH)) {
+    page = <BudgetItemsPage roles={me.roles} selectedId={budgetItemId} />;
   } else if (path === BUDGET_CONTRACTS_PATH && current) {
     page = <ContractsPage roles={me.roles} />;
   } else if (contractId !== null && items.some((item) => item.path === BUDGET_CONTRACTS_PATH)) {
@@ -556,6 +562,8 @@ export function Layout({ me }: LayoutProps) {
     page = <StatisticsPage roles={me.roles} />;
   } else if (path === BUDGET_INVOICES_PATH && current) {
     page = <InvoicesPage roles={me.roles} />;
+  } else if (invoiceId !== null && items.some((item) => item.path === BUDGET_INVOICES_PATH)) {
+    page = <InvoicesPage roles={me.roles} selectedId={invoiceId} />;
   } else if (partnerId !== null && items.some((item) => item.path === BUDGET_PARTNERS_PATH)) {
     page = <PartnerDetailPage key={partnerId} roles={me.roles} partnerId={partnerId} />;
   } else if (path === BUDGET_PARTNERS_PATH && current) {
