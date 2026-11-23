@@ -23,13 +23,15 @@ import {
   type DraftRow,
 } from "./api";
 
-type Section = "arten" | "hersteller" | "gruende" | "abteilungen" | "ausstattung" | "nummern";
+type Section =
+  "arten" | "hersteller" | "gruende" | "abteilungen" | "zwecke" | "ausstattung" | "nummern";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "arten", label: "Hardware-Arten" },
   { id: "hersteller", label: "Hersteller und Modelle" },
   { id: "gruende", label: "Gründe fürs Ausmustern" },
   { id: "abteilungen", label: "Abteilungen" },
+  { id: "zwecke", label: "Zwecke für Pool-Arbeitsplätze" },
   { id: "ausstattung", label: "Ausstattung Arbeitsplatz" },
   { id: "nummern", label: "Nummernkreise" },
 ];
@@ -734,7 +736,10 @@ export function MasterDataPage({ roles }: { roles: readonly string[] }) {
                 <h2 id="stamm-abteilungen">Abteilungen</h2>
               </div>
               <div className="detail-body">
-                <p className="small">Die Abteilung wählst du bei der Stelle.</p>
+                <p className="small">
+                  Die Abteilung wählst du bei der Stelle, als verantwortliche Abteilung auch beim
+                  Pool-Arbeitsplatz.
+                </p>
                 {canEdit && (
                   <AddForm
                     label="Neue Abteilung"
@@ -749,10 +754,45 @@ export function MasterDataPage({ roles }: { roles: readonly string[] }) {
                       key={entry.id}
                       name={entry.name}
                       used={entry.used}
-                      units={["Stelle", "Stellen"]}
+                      units={["Verwendung", "Verwendungen"]}
                       canEdit={canEdit}
                       onRename={(name) => apply(updateEntry("departments", entry.id, { name }))}
                       onDelete={() => apply(deleteEntry("departments", entry.id))}
+                    />
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
+
+          {section === "zwecke" && (
+            <section className="panel" aria-labelledby="stamm-zwecke">
+              <div className="panel-head">
+                <h2 id="stamm-zwecke">Zwecke für Pool-Arbeitsplätze</h2>
+              </div>
+              <div className="detail-body">
+                <p className="small">
+                  Den Zweck wählst du beim Pool-Arbeitsplatz, zum Beispiel Desk-Sharing, Gast oder
+                  Schulung. Löschen geht nur, solange kein Arbeitsplatz den Zweck nutzt.
+                </p>
+                {canEdit && (
+                  <AddForm
+                    label="Neuer Zweck"
+                    maxLength={80}
+                    onAdd={(name) => apply(createEntry("purposes", { name }))}
+                  />
+                )}
+                {data.purposes.length === 0 && <p className="empty">Noch kein Zweck.</p>}
+                <ul className="master-list">
+                  {data.purposes.map((entry) => (
+                    <EntryRow
+                      key={entry.id}
+                      name={entry.name}
+                      used={entry.used}
+                      units={["Arbeitsplatz", "Arbeitsplätze"]}
+                      canEdit={canEdit}
+                      onRename={(name) => apply(updateEntry("purposes", entry.id, { name }))}
+                      onDelete={() => apply(deleteEntry("purposes", entry.id))}
                     />
                   ))}
                 </ul>

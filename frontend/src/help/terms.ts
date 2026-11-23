@@ -182,6 +182,11 @@ export const HELP = {
     text: "Was für das gewählte Jahr vorgesehen ist, als Bruttobetrag.",
     topic: ["it-budget", "begriffe"],
   },
+  "bestand.pool": {
+    term: "Pool-Arbeitsplatz",
+    text: "Ein Arbeitsplatz, der absichtlich keiner Stelle gehört, etwa beim Desk-Sharing oder für Gäste. Er hat einen Zweck aus den Stammdaten und zählt nicht als frei.",
+    topic: ["it-bestand", "arbeitsplaetze"],
+  },
   "budget.betrag": {
     term: "Netto oder Brutto",
     text: "Trag den Betrag so ein, wie er dir vorliegt; den anderen Wert rechnet die Werkbank aus dem Steuersatz. Fürs Budget zählt immer das Brutto.",

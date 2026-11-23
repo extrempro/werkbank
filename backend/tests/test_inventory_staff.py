@@ -486,3 +486,111 @@ def test_room_list_description_and_occupancy(db: Session) -> None:
     assert shown["name"] == "R. 102"
     assert shown["workplaces"] == 2 and shown["workplaces_free"] == 1
     assert shown["people"] == ["Ina Beispiel"]
+
+
+@pytest.mark.db
+def test_pool_workplaces_with_purpose_and_department(db: Session) -> None:
+    editor = client_for(["Bestand.Editor"], "pool-pflege")
+    master = editor.get(f"{BASE}/master-data").json()
+    # Vorschläge aus der Migration
+    assert {"Desk-Sharing", "Gast", "Schulung", "Besprechung"} <= {
+        entry["name"] for entry in master["purposes"]
+    }
+    purposes = editor.post(f"{BASE}/purposes", json={"name": "Werkstatt"}, headers=HEADERS)
+    assert purposes.status_code == 201, purposes.text
+    werkstatt = next(p for p in purposes.json()["purposes"] if p["name"] == "Werkstatt")
+    assert (
+        editor.post(f"{BASE}/purposes", json={"name": "werkstatt"}, headers=HEADERS).status_code
+        == 409
+    )
+    departments = editor.post(f"{BASE}/departments", json={"name": "Abt. Pool"}, headers=HEADERS)
+    department = next(d for d in departments.json()["departments"] if d["name"] == "Abt. Pool")
+
+    city = editor.post(f"{BASE}/cities", json={"name": "Poolstadt"}, headers=HEADERS).json()
+    site = editor.post(
+        f"{BASE}/sites",
+        json={"name": "Haus P", "city_id": city["cities"][0]["id"]},
+        headers=HEADERS,
+    ).json()
+    section = editor.post(
+        f"{BASE}/sections",
+        json={"name": "Teil P", "site_id": site["cities"][0]["sites"][0]["id"]},
+        headers=HEADERS,
+    ).json()
+    floor = editor.post(
+        f"{BASE}/floors",
+        json={"name": "EG", "section_id": section["cities"][0]["sites"][0]["sections"][0]["id"]},
+        headers=HEADERS,
+    ).json()
+    room = editor.post(
+        f"{BASE}/floors/{floor['id']}/rooms",
+        json={"name": "P.01", "x": 0, "y": 0, "w": 20, "h": 20},
+        headers=HEADERS,
+    ).json()["rooms"][0]
+    position = editor.post(f"{BASE}/positions", json={"name": "Stelle P"}, headers=HEADERS).json()
+
+    # Pool ohne Zweck, mit Stelle oder mit unbekanntem Zweck: abgelehnt
+    for bad in (
+        {"room_id": room["id"], "pool": True},
+        {
+            "room_id": room["id"],
+            "pool": True,
+            "purpose_id": werkstatt["id"],
+            "position_ids": [position["id"]],
+        },
+        {"room_id": room["id"], "pool": True, "purpose_id": 999999},
+    ):
+        assert editor.post(f"{BASE}/workplaces", json=bad, headers=HEADERS).status_code == 422, bad
+
+    created = editor.post(
+        f"{BASE}/workplaces",
+        json={
+            "room_id": room["id"],
+            "pool": True,
+            "shared": True,
+            "purpose_id": werkstatt["id"],
+            "department_id": department["id"],
+        },
+        headers=HEADERS,
+    )
+    assert created.status_code == 201, created.text
+    pool = created.json()
+    assert pool["pool"] is True and pool["shared"] is False
+    assert pool["purpose"] == "Werkstatt" and pool["department"] == "Abt. Pool"
+    # Ein freier Arbeitsplatz zum Vergleich
+    free = editor.post(f"{BASE}/workplaces", json={"room_id": room["id"]}, headers=HEADERS).json()
+
+    listed = editor.get(f"{BASE}/workplaces", params={"filter": "pool"}).json()["items"]
+    assert [entry["id"] for entry in listed] == [pool["id"]]
+    free_ids = [
+        e["id"] for e in editor.get(f"{BASE}/workplaces", params={"filter": "frei"}).json()["items"]
+    ]
+    assert free["id"] in free_ids and pool["id"] not in free_ids
+    found = editor.get(f"{BASE}/workplaces", params={"q": "werkstatt"}).json()["items"]
+    assert [entry["id"] for entry in found] == [pool["id"]]
+    # In der Raumliste zählt nur der freie Platz als frei
+    shown = editor.get(f"{BASE}/floors/{floor['id']}").json()["rooms"][0]
+    assert shown["workplaces"] == 2 and shown["workplaces_free"] == 1
+
+    # Zweck und Abteilung lassen sich nicht löschen, solange sie verwendet werden
+    assert editor.delete(f"{BASE}/purposes/{werkstatt['id']}", headers=HEADERS).status_code == 409
+    assert (
+        editor.delete(f"{BASE}/departments/{department['id']}", headers=HEADERS).status_code == 409
+    )
+    used = editor.get(f"{BASE}/master-data").json()
+    assert next(p for p in used["purposes"] if p["id"] == werkstatt["id"])["used"] == 1
+    assert next(d for d in used["departments"] if d["id"] == department["id"])["used"] == 1
+
+    # Zurück zum Einzelarbeitsplatz: Zweck und Abteilung fallen weg, Verlauf nennt den Typ
+    back = editor.put(
+        f"{BASE}/workplaces/{pool['id']}",
+        json={"room_id": room["id"], "position_ids": [position["id"]]},
+        headers=HEADERS,
+    )
+    assert back.status_code == 200, back.text
+    single = back.json()
+    assert (
+        single["pool"] is False and single["purpose_id"] is None and single["department_id"] is None
+    )
+    assert any("Typ: einzeln" in event["text"] for event in single["events"])
+    assert editor.delete(f"{BASE}/purposes/{werkstatt['id']}", headers=HEADERS).status_code == 200

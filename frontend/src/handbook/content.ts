@@ -1522,16 +1522,16 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Ein Arbeitsplatz steht in einem Raum. Ein Einzelarbeitsplatz gehört zu genau einer Stelle, ein geteilter Arbeitsplatz zu mehreren. Über der Liste suchst du nach Nummer, Raum oder Stelle; mit den Filtern findest du zum Beispiel freie Plätze oder Plätze, an denen Ausstattung fehlt.",
+                text: "Ein Arbeitsplatz steht in einem Raum. Ein Einzelarbeitsplatz gehört zu genau einer Stelle, ein geteilter Arbeitsplatz zu mehreren. Ein Pool-Arbeitsplatz gehört absichtlich keiner Stelle, etwa beim Desk-Sharing, für Gäste oder Schulungen: Er hat einen Zweck aus den Stammdaten und auf Wunsch eine verantwortliche Abteilung, und er zählt nie als „frei“. Über der Liste suchst du nach Nummer, Raum, Stelle oder Zweck; mit den Filtern findest du zum Beispiel Pool-Arbeitsplätze, freie Plätze oder Plätze, an denen Ausstattung fehlt.",
               },
               {
                 kind: "steps",
                 items: [
                   "Tippe unter „Arbeitsplätze“ auf „Arbeitsplatz anlegen“.",
                   "Such den Raum und wähle ihn; er ist Pflicht. Hat die Etage einen Grundriss, erscheint er gleich darunter: Ein Klick in den Raum setzt den Platz des Arbeitsplatzes. Das ist freiwillig und geht auch später.",
-                  "Wähle den Typ: Einzelarbeitsplatz oder geteilter Arbeitsplatz. Einen Namen braucht der Arbeitsplatz nicht; er heißt nach seiner Nummer.",
+                  "Wähle den Typ: Einzelarbeitsplatz, geteilter Arbeitsplatz oder Pool-Arbeitsplatz. Beim Pool-Arbeitsplatz wählst du den Zweck und auf Wunsch die verantwortliche Abteilung; Stellen gibt es dort nicht. Einen Namen braucht der Arbeitsplatz nicht; er heißt nach seiner Nummer.",
                   "Wähle auf Wunsch eine Vorlage für die Ausstattung.",
-                  "Such unter „Stelle hinzufügen“ nach Nummer, Stelle, Person oder Abteilung und wähle den Treffer; bei einem geteilten Arbeitsplatz auch mehrere.",
+                  "Such unter „Stelle hinzufügen“ nach Nummer, Stelle, Person oder Abteilung und wähle den Treffer; bei einem geteilten Arbeitsplatz auch mehrere. Bei einem Pool-Arbeitsplatz entfällt dieser Schritt.",
                   "Tippe auf „Arbeitsplatz anlegen“.",
                 ],
               },
@@ -1660,7 +1660,8 @@ export const AREAS: readonly Area[] = [
                   "Hardware-Arten: zum Beispiel Notebook, PC, Monitor. Bei jeder Art legst du fest, ob sie einen Datenträger hat und wie lange sie genutzt wird (Nutzungsdauer in Jahren, für den Erneuerungsbedarf in der Statistik).",
                   "Hersteller und Modelle: je Hersteller beliebig viele Modelle.",
                   "Gründe fürs Ausmustern: zum Beispiel defekt, veraltet, verloren oder gestohlen, Garantietausch.",
-                  "Abteilungen: Auswahl bei der Stelle.",
+                  "Abteilungen: Auswahl bei der Stelle und als verantwortliche Abteilung beim Pool-Arbeitsplatz.",
+                  "Zwecke für Pool-Arbeitsplätze: Auswahl beim Pool-Arbeitsplatz, zum Beispiel Desk-Sharing, Gast oder Schulung.",
                   "Ausstattung Arbeitsplatz: Vorlagen mit Zeilen, zum Beispiel „1 Rechner (Notebook oder PC)“ und „2 Monitore“.",
                   "Nummernkreise: Präfix für die Nummern von Stellen und Arbeitsplätzen. Ein neues Präfix gilt nur für neue Einträge.",
                 ],

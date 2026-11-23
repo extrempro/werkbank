@@ -287,6 +287,15 @@ class InventoryEvent(Base):
     text: Mapped[str] = mapped_column(String(400))
 
 
+class InventoryWorkplacePurpose(Base):
+    """Zweck eines Pool-Arbeitsplatzes, z. B. Desk-Sharing oder Schulung (Stammdaten)."""
+
+    __tablename__ = "inventory_workplace_purposes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), unique=True)
+
+
 class InventoryDepartment(Base):
     """Eine Abteilung, der Stellen angehören (Stammdaten)."""
 
@@ -384,6 +393,14 @@ class InventoryWorkplace(Base):
     spot_x: Mapped[float | None] = mapped_column(Float)
     spot_y: Mapped[float | None] = mapped_column(Float)
     shared: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("false"))
+    # Pool-Arbeitsplatz: gehört absichtlich keiner Stelle; mit Zweck, Abteilung freiwillig
+    pool: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("false"))
+    purpose_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_workplace_purposes.id", ondelete="RESTRICT"), index=True
+    )
+    department_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_departments.id", ondelete="RESTRICT"), index=True
+    )
     kit_id: Mapped[int | None] = mapped_column(
         ForeignKey("inventory_kits.id", ondelete="RESTRICT"), index=True
     )

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
+import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
 import { INVENTORY_MASTER_PATH, INVENTORY_WORKPLACES_PATH } from "../../navigation";
 import { navigate } from "../../router";
@@ -27,13 +28,16 @@ import {
   WORKPLACE_FILTERS,
   WORKPLACE_TABS,
   workplaceInput,
+  workplaceKind,
   workplaceName,
   workplacePath,
   type Assignees,
+  type Department,
   type Floor,
   type Kit,
   type LookupItem,
   type Locations,
+  type Purpose,
   type Workplace,
   type WorkplaceFilter,
   type WorkplaceInput,
@@ -48,12 +52,37 @@ interface Choices {
   assignees: Assignees;
   locations: Locations;
   kits: Kit[];
+  purposes: Purpose[];
+  departments: Department[];
 }
 
 function loadChoices(): Promise<Choices> {
   return Promise.all([fetchAssignees(), fetchLocations(), fetchMasterData()]).then(
-    ([assignees, locations, master]) => ({ assignees, locations, kits: master.kits }),
+    ([assignees, locations, master]) => ({
+      assignees,
+      locations,
+      kits: master.kits,
+      purposes: master.purposes,
+      departments: master.departments,
+    }),
   );
+}
+
+type WorkplaceType = "einzeln" | "geteilt" | "pool";
+
+const WORKPLACE_TYPES: { value: WorkplaceType; label: string }[] = [
+  { value: "einzeln", label: "Einzelarbeitsplatz" },
+  { value: "geteilt", label: "Geteilter Arbeitsplatz" },
+  { value: "pool", label: "Pool-Arbeitsplatz" },
+];
+
+/** Art in Worten, z. B. für die Ansicht. */
+function typeLabel(entry: Pick<WorkplaceSummary, "pool" | "shared">): string {
+  return entry.pool
+    ? "Pool-Arbeitsplatz"
+    : entry.shared
+      ? "Geteilter Arbeitsplatz"
+      : "Einzelarbeitsplatz";
 }
 
 function equipmentPill(entry: Pick<WorkplaceSummary, "complete" | "missing">) {
@@ -181,7 +210,18 @@ function WorkplaceForm({
   );
   const [spot, setSpot] = useState<{ x: number; y: number } | null>(null);
   const [roomError, setRoomError] = useState<string | null>(null);
-  const [shared, setShared] = useState(initial.shared);
+  const [type, setType] = useState<WorkplaceType>(
+    initial.pool ? "pool" : initial.shared ? "geteilt" : "einzeln",
+  );
+  const shared = type === "geteilt";
+  const pool = type === "pool";
+  const [purposeId, setPurposeId] = useState(
+    initial.purpose_id === null ? "" : String(initial.purpose_id),
+  );
+  const [purposeError, setPurposeError] = useState<string | null>(null);
+  const [departmentId, setDepartmentId] = useState(
+    initial.department_id === null ? "" : String(initial.department_id),
+  );
   const [kitId, setKitId] = useState(initial.kit_id === null ? "" : String(initial.kit_id));
   const [positionIds, setPositionIds] = useState<number[]>(initial.position_ids);
   // Namen der Stellen, die über die Suche dazukommen
@@ -191,7 +231,7 @@ function WorkplaceForm({
   const [busy, setBusy] = useState(false);
 
   const byId = new Map(choices.assignees.positions.map((entry) => [entry.id, entry]));
-  const tooMany = !shared && positionIds.length > 1;
+  const tooMany = type === "einzeln" && positionIds.length > 1;
   const canAdd = shared || positionIds.length === 0;
 
   const onSubmit = (event: FormEvent) => {
@@ -204,11 +244,18 @@ function WorkplaceForm({
       setError("Ein Einzelarbeitsplatz gehört zu höchstens einer Stelle.");
       return;
     }
+    if (pool && !purposeId) {
+      setPurposeError("Bitte wähle den Zweck.");
+      return;
+    }
     setBusy(true);
     setError(null);
     onSave({
       room_id: room ? room.id : null,
       shared,
+      pool,
+      purpose_id: pool && purposeId ? Number(purposeId) : null,
+      department_id: pool && departmentId ? Number(departmentId) : null,
       kit_id: kitId ? Number(kitId) : null,
       position_ids: positionIds,
       note: note.trim(),
@@ -236,27 +283,78 @@ function WorkplaceForm({
       />
       {creating && room && <SpotPicker room={room} spot={spot} onSpot={setSpot} />}
       <fieldset className="seg-field">
-        <legend>Typ</legend>
+        <legend>
+          Typ <InfoTip term="bestand.pool" />
+        </legend>
         <div className="chips">
-          {[
-            { value: false, label: "Einzelarbeitsplatz" },
-            { value: true, label: "Geteilter Arbeitsplatz" },
-          ].map((entry) => (
+          {WORKPLACE_TYPES.map((entry) => (
             <button
-              key={entry.label}
+              key={entry.value}
               type="button"
               className="chip chip-filter"
-              aria-pressed={shared === entry.value}
-              onClick={() => setShared(entry.value)}
+              aria-pressed={type === entry.value}
+              onClick={() => {
+                setType(entry.value);
+                if (entry.value === "pool") {
+                  // Ein Pool-Arbeitsplatz gehört keiner Stelle
+                  setPositionIds([]);
+                }
+              }}
             >
               {entry.label}
             </button>
           ))}
         </div>
         <p className="small">
-          Ein Einzelarbeitsplatz gehört zu genau einer Stelle, ein geteilter zu mehreren.
+          Ein Einzelarbeitsplatz gehört zu genau einer Stelle, ein geteilter zu mehreren. Ein
+          Pool-Arbeitsplatz gehört absichtlich keiner Stelle, zum Beispiel beim Desk-Sharing.
         </p>
       </fieldset>
+      {pool && (
+        <>
+          <label>
+            Zweck <span aria-hidden="true">*</span>
+            <select
+              value={purposeId}
+              required
+              aria-invalid={purposeError ? true : undefined}
+              aria-describedby={purposeError ? "pool-zweck-fehler" : undefined}
+              onChange={(event) => {
+                setPurposeId(event.target.value);
+                setPurposeError(null);
+              }}
+            >
+              <option value="">Bitte wählen</option>
+              {choices.purposes.map((entry) => (
+                <option key={entry.id} value={String(entry.id)}>
+                  {entry.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {purposeError && (
+            <p id="pool-zweck-fehler" className="field-error">
+              {purposeError}
+            </p>
+          )}
+          {choices.purposes.length === 0 && (
+            <p className="small">
+              Zwecke legst du unter <Link to={INVENTORY_MASTER_PATH}>Stammdaten</Link> an.
+            </p>
+          )}
+          <label>
+            Verantwortliche Abteilung (freiwillig)
+            <select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
+              <option value="">keine</option>
+              {choices.departments.map((entry) => (
+                <option key={entry.id} value={String(entry.id)}>
+                  {entry.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
       <label>
         Ausstattung (Vorlage, freiwillig)
         <select value={kitId} onChange={(event) => setKitId(event.target.value)}>
@@ -273,63 +371,65 @@ function WorkplaceForm({
           Vorlagen legst du unter <Link to={INVENTORY_MASTER_PATH}>Stammdaten</Link> an.
         </p>
       )}
-      <fieldset className="seg-field">
-        <legend>Stellen ({positionIds.length})</legend>
-        {positionIds.length === 0 ? (
-          <p className="small">Frei, keine Stelle zugeordnet.</p>
-        ) : (
-          <ul className="master-list">
-            {positionIds.map((id) => {
-              const entry = byId.get(id);
-              const chosen = picked[id];
-              const label = entry
-                ? `${entry.number} ${entry.name}`
-                : (chosen?.label ?? `Stelle ${id}`);
-              return (
-                <li key={id} className="master-row">
-                  <span className="master-name">
-                    <strong>{label}</strong>
-                    <span className="small">
-                      {entry ? entry.person_name || "unbesetzt" : (chosen?.detail ?? "")}
+      {!pool && (
+        <fieldset className="seg-field">
+          <legend>Stellen ({positionIds.length})</legend>
+          {positionIds.length === 0 ? (
+            <p className="small">Frei, keine Stelle zugeordnet.</p>
+          ) : (
+            <ul className="master-list">
+              {positionIds.map((id) => {
+                const entry = byId.get(id);
+                const chosen = picked[id];
+                const label = entry
+                  ? `${entry.number} ${entry.name}`
+                  : (chosen?.label ?? `Stelle ${id}`);
+                return (
+                  <li key={id} className="master-row">
+                    <span className="master-name">
+                      <strong>{label}</strong>
+                      <span className="small">
+                        {entry ? entry.person_name || "unbesetzt" : (chosen?.detail ?? "")}
+                      </span>
                     </span>
-                  </span>
-                  <span className="master-actions">
-                    <button
-                      type="button"
-                      className="row-button"
-                      aria-label={`${label} entfernen`}
-                      onClick={() => setPositionIds(positionIds.filter((value) => value !== id))}
-                    >
-                      Entfernen
-                    </button>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {tooMany && (
-          <p role="alert" className="hint-box hint-warn">
-            Ein Einzelarbeitsplatz darf nur zu einer Stelle gehören. Entferne die übrigen Stellen
-            oder wähle „Geteilter Arbeitsplatz“.
-          </p>
-        )}
-        {canAdd && (
-          <LookupPicker
-            kind="position"
-            label="Stelle hinzufügen"
-            placeholder="Nummer, Stelle, Person oder Abteilung …"
-            value={null}
-            exclude={positionIds}
-            onChange={(item) => {
-              if (item) {
-                setPicked({ ...picked, [item.id]: item });
-                setPositionIds([...positionIds, item.id]);
-              }
-            }}
-          />
-        )}
-      </fieldset>
+                    <span className="master-actions">
+                      <button
+                        type="button"
+                        className="row-button"
+                        aria-label={`${label} entfernen`}
+                        onClick={() => setPositionIds(positionIds.filter((value) => value !== id))}
+                      >
+                        Entfernen
+                      </button>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {tooMany && (
+            <p role="alert" className="hint-box hint-warn">
+              Ein Einzelarbeitsplatz darf nur zu einer Stelle gehören. Entferne die übrigen Stellen
+              oder wähle „Geteilter Arbeitsplatz“.
+            </p>
+          )}
+          {canAdd && (
+            <LookupPicker
+              kind="position"
+              label="Stelle hinzufügen"
+              placeholder="Nummer, Stelle, Person oder Abteilung …"
+              value={null}
+              exclude={positionIds}
+              onChange={(item) => {
+                if (item) {
+                  setPicked({ ...picked, [item.id]: item });
+                  setPositionIds([...positionIds, item.id]);
+                }
+              }}
+            />
+          )}
+        </fieldset>
+      )}
       <label>
         Notiz (freiwillig)
         <input
@@ -359,6 +459,9 @@ function WorkplaceForm({
 const EMPTY_WORKPLACE: WorkplaceInput = {
   room_id: null,
   shared: false,
+  pool: false,
+  purpose_id: null,
+  department_id: null,
   kit_id: null,
   position_ids: [],
   note: "",
@@ -401,7 +504,7 @@ export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
           <h1>Arbeitsplätze</h1>
           <p className="page-sub">
             Ein Einzelarbeitsplatz gehört zu genau einer Stelle, ein geteilter Arbeitsplatz zu
-            mehreren.
+            mehreren, ein Pool-Arbeitsplatz absichtlich keiner.
           </p>
         </div>
         {canEdit && !choices && (
@@ -483,14 +586,21 @@ export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
                     <th scope="row">
                       <Link to={workplacePath(entry.id)}>{workplaceName(entry)}</Link>
                     </th>
-                    <td data-label="Typ">{entry.shared ? "geteilt" : "einzeln"}</td>
+                    <td data-label="Typ">
+                      {workplaceKind(entry)}
+                      {entry.pool && entry.purpose && (
+                        <span className="small"> · {entry.purpose}</span>
+                      )}
+                    </td>
                     <td data-label="Ort">{entry.place ?? "–"}</td>
                     <td data-label="Stellen">
-                      {entry.positions.length === 0
-                        ? "frei"
-                        : entry.positions
-                            .map((position) => position.person_name || position.name)
-                            .join(", ")}
+                      {entry.pool
+                        ? (entry.department ?? "–")
+                        : entry.positions.length === 0
+                          ? "frei"
+                          : entry.positions
+                              .map((position) => position.person_name || position.name)
+                              .join(", ")}
                     </td>
                     <td data-label="Ausstattung">{equipmentPill(entry)}</td>
                   </tr>
@@ -587,8 +697,20 @@ function Overview({
           <dl className="facts">
             <div>
               <dt>Typ</dt>
-              <dd>{workplace.shared ? "Geteilter Arbeitsplatz" : "Einzelarbeitsplatz"}</dd>
+              <dd>{typeLabel(workplace)}</dd>
             </div>
+            {workplace.pool && (
+              <>
+                <div>
+                  <dt>Zweck</dt>
+                  <dd>{workplace.purpose ?? "–"}</dd>
+                </div>
+                <div>
+                  <dt>Verantwortliche Abteilung</dt>
+                  <dd>{workplace.department ?? "keine"}</dd>
+                </div>
+              </>
+            )}
             <div>
               <dt>Ort</dt>
               <dd>{workplace.place ?? "–"}</dd>
@@ -607,7 +729,9 @@ function Overview({
             )}
           </dl>
           <h3 className="sub-head">Stellen ({workplace.positions.length})</h3>
-          {workplace.positions.length === 0 ? (
+          {workplace.pool ? (
+            <p className="empty">Pool-Arbeitsplatz, absichtlich ohne feste Stelle.</p>
+          ) : workplace.positions.length === 0 ? (
             <p className="empty">Frei, keine Stelle zugeordnet.</p>
           ) : (
             <ul className="link-list">
@@ -722,7 +846,8 @@ export function WorkplaceDetailPage({
             <p className="module-label">Arbeitsplatz</p>
             <h1>{workplaceName(workplace)}</h1>
             <p className="page-sub">
-              {workplace.shared ? "Geteilt" : "Einzeln"} {equipmentPill(workplace)}
+              {workplace.pool ? "Pool" : workplace.shared ? "Geteilt" : "Einzeln"}{" "}
+              {equipmentPill(workplace)}
             </p>
             <PlaceLine
               kind="arbeitsplatz"

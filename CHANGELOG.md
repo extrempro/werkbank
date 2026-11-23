@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.110.0] – 2026-11-23
+
+### IT-Bestand
+
+- **Pool-Arbeitsplatz** als dritter Typ neben Einzel und Geteilt: gehört absichtlich keiner Stelle (z. B. Desk-Sharing, Gast, Schulung), mit **Zweck** (Pflicht, Stammdaten) und freiwilliger **verantwortlicher Abteilung**. Zählt nie als „frei“ (Filter „Frei“, Raumliste). Neuer Filter „Pool“, Suche über Zweck und Abteilung.
+  - Migration `0075`: Tabelle `inventory_workplace_purposes` mit Vorschlägen (Desk-Sharing, Gast, Schulung, Besprechung), Spalten `pool`, `purpose_id`, `department_id` an `inventory_workplaces`
+  - Stammdaten: neuer Bereich „Zwecke für Pool-Arbeitsplätze“ (`/api/inventory/purposes`). Abteilungen zählen und sperren das Löschen auch bei Pool-Arbeitsplätzen.
+  - Bestehende Arbeitsplätze ohne Stelle bleiben „frei“ und werden von Hand umgestellt.
+
+### Dokumentation
+
+- spec.md und Handbuch (Arbeitsplätze, Stammdaten), Info-Symbol „Pool-Arbeitsplatz“
+
+### Tests
+
+- `test_inventory_staff.py` (Pool: Prüfungen, Filter, Raumliste, Stammdaten, Rückstufung), `staff.test.tsx` (Maske Pool)
+
 ## [0.109.0] – 2026-11-23
 
 ### IT-Bestand
