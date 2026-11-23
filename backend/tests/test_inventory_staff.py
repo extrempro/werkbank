@@ -420,3 +420,69 @@ def test_workplaces_kits_and_equipment(db: Session) -> None:
     assert any(
         hit["kind"] == "Arbeitsplatz" and hit["title"] == workplace["number"] for hit in hits
     )
+
+
+@pytest.mark.db
+def test_room_list_description_and_occupancy(db: Session) -> None:
+    editor = client_for(["Bestand.Editor"], "raumliste-pflege")
+    city = editor.post(f"{BASE}/cities", json={"name": "Beispielstadt"}, headers=HEADERS).json()
+    city_id = city["cities"][0]["id"]
+    site = editor.post(
+        f"{BASE}/sites", json={"name": "Haus Süd", "city_id": city_id}, headers=HEADERS
+    ).json()
+    site_id = site["cities"][0]["sites"][0]["id"]
+    section = editor.post(
+        f"{BASE}/sections", json={"name": "Bauteil B", "site_id": site_id}, headers=HEADERS
+    ).json()
+    section_id = section["cities"][0]["sites"][0]["sections"][0]["id"]
+    floor = editor.post(
+        f"{BASE}/floors",
+        json={"name": "1. OG", "section_id": section_id, "position": 1},
+        headers=HEADERS,
+    ).json()
+    rooms_url = f"{BASE}/floors/{floor['id']}/rooms"
+    created = editor.post(
+        rooms_url,
+        json={"name": "R. 101", "description": "  Besprechung  ", "x": 0, "y": 0, "w": 20, "h": 20},
+        headers=HEADERS,
+    ).json()
+    meeting = created["rooms"][0]
+    assert meeting["description"] == "Besprechung"
+    office = editor.post(
+        rooms_url,
+        json={"name": "R. 102", "x": 30, "y": 0, "w": 20, "h": 20},
+        headers=HEADERS,
+    ).json()["rooms"][1]
+    assert office["description"] == "" and office["workplaces"] == 0 and office["people"] == []
+
+    # Verschieben ohne Beschreibung lässt sie stehen; leerer Text löscht sie
+    moved = editor.put(
+        f"{BASE}/rooms/{meeting['id']}",
+        json={"name": "R. 101", "x": 1, "y": 0, "w": 20, "h": 20},
+        headers=HEADERS,
+    ).json()
+    assert moved["rooms"][0]["description"] == "Besprechung"
+    cleared = editor.put(
+        f"{BASE}/rooms/{meeting['id']}",
+        json={"name": "R. 101", "description": "", "x": 1, "y": 0, "w": 20, "h": 20},
+        headers=HEADERS,
+    ).json()
+    assert cleared["rooms"][0]["description"] == ""
+
+    # Zwei Arbeitsplätze im Büro: einer mit Stelle und Person, einer ohne Stelle
+    staffed = editor.post(f"{BASE}/positions", json={"name": "Stelle Raum"}, headers=HEADERS).json()
+    position = db.get(InventoryPosition, staffed["id"])
+    assert position is not None
+    position.person_name = "Ina Beispiel"
+    db.commit()
+    for ids in ([staffed["id"]], []):
+        done = editor.post(
+            f"{BASE}/workplaces",
+            json={"room_id": office["id"], "position_ids": ids},
+            headers=HEADERS,
+        )
+        assert done.status_code == 201, done.text
+    shown = editor.get(f"{BASE}/floors/{floor['id']}").json()["rooms"][1]
+    assert shown["name"] == "R. 102"
+    assert shown["workplaces"] == 2 and shown["workplaces_free"] == 1
+    assert shown["people"] == ["Ina Beispiel"]

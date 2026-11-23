@@ -170,6 +170,8 @@ class InventoryRoom(Base):
         ForeignKey("inventory_floors.id", ondelete="RESTRICT"), index=True
     )
     name: Mapped[str] = mapped_column(String(80))
+    # freiwillig: Nutzung oder Beschreibung, z. B. „Besprechung“ oder „Technik“
+    description: Mapped[str] = mapped_column(String(120), default="", server_default="")
     x: Mapped[float] = mapped_column(Float)
     y: Mapped[float] = mapped_column(Float)
     w: Mapped[float] = mapped_column(Float)

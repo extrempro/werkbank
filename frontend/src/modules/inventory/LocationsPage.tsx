@@ -4,6 +4,7 @@ import { ConfirmButton } from "../../components/ConfirmDialog";
 import { Icon } from "../../components/Icon";
 import { Link } from "../../components/Link";
 import { navigate } from "../../router";
+import { RoomList } from "./RoomList";
 import { planSpots, PlanView } from "./PlanView";
 import {
   clampRect,
@@ -596,10 +597,11 @@ function RoomPanel({
   workplaces: FloorSpot[];
   canEdit: boolean;
   onBack: () => void;
-  onSave: (name: string, rect: RoomRect) => Promise<unknown>;
+  onSave: (name: string, description: string, rect: RoomRect) => Promise<unknown>;
   onDelete: () => Promise<unknown>;
 }) {
   const [name, setName] = useState(room.name);
+  const [description, setDescription] = useState(room.description);
   const [rect, setRect] = useState({
     x: String(room.x),
     y: String(room.y),
@@ -625,7 +627,7 @@ function RoomPanel({
       return;
     }
     setError(null);
-    onSave(name.trim(), clampRect(numbers)).catch((problem: unknown) =>
+    onSave(name.trim(), description.trim(), clampRect(numbers)).catch((problem: unknown) =>
       setError(errorText(problem, "Der Raum konnte nicht gespeichert werden.")),
     );
   };
@@ -636,6 +638,7 @@ function RoomPanel({
         ‹ Alle Räume
       </button>
       <h3 id="raum-titel">Raum {room.name}</h3>
+      {room.description && <p className="room-description">{room.description}</p>}
       <p className="small">
         {room.hardware === 0 ? "keine Hardware" : plural(room.hardware, "Gerät", "Geräte")}
         {" · "}
@@ -667,6 +670,16 @@ function RoomPanel({
               value={name}
               maxLength={80}
               onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <label>
+            Nutzung oder Beschreibung (freiwillig)
+            <input
+              type="text"
+              value={description}
+              maxLength={120}
+              placeholder="z. B. Besprechung, Technik, Büro"
+              onChange={(event) => setDescription(event.target.value)}
             />
           </label>
           <details className="room-rect-details">
@@ -1190,8 +1203,8 @@ export function LocationsPage({
                           )}
                           canEdit={canEdit}
                           onBack={() => navigate(locationPath(shownFloor.id))}
-                          onSave={(name, rect) =>
-                            updateRoom(room.id, { name, ...rect }).then(applyFloor)
+                          onSave={(name, description, rect) =>
+                            updateRoom(room.id, { name, description, ...rect }).then(applyFloor)
                           }
                           onDelete={() =>
                             deleteRoom(room.id).then((next) => {
@@ -1201,30 +1214,15 @@ export function LocationsPage({
                           }
                         />
                       ) : (
-                        <div className="room-list" role="group" aria-label="Räume dieser Etage">
-                          <p className="small room-list-head">
-                            {shownFloor.rooms.length === 0
-                              ? canEdit
-                                ? "Noch keine Räume. Mit „Räume bearbeiten“ ziehst du sie im Grundriss auf."
-                                : "Noch keine Räume."
-                              : plural(shownFloor.rooms.length, "Raum", "Räume")}
-                          </p>
-                          {shownFloor.rooms.map((entry) => (
-                            <button
-                              key={entry.id}
-                              type="button"
-                              aria-pressed={false}
-                              onClick={() => navigate(locationPath(shownFloor.id, entry.id))}
-                            >
-                              <span className="lt-name">{entry.name}</span>
-                              <span className="lt-count">
-                                {entry.hardware === 0
-                                  ? "–"
-                                  : plural(entry.hardware, "Gerät", "Geräte")}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
+                        <RoomList
+                          rooms={shownFloor.rooms}
+                          emptyText={
+                            canEdit
+                              ? "Noch keine Räume. Mit „Räume bearbeiten“ ziehst du sie im Grundriss auf."
+                              : "Noch keine Räume."
+                          }
+                          onOpen={(entry) => navigate(locationPath(shownFloor.id, entry.id))}
+                        />
                       )}
                     </div>
                   </div>

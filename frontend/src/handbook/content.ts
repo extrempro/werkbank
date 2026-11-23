@@ -1568,7 +1568,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Rechts steht immer genau das, was du gewählt hast: Bei einer Stadt, einem Standort oder Abschnitt siehst du, was darunter liegt. Bei einer Etage siehst du den Grundriss und daneben die Räume mit der Zahl der Geräte. Wählst du einen Raum, stehen seine Angaben und Arbeitsplätze neben dem Grundriss; „Alle Räume“ führt zurück. Der Pfad über dem Titel ist anklickbar.",
+                text: "Rechts steht immer genau das, was du gewählt hast: Bei einer Stadt, einem Standort oder Abschnitt siehst du, was darunter liegt. Bei einer Etage siehst du den Grundriss und daneben die Räume: je Raum der Name, darunter Nutzung oder Beschreibung und die belegten Arbeitsplätze (freie Plätze stehen extra da), rechts die Zahl der Geräte. Über „Raum suchen“ findest du Räume nach Name, Beschreibung oder Person, über „Zeigen“ nur Räume mit freien Plätzen, mit Geräten oder ohne Geräte. Ab 13 Räumen ordnet die Werkbank sie nach dem Anfang der Raumnummer in Gruppen, zum Beispiel „Räume 200–299“; jede Gruppe lässt sich zuklappen. Wählst du einen Raum, stehen seine Angaben und Arbeitsplätze neben dem Grundriss; „Alle Räume“ führt zurück. Der Pfad über dem Titel ist anklickbar.",
               },
               {
                 kind: "hint",
@@ -1590,7 +1590,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Ein Gerät ordnest du beim Erfassen oder unter „Bearbeiten“ einem Raum zu. Im Gerät zeigt der Reiter „Standort“ den Raum auf dem Grundriss. Umbenennen und löschen kannst du Stadt, Standort und Abschnitt dort, wo du sie geöffnet hast. Löschen lässt sich nur, was leer ist: ein Raum ohne Geräte, eine Etage ohne Räume und so weiter.",
+                text: "Ein Gerät ordnest du beim Erfassen oder unter „Bearbeiten“ einem Raum zu. Im Gerät zeigt der Reiter „Standort“ den Raum auf dem Grundriss. Am gewählten Raum trägst du unter „Nutzung oder Beschreibung“ freiwillig ein, wofür er dient, zum Beispiel Besprechung oder Technik. Umbenennen und löschen kannst du Stadt, Standort und Abschnitt dort, wo du sie geöffnet hast. Löschen lässt sich nur, was leer ist: ein Raum ohne Geräte, eine Etage ohne Räume und so weiter.",
               },
             ],
             links: [{ to: "/bestand/standorte", label: "Zu den Standorten" }],
