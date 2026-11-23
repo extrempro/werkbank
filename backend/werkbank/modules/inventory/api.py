@@ -32,6 +32,7 @@ from werkbank.modules.inventory.models import (
     InventorySection,
     InventorySite,
     InventoryWorkplace,
+    InventoryWorkplacePurpose,
 )
 from werkbank.modules.inventory.places import RoomPlace, room_place
 from werkbank.modules.inventory.psref import av_summary
@@ -150,6 +151,14 @@ class DepartmentOut(BaseModel):
     used: int
 
 
+class PurposeOut(BaseModel):
+    """Zweck eines Pool-Arbeitsplatzes; ``used`` = so viele Arbeitsplätze."""
+
+    id: int
+    name: str
+    used: int
+
+
 class KitRowOut(BaseModel):
     label: str
     count: int
@@ -169,6 +178,7 @@ class MasterDataOut(BaseModel):
     makers: list[MakerOut]
     reasons: list[ReasonOut]
     departments: list[DepartmentOut]
+    purposes: list[PurposeOut]
     kits: list[KitOut]
 
 
@@ -1065,11 +1075,25 @@ def master_data(db: Session) -> MasterDataOut:
             .group_by(InventoryHardware.retire_reason_id)
         ).all()
     )
-    department_use = dict(
+    department_use: dict[int | None, int] = dict(
         db.execute(
             select(InventoryPosition.department_id, func.count())
             .where(InventoryPosition.department_id.is_not(None))
             .group_by(InventoryPosition.department_id)
+        ).all()
+    )
+    # Abteilungen an Pool-Arbeitsplätzen zählen mit
+    for department_id, count in db.execute(
+        select(InventoryWorkplace.department_id, func.count())
+        .where(InventoryWorkplace.department_id.is_not(None))
+        .group_by(InventoryWorkplace.department_id)
+    ).all():
+        department_use[department_id] = department_use.get(department_id, 0) + count
+    purpose_use = dict(
+        db.execute(
+            select(InventoryWorkplace.purpose_id, func.count())
+            .where(InventoryWorkplace.purpose_id.is_not(None))
+            .group_by(InventoryWorkplace.purpose_id)
         ).all()
     )
     models_by_maker: dict[int, list[ModelOut]] = {}
@@ -1111,6 +1135,14 @@ def master_data(db: Session) -> MasterDataOut:
             for row in db.scalars(
                 select(InventoryDepartment).order_by(
                     func.lower(InventoryDepartment.name), InventoryDepartment.id
+                )
+            ).all()
+        ],
+        purposes=[
+            PurposeOut(id=row.id, name=row.name, used=purpose_use.get(row.id, 0))
+            for row in db.scalars(
+                select(InventoryWorkplacePurpose).order_by(
+                    func.lower(InventoryWorkplacePurpose.name), InventoryWorkplacePurpose.id
                 )
             ).all()
         ],
@@ -1162,6 +1194,7 @@ NamedTable = (
     | type[InventoryMaker]
     | type[InventoryRetireReason]
     | type[InventoryDepartment]
+    | type[InventoryWorkplacePurpose]
     | type[InventoryKit]
 )
 
@@ -1497,9 +1530,72 @@ def delete_department(
     )
     if used:
         raise _conflict("Diese Abteilung ist noch bei Stellen eingetragen.")
+    if db.scalar(
+        select(func.count())
+        .select_from(InventoryWorkplace)
+        .where(InventoryWorkplace.department_id == row.id)
+    ):
+        raise _conflict("Diese Abteilung ist noch bei Pool-Arbeitsplätzen eingetragen.")
     name = row.name
     db.delete(row)
     _audit(db, request, user, "abteilung_geloescht", "abteilung", department_id, {"name": name})
+    db.commit()
+    return master_data(db)
+
+
+# --- Zwecke von Pool-Arbeitsplätzen ------------------------------------------------------------
+
+
+@router.post("/purposes", status_code=status.HTTP_201_CREATED)
+def create_purpose(request: Request, body: NameIn, user: Editor, db: DbDep) -> MasterDataOut:
+    _name_free(db, InventoryWorkplacePurpose, body.name, None)
+    row = InventoryWorkplacePurpose(name=body.name)
+    db.add(row)
+    db.flush()
+    _audit(db, request, user, "zweck_angelegt", "zweck", row.id, {"name": row.name})
+    db.commit()
+    return master_data(db)
+
+
+@router.put("/purposes/{purpose_id}")
+def update_purpose(
+    request: Request, purpose_id: ObjectId, body: NameIn, user: Editor, db: DbDep
+) -> MasterDataOut:
+    row = db.get(InventoryWorkplacePurpose, purpose_id)
+    if row is None:
+        raise _not_found()
+    _name_free(db, InventoryWorkplacePurpose, body.name, row.id)
+    before = row.name
+    row.name = body.name
+    _audit(
+        db,
+        request,
+        user,
+        "zweck_geaendert",
+        "zweck",
+        row.id,
+        {"vorher": before, "nachher": row.name},
+    )
+    db.commit()
+    return master_data(db)
+
+
+@router.delete("/purposes/{purpose_id}")
+def delete_purpose(
+    request: Request, purpose_id: ObjectId, user: Editor, db: DbDep
+) -> MasterDataOut:
+    row = db.get(InventoryWorkplacePurpose, purpose_id)
+    if row is None:
+        raise _not_found()
+    if db.scalar(
+        select(func.count())
+        .select_from(InventoryWorkplace)
+        .where(InventoryWorkplace.purpose_id == row.id)
+    ):
+        raise _conflict("Dieser Zweck ist noch bei Pool-Arbeitsplätzen eingetragen.")
+    name = row.name
+    db.delete(row)
+    _audit(db, request, user, "zweck_geloescht", "zweck", purpose_id, {"name": name})
     db.commit()
     return master_data(db)
 

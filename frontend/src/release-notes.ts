@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.110.0",
+    date: "2026-11-23",
+    summary: "IT-Bestand: Pool-Arbeitsplätze ohne feste Stelle.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Neu ist der Pool-Arbeitsplatz für Plätze, die absichtlich keiner Stelle gehören, etwa beim Desk-Sharing, für Gäste oder Schulungen. Du wählst einen Zweck und auf Wunsch eine verantwortliche Abteilung.",
+          "Pool-Arbeitsplätze zählen nicht als frei. In der Liste findest du sie mit dem Filter „Pool“.",
+          "Die Zwecke pflegst du in den Stammdaten unter „Zwecke für Pool-Arbeitsplätze“.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.109.0",
     date: "2026-11-23",
     summary: "IT-Bestand: übersichtlichere Raumliste neben dem Grundriss.",

@@ -51,6 +51,7 @@ const master: MasterData = {
   makers: [{ id: 5, name: "Hersteller A", models: [{ id: 9, name: "Notebook 14 G10", used: 1 }] }],
   reasons: [{ id: 3, name: "defekt", used: 0 }],
   departments: [],
+  purposes: [],
   kits: [],
 };
 

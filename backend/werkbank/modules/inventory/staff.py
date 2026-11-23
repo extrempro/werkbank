@@ -57,6 +57,7 @@ from werkbank.modules.inventory.models import (
     InventorySite,
     InventoryWorkplace,
     InventoryWorkplacePosition,
+    InventoryWorkplacePurpose,
 )
 from werkbank.modules.inventory.people import (
     PeopleError,
@@ -175,6 +176,7 @@ class WorkplaceBrief(BaseModel):
     name: str
     shared: bool
     place: str | None
+    pool: bool = False
 
 
 class PositionSummary(BaseModel):
@@ -223,6 +225,10 @@ class PositionOut(PositionSummary):
 class WorkplaceIn(BaseModel):
     room_id: int | None = Field(default=None, ge=1)
     shared: bool = False
+    # Pool-Arbeitsplatz: ohne Stelle, mit Zweck (Pflicht) und Abteilung (freiwillig)
+    pool: bool = False
+    purpose_id: int | None = Field(default=None, ge=1)
+    department_id: int | None = Field(default=None, ge=1)
     kit_id: int | None = Field(default=None, ge=1)
     position_ids: list[int] = Field(default_factory=list, max_length=POSITIONS_PER_WORKPLACE)
     note: str = Field(default="", max_length=500)
@@ -267,6 +273,11 @@ class WorkplaceSummary(BaseModel):
     number: str
     name: str
     shared: bool
+    pool: bool
+    purpose_id: int | None
+    purpose: str | None
+    department_id: int | None
+    department: str | None
     room_id: int | None
     place: str | None
     positions: list[PositionBrief]
@@ -596,6 +607,8 @@ def workplace_summaries(db: Session, only: int | None = None) -> list[WorkplaceS
     rows = db.scalars(query.order_by(InventoryWorkplace.number, InventoryWorkplace.id)).all()
     places = _places(db)
     kits = {row.id: row.name for row in db.scalars(select(InventoryKit)).all()}
+    purposes = {row.id: row.name for row in db.scalars(select(InventoryWorkplacePurpose)).all()}
+    departments = {row.id: row.name for row in db.scalars(select(InventoryDepartment)).all()}
     positions = {row.id: row for row in db.scalars(select(InventoryPosition)).all()}
     positions_of: dict[int, list[PositionBrief]] = {}
     for workplace_id, position_id in _links(db):
@@ -618,6 +631,11 @@ def workplace_summaries(db: Session, only: int | None = None) -> list[WorkplaceS
                 number=row.number,
                 name=row.name,
                 shared=row.shared,
+                pool=row.pool,
+                purpose_id=row.purpose_id,
+                purpose=purposes.get(row.purpose_id) if row.purpose_id else None,
+                department_id=row.department_id,
+                department=departments.get(row.department_id) if row.department_id else None,
                 room_id=row.room_id,
                 place=places.get(row.room_id) if row.room_id else None,
                 positions=sorted(positions_of.get(row.id, []), key=lambda entry: entry.number),
@@ -878,16 +896,37 @@ def _workplace_details(row: InventoryWorkplace, position_ids: list[int]) -> dict
         "bezeichnung": row.name,
         "raum": row.room_id,
         "geteilt": row.shared,
+        "pool": row.pool,
+        "zweck": row.purpose_id,
+        "abteilung": row.department_id,
         "vorlage": row.kit_id,
         "stellen": sorted(position_ids),
     }
+
+
+def _check_pool(db: Session, body: WorkplaceIn) -> tuple[int | None, int | None]:
+    """Zweck und Abteilung eines Pool-Arbeitsplatzes; bei anderen Arbeitsplätzen beide leer."""
+    if not body.pool:
+        return None, None
+    if body.position_ids:
+        raise _invalid(
+            "Ein Pool-Arbeitsplatz gehört keiner Stelle. Entferne die Stellen oder wähle "
+            "„Einzelarbeitsplatz“ bzw. „Geteilter Arbeitsplatz“."
+        )
+    if body.purpose_id is None:
+        raise _invalid("Bitte wähle den Zweck des Pool-Arbeitsplatzes.")
+    if db.get(InventoryWorkplacePurpose, body.purpose_id) is None:
+        raise _invalid("Unbekannter Zweck")
+    if body.department_id is not None and db.get(InventoryDepartment, body.department_id) is None:
+        raise _invalid("Unbekannte Abteilung")
+    return body.purpose_id, body.department_id
 
 
 def _check_workplace(
     db: Session, body: WorkplaceIn
 ) -> tuple[list[InventoryPosition], int | None, int | None]:
     position_ids = list(dict.fromkeys(body.position_ids))
-    if not body.shared and len(position_ids) > 1:
+    if not body.shared and not body.pool and len(position_ids) > 1:
         raise _invalid(
             "Ein Einzelarbeitsplatz gehört zu höchstens einer Stelle. Wähle „geteilt“ oder "
             "entferne die übrigen Stellen."
@@ -964,11 +1003,14 @@ def _set_positions(
 
 def _workplace_filter(entry: WorkplaceSummary, filter_: str) -> bool:
     if filter_ == "einzeln":
-        return not entry.shared
+        return not entry.shared and not entry.pool
     if filter_ == "geteilt":
-        return entry.shared
+        return entry.shared and not entry.pool
+    if filter_ == "pool":
+        return entry.pool
     if filter_ == "frei":
-        return not entry.positions
+        # Pool-Arbeitsplätze haben absichtlich keine Stelle und sind nicht „frei“
+        return not entry.positions and not entry.pool
     if filter_ == "unvollstaendig":
         return entry.complete is False
     return True
@@ -979,7 +1021,8 @@ def list_workplaces(
     user: Reader,
     db: DbDep,
     filter_: Annotated[
-        Literal["alle", "einzeln", "geteilt", "frei", "unvollstaendig"], Query(alias="filter")
+        Literal["alle", "einzeln", "geteilt", "pool", "frei", "unvollstaendig"],
+        Query(alias="filter"),
     ] = "alle",
     q: Annotated[str, Query(max_length=100)] = "",
     offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,
@@ -999,6 +1042,9 @@ def list_workplaces(
                     entry.name,
                     entry.place,
                     entry.kit,
+                    entry.purpose,
+                    entry.department,
+                    "pool" if entry.pool else None,
                     *(
                         f"{brief.number} {brief.name} {brief.person_name}"
                         for brief in entry.positions
@@ -1030,6 +1076,7 @@ def read_assignees(user: Reader, db: DbDep) -> AssigneesOut:
                 name=row.name,
                 shared=row.shared,
                 place=places.get(row.room_id) if row.room_id else None,
+                pool=row.pool,
             )
             for row in db.scalars(select(InventoryWorkplace).order_by(InventoryWorkplace.number))
         ],
@@ -1049,11 +1096,15 @@ def create_workplace(request: Request, body: WorkplaceNew, user: Editor, db: DbD
             detail="Bitte gib beide Werte für den Platz an oder lass beide leer.",
         )
     positions, room_id, kit_id = _check_workplace(db, body)
+    purpose_id, department_id = _check_pool(db, body)
     row = InventoryWorkplace(
         number=next_number(db, "arbeitsplatz", InventoryWorkplace),
         name="",
         room_id=room_id,
-        shared=body.shared,
+        shared=body.shared and not body.pool,
+        pool=body.pool,
+        purpose_id=purpose_id,
+        department_id=department_id,
         kit_id=kit_id,
         note=body.note,
         spot_x=round(body.spot_x, 2) if body.spot_x is not None else None,
@@ -1095,10 +1146,18 @@ def update_workplace(
 ) -> WorkplaceOut:
     row = _workplace(db, workplace_id)
     positions, room_id, kit_id = _check_workplace(db, body)
+    purpose_id, department_id = _check_pool(db, body)
+    shared = body.shared and not body.pool
     before = _workplace_details(row, _workplace_position_ids(db, row.id))
     changes: list[str] = []
-    if row.shared != body.shared:
-        changes.append("Typ: " + ("geteilt" if body.shared else "einzeln"))
+    if row.shared != shared or row.pool != body.pool:
+        changes.append("Typ: " + ("Pool" if body.pool else "geteilt" if shared else "einzeln"))
+    if row.purpose_id != purpose_id:
+        new_purpose = db.get(InventoryWorkplacePurpose, purpose_id) if purpose_id else None
+        changes.append(f"Zweck: {new_purpose.name if new_purpose else 'keiner'}")
+    if row.department_id != department_id:
+        new_department = db.get(InventoryDepartment, department_id) if department_id else None
+        changes.append(f"Abteilung: {new_department.name if new_department else 'keine'}")
     if row.room_id != room_id:
         changes.append(
             f"Standort: {place_label(room_place(db, row.room_id))} → "
@@ -1113,7 +1172,10 @@ def update_workplace(
         )
     if row.note != body.note:
         changes.append("Notiz geändert")
-    row.shared = body.shared
+    row.shared = shared
+    row.pool = body.pool
+    row.purpose_id = purpose_id
+    row.department_id = department_id
     if row.room_id != room_id:
         # Neuer Raum: der Platz im alten Raum passt nicht mehr
         row.spot_x = None

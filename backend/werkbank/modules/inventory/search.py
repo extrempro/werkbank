@@ -121,7 +121,10 @@ def _workplaces(db: Session, pattern: str, limit: int) -> list[SearchHit]:
             title=row.number,
             subtitle=" · ".join(
                 part
-                for part in ("geteilt" if row.shared else "einzeln", f"Raum {room}" if room else "")
+                for part in (
+                    "Pool" if row.pool else "geteilt" if row.shared else "einzeln",
+                    f"Raum {room}" if room else "",
+                )
                 if part
             ),
             link=f"/bestand/arbeitsplaetze/{row.id}",

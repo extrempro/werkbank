@@ -170,11 +170,19 @@ export interface Kit {
   rows: KitRow[];
 }
 
+/** Zweck eines Pool-Arbeitsplatzes (Stammdaten); ``used`` = so viele Arbeitsplätze. */
+export interface Purpose {
+  id: number;
+  name: string;
+  used: number;
+}
+
 export interface MasterData {
   kinds: Kind[];
   makers: Maker[];
   reasons: Reason[];
   departments: Department[];
+  purposes: Purpose[];
   kits: Kit[];
 }
 
@@ -262,7 +270,7 @@ export function fetchMasterData(): Promise<MasterData> {
   return getJson(`${BASE}/master-data`);
 }
 
-export type MasterKind = "kinds" | "makers" | "reasons" | "departments";
+export type MasterKind = "kinds" | "makers" | "reasons" | "departments" | "purposes";
 
 export function createEntry(
   kind: MasterKind,
@@ -728,6 +736,7 @@ export interface WorkplaceBrief {
   name: string;
   shared: boolean;
   place: string | null;
+  pool?: boolean;
 }
 
 export interface PositionSummary {
@@ -788,6 +797,12 @@ export interface WorkplaceSummary {
   number: string;
   name: string;
   shared: boolean;
+  /** Pool-Arbeitsplatz: absichtlich ohne Stelle, mit Zweck und freiwilliger Abteilung */
+  pool: boolean;
+  purpose_id: number | null;
+  purpose: string | null;
+  department_id: number | null;
+  department: string | null;
   room_id: number | null;
   place: string | null;
   positions: PositionBrief[];
@@ -813,6 +828,9 @@ export interface Workplace extends WorkplaceSummary {
 export interface WorkplaceInput {
   room_id: number | null;
   shared: boolean;
+  pool: boolean;
+  purpose_id: number | null;
+  department_id: number | null;
   kit_id: number | null;
   position_ids: number[];
   note: string;
@@ -1014,23 +1032,31 @@ export function updateNumberRange(key: NumberRange["key"], prefix: string): Prom
 }
 
 /** Eingaben eines Arbeitsplatzes aus seinem aktuellen Stand, z. B. vor einer Änderung. */
+/** Art eines Arbeitsplatzes für Listen: „Pool“, „geteilt“ oder „einzeln“. */
+export function workplaceKind(entry: Pick<WorkplaceSummary, "pool" | "shared">): string {
+  return entry.pool ? "Pool" : entry.shared ? "geteilt" : "einzeln";
+}
+
 export function workplaceInput(workplace: WorkplaceSummary & { note?: string }): WorkplaceInput {
   return {
     room_id: workplace.room_id,
     shared: workplace.shared,
+    pool: workplace.pool,
+    purpose_id: workplace.purpose_id,
+    department_id: workplace.department_id,
     kit_id: workplace.kit_id,
     position_ids: workplace.positions.map((entry) => entry.id),
     note: workplace.note ?? "",
   };
 }
 
-/** Suche in Stellen über Nummer, Bezeichnung, Person, Abteilung und Standorte. */
-export type WorkplaceFilter = "alle" | "einzeln" | "geteilt" | "frei" | "unvollstaendig";
+export type WorkplaceFilter = "alle" | "einzeln" | "geteilt" | "pool" | "frei" | "unvollstaendig";
 
 export const WORKPLACE_FILTERS: { id: WorkplaceFilter; label: string }[] = [
   { id: "alle", label: "Alle" },
   { id: "einzeln", label: "Einzeln" },
   { id: "geteilt", label: "Geteilt" },
+  { id: "pool", label: "Pool" },
   { id: "frei", label: "Frei" },
   { id: "unvollstaendig", label: "Ausstattung fehlt" },
 ];

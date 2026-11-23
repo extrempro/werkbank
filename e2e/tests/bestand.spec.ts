@@ -326,6 +326,36 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
     page.getByRole("link", { name: `Monitor ${stamp}` }),
   ).toBeVisible();
   await expectNoA11yViolations(page);
+
+  // Pool-Arbeitsplatz im selben Raum: Zweck Pflicht, keine Stellen
+  await page.goto("/bestand/arbeitsplaetze");
+  await page.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
+  const poolForm = page.getByRole("region", { name: "Arbeitsplatz anlegen" });
+  await poolForm
+    .getByRole("combobox", { name: "Raum (Pflicht)" })
+    .fill(`R ${stamp}`);
+  await poolForm
+    .getByRole("option", { name: new RegExp(`Raum R ${stamp}`) })
+    .click();
+  await poolForm
+    .getByRole("button", { name: "Pool-Arbeitsplatz", exact: true })
+    .click();
+  await expect(
+    poolForm.getByRole("combobox", { name: "Stelle hinzufügen" }),
+  ).toHaveCount(0);
+  await poolForm.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
+  await expect(poolForm.getByText("Bitte wähle den Zweck.")).toBeVisible();
+  await poolForm
+    .getByRole("combobox", { name: /^Zweck/ })
+    .selectOption({ label: "Desk-Sharing" });
+  await expectNoA11yViolations(page);
+  await poolForm.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
+  await expect(page).toHaveURL(/\/bestand\/arbeitsplaetze\/\d+$/);
+  await expect(
+    page.getByText("Pool-Arbeitsplatz", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Desk-Sharing", { exact: true })).toBeVisible();
+  await expectNoA11yViolations(page);
 });
 
 test("IT-Bestand: Vorgänge und Technik ohne NinjaOne", async ({ page }) => {

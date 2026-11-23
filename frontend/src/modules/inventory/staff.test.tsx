@@ -103,6 +103,11 @@ const workplaceSummary: WorkplaceSummary = {
   number: "AP-002",
   name: "Fenster",
   shared: false,
+  pool: false,
+  purpose_id: null,
+  purpose: null,
+  department_id: null,
+  department: null,
   room_id: 9,
   place: "0.12 · Haus Nord, EG",
   positions: [
@@ -360,7 +365,8 @@ describe("Arbeitsplätze: anlegen", () => {
         kinds: [],
         makers: [],
         reasons: [],
-        departments: [],
+        departments: [{ id: 5, name: "Abt. Beispiel", used: 0 }],
+        purposes: [{ id: 3, name: "Desk-Sharing", used: 0 }],
         kits: [],
       },
       // Eine Antwort für beide Suchen: Raum und Stelle
@@ -399,8 +405,65 @@ describe("Arbeitsplätze: anlegen", () => {
       expect(calls.find((call) => call.method === "POST")?.body).toEqual({
         room_id: 9,
         shared: false,
+        pool: false,
+        purpose_id: null,
+        department_id: null,
         kit_id: null,
         position_ids: [4],
+        note: "",
+      }),
+    );
+  });
+
+  it("legt einen Pool-Arbeitsplatz mit Zweck und Abteilung an, ohne Stellen", async () => {
+    const calls = stubFetch({
+      "GET /api/inventory/workplaces": { items: [], total: 0 },
+      "GET /api/inventory/assignees": { positions: [], workplaces: [] },
+      "GET /api/inventory/locations": { cities: [] },
+      "GET /api/inventory/master-data": {
+        kinds: [],
+        makers: [],
+        reasons: [],
+        departments: [{ id: 5, name: "Abt. Beispiel", used: 0 }],
+        purposes: [{ id: 3, name: "Desk-Sharing", used: 0 }],
+        kits: [],
+      },
+      "GET /api/inventory/lookup": {
+        items: [{ id: 9, label: "Raum 0.12", detail: "Musterstadt / Haus Nord", floor_id: 4 }],
+        total: 1,
+      },
+      "GET /api/inventory/floors/4": floor,
+      "POST /api/inventory/workplaces": { id: 13 },
+    });
+    render(<WorkplacesPage roles={["Bestand.Editor"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Arbeitsplatz anlegen" }));
+    const form = await screen.findByRole("region", { name: "Arbeitsplatz anlegen" });
+    const room = within(form).getByRole("combobox", { name: "Raum (Pflicht)" });
+    fireEvent.focus(room);
+    fireEvent.change(room, { target: { value: "0.12" } });
+    fireEvent.click(await within(form).findByRole("option", { name: /Raum 0\.12/ }));
+
+    fireEvent.click(within(form).getByRole("button", { name: "Pool-Arbeitsplatz" }));
+    // Beim Pool gibt es keine Stellen
+    expect(within(form).queryByRole("combobox", { name: "Stelle hinzufügen" })).toBeNull();
+    fireEvent.click(within(form).getByRole("button", { name: "Arbeitsplatz anlegen" }));
+    expect(await within(form).findByText("Bitte wähle den Zweck.")).toBeTruthy();
+    expect(calls.some((call) => call.method === "POST")).toBe(false);
+
+    fireEvent.change(within(form).getByLabelText(/^Zweck/), { target: { value: "3" } });
+    fireEvent.change(within(form).getByLabelText("Verantwortliche Abteilung (freiwillig)"), {
+      target: { value: "5" },
+    });
+    fireEvent.click(within(form).getByRole("button", { name: "Arbeitsplatz anlegen" }));
+    await vi.waitFor(() =>
+      expect(calls.find((call) => call.method === "POST")?.body).toEqual({
+        room_id: 9,
+        shared: false,
+        pool: true,
+        purpose_id: 3,
+        department_id: 5,
+        kit_id: null,
+        position_ids: [],
         note: "",
       }),
     );

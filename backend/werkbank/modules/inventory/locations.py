@@ -316,19 +316,21 @@ ROOM_PEOPLE = 20
 
 
 def room_occupancy(db: Session, room_ids: list[int]) -> dict[int, tuple[int, int, list[str]]]:
-    """Je Raum: Zahl der Arbeitsplätze, davon ohne Stelle, und Personen der Stellen dort."""
+    """Je Raum: Zahl der Arbeitsplätze, davon frei (ohne Stelle, kein Pool), und Personen."""
     if not room_ids:
         return {}
     places = db.execute(
-        select(InventoryWorkplace.id, InventoryWorkplace.room_id).where(
+        select(InventoryWorkplace.id, InventoryWorkplace.room_id, InventoryWorkplace.pool).where(
             InventoryWorkplace.room_id.in_(room_ids)
         )
     ).all()
     if not places:
         return {}
     room_of: dict[int, int] = {
-        place_id: room_id for place_id, room_id in places if room_id is not None
+        place_id: room_id for place_id, room_id, _ in places if room_id is not None
     }
+    # Pool-Arbeitsplätze haben absichtlich keine Stelle: nie „frei“
+    pooled = {place_id for place_id, _, pool in places if pool}
     staffed: set[int] = set()
     people: dict[int, list[str]] = {}
     for place_id, person in db.execute(
@@ -344,7 +346,8 @@ def room_occupancy(db: Session, room_ids: list[int]) -> dict[int, tuple[int, int
     result: dict[int, tuple[int, int, list[str]]] = {}
     for place_id, room_id in room_of.items():
         total, free, _ = result.get(room_id, (0, 0, []))
-        result[room_id] = (total + 1, free + (place_id not in staffed), people.get(room_id, []))
+        unstaffed = place_id not in staffed and place_id not in pooled
+        result[room_id] = (total + 1, free + unstaffed, people.get(room_id, []))
     return result
 
 
