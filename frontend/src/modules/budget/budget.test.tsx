@@ -1304,7 +1304,7 @@ describe("Rechnungen", () => {
     ).toBeNull();
     fireEvent.change(second.getByLabelText("Budgetposten"), { target: { value: "11" } });
     // Die zweite Position wird brutto eingetragen; das Netto rechnet die Werkbank.
-    fireEvent.click(second.getByRole("button", { name: "7 %" }));
+    fireEvent.change(second.getByLabelText("Steuersatz (%)"), { target: { value: "7" } });
     fireEvent.click(second.getByRole("button", { name: "Brutto" }));
     expect(second.queryByLabelText(/^Brutto laut Rechnung/)).toBeNull();
     fireEvent.change(second.getByLabelText(/^Betrag brutto/), { target: { value: "214,00" } });

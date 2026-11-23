@@ -19,9 +19,6 @@ export interface AmountCents {
   tax_rate_bp: number;
 }
 
-/** Steuersätze zum schnellen Wählen; jeder andere lässt sich eintippen. */
-export const QUICK_RATES = [1900, 700, 0] as const;
-
 /** Netto aus Brutto, kaufmännisch gerundet wie auf dem Server. */
 export function netFromGross(gross: number, taxRateBp: number): number {
   const divisor = 10_000 + taxRateBp;
@@ -92,7 +89,6 @@ export function AmountFields({
 }) {
   const id = useId();
   const summary = summaryText ?? amountSummary(value);
-  const currentRate = parseRate(value.rate);
   const switchMode = (mode: AmountMode) => {
     if (mode === value.mode) {
       return;
@@ -154,19 +150,6 @@ export function AmountFields({
           />
         </label>
         {extra}
-      </div>
-      <div className="chips" role="group" aria-label="Steuersatz schnell wählen">
-        {QUICK_RATES.map((rate) => (
-          <button
-            key={rate}
-            type="button"
-            className="chip chip-filter"
-            aria-pressed={currentRate === rate}
-            onClick={() => onChange({ ...value, rate: (rate / 100).toLocaleString("de-DE") })}
-          >
-            {formatRate(rate)}
-          </button>
-        ))}
       </div>
       <p id={`${id}-ergebnis`} className="small budget-amount-result" aria-live="polite">
         {summary ?? "Den anderen Wert rechnet die Werkbank aus dem Steuersatz."}

@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.107.0] – 2026-11-23
+
+### Oberfläche
+
+- **Ansicht rechts ohne eigenen Scrollbalken:** Seiten mit Liste und Ansicht (IT-Budget, IT-Bestand, Verleih, Evergreen, Zabbix), M365-Seiten mit Detail und die Angaben im Ticket laufen mit der Seite mit und bleiben stehen, sobald ihr Ende sichtbar ist (`components/stickyPanes.ts`; CSS ohne `max-height`/`overflow` an `.case-main`, `.split-detail`, `.ticket-side`)
+
+### IT-Budget
+
+- Betragseingabe ohne Schnellwahl der Steuersätze; das Feld steht weiter mit 19 % vor
+
+### Behoben
+
+- **Auswahl mit Suche** (z. B. Stelle oder Arbeitsplatz am Gerät): Die Trefferliste wurde vom umgebenden Kasten abgeschnitten und schloss sich beim Klick auf ihre Scrollleiste. Sie steht jetzt im Fluss unter dem Feld und bleibt beim Scrollen offen.
+
+### Dokumentation
+
+- design.md (Liste und Ansicht), Handbuch (Steuersatz)
+
+### Tests
+
+- `stickyPanes.test.ts`, `budget.test.tsx` angepasst
+
 ## [0.106.0] – 2026-11-23
 
 ### IT-Budget

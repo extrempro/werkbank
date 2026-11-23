@@ -158,7 +158,16 @@ export function LookupPicker({
         onBlur={() => window.setTimeout(() => setOpen(false), 150)}
         onKeyDown={onKey}
       />
-      <ul id={listId} role="listbox" aria-label={label} className="lookup-list" hidden={!expanded}>
+      {/* Ein Klick in die Liste (auch auf ihre Scrollleiste) lässt den Fokus im Feld; sonst
+          schlösse sie sich, bevor man scrollen kann. */}
+      <ul
+        id={listId}
+        role="listbox"
+        aria-label={label}
+        className="lookup-list"
+        hidden={!expanded}
+        onMouseDown={(event) => event.preventDefault()}
+      >
         {items.map((item, index) => (
           <li
             key={item.id}

@@ -156,6 +156,7 @@ import { MobileNav } from "./nav/MobileNav";
 import { QuickSearch } from "./nav/QuickSearch";
 import { SideMenu } from "./nav/SideMenu";
 import { TitlePin } from "./nav/TitlePin";
+import { useStickyPanes } from "./stickyPanes";
 
 const SETTINGS_PATH = "/m365/einstellungen";
 const RECOMMENDATIONS_PATH = "/m365/empfehlungen";
@@ -204,6 +205,8 @@ const TASK_REFRESH_MS = 5 * 60 * 1000;
 
 export function Layout({ me }: LayoutProps) {
   const path = usePath();
+  // Ansichten rechts neben Listen laufen mit der Seite mit, ohne eigenen Scrollbalken.
+  useStickyPanes();
   const branding = useBranding();
   const logoUrl = headerLogo(branding);
   const sideMenuId = useId();
