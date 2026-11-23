@@ -158,8 +158,10 @@ def run_fast(db: Session, client: ZabbixClient, now: datetime) -> dict[str, int]
             existing[host.hostid] = row
         _apply_state(row, host, now)
     observe_maintenance(db, existing.values(), now)
-    problems = client.problems()
-    trigger_hosts = client.trigger_hosts(sorted({problem.triggerid for problem in problems}))
+    found = client.problems()
+    trigger_hosts = client.trigger_hosts(sorted({problem.triggerid for problem in found}))
+    # Probleme abgeschalteter Trigger, Items oder Hosts bleiben in Zabbix offen, zählen aber nicht
+    problems = [problem for problem in found if problem.triggerid in trigger_hosts]
     db.execute(delete(ZbxProblem))
     for problem in problems:
         hostids = trigger_hosts.get(problem.triggerid) or []

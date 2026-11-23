@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.104.2] – 2026-11-23
+
+### Behoben
+
+- **Zabbix:** Probleme von abgeschalteten Triggern, Items oder Hosts erschienen weiter in Übersicht, Hosts und Zählern. `problem.get` liefert sie, solange das Problem in Zabbix offen ist; die Werkbank fragt die Trigger jetzt mit `monitored` ab und lässt Probleme ohne überwachten Trigger weg, wie die Problemansicht in Zabbix.
+
+### Tests
+
+- `test_monitoring_zabbix.py`: Problem eines abgeschalteten Triggers wird nicht übernommen, `trigger.get` mit `monitored`
+
 ## [0.104.1] – 2026-11-23
 
 ### Behoben

@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.104.2",
+    date: "2026-11-23",
+    summary: "Zabbix: keine Meldungen mehr zu abgeschalteten Checks.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Probleme von Checks, Triggern oder Hosts, die du in Zabbix abgeschaltet hast, tauchen in der Werkbank nicht mehr auf.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.104.1",
     date: "2026-11-23",
     summary: "Die Werkbank spricht dich überall mit du an.",

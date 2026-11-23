@@ -395,13 +395,20 @@ class ZabbixClient:
         ]
 
     def trigger_hosts(self, triggerids: list[str]) -> dict[str, list[str]]:
-        """Trigger-ID → Host-IDs. problem.get nennt den Host nicht selbst."""
+        """Trigger-ID → Host-IDs, nur für überwachte Trigger. problem.get nennt den Host nicht
+        selbst und liefert auch Probleme, deren Trigger, Item oder Host inzwischen abgeschaltet
+        ist; ``monitored`` lässt genau diese weg (wie die Problemansicht in Zabbix)."""
         out: dict[str, list[str]] = {}
         for start in range(0, len(triggerids), 500):
             chunk = triggerids[start : start + 500]
             for row in self._list(
                 "trigger.get",
-                {"triggerids": chunk, "output": ["triggerid"], "selectHosts": ["hostid"]},
+                {
+                    "triggerids": chunk,
+                    "monitored": True,
+                    "output": ["triggerid"],
+                    "selectHosts": ["hostid"],
+                },
             ):
                 out[_text(row.get("triggerid"), 20)] = [
                     _text(host.get("hostid"), 20)
