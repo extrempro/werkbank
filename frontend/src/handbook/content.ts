@@ -1725,7 +1725,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Gezählt wird im Budget immer brutto. Beträge trägst du am Budgetposten, am Vertrag und an der Rechnungsposition wahlweise netto oder brutto ein, dazu den Steuersatz (19 %, 7 %, 0 % oder einen anderen); den anderen Wert rechnet die Werkbank und zeigt ihn gleich darunter. Das auf einer Seite gewählte Geschäftsjahr gilt auch auf den anderen Seiten.",
+                text: "Gezählt wird im Budget immer brutto. Beträge trägst du am Budgetposten, am Vertrag und an der Rechnungsposition wahlweise netto oder brutto ein, dazu den Steuersatz (Vorgabe 19 %, jeder andere lässt sich eintragen); den anderen Wert rechnet die Werkbank und zeigt ihn gleich darunter. Das auf einer Seite gewählte Geschäftsjahr gilt auch auf den anderen Seiten.",
               },
             ],
           },

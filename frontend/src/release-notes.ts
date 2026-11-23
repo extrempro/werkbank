@@ -24,6 +24,26 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.107.0",
+    date: "2026-11-23",
+    summary: "Nur noch ein Scrollbalken neben Listen und Auswahllisten, die sich scrollen lassen.",
+    sections: [
+      {
+        area: "Alle Bereiche",
+        entries: [
+          "Die Ansicht rechts neben einer Liste hat keinen eigenen Scrollbalken mehr. Sie scrollt mit der Seite mit und bleibt stehen, sobald ihr Ende zu sehen ist.",
+          "Auswahllisten mit Suche, zum Beispiel für Stelle oder Arbeitsplatz am Gerät, lassen sich jetzt scrollen und werden nicht mehr abgeschnitten.",
+        ],
+      },
+      {
+        area: "IT-Budget",
+        entries: [
+          "Die Schnellwahl 19 %, 7 % und 0 % beim Steuersatz ist weg. Das Feld steht weiter auf 19 %; einen anderen Satz trägst du einfach ein.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.106.0",
     date: "2026-11-23",
     summary: "IT-Budget: Beträge netto oder brutto, PDF-Symbol und Links zum Weitergeben.",

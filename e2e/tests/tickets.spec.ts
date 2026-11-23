@@ -320,6 +320,8 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
   await expect(
     page.getByText("Geht per E-Mail an: m.muster@example.com"),
   ).toBeVisible();
+  // Am Seitenende liegt die Antwortleiste an ihrem Platz und verdeckt keine Links.
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expectNoA11yViolations(page);
   await page
     .getByRole("textbox", { name: /Antwort an M. Muster/ })
