@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.108.0] – 2026-11-23
+
+### IT-Bestand
+
+- **Lenovo PSREF wieder abrufbar:** Lenovo lehnt Abrufe ohne Browser-Kennung mit 403 und der Seite „PSREF page not found“ ab; die offizielle Schnittstelle `psrefapi.lenovo.com` verlangt eine Anmeldung. Neu ist die Einstellung „Absenderkennung für PSREF“ in der Verwaltung bei NinjaOne (`psref_user_agent`, leer: Kennung der Werkbank). Die Kennung steht nicht im Code.
+- **Grund eines Fehlers sichtbar:** am Modell gespeichert (`psref_error`, Migration `0073`), im Reiter „Technik“ angezeigt, im Protokoll (`grund`) und als Warnung im Log; bei der Ablehnung durch Lenovo mit Hinweis auf die Absenderkennung
+
+### Betrieb
+
+- Das Backend gibt Meldungen der Werkbank (`werkbank.*`) ab `LOG_LEVEL` im Container-Log aus; bisher gingen Hinweise und Warnungen aus Anfragen verloren
+
+### Dokumentation
+
+- spec.md, datenschutz.md, Handbuch (IT-Bestand, PSREF)
+
+### Tests
+
+- `test_inventory_psref.py` (Absenderkennung, Erkennen der Ablehnung, Fehlergrund in Ansicht und Protokoll, Einstellung), `inventory.test.tsx`, `cases.test.tsx`
+
 ## [0.107.0] – 2026-11-23
 
 ### Oberfläche

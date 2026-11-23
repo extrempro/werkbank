@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.108.0",
+    date: "2026-11-23",
+    summary: "IT-Bestand: PSREF wieder abrufbar, und du siehst, warum ein Abruf scheitert.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Lenovo lässt Abrufe aus PSREF zurzeit nur zu, wenn sie sich als Browser melden. In der Verwaltung bei NinjaOne gibt es dafür das neue Feld „Absenderkennung für PSREF“.",
+          "Klappt ein Abruf nicht, steht im Reiter „Technik“ und im Protokoll jetzt der Grund.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.107.0",
     date: "2026-11-23",
     summary: "Nur noch ein Scrollbalken neben Listen und Auswahllisten, die sich scrollen lassen.",

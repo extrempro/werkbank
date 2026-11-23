@@ -108,7 +108,17 @@ def search_url(text: str) -> str:
 Getter = Callable[[str, dict[str, str]], Any]
 
 
-def http_getter(http: httpx.Client) -> Getter:
+# Lenovo zeigt Abrufen ohne Browser-Kennung diese Seite (mit Status 403)
+BLOCKED_PAGE = "PSREF page not found"
+# Zeichen, die in der Absenderkennung erlaubt sind (sichtbares ASCII und Leerzeichen)
+_AGENT = re.compile(r"^[\x20-\x7e]{1,300}$")
+
+
+def valid_user_agent(value: str) -> bool:
+    return bool(_AGENT.match(value))
+
+
+def http_getter(http: httpx.Client, user_agent: str = USER_AGENT) -> Getter:
     def get(path: str, params: dict[str, str]) -> Any:
         try:
             response = http.get(
@@ -117,13 +127,18 @@ def http_getter(http: httpx.Client) -> Getter:
                 headers={
                     "Accept": "application/json",
                     "Referer": f"{BASE_URL}/",
-                    "User-Agent": USER_AGENT,
+                    "User-Agent": user_agent,
                 },
             )
         except httpx.HTTPError as exc:
             raise PsrefError(f"PSREF nicht erreichbar: {type(exc).__name__}") from exc
         if response.status_code == 404:
             return None
+        if response.status_code == 403 and BLOCKED_PAGE in response.text[:2000]:
+            raise PsrefError(
+                "PSREF lehnt den Abruf ab (403). Lenovo lässt nur Abrufe mit Browser-Kennung zu; "
+                "trag sie in der Verwaltung als Absenderkennung ein."
+            )
         if response.status_code >= 400:
             raise PsrefError(f"PSREF antwortet mit {response.status_code}.")
         try:
@@ -235,11 +250,12 @@ def av_summary(specs: list[dict[str, str]] | tuple[Spec, ...]) -> dict[str, str]
     return found
 
 
-def fetch(lookup: str, value: str) -> PsrefResult:
+def fetch(lookup: str, value: str, user_agent: str = USER_AGENT) -> PsrefResult:
     """Ein Abruf mit eigener Verbindung; ``lookup`` ist „modell“ (MTM) oder „monitor“."""
     with httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=False) as http:
-        get = http_getter(http)
+        get = http_getter(http, user_agent)
         return lookup_model(get, value) if lookup == "modell" else lookup_monitor(get, value)
 
 
-Fetcher = Callable[[str, str], PsrefResult]
+# (Art, Wert, Absenderkennung) → Ergebnis
+Fetcher = Callable[[str, str, str], PsrefResult]

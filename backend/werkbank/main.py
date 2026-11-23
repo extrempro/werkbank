@@ -1,5 +1,7 @@
 """Einstiegspunkt der Werkbank-API."""
 
+import logging
+
 from fastapi import FastAPI, Response, status
 
 from werkbank import __version__
@@ -69,10 +71,28 @@ from werkbank.security import SecurityHeadersMiddleware
 from werkbank.web import mount_frontend
 
 
+def configure_logging(level: str) -> None:
+    """Meldungen der Werkbank (Logger „werkbank.*“) ins Log des Containers, ab ``LOG_LEVEL``.
+
+    uvicorn richtet nur seine eigenen Logger ein; ohne das gingen Hinweise und Warnungen aus
+    Anfragen (z. B. ein fehlgeschlagener PSREF-Abruf) verloren.
+    """
+    logger = logging.getLogger("werkbank")
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        logger.addHandler(handler)
+        # nicht zusätzlich an den Root-Logger weiterreichen (sonst doppelt, falls der Server
+        # selbst einen einrichtet)
+        logger.propagate = False
+    logger.setLevel(level.upper())
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Erzeugt die FastAPI-Anwendung."""
     settings = settings or get_settings()
     settings.validate_for_startup()
+    configure_logging(settings.log_level)
 
     app = FastAPI(
         title="Werkbank",

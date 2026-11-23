@@ -69,6 +69,7 @@ function NinjaForm({
   const [roleIds, setRoleIds] = useState<number[]>(stored.role_ids);
   const [monitorField, setMonitorField] = useState(stored.monitor_field);
   const [psrefEnabled, setPsrefEnabled] = useState(stored.psref_enabled);
+  const [psrefAgent, setPsrefAgent] = useState(stored.psref_user_agent);
   const [options, setOptions] = useState<NinjaOptions | null>(null);
   const [message, setMessage] = useState<Message | null>(initialMessage);
   const [busy, setBusy] = useState(false);
@@ -89,6 +90,7 @@ function NinjaForm({
         : roleIds,
       monitor_field: monitorField.trim(),
       psref_enabled: psrefEnabled,
+      psref_user_agent: psrefAgent.trim(),
     };
     if (removeSecret) {
       update.client_secret = "";
@@ -274,6 +276,22 @@ function NinjaForm({
           Einmal am Tag fragt die Werkbank für Lenovo-Rechner (Modell als Maschinentyp, z. B.
           10T7004BGE) und Lenovo-Monitore die technischen Daten bei psref.lenovo.com ab. Gesendet
           wird nur die Modellbezeichnung, keine Seriennummer.
+        </p>
+        <label>
+          Absenderkennung für PSREF (freiwillig)
+          <input
+            type="text"
+            value={psrefAgent}
+            maxLength={300}
+            spellCheck={false}
+            aria-describedby={`${secretHint}-psref-agent`}
+            onChange={(event) => setPsrefAgent(event.target.value)}
+          />
+        </label>
+        <p className="small" id={`${secretHint}-psref-agent`}>
+          Leer lassen: Die Werkbank meldet sich als „Werkbank“. Lenovo lässt zurzeit nur Abrufe mit
+          der Kennung eines Browsers zu; dann trag hier die Kennung (User-Agent) eines aktuellen
+          Browsers ein. Nur sichtbare Zeichen, ohne Umlaute.
         </p>
         <label className="check-label">
           <input

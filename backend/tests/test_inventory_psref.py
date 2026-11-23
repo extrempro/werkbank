@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from sqlalchemy import delete, select
@@ -14,7 +15,7 @@ from sqlalchemy.orm import Session
 from tests.test_admin_settings import HEADERS, admin, settings_with_key
 from tests.test_m365_api import client_for
 from werkbank.core.app_settings import NINJA_KEY, set_setting
-from werkbank.core.models import AppSetting
+from werkbank.core.models import AppSetting, AuditLog
 from werkbank.modules.inventory.models import (
     InventoryHardware,
     InventoryKind,
@@ -22,17 +23,20 @@ from werkbank.modules.inventory.models import (
     InventoryModel,
 )
 from werkbank.modules.inventory.psref import (
+    USER_AGENT,
     PsrefError,
     PsrefResult,
     Spec,
     av_summary,
     clean,
+    http_getter,
     is_mtm,
     lookup_model,
     lookup_monitor,
     monitor_keys,
     parse_model_specs,
     parse_product_specs,
+    valid_user_agent,
 )
 from werkbank.modules.inventory.psref_sync import due, get_psref_fetcher, run_psref
 
@@ -160,6 +164,30 @@ def test_lookups_with_fake_getter() -> None:
     assert missing.specs == () and missing.url.endswith("/Search?kw=X1")
 
 
+def test_http_getter_sends_agent_and_explains_the_block() -> None:
+    seen: list[str] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers["User-Agent"])
+        if request.headers["User-Agent"] == USER_AGENT:
+            page = "<html><head><title>PSREF page not found</title></head></html>"
+            return httpx.Response(403, text=page)
+        if request.url.params.get("model_code") == "KAPUTT":
+            return httpx.Response(500, text="Fehler")
+        return httpx.Response(200, json=MODEL_ANSWER)
+
+    with httpx.Client(transport=httpx.MockTransport(answer)) as http:
+        with pytest.raises(PsrefError, match=r"lehnt den Abruf ab \(403\).*Absenderkennung"):
+            http_getter(http)("/api/model/Info/SpecData", {"model_code": "10T7004BGE"})
+        browser = http_getter(http, "Mozilla/5.0 Beispiel")
+        assert browser("/api/model/Info/SpecData", {"model_code": "10T7004BGE"}) == MODEL_ANSWER
+        with pytest.raises(PsrefError, match="antwortet mit 500"):
+            browser("/api/model/Info/SpecData", {"model_code": "KAPUTT"})
+    assert seen[:2] == [USER_AGENT, "Mozilla/5.0 Beispiel"]
+    assert valid_user_agent("Mozilla/5.0 (Windows NT 10.0)")
+    assert not valid_user_agent("Kennung mit Ümlaut") and not valid_user_agent("a\nb")
+
+
 # --- mit Datenbank --------------------------------------------------------------------
 
 
@@ -201,10 +229,12 @@ def hardware(db: Session, kind: str, maker: str, model: str, serial: str) -> Inv
 class FakeFetcher:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str]] = []
+        self.agents: list[str] = []
         self.fail = False
 
-    def __call__(self, lookup: str, value: str) -> PsrefResult:
+    def __call__(self, lookup: str, value: str, user_agent: str) -> PsrefResult:
         self.calls.append((lookup, value))
+        self.agents.append(user_agent)
         if self.fail:
             raise PsrefError("PSREF nicht erreichbar: ConnectError")
         if lookup == "modell":
@@ -249,6 +279,24 @@ def test_run_psref_only_when_enabled_and_due(db: Session) -> None:
     assert run_psref(db, fake, pause=0) == 1
     db.refresh(tiny_model)
     assert tiny_model.psref_status == "fehler" and tiny_model.psref_specs
+    assert tiny_model.psref_error == "PSREF nicht erreichbar: ConnectError"
+    # Ohne Eintrag in der Verwaltung die Kennung der Werkbank
+    assert set(fake.agents) == {USER_AGENT}
+
+    # Klappt es wieder, ist der Grund weg; die Kennung aus der Verwaltung wird genutzt
+    set_setting(
+        db,
+        NINJA_KEY,
+        {"enabled": False, "psref_enabled": True, "psref_user_agent": "Mozilla/5.0 Beispiel"},
+        None,
+    )
+    fake.fail = False
+    tiny_model.psref_checked_at = datetime.now(UTC) - timedelta(days=31)
+    db.commit()
+    assert run_psref(db, fake, pause=0) == 1
+    db.refresh(tiny_model)
+    assert tiny_model.psref_status == "ok" and tiny_model.psref_error == ""
+    assert fake.agents[-1] == "Mozilla/5.0 Beispiel"
 
 
 @pytest.mark.db
@@ -284,6 +332,19 @@ def test_psref_in_hardware_view_and_refresh_endpoint(db: Session) -> None:
     # Kein Lenovo-Gerät
     assert editor.post(f"{BASE}/hardware/{other.id}/psref", headers=HEADERS).status_code == 409
 
+    # Fehler: Grund in der Ansicht und im Protokoll
+    fake.fail = True
+    failed = editor.post(url, headers=HEADERS).json()["psref"]
+    assert failed["status"] == "fehler"
+    assert failed["error"] == "PSREF nicht erreichbar: ConnectError"
+    entry = db.scalars(
+        select(AuditLog)
+        .where(AuditLog.action == "bestand.psref_abgerufen")
+        .order_by(AuditLog.id.desc())
+    ).first()
+    assert entry is not None
+    assert entry.details == {"ergebnis": "fehler", "grund": "PSREF nicht erreichbar: ConnectError"}
+
 
 @pytest.mark.db
 def test_admin_psref_toggle(db: Session, tmp_path: Path) -> None:
@@ -297,3 +358,18 @@ def test_admin_psref_toggle(db: Session, tmp_path: Path) -> None:
     )
     assert saved.status_code == 200, saved.text
     assert saved.json()["psref_enabled"] is True
+    assert saved.json()["psref_user_agent"] == ""
+    agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Beispiel"
+    saved = client.put(
+        "/api/admin/settings/ninjaone",
+        json={"enabled": False, "region": "eu", "psref_enabled": True, "psref_user_agent": agent},
+        headers=HEADERS,
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["psref_user_agent"] == agent
+    bad = client.put(
+        "/api/admin/settings/ninjaone",
+        json={"enabled": False, "region": "eu", "psref_user_agent": "Kennung mit Ümlaut"},
+        headers=HEADERS,
+    )
+    assert bad.status_code == 422

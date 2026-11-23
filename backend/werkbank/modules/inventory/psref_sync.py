@@ -29,10 +29,12 @@ from werkbank.modules.inventory.models import (
 from werkbank.modules.inventory.psref import (
     REFRESH_FAILED,
     REFRESH_OK,
+    USER_AGENT,
     Fetcher,
     PsrefError,
     fetch,
     is_mtm,
+    valid_user_agent,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,6 +52,13 @@ STATUS_ERROR = "fehler"
 def psref_enabled(db: Session) -> bool:
     stored: Any = get_setting(db, NINJA_KEY)
     return isinstance(stored, dict) and stored.get("psref_enabled") is True
+
+
+def psref_user_agent(db: Session) -> str:
+    """Absenderkennung für PSREF aus der Verwaltung; ohne Eintrag die der Werkbank."""
+    stored: Any = get_setting(db, NINJA_KEY)
+    value = stored.get("psref_user_agent") if isinstance(stored, dict) else None
+    return value if isinstance(value, str) and valid_user_agent(value) else USER_AGENT
 
 
 def lookup_for(db: Session, model: InventoryModel) -> tuple[str, str] | None:
@@ -77,12 +86,14 @@ def refresh_model(
     if lookup is None:
         return None
     try:
-        result = fetcher(*lookup)
+        result = fetcher(*lookup, psref_user_agent(db))
     except PsrefError as exc:
-        logger.info("PSREF für Modell %s: %s", model.id, exc)
+        logger.warning("PSREF für Modell %s: %s", model.id, exc)
         model.psref_status = STATUS_ERROR
+        model.psref_error = str(exc)[:300]
         model.psref_checked_at = now
         return STATUS_ERROR
+    model.psref_error = ""
     model.psref_checked_at = now
     model.psref_url = result.url[:300]
     if not result.specs:
@@ -165,6 +176,9 @@ def refresh_psref(
             detail="Für dieses Gerät gibt es keine Daten in PSREF (nur Lenovo-Rechner mit "
             "Maschinentyp und Lenovo-Monitore).",
         )
-    _audit(db, request, user, "psref_abgerufen", "modell", model.id, {"ergebnis": result})
+    details: dict[str, Any] = {"ergebnis": result}
+    if model.psref_error:
+        details["grund"] = model.psref_error
+    _audit(db, request, user, "psref_abgerufen", "modell", model.id, details)
     db.commit()
     return hardware_out(db, row)

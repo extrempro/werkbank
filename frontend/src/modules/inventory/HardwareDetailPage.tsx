@@ -627,6 +627,9 @@ function PsrefSection({
       ) : (
         <p className="small">Für dieses Modell wurden noch keine Daten aus PSREF geholt.</p>
       )}
+      {psref?.status === "fehler" && psref.error && (
+        <p className="field-error">Grund: {psref.error}</p>
+      )}
       {highlights.length > 0 && (
         <dl className="facts">
           {highlights.map((row) => (

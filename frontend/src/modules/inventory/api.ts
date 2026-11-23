@@ -1090,6 +1090,8 @@ export interface NinjaSettings {
   monitor_field: string;
   /** Technische Daten von Lenovo-Modellen aus Lenovo PSREF holen */
   psref_enabled: boolean;
+  /** Absenderkennung für PSREF; leer: Kennung der Werkbank */
+  psref_user_agent: string;
 }
 
 export interface NinjaUpdate {
@@ -1100,6 +1102,7 @@ export interface NinjaUpdate {
   role_ids: number[];
   monitor_field: string;
   psref_enabled: boolean;
+  psref_user_agent: string;
   /** Weglassen: bleibt. Leerer Text: löschen. */
   client_secret?: string;
 }
@@ -1194,6 +1197,8 @@ export interface PsrefInfo {
   url: string;
   name: string;
   status: PsrefStatus;
+  /** Grund des letzten Fehlers; leer, wenn der letzte Abruf geklappt hat */
+  error?: string;
   checked_at: string | null;
   /** Kamera, Mikrofon, Lautsprecher, soweit PSREF sie nennt */
   av: Partial<Record<"camera" | "microphone" | "speakers", string>>;
