@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.105.0",
+    date: "2026-11-23",
+    summary: "IT-Monitoring: neue Zabbix-Übersicht mit dem aktuellen Stand auf einen Blick.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Oben in der Zabbix-Übersicht zeigt eine farbige Karte sofort, ob alles in Ordnung ist oder schwere Probleme offen sind, und welcher Standort am meisten betroffen ist.",
+          "Die offenen Probleme stehen als Balken nach Schweregrad da. Ein Klick auf einen Schweregrad filtert die Liste.",
+          "Jeder Standort hat eine Kachel mit einem Kästchen je Host. Die Farbe zeigt, wie es dem Host geht. Ein Klick auf die Kachel zeigt nur die Probleme dieses Standorts.",
+          "Neu ist der Verlauf der letzten 24 Stunden. Er füllt sich ab dem Update.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.104.2",
     date: "2026-11-23",
     summary: "Zabbix: keine Meldungen mehr zu abgeschalteten Checks.",
