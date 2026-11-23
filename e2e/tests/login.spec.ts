@@ -29,7 +29,7 @@ test("Admin sieht alle Bereiche", async ({ page }) => {
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: /^Guten (Morgen|Tag|Abend), Erika Beispiel$/,
+      name: /^(Guten Morgen|Hallo|Guten Abend), Erika$/,
     }),
   ).toBeVisible();
   // Audit-Log und Einstellungen stehen im eigenen Bereich „Verwaltung“.
