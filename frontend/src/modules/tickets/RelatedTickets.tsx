@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { Link } from "../../components/Link";
-import { STATUS_LABELS, ticketLabel, ticketPath, type HardwareTickets } from "./api";
+import { STATUS_LABELS, ticketLabel, ticketPath, type TicketRefs } from "./api";
 
 /** Tickets zu einem Gerät oder einer Stelle im IT-Bestand: eigene Bereiche einzeln, die übrigen
  * nur als Anzahl. Ohne Tickets oder ohne Zugriff erscheint nichts. */
@@ -8,10 +8,10 @@ export function RelatedTickets({
   load,
   title = "Tickets",
 }: {
-  load: () => Promise<HardwareTickets>;
+  load: () => Promise<TicketRefs>;
   title?: string;
 }) {
-  const [data, setData] = useState<HardwareTickets | null>(null);
+  const [data, setData] = useState<TicketRefs | null>(null);
   const headingId = useId();
   useEffect(() => {
     let active = true;

@@ -20,7 +20,6 @@ from werkbank.core.admin_settings import ADDRESS_PATTERN
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, SettingsDep
 from werkbank.core.sessions import now_utc
-from werkbank.modules.inventory.models import InventoryHardware, InventoryKind
 from werkbank.modules.inventory.search import escape_like
 from werkbank.modules.tickets.access import (
     AccessDep,
@@ -36,6 +35,7 @@ from werkbank.modules.tickets.mailbox import MailboxError, available, new_http, 
 from werkbank.modules.tickets.models import (
     AREA_ADMIN,
     AREA_EDIT,
+    ENTRY_FORWARD,
     ENTRY_INBOUND,
     ENTRY_NOTE,
     OPEN_STATUSES,
@@ -49,9 +49,10 @@ from werkbank.modules.tickets.models import (
     TicketAttachment,
     TicketCategory,
     TicketEntry,
+    TicketMailOut,
     TicketParticipant,
 )
-from werkbank.modules.tickets.outbound import event_text, send_to_reporter
+from werkbank.modules.tickets.outbound import build_forward, event_text, send_to_reporter
 from werkbank.modules.tickets.service import (
     PRIORITY_LABELS,
     STATUS_LABELS,
@@ -154,6 +155,10 @@ class AttachmentOut(BaseModel):
 class EntryOut(BaseModel):
     id: str
     kind: str
+    # Eingehende Mails: reporter (Melder), participant (Beteiligte), external (von außen)
+    origin: str
+    # Empfänger gesendeter Antworten und Weiterleitungen
+    recipients: str
     # Beim Zusammenführen übernommen: Nummer des Quelltickets
     from_number: int | None
     body: str
@@ -181,14 +186,6 @@ class SlaOut(BaseModel):
     response_met: bool | None
     solution_met: bool | None
     paused: bool
-
-
-class DeviceRef(BaseModel):
-    id: int
-    name: str
-    kind: str
-    inventory_no: str
-    serial: str
 
 
 class PermissionsOut(BaseModel):
@@ -228,9 +225,8 @@ class TicketOut(TicketItem):
     categories: list[CategoryRef]
     reminder_note: str
     sla: SlaOut | None
-    # Rechte im IT-Bestand: Gerät und Angaben zum Melder sichtbar
+    # Rechte im IT-Bestand: Angaben zum Melder sichtbar
     inventory: bool
-    device: DeviceRef | None
     reporter_inventory: ReporterInventory | None
     merged_into: int | None
     retention: RetentionOut
@@ -354,6 +350,8 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
             EntryOut(
                 id=str(e.id),
                 kind=e.kind,
+                origin=_origin(e, ticket, {p.mail for p in participants}),
+                recipients=e.recipients,
                 body=e.body,
                 quote=e.quote,
                 from_number=e.from_number,
@@ -399,7 +397,6 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
         if area is not None and area.sla_enabled and ticket.sla_solution_due is not None
         else None,
         inventory=access.inventory,
-        device=_device_ref(db, ticket.hardware_id) if access.inventory else None,
         reporter_inventory=reporter_inventory(db, ticket.reporter_mail)
         if access.inventory and ticket.reporter_mail
         else None,
@@ -426,26 +423,22 @@ def _retention(
     )
 
 
+def _origin(entry: TicketEntry, ticket: Ticket, participants: set[str]) -> str:
+    """Wer eine eingehende Mail geschickt hat: Melder, Beteiligte oder jemand von außen."""
+    if entry.kind != ENTRY_INBOUND:
+        return ""
+    sender = entry.author_mail.lower()
+    if not sender or entry.original or sender == ticket.reporter_mail.lower():
+        return "reporter"
+    if sender in {p.lower() for p in participants}:
+        return "participant"
+    return "external"
+
+
 def _merged_number(db: Session, ticket: Ticket) -> int | None:
     if ticket.merged_into_id is None:
         return None
     return db.scalar(select(Ticket.number).where(Ticket.id == ticket.merged_into_id))
-
-
-def _device_ref(db: Session, hardware_id: int | None) -> DeviceRef | None:
-    if hardware_id is None:
-        return None
-    hw = db.get(InventoryHardware, hardware_id)
-    if hw is None:
-        return None
-    kind = db.get(InventoryKind, hw.kind_id)
-    return DeviceRef(
-        id=hw.id,
-        name=hw.name,
-        kind=kind.name if kind else "",
-        inventory_no=hw.inventory_no or "",
-        serial=hw.serial,
-    )
 
 
 # --- Endpunkte -----------------------------------------------------------------------------
@@ -586,7 +579,7 @@ def create_ticket(body: TicketIn, access: AccessDep, db: DbDep, settings: Settin
     if area is None or not area.active or not access.can_read(area.id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bereich nicht gefunden.")
     if not access.can_edit(area.id):
-        raise forbidden("Mit „Nur lesen“ kannst du keine Tickets anlegen.")
+        raise forbidden("Dafür brauchst du im Bereich die Rolle „Bearbeiten“.")
     me_actor = actor(access)
     ticket = Ticket(
         area_id=area.id,
@@ -657,7 +650,7 @@ def change_ticket(
     """Status und/oder Zuständigkeit ändern (mit Prüfung der Rechte)."""
     ticket = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(ticket.area_id):
-        raise forbidden("Mit „Nur lesen“ kannst du Status und Zuständigkeit nicht ändern.")
+        raise forbidden("Dafür brauchst du im Bereich die Rolle „Bearbeiten“.")
     if ticket.status != body.expected_status or (ticket.assignee_oid or None) != (
         body.expected_assignee_oid or None
     ):
@@ -822,7 +815,7 @@ def change_details(
     """Priorität und Beteiligte."""
     ticket = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(ticket.area_id):
-        raise forbidden("Mit „Nur lesen“ kannst du die Angaben nicht ändern.")
+        raise forbidden("Dafür brauchst du im Bereich die Rolle „Bearbeiten“.")
     me_actor = actor(access)
     if body.priority != ticket.priority:
         system_entry(
@@ -868,7 +861,7 @@ def move_ticket(
     """In einen anderen Bereich verschieben. Wer das Ziel nicht sieht, verliert den Zugriff."""
     ticket = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(ticket.area_id):
-        raise forbidden("Mit „Nur lesen“ kannst du Tickets nicht verschieben.")
+        raise forbidden("Dafür brauchst du im Bereich die Rolle „Bearbeiten“.")
     target = db.get(TicketArea, body.area_id)
     if target is None or not target.active or target.id == ticket.area_id:
         raise HTTPException(
@@ -915,7 +908,7 @@ class NoteIn(BaseModel):
 def add_note(
     number: TicketNumber, body: NoteIn, access: AccessDep, db: DbDep, settings: SettingsDep
 ) -> TicketOut:
-    """Interne Notiz (auch mit „Nur lesen“). Der Melder sieht sie nicht und bekommt keine Mail."""
+    """Interne Notiz. Der Melder sieht sie nicht und bekommt keine Mail."""
     ticket = _visible_ticket(db, access, number, write=True)
     db.add(
         TicketEntry(
@@ -936,6 +929,8 @@ class ReplyIn(BaseModel):
     body: str = Field(min_length=1, max_length=BODY_MAX)
     # Status danach: "" = unverändert
     status_after: Literal["", "waiting", "solved"] = ""
+    # An alle: Beteiligte in Kopie; sonst nur an den Melder
+    reply_all: bool = False
 
     @field_validator("body")
     @classmethod
@@ -950,10 +945,11 @@ class ReplyIn(BaseModel):
 def send_reply(
     number: TicketNumber, body: ReplyIn, access: AccessDep, db: DbDep, settings: SettingsDep
 ) -> TicketOut:
-    """Antwort an den Melder (Mail aus dem Postfach des Bereichs, Beteiligte in Kopie)."""
+    """Antwort an den Melder (Mail aus dem Postfach des Bereichs); „an alle“ mit den
+    Beteiligten in Kopie."""
     ticket = _visible_ticket(db, access, number, write=True)
     if not access.can_edit(ticket.area_id):
-        raise forbidden("Mit „Nur lesen“ kannst du nicht antworten.")
+        raise forbidden("Dafür brauchst du im Bereich die Rolle „Bearbeiten“.")
     area = db.get(TicketArea, ticket.area_id)
     problem = reply_problem(settings, area, ticket)
     if problem or area is None:
@@ -966,8 +962,17 @@ def send_reply(
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
             ) from exc
+        sent_to: list[str] = []
         message_id, error = send_to_reporter(
-            db, mailbox, area, ticket, body.body, kind="antwort", auto=False
+            db,
+            mailbox,
+            area,
+            ticket,
+            body.body,
+            kind="antwort",
+            auto=False,
+            cc_all=body.reply_all,
+            sent_to=sent_to,
         )
     if message_id is None:
         db.commit()
@@ -983,6 +988,7 @@ def send_reply(
             author_oid=access.oid,
             author_name=me_actor.name,
             message_id=message_id,
+            recipients=", ".join(sent_to)[:2000],
         )
     )
     now = now_utc()
@@ -1010,7 +1016,109 @@ def send_reply(
         set_status(ticket, STATUS_IN_PROGRESS, db)
         system_entry(db, ticket, f"Status: {STATUS_LABELS[old]} → In Arbeit", me_actor)
     ticket.updated_at = now
-    protocol(db, me_actor, "ticket_antwort", ticket=ticket)
+    protocol(db, me_actor, "ticket_antwort", ticket=ticket, details={"an_alle": body.reply_all})
+    db.commit()
+    db.refresh(ticket)
+    return _detail(db, settings, access, ticket)
+
+
+class ForwardIn(BaseModel):
+    to: list[Mail] = Field(min_length=1, max_length=10)
+    text: str = Field(default="", max_length=4000)
+    # Eintrag, der weitergeleitet wird; leer = die ursprüngliche Meldung
+    entry_id: str | None = Field(default=None, max_length=36)
+    attachments: bool = True
+
+
+@router.post("/{number}/forward", status_code=status.HTTP_201_CREATED)
+def forward(
+    number: TicketNumber, body: ForwardIn, access: AccessDep, db: DbDep, settings: SettingsDep
+) -> TicketOut:
+    """Nachricht aus dem Postfach des Bereichs weiterleiten. Der Melder bekommt davon nichts mit;
+    im Verlauf steht ein interner Eintrag. Antworten landen über die Nummer im Ticket."""
+    ticket = _visible_ticket(db, access, number, write=True)
+    if not access.can_edit(ticket.area_id):
+        raise forbidden("Dafür brauchst du im Bereich die Rolle „Bearbeiten“.")
+    area = db.get(TicketArea, ticket.area_id)
+    if area is None or not area.mailbox:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Für den Bereich ist kein Postfach eingetragen.",
+        )
+    if not available(settings):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Die Postfächer der Tickets sind noch nicht eingerichtet.",
+        )
+    query = select(TicketEntry).where(TicketEntry.ticket_id == ticket.id)
+    if body.entry_id:
+        try:
+            wanted = uuid.UUID(body.entry_id)
+        except ValueError as exc:
+            raise not_found() from exc
+        source = db.scalar(query.where(TicketEntry.id == wanted))
+    else:
+        source = db.scalar(query.where(TicketEntry.original.is_(True)))
+    if source is None or source.kind not in (ENTRY_INBOUND, "reply"):
+        raise not_found()
+    to = [str(m).lower() for m in body.to]
+    stamp = source.created_at.astimezone(work_zone()).strftime("%d.%m.%Y %H:%M")
+    quoted = (
+        f"Von: {source.author_name}"
+        + (f" <{source.author_mail}>" if source.author_mail else "")
+        + f"\nDatum: {stamp}\nBetreff: {ticket.subject}\n\n{source.body}"
+    )
+    files: list[tuple[str, str, bytes]] = []
+    if body.attachments:
+        for att in db.scalars(
+            select(TicketAttachment).where(
+                TicketAttachment.entry_id == source.id,
+                TicketAttachment.key.is_not(None),
+                TicketAttachment.original.is_(False),
+            )
+        ):
+            path = file_path(settings.tickets_files_dir, att.key or "")
+            if path is not None and path.exists():
+                files.append((att.filename, att.content_type, path.read_bytes()))
+    message, message_id = build_forward(db, area, ticket, to, body.text, quoted, files)
+    me = actor(access)
+    with new_http() as http:
+        try:
+            mailbox = open_mailbox(settings, http)
+            mailbox.send(area.mailbox, message.as_bytes())
+        except MailboxError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Die Weiterleitung konnte nicht gesendet werden: {exc}",
+            ) from exc
+    db.add(
+        TicketMailOut(
+            ticket_id=ticket.id,
+            area_id=area.id,
+            kind="weiterleitung",
+            recipients=", ".join(to)[:2000],
+            message_id=message_id,
+        )
+    )
+    db.add(
+        TicketEntry(
+            ticket_id=ticket.id,
+            kind=ENTRY_FORWARD,
+            body=body.text.strip() or "(ohne eigenen Text)",
+            author_oid=access.oid,
+            author_name=me.name,
+            message_id=message_id,
+            recipients=", ".join(to)[:2000],
+        )
+    )
+    ticket.updated_at = now_utc()
+    protocol(
+        db,
+        me,
+        "ticket_weitergeleitet",
+        ticket=ticket,
+        details={"empfaenger": len(to), "anhaenge": len(files)},
+    )
     db.commit()
     db.refresh(ticket)
     return _detail(db, settings, access, ticket)

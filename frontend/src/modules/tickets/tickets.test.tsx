@@ -45,6 +45,8 @@ function entry(id: string, kind: Entry["kind"], original = false): Entry {
     created_at: "2026-11-22T08:00:00Z",
     quote: "",
     from_number: null,
+    origin: kind === "inbound" ? "reporter" : "",
+    recipients: kind === "reply" ? "m.muster@example.com" : "",
     attachments: [],
   };
 }
@@ -84,7 +86,6 @@ function ticket(extra: Partial<Ticket> = {}): Ticket {
     reminder_note: "",
     sla: null,
     inventory: false,
-    device: null,
     reporter_inventory: null,
     merged_into: null,
     retention: {
@@ -155,7 +156,7 @@ describe("Hilfsfunktionen", () => {
     const roles = ticketNavRoles({
       manager: false,
       settings: false,
-      areas: [{ id: 1, name: "IT", role: "read" }],
+      areas: [{ id: 1, name: "IT", role: "edit" }],
     });
     expect(roles).toEqual([TICKETS_MEMBER]);
     const area = areasFor(roles).find((a) => a.id === "tickets");
@@ -239,7 +240,7 @@ describe("TicketPage", () => {
       }),
     );
     render(<TicketPage number={1042} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Interne Notiz schreiben/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Interne Notiz/ }));
     expect(
       screen.getByText("M. Muster sieht diesen Text nicht und bekommt keine Mail."),
     ).toBeTruthy();
@@ -267,23 +268,28 @@ describe("Antwort an den Melder", () => {
       }),
     );
     render(<TicketPage number={1042} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Antwort an M. Muster schreiben/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Antworten( \(Entwurf\))?$/ }));
+    expect(screen.getByText("Geht per E-Mail an: m.muster@example.com")).toBeTruthy();
+    // „An alle“: Beteiligte in Kopie
+    fireEvent.click(screen.getByRole("button", { name: "An alle" }));
     expect(
-      screen.getByText("Geht per E-Mail an: m.muster@example.com (Kopie an kopie@example.com)"),
+      screen.getByText("Geht per E-Mail an: m.muster@example.com · Kopie an kopie@example.com"),
     ).toBeTruthy();
-    fireEvent.change(screen.getByRole("textbox", { name: /Antwort an M. Muster/ }), {
+    fireEvent.change(screen.getByRole("textbox", { name: /Antwort an alle/ }), {
       target: { value: "Bitte neu starten." },
     });
     fireEvent.change(screen.getByLabelText("Status danach"), { target: { value: "waiting" } });
     // Einklappen behält den Entwurf
     fireEvent.click(screen.getByRole("button", { name: "Einklappen" }));
-    fireEvent.click(screen.getByRole("button", { name: /Antwort an M. Muster schreiben/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Antworten an alle" }));
     expect(
-      (screen.getByRole("textbox", { name: /Antwort an M. Muster/ }) as HTMLTextAreaElement).value,
+      (screen.getByRole("textbox", { name: /Antwort an alle/ }) as HTMLTextAreaElement).value,
     ).toBe("Bitte neu starten.");
     fireEvent.click(screen.getByRole("button", { name: "An M. Muster senden" }));
     await waitFor(() =>
-      expect(bodies).toEqual([{ body: "Bitte neu starten.", status_after: "waiting" }]),
+      expect(bodies).toEqual([
+        { body: "Bitte neu starten.", status_after: "waiting", reply_all: true },
+      ]),
     );
   });
 
@@ -328,7 +334,7 @@ describe("Antwort an den Melder", () => {
     render(<TicketPage number={1042} />);
     expect(await screen.findByText(/keine Mailadresse eingetragen/)).toBeTruthy();
     expect(
-      (screen.getByRole("button", { name: /Antwort an M. Muster schreiben/ }) as HTMLButtonElement)
+      (screen.getByRole("button", { name: /^Antworten( \(Entwurf\))?$/ }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
     expect(screen.getByRole("link", { name: /a.pdf/ }).getAttribute("href")).toBe(
@@ -544,7 +550,7 @@ describe("TicketPage: Arbeitshilfen", () => {
       }),
     );
     render(<TicketPage number={1042} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Antwort an M. Muster schreiben/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Antworten( \(Entwurf\))?$/ }));
     await screen.findByText(/Schrägstrich und Kürzel tippen/);
     const field = screen.getByLabelText(/^Antwort an M. Muster/) as HTMLTextAreaElement;
     fireEvent.change(field, { target: { value: "Danke! /dr", selectionStart: 10 } });
@@ -665,7 +671,7 @@ describe("Übersicht und Export", () => {
           settings: true,
           areas: [
             { id: 1, name: "IT", role: "admin" },
-            { id: 2, name: "Haustechnik", role: "read" },
+            { id: 2, name: "Haustechnik", role: "edit" },
           ],
         }}
       />,
@@ -758,7 +764,7 @@ describe("TicketPage: Aufbewahrung", () => {
     );
     render(<TicketPage number={1042} />);
     expect(await screen.findByText(/nach der Aufbewahrungsfrist/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Interne Notiz schreiben/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Interne Notiz/ })).toBeNull();
     expect((screen.getByLabelText("Status") as HTMLSelectElement).disabled).toBe(true);
   });
 });
@@ -905,5 +911,57 @@ describe("Melder und IT-Bestand", () => {
     expect(
       screen.getByText("2 weitere Tickets liegen in Bereichen, die du nicht siehst."),
     ).toBeTruthy();
+  });
+});
+
+describe("Weiterleiten und Kennzeichnung", () => {
+  it("kennzeichnet Antworten von Beteiligten, von außen und Weiterleitungen", () => {
+    const t = ticket();
+    expect(entryMarker({ ...entry("x", "inbound"), origin: "participant" }, t)).toBe(
+      "von Beteiligten",
+    );
+    expect(entryMarker({ ...entry("x", "inbound"), origin: "external" }, t)).toBe(
+      "Antwort von extern",
+    );
+    expect(entryMarker({ ...entry("x", "forward"), recipients: "service@example.com" }, t)).toBe(
+      "Weitergeleitet an service@example.com",
+    );
+    expect(
+      entryMarker({ ...entry("x", "reply"), recipients: "a@example.com, b@example.com" }, t),
+    ).toBe("an Melder und Beteiligte gesendet");
+  });
+
+  it("leitet eine Nachricht mit Text weiter", async () => {
+    const bodies: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "POST" && url.endsWith("/forward")) {
+          bodies.push(JSON.parse(String(init.body)));
+        }
+        return new Response(JSON.stringify(ticket()), { status: 200 });
+      }),
+    );
+    render(<TicketPage number={1042} />);
+    await screen.findByText("Drucker druckt nicht");
+    fireEvent.click(screen.getAllByRole("button", { name: "Weiterleiten" })[0] as HTMLElement);
+    const panel = await screen.findByRole("region", { name: /Weiterleiten:/ });
+    const send = within(panel).getByRole("button", { name: "Weiterleiten" }) as HTMLButtonElement;
+    expect(send.disabled).toBe(true);
+    fireEvent.change(within(panel).getByLabelText(/^An/), {
+      target: { value: "Service@Example.com, b@example.com" },
+    });
+    fireEvent.change(within(panel).getByLabelText(/Text dazu/), {
+      target: { value: "Bitte prüfen." },
+    });
+    fireEvent.click(send);
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({
+      to: ["service@example.com", "b@example.com"],
+      text: "Bitte prüfen.",
+      entry_id: null,
+      attachments: true,
+    });
+    expect(await screen.findByText(/Weitergeleitet an service@example.com/)).toBeTruthy();
   });
 });

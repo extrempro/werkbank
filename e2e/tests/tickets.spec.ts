@@ -4,6 +4,7 @@ import {
   test,
   type APIRequestContext,
   type Browser,
+  type Page,
 } from "@playwright/test";
 import { BASE_URL, expectNoA11yViolations, loginAs } from "./helpers";
 
@@ -11,6 +12,17 @@ import { BASE_URL, expectNoA11yViolations, loginAs } from "./helpers";
 // Status und Zuständigkeit erst nach „Bestätigen“, interne Notizen, Einstellungen.
 
 const HEADERS = { Origin: new URL(BASE_URL).origin };
+
+/** Auf Tablet und Handy stehen die Angaben eingeklappt unter „Angaben“. */
+async function openFacts(page: Page): Promise<void> {
+  const toggle = page.locator("details.ticket-facts-toggle");
+  if (
+    (await toggle.count()) > 0 &&
+    !(await toggle.evaluate((el) => (el as HTMLDetailsElement).open))
+  ) {
+    await toggle.locator("summary").click();
+  }
+}
 
 function slug(name: string): string {
   return name.toLowerCase().replace(/\s+/g, "-");
@@ -165,7 +177,7 @@ test("Tickets: Status und Zuständigkeit gelten erst nach „Bestätigen“, Not
   await expect(page.getByText(/Status: Neu → In Arbeit/).first()).toBeVisible();
 
   // Interne Notiz mit Hinweis
-  await page.getByRole("button", { name: /Interne Notiz schreiben/ }).click();
+  await page.getByRole("button", { name: /^Interne Notiz/ }).click();
   await expect(
     page.getByText("M. Muster sieht diesen Text nicht und bekommt keine Mail."),
   ).toBeVisible();
@@ -292,7 +304,7 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
   ).toBeVisible();
 
   // Interne Notiz: keine Mail
-  await page.getByRole("button", { name: /Interne Notiz schreiben/ }).click();
+  await page.getByRole("button", { name: /^Interne Notiz/ }).click();
   await page
     .getByRole("textbox", { name: /^Interne Notiz/ })
     .fill("Nur für uns");
@@ -304,9 +316,7 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
   expect(outbox).toEqual([]);
 
   // Antwort an den Melder
-  await page
-    .getByRole("button", { name: /Antwort an M. Muster schreiben/ })
-    .click();
+  await page.getByRole("button", { name: "Antworten", exact: true }).click();
   await expect(
     page.getByText("Geht per E-Mail an: m.muster@example.com"),
   ).toBeVisible();
@@ -324,6 +334,26 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
     await editor.get("/api/tickets/test/outbox", { params: { ticket: number } })
   ).json()) as { kind: string }[];
   expect(outbox.map((mail) => mail.kind)).toEqual(["antwort"]);
+
+  // Weiterleiten: interner Eintrag, Melder bekommt nichts
+  await page
+    .getByRole("button", { name: "Weiterleiten", exact: true })
+    .first()
+    .click();
+  const panel = page.getByRole("region", { name: /Weiterleiten:/ });
+  await panel.getByLabel(/^An/).fill("service@example.com");
+  await panel.getByLabel(/Text dazu/).fill("Bitte prüfen.");
+  // Am Seitenende liegt die Antwortleiste an ihrem Platz und verdeckt keine Knöpfe.
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expectNoA11yViolations(page);
+  await panel.getByRole("button", { name: "Weiterleiten" }).click();
+  await expect(
+    page.getByText("Weitergeleitet an service@example.com").first(),
+  ).toBeVisible();
+  outbox = (await (
+    await editor.get("/api/tickets/test/outbox", { params: { ticket: number } })
+  ).json()) as { kind: string }[];
+  expect(outbox.map((mail) => mail.kind)).toEqual(["antwort", "weiterleitung"]);
 });
 
 test("Tickets: Mail an ein geschlossenes Ticket je nach Einstellung", async ({
@@ -508,9 +538,7 @@ test("Tickets: Zusammenführen, Textbaustein, ohne Fristen keine Frist", async (
   await expect(page.getByText("Frist", { exact: false })).toHaveCount(0);
 
   // Textbaustein über /kürzel
-  await page
-    .getByRole("button", { name: /Antwort an M. Muster schreiben/ })
-    .click();
+  await page.getByRole("button", { name: "Antworten", exact: true }).click();
   const field = page.getByRole("textbox", { name: /^Antwort an M. Muster/ });
   await field.fill("/dru");
   await expect(
@@ -526,7 +554,9 @@ test("Tickets: Zusammenführen, Textbaustein, ohne Fristen keine Frist", async (
     .click();
 
   // Zusammenführen mit Bestätigung
-  await page.getByText("Zusammenführen", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Zusammenführen", exact: true })
+    .click();
   const candidate = page.getByRole("button", {
     name: new RegExp(`T-${s.number} Drucker druckt nicht`),
   });
@@ -544,9 +574,9 @@ test("Tickets: Zusammenführen, Textbaustein, ohne Fristen keine Frist", async (
   ).toBeVisible();
   await expect(page.getByRole("note")).toContainText("Zusammengeführt in");
   // Abgeschlossen: weder Zusammenführen noch Status ändern
-  await expect(page.getByText("Zusammenführen", { exact: true })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("button", { name: "Zusammenführen", exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByLabel("Status")).toBeDisabled();
   await page.getByRole("link", { name: `T-${s.number}`, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/tickets/${s.number}$`));
@@ -604,6 +634,8 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
 
   // Mit Fristen zeigt das Ticket eine Frist
   await page.goto(`/tickets/${s.number}`);
+  await expect(page.getByText("Anruf erfasst")).toBeVisible();
+  await openFacts(page);
   await expect(page.getByText(/Lösung bis/)).toBeVisible();
 });
 
@@ -658,6 +690,8 @@ test("Tickets: Übersicht, Aufbewahrung mit Ausnahme, Export und Protokoll", asy
 
   // Ausnahme am Ticket
   await page.goto(`/tickets/${s.number}`);
+  await expect(page.getByText("Anruf erfasst")).toBeVisible();
+  await openFacts(page);
   await expect(
     page.getByText("2 Jahre nach dem Schließen anonymisieren"),
   ).toBeVisible();
@@ -716,6 +750,8 @@ test("Tickets: Melder im IT-Bestand nur mit Rechten dort; Melder frei eintragbar
 
   await loginAs(page, ["Tickets.Nutzer", "Bestand.Reader"], s.editor);
   await page.goto(`/tickets/${s.number}`);
+  await expect(page.getByText("Anruf erfasst")).toBeVisible();
+  await openFacts(page);
   await expect(page.getByText("Im IT-Bestand", { exact: true })).toBeVisible();
   await expect(
     page.getByText("Keine Stelle im IT-Bestand gefunden."),

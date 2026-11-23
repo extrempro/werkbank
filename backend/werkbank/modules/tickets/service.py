@@ -115,7 +115,7 @@ def next_round_robin(db: Session, area_id: int) -> Member | None:
     """Person mit „Bearbeiten“ und den wenigsten offenen Tickets.
 
     Bei Gleichstand bekommt die Person, die am längsten kein neues Ticket bekommen hat.
-    „Nur lesen“ und die Bereichsverwaltung werden nicht berücksichtigt.
+    Die Bereichsverwaltung wird nicht berücksichtigt.
     """
     candidates = [member for member, role in area_people(db, area_id, (AREA_EDIT,))]
     if not candidates:

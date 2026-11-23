@@ -160,7 +160,7 @@ def _drop_traces(db: Session, ticket: Ticket) -> None:
 
 
 def anonymize(db: Session, directory: Path, ticket: Ticket, now: datetime) -> None:
-    """Entfernt Melder, Adressen, Betreff, Texte, Anhänge, Namen der Bearbeiter und das Gerät.
+    """Entfernt Melder, Adressen, Betreff, Texte, Anhänge, Namen der Bearbeiter.
     Erhalten bleiben Nr., Bereich, Kategorie, Priorität, Zeitpunkte und die Fristen."""
     _remove_files(db, directory, ticket.id)
     db.execute(delete(TicketAttachment).where(TicketAttachment.ticket_id == ticket.id))
@@ -175,7 +175,6 @@ def anonymize(db: Session, directory: Path, ticket: Ticket, now: datetime) -> No
     ticket.assigned_by_oid = None
     ticket.created_by = ""
     ticket.reminder_note = ""
-    ticket.hardware_id = None
     ticket.hold_until = None
     ticket.hold_reason = ""
     ticket.hold_by_name = ""

@@ -293,7 +293,7 @@ export const HELP = {
   },
   "tickets.rollen": {
     term: "Rollen im Bereich",
-    text: "„Nur lesen“ sieht Tickets und schreibt Notizen, „Bearbeiten“ ändert Status und Zuständigkeit. Die Bereichsverwaltung darf jedes Ticket zuweisen und den Bereich einstellen.",
+    text: "„Bearbeiten“ legt Tickets an, antwortet und ändert Status und Zuständigkeit. Die Bereichsverwaltung darf jedes Ticket zuweisen und den Bereich einstellen.",
     topic: ["tickets", "einstellungen"],
   },
   "tickets.kategorie": {
@@ -319,11 +319,6 @@ export const HELP = {
   "tickets.textbausteine": {
     term: "Textbausteine",
     text: "Vorgefertigte Antworten und Notizen, die du im Antwortfeld mit Schrägstrich und Kürzel einfügst, zum Beispiel /drucker. Platzhalter wie {Vorname} werden ersetzt.",
-    topic: ["tickets", "arbeitshilfen"],
-  },
-  "tickets.geraet": {
-    term: "Gerät",
-    text: "Verknüpft das Ticket mit einem Gerät aus dem IT-Bestand. Das geht nur mit Rechten im IT-Bestand; auf der Seite des Geräts stehen dann die Tickets dazu.",
     topic: ["tickets", "arbeitshilfen"],
   },
   "tickets.aufbewahrung": {

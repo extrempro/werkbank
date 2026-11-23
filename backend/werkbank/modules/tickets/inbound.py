@@ -199,6 +199,7 @@ def _entry(db: Session, ticket: Ticket, mail: ParsedMail, *, original: bool) -> 
         quote=quote,
         author_oid=None,
         author_name=mail.sender_name or mail.sender,
+        author_mail=(mail.sender or "")[:320],
         original=original,
         message_id=mail.message_id or None,
     )
@@ -353,9 +354,18 @@ def _reply(
 ) -> Outcome:
     entry = _entry(db, ticket, mail, original=False)
     removed = _add_attachments(db, settings, area, ticket, entry, raw, mail)
-    _participants(db, ticket, mail, mailboxes)
+    # Antwort von außen (z. B. auf eine Weiterleitung): keine neuen Beteiligten, Status bleibt
+    sender = (mail.sender or "").lower()
+    known = sender == ticket.reporter_mail.lower() or sender in {
+        m.lower()
+        for m in db.scalars(
+            select(TicketParticipant.mail).where(TicketParticipant.ticket_id == ticket.id)
+        )
+    }
+    if known:
+        _participants(db, ticket, mail, mailboxes)
     old = ticket.status
-    if old in (STATUS_WAITING, STATUS_SOLVED, STATUS_CLOSED, STATUS_REMINDER):
+    if known and old in (STATUS_WAITING, STATUS_SOLVED, STATUS_CLOSED, STATUS_REMINDER):
         set_status(ticket, STATUS_IN_PROGRESS, db)
         label = "wieder geöffnet" if old == STATUS_CLOSED else "Antwort des Melders"
         system_entry(db, ticket, f"Status: {_label(old)} → In Arbeit ({label})", SYSTEM)

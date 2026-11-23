@@ -1,4 +1,14 @@
-import { useEffect, useId, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { ApiError, errorText, formatDateTime } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
@@ -13,6 +23,7 @@ import {
   CHANNEL_LABELS,
   fetchMergeCandidates,
   fetchTicket,
+  forwardTicket,
   fetchTicketTemplates,
   fillTemplate,
   mergeTicket,
@@ -20,8 +31,6 @@ import {
   RETENTION_ACTION_LABELS,
   retentionText,
   setHold,
-  searchDevices,
-  setDevice,
   ticketPath,
   formatSize,
   moveTicket,
@@ -44,6 +53,8 @@ import {
   type TicketStatus,
 } from "./api";
 import { formatDate, hardwarePath, positionPath } from "../inventory/api";
+import { parseMails } from "./NewTicketPage";
+import { STATUS_PILLS } from "./TicketsPage";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
 
 /** So viele Einträge stehen nach der ursprünglichen Meldung, der Rest ist eingeklappt. */
@@ -63,11 +74,22 @@ export function entryMarker(entry: Entry, ticket: Ticket): string {
   if (entry.kind === "note") {
     return "Intern";
   }
+  if (entry.kind === "forward") {
+    return `Weitergeleitet an ${entry.recipients}`;
+  }
   if (entry.kind === "reply") {
-    return "an Melder gesendet";
+    return entry.recipients.includes(",")
+      ? "an Melder und Beteiligte gesendet"
+      : "an Melder gesendet";
   }
   if (entry.kind === "inbound" && entry.original && ticket.channel === "phone") {
     return "Anruf erfasst";
+  }
+  if (entry.origin === "participant") {
+    return "von Beteiligten";
+  }
+  if (entry.origin === "external") {
+    return "Antwort von extern";
   }
   return "vom Melder";
 }
@@ -77,7 +99,7 @@ function matches(entry: Entry, filter: EntryFilter): boolean {
     return entry.kind === "inbound" || entry.kind === "reply";
   }
   if (filter === "internal") {
-    return entry.kind === "note" || entry.kind === "system";
+    return entry.kind === "note" || entry.kind === "system" || entry.kind === "forward";
   }
   return true;
 }
@@ -99,7 +121,15 @@ export function splitEntries(
   };
 }
 
-function EntryItem({ entry, ticket }: { entry: Entry; ticket: Ticket }) {
+function EntryItem({
+  entry,
+  ticket,
+  onForward,
+}: {
+  entry: Entry;
+  ticket: Ticket;
+  onForward: ((entry: Entry) => void) | null;
+}) {
   const [full, setFull] = useState(false);
   if (entry.kind === "system") {
     return (
@@ -115,10 +145,12 @@ function EntryItem({ entry, ticket }: { entry: Entry; ticket: Ticket }) {
   const text = long && !full ? `${entry.body.slice(0, LONG_MESSAGE).trimEnd()} …` : entry.body;
   const marker = entryMarker(entry, ticket);
   return (
-    <li className={`ticket-entry ticket-entry-${entry.kind}`}>
+    <li
+      className={`ticket-entry ticket-entry-${entry.kind}${entry.origin === "external" ? " ticket-entry-external" : ""}`}
+    >
       <div className="ticket-entry-head">
         <span className="ticket-marker">
-          {entry.kind === "note" && <Icon name="schloss" />}
+          {(entry.kind === "note" || entry.kind === "forward") && <Icon name="schloss" />}
           {entry.kind === "reply" && <Icon name="brief" />}
           {marker}
           {entry.from_number !== null && (
@@ -126,11 +158,16 @@ function EntryItem({ entry, ticket }: { entry: Entry; ticket: Ticket }) {
           )}
         </span>
         <span className="small">
-          {entry.kind === "inbound" ? ticket.reporter_name || entry.author_name : entry.author_name}{" "}
+          {entry.kind === "inbound" && entry.origin === "reporter"
+            ? ticket.reporter_name || entry.author_name
+            : entry.author_name}{" "}
           · {formatDateTime(entry.created_at)}
           {entry.original && " · ursprüngliche Meldung"}
         </span>
       </div>
+      {entry.kind === "reply" && entry.recipients && (
+        <p className="small ticket-recipients">An: {entry.recipients}</p>
+      )}
       <p className="ticket-entry-body">{text}</p>
       {long && (
         <button type="button" className="row-button" onClick={() => setFull(!full)}>
@@ -161,11 +198,22 @@ function EntryItem({ entry, ticket }: { entry: Entry; ticket: Ticket }) {
           ))}
         </ul>
       )}
+      {onForward && (entry.kind === "inbound" || entry.kind === "reply") && (
+        <button type="button" className="row-button" onClick={() => onForward(entry)}>
+          Weiterleiten
+        </button>
+      )}
     </li>
   );
 }
 
-function Timeline({ ticket }: { ticket: Ticket }) {
+function Timeline({
+  ticket,
+  onForward,
+}: {
+  ticket: Ticket;
+  onForward: ((entry: Entry) => void) | null;
+}) {
   const [filter, setFilter] = useState<EntryFilter>("all");
   const [showAll, setShowAll] = useState(false);
   const visible = ticket.entries.filter((entry) => matches(entry, filter) || entry.original);
@@ -189,7 +237,7 @@ function Timeline({ ticket }: { ticket: Ticket }) {
         </div>
       </div>
       <ol className="ticket-entries">
-        {original && <EntryItem entry={original} ticket={ticket} />}
+        {original && <EntryItem entry={original} ticket={ticket} onForward={onForward} />}
         {hidden > 0 && (
           <li className="ticket-entry-more">
             <button type="button" className="button" onClick={() => setShowAll(true)}>
@@ -198,14 +246,14 @@ function Timeline({ ticket }: { ticket: Ticket }) {
           </li>
         )}
         {shown.map((entry) => (
-          <EntryItem key={entry.id} entry={entry} ticket={ticket} />
+          <EntryItem key={entry.id} entry={entry} ticket={ticket} onForward={onForward} />
         ))}
       </ol>
     </section>
   );
 }
 
-type ComposerMode = "reply" | "note" | null;
+type ComposerMode = "reply" | "all" | "note" | null;
 
 const STATUS_AFTER_LABELS: Record<StatusAfter, string> = {
   "": "unverändert",
@@ -270,7 +318,9 @@ function Composer({
     };
   }, [mode, templates, ticket.number]);
 
-  const kindTemplates = (templates?.templates ?? []).filter((t) => t.kind === mode);
+  const kindTemplates = (templates?.templates ?? []).filter(
+    (t) => t.kind === (mode === "note" ? "note" : "reply"),
+  );
   const suggestions = slash ? matchTemplates(kindTemplates, slash.word) : [];
   const showList = slash !== null && suggestions.length > 0;
 
@@ -286,12 +336,12 @@ function Composer({
     if (!slash) {
       return;
     }
-    const current = mode === "reply" ? reply : note;
+    const current = mode === "note" ? note : reply;
     const text = fillTemplate(template.body, templates?.values ?? {});
     const end = slash.start + 1 + slash.word.length;
     const next = current.slice(0, slash.start) + text + current.slice(end);
-    (mode === "reply" ? setReply : setNote)(next);
-    if (mode === "reply" && template.status_after) {
+    (mode === "note" ? setNote : setReply)(next);
+    if (mode !== "note" && template.status_after) {
       setStatusAfter(template.status_after);
     }
     setSlash(null);
@@ -328,16 +378,18 @@ function Composer({
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const text = mode === "reply" ? reply : note;
+    const text = mode === "note" ? note : reply;
     if (!text.trim()) {
       return;
     }
     setBusy(true);
     const request =
-      mode === "reply" ? sendReply(ticket.number, text, statusAfter) : addNote(ticket.number, text);
+      mode === "note"
+        ? addNote(ticket.number, text)
+        : sendReply(ticket.number, text, statusAfter, mode === "all");
     request
       .then((result) => {
-        if (mode === "reply") {
+        if (mode !== "note") {
           setReply("");
           setStatusAfter("");
         } else {
@@ -348,7 +400,7 @@ function Composer({
         onMessage({
           kind: "status",
           text:
-            mode === "reply"
+            mode !== "note"
               ? `Die Antwort an ${reporter} wurde gesendet.`
               : "Die interne Notiz wurde gespeichert.",
         });
@@ -358,7 +410,7 @@ function Composer({
           kind: "alert",
           text: errorText(
             problem,
-            mode === "reply"
+            mode !== "note"
               ? "Die Antwort konnte nicht gesendet werden."
               : "Die Notiz konnte nicht gespeichert werden.",
           ),
@@ -383,17 +435,32 @@ function Composer({
               onClick={() => setMode("reply")}
             >
               <Icon name="brief" />
-              Antwort an {reporter} schreiben
+              Antworten
               {reply.trim() && <span className="small"> (Entwurf)</span>}
+            </button>
+          )}
+          {ticket.permissions.edit && copies.length > 0 && (
+            <button
+              type="button"
+              className="button ticket-reply-button ticket-reply-all"
+              disabled={!ticket.can_reply}
+              aria-describedby={ticket.can_reply ? undefined : `${fieldId}-hint`}
+              onClick={() => setMode("all")}
+              aria-label="Antworten an alle"
+            >
+              <span className="label-wide">Antworten an alle</span>
+              <span className="label-narrow">An alle</span>
             </button>
           )}
           <button
             type="button"
             className="button ticket-note-button"
             onClick={() => setMode("note")}
+            aria-label={note.trim() ? "Interne Notiz (Entwurf)" : "Interne Notiz"}
           >
             <Icon name="schloss" />
-            Interne Notiz schreiben
+            <span className="label-wide">Interne Notiz</span>
+            <span className="label-narrow">Notiz</span>
             {note.trim() && <span className="small"> (Entwurf)</span>}
           </button>
         </div>
@@ -405,18 +472,42 @@ function Composer({
       </div>
     );
   }
-  const isReply = mode === "reply";
+  const isReply = mode === "reply" || mode === "all";
   return (
     <div className="ticket-composer">
       <form className={isReply ? "ticket-reply-form" : "ticket-note-form"} onSubmit={submit}>
         <label htmlFor={fieldId} className="ticket-note-label">
           <Icon name={isReply ? "brief" : "schloss"} />
-          {isReply ? `Antwort an ${reporter}` : "Interne Notiz"}
+          {mode === "all"
+            ? "Antwort an alle"
+            : isReply
+              ? `Antwort an ${reporter}`
+              : "Interne Notiz"}
           {!isReply && <InfoTip term="tickets.notiz" />}
         </label>
+        {isReply && copies.length > 0 && (
+          <div className="chips" role="group" aria-label="Empfänger">
+            <button
+              type="button"
+              className="chip chip-filter"
+              aria-pressed={mode === "reply"}
+              onClick={() => setMode("reply")}
+            >
+              Nur Melder
+            </button>
+            <button
+              type="button"
+              className="chip chip-filter"
+              aria-pressed={mode === "all"}
+              onClick={() => setMode("all")}
+            >
+              An alle
+            </button>
+          </div>
+        )}
         <p className="small">
           {isReply
-            ? `Geht per E-Mail an: ${ticket.reporter_mail}${copies.length > 0 ? ` (Kopie an ${copies.join(", ")})` : ""}`
+            ? `Geht per E-Mail an: ${ticket.reporter_mail}${mode === "all" && copies.length > 0 ? ` · Kopie an ${copies.join(", ")}` : ""}`
             : `${reporter} sieht diesen Text nicht und bekommt keine Mail.`}
         </p>
         <div className="ticket-template-anchor">
@@ -718,95 +809,126 @@ function Facts({
 
   return (
     <aside className="ticket-side" aria-label="Angaben zum Ticket">
-      <div className="ticket-facts">
-        <div className="ticket-fact">
-          <span className="ticket-fact-label">Bereich</span>
-          <span>{ticket.area.name}</span>
-          {ticket.permissions.move && ticket.move_targets.length > 0 && (
-            <div className="ticket-move">
-              <label htmlFor={areaId} className="visually-hidden">
-                Verschieben nach
-              </label>
-              <select
-                id={areaId}
-                value={target}
-                onChange={(event) => setTarget(event.target.value)}
-              >
-                <option value="">Verschieben nach …</option>
-                {ticket.move_targets.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="button" disabled={!target} onClick={move}>
-                Verschieben
-              </button>
+      <FactsFrame summary={factsSummary(ticket)}>
+        <div className="ticket-cards">
+          <section className="ticket-facts" aria-labelledby={`${areaId}-ticket`}>
+            <h2 className="ticket-card-title" id={`${areaId}-ticket`}>
+              Ticket
+            </h2>
+            <div className="ticket-fact">
+              <span className="ticket-fact-label">Bereich</span>
+              <span>{ticket.area.name}</span>
+              {ticket.permissions.move && ticket.move_targets.length > 0 && (
+                <div className="ticket-move">
+                  <label htmlFor={areaId} className="visually-hidden">
+                    Verschieben nach
+                  </label>
+                  <select
+                    id={areaId}
+                    value={target}
+                    onChange={(event) => setTarget(event.target.value)}
+                  >
+                    <option value="">Verschieben nach …</option>
+                    {ticket.move_targets.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" className="button" disabled={!target} onClick={move}>
+                    Verschieben
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <div className="ticket-fact">
-          <label htmlFor={priorityId} className="ticket-fact-label">
-            Priorität
-          </label>
-          {ticket.permissions.edit ? (
-            <select
-              id={priorityId}
-              value={ticket.priority}
-              onChange={(event) => changePriority(event.target.value as Priority)}
-            >
-              {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
-                <option key={p} value={p}>
-                  {PRIORITY_LABELS[p]}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span id={priorityId}>{PRIORITY_LABELS[ticket.priority]}</span>
-          )}
-        </div>
-        {(ticket.categories.length > 0 || ticket.category_id !== null) && (
-          <div className="ticket-fact">
-            <label htmlFor={categoryId} className="ticket-fact-label">
-              Kategorie
-            </label>
-            {ticket.permissions.edit ? (
-              <select
-                id={categoryId}
-                value={ticket.category_id ?? ""}
-                onChange={(event) =>
-                  changeFacts(
-                    ticket.priority,
-                    event.target.value ? Number(event.target.value) : null,
-                    "Die Kategorie",
-                  )
-                }
-              >
-                <option value="">Keine</option>
-                {ticket.categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span id={categoryId}>{ticket.category || "–"}</span>
+            <div className="ticket-fact">
+              <label htmlFor={priorityId} className="ticket-fact-label">
+                Priorität
+              </label>
+              {ticket.permissions.edit ? (
+                <select
+                  id={priorityId}
+                  value={ticket.priority}
+                  onChange={(event) => changePriority(event.target.value as Priority)}
+                >
+                  {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
+                    <option key={p} value={p}>
+                      {PRIORITY_LABELS[p]}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span id={priorityId}>{PRIORITY_LABELS[ticket.priority]}</span>
+              )}
+            </div>
+            {(ticket.categories.length > 0 || ticket.category_id !== null) && (
+              <div className="ticket-fact">
+                <label htmlFor={categoryId} className="ticket-fact-label">
+                  Kategorie
+                </label>
+                {ticket.permissions.edit ? (
+                  <select
+                    id={categoryId}
+                    value={ticket.category_id ?? ""}
+                    onChange={(event) =>
+                      changeFacts(
+                        ticket.priority,
+                        event.target.value ? Number(event.target.value) : null,
+                        "Die Kategorie",
+                      )
+                    }
+                  >
+                    <option value="">Keine</option>
+                    {ticket.categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span id={categoryId}>{ticket.category || "–"}</span>
+                )}
+              </div>
             )}
-          </div>
-        )}
-        {ticket.sla && <SlaFact sla={ticket.sla} />}
-        <Participants ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
-        {ticket.inventory && (
-          <DeviceSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
-        )}
-        {ticket.reporter_inventory && <ReporterInventorySection data={ticket.reporter_inventory} />}
-        {ticket.permissions.edit && ticket.status !== "merged" && (
-          <MergeSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
-        )}
-        {(ticket.retention.active || ticket.retention.hold_until !== null) && (
-          <RetentionSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
-        )}
-      </div>
+            {ticket.sla && <SlaFact sla={ticket.sla} />}
+          </section>
+          <section className="ticket-facts" aria-labelledby={`${areaId}-melder`}>
+            <h2 className="ticket-card-title" id={`${areaId}-melder`}>
+              Melder
+            </h2>
+            <div className="ticket-fact">
+              <span>
+                <strong>{ticket.reporter_name || "–"}</strong>
+                {ticket.reporter_mail && (
+                  <>
+                    <br />
+                    <span className="small">{ticket.reporter_mail}</span>
+                  </>
+                )}
+              </span>
+            </div>
+            <Participants ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
+          </section>
+          {ticket.reporter_inventory && (
+            <section className="ticket-facts" aria-labelledby={`${areaId}-bestand`}>
+              <h2 className="ticket-card-title" id={`${areaId}-bestand`}>
+                Im IT-Bestand
+                <InfoTip term="tickets.melder-bestand" />
+              </h2>
+              <ReporterInventorySection data={ticket.reporter_inventory} />
+            </section>
+          )}
+          {(ticket.retention.active || ticket.retention.hold_until !== null) && (
+            <section className="ticket-facts" aria-labelledby={`${areaId}-aufbewahrung`}>
+              <h2 className="ticket-card-title" id={`${areaId}-aufbewahrung`}>
+                Aufbewahrung
+                <InfoTip term="tickets.aufbewahrung" />
+              </h2>
+              <RetentionSection ticket={ticket} onSaved={onSaved} onMessage={onMessage} />
+            </section>
+          )}
+        </div>
+      </FactsFrame>
       {dialog}
     </aside>
   );
@@ -879,10 +1001,6 @@ function RetentionSection({
 
   return (
     <div className="ticket-fact">
-      <span className="ticket-fact-label">
-        Aufbewahrung
-        <InfoTip term="tickets.aufbewahrung" />
-      </span>
       <span className="small">{rule}</span>
       {held && (
         <span>
@@ -977,197 +1095,137 @@ function useSearch<T>(load: (q: string) => Promise<T[]>, active: boolean) {
   return { query, setQuery, items, failed };
 }
 
-/** Melder im IT-Bestand: Stellen, Arbeitsplätze, Geräte, offene Verleihe (nur lesen). */
-function ReporterInventorySection({ data }: { data: ReporterInventory }) {
-  const [open, setOpen] = useState(true);
-  const empty = data.positions.length === 0 && data.loans.length === 0;
-  return (
-    <div className="ticket-fact">
-      <details
-        className="ticket-device"
-        open={open}
-        onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
-      >
-        <summary>Im IT-Bestand</summary>
-        <p className="small">
-          Zugeordnet über die Mailadresse des Melders.
-          <InfoTip term="tickets.melder-bestand" />
-        </p>
-        {empty && <p className="small">Keine Stelle im IT-Bestand gefunden.</p>}
-        {data.positions.map((pos) => (
-          <div key={pos.id} className="ticket-inventory-position">
-            <Link to={positionPath(pos.id)}>
-              <span className="mono">{pos.number}</span> {pos.name}
-            </Link>
-            {pos.department && <span className="small"> · {pos.department}</span>}
-            {pos.workplaces.length > 0 && (
-              <p className="small">
-                Arbeitsplatz:{" "}
-                {pos.workplaces
-                  .map((w) => (w.room ? `${w.number} (${w.room})` : w.number))
-                  .join(", ")}
-              </p>
-            )}
-            {pos.devices.length > 0 ? (
-              <ul className="ticket-pick-list">
-                {pos.devices.map((d) => (
-                  <li key={d.id}>
-                    <Link to={hardwarePath(d.id)}>{d.name}</Link>
-                    <span className="small">
-                      {" "}
-                      · {d.kind}
-                      {d.inventory_no && ` · ${d.inventory_no}`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="small">Keine Geräte an dieser Stelle.</p>
-            )}
-          </div>
-        ))}
-        {data.loans.length > 0 && (
-          <div>
-            <p className="small">Offene Verleihe:</p>
-            <ul className="ticket-pick-list">
-              {data.loans.map((loan) => (
-                <li key={loan.id}>
-                  <span className="mono">{loan.number}</span>
-                  <span className="small">
-                    {" "}
-                    · {loan.items === 1 ? "1 Gerät" : `${loan.items} Geräte`} · bis{" "}
-                    {formatDate(loan.due_on)}
-                  </span>
-                  {loan.overdue && <span className="pill pill-bad">überfällig</span>}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </details>
-    </div>
+const NARROW = "(max-width: 1000px)";
+
+/** Schmale Ansicht (Handy, Tablet hochkant): Angaben stehen dann unter dem Kopf. */
+export function useNarrow(): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      if (typeof window.matchMedia !== "function") {
+        return () => undefined;
+      }
+      const query = window.matchMedia(NARROW);
+      query.addEventListener("change", notify);
+      return () => query.removeEventListener("change", notify);
+    },
+    () => typeof window.matchMedia === "function" && window.matchMedia(NARROW).matches,
   );
 }
 
-/** Gerät aus dem IT-Bestand verknüpfen (höchstens 5 Treffer, Vorschläge des Melders zuerst). */
-function DeviceSection({
-  ticket,
-  onSaved,
-  onMessage,
-}: {
-  ticket: Ticket;
-  onSaved: (ticket: Ticket) => void;
-  onMessage: (message: FeedbackMessage) => void;
-}) {
+/** Kurzfassung der Angaben für den eingeklappten Block, z. B. „IT · Mittel · Drucker“. */
+export function factsSummary(ticket: Ticket): string {
+  const parts = [ticket.area.name, PRIORITY_LABELS[ticket.priority]];
+  if (ticket.category) {
+    parts.push(ticket.category);
+  }
+  if (ticket.sla_overdue) {
+    parts.push("Frist überschritten");
+  }
+  if (ticket.reporter_inventory?.positions[0]) {
+    parts.push(ticket.reporter_inventory.positions[0].number);
+  }
+  return parts.join(" · ");
+}
+
+/** Auf dem Handy ein eingeklappter Block „Angaben“ mit Kurzfassung, sonst die Spalte rechts. */
+function FactsFrame({ summary, children }: { summary: string; children: ReactNode }) {
+  const narrow = useNarrow();
   const [open, setOpen] = useState(false);
-  const searchId = useId();
-  const canEdit = ticket.permissions.edit && ticket.status !== "merged";
-  const search = useSearch((q) => searchDevices(ticket.number, q), open && canEdit);
+  if (!narrow) {
+    return <>{children}</>;
+  }
+  return (
+    <details
+      className="ticket-facts-toggle"
+      open={open}
+      onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
+    >
+      <summary>
+        <span className="ticket-facts-title">Angaben</span> <span className="small">{summary}</span>
+      </summary>
+      {children}
+    </details>
+  );
+}
 
-  const save = (hardwareId: number | null) =>
-    setDevice(ticket.number, hardwareId)
-      .then((result) => {
-        onSaved(result);
-        setOpen(false);
-        onMessage({
-          kind: "status",
-          text: hardwareId === null ? "Das Gerät wurde gelöst." : "Das Gerät wurde verknüpft.",
-        });
-      })
-      .catch((problem: unknown) =>
-        onMessage({
-          kind: "alert",
-          text: errorText(problem, "Das Gerät konnte nicht gespeichert werden."),
-        }),
-      );
-
-  const device = ticket.device;
+/** Melder im IT-Bestand: Stellen, Arbeitsplätze, Geräte, offene Verleihe (nur lesen). */
+function ReporterInventorySection({ data }: { data: ReporterInventory }) {
+  const empty = data.positions.length === 0 && data.loans.length === 0;
   return (
     <div className="ticket-fact">
-      <span className="ticket-fact-label">
-        Gerät
-        <InfoTip term="tickets.geraet" />
-      </span>
-      {device ? (
-        <span>
-          <Link to={hardwarePath(device.id)}>{device.name}</Link>
-          <span className="small">
-            {" "}
-            · {device.kind}
-            {device.inventory_no && ` · ${device.inventory_no}`}
-          </span>
-        </span>
-      ) : (
-        <span>–</span>
-      )}
-      {canEdit && (
-        <details
-          className="ticket-device"
-          open={open}
-          onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
-        >
-          <summary>{device ? "Anderes Gerät wählen" : "Gerät verknüpfen"}</summary>
-          <label htmlFor={searchId}>Name, Inventar- oder Seriennummer</label>
-          <input
-            id={searchId}
-            type="search"
-            value={search.query}
-            maxLength={100}
-            onChange={(event) => search.setQuery(event.target.value)}
-          />
-          {search.failed && (
-            <p className="small" role="alert">
-              Die Suche hat nicht geklappt.
+      <p className="small">Zugeordnet über die Mailadresse des Melders.</p>
+      {empty && <p className="small">Keine Stelle im IT-Bestand gefunden.</p>}
+      {data.positions.map((pos) => (
+        <div key={pos.id} className="ticket-inventory-position">
+          <Link to={positionPath(pos.id)}>
+            <span className="mono">{pos.number}</span> {pos.name}
+          </Link>
+          {pos.department && <span className="small"> · {pos.department}</span>}
+          {pos.workplaces.length > 0 && (
+            <p className="small">
+              Arbeitsplatz:{" "}
+              {pos.workplaces
+                .map((w) => (w.room ? `${w.number} (${w.room})` : w.number))
+                .join(", ")}
             </p>
           )}
-          <ul className="ticket-pick-list" aria-live="polite">
-            {search.items.map((d) => (
-              <li key={d.id}>
-                <button
-                  type="button"
-                  className="button button-link"
-                  onClick={() => void save(d.id)}
-                >
-                  {d.name}
-                </button>
+          {pos.devices.length > 0 ? (
+            <ul className="ticket-pick-list">
+              {pos.devices.map((d) => (
+                <li key={d.id}>
+                  <Link to={hardwarePath(d.id)}>{d.name}</Link>
+                  <span className="small">
+                    {" "}
+                    · {d.kind}
+                    {d.inventory_no && ` · ${d.inventory_no}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="small">Keine Geräte an dieser Stelle.</p>
+          )}
+        </div>
+      ))}
+      {data.loans.length > 0 && (
+        <div>
+          <p className="small">Offene Verleihe:</p>
+          <ul className="ticket-pick-list">
+            {data.loans.map((loan) => (
+              <li key={loan.id}>
+                <span className="mono">{loan.number}</span>
                 <span className="small">
                   {" "}
-                  · {d.kind}
-                  {d.inventory_no && ` · ${d.inventory_no}`}
-                  {d.reporter && " · gehört dem Melder"}
+                  · {loan.items === 1 ? "1 Gerät" : `${loan.items} Geräte`} · bis{" "}
+                  {formatDate(loan.due_on)}
                 </span>
+                {loan.overdue && <span className="pill pill-bad">überfällig</span>}
               </li>
             ))}
-            {!search.failed && search.items.length === 0 && (
-              <li className="small">Keine passenden Geräte.</li>
-            )}
           </ul>
-          {device && (
-            <button type="button" className="button" onClick={() => void save(null)}>
-              Gerät lösen
-            </button>
-          )}
-        </details>
+        </div>
       )}
     </div>
   );
 }
 
 /** In ein anderes Ticket zusammenführen: Vorschläge, Suche, Bestätigung. */
-function MergeSection({
+function MergePanel({
   ticket,
   onSaved,
   onMessage,
+  onClose,
 }: {
   ticket: Ticket;
   onSaved: (ticket: Ticket) => void;
   onMessage: (message: FeedbackMessage) => void;
+  onClose: () => void;
 }) {
   const [ask, dialog] = useConfirm();
-  const [open, setOpen] = useState(false);
   const [notify, setNotify] = useState(true);
   const searchId = useId();
-  const search = useSearch((q) => fetchMergeCandidates(ticket.number, q), open);
+  const headingId = useId();
+  const search = useSearch((q) => fetchMergeCandidates(ticket.number, q), true);
 
   const merge = (target: Candidate) =>
     ask(
@@ -1182,7 +1240,7 @@ function MergeSection({
           .then(() => fetchTicket(ticket.number))
           .then((result) => {
             onSaved(result);
-            setOpen(false);
+            onClose();
             onMessage({
               kind: "status",
               text: `Das Ticket wurde in ${ticketLabel(target.number)} zusammengeführt.`,
@@ -1197,13 +1255,14 @@ function MergeSection({
     );
 
   return (
-    <div className="ticket-fact">
-      <details
-        className="ticket-merge"
-        open={open}
-        onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}
-      >
-        <summary>Zusammenführen</summary>
+    <section className="ticket-merge-panel" aria-labelledby={headingId}>
+      <div className="ticket-merge-head">
+        <h2 id={headingId}>Zusammenführen</h2>
+        <button type="button" className="button button-secondary" onClick={onClose}>
+          Abbrechen
+        </button>
+      </div>
+      <div className="ticket-merge">
         <p className="small">
           Verlauf in ein anderes Ticket verschieben; dieses wird geschlossen.
           <InfoTip term="tickets.zusammenfuehren" />
@@ -1212,6 +1271,7 @@ function MergeSection({
         <input
           id={searchId}
           type="search"
+          autoFocus
           value={search.query}
           maxLength={200}
           onChange={(event) => search.setQuery(event.target.value)}
@@ -1248,9 +1308,122 @@ function MergeSection({
           />{" "}
           Melder benachrichtigen
         </label>
-      </details>
+      </div>
       {dialog}
-    </div>
+    </section>
+  );
+}
+
+/** Weiterleiten aus dem Postfach des Bereichs; der Melder bekommt davon nichts mit. */
+function ForwardPanel({
+  ticket,
+  source,
+  onSaved,
+  onMessage,
+  onClose,
+}: {
+  ticket: Ticket;
+  source: Entry | null;
+  onSaved: (ticket: Ticket) => void;
+  onMessage: (message: FeedbackMessage) => void;
+  onClose: () => void;
+}) {
+  const [to, setTo] = useState("");
+  const [text, setText] = useState("");
+  const [withFiles, setWithFiles] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const headingId = useId();
+  const toId = useId();
+  const textId = useId();
+  const box = useRef<HTMLElement>(null);
+  const entry = source ?? ticket.entries.find((e) => e.original) ?? null;
+  const files = (entry?.attachments ?? []).filter((a) => !a.removed_reason && !a.original);
+  const mails = parseMails(to);
+  const what = source
+    ? `Nachricht von ${source.author_name} (${formatDateTime(source.created_at)})`
+    : "ursprüngliche Meldung";
+
+  useEffect(() => {
+    box.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+  }, [source]);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    forwardTicket(ticket.number, {
+      to: mails,
+      text,
+      entry_id: source ? source.id : null,
+      attachments: withFiles,
+    })
+      .then((result) => {
+        onSaved(result);
+        onClose();
+        onMessage({ kind: "status", text: `Weitergeleitet an ${mails.join(", ")}.` });
+      })
+      .catch((problem: unknown) =>
+        onMessage({
+          kind: "alert",
+          text: errorText(problem, "Die Weiterleitung konnte nicht gesendet werden."),
+        }),
+      )
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <section ref={box} className="ticket-merge-panel" aria-labelledby={headingId}>
+      <div className="ticket-merge-head">
+        <h2 id={headingId}>Weiterleiten: {what}</h2>
+        <button type="button" className="button button-secondary" onClick={onClose}>
+          Abbrechen
+        </button>
+      </div>
+      <form className="ticket-merge" onSubmit={submit}>
+        <label htmlFor={toId}>An (Mailadressen, mit Komma getrennt)</label>
+        <input
+          id={toId}
+          type="text"
+          inputMode="email"
+          autoComplete="off"
+          required
+          maxLength={2000}
+          value={to}
+          onChange={(event) => setTo(event.target.value)}
+        />
+        <label htmlFor={textId}>Text dazu (freiwillig)</label>
+        <textarea
+          id={textId}
+          rows={3}
+          maxLength={4000}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+        />
+        {files.length > 0 && (
+          <label className="check-label">
+            <input
+              type="checkbox"
+              checked={withFiles}
+              onChange={(event) => setWithFiles(event.target.checked)}
+            />{" "}
+            Anhänge mitsenden ({files.map((f) => f.filename).join(", ")})
+          </label>
+        )}
+        <p className="small">
+          Geht aus dem Postfach des Bereichs mit [#{ticketLabel(ticket.number)}] im Betreff.
+          {ticket.reporter_name || "Der Melder"} bekommt davon nichts mit; im Verlauf steht ein
+          interner Eintrag. Antworten landen in diesem Ticket.
+        </p>
+        <div className="actions">
+          <button
+            type="submit"
+            className="button button-primary"
+            disabled={busy || mails.length === 0}
+          >
+            {busy ? "Wird gesendet …" : "Weiterleiten"}
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }
 
@@ -1305,6 +1478,9 @@ export function TicketPage({ number }: { number: number }) {
   const reminderNoteId = useId();
   const assigneeId = useId();
   const noteId = useId();
+  const [merging, setMerging] = useState(false);
+  // Weiterleiten: Eintrag (null = ursprüngliche Meldung); undefined = geschlossen
+  const [forwarding, setForwarding] = useState<Entry | null | undefined>(undefined);
   // Eigene Objekt-ID kommt vom Server (für „Mir zuweisen“)
   const meOid = ticket?.me_oid || null;
 
@@ -1443,6 +1619,7 @@ export function TicketPage({ number }: { number: number }) {
               {ticket.subject}
             </span>
           </h1>
+          <span className={STATUS_PILLS[ticket.status]}>{STATUS_LABELS[ticket.status]}</span>
         </div>
         <div className="ticket-head-row ticket-head-fields">
           <label htmlFor={statusId} className="ticket-head-field">
@@ -1484,12 +1661,50 @@ export function TicketPage({ number }: { number: number }) {
               Mir zuweisen
             </button>
           )}
+          {canEdit && (
+            <button
+              type="button"
+              className="button button-secondary"
+              aria-expanded={merging}
+              onClick={() => setMerging((value) => !value)}
+            >
+              Zusammenführen
+            </button>
+          )}
+          {canEdit && (
+            <button
+              type="button"
+              className="button button-secondary"
+              aria-expanded={forwarding !== undefined}
+              onClick={() => setForwarding(forwarding === undefined ? null : undefined)}
+            >
+              Weiterleiten
+            </button>
+          )}
           <p className="ticket-head-meta small">
             {ticket.reporter_name}
             {ticket.reporter_mail && ` (${ticket.reporter_mail})`} ·{" "}
             {CHANNEL_LABELS[ticket.channel]} · {formatDateTime(ticket.created_at)}
           </p>
         </div>
+        {merging && canEdit && (
+          <MergePanel
+            ticket={ticket}
+            onSaved={accept}
+            onMessage={setMessage}
+            onClose={() => setMerging(false)}
+          />
+        )}
+        {forwarding !== undefined && canEdit && (
+          <ForwardPanel
+            key={forwarding?.id ?? "original"}
+            ticket={ticket}
+            source={forwarding}
+            onSaved={accept}
+            onMessage={setMessage}
+            onClose={() => setForwarding(undefined)}
+          />
+        )}
         {ticket.anonymized_at !== null && (
           <p className="hint-box" role="note">
             Dieses Ticket wurde am {formatDateTime(ticket.anonymized_at)} nach der
@@ -1604,7 +1819,7 @@ export function TicketPage({ number }: { number: number }) {
       </header>
       <div className="ticket-layout">
         <div className="ticket-main">
-          <Timeline ticket={ticket} />
+          <Timeline ticket={ticket} onForward={canEdit ? (entry) => setForwarding(entry) : null} />
           <Composer ticket={ticket} onSaved={accept} onMessage={setMessage} />
         </div>
         <Facts

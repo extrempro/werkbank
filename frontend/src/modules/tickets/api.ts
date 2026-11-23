@@ -6,12 +6,12 @@ import { TICKETS_PATH } from "../../navigation";
 
 export { TICKETS_NEW_PATH, TICKETS_PATH, TICKETS_SETTINGS_PATH } from "../../navigation";
 
-export type AreaRole = "admin" | "edit" | "read";
+export type AreaRole = "admin" | "edit";
 export type TicketStatus =
   "new" | "in_progress" | "waiting" | "reminder" | "solved" | "closed" | "merged";
 export type Priority = "low" | "medium" | "high";
 export type Channel = "mail" | "manual" | "phone";
-export type EntryKind = "inbound" | "reply" | "note" | "system";
+export type EntryKind = "inbound" | "reply" | "note" | "system" | "forward";
 export type View = "open" | "mine" | "unassigned" | "waiting" | "reminder" | "done" | "all";
 
 export const STATUS_LABELS: Record<TicketStatus, string> = {
@@ -44,7 +44,6 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
 export const ROLE_LABELS: Record<AreaRole, string> = {
   admin: "Bereichsverwaltung",
   edit: "Bearbeiten",
-  read: "Nur lesen",
 };
 export const VIEW_LABELS: Record<View, string> = {
   open: "Offen",
@@ -115,6 +114,10 @@ export interface Entry {
   quote: string;
   /** Beim Zusammenführen übernommen: Nummer des Quelltickets. */
   from_number: number | null;
+  /** Eingehende Mails: vom Melder, von Beteiligten oder von außen. */
+  origin: "reporter" | "participant" | "external" | "";
+  /** Empfänger gesendeter Antworten und Weiterleitungen. */
+  recipients: string;
   author_name: string;
   original: boolean;
   created_at: string;
@@ -143,9 +146,8 @@ export interface Ticket extends TicketItem {
   categories: Category[];
   reminder_note: string;
   sla: Sla | null;
-  /** Rechte im IT-Bestand: Gerät und Angaben zum Melder sichtbar. */
+  /** Rechte im IT-Bestand: Angaben zum Melder sichtbar. */
   inventory: boolean;
-  device: Device | null;
   reporter_inventory: ReporterInventory | null;
   merged_into: number | null;
   retention: TicketRetention;
@@ -188,16 +190,6 @@ export interface ReporterInventory {
     devices: { id: number; name: string; kind: string; inventory_no: string }[];
   }[];
   loans: { id: number; number: string; due_on: string; overdue: boolean; items: number }[];
-}
-
-export interface Device {
-  id: number;
-  name: string;
-  kind: string;
-  inventory_no: string;
-  serial: string;
-  /** Gehört laut IT-Bestand dem Melder. */
-  reporter?: boolean;
 }
 
 export function ticketLabel(number: number): string {
@@ -291,8 +283,29 @@ export function addNote(number: number, body: string): Promise<Ticket> {
 
 export type StatusAfter = "" | "waiting" | "solved";
 
-export function sendReply(number: number, body: string, statusAfter: StatusAfter): Promise<Ticket> {
-  return postJson(`${BASE}/${number}/replies`, { body, status_after: statusAfter });
+export function sendReply(
+  number: number,
+  body: string,
+  statusAfter: StatusAfter,
+  replyAll = false,
+): Promise<Ticket> {
+  return postJson(`${BASE}/${number}/replies`, {
+    body,
+    status_after: statusAfter,
+    reply_all: replyAll,
+  });
+}
+
+export interface ForwardInput {
+  to: string[];
+  text: string;
+  /** Eintrag, der weitergeleitet wird; null = die ursprüngliche Meldung. */
+  entry_id: string | null;
+  attachments: boolean;
+}
+
+export function forwardTicket(number: number, body: ForwardInput): Promise<Ticket> {
+  return postJson(`${BASE}/${number}/forward`, body);
 }
 
 export function attachmentUrl(number: number, id: string): string {
@@ -570,21 +583,9 @@ export function mergeTicket(
   return postJson(`${BASE}/${number}/merge`, { target, notify_reporter: notifyReporter });
 }
 
-export function searchDevices(number: number, q: string): Promise<Device[]> {
-  return getJson(`${BASE}/${number}/devices?${new URLSearchParams({ q }).toString()}`);
-}
-
-export function setDevice(number: number, hardwareId: number | null): Promise<Ticket> {
-  return putJson(`${BASE}/${number}/device`, { hardware_id: hardwareId });
-}
-
-export interface HardwareTickets {
+export interface TicketRefs {
   items: { number: number; subject: string; status: TicketStatus }[];
   hidden: number;
-}
-
-export function fetchHardwareTickets(hardwareId: number): Promise<HardwareTickets> {
-  return getJson(`${BASE}/by-hardware/${hardwareId}`);
 }
 
 export interface Template {
@@ -894,7 +895,7 @@ export function auditDetails(details: Record<string, unknown>): string {
 
 // --- IT-Bestand und Melder aus Entra --------------------------------------------------------
 
-export function fetchPositionTickets(positionId: number): Promise<HardwareTickets> {
+export function fetchPositionTickets(positionId: number): Promise<TicketRefs> {
   return getJson(`${BASE}/by-position/${positionId}`);
 }
 

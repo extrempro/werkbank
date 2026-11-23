@@ -32,8 +32,7 @@ from werkbank.modules.tickets.mail_texts import DEFAULT_EVENTS, DEFAULT_TYPES
 # Rollen je Bereich, von stark nach schwach
 AREA_ADMIN = "admin"  # Bereichsverwaltung
 AREA_EDIT = "edit"  # Bearbeiten
-AREA_READ = "read"  # Nur lesen
-AREA_ROLES = (AREA_ADMIN, AREA_EDIT, AREA_READ)
+AREA_ROLES = (AREA_ADMIN, AREA_EDIT)
 
 ASSIGN_FIRST = "first"
 ASSIGN_ROUND_ROBIN = "round_robin"
@@ -69,7 +68,8 @@ ENTRY_INBOUND = "inbound"  # Nachricht vom Melder
 ENTRY_REPLY = "reply"  # Antwort an den Melder
 ENTRY_NOTE = "note"  # interne Notiz
 ENTRY_SYSTEM = "system"  # Systemeintrag
-ENTRY_KINDS = (ENTRY_INBOUND, ENTRY_REPLY, ENTRY_NOTE, ENTRY_SYSTEM)
+ENTRY_FORWARD = "forward"  # weitergeleitet (intern)
+ENTRY_KINDS = (ENTRY_INBOUND, ENTRY_REPLY, ENTRY_NOTE, ENTRY_SYSTEM, ENTRY_FORWARD)
 
 
 class TicketArea(Base):
@@ -160,7 +160,7 @@ class TicketAreaGrant(Base):
 
     __table_args__ = (
         UniqueConstraint("area_id", "role", "kind", "oid", name="uq_ticket_grant"),
-        CheckConstraint("role IN ('admin', 'edit', 'read')", name="ck_ticket_grant_role"),
+        CheckConstraint("role IN ('admin', 'edit')", name="ck_ticket_grant_role"),
         CheckConstraint("kind IN ('group', 'person')", name="ck_ticket_grant_kind"),
     )
 
@@ -213,12 +213,9 @@ class Ticket(Base):
     created_by: Mapped[str] = mapped_column(String(256), default="", server_default="")
     # Erste Antwort an den Melder (für Fristen)
     first_response_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Phase 3: Kategorie, Gerät, Erinnerung, Zusammenführen, Zuständigkeit
+    # Phase 3: Kategorie, Erinnerung, Zusammenführen, Zuständigkeit
     category_id: Mapped[int | None] = mapped_column(
         ForeignKey("ticket_categories.id", ondelete="SET NULL"), index=True
-    )
-    hardware_id: Mapped[int | None] = mapped_column(
-        ForeignKey("inventory_hardware.id", ondelete="SET NULL"), index=True
     )
     reminder_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     reminder_note: Mapped[str] = mapped_column(String(120), default="", server_default="")
@@ -349,10 +346,13 @@ class TicketEntry(Base):
     message_id: Mapped[str | None] = mapped_column(String(998), index=True)
     # Beim Zusammenführen übernommen: Nummer des Quelltickets („aus T-…“)
     from_number: Mapped[int | None] = mapped_column(BigInteger)
+    # Absender eingehender Mails; Empfänger gesendeter Antworten und Weiterleitungen
+    author_mail: Mapped[str] = mapped_column(String(320), default="", server_default="")
+    recipients: Mapped[str] = mapped_column(String(2000), default="", server_default="")
 
     __table_args__ = (
         CheckConstraint(
-            "kind IN ('inbound', 'reply', 'note', 'system')", name="ck_ticket_entry_kind"
+            "kind IN ('inbound', 'reply', 'note', 'system', 'forward')", name="ck_ticket_entry_kind"
         ),
     )
 

@@ -12261,6 +12261,11 @@ input[type="file"] {
   justify-content: center;
 }
 
+/* Fokus und Sprungziele landen nicht unter der Antwortleiste. */
+html:has(.ticket-composer) {
+  scroll-padding-bottom: 96px;
+}
+
 .ticket-composer {
   position: sticky;
   bottom: 0;
@@ -12670,4 +12675,136 @@ input[type="file"] {
 
 .ticket-template-preview .ticket-entry-body {
   white-space: pre-wrap;
+}
+
+.ticket-merge-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+}
+
+.ticket-merge-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ticket-merge-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ticket-merge {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ticket-facts-toggle > summary {
+  padding: 10px 14px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+  background: var(--farbe-flaeche);
+  cursor: pointer;
+}
+
+.ticket-facts-toggle[open] > summary {
+  margin-bottom: 8px;
+}
+
+.ticket-facts-title {
+  font-weight: 600;
+}
+
+/* Ticketseite: Angaben als Karten, Weiterleitung, Antworten von außen */
+.ticket-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ticket-card-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--farbe-text-leise);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ticket-side {
+  max-height: calc(100vh - var(--kopf-hoehe) - 160px);
+  overflow-y: auto;
+}
+
+.ticket-entry-forward {
+  border-left: 4px solid var(--farbe-warn-rand-stark);
+  background: var(--farbe-warn-flaeche);
+}
+
+.ticket-entry-external {
+  border-left: 4px solid var(--farbe-rand-kontrast);
+  background: var(--farbe-neutral-flaeche);
+}
+
+.ticket-recipients {
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+
+.ticket-reply-all {
+  background: var(--farbe-flaeche);
+}
+
+@media (max-width: 1000px) {
+  .ticket-side {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .ticket-facts-toggle .ticket-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .ticket-facts-toggle .ticket-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.label-narrow {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .label-wide {
+    display: none;
+  }
+
+  .label-narrow {
+    display: inline;
+  }
+
+  .ticket-composer-buttons {
+    flex-wrap: nowrap;
+  }
+
+  .ticket-composer-buttons .button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 8px;
+  }
 }

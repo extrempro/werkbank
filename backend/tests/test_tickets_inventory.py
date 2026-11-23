@@ -86,10 +86,6 @@ def test_reporter_inventory_only_with_inventory_rights(db: Session, areas: dict[
     # Unbekannte Mail: leer
     other = new_ticket(reader, areas["it"], reporter_mail="niemand@example.com")
     assert other["reporter_inventory"] == {"positions": [], "loans": []}
-    # Vorschläge für Geräte: die des Melders zuerst
-    hits = reader.get(f"{BASE}/{ticket['number']}/devices").json()
-    assert {h["name"] for h in hits} >= {"TK-Gerät Notebook", "TK-Gerät Headset"}
-    assert all(h["reporter"] for h in hits)
 
     # Umgekehrt: Tickets zur Stelle
     assert plain.get(f"{BASE}/by-position/{position_id}").status_code == 403

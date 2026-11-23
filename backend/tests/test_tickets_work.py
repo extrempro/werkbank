@@ -6,14 +6,13 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from sqlalchemy import delete, select, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from tests.test_tickets import BASE, SETTINGS, areas, client_for, db, new_ticket, oid_of  # noqa: F401
 from tests.test_tickets_mail import inbound, mail
 from werkbank.config import Settings
 from werkbank.core.sessions import now_utc
-from werkbank.modules.inventory.models import InventoryHardware, InventoryKind
 from werkbank.modules.tickets.jobs import sla_missed_mails
 from werkbank.modules.tickets.models import Ticket, TicketArea, TicketMailOut
 from werkbank.modules.tickets.notifications import tickets_notifications
@@ -300,10 +299,10 @@ def test_merge(db: Session, areas: dict[str, int]) -> None:
     assert len(suggestions) <= 3
     hits = max_.get(f"{BASE}/{source}/merge-candidates", params={"q": f"T-{target}"}).json()
     assert [h["number"] for h in hits] == [target]
-    # Nur lesen darf nicht
+    # Ohne Rolle im Bereich: nicht gefunden
     assert (
         client_for("Lea Lesen").post(f"{BASE}/{source}/merge", json={"target": target}).status_code
-        == 403
+        == 404
     )
     merged = max_.post(f"{BASE}/{source}/merge", json={"target": target, "notify_reporter": True})
     assert merged.status_code == 200, merged.text
@@ -333,43 +332,6 @@ def test_merge(db: Session, areas: dict[str, int]) -> None:
 
 
 @pytest.mark.db
-def test_devices(db: Session, areas: dict[str, int]) -> None:
-    db.execute(delete(InventoryHardware).where(InventoryHardware.name.like("Ticket-Gerät%")))
-    kind = db.scalar(select(InventoryKind).where(InventoryKind.name == "Ticket-Testart"))
-    if kind is None:
-        kind = InventoryKind(name="Ticket-Testart")
-        db.add(kind)
-        db.flush()
-    for index in range(7):
-        db.add(
-            InventoryHardware(kind_id=kind.id, name=f"Ticket-Gerät {index}", serial=f"TG-{index}")
-        )
-    db.commit()
-    # Ohne Rechte im IT-Bestand: keine Geräte, keine Angaben zum Melder
-    plain = client_for("Max Muster")
-    ticket = new_ticket(plain, areas["it"])
-    assert ticket["inventory"] is False and ticket["reporter_inventory"] is None
-    assert (
-        plain.get(f"{BASE}/{ticket['number']}/devices", params={"q": "Ticket"}).status_code == 403
-    )
-    max_ = client_for("Max Muster", ["Bestand.Reader"])
-    assert max_.get(f"{BASE}/{ticket['number']}").json()["inventory"] is True
-    hits = max_.get(f"{BASE}/{ticket['number']}/devices", params={"q": "Ticket-Gerät"}).json()
-    assert len(hits) == 5
-    linked = max_.put(
-        f"{BASE}/{ticket['number']}/device", json={"hardware_id": hits[0]["id"]}
-    ).json()
-    assert linked["device"]["name"] == hits[0]["name"]
-    seen = max_.get(f"{BASE}/by-hardware/{hits[0]['id']}").json()
-    assert seen["items"][0]["number"] == ticket["number"]
-    other = client_for("Hans Haus", ["Bestand.Reader"]).get(f"{BASE}/by-hardware/{hits[0]['id']}")
-    assert other.json() == {"items": [], "hidden": 1}
-    assert client_for("Hans Haus").get(f"{BASE}/by-hardware/{hits[0]['id']}").status_code == 403
-    unlinked = max_.put(f"{BASE}/{ticket['number']}/device", json={"hardware_id": None}).json()
-    assert unlinked["device"] is None
-
-
-@pytest.mark.db
 def test_templates(db: Session, areas: dict[str, int]) -> None:
     ina = client_for("Ina Beispiel")
     body = {
@@ -392,8 +354,7 @@ def test_templates(db: Session, areas: dict[str, int]) -> None:
     assert {t["shortcut"] for t in data["templates"]} == {"neustart", "intern"}
     assert data["values"]["Vorname"] == "M."
     assert data["values"]["Nr"] == f"T-{ticket['number']}"
-    lea = client_for("Lea Lesen").get(f"{BASE}/{ticket['number']}/templates").json()
-    assert [t["kind"] for t in lea["templates"]] == ["note"]
+    assert client_for("Lea Lesen").get(f"{BASE}/{ticket['number']}/templates").status_code == 404
     assert max_.post(f"{SETTINGS}/areas/{areas['it']}/templates", json=note).status_code == 404
     deleted = ina.delete(f"{SETTINGS}/areas/{areas['it']}/templates/{created[0]['id']}").json()
     assert [t["shortcut"] for t in deleted] == ["intern"]
