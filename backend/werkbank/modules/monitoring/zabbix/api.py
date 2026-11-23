@@ -1,7 +1,7 @@
 """API der Quelle Zabbix. Liest nur aus der Werkbank-Datenbank, nie live aus Zabbix."""
 
 import re
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -47,6 +47,7 @@ from werkbank.modules.monitoring.zabbix.models import (
     ZbxHostLink,
     ZbxMaintenance,
     ZbxProblem,
+    ZbxProblemHour,
     ZbxRun,
     ZbxStatus,
     ZbxUnmonitored,
@@ -337,6 +338,32 @@ class TodoOut(BaseModel):
     certificate_tag: str | None
 
 
+class HostCell(BaseModel):
+    """Ein Host als Kästchen: ok, 1 bis 5 (schlimmster offener Schweregrad), down, wartung."""
+
+    hostid: str
+    name: str
+    state: str
+
+
+class SiteHealthOut(BaseModel):
+    # None: ohne Standort
+    name: str | None
+    hosts: int
+    unreachable: int
+    maintenance: int
+    problems: int
+    worst: int | None
+    cells: list[HostCell]
+
+
+class HourOut(BaseModel):
+    hour: datetime
+    # None: kein Abruf in dieser Stunde
+    open: int | None
+    high: int | None
+
+
 class OverviewOut(BaseModel):
     state: DataState
     kpis: KpisOut
@@ -345,6 +372,79 @@ class OverviewOut(BaseModel):
     maintenances: list[MaintenanceOut]
     todo: TodoOut
     sites: list[str]
+    site_health: list[SiteHealthOut]
+    history: list[HourOut]
+
+
+# Höchstens so viele Kästchen je Standort; die Zahlen zählen trotzdem alle Hosts
+CELLS_MAX = 400
+
+
+def _cell_state(host: ZbxHost, worst: int | None) -> str:
+    if host.in_maintenance:
+        return "wartung"
+    if host.reachable is False:
+        return "down"
+    return str(worst) if worst else "ok"
+
+
+def _site_health(
+    monitored: list[ZbxHost], visible: list[ZbxProblem], sites: dict[int, str]
+) -> list[SiteHealthOut]:
+    """Je Standort Hosts, Ausfälle, Wartung, Probleme und ein Kästchen je Host."""
+    worst: dict[str, int] = {}
+    count: dict[str, int] = {}
+    for problem in visible:
+        if problem.hostid:
+            worst[problem.hostid] = max(worst.get(problem.hostid, 0), problem.severity)
+            count[problem.hostid] = count.get(problem.hostid, 0) + 1
+    groups: dict[str | None, list[ZbxHost]] = {}
+    for host in monitored:
+        name = sites.get(host.site_id) if host.site_id else None
+        groups.setdefault(name, []).append(host)
+    out: list[SiteHealthOut] = []
+    for name in sorted(groups, key=lambda entry: (entry is None, (entry or "").lower())):
+        members = sorted(groups[name], key=lambda host: host.name.lower())
+        site_worst = max((worst.get(host.hostid, 0) for host in members), default=0)
+        out.append(
+            SiteHealthOut(
+                name=name,
+                hosts=len(members),
+                unreachable=sum(
+                    1 for host in members if host.reachable is False and not host.in_maintenance
+                ),
+                maintenance=sum(1 for host in members if host.in_maintenance),
+                problems=sum(count.get(host.hostid, 0) for host in members),
+                worst=site_worst or None,
+                cells=[
+                    HostCell(
+                        hostid=host.hostid,
+                        name=host.name,
+                        state=_cell_state(host, worst.get(host.hostid)),
+                    )
+                    for host in members[:CELLS_MAX]
+                ],
+            )
+        )
+    return out
+
+
+def _history(db: Session, now: datetime) -> list[HourOut]:
+    """Die letzten 24 Stunden, älteste zuerst; Stunden ohne Abruf bleiben leer."""
+    current = now.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
+    start = current - timedelta(hours=23)
+    rows = {
+        row.hour.astimezone(UTC): row
+        for row in db.scalars(select(ZbxProblemHour).where(ZbxProblemHour.hour >= start))
+    }
+    out: list[HourOut] = []
+    for index in range(24):
+        hour = start + timedelta(hours=index)
+        row = rows.get(hour)
+        out.append(
+            HourOut(hour=hour, open=row.open if row else None, high=row.high if row else None)
+        )
+    return out
 
 
 @router.get("")
@@ -416,6 +516,8 @@ def overview(user: ReaderUser, db: DbDep) -> OverviewOut:
             ),
         ),
         sites=sorted({sites[host.site_id] for host in monitored if host.site_id in sites}),
+        site_health=_site_health(monitored, visible, sites),
+        history=_history(db, now),
     )
 
 

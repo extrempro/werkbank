@@ -151,3 +151,113 @@ test("IT-Monitoring: Berichte mit Auslösern für Monitoring.Reader", async ({
   ).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test("IT-Monitoring: Zabbix-Übersicht mit Gesamtstand, Standorten und Filtern", async ({
+  page,
+}) => {
+  // Ohne echtes Zabbix: die Antwort der Übersicht wird nachgebildet (erfundene Daten).
+  const now = Date.now();
+  const problem = (index: number, severity: number, site: string | null) => ({
+    eventid: String(5000 + index),
+    name: `Beispielproblem ${index}`,
+    severity,
+    since: new Date(now - (index + 1) * 3_600_000).toISOString(),
+    acknowledged: false,
+    suppressed: false,
+    tags: [],
+    hostid: String(100 + index),
+    host: `host-${index}`,
+    site,
+    link: null,
+  });
+  const cells = (count: number, marks: Record<number, string>) =>
+    Array.from({ length: count }, (_, index) => ({
+      hostid: `${count}-${index}`,
+      name: `host-${index}`,
+      state: marks[index] ?? "ok",
+    }));
+  const data = {
+    state: {
+      configured: true,
+      data_at: new Date(now).toISOString(),
+      stale: false,
+      error: null,
+      failures: 0,
+      next_at: null,
+      zabbix_url: null,
+    },
+    kpis: {
+      problems: 3,
+      by_severity: { "4": 1, "2": 2 },
+      hosts: 20,
+      unreachable: 1,
+      maintenance: 1,
+    },
+    problems: [
+      problem(0, 4, "Gebäude A"),
+      problem(1, 2, "Gebäude A"),
+      problem(2, 2, null),
+    ],
+    unreachable: [
+      {
+        hostid: "9",
+        name: "host-9",
+        site: "Gebäude A",
+        since: null,
+        link: null,
+      },
+    ],
+    maintenances: [],
+    todo: {
+      long_open: 0,
+      unmonitored: 0,
+      no_inventory: 0,
+      no_serial: 0,
+      certificates: [],
+      certificate_tag: null,
+    },
+    sites: ["Gebäude A"],
+    site_health: [
+      {
+        name: "Gebäude A",
+        hosts: 14,
+        unreachable: 1,
+        maintenance: 1,
+        problems: 2,
+        worst: 4,
+        cells: cells(14, { 0: "4", 1: "2", 2: "wartung", 13: "down" }),
+      },
+      {
+        name: null,
+        hosts: 6,
+        unreachable: 0,
+        maintenance: 0,
+        problems: 1,
+        worst: 2,
+        cells: cells(6, { 0: "2" }),
+      },
+    ],
+    history: Array.from({ length: 24 }, (_, index) => ({
+      hour: new Date(now - (23 - index) * 3_600_000).toISOString(),
+      open: index < 4 ? null : (index % 5) + 1,
+      high: 0,
+    })),
+  };
+  await page.route("**/api/monitoring/zabbix", (route) =>
+    route.fulfill({ json: data }),
+  );
+  await loginAs(page, ["Monitoring.Reader"], "Mona Monitoring");
+  await page.goto("/monitoring/zabbix");
+  await expect(
+    page.getByRole("heading", { name: /1 schweres Problem offen/ }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Warnung: 2 Probleme" }).click();
+  await expect(page.getByText(/nur Warnung · 2 Probleme/)).toBeVisible();
+  await expect(page.getByText("Beispielproblem 0")).toHaveCount(0);
+  await page.getByRole("button", { name: "Filter zurücksetzen" }).click();
+  await page.getByRole("button", { name: /^Ohne Standort/ }).click();
+  await expect(page.getByText(/Ohne Standort · 1 Problem/)).toBeVisible();
+  await expect(page.getByText("Beispielproblem 2")).toBeVisible();
+  await expectNoA11yViolations(page);
+});

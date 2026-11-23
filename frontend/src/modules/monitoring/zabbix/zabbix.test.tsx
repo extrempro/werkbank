@@ -9,7 +9,7 @@ import type {
   ZbxOverview,
   ZbxUnmonitored,
 } from "./api";
-import { severityClass, severityLabel } from "./api";
+import { cellLabel, overviewHeadline, severityClass, severityLabel } from "./api";
 import {
   age,
   ZabbixConnectionPage,
@@ -80,6 +80,34 @@ const overview: ZbxOverview = {
     certificate_tag: null,
   },
   sites: ["Gebäude A (Beispielstadt)"],
+  site_health: [
+    {
+      name: "Gebäude A (Beispielstadt)",
+      hosts: 2,
+      unreachable: 0,
+      maintenance: 1,
+      problems: 1,
+      worst: 4,
+      cells: [
+        { hostid: "10101", name: "Server A", state: "4" },
+        { hostid: "10103", name: "USV C", state: "wartung" },
+      ],
+    },
+    {
+      name: null,
+      hosts: 1,
+      unreachable: 1,
+      maintenance: 0,
+      problems: 1,
+      worst: 2,
+      cells: [{ hostid: "10102", name: "Switch B", state: "down" }],
+    },
+  ],
+  history: Array.from({ length: 24 }, (_, index) => ({
+    hour: new Date(Date.UTC(2026, 10, 21, 9 + index)).toISOString(),
+    open: index < 20 ? null : index,
+    high: index < 20 ? null : 1,
+  })),
 };
 
 function stubFetch(handler: (url: string, init?: RequestInit) => unknown) {
@@ -102,6 +130,26 @@ describe("Hilfen", () => {
     expect(age("2026-11-12T10:00:00Z", now)).toBe("10 Tagen");
     expect(age(null, now)).toBe("–");
   });
+
+  it("fasst den Stand zusammen und beschriftet Kästchen", () => {
+    expect(overviewHeadline(overview).tone).toBe("bad");
+    const calm = {
+      kpis: { problems: 1, by_severity: { "2": 1 }, hosts: 3, unreachable: 0, maintenance: 0 },
+      site_health: [],
+    };
+    expect(overviewHeadline(calm)).toMatchObject({
+      tone: "warn",
+      title: "1 Problem offen, nichts Schweres",
+    });
+    expect(
+      overviewHeadline({
+        kpis: { problems: 0, by_severity: {}, hosts: 3, unreachable: 0, maintenance: 0 },
+        site_health: [],
+      }),
+    ).toMatchObject({ tone: "ok", title: "Alles in Ordnung" });
+    expect(cellLabel({ hostid: "1", name: "Server A", state: "4" })).toBe("Server A: Hoch");
+    expect(cellLabel({ hostid: "1", name: "USV C", state: "wartung" })).toBe("USV C: in Wartung");
+  });
 });
 
 describe("ZabbixOverviewPage", () => {
@@ -116,12 +164,23 @@ describe("ZabbixOverviewPage", () => {
       "target",
       "_blank",
     );
-    fireEvent.change(screen.getByLabelText("Ab Schweregrad"), { target: { value: "4" } });
+    // Gesamtstand oben
+    expect(screen.getByRole("heading", { name: "1 schweres Problem offen" })).toBeVisible();
+    expect(screen.getByText(/am meisten betroffen: Gebäude A/)).toBeVisible();
+    // Schweregrad filtert die Liste
+    fireEvent.click(screen.getByRole("button", { name: "Hoch: 1 Problem" }));
     expect(screen.queryByText("Zertifikat läuft ab")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Ab Schweregrad"), { target: { value: "1" } });
-    fireEvent.change(screen.getByLabelText("Standort"), { target: { value: "" } });
+    expect(screen.getByText(/nur Hoch · 1 Problem/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Filter zurücksetzen" }));
+    // Standort-Kachel filtert, die Kästchen tragen den Zustand im Tooltip
+    const tile = screen.getByRole("button", { name: /^Ohne Standort/ });
+    expect(tile.querySelector('[title="Switch B: nicht erreichbar"]')).not.toBeNull();
+    fireEvent.click(tile);
+    expect(tile).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Zertifikat läuft ab")).toBeVisible();
     expect(screen.queryByText("Switch B ist nicht erreichbar <b>fett</b>")).toBeNull();
+    // Verlauf als Bild mit Beschreibung
+    expect(screen.getByRole("img", { name: /zuletzt 23, höchstens 23/ })).toBeVisible();
     expect(screen.getByText("Firmware Strom")).toBeVisible();
     expect(screen.getByText(/^Stand /)).toBeVisible();
   });

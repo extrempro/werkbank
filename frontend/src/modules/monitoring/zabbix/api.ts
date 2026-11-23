@@ -104,6 +104,93 @@ export interface ZbxOverview {
     certificate_tag: string | null;
   };
   sites: string[];
+  site_health: ZbxSiteHealth[];
+  history: ZbxHour[];
+}
+
+/** Ein Host als Kästchen: „ok“, „1“ bis „5“ (schlimmster offener Schweregrad), „down“, „wartung“. */
+export interface ZbxHostCell {
+  hostid: string;
+  name: string;
+  state: string;
+}
+
+export interface ZbxSiteHealth {
+  /** null: ohne Standort */
+  name: string | null;
+  hosts: number;
+  unreachable: number;
+  maintenance: number;
+  problems: number;
+  worst: number | null;
+  cells: ZbxHostCell[];
+}
+
+export interface ZbxHour {
+  hour: string;
+  /** null: in dieser Stunde kein Abruf */
+  open: number | null;
+  high: number | null;
+}
+
+/** Kurzfassung des Stands für die farbige Karte oben in der Übersicht. */
+export function overviewHeadline(data: Pick<ZbxOverview, "kpis" | "site_health">): {
+  tone: "ok" | "warn" | "bad";
+  title: string;
+  text: string;
+} {
+  const count = (value: number) => data.kpis.by_severity[String(value)] ?? 0;
+  const severe = count(5) + count(4);
+  const parts = SEVERITIES.filter((entry) => count(entry.value) > 0).map(
+    (entry) => `${count(entry.value)} ${entry.label}`,
+  );
+  if (data.kpis.unreachable > 0) {
+    parts.push(
+      `${data.kpis.unreachable} ${data.kpis.unreachable === 1 ? "Host" : "Hosts"} nicht erreichbar`,
+    );
+  }
+  const worst = data.site_health
+    .filter((site) => site.worst !== null || site.unreachable > 0)
+    .sort(
+      (left, right) =>
+        (right.worst ?? 0) - (left.worst ?? 0) || right.unreachable - left.unreachable,
+    )[0];
+  if (worst && (severe > 0 || data.kpis.unreachable > 0)) {
+    parts.push(`am meisten betroffen: ${worst.name ?? "ohne Standort"}`);
+  }
+  if (severe > 0) {
+    return {
+      tone: "bad",
+      title: severe === 1 ? "1 schweres Problem offen" : `${severe} schwere Probleme offen`,
+      text: parts.join(" · "),
+    };
+  }
+  if (data.kpis.problems > 0 || data.kpis.unreachable > 0) {
+    const title =
+      data.kpis.problems === 0
+        ? "Keine Probleme, aber Hosts nicht erreichbar"
+        : `${data.kpis.problems} ${data.kpis.problems === 1 ? "Problem" : "Probleme"} offen, nichts Schweres`;
+    return { tone: "warn", title, text: parts.join(" · ") };
+  }
+  return {
+    tone: "ok",
+    title: "Alles in Ordnung",
+    text: `Keine offenen Probleme, alle ${data.kpis.hosts} überwachten Hosts erreichbar.`,
+  };
+}
+
+/** Beschriftung eines Host-Kästchens für Tooltip und Screenreader. */
+export function cellLabel(cell: ZbxHostCell): string {
+  if (cell.state === "ok") {
+    return `${cell.name}: in Ordnung`;
+  }
+  if (cell.state === "down") {
+    return `${cell.name}: nicht erreichbar`;
+  }
+  if (cell.state === "wartung") {
+    return `${cell.name}: in Wartung`;
+  }
+  return `${cell.name}: ${severityLabel(Number(cell.state))}`;
 }
 
 export interface ZbxHostRow {

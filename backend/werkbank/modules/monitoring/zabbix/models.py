@@ -59,6 +59,18 @@ class ZbxProblem(Base):
     tags: Mapped[list[Any]] = mapped_column(JSONB, default=list)
 
 
+class ZbxProblemHour(Base):
+    """Offene Probleme je Stunde für den Verlauf der Übersicht (letzter Abruf der Stunde).
+    Nur Zahlen, keine Namen; älter als zwei Tage wird gelöscht."""
+
+    __tablename__ = "mon_zbx_problem_hours"
+
+    hour: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    open: Mapped[int] = mapped_column(Integer, default=0)
+    # davon Hoch oder Katastrophe
+    high: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class ZbxMaintenance(Base):
     """Eine Wartung mit Zeitraum und betroffenen Hosts und Gruppen."""
 

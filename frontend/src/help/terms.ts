@@ -126,6 +126,16 @@ export const HELP = {
     text: "Keine Schnittstelle des Hosts antwortet Zabbix. Hosts in Wartung zählen hier nicht mit.",
     topic: ["it-monitoring", "zabbix-uebersicht"],
   },
+  "zabbix.gesamtstand": {
+    term: "Gesamtstand",
+    text: "Rot, sobald ein Problem mit Hoch oder Katastrophe offen ist, gelb bei anderen Problemen oder nicht erreichbaren Hosts, sonst grün. Unterdrückte Probleme zählen nicht mit.",
+    topic: ["it-monitoring", "zabbix-uebersicht"],
+  },
+  "zabbix.verlauf": {
+    term: "Letzte 24 Stunden",
+    text: "Wie viele Probleme je Stunde offen waren, gemessen beim letzten Abruf der Stunde. Die Werkbank sammelt das selbst, erst ab dem Update.",
+    topic: ["it-monitoring", "zabbix-uebersicht"],
+  },
   "zabbix.lange-offen": {
     term: "Lange offen",
     text: "Probleme, die seit mehr als 7 Tagen offen sind. Hier hilft meist eine Entscheidung mehr als Warten.",

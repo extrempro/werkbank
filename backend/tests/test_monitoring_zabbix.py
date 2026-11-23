@@ -32,6 +32,7 @@ from werkbank.modules.monitoring.zabbix import collector, reports
 from werkbank.modules.monitoring.zabbix.admin import get_zabbix_transport
 from werkbank.modules.monitoring.zabbix.api import maintenance_state
 from werkbank.modules.monitoring.zabbix.client import (
+    Problem,
     RoleCheck,
     ZabbixClient,
     ZabbixConfig,
@@ -51,6 +52,7 @@ from werkbank.modules.monitoring.zabbix.models import (
     ZbxMaintLog,
     ZbxOutage,
     ZbxProblem,
+    ZbxProblemHour,
     ZbxReportDay,
     ZbxRun,
     ZbxStatus,
@@ -326,6 +328,25 @@ def test_collect_stores_state(db: Session, tmp_path: Path, name: str) -> None:
 
 
 @pytest.mark.db
+def test_problem_hours_keep_last_value_and_two_days(db: Session) -> None:
+    now = datetime(2026, 11, 23, 10, 20, tzinfo=UTC)
+    db.execute(delete(ZbxProblemHour))
+    db.add(ZbxProblemHour(hour=now - timedelta(days=3), open=7, high=1))
+    db.commit()
+
+    def problem(eventid: str, severity: int, suppressed: bool = False) -> Problem:
+        return Problem(eventid, "1", "x", severity, 0, False, suppressed, [])
+
+    collector.record_hour(db, [problem("1", 5), problem("2", 2), problem("3", 4, True)], now)
+    collector.record_hour(db, [problem("1", 5)], now + timedelta(minutes=30))
+    db.commit()
+    rows = list(db.scalars(select(ZbxProblemHour)))
+    assert [(row.hour, row.open, row.high) for row in rows] == [
+        (datetime(2026, 11, 23, 10, tzinfo=UTC), 1, 1)
+    ]
+
+
+@pytest.mark.db
 def test_notifications_after_three_failures(db: Session, tmp_path: Path) -> None:
     settings = settings_with_key(tmp_path)
     now = now_utc()
@@ -395,6 +416,22 @@ def test_api_overview_hosts_and_rights(db: Session, tmp_path: Path) -> None:
     assert data["todo"]["long_open"] == 2
     assert [entry["eventid"] for entry in data["todo"]["certificates"]] == ["5002"]
     assert data["sites"] == ["Gebäude A (Beispielstadt)"]
+    health = {entry["name"]: entry for entry in data["site_health"]}
+    assert [entry["name"] for entry in data["site_health"]] == ["Gebäude A (Beispielstadt)", None]
+    site_a = health["Gebäude A (Beispielstadt)"]
+    assert (site_a["hosts"], site_a["maintenance"], site_a["problems"], site_a["worst"]) == (
+        2,
+        1,
+        1,
+        2,
+    )
+    assert [cell["state"] for cell in site_a["cells"]] == ["2", "wartung"]
+    assert health[None]["cells"] == [{"hostid": "10102", "name": "Switch B", "state": "down"}]
+    assert health[None]["unreachable"] == 1 and health[None]["worst"] == 4
+    # Verlauf: 24 Stunden, die laufende mit den offenen Problemen (ohne unterdrückte)
+    assert len(data["history"]) == 24
+    assert data["history"][-1]["open"] == 2 and data["history"][-1]["high"] == 1
+    assert data["history"][0]["open"] is None
     assert "zbx-geheim" not in json.dumps(data)
 
     rows = {row["hostid"]: row for row in client.get("/api/monitoring/zabbix/hosts").json()}

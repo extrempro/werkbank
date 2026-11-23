@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.105.0] – 2026-11-23
+
+### IT-Monitoring
+
+- **Zabbix-Übersicht neu aufgebaut** nach dem freigegebenen Entwurf:
+  - Gesamtstand als farbige Karte (grün, gelb, rot) mit Aufzählung und dem am meisten betroffenen Standort, daneben „Hosts erreichbar“ und „Zu erledigen“
+  - offene Probleme als Balken nach Schweregrad; ein Klick filtert die Liste
+  - Standorte als Kacheln mit einem Kästchen je Host (Farbe = schlimmster offener Zustand, nicht erreichbar umrandet, Wartung grau); ein Klick filtert
+  - „Letzte 24 Stunden“: offene Probleme je Stunde (neue Tabelle `mon_zbx_problem_hours`, Migration `0071`, 48 Stunden)
+  - ohne Einrichtung nur der Hinweis
+- API: Übersicht liefert zusätzlich `site_health` und `history`
+
+### Dokumentation
+
+- spec.md (Übersicht, neue Tabelle), Handbuch (Übersicht), Info-Symbole „Gesamtstand“ und „Letzte 24 Stunden“
+
+### Tests
+
+- `test_monitoring_zabbix.py` (Standorte, Verlauf, Aufbewahrung), `zabbix.test.tsx`, E2E `monitoring.spec.ts` mit nachgebildeter Übersicht (axe auf allen Profilen)
+
 ## [0.104.2] – 2026-11-23
 
 ### Behoben
