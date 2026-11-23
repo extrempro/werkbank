@@ -887,7 +887,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Die Werkbank zeigt, was Zabbix gerade meldet: offene Probleme, nicht erreichbare Hosts und Wartungen. Sie liest nur, quittieren und Wartungen anlegen geht weiter in Zabbix. Probleme fragt sie jede Minute ab, Wartungen alle 15 Minuten, Hosts mit Gruppen und Inventar stündlich. Oben auf jeder Seite steht, wann die Daten zuletzt kamen. Ist Zabbix nicht erreichbar, siehst du den letzten Stand mit Zeit und einen Hinweis.",
+                text: "Die Werkbank zeigt, was Zabbix gerade meldet: offene Probleme, nicht erreichbare Hosts und Wartungen. Sie liest nur, quittieren und Wartungen anlegen geht weiter in Zabbix. Probleme von Triggern, Items oder Hosts, die du in Zabbix abgeschaltet hast, zeigt sie nicht, genau wie Zabbix selbst. Probleme fragt sie jede Minute ab, Wartungen alle 15 Minuten, Hosts mit Gruppen und Inventar stündlich. Oben auf jeder Seite steht, wann die Daten zuletzt kamen. Ist Zabbix nicht erreichbar, siehst du den letzten Stand mit Zeit und einen Hinweis.",
               },
               {
                 kind: "terms",

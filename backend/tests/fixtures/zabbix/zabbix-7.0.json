@@ -208,6 +208,16 @@
    "acknowledged": "0",
    "suppressed": "1",
    "tags": []
+  },
+  {
+   "eventid": "5004",
+   "objectid": "9004",
+   "name": "Check in Zabbix abgeschaltet",
+   "severity": "4",
+   "clock": "1790000100",
+   "acknowledged": "0",
+   "suppressed": "0",
+   "tags": []
   }
  ],
  "trigger.get": [

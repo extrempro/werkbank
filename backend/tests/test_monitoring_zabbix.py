@@ -305,6 +305,10 @@ def test_collect_stores_state(db: Session, tmp_path: Path, name: str) -> None:
     assert hosts["10101"].serial == "SN-1001"
     problems = {row.eventid: row for row in db.scalars(select(ZbxProblem))}
     assert problems["5001"].hostid == "10102"
+    # Trigger 9004 ist in Zabbix abgeschaltet: trigger.get (monitored) nennt ihn nicht
+    assert "5004" not in problems
+    trigger_calls = [params for method, params, _ in fake.calls if method == "trigger.get"]
+    assert trigger_calls and all(params.get("monitored") is True for params in trigger_calls)
     status = db.get(ZbxStatus, 1)
     assert status is not None and status.version == fake.data["apiinfo.version"]
     hints = status.account["hinweise"]
