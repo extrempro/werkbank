@@ -55,6 +55,18 @@ export interface OverviewRow {
   forecast_cents: number;
 }
 
+/** Eine Rechnung zu einem Budgetposten, für Links und das PDF-Symbol. */
+export interface InvoiceRef {
+  id: number;
+  number: string;
+  invoice_date: string;
+  /** Geschäftsjahr der Rechnung, für den Link in die Liste dieses Jahres. */
+  year: number;
+  status: InvoiceStatus;
+  /** Es gibt einen PDF-Beleg. */
+  has_document: boolean;
+}
+
 /** Ein Budgetposten: ein Vorhaben mit erwarteten Kosten je Geschäftsjahr und Laufzeit. */
 export interface Item {
   id: number;
@@ -67,6 +79,9 @@ export interface Item {
   name: string;
   /** Erwartete Kosten je Geschäftsjahr, brutto. */
   amount_cents: number;
+  /** Dasselbe netto und der Steuersatz in Hundertstel Prozent (1900 = 19 %). */
+  net_cents: number;
+  tax_rate_bp: number;
   start_year: number;
   start_year_name: string;
   /** null: bis auf Weiteres; gleich start_year: einmalig. */
@@ -87,6 +102,8 @@ export interface Item {
   /** IT-Projekt, zu dem der Posten gehört; höchstens eins. */
   project_id?: number | null;
   project_name?: string | null;
+  /** Rechnungen mit Positionen auf diesem Posten, neueste zuerst. */
+  invoices?: InvoiceRef[];
 }
 
 export interface ItemUpdate {
@@ -94,7 +111,10 @@ export interface ItemUpdate {
   /** Partner (Firma) des Postens, Pflicht. */
   partner_id: number;
   name: string;
+  /** Brutto; dazu Netto und Steuersatz, wie eingegeben. */
   amount_cents: number;
+  net_cents: number;
+  tax_rate_bp: number;
   start_year: number;
   end_year: number | null;
   note: string;
@@ -305,6 +325,8 @@ export interface ContractUpdate {
   net_cents: number;
   /** Steuersatz in Hundertstel Prozent: 1900 = 19 %. */
   tax_rate_bp: number;
+  /** Brutto, wenn es eingegeben wurde (Netto daraus gerechnet); sonst rechnet der Server. */
+  gross_cents?: number | null;
   interval: ContractInterval;
   note: string;
 }
@@ -315,6 +337,8 @@ export interface ContractItem {
   name: string;
   account_number: string;
   account_name: string;
+  /** Rechnungen des Postens, neueste zuerst. */
+  invoices?: InvoiceRef[];
 }
 
 export interface Contract extends Omit<ContractUpdate, "item_ids"> {

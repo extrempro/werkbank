@@ -166,6 +166,11 @@ const PATHS = {
   haken: ["M5 12l5 5 9-10"],
   warnung: ["M12 4l9 16H3z", "M12 10v4", "M12 17h.01"],
   extern: ["M14 4h6v6", "M20 4l-9 9", "M18 14v6H4V6h6"],
+  link: [
+    "M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1",
+    "M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1",
+  ],
+  pdf: ["M14 3H6v18h12V7z", "M14 3v4h4", "M9 13h6", "M9 17h4"],
 } as const;
 
 export type IconName = keyof typeof PATHS;

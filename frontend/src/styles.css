@@ -5019,6 +5019,132 @@ html {
   fill: var(--farbe-bad-text);
 }
 
+/* Budget: eigener Link einer Ansicht, verknüpfte Einträge und PDF-Symbol */
+.budget-link-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+  background: var(--farbe-grund);
+}
+
+.budget-link-url {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: var(--farbe-text-mittel);
+  overflow-wrap: anywhere;
+}
+
+.budget-link-bar .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.budget-link-state {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.budget-link-state:empty {
+  display: none;
+}
+
+.budget-linked {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.budget-linked h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.budget-linked ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.budget-linked li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.budget-linked li > a {
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.budget-linked-kind {
+  min-width: 92px;
+  font-weight: 700;
+  color: var(--farbe-text-leise);
+}
+
+.budget-linked-actions {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.budget-icon-button,
+.budget-pdf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text-mittel);
+}
+
+.budget-pdf {
+  color: var(--farbe-bad-text);
+}
+
+.budget-pdf:hover,
+.budget-icon-button:hover {
+  border-color: var(--farbe-rand-kontrast);
+}
+
+.budget-status-cell .budget-pdf {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.budget-pdf-small {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+}
+
+.budget-pdf-small .icon {
+  width: 16px;
+  height: 16px;
+}
+
 .budget-list {
   display: flex;
   flex-direction: column;
@@ -10321,6 +10447,42 @@ td > .budget-row-actions {
 .form-label {
   font-size: 0.875rem;
   font-weight: 600;
+}
+
+/* Betrag mit Netto/Brutto und freiem Steuersatz (Budgetposten, Vertrag, Rechnungsposition) */
+.budget-amount {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 10px;
+}
+
+.budget-amount legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.budget-amount-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.budget-amount-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 10px 14px;
+}
+
+.budget-amount-result {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--farbe-info-flaeche);
+  color: var(--farbe-info-text);
 }
 
 .form-hint {

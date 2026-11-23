@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.106.0",
+    date: "2026-11-23",
+    summary: "IT-Budget: Beträge netto oder brutto, PDF-Symbol und Links zum Weitergeben.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Bei Budgetposten, Verträgen und Rechnungspositionen trägst du den Betrag wahlweise netto oder brutto ein, mit beliebigem Steuersatz. Den anderen Wert siehst du sofort darunter.",
+          "Bestehende Budgetposten haben 19 % Steuer bekommen; ihr Brutto bleibt gleich.",
+          "Im Vertrag stehen Budgetposten, die schon zu einem anderen Vertrag gehören, nicht mehr zur Wahl.",
+          "Gibt es zu einer Rechnung ein PDF, öffnet ein rotes Symbol am Budgetposten, an der Rechnung und an der Position es direkt.",
+          "Budgetposten, Rechnungen und Verträge haben einen eigenen Link. Mit „Link kopieren“ schickst du ihn jemandem; unter „Verknüpft“ springst du zwischen Posten, Rechnung und Vertrag hin und her.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.105.0",
     date: "2026-11-23",
     summary: "IT-Monitoring: neue Zabbix-Übersicht mit dem aktuellen Stand auf einen Blick.",

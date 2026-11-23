@@ -23,6 +23,7 @@ from werkbank.modules.budget.contracts import (
     expected_cents,
     gross_cents,
     is_running,
+    net_from_gross,
     notice_deadline,
     term_end,
     yearly_cents,
@@ -95,6 +96,8 @@ STATUS_BOOKED = "gebucht"
 STATUS_LABELS = {STATUS_OPEN: "zu prüfen", STATUS_BOOKED: "gebucht"}
 # So weit darf ein von Hand eingetragenes Brutto vom gerechneten abweichen (in Cent).
 GROSS_TOLERANCE = 100
+# Netto aus Brutto gerechnet kann um einen Cent vom Brutto zurück abweichen
+ROUNDING_CENTS = 1
 # So viele Geschäftsjahre nach dem laufenden stehen in der Jahresauswahl.
 PLAN_AHEAD = 5
 # So viele Geschäftsjahre zeigen Mehrjahresübersicht, Statistik und Export.
@@ -180,6 +183,19 @@ class AccountIn(BaseModel):
         return value
 
 
+class InvoiceRef(BaseModel):
+    """Eine Rechnung zu einem Budgetposten, für Links und das PDF-Symbol."""
+
+    id: int
+    number: str
+    invoice_date: date
+    # Geschäftsjahr der Rechnung (für den Link in die Liste dieses Jahres)
+    year: int
+    status: str
+    # Es gibt einen PDF-Beleg
+    has_document: bool
+
+
 class ItemOut(BaseModel):
     id: int
     # Feste Nummer, z. B. BP-2026-012
@@ -192,6 +208,9 @@ class ItemOut(BaseModel):
     name: str
     # Erwartete Kosten je Geschäftsjahr (brutto) und Laufzeit; ohne Ende: bis auf Weiteres
     amount_cents: int
+    # Dasselbe netto und der Steuersatz in Hundertstel Prozent (1900 = 19 %)
+    net_cents: int
+    tax_rate_bp: int
     start_year: int
     start_year_name: str
     end_year: int | None
@@ -210,6 +229,8 @@ class ItemOut(BaseModel):
     # Partner (Firma) des Postens; ältere Posten haben noch keinen
     partner_id: int | None = None
     partner_name: str | None = None
+    # Rechnungen mit Positionen auf diesem Posten, neueste zuerst
+    invoices: list[InvoiceRef] = Field(default_factory=list)
 
 
 class ItemIn(BaseModel):
@@ -217,7 +238,12 @@ class ItemIn(BaseModel):
     # Partner (Firma) des Postens, Pflicht
     partner_id: int = Field(ge=1)
     name: str = Field(min_length=1, max_length=160)
+    # Erwartete Kosten brutto; fürs Budget zählt das Brutto
     amount_cents: int = Field(default=0, ge=0, le=AMOUNT_MAX)
+    # Steuersatz in Hundertstel Prozent (1900 = 19 %), frei wählbar
+    tax_rate_bp: int = Field(default=1900, ge=0, le=10_000)
+    # Netto; None: aus Brutto und Steuersatz rechnen. Angegeben muss es zum Brutto passen.
+    net_cents: int | None = Field(default=None, ge=0, le=AMOUNT_MAX)
     # Erstes Geschäftsjahr. None: beim Anlegen das laufende, beim Ändern bleibt es.
     start_year: int | None = Field(default=None, ge=YEAR_MIN, le=YEAR_MAX)
     # None: bis auf Weiteres; gleich start_year: einmalig
@@ -468,6 +494,7 @@ def item_out(
     status_text: str | None = None,
     contract: BudgetContract | None = None,
     projects: dict[int, str] | None = None,
+    invoices: dict[int, list[InvoiceRef]] | None = None,
 ) -> ItemOut:
     account = accounts.get(row.account_id)
     return ItemOut(
@@ -479,6 +506,8 @@ def item_out(
         kind=account.kind if account else KIND_RUNNING,
         name=row.name,
         amount_cents=row.amount_cents,
+        net_cents=row.net_cents,
+        tax_rate_bp=row.tax_rate_bp,
         start_year=row.start_year,
         start_year_name=fiscal_year_name(row.start_year, start_month),
         end_year=row.end_year,
@@ -499,7 +528,45 @@ def item_out(
         ),
         partner_id=row.partner_id,
         partner_name=row.partner.name if row.partner is not None else None,
+        invoices=(invoices or {}).get(row.id, []),
     )
+
+
+# Höchstens so viele Rechnungen je Posten in Listen und Ansichten
+INVOICES_PER_ITEM = 20
+
+
+def item_invoices(db: DbDep) -> dict[int, list[InvoiceRef]]:
+    """Rechnungen je Budgetposten (über ihre Positionen), neueste zuerst."""
+    rows = db.execute(
+        select(
+            BudgetInvoiceLine.item_id,
+            BudgetInvoice.id,
+            BudgetInvoice.number,
+            BudgetInvoice.invoice_date,
+            BudgetInvoice.status,
+            BudgetInvoice.doc_key,
+        )
+        .join(BudgetInvoice, BudgetInvoice.id == BudgetInvoiceLine.invoice_id)
+        .order_by(BudgetInvoice.invoice_date.desc(), BudgetInvoice.id.desc())
+    ).all()
+    start_month = load_settings(db).start_month
+    out: dict[int, list[InvoiceRef]] = {}
+    for item_id, invoice_id, number, invoice_date, invoice_status, doc_key in rows:
+        refs = out.setdefault(item_id, [])
+        if len(refs) >= INVOICES_PER_ITEM or any(ref.id == invoice_id for ref in refs):
+            continue
+        refs.append(
+            InvoiceRef(
+                id=invoice_id,
+                number=number,
+                invoice_date=invoice_date,
+                year=fiscal_year_of(invoice_date, start_month),
+                status=invoice_status,
+                has_document=doc_key is not None,
+            )
+        )
+    return out
 
 
 def _year_lines(db: DbDep, years: list[int], start_month: int) -> dict[tuple[int, int], YearLines]:
@@ -587,6 +654,7 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
     accounts = {row.id: row for row in _accounts(db)}
     item_contracts = _item_contracts(db)
     projects = _project_names(db)
+    invoices = item_invoices(db)
     items: list[ItemRow] = []
     for item in _items(db, accounts):
         expected = expected_in(item, year)
@@ -608,6 +676,7 @@ def _overview(db: DbDep, year: int) -> OverviewOut:
                     settings.start_month,
                     contract=item_contracts.get(item.id),
                     projects=projects,
+                    invoices=invoices,
                 ),
                 expected_cents=expected,
                 previous_cents=expected_in(item, year - 1),
@@ -691,6 +760,14 @@ def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Den Vertrag gibt es nicht."
         )
+    if (
+        body.net_cents is not None
+        and abs(gross_cents(body.net_cents, body.tax_rate_bp) - body.amount_cents) > ROUNDING_CENTS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Netto, Steuersatz und Brutto passen nicht zusammen.",
+        )
     _check_project(db, body, own_id)
     other = db.scalars(
         select(BudgetItem).where(
@@ -748,9 +825,17 @@ def list_items(user: Reader, db: DbDep, year: YearQuery = None) -> list[ItemOut]
     rows = _items(db, accounts)
     contracts = _item_contracts(db)
     projects = _project_names(db)
+    invoices = item_invoices(db)
     if year is None:
         return [
-            item_out(row, accounts, start_month, contract=contracts.get(row.id), projects=projects)
+            item_out(
+                row,
+                accounts,
+                start_month,
+                contract=contracts.get(row.id),
+                projects=projects,
+                invoices=invoices,
+            )
             for row in rows
         ]
     lines = _year_lines(db, [year], start_month)
@@ -762,6 +847,7 @@ def list_items(user: Reader, db: DbDep, year: YearQuery = None) -> list[ItemOut]
             item_status(row, year, lines.get((row.id, year))),
             contracts.get(row.id),
             projects,
+            invoices,
         )
         for row in rows
     ]
@@ -789,6 +875,7 @@ def _one_item(db: DbDep, row: BudgetItem) -> ItemOut:
         load_settings(db).start_month,
         contract=db.get(BudgetContract, contract_id) if contract_id is not None else None,
         projects=_project_names(db),
+        invoices=item_invoices(db),
     )
 
 
@@ -822,6 +909,12 @@ def _apply_item(db: DbDep, row: BudgetItem, body: ItemIn) -> None:
     row.partner = db.get(BudgetPartner, body.partner_id)
     row.name = body.name
     row.amount_cents = body.amount_cents
+    row.tax_rate_bp = body.tax_rate_bp
+    row.net_cents = (
+        net_from_gross(body.amount_cents, body.tax_rate_bp)
+        if body.net_cents is None
+        else body.net_cents
+    )
     row.end_year = body.end_year
     row.note = body.note
     row.active = body.active
@@ -1109,6 +1202,8 @@ class ContractItemOut(BaseModel):
     name: str
     account_number: str
     account_name: str
+    # Rechnungen des Postens, neueste zuerst
+    invoices: list[InvoiceRef] = Field(default_factory=list)
 
 
 class ContractOut(BaseModel):
@@ -1179,6 +1274,8 @@ class ContractIn(BaseModel):
     net_cents: int = Field(ge=0, le=AMOUNT_MAX)
     # Steuersatz in Hundertstel Prozent: 1900 = 19 %
     tax_rate_bp: int = Field(default=1900, ge=0, le=10_000)
+    # Brutto, wenn es eingegeben wurde (Netto dann daraus gerechnet); muss dazu passen
+    gross_cents: int | None = Field(default=None, ge=0, le=2 * AMOUNT_MAX)
     interval: str
     note: str = Field(default="", max_length=500)
 
@@ -1225,6 +1322,7 @@ def contract_out(
     year_range: tuple[date, date],
     item_ids: list[int],
     actuals: dict[int, int] | None = None,
+    invoices: dict[int, list[InvoiceRef]] | None = None,
 ) -> ContractOut:
     deadline = notice_deadline(row, today)
     days = (deadline - today).days if deadline is not None else None
@@ -1242,6 +1340,7 @@ def contract_out(
                 name=item.name,
                 account_number=account.number if account else "",
                 account_name=account.name if account else "",
+                invoices=(invoices or {}).get(item.id, []),
             )
         )
     linked.sort(key=lambda entry: (entry.account_number, entry.name.lower(), entry.id))
@@ -1327,7 +1426,15 @@ def _one_contract(db: DbDep, row: BudgetContract) -> ContractOut:
     linked = _contract_items(db).get(row.id, [])
     year = fiscal_year_of(today, load_settings(db).start_month)
     return contract_out(
-        row, partners, accounts, items, today, year_range, linked, _contract_actuals(db, year)
+        row,
+        partners,
+        accounts,
+        items,
+        today,
+        year_range,
+        linked,
+        _contract_actuals(db, year),
+        item_invoices(db),
     )
 
 
@@ -1347,6 +1454,11 @@ def _check_contract(db: DbDep, body: ContractIn, own_id: int | None) -> None:
         problem = "Der Kündigungstag liegt vor dem Beginn."
     elif body.ends_on is None and body.renewal_months is not None:
         problem = "Eine Verlängerung gibt es nur bei einem Ende der Laufzeit."
+    elif (
+        body.gross_cents is not None
+        and abs(gross_cents(body.net_cents, body.tax_rate_bp) - body.gross_cents) > ROUNDING_CENTS
+    ):
+        problem = "Netto, Steuersatz und Brutto passen nicht zusammen."
     if problem:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=problem)
     # Ein Budgetposten hat höchstens einen Vertrag.
@@ -1385,7 +1497,11 @@ def _apply_contract(row: BudgetContract, body: ContractIn) -> None:
     row.cancelled_to = body.cancelled_to
     row.net_cents = body.net_cents
     row.tax_rate_bp = body.tax_rate_bp
-    row.amount_cents = gross_cents(body.net_cents, body.tax_rate_bp)
+    row.amount_cents = (
+        gross_cents(body.net_cents, body.tax_rate_bp)
+        if body.gross_cents is None
+        else body.gross_cents
+    )
     row.interval = body.interval
     row.note = body.note
 
@@ -1413,9 +1529,18 @@ def list_contracts(user: Reader, db: DbDep, year: YearQuery = None) -> ContractL
     partners, accounts, items, today, year_range, year_name = _contract_context(db, chosen)
     linked = _contract_items(db)
     actuals = _contract_actuals(db, chosen)
+    invoices = item_invoices(db)
     entries = [
         contract_out(
-            row, partners, accounts, items, today, year_range, linked.get(row.id, []), actuals
+            row,
+            partners,
+            accounts,
+            items,
+            today,
+            year_range,
+            linked.get(row.id, []),
+            actuals,
+            invoices,
         )
         for row in db.scalars(select(BudgetContract)).all()
     ]
@@ -1579,6 +1704,8 @@ def create_monthly_items(
             partner=partner,
             name=name,
             amount_cents=row.amount_cents,
+            net_cents=row.net_cents,
+            tax_rate_bp=row.tax_rate_bp,
             start_year=body.year,
             end_year=body.year,
             note=f"Monatsposten aus dem Vertrag {row.title}"[:500],

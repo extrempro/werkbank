@@ -32,7 +32,10 @@ describe("Erklärungen der Info-Symbole", () => {
   });
 
   it("findet die Hilfe auch für Unterseiten", () => {
-    expect(pageTopics("/budget/posten")).toEqual([["it-budget", "posten"]]);
+    expect(pageTopics("/budget/posten/11")).toEqual([
+      ["it-budget", "posten"],
+      ["it-budget", "verknuepft"],
+    ]);
     expect(pageTopics("/evergreen/m365/12")).toEqual([["evergreen", "liste"]]);
     expect(pageTopics("/it-tools/verlauf")).toEqual([["it-tools", "verlauf"]]);
     expect(pageTopics("/it-tools/netzwerk")).toEqual([["it-tools", "ueberblick"]]);

@@ -81,9 +81,13 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .selectOption({ label: `${number} Testkonto Wartung` });
   // Der Partner ist am Budgetposten Pflicht.
   await pickFromList(itemForm, /^Partner/, `Beispiel Partner ${number}`);
-  await itemForm
-    .getByRole("textbox", { name: /^Betrag \(Brutto\)/ })
+  // Der Betrag lässt sich netto oder brutto eintragen.
+  const itemAmount = itemForm.getByRole("group", { name: /^Erwartete Kosten/ });
+  await itemAmount.getByRole("button", { name: "Brutto", exact: true }).click();
+  await itemAmount
+    .getByRole("textbox", { name: /^Betrag brutto/ })
     .fill("1.500,00");
+  await expect(itemAmount.getByText(/^Netto: 1\.260,50\s€/)).toBeVisible();
   await expect(itemForm.getByText(/^Plan: 1\.500,00\s€ nur für/)).toBeVisible();
   // Tags stehen sichtbar in der Maske.
   await itemForm
@@ -134,7 +138,8 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   // Turnus zuerst; das Betragsfeld heißt dann passend.
   await contractForm.getByRole("button", { name: "Monatlich" }).click();
   await contractForm
-    .getByRole("textbox", { name: /^Monatsbetrag/ })
+    .getByRole("group", { name: /^Monatsbetrag/ })
+    .getByRole("textbox", { name: /^Betrag netto/ })
     .fill("100,00");
   await expect(
     contractForm.getByText(/^Brutto 119,00\s€ je Monat/),
@@ -228,7 +233,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .getByRole("combobox", { name: /^Budgetposten/ })
     .selectOption({ index: 1 });
   await second.getByRole("textbox", { name: /^Betrag netto/ }).fill("50,00");
-  await second.getByRole("textbox", { name: /^Steuersatz/ }).fill("7");
+  await second.getByRole("textbox", { name: "Steuersatz (%)" }).fill("7");
   await expect(
     second.getByLabel("Schließt den Budgetposten ab"),
   ).not.toBeChecked();
@@ -278,6 +283,40 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   expect(download.status()).toBe(200);
   expect(download.headers()["content-disposition"]).toContain("attachment");
   expect((await download.body()).equals(pdf)).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expectNoA11yViolations(page);
+
+  // Eigener Link und „Verknüpft“: von der Rechnung zum Budgetposten springen.
+  await expect(page).toHaveURL(/\/budget\/rechnungen\/\d+\?jahr=\d{4}$/);
+  await expect(
+    invoicePane.getByRole("button", { name: "Link kopieren" }),
+  ).toBeVisible();
+  await expect(
+    invoicePane
+      .getByRole("link", { name: `PDF von Rechnung RE-${number} öffnen` })
+      .first(),
+  ).toBeVisible();
+  await invoicePane
+    .getByRole("region", { name: "Verknüpft" })
+    .getByRole("link", { name: new RegExp(`Posten ${number}$`) })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/budget\/posten\/\d+\?jahr=\d{4}$/);
+  const linkedItem = page.getByRole("region", { name: `Posten ${number}` });
+  const itemLinks = linkedItem.getByRole("region", { name: "Verknüpft" });
+  await expect(
+    itemLinks.getByRole("link", { name: `RE-${number}`, exact: true }),
+  ).toBeVisible();
+  await expect(
+    itemLinks.getByRole("link", {
+      name: `PDF von Rechnung RE-${number} öffnen`,
+    }),
+  ).toBeVisible();
+  // Der Link funktioniert auch direkt geöffnet.
+  await page.reload();
+  await expect(
+    page.getByRole("region", { name: `Posten ${number}` }),
+  ).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
 
