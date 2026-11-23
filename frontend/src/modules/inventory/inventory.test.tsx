@@ -312,6 +312,18 @@ describe("Lenovo PSREF", () => {
     expect(calls.some((call) => call.method === "POST")).toBe(true);
   });
 
+  it("nennt den Grund, wenn der letzte Abruf fehlgeschlagen ist", async () => {
+    stubFetch({
+      "GET /api/inventory/hardware/7": {
+        ...lenovo,
+        psref: { ...psref, status: "fehler", error: "PSREF antwortet mit 500." },
+      },
+    });
+    render(<HardwareDetailPage hardwareId={7} tab="technik" roles={["Bestand.Reader"]} />);
+    expect(await screen.findByText("Grund: PSREF antwortet mit 500.")).toBeTruthy();
+    expect(screen.getByText(/Abruf fehlgeschlagen/)).toBeTruthy();
+  });
+
   it("zeigt Lesern keinen Abruf", async () => {
     stubFetch({ "GET /api/inventory/hardware/7": { ...lenovo, psref } });
     render(<HardwareDetailPage hardwareId={7} tab="technik" roles={["Bestand.Reader"]} />);

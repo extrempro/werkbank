@@ -1360,7 +1360,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Für Lenovo-Rechner und Lenovo-Monitore holt die Werkbank einmal am Tag die technischen Daten von der Lenovo-Seite PSREF, wenn ein Admin das in der Verwaltung bei NinjaOne eingeschaltet hat. Im Reiter „Technik“ stehen dann Kamera, Mikrofon und Lautsprecher (soweit Lenovo sie nennt), die wichtigsten Eckdaten, alle Merkmale zum Aufklappen und ein Link zur Lenovo-Seite. Mit „Bei PSREF abrufen“ holst du die Daten sofort neu. Bei Rechnern muss als Modell der Maschinentyp stehen, zum Beispiel 10T7004BGE.",
+                text: "Für Lenovo-Rechner und Lenovo-Monitore holt die Werkbank einmal am Tag die technischen Daten von der Lenovo-Seite PSREF, wenn ein Admin das in der Verwaltung bei NinjaOne eingeschaltet hat. Im Reiter „Technik“ stehen dann Kamera, Mikrofon und Lautsprecher (soweit Lenovo sie nennt), die wichtigsten Eckdaten, alle Merkmale zum Aufklappen und ein Link zur Lenovo-Seite. Mit „Bei PSREF abrufen“ holst du die Daten sofort neu. Bei Rechnern muss als Modell der Maschinentyp stehen, zum Beispiel 10T7004BGE. Klappt ein Abruf nicht, steht darunter der Grund. Lenovo lässt zurzeit nur Abrufe zu, die sich als Browser melden; dafür trägt ein Admin in der Verwaltung bei NinjaOne die „Absenderkennung für PSREF“ ein.",
               },
             ],
             links: [{ to: "/bestand/vorgaenge", label: "Zu den Vorgängen" }],

@@ -316,6 +316,8 @@ class PsrefOut(BaseModel):
     url: str
     name: str
     status: str
+    # Grund des letzten Fehlers; leer, wenn der letzte Abruf geklappt hat
+    error: str = ""
     checked_at: datetime | None
     # Kamera, Mikrofon, Lautsprecher, soweit PSREF sie nennt
     av: dict[str, str]
@@ -580,6 +582,7 @@ def psref_out(model: InventoryModel | None) -> PsrefOut | None:
         url=model.psref_url,
         name=model.psref_name,
         status=model.psref_status,
+        error=model.psref_error if model.psref_status == "fehler" else "",
         checked_at=model.psref_checked_at,
         av=av_summary(model.psref_specs or []),
         specs=specs,
