@@ -66,17 +66,6 @@ class InventoryModel(Base):
         ForeignKey("inventory_makers.id", ondelete="CASCADE"), index=True
     )
     name: Mapped[str] = mapped_column(String(120))
-    # Technische Daten aus Lenovo PSREF (nur Lenovo-Modelle), gespeichert je Modell
-    psref_key: Mapped[str] = mapped_column(String(120), default="", server_default="")
-    psref_name: Mapped[str] = mapped_column(String(160), default="", server_default="")
-    psref_url: Mapped[str] = mapped_column(String(300), default="", server_default="")
-    # Liste aus {"group", "name", "value"}
-    psref_specs: Mapped[list[dict[str, str]] | None] = mapped_column(JSONB)
-    # ok, nicht_gefunden oder fehler
-    psref_status: Mapped[str] = mapped_column(String(16), default="", server_default="")
-    # Grund des letzten Fehlers (leer, wenn der letzte Abruf geklappt hat)
-    psref_error: Mapped[str] = mapped_column(String(300), default="", server_default="")
-    psref_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class InventoryRetireReason(Base):

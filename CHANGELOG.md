@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.111.0] – 2026-11-24
+
+### IT-Bestand
+
+- **Lenovo PSREF entfernt**, solange es keinen Zugang zur offiziellen Schnittstelle gibt: kein täglicher Abruf mehr, kein Block im Reiter „Technik“, keine Einstellungen dazu in der Verwaltung bei NinjaOne.
+  - Gelöscht: `psref.py`, `psref_sync.py`, Auftrag `bestand.psref`, Endpunkt `POST /api/inventory/hardware/{id}/psref`
+  - Migration `0076`: entfernt die Spalten `psref_*` an `inventory_models`, offene Aufträge `bestand.psref` und die Schlüssel `psref_enabled` und `psref_user_agent` aus den NinjaOne-Einstellungen. Die gespeicherten technischen Daten gehen dabei verloren.
+
+### Dokumentation
+
+- spec.md, datenschutz.md (Lenovo PSREF als Empfänger entfernt), security/asvs-l2.md und Handbuch angepasst
+
+### Tests
+
+- `test_inventory_psref.py` und die PSREF-Tests im Frontend entfernt
+
 ## [0.110.1] – 2026-11-24
 
 ### Behoben

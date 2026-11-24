@@ -4,16 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "werkbank"
-version = "0.110.1"
+version = "0.111.0"
 description = "Werkbank - Open-Source-Plattform für IT-Abteilungen"
 license = "MIT"
 requires-python = ">=3.14"
 dependencies = [
-    "fastapi>=0.163.1",
+    "fastapi>=0.162.7",
     "uvicorn[standard]>=0.54.0",
     "pydantic>=2.14.3",
     "pydantic-settings>=2.16.3",
-    "sqlalchemy>=2.1.9",
+    "sqlalchemy>=2.1.8",
     "alembic>=1.20.1",
     "psycopg[binary]>=3.3.9",
     "msal>=1.39.0",

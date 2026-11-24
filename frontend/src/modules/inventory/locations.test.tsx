@@ -314,7 +314,6 @@ describe("Gerät: Standort", () => {
       ninja: null,
       connected_to: null,
       monitors: [],
-      psref: null,
       loan: null,
       purchased_on: null,
       location: {
