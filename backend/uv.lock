@@ -1337,7 +1337,7 @@ wheels = [
 
 [[package]]
 name = "werkbank"
-version = "0.124.2"
+version = "0.125.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },

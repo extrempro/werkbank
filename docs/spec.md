@@ -919,6 +919,8 @@ Umsetzung in vier Phasen mit Halt nach jeder Phase (entschieden): **D1** Arbeits
 
 **Versionen**: nach der eingestellten Bearbeitungszeit (5, 10 oder 30 Minuten, Vorgabe 10) entsteht beim Speichern eine Version; der Auftrag `doku.versionen` (alle 5 Minuten) legt sie auch an, wenn danach niemand mehr speichert. „Aktuellen Stand benennen“; benannte bleiben immer. Ansehen nur lesend, „Wiederherstellen“ mit Bestätigung und freiwilligem Grund; der Stand davor bleibt als Version. Automatische Versionen: 1 Jahr (danach bleibt je Tag die jüngste) oder immer (Auftrag `doku.aufraeumen` täglich).
 
+**Verschieben** (0.125.0, `POST /api/doku/pages/{id}/move`): Knopf „Verschieben“ rechts unter „Seite“ (Bearbeiten, nicht gesperrt, nicht archiviert) öffnet einen Dialog mit neuem Platz im selben Arbeitsbereich (oben nur mit Bearbeiten im Arbeitsbereich, sonst unter einer Seite mit Bearbeiten; die Seite selbst und ihre Unterseiten stehen nicht zur Wahl) und der Reihenfolge („Am Ende“ oder „Vor …“). Unterseiten wandern mit. Ohne Bestätigungsdialog, weil sich jede Verschiebung zurückschieben lässt; der Dialog selbst ist die Bestätigung. Ziehen im Seitenbaum gibt es nicht (Bedienung mit Tastatur und am Handy gleich).
+
 **Papierkorb**: Löschen (mit Bestätigung) legt die Seite mit Unterseiten in den Papierkorb; die Doku-Verwaltung stellt wieder her oder löscht endgültig (mit Bestätigung); nach 30 Tagen löscht der Auftrag `doku.aufraeumen` endgültig.
 
 **Verwaltung** (`/doku/verwaltung`, Reiter Arbeitsbereiche · Seiten mit eigenen Rechten · Versionen · Papierkorb; Lese-Links mit D4).

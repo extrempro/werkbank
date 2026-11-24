@@ -15,6 +15,7 @@ import { clearRefCache } from "./DokuNodes";
 import { refreshCommentMarks, type CommentMarksOptions, type MarkedThread } from "./commentMarks";
 import { DokuMenuContent, useDokuTree } from "./DokuMenu";
 import { NewPageDialog } from "./NewPageDialog";
+import { MovePageDialog } from "./MovePageDialog";
 import { RightsDialog } from "./RightsDialog";
 import { VersionsPanel } from "./VersionsPanel";
 import { useLiveDoc, type LiveStatus } from "./useLiveDoc";
@@ -254,7 +255,7 @@ function ReasonField({ onChange }: { onChange: (value: string) => void }) {
 
 /**
  * Eine Seite: Titel und Inhalt bearbeiten (automatisch gespeichert), Rechte und Teilen,
- * Sperren, Versionen ansehen und wiederherstellen, in den Papierkorb legen.
+ * Sperren, Versionen ansehen und wiederherstellen, verschieben, in den Papierkorb legen.
  */
 export function DokuPageView({ pageId }: { pageId: string }) {
   const [page, setPage] = useState<DokuPageData | null>(null);
@@ -264,6 +265,7 @@ export function DokuPageView({ pageId }: { pageId: string }) {
   const [session, setSession] = useState(0);
   const [viewing, setViewing] = useState<VersionDetail | null>(null);
   const [rightsOpen, setRightsOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const [message, setMessage] = useState<FeedbackMessage | null>(null);
   const [ask, confirmDialog] = useConfirm();
   const draft = useRef<string | null>(null);
@@ -679,6 +681,19 @@ export function DokuPageView({ pageId }: { pageId: string }) {
             {canChange && !page.locked && (
               <button
                 type="button"
+                className="button button-secondary"
+                onClick={() => {
+                  flush();
+                  setMoveOpen(true);
+                }}
+              >
+                <Icon name="pfeil-rechts" />
+                Verschieben
+              </button>
+            )}
+            {canChange && !page.locked && (
+              <button
+                type="button"
                 className="button button-secondary doku-danger"
                 onClick={() =>
                   ask(
@@ -711,6 +726,17 @@ export function DokuPageView({ pageId }: { pageId: string }) {
           </section>
         </aside>
       </div>
+      {moveOpen && (
+        <MovePageDialog
+          page={page}
+          onClose={() => setMoveOpen(false)}
+          onMoved={(data) => {
+            apply(data, true);
+            notifyTreeChanged();
+            setMessage({ kind: "status", text: "Die Seite wurde verschoben." });
+          }}
+        />
+      )}
       {rightsOpen && (
         <RightsDialog
           pageId={page.id}
