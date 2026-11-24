@@ -170,8 +170,10 @@ describe("EntriesPage", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Microsoft 365" })).toBeVisible();
     const nav = await screen.findByRole("navigation", { name: "Einträge Microsoft 365" });
     expect(screen.getByText("3 offen, davon 2 neu")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Mit Frist · 1" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Abgeschlossen · 4" })).toBeVisible();
+    const status = screen.getByRole("combobox", { name: "Status" });
+    expect(screen.getByRole("option", { name: "Mit Frist · 1" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Abgeschlossen · 4" })).toBeTruthy();
+    expect(screen.queryByRole("group", { name: "Status" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Neuer Eintrag" })).toBeNull();
     const heads = nav.querySelectorAll("h2");
     expect([...heads].map((head) => head.textContent)).toEqual([
@@ -189,7 +191,7 @@ describe("EntriesPage", () => {
     fireEvent.click(screen.getByRole("link", { name: /Ohne Frist neu/ }));
     expect(navigate).toHaveBeenCalledWith("/evergreen/m365/7");
 
-    fireEvent.click(screen.getByRole("button", { name: "Abgeschlossen · 4" }));
+    fireEvent.change(status, { target: { value: "abgeschlossen" } });
     await waitFor(() => expect(calls.at(-1)?.url).toContain("state=abgeschlossen"));
     await waitFor(() => expect(nav.querySelectorAll("h2")).toHaveLength(0));
   });

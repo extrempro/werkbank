@@ -166,11 +166,15 @@ export async function openHandbook(page: Page) {
 
 /**
  * Status über einer Liste wählen (gemeinsame Filterzeile): am Computer und Tablet ein Chip
- * „Name · Anzahl“, am Handy eine Auswahl.
+ * „Name · Anzahl“, am Handy und in Listen mit fester Breite eine Auswahl.
  */
 export async function chooseStatus(page: Page, label: string, option: string) {
-  if (isPhone(page)) {
-    const select = page.getByRole("combobox", { name: label, exact: true });
+  const select = page.getByRole("combobox", { name: label, exact: true });
+  // Am Handy und in Listen mit fester Breite (z. B. Evergreen) ist der Status eine Auswahl
+  await expect(
+    select.or(page.getByRole("group", { name: label, exact: true })).first(),
+  ).toBeVisible();
+  if (isPhone(page) || (await select.count()) > 0) {
     const value = await select
       .getByRole("option", { name: new RegExp(`^${escape(option)}( ·|$)`) })
       .getAttribute("value");
@@ -186,8 +190,11 @@ export async function chooseStatus(page: Page, label: string, option: string) {
 /** Prüft, welcher Status über einer Liste gewählt ist. */
 export async function expectStatus(page: Page, label: string, option: string) {
   const name = new RegExp(`^${escape(option)}( ·|$)`);
-  if (isPhone(page)) {
-    const select = page.getByRole("combobox", { name: label, exact: true });
+  const select = page.getByRole("combobox", { name: label, exact: true });
+  await expect(
+    select.or(page.getByRole("group", { name: label, exact: true })).first(),
+  ).toBeVisible();
+  if (isPhone(page) || (await select.count()) > 0) {
     await expect(select.locator("option:checked")).toHaveText(name);
   } else {
     await expect(

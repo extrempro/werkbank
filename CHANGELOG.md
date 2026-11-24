@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.112.0] – 2026-11-24
+
+### Evergreen
+
+- Status in der Liste als Auswahl unter der Suche statt seitlich scrollender Chips (`FilterBar` mit `statusSelect`, Regel „Filter-Chips nie seitlich scrollen“ in design.md)
+
+### Tests
+
+- E2E-Helfer `chooseStatus`/`expectStatus` erkennen die Auswahl auch am Computer
+
 ## [0.111.0] – 2026-11-24
 
 ### IT-Bestand
