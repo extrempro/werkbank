@@ -20,82 +20,135 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Geraete.Zuordnung", "Gerätezuordnung"],
 ];
 
-const ROLE_INFO: Record<string, { label: string; description: string }> = {
-  "Geraete.Zuordnung": {
-    label: "Gerätezuordnung",
-    description:
-      "Neue Windows-Geräte per QR-Code scannen, zur Freigabe senden, freigeben, verwerfen",
+interface RightArea {
+  name: string;
+  /** Stufen von der höchsten zur niedrigsten: Bezeichnung, entscheidende Rolle, Erklärung. */
+  levels: readonly (readonly [string, string, string])[];
+}
+
+/**
+ * Bereiche und Stufen wie unter Verwaltung › Berechtigungen (Server: `core/permissions.py`).
+ * Die Rollennamen sind nur noch interne Kennungen; angezeigt werden Bereich und Stufe.
+ */
+const RIGHT_AREAS: readonly RightArea[] = [
+  {
+    name: "Tickets",
+    levels: [
+      ["Verwalten", "Tickets.Verwaltung", "Bereiche und Postfächer einrichten"],
+      ["Nutzen", "Tickets.Nutzer", "Tickets der eigenen Bereiche bearbeiten"],
+    ],
   },
-  "Werkbank.Admin": {
-    label: "Werkbank Admin",
-    description: "Verwaltung der Werkbank: Module, Konnektoren, Regeln, Audit-Log",
+  {
+    name: "Dokumentation",
+    levels: [
+      ["Verwalten", "Doku.Admin", "Arbeitsbereiche, Versionen und Papierkorb verwalten"],
+      ["Nutzen", "Doku.Nutzer", "Seiten der eigenen Arbeitsbereiche lesen und bearbeiten"],
+    ],
   },
-  "Config.Reader": {
-    label: "Konfiguration Leser",
-    description: "M365-Konfiguration ansehen und exportieren",
+  {
+    name: "IT-Bestand",
+    levels: [
+      ["Bearbeiten", "Bestand.Editor", "Hardware, Stammdaten und Vorgänge pflegen"],
+      ["Lesen", "Bestand.Reader", "Hardware, Stammdaten und Vorgänge ansehen"],
+    ],
   },
-  "Config.Reviewer": {
-    label: "Konfiguration Prüfer",
-    description: "Änderungen bewerten, Beschreibungen und Soll-Werte pflegen",
+  {
+    name: "Gerätezuordnung",
+    levels: [
+      [
+        "Nutzen",
+        "Geraete.Zuordnung",
+        "Neue Windows-Geräte per QR-Code scannen, zur Freigabe senden und freigeben",
+      ],
+    ],
   },
-  "Evergreen.Reader": {
-    label: "Evergreen Leser",
-    description: "Evergreen-Einträge mit Bewertung und Notizen ansehen",
+  {
+    name: "IT-Projekte",
+    levels: [
+      ["Bearbeiten", "Projekte.Editor", "Projekte, Jour Fixe und Aufgaben pflegen"],
+      ["Lesen", "Projekte.Reader", "Projekte mit Budget, Jour Fixe und Aufgaben ansehen"],
+    ],
   },
-  "Evergreen.Editor": {
-    label: "Evergreen Bearbeiter",
-    description:
-      "Evergreen-Einträge anlegen, bewerten, Notizen anfügen, abschließen und wieder öffnen",
+  {
+    name: "IT-Budget",
+    levels: [
+      ["Verwalten", "Budget.Manager", "Wie Bearbeiten, dazu Rechnungen buchen und Einstellungen"],
+      ["Bearbeiten", "Budget.Editor", "Konten, Posten, Verträge, Partner und Rechnungen pflegen"],
+      ["Lesen", "Budget.Reader", "IT-Budget ansehen"],
+    ],
   },
-  "Monitoring.Reader": {
-    label: "Monitoring Leser",
-    description: "Bereich IT-Monitoring ansehen (z. B. DNS-Abgleich mit NetBox)",
+  {
+    name: "IT-Monitoring",
+    levels: [
+      ["Lesen", "Monitoring.Reader", "Den ganzen Bereich ansehen"],
+      ["Nur Berichte", "Monitoring.Berichte", "Nur die Berichte, ohne Hostdetails"],
+    ],
   },
-  "Monitoring.Berichte": {
-    label: "Monitoring Berichte",
-    description: "Nur die Berichte von IT-Monitoring ansehen und exportieren, ohne Hostdetails",
+  {
+    name: "M365-Einstellungen",
+    levels: [
+      ["Prüfen", "Config.Reviewer", "Änderungen bewerten, Beschreibungen und Soll-Werte pflegen"],
+      ["Lesen", "Config.Reader", "Einstellungen und Tenant-Übersicht ansehen"],
+      ["Lesen", "Tenant.Reader", "Einstellungen und Tenant-Übersicht ansehen"],
+    ],
   },
-  "Tools.User": {
-    label: "IT-Tools Nutzer",
-    description: "Bereich IT-Tools öffnen (Rechner, Generatoren, Konverter)",
+  {
+    name: "Evergreen",
+    levels: [
+      ["Bearbeiten", "Evergreen.Editor", "Einträge anlegen, bewerten und abschließen"],
+      ["Lesen", "Evergreen.Reader", "Einträge mit Bewertung und Notizen ansehen"],
+    ],
   },
-  "Tenant.Reader": {
-    label: "Tenant Leser",
-    description: "Lizenzen und Benutzerzahlen des Tenants mit Verlauf ansehen",
+  {
+    name: "IT-Tools",
+    levels: [["Nutzen", "Tools.User", "Rechner, Generatoren und Konverter"]],
   },
-  "Budget.Editor": {
-    label: "Budget Bearbeiter",
-    description:
-      "IT-Budget ansehen; Konten, Budgetposten, Verträge, Partner und Rechnungen pflegen",
+];
+
+export const ADMIN_ROLE = "Werkbank.Admin";
+
+const OTHER_INFO: Record<string, { label: string; description: string }> = {
+  [ADMIN_ROLE]: {
+    label: "Admin-Gruppe",
+    description: "Verwaltung der Werkbank; die Mitgliedschaft kommt aus Entra",
   },
-  "Budget.Manager": {
-    label: "Budgetverwalter",
-    description: "Wie Bearbeiter, dazu Rechnungen buchen und die Einstellungen festlegen",
+  "tickets:bereich": {
+    label: "Tickets: Mitglied eines Bereichs",
+    description: "Tickets der eigenen Bereiche",
   },
-  "Budget.Reader": { label: "Budget Leser", description: "IT-Budget ansehen" },
-  "Projekte.Reader": {
-    label: "Projekte Leser",
-    description: "IT-Projekte ansehen: Übersicht, Budget, Jour Fixe und Aufgaben",
-  },
-  "Projekte.Editor": {
-    label: "Projekte Bearbeiter",
-    description:
-      "IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe mit Anhängen und Aufgaben",
-  },
-  "Bestand.Reader": {
-    label: "IT-Bestand Leser",
-    description: "IT-Bestand ansehen: Hardware und Stammdaten",
-  },
-  "Bestand.Editor": {
-    label: "IT-Bestand Bearbeiter",
-    description:
-      "IT-Bestand pflegen: Hardware erfassen, Inventurnummern setzen, ausmustern, Stammdaten",
+  "tickets:einstellungen": {
+    label: "Tickets: Einstellungen",
+    description: "Einstellungen der Ticket-Bereiche",
   },
 };
 
-/** Name und Beschreibung einer App-Rolle (wie in der Verwaltung). */
+export interface Right {
+  area: string;
+  level: string;
+  description: string;
+}
+
+/** Höchste Stufe je Bereich, wie unter Verwaltung › Berechtigungen. */
+export function myRights(roles: readonly string[]): Right[] {
+  const rights: Right[] = [];
+  for (const area of RIGHT_AREAS) {
+    const level = area.levels.find(([, role]) => roles.includes(role));
+    if (level) {
+      rights.push({ area: area.name, level: level[0], description: level[2] });
+    }
+  }
+  return rights;
+}
+
+/** Name und Beschreibung einer Rolle als Bereich und Stufe, z. B. „IT-Budget: Lesen“. */
 export function roleInfo(role: string): { label: string; description: string } {
-  return ROLE_INFO[role] ?? { label: role, description: "" };
+  for (const area of RIGHT_AREAS) {
+    const level = area.levels.find(([, key]) => key === role);
+    if (level) {
+      return { label: `${area.name}: ${level[0]}`, description: level[2] };
+    }
+  }
+  return OTHER_INFO[role] ?? { label: role, description: "" };
 }
 
 /** Bezeichnung der wichtigsten Rolle; ohne bekannte Rolle `null`. */

@@ -43,7 +43,7 @@ describe("HandbookPage", () => {
     render(<HandbookPage roles={["Budget.Manager"]} areaId="it-budget" topicId="rechnungen" />);
     expect(screen.getByRole("heading", { level: 1, name: "Rechnungen erfassen" })).toBeVisible();
     expect(screen.getByText(/›\s*Ausgaben/)).toBeVisible();
-    expect(screen.getByText(/^Für: .*Budgetverwalter/)).toBeVisible();
+    expect(screen.getByText(/^Für: .*IT-Budget: Verwalten/)).toBeVisible();
     expect(screen.getByRole("link", { name: "Zu den Rechnungen ›" })).toHaveAttribute(
       "href",
       "/budget/rechnungen",

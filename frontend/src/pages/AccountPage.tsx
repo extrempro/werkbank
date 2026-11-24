@@ -10,16 +10,17 @@ import { ThemeSwitch } from "../components/ThemeSwitch";
 import { NEWS_PATH } from "../navigation";
 import { HANDBOOK_PATH } from "../handbook";
 import { NOTIFICATIONS_PATH } from "../notifications";
-import { roleInfo } from "../user";
+import { ADMIN_ROLE, myRights } from "../user";
 
 /** Eigene Angaben, Rollen, angemeldete Geräte und persönliche Einstellungen. */
 export function AccountPage({ me, tickets = false }: { me: Me; tickets?: boolean }) {
+  const rights = myRights(me.roles);
   return (
     <div className="page account">
       <header className="page-head">
         <h1>Konto</h1>
         <p className="page-sub">
-          Deine Angaben, Rollen, angemeldeten Geräte und persönlichen Einstellungen.
+          Deine Angaben, Rechte, angemeldeten Geräte und persönlichen Einstellungen.
         </p>
       </header>
 
@@ -35,24 +36,35 @@ export function AccountPage({ me, tickets = false }: { me: Me; tickets?: boolean
         </div>
       </section>
 
-      <section className="panel" aria-labelledby="konto-rollen">
+      <section className="panel" aria-labelledby="konto-rechte">
         <div className="panel-head">
-          <h2 id="konto-rollen">Meine Rollen</h2>
-          <span className="small">vergeben in Microsoft Entra ID</span>
+          <h2 id="konto-rechte">Meine Rechte</h2>
+          <span className="small">vergeben unter Verwaltung › Berechtigungen</span>
         </div>
         <ul className="rows">
-          {me.roles.map((role) => {
-            const info = roleInfo(role);
-            return (
-              <li key={role}>
-                <span className="row-main">
-                  <span className="row-title">{info.label}</span>
-                  <span className="small">{info.description}</span>
+          {me.roles.includes(ADMIN_ROLE) && (
+            <li>
+              <span className="row-main">
+                <span className="row-title">Verwaltung</span>
+                <span className="small">
+                  Du bist in der Admin-Gruppe. Das kommt aus Entra und lässt sich in der Werkbank
+                  nicht ändern.
                 </span>
-                <span className="mono small">{role}</span>
-              </li>
-            );
-          })}
+              </span>
+            </li>
+          )}
+          {rights.map((right) => (
+            <li key={right.area}>
+              <span className="row-main">
+                <span className="row-title">{right.area}</span>
+                <span className="small">{right.description}</span>
+              </span>
+              <span className="pill pill-neutral">{right.level}</span>
+            </li>
+          ))}
+          {rights.length === 0 && !me.roles.includes(ADMIN_ROLE) && (
+            <li className="empty">Du hast noch keine Rechte in einem Bereich.</li>
+          )}
         </ul>
       </section>
 

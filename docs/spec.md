@@ -766,18 +766,18 @@ Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Ei
 
 | Rolle | Gilt für | Technik | Darf |
 |---|---|---|---|
-| **Ticket-Nutzer** | Anmeldung | Entra-App-Rolle `Tickets.Nutzer` | Nur die Anmeldung an der Werkbank für Personen, die sonst keine App-Rolle haben (z. B. Mitglieder anderer Abteilungen). Gibt allein **keinen** Zugriff auf Tickets; den regeln die Rollen je Bereich. Zuweisung an die Gruppen der Bereiche. |
-| **Ticket-Verwaltung** | alle Bereiche | Entra-App-Rolle `Tickets.Verwaltung` (Claim `roles`, wirkt ab der nächsten Anmeldung) | Bereiche anlegen, Postfächer anbinden oder wechseln, Rollen vergeben, Vorgabe der Aufbewahrung. **Kein** Zugriff auf Tickets, außer sie ist im Bereich zusätzlich Bereichsverwaltung oder Mitglied. |
+| **Ticket-Nutzer** | Anmeldung | Verwaltung › Berechtigungen: Tickets „Nutzen“ (intern `Tickets.Nutzer`, seit 0.121.0; vorher Entra-App-Rolle) | Öffnet den Bereich Tickets. Gibt allein **keinen** Zugriff auf Tickets; den regeln die Rollen je Bereich. Wer sich anmelden darf, regelt die Zugangsgruppe in Entra (6.1a). |
+| **Ticket-Verwaltung** | alle Bereiche | Verwaltung › Berechtigungen: Tickets „Verwalten“ (intern `Tickets.Verwaltung`, wirkt sofort) | Bereiche anlegen, Postfächer anbinden oder wechseln, Rollen vergeben, Vorgabe der Aufbewahrung. **Kein** Zugriff auf Tickets, außer sie ist im Bereich zusätzlich Bereichsverwaltung oder Mitglied. |
 | **Bereichsverwaltung** | je Bereich | Werkbank-Datenbank (Gruppe und/oder Personen) | Einstellungen des Bereichs: Mitglieder, Kategorien, Fristen, Geräte, Textbausteine, Filter, Texte und Melder-Mails des eigenen Postfachs, Abweichung der Aufbewahrung, Ausnahmen. Sieht **alle** Tickets des Bereichs, darf jedes zuweisen und umverteilen, bekommt die Eskalationen. |
 | **Bearbeiten** | je Bereich | wie oben | Tickets sehen, antworten, Status ändern, freies Ticket nehmen, eigene Tickets übergeben, interne Notizen. |
 
 - Eine Rolle „Leitung“ gibt es nicht; das übernimmt die Bereichsverwaltung.
-- **Bereichsrollen sind keine App-Rollen**, weil Bereiche in der Werkbank angelegt werden. Je Bereich und Rolle speichert die Werkbank eine oder mehrere Entra-Gruppen (**Objekt-ID**, Name nur zur Anzeige) und/oder einzelne Personen (Objekt-ID).
+- **Bereichsrollen sind keine Stufen unter Verwaltung › Berechtigungen**, weil Bereiche in der Werkbank angelegt werden. Je Bereich und Rolle speichert die Werkbank eine oder mehrere Entra-Gruppen (**Objekt-ID**, Name nur zur Anzeige) und/oder einzelne Personen (Objekt-ID).
 - **Prüfung serverseitig über Microsoft Graph:** `GET /users/{id}/transitiveMemberOf/microsoft.graph.group?$select=id` (auch verschachtelte Gruppen). Ergebnis je Person zwischengespeichert (`TICKETS_MEMBERSHIP_CACHE_MINUTES`, Vorgabe 5). Zusätzlich gleicht ein Auftrag die Mitglieder der Gruppen regelmäßig ab (`GET /groups/{id}/transitiveMembers`, stündlich), z. B. für „reihum“, Benachrichtigungen und die Liste der zuweisbaren Personen. Der Gruppen-Claim im Token wird **nicht** verwendet (ab 200 Gruppen unvollständig, „Overage“).
 - Anwendungsberechtigung `GroupMember.Read.All` in der Collector-App (Begründung und Einrichtung in `entra-setup.md`). Personen für einzelne Einträge sucht die Werkbank wie im IT-Bestand mit `User.Read.All`.
 - **Deny by default:** ohne passende Rolle kein Zugriff. Wer eine Gruppenmitgliedschaft verliert, verliert den Zugriff spätestens nach Ablauf des Zwischenspeichers. Ist Graph nicht erreichbar und der Zwischenspeicher abgelaufen, gilt die Person als nicht berechtigt.
 - Hat eine Person mehrere Rollen im selben Bereich, gilt die stärkste (Bereichsverwaltung > Bearbeiten).
-- Den Menüpunkt „Einstellungen“ sieht nur, wer `Tickets.Verwaltung` hat oder in mindestens einem Bereich Bereichsverwaltung ist. Die Ticket-Verwaltung muss immer mindestens einen Eintrag behalten (in der Werkbank: mindestens eine Gruppe oder Person mit Bereichsverwaltung je Bereich; die App-Rolle selbst wird in Entra gepflegt).
+- Den Menüpunkt „Einstellungen“ sieht nur, wer Tickets „Verwalten“ hat oder in mindestens einem Bereich Bereichsverwaltung ist. Jeder Bereich muss immer mindestens eine Gruppe oder Person mit Bereichsverwaltung behalten.
 - **Protokoll** (eigene Tabelle `ticket_audit`, Aufbewahrung 3 Jahre, zusätzlich Einträge im Audit-Log der Werkbank): jede Änderung an Einstellungen (wer, wann, welcher Bereich, was; ohne Inhalte von Texten), dazu Zuständigkeit, Status, Zusammenführen, Löschläufe und Ausnahmen.
 
 ### Sichtbarkeit
@@ -883,7 +883,7 @@ Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Ei
 
 - **Mail-Inhalte gelten als feindlich.** HTML wird serverseitig in reinen Text umgewandelt (entschieden: keine HTML-Darstellung, kein Zusatzpaket); Skripte, Formulare, Stile und externe Ressourcen fallen damit weg, Bilder werden nicht nachgeladen. Das Original gibt es nur als Download (.eml).
 - **Anhänge:** Typ über den Inhalt, Größenlimit, Download mit `Content-Disposition: attachment` und `X-Content-Type-Options: nosniff`, Ablage im Volume außerhalb des Webroots, Zugriff nur über das Ticket mit Bereichsprüfung. **Vorschau (0.116.0):** Bilder (PNG, JPEG, GIF, WebP) und PDF mit `?view=true` im Browser (`inline`, `nosniff`, `no-store`), nur wenn der Dateianfang zum gespeicherten Typ passt; Bilder mit `Content-Security-Policy: default-src 'none'; sandbox`, PDF ohne Sandbox (sonst zeigt der Browser seine PDF-Ansicht nicht), aber mit `default-src 'none'`. Textdateien (TXT, CSV, EML, auch die Original-Mail) über `GET …/attachments/{id}/text` als Auszug der ersten 200 KB, dargestellt nur als Text. Office-Dateien, ZIP und MSG nur zum Herunterladen. Protokolliert werden Download, PDF und Text, nicht das Ansehen von Bildern (die Vorschaubilder laden bei jedem Öffnen des Tickets).
-- **Rechte** für jeden Endpunkt und jede Aktion serverseitig (App-Rolle aus der Sitzung, Bereichsrolle über die zwischengespeicherte Graph-Prüfung), auch für Export, Suche und Anhänge. Fremde Tickets 404. Anhänge und Einträge über zufällige IDs (UUID).
+- **Rechte** für jeden Endpunkt und jede Aktion serverseitig (Stufe aus den Berechtigungen der Werkbank, je Anfrage gelesen; Bereichsrolle über die zwischengespeicherte Graph-Prüfung), auch für Export, Suche und Anhänge. Fremde Tickets 404. Anhänge und Einträge über zufällige IDs (UUID).
 - **Kein eingehender Webhook:** Die Werkbank holt Mails selbst ab; es gibt keinen von außen erreichbaren Endpunkt für Graph.
 - **Ausgehende Mails** nur über das Postfach des Bereichs; Platzhalter escaped; Kopfzeilen gegen Zeilenumbrüche geschützt.
 - **Protokoll** wie oben; Exporte im Audit-Log.
@@ -932,7 +932,7 @@ Umsetzung in vier Phasen mit Halt nach jeder Phase (entschieden): **D1** Arbeits
 - **Rückverweise** „In der Dokumentation“ auf Ticket, Gerät, Stelle, Arbeitsplatz, IT-Projekt und Vertrag (`GET /api/doku/backlinks`, entschieden): nur für Personen, die die Doku nutzen dürfen, und nur Seiten, die sie lesen dürfen (Prüfung je Seite wie beim Öffnen). Gefunden über Verweise und Projekt-Live-Bausteine im Inhalt (Postgres `jsonb_path_exists`). Seiten im Papierkorb zählen nicht.
 
 **Rollen und Rechte** (entschieden):
-- App-Rollen `Doku.Nutzer` (Bereich öffnen) und `Doku.Admin` (Verwaltung). Inhalte sieht auch `Doku.Admin` nur als Mitglied eines Arbeitsbereichs; in der Verwaltung stehen nur Titel.
+- Verwaltung › Berechtigungen: Dokumentation „Nutzen“ (Bereich öffnen, intern `Doku.Nutzer`) und „Verwalten“ (Verwaltung, intern `Doku.Admin`). Inhalte sieht auch „Verwalten“ nur als Mitglied eines Arbeitsbereichs; in der Verwaltung stehen nur Titel.
 - **Arbeitsbereich**: Personen einzeln aus Entra (entschieden, keine Gruppen) mit **Lesen**, **Bearbeiten** oder **Verwalten** (= Bearbeiten und die Personen des Arbeitsbereichs ändern, im Dialog „Rechte und Teilen“). Betriebsrat und Geschäftsführung bekommen keinen automatischen Lesezugriff.
 - **Eigene Rechte einer Seite** (Schloss im Seitenbaum): darf jede Person setzen, die die Seite bearbeiten darf. Sie gelten für die Seite und ihre Unterseiten, bis eine Unterseite eigene hat. Je Person überschreibt ein Eintrag das Recht aus dem Arbeitsbereich (Lesen, Bearbeiten, **Kein Zugriff**); Personen ohne Eintrag behalten ihr Recht aus dem Arbeitsbereich. Personen außerhalb des Arbeitsbereichs lassen sich hinzufügen und sehen dann nur diese Seiten. Gespeichert werden nur Abweichungen.
 - Archivierte Arbeitsbereiche sind nur lesbar und stehen im Baum mit „Archiv“. Löschen nur leerer Arbeitsbereiche (auch ohne Seiten im Papierkorb).
@@ -1217,8 +1217,11 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 3 | Evergreen: Nachrichtencenter, Workflow, BR-/GF-Ansicht, Soll-Werte | Freigabeprozess digital | ✅ umgesetzt (3a bis 3e); in 0.76 umgebaut: nur für die IT, Einträge mit Status und Notizen je Software (Kapitel 8) |
 | – | Einheitliche Oberfläche, heller und dunkler Modus, Neuigkeiten, Konto mit Profilbild, automatische Releases | einheitliches Aussehen | ✅ umgesetzt, mit Handbuch und letzten Aktivitäten auf der Startseite |
 | 4 | Ausbau: Exchange, Teams, Intune, SharePoint, Benachrichtigungen, Push | Vollumfang v1 | 🔄 weitgehend: Exchange, Teams, Intune und SharePoint (Konfiguration), Benachrichtigungen (Glocke, Mail, Teams, Push) umgesetzt |
-| 5 | weitere Module nach Bedarf | – | offen |
-| T1–T4 | Modul Tickets (8e) | Ticketsystem für Bereiche mit eigenem Postfach | 🔄 T1 und T2 umgesetzt (T1: Bereiche, Rollen je Bereich, Tickets von Hand, Liste, Ticketseite, Status und Zuständigkeit mit Bestätigung, Verlauf, Notizen, Verschieben; T2: E-Mail-Eingang, Antworten, Mails an den Melder, Gestaltung) |
+| 5 | weitere Module nach Bedarf | – | 🔄 laufend, siehe die Zeilen darunter |
+| T1–T4 | Modul Tickets (8e) | Ticketsystem für Bereiche mit eigenem Postfach | ✅ umgesetzt (T1 Grundlagen, T2 E-Mail, T3 Arbeitshilfen, T4 Betrieb); dazu Leiste „Favoriten“ und „Geöffnet“ (0.124.0) |
+| – | Weitere Bereiche nach Bedarf (Phase 5) | Werkzeuge der IT in einer Oberfläche | ✅ umgesetzt: Tenant (7a), IT-Budget (7b), Gerätezuordnung (7c), IT-Tools (8a), IT-Monitoring mit NetBox und Zabbix (8b), IT-Projekte (8c), IT-Bestand mit NinjaOne (8d) |
+| – | Berechtigungen in der Werkbank (6.1a) | Rechte je Bereich statt App-Rollen | ✅ umgesetzt (0.121.0); App-Rollen nur noch für die einmalige Übernahme |
+| D1–D4 | Modul Dokumentation (8f) | Wissen der Abteilungen festhalten und teilen | 🔄 D1 bis D3 umgesetzt (0.118.0, 0.119.0, 0.123.0); offen: D4 (Lese-Links für Externe, Export als PDF und Markdown) |
 
 ---
 
@@ -1240,5 +1243,5 @@ Ein Ordner `powershell/` kommt mit den Diensten, die PowerShell brauchen (Phase 
 | 10 | Mail | Entschieden: Versand über einen SMTP-Server, der in der Verwaltung eingetragen wird (Absender dort). Benachrichtigungen selbst folgen in Phase 4 |
 | 11 | Copyright | Entschieden: `extrempro` |
 | 12 | ASVS-Version | Entschieden: OWASP ASVS 5.0.0 |
-| 16 | Evergreen: BR-Vorlage | Offen: Was „Als BR-Vorlage übernehmen“ erzeugt (Dokument, Eintrag für die IT-Kommission, PDF) und für wen |
+| 16 | Evergreen: BR-Vorlage | Hinfällig: Seit dem Umbau in 0.76 ist Evergreen nur noch für die IT, ohne Vorlage an Betriebsrat und Geschäftsführung |
 | 17 | Evergreen: Steckbrief automatisch | Entschieden: Phasen und Steckbrief per KI (eigener Schalter in der Verwaltung), Regeln als Ersatz; Kurzfassung und Bewertung bleiben von Hand (8.4). Freigabe des Anbieters für diesen Zweck klärt der Betreiber mit dem Datenschutz |

@@ -77,14 +77,17 @@ function stubSessions() {
 }
 
 describe("AccountPage", () => {
-  it("zeigt Angaben, Rollen mit Beschreibung, angemeldete Geräte und Version", async () => {
+  it("zeigt Angaben, Rechte je Bereich, angemeldete Geräte und Version", async () => {
     stubSessions();
     render(<AccountPage me={me} />);
     expect(screen.getByRole("heading", { level: 1, name: "Konto" })).toBeVisible();
     expect(screen.getByText("erika@example.com")).toBeVisible();
     expect(screen.getByText("EB")).toBeInTheDocument();
-    expect(screen.getByText("Konfiguration Prüfer")).toBeVisible();
-    expect(screen.getByText("Evergreen.Editor")).toBeVisible();
+    expect(screen.getByText("M365-Einstellungen")).toBeVisible();
+    expect(screen.getByText("Prüfen")).toBeVisible();
+    expect(screen.getByText("Evergreen")).toBeVisible();
+    // Keine internen Rollennamen mehr
+    expect(screen.queryByText("Evergreen.Editor")).toBeNull();
     expect(await screen.findByText("Edge unter Windows")).toBeVisible();
     expect(screen.getByText("Dieses Gerät")).toBeVisible();
     expect(screen.getByText(/läuft spätestens .* ab/)).toBeVisible();

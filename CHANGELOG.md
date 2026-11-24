@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.124.1] – 2026-11-24
+
+### Konto, Handbuch und Dokumentation
+
+- **Konto › Meine Rechte** zeigt je Bereich die Stufe aus Verwaltung › Berechtigungen (z. B. „IT-Budget · Verwalten“) statt der internen Rollennamen und des Hinweises auf Entra; die Admin-Gruppe steht als „Verwaltung“ darüber.
+- Handbuch: „Für:“ und die Texte nennen Bereich und Stufe statt interner Rollennamen.
+- Spec: Rechte von Tickets und Dokumentation nach der Umstellung (0.121.0), Phasen mit allen Bereichen, offener Punkt 16 (Evergreen: BR-Vorlage) hinfällig. README: Bereiche und Stand aktualisiert.
+
 ## [0.124.0] – 2026-11-24
 
 ### Tickets
