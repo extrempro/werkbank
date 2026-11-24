@@ -36,8 +36,8 @@ const PREVIEW_DELAY = 250;
  * aus dem HTML); der Inhalt bleibt im Browser und kommt über einen eigenen Nachrichtenkanal hinein.
  */
 export default function HtmlEditorTool() {
-  const [html, setHtml] = useState(TEMPLATES.signatur.html);
-  const [template, setTemplate] = useState<TemplateId>("signatur");
+  const [html, setHtml] = useState("");
+  const [template, setTemplate] = useState<TemplateId>("leer");
   const [width, setWidth] = useState<Width>("pc");
   const [view, setView] = useState<"html" | "vorschau">("html");
   const [internet, setInternet] = useState<boolean | null>(null);

@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.122.1",
+    date: "2026-11-24",
+    summary: "HTML-Editor startet leer.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Der HTML-Editor öffnet jetzt mit einem leeren Feld. Die Vorlage „Mail-Signatur“ gibt es nicht mehr; die Vorlage „Tabelle“ bleibt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.122.0",
     date: "2026-11-24",
     summary: "Neues IT-Tool: HTML-Editor mit Vorschau.",

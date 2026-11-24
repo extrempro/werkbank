@@ -120,28 +120,10 @@ export function formatHtml(html: string, indent = "  "): string {
   return lines.join("\n");
 }
 
-export type TemplateId = "leer" | "signatur" | "tabelle";
+export type TemplateId = "leer" | "tabelle";
 
 export const TEMPLATES: Record<TemplateId, { label: string; html: string }> = {
   leer: { label: "Leer", html: "" },
-  signatur: {
-    label: "Mail-Signatur",
-    html: `<p>Viele Grüße</p>
-<table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px">
-  <tr>
-    <td style="padding-right:14px;border-right:2px solid #1f57c3">
-      <img src="https://example.com/logo.png" alt="Logo" width="56">
-    </td>
-    <td style="padding-left:14px">
-      <strong>Ina Beispiel</strong><br>
-      IT-Service<br>
-      Telefon +49 30 1234567<br>
-      <a href="mailto:ina.beispiel@example.com">ina.beispiel@example.com</a>
-    </td>
-  </tr>
-</table>
-<p style="font-size:11px;color:#777">Firma A GmbH · Musterstraße 1 · 12345 Musterstadt</p>`,
-  },
   tabelle: {
     label: "Tabelle",
     html: `<style>

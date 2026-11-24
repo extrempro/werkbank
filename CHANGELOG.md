@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.122.1] – 2026-11-24
+
+### IT-Tools
+
+- **HTML-Editor** startet leer; die Vorlage „Mail-Signatur“ entfällt (Vorlagen: Leer, Tabelle).
+
 ## [0.122.0] – 2026-11-24
 
 ### IT-Tools
