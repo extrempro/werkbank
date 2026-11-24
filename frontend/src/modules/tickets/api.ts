@@ -144,6 +144,10 @@ export interface Ticket extends TicketItem {
   reply_hint: string;
   category_id: number | null;
   categories: Category[];
+  /** Lösung (bei „Gelöst“ und danach), sonst null */
+  solution: Solution | null;
+  /** Aktive Lösungsarten des Bereichs zur Auswahl */
+  solution_types: SolutionType[];
   reminder_note: string;
   sla: Sla | null;
   /** Rechte im IT-Bestand: Angaben zum Melder sichtbar. */
@@ -153,6 +157,28 @@ export interface Ticket extends TicketItem {
   retention: TicketRetention;
   anonymized_at: string | null;
 }
+
+export interface SolutionType {
+  id: number;
+  name: string;
+}
+
+export interface Solution {
+  type_id: number | null;
+  type_name: string;
+  text: string;
+  /** In der Mail an den Melder zeigen */
+  public: boolean;
+}
+
+/** Eingabe beim Wechsel auf „Gelöst“; alles freiwillig */
+export interface SolutionInput {
+  type_id: number | null;
+  text: string;
+  public: boolean;
+}
+
+export const EMPTY_SOLUTION: SolutionInput = { type_id: null, text: "", public: true };
 
 export interface TicketRetention {
   /** Gilt im Bereich eine Aufbewahrungsfrist? */
@@ -257,6 +283,8 @@ export interface TicketChange {
   notify_assignee: boolean;
   reminder_at: string | null;
   reminder_note: string;
+  /** Bei „Gelöst“: Lösung (freiwillig) */
+  solution?: SolutionInput | null;
 }
 
 export function changeTicket(number: number, body: TicketChange): Promise<Ticket> {
@@ -288,11 +316,13 @@ export function sendReply(
   body: string,
   statusAfter: StatusAfter,
   replyAll = false,
+  solution: SolutionInput | null = null,
 ): Promise<Ticket> {
   return postJson(`${BASE}/${number}/replies`, {
     body,
     status_after: statusAfter,
     reply_all: replyAll,
+    solution: statusAfter === "solved" ? solution : null,
   });
 }
 
@@ -593,6 +623,31 @@ export interface CategorySetting {
   active: boolean;
 }
 
+export interface SolutionTypeSetting {
+  id: number;
+  name: string;
+  active: boolean;
+}
+
+export function fetchSolutionTypes(areaId: number): Promise<SolutionTypeSetting[]> {
+  return getJson(`${SETTINGS}/areas/${areaId}/solution-types`);
+}
+
+export function addSolutionType(
+  areaId: number,
+  body: { name: string; active: boolean },
+): Promise<SolutionTypeSetting[]> {
+  return postJson(`${SETTINGS}/areas/${areaId}/solution-types`, body);
+}
+
+export function updateSolutionType(
+  areaId: number,
+  id: number,
+  body: { name: string; active: boolean },
+): Promise<SolutionTypeSetting[]> {
+  return putJson(`${SETTINGS}/areas/${areaId}/solution-types/${id}`, body);
+}
+
 export function fetchCategories(areaId: number): Promise<CategorySetting[]> {
   return getJson(`${SETTINGS}/areas/${areaId}/categories`);
 }
@@ -696,6 +751,8 @@ export interface Stats {
   solved_recent: number;
   created_by_channel: Count[];
   open_by_category: Count[];
+  /** Gelöst oder geschlossen in den letzten 30 Tagen, nach Lösungsart */
+  solved_by_type: Count[];
   mine_list: TicketItem[];
   unassigned_list: TicketItem[];
 }

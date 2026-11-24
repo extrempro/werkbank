@@ -239,6 +239,14 @@ class Ticket(Base):
     hold_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     hold_reason: Mapped[str] = mapped_column(String(500), default="", server_default="")
     hold_by_name: Mapped[str] = mapped_column(String(256), default="", server_default="")
+    # Lösung beim Statuswechsel auf „Gelöst“ (freiwillig): Art je Bereich, Text, an den Melder?
+    solution_type_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ticket_solution_types.id", ondelete="SET NULL")
+    )
+    solution_text: Mapped[str] = mapped_column(Text, default="", server_default="")
+    solution_public: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=text("true")
+    )
     anonymized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
@@ -273,6 +281,21 @@ class TicketCategory(Base):
             "default_priority IN ('low', 'medium', 'high')", name="ck_ticket_category_priority"
         ),
     )
+
+
+class TicketSolutionType(Base):
+    """Lösungsart je Bereich (z. B. „Behoben“, „Anleitung gegeben“), für Mail und Statistik."""
+
+    __tablename__ = "ticket_solution_types"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    area_id: Mapped[int] = mapped_column(
+        ForeignKey("ticket_areas.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+
+    __table_args__ = (UniqueConstraint("area_id", "name", name="uq_ticket_solution_type"),)
 
 
 class TicketSla(Base):

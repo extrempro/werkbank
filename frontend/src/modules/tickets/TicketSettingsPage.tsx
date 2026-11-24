@@ -29,6 +29,7 @@ import {
 } from "./TicketMailSettings";
 import {
   CategoriesSection,
+  SolutionTypesSection,
   RetentionDefaultSection,
   RetentionSection,
   TemplatesSection,
@@ -532,7 +533,7 @@ function NewAreaForm({
 
 export const SETTINGS_TABS = [
   { id: "bereiche", label: "Bereiche" },
-  { id: "kategorien", label: "Kategorien und Fristen" },
+  { id: "kategorien", label: "Kategorien, Lösungen und Fristen" },
   { id: "email", label: "E-Mail-Eingang" },
   { id: "textbausteine", label: "Textbausteine" },
   { id: "aufbewahrung", label: "Aufbewahrung" },
@@ -621,7 +622,8 @@ export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
           <p className="module-label">Tickets</p>
           <h1>Einstellungen</h1>
           <p className="page-sub">
-            Bereiche, Kategorien und Fristen, E-Mail, Textbausteine, Aufbewahrung und Rollen.
+            Bereiche, Kategorien, Lösungen und Fristen, E-Mail, Textbausteine, Aufbewahrung und
+            Rollen.
           </p>
         </div>
       </header>
@@ -693,6 +695,9 @@ export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
         <div key={area.id}>
           <SettingsPanel title="Kategorien" term="tickets.kategorie">
             <CategoriesSection areaId={area.id} onMessage={setMessage} />
+          </SettingsPanel>
+          <SettingsPanel title="Lösungsarten" term="tickets.loesung">
+            <SolutionTypesSection areaId={area.id} onMessage={setMessage} />
           </SettingsPanel>
           <SettingsPanel title="Fristen" term="tickets.frist">
             <WorkSection areaId={area.id} onMessage={setMessage} />

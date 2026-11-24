@@ -31,14 +31,17 @@ from werkbank.modules.tickets.api import (
 from werkbank.modules.tickets.models import (
     CHANNELS,
     OPEN_STATUSES,
+    STATUS_CLOSED,
     STATUS_MERGED,
     STATUS_NEW,
     STATUS_REMINDER,
+    STATUS_SOLVED,
     STATUS_WAITING,
     Ticket,
     TicketArea,
     TicketAudit,
     TicketRetentionRun,
+    TicketSolutionType,
 )
 from werkbank.modules.tickets.retention import (
     Policy,
@@ -99,6 +102,8 @@ class StatsOut(BaseModel):
     solved_recent: int
     created_by_channel: list[Count]
     open_by_category: list[Count]
+    # Gelöst oder geschlossen in den letzten Tagen, nach Lösungsart
+    solved_by_type: list[Count]
     mine_list: list[TicketItem]
     unassigned_list: list[TicketItem]
 
@@ -161,6 +166,25 @@ def stats(access: AccessDep, db: DbDep, area: AreaQuery = None) -> StatsOut:
         ),
         key=lambda c: (-c.count, c.label),
     )
+    solved = (
+        db.execute(
+            select(TicketSolutionType.name, func.count())
+            .select_from(Ticket)
+            .outerjoin(TicketSolutionType, Ticket.solution_type_id == TicketSolutionType.id)
+            .where(
+                in_areas,
+                Ticket.status.in_((STATUS_SOLVED, STATUS_CLOSED)),
+                or_(Ticket.solved_at >= recent, Ticket.closed_at >= recent),
+            )
+            .group_by(TicketSolutionType.name)
+        )
+        .tuples()
+        .all()
+    )
+    solved_by_type = sorted(
+        (Count(key=name or "", label=name or "Ohne Lösungsart", count=n) for name, n in solved),
+        key=lambda c: (-c.count, c.label),
+    )
     area_names = _area_names(db)
 
     def short(*where: Any) -> list[TicketItem]:
@@ -191,6 +215,7 @@ def stats(access: AccessDep, db: DbDep, area: AreaQuery = None) -> StatsOut:
             Count(key=c, label=CHANNEL_NAMES[c], count=channels.get(c, 0)) for c in CHANNELS
         ],
         open_by_category=by_category,
+        solved_by_type=solved_by_type,
         mine_list=short(*mine),
         unassigned_list=short(*unassigned_new),
     )

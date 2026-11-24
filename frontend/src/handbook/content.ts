@@ -1149,7 +1149,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Die „Übersicht“ zeigt oben Kennzahlen: offen, dir zugewiesen, neu und frei, wartet, Erinnerung und gelöst in den letzten 30 Tagen; mit Fristen auch überfällig und wie oft die Frist eingehalten wurde. Ein Klick auf eine Kennzahl öffnet die passende Liste. Darunter stehen deine Tickets, neue freie Tickets, der Eingang der letzten 30 Tage nach Weg und die offenen Tickets nach Kategorie. Mit mehreren Bereichen wählst du oben einen aus.",
+                text: "Die „Übersicht“ zeigt oben Kennzahlen: offen, dir zugewiesen, neu und frei, wartet, Erinnerung und gelöst in den letzten 30 Tagen; mit Fristen auch überfällig und wie oft die Frist eingehalten wurde. Ein Klick auf eine Kennzahl öffnet die passende Liste. Darunter stehen deine Tickets, neue freie Tickets, der Eingang der letzten 30 Tage nach Weg, die offenen Tickets nach Kategorie und die gelösten Tickets der letzten 30 Tage nach Lösungsart. Mit mehreren Bereichen wählst du oben einen aus.",
               },
               {
                 kind: "text",
@@ -1242,6 +1242,10 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
+                text: "Stellst du ein Ticket auf „Gelöst“, im Kopf oder mit „Status danach“ bei einer Antwort, fragt die Werkbank nach der Lösung: Lösungsart (wenn der Bereich welche hat) und was gemacht wurde. Beides ist freiwillig. Mit „In der Mail an den Melder zeigen“ steht die Lösung in der Mail, sonst bleibt sie intern. Die Lösung steht danach rechts bei den Angaben zum Ticket. Die Lösungsarten pflegt die Bereichsverwaltung unter Einstellungen › Kategorien, Lösungen und Fristen.",
+              },
+              {
+                kind: "text",
                 text: "Meldet jemand dasselbe zweimal, führst du die Tickets zusammen. Der Verlauf wandert ins Ziel und ist dort mit „aus T-…“ gekennzeichnet; das alte Ticket wird geschlossen. Spätere Mails dazu landen im Ziel. Das lässt sich nicht rückgängig machen.",
               },
               {
@@ -1267,7 +1271,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Die Einstellungen haben Reiter: Bereiche, Kategorien und Fristen, E-Mail-Eingang, Textbausteine, Aufbewahrung und Rollen. In den Reitern, die je Bereich gelten, wählst du oben den Bereich. Du siehst nur Bereiche, die du einstellen darfst.",
+                text: "Die Einstellungen haben Reiter: Bereiche, Kategorien, Lösungen und Fristen, E-Mail-Eingang, Textbausteine, Aufbewahrung und Rollen. In den Reitern, die je Bereich gelten, wählst du oben den Bereich. Du siehst nur Bereiche, die du einstellen darfst.",
               },
               {
                 kind: "text",

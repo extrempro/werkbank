@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.115.0] – 2026-11-24
+
+### Tickets
+
+- **Lösung bei „Gelöst“:** Beim Wechsel auf „Gelöst“ (Kopf oder „Status danach“ bei einer Antwort) freiwillig Lösungsart und Lösungstext; wählbar, ob beides in der Mail an den Melder steht oder intern bleibt. Die Lösung steht bei den Angaben zum Ticket und als Eintrag im Verlauf.
+  - Lösungsarten je Bereich (Einstellungen › Kategorien, Lösungen und Fristen; `/api/tickets/settings/areas/{id}/solution-types`)
+  - Übersicht: „Gelöst nach Lösungsart“ (30 Tage), `solved_by_type` in `GET /api/tickets/stats`
+  - Migration `0078`: Tabelle `ticket_solution_types`, Spalten `solution_type_id`, `solution_text`, `solution_public` an `tickets`; beim Anonymisieren wird der Lösungstext gelöscht
+
+### Dokumentation
+
+- spec.md, datenschutz.md (Lösungstext), Handbuch (Arbeitshilfen, Übersicht, Einstellungen), Info-Symbol „Lösung“
+
+### Tests
+
+- `test_tickets_work.py` (Lösungsarten, Gelöst mit Lösung, Mail, Statistik), `test_tickets_mail.py` (Antwort mit Lösung), `tickets.test.tsx`, E2E `tickets.spec.ts` (Gelöst mit Lösung, Lösungsart anlegen)
+
 ## [0.114.0] – 2026-11-24
 
 ### Mails

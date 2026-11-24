@@ -768,6 +768,7 @@ Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Ei
 | `ticket_membership_cache` | Person, Liste der Gruppen-IDs, Zeitpunkt |
 | `ticket_group_members` | Gruppe, Person (Objekt-ID, Name, Mail), Stand des Abgleichs |
 | `ticket_categories` | Bereich, Name, Standard-Priorität, aktiv |
+| `ticket_solution_types` | Bereich, Name, aktiv (Lösungsarten; Migration `0078`) |
 | `ticket_sla` | Bereich, Priorität, erste Reaktion und Lösung (Arbeitsminuten) |
 | `tickets` | Nr. (fortlaufend über alle Bereiche, Anzeige `T-1042`), Bereich, Betreff, Melder (Name, Mail), Kategorie, Priorität (`low`, `medium`, `high`), Status, zuständige Person, Eingangsweg (`mail`, `manual`, `phone`), angelegt, erste Reaktion, gelöst, geschlossen, Erinnerung (Zeitpunkt, Stichwort), Frist (Reaktion, Lösung, verbrauchte Zeit, eingehalten), Gerät (IT-Bestand), Zusammengeführt in, Aufbewahrungs-Ausnahme |
 | `ticket_participants` | Ticket, Name, Mail |
@@ -839,7 +840,8 @@ Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Ei
 
 ### Oberfläche
 
-- **Menü „Tickets“** (umgesetzt, Einstellungen als Reiter einer Seite): Übersicht (Kennzahlen, „Mir zugewiesen“, „Neu und nicht zugewiesen“, Eingang nach Kanal, offen nach Kategorie) · Alle Tickets (Suche; Filter Offen, Mir zugewiesen, Nicht zugewiesen, Wartet, Erinnerung, Gelöst und geschlossen, Alle; nach Bereich; Export als Excel, nur Bereichsverwaltung) · Neues Ticket (Bereich wählen, dann Kategorien) · Einstellungen (Bereiche · Kategorien, Fristen, Geräte · E-Mail-Eingang · E-Mail-Gestaltung · Textbausteine · Aufbewahrung · Rollen).
+- **Menü „Tickets“** (umgesetzt, Einstellungen als Reiter einer Seite): Übersicht (Kennzahlen, „Mir zugewiesen“, „Neu und nicht zugewiesen“, Eingang nach Kanal, offen nach Kategorie) · Alle Tickets (Suche; Filter Offen, Mir zugewiesen, Nicht zugewiesen, Wartet, Erinnerung, Gelöst und geschlossen, Alle; nach Bereich; Export als Excel, nur Bereichsverwaltung) · Neues Ticket (Bereich wählen, dann Kategorien) · Einstellungen (Bereiche · Kategorien, Lösungen und Fristen · E-Mail-Eingang · Textbausteine · Aufbewahrung · Rollen).
+- **Lösung bei „Gelöst“** (0.115.0): Beim Wechsel auf „Gelöst“ (`PATCH /api/tickets/{nr}` mit `solution`, oder Antwort mit `status_after: solved` und `solution`) freiwillig Lösungsart (je Bereich, `/api/tickets/settings/areas/{id}/solution-types`, Bereichsverwaltung) und Lösungstext (höchstens 2000 Zeichen) sowie `public` (Vorgabe an): ob beides in der Mail an den Melder steht (Zeilen „Lösungsart“ und „Lösung“ im Kasten). Am Ticket `solution_type_id`, `solution_text`, `solution_public`; Systemeintrag im Verlauf. Bei einem neuen Wechsel auf „Gelöst“ wird die Lösung neu gesetzt. Übersicht: „Gelöst nach Lösungsart“ (30 Tage). Beim Anonymisieren wird der Lösungstext gelöscht, die Art bleibt.
 - **Ticketseite** für lange Verläufe:
   - Kompakter fester Kopf: Zurück, Nr., gekürzter Betreff, Status, Zuständig, „Mir zuweisen“, Melder, Eingangsweg, Datum, Bestätigen/Verwerfen.
   - Verlauf: ursprüngliche Meldung oben, dann „N ältere Einträge anzeigen“, dann die letzten 4 Einträge. Systemeinträge einzeilig und klein. Filter Alles · Nur Nachrichten · Nur intern. Lange Nachrichten gekürzt („Ganze Nachricht anzeigen“), Zitate eingeklappt. Markierung „vom Melder“, „an Melder gesendet“, „Intern“, „Anruf erfasst“ (Text und Symbol, nie nur Farbe).

@@ -5,6 +5,10 @@ import type { FeedbackMessage } from "../../components/Feedback";
 import { InfoTip } from "../../components/InfoTip";
 import {
   addCategory,
+  addSolutionType,
+  fetchSolutionTypes,
+  updateSolutionType,
+  type SolutionTypeSetting,
   fetchAreaRetention,
   fetchRetentionDefault,
   previewAreaRetention,
@@ -156,6 +160,93 @@ export function CategoriesSection({ areaId, onMessage }: { areaId: number; onMes
         </select>
         <button type="submit" className="button" disabled={!name.trim()}>
           Anlegen
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// --- Lösungsarten --------------------------------------------------------------------------
+
+export function SolutionTypesSection({
+  areaId,
+  onMessage,
+}: {
+  areaId: number;
+  onMessage: OnMessage;
+}) {
+  const [items, setItems] = useState<SolutionTypeSetting[] | null>(null);
+  const [name, setName] = useState("");
+  const nameId = useId();
+
+  useEffect(() => {
+    let active = true;
+    fetchSolutionTypes(areaId).then(
+      (result) => active && setItems(result),
+      () => active && setItems([]),
+    );
+    return () => {
+      active = false;
+    };
+  }, [areaId]);
+
+  const add = (event: FormEvent) => {
+    event.preventDefault();
+    addSolutionType(areaId, { name: name.trim(), active: true })
+      .then((result) => {
+        setItems(result);
+        setName("");
+        onMessage({ kind: "status", text: "Die Lösungsart wurde angelegt." });
+      })
+      .catch(failed(onMessage, "Die Lösungsart konnte nicht angelegt werden."));
+  };
+
+  const change = (item: SolutionTypeSetting, active: boolean) =>
+    updateSolutionType(areaId, item.id, { name: item.name, active })
+      .then((result) => {
+        setItems(result);
+        onMessage({ kind: "status", text: `Die Lösungsart „${item.name}“ wurde gespeichert.` });
+      })
+      .catch(failed(onMessage, "Die Lösungsart konnte nicht gespeichert werden."));
+
+  return (
+    <div className="settings-form">
+      <p className="small">
+        Beim Wechsel auf „Gelöst“ wählt man eine Lösungsart, zum Beispiel „Behoben“ oder „Anleitung
+        gegeben“. Sie steht in der Mail an den Melder (wenn freigegeben) und in der Übersicht.
+        Abgeschaltete Arten bleiben an alten Tickets stehen.
+      </p>
+      {items && items.length === 0 && <p className="small">Noch keine Lösungsarten.</p>}
+      {items && items.length > 0 && (
+        <ul className="plain ticket-category-list">
+          {items.map((item) => (
+            <li key={item.id}>
+              <span className={item.active ? "" : "muted"}>{item.name}</span>
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  checked={item.active}
+                  onChange={(event) => void change(item, event.target.checked)}
+                />{" "}
+                aktiv <span className="visually-hidden">– {item.name}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form className="ticket-participant-add" onSubmit={add}>
+        <label htmlFor={nameId} className="visually-hidden">
+          Neue Lösungsart
+        </label>
+        <input
+          id={nameId}
+          placeholder="Neue Lösungsart"
+          maxLength={80}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+        <button type="submit" className="button" disabled={!name.trim()}>
+          Anlegen <span className="visually-hidden">– Lösungsart</span>
         </button>
       </form>
     </div>

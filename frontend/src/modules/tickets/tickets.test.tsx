@@ -83,6 +83,8 @@ function ticket(extra: Partial<Ticket> = {}): Ticket {
     sla_overdue: false,
     category_id: null,
     categories: [],
+    solution: null,
+    solution_types: [],
     reminder_note: "",
     sla: null,
     inventory: false,
@@ -219,6 +221,52 @@ describe("TicketPage", () => {
     expect(await screen.findByText("Die Änderung wurde gespeichert.")).toBeTruthy();
   });
 
+  it("fragt beim Wechsel auf Gelöst nach der Lösung", async () => {
+    const calls: { body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        if (init?.method === "PATCH") {
+          calls.push({ body: JSON.parse(String(init.body)) });
+          return new Response(
+            JSON.stringify(
+              ticket({
+                status: "solved",
+                solution: {
+                  type_id: 3,
+                  type_name: "Behoben",
+                  text: "Neu gestartet.",
+                  public: false,
+                },
+              }),
+            ),
+            { status: 200 },
+          );
+        }
+        return new Response(
+          JSON.stringify(ticket({ solution_types: [{ id: 3, name: "Behoben" }] })),
+          { status: 200 },
+        );
+      }),
+    );
+    render(<TicketPage number={1042} />);
+    await screen.findByText("Drucker druckt nicht");
+    expect(screen.queryByLabelText("Lösungsart")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "solved" } });
+    fireEvent.change(screen.getByLabelText("Lösungsart"), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText("Was wurde gemacht?"), {
+      target: { value: " Neu gestartet. " },
+    });
+    fireEvent.click(screen.getByLabelText("In der Mail an den Melder zeigen"));
+    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.body).toMatchObject({
+      status: "solved",
+      solution: { type_id: 3, text: "Neu gestartet.", public: false },
+    });
+    expect(await screen.findByText("nur intern")).toBeTruthy();
+  });
+
   it("zeigt für fremde Tickets „nicht gefunden“", async () => {
     vi.stubGlobal(
       "fetch",
@@ -288,7 +336,7 @@ describe("Antwort an den Melder", () => {
     fireEvent.click(screen.getByRole("button", { name: "An M. Muster senden" }));
     await waitFor(() =>
       expect(bodies).toEqual([
-        { body: "Bitte starte neu.", status_after: "waiting", reply_all: true },
+        { body: "Bitte starte neu.", status_after: "waiting", reply_all: true, solution: null },
       ]),
     );
   });
@@ -579,6 +627,7 @@ function stats(extra: Partial<Stats> = {}): Stats {
       { key: "phone", label: "Telefon", count: 0 },
     ],
     open_by_category: [{ key: "0", label: "Ohne Kategorie", count: 5 }],
+    solved_by_type: [{ key: "Behoben", label: "Behoben", count: 2 }],
     mine_list: [ticket({ number: 1050, subject: "Monitor flackert" })],
     unassigned_list: [],
     ...extra,

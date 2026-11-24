@@ -361,3 +361,82 @@ def test_templates(db: Session, areas: dict[str, int]) -> None:
 
 
 __all__ = ["UTC", "TicketArea"]
+
+
+# --- Lösung bei „Gelöst“ ---------------------------------------------------------------------
+
+
+@pytest.mark.db
+def test_solution_types_and_solved_with_solution(db: Session, areas: dict[str, int]) -> None:
+    from werkbank.modules.tickets.models import Ticket, TicketArea
+    from werkbank.modules.tickets.outbound import build_message
+
+    ina = client_for("Ina Beispiel")
+    kinds = ina.post(
+        f"{SETTINGS}/areas/{areas['it']}/solution-types", json={"name": "Behoben"}
+    ).json()
+    assert [k["name"] for k in kinds] == ["Behoben"]
+    assert (
+        ina.post(
+            f"{SETTINGS}/areas/{areas['it']}/solution-types", json={"name": "Behoben"}
+        ).status_code
+        == 409
+    )
+    other = (
+        client_for("Hans Haus")
+        .post(f"{SETTINGS}/areas/{areas['ht']}/solution-types", json={"name": "Getauscht"})
+        .json()
+    )
+    max_ = client_for("Max Muster")
+    # Ohne Bereichsverwaltung keine Einstellungen
+    assert max_.post(
+        f"{SETTINGS}/areas/{areas['it']}/solution-types", json={"name": "X"}
+    ).status_code in (403, 404)
+    ticket = new_ticket(max_, areas["it"])
+    number = ticket["number"]
+    assert [k["name"] for k in ticket["solution_types"]] == ["Behoben"]
+    assert ticket["solution"] is None
+    base = {"expected_status": "new", "expected_assignee_oid": None, "status": "solved"}
+    # Lösungsart eines fremden Bereichs: abgelehnt
+    wrong = {**base, "solution": {"type_id": other[0]["id"], "text": ""}}
+    assert max_.patch(f"{BASE}/{number}", json=wrong).status_code == 422
+    solved = max_.patch(
+        f"{BASE}/{number}",
+        json={
+            **base,
+            "solution": {"type_id": kinds[0]["id"], "text": "Netzteil getauscht.", "public": True},
+        },
+    ).json()
+    assert solved["status"] == "solved"
+    assert solved["solution"] == {
+        "type_id": kinds[0]["id"],
+        "type_name": "Behoben",
+        "text": "Netzteil getauscht.",
+        "public": True,
+    }
+    assert any(
+        e["kind"] == "system" and e["body"].startswith("Lösung: Behoben") for e in solved["entries"]
+    )
+    # Die Mail an den Melder zeigt die Lösung, nur wenn freigegeben
+    row = db.scalar(select(Ticket).where(Ticket.number == number))
+    assert row is not None
+    area = db.get(TicketArea, row.area_id)
+    assert area is not None
+    message, _, _ = build_message(db, area, row, "Gelöst.", auto=True)
+    html = message.get_body(("html",))
+    assert html is not None and "Lösungsart" in html.get_content()
+    assert "Netzteil getauscht." in html.get_content()
+    row.solution_public = False
+    message, _, _ = build_message(db, area, row, "Gelöst.", auto=True)
+    html = message.get_body(("html",))
+    assert html is not None and "Netzteil getauscht." not in html.get_content()
+    db.rollback()
+    # Statistik: gelöst nach Lösungsart
+    stats = max_.get(f"{BASE}/stats").json()
+    assert {"key": "Behoben", "label": "Behoben", "count": 1} in stats["solved_by_type"]
+    # Deaktivierte Art steht nicht mehr zur Auswahl
+    ina.put(
+        f"{SETTINGS}/areas/{areas['it']}/solution-types/{kinds[0]['id']}",
+        json={"name": "Behoben", "active": False},
+    )
+    assert max_.get(f"{BASE}/{number}").json()["solution_types"] == []

@@ -51,9 +51,12 @@ import {
   type TemplatesForTicket,
   type Ticket,
   type TicketStatus,
+  EMPTY_SOLUTION,
+  type SolutionInput,
 } from "./api";
 import { formatDate, hardwarePath, positionPath } from "../inventory/api";
 import { parseMails } from "./NewTicketPage";
+import { SolutionFields } from "./SolutionFields";
 import { STATUS_PILLS } from "./TicketsPage";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
 
@@ -295,6 +298,7 @@ function Composer({
   const [reply, setReply] = useState("");
   const [note, setNote] = useState("");
   const [statusAfter, setStatusAfter] = useState<StatusAfter>("");
+  const [replySolution, setReplySolution] = useState<SolutionInput>(EMPTY_SOLUTION);
   const [busy, setBusy] = useState(false);
   const [templates, setTemplates] = useState<TemplatesForTicket | null>(null);
   const [slash, setSlash] = useState<{ start: number; word: string } | null>(null);
@@ -386,12 +390,13 @@ function Composer({
     const request =
       mode === "note"
         ? addNote(ticket.number, text)
-        : sendReply(ticket.number, text, statusAfter, mode === "all");
+        : sendReply(ticket.number, text, statusAfter, mode === "all", replySolution);
     request
       .then((result) => {
         if (mode !== "note") {
           setReply("");
           setStatusAfter("");
+          setReplySolution(EMPTY_SOLUTION);
         } else {
           setNote("");
         }
@@ -583,6 +588,13 @@ function Composer({
                 ))}
               </select>
             </label>
+          )}
+          {isReply && statusAfter === "solved" && ticket.status !== "solved" && (
+            <SolutionFields
+              types={ticket.solution_types}
+              value={replySolution}
+              onChange={setReplySolution}
+            />
           )}
           <button
             type="submit"
@@ -891,6 +903,19 @@ function Facts({
               </div>
             )}
             {ticket.sla && <SlaFact sla={ticket.sla} />}
+            {ticket.solution && (
+              <div className="ticket-fact">
+                <span className="ticket-fact-label">Lösung</span>
+                <span>
+                  {ticket.solution.type_name && <strong>{ticket.solution.type_name}</strong>}
+                  {ticket.solution.type_name && ticket.solution.text && <br />}
+                  {ticket.solution.text}
+                  <span className="small ticket-solution-scope">
+                    {ticket.solution.public ? "steht in der Mail an den Melder" : "nur intern"}
+                  </span>
+                </span>
+              </div>
+            )}
           </section>
           <section className="ticket-facts" aria-labelledby={`${areaId}-melder`}>
             <h2 className="ticket-card-title" id={`${areaId}-melder`}>
@@ -1471,6 +1496,7 @@ export function TicketPage({ number }: { number: number }) {
   const [reminderDate, setReminderDate] = useState("");
   const [reminderTime, setReminderTime] = useState("08:00");
   const [reminderNote, setReminderNote] = useState("");
+  const [solution, setSolution] = useState<SolutionInput>(EMPTY_SOLUTION);
   const [busy, setBusy] = useState(false);
   const statusId = useId();
   const reminderDateId = useId();
@@ -1524,6 +1550,7 @@ export function TicketPage({ number }: { number: number }) {
     ticket !== null && assignee !== null && assignee !== ticket.assignee_oid && assignee !== meOid;
   const wantsReminder = ticket !== null && status === "reminder" && status !== ticket.status;
   const reminderMissing = wantsReminder && !inFuture(reminderAt);
+  const wantsSolved = ticket !== null && status === "solved" && status !== ticket.status;
 
   const statusOptions = useMemo(() => {
     if (!ticket) {
@@ -1590,6 +1617,7 @@ export function TicketPage({ number }: { number: number }) {
       notify_assignee: assigningOther && notifyAssignee,
       reminder_at: wantsReminder ? reminderAt : null,
       reminder_note: wantsReminder ? reminderNote.trim() : "",
+      solution: wantsSolved ? { ...solution, text: solution.text.trim() } : null,
     })
       .then((result) => {
         accept(result);
@@ -1768,6 +1796,13 @@ export function TicketPage({ number }: { number: number }) {
                 />
               </div>
             )}
+            {wantsSolved && (
+              <SolutionFields
+                types={ticket.solution_types}
+                value={solution}
+                onChange={setSolution}
+              />
+            )}
             {assigningOther && (
               <label className="check-label">
                 <input
@@ -1809,6 +1844,7 @@ export function TicketPage({ number }: { number: number }) {
                   setNote("");
                   setReminderDate("");
                   setReminderNote("");
+                  setSolution(EMPTY_SOLUTION);
                 }}
               >
                 Verwerfen

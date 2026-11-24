@@ -13170,6 +13170,39 @@ html:has(.ticket-composer) {
 }
 
 /* Tickets: Arbeitshilfen */
+/* Lösung beim Wechsel auf „Gelöst“ (Kopf und Antwort) */
+.ticket-solution {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.ticket-solution legend {
+  float: left;
+  padding: 0;
+  font-weight: 600;
+}
+
+.ticket-solution label:not(.check-label) {
+  display: grid;
+  gap: 4px;
+}
+
+.ticket-solution select,
+.ticket-solution textarea {
+  width: 100%;
+}
+
+.ticket-solution-scope {
+  display: block;
+  color: var(--farbe-text-leise);
+}
+
 .ticket-reminder {
   display: flex;
   flex-direction: column;

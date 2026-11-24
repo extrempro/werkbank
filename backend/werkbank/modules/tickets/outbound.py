@@ -8,6 +8,7 @@ geschützt. In Mails an Melder kommt die Werkbank nicht vor; Melder melden sich 
 """
 
 import re
+from collections.abc import Sequence
 from email.message import EmailMessage
 from email.utils import format_datetime, formataddr, make_msgid
 
@@ -38,6 +39,7 @@ from werkbank.modules.tickets.models import (
     TicketEntry,
     TicketMailOut,
     TicketParticipant,
+    TicketSolutionType,
 )
 
 _LINEBREAK = re.compile(r"[\r\n]+")
@@ -61,6 +63,19 @@ REPORTER_STATUS = {
 }
 REPLY_FOOTER = "Fragen oder Ergänzungen? Antworte einfach auf diese Mail."
 FORWARD_FOOTER = "Antworten auf diese Mail landen direkt bei uns."
+
+
+def solution_rows(db: Session, ticket: Ticket, status: str | None) -> list[tuple[str, str]]:
+    """Lösungsart und Lösung für die Mail: nur bei „Gelöst“ und wenn für den Melder freigegeben."""
+    if (status or ticket.status) != "solved" or not ticket.solution_public:
+        return []
+    rows = []
+    kind = db.get(TicketSolutionType, ticket.solution_type_id) if ticket.solution_type_id else None
+    if kind is not None:
+        rows.append(("Lösungsart", kind.name))
+    if ticket.solution_text:
+        rows.append(("Lösung", ticket.solution_text))
+    return rows
 
 
 def area_title(area: TicketArea) -> str:
@@ -90,11 +105,13 @@ def render_html(
     body: str,
     logo_cid: str | None,
     status: str | None = None,
+    extra: Sequence[tuple[str, str]] = (),
 ) -> str:
     rows = [
         ("Ticket", f"T-{ticket.number}"),
         ("Betreff", ticket.subject),
         ("Status", REPORTER_STATUS.get(status or ticket.status, "In Bearbeitung")),
+        *extra,
     ]
     signature = paragraphs(area.signature) if area.signature.strip() else ""
     content = paragraphs(body) + info_box(brand, rows, badge=f"T-{ticket.number}") + signature
@@ -109,7 +126,12 @@ def render_html(
 
 
 def render_text(
-    area: TicketArea, brand: MailBrand, ticket: Ticket, body: str, status: str | None = None
+    area: TicketArea,
+    brand: MailBrand,
+    ticket: Ticket,
+    body: str,
+    status: str | None = None,
+    extra: Sequence[tuple[str, str]] = (),
 ) -> str:
     parts = [
         REPLY_ABOVE,
@@ -119,6 +141,7 @@ def render_text(
         f"Ticket: T-{ticket.number}",
         f"Betreff: {ticket.subject}",
         f"Status: {REPORTER_STATUS.get(status or ticket.status, 'In Bearbeitung')}",
+        *[f"{label}: {value}" for label, value in extra],
     ]
     if area.signature.strip():
         parts += ["", area.signature.strip()]
@@ -170,11 +193,12 @@ def build_message(
     if auto:
         message["Auto-Submitted"] = "auto-generated"
         message["X-Auto-Response-Suppress"] = "All"
-    message.set_content(render_text(area, brand, ticket, body, status))
+    extra = solution_rows(db, ticket, status)
+    message.set_content(render_text(area, brand, ticket, body, status, extra))
     add_html(
         message,
         brand,
-        lambda cid: render_html(area, brand, ticket, body, cid, status),
+        lambda cid: render_html(area, brand, ticket, body, cid, status, extra),
         domain,
     )
     return message, message_id.strip("<>").lower(), [ticket.reporter_mail, *cc]

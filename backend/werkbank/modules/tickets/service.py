@@ -98,6 +98,39 @@ def system_entry(db: Session, ticket: Ticket, text: str, actor: Actor) -> None:
     )
 
 
+SOLUTION_TEXT_MAX = 2000
+
+
+def apply_solution(
+    db: Session,
+    ticket: Ticket,
+    type_id: int | None,
+    text: str,
+    public: bool,
+    actor: Actor,
+    *,
+    note: bool = True,
+) -> None:
+    """Lösung beim Wechsel auf „Gelöst“ setzen (alles freiwillig). Die Art muss zum Bereich
+    gehören und aktiv sein; ValueError mit Text für die Oberfläche sonst."""
+    from werkbank.modules.tickets.models import TicketSolutionType
+
+    name = ""
+    if type_id is not None:
+        kind = db.get(TicketSolutionType, type_id)
+        if kind is None or kind.area_id != ticket.area_id or not kind.active:
+            raise ValueError("Diese Lösungsart gibt es im Bereich nicht.")
+        name = kind.name
+    text = text.replace("\r\n", "\n").strip()[:SOLUTION_TEXT_MAX]
+    ticket.solution_type_id = type_id
+    ticket.solution_text = text
+    ticket.solution_public = public
+    if note and (name or text):
+        head = "Lösung" + (f": {name}" if name else "")
+        where = "steht in der Mail an den Melder" if public else "nur intern"
+        system_entry(db, ticket, f"{head} ({where})" + (f"\n{text}" if text else ""), actor)
+
+
 def open_counts(db: Session, area_id: int) -> dict[str, int]:
     rows = db.execute(
         select(Ticket.assignee_oid, func.count())
