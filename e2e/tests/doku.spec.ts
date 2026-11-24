@@ -100,15 +100,15 @@ test("Doku: Seite anlegen, schreiben, Versionen, Rechte, Sperren und Papierkorb"
   const pageUrl = page.url();
   const pageId = pageUrl.split("/").pop() ?? "";
 
-  // Schreiben: wird automatisch gespeichert
-  const content = page.getByRole("textbox", { name: "Inhalt der Seite" });
-  await content.click();
-  await content.pressSequentially("Toner liegt im Lager.");
+  // Schreiben: live verbunden, wird automatisch gespeichert
   await expect(
-    page.getByRole("status").filter({ hasText: /^Gespeichert$/ }),
+    page.getByText("Live · wird automatisch gespeichert"),
   ).toBeVisible({
     timeout: 10_000,
   });
+  const content = page.getByRole("textbox", { name: "Inhalt der Seite" });
+  await content.click();
+  await content.pressSequentially("Toner liegt im Lager.");
   // Baustein über „/“
   await content.press("End");
   await content.press("Enter");
@@ -118,11 +118,22 @@ test("Doku: Seite anlegen, schreiben, Versionen, Rechte, Sperren und Papierkorb"
   await blocks.press("Enter");
   await content.pressSequentially("Toner bestellen");
   await expect(content.getByRole("checkbox")).toHaveCount(1);
-  await expect(
-    page.getByRole("status").filter({ hasText: /^Gespeichert$/ }),
-  ).toBeVisible({
-    timeout: 10_000,
-  });
+  // Der Server speichert kurz nach der letzten Änderung
+  await expect
+    .poll(
+      async () =>
+        JSON.stringify(
+          (
+            (await (
+              await page.request.get(`/api/doku/pages/${pageId}`)
+            ).json()) as {
+              content: unknown;
+            }
+          ).content,
+        ),
+      { timeout: 10_000 },
+    )
+    .toContain("Toner bestellen");
   await expectNoA11yViolations(page);
 
   // Im Seitenbaum
@@ -245,4 +256,65 @@ test("Doku: ohne Rolle kein Zugriff, Lesen ohne Bearbeiten", async ({
   ).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sperren" })).toHaveCount(0);
   await expectNoA11yViolations(page);
+});
+
+test("Doku: zwei Personen schreiben gleichzeitig, Lesen sieht live mit", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const editor = await apiAs(browser, ["Doku.Nutzer"], s.editor);
+  const created = await editor.post("/api/doku/pages", {
+    data: { space_id: s.spaceId, parent_id: null, title: `Gemeinsam ${stamp}` },
+    headers: HEADERS,
+  });
+  const id = ((await created.json()) as { id: string }).id;
+  const admin = await apiAs(browser, ["Doku.Admin"], s.admin);
+  const second = `Max ${stamp}`;
+  await admin.put(`/api/doku/admin/spaces/${s.spaceId}`, {
+    data: {
+      name: s.space,
+      description: "",
+      archived: false,
+      members: [
+        { oid: `test:${slug(s.editor)}`, name: s.editor, role: "manage" },
+        { oid: `test:${slug(second)}`, name: second, role: "edit" },
+        { oid: `test:${slug(s.reader)}`, name: s.reader, role: "read" },
+      ],
+    },
+    headers: HEADERS,
+  });
+
+  await loginAs(page, ["Doku.Nutzer"], s.editor);
+  await page.goto(`/doku/seite/${id}`);
+  const otherContext = await browser.newContext({ baseURL: BASE_URL });
+  const other = await otherContext.newPage();
+  await loginAs(other, ["Doku.Nutzer"], second);
+  await other.goto(`/doku/seite/${id}`);
+  const readerContext = await browser.newContext({ baseURL: BASE_URL });
+  const reader = await readerContext.newPage();
+  await loginAs(reader, ["Doku.Nutzer"], s.reader);
+  await reader.goto(`/doku/seite/${id}`);
+
+  const mine = page.getByRole("textbox", { name: "Inhalt der Seite" });
+  const theirs = other.getByRole("textbox", { name: "Inhalt der Seite" });
+  await mine.click();
+  await mine.pressSequentially("Von Ina.");
+  await expect(theirs).toContainText("Von Ina.");
+  await theirs.click();
+  await theirs.press("End");
+  await theirs.pressSequentially(" Von Max.");
+  await expect(mine).toContainText("Von Max.");
+  // Lesen: sieht beides, ohne Eingabefeld
+  const view = reader.getByRole("document", { name: "Inhalt der Seite" });
+  await expect(view).toContainText("Von Ina.");
+  await expect(view).toContainText("Von Max.");
+  // Anwesenheit
+  await expect(
+    page.getByRole("list", { name: "Gerade auf der Seite" }).getByText(second),
+  ).toBeAttached();
+  await expectNoA11yViolations(page);
+  await otherContext.close();
+  await readerContext.close();
 });

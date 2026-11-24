@@ -186,7 +186,7 @@ export function createPage(body: {
 
 export function savePage(
   id: string,
-  body: { title: string; content: DocJson; revision: number },
+  body: { title: string; content?: DocJson; revision: number },
 ): Promise<DokuPageData> {
   return putJson(`${BASE}/pages/${id}`, body, QUIET);
 }

@@ -21,6 +21,7 @@ from werkbank.modules.doku.api import (
     _members,
     replace_members,
 )
+from werkbank.modules.doku.collab import reset_space
 from werkbank.modules.doku.models import DokuPage, DokuPageRight, DokuSpace, DokuSpaceMember
 from werkbank.modules.doku.service import (
     TRASH_DAYS,
@@ -178,6 +179,7 @@ def update_space(
     replace_members(db, space, body.members)
     _audit(db, access, "arbeitsbereich_geaendert", "arbeitsbereich", str(space.id))
     db.commit()
+    reset_space(space.id)
     db.refresh(space)
     return _space_out(db, space)
 
@@ -248,6 +250,7 @@ def reset_rights(page_id: uuid.UUID, access: AdminDep, db: DbDep) -> dict[str, b
     page.own_rights = False
     _audit(db, access, "rechte_zurueckgesetzt", "seite", str(page.id))
     db.commit()
+    reset_space(page.space_id)
     return {"ok": True}
 
 

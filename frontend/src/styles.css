@@ -14726,3 +14726,93 @@ img.ProseMirror-separator {
 .doku-row-actions .button + .button {
   margin-left: 6px;
 }
+
+/* Dokumentation: Live-Bearbeitung (Anwesenheit, Cursor anderer Personen) */
+.doku-presence {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doku-presence-person {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: -6px;
+  border: 2px solid var(--farbe-flaeche);
+  border-radius: 50%;
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.doku-presence-person:first-child {
+  margin-left: 0;
+}
+
+.doku-connecting {
+  margin: 0;
+  padding: 24px;
+  color: var(--farbe-text-leise);
+}
+
+.collaboration-carets__caret {
+  position: relative;
+  margin-right: -1px;
+  margin-left: -1px;
+  border-right: 1px solid;
+  border-left: 1px solid;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.collaboration-carets__label {
+  position: absolute;
+  top: -1.4em;
+  left: -1px;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px 3px 3px 0;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 600;
+  line-height: normal;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.doku-selection-0 {
+  background: rgb(31 87 195 / 20%);
+}
+
+.doku-selection-1 {
+  background: rgb(181 71 8 / 20%);
+}
+
+.doku-selection-2 {
+  background: rgb(6 118 71 / 20%);
+}
+
+.doku-selection-3 {
+  background: rgb(158 31 99 / 20%);
+}
+
+.doku-selection-4 {
+  background: rgb(91 60 196 / 20%);
+}
+
+.doku-selection-5 {
+  background: rgb(14 112 144 / 20%);
+}
+
+.doku-selection-6 {
+  background: rgb(161 92 7 / 20%);
+}
+
+.doku-selection-7 {
+  background: rgb(192 16 72 / 20%);
+}

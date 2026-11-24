@@ -4,6 +4,9 @@ import StarterKit from "@tiptap/starter-kit";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import { Placeholder } from "@tiptap/extensions";
+import Collaboration from "@tiptap/extension-collaboration";
+import CollaborationCaret from "@tiptap/extension-collaboration-caret";
+import { CARET_COLORS, type LiveDoc } from "./useLiveDoc";
 import { Icon } from "../../components/Icon";
 import type { DocJson } from "./api";
 
@@ -49,9 +52,33 @@ export function allowedLink(href: string): boolean {
   );
 }
 
-export function extensions(placeholder: string) {
+/** Cursor einer anderen Person: Farbe über CSSOM (die CSP erlaubt keine style-Attribute). */
+function renderCaret(user: Record<string, unknown>): HTMLElement {
+  const color = typeof user.color === "string" ? user.color : "";
+  const caret = document.createElement("span");
+  caret.classList.add("collaboration-carets__caret");
+  // Nur sichtbar: Screenreader lesen den Namen nicht mitten im Text vor
+  caret.setAttribute("aria-hidden", "true");
+  caret.style.borderColor = color;
+  const label = document.createElement("span");
+  label.classList.add("collaboration-carets__label");
+  label.style.backgroundColor = color;
+  label.textContent = typeof user.name === "string" ? user.name : "";
+  caret.append(label);
+  return caret;
+}
+
+/** Markierung einer anderen Person: feste Klassen je Farbe statt style-Attribut. */
+function caretSelection(user: Record<string, unknown>): { class: string } {
+  const index = CARET_COLORS.findIndex((color) => color === user.color);
+  return { class: `doku-selection doku-selection-${index < 0 ? 0 : index}` };
+}
+
+export function extensions(placeholder: string, live?: LiveDoc) {
   return [
     StarterKit.configure({
+      // Mit Live-Bearbeitung kommt „Rückgängig“ aus dem gemeinsamen Dokument (nur eigene Änderungen)
+      ...(live ? { undoRedo: false as const } : {}),
       heading: { levels: [1, 2, 3] },
       link: {
         openOnClick: false,
@@ -76,6 +103,17 @@ export function extensions(placeholder: string) {
     }),
     Callout,
     Placeholder.configure({ placeholder }),
+    ...(live
+      ? [
+          Collaboration.configure({ document: live.doc, field: "default" }),
+          CollaborationCaret.configure({
+            provider: live.provider,
+            user: { name: "", color: live.color },
+            render: renderCaret,
+            selectionRender: caretSelection,
+          }),
+        ]
+      : []),
   ];
 }
 
@@ -478,11 +516,14 @@ function Toolbar({ editor, onBlocks }: { editor: Editor; onBlocks: () => void })
  */
 export function DokuEditor({
   content,
+  live,
   editable,
   label,
   onChange,
 }: {
-  content: DocJson;
+  /** Fester Inhalt (z. B. eine Version); mit `live` kommt der Inhalt aus dem gemeinsamen Dokument */
+  content?: DocJson;
+  live?: LiveDoc;
   editable: boolean;
   label: string;
   onChange?: (doc: DocJson) => void;
@@ -493,8 +534,8 @@ export function DokuEditor({
     change.current = onChange;
   }, [onChange]);
   const editor = useEditor({
-    extensions: extensions("Schreib los oder tippe „/“ für Bausteine"),
-    content,
+    extensions: extensions("Schreib los oder tippe „/“ für Bausteine", live),
+    ...(live ? {} : { content }),
     editable,
     immediatelyRender: true,
     // Kein <style> zur Laufzeit (CSP ohne 'unsafe-inline'); die Grundregeln stehen in styles.css

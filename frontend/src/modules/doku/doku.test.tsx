@@ -1,5 +1,27 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import * as Y from "yjs";
+
+// Ohne Server: das gemeinsame Dokument ist leer und gilt als verbunden
+const liveState = vi.hoisted(() => ({
+  status: "live" as string,
+  presence: [] as { id: number; name: string; color: string }[],
+}));
+vi.mock("./useLiveDoc", async (original) => {
+  const actual = await original<typeof import("./useLiveDoc")>();
+  const { Awareness } = await import("y-protocols/awareness");
+  const doc = new Y.Doc();
+  const awareness = new Awareness(doc);
+  return {
+    ...actual,
+    useLiveDoc: (pageId: string, session: number) => ({
+      live: { doc, provider: { awareness }, color: "#1f57c3", pageId, session },
+      status: liveState.status,
+      synced: liveState.status === "live",
+      presence: liveState.presence,
+    }),
+  };
+});
 import { areasFor } from "../../navigation";
 import { DokuAdminPage } from "./DokuAdminPage";
 import { allowedLink } from "./DokuEditor";
@@ -116,7 +138,9 @@ describe("Doku: Adressen, Baum, Links", () => {
 });
 
 describe("Doku: Seite", () => {
-  it("speichert den Titel automatisch mit dem Stand der Seite", async () => {
+  it("speichert den Titel automatisch, der Inhalt läuft live", async () => {
+    liveState.status = "live";
+    liveState.presence = [{ id: 2, name: "Max Muster", color: "#1f57c3" }];
     const calls = stubFetch({
       [`GET /api/doku/pages/${ID}`]: pageData(),
       [`GET /api/doku/pages/${ID}/versions`]: [],
@@ -124,19 +148,37 @@ describe("Doku: Seite", () => {
     });
     render(<DokuPageView pageId={ID} />);
     const title = await screen.findByRole("textbox", { name: "Titel der Seite" });
-    expect(screen.getByRole("textbox", { name: "Inhalt der Seite" })).toHaveTextContent(
-      "Toner im Lager",
-    );
+    expect(screen.getByRole("textbox", { name: "Inhalt der Seite" })).toBeInTheDocument();
+    expect(screen.getByText("Live · wird automatisch gespeichert")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list", { name: "Gerade auf der Seite" })).getByText("Max Muster"),
+    ).toBeInTheDocument();
     vi.useFakeTimers();
     fireEvent.change(title, { target: { value: "Drucker im Flur" } });
-    expect(screen.getByText("Änderungen noch nicht gespeichert")).toBeInTheDocument();
+    expect(screen.getByText("Titel wird gespeichert …")).toBeInTheDocument();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1500);
     });
     vi.useRealTimers();
-    await waitFor(() => expect(screen.getByText("Gespeichert")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("Live · wird automatisch gespeichert")).toBeInTheDocument(),
+    );
     const put = calls.find((call) => call.method === "PUT");
-    expect(put?.body).toMatchObject({ title: "Drucker im Flur", revision: 3 });
+    expect(put?.body).toEqual({ title: "Drucker im Flur", revision: 3 });
+  });
+
+  it("meldet eine unterbrochene Verbindung", async () => {
+    liveState.status = "getrennt";
+    liveState.presence = [];
+    stubFetch({
+      [`GET /api/doku/pages/${ID}`]: pageData(),
+      [`GET /api/doku/pages/${ID}/versions`]: [],
+    });
+    render(<DokuPageView pageId={ID} />);
+    expect(
+      await screen.findByText("Verbindung unterbrochen – Änderungen werden nachgereicht"),
+    ).toBeInTheDocument();
+    liveState.status = "live";
   });
 
   it("zeigt gesperrte Seiten und Seiten zum Lesen ohne Eingabe", async () => {

@@ -296,6 +296,11 @@ export const HELP = {
     text: "Ein gespeicherter Stand der Seite. Er entsteht nach einer Weile Bearbeitung von selbst oder wenn du ihn benennst.",
     topic: ["doku", "versionen"],
   },
+  "doku.live": {
+    term: "Live-Bearbeitung",
+    text: "Alle, die die Seite offen haben, sehen Änderungen sofort und können gleichzeitig schreiben. Gespeichert wird automatisch.",
+    topic: ["doku", "seiten"],
+  },
   "doku.arbeitsbereich": {
     term: "Arbeitsbereich",
     text: "Sammlung von Seiten, etwa für eine Abteilung. Wer darin Mitglied ist, bekommt Lesen, Bearbeiten oder Verwalten.",

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "werkbank"
-version = "0.118.0"
+version = "0.119.0"
 description = "Werkbank - Open-Source-Plattform für IT-Abteilungen"
 license = "MIT"
 requires-python = ">=3.14"
@@ -20,6 +20,8 @@ dependencies = [
     "cryptography>=50.0.2",
     "httpx>=0.28.1",
     "pyyaml>=6.0.3",
+    # Gemeinsames Dokument der Live-Bearbeitung in der Dokumentation (Yjs-kompatibel, MIT)
+    "pycrdt>=0.14.13",
 ]
 
 [project.optional-dependencies]
