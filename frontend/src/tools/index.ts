@@ -280,6 +280,15 @@ export const TOOLS: readonly ToolDefinition[] = [
     component: lazy(() => import("./json-format/JsonFormatTool")),
   },
   {
+    id: "html-editor",
+    name: "HTML-Editor",
+    category: "formatter",
+    description:
+      "HTML eingeben und sofort als Vorschau sehen, etwa für Mail-Signaturen oder Vorlagen; mit Formatieren und Breiten für PC, Tablet und Handy.",
+    tags: ["html", "vorschau", "preview", "signatur", "mail", "css", "editor"],
+    component: lazy(() => import("./html-editor/HtmlEditorTool")),
+  },
+  {
     id: "yaml-formatter",
     name: "YAML-Formatter",
     category: "formatter",

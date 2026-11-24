@@ -2295,6 +2295,10 @@ export const AREAS: readonly Area[] = [
                 kind: "text",
                 text: "Viele Tools schreiben ihre Einstellungen in die Adresse, damit du einen Link teilen kannst. Kennwörter, Schlüssel, eingegebene Texte und abgefragte Namen stehen dort nie.",
               },
+              {
+                kind: "text",
+                text: "Der HTML-Editor zeigt dein HTML in einem abgeschotteten Rahmen: nur HTML und CSS, keine Skripte, Formulare oder eingebetteten Seiten, kein Zugriff auf dein Konto. Bilder aus dem Internet lädt dein Browser dort direkt von der angegebenen Adresse, solange die Verwaltung Abfragen ins Internet erlaubt.",
+              },
             ],
           },
           {

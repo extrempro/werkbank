@@ -14960,3 +14960,75 @@ img.ProseMirror-separator {
 .perm-detail {
   container-type: inline-size;
 }
+
+/* IT-Tools › HTML-Editor: Code und Vorschau nebeneinander, ab Tablet untereinander */
+.html-editor {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1023px) {
+  .html-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.html-editor-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.html-editor-pane[hidden] {
+  display: none;
+}
+
+.html-editor-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.tool-body textarea.html-editor-code {
+  min-height: 24rem;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 2;
+  resize: vertical;
+}
+
+.html-editor-stage {
+  padding: 12px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-neutral-flaeche);
+  overflow-x: auto;
+}
+
+/* Die Vorschau ist immer hell wie eine Mail oder Webseite, auch im dunklen Modus */
+.html-editor-frame {
+  display: block;
+  width: 100%;
+  height: 32rem;
+  margin: 0 auto;
+  border: 0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(20 33 61 / 15%);
+  resize: vertical;
+}
+
+.html-editor-frame-tablet {
+  width: 768px;
+  max-width: none;
+}
+
+.html-editor-frame-handy {
+  width: 375px;
+  max-width: 100%;
+}
