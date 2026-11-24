@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.114.0] – 2026-11-24
+
+### Mails
+
+- **Ein Aussehen für alle Mails** (`core/mail_layout.py`): Logo und Name, Linie in der Akzentfarbe, Text, Fußzeile mit Text und Datenschutz-Link. Gilt für Ticket-Mails an Melder, Weiterleitungen, Benachrichtigungen und Verleih-Mails.
+- **Branding der Plattform** (Verwaltung › Allgemein) bekommt ein **Logo für Mails** (nur PNG; ohne eigenes gilt das helle Logo, wenn es ein PNG ist), eine **Fußzeile** und einen **Datenschutz-Link** (beides freiwillig, Link nur https).
+- **Tickets:** Die eigene „E-Mail-Gestaltung“ entfällt. Mails an Melder zeigen unter dem Text einen Kasten mit Ticketnummer, Betreff und Status in Worten (bei einer Antwort mit „Status danach“ der neue Status); die Fußzeile nennt den Bereich, nicht die Werkbank. Weiterleitungen gehen im selben Aussehen raus.
+  - Migration `0077`: übernimmt Fußzeile, Datenschutz-Link und Logo der bisherigen Gestaltung ins Branding (nur, wenn dort noch nichts steht) und entfernt die Tabelle `ticket_mail_design`. Die eigene Akzentfarbe der Ticket-Mails entfällt.
+  - Entfallen: `GET/PUT /api/tickets/einstellungen/design`, `PUT/DELETE …/design/logo`
+
+### Dokumentation
+
+- spec.md (Tickets, Benachrichtigungen, Verwaltung), security/asvs-l2.md (Branding), Handbuch (Tickets, Verwaltung)
+
+### Tests
+
+- `test_branding.py` (Mail-Logo nur PNG, Fußzeile, Datenschutz-Link), `test_tickets_mail.py` (neues Aussehen, Status, ohne „Werkbank“), `test_notify_channels.py`, `tickets.test.tsx`
+
 ## [0.113.0] – 2026-11-24
 
 ### IT-Bestand

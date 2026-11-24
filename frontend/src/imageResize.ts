@@ -136,6 +136,8 @@ export async function prepareImage(
   kind: ImageKind,
   mode: ResizeMode,
   maxBytes: number,
+  /** Immer als PNG (z. B. das Logo für Mails, WebP zeigen viele Mailprogramme nicht). */
+  forcePng = false,
 ): Promise<Prepared> {
   const original = async (): Promise<Prepared> => ({
     base64: await blobToBase64(file),
@@ -154,7 +156,7 @@ export async function prepareImage(
     throw new ImageProblem(problem);
   }
   const mustConvert =
-    file.type === "image/jpeg" || (kind === "favicon" && file.type !== "image/png");
+    file.type === "image/jpeg" || ((kind === "favicon" || forcePng) && file.type !== "image/png");
   const limit = kind === "favicon" ? FAVICON_MAX : LOGO_MAX;
   const tooLarge = Math.max(before.width, before.height) > limit || file.size > maxBytes;
   if (mode === "original" && !mustConvert) {

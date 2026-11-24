@@ -15,7 +15,7 @@ import html
 import logging
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
-from email.utils import formataddr, make_msgid
+from email.utils import formataddr
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
@@ -27,6 +27,8 @@ from sqlalchemy.orm import Session
 from werkbank.config import Settings
 from werkbank.core.deps import DbDep
 from werkbank.core.mail import MailError, SmtpConfig, load_smtp_config, send_message
+from werkbank.core.mail_layout import add_html, footer_text, render_html
+from werkbank.core.mail_layout import paragraphs as paragraphs_html
 from werkbank.core.notify_channels import (
     LOGO_CID_DOMAIN,
     Brand,
@@ -723,36 +725,21 @@ def loan_mail(config: SmtpConfig, kind: str, loan: InventoryLoan, brand: Brand) 
     message["From"] = formataddr((config.sender_name or brand.name, config.sender_address))
     message["To"] = loan.person_mail
     message["Subject"] = subject
-    message.set_content("\n\n".join([greeting, *paragraphs, f"Deine IT · {brand.name}"]))
-    cid = make_msgid(domain=LOGO_CID_DOMAIN) if brand.logo_png else None
-    name = html.escape(brand.name)
-    accent = html.escape(brand.accent)
-    head = (
-        f'<img src="cid:{html.escape(cid[1:-1])}" alt="{name}" height="32" '
-        'style="display:block;height:32px;width:auto">'
-        if cid
-        else f'<span style="font-size:18px;font-weight:700;color:#ffffff">{name}</span>'
+    message.set_content(
+        "\n\n".join([greeting, *paragraphs, f"Deine IT · {brand.name}"])
+        + "\n".join(footer_text(brand, ""))
     )
-    body = "".join(
-        f'<p style="margin:0 0 12px">{html.escape(text)}</p>' for text in [greeting, *paragraphs]
+    body = paragraphs_html("\n\n".join([greeting, *paragraphs])) + (
+        f'<p style="margin:16px 0 0">Deine IT · {html.escape(brand.name)}</p>'
     )
-    message.add_alternative(
-        '<!DOCTYPE html><html lang="de"><body style="margin:0;padding:0;background:#f5f6f8;'
-        'font-family:Segoe UI,Arial,sans-serif;color:#171a1f">'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
-        '<tr><td align="center" style="padding:24px 12px">'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-        'style="max-width:560px;background:#ffffff;border-radius:10px;overflow:hidden">'
-        f'<tr><td style="background:{accent};padding:16px 24px">{head}</td></tr>'
-        f'<tr><td style="padding:24px">{body}'
-        f'<p style="margin:16px 0 0;font-size:13px;color:#4f5765">Deine IT · {name}</p>'
-        "</td></tr></table></td></tr></table></body></html>",
-        subtype="html",
+    add_html(
+        message,
+        brand,
+        lambda cid: render_html(
+            brand, title=brand.name, body_html=body, footer_lead="", logo_cid=cid
+        ),
+        LOGO_CID_DOMAIN,
     )
-    if cid and brand.logo_png:
-        part = message.get_body(("html",))
-        if isinstance(part, EmailMessage):
-            part.add_related(brand.logo_png, maintype="image", subtype="png", cid=cid)
     return message
 
 

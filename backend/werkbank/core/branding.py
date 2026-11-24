@@ -1,6 +1,7 @@
 """Branding: Name, Akzentfarbe, Logos und Favicon aus der Verwaltung.
 
 Name und Bilder erscheinen auch auf der Anmeldeseite und sind deshalb ohne Anmeldung abrufbar.
+Fußzeile, Datenschutz-Link und das Mail-Logo (nur PNG) gelten für alle Mails der Werkbank.
 Geändert werden sie nur von Admins kurz nach einer Anmeldung. Angenommen werden ausschließlich
 PNG und WebP (kein SVG: darin könnten Skripte stecken); geprüft wird der Inhalt der Datei, nicht
 der Dateiname.
@@ -30,8 +31,10 @@ BRANDING_KEY = "branding"
 DEFAULT_NAME = "Werkbank"
 MODULE = "kern"
 
-AssetKind = Literal["logo-hell", "logo-dunkel", "favicon"]
-ASSET_KINDS: tuple[str, ...] = ("logo-hell", "logo-dunkel", "favicon")
+AssetKind = Literal["logo-hell", "logo-dunkel", "logo-mail", "favicon"]
+ASSET_KINDS: tuple[str, ...] = ("logo-hell", "logo-dunkel", "logo-mail", "favicon")
+MAIL_FOOTER_MAX = 1000
+PRIVACY_URL_MAX = 500
 
 MAX_IMAGE_BYTES = 256 * 1024
 # Base64 braucht vier Zeichen je drei Bytes.
@@ -88,6 +91,15 @@ def _webp_size(data: bytes) -> tuple[int, int] | None:
     return None
 
 
+def valid_privacy_url(value: str) -> bool:
+    """Nur https, ohne Leerzeichen und Steuerzeichen."""
+    return (
+        value.startswith("https://")
+        and len(value) <= PRIVACY_URL_MAX
+        and not any(char.isspace() or ord(char) < 32 for char in value)
+    )
+
+
 def inspect_image(kind: str, data: bytes) -> ImageInfo:
     """Prüft Format, Dateigröße und Abmessungen eines hochgeladenen Bildes."""
     if len(data) > MAX_IMAGE_BYTES:
@@ -106,6 +118,10 @@ def inspect_image(kind: str, data: bytes) -> ImageInfo:
                 "Pixel breit sein."
             )
         return ImageInfo("image/png", width, height)
+    if kind == "logo-mail" and png is None:
+        raise ImageError(
+            "Das Logo für Mails muss eine PNG-Datei sein (WebP zeigen viele Mailprogramme nicht)."
+        )
     size = png or webp
     if size is None:
         raise ImageError("Erlaubt sind nur PNG- und WebP-Dateien.")
@@ -126,7 +142,12 @@ class BrandingOut(BaseModel):
     show_name: bool
     logo_light_url: str | None
     logo_dark_url: str | None
+    # Logo für Mails (PNG); ohne nimmt die Werkbank das helle Logo, wenn es ein PNG ist
+    logo_mail_url: str | None
     favicon_url: str | None
+    # Für alle Mails: Text der Fußzeile und Link zur Datenschutzerklärung (beides freiwillig)
+    mail_footer: str
+    privacy_url: str
     max_image_bytes: int
 
 
@@ -134,6 +155,29 @@ class BrandingIn(BaseModel):
     app_name: str = Field(max_length=40)
     accent: str | None = Field(default=None, max_length=7)
     show_name: bool = True
+    # None: bleibt, wie es ist
+    mail_footer: str | None = Field(default=None, max_length=MAIL_FOOTER_MAX)
+    privacy_url: str | None = Field(default=None, max_length=PRIVACY_URL_MAX)
+
+    @field_validator("mail_footer")
+    @classmethod
+    def footer_is_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.replace("\r\n", "\n").strip()
+        if any(ord(char) < 32 and char != "\n" for char in value):
+            raise ValueError("Keine Steuerzeichen")
+        return value
+
+    @field_validator("privacy_url")
+    @classmethod
+    def privacy_is_https(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if value and not valid_privacy_url(value):
+            raise ValueError("Nur eine https-Adresse ohne Leerzeichen ist erlaubt.")
+        return value
 
     @field_validator("app_name")
     @classmethod
@@ -174,13 +218,18 @@ def branding_out(db: Session) -> BrandingOut:
     etags = {str(row[0]): str(row[1]) for row in rows}
     accent = data.get("accent")
     name = data.get("app_name")
+    footer = data.get("mail_footer")
+    privacy = data.get("privacy_url")
     return BrandingOut(
         app_name=name if isinstance(name, str) and name else DEFAULT_NAME,
         accent=accent if isinstance(accent, str) and ACCENT_PATTERN.match(accent) else None,
         show_name=data.get("show_name") is not False,
         logo_light_url=_asset_url("logo-hell", etags),
         logo_dark_url=_asset_url("logo-dunkel", etags),
+        logo_mail_url=_asset_url("logo-mail", etags),
         favicon_url=_asset_url("favicon", etags),
+        mail_footer=footer if isinstance(footer, str) else "",
+        privacy_url=privacy if isinstance(privacy, str) and valid_privacy_url(privacy) else "",
         max_image_bytes=MAX_IMAGE_BYTES,
     )
 
@@ -214,8 +263,19 @@ def read_asset(db: DbDep, kind: AssetKind) -> Response:
 
 @router.put("/admin/branding")
 def update_branding(request: Request, body: BrandingIn, user: AdminUser, db: DbDep) -> BrandingOut:
-    """Speichert Name, Akzentfarbe und ob der Name neben dem Logo steht."""
-    value = {"app_name": body.app_name, "accent": body.accent, "show_name": body.show_name}
+    """Speichert Name, Akzentfarbe, ob der Name neben dem Logo steht, und die Fußzeile der Mails."""
+    stored = _stored(db)
+    value = {
+        "app_name": body.app_name,
+        "accent": body.accent,
+        "show_name": body.show_name,
+        "mail_footer": body.mail_footer
+        if body.mail_footer is not None
+        else str(stored.get("mail_footer") or ""),
+        "privacy_url": body.privacy_url
+        if body.privacy_url is not None
+        else str(stored.get("privacy_url") or ""),
+    }
     set_setting(db, BRANDING_KEY, value, user.user_id)
     write_audit(
         db,

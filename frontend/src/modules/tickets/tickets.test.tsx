@@ -779,7 +779,7 @@ describe("Einstellungen in Reitern", () => {
     expect(settingsPath("aufbewahrung", 3)).toBe("/tickets/einstellungen/aufbewahrung?bereich=3");
   });
 
-  it("zeigt die E-Mail-Gestaltung nur der Ticket-Verwaltung", async () => {
+  it("zeigt die Reiter der Einstellungen, ohne eigene Mail-Gestaltung", async () => {
     const settings = (manager: boolean) =>
       new Response(
         JSON.stringify({
@@ -820,7 +820,8 @@ describe("Einstellungen in Reitern", () => {
     render(<TicketSettingsPage tab="bereiche" />);
     const nav2 = await screen.findByRole("navigation", { name: "Einstellungen der Tickets" });
     await screen.findByRole("heading", { name: "IT" });
-    expect(within(nav2).getByRole("link", { name: "E-Mail-Gestaltung" })).toBeTruthy();
+    expect(within(nav2).queryByRole("link", { name: "E-Mail-Gestaltung" })).toBeNull();
+    expect(within(nav2).getByRole("link", { name: "Textbausteine" })).toBeTruthy();
   });
 });
 

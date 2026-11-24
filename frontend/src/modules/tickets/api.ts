@@ -530,34 +530,6 @@ export function actOnReview(
   return postJson(`${SETTINGS}/areas/${areaId}/review/${id}/${action}`, {});
 }
 
-export interface MailDesign {
-  accent: string;
-  footer: string;
-  privacy_url: string;
-  has_logo: boolean;
-  default_accent: string;
-}
-
-export function fetchDesign(): Promise<MailDesign> {
-  return getJson(`${SETTINGS}/design`);
-}
-
-export function saveDesign(body: {
-  accent: string;
-  footer: string;
-  privacy_url: string;
-}): Promise<MailDesign> {
-  return putJson(`${SETTINGS}/design`, body);
-}
-
-export function uploadDesignLogo(contentBase64: string): Promise<MailDesign> {
-  return putJson(`${SETTINGS}/design/logo`, { content_base64: contentBase64 });
-}
-
-export function deleteDesignLogo(): Promise<MailDesign> {
-  return deleteJson(`${SETTINGS}/design/logo`);
-}
-
 // --- Arbeitshilfen (Phase 3) ---------------------------------------------------------------
 
 export function fetchAreaCategories(areaId: number): Promise<(Category & { active: boolean })[]> {

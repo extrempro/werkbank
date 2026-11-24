@@ -426,7 +426,6 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
     ["tickets", "betrieb"],
   ],
   "/tickets/einstellungen/email": [["tickets", "email"]],
-  "/tickets/einstellungen/gestaltung": [["tickets", "email"]],
   "/tickets/einstellungen/textbausteine": [["tickets", "arbeitshilfen"]],
   "/tickets/einstellungen/kategorien": [["tickets", "arbeitshilfen"]],
   "/bestand/vorgaenge": [["it-bestand", "vorgaenge"]],

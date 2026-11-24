@@ -46,6 +46,13 @@ const SLOTS: ImageSlot[] = [
     url: (branding) => branding.logo_dark_url,
   },
   {
+    kind: "logo-mail",
+    title: "Logo für Mails",
+    hint: "Steht oben in allen Mails der Werkbank (Tickets, Benachrichtigungen, Verleih). Nur PNG, weil viele Mailprogramme WebP nicht zeigen; andere Formate wandelt die Werkbank um. Ohne eigenes Bild nimmt sie das Logo für hellen Hintergrund, wenn es ein PNG ist, sonst steht nur der Name.",
+    preview: "hell",
+    url: (branding) => branding.logo_mail_url ?? null,
+  },
+  {
     kind: "favicon",
     title: "Favicon",
     hint: "Das kleine Bild im Browser-Tab. Ein nicht quadratisches Bild setzt die Werkbank mittig in ein Quadrat.",
@@ -73,14 +80,19 @@ function savedText(title: string, prepared: Prepared): string {
     : `${title}: gespeichert. Das Bild wurde von ${sizeText(prepared.before)} auf ${sizeText(prepared.after)} angepasst.`;
 }
 
-/** Verwaltung › Allgemein: Name, Akzentfarbe, Logos und Favicon. */
+/** Verwaltung › Allgemein: Name, Akzentfarbe, Logos, Favicon und Fußzeile der Mails. */
 export function BrandingSettings() {
   const branding = useBranding();
   const [name, setName] = useState(branding.app_name);
   const [showName, setShowName] = useState(branding.show_name);
   const [ownAccent, setOwnAccent] = useState(branding.accent !== null);
   const [accent, setAccent] = useState(branding.accent ?? DEFAULT_ACCENT);
+  const [footer, setFooter] = useState(branding.mail_footer ?? "");
+  const [privacy, setPrivacy] = useState(branding.privacy_url ?? "");
   const [message, setMessage] = useState<Message | null>(null);
+  const [mailMessage, setMailMessage] = useState<Message | null>(null);
+  const footerHint = useId();
+  const privacyHint = useId();
   const [imageMessage, setImageMessage] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<ResizeMode>("auto");
@@ -108,6 +120,32 @@ export function BrandingSettings() {
       .finally(() => setBusy(false));
   };
 
+  const onSaveMail = (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setMailMessage(null);
+    saveBranding({
+      app_name: branding.app_name,
+      accent: branding.accent,
+      show_name: branding.show_name,
+      mail_footer: footer.trim(),
+      privacy_url: privacy.trim(),
+    })
+      .then((result) => {
+        setBranding(result);
+        setFooter(result.mail_footer ?? "");
+        setPrivacy(result.privacy_url ?? "");
+        setMailMessage({ kind: "status", text: "Fußzeile und Datenschutz-Link sind gespeichert." });
+      })
+      .catch((error: unknown) => {
+        setMailMessage({
+          kind: "alert",
+          text: errorText(error, "Die Angaben konnten nicht gespeichert werden. Bitte prüf sie."),
+        });
+      })
+      .finally(() => setBusy(false));
+  };
+
   const onFile = (slot: ImageSlot, event: ChangeEvent<HTMLInputElement>) => {
     const input = event.target;
     const file = input.files?.[0];
@@ -122,7 +160,7 @@ export function BrandingSettings() {
     setBusy(true);
     setImageMessage(null);
     const kind = slot.kind === "favicon" ? "favicon" : "logo";
-    prepareImage(file, kind, mode, branding.max_image_bytes)
+    prepareImage(file, kind, mode, branding.max_image_bytes, slot.kind === "logo-mail")
       .then((prepared) => {
         if (prepared.bytes > branding.max_image_bytes) {
           throw new ImageProblem(`Die Datei ist zu groß (höchstens ${maxKb} KB).`);
@@ -165,7 +203,7 @@ export function BrandingSettings() {
     <section className="panel" aria-labelledby="branding-titel">
       <div className="panel-head">
         <h3 id="branding-titel">Branding</h3>
-        <span className="small">Name, Farbe, Logo</span>
+        <span className="small">Name, Farbe, Logo, Mails</span>
       </div>
       <form className="detail-body settings-form" onSubmit={onSave}>
         <p className="small">
@@ -231,6 +269,47 @@ export function BrandingSettings() {
           </button>
         </div>
         <Feedback message={message} onClose={() => setMessage(null)} />
+      </form>
+
+      <form className="detail-body settings-form" onSubmit={onSaveMail}>
+        <h4 className="sub-head">Mails</h4>
+        <p className="small">
+          Gilt für alle Mails der Werkbank: Tickets, Weiterleitungen, Benachrichtigungen und
+          Verleih. Name, Farbe und Logo kommen von oben.
+        </p>
+        <label>
+          Fußzeile (freiwillig)
+          <textarea
+            rows={3}
+            value={footer}
+            maxLength={1000}
+            aria-describedby={footerHint}
+            onChange={(event) => setFooter(event.target.value)}
+          />
+        </label>
+        <p className="small" id={footerHint}>
+          Steht klein unten in jeder Mail, zum Beispiel Name und Anschrift. Nur Text.
+        </p>
+        <label>
+          Link zur Datenschutzerklärung (freiwillig)
+          <input
+            type="url"
+            value={privacy}
+            maxLength={500}
+            placeholder="https://example.com/datenschutz"
+            aria-describedby={privacyHint}
+            onChange={(event) => setPrivacy(event.target.value)}
+          />
+        </label>
+        <p className="small" id={privacyHint}>
+          Nur https. Leer lassen: In den Mails steht kein Datenschutz-Link.
+        </p>
+        <div className="actions">
+          <button type="submit" className="button button-primary" disabled={busy}>
+            Fußzeile und Link speichern
+          </button>
+        </div>
+        <Feedback message={mailMessage} onClose={() => setMailMessage(null)} />
       </form>
 
       <div className="detail-body settings-form">

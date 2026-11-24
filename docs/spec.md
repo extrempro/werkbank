@@ -101,7 +101,7 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Bestand.Reader` | IT-Bestand | Hardware mit Verlauf und Stammdaten ansehen |
 | `Bestand.Editor` | IT-Bestand | Hardware erfassen und ändern, Inventurnummern setzen, ausmustern und wieder in Betrieb nehmen, Stammdaten pflegen |
 | `Tickets.Nutzer` | Tickets | Nur Anmeldung, z. B. für Mitglieder anderer Abteilungen; ohne Rolle in einem Bereich kein Zugriff auf Tickets |
-| `Tickets.Verwaltung` | Tickets | Bereiche anlegen, Postfächer anbinden, Rollen der Bereiche vergeben, globale Mail-Gestaltung und Vorgabe der Aufbewahrung. Kein Zugriff auf Tickets; die Rollen je Bereich (Bereichsverwaltung, Bearbeiten) liegen in der Werkbank, nicht in Entra (8e) |
+| `Tickets.Verwaltung` | Tickets | Bereiche anlegen, Postfächer anbinden, Rollen der Bereiche vergeben und Vorgabe der Aufbewahrung. Kein Zugriff auf Tickets; die Rollen je Bereich (Bereichsverwaltung, Bearbeiten) liegen in der Werkbank, nicht in Entra (8e) |
 | `Geraete.Zuordnung` | Gerätezuordnung | Neue Windows-Geräte per QR-Code scannen, zur Freigabe senden, verwerfen; mit verbundenem Admin-Konto freigeben (dem Tenant zuordnen) |
 
 Sichtbarkeit:
@@ -270,7 +270,7 @@ Standardregeln:
 
 **Mail und Teams (umgesetzt):** Ein Auftrag (`kern.benachrichtigungen_versand`, alle 15 Minuten) fasst je Person und Kanal die neuen, ungelesenen Benachrichtigungen der eingeschalteten Arten zusammen und schickt höchstens eine Nachricht: Name aus dem Branding, Anrede mit „du“, Zahl der Benachrichtigungen je Bereich, Link auf „Benachrichtigungen“ und auf das Konto, **keine fachlichen Inhalte** (keine Titel). Jede Person stellt je Art Glocke, Mail und Teams im Konto ein; Mail und Teams sind anfangs aus, mitgeteilt wird nur, was nach dem Einschalten entsteht. Ohne Glocke gibt es auch keine Mail und kein Teams. Ohne Mailadresse in Entra weder Mail noch Teams. Fehlgeschlagene Sendungen werden beim nächsten Lauf wiederholt, nach 24 Stunden verfallen sie.
 
-- **Mail:** über den SMTP-Server aus der Verwaltung, als Text und HTML mit Farbe und Logo (PNG, eingebettet, keine externe Adresse) aus dem Branding.
+- **Mail:** über den SMTP-Server aus der Verwaltung, als Text und HTML im gemeinsamen Aussehen aller Mails (`core/mail_layout.py`): Farbe, Logo (PNG, eingebettet, keine externe Adresse), Fußzeile und Datenschutz-Link aus dem Branding. Ebenso die Mails des Verleihs im IT-Bestand.
 - **Teams:** Adaptive Card an einen Power-Automate-Workflow, der sie als Flow-Bot in den Chat der Person stellt (Empfänger: Mailadresse). Die Adresse des Workflows trägt ein Admin unter Verwaltung › Allgemein ein; sie liegt verschlüsselt in der Datenbank, wird nie ausgegeben und muss eine https-Adresse von Power Automate bzw. Logic Apps sein (`…logic.azure.com`, `…api.powerplatform.com`, Port 443, keine Weiterleitungen). Testnachricht an die eigene Adresse. Einrichtung: [`docs/teams-workflow.md`](teams-workflow.md).
 
 **Glocke (umgesetzt):** Ein Auftrag im Worker (`kern.benachrichtigungen`, alle 5 Minuten) fragt die Quellen der Module ab. Jede Quelle meldet die aktuell vorliegenden Ereignisse mit festem Schlüssel; gemeldet wird nur, was neu ist, jedes Ereignis einmal. Beim ersten Lauf einer Art gilt der Bestand als gemeldet (keine Flut alter Meldungen). Empfänger sind alle Personen, deren Rollen bei der letzten Anmeldung passen; die API zeigt zusätzlich nur Arten, die zu den Rollen der laufenden Sitzung passen. Alle Arten sind eingeschaltet; jede Person kann einzelne Arten im Konto ausschalten. Gespeichert werden Art, Titel, Link und Zeitpunkt (Titel nennt z. B. Vorgang, Vertrag oder Rechnungsnummer), Aufbewahrung 90 Tage.
@@ -741,7 +741,7 @@ Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Ei
 | Rolle | Gilt für | Technik | Darf |
 |---|---|---|---|
 | **Ticket-Nutzer** | Anmeldung | Entra-App-Rolle `Tickets.Nutzer` | Nur die Anmeldung an der Werkbank für Personen, die sonst keine App-Rolle haben (z. B. Mitglieder anderer Abteilungen). Gibt allein **keinen** Zugriff auf Tickets; den regeln die Rollen je Bereich. Zuweisung an die Gruppen der Bereiche. |
-| **Ticket-Verwaltung** | alle Bereiche | Entra-App-Rolle `Tickets.Verwaltung` (Claim `roles`, wirkt ab der nächsten Anmeldung) | Bereiche anlegen, Postfächer anbinden oder wechseln, Rollen vergeben, globale Mail-Gestaltung, Vorgabe der Aufbewahrung. **Kein** Zugriff auf Tickets, außer sie ist im Bereich zusätzlich Bereichsverwaltung oder Mitglied. |
+| **Ticket-Verwaltung** | alle Bereiche | Entra-App-Rolle `Tickets.Verwaltung` (Claim `roles`, wirkt ab der nächsten Anmeldung) | Bereiche anlegen, Postfächer anbinden oder wechseln, Rollen vergeben, Vorgabe der Aufbewahrung. **Kein** Zugriff auf Tickets, außer sie ist im Bereich zusätzlich Bereichsverwaltung oder Mitglied. |
 | **Bereichsverwaltung** | je Bereich | Werkbank-Datenbank (Gruppe und/oder Personen) | Einstellungen des Bereichs: Mitglieder, Kategorien, Fristen, Geräte, Textbausteine, Filter, Texte und Melder-Mails des eigenen Postfachs, Abweichung der Aufbewahrung, Ausnahmen. Sieht **alle** Tickets des Bereichs, darf jedes zuweisen und umverteilen, bekommt die Eskalationen. |
 | **Bearbeiten** | je Bereich | wie oben | Tickets sehen, antworten, Status ändern, freies Ticket nehmen, eigene Tickets übergeben, interne Notizen. |
 
@@ -777,7 +777,6 @@ Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Ei
 | `ticket_mail_review` | Mails unter „Zu prüfen“ (Absender, Betreff, Eingang, Graph-ID) |
 | `ticket_sender_blocks` | Postfach, Adresse oder Domain |
 | `ticket_templates` | Bereich, Name, Kürzel, Art (Antwort, Notiz), Status danach, Text |
-| `ticket_mail_design` | global: Logo, Akzentfarbe, Fußzeile, Datenschutz-Link |
 | `ticket_retention` | Vorgabe: Frist (Monate), Art (`anonymize`, `delete`), Anhänge früher löschen (Monate) |
 | `ticket_retention_runs` | Lauf mit Zahlen je Bereich |
 | `ticket_audit` | Protokoll (siehe oben) |
@@ -819,7 +818,7 @@ Schlankes Ticketsystem, zuerst für die IT, später für weitere Abteilungen. Ei
 - Absender ist immer das Postfach des Bereichs (Graph `sendMail` als Postfach). Betreff `[#{Nr}] {Betreff}`. Antworten gehen an den Melder, Beteiligte in Kopie.
 - **Eingangsbestätigung** optional, eigener Text je Bereich, Platzhalter {Nr}, {Betreff}, {Name}.
 - **Automatische Mails** je Bereich: In Arbeit (aus), Wechsel der Zuständigkeit (aus), Wartet auf Rückmeldung (an, zusammen mit der Rückfrage), Gelöst (an), Geschlossen (aus), Frist nicht eingehalten (aus; nur sichtbar bei Bereichen mit Fristen).
-- **Gestaltung:** global (Ticket-Verwaltung) Logo, Akzentfarbe, Fußzeile, Datenschutz-Link; je Bereich Absendername, Titel der Kopfzeile, Signatur.
+- **Gestaltung:** wie alle Mails der Werkbank aus dem Branding der Plattform (`core/mail_layout.py`, Verwaltung › Allgemein): Logo (eigenes PNG für Mails, sonst das helle Logo, wenn PNG), Name, Linie in der Akzentfarbe, Fußzeile und Datenschutz-Link (beides freiwillig, Link nur https). Je Bereich Absendername, Titel der Kopfzeile und Signatur. Unter dem Text ein Kasten mit Ticketnummer, Betreff und Status in Worten für den Melder (bei einer Antwort mit „Status danach“ der neue Status). Fußzeile beginnt mit „{Titel} · Fragen oder Ergänzungen? Antworte einfach auf diese Mail.“; in Mails an Melder kommt die Werkbank nicht vor, Melder melden sich nie an. Weiterleitungen gehen im selben Aussehen raus (Text, Signatur, weitergeleitete Nachricht als Kasten, Fußzeile „Antworten auf diese Mail landen direkt bei uns.“). Die frühere eigene Gestaltung der Ticket-Mails ist entfallen (Migration `0077` übernimmt Fußzeile, Datenschutz-Link und Logo ins Branding, wenn dort noch nichts steht).
 - **Technik:** HTML mit Tabellenlayout und Inline-CSS, immer zusätzlich Text; Logo per CID eingebettet; keine Zählpixel, keine externen Ressourcen; lesbar im dunklen Modus. Oben „Bitte antworte oberhalb dieser Zeile.“. Platzhalter werden beim Einsetzen escaped.
 
 ### Textbausteine (je Bereich)
@@ -866,7 +865,7 @@ Neu verarbeitet werden Melder und Beteiligte (Name, Mailadresse, auch extern), I
 | Phase | Inhalt |
 |---|---|
 | T1 Grundgerüst | Datenmodell, Bereiche, Rollen (Ticket-Verwaltung, Bereichsverwaltung, Bearbeiten, Nur lesen) mit Graph-Prüfung, Ticket von Hand anlegen, Liste, Ticketseite, Status und Zuständigkeit mit Bestätigung, Verlauf, interne Notizen |
-| T2 E-Mail | Postfach-Anbindung, Eingang, Antwort-Erkennung, Filter, „Zu prüfen“, Ordner und Löschfristen, Antworten senden, Mails an den Melder, Mail-Gestaltung |
+| T2 E-Mail | Postfach-Anbindung, Eingang, Antwort-Erkennung, Filter, „Zu prüfen“, Ordner und Löschfristen, Antworten senden, Mails an den Melder |
 | T3 Arbeitshilfen | Kategorien, Fristen (optional), Geräte (optional), Textbausteine, Erinnerung, Zusammenführen, Übergabe |
 | T4 Betrieb | Rollen-Seite mit Protokoll, Aufbewahrung mit täglichem Lauf, Kennzahlen, Export, Handbuchkapitel |
 
@@ -947,7 +946,7 @@ Evergreen:
 | M365 › Snapshots | Config.* | Abrufe mit Status; Vergleich zweier Abrufe (neu, geändert, entfernt mit Vorher/Nachher); Stand eines Abrufs als JSON und CSV |
 | Evergreen › Microsoft 365 | Evergreen.Reader, Evergreen.Editor | Liste und Ansicht (8.3): Liste mit Suche, Status (Offen, Neu, Mit Frist, Abgeschlossen), „Reine Info-Meldungen ausblenden“ und Gruppen; Ansicht mit Steckbrief, Rollout und Reitern Unsere Bewertung, Text von Microsoft, Notizen und Verlauf; Bearbeiter: Neuer Eintrag, Bewertung speichern, Notiz anfügen, Abschließen, Wieder öffnen |
 | Reports | später | Berichtsvorlagen, Download, geplanter Versand. Noch nicht gebaut; ohne Eintrag in der Navigation |
-| Verwaltung (eigener Bereich in der Navigation) | Admin (mit Step-up) | Seiten **Allgemein** (Branding, Aufbewahrung des Audit-Logs, Vorlauf für ablaufende Zertifikate und Secrets), **Rollen** (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), **Mail & Teams** (SMTP-Server, Teams), **Verbindungen** (KI-Texte, NetBox, Abfragen ins Internet) und **Audit-Log**. Später: Module, Kommentarregeln |
+| Verwaltung (eigener Bereich in der Navigation) | Admin (mit Step-up) | Seiten **Allgemein** (Branding mit Logo, Fußzeile und Datenschutz-Link für alle Mails, Aufbewahrung des Audit-Logs, Vorlauf für ablaufende Zertifikate und Secrets), **Rollen** (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), **Mail & Teams** (SMTP-Server, Teams), **Verbindungen** (KI-Texte, NetBox, Abfragen ins Internet) und **Audit-Log**. Später: Module, Kommentarregeln |
 | Verwaltung › Audit-Log | Admin | Filterbare Tabelle, Export |
 | Konto | alle | Name, E-Mail, Profilbild, Rollen, angemeldete Geräte (eigene Sitzungen, andere einzeln oder alle abmelden), Darstellung (hell/dunkel) und Schriftgröße im Menü (klein, normal, groß, sehr groß) und Abstände im Menü (kompakt, normal, weiträumig; mit Touch mindestens 44 px; je Browser, nur Navigation), Benachrichtigungen je Art mit Glocke, Mail, Teams und Push, Push je Gerät ein und aus mit Liste der Geräte und Testnachricht, auf iPhone/iPad Hinweis zur Installation, Version |
 | Benachrichtigungen | alle | Die letzten 100 Benachrichtigungen, alle als gelesen markieren, Verweis auf die Einstellungen im Konto. Die Glocke in der Kopfzeile zeigt die Zahl der ungelesenen und die neuesten zehn |

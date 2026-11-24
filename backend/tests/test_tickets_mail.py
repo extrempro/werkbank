@@ -12,6 +12,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from tests.test_tickets import BASE, SETTINGS, areas, client_for, db, join, new_ticket, oid_of  # noqa: F401
+from werkbank.core.mail_layout import MailBrand
 from werkbank.core.sessions import now_utc
 from werkbank.modules.tickets.mail_texts import fill
 from werkbank.modules.tickets.mailparse import (
@@ -120,13 +121,28 @@ def test_placeholders_are_escaped_in_html() -> None:
     text = fill("Hallo {Name}, {Betreff} {Unbekannt}", {"Name": "<b>Ina</b>", "Betreff": "a&b"})
     assert text == "Hallo <b>Ina</b>, a&b {Unbekannt}"
     area = TicketArea(name="IT", mailbox="it@example.com", signature="Dein <IT>-Team")
-    from werkbank.modules.tickets.outbound import Design
-
-    html = render_html(area, Design("#112233", "", "javascript:alert(1)", None), text, None)
+    ticket = Ticket(number=1042, subject="<i>Drucker</i>", status="waiting")
+    brand = MailBrand(
+        name="Werkbank", accent="#112233", logo_png=None, footer="Firma <A>", privacy_url=""
+    )
+    html = render_html(area, brand, ticket, text, None)
     assert "<b>Ina</b>" not in html and "&lt;b&gt;Ina&lt;/b&gt;" in html
-    assert "&lt;IT&gt;" in html
-    assert "javascript:" not in html
+    assert "&lt;IT&gt;" in html and "&lt;i&gt;Drucker&lt;/i&gt;" in html
+    assert "Firma &lt;A&gt;" in html and "Datenschutz" not in html
     assert "Bitte antworte oberhalb dieser Zeile." in html
+    assert "T-1042" in html and "Wartet auf deine Rückmeldung" in html
+    # Melder kennen die Werkbank nicht
+    assert "Werkbank" not in html
+    solved = render_html(area, brand, ticket, text, None, status="solved")
+    assert "Gelöst" in solved and "#112233" in solved
+
+
+def test_mail_brand_privacy_link_only_https() -> None:
+    area = TicketArea(name="IT", mailbox="it@example.com", signature="")
+    ticket = Ticket(number=7, subject="Test", status="new")
+    brand = MailBrand("Werkbank", "#1f57c3", None, "", "https://example.com/datenschutz")
+    html = render_html(area, brand, ticket, "Hallo", None)
+    assert 'href="https://example.com/datenschutz"' in html
 
 
 # --- mit Datenbank --------------------------------------------------------------------------
@@ -374,24 +390,6 @@ def test_reply_status_mails_and_note_without_mail(db: Session, areas: dict[str, 
     assert max_.post(f"{BASE}/{manual['number']}/replies", json={"body": "x"}).status_code == 409
     rows = db.scalars(select(TicketMailOut.kind)).all()
     assert "antwort" in rows
-
-
-@pytest.mark.db
-def test_design_only_for_manager(areas: dict[str, int]) -> None:
-    manager = client_for("Vera Verwaltung", ["Tickets.Verwaltung"])
-    ina = client_for("Ina Beispiel")
-    body = {
-        "accent": "#112233",
-        "footer": "Firma A",
-        "privacy_url": "https://example.com/datenschutz",
-    }
-    assert ina.put(f"{SETTINGS}/design", json=body).status_code == 403
-    assert manager.put(f"{SETTINGS}/design", json=body).json()["accent"] == "#112233"
-    assert (
-        manager.put(f"{SETTINGS}/design", json={**body, "privacy_url": "javascript:x"}).status_code
-        == 422
-    )
-    assert ina.get(f"{SETTINGS}/design").json()["footer"] == "Firma A"
 
 
 @pytest.mark.db
