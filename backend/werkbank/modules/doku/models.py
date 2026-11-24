@@ -15,6 +15,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    LargeBinary,
     String,
     Text,
     func,
@@ -78,6 +79,8 @@ class DokuPage(Base):
     position: Mapped[int] = mapped_column(Integer, default=0, server_default=sql_text("0"))
     title: Mapped[str] = mapped_column(String(200))
     content: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    # Stand des gemeinsamen Dokuments (Yjs) für die Live-Bearbeitung; leer: aus `content` aufbauen
+    ystate: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
     # Reiner Text des Inhalts für die Suche
     text: Mapped[str] = mapped_column(Text, default="", server_default="")
     # Zählt jede Speicherung; schützt vor dem Überschreiben fremder Änderungen

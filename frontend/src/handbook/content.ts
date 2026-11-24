@@ -1706,7 +1706,7 @@ export const AREAS: readonly Area[] = [
                 items: [
                   "Klick im Menü auf „Neue Seite“.",
                   "Gib einen Titel ein. Steht gerade eine Seite offen, kannst du die neue darunter anlegen; sonst wählst du den Arbeitsbereich.",
-                  "Schreib einfach los. Jede Änderung wird nach einem kurzen Moment automatisch gespeichert; oben rechts steht „Gespeichert“.",
+                  "Schreib einfach los. Jede Änderung wird nach einem kurzen Moment automatisch gespeichert; oben rechts steht „Live · wird automatisch gespeichert“.",
                 ],
               },
               {
@@ -1722,8 +1722,12 @@ export const AREAS: readonly Area[] = [
                 text: "„In den Papierkorb“ rechts unter „Seite“ entfernt die Seite mit allen Unterseiten. Die Doku-Verwaltung kann sie 30 Tage lang wiederherstellen.",
               },
               {
+                kind: "text",
+                text: "Mehrere Personen können gleichzeitig auf derselben Seite schreiben, auch im selben Absatz. Was die anderen tippen, erscheint sofort; ihr Cursor steht mit Namen im Text. Oben rechts siehst du, wer gerade auf der Seite ist, und den Zustand der Verbindung: „Live · wird automatisch gespeichert“. „Rückgängig“ nimmt nur deine eigenen Änderungen zurück.",
+              },
+              {
                 kind: "hint",
-                text: "Speichert jemand anderes dieselbe Seite, während du schreibst, meldet die Werkbank „Seite wurde inzwischen geändert“. Mit „Neu laden“ holst du den neuen Stand; deine letzte Eingabe musst du dann noch einmal machen. Gemeinsames Schreiben in Echtzeit kommt in einem nächsten Schritt.",
+                text: "Steht dort „Verbindung unterbrochen“, schreib ruhig weiter: Sobald die Verbindung wieder da ist, werden deine Änderungen nachgereicht. Wird eine Seite gesperrt oder ändern sich ihre Rechte, lädt sie sich bei allen kurz neu.",
               },
             ],
           },

@@ -13,6 +13,7 @@ import { DokuMenuContent, useDokuTree } from "./DokuMenu";
 import { NewPageDialog } from "./NewPageDialog";
 import { RightsDialog } from "./RightsDialog";
 import { VersionsPanel } from "./VersionsPanel";
+import { useLiveDoc, type LiveStatus } from "./useLiveDoc";
 import {
   buildTree,
   deletePage,
@@ -24,7 +25,6 @@ import {
   pagePath,
   restoreVersion,
   savePage,
-  type DocJson,
   type DokuPageData,
   type Version,
   type VersionDetail,
@@ -33,15 +33,34 @@ import {
 /** Wartezeit nach der letzten Eingabe, bevor gespeichert wird. */
 const SAVE_DELAY_MS = 1200;
 
-type SaveState = "gespeichert" | "ungespeichert" | "speichert" | "fehler" | "konflikt";
+type SaveState = "gespeichert" | "ungespeichert" | "speichert" | "fehler";
 
-const SAVE_TEXT: Record<SaveState, string> = {
-  gespeichert: "Gespeichert",
-  ungespeichert: "Änderungen noch nicht gespeichert",
-  speichert: "Wird gespeichert …",
-  fehler: "Nicht gespeichert",
-  konflikt: "Nicht gespeichert: Seite wurde inzwischen geändert",
-};
+/** Was oben rechts steht: Verbindung der Live-Bearbeitung, sonst der Titel. */
+function statusText(status: LiveStatus, synced: boolean, title: SaveState): string {
+  if (status === "kein-zugriff") {
+    return "Keine Verbindung: Zugriff verweigert";
+  }
+  if (status === "getrennt") {
+    return "Verbindung unterbrochen – Änderungen werden nachgereicht";
+  }
+  if (status === "verbinden" || !synced) {
+    return "Wird verbunden …";
+  }
+  if (title === "ungespeichert" || title === "speichert") {
+    return "Titel wird gespeichert …";
+  }
+  if (title === "fehler") {
+    return "Titel nicht gespeichert";
+  }
+  return "Live · wird automatisch gespeichert";
+}
+
+function initials(name: string): string {
+  const parts = name.split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : ""))
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 /** Am Handy: Knopf „Seiten“, der das Doku-Menü als Blatt öffnet. */
 function PhonePages({ pageId }: { pageId: string | null }) {
@@ -197,27 +216,26 @@ export function DokuPageView({ pageId }: { pageId: string }) {
   const [page, setPage] = useState<DokuPageData | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [title, setTitle] = useState("");
-  const [state, setState] = useState<SaveState>("gespeichert");
-  const [editorKey, setEditorKey] = useState(0);
+  const [titleState, setTitleState] = useState<SaveState>("gespeichert");
+  const [session, setSession] = useState(0);
   const [viewing, setViewing] = useState<VersionDetail | null>(null);
   const [rightsOpen, setRightsOpen] = useState(false);
   const [message, setMessage] = useState<FeedbackMessage | null>(null);
   const [ask, confirmDialog] = useConfirm();
-  const draft = useRef<{ title: string; content: DocJson } | null>(null);
+  const draft = useRef<string | null>(null);
   const revision = useRef(0);
   const timer = useRef<number | null>(null);
   const saving = useRef(false);
   const reason = useRef("");
   const pageTitle = useRef("");
 
-  const apply = useCallback((data: DokuPageData, remount: boolean) => {
+  const apply = useCallback((data: DokuPageData, retitle: boolean) => {
     setPage(data);
     revision.current = data.revision;
     pageTitle.current = data.title;
-    if (remount) {
+    if (retitle) {
       setTitle(data.title);
       draft.current = null;
-      setEditorKey((key) => key + 1);
     }
   }, []);
 
@@ -225,7 +243,7 @@ export function DokuPageView({ pageId }: { pageId: string }) {
     fetchPage(pageId).then(
       (data) => {
         apply(data, true);
-        setState("gespeichert");
+        setTitleState("gespeichert");
         setFailed(null);
       },
       (problem: unknown) =>
@@ -241,6 +259,14 @@ export function DokuPageView({ pageId }: { pageId: string }) {
     load();
   }, [load]);
 
+  // Der Server hat die Seite neu aufgebaut (Sperre, Rechte, Wiederherstellen): neu verbinden
+  const reload = useCallback(() => {
+    setSession((value) => value + 1);
+    load();
+  }, [load]);
+  const { live, status, synced, presence } = useLiveDoc(pageId, session, reload);
+
+  // Titel: eigenes Speichern (der Inhalt läuft über die Live-Bearbeitung)
   const flushRef = useRef<() => void>(() => undefined);
   const flushLater = useCallback(() => {
     if (timer.current !== null) {
@@ -254,33 +280,29 @@ export function DokuPageView({ pageId }: { pageId: string }) {
       timer.current = null;
     }
     const next = draft.current;
-    if (!next || saving.current) {
+    if (next === null || saving.current) {
       return;
     }
     saving.current = true;
-    setState("speichert");
-    savePage(pageId, { ...next, revision: revision.current }).then(
+    setTitleState("speichert");
+    savePage(pageId, { title: next, revision: revision.current }).then(
       (data) => {
         saving.current = false;
-        const renamed = next.title !== pageTitle.current;
         apply(data, false);
         if (draft.current === next) {
           draft.current = null;
-          setState("gespeichert");
+          setTitleState("gespeichert");
         } else {
-          // Während des Speicherns weitergeschrieben: gleich noch einmal
           flushLater();
         }
-        if (renamed) {
-          notifyTreeChanged();
-        }
+        notifyTreeChanged();
       },
       (problem: unknown) => {
         saving.current = false;
-        setState(problem instanceof ApiError && problem.status === 409 ? "konflikt" : "fehler");
+        setTitleState("fehler");
         setMessage({
           kind: "alert",
-          text: errorText(problem, "Die Änderung konnte nicht gespeichert werden."),
+          text: errorText(problem, "Der Titel konnte nicht gespeichert werden."),
         });
       },
     );
@@ -288,43 +310,22 @@ export function DokuPageView({ pageId }: { pageId: string }) {
   useEffect(() => {
     flushRef.current = flush;
   }, [flush]);
+  useEffect(() => () => flushRef.current(), []);
 
-  // Beim Verlassen der Seite: offene Änderung noch speichern bzw. im Browser warnen
-  useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => {
-      if (draft.current) {
-        event.preventDefault();
-      }
-    };
-    window.addEventListener("beforeunload", warn);
-    return () => {
-      window.removeEventListener("beforeunload", warn);
-      flushRef.current();
-    };
-  }, []);
-
-  const change = useCallback(
-    (content: DocJson) => {
-      draft.current = { title: draft.current?.title ?? title, content };
-      setState("ungespeichert");
-      flushLater();
-    },
-    [title, flushLater],
-  );
   const changeTitle = (value: string) => {
     setTitle(value);
     if (!value.trim()) {
       return;
     }
-    draft.current = { title: value, content: draft.current?.content ?? page?.content ?? {} };
-    setState("ungespeichert");
+    draft.current = value;
+    setTitleState("ungespeichert");
     flushLater();
   };
 
-  const run = (action: Promise<DokuPageData>, ok: string, fail: string, remount = true) =>
+  const run = (action: Promise<DokuPageData>, ok: string, fail: string) =>
     action.then(
       (data) => {
-        apply(data, remount);
+        apply(data, true);
         notifyTreeChanged();
         setMessage({ kind: "status", text: ok });
       },
@@ -398,16 +399,23 @@ export function DokuPageView({ pageId }: { pageId: string }) {
           </h1>
         </div>
         <div className="doku-head-actions">
-          {page.role === "edit" && (
-            <span className={`doku-save doku-save-${state}`} role="status">
-              {SAVE_TEXT[state]}
-            </span>
+          {presence.length > 0 && (
+            <ul className="doku-presence" aria-label="Gerade auf der Seite">
+              {presence.map((person) => (
+                <li key={person.id} title={person.name} className="doku-presence-person">
+                  <span aria-hidden="true">{initials(person.name)}</span>
+                  <span className="visually-hidden">{person.name}</span>
+                </li>
+              ))}
+            </ul>
           )}
-          {state === "konflikt" && (
-            <button type="button" className="button button-secondary" onClick={load}>
-              Neu laden
-            </button>
-          )}
+          <span
+            className={`doku-save${status === "live" && synced ? "" : " doku-save-fehler"}`}
+            role="status"
+          >
+            {statusText(status, synced, titleState)}
+          </span>
+          <InfoTip term="doku.live" />
           <button
             type="button"
             className="button button-secondary"
@@ -519,6 +527,13 @@ export function DokuPageView({ pageId }: { pageId: string }) {
 
       <div className="doku-layout">
         <article className="panel doku-article" aria-label="Seiteninhalt">
+          {!viewing && !(live && synced) && (
+            <p className="doku-connecting" role="status">
+              {status === "kein-zugriff"
+                ? "Der Inhalt lässt sich gerade nicht laden."
+                : "Wird verbunden …"}
+            </p>
+          )}
           {viewing ? (
             <DokuEditor
               key={`v${viewing.id}`}
@@ -527,13 +542,15 @@ export function DokuPageView({ pageId }: { pageId: string }) {
               label={`Version vom ${formatDateTime(viewing.created_at)}`}
             />
           ) : (
-            <DokuEditor
-              key={`${editorKey}-${editable ? "schreiben" : "lesen"}`}
-              content={page.content}
-              editable={editable}
-              label="Inhalt der Seite"
-              onChange={change}
-            />
+            live &&
+            synced && (
+              <DokuEditor
+                key={`${session}-${editable ? "schreiben" : "lesen"}`}
+                live={live}
+                editable={editable}
+                label="Inhalt der Seite"
+              />
+            )
           )}
         </article>
         <aside className="doku-aside" aria-label="Zur Seite">

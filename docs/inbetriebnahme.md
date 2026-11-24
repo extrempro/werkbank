@@ -46,6 +46,8 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 - [ ] Öffentliche Adresse der Werkbank zeigt auf `BIND_IP:BIND_PORT` des Docker-Hosts
 - [ ] TLS endet am Proxy; HSTS ist dort gesetzt
 - [ ] `https://werkbank.example.com/health` antwortet mit `{"status":"ok"}`
+- [ ] WebSockets werden durchgereicht (Upgrade für `/api/doku/live/…`, Live-Bearbeitung der Dokumentation); Zeitlimit für offene Verbindungen mindestens einige Minuten. Ohne WebSockets zeigt eine Doku-Seite dauerhaft „Wird verbunden …“
+- [ ] Der Dienst `web` läuft mit einem Prozess (Vorgabe); die Live-Bearbeitung hält die offenen Seiten im Speicher dieses Prozesses
 
 ## 5. Prüfen
 
@@ -54,6 +56,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 | Startseite ohne Anmeldung | Login-Seite, sonst nichts erreichbar |
 | Anmeldung mit einem Konto mit Rolle | Weiterleitung zu Microsoft, MFA, zurück zur Startseite |
 | Anmeldung mit einem Konto ohne Rolle | Entra lehnt ab („Zuweisung erforderlich“) |
+| Doku-Seite in zwei Browsern öffnen (Rolle `Doku.Nutzer`, Mitglied im Arbeitsbereich) | oben rechts „Live · wird automatisch gespeichert“, Text erscheint im anderen Browser sofort |
 | Audit-Log (Admin) | Eintrag `anmeldung.erfolgreich`; in der Spalte „Herkunft“ steht das Netz des Clients (gekürzte IP), **nicht** das des Proxys oder ein Docker-Netz (`172.x`). Sonst `TRUSTED_PROXY_IPS` auf die Adresse setzen, die dort bzw. im Protokoll des Dienstes `web` erscheint, und neu bereitstellen |
 | Verwaltung nach mehr als 15 Minuten | Hinweis „Erneut anmelden“, danach erreichbar. Mit `auth_time` darf eine stille Anmeldung nicht genügen |
 | M365-Konfiguration → Übersicht (Admin mit Config-Rolle) | Kein Hinweis „nicht eingerichtet“; „Jetzt abrufen“ startet einen Abruf |

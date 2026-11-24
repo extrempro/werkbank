@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.119.0] – 2026-11-24
+
+### Dokumentation (Phase D2)
+
+- **Gemeinsam schreiben in Echtzeit**: WebSocket `/api/doku/live/{id}` (Protokoll von y-websocket), im Browser Yjs mit Tiptap (`@tiptap/extension-collaboration`, `@tiptap/extension-collaboration-caret`, `@tiptap/y-tiptap`, `y-websocket`, `y-protocols`), im Server pycrdt (`modules/doku/collab.py`, Umwandlung in `ydoc.py`).
+- Server hält je offener Seite ein gemeinsames Dokument, speichert 2 Sekunden nach der letzten Änderung (Stand in `doku_pages.ystate`, Inhalt geprüft mit der Positivliste), verwirft Änderungen von Personen mit Lesen, setzt Namen der Anwesenheit selbst, trennt bei geänderten Rechten, Sperre oder beim Wiederherstellen (Neuladen).
+- Anwesenheit („Gerade auf der Seite“) und Cursor anderer mit Namen; Zustand der Verbindung oben rechts. Cursor-Farben ohne style-Attribute (CSP).
+- Titel weiter über die API; ganzer Inhalt über die API nur noch mit Revision.
+- Dev-Server leitet WebSockets an das Backend weiter (`vite.config.ts`).
+- Migration `0081`; Info-Symbol „Live-Bearbeitung“.
+
+### Dokumentation
+
+- spec.md (8f, D2), inbetriebnahme.md (WebSockets am Reverse Proxy, ein Prozess), asvs-l2.md, datenschutz.md, THIRD_PARTY_NOTICES.md, Handbuch
+
+### Tests
+
+- `test_doku_live.py` (echter Server: Abgleich, Rechte, Speichern, Sperre, Positivliste, Wiederherstellen), `doku.test.tsx`, E2E `doku.spec.ts` (zwei Personen gleichzeitig, Lesen live)
+
 ## [0.118.0] – 2026-11-24
 
 ### Dokumentation (neu, Phase D1)

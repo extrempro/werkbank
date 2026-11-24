@@ -70,7 +70,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api": "http://localhost:8000",
+      // ws: Live-Bearbeitung der Dokumentation (/api/doku/live/…)
+      "/api": { target: "http://localhost:8000", ws: true },
       "/auth": "http://localhost:8000",
     },
   },

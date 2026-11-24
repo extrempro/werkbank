@@ -76,3 +76,13 @@ gebündelt ausgeliefert, ohne CDN und ohne Tiptap-Cloud-Dienste.
   2021-present Floating UI contributors.
 - Weitere kleine Abhängigkeiten, alle MIT-Lizenz: orderedmap, rope-sequence, w3c-keyname (Marijn
   Haverbeke), fast-equals, use-sync-external-store.
+
+## Yjs und pycrdt (Live-Bearbeitung der Dokumentation)
+
+- Yjs, https://github.com/yjs/yjs – MIT-Lizenz, Copyright (c) 2023 Kevin Jahns und Mitwirkende.
+- y-protocols, y-websocket (nur der Teil im Browser), lib0, https://github.com/yjs – MIT-Lizenz,
+  Copyright (c) Kevin Jahns.
+- @tiptap/y-tiptap, @tiptap/extension-collaboration, @tiptap/extension-collaboration-caret –
+  MIT-Lizenz, Copyright (c) Tiptap GmbH bzw. Kevin Jahns (y-prosemirror, auf dem y-tiptap beruht).
+- pycrdt, https://github.com/y-crdt/pycrdt – MIT-Lizenz, Copyright (c) 2023 David Brochart;
+  enthält y-crdt (yrs) – MIT-Lizenz.

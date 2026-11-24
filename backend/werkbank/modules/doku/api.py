@@ -23,6 +23,7 @@ from werkbank.modules.doku.access import (
     space_pages,
     visible_page,
 )
+from werkbank.modules.doku.collab import reset_page, reset_space
 from werkbank.modules.doku.content import TITLE_MAX, ContentError, clean_content, empty_doc
 from werkbank.modules.doku.models import (
     PAGE_ROLES,
@@ -183,8 +184,9 @@ class PageIn(BaseModel):
 
 class SaveIn(BaseModel):
     title: str = Field(min_length=1, max_length=TITLE_MAX)
-    content: dict[str, Any]
-    # Stand, auf dem die Änderung beruht; passt er nicht, hat jemand anderes gespeichert (409)
+    # Ohne Inhalt: nur den Titel ändern (der Inhalt läuft über die Live-Bearbeitung)
+    content: dict[str, Any] | None = None
+    # Stand, auf dem der Inhalt beruht; passt er nicht, hat jemand anderes gespeichert (409)
     revision: int = Field(ge=1)
 
     @field_validator("title")
@@ -481,10 +483,17 @@ def create_page(body: PageIn, access: AccessDep, db: DbDep) -> PageOut:
 
 @router.put("/pages/{page_id}")
 def save_page(page_id: PageId, body: SaveIn, access: AccessDep, db: DbDep) -> PageOut:
-    """Automatisches Speichern: Titel und Inhalt. Nach der eingestellten Bearbeitungszeit
-    entsteht eine Version."""
+    """Titel speichern; mit Inhalt auch den ganzen Inhalt (dann laden alle, die die Seite live
+    offen haben, neu). Nach der eingestellten Bearbeitungszeit entsteht eine Version."""
     page, role = visible_page(db, access, page_id, write=True)
     _writable(page)
+    if body.content is None:
+        if body.title != page.title:
+            page.title = body.title
+            record_edit(db, page, access.name, load_settings(db))
+            db.commit()
+            db.refresh(page)
+        return _page_out(db, access, page, role)
     if body.revision != page.revision:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -498,11 +507,14 @@ def save_page(page_id: PageId, body: SaveIn, access: AccessDep, db: DbDep) -> Pa
         ) from exc
     if content == page.content and body.title == page.title:
         return _page_out(db, access, page, role)
+    reset_page(page.id, persist=False)
     page.title = body.title
     page.content = content
     page.text = text
+    page.ystate = None
     record_edit(db, page, access.name, load_settings(db))
     db.commit()
+    reset_page(page.id, persist=False)
     db.refresh(page)
     return _page_out(db, access, page, role)
 
@@ -544,9 +556,12 @@ def delete_page(page_id: PageId, access: AccessDep, db: DbDep) -> dict[str, bool
     """In den Papierkorb, mit allen Unterseiten (30 Tage wiederherstellbar)."""
     page, _ = visible_page(db, access, page_id, write=True)
     _writable(page)
+    ids = [entry.id for entry in subtree(db, page)]
     count = trash(db, page, access.name)
     _audit(db, access, "seite_geloescht", str(page.id), {"seiten": count})
     db.commit()
+    for entry_id in ids:
+        reset_page(entry_id, persist=False)
     return {"ok": True}
 
 
@@ -559,6 +574,7 @@ def lock_page(page_id: PageId, access: AccessDep, db: DbDep) -> PageOut:
         page.locked_by_name = access.name
         _audit(db, access, "seite_gesperrt", str(page.id), None)
         db.commit()
+        reset_page(page.id, persist=True)
         db.refresh(page)
     return _page_out(db, access, page, role)
 
@@ -571,6 +587,7 @@ def unlock_page(page_id: PageId, access: AccessDep, db: DbDep) -> PageOut:
         page.locked_by_name = ""
         _audit(db, access, "seite_entsperrt", str(page.id), None)
         db.commit()
+        reset_page(page.id, persist=True)
         db.refresh(page)
     return _page_out(db, access, page, role)
 
@@ -640,9 +657,13 @@ def restore_version(
     _writable(page)
     v = _version(db, page, version_id)
     stamp = v.created_at.strftime("%d.%m.%Y %H:%M")
+    # Offene Live-Änderungen erst speichern, damit sie in der Sicherung davor stehen
+    reset_page(page.id, persist=True)
+    db.refresh(page)
     snapshot(db, page, note="Stand vor dem Wiederherstellen")
     page.title = v.title
     page.content = v.content
+    page.ystate = None
     _, page.text = clean_content(v.content)
     record_edit(db, page, access.name, load_settings(db))
     note = f"Wiederhergestellt: Stand vom {stamp}" + (
@@ -651,6 +672,7 @@ def restore_version(
     snapshot(db, page, note=note[:300], authors=access.name)
     _audit(db, access, "version_wiederhergestellt", str(page.id), {"version": v.id})
     db.commit()
+    reset_page(page.id, persist=False)
     db.refresh(page)
     return _page_out(db, access, page, role)
 
@@ -724,6 +746,7 @@ def save_rights(page_id: PageId, body: PageRightsIn, access: AccessDep, db: DbDe
         {"eigene_rechte": body.own_rights, "eintraege": len(body.entries)},
     )
     db.commit()
+    reset_space(page.space_id)
     try:
         return read_rights(page_id, access, db)
     except HTTPException:
@@ -767,6 +790,7 @@ def save_members(
         details={"personen": len(body.members)},
     )
     db.commit()
+    reset_space(space.id)
     return _members(db, space.id)
 
 

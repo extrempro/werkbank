@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.119.0",
+    date: "2026-11-24",
+    summary: "Dokumentation: gemeinsam in Echtzeit schreiben.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Mehrere Personen schreiben gleichzeitig auf derselben Seite. Was die anderen tippen, erscheint sofort, ihr Cursor steht mit Namen im Text.",
+          "Oben rechts siehst du, wer gerade auf der Seite ist und ob die Verbindung steht. Bricht sie ab, schreibst du weiter; deine Änderungen werden nachgereicht.",
+          "„Rückgängig“ nimmt nur deine eigenen Änderungen zurück.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.118.0",
     date: "2026-11-24",
     summary: "Neu: Dokumentation mit Seiten, Rechten und Versionen.",
