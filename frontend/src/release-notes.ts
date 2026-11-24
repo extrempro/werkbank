@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.112.0",
+    date: "2026-11-24",
+    summary: "Evergreen: Status als Auswahl.",
+    sections: [
+      {
+        area: "Evergreen",
+        entries: [
+          "Den Status der Einträge wählst du jetzt in einer Auswahl unter der Suche. So musst du in der Liste nicht mehr zur Seite scrollen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.111.0",
     date: "2026-11-24",
     summary: "IT-Bestand: technische Daten von Lenovo vorerst entfernt.",

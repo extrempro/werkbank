@@ -10309,6 +10309,17 @@ td > .budget-row-actions {
   width: 100%;
 }
 
+/* Liste mit fester Breite: Suche und Status untereinander über die ganze Breite */
+.filter-bar-stack .filter-search,
+.filter-bar-stack .filter-status {
+  flex: 1 1 100%;
+  max-width: none;
+}
+
+.filter-bar-stack .filter-status select {
+  width: 100%;
+}
+
 .filter-more-button {
   flex: 0 0 auto;
   display: inline-flex;

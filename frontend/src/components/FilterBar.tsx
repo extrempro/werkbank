@@ -37,7 +37,7 @@ interface FilterBarProps<T extends string> {
     placeholder?: string;
     onChange: (value: string) => void;
   };
-  /** Status: am Computer als Chips, am Handy als Auswahl. */
+  /** Status: am Computer als Chips, am Handy als Auswahl (siehe `statusSelect`). */
   status?: {
     label: string;
     value: T;
@@ -56,6 +56,9 @@ interface FilterBarProps<T extends string> {
   extra?: ReactNode;
   /** Ohne eigene Fläche, z. B. oben in einer Liste, die schon eine hat. */
   plain?: boolean;
+  /** Status immer als Auswahl unter der Suche, z. B. in einer Liste mit fester Breite, in der
+   *  Chips nicht in eine Zeile passen (design.md, „Filter-Chips nie seitlich scrollen“). */
+  statusSelect?: boolean;
 }
 
 function optionText(option: StatusOption<string>): string {
@@ -129,8 +132,10 @@ export function FilterBar<T extends string>({
   onReset,
   extra,
   plain = false,
+  statusSelect = false,
 }: FilterBarProps<T>) {
   const phone = useMediaQuery(PHONE_QUERY);
+  const asSelect = phone || statusSelect;
   const [sheetOpen, setSheetOpen] = useState(false);
   const searchId = useId();
   const statusId = useId();
@@ -140,6 +145,7 @@ export function FilterBar<T extends string>({
       className={[
         plain ? "filter-bar filter-bar-plain" : "panel filter-bar",
         phone ? "filter-bar-phone" : "",
+        statusSelect ? "filter-bar-stack" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -159,7 +165,7 @@ export function FilterBar<T extends string>({
             />
           </div>
         )}
-        {phone && status && (
+        {asSelect && status && (
           <div className="filter-status">
             <label htmlFor={statusId}>{status.label}</label>
             <select
@@ -201,7 +207,7 @@ export function FilterBar<T extends string>({
         )}
         {extra}
       </div>
-      {!phone && status && (
+      {!asSelect && status && (
         <div className="chips filter-chips" role="group" aria-label={status.label}>
           {status.options.map((option) => (
             <button

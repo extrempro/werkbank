@@ -268,6 +268,7 @@ export function EntriesPage({
           <div className="case-filters">
             <FilterBar
               plain
+              statusSelect
               search={{
                 label: "Einträge durchsuchen",
                 value: search,
