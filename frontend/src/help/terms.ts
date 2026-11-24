@@ -280,6 +280,11 @@ export const HELP = {
     text: "Vergleicht die vergebenen Rechte mit dem, was die eingetragenen Typen laut Microsoft brauchen. So siehst du vor dem nächsten Abruf, was fehlt.",
     topic: ["verwaltung", "einstellungen"],
   },
+  "verwaltung.berechtigungen": {
+    term: "Berechtigungen",
+    text: "Je Bereich legst du eine Stufe fest, etwa Lesen oder Bearbeiten. Anmelden darf sich nur, wer in der Zugangs-Gruppe ist; in die Verwaltung kommt nur die Admin-Gruppe.",
+    topic: ["verwaltung", "berechtigungen"],
+  },
   // Dokumentation
   "doku.eigene-rechte": {
     term: "Eigene Rechte",
@@ -494,6 +499,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/it-tools/verlauf": [["it-tools", "verlauf"]],
   "/it-tools": [["it-tools", "ueberblick"]],
   "/verwaltung": [["verwaltung", "einstellungen"]],
+  "/verwaltung/berechtigungen": [["verwaltung", "berechtigungen"]],
   "/audit": [["verwaltung", "audit"]],
 };
 

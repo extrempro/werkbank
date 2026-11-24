@@ -25,7 +25,9 @@ from werkbank.core.avatar import (
 )
 from werkbank.core.credentials import certificate_credential
 from werkbank.core.deps import CurrentUserDep, DbDep, SettingsDep
+from werkbank.core.groups import GroupCheckerDep, GroupCheckError
 from werkbank.core.models import AuthFlow, User, UserSession
+from werkbank.core.permissions import ADMIN_ROLE, effective_roles, set_permissions
 from werkbank.core.roles import filter_known_roles
 from werkbank.core.sessions import (
     SESSION_COOKIE,
@@ -122,13 +124,20 @@ def _start_session(
     oid: str,
     name: str,
     email: str | None,
-    roles: list[str],
+    token_roles: list[str],
+    is_admin: bool,
     method: str,
     return_to: str,
     authenticated_at: datetime | None = None,
     photo: PhotoResult = None,
+    replace_permissions: bool = False,
 ) -> RedirectResponse:
-    """Legt bzw. aktualisiert die Person an, startet die Sitzung und protokolliert."""
+    """Legt bzw. aktualisiert die Person an, startet die Sitzung und protokolliert.
+
+    Die Bereichsrechte stehen in der Datenbank. Die alten App-Rollen aus dem Token werden nur
+    einmal übernommen, bei der ersten Anmeldung nach der Umstellung (permissions_since leer).
+    Der Test-Login setzt die Rechte bei jeder Anmeldung neu (replace_permissions).
+    """
     now = now_utc()
     # Eine bestehende Sitzung dieses Browsers endet: neue Anmeldung, neues Token.
     previous = request.cookies.get(SESSION_COOKIE)
@@ -142,7 +151,17 @@ def _start_session(
         user.display_name = name
         user.email = email
     user.last_login_at = now
-    user.last_roles = roles
+    user.is_admin = is_admin
+    taken_over = False
+    if replace_permissions or user.permissions_since is None:
+        set_permissions(user, token_roles, exact=replace_permissions)
+        taken_over = not replace_permissions
+        if user.permissions_since is None:
+            user.permissions_since = now
+            user.permissions_origin = "app_rollen"
+    else:
+        user.last_roles = effective_roles(user)
+    roles = effective_roles(user)
     db.flush()
     store_photo(db, user.id, photo)
     token = create_session(
@@ -159,7 +178,12 @@ def _start_session(
         action="anmeldung.erfolgreich",
         user_id=user.id,
         ip=_client_ip(request),
-        details={"methode": method, "rollen": roles},
+        details={
+            "methode": method,
+            "rollen": roles,
+            "admin": is_admin,
+            **({"app_rollen_uebernommen": user.permissions} if taken_over else {}),
+        },
     )
     db.commit()
     response = RedirectResponse(return_to, status_code=status.HTTP_303_SEE_OTHER)
@@ -192,7 +216,12 @@ def login(
 ) -> RedirectResponse:
     """Leitet zur Anmeldung bei Entra weiter. Mit step_up fragt Entra die Anmeldung neu ab."""
     flow = entra.initiate_auth_code_flow(
-        scopes=["email", PHOTO_SCOPE] if settings.entra_profile_photo else ["email"],
+        # User.Read braucht das Profilbild und die Prüfung der Gruppen (core/groups.py)
+        scopes=(
+            ["email", PHOTO_SCOPE]
+            if settings.entra_profile_photo or settings.entra_groups_configured
+            else ["email"]
+        ),
         redirect_uri=f"{settings.public_url}/auth/callback",
         prompt="login" if step_up else None,
     )
@@ -219,8 +248,9 @@ def callback(
     settings: SettingsDep,
     entra: EntraDep,
     photo_fetcher: PhotoFetcherDep,
+    group_checker: GroupCheckerDep,
 ) -> RedirectResponse:
-    """Rückkehr von Entra: Code einlösen, Token prüfen, Sitzung starten."""
+    """Rückkehr von Entra: Code einlösen, Token prüfen, Gruppen prüfen, Sitzung starten."""
     flow_id = request.cookies.get(AUTH_FLOW_COOKIE)
     auth_flow = db.get(AuthFlow, hash_token(flow_id)) if flow_id else None
     if auth_flow is None or auth_flow.expires_at < now_utc():
@@ -238,16 +268,31 @@ def callback(
     oid = claims.get("oid")
     if not isinstance(oid, str) or not oid:
         raise _deny(request, db, "keine_objekt_id")
-    roles = filter_known_roles(claims.get("roles"))
-    if not roles:
-        raise _deny(request, db, "keine_rolle")
+    token_roles = filter_known_roles(claims.get("roles"))
+    access_token = result.get("access_token")
+    if settings.entra_groups_configured:
+        admin_group = settings.entra_admin_group_id.strip().lower()
+        access_group = settings.entra_access_group_id.strip().lower()
+        if not isinstance(access_token, str) or not access_token:
+            raise _deny(request, db, "kein_zugriffstoken")
+        try:
+            groups = group_checker(access_token, [admin_group, access_group])
+        except GroupCheckError:
+            raise _deny(request, db, "gruppen_nicht_pruefbar") from None
+        is_admin = admin_group in groups
+        if not is_admin and access_group not in groups:
+            raise _deny(request, db, "keine_gruppe")
+    else:
+        # Übergang ohne Gruppen: Einlass und Verwaltung wie bisher über die App-Rollen
+        if not token_roles:
+            raise _deny(request, db, "keine_rolle")
+        is_admin = ADMIN_ROLE in token_roles
 
     name = str(claims.get("name") or claims.get("preferred_username") or "Unbekannt")[:256]
     email_claim = claims.get("email") or claims.get("preferred_username")
     email = str(email_claim)[:320] if email_claim else None
     # Profilbild im Namen der Person holen. Ein Fehler dabei verhindert die Anmeldung nicht.
     photo: PhotoResult = None
-    access_token = result.get("access_token")
     if settings.entra_profile_photo and isinstance(access_token, str) and access_token:
         photo = photo_fetcher(access_token)
     return _start_session(
@@ -257,7 +302,8 @@ def callback(
         oid=oid,
         name=name,
         email=email,
-        roles=roles,
+        token_roles=token_roles,
+        is_admin=is_admin,
         method="entra",
         return_to=return_to,
         authenticated_at=_auth_time(claims),
@@ -284,6 +330,8 @@ class TestLoginRequest(BaseModel):
     name: str = Field(min_length=1, max_length=256)
     email: str | None = Field(default=None, max_length=320)
     roles: list[str] = Field(default_factory=list)
+    # Ohne Rollen anmelden wie ein Mitglied der Zugangs-Gruppe ohne Rechte
+    access: bool = False
 
 
 @router.post("/auth/test-login")
@@ -294,7 +342,7 @@ def test_login(
     if not settings.enable_test_login or settings.environment not in ("test", "development"):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     roles = filter_known_roles(body.roles)
-    if not roles:
+    if not roles and not body.access:
         raise _deny(request, db, "keine_rolle")
     return _start_session(
         request,
@@ -303,9 +351,11 @@ def test_login(
         oid=f"test:{body.oid}",
         name=body.name,
         email=body.email,
-        roles=roles,
+        token_roles=roles,
+        is_admin=ADMIN_ROLE in roles,
         method="test",
         return_to="/",
+        replace_permissions=True,
     )
 
 

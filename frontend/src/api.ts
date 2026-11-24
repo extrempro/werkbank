@@ -227,57 +227,6 @@ export function fetchAudit(
   return getJson(`/api/audit?${auditQuery(filter, { offset: String(offset), limit: "50" })}`);
 }
 
-export interface RoleHolder {
-  avatar_url?: string | null;
-  display_name: string;
-  email: string | null;
-  last_login_at: string | null;
-}
-
-export interface RoleInfo {
-  value: string;
-  label: string;
-  description: string;
-  holders: RoleHolder[];
-}
-
-export function fetchRoles(): Promise<RoleInfo[]> {
-  return getJson("/api/admin/roles");
-}
-
-/** Eine Person mit allen Rollen ihrer letzten Anmeldung. */
-export interface PersonRoles {
-  avatar_url?: string | null;
-  display_name: string;
-  email: string | null;
-  last_login_at: string | null;
-  roles: { value: string; label: string }[];
-}
-
-export function fetchPeople(): Promise<PersonRoles[]> {
-  return getJson("/api/admin/people");
-}
-
-/** Filtert Personen nach Name, Mail-Adresse oder Rolle; „ohne Rolle“ zeigt nur Personen ohne. */
-export function filterPeople(
-  people: PersonRoles[],
-  query: string,
-  withoutRole = false,
-): PersonRoles[] {
-  const needle = query.trim().toLowerCase();
-  return people.filter(
-    (person) =>
-      (!withoutRole || person.roles.length === 0) &&
-      (needle === "" ||
-        person.display_name.toLowerCase().includes(needle) ||
-        (person.email ?? "").toLowerCase().includes(needle) ||
-        person.roles.some(
-          (role) =>
-            role.label.toLowerCase().includes(needle) || role.value.toLowerCase().includes(needle),
-        )),
-  );
-}
-
 const dateTime = new Intl.DateTimeFormat("de-DE", { dateStyle: "short", timeStyle: "medium" });
 
 export function formatDateTime(iso: string | null): string {

@@ -64,7 +64,7 @@ export const INVENTORY_WORKPLACES_PATH = "/bestand/arbeitsplaetze";
 export const INVENTORY_LOANS_PATH = "/bestand/verleih";
 export const INVENTORY_STATISTICS_PATH = "/bestand/statistik";
 export const ADMIN_PATH = "/verwaltung";
-export const ADMIN_ROLES_PATH = "/verwaltung/rollen";
+export const ADMIN_PERMISSIONS_PATH = "/verwaltung/berechtigungen";
 export const ADMIN_MAIL_PATH = "/verwaltung/mail-teams";
 export const ADMIN_CONNECTIONS_PATH = "/verwaltung/verbindungen";
 export const AUDIT_PATH = "/audit";
@@ -441,7 +441,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
           title: null,
           items: [
             { path: ADMIN_PATH, label: "Allgemein", icon: "einstellungen" },
-            { path: ADMIN_ROLES_PATH, label: "Rollen", icon: "benutzer" },
+            { path: ADMIN_PERMISSIONS_PATH, label: "Berechtigungen", icon: "benutzer" },
             { path: ADMIN_MAIL_PATH, label: "Mail & Teams", icon: "eingang" },
             { path: ADMIN_CONNECTIONS_PATH, label: "Verbindungen", icon: "netzwerk" },
             { path: AUDIT_PATH, label: "Audit-Log", icon: "audit" },

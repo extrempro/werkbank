@@ -78,7 +78,7 @@ App-Registrierung → **Tokenkonfiguration → Optionalen Anspruch hinzufügen**
 - `preferred_username`
 - `auth_time` (empfohlen): Zeitpunkt der letzten echten Anmeldung. Damit erkennt die Werkbank bei der erneuten Anmeldung für die Verwaltung (Step-up), ob wirklich neu angemeldet wurde. Ohne diesen Anspruch zählt der Zeitpunkt der Rückkehr von Entra.
 
-Gruppenansprüche sind **nicht** nötig, die Werkbank arbeitet mit App-Rollen.
+Gruppenansprüche sind **nicht** nötig. Die Werkbank fragt die beiden Gruppen aus 1.8 bei der Anmeldung über Graph ab; der Gruppen-Anspruch im Token wäre ab 200 Gruppen unvollständig.
 
 ### 1.5 API-Berechtigungen
 
@@ -90,16 +90,22 @@ Microsoft Graph, **delegiert**:
 - `profile`
 - `email`
 
-- `User.Read` – nur, wenn die Werkbank das **Profilbild** anzeigen soll (`ENTRA_PROFILE_PHOTO=true`). Die Werkbank liest damit bei der Anmeldung ausschließlich das eigene Bild der Person (`/me/photos/120x120`).
+- `User.Read` – nötig, sobald die Gruppen aus 1.8 eingetragen sind, und für das **Profilbild** (`ENTRA_PROFILE_PHOTO=true`). Die Werkbank fragt damit bei der Anmeldung im Namen der Person nur zwei Dinge ab: ob sie in der Admin- bzw. Zugangs-Gruppe ist (`POST /me/checkMemberGroups`, auch verschachtelt) und ggf. ihr eigenes Bild (`/me/photos/120x120`).
 
-Ohne Profilbild kann `User.Read` entfernt werden; die Werkbank ruft Graph dann nicht im Namen des Benutzers auf.
+Ohne Gruppen und ohne Profilbild kann `User.Read` entfernt werden; die Werkbank ruft Graph dann nicht im Namen des Benutzers auf.
 → **Administratorzustimmung für <Mandant> erteilen**
 
 **Reihenfolge beim Einschalten des Profilbilds:** erst `User.Read` eintragen und die Administratorzustimmung erteilen, danach `ENTRA_PROFILE_PHOTO=true` setzen und die Werkbank neu starten. Fehlt die Zustimmung, schlägt die Anmeldung fehl.
 
-### 1.6 App-Rollen
+### 1.6 App-Rollen (nur noch für die Umstellung)
 
-App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile eine Rolle:
+Seit Version 0.121.0 vergibt die Werkbank die Rechte selbst (Verwaltung › Berechtigungen, siehe 1.8). Die App-Rollen braucht es nur noch für den Übergang:
+
+- Bei der **ersten Anmeldung nach der Umstellung** übernimmt die Werkbank die App-Rollen der Person **einmal** als Stufen je Bereich (z. B. `Budget.Manager` → IT-Budget „Verwalten“, `Tenant.Reader` → M365-Einstellungen „Lesen“). Danach zählen App-Rollen nicht mehr. Hat ein Admin für die Person schon vorher Rechte gespeichert, wird nichts übernommen.
+- `Werkbank.Admin` wird nicht übernommen; in die Verwaltung kommt nur die Admin-Gruppe.
+- Solange `ENTRA_ADMIN_GROUP_ID` und `ENTRA_ACCESS_GROUP_ID` leer sind, entscheiden die App-Rollen weiter, wer sich anmelden darf (mindestens eine Rolle) und wer in die Verwaltung darf (`Werkbank.Admin`).
+
+Wenn alle einmal angemeldet waren und die Gruppen eingetragen sind, können die App-Rollen und ihre Zuweisungen in Entra entfernt werden. Für eine neue Einrichtung sind sie nicht nötig. Die bisherigen Rollen:
 
 | Anzeigename | Wert | Beschreibung |
 |---|---|---|
@@ -139,9 +145,22 @@ Entra Admin Center → **Identität → Anwendungen → Unternehmensanwendungen 
   Ohne diese Einstellung könnte sich jede Person aus dem Mandanten anmelden (ohne Rolle, aber mit Zugriff auf die Login-Seite dahinter).
 - **Eigenschaften → Für Benutzer sichtbar?** → nach Wunsch (erscheint dann in „Meine Apps“)
 
-### 1.8 Gruppen den Rollen zuweisen
+### 1.8 Gruppen für Anmeldung und Verwaltung
 
-Zuerst je Rolle eine Sicherheitsgruppe anlegen. **Die Gruppennamen sind frei wählbar**, z. B. nach eurem bestehenden Namensschema. Die Werkbank sieht die Gruppen nicht, sie wertet nur die **App-Rollen** aus (deren Werte aus 1.6 müssen exakt stimmen). Vorschlag:
+Zwei Sicherheitsgruppen anlegen (Namen frei wählbar):
+
+| Gruppe | Wirkung | Eintrag in `.env` |
+|---|---|---|
+| Admin-Gruppe, z. B. `GG-Werkbank-Admin` | darf sich anmelden und in die Verwaltung; **keine** Rechte in den Bereichen | `ENTRA_ADMIN_GROUP_ID` |
+| Zugangs-Gruppe, z. B. `GG-Werkbank-Zugang` | darf sich anmelden; die Rechte in den Bereichen vergibt die Verwaltung | `ENTRA_ACCESS_GROUP_ID` |
+
+Eingetragen wird jeweils die **Objekt-ID** der Gruppe (Gruppe → Übersicht). Beide Werte nur zusammen setzen, sonst startet die Werkbank nicht. Mitglieder verschachtelter Gruppen zählen mit. Wer in keiner der beiden Gruppen ist, wird bei der Anmeldung abgelehnt (Audit-Log: `keine_gruppe`). Die Gruppen werden bei jeder Anmeldung geprüft; wer aus einer Gruppe entfernt wird, verliert den Zugang mit dem Ende seiner laufenden Sitzung (höchstens `SESSION_MAX_HOURS`). Rechte in den Bereichen wirken dagegen sofort.
+
+Mit „Zuweisung erforderlich“ (1.7) beide Gruppen der Unternehmensanwendung zuweisen (Benutzer und Gruppen → Benutzer/Gruppe hinzufügen, Rolle „Standardzugriff“). Achtung: Diese Zuweisung löst verschachtelte Gruppen **nicht** auf. Wer nur über eine Untergruppe Mitglied ist, braucht dann eine eigene Zuweisung, oder „Zuweisung erforderlich“ wird auf **Nein** gestellt; die Werkbank lässt trotzdem nur Mitglieder der beiden Gruppen ein.
+
+#### Bisher: Gruppen den App-Rollen zuweisen (nur für die Umstellung)
+
+Je Rolle eine Sicherheitsgruppe. **Die Gruppennamen sind frei wählbar**, z. B. nach eurem bestehenden Namensschema. Die Werkbank sieht die Gruppen nicht, sie wertet nur die **App-Rollen** aus (deren Werte aus 1.6 müssen exakt stimmen). Vorschlag:
 
 | Gruppe | Rolle |
 |---|---|

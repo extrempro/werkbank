@@ -1,46 +1,37 @@
 import { useEffect, useState } from "react";
-import { Avatar } from "../components/Avatar";
-import {
-  ApiError,
-  fetchAdminSettings,
-  fetchRoles,
-  formatDateTime,
-  stepUpLoginUrl,
-  type AdminSettings,
-  type RoleInfo,
-} from "../api";
+import { ApiError, fetchAdminSettings, stepUpLoginUrl, type AdminSettings } from "../api";
 import { AiSettings } from "./AiSettings";
 import { BrandingSettings } from "./BrandingSettings";
 import { CollectorCheckPanel } from "./CollectorCheck";
 import { GeneralSettings } from "./GeneralSettings";
 import { NinjaSettings } from "./NinjaSettings";
-import { PeopleRoles } from "./PeopleRoles";
+import { Permissions } from "./Permissions";
 
 /** Seiten im Bereich Verwaltung (das Audit-Log hat eine eigene Seite). */
-export type AdminSection = "allgemein" | "rollen" | "mail-teams" | "verbindungen";
+export type AdminSection = "allgemein" | "berechtigungen" | "mail-teams" | "verbindungen";
 
 const SECTIONS: Record<AdminSection, { title: string; path: string }> = {
   allgemein: { title: "Allgemein", path: "/verwaltung" },
-  rollen: { title: "Rollen", path: "/verwaltung/rollen" },
+  berechtigungen: { title: "Berechtigungen", path: "/verwaltung/berechtigungen" },
   "mail-teams": { title: "Mail & Teams", path: "/verwaltung/mail-teams" },
   verbindungen: { title: "Verbindungen", path: "/verwaltung/verbindungen" },
 };
 
 export function AdminPage({ section = "allgemein" }: { section?: AdminSection }) {
-  const [roles, setRoles] = useState<RoleInfo[] | null>(null);
   const [general, setGeneral] = useState<AdminSettings | null>(null);
-  const [view, setView] = useState<"rolle" | "person">("rolle");
   const [status, setStatus] = useState<"loading" | "ready" | "stepup" | "forbidden" | "error">(
     "loading",
   );
 
   useEffect(() => {
     let active = true;
-    fetchRoles()
+    fetchAdminSettings()
       .then((result) => {
-        if (active) {
-          setRoles(result);
+        if (active && result && typeof result === "object" && "smtp" in result) {
+          setGeneral(result);
           setStatus("ready");
+        } else if (active) {
+          setStatus("error");
         }
       })
       .catch((error: unknown) => {
@@ -53,15 +44,6 @@ export function AdminPage({ section = "allgemein" }: { section?: AdminSection })
             setStatus("error");
           }
         }
-      });
-    fetchAdminSettings()
-      .then((result) => {
-        if (active && result && typeof result === "object" && "smtp" in result) {
-          setGeneral(result);
-        }
-      })
-      .catch(() => {
-        // Die Meldung zur Anmeldung bzw. zum Fehler kommt vom Abruf der Rollen.
       });
     return () => {
       active = false;
@@ -126,76 +108,7 @@ export function AdminPage({ section = "allgemein" }: { section?: AdminSection })
         </div>
       )}
 
-      {status === "ready" && section === "rollen" && (
-        <div className="admin-section">
-          <p className="note">
-            Rollen werden in Microsoft Entra ID vergeben (App-Rollen der Unternehmensanwendung
-            „Werkbank“). Diese Übersicht zeigt, wer eine Rolle bei der letzten Anmeldung hatte, und
-            dient nur zur Information. Wer sich noch nie angemeldet hat, steht hier nicht.
-          </p>
-          <div className="chips" role="group" aria-label="Ansicht der Rollen">
-            <button
-              type="button"
-              className="chip chip-filter"
-              aria-pressed={view === "rolle"}
-              onClick={() => setView("rolle")}
-            >
-              Nach Rolle
-            </button>
-            <button
-              type="button"
-              className="chip chip-filter"
-              aria-pressed={view === "person"}
-              onClick={() => setView("person")}
-            >
-              Nach Person
-            </button>
-          </div>
-          {view === "person" && <PeopleRoles />}
-          {view === "rolle" && roles && (
-            <div className="table-wrap card-wrap" tabIndex={0} role="region" aria-label="Rollen">
-              <table className="table-cards">
-                <caption className="visually-hidden">App-Rollen und Personen</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Rolle</th>
-                    <th scope="col">Darf</th>
-                    <th scope="col">Personen (letzte Anmeldung)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {roles.map((role) => (
-                    <tr key={role.value}>
-                      <td data-label="Rolle">
-                        <span className="role-label">{role.label}</span>
-                        <span className="mono small">{role.value}</span>
-                      </td>
-                      <td data-label="Darf">{role.description}</td>
-                      <td data-label="Personen (letzte Anmeldung)">
-                        {role.holders.length === 0 ? (
-                          <span className="empty">niemand</span>
-                        ) : (
-                          <ul className="plain">
-                            {role.holders.map((holder) => (
-                              <li key={`${role.value}-${holder.display_name}-${holder.email}`}>
-                                <Avatar name={holder.display_name} url={holder.avatar_url} />{" "}
-                                {holder.display_name}{" "}
-                                <span className="small">
-                                  ({formatDateTime(holder.last_login_at)})
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+      {ready && section === "berechtigungen" && <Permissions />}
     </div>
   );
 }

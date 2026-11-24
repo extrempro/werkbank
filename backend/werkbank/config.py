@@ -1,11 +1,14 @@
 """Konfiguration über Umgebungsvariablen (siehe deploy/.env.example)."""
 
+import re
 from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
+
+_GUID = re.compile(r"^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$")
 
 
 class Settings(BaseSettings):
@@ -40,6 +43,11 @@ class Settings(BaseSettings):
     # Profilbild bei der Anmeldung aus Entra holen. Braucht die delegierte Berechtigung
     # User.Read an der App-Registrierung für die Anmeldung (docs/entra-setup.md).
     entra_profile_photo: bool = False
+    # Gruppen in Entra (Objekt-IDs, docs/entra-setup.md): Mitglieder der Zugangs-Gruppe dürfen
+    # sich anmelden, Mitglieder der Admin-Gruppe dazu in die Verwaltung. Die Rechte in den
+    # Bereichen vergibt die Verwaltung. Leer: Übergang, Anmeldung wie bisher über App-Rollen.
+    entra_admin_group_id: str = ""
+    entra_access_group_id: str = ""
     # Schlüssel für geheime Werte aus der Verwaltung (z. B. SMTP-Passwort): beliebiger
     # Zufallstext mit mindestens 32 Zeichen als Secret-Datei.
     settings_key_file: Path = Path("/run/secrets/settings_key")
@@ -168,8 +176,24 @@ class Settings(BaseSettings):
         names = [name.strip().lower() for name in self.collector_resources.split(",")]
         return list(dict.fromkeys(name for name in names if name))
 
+    @property
+    def entra_groups_configured(self) -> bool:
+        """Anmeldung über die Gruppen: beide Objekt-IDs sind eingetragen."""
+        return bool(self.entra_admin_group_id.strip() and self.entra_access_group_id.strip())
+
     def validate_for_startup(self) -> None:
         """Bricht den Start ab, wenn die Konfiguration unsicher ist."""
+        groups = [self.entra_admin_group_id.strip(), self.entra_access_group_id.strip()]
+        if any(groups) and not all(groups):
+            raise RuntimeError(
+                "ENTRA_ADMIN_GROUP_ID und ENTRA_ACCESS_GROUP_ID nur zusammen eintragen."
+            )
+        if any(groups) and not all(_GUID.match(value) for value in groups):
+            raise RuntimeError(
+                "ENTRA_ADMIN_GROUP_ID und ENTRA_ACCESS_GROUP_ID sind keine Objekt-IDs."
+            )
+        if any(groups) and groups[0].lower() == groups[1].lower():
+            raise RuntimeError("Admin- und Zugangs-Gruppe müssen verschiedene Gruppen sein.")
         if self.enable_test_login and self.environment not in ("test", "development"):
             raise RuntimeError(
                 "ENABLE_TEST_LOGIN ist nur in den Umgebungen 'test' und 'development' erlaubt."

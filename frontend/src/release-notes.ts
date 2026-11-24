@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.121.0",
+    date: "2026-11-24",
+    summary: "Rechte vergibt die IT jetzt direkt in der Werkbank.",
+    sections: [
+      {
+        area: "Verwaltung",
+        entries: [
+          "Neue Seite „Berechtigungen“ statt „Rollen“: Für jede Person legst du je Bereich eine Stufe fest, etwa Lesen, Bearbeiten oder Verwalten. Änderungen wirken sofort, ohne neue Anmeldung.",
+          "Wer sich anmelden darf und wer in die Verwaltung kommt, regeln zwei Gruppen in Microsoft Entra. Die bisherigen Rollen werden bei der nächsten Anmeldung einmal übernommen.",
+          "Personen, die sich noch nie angemeldet haben, kannst du über „Person hinzufügen“ vorab aufnehmen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.120.0",
     date: "2026-11-24",
     summary: "Tickets: Melder sehen, wer ihnen antwortet.",

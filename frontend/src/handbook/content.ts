@@ -295,51 +295,49 @@ export const AREAS: readonly Area[] = [
           },
           {
             id: "rollen",
-            title: "Rollen im Überblick",
+            title: "Rechte im Überblick",
             blocks: [
               {
                 kind: "text",
-                text: "Rollen vergibt die IT über Gruppen in Microsoft Entra. Eine Person kann mehrere Rollen haben. Welche du hast, steht auf der Seite „Konto“.",
+                text: "Ob du dich anmelden darfst, regelt die IT über eine Gruppe in Microsoft Entra. Was du in den Bereichen siehst und tun darfst, legt die IT in der Werkbank fest: je Bereich eine Stufe. Änderungen wirken sofort, ein Neuladen der Seite genügt. Welche Rechte du hast, steht auf der Seite „Konto“.",
               },
               {
                 kind: "terms",
                 items: [
-                  ["Werkbank.Admin", "Verwaltung der Werkbank und das vollständige Audit-Log"],
-                  ["Config.Reader", "Einstellungen, Änderungen und Snapshots des Tenants ansehen"],
                   [
-                    "Config.Reviewer",
-                    "zusätzlich Änderungen bewerten, Angaben und Soll-Werte pflegen",
+                    "Tickets",
+                    "Nutzen: Tickets in deinen Ticket-Bereichen. Verwalten: Bereiche und Postfächer einrichten",
                   ],
                   [
-                    "Tenant.Reader",
-                    "Lizenzen, Benutzerzahlen, Zertifikate, Dienststatus und Nutzung ansehen",
-                  ],
-                  ["Evergreen.Reader", "Evergreen-Einträge mit Bewertung und Notizen ansehen"],
-                  [
-                    "Evergreen.Editor",
-                    "Evergreen-Einträge anlegen, bewerten, Notizen anfügen, abschließen und wieder öffnen",
-                  ],
-                  ["Budget.Reader", "das IT-Budget ansehen"],
-                  ["Budget.Editor", "Konten, Posten, Verträge, Partner und Rechnungen pflegen"],
-                  [
-                    "Budget.Manager",
-                    "zusätzlich Rechnungen buchen, Partner zusammenlegen, Einstellungen des Budgets",
-                  ],
-                  ["Tools.User", "den Bereich IT-Tools öffnen"],
-                  ["Monitoring.Reader", "den Bereich IT-Monitoring ansehen"],
-                  ["Projekte.Reader", "die IT-Projekte ansehen"],
-                  [
-                    "Projekte.Editor",
-                    "IT-Projekte anlegen und pflegen: Einstellungen, Jour Fixe und Aufgaben",
-                  ],
-                  ["Bestand.Reader", "den IT-Bestand ansehen: Hardware und Stammdaten"],
-                  [
-                    "Bestand.Editor",
-                    "Hardware erfassen, Inventurnummern setzen, Geräte ausmustern, Stammdaten pflegen",
+                    "Dokumentation",
+                    "Nutzen: Seiten deiner Arbeitsbereiche. Verwalten: Arbeitsbereiche, Versionen, Papierkorb",
                   ],
                   [
-                    "Geraete.Zuordnung",
+                    "IT-Bestand",
+                    "Lesen: Hardware und Stammdaten ansehen. Bearbeiten: erfassen, ausmustern, pflegen",
+                  ],
+                  [
+                    "Gerätezuordnung",
                     "neue Windows-Geräte per QR-Code scannen und dem Tenant zuordnen",
+                  ],
+                  ["IT-Projekte", "Lesen oder Bearbeiten: Einstellungen, Jour Fixe und Aufgaben"],
+                  [
+                    "IT-Budget",
+                    "Lesen, Bearbeiten (Konten, Posten, Verträge, Rechnungen) oder Verwalten (zusätzlich buchen und Einstellungen)",
+                  ],
+                  [
+                    "IT-Monitoring",
+                    "Nur Berichte (ohne Hostdetails) oder Lesen (der ganze Bereich)",
+                  ],
+                  [
+                    "M365-Einstellungen",
+                    "Lesen (mit Lizenzen und Dienststatus des Tenants) oder Prüfen (Änderungen bewerten, Soll-Werte pflegen)",
+                  ],
+                  ["Evergreen", "Lesen oder Bearbeiten: anlegen, bewerten, abschließen"],
+                  ["IT-Tools", "Rechner, Generatoren und Konverter"],
+                  [
+                    "Verwaltung",
+                    "nur für Mitglieder der Admin-Gruppe in Entra; die Werkbank vergibt sie nicht",
                   ],
                 ],
               },
@@ -2328,7 +2326,7 @@ export const AREAS: readonly Area[] = [
   {
     id: "verwaltung",
     title: "Verwaltung und Audit-Log",
-    summary: "Einstellungen der Werkbank, Rollen und das Protokoll aller Aktionen.",
+    summary: "Einstellungen der Werkbank, Berechtigungen und das Protokoll aller Aktionen.",
     roles: [ADMIN],
     parts: [
       {
@@ -2365,7 +2363,10 @@ export const AREAS: readonly Area[] = [
                     "Allgemein",
                     "Branding (Name, Farbe, Logos, Favicon; für alle Mails ein PNG-Logo, Fußzeile und Datenschutz-Link), Aufbewahrung des Audit-Logs (30 bis 3650 Tage), ab wie vielen Tagen Zertifikate und Secrets als Hinweis, Warnung und dringend gelten",
                   ],
-                  ["Rollen", "welche Rollen es gibt und wer sie hat (siehe unten)"],
+                  [
+                    "Berechtigungen",
+                    "wer welche Bereiche sehen und bearbeiten darf (siehe „Berechtigungen“)",
+                  ],
                   [
                     "Mail & Teams",
                     "SMTP-Server und Absender mit Testmail an dich selbst; Benachrichtigungen in Teams über einen Workflow aus Power Automate mit Testnachricht; Push aufs Handy ein- und ausschalten",
@@ -2377,13 +2378,34 @@ export const AREAS: readonly Area[] = [
                   ["Audit-Log", "das Protokoll aller Aktionen (siehe oben)"],
                 ],
               },
-              {
-                kind: "text",
-                text: "Auf der Seite „Rollen“ steht, welche Rollen es gibt und wer sie bei der letzten Anmeldung hatte. „Nach Person“ zeigt dieselbe Information je Person: wer sich angemeldet hat und mit welchen Rollen; mit der Suche findest du Personen und Rollen, „Nur Personen ohne Rolle“ zeigt, wer sich angemeldet hat, aber nichts sieht. Wer sich noch nie angemeldet hat, steht dort nicht. Vergeben werden Rollen in Microsoft Entra, nicht in der Werkbank.",
-              },
               { kind: "hint", text: "Jede Änderung in der Verwaltung steht im Audit-Log." },
             ],
             links: [{ to: "/verwaltung", label: "Zur Verwaltung" }],
+          },
+          {
+            id: "berechtigungen",
+            title: "Berechtigungen",
+            roles: [ADMIN],
+            blocks: [
+              {
+                kind: "text",
+                text: "Zwei Gruppen in Microsoft Entra regeln den Einlass: Wer in der Zugangs-Gruppe ist, darf sich anmelden. Wer in der Admin-Gruppe ist, darf sich anmelden und in die Verwaltung, bekommt dadurch aber keine Rechte in den Bereichen. Geprüft wird bei jeder Anmeldung.",
+              },
+              {
+                kind: "text",
+                text: "Unter Verwaltung › Berechtigungen legst du für jede Person je Bereich eine Stufe fest, etwa Lesen, Bearbeiten oder Verwalten. Wähle die Person in der Liste, setze die Stufen und tippe auf „Speichern“. Die Änderung wirkt sofort, auch in offenen Sitzungen. „Alle Rechte entziehen“ lässt nur noch die Startseite übrig.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "In der Liste stehen alle, die sich schon einmal angemeldet haben. Wer noch nie da war, nimmst du mit „Person hinzufügen“ aus Entra auf und gibst ihm vorab Rechte.",
+                  "„Nach Bereich“ zeigt je Bereich, wer welche Stufe hat.",
+                  "Die alten App-Rollen aus Entra übernimmt die Werkbank einmal, bei der ersten Anmeldung nach der Umstellung. Hast du vorher schon Rechte gespeichert, gilt dein Stand.",
+                ],
+              },
+              { kind: "hint", text: "Jede Änderung steht mit vorher und nachher im Audit-Log." },
+            ],
+            links: [{ to: "/verwaltung/berechtigungen", label: "Zu den Berechtigungen" }],
           },
           {
             id: "auftraege",
@@ -2418,7 +2440,7 @@ export const AREAS: readonly Area[] = [
                 items: [
                   [
                     "Ich sehe einen Bereich nicht.",
-                    "Dir fehlt die Rolle dafür. Die IT vergibt sie über Microsoft Entra; danach einmal ab- und wieder anmelden.",
+                    "Dir fehlen die Rechte dafür. Die IT vergibt sie in der Werkbank; sie wirken sofort, lade die Seite neu.",
                   ],
                   [
                     "„Deine Sitzung ist abgelaufen“",

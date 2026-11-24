@@ -1,4 +1,4 @@
-"""Audit-Log ansehen und exportieren, Rollenübersicht für die Verwaltung (spec.md 6.6, 10)."""
+"""Audit-Log ansehen und exportieren (spec.md 6.6, 10)."""
 
 import csv
 import io
@@ -11,10 +11,9 @@ from pydantic import BaseModel
 from sqlalchemy import Select, select
 
 from werkbank.core.audit import write_audit
-from werkbank.core.avatar import avatar_etags, avatar_url
 from werkbank.core.deps import DbDep, require_recent_login, require_roles
 from werkbank.core.models import AuditLog, User
-from werkbank.core.roles import ROLE_INFO, Role
+from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser
 
 router = APIRouter(prefix="/api")
@@ -170,77 +169,3 @@ def export_audit(
             "Cache-Control": "no-store",
         },
     )
-
-
-class RoleHolderOut(BaseModel):
-    avatar_url: str | None
-    display_name: str
-    email: str | None
-    last_login_at: datetime | None
-
-
-class RoleOut(BaseModel):
-    value: str
-    label: str
-    description: str
-    holders: list[RoleHolderOut]
-
-
-@router.get("/admin/roles")
-def list_roles(user: AdminUser, db: DbDep) -> list[RoleOut]:
-    """App-Rollen mit den Personen, die sie bei ihrer letzten Anmeldung hatten (nur Admin)."""
-    people = db.scalars(select(User).order_by(User.display_name)).all()
-    etags = avatar_etags(db, [person.id for person in people])
-    result: list[RoleOut] = []
-    for role in Role:
-        label, description = ROLE_INFO[role]
-        holders = [
-            RoleHolderOut(
-                avatar_url=avatar_url(person.id, etags.get(person.id)),
-                display_name=person.display_name,
-                email=person.email,
-                last_login_at=person.last_login_at,
-            )
-            for person in people
-            if role.value in (person.last_roles or [])
-        ]
-        result.append(
-            RoleOut(value=role.value, label=label, description=description, holders=holders)
-        )
-    return result
-
-
-class PersonRoleOut(BaseModel):
-    value: str
-    label: str
-
-
-class PersonOut(BaseModel):
-    avatar_url: str | None
-    display_name: str
-    email: str | None
-    last_login_at: datetime | None
-    # Rollen bei der letzten Anmeldung; maßgeblich ist Entra
-    roles: list[PersonRoleOut]
-
-
-@router.get("/admin/people")
-def list_people(user: AdminUser, db: DbDep) -> list[PersonOut]:
-    """Alle Personen, die sich je angemeldet haben, mit ihren Rollen der letzten Anmeldung."""
-    people = db.scalars(select(User).order_by(User.display_name, User.id)).all()
-    etags = avatar_etags(db, [person.id for person in people])
-    order = list(Role)
-    return [
-        PersonOut(
-            avatar_url=avatar_url(person.id, etags.get(person.id)),
-            display_name=person.display_name,
-            email=person.email,
-            last_login_at=person.last_login_at,
-            roles=[
-                PersonRoleOut(value=role.value, label=ROLE_INFO[role][0])
-                for role in order
-                if role.value in (person.last_roles or [])
-            ],
-        )
-        for person in people
-    ]
