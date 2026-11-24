@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.117.1",
+    date: "2026-11-24",
+    summary: "Tickets: Mails an Melder werden wieder richtig angezeigt.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Mails aus den Tickets kamen in Outlook mit seltsamen Zeichen im Text (zum Beispiel „=tatus“) und ohne Logo an. Das ist behoben.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.117.0",
     date: "2026-11-24",
     summary: "IT-Bestand: Standortbaum kompakt oder ausführlich.",

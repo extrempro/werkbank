@@ -32,7 +32,7 @@ from werkbank.modules.tickets.mail_texts import (
     fill,
     first_name,
 )
-from werkbank.modules.tickets.mailbox import Mailbox, MailboxError
+from werkbank.modules.tickets.mailbox import Mailbox, MailboxError, mime_bytes
 from werkbank.modules.tickets.models import (
     Ticket,
     TicketArea,
@@ -232,7 +232,7 @@ def send_to_reporter(
         sent_to.extend(recipients)
     error = ""
     try:
-        mailbox.send(area.mailbox, message.as_bytes())
+        mailbox.send(area.mailbox, mime_bytes(message))
     except MailboxError as exc:
         error = str(exc)[:500]
     db.add(

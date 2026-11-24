@@ -4,6 +4,9 @@ Test-Endpunkt, Antworten und automatische Mails, Zu prüfen, Sperrliste, Anhäng
 
 import base64
 from datetime import timedelta
+from email import policy
+from email.message import EmailMessage
+from email.parser import BytesParser
 from typing import Any
 
 import pytest
@@ -12,9 +15,10 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from tests.test_tickets import BASE, SETTINGS, areas, client_for, db, join, new_ticket, oid_of  # noqa: F401
-from werkbank.core.mail_layout import MailBrand
+from werkbank.core.mail_layout import MailBrand, add_html
 from werkbank.core.sessions import now_utc
 from werkbank.modules.tickets.mail_texts import fill
+from werkbank.modules.tickets.mailbox import mime_bytes
 from werkbank.modules.tickets.mailparse import (
     clean_subject,
     detect_type,
@@ -141,6 +145,27 @@ def test_inline_images_get_numbers() -> None:
     # Outlook-Textteil mit Marken: unbekannte werden zu „[Bild]“
     plain = parse(mail(body="Hier [cid:image001.png@01DA] und [cid:fehlt@x]").encode())
     assert "Hier [Bild] und [Bild]" in plain.text
+
+
+def test_mime_for_graph_uses_crlf() -> None:
+    """Exchange zeigt quoted-printable mit LF-Zeilenenden roh an („dies=r Zeile“)."""
+    message = EmailMessage()
+    message["Subject"] = "Status: Wartet auf deine Rückmeldung"
+    message.set_content("Bitte antworte oberhalb dieser Zeile. " * 5)
+    html = "<p>" + "Beschäftigten Portal · Fragen oder Ergänzungen? " * 8 + "</p>"
+    add_html(
+        message,
+        MailBrand(name="Portal", accent="#1f57c3", logo_png=PNG),
+        lambda cid: html,
+        "example.com",
+    )
+    raw = mime_bytes(message)
+    assert b"\n" not in raw.replace(b"\r\n", b"")
+    parsed = parse(raw)
+    assert parsed.text.startswith("Bitte antworte oberhalb dieser Zeile.")
+    again = BytesParser(policy=policy.default).parsebytes(raw)
+    body = again.get_body(("html",))
+    assert body is not None and body.get_content().rstrip() == html.rstrip()
 
 
 def test_detect_type() -> None:
