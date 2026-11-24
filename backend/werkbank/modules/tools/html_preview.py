@@ -7,7 +7,8 @@ fremden Bilder zeigen. Diese Seite hat deshalb eine eigene, enge Richtlinie:
   Zugriff auf Cookies, Speicher oder die Werkbank; keine Formulare, Pop-ups, Navigation oben.
 - Skripte nur das eine Skript dieser Seite (Hash). Es gibt dem Elternfenster einen eigenen
   Nachrichtenkanal (MessagePort) und nimmt das HTML nur darüber entgegen. Es entfernt Skripte,
-  Meta-Weiterleitungen, base und eingebettete Rahmen und setzt den Rest ein. Inline-Handler und javascript:-Links verbietet die Richtlinie.
+  Meta-Weiterleitungen, base und eingebettete Rahmen und setzt den Rest ein. Inline-Handler
+  und javascript:-Links verbietet die Richtlinie.
 - CSS inline erlaubt, Bilder nur als data:, mit „Abfragen ins Internet“ auch über https.
 
 Der Inhalt geht nie an den Server; die Seite selbst ist für alle Personen gleich.
