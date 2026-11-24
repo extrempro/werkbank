@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.124.1",
+    date: "2026-11-24",
+    summary: "Konto zeigt deine Rechte je Bereich.",
+    sections: [
+      {
+        area: "Konto und Handbuch",
+        entries: [
+          "Unter Konto › Meine Rechte siehst du je Bereich deine Stufe, zum Beispiel „IT-Budget · Verwalten“, so wie sie unter Verwaltung › Berechtigungen vergeben ist.",
+          "Das Handbuch nennt bei jedem Thema Bereich und Stufe statt technischer Rollennamen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.124.0",
     date: "2026-11-24",
     summary: "Tickets: Favoriten und zuletzt geöffnete Tickets im Menü.",

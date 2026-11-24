@@ -263,7 +263,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Das Kontomenü oben rechts (dein Bild oder deine Initialen) führt zur Seite „Konto“: deine Angaben aus Microsoft, deine Rollen mit kurzer Erklärung, die angemeldeten Geräte, die Darstellung (automatisch, hell oder dunkel) die Schriftgröße im Menü (klein, normal, groß, sehr groß) und die Abstände im Menü (kompakt, normal, weiträumig; mit dem Finger bleiben Einträge immer gut antippbar; alles gilt nur für diesen Browser), deine Benachrichtigungen (Glocke, Mail, Teams) und die Version der Werkbank.",
+                text: "Das Kontomenü oben rechts (dein Bild oder deine Initialen) führt zur Seite „Konto“: deine Angaben aus Microsoft, deine Rechte je Bereich mit kurzer Erklärung, die angemeldeten Geräte, die Darstellung (automatisch, hell oder dunkel) die Schriftgröße im Menü (klein, normal, groß, sehr groß) und die Abstände im Menü (kompakt, normal, weiträumig; mit dem Finger bleiben Einträge immer gut antippbar; alles gilt nur für diesen Browser), deine Benachrichtigungen (Glocke, Mail, Teams) und die Version der Werkbank.",
               },
               {
                 kind: "text",
@@ -449,7 +449,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Eine Bewertung lässt sich zurücksetzen; auch das wird protokolliert. Mit der Rolle Evergreen.Editor kannst du aus einer Änderung einen Evergreen-Eintrag anlegen.",
+                text: "Eine Bewertung lässt sich zurücksetzen; auch das wird protokolliert. Mit Evergreen „Bearbeiten“ kannst du aus einer Änderung einen Evergreen-Eintrag anlegen.",
               },
             ],
             links: [{ to: "/m365/aenderungen", label: "Zu den Änderungen" }],
@@ -461,7 +461,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Die Seite „Änderungen“ listet erkannte Änderungen mit Art (neu, geändert, entfernt), Zeitpunkt, wer geändert hat und der Bewertung. Ein Klick zeigt vorher und nachher. Bewerten dürfen Personen mit der Rolle Config.Reviewer.",
+                text: "Die Seite „Änderungen“ listet erkannte Änderungen mit Art (neu, geändert, entfernt), Zeitpunkt, wer geändert hat und der Bewertung. Ein Klick zeigt vorher und nachher. Bewerten dürfen Personen mit M365-Einstellungen „Prüfen“.",
               },
             ],
             links: [{ to: "/m365/aenderungen", label: "Zu den Änderungen" }],
@@ -867,7 +867,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Mit der Rolle Evergreen.Reader siehst du alle Einträge mit Bewertung und Notizen, kannst aber nichts ändern. Den Link zur verknüpften Einstellung siehst du nur, wenn du auch die M365-Konfiguration ansehen darfst. Aufgaben und Benachrichtigungen aus Evergreen bekommst du nicht.",
+                text: "Mit Evergreen „Lesen“ siehst du alle Einträge mit Bewertung und Notizen, kannst aber nichts ändern. Den Link zur verknüpften Einstellung siehst du nur, wenn du auch die M365-Konfiguration ansehen darfst. Aufgaben und Benachrichtigungen aus Evergreen bekommst du nicht.",
               },
             ],
           },
@@ -967,7 +967,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "hint",
-                text: "Markieren und Zuordnen dürfen alle, die das Monitoring sehen und zusätzlich die Rolle Bestand.Editor haben.",
+                text: "Markieren und Zuordnen dürfen alle, die das Monitoring sehen und zusätzlich im IT-Bestand „Bearbeiten“ haben.",
               },
             ],
             links: [
@@ -1009,7 +1009,7 @@ export const AREAS: readonly Area[] = [
                   "Oben wählst du das Geschäftsjahr und ob nach Standort oder nach Hostgruppe aufgeteilt wird. Ein Host in mehreren Gruppen zählt in jeder.",
                   "„Als CSV exportieren“ lädt die Tabelle mit allen Monaten herunter, zum Beispiel für eine Tabellenkalkulation.",
                   "„Drucken oder als PDF“ öffnet den Druckdialog; dort kannst du auch „Als PDF speichern“ wählen. Menüs und Knöpfe erscheinen im Ausdruck nicht.",
-                  "Wer das ganze IT-Monitoring sehen darf, findet darunter die häufigsten Auslöser und die längsten Ausfälle mit Host. Mit der Rolle nur für Berichte siehst du die Summen ohne Hostnamen.",
+                  "Wer das ganze IT-Monitoring sehen darf, findet darunter die häufigsten Auslöser und die längsten Ausfälle mit Host. Mit IT-Monitoring „Nur Berichte“ siehst du die Summen ohne Hostnamen.",
                 ],
               },
             ],
@@ -1879,7 +1879,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Die Verwaltung siehst du mit der Rolle Doku-Verwaltung im Menü unter „Arbeitsbereiche“. Dort legst du Arbeitsbereiche an, ordnest Personen aus Entra mit Lesen, Bearbeiten oder Verwalten zu und archivierst Arbeitsbereiche, die nicht mehr gebraucht werden. Archivierte Arbeitsbereiche sind nur noch lesbar. Löschen lässt sich ein Arbeitsbereich nur, wenn er keine Seiten mehr hat.",
+                text: "Die Verwaltung siehst du mit Dokumentation „Verwalten“ im Menü unter „Arbeitsbereiche“. Dort legst du Arbeitsbereiche an, ordnest Personen aus Entra mit Lesen, Bearbeiten oder Verwalten zu und archivierst Arbeitsbereiche, die nicht mehr gebraucht werden. Archivierte Arbeitsbereiche sind nur noch lesbar. Löschen lässt sich ein Arbeitsbereich nur, wenn er keine Seiten mehr hat.",
               },
               {
                 kind: "hint",
@@ -2000,7 +2000,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Mit Budget.Reader siehst du alle Seiten des Budgets, kannst Belege herunterladen und Excel exportieren, aber nichts ändern. Die Seiten weisen darauf hin.",
+                text: "Mit IT-Budget „Lesen“ siehst du alle Seiten des Budgets, kannst Belege herunterladen und Excel exportieren, aber nichts ändern. Die Seiten weisen darauf hin.",
               },
             ],
           },
@@ -2057,7 +2057,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Erfasst eine Person mit Budget.Editor, steht die Rechnung auf „zu prüfen“. Erst gebuchte Rechnungen zählen zum Ist.",
+                text: "Erfasst eine Person mit IT-Budget „Bearbeiten“, steht die Rechnung auf „zu prüfen“. Erst gebuchte Rechnungen zählen zum Ist.",
               },
             ],
             links: [{ to: "/budget/rechnungen", label: "Zu den Rechnungen" }],
@@ -2069,7 +2069,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Offene Rechnungen stehen auf deiner Startseite und in der Glocke, auf der Seite „Rechnungen“ unter dem Filter „Zu prüfen“. Ein Klick auf eine Rechnung öffnet sie rechts daneben; prüfe Positionen und Beleg und wähle „Prüfen und buchen“. Rechnungen, die du selbst erfasst, sind sofort gebucht. Gebuchte Rechnungen ändern und löschen nur Personen mit Budget.Manager.",
+                text: "Offene Rechnungen stehen auf deiner Startseite und in der Glocke, auf der Seite „Rechnungen“ unter dem Filter „Zu prüfen“. Ein Klick auf eine Rechnung öffnet sie rechts daneben; prüfe Positionen und Beleg und wähle „Prüfen und buchen“. Rechnungen, die du selbst erfasst, sind sofort gebucht. Gebuchte Rechnungen ändern und löschen nur Personen mit IT-Budget „Verwalten“.",
               },
             ],
           },
@@ -2130,7 +2130,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "hint",
-                text: "Doppelte Partner legt eine Person mit Budget.Manager zusammen: Verträge und Rechnungen wandern zum Ziel, der andere Partner wird gelöscht. Das lässt sich nicht rückgängig machen.",
+                text: "Doppelte Partner legt eine Person mit IT-Budget „Verwalten“ zusammen: Verträge und Rechnungen wandern zum Ziel, der andere Partner wird gelöscht. Das lässt sich nicht rückgängig machen.",
               },
             ],
             links: [{ to: "/budget/partner", label: "Zu den Partnern" }],

@@ -1,13 +1,21 @@
 # Werkbank
 
-Open-Source-Plattform für IT-Abteilungen mit gemeinsamer Anmeldung (Microsoft Entra ID), Rollen, Aufgabenliste, Workflows, Audit-Log und Berichten.
+Open-Source-Plattform für IT-Abteilungen mit gemeinsamer Anmeldung (Microsoft Entra ID), Rechten je Bereich, Aufgabenliste, Benachrichtigungen, Audit-Log und Handbuch.
 
-**Module (Version 1)**
+**Bereiche**
 
-- **M365-Konfiguration**: erfasst die Einstellungen des Microsoft-365-Tenants, erkennt Änderungen und führt einen Verlauf je Einstellung.
-- **Evergreen**: neue Microsoft-Funktionen bewerten, dem Betriebsrat vorlegen, von der Geschäftsführung abnehmen lassen und die Umsetzung im Tenant überwachen.
+- **M365-Einstellungen**: erfasst die Einstellungen des Microsoft-365-Tenants, erkennt Änderungen, führt einen Verlauf je Einstellung und vergleicht mit Soll-Werten; dazu Tenant-Übersicht (Lizenzen, Nutzung, Dienststatus).
+- **Evergreen**: Neuerungen der eingesetzten Software sichten, bewerten und mit Notizen nachhalten.
+- **Tickets**: Ticketsystem für Bereiche mit eigenem Postfach (E-Mail-Eingang, Antworten, Fristen, Textbausteine, Aufbewahrung).
+- **Dokumentation**: Seiten in Arbeitsbereichen mit gemeinsamer Bearbeitung in Echtzeit, Kommentaren, Verweisen und Live-Bausteinen.
+- **IT-Bestand**: Hardware, Stellen, Arbeitsplätze, Standorte, Verleih und Vorgänge; Abgleich mit NinjaOne.
+- **IT-Projekte**: Projekte mit Budget, Jour Fixe und Aufgaben.
+- **IT-Budget**: Konten, Budgetposten, Verträge mit Fristen, Partner und Rechnungen.
+- **IT-Monitoring**: DNS-Abgleich mit NetBox und Übersicht aus Zabbix mit Berichten.
+- **Gerätezuordnung**: neue Windows-Geräte per QR-Code erfassen und freigeben.
+- **IT-Tools**: Rechner, Generatoren und Konverter für den IT-Alltag.
 
-> Status: **Version 0.3** (Phase 3 umgesetzt): Kern (Anmeldung über Entra ID, Rollen, Aufgaben, Audit-Log, Konto, Neuigkeiten, heller und dunkler Modus, Oberfläche als PWA), Modul M365-Konfiguration (Abruf, Verlauf, Bewertung von Änderungen, Soll/Ist) und Modul Evergreen (Nachrichtencenter, Vorgänge mit Ablauf über Betriebsrat und Geschäftsführung, Umsetzung). Als Nächstes: Oberfläche weiter an den Entwurf angleichen, danach Phase 4 (weitere Dienste, Reports, Benachrichtigungen). Stand und offene Punkte: [`docs/spec.md`](docs/spec.md), Kapitel 15 und 16. Änderungen je Version: [`CHANGELOG.md`](CHANGELOG.md) und [Releases](https://github.com/extrempro/werkbank/releases).
+> Stand und offene Punkte: [`docs/spec.md`](docs/spec.md), Kapitel 15 und 16. Änderungen je Version: [`CHANGELOG.md`](CHANGELOG.md) und [Releases](https://github.com/extrempro/werkbank/releases).
 
 ## Dokumentation
 
@@ -23,7 +31,7 @@ Open-Source-Plattform für IT-Abteilungen mit gemeinsamer Anmeldung (Microsoft E
 | [`deploy/README.md`](deploy/README.md) | Deployment mit Docker Compose, Secrets, Git-Sync, Updates |
 | [`docs/inbetriebnahme.md`](docs/inbetriebnahme.md) | Erste Inbetriebnahme Schritt für Schritt mit Prüfschritten |
 | [`CHANGELOG.md`](CHANGELOG.md) | Änderungsprotokoll je Version |
-| [`docs/entra-setup.md`](docs/entra-setup.md) | Einrichtung in Microsoft Entra ID (App-Registrierungen, Rollen, MFA) |
+| [`docs/entra-setup.md`](docs/entra-setup.md) | Einrichtung in Microsoft Entra ID (App-Registrierungen, Gruppen, MFA) |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Mitarbeit: Branches, Commits, Pull Requests |
 | [`SECURITY.md`](SECURITY.md) | Sicherheitslücken melden |
 | [`CLAUDE.md`](CLAUDE.md) | Arbeitsregeln für Claude |
