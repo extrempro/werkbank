@@ -493,7 +493,7 @@ def backlinks(
 
 def doku_notifications(db: Session, settings: Settings, now: datetime) -> Iterable[Event]:
     """Erwähnungen und Antworten der letzten Tage; nur an Personen, die die Seite lesen dürfen."""
-    users = {oid.lower(): uid for uid, oid in db.execute(select(User.id, User.entra_oid)).tuples()}
+    users = {oid.lower(): uid for uid, oid in db.execute(select(User.id, User.entra_oid))}
     rows = db.execute(
         select(DokuComment, DokuThread, DokuPage)
         .join(DokuThread, DokuThread.id == DokuComment.thread_id)

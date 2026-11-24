@@ -9,7 +9,6 @@ export interface IcoImage {
   png: Uint8Array;
 }
 
-export const DEFAULT_ICO_SIZES = [16, 32, 48, 256];
 export const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256];
 
 export function buildIco(images: IcoImage[]): Uint8Array {

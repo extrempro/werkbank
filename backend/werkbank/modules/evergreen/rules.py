@@ -8,7 +8,6 @@ aus den Kennzeichen (``tags``) Art und Betroffene.
 import re
 from typing import Any
 
-SCHEDULE_HEAD = "When this will happen"
 MAX_PHASES = 6
 SECTION_TEXT_MAX = 8000
 HEAD_MAX = 120

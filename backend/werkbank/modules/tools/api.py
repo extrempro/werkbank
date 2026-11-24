@@ -103,7 +103,7 @@ def dns(body: DnsIn, user: ToolsUser, fetch: FetcherDep) -> list[DnsAnswerOut]:
     """Bis zu 20 DNS-Abfragen an einen der festen Resolver (DNS über HTTPS)."""
     if body.resolver not in RESOLVERS:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannter Resolver."
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Unbekannter Resolver."
         )
 
     def one(query: DnsQueryIn) -> DnsAnswerOut:

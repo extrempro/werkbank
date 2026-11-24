@@ -48,7 +48,7 @@ def get_usage(user: Reader, db: DbDep, settings: SettingsDep, days: Period = 30)
     """Summen je Dienst für den Zeitraum und aktive Benutzer je Tag in diesem Zeitraum."""
     if days not in PERIODS:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Zeitraum: 7, 30, 90 oder 180 Tage",
         )
     rows = {

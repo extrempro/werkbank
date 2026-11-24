@@ -743,7 +743,7 @@ async def upload_plan(
     row = _floor(db, floor_id)
     limit = settings.inventory_plan_max_mb * 1024 * 1024
     too_large = HTTPException(
-        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
         detail=f"Die Datei ist größer als {settings.inventory_plan_max_mb} MB.",
     )
     declared = request.headers.get("content-length", "")

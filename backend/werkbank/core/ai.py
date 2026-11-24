@@ -27,7 +27,6 @@ AI_RATE_MIN = 1
 AI_RATE_MAX = 500
 # Art der Schnittstelle; ältere Einstellungen ohne Angabe sind OpenAI-kompatibel
 AiProvider = Literal["openai", "anthropic"]
-AI_PROVIDERS: tuple[AiProvider, ...] = ("openai", "anthropic")
 ANTHROPIC_VERSION = "2023-06-01"
 # Bei Anthropic zählt das Mitdenken mit in max_tokens; der Text selbst bleibt kurz
 # (AI_TEXT_MAX_LENGTH), das Budget lässt dem Modell Platz zum Denken.

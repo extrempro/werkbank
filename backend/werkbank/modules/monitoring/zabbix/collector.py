@@ -75,15 +75,6 @@ SLACK = timedelta(seconds=5)
 KEEP_HOURS = timedelta(hours=48)
 ERROR_MAX = 500
 
-# Dient in Tests als Ersatz für http_transport
-_transport: Transport = http_transport
-
-
-def set_transport(transport: Transport) -> None:
-    """Nur für Tests."""
-    global _transport
-    _transport = transport
-
 
 def _ts(value: int) -> datetime:
     return datetime.fromtimestamp(max(value, 0), UTC)
@@ -293,7 +284,7 @@ def collect(db: Session, settings: Settings, transport: Transport | None = None)
     config = load_config(db, settings)
     if config is None:
         return []
-    client = ZabbixClient(config, transport or _transport)
+    client = ZabbixClient(config, transport or http_transport)
     now = now_utc()
     known = db.scalar(select(ZbxHost.hostid).limit(1)) is not None
     runs: list[ZbxRun] = []

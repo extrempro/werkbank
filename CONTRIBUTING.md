@@ -53,7 +53,7 @@ docs: Datenschutzkonzept ergänzt
 ## Pull Requests
 
 - Eine Sache pro PR, möglichst klein.
-- Alle Prüfungen grün: Lint, Tests, E2E, Barrierefreiheit, Lighthouse, Docker, Semgrep, gitleaks, Trivy.
+- Alle Prüfungen grün: Lint, Tests, E2E, Barrierefreiheit, Lighthouse, Docker, Semgrep, Betterleaks, Trivy.
 - Bei neuen Screens: Designrichtlinie, WCAG-Checkliste und ISO-9241-Checkliste durchgehen.
 - Bei sicherheitsrelevanten Änderungen: ASVS-Nachweis aktualisieren.
 - Bei neuen personenbezogenen Daten: Datenschutzdokument aktualisieren.

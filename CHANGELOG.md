@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.124.2] – 2026-11-24
+
+### Aufräumen
+
+- **Workflow-Engine entfernt** (seit dem Umbau von Evergreen in 0.76 ungenutzt): `core/workflow.py`, Tabellen `workflow_instances` und `workflow_events` (Migration 0085), Abhängigkeit `pyyaml`.
+- **Dokumentation:** Die Größengrenze einer Seite (1 Mio. Zeichen im JSON) war festgelegt, wurde aber nicht geprüft; jetzt weist der Server größere Seiten ab.
+- Ungenutzte Konstanten und Funktionen entfernt (Backend und Frontend), ebenso die doppelte Einstellung `trusted_proxy_ips` (`TRUSTED_PROXY_IPS` wirkt weiter über das Dockerfile).
+- Veraltete Schnittstellen ersetzt: `Result.tuples()` (SQLAlchemy 2.1), `HTTP_422_UNPROCESSABLE_ENTITY` und `HTTP_413_REQUEST_ENTITY_TOO_LARGE` (Starlette); `path_separator` in `alembic.ini`.
+- CI: **Betterleaks** statt gitleaks (gitleaks wird nicht mehr weiterentwickelt; gleiches Konfigurationsformat, jetzt `.betterleaks.toml`), Image auf Version 1.10.1 festgelegt statt `latest`.
+- `.gitignore`: `*.tsbuildinfo`.
+
+### Abhängigkeiten
+
+- fastapi 0.163.2, SQLAlchemy 2.1.9 (beide mindestens 7 Tage alt).
+- TypeScript bleibt bei 6.0: typescript-eslint unterstützt TypeScript 7 noch nicht (`typescript <6.1`). Tiptap 3.35, vitest 5.1.1, jest-dom 8.0 und weitere sind jünger als 7 Tage und kommen mit Dependabot.
+
 ## [0.124.1] – 2026-11-24
 
 ### Konto, Handbuch und Dokumentation

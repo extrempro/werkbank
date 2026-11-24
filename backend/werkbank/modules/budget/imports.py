@@ -471,7 +471,7 @@ async def upload(request: Request, user: Manager, db: DbDep) -> ImportOut:
             detail="Nur Excel-Dateien (.xlsx).",
         )
     too_large = HTTPException(
-        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
         detail=f"Die Datei ist größer als {FILE_MAX_BYTES // (1024 * 1024)} MB.",
     )
     declared = request.headers.get("content-length", "")
@@ -488,16 +488,16 @@ async def upload(request: Request, user: Manager, db: DbDep) -> ImportOut:
         parsed = parse_sheet(read_first_sheet(b"".join(chunks)))
     except (XlsxError, SheetError) as error:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)
         ) from error
     if not parsed.rows:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="In der Datei steht keine Zeile mit einem Betrag.",
         )
     if len(parsed.rows) > ROWS_MAX:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Die Datei hat mehr als {ROWS_MAX} Zeilen.",
         )
     settings = load_settings(db)
@@ -650,13 +650,13 @@ def take_row(
         )
     if (body.partner_id is None) == (not body.new_partner):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Bitte wähle einen Partner oder leg einen neuen an.",
         )
     account = db.get(BudgetAccount, body.account_id)
     if account is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Das Konto gibt es nicht.",
         )
     partner: BudgetPartner | None
@@ -665,7 +665,7 @@ def take_row(
         partner = db.get(BudgetPartner, body.partner_id)
         if partner is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Den Partner gibt es nicht.",
             )
     else:
@@ -802,13 +802,13 @@ def plan_rows(
         entry = db.get(BudgetImportRow, plan.row_id)
         if entry is None or entry.import_id != row.id or entry.status != ROW_TAKEN:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Nur übernommene Zeilen lassen sich in die Planung übernehmen.",
             )
         item = _row_items(db, [entry]).get(entry.id)
         if item is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Zu dieser Zeile gibt es keinen Budgetposten mehr.",
             )
         item.end_year = None if plan.ongoing else max(year, item.end_year or year)

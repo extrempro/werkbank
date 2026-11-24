@@ -1,0 +1,43 @@
+# Ausnahmen für Betterleaks (früher gitleaks, gleiches Format). Jede Ausnahme mit Begründung;
+# echte Geheimnisse gehören nie ins Repository.
+title = "Werkbank"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Testmaterial der Zertifikats-Tools, DKIM und Web-Push"
+# Private Testschlüssel, mit OpenSSL nur für die Tests erzeugt; sie schützen nichts.
+# Die Tests für PFX und APC-.p15 vergleichen gegen Referenzdateien, die genau diese Schlüssel brauchen.
+# Öffentliche DKIM-Testschlüssel (Wert p= eines DKIM-Eintrags) im Test des DNS-/Mail-Checks;
+# öffentliche Schlüssel sind kein Geheimnis.
+# Testvektor aus RFC 8291, Anhang A (Web-Push-Verschlüsselung), im Test für Push: veröffentlichte
+# Beispielwerte des Standards, kein Geheimnis.
+paths = [
+  '''^frontend/src/tools/cert-decode/(pfx|apc)-fixtures\.ts$''',
+  '''^frontend/src/tools/mail-check/records\.test\.ts$''',
+  '''^backend/tests/test_push\.py$''',
+]
+
+[[allowlists]]
+description = "Name eines Formats im Code, kein Geheimnis"
+# „ENCRYPTED PRIVATE KEY“ → pkcs8-encrypted
+regexes = [
+  '''^pkcs8-encrypted$''',
+]
+
+[[allowlists]]
+description = "Erfundene Kennwörter und Zugangsdaten in Tests und für die Datenbank der CI"
+# Betterleaks hat strengere allgemeine Regeln als gitleaks. Sie schlagen in Tests an
+# (erfundene Kennwörter, Kennungen von Testpersonen, Beispieladressen mit Zugangsdaten)
+# und beim Kennwort der Wegwerf-Datenbank in ci.yml. Nur diese zwei allgemeinen Regeln und nur
+# diese Pfade; Regeln für echte Schlüsselformate (z. B. Tokens von Anbietern) gelten dort weiter.
+targetRules = ["generic-password", "generic-credential-uri"]
+paths = [
+  '''^backend/tests/''',
+  '''^frontend/src/.+\.test\.tsx?$''',
+  '''^e2e/tests/''',
+  '''^\.github/workflows/ci\.yml$''',
+  # Diese Datei selbst (ein früherer Stand des Kommentars enthielt ein Beispiel)
+  '''^\.betterleaks\.toml$''',
+]

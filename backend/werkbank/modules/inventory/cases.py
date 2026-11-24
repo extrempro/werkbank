@@ -134,7 +134,7 @@ def _conflict(detail: str) -> HTTPException:
 
 
 def _invalid(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 # --- Schemas ------------------------------------------------------------------------------

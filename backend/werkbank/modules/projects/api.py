@@ -851,7 +851,7 @@ def create_task(
     )
     if (count or 0) >= TASKS_MAX:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Ein Projekt hat höchstens {TASKS_MAX} Aufgaben.",
         )
     row = ProjectTask(project_id=project_id, done=False)
@@ -1071,12 +1071,12 @@ async def upload_file(
     row = _meeting(db, project_id, meeting_id)
     if len(_meeting_files(db, row.id)) >= FILES_MAX:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Ein Eintrag hat höchstens {FILES_MAX} Anhänge.",
         )
     limit = settings.project_document_max_mb * 1024 * 1024
     too_large = HTTPException(
-        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
         detail=f"Die Datei ist größer als {settings.project_document_max_mb} MB.",
     )
     if not request.headers.get("content-type", "").lower().startswith(PDF_TYPE):
@@ -1097,7 +1097,7 @@ async def upload_file(
     data = b"".join(chunks)
     if not looks_like_pdf(data):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Die Datei ist kein PDF."
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Die Datei ist kein PDF."
         )
     entry = ProjectMeetingFile(
         meeting_id=row.id,

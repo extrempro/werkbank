@@ -14,7 +14,6 @@ from werkbank.modules.doku.models import DokuPage, DokuVersion
 
 SETTINGS_KEY = "doku"
 VERSION_MINUTES = (5, 10, 30)
-KEEP_CHOICES = ("1y", "immer")
 TRASH_DAYS = 30
 EDITORS_MAX = 500
 

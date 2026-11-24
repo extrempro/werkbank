@@ -106,7 +106,7 @@ def lookup(
     words = fold(q).split()
     if kind == "position":
         departments = dict(
-            db.execute(select(InventoryDepartment.id, InventoryDepartment.name)).tuples().all()
+            db.execute(select(InventoryDepartment.id, InventoryDepartment.name)).all()
         )
         positions = db.scalars(select(InventoryPosition).order_by(InventoryPosition.number)).all()
         return _pick(
@@ -200,6 +200,4 @@ def lookup(
             (row.name, row.hostname, row.serial, row.inventory_no or "", kind_name),
         )
 
-    return _pick(
-        words, (hardware_item(row, name) for row, name in db.execute(query).tuples()), limit
-    )
+    return _pick(words, (hardware_item(row, name) for row, name in db.execute(query)), limit)

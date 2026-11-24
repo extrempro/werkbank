@@ -88,7 +88,7 @@ def _conflict(detail: str) -> HTTPException:
 
 
 def _invalid(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 # --- Schemas ------------------------------------------------------------------------------
@@ -1088,11 +1088,11 @@ def create_workplace(request: Request, body: WorkplaceNew, user: Editor, db: DbD
     # Beim Anlegen ist der Raum Pflicht; bestehende Arbeitsplätze dürfen (noch) ohne sein.
     if body.room_id is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Bitte wähle einen Raum."
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Bitte wähle einen Raum."
         )
     if (body.spot_x is None) != (body.spot_y is None):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Bitte gib beide Werte für den Platz an oder lass beide leer.",
         )
     positions, room_id, kit_id = _check_workplace(db, body)
@@ -1211,7 +1211,7 @@ def set_workplace_spot(
     row = _workplace(db, workplace_id)
     if (body.x is None) != (body.y is None):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Bitte gib beide Werte an oder lass beide leer.",
         )
     if body.x is not None and row.room_id is None:

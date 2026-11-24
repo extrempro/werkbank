@@ -52,7 +52,6 @@ from werkbank.modules.tickets.settings_api import _area_for_settings
 router = APIRouter(prefix="/api/tickets/settings")
 AreaId = Annotated[int, Path(ge=1, le=2_000_000_000)]
 ItemId = Annotated[int, Path(ge=1, le=2_000_000_000)]
-_ACCENT = re.compile(r"^#[0-9a-fA-F]{6}$")
 _BLOCK = re.compile(
     r"^(@[a-z0-9.-]{1,253}\.[a-z]{2,63}|[^@\s<>,;\"]{1,64}@[a-z0-9.-]{1,253}\.[a-z]{2,63})$"
 )

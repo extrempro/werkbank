@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.124.2",
+    date: "2026-11-24",
+    summary: "Aufräumarbeiten im Hintergrund.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Sehr große Seiten (über eine Million Zeichen) nimmt die Werkbank jetzt nicht mehr an. Teile solche Seiten bitte auf.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.124.1",
     date: "2026-11-24",
     summary: "Konto zeigt deine Rechte je Bereich.",

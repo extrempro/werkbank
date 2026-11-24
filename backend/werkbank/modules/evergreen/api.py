@@ -217,9 +217,7 @@ def _clean(value: str | None) -> str | None:
 def _names(db: Session, ids: set[uuid.UUID]) -> dict[uuid.UUID, str]:
     if not ids:
         return {}
-    return dict(
-        db.execute(select(User.id, User.display_name).where(User.id.in_(ids))).tuples().all()
-    )
+    return dict(db.execute(select(User.id, User.display_name).where(User.id.in_(ids))).all())
 
 
 def _last_editors(db: Session, entry_ids: list[int]) -> dict[int, str]:
@@ -435,7 +433,7 @@ def list_entries(
     ).all()
     counted = base.subquery()
     counts: dict[str, int] = dict(
-        db.execute(select(counted.c.status, func.count()).group_by(counted.c.status)).tuples().all()
+        db.execute(select(counted.c.status, func.count()).group_by(counted.c.status)).all()
     )
     due = (
         db.scalar(

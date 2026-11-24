@@ -174,9 +174,7 @@ def _names(db: Session, rows: list[DeviceAssociation]) -> dict[Any, str]:
     ids.discard(None)
     if not ids:
         return {}
-    return dict(
-        db.execute(select(User.id, User.display_name).where(User.id.in_(ids))).tuples().all()
-    )
+    return dict(db.execute(select(User.id, User.display_name).where(User.id.in_(ids))).all())
 
 
 def _out(row: DeviceAssociation, names: dict[Any, str]) -> EntryOut:
@@ -650,9 +648,7 @@ def list_entries(
     counts = dict(
         db.execute(
             select(DeviceAssociation.status, func.count()).group_by(DeviceAssociation.status)
-        )
-        .tuples()
-        .all()
+        ).all()
     )
     last_run = db.scalar(select(func.max(Job.finished_at)).where(Job.type == JOB_TYPE))
     names = _names(db, list(rows))

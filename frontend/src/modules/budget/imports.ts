@@ -26,8 +26,6 @@ export const ROW_STATUS_PILLS: Record<RowStatus, string> = {
   uebersprungen: "pill pill-todo",
 };
 
-export const TAX_RATES = [1900, 700, 0] as const;
-
 export interface ImportAccount {
   number: string;
   name: string;
@@ -197,10 +195,6 @@ export function deleteImport(id: number): Promise<{ deleted: boolean }> {
 export function netFromGross(grossCents: number, taxRateBp: number): number {
   const divisor = 10_000 + taxRateBp;
   return Math.floor((grossCents * 10_000 * 2 + divisor) / (2 * divisor));
-}
-
-export function rateLabel(taxRateBp: number): string {
-  return `${taxRateBp / 100} %`;
 }
 
 export type RowFilter = "offen" | "hinweis" | "alle";

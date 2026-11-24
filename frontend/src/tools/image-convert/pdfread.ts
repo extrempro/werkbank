@@ -21,8 +21,6 @@ function pdfjs(): Promise<PdfJs> {
   return library;
 }
 
-/** Auflösungen für PDF-Seiten in dpi */
-export const PDF_DPI = [72, 150, 300] as const;
 /** Längste Seite eines gezeichneten Bilds in Pixeln */
 const MAX_SIDE = 10000;
 /** Höchstens so viele Pixel je Seite (40 Megapixel) */

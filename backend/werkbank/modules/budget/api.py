@@ -112,7 +112,6 @@ Reader = Annotated[
 Editor = Annotated[CurrentUser, Depends(require_roles(Role.BUDGET_EDITOR, Role.BUDGET_MANAGER))]
 Manager = Annotated[CurrentUser, Depends(require_roles(Role.BUDGET_MANAGER))]
 AccountId = Annotated[int, Path(ge=1)]
-Year = Annotated[int, Path(ge=YEAR_MIN, le=YEAR_MAX)]
 YearQuery = Annotated[int | None, Query(ge=YEAR_MIN, le=YEAR_MAX)]
 
 
@@ -750,22 +749,22 @@ ItemId = Annotated[int, Path(ge=1)]
 def _check_item(db: DbDep, body: ItemIn, own_id: int | None) -> None:
     if db.get(BudgetAccount, body.account_id) is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Das Konto gibt es nicht."
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Das Konto gibt es nicht."
         )
     if db.get(BudgetPartner, body.partner_id) is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Den Partner gibt es nicht."
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Den Partner gibt es nicht."
         )
     if body.contract_id is not None and db.get(BudgetContract, body.contract_id) is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Den Vertrag gibt es nicht."
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Den Vertrag gibt es nicht."
         )
     if (
         body.net_cents is not None
         and abs(gross_cents(body.net_cents, body.tax_rate_bp) - body.amount_cents) > ROUNDING_CENTS
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Netto, Steuersatz und Brutto passen nicht zusammen.",
         )
     _check_project(db, body, own_id)
@@ -789,12 +788,12 @@ def _check_project(db: DbDep, body: ItemIn, own_id: int | None) -> None:
     project: Project | None = db.get(Project, body.project_id)
     if project is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Das Projekt gibt es nicht."
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Das Projekt gibt es nicht."
         )
     current = db.get(BudgetItem, own_id) if own_id is not None else None
     if project.status == "abgeschlossen" and (current is None or current.project_id != project.id):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Das Projekt ist abgeschlossen. Ihm lassen sich keine Posten mehr zuordnen.",
         )
 
@@ -810,7 +809,7 @@ def _listed_tags(db: DbDep, tags: list[str]) -> list[str]:
     missing = [tag for tag in tags if tag.casefold() not in known]
     if missing:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Den Tag „{missing[0]}“ gibt es nicht. "
             "Tags legt der Budgetverwalter unter Einstellungen an.",
         )
@@ -900,7 +899,7 @@ def _apply_item(db: DbDep, row: BudgetItem, body: ItemIn) -> None:
         row.start_year = fiscal_year_of(now_utc().date(), load_settings(db).start_month)
     if body.end_year is not None and body.end_year < row.start_year:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Die Laufzeit endet vor ihrem Beginn.",
         )
     row.account_id = body.account_id
@@ -1010,7 +1009,7 @@ def close_item(
     current = _closure_out(db, row, body.year)
     if current.status is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Der Posten läuft in diesem Geschäftsjahr nicht.",
         )
     if db.get(BudgetItemClosure, (row.id, body.year)) is None:
@@ -1117,7 +1116,7 @@ def _partner_taken(db: DbDep, name: str, own_id: int | None) -> bool:
 def _check_partner(body: PartnerIn) -> None:
     if not (body.is_contract_partner or body.is_invoicer):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Ein Partner ist Vertragspartner, Rechnungssteller oder beides.",
         )
 
@@ -1460,7 +1459,7 @@ def _check_contract(db: DbDep, body: ContractIn, own_id: int | None) -> None:
     ):
         problem = "Netto, Steuersatz und Brutto passen nicht zusammen."
     if problem:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=problem)
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=problem)
     # Ein Budgetposten hat höchstens einen Vertrag.
     taken = db.execute(
         select(BudgetItem.name, BudgetContract.title)
@@ -1670,20 +1669,20 @@ def create_monthly_items(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
     if row.interval != "monatlich":
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Monatsposten gibt es nur für Verträge mit monatlicher Zahlung.",
         )
     account: BudgetAccount | None = db.get(BudgetAccount, body.account_id)
     if account is None or not account.active:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Das Konto gibt es nicht oder es ist stillgelegt.",
         )
     first, last = fiscal_year_range(body.year, load_settings(db).start_month)
     days = due_dates(row, first, last)
     if not days:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="In diesem Geschäftsjahr ist aus dem Vertrag keine Zahlung fällig.",
         )
     taken = {
@@ -1905,7 +1904,7 @@ def _invoice_gross(db: DbDep, body: InvoiceIn) -> list[int]:
     """Prüft die Bezüge der Rechnung und liefert das Brutto je Position."""
     if db.get(BudgetPartner, body.invoicer_id) is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Den Rechnungssteller gibt es nicht.",
         )
     gross: list[int] = []
@@ -1918,13 +1917,13 @@ def _invoice_gross(db: DbDep, body: InvoiceIn) -> list[int]:
             problem = "Das Brutto weicht um mehr als 1 Euro vom gerechneten Betrag ab."
         if problem:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Position {number}: {problem}",
             )
         gross.append(computed if line.gross_cents is None else line.gross_cents)
     if body.total_gross_cents is not None and body.total_gross_cents != sum(gross):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Die Positionen ergeben nicht den Rechnungsbetrag. "
             "Bitte verteil den ganzen Betrag auf Positionen.",
         )
@@ -2198,7 +2197,7 @@ def merge_partner(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nicht gefunden")
     if target is None or target.id == source.id:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Bitte wähle einen anderen vorhandenen Partner als Ziel.",
         )
     moved_contracts = 0
@@ -2554,7 +2553,7 @@ async def upload_document(
     row = _own_invoice(db, invoice_id, user)
     limit = settings.budget_document_max_mb * 1024 * 1024
     too_large = HTTPException(
-        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
         detail=f"Die Datei ist größer als {settings.budget_document_max_mb} MB.",
     )
     if not request.headers.get("content-type", "").lower().startswith(PDF_TYPE):
@@ -2575,7 +2574,7 @@ async def upload_document(
     data = b"".join(chunks)
     if not looks_like_pdf(data):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Die Datei ist kein PDF.",
         )
     old_key = row.doc_key

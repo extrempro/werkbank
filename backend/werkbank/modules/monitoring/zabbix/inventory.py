@@ -51,7 +51,7 @@ def match_inventory(db: Session) -> Match:
             select(InventoryHardware.id, InventoryHardware.serial, InventoryHardware.kind_id).where(
                 InventoryHardware.status == "aktiv"
             )
-        ).tuples()
+        )
     )
     by_serial: dict[str, int] = {}
     for device_id, serial, _ in sorted(devices):

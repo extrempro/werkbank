@@ -41,8 +41,6 @@ router = APIRouter(prefix="/api/tickets/settings")
 AreaId = Annotated[int, Path(ge=1, le=2_000_000_000)]
 GROUP_SYNC = "tickets.gruppen"
 
-ROLE_LABELS = {"admin": "Bereichsverwaltung", "edit": "Bearbeiten"}
-
 
 class GrantOut(BaseModel):
     id: int
@@ -175,12 +173,12 @@ class NewAreaIn(AreaIn):
 def _check_grant(body: GrantIn, settings_ok: bool) -> None:
     if not settings_ok:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Unbekannte Kennung aus Entra.",
         )
     if body.kind == "group" and body.mail:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Gruppen haben hier keine Mailadresse.",
         )
 
@@ -216,7 +214,7 @@ def create_area(body: NewAreaIn, access: AccessDep, db: DbDep, settings: Setting
         raise forbidden("Bereiche legt nur die Ticket-Verwaltung an.")
     if body.admin.role != AREA_ADMIN:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Der erste Eintrag muss die Bereichsverwaltung sein.",
         )
     _check_grant(body.admin, valid_oid(body.admin.oid, settings))

@@ -304,16 +304,16 @@ def _set_solution(
         apply_solution(db, ticket, body.type_id, body.text, body.public, me, note=note)
     except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
 
 
 def _area_names(db: Session) -> dict[int, str]:
-    return dict(db.execute(select(TicketArea.id, TicketArea.name)).tuples().all())
+    return dict(db.execute(select(TicketArea.id, TicketArea.name)).all())
 
 
 def _category_names(db: Session) -> dict[int, str]:
-    return dict(db.execute(select(TicketCategory.id, TicketCategory.name)).tuples().all())
+    return dict(db.execute(select(TicketCategory.id, TicketCategory.name)).all())
 
 
 def _item(
@@ -645,7 +645,7 @@ def _category_of(db: Session, area_id: int, category_id: int | None) -> int | No
     category = db.get(TicketCategory, category_id)
     if category is None or category.area_id != area_id or not category.active:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Diese Kategorie gibt es im Bereich nicht.",
         )
     return category.id
@@ -756,7 +756,7 @@ def change_ticket(
     if body.status is not None and body.status != ticket.status:
         if body.status not in SETTABLE_STATUSES:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Diesen Status kannst du hier nicht setzen.",
             )
         if ticket.status == "merged":
@@ -769,7 +769,7 @@ def change_ticket(
             when = body.reminder_at
             if when is None or when.tzinfo is None or when <= now_utc():
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail="Für die Erinnerung brauchst du einen Zeitpunkt in der Zukunft.",
                 )
         set_status(ticket, body.status, db)
@@ -883,7 +883,7 @@ def _check_handover(db: Session, access: TicketAccess, ticket: Ticket, new_oid: 
         allowed = {m.oid for m, _ in area_people(db, ticket.area_id, (AREA_ADMIN, AREA_EDIT))}
         if new_oid != access.oid and new_oid not in allowed:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Diese Person kann im Bereich keine Tickets bearbeiten.",
             )
     if access.is_area_admin(ticket.area_id):
@@ -958,7 +958,8 @@ def move_ticket(
     target = db.get(TicketArea, body.area_id)
     if target is None or not target.active or target.id == ticket.area_id:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Diesen Bereich gibt es nicht."
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Diesen Bereich gibt es nicht.",
         )
     me_actor = actor(access)
     names = _area_names(db)

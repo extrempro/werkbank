@@ -20,7 +20,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=None, extra="ignore")
 
     public_url: str = "http://localhost:8080"
-    trusted_proxy_ips: str = "127.0.0.1"
     log_level: str = "info"
     # production | development | test
     environment: str = "production"

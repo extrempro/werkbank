@@ -77,10 +77,8 @@ def positions_for(db: Session, mail: str) -> list[InventoryPosition]:
 
 def reporter_inventory(db: Session, mail: str) -> ReporterInventory:
     """Stellen, Arbeitsplätze, Geräte und offene Verleihe zur Mailadresse des Melders."""
-    kinds = dict(db.execute(select(InventoryKind.id, InventoryKind.name)).tuples().all())
-    departments = dict(
-        db.execute(select(InventoryDepartment.id, InventoryDepartment.name)).tuples().all()
-    )
+    kinds = dict(db.execute(select(InventoryKind.id, InventoryKind.name)).all())
+    departments = dict(db.execute(select(InventoryDepartment.id, InventoryDepartment.name)).all())
     positions: list[LinkedPosition] = []
     for pos in positions_for(db, mail):
         places = db.execute(
