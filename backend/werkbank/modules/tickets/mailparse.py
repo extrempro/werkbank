@@ -4,6 +4,8 @@
   HTML-Darstellung in der Werkbank).
 - Antworten: nur der neue Teil wird übernommen; Zitate früherer Mails stehen getrennt.
 - Anhänge: Dateityp über den Inhalt (Positivliste), Größe; nicht erlaubte werden entfernt.
+- Eingebettete Bilder (Content-ID) zählen als Anhang mit Nummer; ihre Stelle im Text wird zu
+  „[Bild n]“.
 """
 
 import re
@@ -39,6 +41,13 @@ _QUOTE_STARTS = (
     re.compile(r"^_{10,}\s*$"),
 )
 _HEADER_FROM = re.compile(r"^\*?(von|from)\s*:\*?\s*\S", re.IGNORECASE)
+_CID_MARK = re.compile(r"\[cid:([^\]\s]{1,300})\]", re.IGNORECASE)
+# Begrenzte Wiederholungen: feindliches HTML soll den Ausdruck nicht ausbremsen
+_IMG_CID = re.compile(
+    r"<img\b[^>]{0,1000}?\bsrc\s{0,5}=\s{0,5}[\"']cid:([^\"'\s>]{1,300})[\"'][^>]{0,1000}>",
+    re.IGNORECASE,
+)
+_INLINE_EXT = {"image/png": "png", "image/jpeg": "jpg", "image/gif": "gif", "image/webp": "webp"}
 _HEADER_SENT = re.compile(r"^\*?(gesendet|sent|datum|date)\s*:\*?\s*\S", re.IGNORECASE)
 
 
@@ -47,6 +56,9 @@ class Attachment:
     filename: str
     content_type: str
     data: bytes
+    # Eingebettetes Bild: Nummer in der Nachricht (1, 2, …) und Content-ID
+    inline_number: int | None = None
+    cid: str = ""
 
 
 @dataclass
@@ -110,16 +122,51 @@ def _body_text(msg: EmailMessage) -> str:
     if not isinstance(content, str):
         return ""
     if part.get_content_subtype() == "html":
+        # Eingebettete Bilder als Marke behalten, sie werden später zu „[Bild n]“
+        content = _IMG_CID.sub(lambda m: f" [cid:{m.group(1)}] ", content)
         return html_to_text(content) or ""
     return content.replace("\r\n", "\n").strip()
 
 
+def _inline_image(part: Message) -> str:
+    """Content-ID eines eingebetteten Bilds, sonst leer."""
+    if part.is_multipart() or part.get_content_type().lower() not in _INLINE_EXT:
+        return ""
+    if (part.get_content_disposition() or "").lower() == "attachment":
+        return ""
+    return _header(part, "Content-ID").strip().strip("<>")[:300]
+
+
 def _attachments(msg: EmailMessage) -> list[Attachment]:
     found: list[Attachment] = []
+    seen: set[int] = set()
+    # Eingebettete Bilder stecken oft in multipart/related neben dem HTML-Text; dort findet
+    # iter_attachments sie nicht. Darum alle Teile durchgehen, in der Reihenfolge der Mail.
+    for part in msg.walk():
+        cid = _inline_image(part)
+        if not cid:
+            continue
+        seen.add(id(part))
+        payload = part.get_payload(decode=True)
+        number = len(found) + 1
+        content_type = part.get_content_type().lower()
+        found.append(
+            Attachment(
+                filename=safe_filename(
+                    part.get_filename() or f"bild-{number}.{_INLINE_EXT[content_type]}"
+                ),
+                content_type=content_type,
+                data=payload if isinstance(payload, bytes) else b"",
+                inline_number=number,
+                cid=cid,
+            )
+        )
     for part in msg.iter_attachments():
+        if id(part) in seen:
+            continue
         filename = part.get_filename() or ""
         disposition = (part.get_content_disposition() or "").lower()
-        # Eingebettete Bilder ohne Dateiname (z. B. Logos in Signaturen) gehören nicht dazu
+        # Andere eingebettete Teile ohne Dateiname gehören nicht dazu
         if disposition == "inline" and not filename:
             continue
         if part.get_content_type() == "message/rfc822":
@@ -137,6 +184,17 @@ def _attachments(msg: EmailMessage) -> list[Attachment]:
             )
         )
     return found
+
+
+def _image_marks(text: str, attachments: list[Attachment]) -> str:
+    """„[cid:…]“ im Text wird zu „[Bild n]“; unbekannte Marken zu „[Bild]“."""
+    numbers = {a.cid.lower(): a.inline_number for a in attachments if a.inline_number}
+
+    def mark(match: re.Match[str]) -> str:
+        number = numbers.get(match.group(1).lower())
+        return f"[Bild {number}]" if number else "[Bild]"
+
+    return _CID_MARK.sub(mark, text)
 
 
 def safe_filename(name: str) -> str:
@@ -168,6 +226,7 @@ def parse(raw: bytes) -> ParsedMail:
     )
     references = message_ids(_header(msg, "In-Reply-To")) + message_ids(_header(msg, "References"))
     own = message_ids(_header(msg, "Message-ID"))
+    attachments = _attachments(msg)
     return ParsedMail(
         message_id=own[0] if own else "",
         references=list(dict.fromkeys(references)),
@@ -176,8 +235,8 @@ def parse(raw: bytes) -> ParsedMail:
         sender_name=sender_name.strip()[:200],
         to=_addresses(msg, "To"),
         cc=_addresses(msg, "Cc"),
-        text=_body_text(msg),
-        attachments=_attachments(msg),
+        text=_image_marks(_body_text(msg), attachments),
+        attachments=attachments,
         auto_reply=auto_reply,
         bounce=bounce,
         bulk=bulk,

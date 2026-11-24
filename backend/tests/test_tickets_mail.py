@@ -61,6 +61,29 @@ def mail_with_attachments() -> str:
     )
 
 
+def mail_with_images() -> str:
+    """Outlook-Art: HTML mit eingebetteten Bildern (multipart/related), dazu Textdatei."""
+    png = base64.b64encode(PNG).decode()
+    log = base64.b64encode(b"Zeile 1: Akku 0 %\nZeile 2: kein Netzteil").decode()
+    html = (
+        '<p>So sieht es aus: <img src="cid:image001.png@01DA"></p>'
+        "<p>Typenschild: <img alt='x' src='cid:bild2@x'></p><p>Danke!</p>"
+    )
+    return (
+        "From: M. Muster <m.muster@example.com>\r\nTo: it@example.com\r\nSubject: Mit Bildern\r\n"
+        "Message-ID: <bild@example.com>\r\nMIME-Version: 1.0\r\n"
+        'Content-Type: multipart/mixed; boundary="M"\r\n\r\n'
+        '--M\r\nContent-Type: multipart/related; boundary="R"\r\n\r\n'
+        f"--R\r\nContent-Type: text/html; charset=utf-8\r\n\r\n{html}\r\n"
+        "--R\r\nContent-Type: image/png\r\nContent-ID: <image001.png@01DA>\r\n"
+        f"Content-Disposition: inline\r\nContent-Transfer-Encoding: base64\r\n\r\n{png}\r\n"
+        "--R\r\nContent-Type: image/png\r\nContent-ID: <bild2@x>\r\n"
+        f"Content-Transfer-Encoding: base64\r\n\r\n{png}\r\n--R--\r\n"
+        '--M\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename="protokoll.log"\r\n'
+        f"Content-Transfer-Encoding: base64\r\n\r\n{log}\r\n--M--\r\n"
+    )
+
+
 # --- ohne Datenbank -------------------------------------------------------------------------
 
 
@@ -106,6 +129,18 @@ def test_filters_from_headers() -> None:
     assert bounce.bounce
     plain = parse(mail().encode())
     assert not (plain.auto_reply or plain.bulk or plain.bounce)
+
+
+def test_inline_images_get_numbers() -> None:
+    parsed = parse(mail_with_images().encode())
+    assert "So sieht es aus: [Bild 1]" in parsed.text
+    assert "Typenschild: [Bild 2]" in parsed.text
+    inline = [(a.filename, a.inline_number) for a in parsed.attachments if a.inline_number]
+    assert inline == [("bild-1.png", 1), ("bild-2.png", 2)]
+    assert [a.filename for a in parsed.attachments if not a.inline_number] == ["protokoll.log"]
+    # Outlook-Textteil mit Marken: unbekannte werden zu „[Bild]“
+    plain = parse(mail(body="Hier [cid:image001.png@01DA] und [cid:fehlt@x]").encode())
+    assert "Hier [Bild] und [Bild]" in plain.text
 
 
 def test_detect_type() -> None:
@@ -347,6 +382,54 @@ def test_attachments_and_download(db: Session, areas: dict[str, int]) -> None:
     assert max_.get(f"{BASE}/{number}/attachments/{files['tool.exe']['id']}").status_code == 404
     hans = client_for("Hans Haus")
     assert hans.get(f"{BASE}/{number}/attachments/{files['rechnung.pdf']['id']}").status_code == 404
+    # PDF in der Vorschau: im Browser, ohne Sandbox; Original-Mail ohne Vorschau
+    assert files["rechnung.pdf"]["preview"] == "pdf"
+    assert files["tool.exe"]["preview"] == ""
+    view = max_.get(f"{BASE}/{number}/attachments/{files['rechnung.pdf']['id']}?view=true")
+    assert view.status_code == 200
+    assert view.headers["content-disposition"].startswith("inline")
+    assert view.headers["content-type"] == "application/pdf"
+    assert "sandbox" not in view.headers["content-security-policy"]
+    original = next(a for a in ticket["entries"][0]["attachments"] if a["original"])
+    assert original["preview"] == "text"
+
+
+@pytest.mark.db
+def test_inline_images_and_preview(db: Session, areas: dict[str, int]) -> None:
+    max_ = client_for("Max Muster")
+    db.execute(
+        update(TicketArea)
+        .where(TicketArea.id == areas["it"])
+        .values(allowed_types=["pdf", "png", "jpg", "txt"])
+    )
+    db.commit()
+    number = inbound(max_, areas["it"], mail_with_images())["ticket_number"]
+    entry = max_.get(f"{BASE}/{number}").json()["entries"][0]
+    assert "[Bild 1]" in entry["body"] and "[Bild 2]" in entry["body"]
+    files = {a["filename"]: a for a in entry["attachments"] if not a["original"]}
+    assert files["bild-1.png"]["inline_number"] == 1
+    assert files["bild-2.png"]["inline_number"] == 2
+    assert files["protokoll.log"]["inline_number"] is None
+    assert files["bild-1.png"]["preview"] == "image"
+    assert files["protokoll.log"]["preview"] == "text"
+    image = max_.get(f"{BASE}/{number}/attachments/{files['bild-1.png']['id']}?view=true")
+    assert image.status_code == 200
+    assert image.headers["content-type"] == "image/png"
+    assert image.headers["content-disposition"].startswith("inline")
+    assert image.headers["content-security-policy"] == "default-src 'none'; sandbox"
+    assert image.headers["cache-control"] == "no-store"
+    assert image.content == PNG
+    text = max_.get(f"{BASE}/{number}/attachments/{files['protokoll.log']['id']}/text").json()
+    assert text == {"text": "Zeile 1: Akku 0 %\nZeile 2: kein Netzteil", "truncated": False}
+    # Text nicht als Bild, Bild nicht als Text
+    log_id = files["protokoll.log"]["id"]
+    assert max_.get(f"{BASE}/{number}/attachments/{log_id}?view=true").status_code == 404
+    image_id = files["bild-1.png"]["id"]
+    assert max_.get(f"{BASE}/{number}/attachments/{image_id}/text").status_code == 404
+    # Fremde Bereiche sehen nichts
+    hans = client_for("Hans Haus")
+    assert hans.get(f"{BASE}/{number}/attachments/{image_id}?view=true").status_code == 404
+    assert hans.get(f"{BASE}/{number}/attachments/{log_id}/text").status_code == 404
 
 
 @pytest.mark.db

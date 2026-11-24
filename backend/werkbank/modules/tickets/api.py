@@ -7,6 +7,7 @@ Bereichen gibt es für sie nicht: 404 statt 403 (spec.md 8e, „Sichtbarkeit“)
 import re
 import uuid
 from datetime import datetime
+from pathlib import Path as FilePath
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Path, Query, status
@@ -54,6 +55,13 @@ from werkbank.modules.tickets.models import (
     TicketSolutionType,
 )
 from werkbank.modules.tickets.outbound import build_forward, event_text, send_to_reporter
+from werkbank.modules.tickets.preview import (
+    PreviewKind,
+    matches,
+    preview_kind,
+    read_head,
+    read_text,
+)
 from werkbank.modules.tickets.service import (
     PRIORITY_LABELS,
     SOLUTION_TEXT_MAX,
@@ -153,6 +161,16 @@ class AttachmentOut(BaseModel):
     original: bool
     # Grund, warum der Anhang entfernt wurde (dann ohne Download)
     removed_reason: str
+    # Eingebettetes Bild: Nummer in der Nachricht („[Bild n]“ im Text)
+    inline_number: int | None
+    # Vorschau: image (im Browser), pdf (neuer Tab), text (Auszug), leer (nur Download)
+    preview: PreviewKind
+
+
+class TextPreviewOut(BaseModel):
+    text: str
+    # Nur die ersten 200 KB
+    truncated: bool
 
 
 class EntryOut(BaseModel):
@@ -382,6 +400,8 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
                 size=att.size,
                 original=att.original,
                 removed_reason=att.removed_reason,
+                inline_number=att.inline_number,
+                preview=preview_kind(att.content_type) if att.key else "",
             )
         )
     area = db.get(TicketArea, ticket.area_id)
@@ -1205,15 +1225,9 @@ def forward(
     return _detail(db, settings, access, ticket)
 
 
-@router.get("/{number}/attachments/{attachment_id}")
-def download_attachment(
-    number: TicketNumber,
-    attachment_id: Annotated[str, Path(min_length=36, max_length=36)],
-    access: AccessDep,
-    db: DbDep,
-    settings: SettingsDep,
-) -> FileResponse:
-    """Anhang oder Original herunterladen (immer als Download, nie im Browser angezeigt)."""
+def _attachment_file(
+    db: Session, settings: Settings, access: TicketAccess, number: int, attachment_id: str
+) -> tuple[Ticket, TicketAttachment, FilePath]:
     ticket = _visible_ticket(db, access, number)
     try:
         att_uuid = uuid.UUID(attachment_id)
@@ -1225,6 +1239,10 @@ def download_attachment(
     path = file_path(settings.tickets_files_dir, att.key)
     if path is None or not path.is_file():
         raise not_found()
+    return ticket, att, path
+
+
+def _audit_file(db: Session, access: TicketAccess, ticket: Ticket) -> None:
     write_audit(
         db,
         module="tickets",
@@ -1234,6 +1252,45 @@ def download_attachment(
         user_id=access.user.user_id,
     )
     db.commit()
+
+
+@router.get("/{number}/attachments/{attachment_id}")
+def download_attachment(
+    number: TicketNumber,
+    attachment_id: Annotated[str, Path(min_length=36, max_length=36)],
+    access: AccessDep,
+    db: DbDep,
+    settings: SettingsDep,
+    view: Annotated[bool, Query()] = False,
+) -> FileResponse:
+    """Anhang herunterladen; mit `view` Bilder und PDF im Browser anzeigen.
+
+    Angezeigt wird nur, was am Inhalt als Bild oder PDF erkannt wird. Bilder laufen in einer
+    Sandbox ohne Skripte. Das Ansehen von Bildern (auch die Vorschaubilder im Verlauf) wird
+    nicht protokolliert, Downloads und PDF schon.
+    """
+    ticket, att, path = _attachment_file(db, settings, access, number, attachment_id)
+    headers = {"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"}
+    if view:
+        kind = preview_kind(att.content_type)
+        if kind not in ("image", "pdf") or not matches(att.content_type, read_head(path)):
+            raise not_found()
+        if kind == "pdf":
+            _audit_file(db, access, ticket)
+            # Ohne Sandbox, sonst zeigt der Browser seine PDF-Ansicht nicht
+            headers["Content-Security-Policy"] = (
+                "default-src 'none'; object-src 'self'; frame-ancestors 'none'"
+            )
+        else:
+            headers["Content-Security-Policy"] = "default-src 'none'; sandbox"
+        return FileResponse(
+            path,
+            media_type=att.content_type,
+            filename=att.filename,
+            content_disposition_type="inline",
+            headers=headers,
+        )
+    _audit_file(db, access, ticket)
     return FileResponse(
         path,
         media_type=att.content_type
@@ -1241,5 +1298,22 @@ def download_attachment(
         else "application/octet-stream",
         filename=att.filename,
         content_disposition_type="attachment",
-        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"},
+        headers=headers,
     )
+
+
+@router.get("/{number}/attachments/{attachment_id}/text")
+def attachment_text(
+    number: TicketNumber,
+    attachment_id: Annotated[str, Path(min_length=36, max_length=36)],
+    access: AccessDep,
+    db: DbDep,
+    settings: SettingsDep,
+) -> TextPreviewOut:
+    """Textdatei (.txt, .log, .csv, .eml) als Auszug: die ersten 200 KB."""
+    ticket, att, path = _attachment_file(db, settings, access, number, attachment_id)
+    if preview_kind(att.content_type) != "text":
+        raise not_found()
+    text, truncated = read_text(path)
+    _audit_file(db, access, ticket)
+    return TextPreviewOut(text=text, truncated=truncated)

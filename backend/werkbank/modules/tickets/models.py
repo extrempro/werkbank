@@ -401,6 +401,8 @@ class TicketAttachment(Base):
     key: Mapped[str | None] = mapped_column(String(64))
     original: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     removed_reason: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    # Eingebettetes Bild: Nummer in der Nachricht, passend zu „[Bild n]“ im Text
+    inline_number: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

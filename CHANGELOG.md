@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.116.0] – 2026-11-24
+
+### Tickets
+
+- **Bilder in der Nachricht:** In Mails eingebettete Bilder (Content-ID, z. B. aus Outlook im HTML-Teil) werden jetzt wie Anhänge geprüft und abgelegt und in der Reihenfolge der Mail nummeriert; im Text steht an ihrer Stelle „[Bild n]“ als Knopf. Bisher fielen sie weg, und im Text blieben Marken wie „[cid:image001.png@…]“ stehen.
+- **Vorschau von Anhängen:** Karten mit Vorschaubild oder Dateityp, „Ansehen“ und „Herunterladen“. Bilder öffnen groß mit Blättern (Knöpfe und Pfeiltasten), PDF im neuen Tab, Textdateien (TXT, CSV, EML) als Auszug der ersten 200 KB; Office-Dateien, ZIP und MSG nur als Download.
+  - `GET /api/tickets/{nr}/attachments/{id}?view=true` für Bilder und PDF (inline, nur wenn der Dateianfang passt; Bilder mit Sandbox), `GET …/attachments/{id}/text`
+  - `inline_number` und `preview` am Anhang; Migration `0079`
+
+### Dokumentation
+
+- spec.md, datenschutz.md (eingebettete Bilder), asvs-l2.md (Dateien und Anhänge), Handbuch (Verlauf)
+
+### Tests
+
+- `test_tickets_mail.py` (eingebettete Bilder, Vorschau, Rechte), `test_tickets_preview.py`, `tickets.test.tsx`, E2E `tickets.spec.ts`
+
 ## [0.115.0] – 2026-11-24
 
 ### Tickets
