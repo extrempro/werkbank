@@ -1741,7 +1741,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "„In den Papierkorb“ rechts unter „Seite“ entfernt die Seite mit allen Unterseiten. Die Doku-Verwaltung kann sie 30 Tage lang wiederherstellen.",
+                text: "„Verschieben“ rechts unter „Seite“ legt die Seite an einen anderen Platz im selben Arbeitsbereich: ganz oben oder unter eine andere Seite, und dort an eine bestimmte Stelle. Unterseiten wandern mit. Eigene Rechte der Seite bleiben, sonst gelten die Rechte am neuen Platz. „In den Papierkorb“ entfernt die Seite mit allen Unterseiten. Die Doku-Verwaltung kann sie 30 Tage lang wiederherstellen.",
               },
               {
                 kind: "text",

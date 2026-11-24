@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.125.0",
+    date: "2026-11-24",
+    summary: "Dokumentation: Seiten verschieben.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Mit „Verschieben“ rechts unter „Seite“ legst du eine Seite an einen anderen Platz im Arbeitsbereich, ganz oben oder unter eine andere Seite. Unterseiten wandern mit.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.124.2",
     date: "2026-11-24",
     summary: "Aufräumarbeiten im Hintergrund.",

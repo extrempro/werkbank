@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.125.0] – 2026-11-24
+
+### Dokumentation
+
+- **Seiten verschieben:** Knopf „Verschieben“ rechts unter „Seite“ mit Dialog für den neuen Platz im selben Arbeitsbereich und die Reihenfolge; Unterseiten wandern mit. Die Schnittstelle gab es schon, die Oberfläche fehlte.
+
+### Sicherheit
+
+- Live-Bearbeitung: Bei einer fehlerhaften Nachricht steht im Log nur noch die Art des Fehlers, nicht dessen Text (CodeQL „Log Injection“, `doku/collab.py`).
+
 ## [0.124.2] – 2026-11-24
 
 ### Aufräumen

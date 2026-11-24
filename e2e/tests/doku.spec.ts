@@ -444,3 +444,45 @@ test("Doku D3: Verweis, Live-Baustein, Kommentar mit Erwähnung und Rückverweis
   await expect(readerPanel.getByText("Offen · 0")).toBeVisible();
   await expectNoA11yViolations(page);
 });
+
+test("Doku: Seite verschieben, Unterseiten wandern mit", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const editor = await apiAs(browser, ["Doku.Nutzer"], s.editor);
+  const make = async (title: string, parent: string | null = null) => {
+    const response = await editor.post("/api/doku/pages", {
+      data: { space_id: s.spaceId, title, parent_id: parent },
+      headers: HEADERS,
+    });
+    expect(response.status()).toBe(201);
+    return ((await response.json()) as { id: string }).id;
+  };
+  await make(`Netzwerk ${stamp}`);
+  const printer = await make(`Drucker ${stamp}`);
+  await make(`Toner ${stamp}`, printer);
+
+  await loginAs(page, ["Doku.Nutzer"], s.editor);
+  await page.goto(`/doku/seite/${printer}`);
+  await page.getByRole("button", { name: "Verschieben" }).click();
+  const dialog = page.getByRole("dialog", { name: /verschieben$/ });
+  const place = dialog.getByRole("combobox", { name: /Neuer Platz/ });
+  // Die Seite selbst und ihre Unterseite stehen nicht zur Wahl
+  await expect(place.getByRole("option", { name: /Toner/ })).toHaveCount(0);
+  await place.selectOption({ label: `Unter: Netzwerk ${stamp}` });
+  await expectNoA11yViolations(page);
+  await dialog.getByRole("button", { name: "Verschieben" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Die Seite wurde verschoben." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: `Netzwerk ${stamp}` }).first(),
+  ).toBeVisible();
+  // Die Unterseite hängt weiter unter „Drucker“
+  const child = await editor.get(`/api/doku/pages/${printer}`);
+  expect(
+    ((await child.json()) as { parent_id: string | null }).parent_id,
+  ).not.toBeNull();
+});

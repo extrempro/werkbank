@@ -374,7 +374,11 @@ async def live(websocket: WebSocket, page_id: uuid.UUID) -> None:
             try:
                 await _handle(room, peer, message)
             except Exception as exc:  # fehlerhafte Nachricht: Verbindung trennen
-                logger.warning("Doku %s: Nachricht nicht verarbeitet: %s", page_id, exc)
+                # Nur die Art des Fehlers: Der Text kann Teile der Nachricht enthalten
+                # (Log Injection)
+                logger.warning(
+                    "Doku %s: Nachricht nicht verarbeitet (%s)", page_id, type(exc).__name__
+                )
                 await websocket.close(1003)
                 break
     except WebSocketDisconnect:
