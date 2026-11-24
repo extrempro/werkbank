@@ -6,7 +6,7 @@ import {
   confirmDialog,
 } from "./helpers";
 
-test("Konto zeigt Angaben, Rollen, Geräte, Darstellung und Version", async ({
+test("Konto zeigt Angaben, Rechte, Geräte, Darstellung und Version", async ({
   page,
 }) => {
   await loginAs(page, ["Evergreen.Reader"], "Kira Konto");
@@ -18,9 +18,11 @@ test("Konto zeigt Angaben, Rollen, Geräte, Darstellung und Version", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: "Konto" }),
   ).toBeVisible();
-  await expect(page.getByText("Evergreen Leser")).toBeVisible();
+  const rights = page.getByRole("region", { name: "Meine Rechte" });
+  await expect(rights.getByText("Evergreen", { exact: true })).toBeVisible();
+  await expect(rights.getByText("Lesen", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("Evergreen-Einträge mit Bewertung und Notizen ansehen"),
+    rights.getByText("Einträge mit Bewertung und Notizen ansehen"),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Angemeldete Geräte" }),
