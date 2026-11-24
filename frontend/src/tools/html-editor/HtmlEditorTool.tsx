@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { PHONE_QUERY, useMediaQuery } from "../../components/FilterBar";
 import { downloadBlob } from "../download";
@@ -33,7 +33,7 @@ const PREVIEW_DELAY = 250;
 /**
  * HTML eingeben und als Vorschau sehen. Die Vorschau ist eine eigene Seite der Werkbank im
  * iframe mit enger Sicherheitsrichtlinie (kein Zugriff auf Konto und Werkbank, keine Skripte
- * aus dem HTML); der Inhalt bleibt im Browser und kommt per postMessage hinein.
+ * aus dem HTML); der Inhalt bleibt im Browser und kommt über einen eigenen Nachrichtenkanal hinein.
  */
 export default function HtmlEditorTool() {
   const [html, setHtml] = useState(TEMPLATES.signatur.html);
@@ -41,8 +41,8 @@ export default function HtmlEditorTool() {
   const [width, setWidth] = useState<Width>("pc");
   const [view, setView] = useState<"html" | "vorschau">("html");
   const [internet, setInternet] = useState<boolean | null>(null);
-  // Zählt die Meldungen „bereit“ der Vorschau; jede neue bekommt den aktuellen Inhalt.
-  const [ready, setReady] = useState(0);
+  // Kanal zur Vorschau; jede neue Meldung „bereit“ (auch nach Neuladen) bringt einen neuen.
+  const [port, setPort] = useState<MessagePort | null>(null);
   const frame = useRef<HTMLIFrameElement>(null);
   const phone = useMediaQuery(PHONE_QUERY);
   const [ask, dialog] = useConfirm();
@@ -65,28 +65,28 @@ export default function HtmlEditorTool() {
     const onMessage = (event: MessageEvent) => {
       if (
         event.source === frame.current?.contentWindow &&
-        (event.data as { type?: unknown } | null)?.type === PREVIEW_READY
+        (event.data as { type?: unknown } | null)?.type === PREVIEW_READY &&
+        event.ports[0]
       ) {
-        setReady((count) => count + 1);
+        setPort(event.ports[0]);
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
-  const send = useCallback((content: string) => {
-    // Der Rahmen hat einen eigenen, undurchsichtigen Ursprung; deshalb "*". Er zeigt immer
-    // die Vorschau-Seite der Werkbank (frame-src 'self').
-    frame.current?.contentWindow?.postMessage({ type: PREVIEW_MESSAGE, html: content }, "*");
-  }, []);
-
   useEffect(() => {
-    if (ready === 0) {
+    if (!port) {
       return undefined;
     }
-    const timer = window.setTimeout(() => send(html), PREVIEW_DELAY);
+    const timer = window.setTimeout(
+      () => port.postMessage({ type: PREVIEW_MESSAGE, html }),
+      PREVIEW_DELAY,
+    );
     return () => window.clearTimeout(timer);
-  }, [html, ready, send]);
+  }, [html, port]);
+
+  useEffect(() => () => port?.close(), [port]);
 
   const showCode = !phone || view === "html";
   const showPreview = !phone || view === "vorschau";

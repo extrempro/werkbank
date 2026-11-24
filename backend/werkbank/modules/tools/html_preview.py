@@ -5,9 +5,9 @@ fremden Bilder zeigen. Diese Seite hat deshalb eine eigene, enge Richtlinie:
 
 - `sandbox allow-scripts` ohne `allow-same-origin`: eigener, undurchsichtiger Ursprung, kein
   Zugriff auf Cookies, Speicher oder die Werkbank; keine Formulare, Pop-ups, Navigation oben.
-- Skripte nur das eine Skript dieser Seite (Hash). Es nimmt das HTML per postMessage vom
-  Elternfenster entgegen, entfernt Skripte, Meta-Weiterleitungen, base und eingebettete Rahmen
-  und setzt den Rest ein. Inline-Handler und javascript:-Links verbietet die Richtlinie.
+- Skripte nur das eine Skript dieser Seite (Hash). Es gibt dem Elternfenster einen eigenen
+  Nachrichtenkanal (MessagePort) und nimmt das HTML nur darüber entgegen. Es entfernt Skripte,
+  Meta-Weiterleitungen, base und eingebettete Rahmen und setzt den Rest ein. Inline-Handler und javascript:-Links verbietet die Richtlinie.
 - CSS inline erlaubt, Bilder nur als data:, mit „Abfragen ins Internet“ auch über https.
 
 Der Inhalt geht nie an den Server; die Seite selbst ist für alle Personen gleich.
@@ -33,15 +33,17 @@ MESSAGE_TYPE = "werkbank-html-vorschau"
 READY_TYPE = "werkbank-html-bereit"
 REMOVED = "script,meta[http-equiv],base,iframe,frame,frameset,object,embed,portal"
 
+# Eigener Kanal (MessageChannel): Die Seite gibt dem Elternfenster einen Port; nur darüber kommt
+# das HTML. So braucht das Elternfenster kein postMessage an "*".
 SCRIPT = (
-    "(function(){var p=window.parent;"
-    "window.addEventListener('message',function(e){"
-    f"if(e.source!==p||!e.data||e.data.type!=='{MESSAGE_TYPE}')return;"
+    "(function(){var c=new MessageChannel();"
+    "c.port1.onmessage=function(e){"
+    f"if(!e.data||e.data.type!=='{MESSAGE_TYPE}')return;"
     "var d=new DOMParser().parseFromString(String(e.data.html),'text/html');"
     f"d.querySelectorAll('{REMOVED}').forEach(function(n){{n.remove();}});"
     "document.replaceChild(document.importNode(d.documentElement,true),"
-    "document.documentElement);});"
-    f"p.postMessage({{type:'{READY_TYPE}'}},'*');}})();"
+    "document.documentElement);};"
+    f"window.parent.postMessage({{type:'{READY_TYPE}'}},'*',[c.port2]);}})();"
 )
 SCRIPT_HASH = base64.b64encode(hashlib.sha256(SCRIPT.encode()).digest()).decode()
 
