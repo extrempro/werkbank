@@ -7371,15 +7371,17 @@ td > .budget-row-actions {
 .loc-tree-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 4px;
   margin-bottom: 8px;
 }
 
 .loc-tree-title {
+  flex: 1;
   font-weight: 700;
 }
 
-.loc-tree-hide {
+.loc-tree-hide,
+.loc-tree-collapse {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7514,37 +7516,53 @@ td > .budget-row-actions {
   margin: 0;
 }
 
-/* Abstände im Standortbaum: kompakt, normal, weiträumig (am Baum einstellbar) */
+/* Standortbaum: zwei Ansichten (am Baum umschaltbar).
+   Kompakt: eine Zeile je Eintrag, lange Namen enden mit „…“, rechts eine Zahl.
+   Ausführlich: ganzer Name (Umbruch an Wortgrenzen), darunter die Kennzahlen. */
 .loc-tree {
-  --lt-height: 40px;
-  --lt-pad: 8px;
+  --lt-height: 52px;
+  --lt-indent: 18px;
   --lt-gap: 2px;
 }
 
-.loc-tree[data-spacing="kompakt"] {
-  --lt-height: 30px;
-  --lt-pad: 4px;
+.loc-tree[data-view="kompakt"] {
+  --lt-height: 32px;
+  --lt-indent: 14px;
   --lt-gap: 0px;
-}
-
-.loc-tree[data-spacing="weit"] {
-  --lt-height: 50px;
-  --lt-pad: 12px;
-  --lt-gap: 6px;
 }
 
 /* Mit dem Finger bleiben Einträge mindestens 44 px hoch, auch kompakt. */
 @media (pointer: coarse) {
-  .loc-tree[data-spacing="kompakt"] {
+  .loc-tree[data-view="kompakt"] {
     --lt-height: 44px;
   }
 }
 
-/* Auswahl der Abstände oben im Baum (Aussehen wie „Abstände im Menü“) */
-.loc-tree-spacing.theme-switch {
-  margin: 0 0 10px;
-  padding: 0;
+.lt-views {
+  display: flex;
+  width: fit-content;
+  margin-bottom: 8px;
+  padding: 2px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+}
+
+.lt-views button {
+  min-height: 32px;
+  padding: 0 10px;
   border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--farbe-text-mittel);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lt-views button[aria-pressed="true"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
 }
 
 .lt-list,
@@ -7560,38 +7578,48 @@ td > .budget-row-actions {
   margin-top: 8px;
 }
 
+/* Lange Namen dürfen die Spalte nicht verbreitern (kompakt: „…“ statt Überlauf) */
+.lt-list > li,
+.lt-children > li {
+  min-width: 0;
+}
+
 .lt-children {
   display: grid;
   gap: var(--lt-gap);
-  margin: 2px 0 4px 15px;
-  padding-left: 6px;
-  border-left: 1px solid var(--farbe-trenner);
+  margin-top: var(--lt-gap);
+  padding-left: var(--lt-indent);
 }
 
 .lt-row {
   display: flex;
   align-items: stretch;
   gap: 2px;
+  min-height: var(--lt-height);
+  border-radius: 6px;
 }
 
-.lt-chev-button {
+.lt-chev-button,
+.lt-chev-space {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  min-height: var(--lt-height);
+  width: 24px;
   padding: 0;
   border: 0;
   border-radius: 6px;
   background: none;
   color: var(--farbe-text-leise);
+}
+
+.lt-chev-button {
   cursor: pointer;
 }
 
 .lt-chev-button .icon {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .lt-chev-button:hover {
@@ -7601,86 +7629,80 @@ td > .budget-row-actions {
 .lt-open {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-.lt-open,
-.lt-toggle,
-.lt-floor {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 6px;
-  row-gap: 0;
-  width: 100%;
-  min-height: var(--lt-height);
-  padding: var(--lt-pad) 8px;
-  border: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 6px 6px 6px 4px;
   border-radius: 6px;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.lt-open:hover,
-.lt-toggle:hover,
-.lt-floor:hover {
-  background: var(--farbe-hover);
-}
-
-.lt-stadt .lt-open {
-  font-weight: 600;
-}
-
-.lt-open,
-.lt-floor {
   color: inherit;
   text-decoration: none;
 }
 
-.lt-chev {
-  flex: none;
-  width: 12px;
-  color: var(--farbe-text-leise);
+.loc-tree[data-view="kompakt"] .lt-open {
+  padding-block: 0;
 }
 
-/* Namen nur an Leerzeichen und Bindestrichen umbrechen; die Zahl rutscht bei Platzmangel
-   in die nächste Zeile statt den Namen zu zerteilen */
-/* Name in voller Breite, die Zahl darunter: So bricht der Name nur, wenn er wirklich
-   nicht in die Zeile passt, und dann an Wortgrenzen. */
-.lt-name {
-  flex: 1 1 8rem;
+.lt-open:hover {
+  background: var(--farbe-hover);
+}
+
+.lt-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  overflow-wrap: break-word;
-  hyphens: manual;
 }
 
-.lt-list .lt-name {
-  flex-basis: 100%;
-}
-
-.lt-list .lt-count {
-  margin-left: 0;
-}
-
-.lt-count {
-  margin-left: auto;
+.lt-line .icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
   color: var(--farbe-text-leise);
-  font-size: 0.8125rem;
-  font-weight: 400;
+}
+
+.lt-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.875rem;
+  overflow-wrap: break-word;
+}
+
+.loc-tree[data-view="kompakt"] .lt-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.lt-floor {
-  padding-left: 30px;
+.lt-stadt .lt-name {
+  font-weight: 600;
 }
 
-.lt-open[aria-current="page"],
-.lt-floor[aria-current="page"] {
+.lt-count {
+  flex: none;
+  color: var(--farbe-text-leise);
+  font-size: 0.75rem;
+}
+
+.lt-sub {
+  padding-left: 24px;
+  color: var(--farbe-text-leise);
+  font-size: 0.75rem;
+}
+
+.lt-open[aria-current="page"] {
   background: var(--farbe-auswahl);
   color: var(--farbe-auswahl-text);
+}
+
+.lt-open[aria-current="page"] .lt-name {
   font-weight: 600;
+}
+
+.lt-open[aria-current="page"] .icon,
+.lt-open[aria-current="page"] .lt-count,
+.lt-open[aria-current="page"] .lt-sub {
+  color: var(--farbe-auswahl-text);
 }
 
 .plan-with-list {

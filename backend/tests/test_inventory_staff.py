@@ -486,6 +486,15 @@ def test_room_list_description_and_occupancy(db: Session) -> None:
     assert shown["name"] == "R. 102"
     assert shown["workplaces"] == 2 and shown["workplaces_free"] == 1
     assert shown["people"] == ["Ina Beispiel"]
+    # Im Standortbaum: freie Plätze je Etage
+    briefs = [
+        brief
+        for city in editor.get(f"{BASE}/locations").json()["cities"]
+        for site in city["sites"]
+        for section in site["sections"]
+        for brief in section["floors"]
+    ]
+    assert next(b for b in briefs if b["id"] == floor["id"])["workplaces_free"] == 1
 
 
 @pytest.mark.db

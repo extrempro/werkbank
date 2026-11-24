@@ -340,6 +340,8 @@ export interface FloorBrief {
   position: number;
   has_plan: boolean;
   rooms: RoomBrief[];
+  /** Freie Arbeitsplätze auf der Etage (ohne Stelle, kein Pool). */
+  workplaces_free: number;
 }
 
 export interface SectionNode {

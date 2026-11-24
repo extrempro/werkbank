@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.117.0",
+    date: "2026-11-24",
+    summary: "IT-Bestand: Standortbaum kompakt oder ausführlich.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Den Standortbaum stellst du oben auf „Kompakt“ oder „Ausführlich“. Kompakt steht jeder Eintrag in einer Zeile, lange Namen siehst du ganz, wenn du darauf zeigst. Ausführlich steht der ganze Name da und darunter Etagen, Räume und freie Plätze.",
+          "Jede Ebene hat ein eigenes Symbol, und „Alles einklappen“ klappt den Baum mit einem Klick zu.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.116.0",
     date: "2026-11-24",
     summary: "Tickets: Bilder in Mails und Vorschau von Anhängen.",

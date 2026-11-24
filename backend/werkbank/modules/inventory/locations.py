@@ -106,6 +106,8 @@ class FloorBrief(BaseModel):
     position: int
     has_plan: bool
     rooms: list[RoomBrief]
+    # Freie Arbeitsplätze auf der Etage (ohne Stelle, kein Pool), für die ausführliche Ansicht
+    workplaces_free: int
 
 
 class SectionNode(BaseModel):
@@ -209,10 +211,14 @@ def plan_url(floor_id: int, etag: str) -> str:
 def locations(db: Session) -> LocationsOut:
     """Der ganze Baum mit Räumen (nur Name), sortiert nach Name bzw. Reihenfolge."""
     rooms: dict[int, list[RoomBrief]] = {}
-    for room in db.scalars(
+    all_rooms = db.scalars(
         select(InventoryRoom).order_by(func.lower(InventoryRoom.name), InventoryRoom.id)
-    ).all():
+    ).all()
+    free: dict[int, int] = {}
+    occupancy = room_occupancy(db, [room.id for room in all_rooms])
+    for room in all_rooms:
         rooms.setdefault(room.floor_id, []).append(RoomBrief(id=room.id, name=room.name))
+        free[room.floor_id] = free.get(room.floor_id, 0) + occupancy.get(room.id, (0, 0, []))[1]
     planned = set(db.scalars(select(InventoryFloorPlan.floor_id)).all())
     floors: dict[int, list[FloorBrief]] = {}
     for floor in db.scalars(
@@ -227,6 +233,7 @@ def locations(db: Session) -> LocationsOut:
                 position=floor.position,
                 has_plan=floor.id in planned,
                 rooms=rooms.get(floor.id, []),
+                workplaces_free=free.get(floor.id, 0),
             )
         )
     sections: dict[int, list[SectionNode]] = {}
