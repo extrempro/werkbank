@@ -11,6 +11,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from email.message import EmailMessage
 from typing import Any, Protocol
 from urllib.parse import quote
 
@@ -170,7 +171,11 @@ class GraphMailbox(UtcmClient):
         return result
 
     def send(self, mailbox: str, mime: bytes) -> None:
-        """Mail als MIME senden (eigene Message-ID, In-Reply-To und References bleiben)."""
+        """Mail als MIME senden (eigene Message-ID, In-Reply-To und References bleiben).
+
+        `mime` muss CRLF-Zeilenenden haben (siehe `mime_bytes`), sonst zeigt Exchange
+        quoted-printable-Text roh an („dies=r Zeile“).
+        """
         self._call(
             lambda: self._request(
                 "POST",
@@ -250,3 +255,12 @@ def open_mailbox(settings: Settings, http: httpx.Client) -> Mailbox:
 
 def new_http() -> httpx.Client:
     return httpx.Client(timeout=HTTP_TIMEOUT_SECONDS, follow_redirects=False)
+
+
+def mime_bytes(message: EmailMessage) -> bytes:
+    """MIME für Graph `sendMail`: Zeilenenden CRLF wie im Mailstandard (RFC 5322).
+
+    `EmailMessage.as_bytes()` nutzt sonst nur LF; Exchange dekodiert dann quoted-printable
+    nicht (Umlaute, weiche Zeilenumbrüche) und das Logo fehlt.
+    """
+    return message.as_bytes(policy=message.policy.clone(linesep="\r\n"))

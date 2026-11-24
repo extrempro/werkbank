@@ -32,7 +32,13 @@ from werkbank.modules.tickets.access import (
 from werkbank.modules.tickets.files import file_path
 from werkbank.modules.tickets.inventory_link import ReporterInventory, reporter_inventory
 from werkbank.modules.tickets.mail_texts import DEFAULT_EVENTS
-from werkbank.modules.tickets.mailbox import MailboxError, available, new_http, open_mailbox
+from werkbank.modules.tickets.mailbox import (
+    MailboxError,
+    available,
+    mime_bytes,
+    new_http,
+    open_mailbox,
+)
 from werkbank.modules.tickets.models import (
     AREA_ADMIN,
     AREA_EDIT,
@@ -1186,7 +1192,7 @@ def forward(
     with new_http() as http:
         try:
             mailbox = open_mailbox(settings, http)
-            mailbox.send(area.mailbox, message.as_bytes())
+            mailbox.send(area.mailbox, mime_bytes(message))
         except MailboxError as exc:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,

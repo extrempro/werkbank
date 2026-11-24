@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.117.1] – 2026-11-24
+
+### Tickets
+
+- **Behoben:** Ticket-Mails (Antworten, Status-Mails, Weiterleitungen) kamen in Outlook mit kaputtem Text an („dies=r Zeile“, „=tatus“) und ohne Logo. Ursache: Das MIME für Graph `sendMail` hatte nur LF statt CRLF als Zeilenende, Exchange dekodierte quoted-printable dann nicht. Neu: `mime_bytes()` in `modules/tickets/mailbox.py`.
+
+### Tests
+
+- `test_tickets_mail.py`: MIME für Graph nur mit CRLF, HTML mit Umlauten und Logo lässt sich wieder sauber lesen
+
 ## [0.117.0] – 2026-11-24
 
 ### IT-Bestand
