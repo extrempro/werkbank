@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.113.0",
+    date: "2026-11-24",
+    summary: "IT-Bestand: Standortbaum mit einstellbaren Abständen.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Im Standortbaum stellst du oben unter „Abstände im Baum“ ein, wie dicht die Einträge stehen: kompakt, normal oder weiträumig. Dein Browser merkt sich die Wahl.",
+          "Die gewählte Etage im Baum ist wieder farbig hinterlegt, und lange Namen brechen nicht mehr seltsam um.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.112.0",
     date: "2026-11-24",
     summary: "Evergreen: Status als Auswahl.",

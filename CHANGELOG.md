@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.113.0] – 2026-11-24
+
+### IT-Bestand
+
+- **Standortbaum:** Abstände einstellbar (kompakt, normal, weiträumig), direkt oben im Baum; der Browser merkt sich die Wahl (`werkbank-standortbaum-abstand`). Mit dem Finger bleiben Einträge auch kompakt mindestens 44 px hoch.
+
+### Behoben
+
+- **Standortbaum:** Seit 0.109.0 fehlten drei Regeln des Baums (Zeile mit Name und Anzahl, Hover, Hervorhebung der Auswahl); die gewählte Etage bekam dazu das Raster der Raumliste, und ihr Name brach seltsam um. Die Regeln sind wiederhergestellt.
+
+### Dokumentation
+
+- Handbuch: Standorte (Abstände im Baum)
+
+### Tests
+
+- `locations.test.tsx`: Abstände im Baum
+
 ## [0.112.0] – 2026-11-24
 
 ### Evergreen
