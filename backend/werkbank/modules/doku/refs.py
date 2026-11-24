@@ -202,7 +202,7 @@ def _resolve_hardware(rights: Rights, ids: list[int]) -> dict[str, RefOut]:
             select(InventoryWorkplace.id, InventoryWorkplace.room_id).where(
                 InventoryWorkplace.id.in_({h.workplace_id for h in rows if h.workplace_id})
             )
-        ).tuples()
+        )
     )
     rooms = {h.id: h.room_id or workplace_rooms.get(h.workplace_id or 0) for h in rows}
     paths = room_paths(rights.db, {r for r in rooms.values() if r})
@@ -297,7 +297,7 @@ def _project_state(db: Session, project_ids: list[int]) -> dict[int, tuple[int, 
             select(ProjectMeeting.project_id, func.min(ProjectMeeting.held_on))
             .where(ProjectMeeting.project_id.in_(project_ids), ProjectMeeting.held_on >= today)
             .group_by(ProjectMeeting.project_id)
-        ).tuples()
+        )
     )
     return {pid: (*tasks.get(pid, (0, 0)), meetings.get(pid)) for pid in project_ids}
 
@@ -544,7 +544,7 @@ def _live_tickets(rights: Rights, attrs: dict[str, Any]) -> LiveOut:
     if query:
         stmt = stmt.where(Ticket.subject.ilike(_like(query)))
     rows = rights.db.scalars(stmt.order_by(Ticket.updated_at.desc()).limit(LIVE_ROWS)).all()
-    names = _pairs(rights.db.execute(select(TicketArea.id, TicketArea.name)).tuples())
+    names = _pairs(rights.db.execute(select(TicketArea.id, TicketArea.name)))
     parts = [names.get(area, "Bereich") if area else "alle deine Bereiche"]
     parts.append("alle Status" if attrs.get("status") == "alle" else "offen")
     if query:
@@ -714,7 +714,7 @@ def live_options(rights: Rights) -> dict[str, Any]:
                 select(TicketArea.id, TicketArea.name)
                 .where(TicketArea.id.in_(rights.ticket_areas))
                 .order_by(TicketArea.name)
-            ).tuples()
+            )
         ]
     if rights.inventory:
         rooms: dict[int, list[dict[str, Any]]] = {}
@@ -742,12 +742,12 @@ def live_options(rights: Rights) -> dict[str, Any]:
             {"id": i, "name": n}
             for i, n in db.execute(
                 select(InventoryKind.id, InventoryKind.name).order_by(InventoryKind.name)
-            ).tuples()
+            )
         ]
     if rights.projects:
         result["projects"] = [
             {"id": i, "name": n}
-            for i, n in db.execute(select(Project.id, Project.name).order_by(Project.name)).tuples()
+            for i, n in db.execute(select(Project.id, Project.name).order_by(Project.name))
         ]
     return result
 

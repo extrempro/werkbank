@@ -10,7 +10,6 @@ from werkbank.core.branding import ImageError, _png_size, _webp_size
 # Größter Grundriss in Pixeln je Seite
 PLAN_MAX_SIDE = 12000
 PLAN_MIN_SIDE = 50
-PLAN_TYPES = ("image/png", "image/jpeg", "image/webp")
 
 # JPEG-Marker mit Bildgröße (Start of Frame), ohne DHT/JPG/DAC
 _SOF_MARKERS = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}

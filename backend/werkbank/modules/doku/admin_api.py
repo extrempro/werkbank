@@ -212,7 +212,7 @@ def own_rights_pages(access: AdminDep, db: DbDep) -> list[OwnRightsPage]:
         .where(DokuPage.own_rights.is_(True), DokuPage.deleted_at.is_(None))
         .order_by(func.lower(DokuPage.title))
     ).all()
-    names = dict(db.execute(select(DokuSpace.id, DokuSpace.name)).tuples().all())
+    names = dict(db.execute(select(DokuSpace.id, DokuSpace.name)).all())
     result: list[OwnRightsPage] = []
     for page in pages:
         rights = db.scalars(select(DokuPageRight).where(DokuPageRight.page_id == page.id)).all()
@@ -279,7 +279,7 @@ def list_trash(access: AdminDep, db: DbDep) -> list[TrashItem]:
         .where(DokuPage.deleted_root.is_(True), DokuPage.deleted_at.is_not(None))
         .order_by(DokuPage.deleted_at.desc())
     ).all()
-    names = dict(db.execute(select(DokuSpace.id, DokuSpace.name)).tuples().all())
+    names = dict(db.execute(select(DokuSpace.id, DokuSpace.name)).all())
     result: list[TrashItem] = []
     for page in roots:
         if page.deleted_at is None:

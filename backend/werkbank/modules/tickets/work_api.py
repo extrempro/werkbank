@@ -135,7 +135,7 @@ def merge_ticket(
         or target.status not in OPEN_STATUSES
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Ziel muss ein anderes offenes Ticket desselben Bereichs sein.",
         )
     me = actor(access)
@@ -524,17 +524,17 @@ def update_work_settings(
     area = _area_for_settings(db, access, area_id)
     if body.work_end <= body.work_start:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Die Arbeitszeit muss nach dem Beginn enden.",
         )
     if body.sla_enabled and not body.work_days:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Für Fristen braucht es mindestens einen Arbeitstag.",
         )
     if any(r.solution_minutes < r.response_minutes for r in body.sla):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Die Lösung darf nicht vor der ersten Reaktion fällig sein.",
         )
     area.sla_enabled = body.sla_enabled

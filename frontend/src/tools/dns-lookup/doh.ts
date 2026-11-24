@@ -29,8 +29,6 @@ export const moreRecordTypes = [
   "SPF",
 ] as const;
 export const dnsRecordTypes = [...commonRecordTypes, ...moreRecordTypes] as const;
-export type DnsRecordType = (typeof dnsRecordTypes)[number];
-
 const statusNames: Record<number, string> = {
   0: "NOERROR",
   1: "FORMERR",

@@ -1,5 +1,5 @@
 # Sicherheitsprüfungen bei jedem Pull Request und wöchentlich (Montag 05:00 UTC).
-# Deckt den regelmäßigen Prüfauftrag ab: XSS (Semgrep), Secrets (gitleaks),
+# Deckt den regelmäßigen Prüfauftrag ab: XSS (Semgrep), Secrets (Betterleaks),
 # Abhängigkeiten und Container (Trivy). Service-Worker-Updates prüft der E2E-Job.
 #
 # Trivy ist auf Version und Digest festgelegt: Im März 2026 wurden unter bekannten Tags
@@ -20,6 +20,10 @@ permissions:
   contents: read
 
 env:
+  # Betterleaks (MIT) ersetzt gitleaks: gitleaks wird nicht mehr weiterentwickelt, Betterleaks
+  # kommt vom selben Autor und liest dieselbe Konfiguration. Release 1.10.1 vom 06.11.2026.
+  # Ohne Digest festgelegt (Tag); Update von Hand, Dependabot erfasst Images in `run` nicht.
+  BETTERLEAKS_IMAGE: ghcr.io/betterleaks/betterleaks:v1.10.1
   # Release 0.76.1 vom 21.10.2026, Digest des Images bei Docker Hub
   TRIVY_IMAGE: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
 
@@ -42,18 +46,20 @@ jobs:
           --metrics=off
           --error
 
-  gitleaks:
-    name: gitleaks (Secrets)
+  betterleaks:
+    name: Betterleaks (Secrets)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: gitleaks
-        # TODO: Image-Version festlegen (Tag statt latest)
+      - name: Betterleaks
+        # Ganze Historie aller Branches; Ausnahmen in .betterleaks.toml. Keine Prüfung gegen die
+        # Anbieter (--validation bleibt aus), damit kein Fund das Repository verlässt.
         run: >
-          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest
-          detect --source /repo --redact --verbose
+          docker run --rm -v "$PWD:/repo" "$BETTERLEAKS_IMAGE"
+          git /repo --config /repo/.betterleaks.toml --log-opts="--all"
+          --redact --verbose
 
   trivy:
     name: Trivy (Abhängigkeiten, Konfiguration, Secrets)

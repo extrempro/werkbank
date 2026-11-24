@@ -60,7 +60,6 @@ CHANNELS = ("mail", "manual", "phone")
 
 RETENTION_ANONYMIZE = "anonymize"
 RETENTION_DELETE = "delete"
-RETENTION_ACTIONS = (RETENTION_ANONYMIZE, RETENTION_DELETE)
 # Text, der nach dem Anonymisieren als Betreff stehen bleibt
 ANONYMIZED_SUBJECT = "(anonymisiert)"
 
@@ -69,7 +68,6 @@ ENTRY_REPLY = "reply"  # Antwort an den Melder
 ENTRY_NOTE = "note"  # interne Notiz
 ENTRY_SYSTEM = "system"  # Systemeintrag
 ENTRY_FORWARD = "forward"  # weitergeleitet (intern)
-ENTRY_KINDS = (ENTRY_INBOUND, ENTRY_REPLY, ENTRY_NOTE, ENTRY_SYSTEM, ENTRY_FORWARD)
 
 
 class TicketArea(Base):

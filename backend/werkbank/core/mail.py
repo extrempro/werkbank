@@ -15,7 +15,6 @@ from werkbank.config import Settings
 from werkbank.core.app_settings import SMTP_KEY, decrypt_secret, get_setting
 
 SMTP_TIMEOUT_SECONDS = 10
-SECURITY_MODES = ("starttls", "tls", "none")
 
 
 class MailError(Exception):

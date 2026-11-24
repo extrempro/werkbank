@@ -1,4 +1,4 @@
-# Ausnahmen für gitleaks. Jede Ausnahme mit Begründung; echte Geheimnisse gehören nie ins Repository.
+# Ausnahmen für Betterleaks (früher gitleaks, gleiches Format). Jede Ausnahme mit Begründung; echte Geheimnisse gehören nie ins Repository.
 title = "Werkbank"
 
 [extend]

@@ -804,7 +804,7 @@ def connection(user: AdminReader, db: DbDep) -> ConnectionOut:
             SiteOut(id=kind_id, name=name)
             for kind_id, name in db.execute(
                 select(InventoryKind.id, InventoryKind.name).order_by(InventoryKind.name)
-            ).tuples()
+            )
         ],
         kind_ids=list(options.kind_ids),
         target=options.target,

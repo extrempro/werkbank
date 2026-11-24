@@ -147,16 +147,12 @@ def stats(access: AccessDep, db: DbDep, area: AreaQuery = None) -> StatsOut:
             select(Ticket.channel, func.count())
             .where(in_areas, Ticket.created_at >= recent)
             .group_by(Ticket.channel)
-        )
-        .tuples()
-        .all()
+        ).all()
     )
     categories = dict(
         db.execute(
             select(Ticket.category_id, func.count()).where(*open_).group_by(Ticket.category_id)
-        )
-        .tuples()
-        .all()
+        ).all()
     )
     names = _category_names(db)
     by_category = sorted(
@@ -166,21 +162,17 @@ def stats(access: AccessDep, db: DbDep, area: AreaQuery = None) -> StatsOut:
         ),
         key=lambda c: (-c.count, c.label),
     )
-    solved = (
-        db.execute(
-            select(TicketSolutionType.name, func.count())
-            .select_from(Ticket)
-            .outerjoin(TicketSolutionType, Ticket.solution_type_id == TicketSolutionType.id)
-            .where(
-                in_areas,
-                Ticket.status.in_((STATUS_SOLVED, STATUS_CLOSED)),
-                or_(Ticket.solved_at >= recent, Ticket.closed_at >= recent),
-            )
-            .group_by(TicketSolutionType.name)
+    solved = db.execute(
+        select(TicketSolutionType.name, func.count())
+        .select_from(Ticket)
+        .outerjoin(TicketSolutionType, Ticket.solution_type_id == TicketSolutionType.id)
+        .where(
+            in_areas,
+            Ticket.status.in_((STATUS_SOLVED, STATUS_CLOSED)),
+            or_(Ticket.solved_at >= recent, Ticket.closed_at >= recent),
         )
-        .tuples()
-        .all()
-    )
+        .group_by(TicketSolutionType.name)
+    ).all()
     solved_by_type = sorted(
         (Count(key=name or "", label=name or "Ohne Lösungsart", count=n) for name, n in solved),
         key=lambda c: (-c.count, c.label),

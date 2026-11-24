@@ -560,7 +560,7 @@ def update_credential_warn_days(
     days = valid_warn_days(body.days)
     if days is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Drei absteigende Zahlen innerhalb der Grenzen angeben",
         )
     before = list(warn_days(db))

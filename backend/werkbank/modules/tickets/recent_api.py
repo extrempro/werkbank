@@ -20,7 +20,6 @@ from werkbank.modules.tickets.models import Ticket, TicketNavPrefs, TicketRecent
 
 router = APIRouter(prefix="/api/tickets/leiste")
 
-LIMITS = (5, 10, 15, 25)
 DEFAULT_LIMIT = 15
 # Obergrenze aller Einträge je Person (auch unsichtbare), damit nichts unbegrenzt wächst
 HARD_LIMIT = 200

@@ -35,14 +35,13 @@ Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen spä
 
 | Begriff | Bedeutung |
 |---|---|
-| Kern | Funktionen, die alle Module nutzen (Anmeldung, Rollen, Aufgaben, Workflows, Kommentare, Audit-Log, Benachrichtigungen, Reports). |
-| Modul | Fachlicher Bereich mit eigenen Daten, Seiten, Rollen, Workflows und Jobs. |
+| Kern | Funktionen, die alle Module nutzen (Anmeldung, Rechte, Aufgaben, Kommentare, Audit-Log, Benachrichtigungen, Reports). |
+| Modul | Fachlicher Bereich mit eigenen Daten, Seiten, Rollen und Jobs. |
 | Einstellung | Ein einzelner Konfigurationswert im Tenant, eindeutig über einen **Pfad** adressiert, z. B. `entra/conditionalAccess/<Richtlinie>/state`. |
 | Snapshot | Ein vollständiger Abruf der Tenant-Konfiguration zu einem Zeitpunkt. |
 | Änderung | Ein Unterschied einer Einstellung zwischen zwei Snapshots (neu, geändert, entfernt). |
 | Soll-Wert | Der beschlossene oder gewünschte Wert einer Einstellung. |
 | Eintrag (Evergreen) | Eine Neuerung einer Software mit Status neu, bearbeitet oder abgeschlossen und Notizen. |
-| Workflow | Beschriebene Abfolge von Schritten mit Rollen, Aktionen und Regeln. |
 | Konnektor | Zugang zu einem externen System (Graph, Exchange Online PowerShell, …). |
 
 ---
@@ -74,7 +73,7 @@ Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen spä
 | Versionen | SemVer. Jeder PR, der die Anwendung ändert, hebt die Version an. Nach dem Mergen legt der Workflow `release.yml` Tag `vX.Y.Z` und GitHub Release mit dem Abschnitt aus `CHANGELOG.md` an. Was Anwender bemerken, steht zusätzlich in der App unter „Neuigkeiten“ (`frontend/src/release-notes.ts`). |
 | Abhängigkeiten | Dependabot (pip, npm, Docker, Docker Compose, GitHub Actions) |
 | Statische Analyse | CodeQL (GitHub Code Scanning) und Semgrep |
-| Secret Scanning | GitHub Secret Scanning mit Push Protection, zusätzlich gitleaks |
+| Secret Scanning | GitHub Secret Scanning mit Push Protection, zusätzlich Betterleaks (Nachfolger von gitleaks) |
 
 ---
 
@@ -167,7 +166,6 @@ Ein Modul liefert:
 - Datenbanktabellen und Migrationen
 - API-Routen und Seiten
 - Rollen, Stufen und Rechte
-- Workflow-Beschreibungen (`workflow.yaml`)
 - Jobs (z. B. Collector)
 - Aufgaben für die Aufgabenliste
 - Dashboard-Kacheln
@@ -219,33 +217,7 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
 
 ### 6.3 Workflow-Engine
 
-Workflows werden je Modul in YAML beschrieben. Stand: Die Engine ist im Kern vorhanden, wird aber derzeit von keinem Bereich genutzt (Evergreen kommt seit 0.76 ohne Ablauf aus); die Tests nutzen einen Beispiel-Ablauf (`backend/tests/fixtures/workflow_beispiel.yaml`). Beispiel:
-
-```yaml
-workflow: evergreen
-schritte:
-  - id: it_bewertung
-    rolle: Evergreen.IT
-    aktionen:
-      - { id: pflichtig, ziel: fachabteilungen }
-      - { id: nicht_pflichtig, ziel: abgeschlossen, kommentar: pflicht,
-          ueberspringt: [fachabteilungen, vorlage, betriebsrat, gf, umsetzung] }
-  - id: betriebsrat
-    rolle: Evergreen.Betriebsrat
-    erfassen_im_auftrag: [Evergreen.Team, Evergreen.IT]
-    aktionen:
-      - { id: zustimmen, ziel: gf }
-      - { id: auflagen,  ziel: gf, kommentar: pflicht }
-      - { id: ablehnen,  ziel: abgelehnt, kommentar: pflicht }
-  # …
-```
-
-Regeln:
-
-- Der Status eines Vorgangs ist der aktuelle Schritt. Er ändert sich **nur** über definierte Aktionen der zuständigen Rolle oder über automatische Bedingungen (z. B. Soll/Ist-Abgleich).
-- Jede Aktion erzeugt einen unveränderlichen Protokolleintrag: Person, Zeitpunkt, Schritt, Aktion, Entscheidung, Kommentar und gegebenenfalls „im Auftrag von“.
-- Keine Aktion zum direkten Setzen eines Status.
-- Stand: Die Engine ist umgesetzt (`core/workflow.py`). Die Beschreibung wird beim Start geprüft (unbekannte Ziele oder Rollen, Sackgassen). Das Protokoll (`workflow_events`) ist per Datenbank-Trigger nur anhängend; jede Aktion steht zusätzlich im Audit-Log. Eine Aktion kann den erwarteten Schritt mitgeben und wird abgewiesen, wenn der Vorgang inzwischen weiterbearbeitet wurde. Das Überspringen von Schritten ergibt sich aus dem Ziel der Aktion; ein eigenes Feld `ueberspringt` gibt es nicht.
+Entfernt in 0.124.2 (entschieden, Migration 0085): Die Engine für Abläufe in YAML (Schritte, Rollen, Aktionen, unveränderliches Protokoll) wurde seit dem Umbau von Evergreen in 0.76 von keinem Bereich mehr genutzt. Code, Tabellen (`workflow_instances`, `workflow_events`, Migration 0085) und die Abhängigkeit `pyyaml` sind entfernt. Braucht ein Bereich wieder einen festen Ablauf, wird er dort umgesetzt oder die Engine neu aufgebaut.
 
 ### 6.4 Kommentare und Kommentarregeln
 
@@ -276,7 +248,7 @@ Standardregeln:
 ### 6.6 Audit-Log
 
 - Nur Anhängen erlaubt, keine Änderung, kein Löschen über die App. Einzige Ausnahme ist die Aufbewahrungsfrist.
-- Protokolliert: Anmeldung und Abmeldung, Rollennutzung, alle Workflow-Aktionen, Bewertungen, Änderungen an Beschreibungen, Soll-Werten und Regeln, Verwaltungsaktionen, Exporte, Zugriffe auf Anhänge.
+- Protokolliert: Anmeldung und Abmeldung, Rollennutzung, Bewertungen, Änderungen an Beschreibungen, Soll-Werten und Regeln, Verwaltungsaktionen, Exporte, Zugriffe auf Anhänge.
 - Felder: Zeitpunkt, Person (Entra-Objekt-ID und Anzeigename), Modul, Aktion, Objekt, Ergebnis, IP (gekürzt, siehe Datenschutz).
 - Aufbewahrung: 90 Tage, in der Verwaltung einstellbar (30 bis 3650 Tage). Der Worker löscht ältere Einträge stündlich und protokolliert die Bereinigung. Die Datenbank lässt das Löschen nur für diesen Auftrag zu und nie für Einträge unter 30 Tagen.
 
@@ -965,8 +937,6 @@ Kern:
 | `sessions` | id, user_id, erstellt, zuletzt_aktiv, ablauf, step_up_zeit |
 | `modules` | key, name, aktiv, version |
 | `tasks` | id, module, objekt_typ, objekt_id, titel, untertitel, rolle, user_id?, faellig, erledigt |
-| `workflow_instances` | id, workflow, objekt_typ, objekt_id, schritt, endzustand |
-| `workflow_events` | id, instance_id, schritt, aktion, entscheidung, kommentar, user_id, im_auftrag_von?, zeitpunkt |
 | `comments` | id, objekt_typ, objekt_id, user_id, text, zeitpunkt |
 | `attachments` | id, objekt_typ, objekt_id, dateiname, mime, groesse, sha256, speicherpfad, user_id, zeitpunkt |
 | `audit_log` | id, zeitpunkt, user_id, module, aktion, objekt_typ, objekt_id, ergebnis, ip_gekuerzt, details (JSONB) |
@@ -1138,7 +1108,7 @@ Handy (ab 360 px), Tablet, Desktop. Aktuelle Versionen von Edge, Chrome, Firefox
 | Docker-Deployment | jeder PR | Image bauen (`backend/Dockerfile`), `docker compose up`, Healthchecks, Smoke-Test; die Compose-Datei für den Betrieb wird geprüft (Image aus der Registry, kein Build) |
 | Container-Scan | jeder PR, wöchentlich | Trivy: Dateisystem (Abhängigkeiten, Konfiguration, Secrets) und das gebaute Docker-Image; Abbruch bei HIGH/CRITICAL mit verfügbarem Update, begründete Ausnahmen in `.trivyignore`; Trivy auf Version und Digest festgelegt |
 | Statische Analyse | jeder PR, wöchentlich | CodeQL (Python, JavaScript/TypeScript), Semgrep (inkl. XSS-Regeln) |
-| Secrets | jeder Push, wöchentlich | gitleaks |
+| Secrets | jeder Push, wöchentlich | Betterleaks |
 | Abhängigkeiten | wöchentlich und jeder PR | Dependabot (wöchentlich), pip-audit und npm audit (jeder PR). Blockierend für npm sind die Pakete der ausgelieferten App (`--omit=dev`); Treffer in Entwicklungs- und Testwerkzeugen erscheinen als Warnung, weil sie nicht ausgeliefert werden und Lücken dort teils noch keine Korrektur haben (entschieden November 2026). Eine automatische Prüfung auf ungenutzte Pakete gibt es noch nicht |
 | Service Worker | jeder PR | Playwright-Test: Offline-Seite, keine API-Daten im Cache. Der Test für den Wechsel von alter zu neuer Version mit Update-Hinweis fehlt noch |
 | Release | Merge auf `main` | `release.yml`: Tag und GitHub Release, wenn die Version neu ist |
@@ -1161,7 +1131,7 @@ Handy (ab 360 px), Tablet, Desktop. Aktuelle Versionen von Edge, Chrome, Firefox
 werkbank/
 ├── backend/
 │   ├── Dockerfile              # Build aus dem ausgecheckten Repository
-│   ├── werkbank/core/          # Anmeldung, Sitzungen, Rollen, Workflow, Audit, Aufgaben, Profilbild
+│   ├── werkbank/core/          # Anmeldung, Sitzungen, Rechte, Audit, Aufgaben, Profilbild
 │   ├── werkbank/modules/
 │   │   ├── m365_config/
 │   │   └── evergreen/

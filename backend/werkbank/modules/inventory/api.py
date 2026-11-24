@@ -313,12 +313,6 @@ class NinjaOut(BaseModel):
     missing_since: datetime | None
 
 
-class SpecOut(BaseModel):
-    group: str
-    name: str
-    value: str
-
-
 class LoanRef(BaseModel):
     """Offener Verleih eines Geräts."""
 
@@ -405,7 +399,7 @@ def _kind(db: Session, kind_id: int) -> InventoryKind:
     row = db.get(InventoryKind, kind_id)
     if row is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannte Hardware-Art"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Unbekannte Hardware-Art"
         )
     return row
 
@@ -416,7 +410,7 @@ def _model(db: Session, model_id: int | None) -> InventoryModel | None:
     row = db.get(InventoryModel, model_id)
     if row is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekanntes Modell"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Unbekanntes Modell"
         )
     return row
 
@@ -651,7 +645,7 @@ def _room(db: Session, room_id: int | None) -> InventoryRoom | None:
     row = db.get(InventoryRoom, room_id)
     if row is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannter Raum"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Unbekannter Raum"
         )
     return row
 
@@ -661,18 +655,18 @@ def _holder(
 ) -> tuple[InventoryPosition | None, InventoryWorkplace | None]:
     if position_id is not None and workplace_id is not None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Ein Gerät gehört entweder zu einer Stelle oder zu einem Arbeitsplatz.",
         )
     position = db.get(InventoryPosition, position_id) if position_id is not None else None
     if position_id is not None and position is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannte Stelle"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Unbekannte Stelle"
         )
     workplace = db.get(InventoryWorkplace, workplace_id) if workplace_id is not None else None
     if workplace_id is not None and workplace is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannter Arbeitsplatz"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Unbekannter Arbeitsplatz"
         )
     return position, workplace
 
@@ -831,7 +825,7 @@ def update_hardware(
         body.hostname != row.hostname or body.serial.casefold() != row.serial.casefold()
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Hostname und Seriennummer kommen aus NinjaOne und sind hier nicht änderbar.",
         )
     _check_serial(db, body.serial, row.id)
@@ -941,19 +935,19 @@ def retire_hardware(
     reason = db.get(InventoryRetireReason, body.reason_id)
     if reason is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannter Grund"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Unbekannter Grund"
         )
     # Ein Tag Spielraum: Kurz nach Mitternacht ist es in Deutschland schon der nächste Tag.
     if body.retired_on > now_utc().date() + timedelta(days=1):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Das Datum darf nicht in der Zukunft liegen.",
         )
     kind = db.get(InventoryKind, row.kind_id)
     has_storage = bool(kind and kind.has_storage)
     if has_storage and not body.wiped:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Bitte bestätige, dass der Datenträger gelöscht oder vernichtet ist.",
         )
     row.status = STATUS_RETIRED
@@ -1586,7 +1580,7 @@ def _kit_rows(db: Session, kit: InventoryKit, rows: list[KitRowIn]) -> None:
         kind_ids = sorted(set(entry.kind_ids))
         if any(kind_id not in known for kind_id in kind_ids):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannte Hardware-Art"
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Unbekannte Hardware-Art"
             )
         kit_row = InventoryKitRow(
             kit_id=kit.id, position=index, label=entry.label, count=entry.count

@@ -5,6 +5,7 @@ prüft Werte und Größe. Die Oberfläche baut daraus die Seite selbst auf; HTML
 oder ausgeliefert.
 """
 
+import json
 from typing import Any
 
 # Größte Seite: Zeichen des JSON, Tiefe der Verschachtelung, Zahl der Bausteine
@@ -200,12 +201,12 @@ def clean_content(raw: object) -> tuple[dict[str, Any], str]:
     doc = walker.node(raw, 0)
     if not doc.get("content"):
         doc = empty_doc()
+    if doc_size(doc) > CONTENT_MAX_CHARS:
+        raise ContentError("Die Seite ist zu groß.")
     text = " ".join("".join(walker.text).split())
     return doc, text
 
 
 def doc_size(doc: dict[str, Any]) -> int:
     """Grobe Größe für die Grenze (Zeichen im JSON)."""
-    import json
-
     return len(json.dumps(doc, ensure_ascii=False, separators=(",", ":")))

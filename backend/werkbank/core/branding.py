@@ -32,7 +32,6 @@ DEFAULT_NAME = "Werkbank"
 MODULE = "kern"
 
 AssetKind = Literal["logo-hell", "logo-dunkel", "logo-mail", "favicon"]
-ASSET_KINDS: tuple[str, ...] = ("logo-hell", "logo-dunkel", "logo-mail", "favicon")
 MAIL_FOOTER_MAX = 1000
 PRIVACY_URL_MAX = 500
 

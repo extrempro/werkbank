@@ -1,7 +1,6 @@
 """Gemeinsame Logik der Gerätezuordnung: Graph-Zugriff wählen, Status prüfen, aufräumen."""
 
 import logging
-from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Protocol
 
@@ -162,6 +161,3 @@ def check_open(db: Session, graph: GraphApi | None, now: datetime | None = None)
 
 def remove_expired_admin_tokens(db: Session, now: datetime | None = None) -> None:
     db.execute(delete(DeviceAdminSession).where(DeviceAdminSession.expires_at < (now or now_utc())))
-
-
-GraphFactory = Callable[[str], GraphApi]

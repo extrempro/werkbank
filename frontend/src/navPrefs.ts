@@ -60,10 +60,6 @@ export function loadNavPrefs(): Promise<void> {
   return getJson<unknown>(BASE).then(accept, () => undefined);
 }
 
-export function isPinned(path: string): boolean {
-  return state.pinned.includes(path);
-}
-
 /** Heftet eine Seite an oder löst sie. Die Anzeige wechselt sofort; scheitert das Speichern, geht sie zurück. */
 export function togglePin(path: string): Promise<void> {
   const before = state.pinned;

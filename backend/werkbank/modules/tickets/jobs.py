@@ -95,7 +95,7 @@ def prune_intake_log(db: Session, now: datetime) -> int:
     """„Letzte Eingänge“ ohne Ticket je Bereich nach `intake_log_days` löschen. Zeilen zu einem
     Ticket gehen mit dessen Aufbewahrung."""
     removed = 0
-    for area_id, days in db.execute(select(TicketArea.id, TicketArea.intake_log_days)).tuples():
+    for area_id, days in db.execute(select(TicketArea.id, TicketArea.intake_log_days)):
         result = db.execute(
             delete(TicketMailLog).where(
                 TicketMailLog.area_id == area_id,

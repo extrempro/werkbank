@@ -121,6 +121,13 @@ def save(client: TestClient, page: Any, *paragraphs: str, title: str | None = No
 # --- ohne Datenbank -------------------------------------------------------------------------
 
 
+def test_content_size_limit() -> None:
+    # Viele leere Absätze bleiben unter der Zahl der Bausteine, aber über der Größe
+    paragraphs = [{"type": "paragraph", "attrs": {"textAlign": None}}] * 50_000
+    with pytest.raises(ContentError, match="zu groß"):
+        clean_content({"type": "doc", "content": paragraphs})
+
+
 def test_content_whitelist() -> None:
     content, text = clean_content(
         {

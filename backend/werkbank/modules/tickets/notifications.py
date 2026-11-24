@@ -35,7 +35,7 @@ def _link(number: int) -> str:
 
 
 def tickets_notifications(db: Session, settings: Settings, now: datetime) -> Iterable[Event]:
-    users = {oid.lower(): uid for uid, oid in db.execute(select(User.id, User.entra_oid)).tuples()}
+    users = {oid.lower(): uid for uid, oid in db.execute(select(User.id, User.entra_oid))}
     areas = {a.id: a for a in db.scalars(select(TicketArea).where(TicketArea.active.is_(True)))}
     people: dict[tuple[int, tuple[str, ...]], frozenset[uuid.UUID]] = {}
 

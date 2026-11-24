@@ -349,9 +349,6 @@ export function htmlToText(html: string): string {
 
 // ---------- aus Outlook (.msg) ----------
 
-export const isReportClass = (cls: string | undefined) =>
-  !!cls && /^REPORT\.IPM\..*\.(?:NDR|DR|Delayed\.DR|Relayed\.DR)$/i.test(cls);
-
 export function bounceFromMsg(m: MsgMessage): Bounce | null {
   const cls = str(m.props, P.MESSAGE_CLASS);
   const subject = str(m.props, P.SUBJECT) ?? "";

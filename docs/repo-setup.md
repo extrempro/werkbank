@@ -57,7 +57,7 @@ Settings → **Rules** → Rulesets → **New branch ruleset**:
 - `Backend (Lint, Typen, Tests)`
 - `Docker-Deployment (Build, Start, Smoke-Test)`
 - `Semgrep (statische Analyse, XSS)`
-- `gitleaks (Secrets)`
+- `Betterleaks (Secrets)`
 - `Trivy (Abhängigkeiten, Konfiguration, Secrets)`
 - `Trivy (Docker-Image)`
 - `CodeQL (python)`
