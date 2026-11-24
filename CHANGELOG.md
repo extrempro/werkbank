@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.120.0] – 2026-11-24
+
+### Tickets
+
+- **Wer antwortet, steht in der Mail** (Variante B aus dem Entwurf): Über dem Text einer Antwort „{Name} schreibt“, im Kasten die Zeile „Bearbeitet von“ (bei automatischen Mails die zuständige Person, wenn vergeben). Auch im Textteil der Mail. Absender bleibt das Postfach des Bereichs.
+
+### Tests
+
+- `test_tickets_mail.py` (Name über dem Text und im Kasten, ohne Zuständige keine Zeile)
+
 ## [0.119.0] – 2026-11-24
 
 ### Dokumentation (Phase D2)

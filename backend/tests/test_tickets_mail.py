@@ -27,7 +27,7 @@ from werkbank.modules.tickets.mailparse import (
     ticket_number,
 )
 from werkbank.modules.tickets.models import Ticket, TicketArea, TicketMailOut
-from werkbank.modules.tickets.outbound import render_html
+from werkbank.modules.tickets.outbound import render_html, render_text
 
 PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
@@ -195,6 +195,22 @@ def test_placeholders_are_escaped_in_html() -> None:
     assert "Werkbank" not in html
     solved = render_html(area, brand, ticket, text, None, status="solved")
     assert "Gelöst" in solved and "#112233" in solved
+
+
+def test_reply_shows_who_answers() -> None:
+    area = TicketArea(name="IT", mailbox="it@example.com", signature="")
+    brand = MailBrand("Portal", "#1f57c3", None, "", "")
+    ticket = Ticket(number=7, subject="Test", status="waiting", assignee_name="Max <Muster>")
+    html = render_html(area, brand, ticket, "Hallo", None, author="Ina <Beispiel>")
+    assert "Ina &lt;Beispiel&gt; schreibt" in html
+    assert "Bearbeitet von" in html and "Ina &lt;Beispiel&gt;" in html
+    text = render_text(area, brand, ticket, "Hallo", author="Ina Beispiel")
+    assert "Ina Beispiel schreibt:" in text and "Bearbeitet von: Ina Beispiel" in text
+    # Automatische Mail: keine Überschrift, aber die zuständige Person im Kasten
+    auto = render_html(area, brand, ticket, "Status geändert", None)
+    assert "schreibt" not in auto and "Max &lt;Muster&gt;" in auto
+    nobody = render_html(area, brand, Ticket(number=8, subject="x", status="new"), "x", None)
+    assert "Bearbeitet von" not in nobody
 
 
 def test_mail_brand_privacy_link_only_https() -> None:
