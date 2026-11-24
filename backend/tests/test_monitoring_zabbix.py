@@ -251,6 +251,8 @@ def db(migrated_db: None, db_session: Session) -> Session:
         ZbxUnmonitored,
         ZbxGroupSite,
         ZbxProblem,
+        # Stundenwerte anderer Tests (feste Daten) dürfen den Verlauf nicht verfälschen
+        ZbxProblemHour,
         ZbxMaintenance,
         ZbxHost,
         ZbxRun,
