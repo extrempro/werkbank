@@ -14,7 +14,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from werkbank.core.deps import DbDep, SettingsDep
+from werkbank.core.deps import DbDep, SettingsDep, check_recent_login
 from werkbank.modules.inventory.people import PeopleError, PeopleFinder, get_people_finder
 from werkbank.modules.tickets.access import (
     AccessDep,
@@ -212,6 +212,8 @@ def create_area(body: NewAreaIn, access: AccessDep, db: DbDep, settings: Setting
     """Bereich anlegen (nur Ticket-Verwaltung), mit erster Bereichsverwaltung."""
     if not access.manager:
         raise forbidden("Bereiche legt nur die Ticket-Verwaltung an.")
+    # Vergibt die erste Bereichsverwaltung: nur mit frischer Anmeldung
+    check_recent_login(access.user, settings)
     if body.admin.role != AREA_ADMIN:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -286,6 +288,8 @@ def add_grant(
     area = _area_for_settings(db, access, area_id)
     if body.role == AREA_ADMIN and not access.manager:
         raise forbidden("Die Bereichsverwaltung vergibt nur die Ticket-Verwaltung.")
+    # Rechte vergeben: nur mit frischer Anmeldung (wie in der Verwaltung)
+    check_recent_login(access.user, settings)
     _check_grant(body, valid_oid(body.oid, settings))
     _add_grant(db, area, body)
     try:
@@ -314,9 +318,11 @@ def remove_grant(
     grant_id: Annotated[int, Path(ge=1, le=2_000_000_000)],
     access: AccessDep,
     db: DbDep,
+    settings: SettingsDep,
 ) -> AreaOut:
     """Rolle entziehen; der letzte Eintrag der Bereichsverwaltung bleibt."""
     area = _area_for_settings(db, access, area_id)
+    check_recent_login(access.user, settings)
     grant = db.get(TicketAreaGrant, grant_id)
     if grant is None or grant.area_id != area.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Eintrag nicht gefunden.")

@@ -8,11 +8,13 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
-from werkbank.core.sessions import now_utc
+from werkbank.core.deps import STEP_UP_HEADER
+from werkbank.core.models import UserSession
+from werkbank.core.sessions import SESSION_COOKIE, hash_token, now_utc
 from werkbank.main import create_app
 from werkbank.modules.tickets.jobs import housekeeping
 from werkbank.modules.tickets.models import (
@@ -387,3 +389,31 @@ def test_test_membership_endpoint_only_in_test() -> None:
     client = TestClient(create_app(settings), base_url=ORIGIN, headers=HEADERS)
     response = client.post(f"{BASE}/test/membership", json={"group_oid": "g", "oid": "o"})
     assert response.status_code in (401, 403, 404)
+
+
+def test_granting_rights_needs_recent_login(db: Session, areas: dict[str, int]) -> None:
+    """Rollen vergeben und entziehen nur mit frischer Anmeldung (wie in der Verwaltung)."""
+    manager = client_for("Vera Verwaltung", ["Tickets.Verwaltung"])
+    token = manager.cookies.get(SESSION_COOKIE) or ""
+    db.execute(
+        update(UserSession)
+        .where(UserSession.token_hash == hash_token(token))
+        .values(authenticated_at=now_utc() - timedelta(minutes=16))
+    )
+    db.commit()
+    me = {"role": "admin", "kind": "person", "oid": oid_of("Vera Verwaltung"), "name": "Vera"}
+    stale = manager.post(f"{SETTINGS}/areas/{areas['it']}/grants", json=me)
+    assert stale.status_code == 403 and stale.headers[STEP_UP_HEADER] == "required"
+    new_area = manager.post(f"{SETTINGS}/areas", json={"name": "Neu", "admin": me})
+    assert new_area.status_code == 403
+    listed = manager.get(SETTINGS).json()["areas"]
+    grants = next(a for a in listed if a["id"] == areas["it"])["grants"]
+    removed = manager.delete(f"{SETTINGS}/areas/{areas['it']}/grants/{grants[-1]['id']}")
+    assert removed.status_code == 403
+    # Zuweisung ist kein Recht und geht weiter
+    assignment = manager.put(
+        f"{SETTINGS}/areas/{areas['it']}/assignment", json={"assignment": "round_robin"}
+    )
+    assert assignment.status_code == 200
+    fresh = client_for("Vera Verwaltung", ["Tickets.Verwaltung"])
+    assert fresh.post(f"{SETTINGS}/areas/{areas['it']}/grants", json=me).status_code == 201

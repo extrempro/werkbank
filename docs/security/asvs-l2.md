@@ -75,7 +75,7 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 | # | Fund | Schwere | Stand |
 |---|---|---|---|
 | E1 | Doku-Links mit Backslash (`/\example.com`) bestanden die Prüfung „beginnt mit `/`, nicht mit `//`“. Browser lesen `\` wie `/` und öffnen eine fremde Seite. Wer in einem Arbeitsbereich bearbeiten darf, konnte so einen intern aussehenden Link auf eine Phishing-Seite legen (kein Skript, die CSP greift). | mittel | ✅ behoben: `_valid_href` (`doku/content.py`) und `allowedLink` (`DokuEditor.tsx`) lehnen Backslash in Pfaden ab, ebenso `safeLink` für Ziele von Benachrichtigungen. Tests: `test_content_whitelist`, `doku.test.tsx`, `notifications.test.ts`; Nachtest: 422 |
-| E2 | Rechte vergeben ohne frische Anmeldung außerhalb der Verwaltung: Die Ticket-Verwaltung kann sich als Bereichsverwaltung eintragen (und erhält damit Zugriff auf die Tickets), die Doku-Verwaltung kann sich als Mitglied eines Arbeitsbereichs eintragen. Beides steht im Audit-Log, verlangt aber keine Anmeldung der letzten 15 Minuten wie `/api/admin`. | niedrig | offen, Entscheidung beim Betreiber (ändert die Bedienung) |
+| E2 | Rechte vergeben ohne frische Anmeldung außerhalb der Verwaltung: Die Ticket-Verwaltung kann sich als Bereichsverwaltung eintragen (und erhält damit Zugriff auf die Tickets), die Doku-Verwaltung kann sich als Mitglied eines Arbeitsbereichs eintragen. Beides steht im Audit-Log, verlangte aber keine Anmeldung der letzten 15 Minuten wie `/api/admin`. | niedrig | ✅ behoben (Entscheidung Betreiber): Rollen in Ticket-Bereichen vergeben und entziehen, Bereich anlegen, Personen eines Arbeitsbereichs ändern (Verwaltung und Arbeitsbereichs-Verwaltung) und Seitenrechte zurücksetzen nur mit frischer Anmeldung (`check_recent_login`). Seitenrechte („Rechte und Teilen“) bewusst ohne, sie geben niemandem mehr als den Zugriff auf diese Seiten. Tests: `test_granting_rights_needs_recent_login` (Doku, Tickets) |
 | E3 | Die Test-Pfade der Tickets (`/api/tickets/test/*`, ohne Anmeldung) waren auch in Produktion eingebunden und nur in der Funktion mit 404 gesperrt. Ein Fehler in dieser einen Prüfung hätte sie geöffnet. | niedrig | ✅ behoben: werden nur noch bei `ENVIRONMENT=test/development` mit Test-Anmeldung eingebunden (`main.py`). Test: `test_test_routes_only_in_test_environment`; Nachtest Produktion: Pfad existiert nicht |
 | E4 | Kein HSTS aus der Anwendung | Info | bewusst: HSTS setzt der Reverse Proxy (`docs/inbetriebnahme.md`) |
 | E5 | Push-Abo: Wer die geheime Endpunkt-Adresse eines Browsers kennt, kann das Abo auf sich umschreiben | Info | akzeptiert: Die Adresse vergibt der Push-Dienst zufällig, sie verlässt den Browser nur zur Werkbank |
@@ -114,7 +114,7 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 | V5 Dateien | erfüllt | Typ am Dateianfang, Größengrenzen, Ablage außerhalb des Webroots unter Zufallsnamen, Download mit `Content-Disposition` und `nosniff`, Vorschau nur in Sandbox |
 | V6 Authentifizierung | erfüllt | nur Entra ID, keine Passwörter in der Werkbank, MFA über Conditional Access (Betreiber) |
 | V7 Sitzungen | erfüllt | serverseitig, 256-Bit-Token, Hash in der DB, Leerlauf 30 min, höchstens 8 h, neue Sitzung je Anmeldung, Abmelden nur per POST (P2) |
-| V8 Autorisierung | teilweise | serverseitig je Anfrage und je Objekt geprüft; offen: frische Anmeldung beim Vergeben von Rechten außerhalb der Verwaltung (E2) |
+| V8 Autorisierung | erfüllt | serverseitig je Anfrage und je Objekt geprüft; Rechte vergeben nur mit frischer Anmeldung (E2) |
 | V9 Self-contained Tokens | erfüllt | ID-Token nur über MSAL geprüft (Signatur, `iss`, `aud`, `exp`, `nonce`), keine eigenen JWTs, Sitzung ist ein Referenz-Token |
 | V10 OAuth und OIDC | erfüllt | Authorization Code Flow mit PKCE, vertraulicher Client, `state`/`nonce` einmalig, feste Redirect-URI, Tokens nur serverseitig (Gerätezuordnung verschlüsselt) |
 | V11 Kryptografie | erfüllt | Zufall aus `secrets`, SHA-256 für Sitzungs-Hashes, Fernet für gespeicherte Schlüssel (`settings_key` als Docker-Secret), keine eigene Kryptografie |
@@ -127,7 +127,7 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 
 ## Dokumentierte Sicherheitsentscheidungen
 
-- **Sitzungen:** Leerlauf 30 Minuten, höchstens 8 Stunden; frische Anmeldung (höchstens 15 Minuten alt) für Schreibzugriffe in der Verwaltung und für Berechtigungen.
+- **Sitzungen:** Leerlauf 30 Minuten, höchstens 8 Stunden; frische Anmeldung (höchstens 15 Minuten alt) für Schreibzugriffe in der Verwaltung, für Berechtigungen und für das Vergeben von Rechten in Ticket-Bereichen und Doku-Arbeitsbereichen.
 - **Fehlversuche und Last:** Kein eigenes Passwort, Fehlversuche begrenzt Entra. Die Werkbank begrenzt je IP und Minute: Anmeldung 60, API 600, Exporte 10, Internet-Abfragen der IT-Tools 300.
 - **Dateien:** Ticket-Anhänge je Bereich einstellbar (Standard 15 MB, höchstens 50 MB), Typen per Positivliste, nie HTML/SVG; Belege PDF bis 15 MB; Projektdokumente PDF bis 20 MB; Grundrisse PNG/JPEG/WebP bis 10 MB; Branding PNG/WebP bis 256 KB; Excel-Import bis 10 MB.
 - **Rollen:** Verwaltung nur über die Admin-Gruppe in Entra. Die übrigen Rechte sind Stufen je Bereich in der Werkbank. Tickets folgen den Rollen in den Bereichen, Doku den Rechten im Arbeitsbereich.
@@ -137,9 +137,8 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 
 ## Offene Punkte
 
-1. **E2:** Entscheiden, ob das Vergeben von Rechten in der Ticket- und der Doku-Verwaltung eine frische Anmeldung verlangen soll.
-2. **Betreiber:** HSTS und TLS am Reverse Proxy, MFA und „Zuweisung erforderlich“ in Entra, Secrets als Docker-Secrets.
-3. E2E-Tests über HTTPS (auch WebKit), HSTS prüfen.
-4. Objektberechtigungen bei jedem neuen Modul erneut prüfen.
+1. **Betreiber:** HSTS und TLS am Reverse Proxy, MFA und „Zuweisung erforderlich“ in Entra, Secrets als Docker-Secrets.
+2. E2E-Tests über HTTPS (auch WebKit), HSTS prüfen.
+3. Objektberechtigungen bei jedem neuen Modul erneut prüfen.
 
 > Diese Prüfung ersetzt keinen externen Penetrationstest. Nach größeren Änderungen wiederholen; dabei die Funde oben gegenprüfen.

@@ -96,7 +96,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "hint",
-                text: "Für die Verwaltung verlangt die Werkbank eine frische Anmeldung, wenn deine letzte länger als 15 Minuten zurückliegt. Microsoft fragt dann noch einmal nach deinem Kennwort.",
+                text: "Für die Verwaltung und wenn du Rechte vergibst (Rollen in Ticket-Bereichen, Personen in Doku-Arbeitsbereichen) verlangt die Werkbank eine frische Anmeldung, wenn deine letzte länger als 15 Minuten zurückliegt. Microsoft fragt dann noch einmal nach deinem Kennwort.",
               },
             ],
           },
@@ -1307,7 +1307,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Eine Rolle bekommt eine Gruppe aus Entra oder eine einzelne Person. Bei Gruppen zählen auch Mitglieder verschachtelter Gruppen. Wer aus einer Gruppe entfernt wird, verliert den Zugriff nach wenigen Minuten. Jeder Bereich behält mindestens einen Eintrag mit Bereichsverwaltung.",
+                text: "Eine Rolle bekommt eine Gruppe aus Entra oder eine einzelne Person. Bei Gruppen zählen auch Mitglieder verschachtelter Gruppen. Wer aus einer Gruppe entfernt wird, verliert den Zugriff nach wenigen Minuten. Jeder Bereich behält mindestens einen Eintrag mit Bereichsverwaltung. Rollen vergeben und entziehen geht nur mit frischer Anmeldung (siehe „Anmelden und abmelden“).",
               },
               {
                 kind: "text",
@@ -1825,7 +1825,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Wer eine Seite sehen oder ändern darf, kommt zuerst aus dem Arbeitsbereich: Jede Person darin hat Lesen, Bearbeiten oder Verwalten. Verwalten heißt Bearbeiten und zusätzlich die Personen des Arbeitsbereichs ändern.",
+                text: "Wer eine Seite sehen oder ändern darf, kommt zuerst aus dem Arbeitsbereich: Jede Person darin hat Lesen, Bearbeiten oder Verwalten. Verwalten heißt Bearbeiten und zusätzlich die Personen des Arbeitsbereichs ändern. Personen hinzufügen, entfernen oder ihre Rolle ändern geht nur mit frischer Anmeldung (siehe „Anmelden und abmelden“).",
               },
               {
                 kind: "text",
