@@ -146,6 +146,11 @@ def test_logout_ends_session(migrated_db: None, db_session: Session) -> None:
     client = client_for(make_app())
     login_as(client, ["Config.Reader"], oid="abmelden")
     token = client.cookies.get(SESSION_COOKIE) or ""
+    # Ein fremder Link (GET) oder ein POST von fremder Seite meldet niemanden ab
+    assert client.get("/auth/logout", follow_redirects=False).status_code == 405
+    foreign = client.post("/auth/logout", headers={"Origin": "https://evil.example"})
+    assert foreign.status_code == 403
+    assert client.get("/api/me").status_code == 200
     response = client.post("/auth/logout", headers={"Origin": ORIGIN})
     assert response.status_code == 303
     stored = db_session.scalars(

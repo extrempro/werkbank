@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.125.1",
+    date: "2026-11-24",
+    summary: "Sicherheit: Links in der Dokumentation strenger geprüft.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Links auf Seiten der Werkbank dürfen keinen umgekehrten Schrägstrich (\\) mehr enthalten. Solche Links sahen intern aus, führten aber auf eine fremde Seite.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.125.0",
     date: "2026-11-24",
     summary: "Dokumentation: Seiten verschieben.",

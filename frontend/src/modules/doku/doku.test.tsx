@@ -125,6 +125,7 @@ describe("Doku: Adressen, Baum, Links", () => {
     expect(allowedLink("/doku/seite/1")).toBe(true);
     expect(allowedLink("javascript:alert(1)")).toBe(false);
     expect(allowedLink("//example.com")).toBe(false);
+    expect(allowedLink("/\\example.com")).toBe(false);
     expect(allowedLink("http://example.com")).toBe(false);
   });
 

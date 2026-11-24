@@ -311,9 +311,11 @@ def callback(
     )
 
 
-@router.api_route("/auth/logout", methods=["GET", "POST"])
+@router.post("/auth/logout")
 def logout(request: Request, db: DbDep) -> RedirectResponse:
-    """Beendet die Sitzung (auch als Front-Channel-Abmeldung von Entra aufrufbar)."""
+    """Beendet die Sitzung. Nur per POST mit eigener Origin: ein fremder Link oder eine
+    Weiterleitung (GET) darf niemanden abmelden. Eine Front-Channel-Abmeldung von Entra
+    wird nicht genutzt (siehe docs/entra-setup.md)."""
     token = request.cookies.get(SESSION_COOKIE)
     if token:
         write_audit(db, module="kern", action="abmeldung", ip=_client_ip(request))

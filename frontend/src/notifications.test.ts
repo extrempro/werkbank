@@ -6,6 +6,7 @@ describe("Benachrichtigungen", () => {
     expect(safeLink("/budget/rechnungen")).toBe("/budget/rechnungen");
     expect(safeLink("/m365/dienststatus#EX1001")).toBe("/m365/dienststatus#EX1001");
     expect(safeLink("//example.com/x")).toBe("/benachrichtigungen");
+    expect(safeLink("/\\example.com/x")).toBe("/benachrichtigungen");
     expect(safeLink("https://example.com")).toBe("/benachrichtigungen");
     expect(safeLink("javascript:alert(1)")).toBe("/benachrichtigungen");
   });

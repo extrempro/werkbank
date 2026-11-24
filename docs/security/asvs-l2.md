@@ -1,7 +1,8 @@
 # Sicherheitsnachweis – OWASP ASVS Stufe 2
 
-> **Stand:** Version 0.6 (Kern, Module M365-Konfiguration und Evergreen, Konto mit Profilbild, Suche).
-> **Grundlage:** OWASP ASVS **5.0.0** (Mai 2025), Stufe 2. Verweise auf einzelne Anforderungen im Format `v5.0.0-<Kapitel>.<Abschnitt>.<Anforderung>`. Die Übersicht unten ist nach Themen gegliedert; die Aufschlüsselung je Anforderung folgt.
+> **Stand:** 24.11.2026, Version 0.125.1 (alle Bereiche: Kern, M365-Konfiguration, Evergreen, IT-Budget, IT-Projekte, Dokumentation, IT-Bestand, Gerätezuordnung, IT-Monitoring, IT-Tools, Tickets, Verwaltung).
+> **Grundlage:** OWASP ASVS **5.0.0** (Mai 2025), Stufe 2. Verweise auf einzelne Anforderungen im Format `v5.0.0-<Kapitel>.<Abschnitt>.<Anforderung>`.
+> **Letzte Prüfung:** Erstprüfung über alle Kapitel V1–V17 am 24.11.2026 mit unabhängigem Prüfer, siehe [Prüfung vom 24.11.2026](#prüfung-vom-24112026). Die Übersicht nach Themen beschreibt die Maßnahmen. Wo sie noch von `Werkbank.Admin` spricht, gilt heute: Verwaltung über die Admin-Gruppe in Entra, die übrigen Rechte als Stufen je Bereich in der Werkbank.
 
 Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht anwendbar
 
@@ -57,14 +58,88 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 | **Navigation (Anheften, Zuletzt besucht)** | `/api/navigation` liefert und ändert nur Einträge der angemeldeten Person (keine ID in der Anfrage); gespeichert werden nur Pfade aus einer festen Liste erlaubter Seiten, die dieselbe Rollenlogik wie die Navigation nutzt (`core/navigation.py`); fremde Adressen, Detailseiten und Seiten ohne Rolle werden abgelehnt (422) bzw. bei Besuchen nicht gemerkt; beim Ausgeben wird erneut gefiltert, damit nach dem Entzug einer Rolle nichts mehr erscheint; höchstens 20 angeheftete und 10 zuletzt besuchte Seiten; Antworten mit `no-store`, der Service Worker speichert sie nicht | `tests/test_navigation.py`, `navigation.test.ts`, `nav.test.tsx`, E2E `navigation.spec.ts` | ✅ |
 | **Profilbild** | Optional (`ENTRA_PROFILE_PHOTO`); Abruf nur des eigenen Bildes mit der delegierten Berechtigung `User.Read`, nur von `https://graph.microsoft.com`, Zeitlimit; nur JPEG/PNG (am Dateianfang geprüft), höchstens 512 KB; das Zugriffstoken wird nicht gespeichert; Auslieferung nur an angemeldete Personen mit festem Medientyp und `nosniff`; ein Fehler beim Abruf verhindert die Anmeldung nicht (`core/avatar.py`) | `tests/test_avatar.py`, E2E `konto.spec.ts` | ✅ (Abruf gegen Microsoft Graph nur mit nachgestellten Antworten getestet) |
 | **Tickets: Leiste** | Einträge nur der eigenen Objekt-ID; Öffnen und Stern nur für Tickets aus Bereichen der Person (sonst 404), Ausgabe filtert bei jedem Abruf nach den aktuellen Bereichsrechten; Höchstzahl nur 5/10/15/25, Obergrenze 200 Einträge je Person (`backend/werkbank/modules/tickets/recent_api.py`) | `test_tickets_recent.py`, `ticketBar.test.tsx`, E2E `tickets.spec.ts` | ✅ |
-| **Dateien und Anhänge** | Keine Uploads durch Personen. Anhänge aus Ticket-Mails: Typ über den Dateianfang (Positivliste je Postfach), Größengrenze, Ablage außerhalb des Webroots unter zufälligem Namen, Zugriff nur über das Ticket mit Bereichsprüfung; Download als Anhang, Vorschau nur für Bilder (Sandbox ohne Skripte) und PDF nach erneuter Prüfung des Dateianfangs, Text nur als Auszug, immer `nosniff` und `no-store` (`backend/werkbank/modules/tickets/preview.py`) | `test_tickets_mail.py`, `test_tickets_preview.py`, `tickets.test.tsx` | ✅ |
+| **Dateien und Anhänge** | Uploads durch Personen nur mit Prüfung am Dateianfang: Belege im IT-Budget (PDF, bis 15 MB) und Dokumente in IT-Projekten (PDF, bis 20 MB) nur als Download, Grundrisse im IT-Bestand (PNG/JPEG/WebP, bis 10 MB) mit eigener Sandbox-CSP, Branding (PNG/WebP, bis 256 KB), Excel-Import (.xlsx, bis 10 MB). Anhänge aus Ticket-Mails: Typ über den Dateianfang (Positivliste je Postfach), Größengrenze, Ablage außerhalb des Webroots unter zufälligem Namen, Zugriff nur über das Ticket mit Bereichsprüfung; Download als Anhang, Vorschau nur für Bilder (Sandbox ohne Skripte) und PDF nach erneuter Prüfung des Dateianfangs, Text nur als Auszug, immer `nosniff` und `no-store` (`backend/werkbank/modules/tickets/preview.py`) | `test_tickets_mail.py`, `test_tickets_preview.py`, `tickets.test.tsx` | ✅ |
 | **Browser-Speicher / PWA** | Service Worker cacht nur die App-Hülle, `/api` und `/auth` nie; Antworten unter `/api`, `/auth` und `/health` tragen `Cache-Control: no-store` (Browser und Proxys speichern sie nicht), außer Profilbilder und Branding mit eigener Regel; keine Fachdaten im lokalen Speicher (dort nur die gewählte Darstellung und die zuletzt gesehene Version der Neuigkeiten) | E2E `pwa.spec.ts` (Cache-Inhalt), Offline-Seite, `test_api_answers_are_never_stored` | ✅ |
 | **Konfiguration und Container** | Container ohne Root, schreibgeschütztes Dateisystem, keine Capabilities, `no-new-privileges`; Secrets nur als Docker-Secrets | Trivy (Konfiguration), Docker-Smoke-Test | ✅ |
 | **Lieferkette** | Actions per Commit-Hash gepinnt, Dependabot mit 7 Tagen Wartezeit, Lockfiles (npm; Python in `backend/uv.lock` mit Hashes, Installation nur mit `--require-hashes`), `npm audit` (blockierend für App-Pakete, Warnung für Entwicklungswerkzeuge)/`pip-audit`, Semgrep, CodeQL, Betterleaks, Trivy | CI-Workflows `ci.yml`, `security.yml`, `codeql.yml` | ✅ |
 | **Secrets im Repository** | Betterleaks (Nachfolger von gitleaks, Image auf Version festgelegt), GitHub Secret Scanning mit Push Protection, `.gitignore` für Schlüssel und `.env` | `security.yml` | ✅ |
 
+## Prüfung vom 24.11.2026
+
+**Was geprüft wurde:** Produktions-Build der Oberfläche (`vite build`) mit dem Backend in zwei Instanzen auf eigener Datenbank: eine mit `ENVIRONMENT=production` ohne Test-Anmeldung, eine Testinstanz mit Test-Anmeldung, um Sitzungen je Rolle anzulegen. Es gab Testzugänge für jede Stufe in jedem Bereich (Admin, Doku-Verwaltung, Doku-Mitglieder mit und ohne Bearbeiten, Ticket-Verwaltung, zwei Ticket-Bereiche, Budget, Projekte, Bestand, Tools, M365, Evergreen, Monitoring, Berichte, Gerätezuordnung, ohne Rechte). Die Werkbank hat nur einen Mandanten. Die Trennung wurde deshalb zwischen Doku-Arbeitsbereichen und Ticket-Bereichen geprüft.
+
+**Vorgehen:** Bestandsaufnahme aller 403 HTTP-Routen und des WebSockets, dann echte Anfragen gegen die laufenden Instanzen (curl, Skripte): anonym und mit jeder Rolle gegen alle Routen, IDOR mit fremden Kennungen, CSRF-Varianten, gespeichertes XSS, Weiterleitungen, Uploads und Downloads, SSRF, WebSocket, Sitzungen, Header. Danach hat ein unabhängiger Prüfer, der nur Adressen, Testzugänge und den Code kannte, die Instanzen selbst angegriffen. Jeder Fund wurde nachgestellt, behoben, mit Tests abgesichert und der Angriff gegen den korrigierten Stand wiederholt.
+
+### Funde und Korrekturen (eigene Prüfung)
+
+| # | Fund | Schwere | Stand |
+|---|---|---|---|
+| E1 | Doku-Links mit Backslash (`/\example.com`) bestanden die Prüfung „beginnt mit `/`, nicht mit `//`“. Browser lesen `\` wie `/` und öffnen eine fremde Seite. Wer in einem Arbeitsbereich bearbeiten darf, konnte so einen intern aussehenden Link auf eine Phishing-Seite legen (kein Skript, die CSP greift). | mittel | ✅ behoben: `_valid_href` (`doku/content.py`) und `allowedLink` (`DokuEditor.tsx`) lehnen Backslash in Pfaden ab, ebenso `safeLink` für Ziele von Benachrichtigungen. Tests: `test_content_whitelist`, `doku.test.tsx`, `notifications.test.ts`; Nachtest: 422 |
+| E2 | Rechte vergeben ohne frische Anmeldung außerhalb der Verwaltung: Die Ticket-Verwaltung kann sich als Bereichsverwaltung eintragen (und erhält damit Zugriff auf die Tickets), die Doku-Verwaltung kann sich als Mitglied eines Arbeitsbereichs eintragen. Beides steht im Audit-Log, verlangt aber keine Anmeldung der letzten 15 Minuten wie `/api/admin`. | niedrig | offen, Entscheidung beim Betreiber (ändert die Bedienung) |
+| E3 | Die Test-Pfade der Tickets (`/api/tickets/test/*`, ohne Anmeldung) waren auch in Produktion eingebunden und nur in der Funktion mit 404 gesperrt. Ein Fehler in dieser einen Prüfung hätte sie geöffnet. | niedrig | ✅ behoben: werden nur noch bei `ENVIRONMENT=test/development` mit Test-Anmeldung eingebunden (`main.py`). Test: `test_test_routes_only_in_test_environment`; Nachtest Produktion: Pfad existiert nicht |
+| E4 | Kein HSTS aus der Anwendung | Info | bewusst: HSTS setzt der Reverse Proxy (`docs/inbetriebnahme.md`) |
+| E5 | Push-Abo: Wer die geheime Endpunkt-Adresse eines Browsers kennt, kann das Abo auf sich umschreiben | Info | akzeptiert: Die Adresse vergibt der Push-Dienst zufällig, sie verlässt den Browser nur zur Werkbank |
+| E6 | Stufe „Nutzen“ bei Tickets wirkt nicht auf die Schnittstelle. Zugriff ergibt sich allein aus den Rollen in den Bereichen. | Info | akzeptiert: keine Lücke, nur eine missverständliche Stufe; bei Gelegenheit bereinigen |
+
+### Funde des unabhängigen Prüfers
+
+| # | Fund | Schwere | Stand |
+|---|---|---|---|
+| P1 | Gespeicherter Link auf fremde Seiten über `/\host` in Doku-Seiten (wie E1) | mittel | ✅ behoben mit E1 |
+| P2 | `GET /auth/logout` beendete die Sitzung. Eine fremde Seite konnte per Link oder Weiterleitung abmelden (Belästigung, keine Daten- oder Rechtefolgen). | niedrig | ✅ behoben: Abmelden nur per POST mit Origin-Prüfung; die Oberfläche nutzte schon POST, eine Front-Channel-Abmeldung ist nicht eingerichtet (`docs/entra-setup.md`). Test: `test_logout_ends_session` (GET 405, fremde Origin 403); Nachtest: Sitzung bleibt bei GET bestehen |
+| P3 | Kein HSTS aus der Anwendung | Info | wie E4 |
+| P4 | IT-Tools: Zwischen der Prüfung der Zieladresse (nur öffentliche IPs) und der Verbindung löst `httpx` den Namen erneut auf (DNS-Rebinding) | Info | akzeptiert: Die Ziele stehen fest (DNS-über-HTTPS-Anbieter, IANA-RDAP-Liste, Pwned Passwords, crt.sh) und sind nicht frei eingebbar; die Verbindung ist immer https mit Zertifikatsprüfung auf den Namen, ein umgebogener Name auf einen internen Server scheitert am Zertifikat; Abfragen ins Internet sind standardmäßig aus |
+
+### Ohne Fund geprüft
+
+- **Zugriff:** anonym alle Routen 401 (außer Branding und Health); jede Rolle nur ihre Bereiche (Budget, Projekte, Bestand, Monitoring, Berichte, Gerätezuordnung, M365, Evergreen, Tools); IDOR mit fremden Kennungen bei Tickets, Anhängen, Doku-Seiten, Unterseiten, Versionen, Rechten, Verschieben, Rückverweisen, Kommentaren → 404; Erwähnungen nur an Personen mit Leserecht; Suche zeigt nur Erlaubtes; Selbst-Eintragen in fremde Arbeitsbereiche → 404.
+- **CSRF:** POST/PUT/PATCH/DELETE ohne Origin, mit fremder Origin, `null`, Präfix-Täuschung und Referer mit `@` → 403; keine CORS-Header.
+- **Anmeldung und OIDC:** MSAL mit `state`, `nonce` und PKCE, Prüfung von `tid`, Anmeldevorgang nur einmal gültig, neue Sitzung je Anmeldung; Rücksprungziel mit `//`, `/\`, Tab, Zeilenumbruch abgewiesen; Admin-Konto der Gerätezuordnung an die eigene Sitzung gebunden.
+- **Sitzungen:** `__Host-`-Cookie, Secure, HttpOnly, SameSite=Lax; Abmelden löscht serverseitig; andere Geräte abmelden; fremde Sitzungs-ID → 404; frische Anmeldung für alle Schreibzugriffe unter `/api/admin` und für Berechtigungen.
+- **XSS und Injection:** Doku nur als Editor-JSON mit Positivliste; `javascript:`, `data:`, `vbscript:`, Tab, `//host` abgewiesen; React ohne `dangerouslySetInnerHTML`; LIKE-Platzhalter maskiert, ORM ohne zusammengesetztes SQL; CSV mit `safe_cell`, xlsx mit Inline-Text; Log-Einträge der Live-Bearbeitung ohne Fehlertext.
+- **Dateien:** Mail-Anhänge HTML/SVG abgelehnt, PDF/Bilder nur nach Prüfung am Dateianfang mit Sandbox-CSP, sonst Download mit `nosniff`, Dateiname als `filename*`; Belege und Projektdokumente nur als Download; Branding nur PNG/WebP.
+- **SSRF:** IT-Tools nur https auf Port 443 zu öffentlichen Adressen ohne Weiterleitung; NetBox, Zabbix und KI nur auf die eine eingetragene Adresse, ohne Weiterleitungen.
+- **WebSocket:** fremde Origin, ohne Cookie, ohne Recht → Abbruch 4403; Nur-Leser können nichts schreiben.
+- **Header und Fehler:** CSP, `nosniff`, Referrer-, Permissions-Policy, COOP/CORP, `no-store` für `/api` und `/auth`; `/docs` und `/openapi.json` nicht erreichbar; keine Stacktraces.
+- **Abhängigkeiten:** `npm audit` (Oberfläche, E2E) ohne Fund, `pip-audit` ohne Fund.
+
+## Stand je ASVS-Kapitel (5.0.0)
+
+| Kapitel | Stand | Umsetzung und Belege |
+|---|---|---|
+| V1 Encoding und Sanitization | erfüllt | React-Ausgabe als Text, Doku als JSON mit Positivliste (`doku/content.py`), HTML aus Mails und Microsoft-Texten vor dem Speichern in Text umgewandelt, CSV/xlsx gegen Formeln, ORM; Tests `test_doku.py`, `test_safe_cell` |
+| V2 Validierung und Geschäftslogik | erfüllt | Pydantic mit Längen und Wertebereichen, Statuswechsel mit Ausgangsprüfung (409), Grenzen für Doku-Inhalt, Rate-Limits |
+| V3 Web-Frontend | erfüllt | strikte CSP ohne `unsafe-inline`, `frame-ancestors 'none'`, Links nur https/mailto/intern ohne Backslash (E1), Service Worker ohne `/api` |
+| V4 API und Web-Services | erfüllt | Rollenprüfung je Endpunkt, Origin-Prüfung, OpenAPI aus, `no-store`, WebSocket mit Origin- und Rechteprüfung |
+| V5 Dateien | erfüllt | Typ am Dateianfang, Größengrenzen, Ablage außerhalb des Webroots unter Zufallsnamen, Download mit `Content-Disposition` und `nosniff`, Vorschau nur in Sandbox |
+| V6 Authentifizierung | erfüllt | nur Entra ID, keine Passwörter in der Werkbank, MFA über Conditional Access (Betreiber) |
+| V7 Sitzungen | erfüllt | serverseitig, 256-Bit-Token, Hash in der DB, Leerlauf 30 min, höchstens 8 h, neue Sitzung je Anmeldung, Abmelden nur per POST (P2) |
+| V8 Autorisierung | teilweise | serverseitig je Anfrage und je Objekt geprüft; offen: frische Anmeldung beim Vergeben von Rechten außerhalb der Verwaltung (E2) |
+| V9 Self-contained Tokens | erfüllt | ID-Token nur über MSAL geprüft (Signatur, `iss`, `aud`, `exp`, `nonce`), keine eigenen JWTs, Sitzung ist ein Referenz-Token |
+| V10 OAuth und OIDC | erfüllt | Authorization Code Flow mit PKCE, vertraulicher Client, `state`/`nonce` einmalig, feste Redirect-URI, Tokens nur serverseitig (Gerätezuordnung verschlüsselt) |
+| V11 Kryptografie | erfüllt | Zufall aus `secrets`, SHA-256 für Sitzungs-Hashes, Fernet für gespeicherte Schlüssel (`settings_key` als Docker-Secret), keine eigene Kryptografie |
+| V12 Sichere Kommunikation | teilweise | TLS und HSTS am Reverse Proxy (Betreiber); ausgehend nur https mit Zertifikatsprüfung |
+| V13 Konfiguration | erfüllt | Secrets als Docker-Secrets, Test-Anmeldung und Test-Pfade nur in Testumgebungen (E3), Container ohne Root und schreibgeschützt, Lieferkette gepinnt und geprüft |
+| V14 Datenschutz | erfüllt | `no-store` für API-Antworten, keine Fachdaten im Browser-Speicher, IP im Audit-Log gekürzt, Aufbewahrungsfristen |
+| V15 Sicheres Programmieren und Architektur | erfüllt | Module mit eigener Rechteprüfung, Positivlisten, Abhängigkeiten mindestens 7 Tage alt, CodeQL, Semgrep, Trivy, Betterleaks |
+| V16 Logging und Fehlerbehandlung | erfüllt | Audit-Log nur anhängend (Trigger), Anmeldung, Ablehnung, Abmeldung, Rechte, Exporte; keine Tokens im Log; Fehler ohne Interna |
+| V17 WebRTC | nicht zutreffend | keine WebRTC-Funktionen |
+
+## Dokumentierte Sicherheitsentscheidungen
+
+- **Sitzungen:** Leerlauf 30 Minuten, höchstens 8 Stunden; frische Anmeldung (höchstens 15 Minuten alt) für Schreibzugriffe in der Verwaltung und für Berechtigungen.
+- **Fehlversuche und Last:** Kein eigenes Passwort, Fehlversuche begrenzt Entra. Die Werkbank begrenzt je IP und Minute: Anmeldung 60, API 600, Exporte 10, Internet-Abfragen der IT-Tools 300.
+- **Dateien:** Ticket-Anhänge je Bereich einstellbar (Standard 15 MB, höchstens 50 MB), Typen per Positivliste, nie HTML/SVG; Belege PDF bis 15 MB; Projektdokumente PDF bis 20 MB; Grundrisse PNG/JPEG/WebP bis 10 MB; Branding PNG/WebP bis 256 KB; Excel-Import bis 10 MB.
+- **Rollen:** Verwaltung nur über die Admin-Gruppe in Entra. Die übrigen Rechte sind Stufen je Bereich in der Werkbank. Tickets folgen den Rollen in den Bereichen, Doku den Rechten im Arbeitsbereich.
+- **Schützenswerte Daten:** Tickets und Anhänge (Personen, Inhalte von Mails), IT-Budget mit Verträgen und Belegen, Doku-Inhalte, Tenant-Einstellungen, gespeicherte Zugangsschlüssel (NetBox, Zabbix, KI, SMTP, Admin-Token der Gerätezuordnung, verschlüsselt).
+- **Protokollierung:** Anmeldungen, Ablehnungen, Abmeldungen, Rechteänderungen, Verwaltung, Exporte und Fehler der Hintergrundaufträge kommen ins Audit-Log. Aufbewahrung nach Einstellung (Standard 90 Tage), Einträge unter 30 Tagen sind nie löschbar. Keine Tokens, Passwörter oder Sitzungskennungen im Log.
+- **Abmeldung:** nur per POST; keine Front-Channel-Abmeldung von Entra.
+
 ## Offene Punkte
 
-1. Objektberechtigungen für die fachlichen Daten der Module: für M365-Konfiguration und Evergreen umgesetzt (siehe Tabelle), bei jedem neuen Modul erneut zu prüfen
-2. E2E-Tests über HTTPS (auch WebKit), HSTS prüfen
-3. Einzelnachweis je Anforderung nach ASVS 5.0.0 (Kapitel V1 bis V17)
+1. **E2:** Entscheiden, ob das Vergeben von Rechten in der Ticket- und der Doku-Verwaltung eine frische Anmeldung verlangen soll.
+2. **Betreiber:** HSTS und TLS am Reverse Proxy, MFA und „Zuweisung erforderlich“ in Entra, Secrets als Docker-Secrets.
+3. E2E-Tests über HTTPS (auch WebKit), HSTS prüfen.
+4. Objektberechtigungen bei jedem neuen Modul erneut prüfen.
+
+> Diese Prüfung ersetzt keinen externen Penetrationstest. Nach größeren Änderungen wiederholen; dabei die Funde oben gegenprüfen.

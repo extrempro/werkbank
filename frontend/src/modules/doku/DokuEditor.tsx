@@ -50,7 +50,8 @@ export function allowedLink(href: string): boolean {
   return (
     lower.startsWith("https://") ||
     lower.startsWith("mailto:") ||
-    (value.startsWith("/") && !value.startsWith("//"))
+    // Kein Backslash: Browser lesen „/\host“ wie „//host“ (fremde Seite)
+    (value.startsWith("/") && !value.startsWith("//") && !value.includes("\\"))
   );
 }
 

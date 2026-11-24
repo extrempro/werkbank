@@ -194,6 +194,11 @@ def test_content_whitelist() -> None:
     }
     with pytest.raises(ContentError):
         clean_content({"type": "doc", "content": [{"type": "paragraph", "content": [bad_link]}]})
+    # Browser lesen „/\host“ wie „//host“: Backslash in Pfaden ist nicht erlaubt
+    for href in ("/\\evil.example", "/doku\\..\\x", "//evil.example"):
+        foreign = {**bad_link, "marks": [{"type": "link", "attrs": {"href": href}}]}
+        with pytest.raises(ContentError):
+            clean_content({"type": "doc", "content": [{"type": "paragraph", "content": [foreign]}]})
     with pytest.raises(ContentError):
         clean_content({"type": "doc", "content": [{"type": "heading", "attrs": {"level": 7}}]})
     deep: dict[str, Any] = {"type": "paragraph"}
