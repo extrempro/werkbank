@@ -1077,6 +1077,7 @@ def send_reply(
             # Die Mail nennt den Status nach der Antwort
             status=body.status_after
             or (STATUS_IN_PROGRESS if ticket.status == "new" else ticket.status),
+            author=me_actor.name,
         )
     if message_id is None:
         ticket.solution_type_id, ticket.solution_text, ticket.solution_public = before

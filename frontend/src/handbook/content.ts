@@ -1190,7 +1190,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Unten auf der Seite wählst du „Antworten“ (nur an den Melder), „Antworten an alle“ (Melder und Beteiligte in Kopie) oder „Interne Notiz“. Im offenen Antwortfeld wechselst du mit „Nur Melder“ und „An alle“, ohne dass der Text verloren geht; darüber steht, an wen die Mail geht. Mit „Status danach“ setzt du beim Senden gleich „Wartet auf Rückmeldung“ oder „Gelöst“. Ein Entwurf bleibt erhalten, wenn du das Feld einklappst. Automatische Mails wie die Eingangsbestätigung gehen nur an den Melder.",
+                text: "Unten auf der Seite wählst du „Antworten“ (nur an den Melder), „Antworten an alle“ (Melder und Beteiligte in Kopie) oder „Interne Notiz“. Im offenen Antwortfeld wechselst du mit „Nur Melder“ und „An alle“, ohne dass der Text verloren geht; darüber steht, an wen die Mail geht. Mit „Status danach“ setzt du beim Senden gleich „Wartet auf Rückmeldung“ oder „Gelöst“. In der Mail steht dein Name über dem Text („… schreibt“) und im Kasten unter „Bearbeitet von“, damit der Melder weiß, wer ihm antwortet. Ein Entwurf bleibt erhalten, wenn du das Feld einklappst. Automatische Mails wie die Eingangsbestätigung gehen nur an den Melder.",
               },
               {
                 kind: "text",

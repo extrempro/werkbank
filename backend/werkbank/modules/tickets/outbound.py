@@ -7,6 +7,7 @@ Zeile.“. Eingesetzte Werte werden für HTML kodiert; Kopfzeilen sind gegen Zei
 geschützt. In Mails an Melder kommt die Werkbank nicht vor; Melder melden sich nie an.
 """
 
+import html
 import re
 from collections.abc import Sequence
 from email.message import EmailMessage
@@ -16,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from werkbank.core.mail_layout import (
+    MUTED,
     MailBrand,
     add_html,
     footer_text,
@@ -98,6 +100,22 @@ def values_for(ticket: Ticket, worker: str = "") -> dict[str, str]:
     }
 
 
+def handler_rows(ticket: Ticket, author: str) -> list[tuple[str, str]]:
+    """Wer das Ticket bearbeitet: wer antwortet, sonst die zuständige Person (wenn vergeben)."""
+    name = author or ticket.assignee_name
+    return [("Bearbeitet von", name)] if name else []
+
+
+def author_label(author: str) -> str:
+    """Überschrift über der Antwort einer Person (Variante B des Entwurfs)."""
+    return (
+        f'<p style="margin:0 0 14px;font-size:13px;font-weight:600;color:{MUTED};'
+        f'text-transform:uppercase;letter-spacing:.05em">{html.escape(author)} schreibt</p>'
+        if author
+        else ""
+    )
+
+
 def render_html(
     area: TicketArea,
     brand: MailBrand,
@@ -106,15 +124,22 @@ def render_html(
     logo_cid: str | None,
     status: str | None = None,
     extra: Sequence[tuple[str, str]] = (),
+    author: str = "",
 ) -> str:
     rows = [
         ("Ticket", f"T-{ticket.number}"),
         ("Betreff", ticket.subject),
         ("Status", REPORTER_STATUS.get(status or ticket.status, "In Bearbeitung")),
+        *handler_rows(ticket, author),
         *extra,
     ]
     signature = paragraphs(area.signature) if area.signature.strip() else ""
-    content = paragraphs(body) + info_box(brand, rows, badge=f"T-{ticket.number}") + signature
+    content = (
+        author_label(author)
+        + paragraphs(body)
+        + info_box(brand, rows, badge=f"T-{ticket.number}")
+        + signature
+    )
     return render_html_layout(
         brand,
         title=area_title(area),
@@ -132,15 +157,18 @@ def render_text(
     body: str,
     status: str | None = None,
     extra: Sequence[tuple[str, str]] = (),
+    author: str = "",
 ) -> str:
     parts = [
         REPLY_ABOVE,
         "",
+        *([f"{author} schreibt:", ""] if author else []),
         body.strip(),
         "",
         f"Ticket: T-{ticket.number}",
         f"Betreff: {ticket.subject}",
         f"Status: {REPORTER_STATUS.get(status or ticket.status, 'In Bearbeitung')}",
+        *[f"{label}: {value}" for label, value in handler_rows(ticket, author)],
         *[f"{label}: {value}" for label, value in extra],
     ]
     if area.signature.strip():
@@ -167,10 +195,12 @@ def build_message(
     auto: bool,
     cc_all: bool = False,
     status: str | None = None,
+    author: str = "",
 ) -> tuple[EmailMessage, str, list[str]]:
     """MIME-Nachricht an den Melder, mit `cc_all` auch an die Beteiligten in Kopie; liefert
     (Nachricht, Message-ID, Empfänger). Automatische Mails gehen nur an den Melder.
-    `status`: Status, den die Mail nennt (sonst der aktuelle des Tickets)."""
+    `status`: Status, den die Mail nennt (sonst der aktuelle des Tickets). `author`: wer
+    antwortet (steht über dem Text und im Kasten)."""
     brand = load_mail_brand(db)
     participants = db.scalars(
         select(TicketParticipant.mail).where(TicketParticipant.ticket_id == ticket.id)
@@ -194,11 +224,11 @@ def build_message(
         message["Auto-Submitted"] = "auto-generated"
         message["X-Auto-Response-Suppress"] = "All"
     extra = solution_rows(db, ticket, status)
-    message.set_content(render_text(area, brand, ticket, body, status, extra))
+    message.set_content(render_text(area, brand, ticket, body, status, extra, author))
     add_html(
         message,
         brand,
-        lambda cid: render_html(area, brand, ticket, body, cid, status, extra),
+        lambda cid: render_html(area, brand, ticket, body, cid, status, extra, author),
         domain,
     )
     return message, message_id.strip("<>").lower(), [ticket.reporter_mail, *cc]
@@ -216,6 +246,7 @@ def send_to_reporter(
     cc_all: bool = False,
     sent_to: list[str] | None = None,
     status: str | None = None,
+    author: str = "",
 ) -> tuple[str | None, str]:
     """Senden und im Ausgang vermerken. Liefert (Message-ID oder None, Fehlertext); die
     Empfänger landen in `sent_to`, wenn angegeben."""
@@ -226,7 +257,14 @@ def send_to_reporter(
     if mailbox is None:
         return None, "Die Postfächer der Tickets sind nicht eingerichtet."
     message, message_id, recipients = build_message(
-        db, area, ticket, body, auto=auto, cc_all=cc_all and not auto, status=status
+        db,
+        area,
+        ticket,
+        body,
+        auto=auto,
+        cc_all=cc_all and not auto,
+        status=status,
+        author=author,
     )
     if sent_to is not None:
         sent_to.extend(recipients)
