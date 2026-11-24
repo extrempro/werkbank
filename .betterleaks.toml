@@ -29,7 +29,7 @@ regexes = [
 [[allowlists]]
 description = "Erfundene Kennwörter und Zugangsdaten in Tests und für die Datenbank der CI"
 # Betterleaks hat strengere allgemeine Regeln als gitleaks. Sie schlagen in Tests an
-# (z. B. "password": "geheim", Kennungen wie "audit-leser", https://user:pw@… als Beispiel)
+# (erfundene Kennwörter, Kennungen von Testpersonen, Beispieladressen mit Zugangsdaten)
 # und beim Kennwort der Wegwerf-Datenbank in ci.yml. Nur diese zwei allgemeinen Regeln und nur
 # diese Pfade; Regeln für echte Schlüsselformate (z. B. Tokens von Anbietern) gelten dort weiter.
 targetRules = ["generic-password", "generic-credential-uri"]
