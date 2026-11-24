@@ -175,6 +175,11 @@ const PATHS = {
   datei: ["M14 3H6v18h12V7z", "M14 3v4h4"],
   herunterladen: ["M12 4v11", "M7 10l5 5 5-5", "M5 20h14"],
   weiter: ["M9 6l6 6-6 6"],
+  "ort-stadt": ["M3 21h18", "M5 21V8l7-5 7 5v13"],
+  "ort-standort": ["M4 3h16v18H4z", "M9 7h2M13 7h2M9 11h2M13 11h2", "M10 21v-4h4v4"],
+  "ort-abschnitt": ["M3 7h18v14H3z", "M12 7v14"],
+  "ort-etage": ["M12 3l9 5-9 5-9-5z", "M3 13l9 5 9-5"],
+  "alles-einklappen": ["M7 20l5-5 5 5", "M7 4l5 5 5-5"],
 } as const;
 
 export type IconName = keyof typeof PATHS;

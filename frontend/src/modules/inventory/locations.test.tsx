@@ -67,8 +67,16 @@ const tree: Locations = {
                     { id: 9, name: "Büro 0.12" },
                     { id: 10, name: "Lager" },
                   ],
+                  workplaces_free: 3,
                 },
-                { id: 5, name: "1. Obergeschoss", position: 1, has_plan: false, rooms: [] },
+                {
+                  id: 5,
+                  name: "1. Obergeschoss",
+                  position: 1,
+                  has_plan: false,
+                  rooms: [],
+                  workplaces_free: 0,
+                },
               ],
             },
           ],
@@ -259,19 +267,46 @@ describe("Standorte: Aufbau", () => {
     expect(container.querySelector(".loc-layout-wide")).toBeNull();
   });
 
-  it("stellt die Abstände im Baum ein und merkt sie sich", async () => {
+  it("wechselt zwischen kompakter und ausführlicher Ansicht und merkt sie sich", async () => {
+    window.localStorage.setItem("werkbank-standortbaum-abstand", "weit");
     stubFetch({ "GET /api/inventory/locations": tree, "GET /api/inventory/floors/4": floor });
     render(<LocationsPage floorId={4} roomId={null} roles={["Bestand.Reader"]} />);
     const nav = await screen.findByRole("navigation", { name: "Standorte" });
-    expect(screen.getByRole("radio", { name: "Normal" })).toBeChecked();
-    expect(nav).not.toHaveAttribute("data-spacing");
-    fireEvent.click(screen.getByRole("radio", { name: "Kompakt" }));
-    expect(nav).toHaveAttribute("data-spacing", "kompakt");
-    expect(window.localStorage.getItem("werkbank-standortbaum-abstand")).toBe("kompakt");
-    fireEvent.click(screen.getByRole("radio", { name: "Weiträumig" }));
-    expect(nav).toHaveAttribute("data-spacing", "weit");
-    fireEvent.click(screen.getByRole("radio", { name: "Normal" }));
+    // Vorgabe: ausführlich mit Kennzahlen unter dem Namen
+    expect(nav).toHaveAttribute("data-view", "ausfuehrlich");
+    expect(screen.getByRole("button", { name: "Ausführlich" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    const city = within(nav).getByRole("link", { name: /Musterstadt/ });
+    expect(city).toHaveTextContent("1 Standort · 2 Etagen · 2 Räume · 3 freie Plätze");
+    const upper = within(nav).getByRole("link", { name: /1\. Obergeschoss/ });
+    expect(upper).toHaveTextContent("0 Räume · ohne Grundriss");
+
+    fireEvent.click(screen.getByRole("button", { name: "Kompakt" }));
+    expect(nav).toHaveAttribute("data-view", "kompakt");
+    expect(window.localStorage.getItem("werkbank-standortbaum-ansicht")).toBe("kompakt");
     expect(window.localStorage.getItem("werkbank-standortbaum-abstand")).toBeNull();
+    // Kompakt: ganzer Name und Kennzahlen im Tooltip und für Screenreader
+    const compact = within(nav).getByRole("link", { name: /Musterstadt/ });
+    expect(compact).toHaveAttribute(
+      "title",
+      "Musterstadt · 1 Standort · 2 Etagen · 2 Räume · 3 freie Plätze",
+    );
+    expect(compact).toHaveAccessibleName(/Musterstadt, 1 Standort/);
+  });
+
+  it("klappt mit „Alles einklappen“ den ganzen Baum zu", async () => {
+    stubFetch({ "GET /api/inventory/locations": tree, "GET /api/inventory/floors/4": floor });
+    render(<LocationsPage floorId={4} roomId={null} roles={["Bestand.Reader"]} />);
+    const nav = await screen.findByRole("navigation", { name: "Standorte" });
+    expect(within(nav).getByRole("link", { name: /Erdgeschoss/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Alles einklappen" }));
+    expect(within(nav).queryByRole("link", { name: /Erdgeschoss/ })).toBeNull();
+    expect(within(nav).getByRole("button", { name: "Musterstadt aufklappen" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
   });
 
   it("zeigt einen Abschnitt mit seinen Etagen und legt dort eine neue an", async () => {

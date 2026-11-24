@@ -6,10 +6,12 @@ interface LinkProps {
   children: ReactNode;
   className?: string;
   "aria-current"?: "page";
+  /** Tooltip, z. B. der ganze Name, wenn er gekürzt angezeigt wird */
+  title?: string;
 }
 
 /** Verweis innerhalb der Werkbank ohne Neuladen der Seite. */
-export function Link({ to, children, className, "aria-current": ariaCurrent }: LinkProps) {
+export function Link({ to, children, className, title, "aria-current": ariaCurrent }: LinkProps) {
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
     if (event.defaultPrevented || event.button !== 0 || modified) {
@@ -20,7 +22,7 @@ export function Link({ to, children, className, "aria-current": ariaCurrent }: L
     document.getElementById("inhalt")?.focus();
   };
   return (
-    <a href={to} className={className} aria-current={ariaCurrent} onClick={onClick}>
+    <a href={to} className={className} title={title} aria-current={ariaCurrent} onClick={onClick}>
       {children}
     </a>
   );

@@ -176,6 +176,18 @@ test("IT-Bestand: Standorte anlegen und Etage öffnen", async ({
     await expect(
       tree.getByRole("link", { name: new RegExp(`^Etage ${stamp}`) }),
     ).toHaveCount(0);
+    // Ansicht: ausführlich mit Kennzahlen, kompakt in einer Zeile
+    await expect(
+      tree.getByRole("link", { name: new RegExp(`^Bauteil ${stamp}`) }),
+    ).toContainText("1 Etage");
+    await tree.getByRole("button", { name: "Kompakt" }).click();
+    await expect(tree).toHaveAttribute("data-view", "kompakt");
+    await expectNoA11yViolations(page);
+    await tree.getByRole("button", { name: "Ausführlich" }).click();
+    await tree.getByRole("button", { name: "Alles einklappen" }).click();
+    await expect(
+      tree.getByRole("link", { name: new RegExp(`^Bauteil ${stamp}`) }),
+    ).toHaveCount(0);
     await tree.getByRole("button", { name: "Standortbaum ausblenden" }).click();
     await expect(tree).toBeHidden();
     await page.getByRole("button", { name: "Standortbaum einblenden" }).click();

@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.117.0] – 2026-11-24
+
+### IT-Bestand
+
+- **Standortbaum mit zwei Ansichten** statt drei Abständen (0.113.0): „Kompakt“ (eine Zeile, langer Name mit „…“, ganz im Tooltip und für Screenreader, rechts die Zahl darunter, 32 px bzw. 44 px mit dem Finger) und „Ausführlich“ (Vorgabe; ganzer Name, darunter Standorte, Etagen, Räume, freie Plätze, „ohne Grundriss“). Umschalter oben im Baum, gemerkt im Browser; die alte Einstellung wird aufgeräumt.
+- Symbole je Ebene (Stadt, Standort, Gebäudeabschnitt, Etage) und „Alles einklappen“.
+- `workplaces_free` je Etage in `GET /api/inventory/locations`
+
+### Dokumentation
+
+- spec.md, Handbuch (Standorte)
+
+### Tests
+
+- `test_inventory_staff.py` (freie Plätze im Baum), `locations.test.tsx`, E2E `bestand.spec.ts`
+
 ## [0.116.0] – 2026-11-24
 
 ### Tickets

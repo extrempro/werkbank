@@ -28,6 +28,7 @@ import {
   uploadPlan,
   workplacePath,
   type Floor,
+  type FloorBrief,
   type FloorSpot,
   type LocationLevel,
   type Locations,
@@ -51,31 +52,28 @@ function readTreeHidden(): boolean {
   }
 }
 
-export type TreeSpacing = "kompakt" | "normal" | "weit";
+/** Ansicht des Standortbaums: eine Zeile je Eintrag oder mit Kennzahlen darunter. */
+export type TreeView = "kompakt" | "ausfuehrlich";
 
-export const TREE_SPACING_KEY = "werkbank-standortbaum-abstand";
-const TREE_SPACINGS: readonly { value: TreeSpacing; label: string }[] = [
+export const TREE_VIEW_KEY = "werkbank-standortbaum-ansicht";
+const TREE_VIEWS: readonly { value: TreeView; label: string }[] = [
   { value: "kompakt", label: "Kompakt" },
-  { value: "normal", label: "Normal" },
-  { value: "weit", label: "Weiträumig" },
+  { value: "ausfuehrlich", label: "Ausführlich" },
 ];
 
-export function readTreeSpacing(): TreeSpacing {
+export function readTreeView(): TreeView {
   try {
-    const value = window.localStorage.getItem(TREE_SPACING_KEY);
-    return value === "kompakt" || value === "weit" ? value : "normal";
+    return window.localStorage.getItem(TREE_VIEW_KEY) === "kompakt" ? "kompakt" : "ausfuehrlich";
   } catch {
-    return "normal";
+    return "ausfuehrlich";
   }
 }
 
-function saveTreeSpacing(spacing: TreeSpacing): void {
+function saveTreeView(view: TreeView): void {
   try {
-    if (spacing === "normal") {
-      window.localStorage.removeItem(TREE_SPACING_KEY);
-    } else {
-      window.localStorage.setItem(TREE_SPACING_KEY, spacing);
-    }
+    window.localStorage.setItem(TREE_VIEW_KEY, view);
+    // Frühere Einstellung „Abstände im Baum“ (bis 0.116.0) aufräumen
+    window.localStorage.removeItem("werkbank-standortbaum-abstand");
   } catch {
     // Speicher gesperrt: gilt nur bis zum Neuladen
   }
@@ -207,17 +205,78 @@ function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   );
 }
 
-/** Baum: Pfeil klappt auf und zu, der Name öffnet Stadt, Standort, Abschnitt oder Etage. */
+type TreeLevel = LocationLevel | "etage";
+
+const LEVEL_ICON = {
+  stadt: "ort-stadt",
+  standort: "ort-standort",
+  abschnitt: "ort-abschnitt",
+  etage: "ort-etage",
+} as const;
+
+/** Kennzahlen einer Ebene für die Zeile darunter (ausführlich) und die Zahl rechts (kompakt). */
+interface Figures {
+  sites?: number;
+  floors?: number;
+  rooms: number;
+  free: number;
+  noPlan?: boolean;
+}
+
+function floorFigures(floor: FloorBrief): Figures {
+  return { rooms: floor.rooms.length, free: floor.workplaces_free, noPlan: !floor.has_plan };
+}
+
+function sumFigures(floors: FloorBrief[]): Figures {
+  return floors.reduce(
+    (sum, floor) => ({
+      floors: (sum.floors ?? 0) + 1,
+      rooms: sum.rooms + floor.rooms.length,
+      free: sum.free + floor.workplaces_free,
+    }),
+    { floors: 0, rooms: 0, free: 0 } as Figures,
+  );
+}
+
+function figuresText(figures: Figures): string {
+  return [
+    figures.sites !== undefined ? plural(figures.sites, "Standort", "Standorte") : "",
+    figures.floors !== undefined ? plural(figures.floors, "Etage", "Etagen") : "",
+    plural(figures.rooms, "Raum", "Räume"),
+    figures.free > 0 ? plural(figures.free, "freier Platz", "freie Plätze") : "",
+    figures.noPlan ? "ohne Grundriss" : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** Kurze Zahl der kompakten Ansicht: was direkt darunter liegt (bei Etagen die Räume). */
+function shortCount(level: TreeLevel, figures: Figures): number {
+  if (level === "stadt") {
+    return figures.sites ?? 0;
+  }
+  return level === "etage" ? figures.rooms : (figures.floors ?? 0);
+}
+
+/**
+ * Baum: Pfeil klappt auf und zu, der Name öffnet Stadt, Standort, Abschnitt oder Etage.
+ * Kompakt: eine Zeile, lange Namen enden mit „…“ (ganz im Tooltip und für Screenreader),
+ * rechts eine Zahl. Ausführlich: ganzer Name, darunter die Kennzahlen.
+ */
 function LocationTree({
   tree,
   floor,
   node,
+  view,
+  collapsed,
 }: {
   tree: Locations;
   floor: Floor | null;
   node: { level: LocationLevel; id: number } | null;
+  view: TreeView;
+  /** Nach „Alles einklappen“: der Weg zur jetzigen Auswahl ist nicht mehr von selbst offen. */
+  collapsed: boolean;
 }) {
-  const [open, setOpen] = useState<Record<string, boolean>>({});
   // Offen ist anfangs nur der Weg zur gewählten Etage oder Ebene
   const onPath: Record<string, boolean> = {};
   if (floor) {
@@ -240,110 +299,141 @@ function LocationTree({
       }
     }
   }
+  // Nach „Alles einklappen“ bleibt auch der Weg zur Auswahl zu (bis man woanders hingeht)
+  const [open, setOpen] = useState<Record<string, boolean>>(() =>
+    collapsed ? Object.fromEntries(Object.keys(onPath).map((key) => [key, false])) : {},
+  );
   const isOpen = (key: string) => open[key] ?? onPath[key] ?? false;
   const toggle = (key: string) => setOpen({ ...open, [key]: !isOpen(key) });
+  const compact = view === "kompakt";
 
   const Row = ({
     id,
     level,
-    levelId,
+    href,
     name,
-    count,
+    figures,
+    current,
+    hasChildren,
   }: {
     id: string;
-    level: LocationLevel;
-    levelId: number;
+    level: TreeLevel;
+    href: string;
     name: string;
-    count: string;
-  }) => (
-    <div className={`lt-row lt-${level}`}>
-      <button
-        type="button"
-        className="lt-chev-button"
-        aria-expanded={isOpen(id)}
-        aria-label={`${name} ${isOpen(id) ? "zuklappen" : "aufklappen"}`}
-        onClick={() => toggle(id)}
-      >
-        <Icon name={isOpen(id) ? "pfeil-unten" : "pfeil-rechts"} />
-      </button>
-      <Link
-        to={levelPath(level, levelId)}
-        className="lt-open"
-        aria-current={node?.level === level && node.id === levelId ? "page" : undefined}
-      >
-        <span className="lt-name">{name}</span>
-        <span className="lt-count">{count}</span>
-      </Link>
-    </div>
-  );
+    figures: Figures;
+    current: boolean;
+    hasChildren: boolean;
+  }) => {
+    const text = figuresText(figures);
+    return (
+      <div className={`lt-row lt-${level}`}>
+        {hasChildren ? (
+          <button
+            type="button"
+            className="lt-chev-button"
+            aria-expanded={isOpen(id)}
+            aria-label={`${name} ${isOpen(id) ? "zuklappen" : "aufklappen"}`}
+            onClick={() => toggle(id)}
+          >
+            <Icon name={isOpen(id) ? "pfeil-unten" : "pfeil-rechts"} />
+          </button>
+        ) : (
+          <span className="lt-chev-space" aria-hidden="true" />
+        )}
+        <Link
+          to={href}
+          className="lt-open"
+          title={compact ? `${name} · ${text}` : undefined}
+          aria-current={current ? "page" : undefined}
+        >
+          <span className="lt-line">
+            <Icon name={LEVEL_ICON[level]} />
+            <span className="lt-name">{name}</span>
+            {compact && (
+              <span className="lt-count" aria-hidden="true">
+                {shortCount(level, figures)}
+              </span>
+            )}
+          </span>
+          {compact ? (
+            <span className="visually-hidden">{`, ${text}`}</span>
+          ) : (
+            <span className="lt-sub">{text}</span>
+          )}
+        </Link>
+      </div>
+    );
+  };
 
   return (
     <ul className="lt-list">
-      {tree.cities.map((city) => (
-        <li key={city.id}>
-          <Row
-            id={`c${city.id}`}
-            level="stadt"
-            levelId={city.id}
-            name={city.name}
-            count={plural(city.sites.length, "Standort", "Standorte")}
-          />
-          {isOpen(`c${city.id}`) && (
-            <ul className="lt-children">
-              {city.sites.map((site) => (
-                <li key={site.id}>
-                  <Row
-                    id={`s${site.id}`}
-                    level="standort"
-                    levelId={site.id}
-                    name={site.name}
-                    count={plural(
-                      site.sections.reduce((sum, section) => sum + section.floors.length, 0),
-                      "Etage",
-                      "Etagen",
+      {tree.cities.map((city) => {
+        const cityFloors = city.sites.flatMap((site) => site.sections.flatMap((s) => s.floors));
+        return (
+          <li key={city.id}>
+            <Row
+              id={`c${city.id}`}
+              level="stadt"
+              href={levelPath("stadt", city.id)}
+              name={city.name}
+              figures={{ ...sumFigures(cityFloors), sites: city.sites.length }}
+              current={node?.level === "stadt" && node.id === city.id}
+              hasChildren={city.sites.length > 0}
+            />
+            {isOpen(`c${city.id}`) && city.sites.length > 0 && (
+              <ul className="lt-children">
+                {city.sites.map((site) => (
+                  <li key={site.id}>
+                    <Row
+                      id={`s${site.id}`}
+                      level="standort"
+                      href={levelPath("standort", site.id)}
+                      name={site.name}
+                      figures={sumFigures(site.sections.flatMap((section) => section.floors))}
+                      current={node?.level === "standort" && node.id === site.id}
+                      hasChildren={site.sections.length > 0}
+                    />
+                    {isOpen(`s${site.id}`) && site.sections.length > 0 && (
+                      <ul className="lt-children">
+                        {site.sections.map((section) => (
+                          <li key={section.id}>
+                            <Row
+                              id={`a${section.id}`}
+                              level="abschnitt"
+                              href={levelPath("abschnitt", section.id)}
+                              name={section.name}
+                              figures={sumFigures(section.floors)}
+                              current={node?.level === "abschnitt" && node.id === section.id}
+                              hasChildren={section.floors.length > 0}
+                            />
+                            {isOpen(`a${section.id}`) && section.floors.length > 0 && (
+                              <ul className="lt-children">
+                                {section.floors.map((entry) => (
+                                  <li key={entry.id}>
+                                    <Row
+                                      id={`f${entry.id}`}
+                                      level="etage"
+                                      href={locationPath(entry.id)}
+                                      name={entry.name}
+                                      figures={floorFigures(entry)}
+                                      current={entry.id === floor?.id}
+                                      hasChildren={false}
+                                    />
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  />
-                  {isOpen(`s${site.id}`) && (
-                    <ul className="lt-children">
-                      {site.sections.map((section) => (
-                        <li key={section.id}>
-                          <Row
-                            id={`a${section.id}`}
-                            level="abschnitt"
-                            levelId={section.id}
-                            name={section.name}
-                            count={plural(section.floors.length, "Etage", "Etagen")}
-                          />
-                          {isOpen(`a${section.id}`) && (
-                            <ul className="lt-children">
-                              {section.floors.map((entry) => (
-                                <li key={entry.id}>
-                                  <Link
-                                    to={locationPath(entry.id)}
-                                    className="lt-floor"
-                                    aria-current={entry.id === floor?.id ? "page" : undefined}
-                                  >
-                                    <span className="lt-name">{entry.name}</span>
-                                    <span className="lt-count">
-                                      {entry.has_plan
-                                        ? plural(entry.rooms.length, "Raum", "Räume")
-                                        : "ohne Grundriss"}
-                                    </span>
-                                  </Link>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </li>
-      ))}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -846,7 +936,9 @@ export function LocationsPage({
   const [draft, setDraft] = useState<RoomRect | null>(null);
   const [mobileTree, setMobileTree] = useState(false);
   const [treeHidden, setTreeHidden] = useState(readTreeHidden);
-  const [spacing, setSpacing] = useState<TreeSpacing>(readTreeSpacing);
+  const [view, setView] = useState<TreeView>(readTreeView);
+  // Zähler für „Alles einklappen“: baut den Baum neu auf, alles zu
+  const [collapses, setCollapses] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const nodeKey = node ? `${node.level}-${node.id}` : "";
@@ -909,9 +1001,9 @@ export function LocationsPage({
       navigate(locationPath(next.id));
     }
   };
-  const pickSpacing = (value: TreeSpacing) => {
-    setSpacing(value);
-    saveTreeSpacing(value);
+  const pickView = (value: TreeView) => {
+    setView(value);
+    saveTreeView(value);
   };
   const toggleTree = (hidden: boolean) => {
     setTreeHidden(hidden);
@@ -1009,7 +1101,7 @@ export function LocationsPage({
                 mobileTree || !selectedLabel ? "panel loc-tree loc-tree-open" : "panel loc-tree"
               }
               aria-label="Standorte"
-              data-spacing={spacing === "normal" ? undefined : spacing}
+              data-view={view}
               onClick={(event) => {
                 // Schmal: Nach der Wahl im Baum schließt er sich wieder.
                 if (event.target instanceof Element && event.target.closest("a")) {
@@ -1021,6 +1113,15 @@ export function LocationsPage({
                 <span className="loc-tree-title">Standorte</span>
                 <button
                   type="button"
+                  className="row-button loc-tree-collapse"
+                  aria-label="Alles einklappen"
+                  title="Alles einklappen"
+                  onClick={() => setCollapses(collapses + 1)}
+                >
+                  <Icon name="alles-einklappen" />
+                </button>
+                <button
+                  type="button"
                   className="row-button loc-tree-hide"
                   aria-label="Standortbaum ausblenden"
                   title="Standortbaum ausblenden"
@@ -1029,23 +1130,18 @@ export function LocationsPage({
                   <Icon name="einklappen" />
                 </button>
               </div>
-              <fieldset className="theme-switch loc-tree-spacing">
-                <legend>Abstände im Baum</legend>
-                <div className="theme-options">
-                  {TREE_SPACINGS.map((option) => (
-                    <label key={option.value}>
-                      <input
-                        type="radio"
-                        name="standortbaum-abstand"
-                        value={option.value}
-                        checked={spacing === option.value}
-                        onChange={() => pickSpacing(option.value)}
-                      />
-                      <span>{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+              <div className="lt-views" role="group" aria-label="Ansicht des Baums">
+                {TREE_VIEWS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={view === option.value}
+                    onClick={() => pickView(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
               <div className="loc-search">
                 <label htmlFor="standort-suche" className="visually-hidden">
                   Raum, Etage oder Standort suchen
@@ -1076,7 +1172,14 @@ export function LocationsPage({
                   </ul>
                 )}
               </div>
-              <LocationTree tree={tree} floor={shownFloor} node={node} />
+              <LocationTree
+                key={collapses}
+                tree={tree}
+                floor={shownFloor}
+                node={node}
+                view={view}
+                collapsed={collapses > 0}
+              />
               {canEdit && (
                 <details className="loc-new-city">
                   <summary>Neue Stadt</summary>
