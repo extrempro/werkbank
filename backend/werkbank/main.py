@@ -31,6 +31,7 @@ from werkbank.modules.devices.tasks import devices_tasks
 from werkbank.modules.doku.admin_api import router as doku_admin_router
 from werkbank.modules.doku.api import router as doku_router
 from werkbank.modules.doku.collab import router as doku_live_router
+from werkbank.modules.doku.d3_api import router as doku_d3_router
 from werkbank.modules.evergreen.api import router as evergreen_router
 from werkbank.modules.evergreen.search import evergreen_search
 from werkbank.modules.evergreen.tasks import evergreen_tasks
@@ -149,6 +150,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(budget_imports_router)
     app.include_router(projects_router)
     app.include_router(doku_router)
+    app.include_router(doku_d3_router)
     app.include_router(doku_admin_router)
     app.include_router(doku_live_router)
     app.include_router(inventory_router)

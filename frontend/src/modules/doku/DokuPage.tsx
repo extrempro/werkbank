@@ -8,7 +8,11 @@ import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
 import { useModal } from "../../components/nav/useModal";
 import { navigate } from "../../router";
+import type { Editor } from "@tiptap/react";
 import { DokuEditor } from "./DokuEditor";
+import { DokuComments } from "./DokuComments";
+import { clearRefCache } from "./DokuNodes";
+import { refreshCommentMarks, type CommentMarksOptions, type MarkedThread } from "./commentMarks";
 import { DokuMenuContent, useDokuTree } from "./DokuMenu";
 import { NewPageDialog } from "./NewPageDialog";
 import { RightsDialog } from "./RightsDialog";
@@ -26,9 +30,49 @@ import {
   restoreVersion,
   savePage,
   type DokuPageData,
+  type DokuThread,
   type Version,
   type VersionDetail,
 } from "./api";
+
+/** Ab dieser Breite stehen die Kommentare als Leiste rechts, darunter in einem Blatt. */
+const WIDE_QUERY = "(min-width: 1024px)";
+
+/** Kommentar aus der Adresse (?kommentar=…), z. B. aus einer Benachrichtigung. */
+function threadFromUrl(): string | null {
+  const value = new URLSearchParams(window.location.search).get("kommentar");
+  return value && /^[0-9a-f-]{36}$/i.test(value) ? value : null;
+}
+
+/** Blatt mit den Kommentaren auf Tablet und Handy. */
+function CommentSheet({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, true, onClose);
+  return (
+    <div
+      className="sheet-backdrop"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <div
+        ref={box}
+        className="sheet doku-comment-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Kommentare"
+      >
+        <div className="sheet-head">
+          <h2 className="sheet-title">
+            Kommentare <InfoTip term="doku.kommentare" />
+          </h2>
+          <button type="button" className="sheet-close" aria-label="Schließen" onClick={onClose}>
+            <Icon name="schliessen" />
+          </button>
+        </div>
+        <div className="sheet-body">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 /** Wartezeit nach der letzten Eingabe, bevor gespeichert wird. */
 const SAVE_DELAY_MS = 1200;
@@ -228,6 +272,39 @@ export function DokuPageView({ pageId }: { pageId: string }) {
   const saving = useRef(false);
   const reason = useRef("");
   const pageTitle = useRef("");
+  const wide = useMediaQuery(WIDE_QUERY);
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [threads, setThreads] = useState<DokuThread[]>([]);
+  const [activeThread, setActiveThread] = useState<string | null>(threadFromUrl);
+  const [sheetOpen, setSheetOpen] = useState(() => threadFromUrl() !== null);
+  const marked = useRef<MarkedThread[]>([]);
+  const selectRef = useRef<(id: string) => void>(() => undefined);
+  // Feste Optionen für den Editor; die aktuellen Werte kommen über die Refs
+  const [commentOptions] = useState<CommentMarksOptions>(() => ({
+    threads: () => marked.current,
+    onSelect: (id) => selectRef.current(id),
+  }));
+  useEffect(() => {
+    selectRef.current = (id: string) => {
+      setActiveThread(id);
+      if (!window.matchMedia(WIDE_QUERY).matches) {
+        setSheetOpen(true);
+      }
+    };
+  }, []);
+  useEffect(() => {
+    marked.current = threads
+      .filter((thread) => thread.anchor && !thread.resolved_at)
+      .map((thread) => ({
+        id: thread.id,
+        anchor: thread.anchor as { from: string; to: string },
+        active: thread.id === activeThread,
+      }));
+    refreshCommentMarks(editor);
+  }, [threads, activeThread, editor]);
+  useEffect(() => {
+    clearRefCache();
+  }, [pageId]);
 
   const apply = useCallback((data: DokuPageData, retitle: boolean) => {
     setPage(data);
@@ -352,6 +429,17 @@ export function DokuPageView({ pageId }: { pageId: string }) {
   }
 
   const editable = page.role === "edit" && !page.locked && !page.archived && viewing === null;
+  const comments = (
+    <DokuComments
+      pageId={page.id}
+      editor={viewing ? null : editor}
+      canComment={!page.archived}
+      activeId={activeThread}
+      onActive={setActiveThread}
+      onThreads={setThreads}
+      onFeedback={setMessage}
+    />
+  );
   const canChange = page.role === "edit" && !page.archived;
   const viewVersion = (version: Version) => {
     flush();
@@ -416,6 +504,15 @@ export function DokuPageView({ pageId }: { pageId: string }) {
             {statusText(status, synced, titleState)}
           </span>
           <InfoTip term="doku.live" />
+          {!wide && !viewing && (
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => setSheetOpen(true)}
+            >
+              Kommentare · {threads.filter((thread) => !thread.resolved_at).length}
+            </button>
+          )}
           <button
             type="button"
             className="button button-secondary"
@@ -549,11 +646,14 @@ export function DokuPageView({ pageId }: { pageId: string }) {
                 live={live}
                 editable={editable}
                 label="Inhalt der Seite"
+                comments={commentOptions}
+                onReady={setEditor}
               />
             )
           )}
         </article>
         <aside className="doku-aside" aria-label="Zur Seite">
+          {wide && !viewing && comments}
           <VersionsPanel
             pageId={page.id}
             revision={page.versions}
@@ -621,6 +721,11 @@ export function DokuPageView({ pageId }: { pageId: string }) {
           onSaved={() => fetchPage(page.id).then((data) => apply(data, false), load)}
         />
       )}
+      {!wide && sheetOpen && !viewing && (
+        <CommentSheet onClose={() => setSheetOpen(false)}>{comments}</CommentSheet>
+      )}
+      {/* Ohne Blatt und schmal: Kommentare trotzdem laden (Zahl im Knopf, Hervorhebungen) */}
+      {!wide && !sheetOpen && !viewing && <div hidden>{comments}</div>}
       {confirmDialog}
       <Feedback message={message} onClose={() => setMessage(null)} />
     </div>

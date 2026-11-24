@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { DokuBacklinks } from "../doku/DokuBacklinks";
 import { fetchPositionTickets } from "../tickets/api";
 import { RelatedTickets } from "../tickets/RelatedTickets";
 import { errorText } from "../../api";
@@ -482,6 +483,7 @@ export function PositionDetailPage({
                 title="Tickets der Person"
                 load={() => fetchPositionTickets(position.id)}
               />
+              <DokuBacklinks kind="stelle" id={position.id} />
             </>
           )}
           {tab === "arbeitsplaetze" && (

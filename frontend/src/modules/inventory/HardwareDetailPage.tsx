@@ -1,4 +1,5 @@
 import { useConfirm } from "../../components/ConfirmDialog";
+import { DokuBacklinks } from "../doku/DokuBacklinks";
 import { InfoTip } from "../../components/InfoTip";
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
@@ -722,7 +723,10 @@ export function HardwareDetailPage({
             ))}
           </nav>
           {tab === "uebersicht" && (
-            <Overview device={device} master={master} canEdit={canEdit} onChange={setDevice} />
+            <>
+              <Overview device={device} master={master} canEdit={canEdit} onChange={setDevice} />
+              <DokuBacklinks kind="hardware" id={device.id} />
+            </>
           )}
           {tab === "standort" && (
             <LocationPanel

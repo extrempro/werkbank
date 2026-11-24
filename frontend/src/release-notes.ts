@@ -24,6 +24,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.123.0",
+    date: "2026-11-24",
+    summary: "Dokumentation: Kommentare, Verweise und Live-Bausteine.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Text markieren und kommentieren, antworten und als erledigt markieren. Mit @ erwähnst du jemanden; die Person bekommt eine Benachrichtigung.",
+          "Verweise auf Tickets, Geräte, Stellen, Arbeitsplätze, Räume, IT-Projekte und Verträge mit „#“. Titel und Status siehst du nur, wenn du das Objekt sehen darfst.",
+          "Live-Bausteine: Ticketliste, Geräteliste, Projektstand und Vertragsfristen bleiben von selbst aktuell.",
+        ],
+      },
+      {
+        area: "Tickets, IT-Bestand, IT-Projekte, IT-Budget",
+        entries: [
+          "Neuer Abschnitt „In der Dokumentation“ zeigt die Seiten, die auf das Objekt verweisen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.122.1",
     date: "2026-11-24",
     summary: "HTML-Editor startet leer.",

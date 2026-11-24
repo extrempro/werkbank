@@ -160,6 +160,16 @@ KINDS: dict[str, KindInfo] = {
     "tickets.ausnahme": KindInfo(
         "Tickets", "Ausnahme von der Aufbewahrung endet bald (Bereichsverwaltung)", ALL_ROLES
     ),
+    "doku.erwaehnung": KindInfo(
+        "Dokumentation",
+        "Jemand hat dich in einem Kommentar erwähnt",
+        (Role.DOKU_USER, Role.DOKU_ADMIN),
+    ),
+    "doku.antwort": KindInfo(
+        "Dokumentation",
+        "Antwort auf einen Kommentar, an dem du beteiligt bist",
+        (Role.DOKU_USER, Role.DOKU_ADMIN),
+    ),
     "bestand.vorgang_neu": KindInfo(
         "IT-Bestand",
         "Neuer Vorgang im Eingang, z. B. ein neues Gerät in NinjaOne",

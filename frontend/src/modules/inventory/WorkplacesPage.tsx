@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { DokuBacklinks } from "../doku/DokuBacklinks";
 import { errorText } from "../../api";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
@@ -868,7 +869,10 @@ export function WorkplaceDetailPage({
             ))}
           </nav>
           {tab === "uebersicht" && (
-            <Overview workplace={workplace} canEdit={canEdit} onChange={setWorkplace} />
+            <>
+              <Overview workplace={workplace} canEdit={canEdit} onChange={setWorkplace} />
+              <DokuBacklinks kind="arbeitsplatz" id={workplace.id} />
+            </>
           )}
           {tab === "ausstattung" && <EquipmentPanel workplace={workplace} />}
           {tab === "hardware" && (

@@ -1,4 +1,5 @@
 import { InfoTip } from "../../components/InfoTip";
+import { DokuBacklinks } from "../doku/DokuBacklinks";
 import { useEffect, useState } from "react";
 import { errorText } from "../../api";
 import { Link } from "../../components/Link";
@@ -495,7 +496,12 @@ export function ProjectPage({ projectId, tab, roles }: PageProps) {
           </Link>
         ))}
       </nav>
-      {tab === "uebersicht" && <OverviewTab project={project} canEdit={canEdit} />}
+      {tab === "uebersicht" && (
+        <>
+          <OverviewTab project={project} canEdit={canEdit} />
+          <DokuBacklinks kind="projekt" id={project.id} />
+        </>
+      )}
       {tab === "budget" && <BudgetTab project={project} />}
       {tab === "jour-fixe" && <MeetingsTab projectId={project.id} canEdit={canEdit} />}
       {tab === "aufgaben" && <TasksTab projectId={project.id} canEdit={canEdit} />}

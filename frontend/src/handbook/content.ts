@@ -1709,7 +1709,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Bausteine fügst du mit „+ Baustein“ in der Leiste ein oder tippst in einer leeren Zeile „/“: Text, Überschriften, Listen, Aufgaben zum Abhaken, Hinweis- und Warnkästen, Tabellen, Code, Zitate und Trennlinien. Die Leiste formatiert markierten Text: fett, kursiv, unterstrichen, durchgestrichen, Code und Links. Links gehen nur mit https://, mailto: oder auf Seiten der Werkbank.",
+                text: "Bausteine fügst du mit „+ Baustein“ in der Leiste ein oder tippst in einer leeren Zeile „/“: Text, Überschriften, Listen, Aufgaben zum Abhaken, Hinweis- und Warnkästen, Tabellen, Code, Zitate, Trennlinien, Verweise und Live-Bausteine. Die Leiste formatiert markierten Text: fett, kursiv, unterstrichen, durchgestrichen, Code und Links. Links gehen nur mit https://, mailto: oder auf Seiten der Werkbank.",
               },
               {
                 kind: "hint",
@@ -1726,6 +1726,72 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "hint",
                 text: "Steht dort „Verbindung unterbrochen“, schreib ruhig weiter: Sobald die Verbindung wieder da ist, werden deine Änderungen nachgereicht. Wird eine Seite gesperrt oder ändern sich ihre Rechte, lädt sie sich bei allen kurz neu.",
+              },
+            ],
+          },
+          {
+            id: "kommentare",
+            title: "Kommentare und Erwähnungen",
+            blocks: [
+              {
+                kind: "steps",
+                items: [
+                  "Markiere auf der Seite den Text, um den es geht.",
+                  "Tippe in „Kommentare“ auf „Kommentieren“ (am Tablet und Handy zuerst oben auf „Kommentare“).",
+                  "Schreib deinen Kommentar und tippe auf „Kommentar speichern“. Die Stelle ist danach gelb markiert.",
+                ],
+              },
+              {
+                kind: "text",
+                text: "Ein Klick auf eine markierte Stelle öffnet den Kommentar, ein Klick auf das Zitat im Kommentar springt zur Stelle. Dort kannst du antworten, den Kommentar erledigen und ihn wieder öffnen. Deine eigenen Beiträge kannst du löschen. Fällt der kommentierte Text weg, bleibt der Kommentar mit dem Zitat stehen.",
+              },
+              {
+                kind: "text",
+                text: "Mit @ und dem Anfang eines Namens erwähnst du jemanden. Vorgeschlagen werden nur Personen, die die Seite lesen dürfen. Wer erwähnt wird, und wer schon an einem Kommentar beteiligt ist, bekommt bei einer Antwort eine Benachrichtigung, je nach den eigenen Einstellungen auch per Mail oder Push. Der Inhalt steht nicht darin, nur der Link zur Seite.",
+              },
+              {
+                kind: "hint",
+                text: "Kommentieren darf jede Person, die die Seite lesen darf, auch auf gesperrten Seiten. In archivierten Arbeitsbereichen geht es nicht.",
+              },
+            ],
+          },
+          {
+            id: "verweise",
+            title: "Verweise und Live-Bausteine",
+            blocks: [
+              {
+                kind: "text",
+                text: "Über „+ Baustein“ oder „/“ fügst du einen Verweis auf ein Ticket, ein Gerät, eine Stelle, einen Arbeitsplatz, einen Raum, ein IT-Projekt oder einen Vertrag ein. Er erscheint als Kästchen mit dem aktuellen Stand, zum Beispiel „T-1042 · In Bearbeitung“; ein Klick öffnet das Objekt. Die Leiste hat dafür auch den Knopf „#“.",
+              },
+              {
+                kind: "terms",
+                items: [
+                  [
+                    "Ticketliste",
+                    "Tickets eines oder aller deiner Bereiche, offen oder alle, optional mit Stichwort im Betreff",
+                  ],
+                  [
+                    "Geräteliste",
+                    "Geräte in Betrieb auf einer Etage oder in einem Raum, optional nur einer Art",
+                  ],
+                  [
+                    "Projektstand",
+                    "Status, erledigte Aufgaben, nächster Jour Fixe und offene Aufgaben eines Projekts",
+                  ],
+                  ["Vertragsfristen", "Kündigungstermine der nächsten 3, 6 oder 12 Monate"],
+                ],
+              },
+              {
+                kind: "text",
+                text: "Live-Bausteine aktualisieren sich jede Minute. Mit „Einstellungen“ änderst du, was sie zeigen.",
+              },
+              {
+                kind: "hint",
+                text: "Jede Person sieht in Verweisen und Live-Bausteinen nur, was sie im jeweiligen Bereich sehen darf. Ohne Rechte steht dort „Kein Zugriff“, ohne Titel und Stand.",
+              },
+              {
+                kind: "text",
+                text: "Umgekehrt zeigen Tickets, Geräte, Stellen, Arbeitsplätze, Projekte und Verträge unter „In der Dokumentation“, welche Seiten auf sie verweisen. Dort stehen nur Seiten, die du lesen darfst.",
               },
             ],
           },

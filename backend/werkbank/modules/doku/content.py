@@ -15,7 +15,17 @@ TEXT_MAX = 200_000
 TITLE_MAX = 200
 
 LINK_SCHEMES = ("https://", "mailto:")
+# Verweise und Live-Bausteine (D3): nur Art, Kennung und Einstellungen, nie Titel oder Stand
+REF_KINDS = ("ticket", "hardware", "stelle", "arbeitsplatz", "raum", "projekt", "vertrag")
+LIVE_KINDS = ("tickets", "geraete", "projekt", "vertraege")
 CALLOUT_KINDS = ("info", "warnung", "erfolg")
+
+
+def _opt_id(value: object) -> bool:
+    return value is None or (
+        isinstance(value, int) and not isinstance(value, bool) and 0 < value < 2**31
+    )
+
 
 # Bausteine mit ihren erlaubten Eigenschaften und einer Prüfung je Wert
 _NODES: dict[str, dict[str, Any]] = {
@@ -40,6 +50,21 @@ _NODES: dict[str, dict[str, Any]] = {
     "tableHeader": {},
     "tableCell": {},
     "callout": {"kind": lambda v: v in CALLOUT_KINDS},
+    "werkbankRef": {
+        "kind": lambda v: v in REF_KINDS,
+        "id": lambda v: isinstance(v, str) and v.isdigit() and 0 < len(v) <= 12,
+    },
+    "liveBlock": {
+        "kind": lambda v: v in LIVE_KINDS,
+        "area": _opt_id,
+        "status": lambda v: v is None or v in ("offen", "alle"),
+        "q": lambda v: v is None or (isinstance(v, str) and len(v) <= 60),
+        "floor": _opt_id,
+        "room": _opt_id,
+        "hwkind": _opt_id,
+        "project": _opt_id,
+        "months": lambda v: v is None or v in (3, 6, 12),
+    },
 }
 _CELL_ATTRS = {
     "colspan": lambda v: isinstance(v, int) and 1 <= v <= 50,
@@ -158,6 +183,10 @@ class _Walker:
             if not isinstance(children, list):
                 raise ContentError(f"Inhalt von „{kind}“ ist ungültig.")
             result["content"] = [self.node(child, depth + 1) for child in children]
+        if kind in ("werkbankRef", "liveBlock") and "kind" not in attrs:
+            raise ContentError("Verweis oder Live-Baustein ohne Art.")
+        if kind == "werkbankRef" and "id" not in attrs:
+            raise ContentError("Verweis ohne Kennung.")
         if kind in ("paragraph", "heading", "codeBlock", "tableCell", "tableHeader", "taskItem"):
             self.text.append("\n")
         return result

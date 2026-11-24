@@ -204,3 +204,35 @@ def visible_page(
 
 def can_edit(role: str) -> bool:
     return LEVEL[role] >= LEVEL[ROLE_EDIT]
+
+
+def access_for_oid(db: Session, oid: str) -> DokuAccess | None:
+    """Rechte einer anderen Person (für Erwähnungen und Benachrichtigungen).
+
+    None, wenn die Person die Werkbank nicht kennt oder die Dokumentation nicht nutzen darf.
+    """
+    from werkbank.core.permissions import effective_roles
+
+    person = db.execute(select(User).where(User.entra_oid == oid)).scalar_one_or_none()
+    if person is None:
+        return None
+    roles = tuple(effective_roles(person))
+    if not any(role in roles for role in (Role.DOKU_USER, Role.DOKU_ADMIN)):
+        return None
+    now = person.last_login_at or person.created_at
+    user = CurrentUser(
+        user_id=person.id,
+        session_id=uuid.UUID(int=0),
+        display_name=person.display_name,
+        email=person.email,
+        roles=roles,
+        authenticated_at=now,
+        expires_at=now,
+    )
+    return load_access(db, user)
+
+
+def can_read_page(db: Session, oid: str, page: DokuPage) -> bool:
+    """Darf die Person (Objekt-ID) die Seite lesen?"""
+    access = access_for_oid(db, oid)
+    return access is not None and LEVEL[page_role(db, access, page)] >= LEVEL[ROLE_READ]

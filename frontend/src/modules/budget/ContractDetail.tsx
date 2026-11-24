@@ -1,4 +1,5 @@
 import { InfoTip } from "../../components/InfoTip";
+import { DokuBacklinks } from "../doku/DokuBacklinks";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { errorText } from "../../api";
 import {
@@ -299,6 +300,7 @@ export function ContractDetail({
             />
           </div>
         )}
+        <DokuBacklinks kind="vertrag" id={contract.id} />
       </div>
     </section>
   );
