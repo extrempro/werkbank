@@ -101,6 +101,8 @@ Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über
 | `Bestand.Reader` | IT-Bestand | Hardware mit Verlauf und Stammdaten ansehen |
 | `Bestand.Editor` | IT-Bestand | Hardware erfassen und ändern, Inventurnummern setzen, ausmustern und wieder in Betrieb nehmen, Stammdaten pflegen |
 | `Tickets.Nutzer` | Tickets | Nur Anmeldung, z. B. für Mitglieder anderer Abteilungen; ohne Rolle in einem Bereich kein Zugriff auf Tickets |
+| `Doku.Nutzer` | Dokumentation | Bereich öffnen; welche Seiten jemand sieht und ändert, regeln die Arbeitsbereiche und eigenen Rechte von Seiten (8f) |
+| `Doku.Admin` | Dokumentation | Arbeitsbereiche anlegen, Personen zuordnen, archivieren, Seiten mit eigenen Rechten zurücksetzen, Versionen einstellen, Papierkorb. Sieht Inhalte nur als Mitglied |
 | `Tickets.Verwaltung` | Tickets | Bereiche anlegen, Postfächer anbinden, Rollen der Bereiche vergeben und Vorgabe der Aufbewahrung. Kein Zugriff auf Tickets; die Rollen je Bereich (Bereichsverwaltung, Bearbeiten) liegen in der Werkbank, nicht in Entra (8e) |
 | `Geraete.Zuordnung` | Gerätezuordnung | Neue Windows-Geräte per QR-Code scannen, zur Freigabe senden, verwerfen; mit verbundenem Admin-Konto freigeben (dem Tenant zuordnen) |
 
@@ -878,6 +880,36 @@ Nach jeder Phase ein Halt mit Zusammenfassung, Testergebnis und Entwurf der Neui
 
 - **E2E:** Mail → Ticket; Antwort im selben Ticket; Mail an geschlossenes Ticket je nach Einstellung; Status und Übergabe erst nach „Bestätigen“; fremder Bereich unsichtbar, auch per Direktaufruf; ohne App-Rolle keine Einstellungen der Ticket-Verwaltung; Zugriff weg nach Entzug der Gruppenmitgliedschaft; interne Notiz erzeugt keine Mail; Zusammenführen; ohne SLA nirgends eine Frist; Aufbewahrungslauf anonymisiert bzw. löscht. Graph wird in den E2E-Tests durch einen Stub ersetzt.
 - **Unit:** Antwort-Erkennung, Filter, Zitat-Erkennung, Platzhalter, Fristberechnung (Arbeitszeit, Pause bei „Wartet“).
+
+## 8f. Modul Dokumentation
+
+Seiten wie in Microsoft Loop: Arbeitsbereiche mit Seiten und Unterseiten, gleichzeitiges Bearbeiten, Versionen, Rechte je Seite. Eigener Bereich „Doku“ in der Bereichsleiste (`/doku`); statt der Liste aus der Navigation steht im Seitenmenü der Seitenbaum (Suche, „Neue Seite“, Arbeitsbereiche mit Seiten, Schloss bei eigenen Rechten, für die Doku-Verwaltung „Arbeitsbereiche“). Am Handy öffnet „Seiten“ den Baum als Blatt.
+
+Umsetzung in vier Phasen mit Halt nach jeder Phase (entschieden): **D1** Arbeitsbereiche, Seitenbaum, Rechte, Bausteine, automatisches Speichern, Versionen, Sperren, Papierkorb, Verwaltung · **D2** gleichzeitiges Bearbeiten in Echtzeit (Yjs mit Tiptap im Browser, pycrdt im Server, WebSocket) mit Anwesenheit · **D3** Kommentare, Verweise auf Objekte der Werkbank, Live-Bausteine · **D4** Lese-Links für Externe (zeitlich begrenzt, Kennwort freiwillig, sonst zufällige Adresse), Export als PDF und Markdown. Stand: **D1 umgesetzt** (0.118.0, `modules/doku`, Migration 0080).
+
+**Rollen und Rechte** (entschieden):
+- App-Rollen `Doku.Nutzer` (Bereich öffnen) und `Doku.Admin` (Verwaltung). Inhalte sieht auch `Doku.Admin` nur als Mitglied eines Arbeitsbereichs; in der Verwaltung stehen nur Titel.
+- **Arbeitsbereich**: Personen einzeln aus Entra (entschieden, keine Gruppen) mit **Lesen**, **Bearbeiten** oder **Verwalten** (= Bearbeiten und die Personen des Arbeitsbereichs ändern, im Dialog „Rechte und Teilen“). Betriebsrat und Geschäftsführung bekommen keinen automatischen Lesezugriff.
+- **Eigene Rechte einer Seite** (Schloss im Seitenbaum): darf jede Person setzen, die die Seite bearbeiten darf. Sie gelten für die Seite und ihre Unterseiten, bis eine Unterseite eigene hat. Je Person überschreibt ein Eintrag das Recht aus dem Arbeitsbereich (Lesen, Bearbeiten, **Kein Zugriff**); Personen ohne Eintrag behalten ihr Recht aus dem Arbeitsbereich. Personen außerhalb des Arbeitsbereichs lassen sich hinzufügen und sehen dann nur diese Seiten. Gespeichert werden nur Abweichungen.
+- Archivierte Arbeitsbereiche sind nur lesbar und stehen im Baum mit „Archiv“. Löschen nur leerer Arbeitsbereiche (auch ohne Seiten im Papierkorb).
+- Alle Prüfungen im Server; fremde oder nicht sichtbare Seiten ergeben 404, Lesen ohne Schreibrecht 403. Ist die Seite darüber nicht sichtbar, hängt die Seite oben im Arbeitsbereich.
+
+**Seiten und Inhalt**:
+- Editor Tiptap (ProseMirror, MIT). Inhalt als JSON des Editors, **nie HTML**. Der Server nimmt nur bekannte Bausteine an (Positivliste in `content.py`): Absatz, Überschrift 1–3, Listen, Aufgabenliste, Zitat, Code, Trennlinie, Tabelle, Hinweis- und Warnkasten; Auszeichnungen fett, kursiv, unterstrichen, durchgestrichen, Code, Link (nur `https://`, `mailto:` und Pfade der Werkbank, Ziel und `rel` fest). Grenzen: 40 Ebenen, 60.000 Bausteine, 200.000 Zeichen Text; unbekannte Eigenschaften fallen weg, unbekannte Bausteine ergeben 422.
+- Bausteine über „+ Baustein“ oder „/“ in einer leeren Zeile; Löschen ohne Bestätigungsdialog, zurück mit „Rückgängig“ (entschieden).
+- **Automatisch speichern** 1,2 Sekunden nach der letzten Eingabe (`PUT /api/doku/pages/{id}` mit `revision`); passt der Stand nicht, 409 und „Neu laden“ (bis D2).
+- **Sperren** (`POST/DELETE …/lock`): jede Person mit Bearbeiten darf sperren und entsperren (entschieden); gesperrt lässt sich nichts ändern, verschieben oder löschen.
+- Suche über Titel und Text (`GET /api/doku/search`), nur sichtbare Seiten.
+
+**Versionen**: nach der eingestellten Bearbeitungszeit (5, 10 oder 30 Minuten, Vorgabe 10) entsteht beim Speichern eine Version; der Auftrag `doku.versionen` (alle 5 Minuten) legt sie auch an, wenn danach niemand mehr speichert. „Aktuellen Stand benennen“; benannte bleiben immer. Ansehen nur lesend, „Wiederherstellen“ mit Bestätigung und freiwilligem Grund; der Stand davor bleibt als Version. Automatische Versionen: 1 Jahr (danach bleibt je Tag die jüngste) oder immer (Auftrag `doku.aufraeumen` täglich).
+
+**Papierkorb**: Löschen (mit Bestätigung) legt die Seite mit Unterseiten in den Papierkorb; die Doku-Verwaltung stellt wieder her oder löscht endgültig (mit Bestätigung); nach 30 Tagen löscht der Auftrag `doku.aufraeumen` endgültig.
+
+**Verwaltung** (`/doku/verwaltung`, Reiter Arbeitsbereiche · Seiten mit eigenen Rechten · Versionen · Papierkorb; Lese-Links mit D4).
+
+**Schnittstellen**: `GET /api/doku/me`, `GET /api/doku/tree`, `GET /api/doku/search`, `POST /api/doku/pages`, `GET/PUT/DELETE /api/doku/pages/{id}`, `POST …/move`, `POST/DELETE …/lock`, `GET/POST …/versions`, `GET …/versions/{v}`, `POST …/versions/{v}/restore`, `GET/PUT …/rights`, `PUT /api/doku/spaces/{id}/members`, `GET /api/doku/people`; Verwaltung `/api/doku/admin/spaces`, `/own-rights`, `/pages/{id}/reset-rights`, `/settings`, `/trash`.
+
+**Tabellen**: `doku_spaces`, `doku_space_members`, `doku_pages`, `doku_page_rights`, `doku_versions`; Einstellungen unter `app_settings` (`doku`). Audit (Modul `doku`): Anlegen und Löschen von Seiten, Sperren, Rechte, Wiederherstellen, Arbeitsbereiche, Einstellungen, Papierkorb.
 
 ## 9. Datenmodell (Überblick)
 

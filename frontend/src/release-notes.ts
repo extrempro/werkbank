@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.118.0",
+    date: "2026-11-24",
+    summary: "Neu: Dokumentation mit Seiten, Rechten und Versionen.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Neuer Bereich „Doku“: Seiten und Unterseiten in Arbeitsbereichen, zum Beispiel für deine Abteilung. Links im Menü stehen alle Seiten als Baum, mit Suche.",
+          "Du schreibst einfach los, alles wird automatisch gespeichert. Mit „+ Baustein“ oder „/“ fügst du Überschriften, Listen, Aufgaben, Hinweise, Tabellen und mehr ein.",
+          "Unter „Rechte und Teilen“ gibst du einer Seite eigene Rechte, auch für Personen außerhalb des Arbeitsbereichs. Seiten lassen sich sperren.",
+          "Versionen entstehen von selbst; wichtige Stände kannst du benennen und alte Stände wiederherstellen.",
+          "Gemeinsames Schreiben in Echtzeit, Kommentare und Lese-Links für Externe folgen in den nächsten Schritten.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.117.1",
     date: "2026-11-24",
     summary: "Tickets: Mails an Melder werden wieder richtig angezeigt.",

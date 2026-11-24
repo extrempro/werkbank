@@ -1,0 +1,530 @@
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { EditorContent, mergeAttributes, Node, useEditor, type Editor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
+import { TaskItem, TaskList } from "@tiptap/extension-list";
+import { Placeholder } from "@tiptap/extensions";
+import { Icon } from "../../components/Icon";
+import type { DocJson } from "./api";
+
+/** Hinweis-Kasten („Hinweis“, „Warnung“, „Erledigt“) mit Absätzen darin. */
+export const Callout = Node.create({
+  name: "callout",
+  group: "block",
+  content: "paragraph+",
+  defining: true,
+  addAttributes() {
+    return {
+      kind: {
+        default: "info",
+        parseHTML: (element: HTMLElement) => element.getAttribute("data-callout") ?? "info",
+        renderHTML: (attributes: { kind?: string }) => ({ "data-callout": attributes.kind }),
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "div[data-callout]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const kind = String(HTMLAttributes["data-callout"] ?? "info");
+    return [
+      "div",
+      mergeAttributes(HTMLAttributes, { class: `doku-callout doku-callout-${kind}`, role: "note" }),
+      0,
+    ];
+  },
+});
+
+/** Links nur mit https, mailto oder innerhalb der Werkbank (wie der Server prüft). */
+export function allowedLink(href: string): boolean {
+  const value = href.trim();
+  if (!value || value.length > 2000 || [...value].some((ch) => ch.charCodeAt(0) < 32)) {
+    return false;
+  }
+  const lower = value.toLowerCase();
+  return (
+    lower.startsWith("https://") ||
+    lower.startsWith("mailto:") ||
+    (value.startsWith("/") && !value.startsWith("//"))
+  );
+}
+
+export function extensions(placeholder: string) {
+  return [
+    StarterKit.configure({
+      heading: { levels: [1, 2, 3] },
+      link: {
+        openOnClick: false,
+        autolink: true,
+        defaultProtocol: "https",
+        protocols: ["https", "mailto"],
+        isAllowedUri: (url: string) => allowedLink(url),
+        HTMLAttributes: { rel: "noopener noreferrer nofollow", target: "_blank" },
+      },
+    }),
+    Table.configure({ resizable: false }),
+    TableRow,
+    TableHeader,
+    TableCell,
+    TaskList,
+    TaskItem.configure({
+      nested: true,
+      a11y: {
+        checkboxLabel: (node: { textContent: string }, checked: boolean) =>
+          `${checked ? "Erledigt" : "Offen"}: ${node.textContent || "leere Aufgabe"}`,
+      },
+    }),
+    Callout,
+    Placeholder.configure({ placeholder }),
+  ];
+}
+
+interface BlockChoice {
+  id: string;
+  label: string;
+  hint: string;
+  run: (editor: Editor) => void;
+}
+
+const BLOCKS: readonly BlockChoice[] = [
+  { id: "text", label: "Text", hint: "Absatz", run: (e) => e.chain().focus().setParagraph().run() },
+  {
+    id: "h1",
+    label: "Überschrift 1",
+    hint: "große Überschrift",
+    run: (e) => e.chain().focus().setHeading({ level: 1 }).run(),
+  },
+  {
+    id: "h2",
+    label: "Überschrift 2",
+    hint: "mittlere Überschrift",
+    run: (e) => e.chain().focus().setHeading({ level: 2 }).run(),
+  },
+  {
+    id: "h3",
+    label: "Überschrift 3",
+    hint: "kleine Überschrift",
+    run: (e) => e.chain().focus().setHeading({ level: 3 }).run(),
+  },
+  {
+    id: "liste",
+    label: "Liste",
+    hint: "Aufzählung mit Punkten",
+    run: (e) => e.chain().focus().toggleBulletList().run(),
+  },
+  {
+    id: "nummern",
+    label: "Nummerierte Liste",
+    hint: "1., 2., 3.",
+    run: (e) => e.chain().focus().toggleOrderedList().run(),
+  },
+  {
+    id: "aufgaben",
+    label: "Aufgaben",
+    hint: "Liste zum Abhaken",
+    run: (e) => e.chain().focus().toggleTaskList().run(),
+  },
+  {
+    id: "hinweis",
+    label: "Hinweis",
+    hint: "Kasten, der auffällt",
+    run: (e) => e.chain().focus().wrapIn("callout", { kind: "info" }).run(),
+  },
+  {
+    id: "warnung",
+    label: "Warnung",
+    hint: "Kasten für Vorsicht",
+    run: (e) => e.chain().focus().wrapIn("callout", { kind: "warnung" }).run(),
+  },
+  {
+    id: "tabelle",
+    label: "Tabelle",
+    hint: "3 × 3 mit Kopfzeile",
+    run: (e) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+  },
+  {
+    id: "code",
+    label: "Code",
+    hint: "Befehle, Konfiguration",
+    run: (e) => e.chain().focus().toggleCodeBlock().run(),
+  },
+  {
+    id: "zitat",
+    label: "Zitat",
+    hint: "eingerückter Text",
+    run: (e) => e.chain().focus().toggleBlockquote().run(),
+  },
+  {
+    id: "linie",
+    label: "Trennlinie",
+    hint: "waagerechte Linie",
+    run: (e) => e.chain().focus().setHorizontalRule().run(),
+  },
+];
+
+/** Auswahl der Bausteine: mit „+ Baustein“ oder „/“ in einer leeren Zeile. */
+function BlockMenu({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const input = useRef<HTMLInputElement>(null);
+  const listId = useId();
+  const choices = BLOCKS.filter((block) =>
+    `${block.label} ${block.hint}`.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+  useEffect(() => {
+    input.current?.focus();
+  }, []);
+  const pick = (choice: BlockChoice | undefined) => {
+    if (choice) {
+      choice.run(editor);
+    }
+    onClose();
+  };
+  const onKey = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActive((active + 1) % Math.max(choices.length, 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActive((active - 1 + choices.length) % Math.max(choices.length, 1));
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      pick(choices[active]);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+      editor.commands.focus();
+    }
+  };
+  return (
+    <div className="doku-blockmenu">
+      <label className="visually-hidden" htmlFor={`${listId}-suche`}>
+        Baustein suchen
+      </label>
+      <input
+        ref={input}
+        id={`${listId}-suche`}
+        type="search"
+        role="combobox"
+        aria-expanded="true"
+        aria-controls={listId}
+        aria-activedescendant={choices[active] ? `${listId}-${choices[active].id}` : undefined}
+        placeholder="Baustein suchen"
+        value={query}
+        autoComplete="off"
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setActive(0);
+        }}
+        onKeyDown={onKey}
+        onBlur={(event) => {
+          if (!event.currentTarget.parentElement?.contains(event.relatedTarget as Element | null)) {
+            onClose();
+          }
+        }}
+      />
+      <ul id={listId} role="listbox" aria-label="Bausteine">
+        {choices.length === 0 && <li className="small">Kein Baustein gefunden.</li>}
+        {choices.map((choice, index) => (
+          <li
+            key={choice.id}
+            id={`${listId}-${choice.id}`}
+            role="option"
+            aria-selected={index === active}
+            className={index === active ? "doku-blockmenu-active" : undefined}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              pick(choice);
+            }}
+          >
+            <strong>{choice.label}</strong>
+            <span className="small">{choice.hint}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function LinkForm({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+  const current = String(editor.getAttributes("link").href ?? "");
+  const [href, setHref] = useState(current);
+  const [error, setError] = useState<string | null>(null);
+  const id = useId();
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const value = href.trim();
+    if (!value) {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      onClose();
+      return;
+    }
+    if (!allowedLink(value)) {
+      setError("Erlaubt sind Adressen mit https://, mailto: oder Seiten der Werkbank (/…).");
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: value }).run();
+    onClose();
+  };
+  return (
+    <form className="doku-linkform" onSubmit={submit}>
+      <label htmlFor={id}>Link-Adresse</label>
+      <input
+        id={id}
+        type="url"
+        value={href}
+        placeholder="https://"
+        autoFocus
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-fehler` : undefined}
+        onChange={(event) => setHref(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            onClose();
+            editor.commands.focus();
+          }
+        }}
+      />
+      <button type="submit" className="button button-primary">
+        {href.trim() ? "Übernehmen" : "Link entfernen"}
+      </button>
+      <button type="button" className="button button-secondary" onClick={onClose}>
+        Abbrechen
+      </button>
+      {error && (
+        <p id={`${id}-fehler`} className="hint-box hint-bad" role="alert">
+          {error}
+        </p>
+      )}
+    </form>
+  );
+}
+
+function ToolButton({
+  label,
+  icon,
+  text,
+  active,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  icon?: Parameters<typeof Icon>[0]["name"];
+  text?: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="doku-tool"
+      aria-label={label}
+      title={label}
+      aria-pressed={active === undefined ? undefined : active}
+      disabled={disabled}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClick}
+    >
+      {icon ? <Icon name={icon} /> : <span aria-hidden="true">{text}</span>}
+    </button>
+  );
+}
+
+function Toolbar({ editor, onBlocks }: { editor: Editor; onBlocks: () => void }) {
+  const [linkOpen, setLinkOpen] = useState(false);
+  // Neu zeichnen, wenn sich Auswahl oder Inhalt ändern (für „gedrückt“)
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const update = () => setTick((tick) => tick + 1);
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+    return () => {
+      editor.off("selectionUpdate", update);
+      editor.off("transaction", update);
+    };
+  }, [editor]);
+  const inTable = editor.isActive("table");
+  return (
+    <div className="doku-toolbar-wrap">
+      <div className="doku-toolbar" role="toolbar" aria-label="Formatieren">
+        <button
+          type="button"
+          className="button button-secondary doku-add"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onBlocks}
+        >
+          <Icon name="plus" />
+          Baustein
+        </button>
+        <span className="doku-tool-sep" aria-hidden="true" />
+        <ToolButton
+          label="Fett"
+          text="F"
+          active={editor.isActive("bold")}
+          onClick={() => editor.chain().focus().toggleBold().run()}
+        />
+        <ToolButton
+          label="Kursiv"
+          text="K"
+          active={editor.isActive("italic")}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+        />
+        <ToolButton
+          label="Unterstrichen"
+          text="U"
+          active={editor.isActive("underline")}
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+        />
+        <ToolButton
+          label="Durchgestrichen"
+          text="S"
+          active={editor.isActive("strike")}
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+        />
+        <ToolButton
+          label="Code im Text"
+          text="</>"
+          active={editor.isActive("code")}
+          onClick={() => editor.chain().focus().toggleCode().run()}
+        />
+        <ToolButton
+          label="Link"
+          icon="link"
+          active={editor.isActive("link")}
+          onClick={() => setLinkOpen(!linkOpen)}
+        />
+        <span className="doku-tool-sep" aria-hidden="true" />
+        <ToolButton
+          label="Überschrift 2"
+          text="Ü"
+          active={editor.isActive("heading", { level: 2 })}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        />
+        <ToolButton
+          label="Liste"
+          text="•"
+          active={editor.isActive("bulletList")}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+        />
+        <ToolButton
+          label="Aufgaben"
+          icon="haken"
+          active={editor.isActive("taskList")}
+          onClick={() => editor.chain().focus().toggleTaskList().run()}
+        />
+        <span className="doku-tool-sep" aria-hidden="true" />
+        <ToolButton
+          label="Rückgängig"
+          icon="rueckgaengig"
+          disabled={!editor.can().undo()}
+          onClick={() => editor.chain().focus().undo().run()}
+        />
+        <ToolButton
+          label="Wiederholen"
+          icon="wiederholen"
+          disabled={!editor.can().redo()}
+          onClick={() => editor.chain().focus().redo().run()}
+        />
+      </div>
+      {inTable && (
+        <div className="doku-toolbar doku-tabletools" role="toolbar" aria-label="Tabelle">
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => editor.chain().focus().addRowAfter().run()}
+          >
+            Zeile +
+          </button>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => editor.chain().focus().addColumnAfter().run()}
+          >
+            Spalte +
+          </button>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => editor.chain().focus().deleteRow().run()}
+          >
+            Zeile löschen
+          </button>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => editor.chain().focus().deleteColumn().run()}
+          >
+            Spalte löschen
+          </button>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => editor.chain().focus().deleteTable().run()}
+          >
+            Tabelle löschen
+          </button>
+        </div>
+      )}
+      {linkOpen && <LinkForm editor={editor} onClose={() => setLinkOpen(false)} />}
+    </div>
+  );
+}
+
+/**
+ * Editor einer Seite (Tiptap). Bausteine über „+ Baustein“ oder „/“ in einer leeren Zeile;
+ * Löschen lässt sich mit „Rückgängig“ (Strg+Z) zurücknehmen. Ohne Schreibrecht nur Anzeige.
+ */
+export function DokuEditor({
+  content,
+  editable,
+  label,
+  onChange,
+}: {
+  content: DocJson;
+  editable: boolean;
+  label: string;
+  onChange?: (doc: DocJson) => void;
+}) {
+  const [blocks, setBlocks] = useState(false);
+  const change = useRef(onChange);
+  useEffect(() => {
+    change.current = onChange;
+  }, [onChange]);
+  const editor = useEditor({
+    extensions: extensions("Schreib los oder tippe „/“ für Bausteine"),
+    content,
+    editable,
+    immediatelyRender: true,
+    // Kein <style> zur Laufzeit (CSP ohne 'unsafe-inline'); die Grundregeln stehen in styles.css
+    injectCSS: false,
+    editorProps: {
+      attributes: {
+        class: "doku-content",
+        "aria-label": label,
+        // Ohne Schreibrecht kein Eingabefeld für Screenreader (Tiptap setzt sonst „textbox“)
+        ...(editable ? { "aria-multiline": "true" } : { role: "document" }),
+      },
+      handleKeyDown: (view, event) => {
+        if (event.key !== "/" || !view.editable) {
+          return false;
+        }
+        const { $from, empty } = view.state.selection;
+        if (empty && $from.parent.type.name === "paragraph" && $from.parent.content.size === 0) {
+          setBlocks(true);
+          return true;
+        }
+        return false;
+      },
+    },
+    onUpdate: ({ editor: current }) => change.current?.(current.getJSON() as DocJson),
+  });
+  return (
+    <div className={editable ? "doku-editor doku-editing" : "doku-editor"}>
+      {editable && <Toolbar editor={editor} onBlocks={() => setBlocks(true)} />}
+      {editable && blocks && <BlockMenu editor={editor} onClose={() => setBlocks(false)} />}
+      <EditorContent editor={editor} />
+    </div>
+  );
+}

@@ -61,3 +61,18 @@ Die Lizenztexte der Dekoder liegen mit unter `/pdfjs/wasm/`.
   (Lizenztext im Paket unter `node_modules/pdfjs-dist/LICENSE`).
 - OpenJPEG (JPEG 2000) – BSD-Lizenz mit 2 Klauseln; PDFium JBIG2 – BSD-Lizenz mit 3 Klauseln;
   qcms (Farbprofile) – MIT-Lizenz. Lizenztexte im Paket unter `node_modules/pdfjs-dist/wasm/`.
+
+## Tiptap und ProseMirror
+
+Editor der Dokumentation (Pakete `@tiptap/*` in Version 3.34.0). Wird mit der Oberfläche
+gebündelt ausgeliefert, ohne CDN und ohne Tiptap-Cloud-Dienste.
+
+- Tiptap, https://github.com/ueberdosis/tiptap – MIT-Lizenz, Copyright (c) 2025, Tiptap GmbH
+  (Lizenztext im Paket unter `node_modules/@tiptap/core/LICENSE.md`).
+- ProseMirror (`prosemirror-*`), https://prosemirror.net – MIT-Lizenz, Copyright (C) 2015-2017
+  Marijn Haverbeke und andere.
+- linkifyjs, https://github.com/nfrasser/linkifyjs – MIT-Lizenz, Copyright (c) 2024 Nick Frasser.
+- Floating UI, https://github.com/floating-ui/floating-ui – MIT-Lizenz, Copyright (c)
+  2021-present Floating UI contributors.
+- Weitere kleine Abhängigkeiten, alle MIT-Lizenz: orderedmap, rope-sequence, w3c-keyname (Marijn
+  Haverbeke), fast-equals, use-sync-external-store.

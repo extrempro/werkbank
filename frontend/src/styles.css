@@ -13804,3 +13804,925 @@ button.ticket-file-thumb {
     padding-inline: 8px;
   }
 }
+
+/* ---------------------------------------------------------------------------------------- */
+/* Dokumentation: Seitenbaum im Menü, Seite mit Editor, Versionen, Rechte, Verwaltung        */
+/* ---------------------------------------------------------------------------------------- */
+
+.doku-new {
+  margin: 4px 10px 8px;
+  gap: 6px;
+}
+
+.doku-tree-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doku-tree-list .doku-tree-list {
+  padding-left: 14px;
+}
+
+.doku-tree-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.doku-tree-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--farbe-text-leise);
+}
+
+button.doku-tree-toggle {
+  cursor: pointer;
+}
+
+button.doku-tree-toggle:hover {
+  background: var(--farbe-grund);
+}
+
+.doku-tree-toggle .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.doku-tree-link {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: max(36px, calc(36px * var(--nav-scale)));
+  padding: 4px 8px;
+  border-radius: 8px;
+  color: var(--farbe-text-mittel);
+  font-size: calc(0.875rem * var(--nav-scale));
+  text-decoration: none;
+}
+
+.doku-tree-link:hover {
+  background: var(--farbe-grund);
+}
+
+.doku-tree-link[aria-current="page"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+  font-weight: 600;
+}
+
+.doku-tree-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.doku-tree-mark .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.doku-tree-empty {
+  margin: 4px 12px;
+}
+
+@media (pointer: coarse) {
+  .doku-tree-link {
+    min-height: 44px;
+  }
+
+  .doku-tree-toggle {
+    width: 36px;
+  }
+}
+
+.doku-hit-space {
+  color: var(--farbe-text-leise);
+}
+
+.doku-phone-pages {
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+/* Kopf der Seite */
+.doku-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 16px;
+}
+
+.doku-head-text {
+  flex: 1 1 24rem;
+  min-width: 0;
+}
+
+.doku-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 0;
+  font-size: 1.75rem;
+  overflow-wrap: anywhere;
+}
+
+.doku-title input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 6px;
+  margin-left: -7px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.doku-title input:hover {
+  border-color: var(--farbe-rand);
+}
+
+.doku-title-mark {
+  display: inline-flex;
+  color: var(--farbe-text-leise);
+}
+
+.doku-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.doku-head-actions .button {
+  gap: 6px;
+}
+
+.doku-save {
+  color: var(--farbe-text-leise);
+  font-size: 0.8125rem;
+}
+
+.doku-save-fehler,
+.doku-save-konflikt {
+  color: var(--farbe-bad-text);
+  font-weight: 600;
+}
+
+.doku-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.doku-version-banner {
+  justify-content: space-between;
+  background: var(--farbe-warn-flaeche);
+  color: var(--farbe-warn-text);
+}
+
+.doku-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.doku-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  gap: 16px;
+  align-items: start;
+}
+
+.doku-article {
+  min-width: 0;
+  padding: 0;
+}
+
+.doku-aside {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.doku-aside > .panel {
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .doku-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.doku-side-panel {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+
+.doku-side-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.doku-side-panel p {
+  margin: 0;
+}
+
+.doku-danger {
+  gap: 6px;
+  color: var(--farbe-bad-text);
+}
+
+.doku-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  vertical-align: middle;
+  color: var(--farbe-text);
+}
+
+.doku-versions {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doku-version {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.doku-version:hover {
+  background: var(--farbe-grund);
+}
+
+.doku-version[aria-current="true"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+.doku-version-when {
+  font-weight: 600;
+}
+
+.doku-name-form,
+.doku-field {
+  display: grid;
+  gap: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.doku-name-form input,
+.doku-field input,
+.doku-field select,
+.doku-picker input {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-weight: 400;
+}
+
+.doku-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+/* Editor: Grundregeln von ProseMirror (sonst von Tiptap zur Laufzeit eingefügt, was die CSP
+   ohne 'unsafe-inline' verhindert) */
+.ProseMirror {
+  position: relative;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  white-space: break-spaces;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0;
+}
+
+.ProseMirror [contenteditable="false"] {
+  white-space: normal;
+}
+
+.ProseMirror [contenteditable="false"] [contenteditable="true"] {
+  white-space: pre-wrap;
+}
+
+.ProseMirror pre {
+  white-space: pre-wrap;
+}
+
+img.ProseMirror-separator {
+  display: inline !important;
+  border: none !important;
+  margin: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.ProseMirror-gapcursor {
+  display: none;
+  pointer-events: none;
+  position: absolute;
+  margin: 0;
+}
+
+.ProseMirror-gapcursor::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: -2px;
+  width: 20px;
+  border-top: 1px solid var(--farbe-text);
+  animation: prosemirror-cursor-blink 1.1s steps(2, start) infinite;
+}
+
+@keyframes prosemirror-cursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+.ProseMirror-hideselection *::selection {
+  background: transparent;
+}
+
+.ProseMirror-hideselection * {
+  caret-color: transparent;
+}
+
+.ProseMirror-focused .ProseMirror-gapcursor {
+  display: block;
+}
+
+.doku-editor {
+  min-width: 0;
+}
+
+.doku-toolbar-wrap {
+  border-bottom: 1px solid var(--farbe-rand);
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--farbe-flaeche);
+}
+
+.doku-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+}
+
+.doku-tabletools {
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.doku-tabletools .button {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 0.8125rem;
+}
+
+.doku-add {
+  min-height: 36px;
+  gap: 4px;
+  padding: 0 10px;
+}
+
+.doku-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--farbe-text-mittel);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.doku-tool:hover {
+  background: var(--farbe-grund);
+}
+
+.doku-tool[aria-pressed="true"] {
+  border-color: var(--farbe-rand-stark);
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+.doku-tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.doku-tool .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.doku-tool-sep {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  background: var(--farbe-rand);
+}
+
+@media (pointer: coarse) {
+  .doku-tool,
+  .doku-add {
+    min-width: 44px;
+    height: 44px;
+  }
+}
+
+.doku-linkform {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--farbe-trenner);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.doku-linkform input {
+  flex: 1 1 16rem;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 400;
+}
+
+.doku-linkform .hint-box {
+  flex-basis: 100%;
+}
+
+.doku-blockmenu {
+  position: relative;
+  z-index: 6;
+  display: grid;
+  gap: 6px;
+  max-width: 22rem;
+  margin: 8px 12px;
+  padding: 8px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 10px;
+  background: var(--farbe-flaeche);
+  box-shadow: var(--schatten-blase);
+}
+
+.doku-blockmenu input {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.doku-blockmenu ul {
+  display: grid;
+  max-height: 18rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.doku-blockmenu li[role="option"] {
+  display: grid;
+  min-height: 40px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.doku-blockmenu li[role="option"]:hover,
+.doku-blockmenu-active {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+.doku-content {
+  min-height: 16rem;
+  padding: 16px 24px 32px;
+  outline: none;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.doku-editing .doku-content:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--farbe-primaer);
+}
+
+.doku-content > * + * {
+  margin-top: 0.75em;
+}
+
+.doku-content p {
+  margin: 0;
+}
+
+.doku-content h1,
+.doku-content h2,
+.doku-content h3 {
+  margin: 1.2em 0 0.4em;
+  line-height: 1.3;
+}
+
+.doku-content h1 {
+  font-size: 1.5rem;
+}
+
+.doku-content h2 {
+  font-size: 1.25rem;
+}
+
+.doku-content h3 {
+  font-size: 1.0625rem;
+}
+
+.doku-content ul,
+.doku-content ol {
+  margin: 0;
+  padding-left: 1.5em;
+}
+
+.doku-content ul[data-type="taskList"] {
+  padding-left: 0;
+  list-style: none;
+}
+
+.doku-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.doku-content ul[data-type="taskList"] li > label {
+  flex: none;
+  margin-top: 0.2em;
+}
+
+.doku-content ul[data-type="taskList"] li > label input {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--farbe-primaer);
+}
+
+.doku-content ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.doku-content ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--farbe-text-leise);
+  text-decoration: line-through;
+}
+
+.doku-content blockquote {
+  margin: 0;
+  padding-left: 14px;
+  border-left: 3px solid var(--farbe-rand-stark);
+  color: var(--farbe-text-mittel);
+}
+
+.doku-content pre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--farbe-grund);
+  font-family: var(--schrift-mono);
+  font-size: 0.8125rem;
+}
+
+.doku-content code {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--farbe-grund);
+  font-family: var(--schrift-mono);
+  font-size: 0.875em;
+}
+
+.doku-content pre code {
+  padding: 0;
+  background: none;
+}
+
+.doku-content hr {
+  border: 0;
+  border-top: 1px solid var(--farbe-rand-stark);
+}
+
+.doku-content a {
+  color: var(--farbe-link);
+}
+
+.doku-content table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.doku-content th,
+.doku-content td {
+  padding: 6px 10px;
+  border: 1px solid var(--farbe-rand-stark);
+  vertical-align: top;
+}
+
+.doku-content th {
+  background: var(--farbe-grund);
+  font-weight: 600;
+  text-align: left;
+}
+
+.doku-content .tableWrapper {
+  overflow-x: auto;
+}
+
+.doku-content .selectedCell {
+  background: var(--farbe-auswahl);
+}
+
+.doku-callout {
+  padding: 10px 14px;
+  border-left: 4px solid var(--farbe-info-rand);
+  border-radius: 8px;
+  background: var(--farbe-info-flaeche);
+  color: var(--farbe-info-text);
+}
+
+.doku-callout-warnung {
+  border-left-color: var(--farbe-warn-rand-stark);
+  background: var(--farbe-warn-flaeche);
+  color: var(--farbe-warn-text);
+}
+
+.doku-callout-erfolg {
+  border-left-color: var(--farbe-ok-text);
+  background: var(--farbe-ok-flaeche);
+  color: var(--farbe-ok-text);
+}
+
+.doku-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--farbe-text-leise);
+  pointer-events: none;
+}
+
+/* Dialoge */
+.doku-dialog {
+  width: 640px;
+}
+
+.doku-dialog h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.doku-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.doku-icon-only {
+  width: 44px;
+  padding: 0;
+}
+
+.doku-choice {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.doku-choice legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.doku-choice label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.doku-choice label > span {
+  display: grid;
+  gap: 2px;
+}
+
+.doku-choice input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--farbe-primaer);
+}
+
+.doku-members {
+  display: grid;
+  gap: 12px;
+}
+
+.doku-members-table th,
+.doku-members-table td {
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+.doku-members-table tbody th {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.doku-members-table select {
+  min-height: 40px;
+  padding: 0 8px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.doku-picker {
+  display: grid;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.doku-picker-hits {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-weight: 400;
+}
+
+.doku-picker-hits li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+}
+
+.doku-space-members {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.doku-space-members summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--farbe-link);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Übersicht und Verwaltung */
+.doku-spaces {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.doku-space-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 16px;
+}
+
+.doku-space-card h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.doku-space-card p {
+  margin: 0;
+}
+
+.doku-space-pages {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doku-space-pages a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.doku-admin-panel {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+  justify-items: start;
+}
+
+.doku-admin-panel > .table-wrap {
+  justify-self: stretch;
+}
+
+.doku-space-form,
+.doku-settings {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: 44rem;
+  padding: 16px;
+}
+
+.doku-space-form h3,
+.doku-space-form h4 {
+  margin: 0;
+}
+
+.doku-cell-sub {
+  display: block;
+  font-weight: 400;
+  color: var(--farbe-text-leise);
+}
+
+.doku-row-actions {
+  white-space: nowrap;
+}
+
+.doku-row-actions .button + .button {
+  margin-left: 6px;
+}

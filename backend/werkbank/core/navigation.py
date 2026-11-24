@@ -85,6 +85,8 @@ PAGES: dict[str, tuple[str, ...]] = {
     "/audit": (Role.WERKBANK_ADMIN,),
     # Tickets: Zugriff hängt an den Rollen je Bereich (Datenbank und Graph), nicht an App-Rollen.
     # Die Seiten zeigen ohne Rolle im Bereich nichts; deshalb hier für alle Angemeldeten.
+    "/doku": (Role.DOKU_USER, Role.DOKU_ADMIN),
+    "/doku/verwaltung": (Role.DOKU_ADMIN,),
     "/tickets": EVERYONE,
     "/tickets/neu": EVERYONE,
     "/tickets/einstellungen": EVERYONE,
