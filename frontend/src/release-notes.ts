@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.116.0",
+    date: "2026-11-24",
+    summary: "Tickets: Bilder in Mails und Vorschau von Anhängen.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Bilder, die in einer Mail stehen, zeigt das Ticket jetzt unter „Bilder in der Nachricht“. Im Text steht an ihrer Stelle „Bild 1“, „Bild 2“ und so weiter; ein Klick zeigt das Bild groß.",
+          "Anhänge haben eine Vorschau: Bilder öffnen groß und du blätterst mit den Pfeilen, PDF-Dateien öffnen in einem neuen Tab, Textdateien als Auszug. Alles andere lädst du wie bisher herunter.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.115.0",
     date: "2026-11-24",
     summary: "Tickets: Lösung beim Wechsel auf „Gelöst“.",

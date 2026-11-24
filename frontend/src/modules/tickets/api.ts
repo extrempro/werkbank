@@ -104,6 +104,16 @@ export interface Attachment {
   original: boolean;
   /** Grund, warum der Anhang entfernt wurde (dann ohne Download). */
   removed_reason: string;
+  /** Eingebettetes Bild: Nummer in der Nachricht, passend zu „[Bild n]“ im Text. */
+  inline_number: number | null;
+  /** Vorschau: Bild, PDF (neuer Tab), Text (Auszug) oder leer (nur Download). */
+  preview: "image" | "pdf" | "text" | "";
+}
+
+export interface TextPreview {
+  text: string;
+  /** Nur die ersten 200 KB. */
+  truncated: boolean;
 }
 
 export interface Entry {
@@ -340,6 +350,16 @@ export function forwardTicket(number: number, body: ForwardInput): Promise<Ticke
 
 export function attachmentUrl(number: number, id: string): string {
   return `${BASE}/${number}/attachments/${id}`;
+}
+
+/** Bild oder PDF im Browser anzeigen (statt herunterladen). */
+export function attachmentViewUrl(number: number, id: string): string {
+  return `${attachmentUrl(number, id)}?view=true`;
+}
+
+/** Textdatei als Auszug (die ersten 200 KB). */
+export function attachmentText(number: number, id: string): Promise<TextPreview> {
+  return getJson(`${attachmentUrl(number, id)}/text`);
 }
 
 /** Größe lesbar: „12 KB“, „1,4 MB“. */

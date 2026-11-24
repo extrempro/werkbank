@@ -17,7 +17,6 @@ import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
 import {
   addNote,
-  attachmentUrl,
   changeDetails,
   changeTicket,
   CHANNEL_LABELS,
@@ -32,7 +31,6 @@ import {
   retentionText,
   setHold,
   ticketPath,
-  formatSize,
   moveTicket,
   PRIORITY_LABELS,
   SETTABLE_STATUSES,
@@ -56,6 +54,7 @@ import {
 } from "./api";
 import { formatDate, hardwarePath, positionPath } from "../inventory/api";
 import { parseMails } from "./NewTicketPage";
+import { EntryContent } from "./AttachmentPreview";
 import { SolutionFields } from "./SolutionFields";
 import { STATUS_PILLS } from "./TicketsPage";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
@@ -171,36 +170,19 @@ function EntryItem({
       {entry.kind === "reply" && entry.recipients && (
         <p className="small ticket-recipients">An: {entry.recipients}</p>
       )}
-      <p className="ticket-entry-body">{text}</p>
-      {long && (
-        <button type="button" className="row-button" onClick={() => setFull(!full)}>
-          {full ? "Nachricht kürzen" : "Ganze Nachricht anzeigen"}
-        </button>
-      )}
-      {entry.quote && (
-        <details className="ticket-quote">
-          <summary>Zitat aus früheren Mails anzeigen</summary>
-          <p className="ticket-entry-body">{entry.quote}</p>
-        </details>
-      )}
-      {entry.attachments.length > 0 && (
-        <ul className="plain ticket-attachments" aria-label="Anhänge">
-          {entry.attachments.map((att) => (
-            <li key={att.id}>
-              {att.removed_reason ? (
-                <span className="small">
-                  {att.filename}: entfernt ({att.removed_reason})
-                </span>
-              ) : (
-                <a href={attachmentUrl(ticket.number, att.id)} download>
-                  {att.original ? "Original-Mail (.eml)" : att.filename}
-                  <span className="small"> · {formatSize(att.size)}</span>
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      <EntryContent number={ticket.number} entry={entry} text={text}>
+        {long && (
+          <button type="button" className="row-button" onClick={() => setFull(!full)}>
+            {full ? "Nachricht kürzen" : "Ganze Nachricht anzeigen"}
+          </button>
+        )}
+        {entry.quote && (
+          <details className="ticket-quote">
+            <summary>Zitat aus früheren Mails anzeigen</summary>
+            <p className="ticket-entry-body">{entry.quote}</p>
+          </details>
+        )}
+      </EntryContent>
       {onForward && (entry.kind === "inbound" || entry.kind === "reply") && (
         <button type="button" className="row-button" onClick={() => onForward(entry)}>
           Weiterleiten

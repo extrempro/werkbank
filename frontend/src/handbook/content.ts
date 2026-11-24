@@ -1192,7 +1192,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Bei Mails steht im Verlauf nur der neue Text. Zitate aus früheren Mails klappst du bei Bedarf auf. Anhänge lädst du herunter; nicht erlaubte Anhänge entfernt die Werkbank und vermerkt das im Ticket. Die ganze Mail gibt es als „Original-Mail (.eml)“.",
+                text: "Bei Mails steht im Verlauf nur der neue Text. Zitate aus früheren Mails klappst du bei Bedarf auf. Bilder, die in der Mail stehen, siehst du unter „Bilder in der Nachricht“; im Text steht an ihrer Stelle „Bild 1“, „Bild 2“ und so weiter, ein Klick darauf zeigt das Bild groß. Dort blätterst du mit den Pfeilen durch alle Bilder der Nachricht. Bei den Anhängen öffnet „Ansehen“ Bilder groß, PDF-Dateien in einem neuen Tab und Textdateien als Auszug; Office-Dateien und ZIP lädst du mit „Herunterladen“. Nicht erlaubte Anhänge entfernt die Werkbank und vermerkt das im Ticket. Die ganze Mail gibt es als „Original-Mail (.eml)“.",
               },
             ],
             links: [{ to: "/tickets", label: "Zu allen Tickets" }],

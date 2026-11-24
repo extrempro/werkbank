@@ -791,3 +791,63 @@ test("Tickets: Melder im IT-Bestand nur mit Rechten dort; Melder frei eintragbar
   );
   await expectNoA11yViolations(page);
 });
+
+const PNG_1PX =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+test("Tickets: eingebettete Bilder groß ansehen, Textanhang als Auszug", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const editor = await apiAs(browser, ["Tickets.Nutzer"], s.editor);
+  const area = await areaId(editor, s.areaName);
+  const log = Buffer.from("Zeile 1: Akku 0 %\nZeile 2: kein Netzteil").toString(
+    "base64",
+  );
+  const raw =
+    `From: M. Muster <m.muster@example.com>\r\nTo: it@example.com\r\n` +
+    `Subject: Netzteil ${stamp}\r\nMessage-ID: <bild-${stamp}@example.com>\r\nMIME-Version: 1.0\r\n` +
+    'Content-Type: multipart/mixed; boundary="M"\r\n\r\n' +
+    '--M\r\nContent-Type: multipart/related; boundary="R"\r\n\r\n' +
+    "--R\r\nContent-Type: text/html; charset=utf-8\r\n\r\n" +
+    '<p>So sieht es aus: <img src="cid:img1@x"> Danke!</p>\r\n' +
+    "--R\r\nContent-Type: image/png\r\nContent-ID: <img1@x>\r\nContent-Disposition: inline\r\n" +
+    `Content-Transfer-Encoding: base64\r\n\r\n${PNG_1PX}\r\n--R--\r\n` +
+    '--M\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename="protokoll.log"\r\n' +
+    `Content-Transfer-Encoding: base64\r\n\r\n${log}\r\n--M--\r\n`;
+  const created = await editor.post("/api/tickets/test/mail", {
+    data: { area_id: area, raw },
+    headers: HEADERS,
+  });
+  const number = ((await created.json()) as { ticket_number: number })
+    .ticket_number;
+
+  await loginAs(page, ["Tickets.Nutzer"], s.editor);
+  await page.goto(`/tickets/${number}`);
+  await expect(page.getByText("Bilder in der Nachricht")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // „Bild 1“ im Text öffnet das Bild groß
+  await page
+    .getByRole("button", { name: "Bild 1 groß anzeigen" })
+    .first()
+    .click();
+  const viewer = page.getByRole("dialog", { name: "Bild 1" });
+  await expect(viewer).toBeVisible();
+  await expect(viewer.getByRole("img", { name: "Bild 1" })).toBeVisible();
+  await expect(
+    viewer.getByRole("link", { name: "Herunterladen" }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.keyboard.press("Escape");
+  await expect(viewer).toBeHidden();
+
+  // Textdatei als Auszug
+  await page.getByRole("button", { name: "protokoll.log ansehen" }).click();
+  const text = page.getByRole("dialog", { name: "protokoll.log" });
+  await expect(text.getByText(/Zeile 2: kein Netzteil/)).toBeVisible();
+  await text.getByRole("button", { name: "Schließen" }).click();
+  await expect(text).toBeHidden();
+});

@@ -172,6 +172,7 @@ def _add_attachments(
                 size=len(item.data),
                 key=None if reason else store_file(directory, item.data),
                 removed_reason=reason,
+                inline_number=item.inline_number,
             )
         )
         if reason:

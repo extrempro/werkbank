@@ -362,6 +362,8 @@ describe("Antwort an den Melder", () => {
                         size: 2048,
                         original: false,
                         removed_reason: "",
+                        inline_number: null,
+                        preview: "pdf",
                       },
                       {
                         id: "f2",
@@ -369,6 +371,8 @@ describe("Antwort an den Melder", () => {
                         size: 10,
                         original: false,
                         removed_reason: "Dateityp nicht erlaubt",
+                        inline_number: null,
+                        preview: "",
                       },
                     ],
                   },
@@ -385,11 +389,82 @@ describe("Antwort an den Melder", () => {
       (screen.getByRole("button", { name: /^Antworten( \(Entwurf\))?$/ }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    expect(screen.getByRole("link", { name: /a.pdf/ }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "a.pdf herunterladen" }).getAttribute("href")).toBe(
       "/api/tickets/1042/attachments/f1",
     );
+    const view = screen.getByRole("link", { name: "a.pdf ansehen (neuer Tab)" });
+    expect(view.getAttribute("href")).toBe("/api/tickets/1042/attachments/f1?view=true");
+    expect(view.getAttribute("target")).toBe("_blank");
     expect(screen.getByText(/b.exe: entfernt/)).toBeTruthy();
     expect(screen.getByText("Zitat aus früheren Mails anzeigen")).toBeTruthy();
+  });
+
+  it("zeigt eingebettete Bilder im Text, groß zum Blättern und Textdateien als Auszug", async () => {
+    const file = (
+      id: string,
+      filename: string,
+      inline: number | null,
+      preview: "image" | "text",
+    ) => ({
+      id,
+      filename,
+      size: 4096,
+      original: false,
+      removed_reason: "",
+      inline_number: inline,
+      preview,
+    });
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        urls.push(url);
+        if (url.endsWith("/text")) {
+          return new Response(JSON.stringify({ text: "Zeile 1\nZeile 2", truncated: true }), {
+            status: 200,
+          });
+        }
+        return new Response(
+          JSON.stringify(
+            ticket({
+              entries: [
+                {
+                  ...entry("a", "inbound", true),
+                  body: "So sieht es aus: [Bild 1] und hier [Bild 3]. Danke!",
+                  attachments: [
+                    file("i1", "bild-1.png", 1, "image"),
+                    file("f1", "foto.jpg", null, "image"),
+                    file("f2", "protokoll.log", null, "text"),
+                  ],
+                },
+              ],
+            }),
+          ),
+          { status: 200 },
+        );
+      }),
+    );
+    render(<TicketPage number={1042} />);
+    fireEvent.click((await screen.findAllByRole("button", { name: "Bild 1 groß anzeigen" }))[0]!);
+    let dialog = screen.getByRole("dialog", { name: "Bild 1" });
+    expect(within(dialog).getByText(/1 von 2/)).toBeTruthy();
+    expect(within(dialog).getByRole("img").getAttribute("src")).toBe(
+      "/api/tickets/1042/attachments/i1?view=true",
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Nächstes Bild" }));
+    dialog = screen.getByRole("dialog", { name: "foto.jpg" });
+    expect(within(dialog).getByText(/2 von 2/)).toBeTruthy();
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(screen.getByRole("dialog", { name: "Bild 1" })).toBeTruthy();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // Bild 3 gibt es nicht: Hinweis ohne Knopf
+    expect(screen.getByText("Bild 3 (nicht verfügbar)")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "protokoll.log ansehen" }));
+    const text = await screen.findByRole("dialog", { name: "protokoll.log" });
+    expect(await within(text).findByText(/Zeile 2/)).toBeTruthy();
+    expect(within(text).getByText(/gekürzt auf die ersten 200 KB/)).toBeTruthy();
+    expect(urls).toContain("/api/tickets/1042/attachments/f2/text");
   });
 });
 

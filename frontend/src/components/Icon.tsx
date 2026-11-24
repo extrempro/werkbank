@@ -171,6 +171,10 @@ const PATHS = {
     "M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1",
   ],
   pdf: ["M14 3H6v18h12V7z", "M14 3v4h4", "M9 13h6", "M9 17h4"],
+  bild: ["M4 5h16v14H4z", "M9 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z", "M4 17l5-5 4 4 2-2 5 5"],
+  datei: ["M14 3H6v18h12V7z", "M14 3v4h4"],
+  herunterladen: ["M12 4v11", "M7 10l5 5 5-5", "M5 20h14"],
+  weiter: ["M9 6l6 6-6 6"],
 } as const;
 
 export type IconName = keyof typeof PATHS;
