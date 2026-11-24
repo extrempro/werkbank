@@ -51,6 +51,36 @@ function readTreeHidden(): boolean {
   }
 }
 
+export type TreeSpacing = "kompakt" | "normal" | "weit";
+
+export const TREE_SPACING_KEY = "werkbank-standortbaum-abstand";
+const TREE_SPACINGS: readonly { value: TreeSpacing; label: string }[] = [
+  { value: "kompakt", label: "Kompakt" },
+  { value: "normal", label: "Normal" },
+  { value: "weit", label: "Weiträumig" },
+];
+
+export function readTreeSpacing(): TreeSpacing {
+  try {
+    const value = window.localStorage.getItem(TREE_SPACING_KEY);
+    return value === "kompakt" || value === "weit" ? value : "normal";
+  } catch {
+    return "normal";
+  }
+}
+
+function saveTreeSpacing(spacing: TreeSpacing): void {
+  try {
+    if (spacing === "normal") {
+      window.localStorage.removeItem(TREE_SPACING_KEY);
+    } else {
+      window.localStorage.setItem(TREE_SPACING_KEY, spacing);
+    }
+  } catch {
+    // Speicher gesperrt: gilt nur bis zum Neuladen
+  }
+}
+
 function saveTreeHidden(hidden: boolean): void {
   try {
     window.localStorage.setItem(TREE_KEY, hidden ? "aus" : "an");
@@ -816,6 +846,7 @@ export function LocationsPage({
   const [draft, setDraft] = useState<RoomRect | null>(null);
   const [mobileTree, setMobileTree] = useState(false);
   const [treeHidden, setTreeHidden] = useState(readTreeHidden);
+  const [spacing, setSpacing] = useState<TreeSpacing>(readTreeSpacing);
   const [notice, setNotice] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const nodeKey = node ? `${node.level}-${node.id}` : "";
@@ -877,6 +908,10 @@ export function LocationsPage({
     if (next.id !== floorId) {
       navigate(locationPath(next.id));
     }
+  };
+  const pickSpacing = (value: TreeSpacing) => {
+    setSpacing(value);
+    saveTreeSpacing(value);
   };
   const toggleTree = (hidden: boolean) => {
     setTreeHidden(hidden);
@@ -974,6 +1009,7 @@ export function LocationsPage({
                 mobileTree || !selectedLabel ? "panel loc-tree loc-tree-open" : "panel loc-tree"
               }
               aria-label="Standorte"
+              data-spacing={spacing === "normal" ? undefined : spacing}
               onClick={(event) => {
                 // Schmal: Nach der Wahl im Baum schließt er sich wieder.
                 if (event.target instanceof Element && event.target.closest("a")) {
@@ -993,6 +1029,23 @@ export function LocationsPage({
                   <Icon name="einklappen" />
                 </button>
               </div>
+              <fieldset className="theme-switch loc-tree-spacing">
+                <legend>Abstände im Baum</legend>
+                <div className="theme-options">
+                  {TREE_SPACINGS.map((option) => (
+                    <label key={option.value}>
+                      <input
+                        type="radio"
+                        name="standortbaum-abstand"
+                        value={option.value}
+                        checked={spacing === option.value}
+                        onChange={() => pickSpacing(option.value)}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <div className="loc-search">
                 <label htmlFor="standort-suche" className="visually-hidden">
                   Raum, Etage oder Standort suchen

@@ -259,6 +259,21 @@ describe("Standorte: Aufbau", () => {
     expect(container.querySelector(".loc-layout-wide")).toBeNull();
   });
 
+  it("stellt die Abstände im Baum ein und merkt sie sich", async () => {
+    stubFetch({ "GET /api/inventory/locations": tree, "GET /api/inventory/floors/4": floor });
+    render(<LocationsPage floorId={4} roomId={null} roles={["Bestand.Reader"]} />);
+    const nav = await screen.findByRole("navigation", { name: "Standorte" });
+    expect(screen.getByRole("radio", { name: "Normal" })).toBeChecked();
+    expect(nav).not.toHaveAttribute("data-spacing");
+    fireEvent.click(screen.getByRole("radio", { name: "Kompakt" }));
+    expect(nav).toHaveAttribute("data-spacing", "kompakt");
+    expect(window.localStorage.getItem("werkbank-standortbaum-abstand")).toBe("kompakt");
+    fireEvent.click(screen.getByRole("radio", { name: "Weiträumig" }));
+    expect(nav).toHaveAttribute("data-spacing", "weit");
+    fireEvent.click(screen.getByRole("radio", { name: "Normal" }));
+    expect(window.localStorage.getItem("werkbank-standortbaum-abstand")).toBeNull();
+  });
+
   it("zeigt einen Abschnitt mit seinen Etagen und legt dort eine neue an", async () => {
     const calls = stubFetch({
       "GET /api/inventory/locations": tree,

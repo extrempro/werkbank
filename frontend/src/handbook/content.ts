@@ -1560,7 +1560,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Unter „Standorte“ steht links der Baum Stadt › Standort › Gebäudeabschnitt › Etage. Der Pfeil klappt eine Ebene auf oder zu, ein Klick auf den Namen öffnet sie. Offen ist anfangs nur der Weg zur Auswahl. Über das Suchfeld findest du Räume, Etagen und Standorte direkt. Mit dem Knopf oben im Baum blendest du ihn aus, damit der Grundriss mehr Platz hat; „Standortbaum einblenden“ holt ihn zurück.",
+                text: "Unter „Standorte“ steht links der Baum Stadt › Standort › Gebäudeabschnitt › Etage. Der Pfeil klappt eine Ebene auf oder zu, ein Klick auf den Namen öffnet sie. Offen ist anfangs nur der Weg zur Auswahl. Über das Suchfeld findest du Räume, Etagen und Standorte direkt. Mit dem Knopf oben im Baum blendest du ihn aus, damit der Grundriss mehr Platz hat; „Standortbaum einblenden“ holt ihn zurück. Unter „Abstände im Baum“ stellst du ein, wie dicht die Einträge stehen: kompakt, normal oder weiträumig. Dein Browser merkt sich die Wahl.",
               },
               {
                 kind: "text",

@@ -7514,6 +7514,39 @@ td > .budget-row-actions {
   margin: 0;
 }
 
+/* Abstände im Standortbaum: kompakt, normal, weiträumig (am Baum einstellbar) */
+.loc-tree {
+  --lt-height: 40px;
+  --lt-pad: 8px;
+  --lt-gap: 2px;
+}
+
+.loc-tree[data-spacing="kompakt"] {
+  --lt-height: 30px;
+  --lt-pad: 4px;
+  --lt-gap: 0px;
+}
+
+.loc-tree[data-spacing="weit"] {
+  --lt-height: 50px;
+  --lt-pad: 12px;
+  --lt-gap: 6px;
+}
+
+/* Mit dem Finger bleiben Einträge mindestens 44 px hoch, auch kompakt. */
+@media (pointer: coarse) {
+  .loc-tree[data-spacing="kompakt"] {
+    --lt-height: 44px;
+  }
+}
+
+/* Auswahl der Abstände oben im Baum (Aussehen wie „Abstände im Menü“) */
+.loc-tree-spacing.theme-switch {
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+}
+
 .lt-list,
 .lt-children {
   list-style: none;
@@ -7523,13 +7556,13 @@ td > .budget-row-actions {
 
 .lt-list {
   display: grid;
-  gap: 2px;
+  gap: var(--lt-gap);
   margin-top: 8px;
 }
 
 .lt-children {
   display: grid;
-  gap: 2px;
+  gap: var(--lt-gap);
   margin: 2px 0 4px 15px;
   padding-left: 6px;
   border-left: 1px solid var(--farbe-trenner);
@@ -7547,7 +7580,7 @@ td > .budget-row-actions {
   align-items: center;
   justify-content: center;
   width: 28px;
-  min-height: 40px;
+  min-height: var(--lt-height);
   padding: 0;
   border: 0;
   border-radius: 6px;
@@ -7572,10 +7605,30 @@ td > .budget-row-actions {
 
 .lt-open,
 .lt-toggle,
-.lt-floor,
+.lt-floor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 6px;
+  row-gap: 0;
+  width: 100%;
+  min-height: var(--lt-height);
+  padding: var(--lt-pad) 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .lt-open:hover,
 .lt-toggle:hover,
-.lt-floor:hover,
+.lt-floor:hover {
+  background: var(--farbe-hover);
+}
+
 .lt-stadt .lt-open {
   font-weight: 600;
 }
@@ -7624,7 +7677,12 @@ td > .budget-row-actions {
 }
 
 .lt-open[aria-current="page"],
-.lt-floor[aria-current="page"],
+.lt-floor[aria-current="page"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+  font-weight: 600;
+}
+
 .plan-with-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 22rem;
