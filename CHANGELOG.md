@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.124.0] – 2026-11-24
+
+### Tickets
+
+- **Favoriten und Geöffnet** unter „Neues Ticket“ (PC, Tablet, im Menü am Handy): zuletzt geöffnete Tickets in fester Reihenfolge, Stern für Favoriten (eigene Gruppe, zählt nicht mit), X zum Entfernen, „Liste leeren“ mit Bestätigung, beide Gruppen aufklappbar. Je Person gespeichert und auf allen Geräten gleich; nur Tickets, die die Person sehen darf (`/api/tickets/leiste`, Migration 0084).
+- **Konto › Tickets:** Höchstzahl (5, 10, 15, 25) und Ansicht (kompakt mit Status-Punkt und Legende, normal mit Status) je Konto.
+- Ein Ticket öffnet direkt bei der letzten Mitteilung im Verlauf.
+- Antworten per Mail: Das Logo aus dem Branding und eingebettete Bilder, die nur im Zitat früherer Mails stehen, kommen nicht mehr als Anhang ins Ticket (sie bleiben in der Original-Mail).
+
 ## [0.123.1] – 2026-11-24
 
 ### IT-Monitoring

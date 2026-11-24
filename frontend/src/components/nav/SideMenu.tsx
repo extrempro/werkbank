@@ -1,4 +1,4 @@
-import { useId, useState, type MouseEvent } from "react";
+import { useId, useState, type MouseEvent, type ReactNode } from "react";
 import type { NavArea } from "../../navigation";
 import { useNavPrefs } from "../../navPrefs";
 import { Icon } from "../Icon";
@@ -8,7 +8,7 @@ import { PinButton } from "./PinButton";
 /** Gemerkter Zustand der Gruppen (auf/zu) in diesem Browser. */
 export const GROUPS_KEY = "werkbank-navigation-gruppen";
 
-function readGroups(): Record<string, boolean> {
+export function readGroups(): Record<string, boolean> {
   try {
     const value: unknown = JSON.parse(window.localStorage.getItem(GROUPS_KEY) ?? "{}");
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -24,7 +24,7 @@ function readGroups(): Record<string, boolean> {
   }
 }
 
-function saveGroups(groups: Record<string, boolean>): void {
+export function saveGroups(groups: Record<string, boolean>): void {
   try {
     window.localStorage.setItem(GROUPS_KEY, JSON.stringify(groups));
   } catch {
@@ -42,6 +42,8 @@ interface SideMenuProps {
   badgeFor: (path: string) => number;
   onNavigate: (event: MouseEvent<HTMLAnchorElement>, path: string) => void;
   onCollapse: () => void;
+  /** Zusätzlicher Inhalt unter den Gruppen, z. B. die Ticket-Leiste. */
+  extra?: ReactNode;
 }
 
 /** Seiten des gewählten Bereichs, in Gruppen zum Auf- und Zuklappen, mit Stern zum Anheften. */
@@ -54,6 +56,7 @@ export function SideMenu({
   badgeFor,
   onNavigate,
   onCollapse,
+  extra,
 }: SideMenuProps) {
   const prefs = useNavPrefs();
   const [stored, setStored] = useState(readGroups);
@@ -142,6 +145,7 @@ export function SideMenu({
             </div>
           );
         })}
+        {extra}
       </div>
       <p className="side-error" role="status">
         {prefs.error}

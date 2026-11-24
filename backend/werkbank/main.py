@@ -66,6 +66,7 @@ from werkbank.modules.tickets.api import router as tickets_router
 from werkbank.modules.tickets.mail_api import router as tickets_mail_router
 from werkbank.modules.tickets.mail_api import test_router as tickets_mail_test_router
 from werkbank.modules.tickets.ops_api import router as tickets_ops_router
+from werkbank.modules.tickets.recent_api import router as tickets_recent_router
 from werkbank.modules.tickets.settings_api import router as tickets_settings_router
 from werkbank.modules.tickets.settings_api import test_router as tickets_test_router
 from werkbank.modules.tickets.work_api import router as tickets_work_router
@@ -180,6 +181,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tickets_test_router)
     app.include_router(tickets_ops_router)
     app.include_router(tickets_work_router)
+    app.include_router(tickets_recent_router)
     app.include_router(tickets_router)
 
     @app.get("/health", include_in_schema=False)

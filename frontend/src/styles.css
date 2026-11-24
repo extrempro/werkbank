@@ -12850,6 +12850,7 @@ input[type="file"] {
 }
 
 .ticket-entry {
+  scroll-margin-top: calc(var(--kopf-hoehe) + 16px);
   padding: 12px 14px;
   border: 1px solid var(--farbe-rand);
   border-radius: 10px;
@@ -15413,4 +15414,158 @@ button.doku-thread-quote {
 }
 .doku-comment-sheet .doku-comments-head {
   justify-content: flex-end;
+}
+
+/* Tickets: Leiste „Favoriten“ und „Geöffnet“ unter „Neues Ticket“ (PC, Tablet, Handy-Menü) */
+.ticket-bar ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ticket-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 8px;
+}
+
+.ticket-bar-item + .ticket-bar-item {
+  margin-top: var(--nav-item-gap, 2px);
+}
+
+.ticket-bar-item > a {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: max(
+    var(--nav-item-height, 40px),
+    calc(var(--nav-item-height, 40px) * var(--nav-scale, 1))
+  );
+  padding: 4px 6px 4px 12px;
+  border-radius: 8px;
+  color: var(--farbe-text-mittel);
+  font-size: calc(0.875rem * var(--nav-scale, 1));
+  text-decoration: none;
+}
+
+.ticket-bar-item > a:hover {
+  background: var(--farbe-grund);
+}
+
+.ticket-bar-item > a[aria-current="page"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+  font-weight: 600;
+}
+
+.ticket-bar-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.ticket-bar-subject {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-bar-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--farbe-text-leise);
+  cursor: pointer;
+}
+
+.ticket-bar-button:hover {
+  background: var(--farbe-grund);
+  color: var(--farbe-text);
+}
+
+.ticket-bar-button.pin-on {
+  color: var(--farbe-stern);
+}
+
+.ticket-bar-button .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Am Handy und mit dem Finger: Ziele mindestens 44 px */
+.sheet-group.ticket-bar .ticket-bar-item > a {
+  min-height: 48px;
+  font-size: 0.9375rem;
+}
+
+@media (pointer: coarse) {
+  .ticket-bar-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.ticket-dot {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.ticket-dot-neu {
+  background: var(--farbe-primaer);
+}
+
+.ticket-dot-arbeit {
+  background: var(--farbe-warn-rand-stark);
+}
+
+.ticket-dot-wartet {
+  box-shadow: inset 0 0 0 2px var(--farbe-rand-kontrast);
+}
+
+.ticket-dot-erledigt {
+  background: var(--farbe-ok-text);
+}
+
+.ticket-dot-zusammen {
+  background: var(--farbe-rand-kontrast);
+}
+
+.ticket-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 12px 0;
+  color: var(--farbe-text-leise);
+  font-size: 0.75rem;
+}
+
+.ticket-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ticket-legend .ticket-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.ticket-bar-clear {
+  margin: 6px 12px 0;
 }

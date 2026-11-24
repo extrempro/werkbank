@@ -17,6 +17,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
+from werkbank.core.models import BrandingAsset
 from werkbank.core.sessions import now_utc
 from werkbank.modules.tickets.files import store_file
 from werkbank.modules.tickets.mailbox import (
@@ -129,6 +130,28 @@ def _find_ticket(db: Session, mail: ParsedMail) -> Ticket | None:
     return None
 
 
+def _from_earlier_mails(db: Session, entry: TicketEntry, mail: ParsedMail) -> set[int]:
+    """Bilder, die nicht vom Absender stammen, sondern aus dem Zitat früherer Mails.
+
+    Mailprogramme hängen beim Antworten die Bilder der zitierten Mail wieder an, etwa das Logo
+    aus dem Branding. Sie gehören nicht in den Verlauf (im Original bleiben sie erhalten):
+    - Bilder, die genau einem Logo aus dem Branding entsprechen,
+    - bei Antworten eingebettete Bilder, die nur im Zitat stehen, nicht im neuen Text.
+    """
+    logos = {
+        hashlib.sha256(data).digest() for data in db.scalars(select(BrandingAsset.data)) if data
+    }
+    skip: set[int] = set()
+    for index, item in enumerate(mail.attachments):
+        if item.data and hashlib.sha256(item.data).digest() in logos:
+            skip.add(index)
+        elif item.inline_number and not entry.original:
+            mark = f"[Bild {item.inline_number}]"
+            if mark in entry.quote and mark not in entry.body:
+                skip.add(index)
+    return skip
+
+
 def _add_attachments(
     db: Session,
     settings: Settings,
@@ -154,7 +177,10 @@ def _add_attachments(
             original=True,
         )
     )
-    for item in mail.attachments:
+    skip = _from_earlier_mails(db, entry, mail)
+    for index, item in enumerate(mail.attachments):
+        if index in skip:
+            continue
         kind = detect_type(item.filename, item.data)
         reason = ""
         if len(item.data) > limit:

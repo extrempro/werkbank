@@ -1172,7 +1172,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Oben stehen Nummer, Betreff, Status, Zuständigkeit und der Melder. Status und Zuständigkeit änderst du direkt in den Auswahlfeldern. Gespeichert wird erst mit „Bestätigen“; vorher zeigt die Seite, was sich ändert. „Verwerfen“ nimmt die Änderung zurück. Wechselst du zu einem anderen Ticket, verfällt eine nicht bestätigte Änderung.",
+                text: "Ein Ticket öffnet direkt bei der letzten Mitteilung im Verlauf. Oben stehen Nummer, Betreff, Status, Zuständigkeit und der Melder. Status und Zuständigkeit änderst du direkt in den Auswahlfeldern. Gespeichert wird erst mit „Bestätigen“; vorher zeigt die Seite, was sich ändert. „Verwerfen“ nimmt die Änderung zurück. Wechselst du zu einem anderen Ticket, verfällt eine nicht bestätigte Änderung.",
               },
               {
                 kind: "text",
@@ -1196,10 +1196,34 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Bei Mails steht im Verlauf nur der neue Text. Zitate aus früheren Mails klappst du bei Bedarf auf. Bilder, die in der Mail stehen, siehst du unter „Bilder in der Nachricht“; im Text steht an ihrer Stelle „Bild 1“, „Bild 2“ und so weiter, ein Klick darauf zeigt das Bild groß. Dort blätterst du mit den Pfeilen durch alle Bilder der Nachricht. Bei den Anhängen öffnet „Ansehen“ Bilder groß, PDF-Dateien in einem neuen Tab und Textdateien als Auszug; Office-Dateien und ZIP lädst du mit „Herunterladen“. Nicht erlaubte Anhänge entfernt die Werkbank und vermerkt das im Ticket. Die ganze Mail gibt es als „Original-Mail (.eml)“.",
+                text: "Bei Mails steht im Verlauf nur der neue Text. Zitate aus früheren Mails klappst du bei Bedarf auf. Bilder aus dem Zitat, etwa das Logo der Werkbank-Mails, übernimmt die Werkbank nicht als Anhang; sie stecken nur in der Original-Mail. Bilder, die in der Mail stehen, siehst du unter „Bilder in der Nachricht“; im Text steht an ihrer Stelle „Bild 1“, „Bild 2“ und so weiter, ein Klick darauf zeigt das Bild groß. Dort blätterst du mit den Pfeilen durch alle Bilder der Nachricht. Bei den Anhängen öffnet „Ansehen“ Bilder groß, PDF-Dateien in einem neuen Tab und Textdateien als Auszug; Office-Dateien und ZIP lädst du mit „Herunterladen“. Nicht erlaubte Anhänge entfernt die Werkbank und vermerkt das im Ticket. Die ganze Mail gibt es als „Original-Mail (.eml)“.",
               },
             ],
             links: [{ to: "/tickets", label: "Zu allen Tickets" }],
+          },
+          {
+            id: "leiste",
+            title: "Favoriten und geöffnete Tickets",
+            roles: [TICKETS_MEMBER],
+            blocks: [
+              {
+                kind: "text",
+                text: "Unter „Neues Ticket“ stehen zwei Gruppen, die du auf- und zuklappen kannst. „Geöffnet“ zeigt die Tickets, die du zuletzt geöffnet hast, in der Reihenfolge, in der du sie zum ersten Mal geöffnet hast. Ein neues Ticket kommt unten dazu. Ist die Liste voll, fällt das älteste heraus.",
+              },
+              {
+                kind: "text",
+                text: "Mit dem Stern hältst du ein Ticket als Favorit fest; es steht dann oben unter „Favoriten“ und zählt nicht mit. Das X nimmt ein Ticket aus der Liste, „Liste leeren“ alle ohne Stern. Die Tickets selbst bleiben dabei unverändert.",
+              },
+              {
+                kind: "text",
+                text: "In der kompakten Ansicht zeigt ein Punkt den Status: blau für neu, orange für in Arbeit, ein Ring für wartet und grün für erledigt. Unter der Liste steht, welcher Punkt was bedeutet. Fährst du mit der Maus über ein Ticket, siehst du den Status ausgeschrieben.",
+              },
+              {
+                kind: "text",
+                text: "Die Liste gilt für dein Konto und ist auf jedem Gerät gleich, am Handy im Menü. Wie viele Tickets sie höchstens zeigt (5, 10, 15 oder 25) und ob sie kompakt oder normal aussieht, stellst du unter Konto › Tickets ein. Verlierst du die Rechte an einem Bereich, verschwinden dessen Tickets aus der Liste.",
+              },
+            ],
+            links: [{ to: "/konto", label: "Zum Konto" }],
           },
           {
             id: "email",

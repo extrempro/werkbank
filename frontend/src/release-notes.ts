@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.124.0",
+    date: "2026-11-24",
+    summary: "Tickets: Favoriten und zuletzt geöffnete Tickets im Menü.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Unter „Neues Ticket“ stehen jetzt deine Favoriten und die zuletzt geöffneten Tickets mit Status. Mit dem Stern hältst du ein Ticket fest, mit dem X nimmst du es aus der Liste. Am Handy findest du beides im Menü.",
+          "Unter Konto › Tickets stellst du ein, wie viele Tickets die Liste höchstens zeigt und ob sie kompakt oder normal aussieht. Das gilt auf allen deinen Geräten.",
+          "Ein Ticket öffnet direkt bei der letzten Mitteilung.",
+          "Antwortet jemand per Mail, landet das Logo aus unseren Mails nicht mehr als Anhang im Ticket.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.123.1",
     date: "2026-11-24",
     summary: "IT-Monitoring nur mit eigener Berechtigung.",

@@ -298,6 +298,26 @@ describe("TicketPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Interne Notiz speichern" }));
     await waitFor(() => expect(bodies).toEqual([{ body: "Toner bestellt" }]));
   });
+
+  it("öffnet bei der letzten Mitteilung, nicht bei Systemeinträgen", async () => {
+    const scrolled: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this.textContent ?? "");
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(ticket()), { status: 200 })),
+    );
+    try {
+      render(<TicketPage number={1042} />);
+      await screen.findByText("Text b");
+      await waitFor(() => expect(scrolled).toHaveLength(1));
+      expect(scrolled[0]).toContain("Text b");
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
 });
 
 describe("Antwort an den Melder", () => {

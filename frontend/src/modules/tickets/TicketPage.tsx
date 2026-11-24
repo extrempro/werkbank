@@ -58,6 +58,7 @@ import { parseMails } from "./NewTicketPage";
 import { EntryContent } from "./AttachmentPreview";
 import { SolutionFields } from "./SolutionFields";
 import { STATUS_PILLS } from "./TicketsPage";
+import { ticketOpened } from "./ticketBar";
 import { TICKET_ACCESS_CHANGED } from "./useTicketAccess";
 
 /** So viele Einträge stehen nach der ursprünglichen Meldung, der Rest ist eingeklappt. */
@@ -204,6 +205,20 @@ function Timeline({
   const [showAll, setShowAll] = useState(false);
   const visible = ticket.entries.filter((entry) => matches(entry, filter) || entry.original);
   const { original, hidden, shown } = splitEntries(visible, showAll);
+  const list = useRef<HTMLOListElement>(null);
+  const scrolledFor = useRef<number | null>(null);
+  // Beim Öffnen eines Tickets direkt zur letzten Mitteilung (nicht bei jedem Neuladen)
+  useEffect(() => {
+    if (scrolledFor.current === ticket.number || window.location.hash) {
+      return;
+    }
+    scrolledFor.current = ticket.number;
+    const messages = list.current?.querySelectorAll(".ticket-entry:not(.ticket-entry-system)");
+    const last = messages?.[messages.length - 1];
+    if (last && messages && messages.length > 1) {
+      last.scrollIntoView?.({ block: "start" });
+    }
+  }, [ticket.number]);
   return (
     <section className="ticket-timeline" aria-labelledby="ticket-verlauf">
       <div className="ticket-timeline-head">
@@ -222,7 +237,7 @@ function Timeline({
           ))}
         </div>
       </div>
-      <ol className="ticket-entries">
+      <ol className="ticket-entries" ref={list}>
         {original && <EntryItem entry={original} ticket={ticket} onForward={onForward} />}
         {hidden > 0 && (
           <li className="ticket-entry-more">
@@ -1508,7 +1523,13 @@ export function TicketPage({ number }: { number: number }) {
   useEffect(() => {
     let active = true;
     fetchTicket(number).then(
-      (result) => active && accept(result),
+      (result) => {
+        if (active) {
+          accept(result);
+          // In die Leiste „Geöffnet“ (hinten, falls noch nicht drin)
+          void ticketOpened(number);
+        }
+      },
       (problem: unknown) =>
         active &&
         setFailed(
