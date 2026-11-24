@@ -8,8 +8,6 @@
   Datenschutz-Link, Logo).
 """
 
-import base64
-import binascii
 import contextlib
 import re
 from datetime import datetime
@@ -21,9 +19,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from werkbank.core.branding import ImageError, inspect_image
 from werkbank.core.deps import DbDep, SettingsDep
-from werkbank.modules.tickets.access import AccessDep, TicketAccess, forbidden
+from werkbank.modules.tickets.access import AccessDep, TicketAccess
 from werkbank.modules.tickets.api import actor
 from werkbank.modules.tickets.inbound import process_raw
 from werkbank.modules.tickets.mail_texts import (
@@ -45,12 +42,10 @@ from werkbank.modules.tickets.mailbox import (
 from werkbank.modules.tickets.models import (
     TicketArea,
     TicketBlock,
-    TicketMailDesign,
     TicketMailLog,
     TicketMailOut,
     TicketReview,
 )
-from werkbank.modules.tickets.outbound import DEFAULT_ACCENT
 from werkbank.modules.tickets.service import protocol
 from werkbank.modules.tickets.settings_api import _area_for_settings
 
@@ -359,115 +354,6 @@ def act_on_review(
             with contextlib.suppress(MailboxError):
                 mailbox.move(area.mailbox, graph_id, folder)
     return ReviewResult(items=_reviews(db, area_id), ticket_number=number)
-
-
-# --- Gestaltung (global) -------------------------------------------------------------------
-
-
-class DesignIn(BaseModel):
-    accent: str = Field(max_length=7)
-    footer: str = Field(max_length=2000)
-    privacy_url: str = Field(max_length=500)
-
-    @field_validator("accent")
-    @classmethod
-    def _accent(cls, value: str) -> str:
-        if value and not _ACCENT.match(value):
-            raise ValueError("Farbe als #rrggbb angeben.")
-        return value.lower()
-
-    @field_validator("privacy_url")
-    @classmethod
-    def _url(cls, value: str) -> str:
-        value = value.strip()
-        if value and (not value.startswith("https://") or any(c.isspace() for c in value)):
-            raise ValueError("Nur eine https-Adresse ist erlaubt.")
-        return value
-
-
-class DesignOut(DesignIn):
-    has_logo: bool
-    default_accent: str
-
-
-def _design(db: Session) -> TicketMailDesign:
-    row = db.get(TicketMailDesign, 1)
-    if row is None:
-        row = TicketMailDesign(id=1, accent="", footer="", privacy_url="")
-        db.add(row)
-        db.flush()
-    return row
-
-
-def _design_out(row: TicketMailDesign) -> DesignOut:
-    return DesignOut(
-        accent=row.accent,
-        footer=row.footer,
-        privacy_url=row.privacy_url,
-        has_logo=row.logo_png is not None,
-        default_accent=DEFAULT_ACCENT,
-    )
-
-
-def _require_manager(access: TicketAccess) -> None:
-    if not access.manager:
-        raise forbidden("Die Gestaltung der Mails ändert nur die Ticket-Verwaltung.")
-
-
-@router.get("/design")
-def read_design(access: AccessDep, db: DbDep) -> DesignOut:
-    if not access.settings_visible:
-        raise forbidden("Keine Berechtigung für die Einstellungen der Tickets.")
-    row = db.get(TicketMailDesign, 1)
-    if row is None:
-        return DesignOut(
-            accent="", footer="", privacy_url="", has_logo=False, default_accent=DEFAULT_ACCENT
-        )
-    return _design_out(row)
-
-
-@router.put("/design")
-def update_design(body: DesignIn, access: AccessDep, db: DbDep) -> DesignOut:
-    _require_manager(access)
-    row = _design(db)
-    row.accent, row.footer, row.privacy_url = body.accent, body.footer, body.privacy_url
-    protocol(db, actor(access), "gestaltung_geaendert")
-    db.commit()
-    return _design_out(row)
-
-
-class LogoIn(BaseModel):
-    content_base64: str = Field(min_length=1, max_length=700_000)
-
-
-@router.put("/design/logo")
-def upload_logo(body: LogoIn, access: AccessDep, db: DbDep) -> DesignOut:
-    """Logo für die Mails: nur PNG (viele Mailprogramme zeigen WebP nicht)."""
-    _require_manager(access)
-    try:
-        data = base64.b64decode(body.content_base64, validate=True)
-        info = inspect_image("logo", data)
-    except binascii.Error as exc:
-        raise HTTPException(status_code=422, detail="Die Datei ist nicht lesbar.") from exc
-    except ImageError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    if info.content_type != "image/png":
-        raise HTTPException(status_code=422, detail="Für Mails ist nur PNG erlaubt.")
-    row = _design(db)
-    row.logo_png = data
-    protocol(db, actor(access), "gestaltung_logo")
-    db.commit()
-    return _design_out(row)
-
-
-@router.delete("/design/logo")
-def delete_logo(access: AccessDep, db: DbDep) -> DesignOut:
-    _require_manager(access)
-    row = _design(db)
-    row.logo_png = None
-    protocol(db, actor(access), "gestaltung_logo_entfernt")
-    db.commit()
-    return _design_out(row)
 
 
 # --- nur für automatische Tests -------------------------------------------------------------

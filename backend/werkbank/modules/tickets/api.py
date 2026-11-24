@@ -973,6 +973,9 @@ def send_reply(
             auto=False,
             cc_all=body.reply_all,
             sent_to=sent_to,
+            # Die Mail nennt den Status nach der Antwort
+            status=body.status_after
+            or (STATUS_IN_PROGRESS if ticket.status == "new" else ticket.status),
         )
     if message_id is None:
         db.commit()

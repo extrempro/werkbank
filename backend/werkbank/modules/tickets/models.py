@@ -453,18 +453,6 @@ class TicketMailOut(Base):
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-class TicketMailDesign(Base):
-    """Gestaltung aller Mails an Melder (eine Zeile, id = 1; Ticket-Verwaltung)."""
-
-    __tablename__ = "ticket_mail_design"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    accent: Mapped[str] = mapped_column(String(7), default="", server_default="")
-    footer: Mapped[str] = mapped_column(Text, default="", server_default="")
-    privacy_url: Mapped[str] = mapped_column(String(500), default="", server_default="")
-    logo_png: Mapped[bytes | None] = mapped_column(LargeBinary)
-
-
 class TicketAudit(Base):
     """Protokoll des Moduls (Einstellungen, Zuständigkeit, Status); 3 Jahre aufbewahrt."""
 

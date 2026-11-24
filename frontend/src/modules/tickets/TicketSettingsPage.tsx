@@ -23,7 +23,6 @@ import {
 } from "./api";
 import {
   BlocksSection,
-  DesignSection,
   IntakeSection,
   MailSettingsSection,
   ReviewSection,
@@ -535,7 +534,6 @@ export const SETTINGS_TABS = [
   { id: "bereiche", label: "Bereiche" },
   { id: "kategorien", label: "Kategorien und Fristen" },
   { id: "email", label: "E-Mail-Eingang" },
-  { id: "gestaltung", label: "E-Mail-Gestaltung" },
   { id: "textbausteine", label: "Textbausteine" },
   { id: "aufbewahrung", label: "Aufbewahrung" },
   { id: "rollen", label: "Rollen" },
@@ -605,7 +603,7 @@ export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
     window.dispatchEvent(new Event(TICKET_ACCESS_CHANGED));
   };
 
-  const tabs = SETTINGS_TABS.filter((t) => t.id !== "gestaltung" || data?.manager);
+  const tabs = SETTINGS_TABS;
   const current = tabs.some((t) => t.id === tab) ? tab : "bereiche";
   const area = data?.areas.find((a) => a.id === wanted) ?? data?.areas[0] ?? null;
   const perArea = AREA_TABS.includes(current);
@@ -691,7 +689,6 @@ export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
           ))}
         </>
       )}
-      {data && current === "gestaltung" && data.manager && <DesignSection onMessage={setMessage} />}
       {data && area && current === "kategorien" && (
         <div key={area.id}>
           <SettingsPanel title="Kategorien" term="tickets.kategorie">

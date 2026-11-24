@@ -107,7 +107,10 @@ def test_branding_is_public_with_defaults(clean: Session) -> None:
         "show_name": True,
         "logo_light_url": None,
         "logo_dark_url": None,
+        "logo_mail_url": None,
         "favicon_url": None,
+        "mail_footer": "",
+        "privacy_url": "",
         "max_image_bytes": MAX_IMAGE_BYTES,
     }
     assert anonymous.get("/api/branding/assets/favicon").status_code == 404
@@ -211,3 +214,41 @@ def test_upload_serve_and_remove_images(clean: Session) -> None:
     ).all()
     assert "einstellungen.branding_bild_gesetzt" in actions
     assert "einstellungen.branding_bild_entfernt" in actions
+
+
+@pytest.mark.db
+def test_mail_footer_and_privacy_link(clean: Session) -> None:
+    client = admin()
+    body = {"app_name": "Werkbank", "accent": None, "show_name": True}
+    footer = {"mail_footer": "Firma A\nBeispielweg 1", "privacy_url": "https://example.com/d"}
+    saved = client.put(ADMIN, json={**body, **footer}, headers=HEADERS).json()
+    assert saved["mail_footer"] == "Firma A\nBeispielweg 1"
+    assert saved["privacy_url"] == "https://example.com/d"
+    # Ohne die Felder bleibt beides, wie es ist
+    kept = client.put(ADMIN, json=body, headers=HEADERS).json()
+    assert kept["privacy_url"] == "https://example.com/d"
+    bad = {**body, "privacy_url": "javascript:alert(1)"}
+    assert client.put(ADMIN, json=bad, headers=HEADERS).status_code == 422
+    cleared = client.put(ADMIN, json={**body, "privacy_url": ""}, headers=HEADERS).json()
+    assert cleared["privacy_url"] == ""
+
+
+def test_mail_logo_must_be_png() -> None:
+    from werkbank.core.branding import ImageError, inspect_image
+
+    webp = b"RIFF" + b"\x00" * 4 + b"WEBPVP8X" + b"\x00" * 8 + b"\x1f\x00\x00\x0f\x00\x00"
+    try:
+        inspect_image("logo-mail", webp)
+    except ImageError as error:
+        assert "PNG" in str(error)
+    else:
+        raise AssertionError("WebP darf kein Mail-Logo sein")
+
+
+def test_privacy_url_only_https() -> None:
+    from werkbank.core.branding import valid_privacy_url
+
+    assert valid_privacy_url("https://example.com/datenschutz")
+    assert not valid_privacy_url("http://example.com")
+    assert not valid_privacy_url("javascript:alert(1)")
+    assert not valid_privacy_url("https://example.com/a b")

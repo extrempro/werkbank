@@ -7,23 +7,18 @@ import { Link } from "../../components/Link";
 import {
   actOnReview,
   addBlock,
-  deleteDesignLogo,
   fetchBlocks,
-  fetchDesign,
   fetchIntake,
   fetchMailSettings,
   fetchReview,
   INTAKE_LABELS,
   MAIL_EVENT_LABELS,
   removeBlock,
-  saveDesign,
   saveMailSettings,
   ticketPath,
   TYPE_LABELS,
-  uploadDesignLogo,
   type Block,
   type Intake,
-  type MailDesign,
   type MailEvent,
   type MailSettings,
   type MailSettingsOut,
@@ -605,173 +600,5 @@ export function IntakeSection({ areaId }: { areaId: number }) {
         </tbody>
       </table>
     </div>
-  );
-}
-
-function readBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result);
-      resolve(result.slice(result.indexOf(",") + 1));
-    };
-    reader.onerror = () => reject(new Error("Datei nicht lesbar"));
-    reader.readAsDataURL(file);
-  });
-}
-
-/** Gestaltung aller Mails an Melder (nur Ticket-Verwaltung). */
-export function DesignSection({ onMessage }: { onMessage: OnMessage }) {
-  const [design, setDesign] = useState<MailDesign | null>(null);
-  const [accent, setAccent] = useState("");
-  const [footer, setFooter] = useState("");
-  const [privacy, setPrivacy] = useState("");
-  const ids = { accent: useId(), footer: useId(), privacy: useId(), logo: useId() };
-  const [ask, dialog] = useConfirm();
-  const accept = (next: MailDesign) => {
-    setDesign(next);
-    setAccent(next.accent);
-    setFooter(next.footer);
-    setPrivacy(next.privacy_url);
-  };
-  useEffect(() => {
-    let active = true;
-    fetchDesign().then(
-      (result) => active && accept(result),
-      () => undefined,
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
-  if (!design) {
-    return null;
-  }
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    saveDesign({ accent, footer, privacy_url: privacy })
-      .then((result) => {
-        accept(result);
-        onMessage({ kind: "status", text: "Die Gestaltung der Mails wurde gespeichert." });
-      })
-      .catch((problem: unknown) =>
-        onMessage({
-          kind: "alert",
-          text: errorText(problem, "Die Gestaltung konnte nicht gespeichert werden."),
-        }),
-      );
-  };
-  const upload = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) {
-      return;
-    }
-    readBase64(file)
-      .then(uploadDesignLogo)
-      .then((result) => {
-        accept(result);
-        onMessage({ kind: "status", text: "Das Logo für die Mails wurde gespeichert." });
-      })
-      .catch((problem: unknown) =>
-        onMessage({
-          kind: "alert",
-          text: errorText(problem, "Das Logo konnte nicht gespeichert werden."),
-        }),
-      );
-  };
-  return (
-    <section className="panel" aria-labelledby="mail-gestaltung">
-      <div className="panel-head">
-        <h2 id="mail-gestaltung">E-Mail-Gestaltung</h2>
-      </div>
-      <form className="detail-body settings-form" onSubmit={submit}>
-        <p>
-          Gilt für alle Mails an Melder. Absendername, Titel und Signatur stellt jeder Bereich
-          selbst ein.
-        </p>
-        <div className="form-grid">
-          <label htmlFor={ids.accent}>
-            Akzentfarbe (#rrggbb, leer = {design.default_accent})
-            <input
-              id={ids.accent}
-              maxLength={7}
-              placeholder={design.default_accent}
-              value={accent}
-              onChange={(event) => setAccent(event.target.value)}
-            />
-          </label>
-          <label htmlFor={ids.privacy}>
-            Datenschutz-Link (https)
-            <input
-              id={ids.privacy}
-              type="url"
-              maxLength={500}
-              placeholder="https://example.com/datenschutz"
-              value={privacy}
-              onChange={(event) => setPrivacy(event.target.value)}
-            />
-          </label>
-        </div>
-        <label htmlFor={ids.footer}>
-          Fußzeile
-          <textarea
-            id={ids.footer}
-            rows={3}
-            maxLength={2000}
-            value={footer}
-            onChange={(event) => setFooter(event.target.value)}
-          />
-        </label>
-        <div className="actions">
-          <button type="submit" className="button button-primary">
-            Speichern
-          </button>
-        </div>
-        <p>Logo: {design.has_logo ? "vorhanden" : "keins"} (PNG, wird in die Mail eingebettet)</p>
-        <div className="actions">
-          <label htmlFor={ids.logo} className="button">
-            Logo hochladen
-          </label>
-          <input
-            id={ids.logo}
-            className="visually-hidden"
-            type="file"
-            accept="image/png"
-            onChange={upload}
-          />
-          {design.has_logo && (
-            <button
-              type="button"
-              className="button button-secondary"
-              onClick={() =>
-                ask(
-                  {
-                    title: "Logo entfernen?",
-                    text: "Die Mails zeigen dann nur den Titel des Bereichs.",
-                    action: "Entfernen",
-                  },
-                  () =>
-                    deleteDesignLogo()
-                      .then((result) => {
-                        accept(result);
-                        onMessage({ kind: "status", text: "Das Logo wurde entfernt." });
-                      })
-                      .catch((problem: unknown) =>
-                        onMessage({
-                          kind: "alert",
-                          text: errorText(problem, "Das Logo konnte nicht entfernt werden."),
-                        }),
-                      ),
-                )
-              }
-            >
-              Logo entfernen
-            </button>
-          )}
-        </div>
-      </form>
-      {dialog}
-    </section>
   );
 }

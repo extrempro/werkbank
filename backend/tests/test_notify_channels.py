@@ -94,7 +94,7 @@ def test_mail_is_branded_plain_and_html_with_embedded_logo() -> None:
 
 def test_mail_without_logo_shows_name() -> None:
     markup = mail_html(BRAND, summarize(["evergreen.neu"], "Ina"), "https://w.example.com", None)
-    assert "cid:" not in markup and ">Werkbank</span>" in markup
+    assert "cid:" not in markup and ">Werkbank</td>" in markup
 
 
 def test_teams_card_names_recipient_and_link_only() -> None:

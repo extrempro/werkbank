@@ -1,20 +1,28 @@
 """Mails an den Melder (spec.md 8e, „Mails an den Melder“).
 
-Absender ist immer das Postfach des Bereichs. Betreff `[#T-1042] Betreff`. HTML mit
-Tabellenlayout und Inline-CSS, immer zusätzlich eine Textfassung; Logo eingebettet (CID), keine
-externen Ressourcen, keine Zählpixel. Oben steht „Bitte antworte oberhalb dieser Zeile.“.
-Eingesetzte Werte werden für HTML kodiert; Kopfzeilen sind gegen Zeilenumbrüche geschützt.
+Absender ist immer das Postfach des Bereichs. Betreff `[#T-1042] Betreff`. Aussehen und Branding
+wie alle Mails der Werkbank (core/mail_layout.py): Logo, Name des Bereichs, Text, Kasten mit
+Ticket, Betreff und Status, Signatur, Fußzeile. Oben steht „Bitte antworte oberhalb dieser
+Zeile.“. Eingesetzte Werte werden für HTML kodiert; Kopfzeilen sind gegen Zeilenumbrüche
+geschützt. In Mails an Melder kommt die Werkbank nicht vor; Melder melden sich nie an.
 """
 
-import html
 import re
-from dataclasses import dataclass
 from email.message import EmailMessage
 from email.utils import format_datetime, formataddr, make_msgid
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from werkbank.core.mail_layout import (
+    MailBrand,
+    add_html,
+    footer_text,
+    info_box,
+    load_mail_brand,
+    paragraphs,
+)
+from werkbank.core.mail_layout import render_html as render_html_layout
 from werkbank.core.sessions import now_utc
 from werkbank.modules.tickets.mail_texts import (
     DEFAULT_ACK,
@@ -28,13 +36,10 @@ from werkbank.modules.tickets.models import (
     Ticket,
     TicketArea,
     TicketEntry,
-    TicketMailDesign,
     TicketMailOut,
     TicketParticipant,
 )
 
-DEFAULT_ACCENT = "#1f4fd1"
-_ACCENT = re.compile(r"^#[0-9a-fA-F]{6}$")
 _LINEBREAK = re.compile(r"[\r\n]+")
 REFERENCES_MAX = 20
 
@@ -44,24 +49,22 @@ def one_line(value: str) -> str:
     return _LINEBREAK.sub(" ", value).strip()
 
 
-@dataclass(frozen=True)
-class Design:
-    accent: str
-    footer: str
-    privacy_url: str
-    logo_png: bytes | None
+# Status, wie ihn der Melder in der Mail liest
+REPORTER_STATUS = {
+    "new": "Neu",
+    "in_progress": "In Bearbeitung",
+    "waiting": "Wartet auf deine Rückmeldung",
+    "reminder": "Wartet auf deine Rückmeldung",
+    "solved": "Gelöst",
+    "closed": "Abgeschlossen",
+    "merged": "Abgeschlossen",
+}
+REPLY_FOOTER = "Fragen oder Ergänzungen? Antworte einfach auf diese Mail."
+FORWARD_FOOTER = "Antworten auf diese Mail landen direkt bei uns."
 
 
-def load_design(db: Session) -> Design:
-    row = db.get(TicketMailDesign, 1)
-    if row is None:
-        return Design(accent=DEFAULT_ACCENT, footer="", privacy_url="", logo_png=None)
-    return Design(
-        accent=row.accent if _ACCENT.match(row.accent or "") else DEFAULT_ACCENT,
-        footer=row.footer,
-        privacy_url=row.privacy_url,
-        logo_png=row.logo_png,
-    )
+def area_title(area: TicketArea) -> str:
+    return area.header_title or area.sender_name or area.name
 
 
 def subject_for(ticket: Ticket) -> str:
@@ -80,71 +83,46 @@ def values_for(ticket: Ticket, worker: str = "") -> dict[str, str]:
     }
 
 
-def _paragraphs(text: str) -> str:
-    """Text als HTML-Absätze (alles kodiert)."""
-    blocks = [b.strip() for b in text.replace("\r\n", "\n").split("\n\n") if b.strip()]
-    return "".join(
-        '<p style="margin:0 0 12px">'
-        + "<br>".join(html.escape(line) for line in block.split("\n"))
-        + "</p>"
-        for block in blocks
+def render_html(
+    area: TicketArea,
+    brand: MailBrand,
+    ticket: Ticket,
+    body: str,
+    logo_cid: str | None,
+    status: str | None = None,
+) -> str:
+    rows = [
+        ("Ticket", f"T-{ticket.number}"),
+        ("Betreff", ticket.subject),
+        ("Status", REPORTER_STATUS.get(status or ticket.status, "In Bearbeitung")),
+    ]
+    signature = paragraphs(area.signature) if area.signature.strip() else ""
+    content = paragraphs(body) + info_box(brand, rows, badge=f"T-{ticket.number}") + signature
+    return render_html_layout(
+        brand,
+        title=area_title(area),
+        body_html=content,
+        footer_lead=f"{area_title(area)} · {REPLY_FOOTER}",
+        logo_cid=logo_cid,
+        above=REPLY_ABOVE,
     )
 
 
-def render_html(area: TicketArea, design: Design, body: str, logo_cid: str | None) -> str:
-    accent = html.escape(design.accent)
-    title = html.escape(area.header_title or area.sender_name or area.name)
-    head = (
-        f'<img src="cid:{html.escape(logo_cid)}" alt="{title}" height="32" '
-        'style="display:block;height:32px;width:auto;border:0">'
-        if logo_cid
-        else ""
-    )
-    title_cell = f'<span style="font-size:18px;font-weight:700;color:#ffffff">{title}</span>'
-    signature = _paragraphs(area.signature) if area.signature.strip() else ""
-    footer_parts = []
-    if design.footer.strip():
-        footer_parts.append(_paragraphs(design.footer))
-    if design.privacy_url.startswith("https://"):
-        link = html.escape(design.privacy_url, quote=True)
-        footer_parts.append(
-            f'<p style="margin:0"><a href="{link}" style="color:#4f5765">Datenschutz</a></p>'
-        )
-    footer = "".join(footer_parts)
-    return (
-        '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8">'
-        '<meta name="color-scheme" content="light dark">'
-        '<meta name="supported-color-schemes" content="light dark"></head>'
-        '<body style="margin:0;padding:0;background:#f5f6f8;'
-        'font-family:Segoe UI,Arial,sans-serif;color:#171a1f">'
-        '<p style="margin:0;padding:8px 12px;font-size:12px;color:#4f5765">'
-        f"{html.escape(REPLY_ABOVE)}</p>"
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
-        '<tr><td align="center" style="padding:12px">'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-        'style="max-width:600px;background:#ffffff;border-radius:10px;border:1px solid #d9dde3">'
-        f'<tr><td style="background:{accent};padding:14px 24px;border-radius:10px 10px 0 0">'
-        f'<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
-        f'<td style="padding-right:12px">{head}</td><td>{title_cell}</td></tr></table></td></tr>'
-        f'<tr><td style="padding:24px;font-size:15px;line-height:1.5;color:#171a1f">'
-        f"{_paragraphs(body)}{signature}</td></tr>"
-        + (
-            f'<tr><td style="padding:0 24px 20px;font-size:12px;color:#4f5765">{footer}</td></tr>'
-            if footer
-            else ""
-        )
-        + "</table></td></tr></table></body></html>"
-    )
-
-
-def render_text(area: TicketArea, design: Design, body: str) -> str:
-    parts = [REPLY_ABOVE, "", body.strip()]
+def render_text(
+    area: TicketArea, brand: MailBrand, ticket: Ticket, body: str, status: str | None = None
+) -> str:
+    parts = [
+        REPLY_ABOVE,
+        "",
+        body.strip(),
+        "",
+        f"Ticket: T-{ticket.number}",
+        f"Betreff: {ticket.subject}",
+        f"Status: {REPORTER_STATUS.get(status or ticket.status, 'In Bearbeitung')}",
+    ]
     if area.signature.strip():
         parts += ["", area.signature.strip()]
-    if design.footer.strip():
-        parts += ["", "--", design.footer.strip()]
-    if design.privacy_url.startswith("https://"):
-        parts += [f"Datenschutz: {design.privacy_url}"]
+    parts += footer_text(brand, f"{area_title(area)} · {REPLY_FOOTER}")
     return "\n".join(parts) + "\n"
 
 
@@ -165,10 +143,12 @@ def build_message(
     *,
     auto: bool,
     cc_all: bool = False,
+    status: str | None = None,
 ) -> tuple[EmailMessage, str, list[str]]:
     """MIME-Nachricht an den Melder, mit `cc_all` auch an die Beteiligten in Kopie; liefert
-    (Nachricht, Message-ID, Empfänger). Automatische Mails gehen nur an den Melder."""
-    design = load_design(db)
+    (Nachricht, Message-ID, Empfänger). Automatische Mails gehen nur an den Melder.
+    `status`: Status, den die Mail nennt (sonst der aktuelle des Tickets)."""
+    brand = load_mail_brand(db)
     participants = db.scalars(
         select(TicketParticipant.mail).where(TicketParticipant.ticket_id == ticket.id)
     ).all()
@@ -190,15 +170,13 @@ def build_message(
     if auto:
         message["Auto-Submitted"] = "auto-generated"
         message["X-Auto-Response-Suppress"] = "All"
-    message.set_content(render_text(area, design, body))
-    cid = make_msgid(domain=domain) if design.logo_png else None
-    message.add_alternative(
-        render_html(area, design, body, cid[1:-1] if cid else None), subtype="html"
+    message.set_content(render_text(area, brand, ticket, body, status))
+    add_html(
+        message,
+        brand,
+        lambda cid: render_html(area, brand, ticket, body, cid, status),
+        domain,
     )
-    if cid and design.logo_png:
-        html_part = message.get_body(("html",))
-        if isinstance(html_part, EmailMessage):
-            html_part.add_related(design.logo_png, maintype="image", subtype="png", cid=cid)
     return message, message_id.strip("<>").lower(), [ticket.reporter_mail, *cc]
 
 
@@ -213,6 +191,7 @@ def send_to_reporter(
     auto: bool,
     cc_all: bool = False,
     sent_to: list[str] | None = None,
+    status: str | None = None,
 ) -> tuple[str | None, str]:
     """Senden und im Ausgang vermerken. Liefert (Message-ID oder None, Fehlertext); die
     Empfänger landen in `sent_to`, wenn angegeben."""
@@ -223,7 +202,7 @@ def send_to_reporter(
     if mailbox is None:
         return None, "Die Postfächer der Tickets sind nicht eingerichtet."
     message, message_id, recipients = build_message(
-        db, area, ticket, body, auto=auto, cc_all=cc_all and not auto
+        db, area, ticket, body, auto=auto, cc_all=cc_all and not auto, status=status
     )
     if sent_to is not None:
         sent_to.extend(recipients)
@@ -272,9 +251,32 @@ def build_forward(
     message["Subject"] = one_line(f"WG: {subject_for(ticket)}")
     message["Message-ID"] = message_id
     message["Date"] = format_datetime(now_utc())
+    brand = load_mail_brand(db)
+    lead = f"{area_title(area)} · {FORWARD_FOOTER}"
     parts = [text.strip()] if text.strip() else []
+    if area.signature.strip():
+        parts.append(area.signature.strip())
     parts.append("---------- Weitergeleitete Nachricht ----------\n" + quoted.strip())
-    message.set_content("\n\n".join(parts) + "\n")
+    message.set_content("\n\n".join(parts) + "\n" + "\n".join(footer_text(brand, lead)) + "\n")
+    quoted_html = (
+        '<div style="margin:18px 0 0;padding:12px 14px;border-radius:8px;background:#f5f6f8;'
+        'font-size:14px"><p style="margin:0 0 6px;font-size:12px;font-weight:700;'
+        'letter-spacing:.06em;text-transform:uppercase;color:#4f5765">Weitergeleitete Nachricht'
+        f"</p>{paragraphs(quoted)}</div>"
+    )
+    content = (
+        paragraphs(text)
+        + (paragraphs(area.signature) if area.signature.strip() else "")
+        + quoted_html
+    )
+    add_html(
+        message,
+        brand,
+        lambda cid: render_html_layout(
+            brand, title=area_title(area), body_html=content, footer_lead=lead, logo_cid=cid
+        ),
+        domain,
+    )
     for filename, content_type, data in files:
         maintype, _, subtype = content_type.partition("/")
         message.add_attachment(

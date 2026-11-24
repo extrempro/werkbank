@@ -435,12 +435,16 @@ export function testAiConnection(): Promise<{ model: string }> {
 
 // --- Verwaltung: Branding ----------------------------------------------------------------
 
-export type BrandingImageKind = "logo-hell" | "logo-dunkel" | "favicon";
+export type BrandingImageKind = "logo-hell" | "logo-dunkel" | "logo-mail" | "favicon";
 
 export interface BrandingUpdate {
   app_name: string;
   accent: string | null;
   show_name: boolean;
+  /** Fußzeile aller Mails; weglassen: bleibt */
+  mail_footer?: string;
+  /** Link zur Datenschutzerklärung (https); leer: keiner */
+  privacy_url?: string;
 }
 
 export function saveBranding(update: BrandingUpdate): Promise<Branding> {

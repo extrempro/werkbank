@@ -14,7 +14,13 @@ export interface Branding {
   show_name: boolean;
   logo_light_url: string | null;
   logo_dark_url: string | null;
+  /** Logo für Mails (PNG); fehlt in älteren gemerkten Ständen */
+  logo_mail_url?: string | null;
   favicon_url: string | null;
+  /** Fußzeile aller Mails */
+  mail_footer?: string;
+  /** Link zur Datenschutzerklärung in Mails (https) */
+  privacy_url?: string;
   max_image_bytes: number;
 }
 
@@ -26,7 +32,10 @@ export const DEFAULT_BRANDING: Branding = {
   show_name: true,
   logo_light_url: null,
   logo_dark_url: null,
+  logo_mail_url: null,
   favicon_url: null,
+  mail_footer: "",
+  privacy_url: "",
   max_image_bytes: 256 * 1024,
 };
 

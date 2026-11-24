@@ -165,6 +165,48 @@ test("Admin stellt Logo und Akzentfarbe ein und nimmt beides wieder zurück", as
   await expect(headerLogo).toHaveCount(0);
 });
 
+test("Admin legt Fußzeile, Datenschutz-Link und Logo für Mails fest", async ({
+  page,
+}) => {
+  await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
+  await page.goto("/verwaltung");
+  await page
+    .getByLabel("Fußzeile (freiwillig)")
+    .fill("Firma A · Beispielweg 1");
+  await page
+    .getByLabel("Link zur Datenschutzerklärung (freiwillig)")
+    .fill("https://example.com/datenschutz");
+  await page
+    .getByRole("button", { name: "Fußzeile und Link speichern" })
+    .click();
+  await expect(
+    page.getByText("Fußzeile und Datenschutz-Link sind gespeichert."),
+  ).toBeVisible();
+  await page
+    .getByLabel(/^Bild (hochladen|ersetzen) – Logo für Mails$/)
+    .setInputFiles("tests/fixtures/logo.png");
+  await expect(page.getByText("Logo für Mails: gespeichert.")).toBeVisible();
+  await expectNoA11yViolations(page);
+  const branding = await (await page.request.get("/api/branding")).json();
+  expect(branding.privacy_url).toBe("https://example.com/datenschutz");
+  expect(branding.logo_mail_url).toContain("/api/branding/assets/logo-mail?v=");
+
+  // Zurück auf den Standard
+  await page.getByLabel("Fußzeile (freiwillig)").fill("");
+  await page.getByLabel("Link zur Datenschutzerklärung (freiwillig)").fill("");
+  await page
+    .getByRole("button", { name: "Fußzeile und Link speichern" })
+    .click();
+  await expect(
+    page.getByText("Fußzeile und Datenschutz-Link sind gespeichert."),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Entfernen – Logo für Mails" })
+    .click();
+  await confirmDialog(page, "Entfernen");
+  await expect(page.getByText("Logo für Mails: entfernt.")).toBeVisible();
+});
+
 test("Admin trägt einen KI-Anbieter ein, der Schlüssel bleibt verborgen", async ({
   page,
 }) => {

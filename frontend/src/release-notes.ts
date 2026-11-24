@@ -24,6 +24,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.114.0",
+    date: "2026-11-24",
+    summary: "Alle Mails im gleichen Aussehen, mit Logo, Fußzeile und Datenschutz-Link.",
+    sections: [
+      {
+        area: "Mails",
+        entries: [
+          "Alle Mails der Werkbank sehen jetzt gleich aus: Logo und Name oben, darunter der Text und unten eine Fußzeile. Das gilt für Tickets, Weiterleitungen, Benachrichtigungen und den Verleih.",
+          "Unter Verwaltung › Allgemein legst du ein eigenes Logo für Mails (PNG), eine Fußzeile und einen Link zur Datenschutzerklärung fest. Beides ist freiwillig.",
+        ],
+      },
+      {
+        area: "Tickets",
+        entries: [
+          "Die eigene „E-Mail-Gestaltung“ in den Ticket-Einstellungen gibt es nicht mehr. Was dort eingestellt war, steht jetzt im Branding.",
+          "Mails an Melder zeigen unter dem Text die Ticketnummer, den Betreff und den Status. Die Werkbank wird dort nicht erwähnt, Melder antworten einfach per Mail.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.113.0",
     date: "2026-11-24",
     summary: "IT-Bestand: Standortbaum mit einstellbaren Abständen.",

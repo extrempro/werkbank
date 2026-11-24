@@ -1219,7 +1219,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Alle Mails an den Melder kommen aus dem Postfach des Bereichs, nie von deiner eigenen Adresse. Je Bereich lassen sich eine Eingangsbestätigung und kurze automatische Mails bei Statuswechseln einschalten, dazu Absendername, Titel und Signatur. Farbe, Logo, Fußzeile und Datenschutz-Link legt die Ticket-Verwaltung für alle fest.",
+                text: "Alle Mails an den Melder kommen aus dem Postfach des Bereichs, nie von deiner eigenen Adresse. Je Bereich lassen sich eine Eingangsbestätigung und kurze automatische Mails bei Statuswechseln einschalten, dazu Absendername, Titel und Signatur. Aussehen, Farbe, Logo, Fußzeile und Datenschutz-Link kommen aus dem Branding der Werkbank (Verwaltung › Allgemein). Jede Mail zeigt unter dem Text einen Kasten mit Ticketnummer, Betreff und Status. Der Melder antwortet einfach per Mail; in die Werkbank meldet er sich nie an.",
               },
             ],
             links: [{ to: "/tickets/einstellungen", label: "Zu den Einstellungen" }],
@@ -1267,7 +1267,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Die Einstellungen haben Reiter: Bereiche, Kategorien und Fristen, E-Mail-Eingang, E-Mail-Gestaltung (nur die Ticket-Verwaltung), Textbausteine, Aufbewahrung und Rollen. In den Reitern, die je Bereich gelten, wählst du oben den Bereich. Du siehst nur Bereiche, die du einstellen darfst.",
+                text: "Die Einstellungen haben Reiter: Bereiche, Kategorien und Fristen, E-Mail-Eingang, Textbausteine, Aufbewahrung und Rollen. In den Reitern, die je Bereich gelten, wählst du oben den Bereich. Du siehst nur Bereiche, die du einstellen darfst.",
               },
               {
                 kind: "text",
@@ -2225,7 +2225,7 @@ export const AREAS: readonly Area[] = [
                 items: [
                   [
                     "Allgemein",
-                    "Branding (Name, Farbe, Logos, Favicon), Aufbewahrung des Audit-Logs (30 bis 3650 Tage), ab wie vielen Tagen Zertifikate und Secrets als Hinweis, Warnung und dringend gelten",
+                    "Branding (Name, Farbe, Logos, Favicon; für alle Mails ein PNG-Logo, Fußzeile und Datenschutz-Link), Aufbewahrung des Audit-Logs (30 bis 3650 Tage), ab wie vielen Tagen Zertifikate und Secrets als Hinweis, Warnung und dringend gelten",
                   ],
                   ["Rollen", "welche Rollen es gibt und wer sie hat (siehe unten)"],
                   [

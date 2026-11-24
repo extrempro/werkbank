@@ -19,7 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from email.message import EmailMessage
-from email.utils import formataddr, make_msgid
+from email.utils import formataddr
 from typing import Annotated, Any
 from urllib.parse import urlsplit
 
@@ -30,9 +30,16 @@ from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
 from werkbank.core.app_settings import TEAMS_KEY, decrypt_secret, get_setting
-from werkbank.core.branding import ACCENT_PATTERN, BRANDING_KEY, DEFAULT_NAME
 from werkbank.core.mail import MailError, SmtpConfig, load_smtp_config, send_message
-from werkbank.core.models import BrandingAsset, Notification, NotificationChannel, User
+from werkbank.core.mail_layout import (
+    MailBrand,
+    add_html,
+    button,
+    footer_text,
+    load_mail_brand,
+    render_html,
+)
+from werkbank.core.models import Notification, NotificationChannel, User
 from werkbank.core.notifications import KINDS
 from werkbank.core.sessions import now_utc
 
@@ -111,27 +118,9 @@ TeamsSenderDep = Annotated[TeamsSender, Depends(get_teams_sender)]
 MailMessageSender = Callable[[SmtpConfig, EmailMessage], None]
 
 
-@dataclass(frozen=True)
-class Brand:
-    name: str
-    accent: str
-    # PNG für die Mail (eingebettet); andere Formate zeigen viele Mailprogramme nicht
-    logo_png: bytes | None
-
-
-def load_brand(db: Session) -> Brand:
-    stored: Any = get_setting(db, BRANDING_KEY)
-    data = stored if isinstance(stored, dict) else {}
-    name = data.get("app_name")
-    accent = data.get("accent")
-    logo = db.get(BrandingAsset, "logo-hell")
-    return Brand(
-        name=name if isinstance(name, str) and name else DEFAULT_NAME,
-        accent=accent
-        if isinstance(accent, str) and ACCENT_PATTERN.match(accent)
-        else DEFAULT_ACCENT,
-        logo_png=logo.data if logo is not None and logo.content_type == "image/png" else None,
-    )
+# Gemeinsames Branding aller Mails (core/mail_layout.py)
+Brand = MailBrand
+load_brand = load_mail_brand
 
 
 @dataclass(frozen=True)
@@ -168,48 +157,33 @@ def mail_text(brand: Brand, digest: Digest, base_url: str) -> str:
         "",
         f"Welche Benachrichtigungen du per Mail bekommst, stellst du in {brand.name} "
         f"unter Konto ein: {base_url}{SETTINGS_PATH}",
+        *footer_text(brand, ""),
     ]
     return "\n".join(lines)
 
 
 def mail_html(brand: Brand, digest: Digest, base_url: str, logo_cid: str | None) -> str:
-    """Schlichte HTML-Mail mit Name, Farbe und Logo aus dem Branding. Alles kodiert."""
+    """HTML-Mail im gemeinsamen Aussehen; nur Anzahl je Bereich, keine Inhalte."""
     name = html.escape(brand.name)
-    accent = html.escape(brand.accent)
-    head = (
-        f'<img src="cid:{html.escape(logo_cid)}" alt="{name}" height="32" '
-        'style="display:block;height:32px;width:auto">'
-        if logo_cid
-        else f'<span style="font-size:18px;font-weight:700;color:#ffffff">{name}</span>'
-    )
     rows = "".join(
-        f'<tr><td style="padding:4px 0">{html.escape(module)}</td>'
-        f'<td style="padding:4px 0 4px 16px;text-align:right">{count}</td></tr>'
+        f'<tr><td style="padding:6px 0;border-top:1px solid #e3e6eb">{html.escape(module)}</td>'
+        f'<td style="padding:6px 0 6px 16px;text-align:right;border-top:1px solid #e3e6eb">'
+        f"{count}</td></tr>"
         for module, count in digest.modules
     )
-    link = html.escape(f"{base_url}{LINK_PATH}", quote=True)
     settings_link = html.escape(f"{base_url}{SETTINGS_PATH}", quote=True)
-    return (
-        '<!DOCTYPE html><html lang="de"><body style="margin:0;padding:0;background:#f5f6f8;'
-        'font-family:Segoe UI,Arial,sans-serif;color:#171a1f">'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
-        '<tr><td align="center" style="padding:24px 12px">'
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-        'style="max-width:560px;background:#ffffff;border-radius:10px;overflow:hidden">'
-        f'<tr><td style="background:{accent};padding:16px 24px">{head}</td></tr>'
-        '<tr><td style="padding:24px">'
+    body = (
         f'<p style="margin:0 0 12px">Hallo {html.escape(digest.name)},</p>'
-        f'<p style="margin:0 0 16px">in {name} gibt es '
+        f'<p style="margin:0 0 12px">in {name} gibt es '
         f"{html.escape(_count_text(digest.total))} für dich:</p>"
-        f'<table role="presentation" cellpadding="0" cellspacing="0">{rows}</table>'
-        f'<p style="margin:24px 0"><a href="{link}" style="display:inline-block;'
-        f"background:{accent};color:#ffffff;text-decoration:none;padding:10px 18px;"
-        'border-radius:8px;font-weight:600">Benachrichtigungen ansehen</a></p>'
-        '<p style="margin:0;font-size:13px;color:#4f5765">Welche Benachrichtigungen du '
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        f'style="font-size:14px">{rows}</table>'
+        + button(brand, f"{base_url}{LINK_PATH}", "Benachrichtigungen ansehen")
+        + '<p style="margin:0;font-size:13px;color:#4f5765">Welche Benachrichtigungen du '
         f"per Mail bekommst, stellst du in {name} unter "
         f'<a href="{settings_link}" style="color:#4f5765">Konto</a> ein.</p>'
-        "</td></tr></table></td></tr></table></body></html>"
     )
+    return render_html(brand, title=brand.name, body_html=body, footer_lead="", logo_cid=logo_cid)
 
 
 def build_mail(
@@ -221,15 +195,7 @@ def build_mail(
     message["To"] = recipient
     message["Subject"] = mail_subject(brand, digest)
     message.set_content(mail_text(brand, digest, base_url))
-    cid = make_msgid(domain=LOGO_CID_DOMAIN) if brand.logo_png else None
-    message.add_alternative(
-        mail_html(brand, digest, base_url, cid[1:-1] if cid else None), subtype="html"
-    )
-    if cid and brand.logo_png:
-        html_part = message.get_body(("html",))
-        if not isinstance(html_part, EmailMessage):
-            return message
-        html_part.add_related(brand.logo_png, maintype="image", subtype="png", cid=cid)
+    add_html(message, brand, lambda cid: mail_html(brand, digest, base_url, cid), LOGO_CID_DOMAIN)
     return message
 
 
