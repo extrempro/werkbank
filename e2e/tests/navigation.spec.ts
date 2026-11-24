@@ -15,7 +15,13 @@ test("Bereichsleiste und Seitenmenü mit Gruppen zum Aufklappen", async ({
   test.skip(isPhone(page), "Auf dem Handy gibt es die Leiste unten");
   await loginAs(
     page,
-    ["Werkbank.Admin", "Config.Reviewer", "Evergreen.Editor", "Budget.Manager"],
+    [
+      "Werkbank.Admin",
+      "Config.Reviewer",
+      "Evergreen.Editor",
+      "Budget.Manager",
+      "Monitoring.Reader",
+    ],
     `Nina Navi ${testInfo.project.name}`,
   );
   await page.goto("/");

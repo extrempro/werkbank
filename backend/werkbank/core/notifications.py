@@ -123,7 +123,7 @@ KINDS: dict[str, KindInfo] = {
     "monitoring.dns_abweichung": KindInfo(
         "IT-Monitoring",
         "DNS-Abgleich mit NetBox findet neue Abweichungen",
-        (Role.MONITORING_READER, Role.WERKBANK_ADMIN),
+        (Role.MONITORING_READER,),
     ),
     "monitoring.dns_fehlgeschlagen": KindInfo(
         "IT-Monitoring",

@@ -50,11 +50,14 @@ def test_allowed_follows_roles() -> None:
     assert not allowed(tools, "/it-tools/kategorie/gibtsnicht")
     assert not allowed(user("Config.Reader"), "/it-tools/kategorie/netzwerk")
 
-    assert allowed(user("Werkbank.Admin"), "/monitoring/dns")
+    assert not allowed(user("Werkbank.Admin"), "/monitoring/dns")
+    assert not allowed(user("Werkbank.Admin"), "/monitoring/zabbix/berichte")
+    assert allowed(user("Werkbank.Admin", "Monitoring.Reader"), "/monitoring/dns")
+    assert allowed(user("Werkbank.Admin"), "/verwaltung/zabbix")
     assert allowed(user("Monitoring.Reader"), "/monitoring/dns")
     assert allowed(user("Monitoring.Berichte"), "/monitoring/zabbix/berichte")
     assert not allowed(user("Monitoring.Berichte"), "/monitoring/zabbix/hosts")
-    assert not allowed(user("Monitoring.Reader"), "/monitoring/zabbix/verbindung")
+    assert not allowed(user("Monitoring.Reader"), "/verwaltung/zabbix")
     assert allowed(user("Bestand.Reader"), "/bestand/verleih")
     assert not allowed(user("Bestand.Reader"), "/m365/lizenzen")
     # Nur Pfade, keine Detailseiten oder Abfragen

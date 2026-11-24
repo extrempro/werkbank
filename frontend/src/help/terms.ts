@@ -452,7 +452,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/m365/geraete/zuordnung": [["m365", "worum-es-geht"]],
   "/evergreen": [["evergreen", "liste"]],
   "/monitoring/dns": [["it-monitoring", "dns-abgleich"]],
-  "/monitoring/zabbix/verbindung": [
+  "/verwaltung/zabbix": [
     ["it-monitoring", "zabbix-einrichten"],
     ["it-monitoring", "zabbix-uebersicht"],
   ],

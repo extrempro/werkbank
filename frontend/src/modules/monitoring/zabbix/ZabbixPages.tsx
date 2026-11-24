@@ -47,7 +47,7 @@ import {
 } from "./api";
 import { Feedback } from "../../../components/Feedback";
 
-const MONITORING_ROLES = ["Monitoring.Reader", "Werkbank.Admin"];
+const MONITORING_ROLES = ["Monitoring.Reader"];
 const INVENTORY_EDITOR = "Bestand.Editor";
 
 /** Verknüpfen mit dem IT-Bestand: Monitoring sehen und den Bestand pflegen. */
@@ -154,11 +154,21 @@ export function DataStateBar({ state }: { state: DataState }) {
   );
 }
 
-function ZabbixHead({ title, sub, state }: { title: string; sub: string; state?: DataState }) {
+function ZabbixHead({
+  title,
+  sub,
+  state,
+  label = "IT-Monitoring · Zabbix",
+}: {
+  title: string;
+  sub: string;
+  state?: DataState;
+  label?: string;
+}) {
   return (
     <header className="page-head zbx-head">
       <div>
-        <p className="module-label">IT-Monitoring · Zabbix</p>
+        <p className="module-label">{label}</p>
         <h1>{title}</h1>
         <p className="page-sub">{sub}</p>
       </div>
@@ -1405,7 +1415,8 @@ export function ZabbixConnectionPage() {
   return (
     <div className="page page-wide">
       <ZabbixHead
-        title="Verbindung"
+        label="Verwaltung"
+        title="Zabbix"
         sub="Zustand der Anbindung, Abfragen des Collectors, Dienstkonto und Standorte."
         state={data?.state}
       />

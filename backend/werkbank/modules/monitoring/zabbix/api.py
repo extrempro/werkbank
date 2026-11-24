@@ -56,9 +56,7 @@ from werkbank.modules.monitoring.zabbix.models import (
 router = APIRouter(prefix="/api/monitoring/zabbix")
 MODULE = "monitoring"
 
-ReaderUser = Annotated[
-    CurrentUser, Depends(require_roles(Role.MONITORING_READER, Role.WERKBANK_ADMIN))
-]
+ReaderUser = Annotated[CurrentUser, Depends(require_roles(Role.MONITORING_READER))]
 AdminReader = Annotated[CurrentUser, Depends(require_roles(Role.WERKBANK_ADMIN))]
 
 
@@ -98,7 +96,7 @@ def _site_names(db: Session) -> dict[int, str]:
 def _link(db: Session, user: CurrentUser, path: str) -> str | None:
     """Sprung nach Zabbix; nur Kennungen aus Ziffern, nie das Token."""
     base = frontend_url(db)
-    if base is None or not user.has_any_role(Role.MONITORING_READER, Role.WERKBANK_ADMIN):
+    if base is None or not user.has_any_role(Role.MONITORING_READER):
         return None
     return f"{base}/{path}"
 
