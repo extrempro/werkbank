@@ -35,7 +35,6 @@ from werkbank.modules.inventory.models import (
     InventoryWorkplacePurpose,
 )
 from werkbank.modules.inventory.places import RoomPlace, room_place
-from werkbank.modules.inventory.psref import av_summary
 
 router = APIRouter(prefix="/api/inventory")
 
@@ -320,20 +319,6 @@ class SpecOut(BaseModel):
     value: str
 
 
-class PsrefOut(BaseModel):
-    """Technische Daten des Modells aus Lenovo PSREF."""
-
-    url: str
-    name: str
-    status: str
-    # Grund des letzten Fehlers; leer, wenn der letzte Abruf geklappt hat
-    error: str = ""
-    checked_at: datetime | None
-    # Kamera, Mikrofon, Lautsprecher, soweit PSREF sie nennt
-    av: dict[str, str]
-    specs: list[SpecOut]
-
-
 class LoanRef(BaseModel):
     """Offener Verleih eines Geräts."""
 
@@ -359,7 +344,6 @@ class HardwareOut(HardwareSummary):
     # Monitor: Rechner laut Custom Field; Rechner: Monitore, die zuletzt an ihm hingen
     connected_to: LinkedDevice | None
     monitors: list[LinkedDevice]
-    psref: PsrefOut | None
     loan: LoanRef | None
     purchased_on: date | None
     holder_ref: HolderOut | None
@@ -576,29 +560,6 @@ def loan_ref(loan: InventoryLoan | None) -> LoanRef | None:
     return LoanRef(id=loan.id, number=loan.number, person_name=loan.person_name, due_on=loan.due_on)
 
 
-def psref_out(model: InventoryModel | None) -> PsrefOut | None:
-    if model is None or not model.psref_status:
-        return None
-    specs = [
-        SpecOut(
-            group=str(item.get("group", "")),
-            name=str(item.get("name", "")),
-            value=str(item.get("value", "")),
-        )
-        for item in (model.psref_specs or [])
-        if isinstance(item, dict)
-    ]
-    return PsrefOut(
-        url=model.psref_url,
-        name=model.psref_name,
-        status=model.psref_status,
-        error=model.psref_error if model.psref_status == "fehler" else "",
-        checked_at=model.psref_checked_at,
-        av=av_summary(model.psref_specs or []),
-        specs=specs,
-    )
-
-
 def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
     kinds, models = _names(db)
     known = holders(db) if row.position_id or row.workplace_id else None
@@ -656,7 +617,6 @@ def hardware_out(db: Session, row: InventoryHardware) -> HardwareOut:
             )
             if item is not None
         ],
-        psref=psref_out(model),
         loan=loan_ref(open_loan(db, row.id)),
         purchased_on=row.purchased_on,
         holder_ref=holder_ref,

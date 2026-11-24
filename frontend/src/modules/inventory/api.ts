@@ -83,8 +83,6 @@ export interface Hardware extends HardwareSummary {
   connected_to: LinkedDevice | null;
   /** Rechner: Monitore, die laut NinjaOne zuletzt an ihm hingen */
   monitors: LinkedDevice[];
-  /** Technische Daten des Modells aus Lenovo PSREF; null, wenn nie abgefragt */
-  psref: PsrefInfo | null;
   /** Offener Verleih, in dem das Gerät gerade ist */
   loan: LoanRef | null;
   /** Anschaffungsdatum JJJJ-MM-TT */
@@ -256,10 +254,6 @@ export function setInventoryNo(id: number, inventoryNo: string | null): Promise<
 
 export function retireHardware(id: number, body: RetireInput): Promise<Hardware> {
   return postJson(`${BASE}/hardware/${id}/retire`, body, { quiet: true });
-}
-
-export function refreshPsref(id: number): Promise<Hardware> {
-  return postJson(`${BASE}/hardware/${id}/psref`, {}, { quiet: true });
 }
 
 export function reactivateHardware(id: number): Promise<Hardware> {
@@ -1128,10 +1122,6 @@ export interface NinjaSettings {
   role_ids: number[];
   /** interner Name des Custom Fields mit den Monitoren; leer: keine Monitore */
   monitor_field: string;
-  /** Technische Daten von Lenovo-Modellen aus Lenovo PSREF holen */
-  psref_enabled: boolean;
-  /** Absenderkennung für PSREF; leer: Kennung der Werkbank */
-  psref_user_agent: string;
 }
 
 export interface NinjaUpdate {
@@ -1141,8 +1131,6 @@ export interface NinjaUpdate {
   organization_ids: number[];
   role_ids: number[];
   monitor_field: string;
-  psref_enabled: boolean;
-  psref_user_agent: string;
   /** Weglassen: bleibt. Leerer Text: löschen. */
   client_secret?: string;
 }
@@ -1230,74 +1218,6 @@ export interface NinjaInfo {
 
 export type CaseState = "neu" | "arbeit" | "fertig";
 export type CaseKind = "neu" | "weg" | "monitor" | "rueckgabe" | "ueberfaellig" | "person_inaktiv";
-
-export type PsrefStatus = "ok" | "nicht_gefunden" | "fehler";
-
-export interface PsrefInfo {
-  url: string;
-  name: string;
-  status: PsrefStatus;
-  /** Grund des letzten Fehlers; leer, wenn der letzte Abruf geklappt hat */
-  error?: string;
-  checked_at: string | null;
-  /** Kamera, Mikrofon, Lautsprecher, soweit PSREF sie nennt */
-  av: Partial<Record<"camera" | "microphone" | "speakers", string>>;
-  specs: { group: string; name: string; value: string }[];
-}
-
-export const PSREF_STATUS_LABELS: Record<PsrefStatus, string> = {
-  ok: "gefunden",
-  nicht_gefunden: "nicht gefunden",
-  fehler: "Abruf fehlgeschlagen",
-};
-
-export const AV_LABELS: { key: keyof PsrefInfo["av"]; label: string }[] = [
-  { key: "camera", label: "Kamera" },
-  { key: "microphone", label: "Mikrofon" },
-  { key: "speakers", label: "Lautsprecher" },
-];
-
-const PSREF_KEY_SPECS =
-  /\b(?:processor|memory|storage|graphics|display|resolution|panel|ports?)\b/i;
-
-/** Wichtigste Angaben: Kamera, Mikrofon, Lautsprecher und die Eckdaten (höchstens 8). */
-export function psrefHighlights(psref: PsrefInfo): { label: string; value: string }[] {
-  const rows: { label: string; value: string }[] = [];
-  for (const entry of AV_LABELS) {
-    const value = psref.av[entry.key];
-    if (value) {
-      rows.push({ label: entry.label, value });
-    }
-  }
-  const seen = new Set<string>();
-  for (const spec of psref.specs) {
-    if (rows.length >= 8) {
-      break;
-    }
-    if (PSREF_KEY_SPECS.test(spec.name) && !seen.has(spec.name)) {
-      seen.add(spec.name);
-      rows.push({ label: spec.name, value: spec.value });
-    }
-  }
-  return rows;
-}
-
-/** Merkmale nach Gruppe, in der Reihenfolge aus PSREF. */
-export function psrefGroups(
-  specs: PsrefInfo["specs"],
-): { group: string; rows: PsrefInfo["specs"] }[] {
-  const groups: { group: string; rows: PsrefInfo["specs"] }[] = [];
-  for (const spec of specs) {
-    const group = spec.group || "Allgemein";
-    const last = groups[groups.length - 1];
-    if (last && last.group === group) {
-      last.rows.push(spec);
-    } else {
-      groups.push({ group, rows: [spec] });
-    }
-  }
-  return groups;
-}
 
 export interface LinkedDevice {
   id: number;

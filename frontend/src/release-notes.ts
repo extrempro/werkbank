@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.111.0",
+    date: "2026-11-24",
+    summary: "IT-Bestand: technische Daten von Lenovo vorerst entfernt.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Die technischen Daten von der Lenovo-Seite PSREF sind vorerst entfernt. Im Reiter „Technik“ stehen nur noch die Daten aus NinjaOne, und in der Verwaltung gibt es die Einstellungen dazu nicht mehr.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.110.1",
     date: "2026-11-24",
     summary: "IT-Bestand: Suchfeld und Auswahl in der Raumliste im gewohnten Aussehen.",

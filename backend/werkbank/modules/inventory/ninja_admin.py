@@ -26,7 +26,6 @@ from werkbank.modules.inventory.ninja import (
     fetch_devices,
     fetch_options,
 )
-from werkbank.modules.inventory.psref import valid_user_agent
 from werkbank.modules.inventory.sync import NinjaScope, load_ninja_config
 
 router = APIRouter(prefix="/api/admin/settings/ninjaone")
@@ -68,9 +67,6 @@ class NinjaOut(BaseModel):
     role_ids: list[int]
     # interner Name des Custom Fields mit den Monitoren; leer: keine Monitore
     monitor_field: str
-    psref_enabled: bool
-    # leer: Kennung der Werkbank
-    psref_user_agent: str
 
 
 class NinjaIn(BaseModel):
@@ -82,18 +78,6 @@ class NinjaIn(BaseModel):
     organization_ids: list[int] = Field(default_factory=list, max_length=SCOPE_MAX)
     role_ids: list[int] = Field(default_factory=list, max_length=SCOPE_MAX)
     monitor_field: str = Field(default="", max_length=64)
-    # Technische Daten von Lenovo-Modellen täglich aus Lenovo PSREF holen
-    psref_enabled: bool = False
-    # Absenderkennung (User-Agent) für PSREF; leer: Kennung der Werkbank
-    psref_user_agent: str = Field(default="", max_length=300)
-
-    @field_validator("psref_user_agent")
-    @classmethod
-    def plain_agent(cls, value: str) -> str:
-        value = value.strip()
-        if value and not valid_user_agent(value):
-            raise ValueError("Nur sichtbare Zeichen ohne Umlaute, höchstens 300")
-        return value
 
     @field_validator("monitor_field")
     @classmethod
@@ -169,8 +153,6 @@ def _out(db: Session, key_available: bool) -> NinjaOut:
         organization_ids=_id_list(data.get("organization_ids")),
         role_ids=_id_list(data.get("role_ids")),
         monitor_field=str(data.get("monitor_field") or ""),
-        psref_enabled=data.get("psref_enabled") is True,
-        psref_user_agent=str(data.get("psref_user_agent") or ""),
     )
 
 
@@ -221,8 +203,6 @@ def put_ninja(
             "organization_ids": body.organization_ids,
             "role_ids": body.role_ids,
             "monitor_field": body.monitor_field,
-            "psref_enabled": body.psref_enabled,
-            "psref_user_agent": body.psref_user_agent,
         },
         user.user_id,
     )
@@ -241,9 +221,6 @@ def put_ninja(
             "organisationen": body.organization_ids,
             "rollen": body.role_ids,
             "monitore_feld": body.monitor_field,
-            "psref": body.psref_enabled,
-            "psref_kennung_geaendert": body.psref_user_agent
-            != str(previous.get("psref_user_agent") or ""),
         },
     )
     db.commit()

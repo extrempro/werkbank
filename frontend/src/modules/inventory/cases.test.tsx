@@ -290,8 +290,6 @@ describe("Verwaltung: NinjaOne", () => {
       organization_ids: [],
       role_ids: [],
       monitor_field: "",
-      psref_enabled: false,
-      psref_user_agent: "",
     };
     const calls = stubFetch({
       "GET /api/admin/settings/ninjaone": stored,
@@ -306,9 +304,6 @@ describe("Verwaltung: NinjaOne", () => {
     fireEvent.change(await screen.findByLabelText("Client-ID"), { target: { value: "app-id" } });
     fireEvent.change(screen.getByLabelText("Client-Secret"), { target: { value: "geheim" } });
     fireEvent.click(screen.getByLabelText("Abgleich mit NinjaOne einschalten"));
-    fireEvent.change(screen.getByLabelText(/^Absenderkennung für PSREF/), {
-      target: { value: "  Mozilla/5.0 Beispiel  " },
-    });
     fireEvent.click(screen.getByRole("button", { name: "NinjaOne speichern" }));
     expect(await screen.findByText("Die Anbindung an NinjaOne ist gespeichert.")).toBeTruthy();
     expect(calls.find((call) => call.method === "PUT")?.body).toEqual({
@@ -318,8 +313,6 @@ describe("Verwaltung: NinjaOne", () => {
       organization_ids: [],
       role_ids: [],
       monitor_field: "",
-      psref_enabled: false,
-      psref_user_agent: "Mozilla/5.0 Beispiel",
       client_secret: "geheim",
     });
   });

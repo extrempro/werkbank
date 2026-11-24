@@ -17,11 +17,7 @@ import {
   modelLabel,
   ninjaFactRows,
   positionPath,
-  psrefGroups,
-  psrefHighlights,
-  PSREF_STATUS_LABELS,
   reactivateHardware,
-  refreshPsref,
   retireHardware,
   setInventoryNo,
   SOURCE_LABELS,
@@ -30,7 +26,6 @@ import {
   WHEREABOUTS_LABELS,
   workplacePath,
   type Hardware,
-  type PsrefInfo,
   type HardwareTab,
   type MasterData,
   type Whereabouts,
@@ -575,121 +570,13 @@ function History({ device }: { device: Hardware }) {
 }
 
 /** Reiter Technik: Kenndaten aus NinjaOne, nur lesend. */
-/** Technische Daten des Modells aus Lenovo PSREF, mit Link und Abruf auf Zuruf. */
-function PsrefSection({
-  device,
-  canEdit,
-  onChange,
-}: {
-  device: Hardware;
-  canEdit: boolean;
-  onChange: (device: Hardware) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState<string | null>(null);
-  const psref: PsrefInfo | null = device.psref;
-  const lenovo = (device.maker ?? "").toLowerCase() === "lenovo";
-  if (!psref && !(canEdit && lenovo)) {
-    return null;
-  }
-
-  async function refresh() {
-    setBusy(true);
-    setFailed(null);
-    try {
-      onChange(await refreshPsref(device.id));
-    } catch (error) {
-      setFailed(errorText(error, "Die Daten konnten nicht aus PSREF geholt werden."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const highlights = psref ? psrefHighlights(psref) : [];
-  const link = psref && psref.url.startsWith("https://psref.lenovo.com/") ? psref.url : null;
-  return (
-    <div className="psref">
-      <h3 className="sub-head">Lenovo PSREF</h3>
-      {psref ? (
-        <p className="small">
-          {psref.name || "Modell"} · {PSREF_STATUS_LABELS[psref.status]}
-          {psref.checked_at && ` · abgefragt ${formatDate(psref.checked_at)}`}
-          {link && (
-            <>
-              {" · "}
-              <a href={link} target="_blank" rel="noopener noreferrer">
-                Bei PSREF öffnen
-                <span className="visually-hidden"> (öffnet in neuem Tab)</span>
-              </a>
-            </>
-          )}
-        </p>
-      ) : (
-        <p className="small">Für dieses Modell wurden noch keine Daten aus PSREF geholt.</p>
-      )}
-      {psref?.status === "fehler" && psref.error && (
-        <p className="field-error">Grund: {psref.error}</p>
-      )}
-      {highlights.length > 0 && (
-        <dl className="facts">
-          {highlights.map((row) => (
-            <div key={row.label}>
-              <dt>{row.label}</dt>
-              <dd>{row.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-      {psref && psref.specs.length > 0 && (
-        <details>
-          <summary>Alle Merkmale ({psref.specs.length})</summary>
-          {psrefGroups(psref.specs).map((group, index) => (
-            <div key={`${group.group}-${index}`}>
-              <h4 className="small">{group.group}</h4>
-              <dl className="facts">
-                {group.rows.map((row, rowIndex) => (
-                  <div key={`${row.name}-${rowIndex}`}>
-                    <dt>{row.name}</dt>
-                    <dd>{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          ))}
-        </details>
-      )}
-      <ErrorBox text={failed} />
-      {canEdit && lenovo && (
-        <p>
-          <button
-            type="button"
-            className="button button-secondary"
-            onClick={() => void refresh()}
-            disabled={busy}
-          >
-            {busy ? "Wird abgerufen …" : "Bei PSREF abrufen"}
-          </button>
-        </p>
-      )}
-    </div>
-  );
-}
-
-function TechTab({
-  device,
-  canEdit,
-  onChange,
-}: {
-  device: Hardware;
-  canEdit: boolean;
-  onChange: (device: Hardware) => void;
-}) {
+function TechTab({ device }: { device: Hardware }) {
   const ninja = device.ninja;
   return (
     <section className="panel" aria-labelledby="geraet-technik">
       <div className="panel-head">
         <h2 id="geraet-technik">Technik</h2>
-        <span className="small">nur lesend, aus NinjaOne und Lenovo PSREF</span>
+        <span className="small">nur lesend, aus NinjaOne</span>
       </div>
       <div className="detail-body tech-list">
         {device.connected_to && (
@@ -745,7 +632,6 @@ function TechTab({
             </dl>
           </>
         )}
-        <PsrefSection device={device} canEdit={canEdit} onChange={onChange} />
       </div>
     </section>
   );
@@ -847,7 +733,7 @@ export function HardwareDetailPage({
               emptyText="Diesem Gerät ist kein Raum zugeordnet, auch nicht über einen Arbeitsplatz oder eine Stelle."
             />
           )}
-          {tab === "technik" && <TechTab device={device} canEdit={canEdit} onChange={setDevice} />}
+          {tab === "technik" && <TechTab device={device} />}
           {tab === "verlauf" && <History device={device} />}
         </>
       )}
