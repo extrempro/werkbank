@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
     func,
     text,
 )
@@ -34,10 +35,22 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(320))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Rollen bei der letzten Anmeldung (nur zur Anzeige; maßgeblich ist Entra)
+    # Wirksame Rollen (Bereichsrechte und ggf. Verwaltung), für Benachrichtigungen und Audit;
+    # gepflegt über core/permissions.py
     last_roles: Mapped[list[str]] = mapped_column(
         JSONB, default=list, server_default=text("'[]'::jsonb")
     )
+    # Bereichsrechte aus der Verwaltung (Rollen ganzer Stufen, ohne Werkbank.Admin)
+    permissions: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    # Mitglied der Admin-Gruppe bei der letzten Anmeldung
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    # Wann die alten App-Rollen einmalig übernommen wurden bzw. die Rechte zuerst gesetzt;
+    # leer heißt: Übernahme steht bei der nächsten Anmeldung noch aus
+    permissions_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Herkunft beim ersten Setzen: "app_rollen" oder "verwaltung"
+    permissions_origin: Mapped[str | None] = mapped_column(String(16))
 
 
 class AuditLog(Base):

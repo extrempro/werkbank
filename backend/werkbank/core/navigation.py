@@ -79,7 +79,7 @@ PAGES: dict[str, tuple[str, ...]] = {
     ),
     "/monitoring/zabbix/verbindung": (Role.WERKBANK_ADMIN,),
     "/verwaltung": (Role.WERKBANK_ADMIN,),
-    "/verwaltung/rollen": (Role.WERKBANK_ADMIN,),
+    "/verwaltung/berechtigungen": (Role.WERKBANK_ADMIN,),
     "/verwaltung/mail-teams": (Role.WERKBANK_ADMIN,),
     "/verwaltung/verbindungen": (Role.WERKBANK_ADMIN,),
     "/audit": (Role.WERKBANK_ADMIN,),

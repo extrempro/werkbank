@@ -80,9 +80,24 @@ Weitere Module (z. B. Lizenzen, Zertifikate, Firewall-Konfiguration) sollen spä
 
 ## 4. Rollen und Berechtigungen
 
-Rollen sind **Entra-App-Rollen** der Werkbank-App-Registrierung. Zuweisung über Entra-Gruppen. Eine Person kann mehrere Rollen haben. Jede Prüfung erfolgt **serverseitig**. Das Ausblenden in der Oberfläche ist nur Komfort.
+Seit 0.121.0 vergibt die Werkbank die Rechte selbst (6.2). Zwei Gruppen in Entra regeln nur den Einlass: Die **Zugangs-Gruppe** darf sich anmelden, die **Admin-Gruppe** darf sich anmelden und in die Verwaltung. In der Verwaltung bekommt jede Person je Bereich eine **Stufe** (z. B. Lesen, Bearbeiten, Verwalten). Intern steht jede Stufe für feste Rollen aus der Tabelle unten; alle Prüfungen im Code fragen weiter nach diesen Rollen. Jede Prüfung erfolgt **serverseitig**, mit den Rechten aus der Datenbank bei jeder Anfrage. Das Ausblenden in der Oberfläche ist nur Komfort.
 
-| App-Rolle | Modul | Darf |
+| Bereich | Stufen (Rollen) |
+|---|---|
+| Tickets | Nutzen (`Tickets.Nutzer`), Verwalten (+ `Tickets.Verwaltung`) |
+| Dokumentation | Nutzen (`Doku.Nutzer`), Verwalten (+ `Doku.Admin`) |
+| IT-Bestand | Lesen (`Bestand.Reader`), Bearbeiten (+ `Bestand.Editor`) |
+| Gerätezuordnung | Nutzen (`Geraete.Zuordnung`) |
+| IT-Projekte | Lesen (`Projekte.Reader`), Bearbeiten (+ `Projekte.Editor`) |
+| IT-Budget | Lesen (`Budget.Reader`), Bearbeiten (+ `Budget.Editor`), Verwalten (+ `Budget.Manager`) |
+| IT-Monitoring | Nur Berichte (`Monitoring.Berichte`), Lesen (`Monitoring.Reader`) |
+| M365-Einstellungen | Lesen (`Config.Reader`, `Tenant.Reader`), Prüfen (+ `Config.Reviewer`) |
+| Evergreen | Lesen (`Evergreen.Reader`), Bearbeiten (+ `Evergreen.Editor`) |
+| IT-Tools | Nutzen (`Tools.User`) |
+
+`Werkbank.Admin` vergibt nur die Admin-Gruppe, nie die Verwaltung.
+
+| Rolle | Modul | Darf |
 |---|---|---|
 | `Werkbank.Admin` | Kern | Verwaltung: Module, Konnektoren, Kommentarregeln, Benachrichtigungsregeln, Audit-Log vollständig |
 | `Config.Reader` | M365-Konfiguration | Einstellungen, Verlauf, Änderungen, Snapshots ansehen und exportieren |
@@ -151,7 +166,7 @@ Ein Modul liefert:
 
 - Datenbanktabellen und Migrationen
 - API-Routen und Seiten
-- App-Rollen und Rechte
+- Rollen, Stufen und Rechte
 - Workflow-Beschreibungen (`workflow.yaml`)
 - Jobs (z. B. Collector)
 - Aufgaben für die Aufgabenliste
@@ -168,7 +183,8 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
 ### 6.1 Anmeldung
 
 - **Microsoft Entra ID**, OpenID Connect, Authorization Code Flow mit PKCE. Einrichtung: [`docs/entra-setup.md`](entra-setup.md).
-- Unternehmensanwendung mit „Zuweisung erforderlich“: Nur Personen bzw. Gruppen mit zugewiesener App-Rolle können sich anmelden.
+- Einlass über zwei Gruppen in Entra (Objekt-IDs `ENTRA_ADMIN_GROUP_ID`, `ENTRA_ACCESS_GROUP_ID`), geprüft bei jeder Anmeldung im Namen der Person über Graph (`POST /me/checkMemberGroups`, transitiv, delegiert `User.Read`). Wer in keiner ist, wird abgelehnt; Graph nicht erreichbar heißt ebenfalls Ablehnung. Ohne eingetragene Gruppen (Übergang) gilt wie bisher: Anmeldung mit mindestens einer App-Rolle, Verwaltung mit `Werkbank.Admin`.
+- Unternehmensanwendung mit „Zuweisung erforderlich“ empfohlen; zugewiesen werden die beiden Gruppen.
 - **Backend-for-Frontend**: Tokens bleiben im Backend. Der Browser erhält nur ein Session-Cookie (`HttpOnly`, `Secure`, `SameSite=Lax`, `__Host-`-Präfix).
 - Session: Leerlauf-Timeout 30 Minuten, absolute Dauer 8 Stunden. Abmelden beendet die Session serverseitig.
 - **Erneute Anmeldung (Step-up)** beim Öffnen der Verwaltung, wenn die letzte Anmeldung länger als 15 Minuten zurückliegt (`STEP_UP_MINUTES`). Die Werkbank schickt die Person dann mit `prompt=login` zu Entra. Liefert Entra den Zeitpunkt der letzten echten Anmeldung mit (`auth_time`), zählt dieser; eine stille Anmeldung über eine bestehende Entra-Sitzung gilt dann nicht als frisch.
@@ -185,6 +201,13 @@ Module werden über die Verwaltung aktiviert oder deaktiviert.
   - Voraussetzung: Entra ID P1 für alle Werkbank-Nutzer.
 - Login-Seite: Name der App, Button „Mit Microsoft anmelden“, Hinweis auf Datenschutz. Ohne Anmeldung ist außer Login-Seite, Offline-Seite und statischen Dateien nichts erreichbar.
 - Auf iOS als installierte PWA: Redirect statt Popup.
+
+### 6.1a Berechtigungen (Verwaltung › Berechtigungen)
+
+- Liste aller Personen, die sich je angemeldet haben oder aufgenommen wurden, mit Stufen je Bereich; Ansicht „Nach Bereich“ als Matrix.
+- Stufen setzen und „Alle Rechte entziehen“ (mit Bestätigung) nur `Werkbank.Admin` mit frischer Anmeldung; jede Änderung mit vorher/nachher im Audit-Log (`berechtigungen.geaendert`). Änderungen wirken sofort, auch in laufenden Sitzungen.
+- **Einmalige Übernahme:** Bei der ersten Anmeldung nach der Umstellung werden die App-Rollen aus dem Token als ganze Stufen übernommen (die wichtigste Rolle einer Stufe genügt, z. B. `Budget.Manager` → Verwalten; `Tenant.Reader` → M365 Lesen). `Werkbank.Admin` wird nicht übernommen. Danach und sobald ein Admin Rechte gespeichert hat, zählen App-Rollen nicht mehr.
+- **Person hinzufügen:** Suche in Entra über die Collector-App (`User.Read.All`), nur Personen, die die Werkbank noch nicht kennt; aufgenommen ohne Rechte. Anmelden kann sich die Person nur als Mitglied einer der beiden Gruppen.
 
 ### 6.2 Aufgabenliste („Meine Aufgaben“)
 

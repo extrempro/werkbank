@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
 from werkbank.core.models import User, UserSession
+from werkbank.core.permissions import effective_roles
 
 SESSION_COOKIE = "__Host-werkbank"
 
@@ -31,7 +32,7 @@ def now_utc() -> datetime:
 
 @dataclass(frozen=True)
 class CurrentUser:
-    """Angemeldete Person mit ihren Rollen aus der laufenden Sitzung."""
+    """Angemeldete Person mit ihren Rollen (bei jeder Anfrage aus der Datenbank)."""
 
     user_id: uuid.UUID
     session_id: uuid.UUID
@@ -97,7 +98,8 @@ def load_session(db: Session, settings: Settings, token: str | None) -> CurrentU
         session_id=user_session.id,
         display_name=user.display_name,
         email=user.email,
-        roles=tuple(user_session.roles),
+        # Rechte aus der Datenbank, nicht aus der Sitzung: Änderungen wirken sofort
+        roles=tuple(effective_roles(user)),
         authenticated_at=user_session.authenticated_at,
         expires_at=user_session.expires_at,
     )

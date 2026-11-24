@@ -14816,3 +14816,147 @@ img.ProseMirror-separator {
 .doku-selection-7 {
   background: rgb(192 16 72 / 20%);
 }
+
+/* Verwaltung › Berechtigungen */
+.perm-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.perm-mail {
+  display: block;
+  color: var(--farbe-text-leise);
+  overflow-wrap: anywhere;
+}
+
+.perm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.perm-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--farbe-neutral-flaeche);
+  color: var(--farbe-text-mittel);
+  font-size: 0.75rem;
+}
+
+.perm-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.perm-head h2,
+.perm-head p {
+  margin: 0;
+}
+
+.perm-form {
+  display: grid;
+  gap: 0;
+}
+
+.perm-row {
+  padding: 12px 0;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.perm-area {
+  display: grid;
+  grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+  gap: 8px 16px;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* legend lässt sich nicht ins Raster stellen; float macht es zum ersten Rasterelement */
+.perm-area legend {
+  float: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.perm-hint {
+  color: var(--farbe-text-leise);
+  font-weight: 400;
+}
+
+.perm-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.perm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.perm-search {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.perm-search input {
+  min-height: 44px;
+}
+
+.perm-hits {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.perm-hits li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 10px;
+}
+
+.perm-level-name {
+  display: block;
+  color: var(--farbe-text-leise);
+  font-weight: 600;
+}
+
+/* Schmale Ansicht (Tablet hochkant, Handy, schmale Spalte): Stufen unter dem Bereichsnamen */
+@container (max-width: 34rem) {
+  .perm-area {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .perm-area legend {
+    float: none;
+    margin-bottom: 4px;
+  }
+
+  .perm-actions .button {
+    flex: 1 1 100%;
+  }
+}
+
+.perm-detail {
+  container-type: inline-size;
+}

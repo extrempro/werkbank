@@ -45,7 +45,7 @@ def session_of(db: Session, client: TestClient) -> UserSession:
 def test_admin_area_needs_recent_login(migrated_db: None, db_session: Session) -> None:
     client = make_client()
     login(client, "stepup-admin", ["Werkbank.Admin"])
-    assert client.get("/api/admin/roles").status_code == 200
+    assert client.get("/api/admin/permissions").status_code == 200
 
     token = client.cookies.get(SESSION_COOKIE)
     assert token
@@ -56,7 +56,7 @@ def test_admin_area_needs_recent_login(migrated_db: None, db_session: Session) -
     )
     db_session.commit()
 
-    stale = client.get("/api/admin/roles")
+    stale = client.get("/api/admin/permissions")
     assert stale.status_code == 403
     assert stale.headers[STEP_UP_HEADER] == "required"
     # Das Audit-Log gehört nicht zur Verwaltung und bleibt erreichbar
@@ -67,7 +67,7 @@ def test_admin_area_needs_recent_login(migrated_db: None, db_session: Session) -
 def test_missing_role_is_not_reported_as_step_up(migrated_db: None) -> None:
     client = make_client()
     login(client, "stepup-leser", ["Config.Reader"])
-    response = client.get("/api/admin/roles")
+    response = client.get("/api/admin/permissions")
     assert response.status_code == 403
     assert STEP_UP_HEADER not in response.headers
 
@@ -149,7 +149,7 @@ def test_old_auth_time_does_not_count_as_fresh(migrated_db: None, db_session: Se
 
     stored = session_of(db_session, client).authenticated_at
     assert abs((stored - old).total_seconds()) < 2
-    response = client.get("/api/admin/roles")
+    response = client.get("/api/admin/permissions")
     assert response.status_code == 403
     assert response.headers[STEP_UP_HEADER] == "required"
 

@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { filterPeople, type PersonRoles } from "../api";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AdminPage } from "./AdminPage";
+import { filterPermissionPeople, rightLabels, type PermissionPerson } from "./Permissions";
 
 afterEach(() => {
   cleanup();
@@ -9,27 +9,6 @@ afterEach(() => {
 });
 
 describe("AdminPage", () => {
-  it("zeigt die Rollen", async () => {
-    const roles = [
-      {
-        value: "Werkbank.Admin",
-        label: "Werkbank Admin",
-        description: "Verwaltung der Werkbank",
-        holders: [
-          { display_name: "Ada Admin", email: null, last_login_at: "2026-11-14T08:00:00Z" },
-        ],
-      },
-    ];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(JSON.stringify(roles), { status: 200 })),
-    );
-    render(<AdminPage section="rollen" />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Rollen" })).toBeVisible();
-    expect(await screen.findByText("Werkbank Admin")).toBeVisible();
-    expect(screen.getByText(/Ada Admin/)).toBeVisible();
-  });
-
   it("bittet um erneute Anmeldung, wenn die letzte zu lange her ist", async () => {
     vi.stubGlobal(
       "fetch",
@@ -63,54 +42,88 @@ describe("AdminPage", () => {
     expect(await screen.findByText(/Keine Berechtigung/)).toBeVisible();
     expect(screen.queryByRole("link", { name: "Erneut anmelden" })).toBeNull();
   });
+});
 
-  it("zeigt je Person alle Rollen und filtert", async () => {
-    const people: PersonRoles[] = [
-      {
-        display_name: "Pia Projekt",
-        email: "pia@example.com",
-        last_login_at: "2026-11-14T08:00:00Z",
-        roles: [
-          { value: "Budget.Reader", label: "Budget Leser" },
-          { value: "Projekte.Reader", label: "Projekte Leser" },
-        ],
-      },
-      { display_name: "Otto Ohne", email: null, last_login_at: null, roles: [] },
-    ];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) =>
-        url === "/api/admin/people"
-          ? new Response(JSON.stringify(people), { status: 200 })
-          : new Response(JSON.stringify([]), { status: 200 }),
-      ),
-    );
-    render(<AdminPage section="rollen" />);
-    fireEvent.click(await screen.findByRole("button", { name: "Nach Person" }));
-    const table = within(await screen.findByRole("region", { name: "Personen und Rollen" }));
-    const pia = table.getByRole("row", { name: /Pia Projekt/ });
-    expect(pia).toHaveTextContent("Budget Leser");
-    expect(pia).toHaveTextContent("Projekte Leser");
-    expect(table.getByRole("row", { name: /Otto Ohne/ })).toHaveTextContent("keine Rolle");
-    fireEvent.change(screen.getByLabelText("Person oder Rolle suchen"), {
-      target: { value: "projekte" },
-    });
-    expect(table.queryByRole("row", { name: /Otto Ohne/ })).toBeNull();
+const OVERVIEW = {
+  groups_configured: true,
+  areas: [
+    {
+      key: "budget",
+      name: "IT-Budget",
+      hint: "Hinweis",
+      levels: [{ label: "Kein Zugriff" }, { label: "Lesen" }, { label: "Bearbeiten" }],
+    },
+    {
+      key: "tools",
+      name: "IT-Tools",
+      hint: "Hinweis",
+      levels: [{ label: "Kein Zugriff" }, { label: "Nutzen" }],
+    },
+  ],
+  people: [
+    {
+      id: "p1",
+      display_name: "Ina Beispiel",
+      email: "ina@example.com",
+      avatar_url: null,
+      last_login_at: "2026-11-24T08:00:00Z",
+      is_admin: true,
+      levels: {},
+      permissions_since: "2026-11-24T08:00:00Z",
+      permissions_origin: "app_rollen",
+    },
+    {
+      id: "p2",
+      display_name: "Max Muster",
+      email: "max@example.com",
+      avatar_url: null,
+      last_login_at: null,
+      is_admin: false,
+      levels: { budget: 1, tools: 1 },
+      permissions_since: null,
+      permissions_origin: null,
+    },
+  ],
+};
+
+describe("Berechtigungen", () => {
+  it("filtert nach Name und Bereich und fasst die Rechte zusammen", () => {
+    const names = (list: PermissionPerson[]) => list.map((person) => person.display_name);
+    const people = OVERVIEW.people as PermissionPerson[];
+    expect(names(filterPermissionPeople(people, "MAX@", ""))).toEqual(["Max Muster"]);
+    expect(names(filterPermissionPeople(people, "", "budget"))).toEqual(["Max Muster"]);
+    expect(names(filterPermissionPeople(people, "", "ohne"))).toEqual(["Ina Beispiel"]);
+    expect(rightLabels(people[1]!, OVERVIEW.areas)).toEqual(["IT-Budget · Lesen", "IT-Tools"]);
   });
 
-  it("filtert Personen nach Name, Mail, Rolle und ohne Rolle", () => {
-    const people: PersonRoles[] = [
-      {
-        display_name: "Pia Projekt",
-        email: "pia@example.com",
-        last_login_at: null,
-        roles: [{ value: "Projekte.Reader", label: "Projekte Leser" }],
-      },
-      { display_name: "Otto Ohne", email: null, last_login_at: null, roles: [] },
-    ];
-    const names = (list: PersonRoles[]) => list.map((person) => person.display_name);
-    expect(names(filterPeople(people, "PIA@"))).toEqual(["Pia Projekt"]);
-    expect(names(filterPeople(people, "projekte.reader"))).toEqual(["Pia Projekt"]);
-    expect(names(filterPeople(people, "", true))).toEqual(["Otto Ohne"]);
+  it("speichert neue Stufen einer Person", async () => {
+    const calls: { url: string; method: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const method = init?.method ?? "GET";
+        calls.push({ url, method, body: init?.body ? JSON.parse(String(init.body)) : null });
+        if (url === "/api/admin/settings") {
+          return new Response(JSON.stringify({ smtp: {} }), { status: 200 });
+        }
+        if (method === "PUT") {
+          return new Response(
+            JSON.stringify({ ...OVERVIEW.people[1], levels: { budget: 2, tools: 1 } }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify(OVERVIEW), { status: 200 });
+      }),
+    );
+    render(<AdminPage section="berechtigungen" />);
+    fireEvent.click(await screen.findByRole("link", { name: "Max Muster" }));
+    const detail = await screen.findByRole("region", { name: "Max Muster" });
+    const budget = within(detail).getByRole("group", { name: /IT-Budget/ });
+    fireEvent.click(within(budget).getByRole("radio", { name: "Bearbeiten" }));
+    fireEvent.click(within(detail).getByRole("button", { name: "Speichern" }));
+    expect(await screen.findByText(/sind gespeichert/)).toBeInTheDocument();
+    const put = calls.find((call) => call.method === "PUT");
+    expect(put?.url).toBe("/api/admin/permissions/p2");
+    expect(put?.body).toEqual({ levels: { budget: 2, tools: 1 } });
   });
 });

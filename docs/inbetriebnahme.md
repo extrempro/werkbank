@@ -8,7 +8,7 @@ Reihenfolge für das erste Deployment mit Prüfschritten. Beispielwerte verwende
 
 Nach [`entra-setup.md`](entra-setup.md):
 
-- [ ] App-Registrierung **Werkbank** (Abschnitt 1): Redirect-URI `https://werkbank.example.com/auth/callback`, Zertifikat hochgeladen, optionale Ansprüche `email`, `preferred_username`, `auth_time`, acht App-Rollen, „Zuweisung erforderlich“, Gruppen zugewiesen
+- [ ] App-Registrierung **Werkbank** (Abschnitt 1): Redirect-URI `https://werkbank.example.com/auth/callback`, Zertifikat hochgeladen, optionale Ansprüche `email`, `preferred_username`, `auth_time`, delegiert `User.Read`, „Zuweisung erforderlich“, Admin- und Zugangs-Gruppe angelegt und zugewiesen (1.8)
 - [ ] Mindestens ein Konto hat die Rolle `Werkbank.Admin`, eines `Config.Reviewer` (kann dasselbe sein)
 - [ ] Optional für Profilbilder: delegierte Berechtigung `User.Read` mit Administratorzustimmung (Abschnitt 1.5), danach `ENTRA_PROFILE_PHOTO=true`
 - [ ] Conditional Access **CA-Werkbank-MFA** (Abschnitt 2), zuerst „Nur Bericht“
@@ -36,6 +36,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 | `PUBLIC_URL` | `https://werkbank.example.com` (ohne Schrägstrich am Ende) |
 | `TRUSTED_PROXY_IPS` | Adresse, von der die Anfragen des Proxys ankommen, zunächst die interne Adresse des Proxy-Servers |
 | `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `COLLECTOR_CLIENT_ID` | aus Schritt 1 |
+| `ENTRA_ADMIN_GROUP_ID`, `ENTRA_ACCESS_GROUP_ID` | Objekt-IDs der beiden Gruppen ([`entra-setup.md`](entra-setup.md), 1.8); danach die Rechte unter Verwaltung › Berechtigungen vergeben |
 | `ENVIRONMENT` | `production` |
 | `ENABLE_TEST_LOGIN` | `false` |
 
@@ -70,6 +71,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 ## 6. Wenn etwas nicht klappt
 
 - **Nach einem Update sieht die Werkbank aus wie vorher:** Das neue Image wurde nicht geholt; ein Neustart nimmt das vorhandene. Auf dem Docker-Host im Projektordner `docker compose pull` und `docker compose up -d` ausführen. Steht in der `.env` eine feste Version (`WERKBANK_IMAGE`), dort die neue eintragen.
+- **Anmeldung abgelehnt mit Grund `keine_gruppe` oder `gruppen_nicht_pruefbar` (Audit-Log):** Die Person ist in keiner der beiden Gruppen, eine Objekt-ID in `.env` stimmt nicht, oder an der App-Registrierung fehlt die delegierte Berechtigung `User.Read` mit Administratorzustimmung ([`entra-setup.md`](entra-setup.md), 1.5 und 1.8).
 - **Anmeldung schlägt fehl, nachdem `ENTRA_PROFILE_PHOTO=true` gesetzt wurde:** An der App-Registrierung fehlt die delegierte Berechtigung `User.Read` oder die Administratorzustimmung ([`entra-setup.md`](entra-setup.md), 1.5).
 - **Compose startet nicht, „bind source path does not exist: …/secrets/postgres_password“:** `WERKBANK_SECRETS_DIR` ist nicht gesetzt (dann sucht Compose im Ordner `secrets` neben der Compose-Datei) oder eine der sechs Dateien fehlt. Nach einem Update auf Version 0.6 fehlt oft `settings_key`; Anleitung in [`deploy/README.md`](../deploy/README.md), Schritt 2a.
 - **„env file not found“:** Es gibt noch keine `.env` neben der Compose-Datei bzw. im Verwaltungswerkzeug sind noch keine Umgebungsvariablen für das Projekt eingetragen.

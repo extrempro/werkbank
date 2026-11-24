@@ -151,12 +151,11 @@ def test_login_stores_photo_and_everyone_can_see_it(migrated_db: None, db_sessio
 
 
 @pytest.mark.db
-def test_roles_list_carries_avatar(migrated_db: None) -> None:
+def test_permissions_list_carries_avatar(migrated_db: None) -> None:
     oid = "33333333-3333-3333-3333-333333333333"
     entra_login(Photo("image/jpeg", JPEG), oid=oid)
     admin = client_for(make_app(make_settings(step_up_minutes=15)))
     login_as(admin, ["Werkbank.Admin"], oid="avatar-admin")
-    roles = admin.get("/api/admin/roles").json()
-    holders = [holder for role in roles for holder in role["holders"]]
-    with_photo = [holder for holder in holders if holder["avatar_url"]]
+    people = admin.get("/api/admin/permissions").json()["people"]
+    with_photo = [person for person in people if person["avatar_url"]]
     assert with_photo and with_photo[0]["display_name"] == "Max Beispiel"

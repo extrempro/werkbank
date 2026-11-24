@@ -18,7 +18,7 @@ import {
   ADMIN_CONNECTIONS_PATH,
   ADMIN_MAIL_PATH,
   ADMIN_PATH,
-  ADMIN_ROLES_PATH,
+  ADMIN_PERMISSIONS_PATH,
   areasFor,
   AUDIT_PATH,
   TICKETS_NEW_PATH,
@@ -440,8 +440,8 @@ export function Layout({ me }: LayoutProps) {
     page = <AuditPage />;
   } else if (path === ADMIN_PATH && current) {
     page = <AdminPage key="allgemein" section="allgemein" />;
-  } else if (path === ADMIN_ROLES_PATH && current) {
-    page = <AdminPage key="rollen" section="rollen" />;
+  } else if (path === ADMIN_PERMISSIONS_PATH && current) {
+    page = <AdminPage key="berechtigungen" section="berechtigungen" />;
   } else if (path === ADMIN_MAIL_PATH && current) {
     page = <AdminPage key="mail-teams" section="mail-teams" />;
   } else if (path === ADMIN_CONNECTIONS_PATH && current) {

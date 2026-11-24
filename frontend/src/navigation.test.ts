@@ -22,7 +22,7 @@ describe("navigationFor", () => {
   it("zeigt dem Admin die Verwaltung und das Audit-Log", () => {
     const labels = allNavItems(navigationFor(["Werkbank.Admin"])).map((item) => item.label);
     expect(labels).toContain("Allgemein");
-    expect(labels).toContain("Rollen");
+    expect(labels).toContain("Berechtigungen");
     expect(labels).toContain("Audit-Log");
   });
 
@@ -73,7 +73,7 @@ describe("areasFor", () => {
     expect(paths(0)).toEqual(["/", "/suche"]);
     expect(paths(4)).toEqual([
       "/verwaltung",
-      "/verwaltung/rollen",
+      "/verwaltung/berechtigungen",
       "/verwaltung/mail-teams",
       "/verwaltung/verbindungen",
       "/audit",
@@ -141,7 +141,7 @@ describe("areasFor", () => {
     expect(id("/m365/empfehlungen")).toBe("m365");
     expect(id("/evergreen/m365/7")).toBe("evergreen");
     expect(id("/verwaltung")).toBe("verwaltung");
-    expect(id("/verwaltung/rollen")).toBe("verwaltung");
+    expect(id("/verwaltung/berechtigungen")).toBe("verwaltung");
     expect(id("/audit")).toBe("verwaltung");
   });
 

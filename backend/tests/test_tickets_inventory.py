@@ -74,6 +74,8 @@ def test_reporter_inventory_only_with_inventory_rights(db: Session, areas: dict[
     plain = client_for("Max Muster")
     ticket = new_ticket(plain, areas["it"])
     assert ticket["reporter_inventory"] is None and ticket["inventory"] is False
+    # Rechte gelten je Person und sofort: vor der Anmeldung mit Bestandsrechten prüfen
+    assert plain.get(f"{BASE}/by-position/{position_id}").status_code == 403
     reader = client_for("Max Muster", READER)
     detail = reader.get(f"{BASE}/{ticket['number']}").json()
     linked = detail["reporter_inventory"]
@@ -88,7 +90,6 @@ def test_reporter_inventory_only_with_inventory_rights(db: Session, areas: dict[
     assert other["reporter_inventory"] == {"positions": [], "loans": []}
 
     # Umgekehrt: Tickets zur Stelle
-    assert plain.get(f"{BASE}/by-position/{position_id}").status_code == 403
     seen = reader.get(f"{BASE}/by-position/{position_id}").json()
     assert [t["number"] for t in seen["items"]] == [ticket["number"]]
     # Wer den Bereich nicht sieht, bekommt nur die Anzahl

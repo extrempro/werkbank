@@ -14,7 +14,7 @@
 | Daten | Herkunft | Zweck | Speicherdauer |
 |---|---|---|---|
 | Name, Mail, Entra-Objekt-ID der Nutzer | Entra-Anmeldung | Anmeldung, Zuordnung von Aktionen | solange Zugang besteht **[OFFEN]** |
-| Rollen | Entra-App-Rollen | Berechtigung | solange Zugang besteht |
+| Rechte je Bereich, Mitgliedschaft in der Admin-Gruppe (ja/nein) | Verwaltung der Werkbank; einmalig aus den Entra-App-Rollen; Gruppenprüfung bei der Anmeldung (nur die zwei eingetragenen Gruppen) | Berechtigung | solange Zugang besteht |
 | Profilbild (nur wenn `ENTRA_PROFILE_PHOTO` eingeschaltet ist) | Entra, bei der Anmeldung im Namen der Person gelesen (120 × 120 Pixel) | Wiedererkennen von Personen in der Oberfläche; für alle angemeldeten Personen sichtbar | bis zur nächsten Anmeldung ohne Bild in Entra, sonst solange Zugang besteht **[OFFEN]** |
 | Aktionen im Audit-Log (wer, wann, was) | Werkbank | Nachweis, Sicherheit | 90 Tage (in der Verwaltung einstellbar), danach automatische Löschung |
 | IP-Adresse (gekürzt) | Anfrage | Sicherheit | wie Audit-Log |

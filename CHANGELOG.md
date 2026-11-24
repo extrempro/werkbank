@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.121.0] – 2026-11-24
+
+### Berechtigungen
+
+- **Rechte in der Werkbank statt App-Rollen in Entra**: Verwaltung › Berechtigungen (ersetzt „Rollen“) mit Stufen je Bereich und Person (Tickets, Dokumentation, IT-Bestand, Gerätezuordnung, IT-Projekte, IT-Budget, IT-Monitoring, M365-Einstellungen, Evergreen, IT-Tools). Tabelle mit Ansicht rechts, unter 1024 px Karten; Ansicht „Nach Bereich“; „Alle Rechte entziehen“ mit Bestätigung; „Person hinzufügen“ sucht in Entra (Collector-App).
+- Rechte gelten bei jeder Anfrage aus der Datenbank (`load_session`), Änderungen wirken sofort; Audit `berechtigungen.geaendert` mit vorher/nachher.
+- **Einlass über zwei Gruppen**: `ENTRA_ADMIN_GROUP_ID` (Anmeldung und Verwaltung, keine Bereichsrechte) und `ENTRA_ACCESS_GROUP_ID` (Anmeldung), geprüft bei der Anmeldung über `POST /me/checkMemberGroups` (delegiert `User.Read`, transitiv). Ohne eingetragene Gruppen wie bisher über App-Rollen.
+- **Einmalige Übernahme** der App-Rollen bei der ersten Anmeldung nach der Umstellung als ganze Stufen; `Werkbank.Admin` wird nicht übernommen. Gespeicherte Rechte der Verwaltung haben Vorrang.
+- `GET /api/admin/roles` und `/api/admin/people` entfallen, neu `/api/admin/permissions` (Übersicht, Stufen setzen, Suche in Entra, Person aufnehmen).
+- Migration `0082` (`users.permissions`, `is_admin`, `permissions_since`, `permissions_origin`); Info-Symbol „Berechtigungen“.
+
+### Dokumentation
+
+- entra-setup.md (1.4–1.8: Gruppen statt App-Rollen, User.Read, Übergang), spec.md (Kapitel 4, 6.1, 6.1a), inbetriebnahme.md, asvs-l2.md, datenschutz.md, `.env.example`, Handbuch (Rechte im Überblick, Verwaltung › Berechtigungen, Häufige Fragen)
+
+### Tests
+
+- `test_permissions.py` (Stufen, Übernahme, Gruppenregeln, sofortige Wirkung, Verwaltung, Aufnahme aus Entra), `AdminPage.test.tsx`, E2E `verwaltung.spec.ts`
+
 ## [0.120.0] – 2026-11-24
 
 ### Tickets

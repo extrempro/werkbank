@@ -39,19 +39,51 @@ test("Audit-Log lässt sich nach Modul filtern", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("Admin sieht die Rollen in der Verwaltung", async ({ page }) => {
+test("Admin vergibt Rechte je Bereich, sie wirken sofort", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const name = `Paul Person ${testInfo.project.name} ${Date.now() % 100_000_000}`;
+  const other = await browser.newContext();
+  const otherPage = await other.newPage();
+  await loginAs(otherPage, ["Tools.User"], name);
+  expect((await otherPage.request.get("/api/budget/accounts")).status()).toBe(
+    403,
+  );
+
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
-  await page.goto("/verwaltung/rollen");
+  await page.goto("/verwaltung/berechtigungen");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Rollen" }),
+    page.getByRole("heading", { level: 1, name: "Berechtigungen" }),
   ).toBeVisible();
+  await page.getByLabel("Personen suchen").fill(name);
+  await page.getByRole("link", { name }).click();
+  const detail = page.getByRole("region", { name });
+  await expect(detail).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  const budget = detail.getByRole("group", { name: /IT-Budget/ });
+  await budget.getByRole("radio", { name: "Lesen", exact: true }).check();
+  await detail.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByText(/sind gespeichert/)).toBeVisible();
+  // Die offene Sitzung der Person hat das Recht ohne neue Anmeldung
+  expect((await otherPage.request.get("/api/budget/accounts")).status()).toBe(
+    200,
+  );
+
+  await detail.getByRole("button", { name: "Alle Rechte entziehen" }).click();
+  await confirmDialog(page, "Rechte entziehen");
+  await expect(page.getByText(/keine Rechte mehr/)).toBeVisible();
+  expect((await otherPage.request.get("/api/budget/accounts")).status()).toBe(
+    403,
+  );
+
+  await page.getByRole("button", { name: "Nach Bereich" }).click();
   await expect(
-    page.getByText("Evergreen Leser", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("cell", { name: /Ada Admin/ }).first(),
+    page.getByRole("rowheader", { name: "IT-Budget" }),
   ).toBeVisible();
   await expectNoA11yViolations(page);
+  await other.close();
 });
 
 test("Admin pflegt SMTP-Server und Aufbewahrungsfrist, das Passwort bleibt verborgen", async ({
@@ -342,7 +374,7 @@ test("Verwaltung ist ein eigener Bereich mit Unterseiten", async ({ page }) => {
   const menu = await openMenu(page);
   for (const label of [
     "Allgemein",
-    "Rollen",
+    "Berechtigungen",
     "Mail & Teams",
     "Verbindungen",
     "Audit-Log",
@@ -361,7 +393,7 @@ test("Ohne Admin-Rolle gibt es Audit-Log und Verwaltung nicht in der Oberfläche
   page,
 }) => {
   await loginAs(page, ["Config.Reviewer"], "Rita Reviewer");
-  for (const path of ["/audit", "/verwaltung", "/verwaltung/rollen"]) {
+  for (const path of ["/audit", "/verwaltung", "/verwaltung/berechtigungen"]) {
     await page.goto(path);
     await expect(
       page.getByRole("heading", { name: "Seite nicht gefunden" }),
@@ -385,8 +417,8 @@ test("Betriebsrat kommt nicht an Audit-Log und Verwaltung", async ({
     headers: { Origin: new URL(BASE_URL).origin },
   });
   expect(branding.status()).toBe(403);
-  const roles = await page.request.get("/api/admin/roles");
-  expect(roles.status()).toBe(403);
+  const rights = await page.request.get("/api/admin/permissions");
+  expect(rights.status()).toBe(403);
 });
 
 test("Verbindungen: Berechtigungen für den Abruf prüfen", async ({ page }) => {
