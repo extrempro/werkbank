@@ -179,6 +179,9 @@ const PATHS = {
   "ort-standort": ["M4 3h16v18H4z", "M9 7h2M13 7h2M9 11h2M13 11h2", "M10 21v-4h4v4"],
   "ort-abschnitt": ["M3 7h18v14H3z", "M12 7v14"],
   "ort-etage": ["M12 3l9 5-9 5-9-5z", "M3 13l9 5 9-5"],
+  rueckgaengig: ["M9 14L4 9l5-5", "M4 9h11a5 5 0 0 1 0 10h-3"],
+  wiederholen: ["M15 14l5-5-5-5", "M20 9H9a5 5 0 0 0 0 10h3"],
+  doku: ["M5 3h10l4 4v14H5z", "M15 3v4h4", "M8 11h8", "M8 15h8", "M8 19h5"],
   "alles-einklappen": ["M7 20l5-5 5 5", "M7 4l5 5 5-5"],
 } as const;
 

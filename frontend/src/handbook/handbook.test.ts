@@ -49,6 +49,7 @@ describe("Handbuch", () => {
       "it-monitoring",
       "tickets",
       "it-bestand",
+      "doku",
       "it-budget",
       "it-projekte",
       "it-tools",

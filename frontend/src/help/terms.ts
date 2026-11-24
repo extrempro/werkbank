@@ -280,6 +280,27 @@ export const HELP = {
     text: "Vergleicht die vergebenen Rechte mit dem, was die eingetragenen Typen laut Microsoft brauchen. So siehst du vor dem nächsten Abruf, was fehlt.",
     topic: ["verwaltung", "einstellungen"],
   },
+  // Dokumentation
+  "doku.eigene-rechte": {
+    term: "Eigene Rechte",
+    text: "Gelten für diese Seite und ihre Unterseiten statt der Rechte des Arbeitsbereichs. Im Seitenbaum steht dann ein Schloss.",
+    topic: ["doku", "rechte"],
+  },
+  "doku.sperren": {
+    term: "Gesperrte Seite",
+    text: "Niemand kann den Inhalt ändern, bis jemand mit Bearbeiten die Seite entsperrt.",
+    topic: ["doku", "rechte"],
+  },
+  "doku.version": {
+    term: "Version",
+    text: "Ein gespeicherter Stand der Seite. Er entsteht nach einer Weile Bearbeitung von selbst oder wenn du ihn benennst.",
+    topic: ["doku", "versionen"],
+  },
+  "doku.arbeitsbereich": {
+    term: "Arbeitsbereich",
+    text: "Sammlung von Seiten, etwa für eine Abteilung. Wer darin Mitglied ist, bekommt Lesen, Bearbeiten oder Verwalten.",
+    topic: ["doku", "rechte"],
+  },
   // Tickets
   "tickets.bereich": {
     term: "Bereich",
@@ -421,6 +442,8 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
     ["it-monitoring", "zabbix-bestand"],
   ],
   "/monitoring/zabbix": [["it-monitoring", "zabbix-uebersicht"]],
+  "/doku": [["doku", "seiten"]],
+  "/doku/verwaltung": [["doku", "verwaltung"]],
   "/tickets": [["tickets", "uebersicht"]],
   "/tickets/neu": [["tickets", "uebersicht"]],
   "/tickets/einstellungen": [["tickets", "einstellungen"]],

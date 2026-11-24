@@ -25,6 +25,8 @@ class Role(StrEnum):
     DEVICES_ASSOCIATION = "Geraete.Zuordnung"
     TICKETS_USER = "Tickets.Nutzer"
     TICKETS_MANAGER = "Tickets.Verwaltung"
+    DOKU_USER = "Doku.Nutzer"
+    DOKU_ADMIN = "Doku.Admin"
 
 
 KNOWN_ROLES: frozenset[str] = frozenset(role.value for role in Role)
@@ -39,6 +41,14 @@ def filter_known_roles(roles: object) -> list[str]:
 
 # Anzeigename und Beschreibung je Rolle (wie in docs/entra-setup.md, Abschnitt 1.6)
 ROLE_INFO: dict[str, tuple[str, str]] = {
+    Role.DOKU_USER: (
+        "Doku Nutzer",
+        "Bereich Dokumentation öffnen; welche Seiten, regeln die Arbeitsbereiche",
+    ),
+    Role.DOKU_ADMIN: (
+        "Doku-Verwaltung",
+        "Arbeitsbereiche anlegen und Personen zuordnen, Versionen und Papierkorb verwalten",
+    ),
     Role.TICKETS_USER: (
         "Tickets Nutzer",
         "Anmeldung für Mitglieder von Ticket-Bereichen; den Zugriff regeln die Rollen je Bereich",

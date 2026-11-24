@@ -120,6 +120,8 @@ App-Registrierung → **App-Rollen → App-Rolle erstellen**. Für jede Zeile ei
 | IT-Bestand Leser | `Bestand.Reader` | IT-Bestand ansehen: Hardware, Stellen, Arbeitsplätze, Standorte und Stammdaten |
 | Gerätezuordnung | `Geraete.Zuordnung` | Neue Windows-Geräte per QR-Code scannen, zur Freigabe senden, mit Admin-Konto freigeben, verwerfen (Kapitel 4a) |
 | Tickets Nutzer | `Tickets.Nutzer` | Nur Anmeldung für Mitglieder von Ticket-Bereichen ohne andere Rolle; den Zugriff auf Tickets regeln die Rollen je Bereich in der Werkbank |
+| Doku Nutzer | `Doku.Nutzer` | Bereich Dokumentation öffnen; welche Seiten, regeln die Arbeitsbereiche in der Werkbank |
+| Doku-Verwaltung | `Doku.Admin` | Arbeitsbereiche anlegen und Personen zuordnen, Versionen und Papierkorb verwalten (Inhalte nur als Mitglied) |
 | Ticket-Verwaltung | `Tickets.Verwaltung` | Ticket-Bereiche anlegen, Postfächer eintragen, Rollen der Bereiche vergeben (kein Zugriff auf Tickets) |
 | IT-Bestand Bearbeiter | `Bestand.Editor` | IT-Bestand pflegen: Hardware erfassen, Inventurnummern setzen, ausmustern, Stellen besetzen (Personensuche in Entra), Arbeitsplätze, Standorte, Stammdaten |
 

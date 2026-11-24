@@ -27,6 +27,8 @@ const TENANT_READER = "Tenant.Reader";
 const DEVICES_ROLE = "Geraete.Zuordnung";
 const BUDGET_MANAGER = "Budget.Manager";
 const BUDGET_ROLES = ["Budget.Reader", "Budget.Editor", BUDGET_MANAGER];
+const DOKU_ADMIN = "Doku.Admin";
+const DOKU_ROLES = ["Doku.Nutzer", DOKU_ADMIN];
 
 export const TOOLS_PATH = "/it-tools";
 export const TOOLS_HISTORY_PATH = "/it-tools/verlauf";
@@ -83,6 +85,8 @@ export const TICKETS_NEW_PATH = "/tickets/neu";
 export const TICKETS_SETTINGS_PATH = "/tickets/einstellungen";
 export const TICKETS_OVERVIEW_PATH = "/tickets/uebersicht";
 export const EVERGREEN_M365_PATH = "/evergreen/m365";
+export const DOKU_PATH = "/doku";
+export const DOKU_ADMIN_PATH = "/doku/verwaltung";
 
 function hasAny(roles: readonly string[], wanted: readonly string[]): boolean {
   return wanted.some((role) => roles.includes(role));
@@ -306,6 +310,27 @@ export function areasFor(roles: readonly string[]): NavArea[] {
           items: [{ path: INVENTORY_MASTER_PATH, label: "Stammdaten", icon: "einstellungen" }],
         },
       ],
+    });
+  }
+  if (hasAny(roles, DOKU_ROLES)) {
+    // Im Bereich steht statt dieser Liste der Seitenbaum (modules/doku/DokuMenu.tsx)
+    const groups: NavGroup[] = [
+      { title: null, items: [{ path: DOKU_PATH, label: "Übersicht", icon: "doku" }] },
+    ];
+    if (roles.includes(DOKU_ADMIN)) {
+      groups.push({
+        title: "Verwaltung",
+        items: [{ path: DOKU_ADMIN_PATH, label: "Arbeitsbereiche", icon: "einstellungen" }],
+      });
+    }
+    areas.push({
+      id: "doku",
+      label: "Dokumentation",
+      short: "Doku",
+      icon: "doku",
+      section: "betrieb",
+      home: DOKU_PATH,
+      groups,
     });
   }
   if (hasAny(roles, BUDGET_ROLES)) {

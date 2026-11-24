@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useId,
@@ -21,6 +23,8 @@ import {
   AUDIT_PATH,
   TICKETS_NEW_PATH,
   TICKETS_PATH,
+  DOKU_ADMIN_PATH,
+  DOKU_PATH,
   TICKETS_SETTINGS_PATH,
   TICKETS_OVERVIEW_PATH,
   BUDGET_ACCOUNTS_PATH,
@@ -107,6 +111,12 @@ import {
   parseHandbookPath,
 } from "../handbook";
 import { HandbookMenu } from "./nav/HandbookMenu";
+import { DokuAdminPage } from "../modules/doku/DokuAdminPage";
+import { DokuMenu } from "../modules/doku/DokuMenu";
+import {
+  parseAdminPath as parseDokuAdminPath,
+  parsePagePath as parseDokuPagePath,
+} from "../modules/doku/api";
 import { NOTIFICATIONS_PATH } from "../notifications";
 import { useMediaQuery } from "./FilterBar";
 import { HelpProvider, topicLink } from "../help/HelpContext";
@@ -192,6 +202,14 @@ interface LayoutProps {
 const LIST_VIEW_QUERY = "(min-width: 761px) and (max-width: 1199px)";
 
 /** Seite mit dem Muster „Liste und Ansicht“: Kennung der Seite (ohne gewählten Eintrag). */
+// Editor der Dokumentation (Tiptap) nur laden, wenn eine Doku-Seite offen ist
+const DokuPageView = lazy(() =>
+  import("../modules/doku/DokuPage").then((module) => ({ default: module.DokuPageView })),
+);
+const DokuStartPage = lazy(() =>
+  import("../modules/doku/DokuPage").then((module) => ({ default: module.DokuStartPage })),
+);
+
 export function listViewPage(path: string): string | null {
   const evergreen = parseEvergreenPath(path);
   if (evergreen) {
@@ -387,6 +405,10 @@ export function Layout({ me }: LayoutProps) {
   const licenseId = licenseMatch ? Number(licenseMatch[1]) : null;
 
   const handbookRoute = parseHandbookPath(path);
+  const dokuPage = parseDokuPagePath(path);
+  const dokuAdmin = parseDokuAdminPath(path);
+  const dokuAllowed = items.some((item) => item.path === DOKU_PATH);
+  const dokuAdminAllowed = items.some((item) => item.path === DOKU_ADMIN_PATH);
   const handbookKnown =
     handbookRoute !== null &&
     (handbookRoute.area === null ||
@@ -608,6 +630,20 @@ export function Layout({ me }: LayoutProps) {
     page = <TicketSettingsPage key={settingsTab} tab={settingsTab} />;
   } else if (path === TICKETS_OVERVIEW_PATH && current && ticketAccess) {
     page = <TicketsOverviewPage access={ticketAccess} />;
+  } else if (path === DOKU_PATH && current) {
+    page = (
+      <Suspense fallback={<p role="status">Wird geladen …</p>}>
+        <DokuStartPage />
+      </Suspense>
+    );
+  } else if (dokuPage !== null && dokuAllowed) {
+    page = (
+      <Suspense fallback={<p role="status">Wird geladen …</p>}>
+        <DokuPageView key={dokuPage} pageId={dokuPage} />
+      </Suspense>
+    );
+  } else if (dokuAdmin !== null && dokuAdminAllowed) {
+    page = <DokuAdminPage tab={dokuAdmin} />;
   } else if (current) {
     page = <PlaceholderPage title={current.label} />;
   } else {
@@ -689,7 +725,17 @@ export function Layout({ me }: LayoutProps) {
                 onCollapse={() => setMenu(true)}
               />
             )}
-            {currentArea && !handbookRoute && (
+            {currentArea?.id === "doku" && !handbookRoute && (
+              <DokuMenu
+                id={sideMenuId}
+                pageId={dokuPage}
+                adminOpen={dokuAdmin !== null}
+                hidden={collapsed}
+                onNavigate={onNavClick}
+                onCollapse={() => setMenu(true)}
+              />
+            )}
+            {currentArea && currentArea.id !== "doku" && !handbookRoute && (
               <SideMenu
                 id={sideMenuId}
                 area={currentArea}

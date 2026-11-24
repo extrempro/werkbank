@@ -1,7 +1,7 @@
 {
   "name": "werkbank-frontend",
   "private": true,
-  "version": "0.117.1",
+  "version": "0.118.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@tiptap/extension-list": "3.34.0",
+    "@tiptap/extension-table": "3.34.0",
+    "@tiptap/extensions": "3.34.0",
+    "@tiptap/pm": "3.34.0",
+    "@tiptap/react": "3.34.0",
+    "@tiptap/starter-kit": "3.34.0",
     "pdfjs-dist": "6.5.438",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

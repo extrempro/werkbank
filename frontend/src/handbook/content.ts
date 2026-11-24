@@ -20,6 +20,8 @@ const DEVICES = "Geraete.Zuordnung";
 // Tickets: Kennzeichen aus den Rollen je Bereich (siehe navigation.ts)
 const TICKETS_MEMBER = "tickets:bereich";
 const TICKETS_SETTINGS = "tickets:einstellungen";
+const DOKU_USER = "Doku.Nutzer";
+const DOKU_ADMIN = "Doku.Admin";
 
 /**
  * Das Handbuch der Werkbank: Bereiche wie in der Bereichsleiste, darin Teile wie im Seitenmenü
@@ -64,6 +66,10 @@ export const AREAS: readonly Area[] = [
                   ],
                   ["IT-Tools", "Rechner, Generatoren und Konverter für den IT-Alltag"],
                   ["IT-Monitoring", "regelmäßige Prüfungen, z. B. ob das DNS zu NetBox passt"],
+                  [
+                    "Dokumentation",
+                    "Seiten in Arbeitsbereichen schreiben, mit Rechten und Versionen",
+                  ],
                 ],
               },
             ],
@@ -1672,6 +1678,130 @@ export const AREAS: readonly Area[] = [
               },
             ],
             links: [{ to: "/bestand/stammdaten", label: "Zu den Stammdaten" }],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "doku",
+    title: "Dokumentation",
+    summary:
+      "Seiten in Arbeitsbereichen schreiben und gliedern, Rechte je Seite, Sperren, Versionen und die Verwaltung der Arbeitsbereiche.",
+    roles: [DOKU_USER, DOKU_ADMIN],
+    parts: [
+      {
+        title: "Seiten",
+        topics: [
+          {
+            id: "seiten",
+            title: "Seiten schreiben und gliedern",
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Dokumentation besteht aus Arbeitsbereichen, zum Beispiel einem je Abteilung. Darin stehen Seiten, die wiederum Unterseiten haben können. Links im Menü siehst du alle Arbeitsbereiche, in denen du Mitglied bist, mit ihren Seiten als Baum. Der Pfeil klappt Unterseiten auf und zu, ein Klick auf den Titel öffnet die Seite. Mit „Seiten durchsuchen“ findest du Seiten über Titel und Text.",
+              },
+              {
+                kind: "steps",
+                items: [
+                  "Klick im Menü auf „Neue Seite“.",
+                  "Gib einen Titel ein. Steht gerade eine Seite offen, kannst du die neue darunter anlegen; sonst wählst du den Arbeitsbereich.",
+                  "Schreib einfach los. Jede Änderung wird nach einem kurzen Moment automatisch gespeichert; oben rechts steht „Gespeichert“.",
+                ],
+              },
+              {
+                kind: "text",
+                text: "Bausteine fügst du mit „+ Baustein“ in der Leiste ein oder tippst in einer leeren Zeile „/“: Text, Überschriften, Listen, Aufgaben zum Abhaken, Hinweis- und Warnkästen, Tabellen, Code, Zitate und Trennlinien. Die Leiste formatiert markierten Text: fett, kursiv, unterstrichen, durchgestrichen, Code und Links. Links gehen nur mit https://, mailto: oder auf Seiten der Werkbank.",
+              },
+              {
+                kind: "hint",
+                text: "Hast du etwas versehentlich gelöscht, nimmst du es mit „Rückgängig“ in der Leiste oder mit Strg+Z zurück.",
+              },
+              {
+                kind: "text",
+                text: "„In den Papierkorb“ rechts unter „Seite“ entfernt die Seite mit allen Unterseiten. Die Doku-Verwaltung kann sie 30 Tage lang wiederherstellen.",
+              },
+              {
+                kind: "hint",
+                text: "Speichert jemand anderes dieselbe Seite, während du schreibst, meldet die Werkbank „Seite wurde inzwischen geändert“. Mit „Neu laden“ holst du den neuen Stand; deine letzte Eingabe musst du dann noch einmal machen. Gemeinsames Schreiben in Echtzeit kommt in einem nächsten Schritt.",
+              },
+            ],
+          },
+          {
+            id: "rechte",
+            title: "Rechte, Teilen und Sperren",
+            blocks: [
+              {
+                kind: "text",
+                text: "Wer eine Seite sehen oder ändern darf, kommt zuerst aus dem Arbeitsbereich: Jede Person darin hat Lesen, Bearbeiten oder Verwalten. Verwalten heißt Bearbeiten und zusätzlich die Personen des Arbeitsbereichs ändern.",
+              },
+              {
+                kind: "text",
+                text: "Unter „Rechte und Teilen“ gibst du einer Seite eigene Rechte. Sie gelten für die Seite und ihre Unterseiten; im Seitenbaum steht dann ein Schloss. Für jede Person wählst du Lesen, Bearbeiten oder Kein Zugriff, und du kannst Personen hinzufügen, die nicht im Arbeitsbereich sind. Sie sehen dann nur diese Seiten. Rechte ändern darf jede Person, die die Seite bearbeiten darf.",
+              },
+              {
+                kind: "terms",
+                items: [
+                  ["Lesen", "Seite und Versionen ansehen"],
+                  ["Bearbeiten", "schreiben, Seiten anlegen, Rechte ändern, sperren und löschen"],
+                  ["Kein Zugriff", "die Seite und ihre Unterseiten sind für die Person nicht da"],
+                ],
+              },
+              {
+                kind: "text",
+                text: "„Sperren“ friert eine Seite ein, zum Beispiel eine freigegebene Anleitung. Niemand kann den Inhalt ändern, bis jemand mit Bearbeiten „Entsperren“ wählt. Oben auf der Seite steht, wer gesperrt hat und wann.",
+              },
+            ],
+          },
+          {
+            id: "versionen",
+            title: "Versionen",
+            blocks: [
+              {
+                kind: "text",
+                text: "Während du schreibst, legt die Werkbank nach einer Weile Bearbeitung von selbst eine Version an (die Doku-Verwaltung stellt ein, nach wie vielen Minuten). Mit „Aktuellen Stand benennen“ hältst du einen wichtigen Stand fest, zum Beispiel „Freigegeben“. Benannte Versionen bleiben immer erhalten.",
+              },
+              {
+                kind: "steps",
+                items: [
+                  "Klick rechts unter „Versionen“ auf einen Eintrag. Die Seite zeigt diesen Stand nur zum Lesen.",
+                  "Mit „Wiederherstellen“ bekommt die Seite diesen Stand zurück. Einen Grund kannst du dazuschreiben.",
+                  "„Zur aktuellen Fassung“ bringt dich zurück, ohne etwas zu ändern.",
+                ],
+              },
+              {
+                kind: "hint",
+                text: "Beim Wiederherstellen geht nichts verloren: Der Stand davor bleibt als eigene Version erhalten.",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Verwaltung",
+        roles: [DOKU_ADMIN],
+        topics: [
+          {
+            id: "verwaltung",
+            title: "Arbeitsbereiche, Versionen, Papierkorb",
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Verwaltung siehst du mit der Rolle Doku-Verwaltung im Menü unter „Arbeitsbereiche“. Dort legst du Arbeitsbereiche an, ordnest Personen aus Entra mit Lesen, Bearbeiten oder Verwalten zu und archivierst Arbeitsbereiche, die nicht mehr gebraucht werden. Archivierte Arbeitsbereiche sind nur noch lesbar. Löschen lässt sich ein Arbeitsbereich nur, wenn er keine Seiten mehr hat.",
+              },
+              {
+                kind: "hint",
+                text: "Die Doku-Verwaltung sieht Inhalte nur in den Arbeitsbereichen, in denen sie selbst Mitglied ist. In der Verwaltung stehen nur Titel.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "„Seiten mit eigenen Rechten“ listet alle Seiten mit Schloss und was dort anders ist. „Auf Arbeitsbereich zurücksetzen“ entfernt die eigenen Rechte.",
+                  "„Versionen“: nach wie vielen Minuten Bearbeitung eine Version entsteht (5, 10 oder 30) und ob automatische Versionen ein Jahr oder immer bleiben. Nach einem Jahr bleibt je Tag die jüngste; benannte bleiben immer.",
+                  "„Papierkorb“: gelöschte Seiten mit Unterseiten. Nach 30 Tagen werden sie endgültig gelöscht; vorher kannst du sie wiederherstellen oder sofort endgültig löschen.",
+                ],
+              },
+            ],
           },
         ],
       },

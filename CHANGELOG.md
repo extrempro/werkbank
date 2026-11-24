@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.118.0] – 2026-11-24
+
+### Dokumentation (neu, Phase D1)
+
+- **Neuer Bereich „Doku“** (`/doku`) mit App-Rollen `Doku.Nutzer` und `Doku.Admin` (in Entra anzulegen, siehe `docs/entra-setup.md`).
+- **Arbeitsbereiche** mit Personen aus Entra (Lesen, Bearbeiten, Verwalten); archivieren; im Seitenmenü der Seitenbaum mit Suche und „Neue Seite“, am Handy als Blatt.
+- **Seiten** mit Editor (Tiptap 3.34.0, MIT): Text, Überschriften, Listen, Aufgaben, Hinweis- und Warnkasten, Tabellen, Code, Zitate, Trennlinie, Links; Bausteine über „+ Baustein“ oder „/“. Automatisch gespeichert; Inhalt als JSON mit Positivliste im Server, nie HTML.
+- **Eigene Rechte** je Seite (Schloss), gelten auch für Unterseiten; Personen außerhalb des Arbeitsbereichs möglich; Lesen, Bearbeiten, Kein Zugriff.
+- **Sperren** und Entsperren durch alle mit Bearbeiten.
+- **Versionen**: automatisch nach 5, 10 oder 30 Minuten Bearbeitung (Auftrag `doku.versionen`), benennen, ansehen, wiederherstellen.
+- **Papierkorb** 30 Tage (Auftrag `doku.aufraeumen`, löscht auch alte automatische Versionen).
+- **Verwaltung** `/doku/verwaltung`: Arbeitsbereiche, Seiten mit eigenen Rechten, Versionen, Papierkorb.
+- Migration `0080`; Handbuch „Dokumentation“, Info-Symbole Arbeitsbereich, Eigene Rechte, Gesperrte Seite, Version.
+
+### Dokumentation
+
+- spec.md (8f, Rollen), entra-setup.md (Rollen), asvs-l2.md, datenschutz.md, THIRD_PARTY_NOTICES.md (Tiptap, ProseMirror)
+
+### Tests
+
+- `test_doku.py`, `doku.test.tsx`, E2E `doku.spec.ts`
+
 ## [0.117.1] – 2026-11-24
 
 ### Tickets

@@ -18,6 +18,14 @@ from werkbank.core.sessions import now_utc
 from werkbank.modules.budget.notifications import budget_notifications
 from werkbank.modules.devices.jobs import STATUS_JOB, STATUS_JOB_INTERVAL, status_job
 from werkbank.modules.devices.notifications import devices_notifications
+from werkbank.modules.doku.jobs import CLEANUP as DOKU_CLEANUP
+from werkbank.modules.doku.jobs import (
+    CLEANUP_INTERVAL as DOKU_CLEANUP_INTERVAL,
+)
+from werkbank.modules.doku.jobs import VERSIONS as DOKU_VERSIONS
+from werkbank.modules.doku.jobs import VERSIONS_INTERVAL as DOKU_VERSIONS_INTERVAL
+from werkbank.modules.doku.jobs import cleanup_job as doku_cleanup_job
+from werkbank.modules.doku.jobs import versions_job as doku_versions_job
 from werkbank.modules.evergreen.ai_suggest import (
     GENERATE_AI_SUGGESTIONS,
     generate_suggestions_job,
@@ -160,6 +168,8 @@ REGISTRY: dict[str, JobType] = {
     HOUSEKEEPING: JobType(handler=housekeeping_job, interval=HOUSEKEEPING_INTERVAL),
     REMINDERS: JobType(handler=reminders_job, interval=REMINDERS_INTERVAL),
     RETENTION: JobType(handler=retention_job, interval=RETENTION_INTERVAL),
+    DOKU_VERSIONS: JobType(handler=doku_versions_job, interval=DOKU_VERSIONS_INTERVAL),
+    DOKU_CLEANUP: JobType(handler=doku_cleanup_job, interval=DOKU_CLEANUP_INTERVAL),
     STATUS_JOB: JobType(handler=status_job, interval=STATUS_JOB_INTERVAL),
     GENERATE_AI_TEXTS: JobType(handler=generate_ai_texts_job, interval=timedelta(hours=1)),
     GENERATE_AI_SUGGESTIONS: JobType(handler=generate_suggestions_job, interval=timedelta(hours=1)),
