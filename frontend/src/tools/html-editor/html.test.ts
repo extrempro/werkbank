@@ -37,9 +37,10 @@ describe("HTML-Editor", () => {
     );
   });
 
-  it("zählt Zeilen und Zeichen und hat Vorlagen ohne echte Daten", () => {
+  it("zählt Zeilen und Zeichen und startet leer und hat nur die Vorlage Tabelle", () => {
     expect(countText("")).toEqual({ lines: 0, chars: 0 });
     expect(countText("a\nb")).toEqual({ lines: 2, chars: 3 });
-    expect(TEMPLATES.signatur.html).toContain("example.com");
+    expect(TEMPLATES.leer.html).toBe("");
+    expect(Object.keys(TEMPLATES)).toEqual(["leer", "tabelle"]);
   });
 });
