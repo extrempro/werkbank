@@ -44,9 +44,9 @@ test("IT-Monitoring: Zabbix ohne Verbindung, Hosts und Wartungen", async ({
   ).toBeVisible();
   await expect(page.getByText(/noch nicht eingerichtet/)).toBeVisible();
   await expectNoA11yViolations(page);
-  // Die Verbindungsseite gibt es nur für Admins
+  // Die Verbindung zu Zabbix steht nur in der Verwaltung
   await expect(
-    page.getByRole("link", { name: "Verbindung", exact: true }),
+    page.getByRole("link", { name: "Zabbix", exact: true }),
   ).toHaveCount(0);
   await page.goto("/monitoring/zabbix/hosts");
   await expect(
@@ -85,13 +85,13 @@ test("IT-Monitoring: Zabbix ohne Verbindung, Hosts und Wartungen", async ({
   expect(api.status()).toBe(403);
 });
 
-test("IT-Monitoring: Admins sehen die Verbindung zu Zabbix", async ({
+test("IT-Monitoring: Admins richten Zabbix in der Verwaltung ein", async ({
   page,
 }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
-  await page.goto("/monitoring/zabbix/verbindung");
+  await page.goto("/verwaltung/zabbix");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Verbindung" }),
+    page.getByRole("heading", { level: 1, name: "Zabbix" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Abfragen" })).toBeVisible();
   await expect(page.getByText(/noch nicht eingerichtet/)).toBeVisible();

@@ -490,6 +490,10 @@ def test_admin_netbox_settings_and_run_now(db: Session, tmp_path: Path) -> None:
         "zones": 3,
     }
 
+    # Admins ohne Monitoring.Reader sehen das Monitoring nicht und dürfen nicht vorziehen
+    assert client.get("/api/monitoring/dns").status_code == 403
+    assert client.post("/api/monitoring/dns/run", headers=HEADERS).status_code == 403
+    login_as(client, ["Werkbank.Admin", "Monitoring.Reader"], oid="einstellungen-admin")
     scheduled = client.post("/api/monitoring/dns/run", headers=HEADERS)
     assert scheduled.status_code == 200
     planned = list(

@@ -15,7 +15,7 @@ from werkbank.modules.monitoring.zabbix.collector import TASK_FAST
 from werkbank.modules.monitoring.zabbix.models import ZbxRun, ZbxStatus
 
 DNS_LINK = "/monitoring/dns"
-ZABBIX_LINK = "/monitoring/zabbix/verbindung"
+ZABBIX_LINK = "/verwaltung/zabbix"
 # So viele fehlgeschlagene Abfragen in Folge, bevor die Glocke meldet
 ZABBIX_FAILURES = 3
 TOKEN_WARN = timedelta(days=30)

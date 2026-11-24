@@ -16,6 +16,7 @@ import {
   areaForPath,
   type NavArea,
   ADMIN_CONNECTIONS_PATH,
+  ADMIN_ZABBIX_PATH,
   ADMIN_MAIL_PATH,
   ADMIN_PATH,
   ADMIN_PERMISSIONS_PATH,
@@ -40,7 +41,6 @@ import {
   CREDENTIALS_PATH,
   HEALTH_PATH,
   MONITORING_DNS_PATH,
-  MONITORING_ZABBIX_CONNECTION_PATH,
   MONITORING_ZABBIX_HOSTS_PATH,
   MONITORING_ZABBIX_MAINTENANCE_PATH,
   MONITORING_ZABBIX_PATH,
@@ -567,7 +567,7 @@ export function Layout({ me }: LayoutProps) {
     page = <ZabbixMaintenancesPage />;
   } else if (path === MONITORING_ZABBIX_REPORTS_PATH && current) {
     page = <ZabbixReportsPage />;
-  } else if (path === MONITORING_ZABBIX_CONNECTION_PATH && current) {
+  } else if (path === ADMIN_ZABBIX_PATH && current) {
     page = <ZabbixConnectionPage />;
   } else if (path === BUDGET_PATH && current) {
     page = <BudgetOverviewPage roles={me.roles} />;

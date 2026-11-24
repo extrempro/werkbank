@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.123.1] – 2026-11-24
+
+### IT-Monitoring
+
+- Die **Admin-Gruppe** allein sieht das IT-Monitoring nicht mehr (Seiten, API, Berichte, Sprung nach Zabbix, Benachrichtigung über DNS-Abweichungen); dafür braucht es die Berechtigung IT-Monitoring „Lesen“ (intern `Monitoring.Reader`).
+- Die Einrichtung von Zabbix (bisher IT-Monitoring › Verbindung) steht jetzt unter **Verwaltung › Zabbix** (`/verwaltung/zabbix`).
+- „Jetzt prüfen“ beim DNS-Abgleich nur für die Admin-Gruppe mit „Lesen“. Fehler von Zabbix und des DNS-Abgleichs melden sich weiter bei der Admin-Gruppe.
+
 ## [0.123.0] – 2026-11-24
 
 ### Dokumentation

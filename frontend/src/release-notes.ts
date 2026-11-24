@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.123.1",
+    date: "2026-11-24",
+    summary: "IT-Monitoring nur mit eigener Berechtigung.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Die Admin-Gruppe sieht das IT-Monitoring nur noch mit der Berechtigung IT-Monitoring „Lesen“.",
+          "Die Einrichtung von Zabbix steht jetzt unter Verwaltung › Zabbix.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.123.0",
     date: "2026-11-24",
     summary: "Dokumentation: Kommentare, Verweise und Live-Bausteine.",

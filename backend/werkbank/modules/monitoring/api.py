@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -28,9 +28,7 @@ from werkbank.worker.jobs import enqueue
 router = APIRouter(prefix="/api/monitoring")
 MODULE = "monitoring"
 
-MonitoringUser = Annotated[
-    CurrentUser, Depends(require_roles(Role.MONITORING_READER, Role.WERKBANK_ADMIN))
-]
+MonitoringUser = Annotated[CurrentUser, Depends(require_roles(Role.MONITORING_READER))]
 AdminUser = Annotated[CurrentUser, Depends(require_roles(Role.WERKBANK_ADMIN))]
 
 
@@ -211,7 +209,10 @@ class RunNowOut(BaseModel):
 
 @router.post("/dns/run")
 def run_now(request: Request, user: AdminUser, db: DbDep) -> RunNowOut:
-    """Zieht den nächsten Abgleich vor (Admins). Läuft schon einer, bleibt es dabei."""
+    """Zieht den nächsten Abgleich vor (Admins mit Monitoring-Lesen). Läuft schon einer,
+    bleibt es dabei."""
+    if not user.has_any_role(Role.MONITORING_READER):
+        raise HTTPException(status_code=403, detail="Keine Berechtigung.")
     now = now_utc()
     planned = db.scalars(
         select(Job)

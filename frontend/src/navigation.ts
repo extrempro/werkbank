@@ -52,7 +52,7 @@ export const MONITORING_DNS_PATH = "/monitoring/dns";
 export const MONITORING_ZABBIX_PATH = "/monitoring/zabbix";
 export const MONITORING_ZABBIX_HOSTS_PATH = "/monitoring/zabbix/hosts";
 export const MONITORING_ZABBIX_MAINTENANCE_PATH = "/monitoring/zabbix/wartungen";
-export const MONITORING_ZABBIX_CONNECTION_PATH = "/monitoring/zabbix/verbindung";
+export const ADMIN_ZABBIX_PATH = "/verwaltung/zabbix";
 export const MONITORING_ZABBIX_REPORTS_PATH = "/monitoring/zabbix/berichte";
 export const PROJECTS_PATH = "/projekte";
 export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
@@ -194,7 +194,8 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       groups: [{ title: null, items }],
     });
   }
-  const monitoringFull = roles.includes(MONITORING_READER) || roles.includes(ADMIN);
+  // Admins sehen das Monitoring nur mit Monitoring.Reader (entschieden).
+  const monitoringFull = roles.includes(MONITORING_READER);
   const reportsItem = {
     path: MONITORING_ZABBIX_REPORTS_PATH,
     label: "Berichte",
@@ -228,15 +229,6 @@ export function areasFor(roles: readonly string[]): NavArea[] {
             { path: MONITORING_ZABBIX_HOSTS_PATH, label: "Hosts", icon: "geraet" },
             { path: MONITORING_ZABBIX_MAINTENANCE_PATH, label: "Wartungen", icon: "kalender" },
             reportsItem,
-            ...(roles.includes(ADMIN)
-              ? [
-                  {
-                    path: MONITORING_ZABBIX_CONNECTION_PATH,
-                    label: "Verbindung",
-                    icon: "einstellungen" as const,
-                  },
-                ]
-              : []),
           ],
         },
         {
@@ -444,6 +436,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
             { path: ADMIN_PERMISSIONS_PATH, label: "Berechtigungen", icon: "benutzer" },
             { path: ADMIN_MAIL_PATH, label: "Mail & Teams", icon: "eingang" },
             { path: ADMIN_CONNECTIONS_PATH, label: "Verbindungen", icon: "netzwerk" },
+            { path: ADMIN_ZABBIX_PATH, label: "Zabbix", icon: "monitoring" },
             { path: AUDIT_PATH, label: "Audit-Log", icon: "audit" },
           ],
         },

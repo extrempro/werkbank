@@ -1043,7 +1043,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Den Bereich sehen Personen mit der Rolle Monitoring.Reader und alle Admins; die Seite „Verbindung“ nur Admins. Mit der Rolle Monitoring.Berichte sieht man nur die Berichte. Die Werkbank übernimmt keine Quittierungs-Kommentare und keine Benutzernamen aus Zabbix.",
+                text: "Den Bereich sieht, wer unter Verwaltung › Berechtigungen für IT-Monitoring „Lesen“ hat; das gilt auch für die Admin-Gruppe. Die Seite „Zabbix“ in der Verwaltung sieht nur die Admin-Gruppe. Mit „Nur Berichte“ sieht man nur die Berichte. Die Werkbank übernimmt keine Quittierungs-Kommentare und keine Benutzernamen aus Zabbix.",
               },
               {
                 kind: "list",
@@ -1054,7 +1054,7 @@ export const AREAS: readonly Area[] = [
                 ],
               },
             ],
-            links: [{ to: "/monitoring/zabbix/verbindung", label: "Zur Verbindung" }],
+            links: [{ to: "/verwaltung/zabbix", label: "Zu Verwaltung › Zabbix" }],
           },
         ],
       },
@@ -1120,7 +1120,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Den Bereich sehen Personen mit der Rolle Monitoring.Reader und alle Admins. Der Token liegt verschlüsselt in der Datenbank und wird nie angezeigt.",
+                text: "Den Bereich sieht, wer für IT-Monitoring „Lesen“ hat, auch in der Admin-Gruppe. „Jetzt prüfen“ darf, wer in der Admin-Gruppe ist und zusätzlich „Lesen“ hat. Der Token liegt verschlüsselt in der Datenbank und wird nie angezeigt.",
               },
             ],
           },

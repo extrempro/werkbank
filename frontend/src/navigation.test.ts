@@ -59,27 +59,36 @@ describe("areasFor", () => {
       "Start",
       "Microsoft 365",
       "Evergreen",
-      "IT-Monitoring",
       "Verwaltung",
     ]);
     expect(areas.map((area) => area.home)).toEqual([
       "/",
       "/m365",
       "/evergreen/m365",
-      "/monitoring/zabbix",
       "/verwaltung",
     ]);
     const paths = (index: number) => allNavItems(areas[index]?.groups ?? []).map((i) => i.path);
     expect(paths(0)).toEqual(["/", "/suche"]);
-    expect(paths(4)).toEqual([
+    expect(paths(3)).toEqual([
       "/verwaltung",
       "/verwaltung/berechtigungen",
       "/verwaltung/mail-teams",
       "/verwaltung/verbindungen",
+      "/verwaltung/zabbix",
       "/audit",
     ]);
     expect(paths(1).every((path) => path.startsWith("/m365"))).toBe(true);
     expect(paths(2)).toEqual(["/evergreen/m365"]);
+  });
+
+  it("zeigt Admins das IT-Monitoring nur mit Monitoring.Reader", () => {
+    expect(areasFor(["Werkbank.Admin"]).some((area) => area.id === "monitoring")).toBe(false);
+    const monitoring = areasFor(["Werkbank.Admin", "Monitoring.Reader"]).find(
+      (area) => area.id === "monitoring",
+    )!;
+    expect(allNavItems(monitoring.groups).map((item) => item.path)).not.toContain(
+      "/verwaltung/zabbix",
+    );
   });
 
   it("zeigt nur Bereiche, für die es eine Rolle gibt", () => {
@@ -249,6 +258,7 @@ describe("areasFor", () => {
   it("gibt jedem Bereich Kurzname, Symbol und Abschnitt der Leiste in der richtigen Reihenfolge", () => {
     const areas = areasFor([
       "Werkbank.Admin",
+      "Monitoring.Reader",
       "Config.Reader",
       "Evergreen.Editor",
       "Budget.Manager",

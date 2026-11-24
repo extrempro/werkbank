@@ -1,6 +1,6 @@
 """Berichte der Quelle Zabbix: Verfügbarkeit je Geschäftsjahr, Export als CSV.
 
-Lesen dürfen `Monitoring.Reader`, `Werkbank.Admin` und `Monitoring.Berichte`. Wer nur
+Lesen dürfen `Monitoring.Reader` und `Monitoring.Berichte`. Wer nur
 `Monitoring.Berichte` hat, sieht Summen je Standort oder Gruppe, keine Hostnamen und keine
 Auslöser.
 """
@@ -46,7 +46,7 @@ MODULE = "monitoring"
 
 ReportUser = Annotated[
     CurrentUser,
-    Depends(require_roles(Role.MONITORING_READER, Role.MONITORING_REPORTS, Role.WERKBANK_ADMIN)),
+    Depends(require_roles(Role.MONITORING_READER, Role.MONITORING_REPORTS)),
 ]
 Split = Literal["standort", "gruppe"]
 NO_SITE = "ohne Standort"
@@ -56,8 +56,8 @@ MONTHS = ("Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt",
 
 
 def _detail(user: CurrentUser) -> bool:
-    """Hostnamen und Auslöser nur für Monitoring.Reader und Admins."""
-    return user.has_any_role(Role.MONITORING_READER, Role.WERKBANK_ADMIN)
+    """Hostnamen und Auslöser nur für Monitoring.Reader."""
+    return user.has_any_role(Role.MONITORING_READER)
 
 
 @dataclass
