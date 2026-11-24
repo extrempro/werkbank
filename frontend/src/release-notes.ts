@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.110.1",
+    date: "2026-11-24",
+    summary: "IT-Bestand: Suchfeld und Auswahl in der Raumliste im gewohnten Aussehen.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "„Raum suchen“ und „Zeigen“ neben dem Grundriss sehen jetzt aus wie die übrigen Such- und Auswahlfelder, auch im dunklen Design.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.110.0",
     date: "2026-11-23",
     summary: "IT-Bestand: Pool-Arbeitsplätze ohne feste Stelle.",

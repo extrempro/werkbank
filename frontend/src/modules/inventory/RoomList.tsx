@@ -145,25 +145,32 @@ export function RoomList({
   return (
     <div className="room-list" role="group" aria-label="Räume dieser Etage">
       <div className="room-list-tools">
-        <label>
-          Raum suchen
+        <div className="filter-search">
+          <label htmlFor={`${id}-suche`}>Raum suchen</label>
           <input
+            id={`${id}-suche`}
             type="search"
             value={text}
-            placeholder="Name, Nutzung, Person"
+            maxLength={100}
+            autoComplete="off"
+            placeholder="Raum oder Person"
             onChange={(event) => setText(event.target.value)}
           />
-        </label>
-        <label>
-          Zeigen
-          <select value={filter} onChange={(event) => setFilter(event.target.value as RoomFilter)}>
+        </div>
+        <div className="filter-field">
+          <label htmlFor={`${id}-zeigen`}>Zeigen</label>
+          <select
+            id={`${id}-zeigen`}
+            value={filter}
+            onChange={(event) => setFilter(event.target.value as RoomFilter)}
+          >
             {FILTERS.map((entry) => (
               <option key={entry.id} value={entry.id}>
                 {entry.label} ({found.filter(entry.test).length})
               </option>
             ))}
           </select>
-        </label>
+        </div>
       </div>
       <p className="small room-list-head" role="status">
         {summary}

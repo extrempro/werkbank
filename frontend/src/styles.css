@@ -7656,17 +7656,14 @@ td > .budget-row-actions {
   align-items: end;
 }
 
-.room-list-tools label {
-  display: grid;
-  gap: 4px;
-  font-size: 0.875rem;
-  font-weight: 600;
+/* Suche und „Zeigen“ nutzen die Felder der Filterleiste (.filter-search, .filter-field) */
+.room-list-tools .filter-search {
+  max-width: none;
 }
 
 .room-list-tools input,
 .room-list-tools select {
-  min-height: 44px;
-  font-weight: 400;
+  width: 100%;
 }
 
 .room-list-empty {

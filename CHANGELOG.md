@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.110.1] – 2026-11-24
+
+### Behoben
+
+- **Raumliste:** „Raum suchen“ und „Zeigen“ hatten nicht das Aussehen der übrigen Such- und Auswahlfelder (im Dunkelmodus deutlich zu sehen). Sie nutzen jetzt die Felder der Filterleiste.
+
 ## [0.110.0] – 2026-11-23
 
 ### IT-Bestand
