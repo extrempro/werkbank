@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.122.0",
+    date: "2026-11-24",
+    summary: "Neues IT-Tool: HTML-Editor mit Vorschau.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Neuer HTML-Editor unter Formatter: HTML eingeben und sofort als Vorschau sehen, in der Breite von PC, Tablet oder Handy. Mit Vorlagen für Mail-Signatur und Tabelle, Formatieren, Kopieren und Herunterladen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.121.0",
     date: "2026-11-24",
     summary: "Rechte vergibt die IT jetzt direkt in der Werkbank.",

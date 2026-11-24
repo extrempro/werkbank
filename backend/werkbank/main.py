@@ -70,6 +70,7 @@ from werkbank.modules.tickets.settings_api import test_router as tickets_test_ro
 from werkbank.modules.tickets.work_api import router as tickets_work_router
 from werkbank.modules.tools.account import router as tools_account_router
 from werkbank.modules.tools.api import router as tools_router
+from werkbank.modules.tools.html_preview import router as tools_html_router
 from werkbank.security import SecurityHeadersMiddleware
 from werkbank.web import mount_frontend
 
@@ -160,6 +161,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(inventory_whereabouts_router)
     app.include_router(inventory_lookup_router)
     app.include_router(tools_router)
+    app.include_router(tools_html_router)
     app.include_router(tools_account_router)
     app.include_router(monitoring_router)
     app.include_router(monitoring_admin_router)

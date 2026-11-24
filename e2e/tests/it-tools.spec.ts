@@ -707,3 +707,35 @@ test("IT-Tools: Abfragen über den Server und Suche", async ({ page }) => {
   await page.goto("/suche?q=dns");
   await expect(page.getByRole("link", { name: "DNS Lookup" })).toBeVisible();
 });
+
+test("IT-Tools: HTML-Editor zeigt die Vorschau abgeschottet", async ({
+  page,
+}, testInfo) => {
+  await loginAs(page, ["Tools.User"], "Hanna Html");
+  await page.goto("/it-tools/html-editor");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "HTML-Editor" }),
+  ).toBeVisible();
+  await page
+    .getByLabel("HTML", { exact: true })
+    .fill(
+      '<p style="color:rgb(200, 0, 0)">Hallo Vorschau</p><script>document.body.textContent="x"</script>',
+    );
+  if (testInfo.project.name === "handy") {
+    await page.getByRole("button", { name: "Vorschau" }).click();
+  }
+  const frame = page.frameLocator(
+    "iframe[title='Vorschau des eingegebenen HTML']",
+  );
+  const text = frame.getByText("Hallo Vorschau");
+  await expect(text).toBeVisible();
+  await expect(text).toHaveCSS("color", "rgb(200, 0, 0)");
+  await expectNoA11yViolations(page);
+
+  if (testInfo.project.name === "handy") {
+    await page.getByRole("button", { name: "HTML", exact: true }).click();
+  }
+  await page.getByRole("button", { name: "Leeren" }).click();
+  await confirmDialog(page, "Leeren");
+  await expect(page.getByLabel("HTML", { exact: true })).toHaveValue("");
+});

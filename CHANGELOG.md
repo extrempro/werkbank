@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.122.0] – 2026-11-24
+
+### IT-Tools
+
+- **HTML-Editor** (Formatter): HTML eingeben, Vorschau daneben (ab Tablet darunter, am Handy umschaltbar), Breiten PC/Tablet/Handy, Vorlagen (Leer, Mail-Signatur, Tabelle), Formatieren, Kopieren, Herunterladen als .html, Leeren mit Bestätigung.
+- Vorschau als eigene Seite `GET /api/tools/html-vorschau` mit eigener Sicherheitsrichtlinie (Sandbox ohne gleichen Ursprung, Skript per Hash, CSS inline, Bilder `data:` und mit „Abfragen ins Internet“ auch `https:`); Inhalt per `postMessage`, nie auf dem Server.
+
+### Dokumentation
+
+- spec.md (8a), asvs-l2.md, Handbuch (IT-Tools › Deine Eingaben)
+
+### Tests
+
+- `test_tools_html.py`, `html.test.ts`, E2E `it-tools.spec.ts`
+
 ## [0.121.0] – 2026-11-24
 
 ### Berechtigungen
