@@ -6,7 +6,13 @@ import {
   type Browser,
   type Page,
 } from "@playwright/test";
-import { BASE_URL, expectNoA11yViolations, loginAs } from "./helpers";
+import {
+  BASE_URL,
+  expectNoA11yViolations,
+  isPhone,
+  loginAs,
+  openMenu,
+} from "./helpers";
 
 // Tickets, Phase 1: Bereiche mit Rollen (Gruppen aus der Testquelle), Sichtbarkeit,
 // Status und Zuständigkeit erst nach „Bestätigen“, interne Notizen, Einstellungen.
@@ -850,4 +856,68 @@ test("Tickets: eingebettete Bilder groß ansehen, Textanhang als Auszug", async 
   await expect(text.getByText(/Zeile 2: kein Netzteil/)).toBeVisible();
   await text.getByRole("button", { name: "Schließen" }).click();
   await expect(text).toBeHidden();
+});
+
+test("Tickets: Leiste „Favoriten“ und „Geöffnet“, Einstellung im Konto", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  await loginAs(page, ["Tickets.Nutzer"], s.editor);
+  await page.goto(`/tickets/${s.number}`);
+  await expect(page.getByText("Anruf erfasst")).toBeVisible();
+
+  const menu = await openMenu(page);
+  const opened = menu.getByRole("list", { name: "Geöffnet" });
+  const link = opened.getByRole("link", { name: new RegExp(`T-${s.number}`) });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute("aria-current", "page");
+  await expect(menu.getByText("Neu", { exact: true })).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Stern: oben unter „Favoriten“
+  await menu.getByRole("button", { name: `T-${s.number} als Favorit` }).click();
+  await expect(
+    menu
+      .getByRole("list", { name: "Favoriten" })
+      .getByRole("link", { name: new RegExp(`T-${s.number}`) }),
+  ).toBeVisible();
+  await expect(
+    menu.getByRole("button", { name: "Geöffnet · 0" }),
+  ).toBeVisible();
+  // X: aus der Liste
+  await menu
+    .getByRole("button", { name: `T-${s.number} aus der Liste nehmen` })
+    .click();
+  await expect(
+    menu.getByRole("button", { name: "Favoriten · 0" }),
+  ).toBeVisible();
+  if (isPhone(page)) {
+    await page.keyboard.press("Escape");
+  }
+
+  // Konto › Tickets: normale Ansicht, Status ausgeschrieben
+  await page.goto("/konto");
+  const settings = page.getByRole("region", { name: /^Tickets/ });
+  // Die Auswahl gilt, sobald der Server gespeichert hat
+  await settings.getByRole("radio", { name: "Normal" }).click();
+  await expect(settings.getByRole("radio", { name: "Normal" })).toBeChecked();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Gespeichert." }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page.goto(`/tickets/${s.number}`);
+  await expect(page.getByText("Anruf erfasst")).toBeVisible();
+  const again = await openMenu(page);
+  await expect(
+    again
+      .getByRole("list", { name: "Geöffnet" })
+      .getByText("Neu", { exact: true }),
+  ).toBeVisible();
+  // Zurück auf kompakt, damit andere Läufe gleich starten
+  await page.request.put("/api/tickets/leiste/einstellungen", {
+    data: { limit: 15, compact: true },
+    headers: { Origin: BASE_URL },
+  });
 });

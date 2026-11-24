@@ -11,11 +11,12 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from tests.test_tickets import BASE, SETTINGS, areas, client_for, db, join, new_ticket, oid_of  # noqa: F401
 from werkbank.core.mail_layout import MailBrand, add_html
+from werkbank.core.models import BrandingAsset
 from werkbank.core.sessions import now_utc
 from werkbank.modules.tickets.mail_texts import fill
 from werkbank.modules.tickets.mailbox import mime_bytes
@@ -471,6 +472,59 @@ def test_inline_images_and_preview(db: Session, areas: dict[str, int]) -> None:
     hans = client_for("Hans Haus")
     assert hans.get(f"{BASE}/{number}/attachments/{image_id}?view=true").status_code == 404
     assert hans.get(f"{BASE}/{number}/attachments/{log_id}/text").status_code == 404
+
+
+def reply_with_quoted_images(number: int, logo: bytes) -> str:
+    """Outlook-Art: Antwort mit eigenem Bild; Logo und Bild der zitierten Mail hängen wieder dran."""
+    own = base64.b64encode(PNG).decode()
+    quoted = base64.b64encode(PNG + b"alt").decode()
+    logo64 = base64.b64encode(logo).decode()
+    html = (
+        '<p>Hier der Fehler: <img src="cid:image001.png@01DB"></p>'
+        "<p>Bitte antworte oberhalb dieser Zeile.</p>"
+        '<p><img src="cid:image002.png@01DB"> IT-Support</p><p>Bild: <img src="cid:image003.png@01DB"></p>'
+    )
+    parts = "".join(
+        f"--R\r\nContent-Type: image/png\r\nContent-ID: <{cid}>\r\n"
+        f"Content-Disposition: inline\r\nContent-Transfer-Encoding: base64\r\n\r\n{data}\r\n"
+        for cid, data in (
+            ("image001.png@01DB", own),
+            ("image002.png@01DB", logo64),
+            ("image003.png@01DB", quoted),
+        )
+    )
+    return (
+        "From: M. Muster <m.muster@example.com>\r\nTo: it@example.com\r\n"
+        f"Subject: AW: [#T-{number}] Mit Bildern\r\n"
+        "Message-ID: <antwort-bild@example.com>\r\nMIME-Version: 1.0\r\n"
+        'Content-Type: multipart/related; boundary="R"\r\n\r\n'
+        f"--R\r\nContent-Type: text/html; charset=utf-8\r\n\r\n{html}\r\n{parts}--R--\r\n"
+    )
+
+
+@pytest.mark.db
+def test_reply_drops_logo_and_quoted_images(db: Session, areas: dict[str, int]) -> None:
+    max_ = client_for("Max Muster")
+    db.execute(update(TicketArea).where(TicketArea.id == areas["it"]).values(allowed_types=["png"]))
+    logo = PNG + b"logo"
+    db.merge(
+        BrandingAsset(
+            kind="logo-mail", content_type="image/png", data=logo, etag="e", width=1, height=1
+        )
+    )
+    db.commit()
+    try:
+        number = inbound(max_, areas["it"], mail())["ticket_number"]
+        inbound(max_, areas["it"], reply_with_quoted_images(number, logo))
+        entry = max_.get(f"{BASE}/{number}").json()["entries"][-1]
+        assert entry["body"] == "Hier der Fehler: [Bild 1]"
+        files = [a["filename"] for a in entry["attachments"] if not a["original"]]
+        # Nur das eigene Bild; Logo und Bild aus dem Zitat bleiben nur im Original
+        assert files == ["bild-1.png"]
+        assert any(a["original"] for a in entry["attachments"])
+    finally:
+        db.execute(delete(BrandingAsset).where(BrandingAsset.kind == "logo-mail"))
+        db.commit()
 
 
 @pytest.mark.db

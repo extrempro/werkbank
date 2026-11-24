@@ -528,3 +528,29 @@ class TicketRetentionRun(Base):
     # Je Bereich: {"<id>": {"anonymized": n, "deleted": n, "holds_expired": n}}
     areas: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict)
     error: Mapped[str] = mapped_column(String(500), default="", server_default="")
+
+
+class TicketRecent(Base):
+    """Leiste „Favoriten“ und „Geöffnet“ je Person (Reihenfolge nach dem ersten Öffnen)."""
+
+    __tablename__ = "ticket_recent"
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    oid: Mapped[str] = mapped_column(String(64), index=True)
+    ticket_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tickets.id", ondelete="CASCADE"), index=True
+    )
+    favorite: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("oid", "ticket_id", name="uq_ticket_recent_oid_ticket"),)
+
+
+class TicketNavPrefs(Base):
+    """Einstellungen der Leiste je Person (Konto, Abschnitt Tickets)."""
+
+    __tablename__ = "ticket_nav_prefs"
+
+    oid: Mapped[str] = mapped_column(String(64), primary_key=True)
+    recent_limit: Mapped[int] = mapped_column(Integer, default=15, server_default=text("15"))
+    compact: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))

@@ -1,4 +1,4 @@
-import { useCallback, useId, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { HANDBOOK_PATH } from "../../handbook";
 import type { NavArea } from "../../navigation";
 import { useNavPrefs } from "../../navPrefs";
@@ -17,6 +17,11 @@ interface MobileNavProps {
   onNavigate: (path: string) => void;
   onSearch: () => void;
   onTasks: () => void;
+  /** Zusätzlicher Inhalt im Menü-Blatt eines Bereichs, z. B. die Ticket-Leiste. */
+  extraFor?: (
+    area: NavArea,
+    onNavigate: (event: MouseEvent<HTMLAnchorElement>, path: string) => void,
+  ) => ReactNode;
 }
 
 /**
@@ -34,6 +39,7 @@ export function MobileNav({
   onNavigate,
   onSearch,
   onTasks,
+  extraFor,
 }: MobileNavProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const closeSheet = useCallback(() => setSheetOpen(false), []);
@@ -108,6 +114,7 @@ export function MobileNav({
           badgeFor={badgeFor}
           onClose={closeSheet}
           onNavigate={onNavigate}
+          extraFor={extraFor}
         />
       )}
     </>
@@ -124,6 +131,7 @@ interface MenuSheetProps {
   badgeFor: (path: string) => number;
   onClose: () => void;
   onNavigate: (path: string) => void;
+  extraFor?: MobileNavProps["extraFor"];
 }
 
 function MenuSheet({
@@ -136,6 +144,7 @@ function MenuSheet({
   badgeFor,
   onClose,
   onNavigate,
+  extraFor,
 }: MenuSheetProps) {
   const prefs = useNavPrefs();
   // null: Liste aller Bereiche; sonst die Seiten dieses Bereichs
@@ -189,60 +198,64 @@ function MenuSheet({
           {shown ? shown.label : "Alle Bereiche"}
         </h2>
         <div className="sheet-body">
-          {shown ? (
-            menuGroups(shown, areas, prefs).map((group, index) => (
-              <div className="sheet-group" key={group.key}>
-                {group.title && <p className="sheet-group-title">{group.title}</p>}
-                {group.personal && group.entries.length === 0 ? (
-                  <p className="side-hint">
-                    Noch nichts angeheftet. Am Computer heftest du Seiten mit dem Stern an.
-                  </p>
-                ) : (
-                  <ul aria-label={group.title ?? (index === 0 ? shown.label : undefined)}>
-                    {group.entries.map((entry) => {
-                      const pinned = prefs.pinned.includes(entry.item.path);
-                      const count = group.personal ? 0 : badgeFor(entry.item.path);
-                      return (
-                        <li key={entry.item.path}>
-                          <a
-                            href={entry.item.path}
-                            aria-current={
-                              !group.personal && entry.item.path === activePath ? "page" : undefined
-                            }
-                            onClick={(event) => go(event, entry.item.path)}
-                          >
-                            <Icon name={entry.item.icon} />
-                            <span className="nav-label">{entry.item.label}</span>
-                            {group.personal && entry.area.id !== shown.id && (
-                              <>
-                                {" "}
-                                <span className="side-chip">{entry.area.short}</span>
-                              </>
-                            )}
-                            {pinned && !group.personal && (
-                              <>
-                                {" "}
-                                <span className="sheet-pinned">
-                                  <Icon name="stern" filled />
-                                  <span className="visually-hidden">angeheftet</span>
+          {shown
+            ? menuGroups(shown, areas, prefs).map((group, index) => (
+                <div className="sheet-group" key={group.key}>
+                  {group.title && <p className="sheet-group-title">{group.title}</p>}
+                  {group.personal && group.entries.length === 0 ? (
+                    <p className="side-hint">
+                      Noch nichts angeheftet. Am Computer heftest du Seiten mit dem Stern an.
+                    </p>
+                  ) : (
+                    <ul aria-label={group.title ?? (index === 0 ? shown.label : undefined)}>
+                      {group.entries.map((entry) => {
+                        const pinned = prefs.pinned.includes(entry.item.path);
+                        const count = group.personal ? 0 : badgeFor(entry.item.path);
+                        return (
+                          <li key={entry.item.path}>
+                            <a
+                              href={entry.item.path}
+                              aria-current={
+                                !group.personal && entry.item.path === activePath
+                                  ? "page"
+                                  : undefined
+                              }
+                              onClick={(event) => go(event, entry.item.path)}
+                            >
+                              <Icon name={entry.item.icon} />
+                              <span className="nav-label">{entry.item.label}</span>
+                              {group.personal && entry.area.id !== shown.id && (
+                                <>
+                                  {" "}
+                                  <span className="side-chip">{entry.area.short}</span>
+                                </>
+                              )}
+                              {pinned && !group.personal && (
+                                <>
+                                  {" "}
+                                  <span className="sheet-pinned">
+                                    <Icon name="stern" filled />
+                                    <span className="visually-hidden">angeheftet</span>
+                                  </span>
+                                </>
+                              )}
+                              {count > 0 && " "}
+                              {count > 0 && (
+                                <span className="nav-count">
+                                  {count} <span className="visually-hidden">offen</span>
                                 </span>
-                              </>
-                            )}
-                            {count > 0 && " "}
-                            {count > 0 && (
-                              <span className="nav-count">
-                                {count} <span className="visually-hidden">offen</span>
-                              </span>
-                            )}
-                          </a>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            ))
-          ) : (
+                              )}
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              ))
+            : null}
+          {shown && extraFor?.(shown, go)}
+          {shown ? null : (
             <ul className="sheet-areas">
               {areas.map((area) => (
                 <li key={area.id}>

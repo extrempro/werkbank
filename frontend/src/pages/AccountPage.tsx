@@ -5,6 +5,7 @@ import { Link } from "../components/Link";
 import { NotificationPreferences } from "../components/NotificationPreferences";
 import { MenuSizeSwitch } from "../components/MenuSizeSwitch";
 import { MenuSpacingSwitch } from "../components/MenuSpacingSwitch";
+import { TicketBarSettings } from "../modules/tickets/TicketBarSettings";
 import { ThemeSwitch } from "../components/ThemeSwitch";
 import { NEWS_PATH } from "../navigation";
 import { HANDBOOK_PATH } from "../handbook";
@@ -12,7 +13,7 @@ import { NOTIFICATIONS_PATH } from "../notifications";
 import { roleInfo } from "../user";
 
 /** Eigene Angaben, Rollen, angemeldete Geräte und persönliche Einstellungen. */
-export function AccountPage({ me }: { me: Me }) {
+export function AccountPage({ me, tickets = false }: { me: Me; tickets?: boolean }) {
   return (
     <div className="page account">
       <header className="page-head">
@@ -68,6 +69,8 @@ export function AccountPage({ me }: { me: Me }) {
           <MenuSpacingSwitch />
         </div>
       </section>
+
+      {tickets && <TicketBarSettings />}
 
       <NotificationPreferences />
       <p>

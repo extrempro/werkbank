@@ -61,6 +61,7 @@ import {
   USERS_PATH,
   USAGE_PATH,
   DEVICE_ASSOCIATION_PATH,
+  TICKETS_MEMBER,
 } from "../navigation";
 import { AccountPage } from "../pages/AccountPage";
 import { AdminPage } from "../pages/AdminPage";
@@ -90,6 +91,7 @@ import { HardwarePage } from "../modules/inventory/HardwarePage";
 import { CasesPage } from "../modules/inventory/CasesPage";
 import { parseTicketPath } from "../modules/tickets/api";
 import { NewTicketPage } from "../modules/tickets/NewTicketPage";
+import { TicketBar } from "../modules/tickets/TicketBar";
 import { TicketPage } from "../modules/tickets/TicketPage";
 import { parseSettingsPath, TicketSettingsPage } from "../modules/tickets/TicketSettingsPage";
 import { TicketsPage } from "../modules/tickets/TicketsPage";
@@ -396,6 +398,15 @@ export function Layout({ me }: LayoutProps) {
   const positionRoute = parsePositionPath(path);
   const caseRoute = parseCasePath(path);
   const ticketRoute = parseTicketPath(path);
+  // Leiste „Favoriten“ und „Geöffnet“ nur für Personen mit Rechten in einem Ticket-Bereich
+  const ticketBarFor = (
+    area: NavArea,
+    variant: "side" | "sheet",
+    navigateTo: (event: MouseEvent<HTMLAnchorElement>, target: string) => void,
+  ) =>
+    area.id === "tickets" && navRoles.includes(TICKETS_MEMBER) ? (
+      <TicketBar activeNumber={ticketRoute} variant={variant} onNavigate={navigateTo} />
+    ) : null;
   const settingsTab = parseSettingsPath(path);
   const zabbixHost = parseZabbixHostPath(path);
   const loanRoute = parseLoanPath(path);
@@ -420,7 +431,7 @@ export function Layout({ me }: LayoutProps) {
   if (path === "/") {
     page = <StartPage me={me} tasks={tasks} />;
   } else if (path === ACCOUNT_PATH) {
-    page = <AccountPage me={me} />;
+    page = <AccountPage me={me} tickets={navRoles.includes(TICKETS_MEMBER)} />;
   } else if (path === SEARCH_PATH) {
     page = <SearchPage roles={me.roles} />;
   } else if (path === NEWS_PATH) {
@@ -745,6 +756,7 @@ export function Layout({ me }: LayoutProps) {
                 badgeFor={badgeFor}
                 onNavigate={onNavClick}
                 onCollapse={() => setMenu(true)}
+                extra={ticketBarFor(currentArea, "side", onNavClick)}
               />
             )}
           </div>
@@ -766,6 +778,7 @@ export function Layout({ me }: LayoutProps) {
           onNavigate={go}
           onSearch={() => setSearchOpen(true)}
           onTasks={onTasks}
+          extraFor={(area, navigateTo) => ticketBarFor(area, "sheet", navigateTo)}
         />
         {searchOpen && <QuickSearch areas={areas} onClose={closeSearch} onNavigate={go} />}
         <ScrollTop />

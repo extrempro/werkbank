@@ -327,6 +327,11 @@ export const HELP = {
     text: "Eine Abteilung mit eigenem Postfach, zum Beispiel die IT. Du siehst nur Tickets der Bereiche, in denen du Mitglied bist.",
     topic: ["tickets", "uebersicht"],
   },
+  "tickets.leiste": {
+    term: "Favoriten und Geöffnet",
+    text: "Unter „Neues Ticket“ stehen deine Favoriten und die zuletzt geöffneten Tickets. Hier stellst du ein, wie viele es höchstens sind und wie sie aussehen.",
+    topic: ["tickets", "leiste"],
+  },
   "tickets.notiz": {
     term: "Interne Notiz",
     text: "Nur für Mitglieder des Bereichs. Der Melder sieht sie nicht und bekommt keine Mail.",
