@@ -138,3 +138,43 @@ class DokuVersion(Base):
     authors: Mapped[str] = mapped_column(String(500), default="", server_default="")
     note: Mapped[str] = mapped_column(String(300), default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DokuThread(Base):
+    """Kommentare zu einer Textstelle (D3). Die Stelle steht als Position im gemeinsamen
+    Dokument (Yjs, relativ), dazu der markierte Text zur Anzeige, falls die Stelle wegfällt."""
+
+    __tablename__ = "doku_threads"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    page_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("doku_pages.id", ondelete="CASCADE"), index=True
+    )
+    # {"from": base64, "to": base64}: Anfang und Ende als relative Position in Yjs
+    anchor: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    quote: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    created_by_oid: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    created_by_name: Mapped[str] = mapped_column(String(256), default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_by_name: Mapped[str] = mapped_column(String(256), default="", server_default="")
+
+
+class DokuComment(Base):
+    """Ein Beitrag in einem Kommentar-Faden; Erwähnungen als Objekt-IDs."""
+
+    __tablename__ = "doku_comments"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    thread_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("doku_threads.id", ondelete="CASCADE"), index=True
+    )
+    author_oid: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    author_name: Mapped[str] = mapped_column(String(256), default="", server_default="")
+    text: Mapped[str] = mapped_column(Text)
+    mentions: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default=sql_text("'[]'::jsonb")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )

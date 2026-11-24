@@ -9,6 +9,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { DokuBacklinks } from "../doku/DokuBacklinks";
 import { ApiError, errorText, formatDateTime } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
@@ -936,6 +937,7 @@ function Facts({
           )}
         </div>
       </FactsFrame>
+      <DokuBacklinks kind="ticket" id={ticket.number} />
       {dialog}
     </aside>
   );

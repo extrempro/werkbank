@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.123.0] – 2026-11-24
+
+### Dokumentation
+
+- **Kommentare an Textstellen** (Phase D3): Text markieren, „Kommentieren“; Antworten, „Erledigt“ und „Wieder öffnen“, eigene Kommentare löschen (mit Bestätigung). Wer lesen darf, darf kommentieren. Die Stelle wird als relative Yjs-Position gespeichert, nicht im Inhalt (`doku_threads`, `doku_comments`, Migration 0083).
+- **Erwähnungen** mit `@` (nur Personen mit Leserecht); Benachrichtigungen `doku.erwaehnung` und `doku.antwort` ohne Inhalt.
+- **Verweise** auf Tickets, Geräte, Stellen, Arbeitsplätze, Räume, IT-Projekte und Verträge („#“ in der Werkzeugleiste); Titel und Status je lesender Person nach ihren Rechten, sonst „Kein Zugriff“.
+- **Live-Bausteine** Ticketliste, Geräteliste, Projektstand und Vertragsfristen mit den Rechten der lesenden Person, neu alle 60 Sekunden.
+- **Rückverweise** „In der Dokumentation“ bei Ticket, Gerät, Stelle, Arbeitsplatz, IT-Projekt und Vertrag, nur für Doku-Nutzende und nur lesbare Seiten.
+- Info-Symbole `doku.kommentare`, `doku.verweise`; Handbuch: „Kommentare und Erwähnungen“, „Verweise und Live-Bausteine“.
+
 ## [0.122.1] – 2026-11-24
 
 ### IT-Tools

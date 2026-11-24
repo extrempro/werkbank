@@ -353,3 +353,167 @@ export function buildTree(pages: TreePage[]): PageNode[] {
   sort(roots);
   return roots;
 }
+
+// --- Phase D3: Kommentare, Verweise, Live-Bausteine, Rückverweise -------------------------
+
+export interface DokuComment {
+  id: string;
+  author_name: string;
+  text: string;
+  mentions: string[];
+  created_at: string;
+  own: boolean;
+}
+
+export interface DokuThread {
+  id: string;
+  /** Relative Positionen im gemeinsamen Dokument (Base64); fehlt die Stelle, nur das Zitat */
+  anchor: { from: string; to: string } | null;
+  quote: string;
+  created_by_name: string;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_by_name: string;
+  comments: DokuComment[];
+}
+
+export interface Mentionable {
+  oid: string;
+  name: string;
+}
+
+export function fetchThreads(pageId: string): Promise<DokuThread[]> {
+  return getJson(`${BASE}/pages/${pageId}/threads`);
+}
+
+export function createThread(
+  pageId: string,
+  body: { anchor: { from: string; to: string }; quote: string; text: string; mentions: string[] },
+): Promise<DokuThread> {
+  return postJson(`${BASE}/pages/${pageId}/threads`, body);
+}
+
+export function replyThread(
+  threadId: string,
+  body: { text: string; mentions: string[] },
+): Promise<DokuThread> {
+  return postJson(`${BASE}/threads/${threadId}/comments`, body);
+}
+
+export function resolveThread(threadId: string, resolved: boolean): Promise<DokuThread> {
+  return putJson(`${BASE}/threads/${threadId}/resolved`, { resolved });
+}
+
+export function deleteComment(commentId: string): Promise<{ ok: boolean }> {
+  return deleteJson(`${BASE}/comments/${commentId}`);
+}
+
+export function fetchMentionable(pageId: string, q: string): Promise<Mentionable[]> {
+  return getJson(`${BASE}/pages/${pageId}/mentionable?q=${encodeURIComponent(q)}`);
+}
+
+export type RefKind =
+  "ticket" | "hardware" | "stelle" | "arbeitsplatz" | "raum" | "projekt" | "vertrag";
+
+export const REF_KIND_LABELS: Record<RefKind, string> = {
+  ticket: "Ticket",
+  hardware: "Gerät",
+  stelle: "Stelle",
+  arbeitsplatz: "Arbeitsplatz",
+  raum: "Raum",
+  projekt: "IT-Projekt",
+  vertrag: "Vertrag",
+};
+
+export interface RefData {
+  kind: RefKind;
+  id: string;
+  /** Rechte im Bereich; ohne Rechte keine Angaben zum Objekt */
+  allowed: boolean;
+  found: boolean;
+  title: string;
+  status: string;
+  detail: string;
+  href: string;
+}
+
+export function resolveRefs(refs: { kind: RefKind; id: string }[]): Promise<RefData[]> {
+  return postJson(`${BASE}/refs/resolve`, { refs }, QUIET);
+}
+
+export function searchRefs(kind: RefKind, q: string): Promise<RefData[]> {
+  return getJson(`${BASE}/refs/search?kind=${kind}&q=${encodeURIComponent(q)}`);
+}
+
+export type LiveKind = "tickets" | "geraete" | "projekt" | "vertraege";
+
+export const LIVE_KIND_LABELS: Record<LiveKind, { label: string; hint: string }> = {
+  tickets: { label: "Ticketliste", hint: "Bereich, Status, Stichwort" },
+  geraete: { label: "Geräteliste", hint: "Etage oder Raum, Art" },
+  projekt: { label: "Projektstand", hint: "Fortschritt und offene Aufgaben" },
+  vertraege: { label: "Vertragsfristen", hint: "Kündigungstermine der nächsten Monate" },
+};
+
+export interface LiveAttrs {
+  kind: LiveKind;
+  area?: number | null;
+  status?: "offen" | "alle" | null;
+  q?: string | null;
+  floor?: number | null;
+  room?: number | null;
+  hwkind?: number | null;
+  project?: number | null;
+  months?: 3 | 6 | 12 | null;
+}
+
+export interface LiveRow {
+  number: string;
+  title: string;
+  status: string;
+  who: string;
+  href: string;
+}
+
+export interface LiveData {
+  kind: LiveKind;
+  allowed: boolean;
+  title: string;
+  rows: LiveRow[] | null;
+  project: {
+    status: string;
+    done: number;
+    total: number;
+    meeting: string | null;
+    href: string;
+    tasks: { text: string; due: string | null }[];
+  } | null;
+  note: string;
+}
+
+export interface LiveOptions {
+  areas: { id: number; name: string }[];
+  floors: { id: number; name: string; rooms: { id: number; name: string }[] }[];
+  kinds: { id: number; name: string }[];
+  projects: { id: number; name: string }[];
+}
+
+export function fetchLiveData(attrs: LiveAttrs): Promise<LiveData> {
+  return postJson(`${BASE}/live-bausteine/daten`, attrs, QUIET);
+}
+
+export function fetchLiveOptions(): Promise<LiveOptions> {
+  return getJson(`${BASE}/live-bausteine/optionen`);
+}
+
+export interface Backlink {
+  id: string;
+  title: string;
+  path: string;
+  updated_at: string;
+  updated_by_name: string;
+  snippet: string;
+}
+
+export function fetchBacklinks(kind: RefKind, id: string): Promise<Backlink[]> {
+  return getJson(`${BASE}/backlinks?kind=${kind}&id=${encodeURIComponent(id)}`);
+}

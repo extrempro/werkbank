@@ -306,6 +306,16 @@ export const HELP = {
     text: "Alle, die die Seite offen haben, sehen Änderungen sofort und können gleichzeitig schreiben. Gespeichert wird automatisch.",
     topic: ["doku", "seiten"],
   },
+  "doku.kommentare": {
+    term: "Kommentare",
+    text: "Markiere Text und kommentiere ihn; mit @ erwähnst du jemanden, der die Seite lesen darf. Kommentieren darf jede Person, die die Seite lesen darf.",
+    topic: ["doku", "kommentare"],
+  },
+  "doku.verweise": {
+    term: "Verweise und Live-Bausteine",
+    text: "Verweise und Live-Bausteine zeigen Tickets, Geräte, Projekte oder Verträge mit ihrem aktuellen Stand. Jede Person sieht nur, was sie im jeweiligen Bereich sehen darf.",
+    topic: ["doku", "verweise"],
+  },
   "doku.arbeitsbereich": {
     term: "Arbeitsbereich",
     text: "Sammlung von Seiten, etwa für eine Abteilung. Wer darin Mitglied ist, bekommt Lesen, Bearbeiten oder Verwalten.",

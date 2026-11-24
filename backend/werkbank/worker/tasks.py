@@ -18,6 +18,7 @@ from werkbank.core.sessions import now_utc
 from werkbank.modules.budget.notifications import budget_notifications
 from werkbank.modules.devices.jobs import STATUS_JOB, STATUS_JOB_INTERVAL, status_job
 from werkbank.modules.devices.notifications import devices_notifications
+from werkbank.modules.doku.d3_api import doku_notifications
 from werkbank.modules.doku.jobs import CLEANUP as DOKU_CLEANUP
 from werkbank.modules.doku.jobs import (
     CLEANUP_INTERVAL as DOKU_CLEANUP_INTERVAL,
@@ -152,6 +153,7 @@ NOTIFICATION_SOURCES = (
     inventory_notifications,
     tickets_notifications,
     devices_notifications,
+    doku_notifications,
 )
 
 REGISTRY: dict[str, JobType] = {

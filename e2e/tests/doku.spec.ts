@@ -318,3 +318,129 @@ test("Doku: zwei Personen schreiben gleichzeitig, Lesen sieht live mit", async (
   await otherContext.close();
   await readerContext.close();
 });
+
+test("Doku D3: Verweis, Live-Baustein, Kommentar mit Erwähnung und Rückverweis", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  // Erwähnen lassen sich Personen, die die Werkbank kennt (schon einmal angemeldet)
+  await apiAs(browser, ["Doku.Nutzer"], s.reader);
+  const projects = await apiAs(browser, ["Projekte.Editor"], `Pia ${stamp}`);
+  const projectName = `Druckerumstellung ${stamp}`;
+  const created = await projects.post("/api/projects", {
+    data: { name: projectName },
+    headers: HEADERS,
+  });
+  expect(created.status()).toBe(201);
+  const projectId = ((await created.json()) as { id: number }).id;
+
+  const editor = await apiAs(
+    browser,
+    ["Doku.Nutzer", "Projekte.Reader"],
+    s.editor,
+  );
+  const made = await editor.post("/api/doku/pages", {
+    data: { space_id: s.spaceId, title: `Umstellung ${stamp}` },
+    headers: HEADERS,
+  });
+  const pageId = ((await made.json()) as { id: string }).id;
+
+  await loginAs(page, ["Doku.Nutzer", "Projekte.Reader"], s.editor);
+  await page.goto(`/doku/seite/${pageId}`);
+  await expect(
+    page.getByText("Live · wird automatisch gespeichert"),
+  ).toBeVisible({ timeout: 10_000 });
+  const content = page.getByRole("textbox", { name: "Inhalt der Seite" });
+  await content.click();
+  await content.pressSequentially("Toner bis Freitag bestellen.");
+  await content.press("Enter");
+  await content.pressSequentially("Projekt: ");
+
+  // Verweis auf das Projekt
+  await page
+    .getByRole("button", { name: "Verweis auf Ticket, Gerät, Projekt …" })
+    .click();
+  const picker = page.getByRole("dialog", { name: "Verweis einfügen" });
+  await picker.getByLabel("Art").selectOption("projekt");
+  await picker.getByLabel("Suchen").fill(projectName);
+  await picker.getByRole("button", { name: new RegExp(projectName) }).click();
+  await expect(
+    content.getByRole("link", { name: new RegExp(projectName) }),
+  ).toBeVisible();
+
+  // Live-Baustein „Projektstand“ über „/“ in einer neuen Zeile
+  await content.press("End");
+  await content.press("Enter");
+  await content.press("/");
+  const blocks = page.getByRole("combobox", { name: "Baustein suchen" });
+  await blocks.fill("Live");
+  await blocks.press("Enter");
+  const form = page.getByRole("form", { name: "Live-Baustein einfügen" });
+  await form.getByRole("radio", { name: "Projektstand" }).check();
+  await form
+    .getByRole("combobox", { name: /^Projekt/ })
+    .selectOption({ label: projectName });
+  await form.getByRole("button", { name: "Einfügen" }).click();
+  await expect(
+    page.getByRole("region", { name: "Live-Baustein: Projektstand" }),
+  ).toContainText("0 von 0 Aufgaben erledigt");
+
+  // Kommentar an einer Textstelle mit Erwähnung
+  await page.getByText("Toner bis Freitag bestellen.").click();
+  await content.press("Home");
+  await content.press("Shift+End");
+  const narrow = await page
+    .getByRole("button", { name: /^Kommentare · / })
+    .isVisible();
+  if (narrow) {
+    await page.getByRole("button", { name: /^Kommentare · / }).click();
+  }
+  const panel = page.getByRole("region", { name: /^Kommentare/ });
+  await panel.getByRole("button", { name: "Kommentieren" }).click();
+  const field = panel.getByLabel("Neuer Kommentar");
+  await field.fill(`Bitte prüfen @${s.reader.slice(0, 3)}`);
+  await panel.getByRole("button", { name: s.reader }).click();
+  await expect(field).toHaveValue(`Bitte prüfen @${s.reader} `);
+  await panel.getByRole("button", { name: "Kommentar speichern" }).click();
+  await expect(page.getByText("Der Kommentar ist gespeichert.")).toBeVisible();
+  await expect(panel.getByText("Offen · 1")).toBeVisible();
+  await expectNoA11yViolations(page);
+  const threads = (await (
+    await page.request.get(`/api/doku/pages/${pageId}/threads`)
+  ).json()) as { comments: { mentions: string[] }[] }[];
+  expect(threads[0]?.comments[0]?.mentions).toEqual([`test:${slug(s.reader)}`]);
+
+  // Umgekehrt: Das Projekt zeigt die Seite unter „In der Dokumentation“
+  await page.goto(`/projekte/${projectId}`);
+  const backlinks = page.getByRole("region", { name: /In der Dokumentation/ });
+  await expect(
+    backlinks.getByRole("link", { name: `Umstellung ${stamp}` }),
+  ).toBeVisible();
+
+  // Wer lesen darf, antwortet; ohne Projektrechte steht beim Verweis „Kein Zugriff“
+  await loginAs(page, ["Doku.Nutzer"], s.reader);
+  await page.goto(`/doku/seite/${pageId}`);
+  await expect(page.getByText("Kein Zugriff").first()).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(
+    page.getByRole("region", { name: "Live-Baustein: Projektstand" }),
+  ).toContainText("keine Rechte");
+  if (narrow) {
+    await page.getByRole("button", { name: /^Kommentare · / }).click();
+  }
+  const readerPanel = page.getByRole("region", { name: /^Kommentare/ });
+  await readerPanel.getByRole("button", { name: "Antworten" }).click();
+  await readerPanel.getByLabel("Antwort").fill("Erledigt, danke.");
+  await readerPanel
+    .getByRole("button", { name: "Antworten", exact: true })
+    .click();
+  await expect(readerPanel.getByText("Erledigt, danke.")).toBeVisible();
+  await readerPanel
+    .getByRole("button", { name: "Erledigt", exact: true })
+    .click();
+  await expect(readerPanel.getByText("Offen · 0")).toBeVisible();
+  await expectNoA11yViolations(page);
+});

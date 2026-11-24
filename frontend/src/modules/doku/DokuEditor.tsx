@@ -8,7 +8,9 @@ import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import { CARET_COLORS, type LiveDoc } from "./useLiveDoc";
 import { Icon } from "../../components/Icon";
-import type { DocJson } from "./api";
+import type { DocJson, LiveAttrs } from "./api";
+import { CommentMarks, type CommentMarksOptions } from "./commentMarks";
+import { LiveBlock, LiveBlockForm, RefPicker, WerkbankRef } from "./DokuNodes";
 
 /** Hinweis-Kasten („Hinweis“, „Warnung“, „Erledigt“) mit Absätzen darin. */
 export const Callout = Node.create({
@@ -74,7 +76,7 @@ function caretSelection(user: Record<string, unknown>): { class: string } {
   return { class: `doku-selection doku-selection-${index < 0 ? 0 : index}` };
 }
 
-export function extensions(placeholder: string, live?: LiveDoc) {
+export function extensions(placeholder: string, live?: LiveDoc, comments?: CommentMarksOptions) {
   return [
     StarterKit.configure({
       // Mit Live-Bearbeitung kommt „Rückgängig“ aus dem gemeinsamen Dokument (nur eigene Änderungen)
@@ -102,6 +104,9 @@ export function extensions(placeholder: string, live?: LiveDoc) {
       },
     }),
     Callout,
+    WerkbankRef,
+    LiveBlock,
+    ...(comments ? [CommentMarks.configure(comments)] : []),
     Placeholder.configure({ placeholder }),
     ...(live
       ? [
@@ -122,6 +127,8 @@ interface BlockChoice {
   label: string;
   hint: string;
   run: (editor: Editor) => void;
+  /** Öffnet stattdessen eine Auswahl (Verweis, Live-Baustein) */
+  open?: "verweis" | "live";
 }
 
 const BLOCKS: readonly BlockChoice[] = [
@@ -198,10 +205,32 @@ const BLOCKS: readonly BlockChoice[] = [
     hint: "waagerechte Linie",
     run: (e) => e.chain().focus().setHorizontalRule().run(),
   },
+  {
+    id: "verweis",
+    label: "Verweis",
+    hint: "Ticket, Gerät, Stelle, Projekt, Vertrag",
+    run: () => undefined,
+    open: "verweis",
+  },
+  {
+    id: "live",
+    label: "Live-Baustein",
+    hint: "Ticketliste, Geräte, Projektstand, Vertragsfristen",
+    run: () => undefined,
+    open: "live",
+  },
 ];
 
 /** Auswahl der Bausteine: mit „+ Baustein“ oder „/“ in einer leeren Zeile. */
-function BlockMenu({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+function BlockMenu({
+  editor,
+  onClose,
+  onOpen,
+}: {
+  editor: Editor;
+  onClose: () => void;
+  onOpen: (what: "verweis" | "live") => void;
+}) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
@@ -213,10 +242,12 @@ function BlockMenu({ editor, onClose }: { editor: Editor; onClose: () => void })
     input.current?.focus();
   }, []);
   const pick = (choice: BlockChoice | undefined) => {
-    if (choice) {
+    onClose();
+    if (choice?.open) {
+      onOpen(choice.open);
+    } else if (choice) {
       choice.run(editor);
     }
-    onClose();
   };
   const onKey = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "ArrowDown") {
@@ -370,7 +401,15 @@ function ToolButton({
   );
 }
 
-function Toolbar({ editor, onBlocks }: { editor: Editor; onBlocks: () => void }) {
+function Toolbar({
+  editor,
+  onBlocks,
+  onRef,
+}: {
+  editor: Editor;
+  onBlocks: () => void;
+  onRef: () => void;
+}) {
   const [linkOpen, setLinkOpen] = useState(false);
   // Neu zeichnen, wenn sich Auswahl oder Inhalt ändern (für „gedrückt“)
   const [, setTick] = useState(0);
@@ -433,6 +472,7 @@ function Toolbar({ editor, onBlocks }: { editor: Editor; onBlocks: () => void })
           active={editor.isActive("link")}
           onClick={() => setLinkOpen(!linkOpen)}
         />
+        <ToolButton label="Verweis auf Ticket, Gerät, Projekt …" text="#" onClick={onRef} />
         <span className="doku-tool-sep" aria-hidden="true" />
         <ToolButton
           label="Überschrift 2"
@@ -520,6 +560,8 @@ export function DokuEditor({
   editable,
   label,
   onChange,
+  comments,
+  onReady,
 }: {
   /** Fester Inhalt (z. B. eine Version); mit `live` kommt der Inhalt aus dem gemeinsamen Dokument */
   content?: DocJson;
@@ -527,14 +569,19 @@ export function DokuEditor({
   editable: boolean;
   label: string;
   onChange?: (doc: DocJson) => void;
+  /** Hervorhebung kommentierter Stellen (nur mit Live-Dokument) */
+  comments?: CommentMarksOptions;
+  /** Meldet den Editor, z. B. für Kommentare an der Auswahl */
+  onReady?: (editor: Editor | null) => void;
 }) {
   const [blocks, setBlocks] = useState(false);
+  const [picker, setPicker] = useState<"verweis" | "live" | null>(null);
   const change = useRef(onChange);
   useEffect(() => {
     change.current = onChange;
   }, [onChange]);
   const editor = useEditor({
-    extensions: extensions("Schreib los oder tippe „/“ für Bausteine", live),
+    extensions: extensions("Schreib los oder tippe „/“ für Bausteine", live, comments),
     ...(live ? {} : { content }),
     editable,
     immediatelyRender: true,
@@ -561,10 +608,36 @@ export function DokuEditor({
     },
     onUpdate: ({ editor: current }) => change.current?.(current.getJSON() as DocJson),
   });
+  const ready = useRef(onReady);
+  useEffect(() => {
+    ready.current = onReady;
+  }, [onReady]);
+  useEffect(() => {
+    ready.current?.(editor);
+    return () => ready.current?.(null);
+  }, [editor]);
+  const insertLive = (attrs: LiveAttrs) => {
+    editor.chain().focus().insertContent({ type: "liveBlock", attrs }).run();
+    setPicker(null);
+  };
   return (
     <div className={editable ? "doku-editor doku-editing" : "doku-editor"}>
-      {editable && <Toolbar editor={editor} onBlocks={() => setBlocks(true)} />}
-      {editable && blocks && <BlockMenu editor={editor} onClose={() => setBlocks(false)} />}
+      {editable && (
+        <Toolbar
+          editor={editor}
+          onBlocks={() => setBlocks(true)}
+          onRef={() => setPicker("verweis")}
+        />
+      )}
+      {editable && blocks && (
+        <BlockMenu editor={editor} onClose={() => setBlocks(false)} onOpen={setPicker} />
+      )}
+      {editable && picker === "verweis" && (
+        <RefPicker editor={editor} onClose={() => setPicker(null)} />
+      )}
+      {editable && picker === "live" && (
+        <LiveBlockForm initial={null} onSubmit={insertLive} onCancel={() => setPicker(null)} />
+      )}
       <EditorContent editor={editor} />
     </div>
   );
