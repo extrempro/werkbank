@@ -475,3 +475,25 @@ def test_reply_all_forward_and_external_answer(db: Session, areas: dict[str, int
     inbound_entries = [e for e in data["entries"] if e["kind"] == "inbound"]
     assert [e["origin"] for e in inbound_entries] == ["reporter", "external", "participant"]
     assert data["status"] == "in_progress"
+
+
+@pytest.mark.db
+def test_reply_solved_with_solution(db: Session, areas: dict[str, int]) -> None:
+    max_ = client_for("Max Muster")
+    number = inbound(max_, areas["it"], mail())["ticket_number"]
+    sent = max_.post(
+        f"{BASE}/{number}/replies",
+        json={
+            "body": "Erledigt.",
+            "status_after": "solved",
+            "solution": {"text": "Treiber neu installiert.", "public": False},
+        },
+    )
+    assert sent.status_code == 201, sent.text
+    data = sent.json()
+    assert data["status"] == "solved"
+    assert data["solution"]["text"] == "Treiber neu installiert."
+    assert data["solution"]["public"] is False
+    assert any("nur intern" in e["body"] for e in data["entries"] if e["kind"] == "system")
+    outbox = max_.get(f"{BASE}/test/outbox", params={"ticket": number}).json()
+    assert [o["kind"] for o in outbox] == ["antwort"]

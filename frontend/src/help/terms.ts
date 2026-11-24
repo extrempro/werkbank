@@ -321,6 +321,11 @@ export const HELP = {
     text: "Ordnet das Ticket ein, zum Beispiel Drucker oder Zugang. Eine Kategorie kann eine Priorität vorschlagen; du kannst sie danach ändern.",
     topic: ["tickets", "arbeitshilfen"],
   },
+  "tickets.loesung": {
+    term: "Lösung",
+    text: "Beim Wechsel auf „Gelöst“ kannst du eine Lösungsart wählen und kurz beschreiben, was gemacht wurde. Ist es freigegeben, steht beides in der Mail an den Melder, sonst nur intern.",
+    topic: ["tickets", "arbeitshilfen"],
+  },
   "tickets.frist": {
     term: "Frist",
     text: "Bis wann das Ticket gelöst sein soll, gezählt in Arbeitszeit des Bereichs. Solange das Ticket auf eine Rückmeldung wartet, ruht die Frist.",

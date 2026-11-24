@@ -192,6 +192,21 @@ test("Tickets: Status und Zuständigkeit gelten erst nach „Bestätigen“, Not
     .getByRole("button", { name: "Nur Nachrichten" })
     .click();
   await expect(page.getByText("Toner ist bestellt")).toBeHidden();
+
+  // Gelöst mit Lösung (freiwillig), nur intern
+  await page.getByLabel("Status").selectOption({ label: "Gelöst" });
+  await page.getByLabel("Was wurde gemacht?").fill("Toner gewechselt.");
+  await page.getByLabel("In der Mail an den Melder zeigen").uncheck();
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Bestätigen" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Die Änderung wurde gespeichert." }),
+  ).toBeVisible();
+  const facts = page.getByRole("complementary", { name: "Angaben zum Ticket" });
+  await expect(facts.getByText("Toner gewechselt.")).toBeAttached();
+  await expect(facts.getByText("nur intern")).toBeAttached();
 });
 
 test("Tickets: fremder Bereich ist nicht sichtbar, auch nicht per Direktaufruf; Gruppe entzogen", async ({
@@ -597,11 +612,19 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
   const panel = page.locator("#inhalt");
 
   await panel.getByRole("textbox", { name: "Neue Kategorie" }).fill("Drucker");
-  await panel.getByRole("button", { name: "Anlegen" }).click();
+  await panel.getByRole("button", { name: "Anlegen", exact: true }).click();
   await expect(
     page
       .getByRole("status")
       .filter({ hasText: "Die Kategorie wurde angelegt." }),
+  ).toBeVisible();
+
+  await panel.getByRole("textbox", { name: "Neue Lösungsart" }).fill("Behoben");
+  await panel.getByRole("button", { name: "Anlegen – Lösungsart" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Die Lösungsart wurde angelegt." }),
   ).toBeVisible();
 
   await panel

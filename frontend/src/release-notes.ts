@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.115.0",
+    date: "2026-11-24",
+    summary: "Tickets: Lösung beim Wechsel auf „Gelöst“.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Stellst du ein Ticket auf „Gelöst“, kannst du eine Lösungsart wählen und kurz beschreiben, was gemacht wurde. Beides ist freiwillig.",
+          "Du entscheidest, ob die Lösung in der Mail an den Melder steht oder nur intern bleibt.",
+          "Die Lösungsarten pflegt die Bereichsverwaltung in den Einstellungen. Die Übersicht zeigt, wie Tickets in den letzten 30 Tagen gelöst wurden.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.114.0",
     date: "2026-11-24",
     summary: "Alle Mails im gleichen Aussehen, mit Logo, Fußzeile und Datenschutz-Link.",

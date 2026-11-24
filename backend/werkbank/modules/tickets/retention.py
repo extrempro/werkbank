@@ -175,6 +175,7 @@ def anonymize(db: Session, directory: Path, ticket: Ticket, now: datetime) -> No
     ticket.assigned_by_oid = None
     ticket.created_by = ""
     ticket.reminder_note = ""
+    ticket.solution_text = ""
     ticket.hold_until = None
     ticket.hold_reason = ""
     ticket.hold_by_name = ""

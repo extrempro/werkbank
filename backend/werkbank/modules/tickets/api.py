@@ -51,12 +51,15 @@ from werkbank.modules.tickets.models import (
     TicketEntry,
     TicketMailOut,
     TicketParticipant,
+    TicketSolutionType,
 )
 from werkbank.modules.tickets.outbound import build_forward, event_text, send_to_reporter
 from werkbank.modules.tickets.service import (
     PRIORITY_LABELS,
+    SOLUTION_TEXT_MAX,
     STATUS_LABELS,
     Actor,
+    apply_solution,
     assign,
     assign_new,
     protocol,
@@ -180,6 +183,27 @@ class CategoryRef(BaseModel):
     default_priority: str
 
 
+class SolutionTypeRef(BaseModel):
+    id: int
+    name: str
+
+
+class SolutionOut(BaseModel):
+    type_id: int | None
+    type_name: str
+    text: str
+    # In der Mail an den Melder zeigen
+    public: bool
+
+
+class SolutionIn(BaseModel):
+    """Lösung beim Wechsel auf „Gelöst“; alles freiwillig."""
+
+    type_id: int | None = Field(default=None, ge=1, le=2_000_000_000)
+    text: str = Field(default="", max_length=SOLUTION_TEXT_MAX)
+    public: bool = True
+
+
 class SlaOut(BaseModel):
     response_due: datetime | None
     solution_due: datetime | None
@@ -223,6 +247,9 @@ class TicketOut(TicketItem):
     reply_hint: str
     category_id: int | None
     categories: list[CategoryRef]
+    # Lösung (bei „Gelöst“ und danach); Lösungsarten des Bereichs zur Auswahl
+    solution: SolutionOut | None
+    solution_types: list[SolutionTypeRef]
     reminder_note: str
     sla: SlaOut | None
     # Rechte im IT-Bestand: Angaben zum Melder sichtbar
@@ -231,6 +258,30 @@ class TicketOut(TicketItem):
     merged_into: int | None
     retention: RetentionOut
     anonymized_at: datetime | None
+
+
+def _solution_out(db: Session, ticket: Ticket) -> SolutionOut | None:
+    kind = db.get(TicketSolutionType, ticket.solution_type_id) if ticket.solution_type_id else None
+    if kind is None and not ticket.solution_text:
+        return None
+    return SolutionOut(
+        type_id=kind.id if kind else None,
+        type_name=kind.name if kind else "",
+        text=ticket.solution_text,
+        public=ticket.solution_public,
+    )
+
+
+def _set_solution(
+    db: Session, ticket: Ticket, solution: SolutionIn | None, me: Actor, *, note: bool = True
+) -> None:
+    body = solution or SolutionIn()
+    try:
+        apply_solution(db, ticket, body.type_id, body.text, body.public, me, note=note)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
 
 
 def _area_names(db: Session) -> dict[int, str]:
@@ -384,6 +435,18 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
                 select(TicketCategory)
                 .where(TicketCategory.area_id == ticket.area_id, TicketCategory.active.is_(True))
                 .order_by(TicketCategory.name)
+            )
+        ],
+        solution=_solution_out(db, ticket),
+        solution_types=[
+            SolutionTypeRef(id=t.id, name=t.name)
+            for t in db.scalars(
+                select(TicketSolutionType)
+                .where(
+                    TicketSolutionType.area_id == ticket.area_id,
+                    TicketSolutionType.active.is_(True),
+                )
+                .order_by(TicketSolutionType.name)
             )
         ],
         reminder_note=ticket.reminder_note,
@@ -641,6 +704,8 @@ class ChangeIn(BaseModel):
     # Für „Erinnerung“: Zeitpunkt (in der Zukunft) und optionales Stichwort
     reminder_at: datetime | None = None
     reminder_note: str = Field(default="", max_length=120)
+    # Bei „Gelöst“: Lösung (freiwillig)
+    solution: SolutionIn | None = None
 
 
 @router.patch("/{number}")
@@ -691,6 +756,8 @@ def change_ticket(
                 f" ({ticket.reminder_note})" if ticket.reminder_note else ""
             )
         system_entry(db, ticket, f"Status: {STATUS_LABELS[old]} → {label}", me_actor)
+        if body.status == STATUS_SOLVED:
+            _set_solution(db, ticket, body.solution, me_actor)
         protocol(
             db, me_actor, "ticket_status", ticket=ticket, details={"von": old, "nach": body.status}
         )
@@ -931,6 +998,8 @@ class ReplyIn(BaseModel):
     status_after: Literal["", "waiting", "solved"] = ""
     # An alle: Beteiligte in Kopie; sonst nur an den Melder
     reply_all: bool = False
+    # Bei „Status danach: Gelöst“: Lösung (freiwillig), steht dann auch in dieser Mail
+    solution: SolutionIn | None = None
 
     @field_validator("body")
     @classmethod
@@ -955,10 +1024,16 @@ def send_reply(
     if problem or area is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=problem)
     me_actor = actor(access)
+    solving = body.status_after == STATUS_SOLVED and ticket.status != STATUS_SOLVED
+    before = (ticket.solution_type_id, ticket.solution_text, ticket.solution_public)
+    if solving:
+        # Die Mail zeigt die Lösung schon; gesetzt bleibt sie nur, wenn die Mail rausgeht
+        _set_solution(db, ticket, body.solution, me_actor, note=False)
     with new_http() as http:
         try:
             mailbox = open_mailbox(settings, http)
         except MailboxError as exc:
+            ticket.solution_type_id, ticket.solution_text, ticket.solution_public = before
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
             ) from exc
@@ -978,6 +1053,7 @@ def send_reply(
             or (STATUS_IN_PROGRESS if ticket.status == "new" else ticket.status),
         )
     if message_id is None:
+        ticket.solution_type_id, ticket.solution_text, ticket.solution_public = before
         db.commit()
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -1007,6 +1083,8 @@ def send_reply(
             f"Status: {STATUS_LABELS[old]} → {STATUS_LABELS[body.status_after]}",
             me_actor,
         )
+        if solving:
+            _set_solution(db, ticket, body.solution, me_actor)
         protocol(
             db,
             me_actor,

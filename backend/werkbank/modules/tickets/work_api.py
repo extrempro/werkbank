@@ -35,6 +35,7 @@ from werkbank.modules.tickets.models import (
     TicketArea,
     TicketCategory,
     TicketSla,
+    TicketSolutionType,
     TicketTemplate,
 )
 from werkbank.modules.tickets.outbound import send_to_reporter, values_for
@@ -379,6 +380,89 @@ def update_category(
     )
     db.commit()
     return _categories(db, area_id)
+
+
+class SolutionTypeOut(BaseModel):
+    id: int
+    name: str
+    active: bool
+
+
+class SolutionTypeIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    active: bool = True
+
+    @field_validator("name")
+    @classmethod
+    def _strip(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("Darf nicht leer sein.")
+        return value
+
+
+def _solution_types(db: Session, area_id: int) -> list[SolutionTypeOut]:
+    rows = db.scalars(
+        select(TicketSolutionType)
+        .where(TicketSolutionType.area_id == area_id)
+        .order_by(TicketSolutionType.name)
+    )
+    return [SolutionTypeOut(id=t.id, name=t.name, active=t.active) for t in rows]
+
+
+@router.get("/settings/areas/{area_id}/solution-types")
+def read_solution_types(area_id: AreaId, access: AccessDep, db: DbDep) -> list[SolutionTypeOut]:
+    _area_for_settings(db, access, area_id)
+    return _solution_types(db, area_id)
+
+
+@router.post("/settings/areas/{area_id}/solution-types", status_code=status.HTTP_201_CREATED)
+def add_solution_type(
+    area_id: AreaId, body: SolutionTypeIn, access: AccessDep, db: DbDep
+) -> list[SolutionTypeOut]:
+    area = _area_for_settings(db, access, area_id)
+    db.add(TicketSolutionType(area_id=area.id, name=body.name, active=body.active))
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Diese Lösungsart gibt es schon."
+        ) from exc
+    protocol(
+        db, actor(access), "loesungsart_angelegt", area_id=area.id, details={"name": body.name}
+    )
+    db.commit()
+    return _solution_types(db, area_id)
+
+
+@router.put("/settings/areas/{area_id}/solution-types/{type_id}")
+def update_solution_type(
+    area_id: AreaId, type_id: ItemId, body: SolutionTypeIn, access: AccessDep, db: DbDep
+) -> list[SolutionTypeOut]:
+    area = _area_for_settings(db, access, area_id)
+    kind = db.get(TicketSolutionType, type_id)
+    if kind is None or kind.area_id != area.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Lösungsart nicht gefunden."
+        )
+    kind.name, kind.active = body.name, body.active
+    try:
+        db.flush()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Diese Lösungsart gibt es schon."
+        ) from exc
+    protocol(
+        db,
+        actor(access),
+        "loesungsart_geaendert",
+        area_id=area.id,
+        details={"name": body.name, "aktiv": body.active},
+    )
+    db.commit()
+    return _solution_types(db, area_id)
 
 
 class SlaRow(BaseModel):

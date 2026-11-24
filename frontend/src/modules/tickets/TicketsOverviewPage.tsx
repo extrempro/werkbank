@@ -285,6 +285,20 @@ export function TicketsOverviewPage({ access }: { access: TicketAccess }) {
                 <Bars items={data.open_by_category} label="Offene Tickets nach Kategorie" />
               </div>
             </section>
+            <section className="panel stat-card" aria-labelledby="ticket-loesungen">
+              <div className="panel-head">
+                <h2 id="ticket-loesungen">Gelöst nach Lösungsart</h2>
+                <InfoTip term="tickets.loesung" />
+              </div>
+              <div className="detail-body">
+                <p className="small">Gelöste und geschlossene Tickets der letzten 30 Tage</p>
+                {data.solved_by_type.length > 0 ? (
+                  <Bars items={data.solved_by_type} label="Gelöste Tickets nach Lösungsart" />
+                ) : (
+                  <p className="small">Noch keine gelösten Tickets.</p>
+                )}
+              </div>
+            </section>
           </div>
         </>
       )}
