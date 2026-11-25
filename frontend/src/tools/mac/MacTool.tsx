@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useEffect, useMemo, useState } from "react";
 import { useToolParams } from "../params";
 import { InfoTable, Output } from "../ui";
@@ -57,16 +58,17 @@ export default function MacTool() {
       </label>
       {hasMacs && (
         <>
-          <label className="narrow">
-            Ausgabeformat
-            <select value={format} onChange={(event) => setParams({ format: event.target.value })}>
-              {FORMATS.map((entry) => (
-                <option key={entry} value={entry}>
-                  {formatLabels[entry]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FixedChoice
+            label="Ausgabeformat"
+            value={String(format)}
+            options={[
+              ...FORMATS.map((entry) => ({
+                value: String(entry),
+                label: String(formatLabels[entry]),
+              })),
+            ]}
+            onChange={(value) => setParams({ format: value })}
+          />
           <Output
             value={converted}
             label={

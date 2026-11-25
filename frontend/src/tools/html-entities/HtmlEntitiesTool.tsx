@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { useToolParams } from "../params";
 import { Output } from "../ui";
@@ -19,25 +20,26 @@ export default function HtmlEntitiesTool() {
   return (
     <div className="tool-body settings-form">
       <div className="tool-row">
-        <label className="narrow">
-          Richtung
-          <select
-            value={decode ? "dekodieren" : "kodieren"}
-            onChange={(event) => setParams({ modus: event.target.value })}
-          >
-            <option value="kodieren">Text → Entities</option>
-            <option value="dekodieren">Entities → Text</option>
-          </select>
-        </label>
+        <FixedChoice
+          label="Richtung"
+          value={decode ? "dekodieren" : "kodieren"}
+          options={[
+            { value: "kodieren", label: "Text → Entities" },
+            { value: "dekodieren", label: "Entities → Text" },
+          ]}
+          onChange={(value) => setParams({ modus: value })}
+        />
         {!decode && (
-          <label className="narrow">
-            Umfang
-            <select value={level} onChange={(event) => setParams({ umfang: event.target.value })}>
-              <option value="minimal">Nur &lt; &gt; &amp; &quot; &apos;</option>
-              <option value="named">Zusätzlich Umlaute als Namen</option>
-              <option value="numeric">Zusätzlich alles außerhalb von ASCII als Nummer</option>
-            </select>
-          </label>
+          <FixedChoice
+            label="Umfang"
+            value={level}
+            options={[
+              { value: "minimal", label: "Nur &lt; &gt; &amp; &quot; &apos;" },
+              { value: "named", label: "Zusätzlich Umlaute als Namen" },
+              { value: "numeric", label: "Zusätzlich alles außerhalb von ASCII als Nummer" },
+            ]}
+            onChange={(value) => setParams({ umfang: value })}
+          />
         )}
       </div>
       <label>

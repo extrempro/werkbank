@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { useToolParams } from "../params";
 import { Output } from "../ui";
@@ -76,57 +77,60 @@ export default function ListCleanTool() {
   return (
     <div className="tool-body settings-form">
       <div className="tool-row">
-        <label className="narrow">
-          Funktion
-          <select
-            value={compare ? "vergleichen" : "bereinigen"}
-            onChange={(event) => setParams({ funktion: event.target.value })}
-          >
-            <option value="bereinigen">Bereinigen</option>
-            <option value="vergleichen">Zwei Listen vergleichen</option>
-          </select>
-        </label>
-        <label className="narrow">
-          Duplikate
-          <select value={dedupe} onChange={(event) => setParams({ duplikate: event.target.value })}>
-            <option value="none">behalten</option>
-            <option value="exact">entfernen</option>
-            <option value="ignoreCase">entfernen (Groß/klein egal)</option>
-          </select>
-        </label>
-        <label className="narrow">
-          Sortieren
-          <select value={sort} onChange={(event) => setParams({ sortieren: event.target.value })}>
-            <option value="none">nicht</option>
-            <option value="natural">A–Z, Zahlen natürlich (srv2 vor srv10)</option>
-            <option value="asc">A–Z</option>
-            <option value="desc">Z–A</option>
-            <option value="length">nach Länge</option>
-            <option value="reverse">Reihenfolge umkehren</option>
-          </select>
-        </label>
-        <label className="narrow">
-          Schreibweise
-          <select
-            value={caseChange}
-            onChange={(event) => setParams({ schreibweise: event.target.value })}
-          >
-            <option value="none">unverändert</option>
-            <option value="lower">klein</option>
-            <option value="upper">GROSS</option>
-          </select>
-        </label>
+        <FixedChoice
+          label="Funktion"
+          value={compare ? "vergleichen" : "bereinigen"}
+          options={[
+            { value: "bereinigen", label: "Bereinigen" },
+            { value: "vergleichen", label: "Zwei Listen vergleichen" },
+          ]}
+          onChange={(value) => setParams({ funktion: value })}
+        />
+        <FixedChoice
+          label="Duplikate"
+          value={dedupe}
+          options={[
+            { value: "none", label: "behalten" },
+            { value: "exact", label: "entfernen" },
+            { value: "ignoreCase", label: "entfernen (Groß/klein egal)" },
+          ]}
+          onChange={(value) => setParams({ duplikate: value })}
+        />
+        <FixedChoice
+          label="Sortieren"
+          value={sort}
+          options={[
+            { value: "none", label: "nicht" },
+            { value: "natural", label: "A–Z, Zahlen natürlich (srv2 vor srv10)" },
+            { value: "asc", label: "A–Z" },
+            { value: "desc", label: "Z–A" },
+            { value: "length", label: "nach Länge" },
+            { value: "reverse", label: "Reihenfolge umkehren" },
+          ]}
+          onChange={(value) => setParams({ sortieren: value })}
+        />
+        <FixedChoice
+          label="Schreibweise"
+          value={caseChange}
+          options={[
+            { value: "none", label: "unverändert" },
+            { value: "lower", label: "klein" },
+            { value: "upper", label: "GROSS" },
+          ]}
+          onChange={(value) => setParams({ schreibweise: value })}
+        />
         {!compare && (
-          <label className="narrow">
-            Ausgabe
-            <select value={format} onChange={(event) => setParams({ ausgabe: event.target.value })}>
-              {FORMATS.map((entry) => (
-                <option key={entry} value={entry}>
-                  {outputLabels[entry]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FixedChoice
+            label="Ausgabe"
+            value={String(format)}
+            options={[
+              ...FORMATS.map((entry) => ({
+                value: String(entry),
+                label: String(outputLabels[entry]),
+              })),
+            ]}
+            onChange={(value) => setParams({ ausgabe: value })}
+          />
         )}
       </div>
       <fieldset className="tool-options">

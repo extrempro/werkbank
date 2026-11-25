@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useState } from "react";
 import { clampInt, useToolParams } from "../params";
 import { Output } from "../ui";
@@ -35,17 +36,16 @@ export default function LoremTool() {
   return (
     <div className="tool-body settings-form">
       <div className="tool-row">
-        <label className="narrow">
-          Einheit
-          <select
-            value={params.einheit in KIND_PARAM ? params.einheit : "absaetze"}
-            onChange={(event) => setParams({ einheit: event.target.value })}
-          >
-            <option value="absaetze">Absätze</option>
-            <option value="saetze">Sätze</option>
-            <option value="woerter">Wörter</option>
-          </select>
-        </label>
+        <FixedChoice
+          label="Einheit"
+          value={params.einheit in KIND_PARAM ? params.einheit : "absaetze"}
+          options={[
+            { value: "absaetze", label: "Absätze" },
+            { value: "saetze", label: "Sätze" },
+            { value: "woerter", label: "Wörter" },
+          ]}
+          onChange={(value) => setParams({ einheit: value })}
+        />
         <label className="narrow">
           Anzahl
           <input

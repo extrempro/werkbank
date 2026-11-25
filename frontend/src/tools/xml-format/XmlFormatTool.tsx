@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { formatXml, minifyXml, parseXml, walk } from "../lib/xml";
 import { useToolParams } from "../params";
@@ -30,15 +31,17 @@ export default function XmlFormatTool() {
 
   return (
     <div className="tool-body settings-form">
-      <label className="narrow">
-        Ausgabe
-        <select value={mode} onChange={(event) => setParams({ ausgabe: event.target.value })}>
-          <option value="2">2 Leerzeichen</option>
-          <option value="4">4 Leerzeichen</option>
-          <option value="tab">Tab</option>
-          <option value="minify">Minimieren</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Ausgabe"
+        value={mode}
+        options={[
+          { value: "2", label: "2 Leerzeichen" },
+          { value: "4", label: "4 Leerzeichen" },
+          { value: "tab", label: "Tab" },
+          { value: "minify", label: "Minimieren" },
+        ]}
+        onChange={(value) => setParams({ ausgabe: value })}
+      />
       <label>
         Eingabe
         <textarea rows={12} value={text} onChange={(event) => setText(event.target.value)} />

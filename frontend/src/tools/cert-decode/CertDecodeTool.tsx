@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
 import { Link } from "../../components/Link";
 import { TOOLS_PATH } from "../../navigation";
@@ -331,23 +332,20 @@ function ExportPanel({ result }: { result: LoadResult }) {
   return (
     <ToolSection title="Umwandeln und herunterladen">
       {certs.length > 1 && (
-        <label>
-          Zertifikat
-          <select
-            value={main ? certs.indexOf(main) : 0}
-            onChange={(event) => {
-              setMainIndex(Number(event.target.value));
-              setError(null);
-            }}
-          >
-            {certs.map((entry, index) => (
-              <option key={index} value={index}>
-                {commonName(entry.info)}
-                {keyForCert(entry, keys) ? " (mit Schlüssel)" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FixedChoice
+          label="Zertifikat"
+          value={String(main ? certs.indexOf(main) : 0)}
+          options={[
+            ...certs.map((entry, index) => ({
+              value: String(index),
+              label: `${commonName(entry.info)}${keyForCert(entry, keys) ? " (mit Schlüssel)" : ""}`,
+            })),
+          ]}
+          onChange={(value) => {
+            setMainIndex(Number(value));
+            setError(null);
+          }}
+        />
       )}
       {chain.length > 0 && (
         <p className="small">
@@ -525,19 +523,18 @@ function ExportPanel({ result }: { result: LoadResult }) {
             </p>
           }
         >
-          <label>
-            Verschlüsselung
-            <select
-              value={mode}
-              onChange={(event) => {
-                setMode(event.target.value as EncryptionMode);
-                setError(null);
-              }}
-            >
-              <option value="aes">Modern (AES-256, SHA-256)</option>
-              <option value="3des">Kompatibel (3DES, SHA-1)</option>
-            </select>
-          </label>
+          <FixedChoice
+            label="Verschlüsselung"
+            value={mode}
+            options={[
+              { value: "aes", label: "Modern (AES-256, SHA-256)" },
+              { value: "3des", label: "Kompatibel (3DES, SHA-1)" },
+            ]}
+            onChange={(value) => {
+              setMode(value as EncryptionMode);
+              setError(null);
+            }}
+          />
           <button
             type="button"
             className="button"

@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { useToolParams } from "../params";
 import { ErrorBox, Output } from "../ui";
@@ -22,16 +23,15 @@ export default function Base64Tool() {
 
   return (
     <div className="tool-body settings-form">
-      <label className="narrow">
-        Richtung
-        <select
-          value={decode ? "dekodieren" : "kodieren"}
-          onChange={(event) => setParams({ modus: event.target.value })}
-        >
-          <option value="kodieren">Text → Base64</option>
-          <option value="dekodieren">Base64 → Text</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Richtung"
+        value={decode ? "dekodieren" : "kodieren"}
+        options={[
+          { value: "kodieren", label: "Text → Base64" },
+          { value: "dekodieren", label: "Base64 → Text" },
+        ]}
+        onChange={(value) => setParams({ modus: value })}
+      />
       <label>
         Eingabe
         <textarea rows={6} value={text} onChange={(event) => setText(event.target.value)} />

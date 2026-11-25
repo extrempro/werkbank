@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useState } from "react";
 import { DataTable, Tile, Tiles, intParam, num, percent } from "../calc";
 import { humanSize, parseNumber } from "../data-units/units";
@@ -29,32 +30,32 @@ type Change = (patch: Partial<Params>) => void;
 
 function UnitSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   return (
-    <label>
-      Einheit
-      <select
-        value={value === "GB" ? "GB" : "TB"}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        <option>TB</option>
-        <option>GB</option>
-      </select>
-    </label>
+    <FixedChoice
+      label="Einheit"
+      value={value === "GB" ? "GB" : "TB"}
+      options={[
+        { value: "TB", label: "TB" },
+        { value: "GB", label: "GB" },
+      ]}
+      onChange={onChange}
+    />
   );
 }
 
 function LevelSelect({ level, onChange }: { level: RaidLevel; onChange: (level: string) => void }) {
   return (
     <div className="tool-field">
-      <label>
-        RAID-Level
-        <select value={level} onChange={(event) => onChange(event.target.value)}>
-          {LEVELS.map((entry) => (
-            <option key={entry} value={entry}>
-              {levelInfo[entry].label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <FixedChoice
+        label="RAID-Level"
+        value={String(level)}
+        options={[
+          ...LEVELS.map((entry) => ({
+            value: String(entry),
+            label: String(levelInfo[entry].label),
+          })),
+        ]}
+        onChange={(value) => onChange(value)}
+      />
       <p className="small">{levelInfo[level].desc}</p>
     </div>
   );
@@ -98,14 +99,16 @@ export default function RaidTool() {
   const level = LEVELS.find((entry) => entry === params.level) ?? "6";
   return (
     <div className="tool-body settings-form">
-      <label className="narrow">
-        Bereich
-        <select value={area} onChange={(event) => setParams({ bereich: event.target.value })}>
-          <option value="kapazitaet">Kapazität</option>
-          <option value="plattenbedarf">Plattenbedarf</option>
-          <option value="ausfall">Ausfall simulieren</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Bereich"
+        value={area}
+        options={[
+          { value: "kapazitaet", label: "Kapazität" },
+          { value: "plattenbedarf", label: "Plattenbedarf" },
+          { value: "ausfall", label: "Ausfall simulieren" },
+        ]}
+        onChange={(value) => setParams({ bereich: value })}
+      />
       {area === "kapazitaet" && <Capacity params={params} level={level} onChange={setParams} />}
       {area === "plattenbedarf" && <DiskPlan params={params} onChange={setParams} />}
       {area === "ausfall" && (

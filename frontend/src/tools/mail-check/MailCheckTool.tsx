@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { NetNotice } from "../NetNotice";
 import { builtInResolvers } from "../dns-lookup/resolvers";
@@ -194,19 +195,17 @@ export default function MailCheckTool() {
             onChange={(event) => setSelectors(event.target.value)}
           />
         </label>
-        <label className="narrow">
-          Resolver
-          <select
-            value={resolver.id}
-            onChange={(event) => setParams({ resolver: event.target.value })}
-          >
-            {builtInResolvers.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FixedChoice
+          label="Resolver"
+          value={String(resolver.id)}
+          options={[
+            ...builtInResolvers.map((entry) => ({
+              value: String(entry.id),
+              label: String(entry.name),
+            })),
+          ]}
+          onChange={(value) => setParams({ resolver: value })}
+        />
         <button
           type="submit"
           className="button button-primary"

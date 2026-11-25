@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { parseYaml, toYaml } from "../lib/yaml";
 import { useToolParams } from "../params";
@@ -27,16 +28,15 @@ export default function YamlFormatTool() {
 
   return (
     <div className="tool-body settings-form">
-      <label className="narrow">
-        Einrückung
-        <select
-          value={String(indent)}
-          onChange={(event) => setParams({ einrueckung: event.target.value })}
-        >
-          <option value="2">2 Leerzeichen</option>
-          <option value="4">4 Leerzeichen</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Einrückung"
+        value={String(indent)}
+        options={[
+          { value: "2", label: "2 Leerzeichen" },
+          { value: "4", label: "4 Leerzeichen" },
+        ]}
+        onChange={(value) => setParams({ einrueckung: value })}
+      />
       <label>
         Eingabe
         <textarea rows={12} value={text} onChange={(event) => setText(event.target.value)} />

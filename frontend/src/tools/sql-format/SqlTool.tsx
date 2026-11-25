@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { formatSql, minifySql } from "../lib/sql";
 import { useToolParams } from "../params";
@@ -26,16 +27,15 @@ export default function SqlTool() {
   const joins = params.bereich === "joins";
   return (
     <div className="tool-body settings-form">
-      <label className="narrow">
-        Bereich
-        <select
-          value={joins ? "joins" : "formatieren"}
-          onChange={(event) => setParams({ bereich: event.target.value })}
-        >
-          <option value="formatieren">Formatieren</option>
-          <option value="joins">JOINs ausprobieren</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Bereich"
+        value={joins ? "joins" : "formatieren"}
+        options={[
+          { value: "formatieren", label: "Formatieren" },
+          { value: "joins", label: "JOINs ausprobieren" },
+        ]}
+        onChange={(value) => setParams({ bereich: value })}
+      />
       {joins ? (
         <SqlJoins
           type={JOIN_TYPES.find((entry) => entry === params.join) ?? "left"}
@@ -77,16 +77,15 @@ function SqlFormatter({
 
   return (
     <>
-      <label className="narrow">
-        Modus
-        <select
-          value={minify ? "minify" : "format"}
-          onChange={(event) => onChange({ modus: event.target.value })}
-        >
-          <option value="format">Formatieren</option>
-          <option value="minify">Eine Zeile</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Modus"
+        value={minify ? "minify" : "format"}
+        options={[
+          { value: "format", label: "Formatieren" },
+          { value: "minify", label: "Eine Zeile" },
+        ]}
+        onChange={(value) => onChange({ modus: value })}
+      />
       {!minify && (
         <fieldset className="tool-options">
           <legend>Optionen</legend>
@@ -193,18 +192,13 @@ function SqlJoins({ type, onType }: { type: JoinType; onType: (type: JoinType) =
           spellCheck={false}
         />
       </label>
-      <label>
-        Verknüpfen über
-        <select
-          value={key}
-          onChange={(event) => setKey(event.target.value)}
-          disabled={!table || type === "cross"}
-        >
-          {(table?.columns ?? []).map((column) => (
-            <option key={column}>{column}</option>
-          ))}
-        </select>
-      </label>
+      <FixedChoice
+        label="Verknüpfen über"
+        value={key}
+        disabled={!table || type === "cross"}
+        options={(table?.columns ?? []).map((column) => ({ value: column, label: column }))}
+        onChange={setKey}
+      />
       <label>
         Daten
         <textarea rows={6} value={data} onChange={(event) => setData(event.target.value)} />
@@ -215,16 +209,17 @@ function SqlJoins({ type, onType }: { type: JoinType; onType: (type: JoinType) =
   return (
     <>
       <div className="tool-row">
-        <label className="narrow">
-          JOIN-Art
-          <select value={type} onChange={(event) => onType(event.target.value as JoinType)}>
-            {JOIN_TYPES.map((entry) => (
-              <option key={entry} value={entry}>
-                {joinInfo[entry].label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FixedChoice
+          label="JOIN-Art"
+          value={String(type)}
+          options={[
+            ...JOIN_TYPES.map((entry) => ({
+              value: String(entry),
+              label: String(joinInfo[entry].label),
+            })),
+          ]}
+          onChange={(value) => onType(value as JoinType)}
+        />
         <Venn type={type} left={nameA} right={nameB} />
       </div>
       <p>{joinInfo[type].text}</p>

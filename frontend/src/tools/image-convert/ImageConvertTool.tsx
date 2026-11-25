@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { downloadBlob } from "../download";
 import { clampInt, useToolParams } from "../params";
@@ -502,19 +503,17 @@ export default function ImageConvertTool() {
           {format !== "ico" && format !== "favicon" && (
             <div className="tool-field">
               <div className="tool-row">
-                <label>
-                  Größe
-                  <select
-                    value={resize}
-                    onChange={(event) => setParams({ groesse: event.target.value })}
-                  >
-                    {RESIZE_MODES.map((mode) => (
-                      <option key={mode} value={mode}>
-                        {resizeLabels[mode]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <FixedChoice
+                  label="Größe"
+                  value={String(resize)}
+                  options={[
+                    ...RESIZE_MODES.map((mode) => ({
+                      value: String(mode),
+                      label: String(resizeLabels[mode]),
+                    })),
+                  ]}
+                  onChange={(value) => setParams({ groesse: value })}
+                />
                 {resize !== "original" && (
                   <label className="narrow">
                     {resize === "percent" ? "Prozent" : "Pixel"}
@@ -561,19 +560,17 @@ export default function ImageConvertTool() {
 
           {format === "pdf" && (
             <div className="tool-field">
-              <label>
-                Seitengröße
-                <select
-                  value={pageSize}
-                  onChange={(event) => setParams({ seite: event.target.value })}
-                >
-                  {PAGE_SIZES.map((key) => (
-                    <option key={key} value={key}>
-                      {pdfPageSizeLabels[key]}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FixedChoice
+                label="Seitengröße"
+                value={String(pageSize)}
+                options={[
+                  ...PAGE_SIZES.map((key) => ({
+                    value: String(key),
+                    label: String(pdfPageSizeLabels[key]),
+                  })),
+                ]}
+                onChange={(value) => setParams({ seite: value })}
+              />
               <label className="check-label">
                 <input
                   type="checkbox"
@@ -628,20 +625,17 @@ export default function ImageConvertTool() {
       {hasPdf && (
         <ToolSection title="PDF-Seiten">
           <div className="tool-columns">
-            <label>
-              Auflösung
-              <select
-                value={String(dpi)}
-                onChange={(event) => setParams({ dpi: event.target.value })}
-              >
-                {DPI_OPTIONS.map((value) => (
-                  <option key={value} value={value}>
-                    {value} dpi
-                    {value === "72" ? " (Bildschirm)" : value === "300" ? " (Druck)" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <FixedChoice
+              label="Auflösung"
+              value={String(String(dpi))}
+              options={[
+                ...DPI_OPTIONS.map((value) => ({
+                  value: String(value),
+                  label: `${value} dpi${value === "72" ? " (Bildschirm)" : value === "300" ? " (Druck)" : ""}`,
+                })),
+              ]}
+              onChange={(value) => setParams({ dpi: value })}
+            />
             <label>
               Seiten (leer = alle)
               <input

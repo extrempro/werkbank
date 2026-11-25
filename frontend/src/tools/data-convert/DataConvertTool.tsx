@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { parseToml, toToml } from "../lib/toml";
 import { parseYaml, toYaml } from "../lib/yaml";
@@ -64,23 +65,27 @@ export default function DataConvertTool() {
   return (
     <div className="tool-body settings-form">
       <div className="tool-row">
-        <label className="narrow">
-          Von
-          <select value={from} onChange={(event) => setParams({ von: event.target.value })}>
-            <option value="auto">automatisch</option>
-            <option value="json">JSON</option>
-            <option value="yaml">YAML</option>
-            <option value="toml">TOML</option>
-          </select>
-        </label>
-        <label className="narrow">
-          Nach
-          <select value={to} onChange={(event) => setParams({ nach: event.target.value })}>
-            <option value="json">JSON</option>
-            <option value="yaml">YAML</option>
-            <option value="toml">TOML</option>
-          </select>
-        </label>
+        <FixedChoice
+          label="Von"
+          value={from}
+          options={[
+            { value: "auto", label: "automatisch" },
+            { value: "json", label: "JSON" },
+            { value: "yaml", label: "YAML" },
+            { value: "toml", label: "TOML" },
+          ]}
+          onChange={(value) => setParams({ von: value })}
+        />
+        <FixedChoice
+          label="Nach"
+          value={to}
+          options={[
+            { value: "json", label: "JSON" },
+            { value: "yaml", label: "YAML" },
+            { value: "toml", label: "TOML" },
+          ]}
+          onChange={(value) => setParams({ nach: value })}
+        />
       </div>
       <label>
         Eingabe

@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { useToolParams } from "../params";
 import { Output } from "../ui";
@@ -34,14 +35,16 @@ export default function LdapEscapeTool() {
   return (
     <div className="tool-body settings-form">
       <div className="tool-field">
-        <label className="narrow">
-          Modus
-          <select value={mode} onChange={(event) => setParams({ modus: event.target.value })}>
-            <option value="filter">Für LDAP-Filter</option>
-            <option value="dn">Für DN</option>
-            <option value="zurueck">Filter-Wert zurückwandeln</option>
-          </select>
-        </label>
+        <FixedChoice
+          label="Modus"
+          value={mode}
+          options={[
+            { value: "filter", label: "Für LDAP-Filter" },
+            { value: "dn", label: "Für DN" },
+            { value: "zurueck", label: "Filter-Wert zurückwandeln" },
+          ]}
+          onChange={(value) => setParams({ modus: value })}
+        />
         <p className="small">{HINTS[mode]}</p>
       </div>
       <label>

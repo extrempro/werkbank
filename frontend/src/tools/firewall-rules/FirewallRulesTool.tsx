@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { ErrorBox, ToolSection } from "../ui";
 import {
@@ -70,16 +71,15 @@ export default function FirewallRulesTool() {
         80,443 oder 1024-65535; leer heißt alle. Alles nach # ist Kommentar. Das Regelwerk bleibt
         auf dieser Seite und wird nirgends gespeichert.
       </p>
-      <label className="narrow">
-        Wenn keine Regel passt
-        <select
-          value={policy}
-          onChange={(event) => setPolicy(event.target.value === "allow" ? "allow" : "deny")}
-        >
-          <option value="deny">alles verbieten (üblich)</option>
-          <option value="allow">alles erlauben</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Wenn keine Regel passt"
+        value={policy}
+        options={[
+          { value: "deny", label: "alles verbieten (üblich)" },
+          { value: "allow", label: "alles erlauben" },
+        ]}
+        onChange={(value) => setPolicy(value === "allow" ? "allow" : "deny")}
+      />
 
       {errors.length > 0 && (
         <ErrorBox>
@@ -93,17 +93,16 @@ export default function FirewallRulesTool() {
 
       <ToolSection title="Testpaket">
         <div className="form-grid">
-          <label>
-            Protokoll
-            <select
-              value={proto}
-              onChange={(event) => setProto(event.target.value as Packet["proto"])}
-            >
-              <option value="tcp">TCP</option>
-              <option value="udp">UDP</option>
-              <option value="icmp">ICMP (Ping)</option>
-            </select>
-          </label>
+          <FixedChoice
+            label="Protokoll"
+            value={proto}
+            options={[
+              { value: "tcp", label: "TCP" },
+              { value: "udp", label: "UDP" },
+              { value: "icmp", label: "ICMP (Ping)" },
+            ]}
+            onChange={(value) => setProto(value as Packet["proto"])}
+          />
           <label>
             Quelle
             <input

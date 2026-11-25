@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useToolParams } from "../params";
 import { ErrorBox, InfoTable, ToolSection } from "../ui";
 import { fmt, parseNumber, unitById, units, type Unit } from "./units";
@@ -43,19 +44,14 @@ export default function DataUnitsTool() {
             onChange={(event) => setParams({ wert: event.target.value })}
           />
         </label>
-        <label className="narrow">
-          Einheit
-          <select
-            value={unit?.id ?? "TB"}
-            onChange={(event) => setParams({ einheit: event.target.value })}
-          >
-            {units.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FixedChoice
+          label="Einheit"
+          value={String(unit?.id ?? "TB")}
+          options={[
+            ...units.map((entry) => ({ value: String(entry.id), label: String(entry.label) })),
+          ]}
+          onChange={(value) => setParams({ einheit: value })}
+        />
       </div>
       {value === null && <ErrorBox>Bitte gib eine Zahl ein.</ErrorBox>}
       {table("dezimal", "Dezimal (Hersteller, macOS, Netzwerk), Faktor 1000")}

@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { downloadBlob } from "../download";
 import { clampInt, useToolParams } from "../params";
@@ -257,19 +258,18 @@ export default function QrCodeTool() {
             {type === "wifi" && (
               <div className="tool-columns">
                 {field("Netzwerkname (SSID)", wifi.ssid, (ssid) => setWifi({ ...wifi, ssid }))}
-                <label>
-                  Verschlüsselung
-                  <select
-                    value={wifi.security}
-                    onChange={(event) =>
-                      setWifi({ ...wifi, security: event.target.value as WifiData["security"] })
-                    }
-                  >
-                    <option value="WPA">WPA / WPA2 / WPA3</option>
-                    <option value="WEP">WEP (veraltet)</option>
-                    <option value="nopass">Offen (kein Kennwort)</option>
-                  </select>
-                </label>
+                <FixedChoice
+                  label="Verschlüsselung"
+                  value={wifi.security}
+                  options={[
+                    { value: "WPA", label: "WPA / WPA2 / WPA3" },
+                    { value: "WEP", label: "WEP (veraltet)" },
+                    { value: "nopass", label: "Offen (kein Kennwort)" },
+                  ]}
+                  onChange={(value) =>
+                    setWifi({ ...wifi, security: value as WifiData["security"] })
+                  }
+                />
                 {wifi.security !== "nopass" && (
                   <div className="tool-row">
                     <label>
@@ -360,16 +360,17 @@ export default function QrCodeTool() {
 
           <ToolSection title="Darstellung">
             <div className="tool-columns">
-              <label>
-                Fehlerkorrektur
-                <select value={ecl} onChange={(event) => setParams({ ecl: event.target.value })}>
-                  {ECLS.map((key) => (
-                    <option key={key} value={key}>
-                      {eclInfo[key].label} ({eclInfo[key].recovery} wiederherstellbar)
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FixedChoice
+                label="Fehlerkorrektur"
+                value={String(ecl)}
+                options={[
+                  ...ECLS.map((key) => ({
+                    value: String(key),
+                    label: `${eclInfo[key].label} (${eclInfo[key].recovery} wiederherstellbar)`,
+                  })),
+                ]}
+                onChange={(value) => setParams({ ecl: value })}
+              />
               <label>
                 Rand: {margin} Module
                 <input
@@ -407,16 +408,17 @@ export default function QrCodeTool() {
                   </button>
                 )}
               </div>
-              <label>
-                PNG-Größe
-                <select value={px} onChange={(event) => setParams({ px: event.target.value })}>
-                  {SIZES.map((size) => (
-                    <option key={size} value={size}>
-                      ca. {size} × {size} px
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FixedChoice
+                label="PNG-Größe"
+                value={String(px)}
+                options={[
+                  ...SIZES.map((size) => ({
+                    value: String(size),
+                    label: `ca. ${size} × ${size} px`,
+                  })),
+                ]}
+                onChange={(value) => setParams({ px: value })}
+              />
             </div>
             <p className="small">
               Höhere Fehlerkorrektur macht den Code robuster (z. B. für Aufkleber oder Ausdrucke),

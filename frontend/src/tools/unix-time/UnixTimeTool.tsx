@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useEffect, useMemo, useState } from "react";
 import {
   excelSerial,
@@ -92,20 +93,15 @@ export default function UnixTimeTool() {
               spellCheck={false}
             />
           </label>
-          <label className="narrow">
-            Einheit
-            <select
-              value={unit ?? "auto"}
-              onChange={(event) => setParams({ einheit: event.target.value })}
-            >
-              <option value="auto">automatisch</option>
-              {UNITS.map((entry) => (
-                <option key={entry} value={entry}>
-                  {unitLabels[entry]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FixedChoice
+            label="Einheit"
+            value={String(unit ?? "auto")}
+            options={[
+              { value: "auto", label: "automatisch" },
+              ...UNITS.map((entry) => ({ value: String(entry), label: String(unitLabels[entry]) })),
+            ]}
+            onChange={(value) => setParams({ einheit: value })}
+          />
         </div>
         {parsed && "error" in parsed && <ErrorBox>{parsed.error}</ErrorBox>}
         {rows.length > 0 && <InfoTable caption="Datum zum Zeitstempel" rows={rows} />}

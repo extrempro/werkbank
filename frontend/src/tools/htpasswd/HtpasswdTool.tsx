@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useState } from "react";
 import { clampInt, useToolParams } from "../params";
 import { ErrorBox, InfoTable, Output } from "../ui";
@@ -16,16 +17,15 @@ export default function HtpasswdTool() {
   const cost = clampInt(params.kosten, 8, 15, 12);
   return (
     <div className="tool-body settings-form">
-      <label className="narrow">
-        Modus
-        <select
-          value={verify ? "pruefen" : "erzeugen"}
-          onChange={(event) => setParams({ modus: event.target.value })}
-        >
-          <option value="erzeugen">Erzeugen</option>
-          <option value="pruefen">Prüfen</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Modus"
+        value={verify ? "pruefen" : "erzeugen"}
+        options={[
+          { value: "erzeugen", label: "Erzeugen" },
+          { value: "pruefen", label: "Prüfen" },
+        ]}
+        onChange={(value) => setParams({ modus: value })}
+      />
       {verify ? (
         <Verify />
       ) : (
@@ -99,16 +99,14 @@ function Create({
     <>
       <div className="tool-columns">
         <div className="tool-field">
-          <label>
-            Format
-            <select value={format} onChange={(event) => onFormat(event.target.value)}>
-              {formats.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FixedChoice
+            label="Format"
+            value={String(format)}
+            options={[
+              ...formats.map((entry) => ({ value: String(entry.id), label: String(entry.label) })),
+            ]}
+            onChange={(value) => onFormat(value)}
+          />
           {info && (
             <p className="small">
               <span className={TONE[info.tone]}>{TONE_TEXT[info.tone]}</span> {info.note}
@@ -269,7 +267,7 @@ function Verify() {
           disabled={busy || !hash || !format}
           onClick={() => void run()}
         >
-          {busy ? "Prüfe …" : "Prüfen"}
+          {busy ? "Prüfe …" : "Kennwort prüfen"}
         </button>
       </div>
       {error && <ErrorBox>{error}</ErrorBox>}
