@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.131.0",
+    date: "2026-11-25",
+    summary: "IT-Bestand: technische Daten von Lenovo sind zurück.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Für Lenovo-Rechner holt die Werkbank wieder die technischen Daten von Lenovo (PSREF), jetzt über die offizielle Schnittstelle. Ein Admin schaltet das in der Verwaltung bei NinjaOne ein.",
+          "Im Reiter „Technik“ stehen die Eckdaten wie Prozessor, Arbeitsspeicher, Speicher, Garantie ab Werk und Support-Ende bei Lenovo, dazu alle Merkmale und ein Link zur Lenovo-Seite.",
+          "Mit „Bei PSREF abrufen“ holst du die Daten eines Geräts sofort neu.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.130.0",
     date: "2026-11-25",
     summary: "Tabellen in der Dokumentation lassen sich viel leichter bearbeiten.",

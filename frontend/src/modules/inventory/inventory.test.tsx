@@ -88,6 +88,7 @@ const detail: Hardware = {
   ninja: null,
   connected_to: null,
   monitors: [],
+  psref: null,
   loan: null,
   purchased_on: null,
   holder_ref: null,
@@ -185,6 +186,39 @@ describe("Hardware-Liste", () => {
 });
 
 describe("Gerät", () => {
+  it("zeigt im Reiter Technik die Daten aus Lenovo PSREF und holt sie neu", async () => {
+    const psref = {
+      url: "https://psref.lenovo.com/Detail/ThinkCentre/ThinkCentre_M720_Tiny?M=10T700BTGE",
+      name: "ThinkCentre M720 Tiny",
+      status: "ok" as const,
+      error: "",
+      checked_at: "2026-11-20T08:00:00Z",
+      specs: [
+        { name: "Model", value: "10T700BTGE" },
+        { name: "Processor", value: "Intel Core i5-9400T" },
+        { name: "End of Support", value: "2025-01-26" },
+      ],
+    };
+    const lenovo = { ...detail, maker: "Lenovo", model: "10T700BTGE", psref: null };
+    const calls = stubFetch({
+      "GET /api/inventory/hardware/7": lenovo,
+      "GET /api/inventory/master-data": master,
+      "POST /api/inventory/hardware/7/psref": { ...lenovo, psref },
+    });
+    render(<HardwareDetailPage hardwareId={7} tab="technik" roles={["Bestand.Editor"]} />);
+    expect(await screen.findByText(/noch keine Daten aus PSREF/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Bei PSREF abrufen" }));
+    expect(await screen.findByText("Die Daten aus PSREF sind aktuell.")).toBeTruthy();
+    expect(calls.some((call) => call.method === "POST" && call.url.endsWith("/psref"))).toBe(true);
+    expect(screen.getByText("Prozessor")).toBeTruthy();
+    expect(screen.getByText("Support-Ende bei Lenovo")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Bei PSREF öffnen/ })).toHaveAttribute(
+      "href",
+      psref.url,
+    );
+    expect(screen.getByText("Alle Merkmale (3)")).toBeTruthy();
+  });
+
   it("zeigt die Übersicht und den Verlauf", async () => {
     stubFetch({
       "GET /api/inventory/hardware/7": detail,
