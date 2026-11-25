@@ -400,7 +400,8 @@ export interface Floor {
   site: string;
   city_id: number;
   city: string;
-  plan: { url: string; width: number; height: number } | null;
+  /** ``rotation``: Drehung beim Anzeigen im Uhrzeigersinn; Räume und Plätze sind ungedreht gespeichert */
+  plan: { url: string; width: number; height: number; rotation: PlanRotation } | null;
   rooms: Room[];
   /** Arbeitsplätze mit gesetztem Platz; x und y in Prozent der Etage */
   workplaces: FloorSpot[];
@@ -543,6 +544,73 @@ export function deletePlan(floorId: number): Promise<Floor> {
 }
 
 export const PLAN_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+/** Dreht den Grundriss beim Anzeigen (im Uhrzeigersinn). */
+export function rotatePlan(floorId: number, rotation: PlanRotation): Promise<Floor> {
+  return putJson(`${BASE}/floors/${floorId}/plan/rotation`, { rotation }, { quiet: true });
+}
+
+// --- Drehung des Grundrisses ---------------------------------------------------------------
+// Gespeichert wird immer in Prozent des ungedrehten Bilds; gedreht wird nur beim Anzeigen.
+
+export type PlanRotation = 0 | 90 | 180 | 270;
+
+export const PLAN_ROTATIONS: readonly PlanRotation[] = [0, 90, 180, 270];
+
+type Point = { x: number; y: number };
+
+/** Punkt des ungedrehten Bilds → Punkt in der Anzeige. */
+export function pointToView(point: Point, rotation: PlanRotation): Point {
+  switch (rotation) {
+    case 90:
+      return { x: 100 - point.y, y: point.x };
+    case 180:
+      return { x: 100 - point.x, y: 100 - point.y };
+    case 270:
+      return { x: point.y, y: 100 - point.x };
+    default:
+      return point;
+  }
+}
+
+/** Punkt in der Anzeige → Punkt des ungedrehten Bilds (zum Speichern). */
+export function pointToPlan(point: Point, rotation: PlanRotation): Point {
+  switch (rotation) {
+    case 90:
+      return { x: point.y, y: 100 - point.x };
+    case 180:
+      return { x: 100 - point.x, y: 100 - point.y };
+    case 270:
+      return { x: 100 - point.y, y: point.x };
+    default:
+      return point;
+  }
+}
+
+function round(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function rectThrough(a: Point, b: Point): RoomRect {
+  const rect = rectFromPoints(a, b);
+  return { x: round(rect.x), y: round(rect.y), w: round(rect.w), h: round(rect.h) };
+}
+
+/** Rechteck des ungedrehten Bilds → Rechteck in der Anzeige. */
+export function rectToView(rect: RoomRect, rotation: PlanRotation): RoomRect {
+  return rectThrough(
+    pointToView({ x: rect.x, y: rect.y }, rotation),
+    pointToView({ x: rect.x + rect.w, y: rect.y + rect.h }, rotation),
+  );
+}
+
+/** Rechteck in der Anzeige → Rechteck des ungedrehten Bilds (zum Speichern). */
+export function rectToPlan(rect: RoomRect, rotation: PlanRotation): RoomRect {
+  return rectThrough(
+    pointToPlan({ x: rect.x, y: rect.y }, rotation),
+    pointToPlan({ x: rect.x + rect.w, y: rect.y + rect.h }, rotation),
+  );
+}
 
 /** Lädt den Grundriss hoch; der Inhalt der Anfrage ist das Bild selbst. */
 export async function uploadPlan(floorId: number, file: File): Promise<Floor> {

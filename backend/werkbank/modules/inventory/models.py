@@ -133,6 +133,7 @@ class InventoryFloorPlan(Base):
     """Der Grundriss einer Etage als Bild (PNG, JPEG oder WebP; nie SVG)."""
 
     __tablename__ = "inventory_floor_plans"
+    __table_args__ = (CheckConstraint("rotation IN (0, 90, 180, 270)", name="rotation_quarter"),)
 
     floor_id: Mapped[int] = mapped_column(
         ForeignKey("inventory_floors.id", ondelete="CASCADE"), primary_key=True
@@ -142,6 +143,9 @@ class InventoryFloorPlan(Base):
     etag: Mapped[str] = mapped_column(String(32))
     width: Mapped[int] = mapped_column(Integer)
     height: Mapped[int] = mapped_column(Integer)
+    # Drehung beim Anzeigen im Uhrzeigersinn (0, 90, 180, 270). Das Bild bleibt unverändert;
+    # Räume und Plätze sind in Prozent des ungedrehten Bilds gespeichert.
+    rotation: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")

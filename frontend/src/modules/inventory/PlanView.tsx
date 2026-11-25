@@ -2,10 +2,15 @@ import { useRef, useState, type FocusEvent, type PointerEvent } from "react";
 import { navigate } from "../../router";
 import {
   clampRect,
+  pointToPlan,
+  pointToView,
   rectFromPoints,
+  rectToPlan,
+  rectToView,
   spotInfo,
   workplacePath,
   type Floor,
+  type PlanRotation,
   type Room,
   type RoomRect,
 } from "./api";
@@ -39,6 +44,10 @@ function styleOf(rect: RoomRect) {
 
 /**
  * Grundriss einer Etage mit den Räumen als Rechtecke.
+ *
+ * Ist der Grundriss gedreht (``plan.rotation``), dreht die Anzeige Bild, Räume und Plätze mit.
+ * Gerechnet wird beim Ziehen in der Anzeige; an die Aufrufer gehen Lagen immer im ungedrehten
+ * Bild, so wie sie gespeichert sind. Namen und Beschriftungen bleiben waagerecht.
  *
  * Im Bearbeiten-Modus zieht man auf freier Fläche einen neuen Raum auf, verschiebt Räume und
  * ändert ihre Größe am Griff unten rechts. Für die Bedienung ohne Maus gibt es die Zahlenfelder
@@ -78,7 +87,15 @@ export function PlanView({
   const [touchTip, setTouchTip] = useState(false);
   // Wie zuletzt gezeigt wurde: Bei Berührung öffnet das erste Antippen das Info-Fenster.
   const pointerKind = useRef("mouse");
-  const ratio = floor.plan ? `${floor.plan.width} / ${floor.plan.height}` : "4 / 3";
+  const rotation: PlanRotation = floor.plan?.rotation ?? 0;
+  const turned = rotation === 90 || rotation === 270;
+  const ratio = floor.plan
+    ? turned
+      ? `${floor.plan.height} / ${floor.plan.width}`
+      : `${floor.plan.width} / ${floor.plan.height}`
+    : "4 / 3";
+  // Lage eines Raums in der Anzeige
+  const viewOf = (room: RoomRect) => rectToView(room, rotation);
 
   const point = (event: PointerEvent) => {
     const bounds = box.current?.getBoundingClientRect();
@@ -102,7 +119,7 @@ export function PlanView({
   const onBoxDown = (event: PointerEvent<HTMLDivElement>) => {
     if (placing) {
       event.preventDefault();
-      onPlace?.(point(event));
+      onPlace?.(pointToPlan(point(event), rotation));
       return;
     }
     if (!editing || event.target !== event.currentTarget) {
@@ -119,20 +136,21 @@ export function PlanView({
     }
     event.stopPropagation();
     const at = point(event);
+    const shown = viewOf(room);
     capture(event);
     onSelect?.(room);
     setDrag({
       kind: "schieben",
       room,
-      offset: { x: at.x - room.x, y: at.y - room.y },
-      rect: { x: room.x, y: room.y, w: room.w, h: room.h },
+      offset: { x: at.x - shown.x, y: at.y - shown.y },
+      rect: shown,
     });
   };
 
   const onHandleDown = (event: PointerEvent, room: Room) => {
     event.stopPropagation();
     capture(event);
-    setDrag({ kind: "groesse", room, rect: { x: room.x, y: room.y, w: room.w, h: room.h } });
+    setDrag({ kind: "groesse", room, rect: viewOf(room) });
   };
 
   const onMoveDrag = (event: PointerEvent) => {
@@ -162,10 +180,11 @@ export function PlanView({
     if (drag.kind === "neu") {
       // Kleine Rechtecke sind meist ein versehentlicher Klick.
       if (drag.rect.w >= 2 && drag.rect.h >= 2) {
-        onDraw?.(clampRect(drag.rect));
+        onDraw?.(clampRect(rectToPlan(clampRect(drag.rect), rotation)));
       }
     } else {
-      const { room, rect } = drag;
+      const { room } = drag;
+      const rect = clampRect(rectToPlan(drag.rect, rotation));
       if (rect.x !== room.x || rect.y !== room.y || rect.w !== room.w || rect.h !== room.h) {
         onMove?.(room, rect);
       }
@@ -188,13 +207,20 @@ export function PlanView({
       onPointerCancel={() => setDrag(null)}
     >
       {floor.plan ? (
-        <img className="plan-image" src={floor.plan.url} alt="" draggable={false} />
+        <img
+          className={rotation ? `plan-image plan-image-turn-${rotation}` : "plan-image"}
+          src={floor.plan.url}
+          alt=""
+          draggable={false}
+          // Gedreht um 90° oder 270°: Das Bild ist vor dem Drehen so breit wie die Fläche hoch
+          style={turned ? { width: `${(floor.plan.width / floor.plan.height) * 100}%` } : undefined}
+        />
       ) : (
         <span className="plan-empty small">Noch kein Grundriss</span>
       )}
       {floor.rooms.map((room) => {
         const moving = drag && drag.kind !== "neu" && drag.room.id === room.id;
-        const rect = moving ? drag.rect : room;
+        const rect = moving ? drag.rect : viewOf(room);
         const selected = room.id === selectedId || highlighted.includes(room.id);
         return (
           <div
@@ -222,7 +248,8 @@ export function PlanView({
           </div>
         );
       })}
-      {spots.map((spot) => {
+      {spots.map((stored) => {
+        const spot = { ...stored, ...pointToView(stored, rotation) };
         const className = spot.on ? "plan-spot plan-spot-on" : "plan-spot";
         const style = { left: `${spot.x}%`, top: `${spot.y}%` };
         if (placing || editing || !spot.href) {
