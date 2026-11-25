@@ -121,7 +121,7 @@ Kopfzeile, Navigation, Seitentitel, Filter-Chips, Tabelle, Listeneintrag, Detail
 
 ## 8. Masken und Suche
 
-Gilt für jede Suche, jeden Filter und jede Eingabemaske auf PC, Tablet und Handy. Gemeinsame Komponenten: `components/Field.tsx` (`Field`, `ChoiceCards`, `ErrorSummary`, `RequiredNote`), `components/ComboField.tsx`, `components/SearchField.tsx`, `components/FilterBar.tsx`, `components/FormStep.tsx`; Lage der schwebenden Fenster in `components/floating.ts`. Nie je Seite nachbauen.
+Gilt für jede Suche, jeden Filter und jede Eingabemaske auf PC, Tablet und Handy. Gemeinsame Komponenten: `components/Field.tsx` (`Field`, `Segmented`, `ChoiceCards`, `ErrorSummary`, `RequiredNote`, `problemFor`), `components/ListChoice.tsx` (Auswahl aus einer Liste, die wachsen kann: bis zehn als Karten, darüber als Suchfeld), `components/ComboField.tsx`, `components/SearchField.tsx`, `components/FilterBar.tsx`, `components/FormStep.tsx`; Lage der schwebenden Fenster in `components/floating.ts`. Nie je Seite nachbauen.
 
 ### Suche und Filter
 
@@ -139,8 +139,9 @@ Gilt für jede Suche, jeden Filter und jede Eingabemaske auf PC, Tablet und Hand
 3. **Hinweis und Fehler:** Ein Hinweis steht klein unter dem Feld. Ein Fehler ersetzt ihn: roter Rahmen, Symbol und ein Satz, was zu tun ist (`aria-invalid`, `aria-describedby`).
 4. **Beim Absenden:** oben ein Kasten „n Angaben fehlen noch“ mit Links zu den Feldern (`ErrorSummary`), zusätzlich zur Meldung am Feld. Geprüft wird beim Absenden, danach live; nicht schon beim ersten Tippen.
 5. **Auswahl nach Anzahl der Möglichkeiten:**
-   - 2–4 feste, die nicht mehr werden (Ja/Nein, Netto/Brutto): Knopfleiste (`segmented`, `aria-pressed`).
+   - 2–4 feste, die nicht mehr werden (Ja/Nein, Netto/Brutto): Knopfleiste (`Segmented`, `aria-pressed`).
    - 5–10, oder die Liste kann wachsen: Auswahlkarten (`ChoiceCards`, Radio) mit Name und kurzer Erklärung in einem Raster, das umbricht (PC drei Spalten, Handy eine). Gewählt: blauer Rahmen, leicht hinterlegt.
+   - Daten, deren Anzahl sich ändert (Konten, Partner, Bereiche, Kategorien): `ListChoice` wählt selbst – bis 10 Karten (mit `none` eine Karte „Kein …“), darüber das Suchfeld.
    - Ab etwa 10: Feld mit Echtzeitsuche (`ComboField`). Schon beim Antippen öffnet ein schwebendes Fenster über dem Inhalt mit der Zahl der Einträge („31 Räume · tippe zum Eingrenzen“); jedes Zeichen grenzt sofort ein („3 Treffer“), höchstens 20 sichtbar, mit Hinweis bei mehr. Je Treffer Name und eine Zeile Zusatz. ↑↓ wählt, Enter übernimmt, Esc schließt. Gewählt steht der Eintrag mit „Ändern“ im Feld. Bei mehr als einigen hundert Einträgen sucht der Server.
 6. **Aufbau:** längere Masken in nummerierten Abschnitten (`FormStep`); am PC zwei Spalten, am Handy eine.
 7. **Knöpfe** unten, beim Scrollen am unteren Rand haftend (`form-actions`). Die Hauptaktion zuerst und mit Verb („Gerät anlegen“, nicht „Speichern“ oder „OK“), dann „Abbrechen“. Am Handy beide gleich breit nebeneinander.

@@ -508,7 +508,9 @@ test("Tickets: Einstellungen zur E-Mail und „Letzte Eingänge“", async ({
       name: "„Letzte Eingänge“ ohne Ticket löschen nach (Tagen)",
     })
     .fill("60");
-  await panel.getByRole("button", { name: "Speichern" }).first().click();
+  await panel
+    .getByRole("button", { name: "Mail-Einstellungen speichern" })
+    .click();
   await expect(
     page.getByText("Die Einstellungen zur E-Mail wurden gespeichert."),
   ).toBeVisible();
@@ -642,7 +644,7 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
   // Felder nicht unter der festen Kopfzeile prüfen
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
-  await panel.getByRole("button", { name: "Speichern" }).last().click();
+  await panel.getByRole("button", { name: "Fristen speichern" }).click();
   await expect(
     page
       .getByRole("status")
@@ -660,7 +662,7 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
   await expect(panel.getByText("Hallo Max, erledigt.")).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
-  await panel.getByRole("button", { name: "Speichern" }).last().click();
+  await panel.getByRole("button", { name: "Vorlage speichern" }).click();
   await expect(panel.getByText("/drucker")).toBeVisible();
 
   // Mit Fristen zeigt das Ticket eine Frist
@@ -705,13 +707,13 @@ test("Tickets: Übersicht, Aufbewahrung mit Ausnahme, Export und Protokoll", asy
   await panel.getByRole("combobox", { name: "Einheit" }).selectOption("years");
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
-  await panel.getByRole("button", { name: "Speichern" }).last().click();
+  await panel.getByRole("button", { name: "Aufbewahrung speichern" }).click();
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toContainText(
     "2 Jahre nach dem Schließen anonymisieren",
   );
   await expect(dialog).toContainText("Beim nächsten Lauf betroffen: 0 Tickets");
-  await dialog.getByRole("button", { name: "Speichern" }).click();
+  await dialog.getByRole("button", { name: "Aufbewahrung speichern" }).click();
   await expect(
     page
       .getByRole("status")
@@ -727,10 +729,10 @@ test("Tickets: Übersicht, Aufbewahrung mit Ausnahme, Export und Protokoll", asy
     page.getByText("2 Jahre nach dem Schließen anonymisieren"),
   ).toBeVisible();
   await page.getByRole("button", { name: "Ausnahme setzen" }).click();
-  await page.getByLabel("Begründung (Pflicht)").fill("Gewährleistung");
+  await page.getByLabel("Begründung").fill("Gewährleistung");
   await page
     .getByRole("complementary", { name: "Angaben zum Ticket" })
-    .getByRole("button", { name: "Speichern" })
+    .getByRole("button", { name: "Ausnahme setzen" })
     .click();
   await expect(page.getByText(/Ausnahme bis/)).toBeVisible();
   await expect(page.getByText(/Gewährleistung/)).toBeVisible();

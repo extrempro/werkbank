@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Field, Segmented } from "../../components/Field";
 import { errorText } from "../../api";
 import {
   BUDGET_EDITOR_ROLES,
@@ -53,42 +54,51 @@ function AccountForm({ account, onSaved, onCancel }: FormProps) {
         <h2 id="konto-formular-titel">{title}</h2>
       </div>
       <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-        <div className="tool-row">
-          <label className="narrow">
-            Kontonummer
-            <input
-              type="text"
-              value={number}
-              maxLength={20}
-              onChange={(event) => setNumber(event.target.value)}
-            />
-          </label>
-          <label>
-            Bezeichnung
-            <input
-              type="text"
-              value={name}
-              maxLength={120}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Art
-            <select value={kind} onChange={(event) => setKind(event.target.value as AccountKind)}>
-              <option value="laufend">{KIND_LABELS.laufend}</option>
-              <option value="investition">{KIND_LABELS.investition}</option>
-            </select>
-          </label>
-        </div>
-        <label>
-          Notiz (freiwillig)
-          <input
-            type="text"
-            value={note}
-            maxLength={500}
-            onChange={(event) => setNote(event.target.value)}
+        <div className="form-grid">
+          <Field label="Kontonummer">
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={number}
+                maxLength={20}
+                onChange={(event) => setNumber(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label="Bezeichnung">
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={name}
+                maxLength={120}
+                onChange={(event) => setName(event.target.value)}
+              />
+            )}
+          </Field>
+          <Segmented
+            label="Art"
+            wide
+            value={kind}
+            options={(["laufend", "investition"] as const).map((entry) => ({
+              value: entry,
+              label: KIND_LABELS[entry],
+            }))}
+            onChange={setKind}
           />
-        </label>
+          <Field label="Notiz" hint="freiwillig" wide>
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={note}
+                maxLength={500}
+                onChange={(event) => setNote(event.target.value)}
+              />
+            )}
+          </Field>
+        </div>
         {account && (
           <label className="check-label">
             <input
@@ -100,9 +110,9 @@ function AccountForm({ account, onSaved, onCancel }: FormProps) {
             Konto ist aktiv
           </label>
         )}
-        <div className="actions">
+        <div className="form-actions">
           <button type="submit" className="button button-primary" disabled={busy}>
-            {account ? "Änderungen speichern" : "Konto speichern"}
+            {account ? "Änderungen speichern" : "Konto anlegen"}
           </button>
           <button type="button" className="button button-secondary" onClick={onCancel}>
             Abbrechen

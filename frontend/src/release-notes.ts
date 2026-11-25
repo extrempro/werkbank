@@ -24,6 +24,28 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.135.0",
+    date: "2026-11-25",
+    summary: "Einheitliche Masken im IT-Budget und bei Tickets.",
+    sections: [
+      {
+        area: "IT-Budget",
+        entries: [
+          "Posten, Verträge, Rechnungen und Konten sehen gleich aus: Beschriftung über dem Feld, Pflichtfelder mit Stern. Fehlt etwas, steht oben eine Liste mit Links direkt zu den Feldern.",
+          "Konto, IT-Projekt und Partner wählst du bei wenigen Einträgen auf Karten, bei vielen in einem Suchfeld mit Treffern beim Tippen. Den Budgetposten einer Rechnungsposition suchst du direkt im Feld.",
+          "Die Knöpfe sagen, was passiert: „Posten anlegen“, „Vertrag anlegen“, „Rechnung erfassen“.",
+        ],
+      },
+      {
+        area: "Tickets",
+        entries: [
+          "„Neues Ticket“ ist in drei Abschnitte gegliedert. Bereich und Kategorie wählst du auf Karten, Eingangsweg und Priorität mit Knöpfen.",
+          "Die Knöpfe in den Einstellungen heißen nach dem, was sie speichern, z. B. „Fristen speichern“.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.134.0",
     date: "2026-11-25",
     summary: "Suchen über Listen zeigen die Treffer sofort in einem Fenster.",

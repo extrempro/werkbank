@@ -352,7 +352,7 @@ export function MailSettingsSection({
       </fieldset>
       <div className="actions">
         <button type="submit" className="button button-primary" disabled={busy}>
-          {busy ? "Wird gespeichert …" : "Speichern"}
+          {busy ? "Wird gespeichert …" : "Mail-Einstellungen speichern"}
         </button>
       </div>
     </form>

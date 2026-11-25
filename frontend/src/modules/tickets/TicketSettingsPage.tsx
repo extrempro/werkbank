@@ -295,7 +295,7 @@ function AreaPanel({
             </label>
             <div className="actions">
               <button type="submit" className="button button-primary" disabled={!changed}>
-                Speichern
+                Bereich speichern
               </button>
             </div>
           </form>

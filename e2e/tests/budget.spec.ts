@@ -5,6 +5,7 @@ import {
   confirmDialog,
   expectNoA11yViolations,
   loginAs,
+  pickChoice,
   pickFromList,
 } from "./helpers";
 
@@ -26,7 +27,10 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await page
     .getByLabel("Bezeichnung", { exact: true })
     .fill("Testkonto Wartung");
-  await page.getByRole("button", { name: "Konto speichern" }).click();
+  await page
+    .getByRole("region", { name: "Konto anlegen" })
+    .getByRole("button", { name: "Konto anlegen" })
+    .click();
   await expect(
     page.getByText(`Konto ${number} ist gespeichert.`),
   ).toBeVisible();
@@ -76,9 +80,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await itemForm
     .getByRole("textbox", { name: /^Bezeichnung/ })
     .fill(`Posten ${number}`);
-  await itemForm
-    .getByRole("combobox", { name: /^Konto/ })
-    .selectOption({ label: `${number} Testkonto Wartung` });
+  await pickChoice(itemForm, "Konto", `${number} Testkonto Wartung`);
   // Der Partner ist am Budgetposten Pflicht.
   await pickFromList(itemForm, /^Partner/, `Beispiel Partner ${number}`);
   // Der Betrag lässt sich netto oder brutto eintragen.
@@ -96,7 +98,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .click();
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
-  await itemForm.getByRole("button", { name: "Posten speichern" }).click();
+  await itemForm.getByRole("button", { name: "Posten anlegen" }).click();
   await expect(
     page.getByText(
       new RegExp(
@@ -156,7 +158,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .fill(`${new Date().getFullYear()}-01-01`);
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
-  await contractForm.getByRole("button", { name: "Vertrag speichern" }).click();
+  await contractForm.getByRole("button", { name: "Vertrag anlegen" }).click();
   await expect(
     page.getByText(`Wartung ${number} ist gespeichert.`),
   ).toBeVisible();
@@ -174,9 +176,16 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
   // Monatlicher Vertrag: je Zahlung einen Posten anlegen, im Konto des zugeordneten Postens.
+  // Vorgabe: das Konto der zugeordneten Posten (Karte oder Suchfeld, je nach Anzahl)
   await expect(
-    contractPane.getByRole("combobox", { name: "Konto der Posten" }),
-  ).not.toHaveValue("");
+    contractPane
+      .getByRole("radio", { name: `${number} Testkonto Wartung`, checked: true })
+      .or(
+        contractPane.getByRole("button", {
+          name: `Konto der Posten ändern: ${number} Testkonto Wartung`,
+        }),
+      ),
+  ).toBeVisible();
   await contractPane
     .getByRole("button", { name: /^Monatsposten für .* anlegen/ })
     .click();
@@ -207,12 +216,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     name: "Position",
     exact: true,
   });
-  await first
-    .getByRole("searchbox", { name: "Budgetposten suchen" })
-    .fill(`Posten ${number}`);
-  await first
-    .getByRole("combobox", { name: /^Budgetposten/ })
-    .selectOption({ index: 1 });
+  await pickFromList(first, /^Budgetposten/, `Posten ${number}`);
   await expect(
     invoiceForm.getByText(`Vertrag des Postens: Wartung ${number}`),
   ).toBeVisible();
@@ -226,12 +230,7 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
     .getByRole("button", { name: "Position hinzufügen" })
     .click();
   const second = invoiceForm.getByRole("group", { name: "Position 2" });
-  await second
-    .getByRole("searchbox", { name: "Budgetposten suchen" })
-    .fill(`Posten ${number}`);
-  await second
-    .getByRole("combobox", { name: /^Budgetposten/ })
-    .selectOption({ index: 1 });
+  await pickFromList(second, /^Budgetposten/, `Posten ${number}`);
   await second.getByRole("textbox", { name: /^Betrag netto/ }).fill("50,00");
   await second.getByRole("textbox", { name: "Steuersatz (%)" }).fill("7");
   await expect(
@@ -240,16 +239,16 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   await invoiceForm
     .getByRole("textbox", { name: /^Rechnungsbetrag laut Beleg/ })
     .fill("170,00");
-  await invoiceForm.getByRole("button", { name: "Rechnung speichern" }).click();
-  await expect(invoiceForm.getByRole("alert")).toContainText(
-    "mehr als der Rechnungsbetrag",
+  await invoiceForm.getByRole("button", { name: "Rechnung erfassen" }).click();
+  await expect(invoiceForm.getByRole("alert").first()).toContainText(
+    "Die Positionen ergeben",
   );
   await invoiceForm
     .getByRole("textbox", { name: /^Rechnungsbetrag laut Beleg/ })
     .fill("172,50");
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
-  await invoiceForm.getByRole("button", { name: "Rechnung speichern" }).click();
+  await invoiceForm.getByRole("button", { name: "Rechnung erfassen" }).click();
   // Der Budgetverwalter bucht beim Erfassen sofort; die Rechnung steht dann in der Ansicht.
   await expect(
     page.getByText(`Rechnung RE-${number} ist gespeichert und gebucht.`),

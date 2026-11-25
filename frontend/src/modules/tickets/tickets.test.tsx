@@ -251,9 +251,10 @@ describe("TicketPage", () => {
     );
     render(<TicketPage number={1042} />);
     await screen.findByText("Drucker druckt nicht");
-    expect(screen.queryByLabelText("Lösungsart")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Lösungsart" })).toBeNull();
     fireEvent.change(screen.getByLabelText("Status"), { target: { value: "solved" } });
-    fireEvent.change(screen.getByLabelText("Lösungsart"), { target: { value: "3" } });
+    const kinds = screen.getByRole("group", { name: "Lösungsart" });
+    fireEvent.click(within(kinds).getByRole("radio", { name: "Behoben" }));
     fireEvent.change(screen.getByLabelText("Was wurde gemacht?"), {
       target: { value: " Neu gestartet. " },
     });
@@ -870,9 +871,9 @@ describe("TicketPage: Aufbewahrung", () => {
     render(<TicketPage number={1042} />);
     expect(await screen.findByText("3 Jahre nach dem Schließen anonymisieren")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Ausnahme setzen" }));
-    const save = screen.getByRole("button", { name: "Speichern" }) as HTMLButtonElement;
+    const save = screen.getByRole("button", { name: "Ausnahme setzen" }) as HTMLButtonElement;
     expect(save.disabled).toBe(true);
-    fireEvent.change(screen.getByLabelText("Begründung (Pflicht)"), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Begründung" }), {
       target: { value: "Prüfung" },
     });
     fireEvent.click(save);
@@ -988,19 +989,21 @@ describe("Melder und IT-Bestand", () => {
         access={{ manager: false, settings: false, areas: [{ id: 1, name: "IT", role: "edit" }] }}
       />,
     );
-    fireEvent.change(screen.getByLabelText("Name des Melders"), { target: { value: "Ina" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Name des Melders" }), {
+      target: { value: "Ina" },
+    });
     const list = await screen.findByRole(
       "list",
       { name: "Vorschläge aus Entra" },
       { timeout: 2000 },
     );
     fireEvent.click(within(list).getByRole("button", { name: "Ina Beispiel" }));
-    expect((screen.getByLabelText("Name des Melders") as HTMLInputElement).value).toBe(
-      "Ina Beispiel",
-    );
     expect(
-      (screen.getByLabelText("Mailadresse des Melders (freiwillig)") as HTMLInputElement).value,
-    ).toBe("ina@example.com");
+      (screen.getByRole("textbox", { name: "Name des Melders" }) as HTMLInputElement).value,
+    ).toBe("Ina Beispiel");
+    expect((screen.getByLabelText("Mailadresse des Melders") as HTMLInputElement).value).toBe(
+      "ina@example.com",
+    );
     expect(screen.queryByRole("list", { name: "Vorschläge aus Entra" })).toBeNull();
   });
 

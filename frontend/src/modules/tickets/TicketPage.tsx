@@ -1,3 +1,4 @@
+import { Field } from "../../components/Field";
 import {
   useEffect,
   useId,
@@ -971,7 +972,6 @@ function RetentionSection({
   const [ask, dialog] = useConfirm();
   const [editing, setEditing] = useState(false);
   const [reason, setReason] = useState("");
-  const reasonId = useId();
   const r = ticket.retention;
   const held = r.hold_until !== null;
   const rule =
@@ -1057,21 +1057,24 @@ function RetentionSection({
       )}
       {r.can_manage && editing && (
         <form className="ticket-template-form" onSubmit={save}>
-          <label htmlFor={reasonId}>Begründung (Pflicht)</label>
-          <textarea
-            id={reasonId}
-            rows={2}
+          <Field
+            label="Begründung"
             required
-            maxLength={500}
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-          />
-          <p className="small">
-            Gilt ein Jahr; danach muss sie bestätigt werden, sonst verfällt sie.
-          </p>
+            hint="Gilt ein Jahr; danach muss sie bestätigt werden, sonst verfällt sie."
+          >
+            {(control) => (
+              <textarea
+                {...control}
+                rows={2}
+                maxLength={500}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+              />
+            )}
+          </Field>
           <div className="actions">
             <button type="submit" className="button button-primary" disabled={!reason.trim()}>
-              Speichern
+              {held ? "Ausnahme bestätigen" : "Ausnahme setzen"}
             </button>
             <button
               type="button"

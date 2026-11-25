@@ -194,7 +194,7 @@ describe("Import", () => {
     expect(await screen.findByRole("heading", { name: "Zeile 5: Notebooks" })).toBeVisible();
     // Kein Budgetposten zum Auswählen: Übernehmen legt ihn aus der Bezeichnung an
     expect(screen.queryByLabelText("Budgetposten")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Konto")).toHaveValue("1");
+    expect(screen.getByRole("radio", { name: "6050 Hardware" })).toBeChecked();
     expect(
       screen.getByText(/legt den Budgetposten „Notebooks“ mit diesem Partner an/),
     ).toBeVisible();
@@ -237,10 +237,6 @@ describe("Import", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und weiter" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Bitte wähle einen Partner");
-    fireEvent.click(screen.getByLabelText("Als neuen Partner anlegen"));
-    fireEvent.change(screen.getByLabelText("Konto"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "Übernehmen und weiter" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Bitte wähle ein Konto");
   });
 
   it("übernimmt Zeilen mit „Jährlich“ in die Planung, ihr Posten läuft weiter", async () => {

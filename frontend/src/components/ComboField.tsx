@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { errorText } from "../api";
 import { useFloating } from "./floating";
 
@@ -35,10 +35,12 @@ export interface ComboFieldProps<T extends ComboItem> {
   /** Mehrzahl für die Zählzeile ohne Eingabe, z. B. „Räume“ → „31 Räume · tippe zum Eingrenzen“ */
   unit?: string;
   required?: boolean;
-  hint?: string;
+  hint?: ReactNode;
   error?: string | null;
   /** Treffer, die nicht angeboten werden (z. B. schon gewählte) */
   exclude?: readonly number[];
+  /** Kennung des Eingabefelds, z. B. für die Links der Fehlerübersicht */
+  id?: string;
 }
 
 /**
@@ -58,6 +60,7 @@ export function ComboField<T extends ComboItem>({
   hint,
   error = null,
   exclude = [],
+  id,
 }: ComboFieldProps<T>) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -65,7 +68,8 @@ export function ComboField<T extends ComboItem>({
   const [result, setResult] = useState<ComboResult<T> | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const settled = useSettled(query);
-  const inputId = useId();
+  const ownId = useId();
+  const inputId = id ?? ownId;
   const listId = useId();
   const hintId = useId();
   const anchor = useRef<HTMLDivElement>(null);
@@ -141,6 +145,7 @@ export function ComboField<T extends ComboItem>({
             {value.detail && <span className="small">{value.detail}</span>}
           </span>
           <button
+            id={inputId}
             type="button"
             className="row-button"
             aria-label={`${label} ändern: ${value.label}`}

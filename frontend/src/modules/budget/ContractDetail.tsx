@@ -1,4 +1,5 @@
 import { InfoTip } from "../../components/InfoTip";
+import { ListChoice } from "../../components/ListChoice";
 import { DokuBacklinks } from "../doku/DokuBacklinks";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { errorText } from "../../api";
@@ -75,7 +76,7 @@ function MonthlyItems({
   const choices = accounts.filter((entry) => entry.active);
   const run = () => {
     if (!accountId) {
-      setError("Bitte wähle das Konto für die Posten.");
+      setError("Wähle das Konto für die Posten.");
       return;
     }
     setBusy(true);
@@ -104,17 +105,18 @@ function MonthlyItems({
         ). Rechnungen buchst du dann auf den Monat.
       </p>
       <div className="settings-form budget-suggest-row">
-        <label>
-          Konto der Posten
-          <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-            <option value="">Bitte wählen</option>
-            {choices.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.number} {entry.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ListChoice
+          label="Konto der Posten"
+          required
+          unit="Konten"
+          placeholder="Nummer oder Name des Kontos …"
+          options={choices.map((entry) => ({
+            id: entry.id,
+            label: `${entry.number} ${entry.name}`,
+          }))}
+          value={accountId}
+          onChange={setAccountId}
+        />
         <button type="button" className="button button-secondary" disabled={busy} onClick={run}>
           Monatsposten für {yearName} anlegen ({payments})
         </button>

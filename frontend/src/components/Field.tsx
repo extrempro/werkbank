@@ -24,9 +24,12 @@ export function Field({
   hint,
   error,
   wide = false,
+  id: fixedId,
   children,
 }: {
   label: string;
+  /** feste Kennung des Eingabeelements, z. B. für die Links der Fehlerübersicht */
+  id?: string;
   required?: boolean;
   hint?: ReactNode;
   error?: string | null;
@@ -34,7 +37,8 @@ export function Field({
   wide?: boolean;
   children: (control: FieldControl) => ReactNode;
 }) {
-  const id = useId();
+  const ownId = useId();
+  const id = fixedId ?? ownId;
   const noteId = useId();
   const note = error || hint ? noteId : undefined;
   return (
@@ -80,6 +84,18 @@ export function Field({
       )}
     </div>
   );
+}
+
+/** Eine fehlende oder falsche Angabe: Kennung des Felds, Name und was zu tun ist. */
+export interface Problem {
+  id: string;
+  label: string;
+  text: string;
+}
+
+/** Text des Fehlers für ein Feld, `null` ohne Fehler. */
+export function problemFor(problems: readonly Problem[], id: string): string | null {
+  return problems.find((problem) => problem.id === id)?.text ?? null;
 }
 
 /** Hinweis oben in einer Maske mit Pflichtfeldern. */
@@ -140,16 +156,28 @@ export function ChoiceCards<T extends string>({
   options,
   onChange,
   required = false,
+  hint,
+  error = null,
+  id,
+  wide = true,
 }: {
   legend: string;
   value: T | null;
   options: readonly { value: T; label: string; hint?: string }[];
   onChange: (value: T) => void;
   required?: boolean;
+  hint?: ReactNode;
+  error?: string | null;
+  /** Kennung des ersten Auswahlknopfs, z. B. für die Links der Fehlerübersicht */
+  id?: string;
+  /** über beide Spalten einer zweispaltigen Maske (Standard) */
+  wide?: boolean;
 }) {
   const name = useId();
+  const noteId = useId();
+  const note = error || hint ? noteId : undefined;
   return (
-    <fieldset className="choice-cards">
+    <fieldset className={wide ? "choice-cards field-wide" : "choice-cards"} aria-describedby={note}>
       <legend className="field-label">
         {legend}
         {required && (
@@ -160,12 +188,13 @@ export function ChoiceCards<T extends string>({
         )}
       </legend>
       <div className="choice-cards-grid">
-        {options.map((option) => (
+        {options.map((option, index) => (
           <label
             key={option.value}
             className={value === option.value ? "choice-card choice-card-on" : "choice-card"}
           >
             <input
+              id={index === 0 ? id : undefined}
               type="radio"
               name={name}
               value={option.value}
@@ -179,6 +208,75 @@ export function ChoiceCards<T extends string>({
           </label>
         ))}
       </div>
+      {error ? (
+        <p id={noteId} className="field-error">
+          {error}
+        </p>
+      ) : (
+        hint && (
+          <p id={noteId} className="field-hint">
+            {hint}
+          </p>
+        )
+      )}
     </fieldset>
+  );
+}
+
+/**
+ * Knopfleiste für 2–4 feste Möglichkeiten, die nicht mehr werden (Ja/Nein, Netto/Brutto):
+ * Beschriftung über der Leiste, der gewählte Knopf mit `aria-pressed`.
+ */
+export function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  hint,
+  info,
+  wide = false,
+}: {
+  label: string;
+  value: T;
+  options: readonly { value: T; label: string }[];
+  onChange: (value: T) => void;
+  hint?: ReactNode;
+  /** z. B. ein Info-Symbol neben der Beschriftung */
+  info?: ReactNode;
+  wide?: boolean;
+}) {
+  const labelId = useId();
+  const hintId = useId();
+  return (
+    <div className={wide ? "field field-wide" : "field"}>
+      <span className="field-info-head">
+        <span className="field-label" id={labelId}>
+          {label}
+        </span>
+        {info}
+      </span>
+      <div
+        className="segmented"
+        role="group"
+        aria-labelledby={labelId}
+        aria-describedby={hint ? hintId : undefined}
+      >
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={value === option.value}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {hint && (
+        <p id={hintId} className="field-hint">
+          {hint}
+        </p>
+      )}
+    </div>
   );
 }
