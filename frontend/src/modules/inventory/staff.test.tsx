@@ -222,11 +222,11 @@ describe("Stellen: Seiten", () => {
     fireEvent.change(screen.getByRole("combobox", { name: /^Abteilung/ }), {
       target: { value: "2" },
     });
-    fireEvent.change(screen.getByLabelText(/Wer besetzt die Stelle/), {
+    fireEvent.change(screen.getByRole("combobox", { name: /Wer besetzt die Stelle/ }), {
       target: { value: "alex" },
     });
-    fireEvent.click(await screen.findByRole("button", { name: /Alex Beispiel/ }));
-    expect(screen.getByRole("button", { name: "Andere Person wählen" })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("option", { name: /Alex Beispiel/ }));
+    expect(screen.getByRole("button", { name: /ändern: Alex Beispiel/ })).toBeTruthy();
     expect(calls.some((call) => call.url === "/api/inventory/people?q=alex")).toBe(true);
 
     const form = screen.getByRole("button", { name: "Stelle anlegen", hidden: false });

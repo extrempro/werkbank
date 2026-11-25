@@ -153,8 +153,10 @@ describe("Verleih", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Verleihen" }));
     expect((await screen.findByRole("alert")).textContent).toContain("Person");
 
-    fireEvent.change(screen.getByLabelText(/Wer leiht aus/), { target: { value: "pia" } });
-    fireEvent.click(await screen.findByRole("button", { name: /Pia Beispiel/ }));
+    fireEvent.change(screen.getByRole("combobox", { name: /Wer leiht aus/ }), {
+      target: { value: "pia" },
+    });
+    fireEvent.click(await screen.findByRole("option", { name: /Pia Beispiel/ }));
     fireEvent.click(await screen.findByRole("checkbox", { name: /Leih-Notebook 1/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /Headset 7/ }));
     fireEvent.change(screen.getByLabelText("Rückgabe bis"), {
@@ -182,8 +184,10 @@ describe("Verleih", () => {
       "GET /api/inventory/loans/4": { ...loan, state: "geplant" },
     });
     render(<LoansPage loanId="neu" roles={["Bestand.Editor"]} />);
-    fireEvent.change(await screen.findByLabelText(/Wer leiht aus/), { target: { value: "pia" } });
-    fireEvent.click(await screen.findByRole("button", { name: /Pia Beispiel/ }));
+    fireEvent.change(await screen.findByRole("combobox", { name: /Wer leiht aus/ }), {
+      target: { value: "pia" },
+    });
+    fireEvent.click(await screen.findByRole("option", { name: /Pia Beispiel/ }));
     fireEvent.click(await screen.findByRole("checkbox", { name: /Leih-Notebook 1/ }));
     const start = daysFrom(today(), 20);
     fireEvent.change(screen.getByLabelText("Ab"), { target: { value: start } });

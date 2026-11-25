@@ -179,7 +179,10 @@ test("Budgetverwalter legt ein Konto an und plant es", async ({ page }) => {
   // Vorgabe: das Konto der zugeordneten Posten (Karte oder Suchfeld, je nach Anzahl)
   await expect(
     contractPane
-      .getByRole("radio", { name: `${number} Testkonto Wartung`, checked: true })
+      .getByRole("radio", {
+        name: `${number} Testkonto Wartung`,
+        checked: true,
+      })
       .or(
         contractPane.getByRole("button", {
           name: `Konto der Posten ändern: ${number} Testkonto Wartung`,

@@ -3,7 +3,7 @@ import { errorText } from "../api";
 import { useFloating } from "./floating";
 
 export interface ComboItem {
-  id: number;
+  id: number | string;
   label: string;
   /** eine Zeile Zusatz, z. B. Hersteller oder Gebäude und Etage */
   detail: string;
@@ -38,9 +38,17 @@ export interface ComboFieldProps<T extends ComboItem> {
   hint?: ReactNode;
   error?: string | null;
   /** Treffer, die nicht angeboten werden (z. B. schon gewählte) */
-  exclude?: readonly number[];
+  exclude?: readonly (number | string)[];
   /** Kennung des Eingabefelds, z. B. für die Links der Fehlerübersicht */
   id?: string;
+  /** Gesucht wird erst ab so vielen Zeichen (z. B. 2 für die Suche in Entra); 0: schon leer */
+  minLength?: number;
+  /** Text ohne Treffer, z. B. mit dem Hinweis, dass nur Sichtbares gefunden wird */
+  nothingFound?: (query: string) => string;
+  /** Fokus beim Erscheinen (z. B. in einem kleinen Fenster nur mit diesem Feld) */
+  autoFocus?: boolean;
+  /** Esc bei geschlossenem Fenster, z. B. um ein umgebendes Fenster zu schließen */
+  onEscape?: () => void;
 }
 
 /**
@@ -61,6 +69,10 @@ export function ComboField<T extends ComboItem>({
   error = null,
   exclude = [],
   id,
+  minLength = 0,
+  nothingFound,
+  autoFocus = false,
+  onEscape,
 }: ComboFieldProps<T>) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -74,8 +86,9 @@ export function ComboField<T extends ComboItem>({
   const hintId = useId();
   const anchor = useRef<HTMLDivElement>(null);
 
+  const tooShort = settled.trim().length < minLength;
   useEffect(() => {
-    if (!open || value) {
+    if (!open || value || tooShort) {
       return;
     }
     let current = true;
@@ -92,9 +105,9 @@ export function ComboField<T extends ComboItem>({
     return () => {
       current = false;
     };
-  }, [search, settled, open, value]);
+  }, [search, settled, open, value, tooShort]);
 
-  const items = (result?.items ?? []).filter((item) => !exclude.includes(item.id));
+  const items = tooShort ? [] : (result?.items ?? []).filter((item) => !exclude.includes(item.id));
   const selected = Math.min(active, Math.max(items.length - 1, 0));
   const optionId = (index: number) => `${listId}-${index}`;
   const floating = useFloating(anchor, open && !value);
@@ -121,6 +134,9 @@ export function ComboField<T extends ComboItem>({
     } else if (event.key === "Escape" && open) {
       event.preventDefault();
       setOpen(false);
+    } else if (event.key === "Escape" && onEscape) {
+      event.preventDefault();
+      onEscape();
     }
   };
 
@@ -173,17 +189,21 @@ export function ComboField<T extends ComboItem>({
     );
   }
 
-  const status = !result
-    ? "Wird gesucht …"
-    : items.length === 0
-      ? `Nichts gefunden für „${query.trim()}“.`
-      : !settled.trim() && unit
-        ? `${result.total} ${unit} · tippe zum Eingrenzen`
-        : result.total > result.items.length
-          ? `${result.items.length} von ${result.total} Treffern – tippe weiter`
-          : result.total === 1
-            ? "1 Treffer"
-            : `${result.total} Treffer`;
+  const status = tooShort
+    ? minLength > 1
+      ? `Tippe mindestens ${minLength} Zeichen.`
+      : "Tippe zum Suchen."
+    : !result || settled !== query
+      ? "Wird gesucht …"
+      : items.length === 0
+        ? (nothingFound?.(query.trim()) ?? `Nichts gefunden für „${query.trim()}“.`)
+        : !settled.trim() && unit
+          ? `${result.total} ${unit} · tippe zum Eingrenzen`
+          : result.total > result.items.length
+            ? `${result.items.length} von ${result.total} Treffern – tippe weiter`
+            : result.total === 1
+              ? "1 Treffer"
+              : `${result.total} Treffer`;
 
   return (
     <div className="field combo">
@@ -206,6 +226,7 @@ export function ComboField<T extends ComboItem>({
           aria-describedby={describedBy}
           autoComplete="off"
           maxLength={100}
+          autoFocus={autoFocus}
           placeholder={placeholder}
           value={query}
           onChange={(event) => {

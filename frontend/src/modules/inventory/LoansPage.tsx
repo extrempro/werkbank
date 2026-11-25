@@ -117,7 +117,9 @@ function NewLoanForm({ onCreated }: { onCreated: (loan: Loan) => void }) {
         <PersonPicker
           value={person}
           onChange={setPerson}
-          label="Wer leiht aus? (Person aus Entra)"
+          label="Wer leiht aus?"
+          hint="Person aus Entra."
+          required
         />
         <div className="tool-row">
           <div className="field-info">
