@@ -24,6 +24,24 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.128.1",
+    date: "2026-11-25",
+    summary: "Baustein-Menü ohne Springen, Grundriss-Auswahl aufgeräumt.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Das Menü für Bausteine öffnet sich jetzt, ohne dass die Seite springt: unter der Zeile oder, wenn unten kein Platz ist, darüber.",
+          "Das Menü bleibt offen, wenn du kurz in ein anderes Fenster wechselst.",
+        ],
+      },
+      {
+        area: "IT-Bestand",
+        entries: ["Die Auswahl der Ausrichtung des Grundrisses sieht aus wie die anderen Felder."],
+      },
+    ],
+  },
+  {
     version: "0.128.0",
     date: "2026-11-25",
     summary: "IT-Bestand: Grundrisse drehen.",

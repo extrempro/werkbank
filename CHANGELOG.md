@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.128.1] – 2026-11-25
+
+### Behoben
+
+- **Dokumentation, Baustein-Menü:** Die Seite springt beim Öffnen nicht mehr. Das Menü steht unter der Zeile, wenn dort Platz ist, sonst darüber (nie unter der Kopfzeile); reicht der Platz nirgends, scrollt es innen.
+- **Baustein-Menü schließt nicht mehr ungewollt:** Es schließt nur noch, wenn der Fokus innerhalb der Seite woanders hingeht (Klick daneben, Tab), nicht mehr beim Wechsel in ein anderes Fenster oder eine andere App.
+- **IT-Bestand:** Die Auswahl „Ausrichtung des Grundrisses“ sieht aus wie die übrigen Formularfelder (vorher kleine Standard-Auswahl des Browsers).
+
 ## [0.128.0] – 2026-11-25
 
 ### Neu
