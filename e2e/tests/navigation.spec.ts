@@ -198,6 +198,10 @@ test("Kontomenü: mit der Tastatur bedienbar, Darstellung umschalten", async ({
   await expect(menu.getByRole("menuitem", { name: "Konto" })).toBeFocused();
   await page.keyboard.press("ArrowDown");
   await expect(
+    menu.getByRole("menuitem", { name: "Benachrichtigungen" }),
+  ).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(
     menu.getByRole("menuitem", { name: /^Release Notes/ }),
   ).toBeFocused();
   await page.keyboard.press("End");

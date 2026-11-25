@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   BASE_URL,
   expectNoA11yViolations,
+  isPhone,
   itemName,
   loginAs,
   openMenu,
@@ -337,7 +338,7 @@ test("Zu große Bilder passt die Werkbank beim Hochladen selbst an", async ({
   await expect(page.getByText("Favicon: entfernt.")).toBeVisible();
 });
 
-test("Admin schaltet Push ein, das Konto zeigt Geräte und die Spalte Push", async ({
+test("Admin schaltet Push ein, die Benachrichtigungen zeigen Geräte und Push", async ({
   page,
 }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
@@ -352,11 +353,25 @@ test("Admin schaltet Push ein, das Konto zeigt Geräte und die Spalte Push", asy
   const stored = await (await page.request.get("/api/admin/settings")).text();
   expect(stored).not.toContain("PRIVATE KEY");
 
-  await page.goto("/konto");
+  await page.goto("/konto/benachrichtigungen");
   await expect(
     page.getByRole("heading", { name: "Push auf deinen Geräten" }),
   ).toBeVisible();
-  await expect(page.getByRole("columnheader", { name: "Push" })).toBeVisible();
+  if (isPhone(page)) {
+    // Am Handy klappt je Art eine Zeile mit den Schaltern auf
+    await page
+      .getByRole("button", { expanded: false })
+      .filter({ hasText: "Glocke" })
+      .first()
+      .click();
+    await expect(
+      page.getByRole("checkbox", { name: /: Push$/ }).first(),
+    ).toBeVisible();
+  } else {
+    await expect(
+      page.getByRole("columnheader", { name: "Push" }),
+    ).toBeVisible();
+  }
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
 

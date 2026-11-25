@@ -3,6 +3,7 @@ import type { Me } from "../../api";
 import { HANDBOOK_PATH } from "../../handbook";
 import { ADMIN_PATH, NEWS_PATH } from "../../navigation";
 import { clearRecent } from "../../navPrefs";
+import { NOTIFICATION_SETTINGS_PATH } from "../../notifications";
 import { saveTheme, storedTheme, type ThemeChoice } from "../../theme";
 import { ADMIN_ROLE, roleLabel } from "../../user";
 import { Avatar } from "../Avatar";
@@ -23,7 +24,7 @@ interface AccountMenuProps {
 }
 
 /**
- * Kontomenü oben rechts: Konto, Neuigkeiten, Handbuch, Verwaltung (nur Admins), Darstellung,
+ * Kontomenü oben rechts: Konto, Benachrichtigungen, Neuigkeiten, Handbuch, Verwaltung (nur Admins), Darstellung,
  * „Zuletzt besucht leeren“, Abmelden.
  * Bedienbar mit Tastatur (Pfeiltasten, Pos1/Ende, Esc schließt und gibt den Fokus zurück).
  */
@@ -150,6 +151,15 @@ export function AccountMenu({ me, newsUnseen, onNavigate }: AccountMenuProps) {
             >
               <Icon name="konto" />
               <span>Konto</span>
+            </a>
+            <a
+              role="menuitem"
+              tabIndex={-1}
+              href={NOTIFICATION_SETTINGS_PATH}
+              onClick={(e) => go(e, NOTIFICATION_SETTINGS_PATH)}
+            >
+              <Icon name="glocke" />
+              <span>Benachrichtigungen</span>
             </a>
             <a role="menuitem" tabIndex={-1} href={NEWS_PATH} onClick={(e) => go(e, NEWS_PATH)}>
               <Icon name="neuigkeiten" />

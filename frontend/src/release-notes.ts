@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.129.0",
+    date: "2026-11-25",
+    summary: "Töne für Benachrichtigungen und eine eigene Seite zum Einstellen.",
+    sections: [
+      {
+        area: "Benachrichtigungen",
+        entries: [
+          "Die Einstellungen haben eine eigene Seite: im Kontomenü unter „Benachrichtigungen“ oder in der Glocke unter „Einstellungen“.",
+          "Neu sind Töne: Wenn du sie einschaltest, erklingt bei einer neuen Benachrichtigung ein Ton. Den Ton wählst du je Bereich und kannst ihn vorher anhören.",
+          "Kommen mehrere Benachrichtigungen auf einmal, hörst du nur einen Ton. Auf Wunsch bleibt es von 18 bis 7 Uhr still oder klingt nur, wenn die Werkbank im Hintergrund ist.",
+          "Am Handy ist die Seite übersichtlicher: je Art eine Zeile, tippen klappt die Schalter auf.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.128.1",
     date: "2026-11-25",
     summary: "Baustein-Menü ohne Springen, Grundriss-Auswahl aufgeräumt.",
