@@ -83,6 +83,8 @@ export interface Hardware extends HardwareSummary {
   connected_to: LinkedDevice | null;
   /** Rechner: Monitore, die laut NinjaOne zuletzt an ihm hingen */
   monitors: LinkedDevice[];
+  /** Technische Daten des Modells aus Lenovo PSREF; null, wenn nie abgefragt */
+  psref: PsrefInfo | null;
   /** Offener Verleih, in dem das Gerät gerade ist */
   loan: LoanRef | null;
   /** Anschaffungsdatum JJJJ-MM-TT */
@@ -1192,6 +1194,8 @@ export interface NinjaSettings {
   role_ids: number[];
   /** interner Name des Custom Fields mit den Monitoren; leer: keine Monitore */
   monitor_field: string;
+  /** Technische Daten von Lenovo-Rechnern aus Lenovo PSREF holen */
+  psref_enabled: boolean;
 }
 
 export interface NinjaUpdate {
@@ -1201,6 +1205,7 @@ export interface NinjaUpdate {
   organization_ids: number[];
   role_ids: number[];
   monitor_field: string;
+  psref_enabled: boolean;
   /** Weglassen: bleibt. Leerer Text: löschen. */
   client_secret?: string;
 }
@@ -1968,4 +1973,56 @@ export function pieSlices(items: StatCount[], max = 8): StatCount[] {
     return head.map((item) => (item === other ? { ...item, count: item.count + rest } : item));
   }
   return [...head, { label: "Andere", count: rest }];
+}
+
+// --- Lenovo PSREF ---------------------------------------------------------------------
+
+export type PsrefStatus = "ok" | "nicht_gefunden" | "fehler";
+
+export interface PsrefInfo {
+  url: string;
+  name: string;
+  status: PsrefStatus;
+  /** Grund des letzten Fehlers; leer, wenn der letzte Abruf geklappt hat */
+  error?: string;
+  checked_at: string | null;
+  specs: { name: string; value: string }[];
+}
+
+export const PSREF_STATUS_LABELS: Record<PsrefStatus, string> = {
+  ok: "gefunden",
+  nicht_gefunden: "nicht gefunden",
+  fehler: "Abruf fehlgeschlagen",
+};
+
+/** Eckdaten in dieser Reihenfolge, deutsch beschriftet; der Rest steht unter „Alle Merkmale“. */
+const PSREF_KEYS: readonly [RegExp, string][] = [
+  [/^processor$/i, "Prozessor"],
+  [/^memory$/i, "Arbeitsspeicher"],
+  [/^storage$/i, "Speicher"],
+  [/^graphics$/i, "Grafik"],
+  [/^display$/i, "Bildschirm"],
+  [/^camera$/i, "Kamera"],
+  [/^microphone$/i, "Mikrofon"],
+  [/^speakers?$/i, "Lautsprecher"],
+  [/^wlan/i, "WLAN"],
+  [/^operating system$/i, "Betriebssystem"],
+  [/^base warranty$/i, "Garantie ab Werk"],
+  [/^end of support$/i, "Support-Ende bei Lenovo"],
+];
+
+/** Wichtigste Angaben aus PSREF, deutsch beschriftet. */
+export function psrefHighlights(psref: PsrefInfo): { label: string; value: string }[] {
+  const rows: { label: string; value: string }[] = [];
+  for (const [pattern, label] of PSREF_KEYS) {
+    const spec = psref.specs.find((entry) => pattern.test(entry.name.trim()));
+    if (spec) {
+      rows.push({ label, value: spec.value });
+    }
+  }
+  return rows;
+}
+
+export function refreshPsref(id: number): Promise<Hardware> {
+  return postJson(`${BASE}/hardware/${id}/psref`, {}, { quiet: true });
 }

@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.131.0] – 2026-11-25
+
+### Neu
+
+- **IT-Bestand, Lenovo PSREF wieder da, jetzt über die offizielle Schnittstelle** `https://psrefapi.lenovo.com` (`/psref/mobile/model/ModelDetails/{MTM}`). Einschaltbar in der Verwaltung bei NinjaOne (`psref_enabled`, Vorgabe aus). Auftrag `bestand.psref` einmal am Tag für Lenovo-Modelle, deren Name ein Maschinentyp-Modell ist (höchstens 40 je Lauf), erneut nach 30 Tagen (gefunden) bzw. 7 Tagen (nicht gefunden, Fehler). Reiter „Technik“: Name, Status, Link zur PSREF-Seite, Eckdaten (u. a. Prozessor, Arbeitsspeicher, Speicher, Garantie ab Werk, Support-Ende) und alle Merkmale; `POST /api/inventory/hardware/{id}/psref` fragt sofort ab. Gesendet wird nur das MTM. Migration `0089` (Spalten am Modell). Keine Absenderkennung mehr nötig; Monitore vorerst nicht (NinjaOne liefert für sie kein MTM).
+
 ## [0.130.0] – 2026-11-25
 
 ### Neu
