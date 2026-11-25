@@ -34,6 +34,8 @@ from werkbank.modules.m365_config.versioning import same_value
 router = APIRouter(prefix="/api/m365-config/snapshots")
 
 Reader = Annotated[CurrentUser, Depends(require_roles(Role.CONFIG_READER, Role.CONFIG_REVIEWER))]
+# Export des vollständigen Stands (alle Einstellungen des Tenants): nur Systemadmins
+Exporter = Annotated[CurrentUser, Depends(require_roles(Role.WERKBANK_ADMIN))]
 SnapshotId = Annotated[int, Path(ge=1, le=2_000_000_000)]
 # Höchstzahl Unterschiede in einer Antwort; der Rest steht im Export
 COMPARE_LIMIT = 2000
@@ -186,7 +188,7 @@ def _audit(
 
 
 @router.get("/{snapshot_id}/export.json")
-def export_json(request: Request, snapshot_id: SnapshotId, user: Reader, db: DbDep) -> Response:
+def export_json(request: Request, snapshot_id: SnapshotId, user: Exporter, db: DbDep) -> Response:
     """Stand eines Abrufs als JSON zum Herunterladen."""
     snapshot = _snapshot(db, snapshot_id)
     state = state_at(db, snapshot)
@@ -225,7 +227,7 @@ def export_json(request: Request, snapshot_id: SnapshotId, user: Reader, db: DbD
 
 
 @router.get("/{snapshot_id}/export.csv")
-def export_csv(request: Request, snapshot_id: SnapshotId, user: Reader, db: DbDep) -> Response:
+def export_csv(request: Request, snapshot_id: SnapshotId, user: Exporter, db: DbDep) -> Response:
     """Stand eines Abrufs als CSV (Semikolon, UTF-8 mit BOM für Excel)."""
     snapshot = _snapshot(db, snapshot_id)
     state = state_at(db, snapshot)

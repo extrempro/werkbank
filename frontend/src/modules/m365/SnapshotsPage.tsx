@@ -154,7 +154,7 @@ function SnapshotCompare({ snapshots }: { snapshots: Snapshot[] }) {
           {result.truncated && (
             <p className="small">
               Es werden die ersten {result.differences.length} von {result.total} Unterschieden
-              gezeigt. Den vollständigen Stand enthält der Export.
+              gezeigt.
             </p>
           )}
           {result.differences.length > 0 && (
@@ -205,7 +205,8 @@ function SnapshotCompare({ snapshots }: { snapshots: Snapshot[] }) {
   );
 }
 
-export function SnapshotsPage() {
+/** `canExport`: nur Systemadmins laden den vollständigen Stand herunter (der Server prüft das). */
+export function SnapshotsPage({ canExport = false }: { canExport?: boolean }) {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [hasMore, setHasMore] = useState(false);
@@ -267,7 +268,7 @@ export function SnapshotsPage() {
                   <th scope="col">Objekte</th>
                   <th scope="col">Änderungen</th>
                   <th scope="col">Quellen</th>
-                  <th scope="col">Export</th>
+                  {canExport && <th scope="col">Export</th>}
                 </tr>
               </thead>
               <tbody>
@@ -282,27 +283,29 @@ export function SnapshotsPage() {
                     <td data-label="Quellen">
                       <SourceCell snapshot={snapshot} />
                     </td>
-                    <td className="nowrap" data-label="Export">
-                      {hasState(snapshot) ? (
-                        <>
-                          <a
-                            href={snapshotExportUrl(snapshot.id, "json")}
-                            aria-label={`Stand vom ${formatDateTime(snapshot.started_at)} als JSON`}
-                          >
-                            JSON
-                          </a>
-                          {" · "}
-                          <a
-                            href={snapshotExportUrl(snapshot.id, "csv")}
-                            aria-label={`Stand vom ${formatDateTime(snapshot.started_at)} als CSV`}
-                          >
-                            CSV
-                          </a>
-                        </>
-                      ) : (
-                        "–"
-                      )}
-                    </td>
+                    {canExport && (
+                      <td className="nowrap" data-label="Export">
+                        {hasState(snapshot) ? (
+                          <>
+                            <a
+                              href={snapshotExportUrl(snapshot.id, "json")}
+                              aria-label={`Stand vom ${formatDateTime(snapshot.started_at)} als JSON`}
+                            >
+                              JSON
+                            </a>
+                            {" · "}
+                            <a
+                              href={snapshotExportUrl(snapshot.id, "csv")}
+                              aria-label={`Stand vom ${formatDateTime(snapshot.started_at)} als CSV`}
+                            >
+                              CSV
+                            </a>
+                          </>
+                        ) : (
+                          "–"
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

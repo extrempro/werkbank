@@ -585,7 +585,12 @@ def test_compare_unknown_snapshot(db: Session) -> None:
 
 def test_snapshot_export_json_and_csv(db: Session) -> None:
     first, second = snapshot_ids(db)
-    client = client_for(["Config.Reader"], "oid-export")
+    # Nur Systemadmins exportieren; Lesende und Prüfende nicht
+    for roles in (["Config.Reader"], ["Config.Reviewer"]):
+        reader = client_for(roles, f"oid-export-{roles[0]}")
+        assert reader.get(f"{BASE}/snapshots/{first}/export.json").status_code == 403
+        assert reader.get(f"{BASE}/snapshots/{first}/export.csv").status_code == 403
+    client = client_for(["Werkbank.Admin"], "oid-export")
     response = client.get(f"{BASE}/snapshots/{first}/export.json")
     assert response.status_code == 200, response.text
     assert response.headers["cache-control"] == "no-store"
@@ -611,7 +616,7 @@ def test_snapshot_export_json_and_csv(db: Session) -> None:
     assert sorted(item["format"] for item in actions) == ["csv", "json"]
 
 
-def test_snapshot_export_needs_config_role(db: Session) -> None:
+def test_snapshot_compare_needs_config_role(db: Session) -> None:
     first, _ = snapshot_ids(db)
     client = client_for(["Tenant.Reader"], "oid-export-403")
     assert client.get(f"{BASE}/snapshots/{first}/export.csv").status_code == 403

@@ -100,7 +100,7 @@ Seit 0.121.0 vergibt die Werkbank die Rechte selbst (6.2). Zwei Gruppen in Entra
 | Rolle | Modul | Darf |
 |---|---|---|
 | `Werkbank.Admin` | Kern | Verwaltung: Module, Konnektoren, Kommentarregeln, Benachrichtigungsregeln, Audit-Log vollständig |
-| `Config.Reader` | M365-Konfiguration | Einstellungen, Verlauf, Änderungen, Snapshots ansehen und exportieren |
+| `Config.Reader` | M365-Konfiguration | Einstellungen, Verlauf, Änderungen, Snapshots ansehen (Export der Snapshots seit 0.132.1 nur `Werkbank.Admin`) |
 | `Config.Reviewer` | M365-Konfiguration | zusätzlich Änderungen bewerten, Beschreibungen und Begründungen pflegen, Soll-Werte setzen |
 | `Evergreen.Reader` | Evergreen | Einträge mit Bewertung und Notizen ansehen; keine Aufgaben und Benachrichtigungen |
 | `Evergreen.Editor` | Evergreen | Einträge anlegen, bewerten, Notizen anfügen, abschließen und wieder öffnen; Aufgabe und Benachrichtigung bei neuen Einträgen |
@@ -995,7 +995,7 @@ Evergreen:
 | IT-Budget › Partner | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Vertragspartner und Rechnungssteller; anlegen, ändern, stilllegen; Detail je Firma mit Verträgen, Budgetposten und Rechnungen; zusammenlegen (Budget.Manager) |
 | IT-Budget › Konten | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Liste der Konten; anlegen, ändern, stilllegen |
 | IT-Budget › Einstellungen | Budget.Manager | Beginn und Bezeichnung des Geschäftsjahrs, Kostenstelle; Liste der Tags anlegen, umbenennen, löschen |
-| M365 › Snapshots | Config.* | Abrufe mit Status; Vergleich zweier Abrufe (neu, geändert, entfernt mit Vorher/Nachher); Stand eines Abrufs als JSON und CSV |
+| M365 › Snapshots | Config.* | Abrufe mit Status; Vergleich zweier Abrufe (neu, geändert, entfernt mit Vorher/Nachher); Stand eines Abrufs als JSON und CSV nur für `Werkbank.Admin` (Server prüft, Spalte sonst ausgeblendet) |
 | Evergreen › Microsoft 365 | Evergreen.Reader, Evergreen.Editor | Liste und Ansicht (8.3): Liste mit Suche, Status (Offen, Neu, Mit Frist, Abgeschlossen), „Reine Info-Meldungen ausblenden“ und Gruppen; Ansicht mit Steckbrief, Rollout und Reitern Unsere Bewertung, Text von Microsoft, Notizen und Verlauf; Bearbeiter: Neuer Eintrag, Bewertung speichern, Notiz anfügen, Abschließen, Wieder öffnen |
 | Reports | später | Berichtsvorlagen, Download, geplanter Versand. Noch nicht gebaut; ohne Eintrag in der Navigation |
 | Verwaltung (über das Kontomenü oben rechts, Seiten im Seitenmenü) | Admin (mit Step-up) | Seiten **Allgemein** (Branding mit Logo, Fußzeile und Datenschutz-Link für alle Mails, Aufbewahrung des Audit-Logs, Vorlauf für ablaufende Zertifikate und Secrets), **Rollen** (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), **Mail & Teams** (SMTP-Server, Teams), **Verbindungen** (KI-Texte, NetBox, Abfragen ins Internet), **Datensicherung** (täglich zu einer Uhrzeit, Aufbewahrung als Anzahl, „Jetzt sichern“, Zustand von Schlüssel und Zielordner, vorhandene Sicherungen und letzte Läufe, Anleitung zum Einrichten und Zurückspielen) und **Audit-Log**. Später: Module, Kommentarregeln |

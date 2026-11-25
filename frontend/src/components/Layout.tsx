@@ -132,6 +132,7 @@ import { OverviewPage } from "../modules/m365/OverviewPage";
 import { RecommendationsPage } from "../modules/m365/RecommendationsPage";
 import { SettingsPage } from "../modules/m365/SettingsPage";
 import { SnapshotsPage } from "../modules/m365/SnapshotsPage";
+import { ADMIN_ROLE } from "../user";
 import { hasUnseenRelease } from "../release-notes";
 import { AccountsPage } from "../modules/budget/AccountsPage";
 import { BudgetOverviewPage } from "../modules/budget/BudgetOverviewPage";
@@ -472,7 +473,7 @@ export function Layout({ me }: LayoutProps) {
   ) {
     page = <RecommendationsPage me={me} selectedId={recommendationId} />;
   } else if (path === "/m365/snapshots" && current) {
-    page = <SnapshotsPage />;
+    page = <SnapshotsPage canExport={me.roles.includes(ADMIN_ROLE)} />;
   } else if (settingId !== null && items.some((item) => item.path === SETTINGS_PATH)) {
     page = <SettingsPage me={me} selectedId={settingId} />;
   } else if (path === TOOLS_PATH && current) {
