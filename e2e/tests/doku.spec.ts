@@ -134,6 +134,9 @@ test("Doku: Seite anlegen, schreiben, Versionen, Rechte, Sperren und Papierkorb"
       { timeout: 10_000 },
     )
     .toContain("Toner bestellen");
+  // Das Baustein-Menü hat die Seite so weit gerückt, dass es ganz zu sehen war. Oben liegt
+  // dann einiges unter der festen Kopfzeile, was axe als verdeckt meldet: erst nach oben.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
 
   // Im Seitenbaum
