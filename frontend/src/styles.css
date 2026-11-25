@@ -9656,94 +9656,6 @@ td > .budget-row-actions {
   font-size: 0.75rem;
 }
 
-/* Auswahl mit Suche (Stelle, Arbeitsplatz, Raum, Gerät) */
-.lookup {
-  position: relative;
-  display: grid;
-  gap: 4px;
-}
-
-.lookup-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.lookup input {
-  width: 100%;
-  min-height: 44px;
-  padding: 0 10px;
-  border: 1px solid var(--farbe-rand-kontrast);
-  border-radius: 8px;
-  background: var(--farbe-flaeche);
-  color: var(--farbe-text);
-  font: inherit;
-  font-size: 1rem;
-}
-
-.lookup input[aria-invalid="true"] {
-  border-color: var(--farbe-bad-text);
-}
-
-/* Die Trefferliste steht im Fluss unter dem Feld, nicht darüber gelegt: So schneidet kein
-   umgebender Kasten sie ab, und sie lässt sich immer scrollen. */
-.lookup-list {
-  position: relative;
-  z-index: 1;
-  max-height: 280px;
-  margin: 4px 0 0;
-  padding: 4px;
-  overflow-y: auto;
-  list-style: none;
-  border: 1px solid var(--farbe-rand-stark);
-  border-radius: 8px;
-  background: var(--farbe-flaeche);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
-}
-
-.lookup-list[hidden] {
-  display: none;
-}
-
-.lookup-list li {
-  display: grid;
-  gap: 2px;
-  min-height: 44px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.lookup-list li[aria-selected="true"] {
-  background: var(--farbe-auswahl);
-  color: var(--farbe-auswahl-text);
-}
-
-.lookup-list li[aria-selected="true"] .small {
-  color: inherit;
-}
-
-.lookup-status {
-  margin: 0;
-}
-
-.lookup-chosen {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 44px;
-  padding: 6px 10px;
-  border: 1px solid var(--farbe-rand-stark);
-  border-radius: 8px;
-  background: var(--farbe-neutral-flaeche);
-}
-
-.lookup-text {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
 .field-error {
   margin: 0;
   color: var(--farbe-bad-text);
@@ -16115,4 +16027,329 @@ button.doku-thread-quote {
   flex: 1 1 auto;
   min-height: 0;
   max-height: none;
+}
+
+/* ---------------------------------------------------------------------------------------
+   Masken und Suche (docs/design.md, „Masken und Suche“): ein Aussehen für alle Felder,
+   schwebende Fenster für Suche und Auswahl, Auswahlkarten, Fehlerübersicht
+   --------------------------------------------------------------------------------------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--farbe-text);
+}
+
+.field-required {
+  color: var(--farbe-bad-text);
+}
+
+/* Eingabe, Auswahl, Datum und Textfeld sehen gleich aus */
+.field-control {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+textarea.field-control {
+  min-height: 88px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.field-control:disabled {
+  background: var(--farbe-neutral-flaeche);
+  color: var(--farbe-text-leise);
+}
+
+.field-control[aria-invalid="true"] {
+  border: 2px solid var(--farbe-bad-text);
+}
+
+.field-hint {
+  margin: 0;
+  color: var(--farbe-text-leise);
+  font-size: 0.8125rem;
+}
+
+.field .field-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+}
+
+.error-summary {
+  padding: 12px 14px;
+  border: 1px solid var(--farbe-bad-text);
+  border-radius: 10px;
+  background: var(--farbe-bad-flaeche);
+  color: var(--farbe-bad-text);
+}
+
+.error-summary ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.error-summary a {
+  color: inherit;
+}
+
+/* Suche über Listen */
+.search-field-input,
+.combo-input {
+  position: relative;
+}
+
+.search-field-input .field-control {
+  padding: 0 40px 0 38px;
+}
+
+.search-field-icon {
+  position: absolute;
+  top: 13px;
+  left: 12px;
+  color: var(--farbe-text-leise);
+  pointer-events: none;
+}
+
+.search-field-clear {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--farbe-text-leise);
+  cursor: pointer;
+}
+
+/* Schwebendes Fenster für Suche und Auswahl (Lage aus components/floating.ts) */
+.floating {
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 4px;
+  overflow: hidden;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 10px;
+  background: var(--farbe-flaeche);
+  box-shadow: 0 12px 32px rgb(20 33 61 / 18%);
+}
+
+.floating-status {
+  margin: 0;
+  padding: 6px 10px;
+  color: var(--farbe-text-leise);
+}
+
+/* Nur die Trefferliste scrollt, nie das Fenster und die Liste zusammen */
+.floating-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.floating-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.floating-list li[aria-selected="true"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+.floating-list li[aria-selected="true"] .small {
+  color: inherit;
+}
+
+.floating-main {
+  font-weight: 600;
+}
+
+.search-panel .floating-list li {
+  padding: 0;
+}
+
+.search-panel .floating-list a {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 4px 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.search-hit-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.search-panel-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  margin-top: 4px;
+  padding: 6px 6px 2px;
+  border-top: 1px solid var(--farbe-trenner);
+  color: var(--farbe-text-leise);
+}
+
+.search-panel-foot .button-link {
+  min-height: 36px;
+}
+
+@media (max-width: 760px) {
+  .search-panel-keys {
+    display: none;
+  }
+}
+
+/* Auswahl mit Suche: gewählt mit „Ändern“ */
+.combo-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-neutral-flaeche);
+}
+
+.combo-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Auswahlkarten (5–10 Möglichkeiten oder eine Liste, die wachsen kann) */
+.choice-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice-cards > legend {
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+.choice-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.choice-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 10px;
+  background: var(--farbe-flaeche);
+  cursor: pointer;
+}
+
+.choice-card input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--farbe-primaer);
+}
+
+.choice-card-on {
+  padding: 9px 11px;
+  border: 2px solid var(--farbe-primaer);
+  background: var(--farbe-auswahl);
+}
+
+.choice-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.choice-card-label {
+  font-weight: 600;
+}
+
+@media (max-width: 1024px) {
+  .choice-cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .choice-cards-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Knöpfe einer Maske: unten, haften beim Scrollen */
+.form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--farbe-rand);
+  background: var(--farbe-grund);
+}
+
+@media (max-width: 760px) {
+  .form-actions {
+    bottom: calc(60px + env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

@@ -308,7 +308,7 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
   await form.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
   await expect(form.getByText("Bitte wähle einen Raum.")).toBeVisible();
   await form
-    .getByRole("combobox", { name: "Raum (Pflicht)" })
+    .getByRole("combobox", { name: "Raum" })
     .fill(`R ${stamp}`);
   await form
     .getByRole("option", { name: new RegExp(`Raum R ${stamp}`) })
@@ -369,7 +369,7 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
   await page.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
   const poolForm = page.getByRole("region", { name: "Arbeitsplatz anlegen" });
   await poolForm
-    .getByRole("combobox", { name: "Raum (Pflicht)" })
+    .getByRole("combobox", { name: "Raum" })
     .fill(`R ${stamp}`);
   await poolForm
     .getByRole("option", { name: new RegExp(`Raum R ${stamp}`) })

@@ -387,7 +387,7 @@ describe("Arbeitsplätze: anlegen", () => {
     expect(await within(form).findByText("Bitte wähle einen Raum.")).toBeTruthy();
     expect(calls.some((call) => call.method === "POST")).toBe(false);
 
-    const room = within(form).getByRole("combobox", { name: "Raum (Pflicht)" });
+    const room = within(form).getByRole("combobox", { name: "Raum" });
     fireEvent.focus(room);
     fireEvent.change(room, { target: { value: "0.12" } });
     fireEvent.click(await within(form).findByRole("option", { name: /Raum 0\.12/ }));
@@ -438,7 +438,7 @@ describe("Arbeitsplätze: anlegen", () => {
     render(<WorkplacesPage roles={["Bestand.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Arbeitsplatz anlegen" }));
     const form = await screen.findByRole("region", { name: "Arbeitsplatz anlegen" });
-    const room = within(form).getByRole("combobox", { name: "Raum (Pflicht)" });
+    const room = within(form).getByRole("combobox", { name: "Raum" });
     fireEvent.focus(room);
     fireEvent.change(room, { target: { value: "0.12" } });
     fireEvent.click(await within(form).findByRole("option", { name: /Raum 0\.12/ }));
