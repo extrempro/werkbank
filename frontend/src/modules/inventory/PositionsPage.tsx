@@ -1,4 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
+import {
+  ErrorSummary,
+  Field,
+  problemFor,
+  RequiredNote,
+  type Problem,
+} from "../../components/Field";
+import { ListChoice } from "../../components/ListChoice";
 import { DokuBacklinks } from "../doku/DokuBacklinks";
 import { fetchPositionTickets } from "../tickets/api";
 import { RelatedTickets } from "../tickets/RelatedTickets";
@@ -55,11 +63,16 @@ function PositionForm({
   const [note, setNote] = useState(initial.note);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tried, setTried] = useState(false);
+  const all: Problem[] = name.trim()
+    ? []
+    : [{ id: "stelle-name", label: "Bezeichnung", text: "Trag eine Bezeichnung ein." }];
+  const problems = tried ? all : [];
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!name.trim()) {
-      setError("Bitte trag eine Bezeichnung ein.");
+    setTried(true);
+    if (all.length > 0) {
       return;
     }
     setBusy(true);
@@ -77,51 +90,67 @@ function PositionForm({
 
   return (
     <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-      <div className="tool-row">
-        <label>
-          Bezeichnung
-          <input
-            type="text"
-            value={name}
-            maxLength={120}
-            autoComplete="off"
-            placeholder="z. B. Sachbearbeitung Einkauf"
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-        <label className="narrow">
-          Abteilung (freiwillig)
-          <select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
-            <option value="">keine Abteilung</option>
-            {departments.map((entry) => (
-              <option key={entry.id} value={String(entry.id)}>
-                {entry.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      {departments.length === 0 && (
-        <p className="small">
-          Abteilungen legst du unter <Link to={INVENTORY_MASTER_PATH}>Stammdaten</Link> an.
-        </p>
-      )}
-      <PersonPicker value={person} onChange={setPerson} />
-      <label>
-        Notiz (freiwillig)
-        <input
-          type="text"
-          value={note}
-          maxLength={500}
-          onChange={(event) => setNote(event.target.value)}
+      <RequiredNote />
+      <ErrorSummary problems={problems} />
+      <div className="form-grid">
+        <Field
+          label="Bezeichnung"
+          id="stelle-name"
+          required
+          wide
+          error={problemFor(problems, "stelle-name")}
+        >
+          {(control) => (
+            <input
+              {...control}
+              type="text"
+              value={name}
+              maxLength={120}
+              autoComplete="off"
+              placeholder="z. B. Sachbearbeitung Einkauf"
+              onChange={(event) => setName(event.target.value)}
+            />
+          )}
+        </Field>
+        <ListChoice
+          label="Abteilung"
+          none="Keine Abteilung"
+          unit="Abteilungen"
+          placeholder="Name der Abteilung …"
+          hint={
+            departments.length === 0 ? (
+              <>
+                Abteilungen legst du unter <Link to={INVENTORY_MASTER_PATH}>Stammdaten</Link> an.
+              </>
+            ) : (
+              "freiwillig"
+            )
+          }
+          options={departments.map((entry) => ({ id: entry.id, label: entry.name }))}
+          value={departmentId}
+          onChange={setDepartmentId}
         />
-      </label>
+        <div className="field-wide">
+          <PersonPicker value={person} onChange={setPerson} />
+        </div>
+        <Field label="Notiz" hint="freiwillig" wide>
+          {(control) => (
+            <input
+              {...control}
+              type="text"
+              value={note}
+              maxLength={500}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          )}
+        </Field>
+      </div>
       {error && (
         <p role="alert" className="hint-box hint-bad">
           {error}
         </p>
       )}
-      <div className="project-actions">
+      <div className="form-actions">
         <button type="submit" className="button button-primary" disabled={busy}>
           {submitLabel}
         </button>
@@ -347,7 +376,7 @@ function Overview({
             person: position.person,
             note: position.note,
           }}
-          submitLabel="Speichern"
+          submitLabel="Änderungen speichern"
           onCancel={() => setMode("ansicht")}
           onSave={(body) =>
             updatePosition(position.id, body).then((next) => {

@@ -216,12 +216,10 @@ describe("Stellen: Seiten", () => {
     });
     render(<PositionsPage roles={["Bestand.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Stelle anlegen" }));
-    fireEvent.change(screen.getByLabelText("Bezeichnung"), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Bezeichnung" }), {
       target: { value: "Sachbearbeitung Einkauf" },
     });
-    fireEvent.change(screen.getByRole("combobox", { name: /^Abteilung/ }), {
-      target: { value: "2" },
-    });
+    fireEvent.click(screen.getByRole("radio", { name: "Einkauf" }));
     fireEvent.change(screen.getByRole("combobox", { name: /Wer besetzt die Stelle/ }), {
       target: { value: "alex" },
     });
@@ -333,7 +331,7 @@ describe("Arbeitsplätze: Platz im Raum", () => {
     fireEvent.click(screen.getByText("Platz mit Zahlen eingeben"));
     fireEvent.change(screen.getByLabelText("Von links im Raum (%)"), { target: { value: "25" } });
     fireEvent.change(screen.getByLabelText("Von oben im Raum (%)"), { target: { value: "50" } });
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(screen.getByRole("button", { name: "Platz speichern" }));
     await vi.waitFor(() =>
       expect(calls.find((call) => call.method === "PUT")?.body).toEqual({ x: 25, y: 50 }),
     );
@@ -384,7 +382,9 @@ describe("Arbeitsplätze: anlegen", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Arbeitsplatz anlegen" }));
     const form = await screen.findByRole("region", { name: "Arbeitsplatz anlegen" });
     fireEvent.click(within(form).getByRole("button", { name: "Arbeitsplatz anlegen" }));
-    expect(await within(form).findByText("Bitte wähle einen Raum.")).toBeTruthy();
+    expect((await within(form).findAllByRole("alert"))[0]).toHaveTextContent(
+      "Raum: Wähle einen Raum.",
+    );
     expect(calls.some((call) => call.method === "POST")).toBe(false);
 
     const room = within(form).getByRole("combobox", { name: "Raum" });
@@ -447,13 +447,13 @@ describe("Arbeitsplätze: anlegen", () => {
     // Beim Pool gibt es keine Stellen
     expect(within(form).queryByRole("combobox", { name: "Stelle hinzufügen" })).toBeNull();
     fireEvent.click(within(form).getByRole("button", { name: "Arbeitsplatz anlegen" }));
-    expect(await within(form).findByText("Bitte wähle den Zweck.")).toBeTruthy();
+    expect((await within(form).findAllByRole("alert"))[0]).toHaveTextContent(
+      "Zweck: Wähle den Zweck.",
+    );
     expect(calls.some((call) => call.method === "POST")).toBe(false);
 
-    fireEvent.change(within(form).getByLabelText(/^Zweck/), { target: { value: "3" } });
-    fireEvent.change(within(form).getByLabelText("Verantwortliche Abteilung (freiwillig)"), {
-      target: { value: "5" },
-    });
+    fireEvent.click(within(form).getByRole("radio", { name: "Desk-Sharing" }));
+    fireEvent.click(within(form).getByRole("radio", { name: "Abt. Beispiel" }));
     fireEvent.click(within(form).getByRole("button", { name: "Arbeitsplatz anlegen" }));
     await vi.waitFor(() =>
       expect(calls.find((call) => call.method === "POST")?.body).toEqual({

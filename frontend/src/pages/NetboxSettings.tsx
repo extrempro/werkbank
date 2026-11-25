@@ -1,4 +1,6 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
+import { ListChoice } from "../components/ListChoice";
+import { Segmented } from "../components/Field";
 import { errorText } from "../api";
 import {
   fetchNetboxSettings,
@@ -225,36 +227,28 @@ function NetboxForm({
             Gespeichertes CA-Zertifikat löschen
           </label>
         )}
-        <label>
-          View
-          <select
-            value={viewId === null ? "" : String(viewId)}
-            onChange={(event) =>
-              setViewId(event.target.value === "" ? null : Number(event.target.value))
-            }
-          >
-            <option value="">Alle Views</option>
-            {viewId !== null && !views.some((view) => view.id === viewId) && (
-              <option value={String(viewId)}>View {viewId}</option>
-            )}
-            {views.map((view) => (
-              <option key={view.id} value={String(view.id)}>
-                {view.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="small">Die Liste der Views füllt „Verbindung prüfen“.</p>
-        <label>
-          Öffentlicher Resolver
-          <select value={resolver} onChange={(event) => setResolver(event.target.value)}>
-            {stored.resolvers.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ListChoice
+          label="View"
+          none="Alle Views"
+          unit="Views"
+          placeholder="Name der View …"
+          hint="Die Liste der Views füllt „Verbindung prüfen“."
+          options={[
+            ...(viewId !== null && !views.some((view) => view.id === viewId)
+              ? [{ id: viewId, label: `View ${viewId}` }]
+              : []),
+            ...views.map((view) => ({ id: view.id, label: view.name })),
+          ]}
+          value={viewId === null ? "" : String(viewId)}
+          onChange={(value) => setViewId(value === "" ? null : Number(value))}
+        />
+        <Segmented
+          label="Öffentlicher Resolver"
+          wide
+          value={resolver}
+          options={stored.resolvers.map((entry) => ({ value: entry.id, label: entry.name }))}
+          onChange={setResolver}
+        />
         <label className="check-label">
           <input
             type="checkbox"

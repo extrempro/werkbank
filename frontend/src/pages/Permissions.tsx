@@ -500,7 +500,7 @@ function PersonDetail({
           ))}
           <div className="perm-actions">
             <button type="submit" className="button button-primary" disabled={busy || !changed}>
-              Speichern
+              Rechte speichern
             </button>
             {changed && (
               <button

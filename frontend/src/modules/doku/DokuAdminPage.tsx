@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
+import { Segmented } from "../../components/Field";
 import { errorText, formatDateTime } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
@@ -105,7 +106,7 @@ function SpaceForm({
       />
       <div className="doku-actions">
         <button type="submit" className="button button-primary" disabled={busy}>
-          Speichern
+          {space ? "Änderungen speichern" : "Arbeitsbereich anlegen"}
         </button>
         <button type="button" className="button button-secondary" onClick={onCancel}>
           Abbrechen
@@ -343,40 +344,36 @@ function VersionsTab({ notify }: { notify: Notify }) {
   };
   return (
     <form className="panel doku-settings" onSubmit={submit}>
-      <label className="doku-field">
-        <span>Automatische Version nach</span>
-        <select
-          value={settings.version_minutes}
-          onChange={(e) =>
-            setSettings({
-              ...settings,
-              version_minutes: Number(e.target.value) as DokuSettings["version_minutes"],
-            })
-          }
-        >
-          <option value={5}>5 Minuten Bearbeitung</option>
-          <option value={10}>10 Minuten Bearbeitung</option>
-          <option value={30}>30 Minuten Bearbeitung</option>
-        </select>
-      </label>
-      <label className="doku-field">
-        <span>Automatische Versionen aufbewahren</span>
-        <select
-          value={settings.keep_auto}
-          onChange={(e) =>
-            setSettings({ ...settings, keep_auto: e.target.value as DokuSettings["keep_auto"] })
-          }
-        >
-          <option value="1y">1 Jahr</option>
-          <option value="immer">immer</option>
-        </select>
-      </label>
+      <Segmented
+        label="Automatische Version nach"
+        value={String(settings.version_minutes)}
+        options={[
+          { value: "5", label: "5 Minuten Bearbeitung" },
+          { value: "10", label: "10 Minuten Bearbeitung" },
+          { value: "30", label: "30 Minuten Bearbeitung" },
+        ]}
+        onChange={(value) =>
+          setSettings({
+            ...settings,
+            version_minutes: Number(value) as DokuSettings["version_minutes"],
+          })
+        }
+      />
+      <Segmented
+        label="Automatische Versionen aufbewahren"
+        value={settings.keep_auto}
+        options={[
+          { value: "1y", label: "1 Jahr" },
+          { value: "immer", label: "immer" },
+        ]}
+        onChange={(keep_auto) => setSettings({ ...settings, keep_auto })}
+      />
       <p className="small">
         Benannte Versionen bleiben immer erhalten. Ältere automatische Versionen werden nachts
         gelöscht, die jüngste je Tag bleibt.
       </p>
       <button type="submit" className="button button-primary">
-        Speichern
+        Einstellungen speichern
       </button>
     </form>
   );

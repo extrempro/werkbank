@@ -44,9 +44,7 @@ describe("NetboxSettings", () => {
       "https://netbox.example.com",
     );
     expect(screen.getByLabelText("Neuer API-Token")).toHaveValue("");
-    fireEvent.change(screen.getByLabelText("Öffentlicher Resolver"), {
-      target: { value: "google" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Google (8.8.8.8)" }));
     fireEvent.click(screen.getByRole("button", { name: "NetBox speichern" }));
     expect(await screen.findByText("Die Anbindung an NetBox ist gespeichert.")).toBeVisible();
     const put = calls.find((call) => call.init?.method === "PUT");
@@ -71,6 +69,6 @@ describe("NetboxSettings", () => {
     render(<NetboxSettings />);
     fireEvent.click(await screen.findByRole("button", { name: "Verbindung prüfen" }));
     expect(await screen.findByRole("status")).toHaveTextContent("NetBox 4.4.1");
-    expect(screen.getByRole("option", { name: "extern" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "extern" })).toBeInTheDocument();
   });
 });

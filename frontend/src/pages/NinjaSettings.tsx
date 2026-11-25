@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
+import { ChoiceCards } from "../components/Field";
 import { errorText } from "../api";
 import {
   fetchNinjaOptions,
@@ -160,16 +161,16 @@ function NinjaForm({
           Services (machine-to-machine)“, dem Scope „Monitoring“ und der Freigabe „Client
           Credentials“. Die Werkbank liest nur.
         </p>
-        <label>
-          Region
-          <select value={region} onChange={(event) => setRegion(event.target.value)}>
-            {stored.regions.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.name} ({entry.host})
-              </option>
-            ))}
-          </select>
-        </label>
+        <ChoiceCards
+          legend="Region"
+          value={region}
+          options={stored.regions.map((entry) => ({
+            value: entry.id,
+            label: entry.name,
+            hint: entry.host,
+          }))}
+          onChange={setRegion}
+        />
         <label>
           Client-ID
           <input

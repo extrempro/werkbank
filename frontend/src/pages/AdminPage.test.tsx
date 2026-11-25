@@ -120,7 +120,7 @@ describe("Berechtigungen", () => {
     const detail = await screen.findByRole("region", { name: "Max Muster" });
     const budget = within(detail).getByRole("group", { name: /IT-Budget/ });
     fireEvent.click(within(budget).getByRole("radio", { name: "Bearbeiten" }));
-    fireEvent.click(within(detail).getByRole("button", { name: "Speichern" }));
+    fireEvent.click(within(detail).getByRole("button", { name: "Rechte speichern" }));
     expect(await screen.findByText(/sind gespeichert/)).toBeInTheDocument();
     const put = calls.find((call) => call.method === "PUT");
     expect(put?.url).toBe("/api/admin/permissions/p2");

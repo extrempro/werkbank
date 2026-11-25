@@ -125,9 +125,9 @@ function MeetingForm({ projectId, meeting, onSaved, onCancel }: FormProps) {
           {error}
         </p>
       )}
-      <div className="project-actions">
+      <div className="form-actions">
         <button type="submit" className="button button-primary" disabled={busy}>
-          Speichern
+          {meeting ? "Änderungen speichern" : "Eintrag speichern"}
         </button>
         <button type="button" className="button button-secondary" onClick={onCancel}>
           Abbrechen

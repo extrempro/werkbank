@@ -1,4 +1,5 @@
 import { useId, useState, type ChangeEvent, type FormEvent } from "react";
+import { Segmented } from "../components/Field";
 import {
   errorText,
   removeBrandingImage,
@@ -313,17 +314,15 @@ export function BrandingSettings() {
       </form>
 
       <div className="detail-body settings-form">
-        <label className="narrow-auto">
-          Größe beim Hochladen
-          <select
-            value={mode}
-            aria-describedby={modeHint}
-            onChange={(event) => setMode(event.target.value === "original" ? "original" : "auto")}
-          >
-            <option value="auto">Automatisch anpassen (empfohlen)</option>
-            <option value="original">Original behalten</option>
-          </select>
-        </label>
+        <Segmented
+          label="Größe beim Hochladen"
+          value={mode}
+          options={[
+            { value: "auto", label: "Automatisch anpassen (empfohlen)" },
+            { value: "original", label: "Original behalten" },
+          ]}
+          onChange={setMode}
+        />
         <p className="small" id={modeHint}>
           Automatisch: Zu große Bilder verkleinert die Werkbank vor dem Hochladen (Logos auf
           höchstens 800 Pixel, Favicons auf 256 Pixel im Quadrat). Vergrößert wird nie. Original:

@@ -108,9 +108,7 @@ describe("AiSettings", () => {
   it("schaltet auf Anthropic und setzt bei leerer Adresse die Adresse von Anthropic", async () => {
     const calls = stubFetch();
     render(<AiSettings ai={{ ...ai, base_url: "" }} onChange={() => undefined} />);
-    fireEvent.change(screen.getByLabelText("Art der Schnittstelle"), {
-      target: { value: "anthropic" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Anthropic (Claude)" }));
     expect(screen.getByLabelText("Adresse der Schnittstelle")).toHaveValue(
       "https://api.anthropic.com/v1",
     );

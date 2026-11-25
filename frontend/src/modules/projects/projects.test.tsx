@@ -254,7 +254,7 @@ describe("Seiten", () => {
     expect(screen.getByRole("button", { name: "Neues Projekt" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Neues Projekt" }));
     fireEvent.click(screen.getByRole("button", { name: "Projekt anlegen" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("trag einen Namen ein");
+    expect(screen.getByRole("alert")).toHaveTextContent("Name: Trag einen Namen ein.");
   });
 
   it("zeigt Lesenden keinen Knopf für neue Projekte", async () => {
@@ -331,7 +331,7 @@ describe("Seiten", () => {
     fireEvent.change(text, { target: { value: "Punkt" } });
     fireEvent.click(screen.getByRole("button", { name: "Vorschau" }));
     expect(screen.getByText("Punkt")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(screen.getByRole("button", { name: "Eintrag speichern" }));
     expect(await screen.findByText(/02\.04\.2026 ist gespeichert/)).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       held_on: "2026-04-02",

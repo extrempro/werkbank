@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Field, Segmented } from "../../components/Field";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { errorText } from "../../api";
 import { navigate } from "../../router";
@@ -142,53 +143,58 @@ export function SettingsTab({ project, onSaved }: Props) {
           <h2 id="einstellungen-allgemein">Allgemein</h2>
         </div>
         <div className="detail-body">
-          <label>
-            Name
-            <input
-              type="text"
-              value={name}
-              maxLength={160}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
-          <label>
-            Kurzbeschreibung
-            <input
-              type="text"
-              value={description}
-              maxLength={500}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </label>
           <div className="form-grid">
-            <label>
-              Status
-              <select
-                value={status}
-                onChange={(event) => setStatus(event.target.value as ProjectStatus)}
-              >
-                <option value="geplant">geplant</option>
-                <option value="aktiv">aktiv</option>
-                <option value="pausiert">pausiert</option>
-                <option value="abgeschlossen">abgeschlossen</option>
-              </select>
-            </label>
-            <label>
-              Beginn
-              <input
-                type="date"
-                value={startsOn}
-                onChange={(event) => setStartsOn(event.target.value)}
-              />
-            </label>
-            <label>
-              Ende
-              <input
-                type="date"
-                value={endsOn}
-                onChange={(event) => setEndsOn(event.target.value)}
-              />
-            </label>
+            <Field label="Name" required wide>
+              {(control) => (
+                <input
+                  {...control}
+                  type="text"
+                  value={name}
+                  maxLength={160}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Kurzbeschreibung" wide>
+              {(control) => (
+                <input
+                  {...control}
+                  type="text"
+                  value={description}
+                  maxLength={500}
+                  onChange={(event) => setDescription(event.target.value)}
+                />
+              )}
+            </Field>
+            <Segmented
+              label="Status"
+              wide
+              value={status}
+              options={(["geplant", "aktiv", "pausiert", "abgeschlossen"] as const).map(
+                (value) => ({ value, label: value }),
+              )}
+              onChange={setStatus}
+            />
+            <Field label="Beginn">
+              {(control) => (
+                <input
+                  {...control}
+                  type="date"
+                  value={startsOn}
+                  onChange={(event) => setStartsOn(event.target.value)}
+                />
+              )}
+            </Field>
+            <Field label="Ende">
+              {(control) => (
+                <input
+                  {...control}
+                  type="date"
+                  value={endsOn}
+                  onChange={(event) => setEndsOn(event.target.value)}
+                />
+              )}
+            </Field>
           </div>
           <p className="small">
             Abgeschlossene Projekte bleiben lesbar. Im IT-Budget lassen sich ihnen keine neuen
@@ -285,18 +291,15 @@ export function SettingsTab({ project, onSaved }: Props) {
                     onChange={(event) => setPerson(index, { role: event.target.value })}
                   />
                 </label>
-                <label>
-                  Art
-                  <select
-                    value={person.kind}
-                    onChange={(event) =>
-                      setPerson(index, { kind: event.target.value as PersonKind })
-                    }
-                  >
-                    <option value="intern">intern</option>
-                    <option value="extern">extern</option>
-                  </select>
-                </label>
+                <Segmented
+                  label="Art"
+                  value={person.kind}
+                  options={(["intern", "extern"] as const).map((value) => ({
+                    value,
+                    label: value,
+                  }))}
+                  onChange={(kind: PersonKind) => setPerson(index, { kind })}
+                />
                 <label>
                   Firma oder Abteilung
                   <input

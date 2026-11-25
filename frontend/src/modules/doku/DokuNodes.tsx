@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import { ComboField, type ComboItem } from "../../components/ComboField";
-import { ChoiceCards } from "../../components/Field";
+import { ChoiceCards, Field, Segmented } from "../../components/Field";
+import { ListChoice } from "../../components/ListChoice";
 import { mergeAttributes, Node, type Editor } from "@tiptap/react";
 import { NodeViewWrapper, ReactNodeViewRenderer, type ReactNodeViewProps } from "@tiptap/react";
 import { errorText, formatDateTime } from "../../api";
@@ -356,117 +357,95 @@ export function LiveBlockForm({
         </fieldset>
       )}
       {attrs.kind === "tickets" && (
-        <div className="doku-picker-row">
-          <label>
-            Bereich
-            <select
-              value={attrs.area ?? ""}
-              onChange={(e) => set({ area: number(e.target.value) })}
-            >
-              <option value="">alle deine Bereiche</option>
-              {options?.areas.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Status
-            <select
+        <>
+          <ListChoice
+            label="Bereich"
+            none="Alle deine Bereiche"
+            unit="Bereiche"
+            placeholder="Name des Bereichs …"
+            options={(options?.areas ?? []).map((area) => ({ id: area.id, label: area.name }))}
+            value={attrs.area ? String(attrs.area) : ""}
+            onChange={(value) => set({ area: number(value) })}
+          />
+          <div className="form-grid">
+            <Segmented
+              label="Status"
               value={attrs.status ?? "offen"}
-              onChange={(e) => set({ status: e.target.value as "offen" | "alle" })}
-            >
-              <option value="offen">offen</option>
-              <option value="alle">alle</option>
-            </select>
-          </label>
-          <label className="doku-picker-grow">
-            Stichwort im Betreff
-            <input
-              type="text"
-              maxLength={60}
-              value={attrs.q ?? ""}
-              onChange={(e) => set({ q: e.target.value })}
+              options={[
+                { value: "offen", label: "offen" },
+                { value: "alle", label: "alle" },
+              ]}
+              onChange={(status) => set({ status })}
             />
-          </label>
-        </div>
+            <Field label="Stichwort im Betreff">
+              {(control) => (
+                <input
+                  {...control}
+                  type="text"
+                  maxLength={60}
+                  value={attrs.q ?? ""}
+                  onChange={(e) => set({ q: e.target.value })}
+                />
+              )}
+            </Field>
+          </div>
+        </>
       )}
       {attrs.kind === "geraete" && (
-        <div className="doku-picker-row">
-          <label className="doku-picker-grow">
-            Etage
-            <select
-              value={attrs.floor ?? ""}
-              onChange={(e) => set({ floor: number(e.target.value), room: null })}
-            >
-              <option value="">alle Standorte</option>
-              {options?.floors.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Raum
-            <select
-              value={attrs.room ?? ""}
-              disabled={!floor}
-              onChange={(e) => set({ room: number(e.target.value) })}
-            >
-              <option value="">alle Räume</option>
-              {floor?.rooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Art
-            <select
-              value={attrs.hwkind ?? ""}
-              onChange={(e) => set({ hwkind: number(e.target.value) })}
-            >
-              <option value="">alle Arten</option>
-              {options?.kinds.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        <>
+          <ListChoice
+            label="Etage"
+            none="Alle Standorte"
+            unit="Etagen"
+            placeholder="Name der Etage …"
+            options={(options?.floors ?? []).map((entry) => ({ id: entry.id, label: entry.name }))}
+            value={attrs.floor ? String(attrs.floor) : ""}
+            onChange={(value) => set({ floor: number(value), room: null })}
+          />
+          {floor && (
+            <ListChoice
+              label="Raum"
+              none="Alle Räume"
+              unit="Räume"
+              placeholder="Name des Raums …"
+              options={floor.rooms.map((room) => ({ id: room.id, label: room.name }))}
+              value={attrs.room ? String(attrs.room) : ""}
+              onChange={(value) => set({ room: number(value) })}
+            />
+          )}
+          <ListChoice
+            label="Art"
+            none="Alle Arten"
+            unit="Arten"
+            placeholder="Art des Geräts …"
+            options={(options?.kinds ?? []).map((entry) => ({ id: entry.id, label: entry.name }))}
+            value={attrs.hwkind ? String(attrs.hwkind) : ""}
+            onChange={(value) => set({ hwkind: number(value) })}
+          />
+        </>
       )}
       {attrs.kind === "projekt" && (
-        <label>
-          Projekt
-          <select
-            value={attrs.project ?? ""}
-            onChange={(e) => set({ project: number(e.target.value) })}
-          >
-            <option value="">bitte wählen</option>
-            {options?.projects.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ListChoice
+          label="Projekt"
+          required
+          unit="Projekte"
+          placeholder="Name des Projekts …"
+          options={(options?.projects ?? []).map((entry) => ({ id: entry.id, label: entry.name }))}
+          value={attrs.project ? String(attrs.project) : ""}
+          onChange={(value) => set({ project: number(value) })}
+        />
       )}
       {attrs.kind === "vertraege" && (
-        <label>
-          Zeitraum
-          <select
-            value={attrs.months ?? 6}
-            onChange={(e) => set({ months: Number(e.target.value) as 3 | 6 | 12 })}
-          >
-            <option value={3}>nächste 3 Monate</option>
-            <option value={6}>nächste 6 Monate</option>
-            <option value={12}>nächste 12 Monate</option>
-          </select>
-        </label>
+        <Segmented
+          label="Zeitraum"
+          value={String(attrs.months ?? 6)}
+          options={[
+            { value: "3", label: "nächste 3 Monate" },
+            { value: "6", label: "nächste 6 Monate" },
+            { value: "12", label: "nächste 12 Monate" },
+          ]}
+          onChange={(value) => set({ months: Number(value) as 3 | 6 | 12 })}
+        />
       )}
       <p className="small">
         Jede Person sieht im Baustein nur, was sie im jeweiligen Bereich sehen darf.

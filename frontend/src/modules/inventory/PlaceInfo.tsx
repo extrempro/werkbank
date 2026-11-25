@@ -191,7 +191,7 @@ function SpotEditor({
             />
           </label>
           <button type="submit" className="button button-secondary" disabled={busy}>
-            Speichern
+            Platz speichern
           </button>
         </form>
       </details>

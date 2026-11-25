@@ -35,7 +35,16 @@ import {
   type Whereabouts,
   locationItem,
 } from "./api";
-import { deviceInput, DeviceFormFields, deviceProblem, type DeviceFields } from "./HardwarePage";
+import { deviceInput, DeviceFormFields, deviceProblems, type DeviceFields } from "./HardwarePage";
+import {
+  ErrorSummary,
+  Field,
+  problemFor,
+  RequiredNote,
+  Segmented,
+  type Problem,
+} from "../../components/Field";
+import { ListChoice } from "../../components/ListChoice";
 import { LocationPanel, PlaceLine } from "./PlaceInfo";
 import { Feedback } from "../../components/Feedback";
 
@@ -74,12 +83,13 @@ function EditForm({
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tried, setTried] = useState(false);
+  const problems = tried ? deviceProblems(fields) : [];
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    const problem = deviceProblem(fields);
-    if (problem) {
-      setError(problem);
+    setTried(true);
+    if (deviceProblems(fields).length > 0) {
       return;
     }
     setBusy(true);
@@ -91,16 +101,19 @@ function EditForm({
 
   return (
     <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
+      <RequiredNote />
+      <ErrorSummary problems={problems} />
       <DeviceFormFields
         master={master}
         fromNinja={device.ninja?.ninja_id != null}
         value={fields}
         onChange={setFields}
+        problems={problems}
       />
       <ErrorBox text={error} />
-      <div className="project-actions">
+      <div className="form-actions">
         <button type="submit" className="button button-primary" disabled={busy}>
-          Speichern
+          Änderungen speichern
         </button>
         <button type="button" className="button button-secondary" onClick={() => onDone(null)}>
           Abbrechen
@@ -160,23 +173,24 @@ function InventoryNoForm({
 
   return (
     <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-      <label className="narrow">
-        Inventurnummer
-        <input
-          type="text"
-          value={value}
-          maxLength={40}
-          autoComplete="off"
-          spellCheck={false}
-          disabled={busy}
-          onChange={(event) => setValue(event.target.value)}
-        />
-      </label>
-      <p className="small">Leer lassen, um die Inventurnummer zu entfernen.</p>
+      <Field label="Inventurnummer" hint="Leer lassen, um die Inventurnummer zu entfernen.">
+        {(control) => (
+          <input
+            {...control}
+            type="text"
+            value={value}
+            maxLength={40}
+            autoComplete="off"
+            spellCheck={false}
+            disabled={busy}
+            onChange={(event) => setValue(event.target.value)}
+          />
+        )}
+      </Field>
       <ErrorBox text={error} />
-      <div className="project-actions">
+      <div className="form-actions">
         <button type="submit" className="button button-primary" disabled={busy}>
-          Weiter
+          {next ? "Inventurnummer übernehmen" : "Inventurnummer entfernen"}
         </button>
         <button type="button" className="button button-secondary" onClick={() => onDone(null)}>
           Abbrechen
@@ -204,23 +218,30 @@ function RetireForm({
   const [ask, dialog] = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tried, setTried] = useState(false);
+  const all: Problem[] = [];
+  if (!reasonId) {
+    all.push({ id: "ausmustern-grund", label: "Grund", text: "Wähle einen Grund." });
+  }
+  if (!whereabouts) {
+    all.push({ id: "ausmustern-verbleib", label: "Verbleib", text: "Wähle den Verbleib." });
+  }
+  if (!day) {
+    all.push({ id: "ausmustern-datum", label: "Datum", text: "Trag ein Datum ein." });
+  }
+  if (device.has_storage && !wiped) {
+    all.push({
+      id: "ausmustern-geloescht",
+      label: "Datenträger",
+      text: "Bestätige, dass der Datenträger gelöscht oder vernichtet ist.",
+    });
+  }
+  const problems = tried ? all : [];
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!reasonId) {
-      setError("Bitte wähle einen Grund.");
-      return;
-    }
-    if (!whereabouts) {
-      setError("Bitte wähle den Verbleib.");
-      return;
-    }
-    if (!day) {
-      setError("Bitte trag ein Datum ein.");
-      return;
-    }
-    if (device.has_storage && !wiped) {
-      setError("Bitte bestätige, dass der Datenträger gelöscht oder vernichtet ist.");
+    setTried(true);
+    if (all.length > 0) {
       return;
     }
     setError(null);
@@ -253,73 +274,80 @@ function RetireForm({
 
   return (
     <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-      <div className="tool-row">
-        <label>
-          Grund
-          <select
-            value={reasonId}
-            disabled={busy}
-            onChange={(event) => setReasonId(event.target.value)}
-          >
-            <option value="">Bitte wählen</option>
-            {master.reasons.map((reason) => (
-              <option key={reason.id} value={String(reason.id)}>
-                {reason.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Verbleib
-          <select
-            value={whereabouts}
-            disabled={busy}
-            onChange={(event) => setWhereabouts(event.target.value as Whereabouts | "")}
-          >
-            <option value="">Bitte wählen</option>
-            {(Object.keys(WHEREABOUTS_LABELS) as Whereabouts[]).map((key) => (
-              <option key={key} value={key}>
-                {WHEREABOUTS_LABELS[key]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="narrow">
-          Datum
-          <input
-            type="date"
-            value={day}
-            max={today()}
-            disabled={busy}
-            onChange={(event) => setDay(event.target.value)}
-          />
-        </label>
+      <RequiredNote />
+      <ErrorSummary problems={problems} />
+      <div className="form-grid">
+        <ListChoice
+          label="Grund"
+          id="ausmustern-grund"
+          required
+          unit="Gründe"
+          placeholder="Grund …"
+          options={master.reasons.map((reason) => ({ id: reason.id, label: reason.name }))}
+          value={reasonId}
+          onChange={setReasonId}
+          error={problemFor(problems, "ausmustern-grund")}
+        />
+        <Segmented
+          label="Verbleib"
+          id="ausmustern-verbleib"
+          required
+          wide
+          value={whereabouts}
+          options={(Object.keys(WHEREABOUTS_LABELS) as Whereabouts[]).map((key) => ({
+            value: key,
+            label: WHEREABOUTS_LABELS[key],
+          }))}
+          onChange={setWhereabouts}
+          error={problemFor(problems, "ausmustern-verbleib")}
+        />
+        <Field
+          label="Datum"
+          id="ausmustern-datum"
+          required
+          error={problemFor(problems, "ausmustern-datum")}
+        >
+          {(control) => (
+            <input
+              {...control}
+              type="date"
+              value={day}
+              max={today()}
+              disabled={busy}
+              onChange={(event) => setDay(event.target.value)}
+            />
+          )}
+        </Field>
       </div>
       {device.has_storage && (
         <label className="check-label">
           <input
+            id="ausmustern-geloescht"
             type="checkbox"
             checked={wiped}
             disabled={busy}
+            aria-invalid={problemFor(problems, "ausmustern-geloescht") ? true : undefined}
             onChange={(event) => setWiped(event.target.checked)}
           />
           Der Datenträger ist gelöscht oder vernichtet.
         </label>
       )}
-      <label>
-        Notiz (freiwillig), z. B. Nummer des Entsorgungsnachweises
-        <input
-          type="text"
-          value={note}
-          maxLength={300}
-          disabled={busy}
-          onChange={(event) => setNote(event.target.value)}
-        />
-      </label>
+      <Field label="Notiz" hint="freiwillig, z. B. Nummer des Entsorgungsnachweises">
+        {(control) => (
+          <input
+            {...control}
+            type="text"
+            value={note}
+            maxLength={300}
+            disabled={busy}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        )}
+      </Field>
       <ErrorBox text={error} />
-      <div className="project-actions">
+      <div className="form-actions">
         <button type="submit" className="button button-primary" disabled={busy}>
-          Weiter
+          Gerät ausmustern
         </button>
         <button type="button" className="button button-secondary" onClick={() => onDone(null)}>
           Abbrechen

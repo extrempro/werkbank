@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
+import { Segmented } from "../components/Field";
 import {
   errorText,
   saveAuditRetention,
@@ -174,16 +175,13 @@ export function GeneralSettings({ settings, onChange, parts = ALL_PARTS }: Gener
                   onChange={(event) => setPort(event.target.value)}
                 />
               </label>
-              <label>
-                Verschlüsselung
-                <select value={security} onChange={(event) => setSecurity(event.target.value)}>
-                  {SECURITY_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Segmented
+                label="Verschlüsselung"
+                wide
+                value={security}
+                options={SECURITY_OPTIONS}
+                onChange={setSecurity}
+              />
               <label>
                 Absenderadresse
                 <input
