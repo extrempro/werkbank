@@ -134,6 +134,9 @@ test("Doku: Seite anlegen, schreiben, Versionen, Rechte, Sperren und Papierkorb"
       { timeout: 10_000 },
     )
     .toContain("Toner bestellen");
+  // Das Baustein-Menü hat die Seite so weit gerückt, dass es ganz zu sehen war. Oben liegt
+  // dann einiges unter der festen Kopfzeile, was axe als verdeckt meldet: erst nach oben.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
 
   // Im Seitenbaum
@@ -485,4 +488,76 @@ test("Doku: Seite verschieben, Unterseiten wandern mit", async ({
   expect(
     ((await child.json()) as { parent_id: string | null }).parent_id,
   ).not.toBeNull();
+});
+
+test("Doku: Baustein-Menü erscheint an der Schreibmarke, die Seite springt nicht", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const editor = await apiAs(browser, ["Doku.Nutzer"], s.editor);
+  const created = await editor.post("/api/doku/pages", {
+    data: { space_id: s.spaceId, title: `Lang ${stamp}` },
+    headers: HEADERS,
+  });
+  const id = ((await created.json()) as { id: string }).id;
+  const paragraphs = Array.from({ length: 40 }, (_, index) => ({
+    type: "paragraph",
+    content: [{ type: "text", text: `Absatz ${index + 1}` }],
+  }));
+  const saved = await editor.put(`/api/doku/pages/${id}`, {
+    data: {
+      title: `Lang ${stamp}`,
+      revision: 1,
+      content: { type: "doc", content: [...paragraphs, { type: "paragraph" }] },
+    },
+    headers: HEADERS,
+  });
+  expect(saved.status()).toBe(200);
+
+  await loginAs(page, ["Doku.Nutzer"], s.editor);
+  await page.goto(`/doku/seite/${id}`);
+  const content = page.locator(".doku-content");
+  await expect(content.getByText("Absatz 40")).toBeVisible();
+  const last = content.locator("p").last();
+  await last.scrollIntoViewIfNeeded();
+  await last.click();
+  const before = await page.evaluate(() => window.scrollY);
+  expect(before).toBeGreaterThan(200);
+
+  await page.keyboard.press("/");
+  const search = page.getByRole("combobox", { name: "Baustein suchen" });
+  await expect(search).toBeFocused();
+  // Das Menü steht direkt unter der Zeile, nicht oben über dem Text. Die Seite rückt höchstens
+  // so weit, dass das Menü ganz zu sehen ist; die Zeile bleibt im Blick.
+  const menu = page.locator(".doku-popover");
+  await expect(menu).toBeInViewport({ ratio: 0.95 });
+  await expect(last).toBeInViewport();
+  const lineBox = (await last.boundingBox())!;
+  const menuBox = (await menu.boundingBox())!;
+  expect(menuBox.y).toBeGreaterThanOrEqual(lineBox.y + lineBox.height - 1);
+  expect(menuBox.y - (lineBox.y + lineBox.height)).toBeLessThan(20);
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(
+    before,
+  );
+  await expectNoA11yViolations(page);
+
+  await search.fill("Überschrift 2");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type(`Neu ${stamp}`);
+  const heading = content.getByRole("heading", {
+    level: 2,
+    name: `Neu ${stamp}`,
+  });
+  await expect(heading).toBeVisible();
+  // Die Überschrift steht hinter „Absatz 40“, nicht oben auf der Seite
+  const after = await content.evaluate((node, title) => {
+    const blocks = [...node.querySelectorAll("p, h2")];
+    const last = blocks.findIndex((el) => el.textContent === "Absatz 40");
+    const added = blocks.findIndex((el) => el.textContent === title);
+    return added > last;
+  }, `Neu ${stamp}`);
+  expect(after).toBe(true);
+  await expect(heading).toBeInViewport();
 });

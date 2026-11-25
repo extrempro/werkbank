@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.126.1] – 2026-11-25
+
+### Behoben
+
+- **Dokumentation, Baustein-Menü:** Das Menü (und die Formulare für Verweis und Live-Baustein) erscheint jetzt direkt unter der Schreibmarke statt oben über dem Text. Bisher sprang die Seite beim Einfügen weiter unten ganz nach oben. Die Seite rückt nur so weit, dass das Menü ganz zu sehen ist.
+- **Baustein-Liste:** Die Einträge überlappten sich (Name und Beschreibung liefen ineinander, die Markierung deckte nur die erste Zeile). Jetzt hat jeder Eintrag seine eigene Zeile mit Abstand.
+
 ## [0.126.0] – 2026-11-25
 
 > **Vor dem Update:** Neues Docker-Secret `backup_key` anlegen (`deploy/README.md`, Secrets anlegen, Schritt 2b). Ohne die Datei startet Compose nicht.

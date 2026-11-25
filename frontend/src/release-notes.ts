@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.126.1",
+    date: "2026-11-25",
+    summary: "Dokumentation: Bausteine einfügen ohne Springen.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Das Menü für Bausteine erscheint jetzt direkt unter der Stelle, an der du schreibst. Die Seite springt beim Einfügen nicht mehr ganz nach oben.",
+          "Die Liste der Bausteine ist wieder ordentlich: Name und Beschreibung stehen sauber untereinander.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.126.0",
     date: "2026-11-25",
     summary: "Neu: Datensicherung in der Verwaltung.",
