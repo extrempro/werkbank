@@ -31,14 +31,22 @@ test("Bereichsleiste und Seitenmenü mit Gruppen zum Aufklappen", async ({
     "Evergreen",
     "IT-Monitoring",
     "IT-Budget",
-    "Verwaltung",
   ]);
   const bar = page.getByRole("navigation", { name: "Bereiche" });
   await expect(bar.getByRole("link", { name: "Start" })).toHaveAttribute(
     "aria-current",
     "true",
   );
-  await expect(bar.getByRole("link", { name: "Handbuch" })).toBeVisible();
+  // Handbuch und Verwaltung stehen im Kontomenü, nicht in der Bereichsleiste
+  await expect(bar.getByRole("link", { name: "Handbuch" })).toHaveCount(0);
+  const account = await openAccountMenu(page);
+  await expect(
+    account.getByRole("menuitem", { name: "Handbuch" }),
+  ).toBeVisible();
+  await expect(
+    account.getByRole("menuitem", { name: "Verwaltung" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
 
   await bar.getByRole("link", { name: /^IT-Budget/ }).click();
   await expect(page).toHaveURL(/\/budget$/);

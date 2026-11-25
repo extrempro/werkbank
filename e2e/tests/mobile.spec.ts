@@ -35,7 +35,8 @@ test("Handy: Leiste unten, Menü als Blatt mit allen Bereichen", async ({
   await sheet.getByRole("button", { name: "Alle Bereiche" }).click();
   const all = page.getByRole("dialog", { name: "Alle Bereiche" });
   await expect(all.getByRole("button", { name: /^IT-Budget/ })).toBeVisible();
-  await expect(all.getByRole("link", { name: "Handbuch" })).toBeVisible();
+  // Das Handbuch steht im Kontomenü oben rechts
+  await expect(all.getByRole("link", { name: "Handbuch" })).toHaveCount(0);
   await all.getByRole("button", { name: /^Evergreen/ }).click();
   const evergreen = page.getByRole("dialog", { name: "Evergreen" });
   await evergreen.getByRole("link", { name: /^Microsoft 365/ }).click();

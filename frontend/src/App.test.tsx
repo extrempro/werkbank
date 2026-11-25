@@ -47,10 +47,8 @@ describe("App", () => {
       "aria-current",
       "true",
     );
-    expect(within(bar).getByRole("link", { name: "Handbuch" })).toHaveAttribute(
-      "href",
-      "/handbuch",
-    );
+    // Das Handbuch steht im Kontomenü, nicht in der Bereichsleiste
+    expect(within(bar).queryByRole("link", { name: "Handbuch" })).toBeNull();
     expect(screen.getByRole("link", { name: "Meine Aufgaben" })).toHaveAttribute("href", "/");
     fireEvent.click(screen.getByRole("button", { name: "Menü einklappen" }));
     expect(screen.queryByRole("navigation", { name: "Seiten: Start" })).toBeNull();

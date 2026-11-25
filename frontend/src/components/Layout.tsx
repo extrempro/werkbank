@@ -107,12 +107,7 @@ import { MasterDataPage } from "../modules/inventory/MasterDataPage";
 import { parseProjectPath } from "../modules/projects/api";
 import { ProjectPage } from "../modules/projects/ProjectPage";
 import { ProjectsPage } from "../modules/projects/ProjectsPage";
-import {
-  areasFor as areasForHandbook,
-  findTopic,
-  HANDBOOK_PATH,
-  parseHandbookPath,
-} from "../handbook";
+import { areasFor as areasForHandbook, findTopic, parseHandbookPath } from "../handbook";
 import { HandbookMenu } from "./nav/HandbookMenu";
 import { DokuAdminPage } from "../modules/doku/DokuAdminPage";
 import { DokuMenu } from "../modules/doku/DokuMenu";
@@ -721,11 +716,9 @@ export function Layout({ me }: LayoutProps) {
               areas={areas}
               currentId={handbookRoute ? undefined : currentArea?.id}
               hasOpen={hasOpen}
-              handbookOpen={path.startsWith(HANDBOOK_PATH)}
               collapsed={collapsed}
               sideMenuId={sideMenuId}
               onArea={onArea}
-              onHandbook={(event) => onNavClick(event, HANDBOOK_PATH)}
               onExpand={() => setMenu(false)}
             />
             {handbookRoute && (

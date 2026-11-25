@@ -108,11 +108,11 @@ export const AREAS: readonly Area[] = [
                 kind: "list",
                 items: [
                   "Kopfzeile: Name der Werkbank, Suchfeld, Glocke für Benachrichtigungen, „Meine Aufgaben“ und rechts dein Kontomenü.",
-                  "Bereichsleiste ganz links: ein Symbol je Bereich, zum Beispiel Start, M365, Evergreen, Monitoring, Bestand, Budget, Projekte und Tools. Fährst du mit der Maus darüber, steht der volle Name da. Ganz unten stehen Verwaltung (nur für Admins) und das Handbuch.",
+                  "Bereichsleiste ganz links: ein Symbol je Bereich, zum Beispiel Start, M365, Evergreen, Monitoring, Bestand, Budget, Projekte und Tools. Fährst du mit der Maus darüber, steht der volle Name da. Handbuch und Verwaltung findest du im Kontomenü oben rechts.",
                   "Ein Punkt an einem Symbol zeigt: In diesem Bereich warten Aufgaben auf dich.",
                   "Seitenmenü daneben: oben der Name des Bereichs, darunter seine Seiten in Gruppen. Eine Gruppe klappst du mit einem Klick auf ihre Überschrift auf oder zu; dein Browser merkt sich das. Zähler zeigen, wie viele Aufgaben auf einer Seite warten.",
                   "„Menü einklappen“ unten im Seitenmenü lässt nur die Bereichsleiste stehen. Ein Klick auf einen Bereich öffnet das Menü wieder.",
-                  "Kontomenü oben rechts: Konto, Release Notes, hell, dunkel oder automatisch, „Zuletzt besucht leeren“ und „Abmelden“.",
+                  "Kontomenü oben rechts: Konto, Release Notes, Handbuch, Verwaltung (nur für Admins), hell, dunkel oder automatisch, „Zuletzt besucht leeren“ und „Abmelden“.",
                   "Auf dem Handy steht unten eine Leiste mit Start, Suche, Aufgaben und Menü. „Menü“ zeigt erst die Seiten des aktuellen Bereichs; über „Alle Bereiche“ kommst du in jeden anderen.",
                   "Bei Aktionen mit Folgen, etwa Löschen, Buchen, Abschließen, Freigeben oder andere Geräte abmelden, fragt die Werkbank in einem eigenen Fenster nach, am Handy als Blatt von unten. Dort steht, was genau passiert. Lässt sich etwas nicht rückgängig machen, ist der Knopf rot und es steht ein Hinweis dabei. „Abbrechen“, Esc, ein Klick daneben oder am Handy Wischen nach unten brechen ab.",
                   "Meldungen nach einer Aktion, zum Beispiel „gespeichert“ oder ein Fehler, erscheinen unten in der Mitte des Bildschirms, am Handy über der Leiste unten. So siehst du sie auch auf langen Seiten. Erfolgsmeldungen verschwinden nach ein paar Sekunden von selbst, solange die Maus nicht darauf steht; Fehler bleiben stehen, bis du sie mit „×“ schließt.",
@@ -2448,7 +2448,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Die Verwaltung ist ein eigener Bereich in der Navigation, nur für Admins. Sie verlangt eine frische Anmeldung (siehe „Anmelden und abmelden“). Die Einstellungen verteilen sich auf diese Seiten:",
+                text: "Die Verwaltung öffnest du über das Kontomenü oben rechts, nur für Admins; ihre Seiten stehen dann links im Menü. Sie verlangt eine frische Anmeldung (siehe „Anmelden und abmelden“). Die Einstellungen verteilen sich auf diese Seiten:",
               },
               {
                 kind: "terms",
