@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.133.0] – 2026-11-25
+
+### Neu
+
+- **Masken und Suche einheitlich:** neue Regel in `CLAUDE.md` und Abschnitt 8 „Masken und Suche“ in `docs/design.md` (Suche in Echtzeit mit schwebendem Fenster, Feldaufbau, Fehler, Auswahl nach Anzahl der Möglichkeiten, haftende Knöpfe, schwebende Fenster). Gemeinsame Komponenten: `components/Field.tsx` (`Field`, `ChoiceCards`, `ErrorSummary`, `RequiredNote`), `components/ComboField.tsx`, `components/SearchField.tsx`, `components/floating.ts` (Lage über `position: fixed`, klappt nach oben, bleibt unter der Kopfzeile und über der Leiste am Handy), `FormStep` nach `components/FormStep.tsx`.
+- **Auswahl mit Suche** (Stellen, Arbeitsplätze, Räume, Geräte, Partner, Verträge, Zabbix-Hosts, Einstellungen in Evergreen) nutzt `ComboField`: Treffer schweben über dem Inhalt statt im Fluss, Zählzeile, Pflicht mit „*“ und `aria-required` statt „(Pflicht)“ im Namen.
+- **Suchfelder der `FilterBar`** mit Lupe und „✕“ zum Leeren; das schwebende Trefferfenster (`search.hits`) bauen die Seiten nach und nach ein.
+
 ## [0.132.1] – 2026-11-25
 
 ### Sicherheit

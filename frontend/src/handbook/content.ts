@@ -235,6 +235,10 @@ export const AREAS: readonly Area[] = [
                   "Budgetposten findest du über ihre Nummer, z. B. BP-2026-012, über Name, Notiz und Tag.",
                 ],
               },
+              {
+                kind: "text",
+                text: "Suchfelder über Listen suchen beim Tippen; mit „✕“ leerst du sie. Felder, in denen du aus vielen Einträgen wählst (zum Beispiel Raum, Stelle, Gerät, Partner oder Vertrag), öffnen schon beim Antippen ein Fenster über der Seite: oben steht, wie viele Einträge es gibt, jedes Zeichen grenzt sofort ein. Mit den Pfeiltasten wählst du, Enter übernimmt, Esc oder ein Klick daneben schließt das Fenster. Gewählt steht der Eintrag mit „Ändern“ da. Pflichtfelder sind mit „*“ markiert.",
+              },
             ],
             links: [{ to: "/suche", label: "Zur Suche" }],
           },

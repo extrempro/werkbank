@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
+import { SearchField, type SearchHit } from "./SearchField";
 import { useModal } from "./nav/useModal";
 
 /** Ab dieser Breite abwärts gilt die Handy-Darstellung (wie Leiste unten und Menü-Blatt). */
@@ -36,6 +37,10 @@ interface FilterBarProps<T extends string> {
     value: string;
     placeholder?: string;
     onChange: (value: string) => void;
+    /** Treffer für das schwebende Fenster (höchstens fünf werden gezeigt); ohne: kein Fenster */
+    hits?: readonly SearchHit[];
+    /** Zahl aller Treffer in der Liste */
+    total?: number;
   };
   /** Status: am Computer als Chips, am Handy als Auswahl (siehe `statusSelect`). */
   status?: {
@@ -153,15 +158,15 @@ export function FilterBar<T extends string>({
       <div className="filter-row">
         {search && (
           <div className="filter-search">
-            <label htmlFor={searchId}>{search.label}</label>
-            <input
+            <SearchField
               id={searchId}
-              type="search"
+              label={search.label}
               value={search.value}
-              maxLength={100}
               placeholder={search.placeholder}
-              autoComplete="off"
-              onChange={(event) => search.onChange(event.target.value)}
+              onChange={search.onChange}
+              hits={search.hits}
+              total={search.total}
+              noPanel={!search.hits}
             />
           </div>
         )}

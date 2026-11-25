@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.133.0",
+    date: "2026-11-25",
+    summary: "Einheitlichere Suche und Auswahl.",
+    sections: [
+      {
+        area: "Überall",
+        entries: [
+          "Felder, in denen du aus vielen Einträgen wählst (zum Beispiel Raum, Stelle, Gerät, Partner oder Vertrag), öffnen ein Fenster über der Seite. Oben steht, wie viele Einträge es gibt; jedes Zeichen grenzt sofort ein.",
+          "Das Fenster schiebt die Seite nicht mehr nach unten und schließt, sobald du daneben klickst.",
+          "Suchfelder über Listen haben eine Lupe und ein „✕“ zum Leeren.",
+          "Pflichtfelder sind mit „*“ markiert.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.132.1",
     date: "2026-11-25",
     summary: "Snapshots exportieren nur noch Admins.",
