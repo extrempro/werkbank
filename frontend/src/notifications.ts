@@ -102,7 +102,9 @@ export function toggleChannel(
 
 /** Nur Pfade innerhalb der Werkbank sind als Ziel erlaubt. */
 export function safeLink(link: string): string {
-  return link.startsWith("/") && !link.startsWith("//") ? link : NOTIFICATIONS_PATH;
+  return link.startsWith("/") && !link.startsWith("//") && !link.includes("\\")
+    ? link
+    : NOTIFICATIONS_PATH;
 }
 
 const relative = new Intl.RelativeTimeFormat("de-DE", { numeric: "auto" });

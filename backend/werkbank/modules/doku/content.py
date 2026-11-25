@@ -84,8 +84,11 @@ def _valid_href(value: object) -> bool:
     if any(ord(ch) < 32 for ch in value):
         return False
     lower = value.lower()
-    # Links innerhalb der Werkbank (z. B. auf eine andere Seite) oder https und mailto
-    return lower.startswith(LINK_SCHEMES) or (value.startswith("/") and not value.startswith("//"))
+    # Links innerhalb der Werkbank (z. B. auf eine andere Seite) oder https und mailto.
+    # Kein Backslash in Pfaden: Browser lesen „/\host“ wie „//host“ (fremde Seite).
+    return lower.startswith(LINK_SCHEMES) or (
+        value.startswith("/") and not value.startswith("//") and "\\" not in value
+    )
 
 
 _MARKS: dict[str, dict[str, Any]] = {

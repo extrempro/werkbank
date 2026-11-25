@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.125.1] – 2026-11-24
+
+### Sicherheit
+
+Sicherheitsprüfung nach OWASP ASVS 5.0 Stufe 2 mit unabhängigem Prüfer (Bericht in `docs/security/asvs-l2.md`).
+
+- **Doku-Links mit Backslash abgelehnt (E1/P1):** Ein Link wie `/\example.com` sah intern aus, führte im Browser aber auf eine fremde Seite. Server und Editor lassen in Pfaden keinen Backslash mehr zu, ebenso die Ziele von Benachrichtigungen.
+- **Rechte vergeben nur mit frischer Anmeldung (E2):** Rollen in Ticket-Bereichen vergeben und entziehen (auch beim Anlegen eines Bereichs), Personen eines Doku-Arbeitsbereichs ändern und Seitenrechte zurücksetzen verlangen jetzt wie die Verwaltung eine Anmeldung der letzten 15 Minuten. Bisher konnte sich die Ticket- bzw. Doku-Verwaltung ohne erneute Anmeldung selbst Zugriff verschaffen.
+- **Abmelden nur per POST (P2):** `GET /auth/logout` meldet niemanden mehr ab; ein fremder Link oder eine Weiterleitung kann so keine Abmeldung erzwingen. Die Oberfläche nutzte schon immer POST.
+- **Test-Pfade der Tickets nur in Testumgebungen (E3):** `/api/tickets/test/*` wird in Produktion gar nicht mehr eingebunden (bisher eingebunden, aber mit 404).
+
 ## [0.125.0] – 2026-11-24
 
 ### Dokumentation

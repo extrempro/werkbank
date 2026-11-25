@@ -36,3 +36,23 @@ def test_ready_with_database(migrated_db: None) -> None:
     response = client.get("/health/ready")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_test_routes_only_in_test_environment() -> None:
+    """Die Hilfspfade für automatische Tests gibt es in Produktion gar nicht."""
+    from starlette.routing import NoMatchFound
+
+    from werkbank.config import Settings
+
+    production = create_app(
+        Settings(public_url="https://werkbank.example.test", environment="production")
+    )
+    for name in ("test_mail", "test_outbox", "test_membership"):
+        with pytest.raises(NoMatchFound):
+            production.url_path_for(name)
+    test = create_app(
+        Settings(
+            public_url="https://werkbank.example.test", environment="test", enable_test_login=True
+        )
+    )
+    assert test.url_path_for("test_mail") == "/api/tickets/test/mail"

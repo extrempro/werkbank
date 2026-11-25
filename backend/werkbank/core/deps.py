@@ -47,6 +47,21 @@ def require_roles(*roles: str) -> Callable[[CurrentUser], CurrentUser]:
     return dependency
 
 
+def check_recent_login(user: CurrentUser, settings: Settings) -> None:
+    """403 mit Hinweis auf erneute Anmeldung, wenn die Anmeldung älter als STEP_UP_MINUTES ist.
+
+    Für Endpunkte, die nur in manchen Fällen eine frische Anmeldung brauchen (z. B. nur, wenn
+    sich Rechte ändern).
+    """
+    limit = user.authenticated_at + timedelta(minutes=settings.step_up_minutes)
+    if now_utc() >= limit:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Erneute Anmeldung erforderlich",
+            headers={STEP_UP_HEADER: "required"},
+        )
+
+
 def require_recent_login(*roles: str) -> Callable[[CurrentUser, Settings], CurrentUser]:
     """Wie require_roles, zusätzlich darf die Anmeldung höchstens STEP_UP_MINUTES alt sein."""
     role_check = require_roles(*roles)
@@ -54,13 +69,7 @@ def require_recent_login(*roles: str) -> Callable[[CurrentUser, Settings], Curre
     def dependency(
         user: Annotated[CurrentUser, Depends(role_check)], settings: SettingsDep
     ) -> CurrentUser:
-        limit = user.authenticated_at + timedelta(minutes=settings.step_up_minutes)
-        if now_utc() >= limit:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Erneute Anmeldung erforderlich",
-                headers={STEP_UP_HEADER: "required"},
-            )
+        check_recent_login(user, settings)
         return user
 
     return dependency

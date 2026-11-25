@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from werkbank.core.audit import write_audit
-from werkbank.core.deps import DbDep
+from werkbank.core.deps import DbDep, SettingsDep, check_recent_login
 from werkbank.modules.doku.access import AdminDep, DokuAccess, not_found
 from werkbank.modules.doku.api import (
     MembersIn,
@@ -19,6 +19,7 @@ from werkbank.modules.doku.api import (
     PersonRightIn,
     _clean_line,
     _members,
+    members_changed,
     replace_members,
 )
 from werkbank.modules.doku.collab import reset_space
@@ -153,7 +154,10 @@ def list_spaces(access: AdminDep, db: DbDep) -> list[SpaceOut]:
 
 
 @router.post("/spaces", status_code=status.HTTP_201_CREATED)
-def create_space(body: SpaceIn, access: AdminDep, db: DbDep) -> SpaceOut:
+def create_space(body: SpaceIn, access: AdminDep, db: DbDep, settings: SettingsDep) -> SpaceOut:
+    if body.members:
+        # Rechte vergeben: nur mit frischer Anmeldung
+        check_recent_login(access.user, settings)
     _name_taken(db, body.name, None)
     space = DokuSpace(name=body.name, description=body.description, archived=body.archived)
     db.add(space)
@@ -167,11 +171,18 @@ def create_space(body: SpaceIn, access: AdminDep, db: DbDep) -> SpaceOut:
 
 @router.put("/spaces/{space_id}")
 def update_space(
-    space_id: Annotated[int, Path(ge=1)], body: SpaceIn, access: AdminDep, db: DbDep
+    space_id: Annotated[int, Path(ge=1)],
+    body: SpaceIn,
+    access: AdminDep,
+    db: DbDep,
+    settings: SettingsDep,
 ) -> SpaceOut:
     space = db.get(DokuSpace, space_id)
     if space is None:
         raise not_found("Arbeitsbereich")
+    if members_changed(db, space.id, body.members):
+        # Rechte vergeben: nur mit frischer Anmeldung; Name und Beschreibung gehen ohne
+        check_recent_login(access.user, settings)
     _name_taken(db, body.name, space.id)
     space.name = body.name
     space.description = body.description
@@ -241,8 +252,11 @@ def own_rights_pages(access: AdminDep, db: DbDep) -> list[OwnRightsPage]:
 
 
 @router.post("/pages/{page_id}/reset-rights")
-def reset_rights(page_id: uuid.UUID, access: AdminDep, db: DbDep) -> dict[str, bool]:
-    """Eigene Rechte entfernen: Es gilt wieder der Arbeitsbereich."""
+def reset_rights(
+    page_id: uuid.UUID, access: AdminDep, db: DbDep, settings: SettingsDep
+) -> dict[str, bool]:
+    """Eigene Rechte entfernen: Es gilt wieder der Arbeitsbereich (frische Anmeldung nötig)."""
+    check_recent_login(access.user, settings)
     page = db.get(DokuPage, page_id)
     if page is None or page.deleted_at is not None:
         raise not_found()

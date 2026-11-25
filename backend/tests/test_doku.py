@@ -14,7 +14,9 @@ from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
 from werkbank.core.app_settings import set_setting
-from werkbank.core.sessions import now_utc
+from werkbank.core.deps import STEP_UP_HEADER
+from werkbank.core.models import UserSession
+from werkbank.core.sessions import SESSION_COOKIE, hash_token, now_utc
 from werkbank.main import create_app
 from werkbank.modules.doku.content import ContentError, clean_content
 from werkbank.modules.doku.models import (
@@ -194,6 +196,11 @@ def test_content_whitelist() -> None:
     }
     with pytest.raises(ContentError):
         clean_content({"type": "doc", "content": [{"type": "paragraph", "content": [bad_link]}]})
+    # Browser lesen „/\host“ wie „//host“: Backslash in Pfaden ist nicht erlaubt
+    for href in ("/\\evil.example", "/doku\\..\\x", "//evil.example"):
+        foreign = {**bad_link, "marks": [{"type": "link", "attrs": {"href": href}}]}
+        with pytest.raises(ContentError):
+            clean_content({"type": "doc", "content": [{"type": "paragraph", "content": [foreign]}]})
     with pytest.raises(ContentError):
         clean_content({"type": "doc", "content": [{"type": "heading", "attrs": {"level": 7}}]})
     deep: dict[str, Any] = {"type": "paragraph"}
@@ -427,3 +434,46 @@ def test_people_search_needs_edit(db: Session, space: int) -> None:
     found = ina.get(f"{BASE}/people", params={"q": "ina"})
     assert found.status_code == 200 and found.json()[0]["oid"] == "abc-1"
     assert client_for("Lea Leser").get(f"{BASE}/people", params={"q": "ina"}).status_code == 403
+
+
+def age_login(db: Session, client: TestClient) -> None:
+    """Anmeldung älter machen als die Grenze für die frische Anmeldung (Step-up)."""
+    token = client.cookies.get(SESSION_COOKIE) or ""
+    db.execute(
+        update(UserSession)
+        .where(UserSession.token_hash == hash_token(token))
+        .values(authenticated_at=now_utc() - timedelta(minutes=16))
+    )
+    db.commit()
+
+
+@pytest.mark.db
+def test_granting_rights_needs_recent_login(db: Session, space: int) -> None:
+    admin = client_for("Ada Admin", ["Doku.Admin"])
+    ina = client_for("Ina Beispiel")
+    for client in (admin, ina):
+        age_login(db, client)
+    page = new_page(client_for("Max Muster"), space, "Seite")
+    members = [
+        member("Ina Beispiel", "manage"),
+        member("Max Muster", "edit"),
+        member("Lea Leser", "read"),
+    ]
+    # Name ändern ohne neue Rechte geht weiter ohne erneute Anmeldung
+    renamed = admin.put(f"{ADMIN}/spaces/{space}", json={"name": "IT neu", "members": members})
+    assert renamed.status_code == 200, renamed.text
+    # Sich selbst (oder andere) eintragen verlangt eine frische Anmeldung
+    grab = {"name": "IT neu", "members": [*members, member("Ada Admin", "manage")]}
+    stale = admin.put(f"{ADMIN}/spaces/{space}", json=grab)
+    assert stale.status_code == 403 and stale.headers[STEP_UP_HEADER] == "required"
+    created = admin.post(f"{ADMIN}/spaces", json={"name": "Neu", "members": members})
+    assert created.status_code == 403
+    assert admin.post(f"{ADMIN}/spaces", json={"name": "Leer"}).status_code == 201
+    reset = admin.post(f"{ADMIN}/pages/{page['id']}/reset-rights")
+    assert reset.status_code == 403
+    more = {"members": [*members, member("Ada Admin", "read")]}
+    assert ina.put(f"{BASE}/spaces/{space}/members", json=more).status_code == 403
+    assert ina.put(f"{BASE}/spaces/{space}/members", json={"members": members}).status_code == 200
+    # Nach erneuter Anmeldung klappt es
+    fresh = client_for("Ada Admin", ["Doku.Admin"])
+    assert fresh.put(f"{ADMIN}/spaces/{space}", json=grab).status_code == 200

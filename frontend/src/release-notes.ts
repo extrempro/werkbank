@@ -24,6 +24,26 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.125.1",
+    date: "2026-11-24",
+    summary: "Sicherheit: frische Anmeldung beim Vergeben von Rechten, Links strenger geprüft.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Rollen in einem Bereich vergeben oder entziehen und neue Bereiche anlegen geht nur mit frischer Anmeldung, wie in der Verwaltung. Liegt deine letzte Anmeldung länger als 15 Minuten zurück, bietet die Werkbank oben die erneute Anmeldung an.",
+        ],
+      },
+      {
+        area: "Dokumentation",
+        entries: [
+          "Personen eines Arbeitsbereichs hinzufügen, entfernen oder ihre Rolle ändern geht nur mit frischer Anmeldung. Name und Beschreibung änderst du weiter ohne.",
+          "Links auf Seiten der Werkbank dürfen keinen umgekehrten Schrägstrich (\\) mehr enthalten. Solche Links sahen intern aus, führten aber auf eine fremde Seite.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.125.0",
     date: "2026-11-24",
     summary: "Dokumentation: Seiten verschieben.",

@@ -10,7 +10,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from werkbank.core.audit import write_audit
-from werkbank.core.deps import DbDep
+from werkbank.core.deps import DbDep, SettingsDep, check_recent_login
 from werkbank.core.sessions import now_utc
 from werkbank.modules.doku.access import (
     LEVEL,
@@ -762,7 +762,11 @@ def save_rights(page_id: PageId, body: PageRightsIn, access: AccessDep, db: DbDe
 
 @router.put("/spaces/{space_id}/members")
 def save_members(
-    space_id: Annotated[int, Path(ge=1)], body: MembersIn, access: AccessDep, db: DbDep
+    space_id: Annotated[int, Path(ge=1)],
+    body: MembersIn,
+    access: AccessDep,
+    db: DbDep,
+    settings: SettingsDep,
 ) -> list[PersonRight]:
     """Personen im Arbeitsbereich: für Verwalten im Arbeitsbereich und für Doku.Admin."""
     space = db.get(DokuSpace, space_id)
@@ -779,6 +783,9 @@ def save_members(
                 "Du würdest dir selbst das Verwalten entziehen. Das kann nur die Doku-Verwaltung."
             ),
         )
+    if members_changed(db, space.id, body.members):
+        # Rechte vergeben: nur mit frischer Anmeldung (wie in der Verwaltung)
+        check_recent_login(access.user, settings)
     replace_members(db, space, body.members)
     write_audit(
         db,
@@ -792,6 +799,15 @@ def save_members(
     db.commit()
     reset_space(space.id)
     return _members(db, space.id)
+
+
+def members_changed(db: Session, space_id: int, members: list[PersonRightIn]) -> bool:
+    """Ändern sich Personen oder ihre Rolle im Arbeitsbereich? (Namen zählen nicht.)"""
+    current = {
+        (m.oid, m.role)
+        for m in db.scalars(select(DokuSpaceMember).where(DokuSpaceMember.space_id == space_id))
+    }
+    return current != {(m.oid, m.role) for m in members}
 
 
 def replace_members(db: Session, space: DokuSpace, members: list[PersonRightIn]) -> None:
