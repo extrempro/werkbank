@@ -351,7 +351,7 @@ describe("Arbeitsplätze: anlegen", () => {
     site: "Haus Nord",
     city_id: 1,
     city: "Musterstadt",
-    plan: { url: "/api/inventory/floors/4/plan?v=1", width: 1600, height: 1000 },
+    plan: { url: "/api/inventory/floors/4/plan?v=1", width: 1600, height: 1000, rotation: 0 },
     rooms: [{ id: 9, name: "0.12", x: 10, y: 20, w: 40, h: 20, hardware: 0 }],
     workplaces: [],
   };

@@ -1611,6 +1611,7 @@ export const AREAS: readonly Area[] = [
                 items: [
                   "Eine neue Stadt legst du unten im Baum unter „Neue Stadt“ an. Den Standort legst du in der Stadt an, den Gebäudeabschnitt im Standort und die Etage im Abschnitt, jeweils rechts unter „Neuer …“.",
                   "Tippe in der Etage auf „Etage bearbeiten“ und wähle „Grundriss hochladen“ (PNG, JPEG oder WebP). Dort benennst du die Etage auch um, änderst die Reihenfolge oder löschst sie.",
+                  "Liegt der Grundriss quer oder auf dem Kopf, wählst du dort unter „Ausrichtung des Grundrisses“, wie er gedreht wird: 90° nach rechts, auf den Kopf oder 90° nach links. Räume und Plätze drehen mit, die Namen bleiben waagerecht. Das Bild selbst ändert sich nicht, „Wie hochgeladen“ stellt es zurück.",
                   "Tippe auf „Räume bearbeiten“ und zieh auf freier Fläche ein Rechteck auf. Trag danach den Namen des Raums ein und tippe auf „Raum anlegen“.",
                   "Räume verschiebst du durch Ziehen; der Griff unten rechts ändert die Größe. Ohne Maus wählst du den Raum und trägst die Lage in Prozent ein.",
                   "Tippe auf „Fertig“.",

@@ -1,3 +1,4 @@
+import { deflateSync } from "node:zlib";
 import { expect, test } from "@playwright/test";
 import {
   BASE_URL,
@@ -163,6 +164,30 @@ test("IT-Bestand: Standorte anlegen und Etage öffnen", async ({
   await expect(
     page.getByRole("button", { name: "Grundriss hochladen" }),
   ).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Grundriss quer hochladen und hochkant drehen: Räume drehen mit, gespeichert wird ungedreht
+  const floorId = new URL(page.url()).pathname.split("/").pop();
+  await page.getByRole("button", { name: "Grundriss hochladen" }).click();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "grundriss.png",
+    mimeType: "image/png",
+    buffer: png(200, 100),
+  });
+  const plan = page.getByRole("group", { name: `Grundriss Etage ${stamp}` });
+  await expect(plan).toHaveAttribute("style", /aspect-ratio: 200 \/ 100/);
+  await page
+    .getByRole("combobox", { name: "Ausrichtung des Grundrisses" })
+    .selectOption({ label: "90° nach rechts gedreht" });
+  await expect(
+    page.getByText("Die Ausrichtung des Grundrisses ist gespeichert."),
+  ).toBeVisible();
+  await expect(plan).toHaveAttribute("style", /aspect-ratio: 100 \/ 200/);
+  await expect(plan.locator("img")).toHaveClass(/plan-image-turn-90/);
+  const stored = await page.request.get(`/api/inventory/floors/${floorId}`);
+  expect(
+    ((await stored.json()) as { plan: { rotation: number } }).plan.rotation,
+  ).toBe(90);
   await expectNoA11yViolations(page);
 
   // Breit lässt sich der Baum ausblenden; Ebenen klappen auf und zu.
@@ -458,3 +483,42 @@ test("IT-Bestand: Statistik", async ({ page }) => {
     page.getByRole("heading", { name: "Fehlende Angaben" }),
   ).toBeVisible();
 });
+
+/** Ein einfarbiges PNG in der gewünschten Größe (für Grundrisse). */
+function png(width: number, height: number): Buffer {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) {
+      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    }
+    return c >>> 0;
+  });
+  const crc = (bytes: Buffer) => {
+    let c = 0xffffffff;
+    for (const byte of bytes) {
+      c = crcTable[(c ^ byte) & 0xff]! ^ (c >>> 8);
+    }
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+    const sum = Buffer.alloc(4);
+    sum.writeUInt32BE(crc(body));
+    return Buffer.concat([length, body, sum]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // Bittiefe
+  header[9] = 0; // Graustufen
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width, 0xdd)]);
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}

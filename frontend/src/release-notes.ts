@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.128.0",
+    date: "2026-11-25",
+    summary: "IT-Bestand: Grundrisse drehen.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Liegt ein Grundriss quer oder auf dem Kopf, drehst du ihn unter „Etage bearbeiten“ bei „Ausrichtung des Grundrisses“ in Vierteldrehungen. Räume und Arbeitsplätze drehen mit, die Namen bleiben gut lesbar.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.127.0",
     date: "2026-11-25",
     summary: "Handbuch und Verwaltung im Kontomenü.",

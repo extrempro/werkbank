@@ -6,7 +6,11 @@ import {
   levelPath,
   locationPath,
   parseLocationPath,
+  pointToPlan,
+  pointToView,
   rectFromPoints,
+  rectToPlan,
+  rectToView,
   searchLocations,
   type Floor,
   type Hardware,
@@ -15,6 +19,7 @@ import {
 import { navigate } from "../../router";
 import { HardwareDetailPage } from "./HardwareDetailPage";
 import { LocationsPage } from "./LocationsPage";
+import { PlanView } from "./PlanView";
 
 vi.mock("../../router", () => ({ navigate: vi.fn() }));
 
@@ -96,7 +101,7 @@ const floor: Floor = {
   site: "Haus Nord",
   city_id: 1,
   city: "Musterstadt",
-  plan: { url: "/api/inventory/floors/4/plan?v=abc", width: 1600, height: 1000 },
+  plan: { url: "/api/inventory/floors/4/plan?v=abc", width: 1600, height: 1000, rotation: 0 },
   rooms: [
     {
       id: 9,
@@ -170,6 +175,20 @@ describe("Standorte: Hilfsfunktionen", () => {
     });
   });
 
+  it("dreht Punkte und Rechtecke für die Anzeige und zurück", () => {
+    const point = { x: 10, y: 20 };
+    expect(pointToView(point, 90)).toEqual({ x: 80, y: 10 });
+    expect(pointToView(point, 180)).toEqual({ x: 90, y: 80 });
+    expect(pointToView(point, 270)).toEqual({ x: 20, y: 90 });
+    for (const rotation of [0, 90, 180, 270] as const) {
+      expect(pointToPlan(pointToView(point, rotation), rotation)).toEqual(point);
+      const rect = { x: 10, y: 20, w: 30, h: 15 };
+      expect(rectToPlan(rectToView(rect, rotation), rotation)).toEqual(rect);
+    }
+    // Quer wird hoch: Breite und Höhe tauschen
+    expect(rectToView({ x: 10, y: 20, w: 30, h: 15 }, 90)).toEqual({ x: 65, y: 10, w: 15, h: 30 });
+  });
+
   it("sucht Räume und Etagen und gruppiert die Raumauswahl", () => {
     const hits = searchLocations(tree, "büro");
     expect(hits).toHaveLength(1);
@@ -181,6 +200,40 @@ describe("Standorte: Hilfsfunktionen", () => {
     expect(searchLocations(tree, " ")).toEqual([]);
     expect(firstFloorId(tree)).toBe(4);
     expect(firstFloorId({ cities: [] })).toBeNull();
+  });
+});
+
+describe("Standorte: gedrehter Grundriss", () => {
+  it("dreht Bild, Räume und Plätze, speichert aber ungedreht", () => {
+    const turned: Floor = { ...floor, plan: { ...floor.plan!, rotation: 90 } };
+    const onPlace = vi.fn();
+    render(
+      <PlanView
+        floor={turned}
+        selectedId={null}
+        spots={[{ id: 2, x: 15, y: 14, label: "AP-002", on: true }]}
+        placing
+        label="Grundriss"
+        onPlace={onPlace}
+      />,
+    );
+    const box = screen.getByRole("group", { name: "Grundriss" });
+    // Hochkant: Seitenverhältnis getauscht, Bild gedreht
+    expect(box.style.aspectRatio).toBe("1000 / 1600");
+    expect(box.querySelector("img")).toHaveClass("plan-image-turn-90");
+    const room = screen.getByRole("button", { name: "Büro 0.12" }).parentElement!;
+    expect(room.style.left).toBe("75%");
+    expect(room.style.top).toBe("10%");
+    expect(room.style.width).toBe("15%");
+    expect(room.style.height).toBe("20%");
+    const spot = box.querySelector<HTMLElement>(".plan-spot")!;
+    expect(spot.style.left).toBe("86%");
+    expect(spot.style.top).toBe("15%");
+    // Klick in der Anzeige oben rechts = oben links im ungedrehten Bild
+    box.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 100, height: 160, right: 100, bottom: 160 }) as DOMRect;
+    fireEvent.pointerDown(box, { clientX: 90, clientY: 16 });
+    expect(onPlace).toHaveBeenCalledWith({ x: 10, y: 10 });
   });
 });
 

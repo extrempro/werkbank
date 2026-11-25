@@ -20,8 +20,12 @@ import {
   INVENTORY_EDITOR_ROLE,
   levelPath,
   locationPath,
+  PLAN_ROTATIONS,
   PLAN_TYPES,
+  rectToPlan,
+  rectToView,
   renameLevel,
+  rotatePlan,
   searchLocations,
   updateFloor,
   updateRoom,
@@ -32,10 +36,20 @@ import {
   type FloorSpot,
   type LocationLevel,
   type Locations,
+  type PlanRotation,
   type Room,
   type RoomRect,
 } from "./api";
 import { Feedback } from "../../components/Feedback";
+import { InfoTip } from "../../components/InfoTip";
+
+/** Beschriftung der Drehung des Grundrisses */
+const ROTATION_LABELS: Record<PlanRotation, string> = {
+  0: "Wie hochgeladen",
+  90: "90° nach rechts gedreht",
+  180: "Auf dem Kopf (180°)",
+  270: "90° nach links gedreht",
+};
 
 function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
@@ -707,6 +721,7 @@ function LevelPanel({
 /** Raum neben dem Grundriss: Arbeitsplätze, Name und Lage (auch ohne Maus änderbar), Löschen. */
 function RoomPanel({
   room,
+  rotation,
   workplaces,
   canEdit,
   onBack,
@@ -714,6 +729,8 @@ function RoomPanel({
   onDelete,
 }: {
   room: Room;
+  /** Drehung des Grundrisses: Die Zahlen gelten so, wie man den Grundriss sieht. */
+  rotation: PlanRotation;
   workplaces: FloorSpot[];
   canEdit: boolean;
   onBack: () => void;
@@ -722,11 +739,9 @@ function RoomPanel({
 }) {
   const [name, setName] = useState(room.name);
   const [description, setDescription] = useState(room.description);
-  const [rect, setRect] = useState({
-    x: String(room.x),
-    y: String(room.y),
-    w: String(room.w),
-    h: String(room.h),
+  const [rect, setRect] = useState(() => {
+    const shown = rectToView(room, rotation);
+    return { x: String(shown.x), y: String(shown.y), w: String(shown.w), h: String(shown.h) };
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -747,7 +762,8 @@ function RoomPanel({
       return;
     }
     setError(null);
-    onSave(name.trim(), description.trim(), clampRect(numbers)).catch((problem: unknown) =>
+    const stored = clampRect(rectToPlan(clampRect(numbers), rotation));
+    onSave(name.trim(), description.trim(), stored).catch((problem: unknown) =>
       setError(errorText(problem, "Der Raum konnte nicht gespeichert werden.")),
     );
   };
@@ -940,6 +956,7 @@ export function LocationsPage({
   // Zähler für „Alles einklappen“: baut den Baum neu auf, alles zu
   const [collapses, setCollapses] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const nodeKey = node ? `${node.level}-${node.id}` : "";
 
@@ -1290,6 +1307,43 @@ export function LocationsPage({
                             </ConfirmButton>
                           )}
                         </div>
+                        {shownFloor.plan && (
+                          <div className="field-info loc-plan-rotation">
+                            <span className="field-info-head">
+                              <label htmlFor="grundriss-ausrichtung">
+                                Ausrichtung des Grundrisses
+                              </label>
+                              <InfoTip term="bestand.grundriss_ausrichtung" />
+                            </span>
+                            <select
+                              id="grundriss-ausrichtung"
+                              value={shownFloor.plan.rotation}
+                              onChange={(event) => {
+                                const rotation = Number(event.target.value) as PlanRotation;
+                                rotatePlan(shownFloor.id, rotation).then(
+                                  (next) => {
+                                    applyFloor(next);
+                                    setNotice(null);
+                                    setSaved("Die Ausrichtung des Grundrisses ist gespeichert.");
+                                  },
+                                  (problem: unknown) =>
+                                    setNotice(
+                                      errorText(
+                                        problem,
+                                        "Die Ausrichtung konnte nicht gespeichert werden.",
+                                      ),
+                                    ),
+                                );
+                              }}
+                            >
+                              {PLAN_ROTATIONS.map((value) => (
+                                <option key={value} value={value}>
+                                  {ROTATION_LABELS[value]}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                         <RenameDelete
                           key={`${shownFloor.id}-${shownFloor.name}-${shownFloor.position}`}
                           label="Etage"
@@ -1312,8 +1366,17 @@ export function LocationsPage({
                       </div>
                     )}
                     <Feedback
-                      message={notice ? { kind: "alert", text: notice } : null}
-                      onClose={() => setNotice(null)}
+                      message={
+                        notice
+                          ? { kind: "alert", text: notice }
+                          : saved
+                            ? { kind: "status", text: saved }
+                            : null
+                      }
+                      onClose={() => {
+                        setNotice(null);
+                        setSaved(null);
+                      }}
                     />
                     {editing && (
                       <p className="hint-box">
@@ -1354,6 +1417,7 @@ export function LocationsPage({
                         <RoomPanel
                           key={`${room.id}-${room.x}-${room.y}-${room.w}-${room.h}-${room.name}`}
                           room={room}
+                          rotation={shownFloor.plan?.rotation ?? 0}
                           workplaces={shownFloor.workplaces.filter(
                             (spot) => spot.room_id === room.id,
                           )}

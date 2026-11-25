@@ -7867,6 +7867,34 @@ td > .budget-row-actions {
   pointer-events: none;
 }
 
+/* Gedrehter Grundriss: Die Fläche hat schon das gedrehte Seitenverhältnis, das Bild dreht
+   sich um die Mitte. Bei 90° und 270° setzt PlanView die Breite vor dem Drehen. */
+.plan-image-turn-90,
+.plan-image-turn-180,
+.plan-image-turn-270 {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+}
+
+.plan-image-turn-90,
+.plan-image-turn-270 {
+  height: auto;
+}
+
+.plan-image-turn-90 {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.plan-image-turn-180 {
+  transform: translate(-50%, -50%) rotate(180deg);
+}
+
+.plan-image-turn-270 {
+  transform: translate(-50%, -50%) rotate(270deg);
+}
+
 .plan-empty {
   position: absolute;
   inset: 0;
@@ -15628,4 +15656,12 @@ button.doku-thread-quote {
 
 .backup-guide li {
   margin-bottom: 8px;
+}
+
+/* Ausrichtung des Grundrisses in den Einstellungen der Etage */
+.loc-plan-rotation {
+  display: grid;
+  gap: 4px;
+  max-width: 22rem;
+  margin: 8px 0;
 }

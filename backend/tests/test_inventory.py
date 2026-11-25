@@ -473,6 +473,23 @@ def test_locations_rooms_and_plan(db: Session) -> None:
     assert image.headers["cache-control"] == "no-store"
     outsider = client_for(["Budget.Reader"], "bestand-standorte-fremd")
     assert outsider.get(plan["url"]).status_code == 403
+    # Drehen: nur zum Anzeigen, nur Vierteldrehungen, nur mit Bearbeiten
+    assert plan["rotation"] == 0
+    turned = editor.put(f"{url}/plan/rotation", json={"rotation": 90}, headers=HEADERS)
+    assert turned.status_code == 200
+    assert turned.json()["plan"]["rotation"] == 90
+    assert turned.json()["rooms"][0]["x"] == 30.12
+    for angle in (45, 360, -90):
+        wrong = editor.put(f"{url}/plan/rotation", json={"rotation": angle}, headers=HEADERS)
+        assert wrong.status_code == 422
+    assert (
+        reader.put(f"{url}/plan/rotation", json={"rotation": 0}, headers=HEADERS).status_code == 403
+    )
+    # Ein neues Bild behält die Drehung
+    again = editor.put(
+        f"{url}/plan", content=png(800, 600), headers={**HEADERS, "Content-Type": "image/png"}
+    )
+    assert again.json()["plan"]["rotation"] == 90
     tree = reader.get(f"{BASE}/locations").json()
     floor_brief = tree["cities"][0]["sites"][0]["sections"][0]["floors"][0]
     assert floor_brief["has_plan"] is True
@@ -511,6 +528,9 @@ def test_locations_rooms_and_plan(db: Session) -> None:
     assert editor.delete(f"{BASE}/rooms/{room_id}", headers=HEADERS).status_code == 200
     without = editor.delete(f"{url}/plan", headers=HEADERS).json()
     assert without["plan"] is None
+    # Ohne Grundriss gibt es nichts zu drehen
+    no_plan = editor.put(f"{url}/plan/rotation", json={"rotation": 90}, headers=HEADERS)
+    assert no_plan.status_code == 409
     assert editor.delete(url, headers=HEADERS).status_code == 200
 
 

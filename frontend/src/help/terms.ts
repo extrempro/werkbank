@@ -182,6 +182,11 @@ export const HELP = {
     text: "Was für das gewählte Jahr vorgesehen ist, als Bruttobetrag.",
     topic: ["it-budget", "begriffe"],
   },
+  "bestand.grundriss_ausrichtung": {
+    term: "Ausrichtung des Grundrisses",
+    text: "Dreht den Grundriss beim Anzeigen in Vierteldrehungen, etwa wenn er hochkant eingescannt ist. Räume und Plätze drehen mit, das Bild bleibt unverändert.",
+    topic: ["it-bestand", "standorte"],
+  },
   "bestand.pool": {
     term: "Pool-Arbeitsplatz",
     text: "Ein Arbeitsplatz, der absichtlich keiner Stelle gehört, etwa beim Desk-Sharing oder für Gäste. Er hat einen Zweck aus den Stammdaten und zählt nicht als frei.",

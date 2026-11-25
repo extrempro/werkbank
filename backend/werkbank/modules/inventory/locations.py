@@ -5,7 +5,7 @@ Grundrisses darauf, damit sie bei jeder Bildgröße passen.
 """
 
 import hashlib
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, HTTPException, Path, Request, Response, status
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -136,6 +136,12 @@ class PlanOut(BaseModel):
     url: str
     width: int
     height: int
+    # Drehung beim Anzeigen im Uhrzeigersinn
+    rotation: int = 0
+
+
+class RotationIn(BaseModel):
+    rotation: Literal[0, 90, 180, 270]
 
 
 class RoomOut(BaseModel):
@@ -267,9 +273,12 @@ def floor_out(db: Session, floor: InventoryFloor) -> FloorOut:
     if section is None or site is None or city is None:
         raise _not_found()
     plan = db.execute(
-        select(InventoryFloorPlan.etag, InventoryFloorPlan.width, InventoryFloorPlan.height).where(
-            InventoryFloorPlan.floor_id == floor.id
-        )
+        select(
+            InventoryFloorPlan.etag,
+            InventoryFloorPlan.width,
+            InventoryFloorPlan.height,
+            InventoryFloorPlan.rotation,
+        ).where(InventoryFloorPlan.floor_id == floor.id)
     ).first()
     counts = dict(
         db.execute(
@@ -295,7 +304,9 @@ def floor_out(db: Session, floor: InventoryFloor) -> FloorOut:
         site=site.name,
         city_id=city.id,
         city=city.name,
-        plan=PlanOut(url=plan_url(floor.id, plan[0]), width=plan[1], height=plan[2])
+        plan=PlanOut(
+            url=plan_url(floor.id, plan[0]), width=plan[1], height=plan[2], rotation=plan[3]
+        )
         if plan
         else None,
         rooms=[
@@ -783,6 +794,33 @@ async def upload_plan(
         {"format": info.content_type, "breite": info.width, "hoehe": info.height, "bytes": size},
     )
     db.commit()
+    return floor_out(db, row)
+
+
+@router.put("/floors/{floor_id}/plan/rotation")
+def rotate_plan(
+    request: Request, floor_id: ObjectId, body: RotationIn, user: Editor, db: DbDep
+) -> FloorOut:
+    """Dreht den Grundriss beim Anzeigen; Bild, Räume und Plätze bleiben gespeichert."""
+    row = _floor(db, floor_id)
+    plan = db.get(InventoryFloorPlan, row.id)
+    if plan is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Die Etage hat noch keinen Grundriss."
+        )
+    if plan.rotation != body.rotation:
+        before = plan.rotation
+        plan.rotation = body.rotation
+        _audit(
+            db,
+            request,
+            user,
+            "grundriss_gedreht",
+            "etage",
+            row.id,
+            {"vorher": before, "nachher": body.rotation},
+        )
+        db.commit()
     return floor_out(db, row)
 
 

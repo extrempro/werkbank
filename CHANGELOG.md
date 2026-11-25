@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.128.0] – 2026-11-25
+
+### Neu
+
+- **IT-Bestand, Grundriss drehen:** In den Einstellungen der Etage lässt sich die Ausrichtung des Grundrisses in Vierteldrehungen wählen (wie hochgeladen, 90° rechts, 180°, 90° links). Gedreht wird nur beim Anzeigen: Bild, Räume und Plätze bleiben ungedreht gespeichert, Namen bleiben waagerecht; Ziehen, Platzieren und die Lage in Zahlen gelten so, wie man den Grundriss sieht. Ein neues Bild behält die Drehung. `PUT /api/inventory/floors/{id}/plan/rotation`, Migration `0087` (Spalte `rotation` mit Prüfung auf 0/90/180/270), im Audit-Log `grundriss_gedreht`.
+
 ## [0.127.0] – 2026-11-25
 
 ### Geändert
