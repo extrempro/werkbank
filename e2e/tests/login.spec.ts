@@ -32,8 +32,13 @@ test("Admin sieht alle Bereiche", async ({ page }) => {
       name: /^(Guten Morgen|Hallo|Guten Abend), Erika$/,
     }),
   ).toBeVisible();
-  // Audit-Log und Einstellungen stehen im eigenen Bereich „Verwaltung“.
-  expect(await areaNames(page)).toContain("Verwaltung");
+  // Audit-Log und Einstellungen stehen in der Verwaltung, erreichbar über das Kontomenü.
+  expect(await areaNames(page)).not.toContain("Verwaltung");
+  const account = await openAccountMenu(page);
+  await expect(
+    account.getByRole("menuitem", { name: "Verwaltung" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
   await openPage(page, "Microsoft 365", "Änderungen");
   await expect(page).toHaveURL(/\/m365\/aenderungen$/);
   await openPage(page, "Evergreen", "Microsoft 365");

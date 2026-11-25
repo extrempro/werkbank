@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.127.0",
+    date: "2026-11-25",
+    summary: "Handbuch und Verwaltung im Kontomenü.",
+    sections: [
+      {
+        area: "Navigation",
+        entries: [
+          "Das Handbuch und – für Admins – die Verwaltung öffnest du jetzt über dein Kontomenü oben rechts. Die Leiste links zeigt nur noch die Bereiche, mit denen du arbeitest.",
+          "Bist du in der Verwaltung oder im Handbuch, stehen deren Seiten wie gewohnt links im Menü.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.126.1",
     date: "2026-11-25",
     summary: "Dokumentation: Bausteine einfügen ohne Springen.",

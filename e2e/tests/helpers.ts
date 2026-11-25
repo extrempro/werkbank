@@ -85,6 +85,24 @@ export async function openMenu(page: Page): Promise<Locator> {
 /** Wechselt in einen Bereich (voller Name) und öffnet dort eine Seite. */
 export async function openPage(page: Page, area: string, label: string) {
   await ready(page);
+  if (area === "Verwaltung") {
+    // Die Verwaltung steht im Kontomenü, ihre Seiten dann im Menü des Bereichs
+    const account = await openAccountMenu(page);
+    await account.getByRole("menuitem", { name: "Verwaltung" }).click();
+    await expect(page).toHaveURL(/\/verwaltung$/);
+    if (label === "Allgemein") {
+      return;
+    }
+    const menu = await openMenu(page);
+    await menu
+      .getByRole("link", { name: itemName(label) })
+      .first()
+      .click();
+    if (isPhone(page)) {
+      await expect(menu).toBeHidden();
+    }
+    return;
+  }
   if (!isPhone(page)) {
     await page
       .getByRole("navigation", { name: "Bereiche" })
@@ -119,7 +137,7 @@ export async function openAccountMenu(page: Page): Promise<Locator> {
   return menu;
 }
 
-/** Volle Namen aller Bereiche, die die Person sieht (ohne Handbuch). */
+/** Volle Namen aller Bereiche in der Bereichsleiste bzw. im Menü (ohne Handbuch und Verwaltung). */
 export async function areaNames(page: Page): Promise<string[]> {
   await ready(page);
   const strip = (name: string | null) =>
@@ -146,22 +164,10 @@ export async function areaNames(page: Page): Promise<string[]> {
   return names;
 }
 
-/** Öffnet das Handbuch: am Computer unten in der Bereichsleiste, am Handy im Menü. */
+/** Öffnet das Handbuch über das Kontomenü oben rechts (auf allen Geräten). */
 export async function openHandbook(page: Page) {
-  await ready(page);
-  if (!isPhone(page)) {
-    await page
-      .getByRole("navigation", { name: "Bereiche" })
-      .getByRole("link", { name: "Handbuch" })
-      .click();
-    return;
-  }
-  const sheet = await openMenu(page);
-  const back = sheet.getByRole("button", { name: "Alle Bereiche" });
-  if (await back.isVisible()) {
-    await back.click();
-  }
-  await sheet.getByRole("link", { name: "Handbuch" }).click();
+  const account = await openAccountMenu(page);
+  await account.getByRole("menuitem", { name: "Handbuch" }).click();
 }
 
 /**

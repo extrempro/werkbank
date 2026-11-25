@@ -1,9 +1,10 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import type { Me } from "../../api";
-import { NEWS_PATH } from "../../navigation";
+import { HANDBOOK_PATH } from "../../handbook";
+import { ADMIN_PATH, NEWS_PATH } from "../../navigation";
 import { clearRecent } from "../../navPrefs";
 import { saveTheme, storedTheme, type ThemeChoice } from "../../theme";
-import { roleLabel } from "../../user";
+import { ADMIN_ROLE, roleLabel } from "../../user";
 import { Avatar } from "../Avatar";
 import { Icon, type IconName } from "../Icon";
 
@@ -22,7 +23,8 @@ interface AccountMenuProps {
 }
 
 /**
- * Kontomenü oben rechts: Konto, Neuigkeiten, Darstellung, „Zuletzt besucht leeren“, Abmelden.
+ * Kontomenü oben rechts: Konto, Neuigkeiten, Handbuch, Verwaltung (nur Admins), Darstellung,
+ * „Zuletzt besucht leeren“, Abmelden.
  * Bedienbar mit Tastatur (Pfeiltasten, Pos1/Ende, Esc schließt und gibt den Fokus zurück).
  */
 export function AccountMenu({ me, newsUnseen, onNavigate }: AccountMenuProps) {
@@ -34,6 +36,7 @@ export function AccountMenu({ me, newsUnseen, onNavigate }: AccountMenuProps) {
   const menu = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const role = roleLabel(me.roles);
+  const admin = me.roles.includes(ADMIN_ROLE);
 
   const items = (): HTMLElement[] =>
     Array.from(menu.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? []);
@@ -154,6 +157,21 @@ export function AccountMenu({ me, newsUnseen, onNavigate }: AccountMenuProps) {
               {newsUnseen && " "}
               {newsUnseen && <span className="account-new">neu</span>}
             </a>
+            <a
+              role="menuitem"
+              tabIndex={-1}
+              href={HANDBOOK_PATH}
+              onClick={(e) => go(e, HANDBOOK_PATH)}
+            >
+              <Icon name="handbuch" />
+              <span>Handbuch</span>
+            </a>
+            {admin && (
+              <a role="menuitem" tabIndex={-1} href={ADMIN_PATH} onClick={(e) => go(e, ADMIN_PATH)}>
+                <Icon name="verwaltung" />
+                <span>Verwaltung</span>
+              </a>
+            )}
             <div role="separator" className="account-sep" />
             <div role="group" aria-label="Darstellung" className="account-themes">
               {THEMES.map((option) => (

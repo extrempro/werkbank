@@ -1,5 +1,4 @@
 import { useCallback, useId, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { HANDBOOK_PATH } from "../../handbook";
 import type { NavArea } from "../../navigation";
 import { useNavPrefs } from "../../navPrefs";
 import { Icon } from "../Icon";
@@ -257,37 +256,30 @@ function MenuSheet({
           {shown && extraFor?.(shown, go)}
           {shown ? null : (
             <ul className="sheet-areas">
-              {areas.map((area) => (
-                <li key={area.id}>
-                  <button
-                    type="button"
-                    className={
-                      area.id === current?.id ? "sheet-area sheet-area-current" : "sheet-area"
-                    }
-                    aria-current={area.id === current?.id ? "true" : undefined}
-                    onClick={() => show(area)}
-                  >
-                    <Icon name={area.icon} />
-                    <span className="nav-label">{area.label}</span>
-                    {hasOpen(area) && (
-                      <span className="area-dot">
-                        <span className="visually-hidden">, offene Aufgaben</span>
-                      </span>
-                    )}
-                    <Icon name="pfeil-rechts" />
-                  </button>
-                </li>
-              ))}
-              <li>
-                <a
-                  className="sheet-area"
-                  href={HANDBOOK_PATH}
-                  onClick={(event) => go(event, HANDBOOK_PATH)}
-                >
-                  <Icon name="handbuch" />
-                  <span className="nav-label">Handbuch</span>
-                </a>
-              </li>
+              {/* Handbuch und Verwaltung stehen im Kontomenü oben rechts */}
+              {areas
+                .filter((area) => area.section !== "unten")
+                .map((area) => (
+                  <li key={area.id}>
+                    <button
+                      type="button"
+                      className={
+                        area.id === current?.id ? "sheet-area sheet-area-current" : "sheet-area"
+                      }
+                      aria-current={area.id === current?.id ? "true" : undefined}
+                      onClick={() => show(area)}
+                    >
+                      <Icon name={area.icon} />
+                      <span className="nav-label">{area.label}</span>
+                      {hasOpen(area) && (
+                        <span className="area-dot">
+                          <span className="visually-hidden">, offene Aufgaben</span>
+                        </span>
+                      )}
+                      <Icon name="pfeil-rechts" />
+                    </button>
+                  </li>
+                ))}
             </ul>
           )}
         </div>

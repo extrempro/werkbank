@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.127.0] – 2026-11-25
+
+### Geändert
+
+- **Handbuch und Verwaltung im Kontomenü:** Beide stehen nicht mehr in der Bereichsleiste links (bzw. am Handy unter „Alle Bereiche“), sondern im Kontomenü oben rechts; die Verwaltung nur für Admins. Innerhalb der Verwaltung und des Handbuchs bleiben die Seiten im Menü links. Handbuch, Spezifikation und E2E-Tests angepasst.
+
 ## [0.126.1] – 2026-11-25
 
 ### Behoben

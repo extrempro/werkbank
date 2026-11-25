@@ -239,6 +239,28 @@ describe("AccountMenu", () => {
     expect(button).toHaveFocus();
   });
 
+  it("führt zum Handbuch, Admins auch zur Verwaltung", () => {
+    const paths: string[] = [];
+    const { unmount } = render(
+      <AccountMenu me={me} newsUnseen={false} onNavigate={(path) => paths.push(path)} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Konto und Einstellungen/ }));
+    expect(screen.queryByRole("menuitem", { name: "Verwaltung" })).toBeNull();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Handbuch" }));
+    expect(paths).toEqual(["/handbuch"]);
+    unmount();
+    render(
+      <AccountMenu
+        me={{ ...me, roles: ["Werkbank.Admin"] }}
+        newsUnseen={false}
+        onNavigate={(path) => paths.push(path)}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Konto und Einstellungen/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Verwaltung" }));
+    expect(paths).toEqual(["/handbuch", "/verwaltung"]);
+  });
+
   it("schaltet die Darstellung um", () => {
     render(<AccountMenu me={me} newsUnseen={false} onNavigate={() => undefined} />);
     fireEvent.click(screen.getByRole("button", { name: /^Konto und Einstellungen/ }));
@@ -284,7 +306,31 @@ describe("MobileNav", () => {
     fireEvent.click(within(sheet).getByRole("button", { name: "Alle Bereiche" }));
     const all = screen.getByRole("dialog", { name: "Alle Bereiche" });
     expect(within(all).getByRole("button", { name: /^Evergreen.*offene Aufgaben/ })).toBeVisible();
+    // Handbuch und Verwaltung stehen im Kontomenü
+    expect(within(all).queryByRole("link", { name: "Handbuch" })).toBeNull();
     fireEvent.click(within(all).getByRole("button", { name: /^Evergreen/ }));
     expect(screen.getByRole("dialog", { name: "Evergreen" })).toBeVisible();
+  });
+
+  it("zeigt Admins die Verwaltung nicht in der Liste der Bereiche", () => {
+    const areas = areasFor(["Werkbank.Admin", "Budget.Reader"]);
+    render(
+      <MobileNav
+        areas={areas}
+        current={undefined}
+        activePath="/"
+        taskCount={0}
+        searchOpen={false}
+        hasOpen={() => false}
+        badgeFor={() => 0}
+        onNavigate={() => undefined}
+        onSearch={() => undefined}
+        onTasks={() => undefined}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Menü" }));
+    const all = screen.getByRole("dialog", { name: "Alle Bereiche" });
+    expect(within(all).getByRole("button", { name: /^IT-Budget/ })).toBeVisible();
+    expect(within(all).queryByRole("button", { name: /^Verwaltung/ })).toBeNull();
   });
 });
