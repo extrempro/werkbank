@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { useToolParams } from "../params";
 import { ErrorBox, InfoTable, numberDuplicates, Output, type InfoRow } from "../ui";
@@ -46,25 +47,30 @@ export default function UrlEncodeTool() {
   return (
     <div className="tool-body settings-form">
       <div className="tool-row">
-        <label className="narrow">
-          Modus
-          <select value={mode} onChange={(event) => setParams({ modus: event.target.value })}>
-            <option value="kodieren">Kodieren</option>
-            <option value="dekodieren">Dekodieren</option>
-            <option value="zerlegen">URL zerlegen</option>
-          </select>
-        </label>
+        <FixedChoice
+          label="Modus"
+          value={mode}
+          options={[
+            { value: "kodieren", label: "Kodieren" },
+            { value: "dekodieren", label: "Dekodieren" },
+            { value: "zerlegen", label: "URL zerlegen" },
+          ]}
+          onChange={(value) => setParams({ modus: value })}
+        />
         {mode === "kodieren" && (
-          <label>
-            Art
-            <select value={kind} onChange={(event) => setParams({ art: event.target.value })}>
-              <option value="component">
-                Parameterwert (alles außer A–Z, 0–9, - _ . ! ~ * &apos; ( ))
-              </option>
-              <option value="form">Formular (Leerzeichen als +)</option>
-              <option value="uri">Ganze URL (/, ?, &amp;, = bleiben)</option>
-            </select>
-          </label>
+          <FixedChoice
+            label="Art"
+            value={kind}
+            options={[
+              {
+                value: "component",
+                label: "Parameterwert (alles außer A–Z, 0–9, - _ . ! ~ * &apos; ( ))",
+              },
+              { value: "form", label: "Formular (Leerzeichen als +)" },
+              { value: "uri", label: "Ganze URL (/, ?, &amp;, = bleiben)" },
+            ]}
+            onChange={(value) => setParams({ art: value })}
+          />
         )}
       </div>
       {mode === "dekodieren" && (

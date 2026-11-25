@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useState, type ClipboardEvent } from "react";
 import { DataTable, dec } from "../calc";
 import { useToolParams } from "../params";
@@ -169,14 +170,12 @@ export default function NetplanTool() {
           >
             Beispiel zurücksetzen
           </button>
-          <label className="narrow">
-            Dauer in
-            <select value={unit} onChange={(event) => setParams({ einheit: event.target.value })}>
-              {UNITS.map((entry) => (
-                <option key={entry}>{entry}</option>
-              ))}
-            </select>
-          </label>
+          <FixedChoice
+            label="Dauer in"
+            value={unit}
+            options={UNITS.map((entry) => ({ value: entry, label: entry }))}
+            onChange={(value) => setParams({ einheit: value })}
+          />
         </div>
         <p className="small">
           Mehrere Zeilen aus Excel (Nr., Vorgang, Dauer, Vorgänger) lassen sich direkt in die

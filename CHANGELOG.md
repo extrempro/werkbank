@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.138.0] – 2026-11-25
+
+### Geändert
+
+- **IT-Tools nach design.md §8:** Alle Auswahllisten der Tools sind ersetzt (63 Stellen in 35 Tools). Die neue gemeinsame Komponente `FixedChoice` wählt nach Anzahl:
+  - 2–4 Möglichkeiten: Knopfleiste
+  - 5–10: Auswahlkarten
+  - mehr: Feld mit Echtzeitsuche im schwebenden Fenster, z. B. Präfix im Subnetz-Rechner oder Zeitzone
+- „Zeitzone hinzufügen“ sucht direkt im Feld und fügt mit der Wahl hinzu (kein eigener Knopf mehr).
+- Im Passwort-Hash heißt die Aktion „Kennwort prüfen“; „Prüfen“ ist der Modus.
+- Knöpfe der Knopfleiste tragen ihren Wert als `data-value` (für Tests).
+
 ## [0.137.0] – 2026-11-25
 
 ### Geändert

@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo } from "react";
 import { useToolParams } from "../params";
 import { Output, ToolSection } from "../ui";
@@ -38,20 +39,15 @@ export default function PortsTool() {
             onChange={(event) => setParams({ suche: event.target.value })}
           />
         </label>
-        <label>
-          Bereich
-          <select
-            value={group ?? ""}
-            onChange={(event) => setParams({ bereich: event.target.value })}
-          >
-            <option value="">alle</option>
-            {groups.map((entry) => (
-              <option key={entry} value={entry}>
-                {entry}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FixedChoice
+          label="Bereich"
+          value={String(group ?? "")}
+          options={[
+            { value: "", label: "alle" },
+            ...groups.map((entry) => ({ value: String(entry), label: String(entry) })),
+          ]}
+          onChange={(value) => setParams({ bereich: value })}
+        />
       </div>
       <p className="small" role="status">
         {list.length === 1 ? "1 Eintrag" : `${list.length} Einträge`}

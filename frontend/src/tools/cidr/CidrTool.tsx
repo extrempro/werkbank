@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState, type ReactNode } from "react";
 import { clampInt, useToolParams } from "../params";
 import { CopyButton, ErrorBox, InfoTable, ToolSection, type InfoRow } from "../ui";
@@ -149,23 +150,17 @@ export default function CidrTool() {
             onChange={(event) => setParams({ netz: event.target.value })}
           />
         </label>
-        <label>
-          Präfix oder Maske
-          <select
-            value={input?.kind === "network" ? input.prefix : ""}
-            disabled={input?.kind !== "network"}
-            onChange={(event) => setPrefix(Number(event.target.value))}
-          >
-            {input?.kind !== "network" && <option value="">–</option>}
-            {Array.from({ length: bitsOf(version) + 1 }, (_, prefix) => (
-              <option key={prefix} value={prefix}>
-                {version === 4
-                  ? `/${prefix} – ${formatIp(4, prefixMask(4, prefix))}`
-                  : `/${prefix}`}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FixedChoice
+          label="Präfix oder Maske"
+          value={input?.kind === "network" ? String(input.prefix) : ""}
+          disabled={input?.kind !== "network"}
+          options={Array.from({ length: bitsOf(version) + 1 }, (_, prefix) => ({
+            value: String(prefix),
+            label:
+              version === 4 ? `/${prefix} – ${formatIp(4, prefixMask(4, prefix))}` : `/${prefix}`,
+          }))}
+          onChange={(value) => setPrefix(Number(value))}
+        />
         <label>
           Benötigte Hosts {version === 6 && "(nur IPv4)"}
           <input
@@ -529,18 +524,18 @@ function SplitSection({
   return (
     <ToolSection title="Aufteilen">
       <div className="tool-row">
-        <label className="narrow">
-          In Netze der Größe
-          <select value={target} onChange={(event) => onSplit(Number(event.target.value))}>
-            {Array.from({ length: maxTarget - info.prefix }, (_, i) => info.prefix + i + 1).map(
-              (prefix) => (
-                <option key={prefix} value={prefix}>
-                  /{prefix} – {formatCountShort(1n << BigInt(prefix - info.prefix))} Netze
-                </option>
-              ),
-            )}
-          </select>
-        </label>
+        <FixedChoice
+          label="In Netze der Größe"
+          value={String(target)}
+          options={Array.from(
+            { length: maxTarget - info.prefix },
+            (_, i) => info.prefix + i + 1,
+          ).map((prefix) => ({
+            value: String(prefix),
+            label: `/${prefix} – ${formatCountShort(1n << BigInt(prefix - info.prefix))} Netze`,
+          }))}
+          onChange={(value) => onSplit(Number(value))}
+        />
         <span className="small">
           {formatCountShort(result.total)} Netze mit je{" "}
           {v === 4

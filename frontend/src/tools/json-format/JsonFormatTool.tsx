@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { useToolParams } from "../params";
 import { ErrorBox, Output } from "../ui";
@@ -25,15 +26,17 @@ export default function JsonFormatTool() {
 
   return (
     <div className="tool-body settings-form">
-      <label className="narrow">
-        Einrückung
-        <select value={indent} onChange={(event) => setParams({ einrueckung: event.target.value })}>
-          <option value="2">2 Leerzeichen</option>
-          <option value="4">4 Leerzeichen</option>
-          <option value="tab">Tab</option>
-          <option value="minify">Minifizieren</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Einrückung"
+        value={indent}
+        options={[
+          { value: "2", label: "2 Leerzeichen" },
+          { value: "4", label: "4 Leerzeichen" },
+          { value: "tab", label: "Tab" },
+          { value: "minify", label: "Minifizieren" },
+        ]}
+        onChange={(value) => setParams({ einrueckung: value })}
+      />
       <label>
         Eingabe
         <textarea

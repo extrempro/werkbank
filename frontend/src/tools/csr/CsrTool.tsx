@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useState } from "react";
 import { keyToEncryptedPem, parsePkcs8 } from "../cert-decode/keys";
 import { downloadBlob } from "../download";
@@ -132,19 +133,17 @@ export default function CsrTool() {
 
       <ToolSection title="Schlüssel">
         <div className="tool-columns">
-          <label>
-            Schlüsseltyp
-            <select
-              value={keyType}
-              onChange={(event) => setParams({ schluessel: event.target.value })}
-            >
-              {KEY_TYPES.map((key) => (
-                <option key={key} value={key}>
-                  {keyTypeLabels[key]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FixedChoice
+            label="Schlüsseltyp"
+            value={String(keyType)}
+            options={[
+              ...KEY_TYPES.map((key) => ({
+                value: String(key),
+                label: String(keyTypeLabels[key]),
+              })),
+            ]}
+            onChange={(value) => setParams({ schluessel: value })}
+          />
           <fieldset className="tool-options">
             <legend>Verwendung</legend>
             <label className="check-label">

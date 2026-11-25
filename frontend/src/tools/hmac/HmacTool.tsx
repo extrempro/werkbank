@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useEffect, useState } from "react";
 import { decodeKey, hmac, matches, toB64, toHex, type KeyEncoding } from "../hash/hash";
 import { useToolParams } from "../params";
@@ -46,27 +47,22 @@ export default function HmacTool() {
   return (
     <div className="tool-body settings-form">
       <div className="tool-row">
-        <label className="narrow">
-          Algorithmus
-          <select value={alg} onChange={(event) => setParams({ algorithmus: event.target.value })}>
-            {ALGS.map((entry) => (
-              <option key={entry} value={entry}>
-                HMAC-{entry}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="narrow">
-          Schlüssel als
-          <select
-            value={encoding}
-            onChange={(event) => setParams({ schluessel: event.target.value })}
-          >
-            <option value="text">Text</option>
-            <option value="hex">Hex</option>
-            <option value="base64">Base64</option>
-          </select>
-        </label>
+        <FixedChoice
+          label="Algorithmus"
+          value={String(alg)}
+          options={[...ALGS.map((entry) => ({ value: String(entry), label: `HMAC-${entry}` }))]}
+          onChange={(value) => setParams({ algorithmus: value })}
+        />
+        <FixedChoice
+          label="Schlüssel als"
+          value={encoding}
+          options={[
+            { value: "text", label: "Text" },
+            { value: "hex", label: "Hex" },
+            { value: "base64", label: "Base64" },
+          ]}
+          onChange={(value) => setParams({ schluessel: value })}
+        />
       </div>
       <label>
         Geheimer Schlüssel

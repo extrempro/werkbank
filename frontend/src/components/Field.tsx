@@ -276,6 +276,7 @@ export function Segmented<T extends string>({
             key={option.value}
             id={index === 0 ? id : undefined}
             type="button"
+            data-value={option.value}
             aria-pressed={value === option.value}
             onClick={() => onChange(option.value)}
           >

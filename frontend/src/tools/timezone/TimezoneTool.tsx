@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { ComboField, type ComboItem } from "../../components/ComboField";
+import { FixedChoice } from "../../components/ListChoice";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { allZones, defaultZones, formatOffset, wallTimeToDate, zoneOffset } from "../lib/time";
 import { CopyButton, ErrorBox } from "../ui";
 
@@ -35,7 +37,24 @@ export default function TimezoneTool() {
   const [time, setTime] = useState(() => localInput(new Date()));
   const [source, setSource] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [zones, setZonesState] = useState(loadZones);
-  const [add, setAdd] = useState("");
+  const latestZones = useRef(zones);
+  useEffect(() => {
+    latestZones.current = zones;
+  });
+  // Suche über alle Zeitzonen ohne die schon gezeigten (höchstens 20 Treffer)
+  const searchZones = useCallback(
+    (query: string) => {
+      const needle = query.trim().toLowerCase();
+      const hits = zonesAll.filter(
+        (zone) => !latestZones.current.includes(zone) && zone.toLowerCase().includes(needle),
+      );
+      return Promise.resolve({
+        items: hits.slice(0, 20).map((zone) => ({ id: zone, label: zone, detail: "" })),
+        total: hits.length,
+      });
+    },
+    [zonesAll],
+  );
 
   const setZones = (next: string[]) => {
     setZonesState(next);
@@ -89,16 +108,12 @@ export default function TimezoneTool() {
             onChange={(event) => setTime(event.target.value)}
           />
         </label>
-        <label className="narrow">
-          in Zeitzone
-          <select value={source} onChange={(event) => setSource(event.target.value)}>
-            {zonesAll.map((zone) => (
-              <option key={zone} value={zone}>
-                {zone}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FixedChoice
+          label="in Zeitzone"
+          value={String(source)}
+          options={[...zonesAll.map((zone) => ({ value: String(zone), label: String(zone) }))]}
+          onChange={(value) => setSource(value)}
+        />
       </div>
       {!at && <ErrorBox>Ungültiges Datum</ErrorBox>}
       {at && (
@@ -144,30 +159,14 @@ export default function TimezoneTool() {
         </div>
       )}
       <div className="tool-row">
-        <label className="narrow">
-          Zeitzone hinzufügen
-          <select value={add} onChange={(event) => setAdd(event.target.value)}>
-            <option value="">– auswählen –</option>
-            {zonesAll
-              .filter((zone) => !zones.includes(zone))
-              .map((zone) => (
-                <option key={zone} value={zone}>
-                  {zone}
-                </option>
-              ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          className="button button-secondary"
-          disabled={!add}
-          onClick={() => {
-            setZones([...zones, add]);
-            setAdd("");
-          }}
-        >
-          Hinzufügen
-        </button>
+        <ComboField<ComboItem>
+          label="Zeitzone hinzufügen"
+          placeholder="Stadt oder Region, z. B. Tokyo"
+          unit="Zeitzonen"
+          search={searchZones}
+          value={null}
+          onChange={(item) => item && setZones([...zones, String(item.id)])}
+        />
         <button
           type="button"
           className="button button-secondary"

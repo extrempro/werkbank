@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useEffect, useId, useRef, useState } from "react";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { PHONE_QUERY, useMediaQuery } from "../../components/FilterBar";
@@ -95,37 +96,32 @@ export default function HtmlEditorTool() {
   return (
     <div className="tool-body settings-form">
       <div className="tool-row">
-        <label className="narrow">
-          Vorlage
-          <select
-            value={template}
-            onChange={(event) => {
-              const next = event.target.value as TemplateId;
-              const load = () => {
-                setTemplate(next);
-                setHtml(TEMPLATES[next].html);
-              };
-              if (html.trim() && html !== TEMPLATES[template].html) {
-                ask(
-                  {
-                    title: "Vorlage laden?",
-                    text: "Dein HTML wird ersetzt. Es ist nirgends gespeichert.",
-                    action: "Laden",
-                  },
-                  load,
-                );
-              } else {
-                load();
-              }
-            }}
-          >
-            {(Object.keys(TEMPLATES) as TemplateId[]).map((key) => (
-              <option key={key} value={key}>
-                {TEMPLATES[key].label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FixedChoice
+          label="Vorlage"
+          value={template}
+          options={(Object.keys(TEMPLATES) as TemplateId[]).map((key) => ({
+            value: key,
+            label: TEMPLATES[key].label,
+          }))}
+          onChange={(next) => {
+            const load = () => {
+              setTemplate(next);
+              setHtml(TEMPLATES[next].html);
+            };
+            if (html.trim() && html !== TEMPLATES[template].html) {
+              ask(
+                {
+                  title: "Vorlage laden?",
+                  text: "Dein HTML wird ersetzt. Es ist nirgends gespeichert.",
+                  action: "Laden",
+                },
+                load,
+              );
+            } else {
+              load();
+            }
+          }}
+        />
         <button
           type="button"
           className="button button-secondary"

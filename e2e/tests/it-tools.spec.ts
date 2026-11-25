@@ -329,7 +329,10 @@ test("IT-Tools: Konverter und Text", async ({ page }) => {
   await page.getByRole("textbox", { name: "Nachher" }).fill("a\nb y\nc");
   await expect(page.getByText("2 hinzugefügt")).toBeVisible();
   await expectNoA11yViolations(page);
-  await page.getByLabel("Ansicht").selectOption("unified");
+  await page
+    .getByRole("group", { name: "Ansicht" })
+    .locator(`[data-value="unified"]`)
+    .click();
   await expect(
     page.getByRole("region", { name: "Unified-Diff" }),
   ).toContainText("+c");

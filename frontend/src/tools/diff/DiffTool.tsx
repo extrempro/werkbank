@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { useToolParams } from "../params";
 import { CopyButton, ErrorBox } from "../ui";
@@ -92,16 +93,15 @@ export default function DiffTool() {
           <textarea rows={10} value={right} onChange={(event) => setRight(event.target.value)} />
         </label>
       </div>
-      <label className="narrow">
-        Ansicht
-        <select
-          value={unified ? "unified" : "nebeneinander"}
-          onChange={(event) => setParams({ ansicht: event.target.value })}
-        >
-          <option value="nebeneinander">Nebeneinander</option>
-          <option value="unified">Unified-Diff</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Ansicht"
+        value={unified ? "unified" : "nebeneinander"}
+        options={[
+          { value: "nebeneinander", label: "Nebeneinander" },
+          { value: "unified", label: "Unified-Diff" },
+        ]}
+        onChange={(value) => setParams({ ansicht: value })}
+      />
       <fieldset className="tool-options">
         <legend>Optionen</legend>
         {check("leerraum", "Leerraum ignorieren")}

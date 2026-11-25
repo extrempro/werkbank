@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { DataTable, NumField, Tile, Tiles, intParam, num } from "../calc";
 import { humanSize, parseSize } from "../data-units/units";
 import { useToolParams } from "../params";
@@ -115,34 +116,32 @@ export default function BackupPlanTool() {
             onChange={(text) => setParams({ einsparung: text })}
           />
           <div className="tool-field">
-            <label>
-              Sicherungstage pro Woche
-              <select value={days} onChange={(event) => setParams({ tage: event.target.value })}>
-                {[5, 6, 7].map((count) => (
-                  <option key={count} value={count}>
-                    {count === 7
-                      ? "täglich (Mo bis So)"
-                      : `${count} Tage (Mo bis ${weekdays[count - 1]})`}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <FixedChoice
+              label="Sicherungstage pro Woche"
+              value={String(days)}
+              options={[5, 6, 7].map((count) => ({
+                value: String(count),
+                label:
+                  count === 7
+                    ? "täglich (Mo bis So)"
+                    : `${count} Tage (Mo bis ${weekdays[count - 1]})`,
+              }))}
+              onChange={(value) => setParams({ tage: value })}
+            />
           </div>
           {strategy !== "full" && (
             <div className="tool-field">
-              <label>
-                Vollsicherung am
-                <select
-                  value={fullDay}
-                  onChange={(event) => setParams({ vollTag: event.target.value })}
-                >
-                  {LONG_DAYS.slice(0, days).map((day, index) => (
-                    <option key={day} value={index}>
-                      {day}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FixedChoice
+                label="Vollsicherung am"
+                value={String(fullDay)}
+                options={[
+                  ...LONG_DAYS.slice(0, days).map((day, index) => ({
+                    value: String(index),
+                    label: String(day),
+                  })),
+                ]}
+                onChange={(value) => setParams({ vollTag: value })}
+              />
             </div>
           )}
           <div className="tool-field">
@@ -211,21 +210,14 @@ export default function BackupPlanTool() {
 
           <ToolSection title="Wiederherstellung">
             <div className="tool-field">
-              <label>
-                Stand nach der Sicherung am
-                <select
-                  value={restoreDay}
-                  onChange={(event) => setParams({ wiederherstellen: event.target.value })}
-                >
-                  {plan.days
-                    .filter((day) => day.type !== "–")
-                    .map((day) => (
-                      <option key={day.day} value={day.day}>
-                        {LONG_DAYS[day.day]}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              <FixedChoice
+                label="Stand nach der Sicherung am"
+                value={String(restoreDay)}
+                options={plan.days
+                  .filter((day) => day.type !== "–")
+                  .map((day) => ({ value: String(day.day), label: String(LONG_DAYS[day.day]) }))}
+                onChange={(value) => setParams({ wiederherstellen: value })}
+              />
             </div>
             <p className="small">Dafür werden gebraucht (im Wochenplan hervorgehoben):</p>
             <ol className="tool-list">

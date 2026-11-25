@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useEffect, useState } from "react";
 import { useToolParams } from "../params";
 import { CopyButton, ErrorBox } from "../ui";
@@ -64,16 +65,15 @@ export default function HashTool() {
 
   return (
     <div className="tool-body settings-form">
-      <label className="narrow">
-        Eingabe als
-        <select
-          value={fileMode ? "datei" : "text"}
-          onChange={(event) => setParams({ eingabe: event.target.value })}
-        >
-          <option value="text">Text</option>
-          <option value="datei">Datei</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Eingabe als"
+        value={fileMode ? "datei" : "text"}
+        options={[
+          { value: "text", label: "Text" },
+          { value: "datei", label: "Datei" },
+        ]}
+        onChange={(value) => setParams({ eingabe: value })}
+      />
       {fileMode ? (
         <div className="tool-field">
           <label>

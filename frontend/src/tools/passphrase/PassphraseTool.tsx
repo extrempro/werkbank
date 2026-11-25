@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useEffect, useState } from "react";
 import { clampInt, useToolParams } from "../params";
 import { strengthLabel } from "../password/password";
@@ -112,19 +113,18 @@ export default function PassphraseTool() {
                 onChange={(event) => setParams({ anzahl: event.target.value })}
               />
             </label>
-            <label className="narrow">
-              Trennzeichen
-              <select
-                value={separatorKey}
-                onChange={(event) => setParams({ trenner: event.target.value })}
-              >
-                <option value="bindestrich">Bindestrich</option>
-                <option value="punkt">Punkt</option>
-                <option value="unterstrich">Unterstrich</option>
-                <option value="leerzeichen">Leerzeichen</option>
-                <option value="ohne">ohne</option>
-              </select>
-            </label>
+            <FixedChoice
+              label="Trennzeichen"
+              value={separatorKey}
+              options={[
+                { value: "bindestrich", label: "Bindestrich" },
+                { value: "punkt", label: "Punkt" },
+                { value: "unterstrich", label: "Unterstrich" },
+                { value: "leerzeichen", label: "Leerzeichen" },
+                { value: "ohne", label: "ohne" },
+              ]}
+              onChange={(value) => setParams({ trenner: value })}
+            />
           </div>
         </div>
         <fieldset className="tool-options">

@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.138.0",
+    date: "2026-11-25",
+    summary: "Die IT-Tools wählen wie der Rest der Werkbank.",
+    sections: [
+      {
+        area: "IT-Tools",
+        entries: [
+          "Statt Auswahllisten gibt es Knöpfe für wenige Möglichkeiten, Karten für einige und ein Suchfeld für viele, zum Beispiel bei Präfix oder Zeitzone.",
+          "„Zeitzone hinzufügen“ fügt die gewählte Zeitzone sofort hinzu.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.137.0",
     date: "2026-11-25",
     summary:

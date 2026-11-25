@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { clampInt, useToolParams } from "../params";
 import { humanSize, parseNumber, parseSize } from "../data-units/units";
 import { duration, durationText, parseDuration, presets, rateText, requiredRate } from "./transfer";
@@ -27,16 +28,15 @@ export default function TransferTool() {
 
   return (
     <div className="tool-body settings-form">
-      <label className="narrow">
-        Modus
-        <select
-          value={wantRate ? "bandbreite" : "dauer"}
-          onChange={(event) => setParams({ modus: event.target.value })}
-        >
-          <option value="dauer">Dauer berechnen</option>
-          <option value="bandbreite">Bandbreite berechnen</option>
-        </select>
-      </label>
+      <FixedChoice
+        label="Modus"
+        value={wantRate ? "bandbreite" : "dauer"}
+        options={[
+          { value: "dauer", label: "Dauer berechnen" },
+          { value: "bandbreite", label: "Bandbreite berechnen" },
+        ]}
+        onChange={(value) => setParams({ modus: value })}
+      />
       <div className="tool-columns">
         <div className="tool-field">
           <label>
@@ -87,17 +87,16 @@ export default function TransferTool() {
                   onChange={(event) => setParams({ rate: event.target.value })}
                 />
               </label>
-              <label>
-                Einheit
-                <select
-                  value={rateUnit}
-                  onChange={(event) => setParams({ einheit: event.target.value })}
-                >
-                  <option value="kbit">kbit/s</option>
-                  <option value="Mbit">Mbit/s</option>
-                  <option value="Gbit">Gbit/s</option>
-                </select>
-              </label>
+              <FixedChoice
+                label="Einheit"
+                value={rateUnit}
+                options={[
+                  { value: "kbit", label: "kbit/s" },
+                  { value: "Mbit", label: "Mbit/s" },
+                  { value: "Gbit", label: "Gbit/s" },
+                ]}
+                onChange={(value) => setParams({ einheit: value })}
+              />
             </div>
             <div className="chips" role="group" aria-label="Übliche Bandbreiten">
               {presets.map((preset) => {

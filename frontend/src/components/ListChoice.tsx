@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ComboField, type ComboItem, type ComboResult } from "./ComboField";
-import { ChoiceCards } from "./Field";
+import { ChoiceCards, Segmented } from "./Field";
 
 /** Bis zu so vielen Möglichkeiten zeigt `ListChoice` Auswahlkarten, darüber ein Suchfeld. */
 export const CARDS_MAX = 10;
@@ -113,6 +113,103 @@ export function ListChoice({
         search={search}
         value={chosen ? { id: chosen.id, label: chosen.label, detail: chosen.detail ?? "" } : null}
         onChange={(item) => onChange(item ? String(item.id) : "")}
+      />
+    </div>
+  );
+}
+
+/**
+ * Auswahl aus festen Möglichkeiten (docs/design.md, „Masken und Suche“): 2–4 als Knopfleiste,
+ * 5–10 als Auswahlkarten, darüber als Feld mit Echtzeitsuche. Die Werte sind Texte.
+ */
+export function FixedChoice<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  hint,
+  wide = false,
+  disabled = false,
+}: {
+  label: string;
+  value: T;
+  options: readonly { value: T; label: string; hint?: string }[];
+  onChange: (value: T) => void;
+  hint?: ReactNode;
+  wide?: boolean;
+  /** Gesperrt: Die Auswahl steht als Text da */
+  disabled?: boolean;
+}) {
+  const latest = useRef(options);
+  useEffect(() => {
+    latest.current = options;
+  });
+  // „Ändern“ im Suchfeld: Bis zur neuen Wahl gilt die alte weiter, das Feld ist leer.
+  const [editing, setEditing] = useState(false);
+  const search = useCallback((query: string) => {
+    const needle = query.trim().toLocaleLowerCase("de");
+    const hits = latest.current.filter(
+      (option) =>
+        !needle || `${option.label} ${option.hint ?? ""}`.toLocaleLowerCase("de").includes(needle),
+    );
+    return Promise.resolve({
+      items: hits
+        .slice(0, LIST_HITS)
+        .map((option) => ({ id: option.value, label: option.label, detail: option.hint ?? "" })),
+      total: hits.length,
+    });
+  }, []);
+  if (disabled) {
+    return (
+      <div className={wide ? "field field-wide" : "field"}>
+        <span className="field-label">{label}</span>
+        <span>{options.find((option) => option.value === value)?.label ?? value}</span>
+      </div>
+    );
+  }
+  if (options.length <= 4) {
+    return (
+      <Segmented
+        label={label}
+        value={value}
+        options={options}
+        onChange={onChange}
+        hint={hint}
+        wide={wide}
+      />
+    );
+  }
+  if (options.length <= CARDS_MAX) {
+    return (
+      <ChoiceCards
+        legend={label}
+        value={value}
+        options={options}
+        onChange={onChange}
+        hint={hint}
+        wide={wide}
+      />
+    );
+  }
+  const chosen = options.find((option) => option.value === value);
+  return (
+    <div className={wide ? "field-wide" : undefined}>
+      <ComboField<ComboItem>
+        label={label}
+        hint={hint}
+        search={search}
+        placeholder="Tippe zum Suchen …"
+        value={
+          chosen && !editing
+            ? { id: chosen.value, label: chosen.label, detail: chosen.hint ?? "" }
+            : null
+        }
+        onChange={(item) => {
+          setEditing(!item);
+          if (item) {
+            onChange(item.id as T);
+          }
+        }}
       />
     </div>
   );

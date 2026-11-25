@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { NumField, Tile, Tiles, dec, intParam, num, percent } from "../calc";
 import { useToolParams } from "../params";
 import { rateText } from "../transfer/transfer";
@@ -40,35 +41,28 @@ export default function VoipTool() {
     <div className="tool-body settings-form">
       <div className="tool-columns">
         <div className="tool-field">
-          <label>
-            Codec
-            <select
-              value={codec?.id ?? "g711"}
-              onChange={(event) => setParams({ codec: event.target.value })}
-            >
-              {codecs.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FixedChoice
+            label="Codec"
+            value={String(codec?.id ?? "g711")}
+            options={[
+              ...codecs.map((entry) => ({ value: String(entry.id), label: String(entry.name) })),
+            ]}
+            onChange={(value) => setParams({ codec: value })}
+          />
           <p className="small">{codec?.note}</p>
         </div>
         <div className="tool-field">
-          <label>
-            Paketintervall
-            <select
-              value={ptime}
-              onChange={(event) => setParams({ intervall: event.target.value })}
-            >
-              {PTIMES.map((entry) => (
-                <option key={entry} value={entry}>
-                  {entry} ms{entry === "20" ? " (Standard)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FixedChoice
+            label="Paketintervall"
+            value={String(ptime)}
+            options={[
+              ...PTIMES.map((entry) => ({
+                value: String(entry),
+                label: `${entry} ms${entry === "20" ? " (Standard)" : ""}`,
+              })),
+            ]}
+            onChange={(value) => setParams({ intervall: value })}
+          />
         </div>
         <div className="tool-field">
           <label>
@@ -83,19 +77,17 @@ export default function VoipTool() {
           </label>
         </div>
         <div className="tool-field">
-          <label>
-            Übertragung
-            <select
-              value={layer2}
-              onChange={(event) => setParams({ schicht2: event.target.value })}
-            >
-              {LAYERS.map((entry) => (
-                <option key={entry} value={entry}>
-                  {layer2Labels[entry]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <FixedChoice
+            label="Übertragung"
+            value={String(layer2)}
+            options={[
+              ...LAYERS.map((entry) => ({
+                value: String(entry),
+                label: String(layer2Labels[entry]),
+              })),
+            ]}
+            onChange={(value) => setParams({ schicht2: value })}
+          />
         </div>
       </div>
       <fieldset className="tool-options">

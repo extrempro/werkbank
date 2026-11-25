@@ -1,3 +1,4 @@
+import { FixedChoice } from "../../components/ListChoice";
 import { useMemo, useState } from "react";
 import { csvToJson, jsonToCsv, type Delimiter } from "../lib/csv";
 import { useToolParams } from "../params";
@@ -69,29 +70,24 @@ export default function CsvJsonTool() {
   return (
     <div className="tool-body settings-form">
       <div className="tool-row">
-        <label className="narrow">
-          Richtung
-          <select
-            value={toJson ? "csv-json" : "json-csv"}
-            onChange={(event) => setParams({ richtung: event.target.value })}
-          >
-            <option value="csv-json">CSV → JSON</option>
-            <option value="json-csv">JSON → CSV</option>
-          </select>
-        </label>
-        <label className="narrow">
-          Trennzeichen
-          <select
-            value={DELIMITERS.some(([key]) => key === params.trenner) ? params.trenner : "auto"}
-            onChange={(event) => setParams({ trenner: event.target.value })}
-          >
-            {DELIMITERS.map(([key, , label]) => (
-              <option key={key} value={key}>
-                {key === "auto" && !toJson ? "Semikolon (Standard)" : label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FixedChoice
+          label="Richtung"
+          value={toJson ? "csv-json" : "json-csv"}
+          options={[
+            { value: "csv-json", label: "CSV → JSON" },
+            { value: "json-csv", label: "JSON → CSV" },
+          ]}
+          onChange={(value) => setParams({ richtung: value })}
+        />
+        <FixedChoice
+          label="Trennzeichen"
+          value={DELIMITERS.some(([key]) => key === params.trenner) ? params.trenner : "auto"}
+          options={DELIMITERS.map(([key, , label]) => ({
+            value: key,
+            label: key === "auto" && !toJson ? "Semikolon (Standard)" : label,
+          }))}
+          onChange={(value) => setParams({ trenner: value })}
+        />
       </div>
       <fieldset className="tool-options">
         <legend>Optionen</legend>
