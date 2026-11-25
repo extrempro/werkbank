@@ -840,7 +840,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "hint",
-                text: "Werte mit „KI-Vorschlag, ungeprüft“ (violett) hat die KI aus dem Text von Microsoft gelesen, Werte mit „Vorschlag, ungeprüft“ (grau) die Werkbank nach festen Regeln, zum Beispiel die Rollout-Phasen aus „When this will happen“. Prüf sie kurz; mit dem Speichern gelten sie als geprüft, und kein späterer Vorschlag überschreibt sie. Jede Änderung steht mit vorher und nachher im Verlauf. Ein neuer Eintrag ist nach dem Speichern „Bearbeitet“.",
+                text: "Werte mit „KI-Vorschlag, ungeprüft“ (violett) hat die KI aus dem Text von Microsoft gelesen, Werte mit „Vorschlag, ungeprüft“ (grau) die Werkbank nach festen Regeln, zum Beispiel die Rollout-Phasen aus „When this will happen“ oder „Rollout Schedule“. Prüf sie kurz; mit dem Speichern gelten sie als geprüft, und kein späterer Vorschlag überschreibt sie. Jede Änderung steht mit vorher und nachher im Verlauf. Ein neuer Eintrag ist nach dem Speichern „Bearbeitet“.",
               },
               {
                 kind: "text",

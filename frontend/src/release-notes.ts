@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.129.1",
+    date: "2026-11-25",
+    summary: "Evergreen erkennt mehr Rollout-Zeiten aus Microsoft-Meldungen.",
+    sections: [
+      {
+        area: "Evergreen",
+        entries: [
+          "Die Rollout-Phasen werden jetzt auch erkannt, wenn Microsoft den Zeitplan unter „Rollout Schedule“ nennt oder nur Zeilen wie „Worldwide: … August 2026 …“ schreibt.",
+          "Frühere Termine in Klammern („previously …“) zählen nicht mehr mit.",
+          "Bestehende Meldungen bekommen beim nächsten Abruf neue Vorschläge. Was du schon geprüft hast, bleibt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.129.0",
     date: "2026-11-25",
     summary: "Töne für Benachrichtigungen und eine eigene Seite zum Einstellen.",

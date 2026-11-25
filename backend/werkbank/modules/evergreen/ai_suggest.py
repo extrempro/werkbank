@@ -21,6 +21,7 @@ from werkbank.core.ai import AiCompleter, AiConfig, AiError, complete, load_ai_c
 from werkbank.core.audit import write_audit
 from werkbank.core.sessions import now_utc
 from werkbank.modules.evergreen.models import EntrySource, EntryStatus, EvEntry, NoteKind
+from werkbank.modules.evergreen.rules import SCHEDULE_HEADS
 from werkbank.modules.evergreen.service import MODULE, OBJECT_TYPE, add_note
 
 logger = logging.getLogger(__name__)
@@ -30,8 +31,7 @@ GENERATE_AI_SUGGESTIONS = "evergreen.ki_vorschlaege"
 EVERGREEN_FLAG = "evergreen"
 SECTION_MAX = 3000
 SECTIONS_FOR_AI = (
-    "when this will happen",
-    "when will this happen",
+    *SCHEDULE_HEADS,
     "how this affects your organization",
     "how this will affect your organization",
     "how this will affect your users",
