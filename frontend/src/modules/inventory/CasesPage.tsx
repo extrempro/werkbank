@@ -300,7 +300,12 @@ function DecisionForm({ entry, onDone }: { entry: Case; onDone: (next: Case) => 
         />
       )}
       {choice === "nachfolge" && (
-        <PersonPicker value={person} onChange={setPerson} label="Neue Person (aus Entra)" />
+        <PersonPicker
+          value={person}
+          onChange={setPerson}
+          label="Neue Person"
+          hint="Person aus Entra."
+        />
       )}
       {choice === "verlaengert" && (
         <label>

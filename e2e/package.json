@@ -1,7 +1,7 @@
 {
   "name": "werkbank-e2e",
   "private": true,
-  "version": "0.135.0",
+  "version": "0.136.0",
   "type": "module",
   "scripts": {
     "test": "playwright test"

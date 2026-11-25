@@ -1,8 +1,16 @@
-import { useEffect, useId, useState } from "react";
-import { errorText } from "../../api";
+import { useCallback } from "react";
+import { ComboField, type ComboItem } from "../../components/ComboField";
 import { searchPeople, type Person } from "./api";
 
-/** Person aus Entra suchen und hinzufügen (Name, Anmeldename, Abteilung). */
+interface PersonItem extends ComboItem {
+  person: Person;
+}
+
+/**
+ * Person aus Entra suchen und hinzufügen (docs/design.md, „Masken und Suche“): Feld mit
+ * Echtzeitsuche im schwebenden Fenster ab zwei Zeichen; eine Wahl fügt die Person hinzu und
+ * leert das Feld für die nächste.
+ */
 export function PeoplePicker({
   label,
   exclude,
@@ -13,87 +21,31 @@ export function PeoplePicker({
   exclude: ReadonlySet<string>;
   onPick: (person: Person) => void;
 }) {
-  const id = useId();
-  const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<Person[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const term = query.trim();
-
-  useEffect(() => {
-    if (term.length < 2) {
-      return;
-    }
-    let active = true;
-    const timer = window.setTimeout(() => {
-      searchPeople(term).then(
-        (result) => {
-          if (active) {
-            setHits(result);
-            setError(null);
-          }
-        },
-        (problem: unknown) =>
-          active && setError(errorText(problem, "Die Suche ist gerade nicht möglich.")),
-      );
-    }, 300);
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [term]);
-
-  const shown = (hits ?? []).filter((person) => !exclude.has(person.oid));
+  const search = useCallback(
+    (query: string) =>
+      searchPeople(query.trim()).then((people) => ({
+        items: people.map((person): PersonItem => ({
+          id: person.oid,
+          label: person.name,
+          detail: [person.upn, person.department].filter(Boolean).join(" · "),
+          person,
+        })),
+        total: people.length,
+      })),
+    [],
+  );
   return (
     <div className="doku-picker">
-      <label htmlFor={id}>{label}</label>
-      <input
-        id={id}
-        type="search"
-        value={query}
-        maxLength={60}
-        autoComplete="off"
+      <ComboField<PersonItem>
+        label={label}
+        minLength={2}
         placeholder="Name oder Anmeldename"
-        onChange={(event) => {
-          setQuery(event.target.value);
-          if (event.target.value.trim().length < 2) {
-            setHits(null);
-          }
-        }}
+        search={search}
+        exclude={[...exclude]}
+        nothingFound={(query) => `Niemand in Entra gefunden für „${query}“.`}
+        value={null}
+        onChange={(item) => item && onPick(item.person)}
       />
-      {error && (
-        <p className="hint-box hint-bad" role="alert">
-          {error}
-        </p>
-      )}
-      {term.length >= 2 && hits !== null && (
-        <ul className="doku-picker-hits" aria-label="Gefundene Personen">
-          {shown.length === 0 && <li className="small">Niemand gefunden.</li>}
-          {shown.map((person) => (
-            <li key={person.oid}>
-              <span>
-                <strong>{person.name}</strong>
-                <span className="small">
-                  {" "}
-                  {person.upn}
-                  {person.department ? ` · ${person.department}` : ""}
-                </span>
-              </span>
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => {
-                  onPick(person);
-                  setQuery("");
-                  setHits(null);
-                }}
-              >
-                Hinzufügen
-                <span className="visually-hidden">{`: ${person.name}`}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

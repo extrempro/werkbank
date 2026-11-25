@@ -14068,7 +14068,7 @@ button.doku-tree-toggle:hover {
 .doku-name-form input,
 .doku-field input,
 .doku-field select,
-.doku-picker input,
+.doku-picker input:not([type="radio"]),
 .doku-picker select {
   min-height: 44px;
   padding: 0 10px;
@@ -15356,7 +15356,7 @@ a.doku-ref:focus-visible {
   gap: 8px 12px;
 }
 
-.doku-picker label {
+.doku-picker label:not(.choice-card) {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -15364,7 +15364,7 @@ a.doku-ref:focus-visible {
   font-weight: 600;
 }
 
-.doku-picker input,
+.doku-picker input:not([type="radio"]),
 .doku-picker select {
   min-height: 44px;
   font-weight: 400;

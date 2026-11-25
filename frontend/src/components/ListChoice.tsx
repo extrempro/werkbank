@@ -7,6 +7,11 @@ export const CARDS_MAX = 10;
 /** Höchstens so viele Treffer zeigt das Suchfeld über eine geladene Liste. */
 const LIST_HITS = 20;
 
+/** Treffer der Suche über eine geladene Liste (Nummer als Kennung) */
+export interface ListItem extends ComboItem {
+  id: number;
+}
+
 export interface ChoiceOption {
   id: number;
   label: string;
@@ -20,7 +25,7 @@ export interface ChoiceOption {
  */
 export function useListSearch(
   options: readonly ChoiceOption[],
-): (query: string) => Promise<ComboResult> {
+): (query: string) => Promise<ComboResult<ListItem>> {
   const latest = useRef(options);
   useEffect(() => {
     latest.current = options;
@@ -97,7 +102,7 @@ export function ListChoice({
   const chosen = options.find((option) => String(option.id) === value) ?? null;
   return (
     <div className="field-wide">
-      <ComboField<ComboItem>
+      <ComboField<ListItem>
         label={label}
         id={id}
         required={required}

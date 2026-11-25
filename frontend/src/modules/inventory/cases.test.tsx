@@ -355,10 +355,10 @@ describe("Vorgänge: Person nicht mehr aktiv", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Neue Person eintragen/ }));
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
     expect((await screen.findByRole("alert")).textContent).toContain("neue Person");
-    fireEvent.change(screen.getByLabelText(/Neue Person \(aus Entra\)/), {
+    fireEvent.change(screen.getByRole("combobox", { name: "Neue Person" }), {
       target: { value: "nils" },
     });
-    fireEvent.click(await screen.findByRole("button", { name: /Nils Nachfolge/ }));
+    fireEvent.click(await screen.findByRole("option", { name: /Nils Nachfolge/ }));
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen und abschließen" }));
     await vi.waitFor(() =>
       expect(calls.find((call) => call.url.endsWith("/decide"))?.body).toEqual({

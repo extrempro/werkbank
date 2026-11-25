@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.136.0] – 2026-11-25
+
+### Geändert
+
+- **Personen- und Verweis-Auswahl über die gemeinsame Auswahl mit Echtzeitsuche** (design.md §8): Die Personensuche in Entra bei Stellen, Verleih und Vorgängen, das Hinzufügen von Personen in den Doku-Rechten und „Verweis einfügen“ in der Doku nutzen `ComboField`. Treffer stehen im schwebenden Fenster, ↑↓/Enter/Esc gelten. Die Personensuche startet ab zwei Zeichen. Die Art des Verweises wählst du auf Auswahlkarten.
+- `ComboField` kennt Kennungen als Text (z. B. Objekt-IDs aus Entra), eine Mindestlänge für die Suche, einen eigenen Text ohne Treffer, Autofokus und Esc zum Schließen eines umgebenden Fensters; während des Tippens steht „Wird gesucht …“.
+
 ## [0.135.0] – 2026-11-25
 
 ### Geändert

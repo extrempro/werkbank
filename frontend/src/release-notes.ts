@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.136.0",
+    date: "2026-11-25",
+    summary: "Personen und Verweise suchst du wie alle anderen Auswahlen.",
+    sections: [
+      {
+        area: "Überall",
+        entries: [
+          "Bei Stellen, Verleih und Vorgängen suchst du Personen aus Entra direkt im Feld. Ab zwei Zeichen erscheinen die Treffer in einem Fenster darunter, mit den Pfeiltasten wählst du, Enter übernimmt.",
+          "In der Doku funktionieren „Personen hinzufügen“ und „Verweis einfügen“ genauso; die Art des Verweises wählst du auf Karten.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.135.0",
     date: "2026-11-25",
     summary: "Einheitliche Masken im IT-Budget und bei Tickets.",

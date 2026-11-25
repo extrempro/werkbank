@@ -1,4 +1,6 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
+import { ComboField, type ComboItem } from "../../components/ComboField";
+import { ChoiceCards } from "../../components/Field";
 import { mergeAttributes, Node, type Editor } from "@tiptap/react";
 import { NodeViewWrapper, ReactNodeViewRenderer, type ReactNodeViewProps } from "@tiptap/react";
 import { errorText, formatDateTime } from "../../api";
@@ -198,34 +200,20 @@ const REF_ORDER: readonly RefKind[] = [
 /** Suche nach einem Objekt und Einfügen als Verweis (nur Bereiche mit Rechten liefern etwas). */
 export function RefPicker({ editor, onClose }: { editor: Editor; onClose: () => void }) {
   const [kind, setKind] = useState<RefKind>("ticket");
-  const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<RefData[] | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
   const id = useId();
-  const term = query.trim();
-
-  useEffect(() => {
-    if (!term) {
-      return undefined;
-    }
-    let active = true;
-    const wait = window.setTimeout(() => {
-      searchRefs(kind, term).then(
-        (found) => {
-          if (active) {
-            setHits(found);
-            setProblem(null);
-          }
-        },
-        (failure: unknown) =>
-          active && setProblem(errorText(failure, "Die Suche ist gerade nicht möglich.")),
-      );
-    }, 250);
-    return () => {
-      active = false;
-      window.clearTimeout(wait);
-    };
-  }, [kind, term]);
+  const search = useCallback(
+    (query: string) =>
+      searchRefs(kind, query.trim()).then((found) => ({
+        items: found.map((hit) => ({
+          id: hit.id,
+          label: hit.title,
+          detail: [hit.status, hit.detail].filter(Boolean).join(" · "),
+          hit,
+        })),
+        total: found.length,
+      })),
+    [kind],
+  );
 
   const insert = (hit: RefData) => {
     refCache.set(refKey(hit.kind, hit.id), hit);
@@ -239,75 +227,36 @@ export function RefPicker({ editor, onClose }: { editor: Editor; onClose: () => 
       .run();
     onClose();
   };
+  const close = () => {
+    onClose();
+    editor.commands.focus();
+  };
 
   return (
     <div className="doku-picker" role="dialog" aria-labelledby={`${id}-titel`}>
       <h2 id={`${id}-titel`} className="doku-picker-title">
         Verweis einfügen
       </h2>
-      <div className="doku-picker-row">
-        <label htmlFor={`${id}-art`}>
-          Art
-          <select
-            id={`${id}-art`}
-            value={kind}
-            onChange={(event) => {
-              setKind(event.target.value as RefKind);
-              setHits(null);
-            }}
-          >
-            {REF_ORDER.map((entry) => (
-              <option key={entry} value={entry}>
-                {REF_KIND_LABELS[entry]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label htmlFor={`${id}-suche`} className="doku-picker-grow">
-          Suchen
-          <input
-            id={`${id}-suche`}
-            type="search"
-            value={query}
-            maxLength={60}
-            autoFocus
-            autoComplete="off"
-            placeholder="Nummer, Name oder Titel"
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.preventDefault();
-                onClose();
-                editor.commands.focus();
-              }
-            }}
-          />
-        </label>
-      </div>
-      {problem && (
-        <p className="hint-box hint-bad" role="alert">
-          {problem}
-        </p>
-      )}
-      {!problem && term && hits !== null && hits.length === 0 && (
-        <p className="small" role="status">
-          Nichts gefunden. Du findest nur, was du in dem Bereich auch sehen darfst.
-        </p>
-      )}
-      {!problem && term && hits !== null && hits.length > 0 && (
-        <ul className="doku-picker-hits" aria-label="Treffer">
-          {hits.map((hit) => (
-            <li key={hit.id}>
-              <button type="button" className="doku-picker-hit" onClick={() => insert(hit)}>
-                <strong>{hit.title}</strong>
-                <span className="small">
-                  {[hit.status, hit.detail].filter(Boolean).join(" · ")}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ChoiceCards
+        legend="Art"
+        value={kind}
+        options={REF_ORDER.map((entry) => ({ value: entry, label: REF_KIND_LABELS[entry] }))}
+        onChange={setKind}
+      />
+      <ComboField<ComboItem & { hit: RefData }>
+        key={kind}
+        label="Suchen"
+        minLength={1}
+        autoFocus
+        placeholder="Nummer, Name oder Titel"
+        search={search}
+        nothingFound={() =>
+          "Nichts gefunden. Du findest nur, was du in dem Bereich auch sehen darfst."
+        }
+        onEscape={close}
+        value={null}
+        onChange={(item) => item && insert(item.hit)}
+      />
       <div className="doku-picker-actions">
         <button type="button" className="button button-secondary" onClick={onClose}>
           Abbrechen
