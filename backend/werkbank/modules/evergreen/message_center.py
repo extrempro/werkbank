@@ -108,7 +108,8 @@ def apply_suggestions(entry: EvEntry) -> None:
 
 
 def _update(db: Session, entry: EvEntry, fields: dict[str, Any], now: datetime) -> None:
-    old_schedule = schedule_text(entry.sections or [])
+    # Noch ohne Abschnitte (z. B. nach neuen Regeln): aus dem bisherigen Text berechnen
+    old_schedule = schedule_text(entry.sections or split_sections(entry.body))
     for name, value in fields.items():
         setattr(entry, name, value)
     new_schedule = schedule_text(split_sections(entry.body))

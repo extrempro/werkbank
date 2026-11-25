@@ -20,6 +20,9 @@ KNOWN_HEADS = (
     "why are we making this change",
     "when this will happen",
     "when will this happen",
+    "rollout schedule",
+    "rollout timeline",
+    "timeline",
     "how this will affect your organization",
     "how this affects your organization",
     "how this will affect your users",
@@ -57,6 +60,22 @@ _MONTH_RE = re.compile(
 _BRACKET_HEAD = re.compile(rf"^\[([^\[\]]{{2,{HEAD_MAX}}}?):?\]$")
 _PHASE_LINE = re.compile(r"^(?P<name>[^:]{2,80}):\s*(?P<rest>.+)$")
 _REGIONS = {"worldwide": "weltweit"}
+# Überschriften, unter denen Microsoft den Zeitplan nennt (klein)
+SCHEDULE_HEADS = (
+    "when this will happen",
+    "when will this happen",
+    "rollout schedule",
+    "rollout timeline",
+    "timeline",
+)
+# Namen von Rollout-Phasen am Zeilenanfang, wenn es keinen Abschnitt zum Zeitplan gibt
+_PHASE_WORDS = re.compile(
+    r"\b(worldwide|targeted release|general availability|public preview|preview|"
+    r"standard release|first release|gcc|rollout)\b",
+    re.IGNORECASE,
+)
+# Frühere Termine in Klammern, z. B. „(previously November 23, 2026)“, zählen nicht
+_PREVIOUS = re.compile(r"\((?:previously|was|formerly)\b[^()]*\)", re.IGNORECASE)
 
 
 def _head_of(line: str) -> tuple[str, str] | None:
@@ -110,21 +129,34 @@ def split_sections(text: str | None) -> list[dict[str, Any]]:
 
 
 def schedule_text(sections: list[dict[str, Any]]) -> str | None:
-    """Text des Abschnitts „When this will happen“, falls vorhanden."""
+    """Text des Abschnitts mit dem Zeitplan („When this will happen“, „Rollout Schedule“ …).
+
+    Fehlt so ein Abschnitt, gelten die Zeilen der Meldung, die mit einer Rollout-Phase
+    beginnen und einen Monat nennen (z. B. „Worldwide: … August 2026 …“).
+    """
     for section in sections:
         head = section.get("head")
-        if isinstance(head, str) and head.casefold() in (
-            "when this will happen",
-            "when will this happen",
-        ):
+        if isinstance(head, str) and head.casefold() in SCHEDULE_HEADS:
             text = section.get("text")
             return text if isinstance(text, str) and text else None
-    return None
+    lines: list[str] = []
+    for section in sections:
+        text = section.get("text")
+        if not isinstance(text, str):
+            continue
+        for line in text.splitlines():
+            line = line.strip().lstrip("•-* ").strip()
+            match = _PHASE_LINE.match(line)
+            if match and _PHASE_WORDS.search(match.group("name")) and _months(match.group("rest")):
+                lines.append(line)
+    return "\n".join(lines) or None
 
 
 def _phase_name(raw: str) -> str:
     name = " ".join(raw.split())
     lowered = name.casefold()
+    if lowered in _REGIONS:
+        return _REGIONS[lowered].capitalize()
     region = ""
     paren = re.search(r"\(([^)]{1,40})\)", name)
     if paren:
@@ -140,6 +172,8 @@ def _phase_name(raw: str) -> str:
 
 
 def _months(text: str) -> list[str]:
+    """Genannte Monate (JJJJ-MM) in Reihenfolge, ohne frühere Termine in Klammern."""
+    text = _PREVIOUS.sub(" ", text)
     return [
         f"{int(year):04d}-{MONTHS[month.casefold()]:02d}" for month, year in _MONTH_RE.findall(text)
     ]
@@ -148,7 +182,7 @@ def _months(text: str) -> list[str]:
 def parse_phases(schedule: str | None) -> list[dict[str, str]]:
     """Rollout-Phasen aus „When this will happen“, je Zeile „<Phase>: <Zeitangabe>“.
 
-    Beginn ist der erste, Ende der letzte genannte Monat der Zeile. Eine Zeile ohne Namen,
+    Beginn ist der früheste, Ende der späteste genannte Monat der Zeile. Eine Zeile ohne Namen,
     aber mit Monaten, wird die Phase „Rollout“, wenn sonst keine Phase erkannt wurde.
     """
     if not schedule:
@@ -165,14 +199,14 @@ def parse_phases(schedule: str | None) -> list[dict[str, str]]:
         match = _PHASE_LINE.match(line)
         if match and not _months(match.group("name")):
             phases.append(
-                {"name": _phase_name(match.group("name")), "start": months[0], "end": months[-1]}
+                {"name": _phase_name(match.group("name")), "start": min(months), "end": max(months)}
             )
         else:
             unnamed.extend(months)
         if len(phases) >= MAX_PHASES:
             break
     if not phases and unnamed:
-        phases.append({"name": "Rollout", "start": unnamed[0], "end": unnamed[-1]})
+        phases.append({"name": "Rollout", "start": min(unnamed), "end": max(unnamed)})
     return phases
 
 

@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.129.1] – 2026-11-25
+
+### Behoben
+
+- **Evergreen, Rollout-Phasen aus dem Nachrichtencenter:** Der Zeitplan wird jetzt auch unter „Rollout Schedule“, „Rollout Timeline“ und „Timeline“ gefunden (bisher nur „When this will happen“). Gibt es keinen solchen Abschnitt, zählen Zeilen, die mit einer Phase beginnen („Worldwide:“, „Targeted Release:“, „General Availability:“, „Preview:“ …) und einen Monat nennen. Frühere Termine in Klammern („previously …“) zählen nicht mehr; Beginn und Ende sind der früheste und der späteste Monat der Zeile. „Worldwide“ heißt auf Deutsch „Weltweit“. Auch die KI bekommt diese Abschnitte. Migration `0088` lässt Abschnitte und ungeprüfte Vorschläge aller Meldungen beim nächsten Abruf neu berechnen; geprüfte Werte bleiben.
+
 ## [0.129.0] – 2026-11-25
 
 ### Neu

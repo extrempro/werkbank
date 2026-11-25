@@ -102,3 +102,48 @@ def test_evergreen_models_load_on_their_own() -> None:
         [sys.executable, "-c", code], capture_output=True, text=True, check=False
     )
     assert result.returncode == 0, result.stderr
+
+
+ROLLOUT_SCHEDULE = "\n".join(
+    [
+        "[Introduction]",
+        "Free/Busy, MailTips and calendar sharing work across organizations.",
+        "Rollout Schedule",
+        "Worldwide: We will begin rolling out in August 2026 and expect to complete by "
+        "September 15, 2026 for Free/Busy, Mailtips and December 4, 2026 (previously "
+        "November 23) for Calendar Sharing.",
+        "",
+        "GCC, GCC High, DoD: We will communicate via Message center when we are ready to proceed.",
+        "[How this affects your organization]",
+        "Nothing to do.",
+    ]
+)
+
+
+def test_phases_under_rollout_schedule() -> None:
+    sections = split_sections(ROLLOUT_SCHEDULE)
+    assert "Rollout Schedule" in [s["head"] for s in sections]
+    assert parse_phases(schedule_text(sections)) == [
+        {"name": "Weltweit", "start": "2026-08", "end": "2026-12"},
+    ]
+
+
+def test_previous_dates_do_not_count() -> None:
+    line = "Worldwide: Complete by December 4, 2026 (previously January 23, 2027)."
+    assert parse_phases(line) == [{"name": "Weltweit", "start": "2026-12", "end": "2026-12"}]
+
+
+def test_phase_lines_without_schedule_head() -> None:
+    text = "\n".join(
+        [
+            "[What is changing]",
+            "A new option.",
+            "Targeted Release: early March 2027 to late March 2027.",
+            "General Availability (Worldwide): April 2027 to May 2027.",
+            "Note: this is not a date line in 2027.",
+        ]
+    )
+    assert parse_phases(schedule_text(split_sections(text))) == [
+        {"name": "Targeted Release", "start": "2027-03", "end": "2027-03"},
+        {"name": "Allgemein verfügbar (weltweit)", "start": "2027-04", "end": "2027-05"},
+    ]
