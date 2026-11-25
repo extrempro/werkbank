@@ -409,19 +409,24 @@ describe("Budgetposten", () => {
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Posten hinzufügen" }));
     const form = within(screen.getByRole("region", { name: "Posten hinzufügen" }));
-    fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Bitte trag eine Bezeichnung ein.");
-    fireEvent.change(form.getByLabelText(/^Bezeichnung/), {
+    fireEvent.click(form.getByRole("button", { name: "Posten anlegen" }));
+    // Beim Absenden stehen alle fehlenden Angaben oben, mit Links zu den Feldern.
+    const summary = () => form.getAllByRole("alert")[0] as HTMLElement;
+    expect(summary()).toHaveTextContent("4 Angaben fehlen noch.");
+    expect(summary()).toHaveTextContent("Bezeichnung: Trag eine Bezeichnung ein.");
+    expect(summary()).toHaveTextContent("Erwartete Kosten: Trag die erwarteten Kosten ein.");
+    expect(summary()).toHaveTextContent("Konto: Wähle ein Konto.");
+    fireEvent.change(form.getByRole("textbox", { name: "Bezeichnung" }), {
       target: { value: "Zeiterfassung Lizenz" },
     });
-    fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Bitte wähle ein Konto.");
-    // Stillgelegte Konten stehen bei einem neuen Posten nicht zur Wahl.
-    expect(within(form.getByLabelText(/^Konto/)).getAllByRole("option")).toHaveLength(2);
-    fireEvent.change(form.getByLabelText(/^Konto/), { target: { value: "1" } });
+    // Danach wird live geprüft.
+    expect(summary()).toHaveTextContent("3 Angaben fehlen noch.");
+    // Stillgelegte Konten stehen bei einem neuen Posten nicht zur Wahl; wenige als Karten.
+    const accountCards = form.getByRole("group", { name: "Konto" });
+    expect(within(accountCards).getAllByRole("radio")).toHaveLength(1);
+    fireEvent.click(within(accountCards).getByRole("radio", { name: "6815 Softwarewartung" }));
     // Der Partner ist Pflicht; stillgelegte stehen nicht zur Wahl.
-    fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Bitte wähle einen Partner.");
+    expect(summary()).toHaveTextContent("Partner: Wähle einen Partner.");
     fireEvent.focus(form.getByRole("combobox", { name: /^Partner/ }));
     const partnerList = await form.findByRole("listbox", { name: "Partner" });
     expect(
@@ -433,8 +438,8 @@ describe("Budgetposten", () => {
     // Betrag wahlweise netto oder brutto, Steuersatz frei
     fireEvent.click(form.getByRole("button", { name: "Brutto" }));
     fireEvent.change(form.getByLabelText(/^Betrag brutto/), { target: { value: "viel" } });
-    fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Der Betrag ist nicht lesbar");
+    fireEvent.click(form.getByRole("button", { name: "Posten anlegen" }));
+    expect(summary()).toHaveTextContent("Der Betrag ist nicht lesbar");
     fireEvent.change(form.getByLabelText(/^Betrag brutto/), {
       target: { value: "5.000,00" },
     });
@@ -446,8 +451,8 @@ describe("Budgetposten", () => {
     // Mehrere Jahre brauchen ein Ende; dann heißt das Feld „Ab …“.
     fireEvent.click(form.getByRole("button", { name: "Mehrere Jahre" }));
     expect(form.getByLabelText("Ab Wirtschaftsjahr")).toHaveValue("2026");
-    fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("bis zu welchem Wirtschaftsjahr");
+    fireEvent.click(form.getByRole("button", { name: "Posten anlegen" }));
+    expect(summary()).toHaveTextContent("bis zu welchem Wirtschaftsjahr");
     // Als Ende stehen nur Jahre nach dem Beginn zur Wahl.
     expect(
       within(form.getByLabelText(/^Bis Wirtschaftsjahr/))
@@ -460,13 +465,14 @@ describe("Budgetposten", () => {
     );
     await pick(form, /^Vertrag/, "Wartung Zeiterfassung");
     // Abgeschlossene Projekte stehen bei einem neuen Posten nicht zur Wahl.
+    const projectCards = form.getByRole("group", { name: "IT-Projekt" });
     expect(
-      within(form.getByLabelText("IT-Projekt"))
-        .getAllByRole("option")
-        .map((option) => option.textContent),
+      within(projectCards)
+        .getAllByRole("radio")
+        .map((option) => option.closest("label")?.textContent),
     ).toEqual(["Kein Projekt", "WLAN-Erneuerung"]);
-    fireEvent.change(form.getByLabelText("IT-Projekt"), { target: { value: "3" } });
-    fireEvent.click(form.getByRole("button", { name: "Posten speichern" }));
+    fireEvent.click(within(projectCards).getByRole("radio", { name: "WLAN-Erneuerung" }));
+    fireEvent.click(form.getByRole("button", { name: "Posten anlegen" }));
     expect(
       await screen.findByText("Zeiterfassung Lizenz (BP-2026-002) ist gespeichert."),
     ).toBeVisible();
@@ -632,11 +638,12 @@ describe("Konten", () => {
     await screen.findByRole("region", { name: "Konten" });
 
     fireEvent.click(screen.getByRole("button", { name: "Konto anlegen" }));
-    fireEvent.click(screen.getByRole("button", { name: "Konto speichern" }));
+    const accountForm = within(screen.getByRole("region", { name: "Konto anlegen" }));
+    fireEvent.click(accountForm.getByRole("button", { name: "Konto anlegen" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Kontonummer und Bezeichnung");
     fireEvent.change(screen.getByLabelText("Kontonummer"), { target: { value: " 6820 " } });
     fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "Telefonie" } });
-    fireEvent.click(screen.getByRole("button", { name: "Konto speichern" }));
+    fireEvent.click(accountForm.getByRole("button", { name: "Konto anlegen" }));
     expect(await screen.findByText("Konto 6820 ist gespeichert.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       number: "6820",
@@ -650,7 +657,10 @@ describe("Konten", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Konto 0420 bearbeiten" }));
     expect(screen.getByRole("heading", { name: "Konto 0420 bearbeiten" })).toBeVisible();
-    expect(screen.getByLabelText("Art")).toHaveValue("investition");
+    expect(screen.getByRole("button", { name: "Investition" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     fireEvent.click(screen.getByLabelText("Konto ist aktiv"));
     fireEvent.click(screen.getByRole("button", { name: "Änderungen speichern" }));
     expect(await screen.findByText("Konto 0420 ist gespeichert.")).toBeVisible();
@@ -998,7 +1008,7 @@ describe("Verträge", () => {
     expect(pane.getByText(/\/budget\/vertraege\/1$/)).toBeVisible();
     expect(pane.getByText("Kündigung: noch 15 Tage")).toBeVisible();
     // Monatlicher Vertrag: Vorschlag „Monatsposten anlegen“ mit dem Konto der Posten
-    expect(pane.getByLabelText("Konto der Posten")).toHaveValue("1");
+    expect(pane.getByRole("radio", { name: "6815 Softwarewartung" })).toBeChecked();
     fireEvent.click(pane.getByRole("button", { name: /^Monatsposten für 2026\/27 anlegen/ }));
     expect(await screen.findByText("2 Monatsposten sind angelegt, 1 gab es schon.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
@@ -1017,10 +1027,13 @@ describe("Verträge", () => {
     await screen.findByRole("table");
     fireEvent.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
     const form = within(screen.getByRole("region", { name: "Vertrag anlegen" }));
-    fireEvent.click(form.getByRole("button", { name: "Vertrag speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Bezeichnung");
+    fireEvent.click(form.getByRole("button", { name: "Vertrag anlegen" }));
+    const summary = () => form.getAllByRole("alert")[0] as HTMLElement;
+    expect(summary()).toHaveTextContent("Bezeichnung: Trag eine Bezeichnung ein.");
 
-    fireEvent.change(form.getByLabelText(/^Bezeichnung/), { target: { value: "Neuer Vertrag" } });
+    fireEvent.change(form.getByRole("textbox", { name: "Bezeichnung" }), {
+      target: { value: "Neuer Vertrag" },
+    });
     await pick(form, /^Vertragspartner/, "Beispiel Software GmbH");
     await pick(form, /^Rechnungssteller/, "Beispiel Distribution AG");
     // Turnus zuerst; das Betragsfeld heißt passend.
@@ -1042,8 +1055,8 @@ describe("Verträge", () => {
       form.getByText("1 Budgetposten hat schon einen anderen Vertrag", { exact: false }),
     ).toBeVisible();
     expect(form.getByText("Budgetposten (0 zugeordnet)")).toBeVisible();
-    fireEvent.click(form.getByRole("button", { name: "Vertrag speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Betrag ist nicht lesbar");
+    fireEvent.click(form.getByRole("button", { name: "Vertrag anlegen" }));
+    expect(summary()).toHaveTextContent("Betrag ist nicht lesbar");
 
     fireEvent.change(yearly.getByLabelText(/^Betrag netto/), { target: { value: "500,00" } });
     expect(yearly.getByText(/^Brutto: 595,00 €/)).toBeVisible();
@@ -1051,13 +1064,13 @@ describe("Verträge", () => {
       "Soll je Geschäftsjahr",
     );
     fireEvent.change(yearly.getByLabelText("Steuersatz (%)"), { target: { value: "x" } });
-    fireEvent.click(form.getByRole("button", { name: "Vertrag speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Steuersatz ist nicht lesbar");
+    fireEvent.click(form.getByRole("button", { name: "Vertrag anlegen" }));
+    expect(summary()).toHaveTextContent("Steuersatz ist nicht lesbar");
     fireEvent.change(yearly.getByLabelText("Steuersatz (%)"), { target: { value: "7" } });
     fireEvent.change(form.getByLabelText(/^Beginn/), { target: { value: "2026-01-01" } });
     fireEvent.change(form.getByLabelText(/^Verlängert sich um/), { target: { value: "12" } });
-    fireEvent.click(form.getByRole("button", { name: "Vertrag speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("nur bei einem Ende der Laufzeit");
+    fireEvent.click(form.getByRole("button", { name: "Vertrag anlegen" }));
+    expect(summary()).toHaveTextContent("nur bei einem Ende der Laufzeit");
 
     fireEvent.change(form.getByLabelText(/^Ende der Laufzeit/), {
       target: { value: "2026-12-31" },
@@ -1065,10 +1078,8 @@ describe("Verträge", () => {
     // Die Kündigungsfrist steht als Auswahl bis 12 Monate bereit.
     expect(within(form.getByLabelText(/^Kündigungsfrist/)).getAllByRole("option")).toHaveLength(14);
     fireEvent.change(form.getByLabelText(/^Kündigungsfrist/), { target: { value: "3" } });
-    fireEvent.change(form.getByLabelText(/^Auftragsverarbeitungsvertrag/), {
-      target: { value: "fehlt" },
-    });
-    fireEvent.click(form.getByRole("button", { name: "Vertrag speichern" }));
+    fireEvent.click(form.getByRole("button", { name: "fehlt" }));
+    fireEvent.click(form.getByRole("button", { name: "Vertrag anlegen" }));
     expect(await screen.findByText("Wartung Zeiterfassung ist gespeichert.")).toBeVisible();
     expect(calls.find((call) => call.method === "POST")?.body).toEqual({
       title: "Neuer Vertrag",
@@ -1262,21 +1273,23 @@ describe("Rechnungen", () => {
     render(<InvoicesPage roles={["Budget.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Rechnung erfassen" }));
     const form = within(screen.getByRole("region", { name: "Rechnung erfassen" }));
-    fireEvent.click(form.getByRole("button", { name: "Rechnung speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Bitte wähle den Rechnungssteller");
+    fireEvent.click(form.getByRole("button", { name: "Rechnung erfassen" }));
+    const summary = () => form.getAllByRole("alert")[0] as HTMLElement;
+    expect(summary()).toHaveTextContent("Rechnungssteller: Wähle den Rechnungssteller.");
 
     // Erst der Rechnungssteller: seine Posten stehen oben in der Auswahl.
     await pick(form, /^Rechnungssteller/, "Beispiel Software GmbH");
-    expect(
-      within(form.getByLabelText("Budgetposten")).getByRole("group", {
-        name: "Posten von Beispiel Software GmbH",
-      }),
-    ).toBeInTheDocument();
+    fireEvent.focus(form.getByRole("combobox", { name: "Budgetposten" }));
+    const firstItems = await form.findByRole("listbox", { name: "Budgetposten" });
+    expect(within(firstItems).getAllByRole("option")[0]).toHaveTextContent(
+      "Posten von Beispiel Software GmbH",
+    );
+    fireEvent.blur(form.getByRole("combobox", { name: "Budgetposten" }));
     fireEvent.click(form.getByRole("button", { name: /^Rechnungssteller ändern/ }));
     await pick(form, /^Rechnungssteller/, "Beispiel Distribution AG");
     // Rechnungen hängen nur am Posten; dessen Vertrag wird angezeigt und lässt den Posten offen.
     expect(form.queryByLabelText(/^Vertrag/)).toBeNull();
-    fireEvent.change(form.getByLabelText("Budgetposten"), { target: { value: "11" } });
+    await pick(form, /^Budgetposten/, "Office-Lizenzen");
     expect(form.getByText("Vertrag des Postens: Wartung Zeiterfassung")).toBeVisible();
     expect(form.getByLabelText(/Schließt den Budgetposten/)).not.toBeChecked();
     fireEvent.change(form.getByLabelText(/^Rechnungsnummer/), { target: { value: " RE-3 " } });
@@ -1285,8 +1298,8 @@ describe("Rechnungen", () => {
     fireEvent.change(form.getByLabelText(/^Betrag netto/), { target: { value: "1.000,00" } });
     expect(plain(form.getByText(/^Brutto der Position/).textContent)).toContain("1.190,00 €");
     fireEvent.change(form.getByLabelText(/^Brutto laut Rechnung/), { target: { value: "x" } });
-    fireEvent.click(form.getByRole("button", { name: "Rechnung speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Das Brutto ist nicht lesbar");
+    fireEvent.click(form.getByRole("button", { name: "Rechnung erfassen" }));
+    expect(summary()).toHaveTextContent("Brutto laut Rechnung: Nicht lesbar.");
 
     fireEvent.change(form.getByLabelText(/^Brutto laut Rechnung/), {
       target: { value: "1190,02" },
@@ -1296,13 +1309,13 @@ describe("Rechnungen", () => {
     // Zweite Position für einen anderen Budgetposten, mit anderem Steuersatz
     fireEvent.click(form.getByRole("button", { name: "Position hinzufügen" }));
     const second = within(form.getByRole("group", { name: "Position 2" }));
-    fireEvent.click(form.getByRole("button", { name: "Rechnung speichern" }));
-    expect(form.getByRole("alert")).toHaveTextContent("Position 2: Bitte wähle den Budgetposten");
+    fireEvent.click(form.getByRole("button", { name: "Rechnung erfassen" }));
+    expect(summary()).toHaveTextContent("Position 2, Budgetposten: Wähle den Budgetposten.");
     // Stillgelegte Posten stehen nicht zur Wahl; zwei Positionen dürfen denselben Posten haben.
-    expect(
-      within(second.getByLabelText("Budgetposten")).queryByRole("option", { name: /Server/ }),
-    ).toBeNull();
-    fireEvent.change(second.getByLabelText("Budgetposten"), { target: { value: "11" } });
+    fireEvent.focus(second.getByRole("combobox", { name: "Budgetposten" }));
+    const secondItems = await second.findByRole("listbox", { name: "Budgetposten" });
+    expect(within(secondItems).queryByRole("option", { name: /Server/ })).toBeNull();
+    await pick(second, /^Budgetposten/, "Office-Lizenzen");
     // Die zweite Position wird brutto eingetragen; das Netto rechnet die Werkbank.
     fireEvent.change(second.getByLabelText("Steuersatz (%)"), { target: { value: "7" } });
     fireEvent.click(second.getByRole("button", { name: "Brutto" }));
@@ -1316,14 +1329,12 @@ describe("Rechnungen", () => {
     fireEvent.change(form.getByLabelText(/^Rechnungsbetrag laut Beleg/), {
       target: { value: "1.500,00" },
     });
-    fireEvent.click(form.getByRole("button", { name: "Rechnung speichern" }));
-    expect(plain(form.getByRole("alert").textContent)).toContain(
-      "noch 95,98 € nicht auf Positionen verteilt",
-    );
+    fireEvent.click(form.getByRole("button", { name: "Rechnung erfassen" }));
+    expect(plain(summary().textContent)).toContain("noch 95,98 € nicht auf Positionen verteilt");
     fireEvent.change(form.getByLabelText(/^Rechnungsbetrag laut Beleg/), {
       target: { value: "1.404,02" },
     });
-    fireEvent.click(form.getByRole("button", { name: "Rechnung speichern" }));
+    fireEvent.click(form.getByRole("button", { name: "Rechnung erfassen" }));
     expect(
       await screen.findByText(/RE-3 ist gespeichert und wartet auf die Prüfung/),
     ).toBeVisible();
@@ -1367,8 +1378,10 @@ describe("Rechnungen", () => {
     fireEvent.click(await screen.findByRole("button", { name: "RE-2" }));
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     expect(
-      within(screen.getByRole("group", { name: "Position 2" })).getByLabelText("Budgetposten"),
-    ).toHaveValue("12");
+      within(screen.getByRole("group", { name: "Position 2" })).getByRole("button", {
+        name: /^Budgetposten ändern: .* · Server/,
+      }),
+    ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Position 2 entfernen" }));
     expect(screen.queryByRole("group", { name: "Position 2" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Änderungen speichern" }));
@@ -1429,7 +1442,11 @@ describe("Partner im Detail", () => {
     render(<PartnerDetailPage roles={["Budget.Manager"]} partnerId={2} />);
     const start = await screen.findByRole("button", { name: "Zusammenlegen" });
     expect(start).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Zusammenlegen mit"), { target: { value: "1" } });
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "Zusammenlegen mit" })).getByRole("radio", {
+        name: "Beispiel Software GmbH",
+      }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Zusammenlegen" }));
     expect(calls.some((call) => call.method === "POST")).toBe(false);
     expect(await screen.findByRole("alertdialog")).toHaveTextContent(

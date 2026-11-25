@@ -61,6 +61,14 @@ import { fetchProjectChoices, projectPath, type ProjectChoice } from "../project
 import { Feedback } from "../../components/Feedback";
 import { ListPicker } from "../inventory/LookupPicker";
 import {
+  ErrorSummary,
+  Field,
+  problemFor,
+  RequiredNote,
+  type Problem,
+} from "../../components/Field";
+import { ListChoice } from "../../components/ListChoice";
+import {
   contractPath,
   CopyLinkBar,
   invoicePath,
@@ -169,6 +177,7 @@ function ItemForm({
   const [tags, setTags] = useState<string[]>(item?.tags ?? []);
   const [active, setActive] = useState(item?.active ?? true);
   const [error, setError] = useState<string | null>(null);
+  const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   // Etwas eingetragen oder gewählt: Vor dem Wechsel zu den Tags wird nachgefragt.
   const [touched, setTouched] = useState(false);
@@ -223,24 +232,44 @@ function ItemForm({
     }
   }
 
+  // Geprüft wird beim Absenden, danach bei jeder Änderung.
+  const problems: Problem[] = [];
+  if (!name.trim()) {
+    problems.push({ id: "posten-name", label: "Bezeichnung", text: "Trag eine Bezeichnung ein." });
+  }
+  if (!accountId) {
+    problems.push({ id: "posten-konto", label: "Konto", text: "Wähle ein Konto." });
+  }
+  if (!partnerId) {
+    problems.push({ id: "posten-partner", label: "Partner", text: "Wähle einen Partner." });
+  }
+  if ("problem" in costRead) {
+    problems.push({
+      id: "posten-betrag",
+      label: "Erwartete Kosten",
+      text: cost.amount.trim() ? costRead.problem : "Trag die erwarteten Kosten ein.",
+    });
+  }
+  if (runtime === "bis" && (!end || Number(end) <= Number(start))) {
+    problems.push({
+      id: "posten-ende",
+      label: `Bis ${yearLabel}`,
+      text: `Wähle, bis zu welchem ${yearLabel} der Posten läuft.`,
+    });
+  }
+  if (tags.length > TAGS_MAX) {
+    problems.push({
+      id: "posten-tags-erste",
+      label: "Tags",
+      text: `Es sind höchstens ${TAGS_MAX} Tags je Budgetposten möglich.`,
+    });
+  }
+  const shown = tried ? problems : [];
+
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    let problem: string | null = null;
-    if (!name.trim()) {
-      problem = "Bitte trag eine Bezeichnung ein.";
-    } else if (!accountId) {
-      problem = "Bitte wähle ein Konto.";
-    } else if (!partnerId) {
-      problem = "Bitte wähle einen Partner.";
-    } else if ("problem" in costRead) {
-      problem = costRead.problem;
-    } else if (runtime === "bis" && (!end || Number(end) <= Number(start))) {
-      problem = `Bitte wähle, bis zu welchem ${yearLabel} der Posten läuft.`;
-    } else if (tags.length > TAGS_MAX) {
-      problem = `Es sind höchstens ${TAGS_MAX} Tags je Budgetposten möglich.`;
-    }
-    if (problem !== null || "problem" in costRead) {
-      setError(problem);
+    setTried(true);
+    if (problems.length > 0 || "problem" in costRead) {
       return;
     }
     const update: ItemUpdate = {
@@ -294,71 +323,77 @@ function ItemForm({
         onChange={() => setTouched(true)}
         noValidate
       >
-        <p className="small budget-muted">
-          Pflichtfelder sind mit <span aria-hidden="true">*</span>
-          <span className="visually-hidden">Stern</span> markiert.
-        </p>
+        <RequiredNote />
+        <ErrorSummary problems={shown} />
         <FormStep number={1} title="Was und bei wem">
-          <label className="form-wide">
-            <span>
-              Bezeichnung <span aria-hidden="true">*</span>
-            </span>
-            <input
-              type="text"
-              value={name}
-              maxLength={160}
-              required
-              aria-required="true"
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
-          <label>
-            <span>
-              Konto <span aria-hidden="true">*</span>
-            </span>
-            <select
-              value={accountId}
-              required
-              aria-required="true"
-              onChange={(event) => setAccountId(event.target.value)}
-            >
-              <option value="">Bitte wählen</option>
-              {choices.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.number} {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div>
+          <Field
+            label="Bezeichnung"
+            id="posten-name"
+            required
+            wide
+            error={problemFor(shown, "posten-name")}
+          >
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={name}
+                maxLength={160}
+                onChange={(event) => setName(event.target.value)}
+              />
+            )}
+          </Field>
+          <ListChoice
+            label="Konto"
+            id="posten-konto"
+            required
+            unit="Konten"
+            placeholder="Nummer oder Name des Kontos …"
+            options={choices.map((entry) => ({
+              id: entry.id,
+              label: `${entry.number} ${entry.name}`,
+            }))}
+            value={accountId}
+            onChange={(next) => {
+              setTouched(true);
+              setAccountId(next);
+            }}
+            error={problemFor(shown, "posten-konto")}
+          />
+          <div className="field-wide">
             <ListPicker
               label="Partner"
+              id="posten-partner"
               required
               placeholder="Name des Partners …"
+              hint="Die Firma, um die es geht."
               options={partnerChoices.map((entry) => ({ id: entry.id, label: entry.name }))}
               value={partnerId}
               onChange={setPartnerId}
+              error={problemFor(shown, "posten-partner")}
             />
-            <span className="form-hint">Die Firma, um die es geht.</span>
           </div>
         </FormStep>
         <FormStep number={2} title="Kosten und Laufzeit">
           <AmountFields
             legend="Erwartete Kosten"
+            id="posten-betrag"
             value={cost}
             onChange={setCost}
             hint="Fürs Budget zählt das Brutto."
+            error={problemFor(shown, "posten-betrag")}
           />
-          <label>
-            {runtime === "einmalig" ? yearLabel : `Ab ${yearLabel}`}
-            <select value={start} onChange={(event) => setStart(event.target.value)}>
-              {yearChoices.map((entry) => (
-                <option key={entry.year} value={entry.year}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Field label={runtime === "einmalig" ? yearLabel : `Ab ${yearLabel}`}>
+            {(control) => (
+              <select {...control} value={start} onChange={(event) => setStart(event.target.value)}>
+                {yearChoices.map((entry) => (
+                  <option key={entry.year} value={entry.year}>
+                    {entry.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
           <div className="form-wide form-field">
             <span className="form-label" id="posten-laufzeit">
               Laufzeit
@@ -380,17 +415,23 @@ function ItemForm({
             </div>
           </div>
           {runtime === "bis" && (
-            <label>
-              Bis {yearLabel}
-              <select value={end} onChange={(event) => setEnd(event.target.value)}>
-                <option value="">Bitte wählen</option>
-                {endChoices.map((entry) => (
-                  <option key={entry.year} value={entry.year}>
-                    {entry.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Field
+              label={`Bis ${yearLabel}`}
+              id="posten-ende"
+              required
+              error={problemFor(shown, "posten-ende")}
+            >
+              {(control) => (
+                <select {...control} value={end} onChange={(event) => setEnd(event.target.value)}>
+                  <option value="">Bitte wählen</option>
+                  {endChoices.map((entry) => (
+                    <option key={entry.year} value={entry.year}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
           )}
           {summary && (
             <p className="form-wide form-summary" aria-live="polite">
@@ -400,7 +441,8 @@ function ItemForm({
         </FormStep>
         <FormStep number={3} title="Verknüpfen" hint="freiwillig">
           <ListPicker
-            label="Vertrag (leer: kein Vertrag)"
+            label="Vertrag"
+            hint="Leer lassen, wenn kein Vertrag dazugehört."
             placeholder="Bezeichnung oder Partner …"
             options={contracts.map((entry) => ({
               id: entry.id,
@@ -411,18 +453,22 @@ function ItemForm({
             onChange={setContractId}
           />
           {projectChoices.length > 0 && (
-            <label>
-              IT-Projekt
-              <select value={projectId} onChange={(event) => setProjectId(event.target.value)}>
-                <option value="">Kein Projekt</option>
-                {projectChoices.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.name}
-                    {entry.status === "abgeschlossen" ? " (abgeschlossen)" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <ListChoice
+              label="IT-Projekt"
+              none="Kein Projekt"
+              unit="Projekte"
+              placeholder="Name des Projekts …"
+              options={projectChoices.map((entry) => ({
+                id: entry.id,
+                label: entry.name,
+                detail: entry.status === "abgeschlossen" ? "abgeschlossen" : undefined,
+              }))}
+              value={projectId}
+              onChange={(next) => {
+                setTouched(true);
+                setProjectId(next);
+              }}
+            />
           )}
           <div className="form-wide form-field">
             <span className="form-label" id="posten-tags">
@@ -430,9 +476,10 @@ function ItemForm({
             </span>
             {knownTags.length > 0 ? (
               <div className="chips" role="group" aria-labelledby="posten-tags">
-                {knownTags.map((entry) => (
+                {knownTags.map((entry, index) => (
                   <button
                     key={entry.id}
+                    id={index === 0 ? "posten-tags-erste" : undefined}
                     type="button"
                     className="chip budget-tag"
                     aria-pressed={isChosen(entry.tag)}
@@ -482,15 +529,17 @@ function ItemForm({
               </div>
             )}
           </div>
-          <label className="form-wide">
-            Notiz
-            <input
-              type="text"
-              value={note}
-              maxLength={500}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          </label>
+          <Field label="Notiz" wide>
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={note}
+                maxLength={500}
+                onChange={(event) => setNote(event.target.value)}
+              />
+            )}
+          </Field>
           {item && (
             <label className="check-label form-wide">
               <input
@@ -508,9 +557,9 @@ function ItemForm({
             {error}
           </p>
         )}
-        <div className="actions">
+        <div className="form-actions">
           <button type="submit" className="button button-primary" disabled={busy}>
-            {item ? "Änderungen speichern" : "Posten speichern"}
+            {item ? "Änderungen speichern" : "Posten anlegen"}
           </button>
           <button type="button" className="button button-secondary" onClick={onCancel}>
             Abbrechen

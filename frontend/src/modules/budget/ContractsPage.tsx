@@ -40,6 +40,14 @@ import { ContractDetail } from "./ContractDetail";
 import { BudgetHead, FormStep, ReadOnlyNote } from "./shared";
 import { Feedback } from "../../components/Feedback";
 import { ListPicker } from "../inventory/LookupPicker";
+import {
+  ErrorSummary,
+  Field,
+  problemFor,
+  RequiredNote,
+  Segmented,
+  type Problem,
+} from "../../components/Field";
 import { AmountFields, amountValue, readAmount, type AmountValue } from "./AmountFields";
 
 interface FormProps {
@@ -85,6 +93,7 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
   const [note, setNote] = useState(contract?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tried, setTried] = useState(false);
 
   // Stillgelegte Einträge stehen nur zur Wahl, wenn der Vertrag sie schon nutzt.
   const partnerChoices = partners.filter(
@@ -113,28 +122,59 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
   }
   const amountRead = readAmount(amount);
 
+  // Geprüft wird beim Absenden, danach bei jeder Änderung.
+  const renewalMonths = wholeNumber(renewal);
+  const noticeMonths = wholeNumber(notice);
+  const problems: Problem[] = [];
+  if (!title.trim()) {
+    problems.push({
+      id: "vertrag-titel",
+      label: "Bezeichnung",
+      text: "Trag eine Bezeichnung ein.",
+    });
+  }
+  if (!partnerId) {
+    problems.push({
+      id: "vertrag-partner",
+      label: "Vertragspartner",
+      text: "Wähle den Vertragspartner.",
+    });
+  }
+  if ("problem" in amountRead) {
+    problems.push({
+      id: "vertrag-betrag",
+      label: "Betrag",
+      text: amount.amount.trim() ? amountRead.problem : "Trag den Betrag ein.",
+    });
+  }
+  if (!startsOn) {
+    problems.push({ id: "vertrag-beginn", label: "Beginn", text: "Trag den Beginn ein." });
+  } else if (endsOn && endsOn < startsOn) {
+    problems.push({
+      id: "vertrag-ende",
+      label: "Ende der Laufzeit",
+      text: "Das Ende liegt vor dem Beginn.",
+    });
+  }
+  if (Number.isNaN(renewalMonths)) {
+    problems.push({
+      id: "vertrag-verlaengerung",
+      label: "Verlängerung",
+      text: "Trag ganze Monate ein.",
+    });
+  } else if (renewalMonths !== null && !endsOn) {
+    problems.push({
+      id: "vertrag-verlaengerung",
+      label: "Verlängerung",
+      text: "Eine Verlängerung gibt es nur bei einem Ende der Laufzeit.",
+    });
+  }
+  const shown = tried ? problems : [];
+
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    const renewalMonths = wholeNumber(renewal);
-    const noticeMonths = wholeNumber(notice);
-    let problem: string | null = null;
-    if (!title.trim()) {
-      problem = "Bitte trag eine Bezeichnung ein.";
-    } else if (!partnerId) {
-      problem = "Bitte wähle den Vertragspartner.";
-    } else if ("problem" in amountRead) {
-      problem = amountRead.problem;
-    } else if (!startsOn) {
-      problem = "Bitte trag den Beginn ein.";
-    } else if (endsOn && endsOn < startsOn) {
-      problem = "Das Ende der Laufzeit liegt vor dem Beginn.";
-    } else if (Number.isNaN(renewalMonths) || Number.isNaN(noticeMonths)) {
-      problem = "Verlängerung und Kündigungsfrist bitte in ganzen Monaten eintragen.";
-    } else if (renewalMonths !== null && !endsOn) {
-      problem = "Eine Verlängerung gibt es nur bei einem Ende der Laufzeit.";
-    }
-    if (problem !== null || "problem" in amountRead) {
-      setError(problem);
+    setTried(true);
+    if (problems.length > 0 || "problem" in amountRead || Number.isNaN(noticeMonths)) {
       return;
     }
     const update = {
@@ -187,65 +227,65 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
         </button>
       </div>
       <form className="detail-body settings-form budget-form" onSubmit={onSubmit} noValidate>
-        <p className="small budget-muted">
-          Pflichtfelder sind mit <span aria-hidden="true">*</span>
-          <span className="visually-hidden">Stern</span> markiert.
-        </p>
+        <RequiredNote />
+        <ErrorSummary problems={shown} />
         <FormStep number={1} title="Vertrag und Partner">
-          <label className="form-wide">
-            <span>
-              Bezeichnung <span aria-hidden="true">*</span>
-            </span>
-            <input
-              type="text"
-              value={title}
-              maxLength={160}
-              required
-              aria-required="true"
-              onChange={(event) => setTitle(event.target.value)}
-            />
-          </label>
+          <Field
+            label="Bezeichnung"
+            id="vertrag-titel"
+            required
+            wide
+            error={problemFor(shown, "vertrag-titel")}
+          >
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={title}
+                maxLength={160}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+            )}
+          </Field>
           <ListPicker
             label="Vertragspartner"
+            id="vertrag-partner"
             required
             placeholder="Name des Partners …"
             options={partnerChoices.map((entry) => ({ id: entry.id, label: entry.name }))}
             value={partnerId}
             onChange={setPartnerId}
+            error={problemFor(shown, "vertrag-partner")}
           />
           <ListPicker
-            label="Rechnungssteller (leer: wie Vertragspartner)"
+            label="Rechnungssteller"
+            hint="Leer lassen, wenn der Vertragspartner die Rechnungen schreibt."
             placeholder="Name des Rechnungsstellers …"
             options={invoicerChoices.map((entry) => ({ id: entry.id, label: entry.name }))}
             value={invoicerId}
             onChange={setInvoicerId}
           />
-          <label>
-            Vertragsnummer
-            <input
-              type="text"
-              value={number}
-              maxLength={60}
-              onChange={(event) => setNumber(event.target.value)}
-            />
-          </label>
-          <div className="field-info">
-            <span className="field-info-head">
-              <label htmlFor="vertrag-avv">Auftragsverarbeitungsvertrag (AVV)</label>
-              <InfoTip term="budget.avv" />
-            </span>
-            <select
-              id="vertrag-avv"
-              value={dpa}
-              onChange={(event) => setDpa(event.target.value as DpaStatus)}
-            >
-              {(Object.keys(DPA_LABELS) as DpaStatus[]).map((key) => (
-                <option key={key} value={key}>
-                  {DPA_LABELS[key]}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Field label="Vertragsnummer">
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={number}
+                maxLength={60}
+                onChange={(event) => setNumber(event.target.value)}
+              />
+            )}
+          </Field>
+          <Segmented
+            label="Auftragsverarbeitungsvertrag (AVV)"
+            info={<InfoTip term="budget.avv" />}
+            value={dpa}
+            options={(Object.keys(DPA_LABELS) as DpaStatus[]).map((key) => ({
+              value: key,
+              label: DPA_LABELS[key],
+            }))}
+            onChange={setDpa}
+          />
         </FormStep>
         <FormStep number={2} title="Kosten">
           <div className="form-wide form-field">
@@ -265,7 +305,13 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
               ))}
             </div>
           </div>
-          <AmountFields legend={AMOUNT_LABELS[interval]} value={amount} onChange={setAmount} />
+          <AmountFields
+            legend={AMOUNT_LABELS[interval]}
+            id="vertrag-betrag"
+            value={amount}
+            onChange={setAmount}
+            error={problemFor(shown, "vertrag-betrag")}
+          />
           <p className="form-wide form-summary" role="status">
             {gross !== null
               ? interval === "einmalig"
@@ -279,73 +325,90 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
           </p>
         </FormStep>
         <FormStep number={3} title="Laufzeit und Kündigung">
-          <label>
-            <span>
-              Beginn <span aria-hidden="true">*</span>
-            </span>
-            <input
-              type="date"
-              value={startsOn}
-              required
-              aria-required="true"
-              onChange={(event) => setStartsOn(event.target.value)}
-            />
-          </label>
-          <label>
-            Ende der Laufzeit
-            <input
-              type="date"
-              value={endsOn}
-              aria-describedby="vertrag-ende-hinweis"
-              onChange={(event) => setEndsOn(event.target.value)}
-            />
-            <span id="vertrag-ende-hinweis" className="form-hint">
-              leer: unbefristet
-            </span>
-          </label>
-          <label>
-            Verlängert sich um (Monate)
-            <input
-              type="text"
-              inputMode="numeric"
-              value={renewal}
-              onChange={(event) => setRenewal(event.target.value)}
-            />
-          </label>
-          <label>
-            Kündigungsfrist
-            <select value={notice} onChange={(event) => setNotice(event.target.value)}>
-              <option value="">keine</option>
-              {noticeChoices.map((months) => (
-                <option key={months} value={months}>
-                  {months === 1 ? "1 Monat" : `${months} Monate`} zum Laufzeitende
-                </option>
-              ))}
-            </select>
-          </label>
-          {contract && (
-            <label>
-              Gekündigt zum
+          <Field
+            label="Beginn"
+            id="vertrag-beginn"
+            required
+            error={problemFor(shown, "vertrag-beginn")}
+          >
+            {(control) => (
               <input
+                {...control}
                 type="date"
-                value={cancelledTo}
-                aria-describedby="vertrag-gekuendigt-hinweis"
-                onChange={(event) => setCancelledTo(event.target.value)}
+                value={startsOn}
+                onChange={(event) => setStartsOn(event.target.value)}
               />
-              <span id="vertrag-gekuendigt-hinweis" className="form-hint">
-                Danach zählt das Soll nichts mehr.
-              </span>
-            </label>
+            )}
+          </Field>
+          <Field
+            label="Ende der Laufzeit"
+            id="vertrag-ende"
+            hint="Leer lassen, wenn der Vertrag unbefristet ist."
+            error={problemFor(shown, "vertrag-ende")}
+          >
+            {(control) => (
+              <input
+                {...control}
+                type="date"
+                value={endsOn}
+                onChange={(event) => setEndsOn(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label="Verlängert sich um (Monate)"
+            id="vertrag-verlaengerung"
+            error={problemFor(shown, "vertrag-verlaengerung")}
+          >
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                inputMode="numeric"
+                value={renewal}
+                onChange={(event) => setRenewal(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label="Kündigungsfrist">
+            {(control) => (
+              <select
+                {...control}
+                value={notice}
+                onChange={(event) => setNotice(event.target.value)}
+              >
+                <option value="">keine</option>
+                {noticeChoices.map((months) => (
+                  <option key={months} value={months}>
+                    {months === 1 ? "1 Monat" : `${months} Monate`} zum Laufzeitende
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+          {contract && (
+            <Field label="Gekündigt zum" hint="Danach zählt das Soll nichts mehr.">
+              {(control) => (
+                <input
+                  {...control}
+                  type="date"
+                  value={cancelledTo}
+                  onChange={(event) => setCancelledTo(event.target.value)}
+                />
+              )}
+            </Field>
           )}
-          <label className="form-wide">
-            Notiz
-            <input
-              type="text"
-              value={note}
-              maxLength={500}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          </label>
+          <Field label="Notiz" wide>
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={note}
+                maxLength={500}
+                onChange={(event) => setNote(event.target.value)}
+              />
+            )}
+          </Field>
         </FormStep>
         <FormStep
           number={4}
@@ -356,15 +419,17 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
             Der Vertrag wird den Posten nur zugeordnet. Ins Budget gehen seine Kosten über die
             Rechnungen auf diese Posten. Ein Posten hat höchstens einen Vertrag.
           </p>
-          <label className="form-wide">
-            Budgetposten suchen
-            <input
-              type="search"
-              value={itemSearch}
-              placeholder="Nummer, Name oder Konto"
-              onChange={(event) => setItemSearch(event.target.value)}
-            />
-          </label>
+          <Field label="Budgetposten suchen" wide>
+            {(control) => (
+              <input
+                {...control}
+                type="search"
+                value={itemSearch}
+                placeholder="Nummer, Name oder Konto"
+                onChange={(event) => setItemSearch(event.target.value)}
+              />
+            )}
+          </Field>
           {itemChoices.length === 0 ? (
             <p className="small budget-muted form-wide">Kein Budgetposten passt zur Suche.</p>
           ) : (
@@ -397,9 +462,9 @@ function ContractForm({ contract, partners, items, yearLabel, onSaved, onCancel 
             {error}
           </p>
         )}
-        <div className="actions">
+        <div className="form-actions">
           <button type="submit" className="button button-primary" disabled={busy}>
-            {contract ? "Änderungen speichern" : "Vertrag speichern"}
+            {contract ? "Änderungen speichern" : "Vertrag anlegen"}
           </button>
           <button type="button" className="button button-secondary" onClick={onCancel}>
             Abbrechen

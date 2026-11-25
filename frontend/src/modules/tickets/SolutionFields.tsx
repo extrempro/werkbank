@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { ListChoice } from "../../components/ListChoice";
 import { InfoTip } from "../../components/InfoTip";
 import type { SolutionInput, SolutionType } from "./api";
 
@@ -26,26 +27,15 @@ export function SolutionFields({
       </legend>
       <InfoTip term="tickets.loesung" />
       {types.length > 0 && (
-        <label htmlFor={`${id}-art`}>
-          Lösungsart
-          <select
-            id={`${id}-art`}
-            value={value.type_id ?? ""}
-            onChange={(event) =>
-              onChange({
-                ...value,
-                type_id: event.target.value ? Number(event.target.value) : null,
-              })
-            }
-          >
-            <option value="">Keine</option>
-            {types.map((type) => (
-              <option key={type.id} value={type.id}>
-                {type.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ListChoice
+          label="Lösungsart"
+          none="Keine"
+          unit="Lösungsarten"
+          placeholder="Name der Lösungsart …"
+          options={types.map((type) => ({ id: type.id, label: type.name }))}
+          value={value.type_id === null ? "" : String(value.type_id)}
+          onChange={(next) => onChange({ ...value, type_id: next ? Number(next) : null })}
+        />
       )}
       <label htmlFor={`${id}-text`}>
         Was wurde gemacht?

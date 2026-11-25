@@ -1,6 +1,16 @@
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { errorText } from "../../api";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
+import {
+  ErrorSummary,
+  Field,
+  problemFor,
+  RequiredNote,
+  Segmented,
+  type Problem,
+} from "../../components/Field";
+import { FormStep } from "../../components/FormStep";
+import { ListChoice } from "../../components/ListChoice";
 import { navigate } from "../../router";
 import { useDebounced } from "../inventory/paged";
 import {
@@ -11,6 +21,7 @@ import {
   type Category,
   type ReporterHit,
   ticketPath,
+  TICKETS_PATH,
   type Priority,
   type TicketAccess,
 } from "./api";
@@ -38,13 +49,13 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
   const [hits, setHits] = useState<{ query: string; items: ReporterHit[] } | null>(null);
   const [searchFailed, setSearchFailed] = useState(false);
   const nameQuery = useDebounced(reporterName.trim());
-  const reporterHintId = useId();
   const [participants, setParticipants] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [channel, setChannel] = useState<"manual" | "phone">("phone");
   const [body, setBody] = useState("");
   const [assignToMe, setAssignToMe] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [tried, setTried] = useState(false);
   const [message, setMessage] = useState<FeedbackMessage | null>(null);
   // Kategorien des gewählten Bereichs (mit dem Bereich, für den sie gelten)
   const [loaded, setLoaded] = useState<{ area: number; items: Category[] } | null>(null);
@@ -105,10 +116,30 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
     );
   }
 
+  // Geprüft wird beim Absenden, danach bei jeder Änderung.
+  const problems: Problem[] = [];
+  if (areaId === "") {
+    problems.push({ id: "ticket-bereich", label: "Bereich", text: "Wähle den Bereich." });
+  }
+  if (!subject.trim()) {
+    problems.push({ id: "ticket-betreff", label: "Betreff", text: "Trag einen Betreff ein." });
+  }
+  if (!reporterName.trim()) {
+    problems.push({
+      id: "ticket-melder",
+      label: "Name des Melders",
+      text: "Trag ein, wer sich gemeldet hat.",
+    });
+  }
+  if (!body.trim()) {
+    problems.push({ id: "ticket-anliegen", label: "Anliegen", text: "Beschreib das Anliegen." });
+  }
+  const shown = tried ? problems : [];
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (areaId === "") {
-      setMessage({ kind: "alert", text: "Bitte wähle zuerst einen Bereich." });
+    setTried(true);
+    if (problems.length > 0 || areaId === "") {
       return;
     }
     setBusy(true);
@@ -146,100 +177,89 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
           <p className="page-sub">Für Anliegen, die per Telefon oder persönlich ankommen.</p>
         </div>
       </header>
-      <form className="panel settings-form detail-body" onSubmit={submit}>
-        <div className="form-grid">
-          <label>
-            Bereich
-            <select
-              required
-              value={areaId}
-              onChange={(event) => {
-                setAreaId(event.target.value ? Number(event.target.value) : "");
-                setCategoryId(null);
-              }}
-            >
-              {areas.length > 1 && <option value="">Bitte wählen …</option>}
-              {areas.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {categories.length > 0 && (
-            <label>
-              Kategorie
-              <select
-                value={categoryId ?? ""}
-                onChange={(event) => {
-                  const id = event.target.value ? Number(event.target.value) : null;
-                  setCategoryId(id);
-                  const chosen = categories.find((c) => c.id === id);
-                  if (chosen) {
-                    setPriority(chosen.default_priority);
-                  }
-                }}
-              >
-                <option value="">Keine</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <label>
-            Eingangsweg
-            <select
-              value={channel}
-              onChange={(event) => setChannel(event.target.value as "manual" | "phone")}
-            >
-              <option value="phone">Anruf</option>
-              <option value="manual">Von Hand erfasst</option>
-            </select>
-          </label>
-          <label>
-            Priorität
-            <select
-              value={priority}
-              onChange={(event) => setPriority(event.target.value as Priority)}
-            >
-              {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
-                <option key={p} value={p}>
-                  {PRIORITY_LABELS[p]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <label>
-          Betreff
-          <input
+      <form className="panel settings-form detail-body" onSubmit={submit} noValidate>
+        <RequiredNote />
+        <ErrorSummary problems={shown} />
+        <FormStep number={1} title="Einordnen">
+          <ListChoice
+            label="Bereich"
+            id="ticket-bereich"
             required
-            maxLength={250}
-            value={subject}
-            onChange={(event) => setSubject(event.target.value)}
+            unit="Bereiche"
+            placeholder="Name des Bereichs …"
+            options={areas.map((a) => ({ id: a.id, label: a.name }))}
+            value={areaId === "" ? "" : String(areaId)}
+            onChange={(next) => {
+              setAreaId(next ? Number(next) : "");
+              setCategoryId(null);
+            }}
+            error={problemFor(shown, "ticket-bereich")}
           />
-        </label>
-        <div className="form-grid">
+          {categories.length > 0 && (
+            <ListChoice
+              label="Kategorie"
+              none="Keine Kategorie"
+              unit="Kategorien"
+              placeholder="Name der Kategorie …"
+              hint="Setzt die Priorität der Kategorie."
+              options={categories.map((c) => ({
+                id: c.id,
+                label: c.name,
+                detail: `Priorität ${PRIORITY_LABELS[c.default_priority]}`,
+              }))}
+              value={categoryId === null ? "" : String(categoryId)}
+              onChange={(next) => {
+                const id = next ? Number(next) : null;
+                setCategoryId(id);
+                const chosen = categories.find((c) => c.id === id);
+                if (chosen) {
+                  setPriority(chosen.default_priority);
+                }
+              }}
+            />
+          )}
+          <Segmented
+            label="Eingangsweg"
+            value={channel}
+            options={[
+              { value: "phone", label: "Anruf" },
+              { value: "manual", label: "Von Hand erfasst" },
+            ]}
+            onChange={setChannel}
+          />
+          <Segmented
+            label="Priorität"
+            value={priority}
+            options={(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => ({
+              value: p,
+              label: PRIORITY_LABELS[p],
+            }))}
+            onChange={setPriority}
+          />
+        </FormStep>
+        <FormStep number={2} title="Wer meldet sich">
           <div className="ticket-reporter">
-            <label>
-              Name des Melders
-              <input
-                required
-                maxLength={200}
-                autoComplete="off"
-                aria-describedby={reporterHintId}
-                value={reporterName}
-                onChange={(event) => setReporterName(event.target.value)}
-              />
-            </label>
-            <p className="small" id={reporterHintId}>
-              {searchFailed
-                ? "Die Suche in Entra ist gerade nicht verfügbar. Trag Name und Mailadresse selbst ein."
-                : "Ab zwei Buchstaben erscheinen Vorschläge aus Entra; du kannst den Namen auch frei eintragen."}
-            </p>
+            <Field
+              label="Name des Melders"
+              id="ticket-melder"
+              required
+              error={problemFor(shown, "ticket-melder")}
+              hint={
+                searchFailed
+                  ? "Die Suche in Entra ist gerade nicht verfügbar. Trag Name und Mailadresse selbst ein."
+                  : "Ab zwei Buchstaben erscheinen Vorschläge aus Entra; du kannst den Namen auch frei eintragen."
+              }
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  maxLength={200}
+                  autoComplete="off"
+                  value={reporterName}
+                  onChange={(event) => setReporterName(event.target.value)}
+                />
+              )}
+            </Field>
             {suggestions.length > 0 && (
               <ul className="ticket-pick-list" aria-label="Vorschläge aus Entra">
                 {suggestions.map((hit) => (
@@ -260,47 +280,87 @@ export function NewTicketPage({ access }: { access: TicketAccess }) {
               {suggestions.length > 0 ? `${suggestions.length} Vorschläge aus Entra.` : ""}
             </p>
           </div>
-          <label>
-            Mailadresse des Melders (freiwillig)
-            <input
-              type="email"
-              maxLength={320}
-              autoComplete="off"
-              value={reporterMail}
-              onChange={(event) => setReporterMail(event.target.value)}
-            />
-          </label>
-        </div>
-        <label>
-          Beteiligte in Kopie (freiwillig, Mailadressen mit Komma getrennt)
-          <input
-            maxLength={2000}
-            autoComplete="off"
-            value={participants}
-            onChange={(event) => setParticipants(event.target.value)}
-          />
-        </label>
-        <label>
-          Anliegen
-          <textarea
+          <Field label="Mailadresse des Melders" hint="freiwillig">
+            {(control) => (
+              <input
+                {...control}
+                type="email"
+                maxLength={320}
+                autoComplete="off"
+                value={reporterMail}
+                onChange={(event) => setReporterMail(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label="Beteiligte in Kopie"
+            hint="freiwillig, Mailadressen mit Komma getrennt"
+            wide
+          >
+            {(control) => (
+              <input
+                {...control}
+                maxLength={2000}
+                autoComplete="off"
+                value={participants}
+                onChange={(event) => setParticipants(event.target.value)}
+              />
+            )}
+          </Field>
+        </FormStep>
+        <FormStep number={3} title="Worum es geht">
+          <Field
+            label="Betreff"
+            id="ticket-betreff"
             required
-            rows={6}
-            maxLength={20000}
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-          />
-        </label>
-        <label className="check-label">
-          <input
-            type="checkbox"
-            checked={assignToMe}
-            onChange={(event) => setAssignToMe(event.target.checked)}
-          />
-          Mir zuweisen
-        </label>
-        <div className="actions">
+            wide
+            error={problemFor(shown, "ticket-betreff")}
+          >
+            {(control) => (
+              <input
+                {...control}
+                maxLength={250}
+                value={subject}
+                onChange={(event) => setSubject(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label="Anliegen"
+            id="ticket-anliegen"
+            required
+            wide
+            error={problemFor(shown, "ticket-anliegen")}
+          >
+            {(control) => (
+              <textarea
+                {...control}
+                rows={6}
+                maxLength={20000}
+                value={body}
+                onChange={(event) => setBody(event.target.value)}
+              />
+            )}
+          </Field>
+          <label className="check-label form-wide">
+            <input
+              type="checkbox"
+              checked={assignToMe}
+              onChange={(event) => setAssignToMe(event.target.checked)}
+            />
+            Mir zuweisen
+          </label>
+        </FormStep>
+        <div className="form-actions">
           <button type="submit" className="button button-primary" disabled={busy}>
             {busy ? "Wird angelegt …" : "Ticket anlegen"}
+          </button>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => navigate(TICKETS_PATH)}
+          >
+            Abbrechen
           </button>
         </div>
       </form>

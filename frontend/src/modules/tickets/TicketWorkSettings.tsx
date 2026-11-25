@@ -448,7 +448,7 @@ export function WorkSection({ areaId, onMessage }: { areaId: number; onMessage: 
       </fieldset>
       <div className="actions">
         <button type="submit" className="button button-primary" disabled={busy || timesInvalid}>
-          {busy ? "Wird gespeichert …" : "Speichern"}
+          {busy ? "Wird gespeichert …" : "Fristen speichern"}
         </button>
       </div>
     </form>
@@ -649,7 +649,7 @@ export function TemplatesSection({ areaId, onMessage }: { areaId: number; onMess
           )}
           <div className="actions">
             <button type="submit" className="button button-primary">
-              Speichern
+              Vorlage speichern
             </button>
             <button
               type="button"
@@ -788,7 +788,7 @@ export function RetentionDefaultSection({ onMessage }: { onMessage: OnMessage })
         text: on
           ? `Gilt für alle Bereiche ohne eigene Regel: Tickets werden ${ruleText(form.months, form.action)}. Der tägliche Lauf führt das aus; das lässt sich nicht rückgängig machen.`
           : "Bereiche ohne eigene Regel löschen dann nichts mehr automatisch.",
-        action: "Speichern",
+        action: "Vorgabe speichern",
       },
       () =>
         saveRetentionDefault(form)
@@ -834,7 +834,7 @@ export function RetentionDefaultSection({ onMessage }: { onMessage: OnMessage })
         <p className="small">Jetzt gespeichert: {ruleText(saved.months, saved.action)}</p>
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={!changed}>
-            Speichern
+            Vorgabe speichern
           </button>
         </div>
       </form>
@@ -898,7 +898,7 @@ export function RetentionSection({ areaId, onMessage }: { areaId: number; onMess
               months > 0
                 ? `Tickets werden ${ruleText(months, action)}. Beim nächsten Lauf betroffen: ${due === 1 ? "1 Ticket" : `${due} Tickets`}. Das lässt sich nicht rückgängig machen.`
                 : "In diesem Bereich wird dann nichts mehr automatisch gelöscht.",
-            action: "Speichern",
+            action: "Aufbewahrung speichern",
           },
           () => void store(),
         );
@@ -958,7 +958,7 @@ export function RetentionSection({ areaId, onMessage }: { areaId: number; onMess
       )}
       <div className="actions">
         <button type="submit" className="button button-primary">
-          Speichern
+          Aufbewahrung speichern
         </button>
       </div>
 

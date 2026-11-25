@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ListChoice } from "../../components/ListChoice";
 import { ApiError, errorText } from "../../api";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { Link } from "../../components/Link";
@@ -217,22 +218,14 @@ export function PartnerDetailPage({ roles, partnerId }: Props) {
                 {partner.name}“ gelöscht. Das lässt sich nicht rückgängig machen.
               </p>
               <div className="settings-form budget-merge">
-                <label>
-                  Zusammenlegen mit
-                  <select
-                    value={target}
-                    onChange={(event) => {
-                      setTarget(event.target.value);
-                    }}
-                  >
-                    <option value="">Bitte wählen</option>
-                    {others.map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        {entry.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <ListChoice
+                  label="Zusammenlegen mit"
+                  unit="Partner"
+                  placeholder="Name des Partners …"
+                  options={others.map((entry) => ({ id: entry.id, label: entry.name }))}
+                  value={target}
+                  onChange={setTarget}
+                />
                 <ConfirmButton
                   className="button button-secondary"
                   disabled={!target || busy}

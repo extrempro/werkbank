@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { ListChoice } from "../../components/ListChoice";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
 import { errorText } from "../../api";
@@ -239,17 +240,17 @@ function RowEditor({ detail, row, accounts, items, partners, onDone }: EditorPro
               onChange={(event) => setDescription(event.target.value)}
             />
           </label>
-          <label>
-            Konto
-            <select value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-              <option value="">Bitte wählen</option>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.number} {account.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ListChoice
+            label="Konto"
+            unit="Konten"
+            placeholder="Nummer oder Name des Kontos …"
+            options={accounts.map((account) => ({
+              id: account.id,
+              label: `${account.number} ${account.name}`,
+            }))}
+            value={accountId}
+            onChange={setAccountId}
+          />
           <label>
             Erwartete Kosten brutto (Euro)
             <input

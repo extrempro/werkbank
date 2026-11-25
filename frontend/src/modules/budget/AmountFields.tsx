@@ -76,6 +76,8 @@ export function AmountFields({
   hint,
   extra,
   summaryText,
+  id: amountId,
+  error = null,
 }: {
   legend: string;
   value: AmountValue;
@@ -86,6 +88,10 @@ export function AmountFields({
   extra?: ReactNode;
   /** Eigener Text unter den Feldern statt des gerechneten anderen Werts */
   summaryText?: string | null;
+  /** Kennung des Betragsfelds, z. B. für die Links der Fehlerübersicht */
+  id?: string;
+  /** Fehler zum Betrag (ersetzt den Hinweis unter den Feldern) */
+  error?: string | null;
 }) {
   const id = useId();
   const summary = summaryText ?? amountSummary(value);
@@ -103,9 +109,14 @@ export function AmountFields({
   };
   return (
     <fieldset className="form-wide budget-amount">
-      <legend>
+      <legend className="field-label">
         {legend}
-        {required && <span aria-hidden="true"> *</span>}
+        {required && (
+          <span className="field-required" aria-hidden="true">
+            {" "}
+            *
+          </span>
+        )}
       </legend>
       <div className="budget-amount-mode" role="group" aria-label="Betrag eingeben als">
         <span className="small">
@@ -124,24 +135,33 @@ export function AmountFields({
         ))}
       </div>
       <div className="budget-amount-fields">
-        <label>
-          <span>
+        <label className="field">
+          <span className="field-label">
             {value.mode === "netto" ? "Betrag netto (Euro)" : "Betrag brutto (Euro)"}
-            {required && <span aria-hidden="true"> *</span>}
+            {required && (
+              <span className="field-required" aria-hidden="true">
+                {" "}
+                *
+              </span>
+            )}
           </span>
           <input
+            id={amountId}
+            className="field-control"
             type="text"
             inputMode="decimal"
             value={value.amount}
             required={required}
             aria-required={required}
-            aria-describedby={`${id}-ergebnis`}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? `${id}-fehler` : `${id}-ergebnis`}
             onChange={(event) => onChange({ ...value, amount: event.target.value })}
           />
         </label>
-        <label>
-          Steuersatz (%)
+        <label className="field">
+          <span className="field-label">Steuersatz (%)</span>
           <input
+            className="field-control"
             type="text"
             inputMode="decimal"
             value={value.rate}
@@ -154,7 +174,13 @@ export function AmountFields({
       <p id={`${id}-ergebnis`} className="small budget-amount-result" aria-live="polite">
         {summary ?? "Den anderen Wert rechnet die Werkbank aus dem Steuersatz."}
       </p>
-      {hint && <p className="small budget-muted">{hint}</p>}
+      {error ? (
+        <p id={`${id}-fehler`} className="field-error">
+          {error}
+        </p>
+      ) : (
+        hint && <p className="field-hint">{hint}</p>
+      )}
     </fieldset>
   );
 }

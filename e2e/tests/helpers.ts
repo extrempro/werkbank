@@ -258,6 +258,24 @@ export async function pickFromList(
     .click();
 }
 
+/**
+ * Wählt in einer Listen-Auswahl (`ListChoice`): bis zehn Möglichkeiten sind Auswahlkarten,
+ * darüber ein Suchfeld mit schwebendem Fenster.
+ */
+export async function pickChoice(scope: Locator, label: string, text: string) {
+  const cards = scope.getByRole("group", { name: label, exact: true });
+  if (
+    (await cards.count()) > 0 &&
+    (await cards.getByRole("radio").count()) > 0
+  ) {
+    await cards
+      .getByRole("radio", { name: new RegExp(escapeRegExp(text)) })
+      .check();
+    return;
+  }
+  await pickFromList(scope, new RegExp(`^${escapeRegExp(label)}`), text);
+}
+
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

@@ -2,7 +2,8 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ComboField, type ComboItem } from "./ComboField";
-import { ChoiceCards, ErrorSummary, Field, RequiredNote } from "./Field";
+import { ChoiceCards, ErrorSummary, Field, RequiredNote, Segmented } from "./Field";
+import { ListChoice } from "./ListChoice";
 import { SearchField, type SearchHit } from "./SearchField";
 
 afterEach(() => {
@@ -168,5 +169,76 @@ describe("Suche über Listen", () => {
     render(<SearchField value="a" onChange={() => undefined} noPanel />);
     expect(screen.getByRole("searchbox", { name: "Suchen" })).toBeTruthy();
     expect(screen.queryByRole("listbox")).toBeNull();
+  });
+});
+
+describe("ListChoice und Segmented", () => {
+  const many = Array.from({ length: 12 }, (_, index) => ({
+    id: index + 1,
+    label: `Konto ${index + 1}`,
+    detail: index === 2 ? "Hardware" : undefined,
+  }));
+
+  it("zeigt bis zehn Möglichkeiten als Karten, mit Karte für „nichts gewählt“", () => {
+    const changes: string[] = [];
+    render(
+      <ListChoice
+        label="IT-Projekt"
+        none="Kein Projekt"
+        options={many.slice(0, 3)}
+        value=""
+        onChange={(value) => changes.push(value)}
+      />,
+    );
+    const group = screen.getByRole("group", { name: "IT-Projekt" });
+    expect(within(group).getAllByRole("radio")).toHaveLength(4);
+    expect(within(group).getByRole("radio", { name: "Kein Projekt" })).toBeChecked();
+    fireEvent.click(within(group).getByRole("radio", { name: /Konto 3/ }));
+    expect(changes).toEqual(["3"]);
+  });
+
+  it("zeigt mehr als zehn als Suchfeld mit schwebendem Fenster", async () => {
+    const changes: string[] = [];
+    render(
+      <ListChoice
+        label="Konto"
+        required
+        unit="Konten"
+        options={many}
+        value=""
+        onChange={(value) => changes.push(value)}
+      />,
+    );
+    const box = screen.getByRole("combobox", { name: "Konto" });
+    expect(box).toHaveAttribute("aria-required", "true");
+    fireEvent.focus(box);
+    expect(await screen.findByText("12 Konten · tippe zum Eingrenzen")).toBeVisible();
+    fireEvent.change(box, { target: { value: "hardware" } });
+    const list = await screen.findByRole("listbox", { name: "Konto" });
+    await vi.waitFor(() => expect(within(list).getAllByRole("option")).toHaveLength(1));
+    fireEvent.click(within(list).getByRole("option", { name: /Konto 3/ }));
+    expect(changes).toEqual(["3"]);
+  });
+
+  it("wählt in der Knopfleiste mit aria-pressed", () => {
+    const changes: string[] = [];
+    render(
+      <Segmented
+        label="Eingangsweg"
+        value="phone"
+        options={[
+          { value: "phone", label: "Anruf" },
+          { value: "manual", label: "Von Hand erfasst" },
+        ]}
+        onChange={(value) => changes.push(value)}
+      />,
+    );
+    const group = screen.getByRole("group", { name: "Eingangsweg" });
+    expect(within(group).getByRole("button", { name: "Anruf" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(within(group).getByRole("button", { name: "Von Hand erfasst" }));
+    expect(changes).toEqual(["manual"]);
   });
 });

@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.135.0] – 2026-11-25
+
+### Geändert
+
+- **Masken in IT-Budget und Tickets nach design.md §8:** Posten, Verträge, Rechnungen, Konten und „Neues Ticket“ mit `Field` (Beschriftung über dem Feld, Pflicht mit „*“, Hinweis und Fehler am Feld), Fehlerübersicht „n Angaben fehlen noch“ mit Links zu den Feldern (geprüft beim Absenden, danach live) und haftender Knopfleiste. Hauptaktionen mit Verb („Posten anlegen“, „Vertrag anlegen“, „Rechnung erfassen“, „Konto anlegen“, „Fristen speichern“, „Vorlage speichern“, „Aufbewahrung speichern“ …).
+- **Auswahl nach Anzahl:** Neue gemeinsame Komponente `ListChoice` – bis zehn Möglichkeiten als Auswahlkarten, darüber als Suchfeld mit schwebendem Fenster. Genutzt für Konto (Posten, Monatsposten, Import), IT-Projekt, Budgetposten einer Rechnungsposition (statt Suchfeld plus Auswahlliste), Partner zum Zusammenlegen, Bereich und Kategorie beim neuen Ticket und Lösungsart. Feste kleine Auswahlen (AVV, Kontoart, Eingangsweg, Priorität) als Knopfleiste (`Segmented`).
+- Ticket-Ausnahme: „Begründung“ mit „*“ statt „(Pflicht)“, Knopf „Ausnahme setzen“ bzw. „Ausnahme bestätigen“.
+- `Field`, `ComboField`, `ChoiceCards`, `AmountFields` und die Listen-Auswahl nehmen eine feste Kennung für die Links der Fehlerübersicht; Auswahlkarten zeigen Hinweis und Fehler.
+
 ## [0.134.0] – 2026-11-25
 
 ### Neu

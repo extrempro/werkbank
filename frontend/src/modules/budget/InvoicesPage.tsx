@@ -27,7 +27,6 @@ import {
   fetchBudgetSettings,
   fetchItems,
   fiscalYearOf,
-  itemMatches,
   fetchPartners,
   fileSize,
   formatBudgetDay,
@@ -53,6 +52,13 @@ import {
 import { AmountFields, amountValue, readAmount, type AmountValue } from "./AmountFields";
 import { BudgetHead, DeleteButton, FormStep, ReadOnlyNote } from "./shared";
 import { Feedback } from "../../components/Feedback";
+import {
+  ErrorSummary,
+  Field,
+  problemFor,
+  RequiredNote,
+  type Problem,
+} from "../../components/Field";
 import { ListPicker } from "../inventory/LookupPicker";
 import {
   contractPath,
@@ -91,8 +97,6 @@ interface LineDraft {
   yearly: boolean;
   /** Schließt den Posten für das Geschäftsjahr der Rechnung ab. */
   closes: boolean;
-  /** Suchtext, der die Auswahl der Budgetposten eingrenzt. */
-  search: string;
 }
 
 function emptyLine(key: number): LineDraft {
@@ -105,7 +109,6 @@ function emptyLine(key: number): LineDraft {
     project: false,
     yearly: false,
     closes: true,
-    search: "",
   };
 }
 
@@ -122,7 +125,6 @@ function draftOf(line: InvoiceLine, key: number): LineDraft {
     project: line.is_project,
     yearly: line.is_yearly,
     closes: line.closes_item,
-    search: "",
   };
 }
 
@@ -179,6 +181,7 @@ function InvoiceForm({
   const [total, setTotal] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tried, setTried] = useState(false);
   // Status der Budgetposten im Geschäftsjahr des Rechnungsdatums, für die Auswahl
   const fiscalYear = fiscalYearOf(date, startMonth) ?? listYear;
   const [statuses, setStatuses] = useState<{
@@ -219,8 +222,23 @@ function InvoiceForm({
     ? itemChoices.filter((entry) => String(entry.partner_id ?? "") === invoicerId)
     : [];
   const otherItems = itemChoices.filter((entry) => !ownItems.includes(entry));
-  const itemText = (entry: Item) =>
-    `${entry.number} · ${entry.account_number} · ${entry.name} · erwartet ${formatEuro(entry.amount_cents)}`;
+  const invoicerName = partners.find((entry) => String(entry.id) === invoicerId)?.name;
+  // Auswahl der Budgetposten: zuerst die des Rechnungsstellers, dann nach Stand im Jahr.
+  const itemOption = (entry: Item, group: string) => ({
+    id: entry.id,
+    label: `${entry.number} · ${entry.name}`,
+    detail: `${entry.account_number} · erwartet ${formatEuro(entry.amount_cents)} · ${group}`,
+  });
+  const itemOptions = [
+    ...ownItems.map((entry) =>
+      itemOption(entry, `Posten von ${invoicerName ?? "diesem Rechnungssteller"}`),
+    ),
+    ...STATUS_ORDER.flatMap((group) =>
+      otherItems
+        .filter((entry) => statusOf(entry.id) === group)
+        .map((entry) => itemOption(entry, groupLabel(group, yearName))),
+    ),
+  ];
 
   const change = (key: number, update: Partial<LineDraft>) =>
     setLines(lines.map((line) => (line.key === key ? { ...line, ...update } : line)));
@@ -243,55 +261,96 @@ function InvoiceForm({
   const totalCents = totalText === "" ? null : parseEuro(totalText);
   const rest = totalCents !== null && grossSum !== null ? totalCents - grossSum : null;
 
+  // Geprüft wird beim Absenden, danach bei jeder Änderung.
+  const problems: Problem[] = [];
+  if (!invoicerId) {
+    problems.push({
+      id: "rechnung-steller",
+      label: "Rechnungssteller",
+      text: "Wähle den Rechnungssteller.",
+    });
+  }
+  if (!number.trim()) {
+    problems.push({
+      id: "rechnung-nummer",
+      label: "Rechnungsnummer",
+      text: "Trag die Rechnungsnummer ein.",
+    });
+  }
+  if (!date) {
+    problems.push({
+      id: "rechnung-datum",
+      label: "Rechnungsdatum",
+      text: "Trag das Rechnungsdatum ein.",
+    });
+  }
+  const parsed: InvoiceLineUpdate[] = [];
+  lines.forEach((line, index) => {
+    const where = lines.length > 1 ? `Position ${index + 1}, ` : "";
+    const read = readAmount(line.amount);
+    const byGross = line.amount.mode === "brutto";
+    const grossText = byGross ? "" : line.gross.trim();
+    const grossValue = grossText === "" ? null : parseEuro(grossText);
+    let fine = true;
+    if (!line.itemId) {
+      problems.push({
+        id: `rechnung-posten-${line.key}`,
+        label: `${where}Budgetposten`,
+        text: "Wähle den Budgetposten.",
+      });
+      fine = false;
+    }
+    if ("problem" in read) {
+      problems.push({
+        id: `rechnung-betrag-${line.key}`,
+        label: `${where}Betrag`,
+        text: line.amount.amount.trim() ? read.problem : "Trag den Betrag ein.",
+      });
+      fine = false;
+    }
+    if (grossText !== "" && grossValue === null) {
+      problems.push({
+        id: `rechnung-brutto-${line.key}`,
+        label: `${where}Brutto laut Rechnung`,
+        text: "Nicht lesbar. Trag es so ein: 1190,00",
+      });
+      fine = false;
+    }
+    if (fine && !("problem" in read)) {
+      parsed.push({
+        item_id: Number(line.itemId),
+        net_cents: read.net_cents,
+        tax_rate_bp: read.tax_rate_bp,
+        gross_cents: byGross ? read.gross_cents : grossValue,
+        description: line.description.trim(),
+        is_project: line.project,
+        is_yearly: line.yearly,
+        closes_item: line.closes,
+      });
+    }
+  });
+  if (totalText !== "" && totalCents === null) {
+    problems.push({
+      id: "rechnung-summe",
+      label: "Rechnungsbetrag",
+      text: "Nicht lesbar. Trag ihn so ein: 1190,00",
+    });
+  } else if (rest !== null && rest !== 0) {
+    problems.push({
+      id: "rechnung-summe",
+      label: "Rechnungsbetrag",
+      text:
+        rest > 0
+          ? `Davon sind noch ${formatEuro(rest)} nicht auf Positionen verteilt.`
+          : `Die Positionen ergeben ${formatEuro(-rest)} mehr.`,
+    });
+  }
+  const shown = tried ? problems : [];
+
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    let problem: string | null = null;
-    if (!invoicerId) {
-      problem = "Bitte wähle den Rechnungssteller.";
-    } else if (!number.trim()) {
-      problem = "Bitte trag die Rechnungsnummer ein.";
-    } else if (!date) {
-      problem = "Bitte trag das Rechnungsdatum ein.";
-    }
-    const parsed: InvoiceLineUpdate[] = [];
-    lines.forEach((line, index) => {
-      if (problem !== null) {
-        return;
-      }
-      const where = lines.length > 1 ? `Position ${index + 1}: ` : "";
-      const read = readAmount(line.amount);
-      const byGross = line.amount.mode === "brutto";
-      const grossText = byGross ? "" : line.gross.trim();
-      const grossValue = grossText === "" ? null : parseEuro(grossText);
-      if (!line.itemId) {
-        problem = `${where}Bitte wähle den Budgetposten.`;
-      } else if ("problem" in read) {
-        problem = `${where}${read.problem}`;
-      } else if (grossText !== "" && grossValue === null) {
-        problem = `${where}Das Brutto ist nicht lesbar. Bitte so eintragen: 1190,00`;
-      } else {
-        parsed.push({
-          item_id: Number(line.itemId),
-          net_cents: read.net_cents,
-          tax_rate_bp: read.tax_rate_bp,
-          gross_cents: byGross ? read.gross_cents : grossValue,
-          description: line.description.trim(),
-          is_project: line.project,
-          is_yearly: line.yearly,
-          closes_item: line.closes,
-        });
-      }
-    });
-    if (problem === null && totalText !== "" && totalCents === null) {
-      problem = "Der Rechnungsbetrag ist nicht lesbar. Bitte so eintragen: 1190,00";
-    } else if (problem === null && rest !== null && rest !== 0) {
-      problem =
-        rest > 0
-          ? `Vom Rechnungsbetrag sind noch ${formatEuro(rest)} nicht auf Positionen verteilt.`
-          : `Die Positionen ergeben ${formatEuro(-rest)} mehr als der Rechnungsbetrag.`;
-    }
-    if (problem !== null) {
-      setError(problem);
+    setTried(true);
+    if (problems.length > 0) {
       return;
     }
     const update: InvoiceUpdate = {
@@ -312,7 +371,6 @@ function InvoiceForm({
       });
   };
 
-  const invoicerName = partners.find((entry) => String(entry.id) === invoicerId)?.name;
   return (
     <section className="panel budget-pane" aria-labelledby="rechnung-formular-titel">
       <div className="panel-head case-head">
@@ -332,62 +390,65 @@ function InvoiceForm({
         </button>
       </div>
       <form className="detail-body settings-form budget-form" onSubmit={onSubmit} noValidate>
-        <p className="small budget-muted">
-          Pflichtfelder sind mit <span aria-hidden="true">*</span>
-          <span className="visually-hidden">Stern</span> markiert.
-        </p>
+        <RequiredNote />
+        <ErrorSummary problems={shown} />
         <FormStep number={1} title="Von wem">
-          <div>
-            <ListPicker
-              label="Rechnungssteller"
-              required
-              placeholder="Name des Rechnungsstellers …"
-              options={partnerChoices.map((entry) => ({ id: entry.id, label: entry.name }))}
-              value={invoicerId}
-              onChange={setInvoicerId}
-            />
-            <span className="form-hint">Danach stehen seine Budgetposten oben in der Auswahl.</span>
-          </div>
+          <ListPicker
+            label="Rechnungssteller"
+            id="rechnung-steller"
+            required
+            placeholder="Name des Rechnungsstellers …"
+            hint="Danach stehen seine Budgetposten oben in der Auswahl."
+            options={partnerChoices.map((entry) => ({ id: entry.id, label: entry.name }))}
+            value={invoicerId}
+            onChange={setInvoicerId}
+            error={problemFor(shown, "rechnung-steller")}
+          />
         </FormStep>
         <FormStep number={2} title="Rechnung">
-          <label>
-            <span>
-              Rechnungsnummer <span aria-hidden="true">*</span>
-            </span>
-            <input
-              required
-              aria-required="true"
-              type="text"
-              value={number}
-              maxLength={80}
-              onChange={(event) => setNumber(event.target.value)}
-            />
-          </label>
-          <label>
-            Interne Nummer (freiwillig)
-            <input
-              type="text"
-              value={internal}
-              maxLength={60}
-              onChange={(event) => setInternal(event.target.value)}
-            />
-          </label>
-          <label>
-            <span>
-              Rechnungsdatum <span aria-hidden="true">*</span>
-            </span>
-            <input
-              type="date"
-              value={date}
-              required
-              aria-required="true"
-              aria-describedby="rechnung-datum-hinweis"
-              onChange={(event) => setDate(event.target.value)}
-            />
-            <span id="rechnung-datum-hinweis" className="form-hint">
-              Zählt für {yearLabel} {yearName}.
-            </span>
-          </label>
+          <Field
+            label="Rechnungsnummer"
+            id="rechnung-nummer"
+            required
+            error={problemFor(shown, "rechnung-nummer")}
+          >
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={number}
+                maxLength={80}
+                onChange={(event) => setNumber(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label="Interne Nummer" hint="freiwillig">
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={internal}
+                maxLength={60}
+                onChange={(event) => setInternal(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label="Rechnungsdatum"
+            id="rechnung-datum"
+            required
+            hint={`Zählt für ${yearLabel} ${yearName}.`}
+            error={problemFor(shown, "rechnung-datum")}
+          >
+            {(control) => (
+              <input
+                {...control}
+                type="date"
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+              />
+            )}
+          </Field>
         </FormStep>
         <FormStep number={3} title="Positionen">
           {lines.map((line, index) => {
@@ -395,59 +456,16 @@ function InvoiceForm({
             return (
               <fieldset key={line.key} className="budget-fieldset form-wide">
                 <legend>{lines.length > 1 ? `Position ${index + 1}` : "Position"}</legend>
-                <div className="tool-row">
-                  <label className="narrow">
-                    Budgetposten suchen
-                    <input
-                      type="search"
-                      value={line.search}
-                      placeholder="Name oder Konto"
-                      onChange={(event) => change(line.key, { search: event.target.value })}
-                    />
-                  </label>
-                  <label>
-                    Budgetposten
-                    <select
-                      value={line.itemId}
-                      onChange={(event) => pickItem(line, event.target.value)}
-                    >
-                      <option value="">Bitte wählen</option>
-                      {ownItems.length > 0 && (
-                        <optgroup label={`Posten von ${invoicerName ?? "diesem Rechnungssteller"}`}>
-                          {ownItems
-                            .filter(
-                              (entry) =>
-                                itemMatches(entry, line.search) || String(entry.id) === line.itemId,
-                            )
-                            .map((entry) => (
-                              <option key={entry.id} value={entry.id}>
-                                {itemText(entry)}
-                              </option>
-                            ))}
-                        </optgroup>
-                      )}
-                      {STATUS_ORDER.map((group) => {
-                        const members = otherItems.filter(
-                          (entry) =>
-                            statusOf(entry.id) === group &&
-                            (itemMatches(entry, line.search) || String(entry.id) === line.itemId),
-                        );
-                        if (members.length === 0) {
-                          return null;
-                        }
-                        return (
-                          <optgroup key={group ?? "ohne"} label={groupLabel(group, yearName)}>
-                            {members.map((entry) => (
-                              <option key={entry.id} value={entry.id}>
-                                {itemText(entry)}
-                              </option>
-                            ))}
-                          </optgroup>
-                        );
-                      })}
-                    </select>
-                  </label>
-                </div>
+                <ListPicker
+                  label="Budgetposten"
+                  id={`rechnung-posten-${line.key}`}
+                  required
+                  placeholder="Nummer, Name oder Konto …"
+                  options={itemOptions}
+                  value={line.itemId}
+                  onChange={(value) => pickItem(line, value)}
+                  error={problemFor(shown, `rechnung-posten-${line.key}`)}
+                />
                 {itemById(line.itemId)?.contract_title && (
                   <p className="small budget-muted">
                     Vertrag des Postens: {itemById(line.itemId)?.contract_title}
@@ -455,6 +473,8 @@ function InvoiceForm({
                 )}
                 <AmountFields
                   legend="Betrag der Position"
+                  id={`rechnung-betrag-${line.key}`}
+                  error={problemFor(shown, `rechnung-betrag-${line.key}`)}
                   value={line.amount}
                   onChange={(amount) => change(line.key, { amount })}
                   summaryText={
@@ -468,27 +488,36 @@ function InvoiceForm({
                   }
                   extra={
                     line.amount.mode === "netto" && (
-                      <label>
-                        Brutto laut Rechnung (freiwillig)
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={line.gross}
-                          onChange={(event) => change(line.key, { gross: event.target.value })}
-                        />
-                      </label>
+                      <Field
+                        label="Brutto laut Rechnung"
+                        id={`rechnung-brutto-${line.key}`}
+                        hint="freiwillig"
+                        error={problemFor(shown, `rechnung-brutto-${line.key}`)}
+                      >
+                        {(control) => (
+                          <input
+                            {...control}
+                            type="text"
+                            inputMode="decimal"
+                            value={line.gross}
+                            onChange={(event) => change(line.key, { gross: event.target.value })}
+                          />
+                        )}
+                      </Field>
                     )
                   }
                 />
-                <label className="form-wide">
-                  Bezeichnung (freiwillig)
-                  <input
-                    type="text"
-                    value={line.description}
-                    maxLength={200}
-                    onChange={(event) => change(line.key, { description: event.target.value })}
-                  />
-                </label>
+                <Field label="Bezeichnung" hint="freiwillig" wide>
+                  {(control) => (
+                    <input
+                      {...control}
+                      type="text"
+                      value={line.description}
+                      maxLength={200}
+                      onChange={(event) => change(line.key, { description: event.target.value })}
+                    />
+                  )}
+                </Field>
                 <div className="budget-checks">
                   <label className="check-label">
                     <input
@@ -546,15 +575,22 @@ function InvoiceForm({
           )}
         </FormStep>
         <FormStep number={4} title="Summe">
-          <label>
-            Rechnungsbetrag laut Beleg (brutto, freiwillig)
-            <input
-              type="text"
-              inputMode="decimal"
-              value={total}
-              onChange={(event) => setTotal(event.target.value)}
-            />
-          </label>
+          <Field
+            label="Rechnungsbetrag laut Beleg (brutto)"
+            id="rechnung-summe"
+            hint="freiwillig"
+            error={problemFor(shown, "rechnung-summe")}
+          >
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                inputMode="decimal"
+                value={total}
+                onChange={(event) => setTotal(event.target.value)}
+              />
+            )}
+          </Field>
           <p className="small form-wide form-summary" role="status">
             {grossSum !== null && netSum !== null
               ? `Summe der Positionen: netto ${formatEuro(netSum)}, brutto ${formatEuro(grossSum)}.`
@@ -572,9 +608,9 @@ function InvoiceForm({
             {error}
           </p>
         )}
-        <div className="actions">
+        <div className="form-actions">
           <button type="submit" className="button button-primary" disabled={busy}>
-            {invoice ? "Änderungen speichern" : "Rechnung speichern"}
+            {invoice ? "Änderungen speichern" : "Rechnung erfassen"}
           </button>
           <button type="button" className="button button-secondary" onClick={onCancel}>
             Abbrechen

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { ComboField } from "../../components/ComboField";
+import { useListSearch, type ChoiceOption } from "../../components/ListChoice";
 import { lookup, type LookupItem, type LookupKind, type LookupResult } from "./api";
 
 interface LookupPickerProps {
@@ -19,6 +20,10 @@ interface LookupPickerProps {
   exclude?: readonly number[];
   /** Fehlermeldung vom Formular */
   error?: string | null;
+  /** Hinweis unter dem Feld */
+  hint?: string;
+  /** Kennung des Eingabefelds, z. B. für die Links der Fehlerübersicht */
+  id?: string;
 }
 
 /**
@@ -37,6 +42,8 @@ export function LookupPicker({
   required = false,
   exclude = [],
   error = null,
+  hint,
+  id,
 }: LookupPickerProps) {
   const find = useCallback(
     (query: string): Promise<LookupResult> =>
@@ -53,22 +60,18 @@ export function LookupPicker({
       required={required}
       exclude={exclude}
       error={error}
+      hint={hint}
+      id={id}
     />
   );
 }
 
-/** Höchstens so viele Treffer zeigt die Auswahl aus einer geladenen Liste */
-const LIST_HITS = 20;
-
-export interface ListOption {
-  id: number;
-  label: string;
-  detail?: string;
-}
+export type ListOption = ChoiceOption;
 
 /**
- * Auswahl mit Suche über eine schon geladene Liste (z. B. Partner oder Verträge im Budget).
- * Ersetzt ein langes Auswahlfeld; der Wert ist die Nummer als Text, leer ohne Auswahl.
+ * Auswahl mit Suche über eine schon geladene Liste (z. B. Partner oder Verträge im Budget),
+ * immer als Suchfeld. Der Wert ist die Nummer als Text, leer ohne Auswahl. Für Listen, die
+ * auch kurz sein können, passt `ListChoice` (Karten bis zehn Einträge).
  */
 export function ListPicker({
   label,
@@ -78,6 +81,8 @@ export function ListPicker({
   placeholder,
   required = false,
   error = null,
+  hint,
+  id,
 }: {
   label: string;
   options: readonly ListOption[];
@@ -86,27 +91,10 @@ export function ListPicker({
   placeholder?: string;
   required?: boolean;
   error?: string | null;
+  hint?: string;
+  id?: string;
 }) {
-  // Die Suche bleibt dieselbe Funktion, auch wenn die Liste bei jedem Rendern neu entsteht;
-  // sonst sucht die Auswahl in einer Schleife.
-  const latest = useRef(options);
-  useEffect(() => {
-    latest.current = options;
-  });
-  const search = useCallback((query: string): Promise<LookupResult> => {
-    const needle = query.trim().toLocaleLowerCase("de");
-    const hits = latest.current.filter(
-      (option) =>
-        !needle ||
-        `${option.label} ${option.detail ?? ""}`.toLocaleLowerCase("de").includes(needle),
-    );
-    return Promise.resolve({
-      items: hits
-        .slice(0, LIST_HITS)
-        .map((option) => ({ id: option.id, label: option.label, detail: option.detail ?? "" })),
-      total: hits.length,
-    });
-  }, []);
+  const search = useListSearch(options);
   const chosen = options.find((option) => String(option.id) === value) ?? null;
   return (
     <LookupPicker
@@ -115,6 +103,8 @@ export function ListPicker({
       required={required}
       placeholder={placeholder}
       error={error}
+      hint={hint}
+      id={id}
       value={chosen ? { id: chosen.id, label: chosen.label, detail: chosen.detail ?? "" } : null}
       onChange={(item) => onChange(item ? String(item.id) : "")}
     />
