@@ -34,6 +34,12 @@ export const RELEASES: readonly Release[] = [
           "Liegt ein Grundriss quer oder auf dem Kopf, drehst du ihn unter „Etage bearbeiten“ bei „Ausrichtung des Grundrisses“ in Vierteldrehungen. Räume und Arbeitsplätze drehen mit, die Namen bleiben gut lesbar.",
         ],
       },
+      {
+        area: "Navigation",
+        entries: [
+          "Die Namen in der Leiste links werden nicht mehr abgeschnitten, auch wenn wenig Platz in der Höhe ist.",
+        ],
+      },
     ],
   },
   {
