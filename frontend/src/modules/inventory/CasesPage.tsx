@@ -716,10 +716,18 @@ export function CasesPage({ caseId, roles }: { caseId: number | null; roles: rea
       )}
       <FilterBar<CaseFilter>
         search={{
-          label: "Vorgänge durchsuchen",
+          label: "Suchen",
           value: search,
           placeholder: "Nummer, Titel, Gerät, Seriennummer …",
           onChange: setSearch,
+          hits: (cases ?? []).map((entry) => ({
+            key: entry.id,
+            title: entry.title,
+            extra: entry.kind_label,
+            meta: entry.number,
+            href: casePath(entry.id),
+          })),
+          total: paged.total,
         }}
         status={{
           label: "Status",

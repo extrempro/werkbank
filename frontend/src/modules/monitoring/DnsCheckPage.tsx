@@ -295,7 +295,8 @@ export function DnsCheckPage({ isAdmin }: { isAdmin: boolean }) {
             <FilterBar<DnsView>
               plain
               search={{
-                label: "Suchen in Name, Zone, Typ und Werten",
+                label: "Suchen",
+                placeholder: "Name, Zone, Typ oder Wert",
                 value: query,
                 onChange: setQuery,
               }}

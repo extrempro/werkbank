@@ -57,7 +57,7 @@ test("Admin vergibt Rechte je Bereich, sie wirken sofort", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: "Berechtigungen" }),
   ).toBeVisible();
-  await page.getByLabel("Personen suchen").fill(name);
+  await page.getByLabel("Suchen", { exact: true }).fill(name);
   await page.getByRole("link", { name }).click();
   const detail = page.getByRole("region", { name });
   await expect(detail).toBeVisible();

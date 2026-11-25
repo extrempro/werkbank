@@ -265,7 +265,7 @@ describe("Budgetposten", () => {
     expect(table.getByRole("row", { name: /Office-Lizenzen/ })).toBeVisible();
 
     // Suche nach der Nummer
-    fireEvent.change(screen.getByLabelText("Budgetposten suchen"), {
+    fireEvent.change(screen.getByLabelText("Suchen"), {
       target: { value: "bp-2026" },
     });
     expect(table.queryByRole("row", { name: /Office-Lizenzen/ })).toBeNull();
@@ -942,7 +942,7 @@ describe("Verträge", () => {
     fireEvent.click(screen.getByRole("button", { name: "AVV fehlt · 1" }));
     expect(table.queryByRole("row", { name: /Wartung Zeiterfassung/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Filter aufheben" }));
-    fireEvent.change(screen.getByLabelText("Verträge suchen"), { target: { value: "wartung" } });
+    fireEvent.change(screen.getByLabelText("Suchen"), { target: { value: "wartung" } });
     expect(table.getByRole("row", { name: /Wartung Zeiterfassung/ })).toBeVisible();
   });
 
@@ -1661,7 +1661,7 @@ describe("Tags", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Filter aufheben" }));
     expect(table.getByRole("row", { name: /Server/ })).toBeVisible();
-    fireEvent.change(screen.getByLabelText("Budgetposten suchen"), { target: { value: "hardw" } });
+    fireEvent.change(screen.getByLabelText("Suchen"), { target: { value: "hardw" } });
     expect(table.queryByRole("row", { name: /Office-Lizenzen/ })).toBeNull();
     expect(table.getByRole("row", { name: /Server/ })).toBeVisible();
   });

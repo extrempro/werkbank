@@ -35,6 +35,7 @@ import {
   type Item,
   type Partner,
 } from "./api";
+import { contractPath } from "./links";
 import { ContractDetail } from "./ContractDetail";
 import { BudgetHead, FormStep, ReadOnlyNote } from "./shared";
 import { Feedback } from "../../components/Feedback";
@@ -652,10 +653,18 @@ export function ContractsPage({
       {data && all.length > 0 && (
         <FilterBar<ContractFilter>
           search={{
-            label: "Verträge suchen",
+            label: "Suchen",
             value: search,
             placeholder: "Vertrag, Partner, Vertragsnummer oder Posten",
             onChange: setSearch,
+            hits: shown.map((entry) => ({
+              key: entry.id,
+              title: entry.title,
+              extra: entry.partner_name,
+              meta: entry.number,
+              href: contractPath(entry.id),
+            })),
+            total: shown.length,
           }}
           status={{
             label: "Status",

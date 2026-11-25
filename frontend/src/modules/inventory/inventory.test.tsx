@@ -141,7 +141,7 @@ describe("Hardware-Liste", () => {
     const cell = screen.getByText("5CG3291XYZ");
     expect(cell.getAttribute("data-label")).toBe("Seriennummer");
 
-    fireEvent.change(screen.getByLabelText("Geräte durchsuchen"), {
+    fireEvent.change(screen.getByLabelText("Suchen"), {
       target: { value: "cn0f3" },
     });
     expect(await screen.findByText("1 von 1")).toBeTruthy();

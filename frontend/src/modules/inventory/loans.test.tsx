@@ -269,7 +269,7 @@ describe("Suche und Mehr anzeigen", () => {
     expect(await screen.findByText("52 von 52")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Mehr anzeigen" })).toBeNull();
 
-    fireEvent.change(screen.getByLabelText("Verleihe durchsuchen"), {
+    fireEvent.change(screen.getByLabelText("Suchen"), {
       target: { value: "L-052" },
     });
     expect(await screen.findByText("1 von 1")).toBeTruthy();

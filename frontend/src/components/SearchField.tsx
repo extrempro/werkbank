@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { navigate } from "../router";
 import { useFloating } from "./floating";
 
@@ -13,7 +13,9 @@ export interface SearchHit {
   /** Nummer o. Ä. rechts, in Festbreitenschrift */
   meta?: string;
   /** Pfad in der Werkbank; ein Klick oder Enter öffnet ihn */
-  href: string;
+  href?: string;
+  /** Statt eines Pfads: öffnet den Eintrag auf derselben Seite (z. B. Ansicht rechts) */
+  onOpen?: () => void;
 }
 
 export interface SearchFieldProps {
@@ -58,10 +60,13 @@ export function SearchField({
   const selected = Math.min(active, Math.max(shown.length - 1, 0));
   const count = total ?? hits.length;
 
-  const go = (hit: SearchHit, event?: MouseEvent) => {
-    event?.preventDefault();
+  const go = (hit: SearchHit) => {
     setOpen(false);
-    navigate(hit.href);
+    if (hit.onOpen) {
+      hit.onOpen();
+    } else if (hit.href) {
+      navigate(hit.href);
+    }
   };
   const onKey = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
@@ -155,14 +160,13 @@ export function SearchField({
                   role="option"
                   aria-selected={index === selected}
                   onMouseEnter={() => setActive(index)}
+                  onClick={() => go(hit)}
                 >
-                  <a href={hit.href} tabIndex={-1} onClick={(event) => go(hit, event)}>
-                    <span className="search-hit-text">
-                      <span className="floating-main">{hit.title}</span>
-                      {hit.extra && <span className="small">{hit.extra}</span>}
-                    </span>
-                    {hit.meta && <span className="small mono">{hit.meta}</span>}
-                  </a>
+                  <span className="search-hit-text">
+                    <span className="floating-main">{hit.title}</span>
+                    {hit.extra && <span className="small">{hit.extra}</span>}
+                  </span>
+                  {hit.meta && <span className="small mono">{hit.meta}</span>}
                 </li>
               ))}
             </ul>

@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.134.0] – 2026-11-25
+
+### Neu
+
+- **Suche über Listen mit schwebendem Trefferfenster** (design.md, Abschnitt 8) auf Hardware, Arbeitsplätze, Verleih, Vorgänge, Budgetposten, Verträge, Rechnungen, Evergreen, Zabbix-Hosts, Tickets, Projekte, Gerätezuordnung und Berechtigungen: höchstens fünf Treffer mit Zusatz und Nummer, Klick/Enter öffnet, „Alle n in der Liste“. Beschriftung überall „Suchen“, der Platzhalter sagt, wonach gesucht wird. DNS-Prüfung nur mit Suchfeld (keine Einträge zum Öffnen). `SearchHit` kennt neben `href` auch `onOpen` (Auswahl auf derselben Seite); Treffer sind Optionen ohne verschachtelte Links.
+
 ## [0.133.0] – 2026-11-25
 
 ### Neu
