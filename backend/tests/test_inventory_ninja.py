@@ -106,6 +106,25 @@ def test_parse_device_keeps_workstations_only() -> None:
     assert parse_device({**item, "nodeClass": "WINDOWS_SERVER"}, {}) is None
     assert parse_device({**item, "id": "41"}, {}) is None
     assert parse_device({**item, "id": True}, {}) is None
+    # Prozessor und Laufwerke; ohne Angaben leer
+    assert parsed.cpu == "" and parsed.volumes == ()
+    detailed = parse_device(
+        {
+            **item,
+            "processors": [{"name": "Intel Core i5-9400T", "numCores": 6, "numLogicalCores": 6}],
+            "volumes": [
+                {"driveLetter": "C:", "capacity": 255_013_683_200, "fileSystem": "NTFS"},
+                {"name": "USB", "deviceType": "Removable Disk", "capacity": 32 * 1024**3},
+                {"driveLetter": "D:", "capacity": 0},
+            ],
+        },
+        {},
+    )
+    assert detailed is not None
+    assert detailed.cpu == "Intel Core i5-9400T (6 Kerne, 6 Threads)"
+    assert detailed.volumes == ("C: 238 GB (NTFS)",)
+    assert detailed.facts()["cpu"] == detailed.cpu
+    assert detailed.facts()["volumes"] == ["C: 238 GB (NTFS)"]
 
 
 def test_client_logs_in_and_pages() -> None:

@@ -72,6 +72,9 @@ class NinjaDevice:
     role: str = ""
     # Monitore aus dem Custom Field (nur, wenn eins eingestellt ist)
     monitors: tuple[MonitorLine, ...] = ()
+    # Prozessor (Name, Kerne) und Laufwerke (Größe, ohne freien Platz: der ändert sich ständig)
+    cpu: str = ""
+    volumes: tuple[str, ...] = ()
 
     def facts(self) -> dict[str, Any]:
         """Was am Gerät gespeichert und im Reiter „Technik“ gezeigt wird."""
@@ -85,6 +88,8 @@ class NinjaDevice:
             "ip": list(self.ip_addresses),
             "last_contact": self.last_contact.isoformat() if self.last_contact else None,
             "ram_gb": self.ram_gb,
+            "cpu": self.cpu,
+            "volumes": list(self.volumes),
             "policy": self.policy,
             "organization": self.organization,
             "role": self.role,
@@ -127,6 +132,54 @@ def _part(item: dict[str, Any], key: str) -> dict[str, Any]:
 
 def _int(value: Any) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _gb(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
+        return None
+    return round(value / 1024**3)
+
+
+def _cpu(item: dict[str, Any]) -> str:
+    """Erster Prozessor mit Kernen und Threads, z. B. „Intel Core i5-9400T (6 Kerne, 6 Threads)“."""
+    processors = item.get("processors")
+    first = processors[0] if isinstance(processors, list) and processors else None
+    if not isinstance(first, dict):
+        return ""
+    name = _text(first.get("name"), 120)
+    cores = _int(first.get("numCores"))
+    threads = _int(first.get("numLogicalCores"))
+    extra = ", ".join(
+        part
+        for part in (
+            f"{cores} Kerne" if cores else "",
+            f"{threads} Threads" if threads else "",
+        )
+        if part
+    )
+    return f"{name} ({extra})" if name and extra else name
+
+
+def _volumes(item: dict[str, Any]) -> tuple[str, ...]:
+    """Lokale Laufwerke mit Größe, z. B. „C: 238 GB (NTFS)“; höchstens acht."""
+    volumes = item.get("volumes")
+    found: list[str] = []
+    for volume in volumes if isinstance(volumes, list) else []:
+        if not isinstance(volume, dict):
+            continue
+        kind = _text(volume.get("deviceType"), 40).casefold()
+        if kind and "local" not in kind and "fixed" not in kind:
+            continue
+        size = _gb(volume.get("capacity"))
+        if not size:
+            continue
+        name = _text(volume.get("driveLetter"), 8) or _text(volume.get("name"), 40)
+        system = _text(volume.get("fileSystem"), 16)
+        text = f"{name} {size} GB".strip() + (f" ({system})" if system else "")
+        found.append(text)
+        if len(found) >= 8:
+            break
+    return tuple(found)
 
 
 def parse_device(
@@ -177,6 +230,8 @@ def parse_device(
         organization=(organizations or {}).get(_int(item.get("organizationId")) or 0, ""),
         role_id=_int(item.get("nodeRoleId")),
         role=(roles or {}).get(_int(item.get("nodeRoleId")) or 0, ""),
+        cpu=_cpu(item),
+        volumes=_volumes(item),
     )
 
 

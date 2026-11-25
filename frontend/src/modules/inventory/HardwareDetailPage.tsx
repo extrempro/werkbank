@@ -621,15 +621,21 @@ function PsrefSection({
   const highlights = psref ? psrefHighlights(psref) : [];
   const link = psref && psref.url.startsWith("https://psref.lenovo.com/") ? psref.url : null;
   return (
-    <div className="psref">
-      <h3 className="sub-head">Lenovo PSREF</h3>
+    <details className="psref">
+      <summary>
+        <span className="psref-title">Lenovo PSREF</span>
+        <span className="small">
+          {psref
+            ? ` · ${psref.name || "Modell"} · ${PSREF_STATUS_LABELS[psref.status]}`
+            : " · noch nicht abgefragt"}
+        </span>
+      </summary>
       {psref ? (
         <p className="small">
-          {psref.name || "Modell"} · {PSREF_STATUS_LABELS[psref.status]}
-          {psref.checked_at && ` · abgefragt ${formatDate(psref.checked_at)}`}
+          {psref.checked_at && `Abgefragt ${formatDate(psref.checked_at)}`}
           {link && (
             <>
-              {" · "}
+              {psref.checked_at && " · "}
               <a href={link} target="_blank" rel="noopener noreferrer">
                 Bei PSREF öffnen
                 <span className="visually-hidden"> (öffnet in neuem Tab)</span>
@@ -682,7 +688,7 @@ function PsrefSection({
         </p>
       )}
       <Feedback message={message} onClose={() => setMessage(null)} />
-    </div>
+    </details>
   );
 }
 
@@ -703,7 +709,6 @@ function TechTab({
         <span className="small">nur lesend, aus NinjaOne und Lenovo PSREF</span>
       </div>
       <div className="detail-body tech-list">
-        <PsrefSection device={device} canEdit={canEdit} onChange={onChange} />
         {device.connected_to && (
           <p>
             Angeschlossen an{" "}
@@ -757,6 +762,7 @@ function TechTab({
             </dl>
           </>
         )}
+        <PsrefSection device={device} canEdit={canEdit} onChange={onChange} />
       </div>
     </section>
   );

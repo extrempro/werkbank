@@ -1254,6 +1254,10 @@ export interface NinjaFacts {
   ip?: string[];
   last_contact?: string | null;
   ram_gb?: number | null;
+  /** Erster Prozessor mit Kernen und Threads */
+  cpu?: string;
+  /** Lokale Laufwerke mit Größe, z. B. „C: 238 GB (NTFS)“ */
+  volumes?: string[];
   policy?: string;
   organization?: string;
   role?: string;
@@ -1652,7 +1656,9 @@ export function ninjaFactRows(
   add("Zuletzt gesehen (Skript)", facts.monitor_seen ? formatDate(facts.monitor_seen) : "");
   add("Betriebssystem", facts.os);
   add("IP-Adresse", (facts.ip ?? []).join(", "), true);
+  add("Prozessor", facts.cpu);
   add("Arbeitsspeicher", facts.ram_gb ? `${facts.ram_gb} GB` : "");
+  add("Laufwerke", (facts.volumes ?? []).join(", "));
   add("Organisation", facts.organization);
   add("Geräterolle", facts.role);
   add("Richtlinie", facts.policy);
@@ -1995,18 +2001,18 @@ export const PSREF_STATUS_LABELS: Record<PsrefStatus, string> = {
   fehler: "Abruf fehlgeschlagen",
 };
 
-/** Eckdaten in dieser Reihenfolge, deutsch beschriftet; der Rest steht unter „Alle Merkmale“. */
+/**
+ * Eckdaten in dieser Reihenfolge, deutsch beschriftet. Prozessor, Arbeitsspeicher, Laufwerke
+ * und Betriebssystem kommen aus NinjaOne (wie das Gerät wirklich ist); hier nur, was NinjaOne
+ * nicht kennt. Alles steht zusätzlich unter „Alle Merkmale“.
+ */
 const PSREF_KEYS: readonly [RegExp, string][] = [
-  [/^processor$/i, "Prozessor"],
-  [/^memory$/i, "Arbeitsspeicher"],
-  [/^storage$/i, "Speicher"],
   [/^graphics$/i, "Grafik"],
   [/^display$/i, "Bildschirm"],
   [/^camera$/i, "Kamera"],
   [/^microphone$/i, "Mikrofon"],
   [/^speakers?$/i, "Lautsprecher"],
   [/^wlan/i, "WLAN"],
-  [/^operating system$/i, "Betriebssystem"],
   [/^base warranty$/i, "Garantie ab Werk"],
   [/^end of support$/i, "Support-Ende bei Lenovo"],
 ];

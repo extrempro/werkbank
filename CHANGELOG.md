@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.132.0] – 2026-11-25
+
+### Neu
+
+- **IT-Bestand, Reiter „Technik“:** Prozessor (Name, Kerne, Threads) und lokale Laufwerke (Größe, Dateisystem; ohne freien Platz, damit sich die Kenndaten nicht bei jedem Abgleich ändern) kommen aus NinjaOne (`processors`, `volumes` aus `devices-detailed`). Lenovo PSREF steht darunter in einem eingeklappten Bereich und zeigt nur noch Eckdaten, die NinjaOne nicht kennt (Grafik, Bildschirm, Kamera, Mikrofon, Lautsprecher, WLAN, Garantie ab Werk, Support-Ende); alle Merkmale bleiben aufklappbar.
+- **Dokumentation, Live-Baustein einfügen:** Vorschau unter den Feldern, die sich 300 ms nach jeder Änderung neu lädt.
+
+### Behoben
+
+- **Dokumentation, Baustein-Menü:** nur noch eine Scrollleiste (die Liste scrollt, das Suchfeld bleibt stehen).
+- **Dokumentation, Live-Baustein einfügen:** Auswahlfelder im Design der Werkbank.
+
 ## [0.131.0] – 2026-11-25
 
 ### Neu

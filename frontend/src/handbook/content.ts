@@ -1375,11 +1375,11 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "PCs und Notebooks gleicht die Werkbank alle 30 Minuten mit NinjaOne ab. Ein Gerät erkennt sie an seiner Kennung in NinjaOne, sonst an der Seriennummer. Welche Organisationen und Geräterollen dabei berücksichtigt werden, legt ein Admin in der Verwaltung fest. Hostname und technische Daten kommen aus NinjaOne; du siehst sie beim Gerät im Reiter „Technik“.",
+                text: "PCs und Notebooks gleicht die Werkbank alle 30 Minuten mit NinjaOne ab. Ein Gerät erkennt sie an seiner Kennung in NinjaOne, sonst an der Seriennummer. Welche Organisationen und Geräterollen dabei berücksichtigt werden, legt ein Admin in der Verwaltung fest. Hostname und technische Daten (unter anderem Prozessor, Arbeitsspeicher und Laufwerke) kommen aus NinjaOne; du siehst sie beim Gerät im Reiter „Technik“.",
               },
               {
                 kind: "text",
-                text: "Für Lenovo-Geräte holt die Werkbank einmal am Tag die technischen Daten von Lenovo (PSREF), wenn ein Admin das in der Verwaltung bei NinjaOne eingeschaltet hat. Im Reiter „Technik“ stehen dann die Eckdaten wie Prozessor, Arbeitsspeicher, Speicher, Garantie ab Werk und Support-Ende bei Lenovo, alle Merkmale zum Aufklappen und ein Link zur Lenovo-Seite. Mit „Bei PSREF abrufen“ holst du die Daten sofort neu. Als Modell muss der Maschinentyp stehen, zum Beispiel 10T700BTGE; bei Rechnern liefert NinjaOne ihn von selbst. Monitore meldet NinjaOne ohne Maschinentyp, für sie gibt es deshalb vorerst keine Daten. Klappt ein Abruf nicht, steht darunter der Grund.",
+                text: "Für Lenovo-Geräte holt die Werkbank einmal am Tag die technischen Daten von Lenovo (PSREF), wenn ein Admin das in der Verwaltung bei NinjaOne eingeschaltet hat. Im Reiter „Technik“ stehen sie unter den Werten aus NinjaOne im eingeklappten Bereich „Lenovo PSREF“: Eckdaten, die NinjaOne nicht kennt (etwa Grafik, Kamera, WLAN, Garantie ab Werk und Support-Ende bei Lenovo), alle Merkmale zum Aufklappen und ein Link zur Lenovo-Seite. Mit „Bei PSREF abrufen“ holst du die Daten sofort neu. Als Modell muss der Maschinentyp stehen, zum Beispiel 10T700BTGE; bei Rechnern liefert NinjaOne ihn von selbst. Monitore meldet NinjaOne ohne Maschinentyp, für sie gibt es deshalb vorerst keine Daten. Klappt ein Abruf nicht, steht darunter der Grund.",
               },
               {
                 kind: "text",
@@ -1824,7 +1824,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Live-Bausteine aktualisieren sich jede Minute. Mit „Einstellungen“ änderst du, was sie zeigen.",
+                text: "Beim Einfügen zeigt eine Vorschau unter den Feldern gleich, was der Baustein anzeigen wird; sie passt sich an, während du Bereich, Status oder Stichwort änderst. Live-Bausteine aktualisieren sich jede Minute. Mit „Einstellungen“ änderst du, was sie zeigen.",
               },
               {
                 kind: "hint",
