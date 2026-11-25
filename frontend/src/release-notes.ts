@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.130.0",
+    date: "2026-11-25",
+    summary: "Tabellen in der Dokumentation lassen sich viel leichter bearbeiten.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Beim Einfügen einer Tabelle wählst du die Größe in einem Raster und ob die erste Zeile eine Kopfzeile ist.",
+          "Über der Tabelle steht eine eigene Leiste: Zeilen und Spalten einfügen oder löschen, Kopfzeile an oder aus, Tabelle löschen (mit Rückfrage).",
+          "Die Zelle, in der du schreibst, ist umrandet; ihre Zeile und Spalte sind leicht hinterlegt. Unter und neben der Tabelle hängst du mit „+“ Zeilen und Spalten an.",
+          "Am Handy findest du die Tabellen-Knöpfe unten am Bildschirm, alles Weitere unter „Mehr …“.",
+          "Das Menü für Bausteine bleibt kompakt und öffnet sich unter der Zeile, statt sich über die ganze Seite zu strecken.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.129.1",
     date: "2026-11-25",
     summary: "Evergreen erkennt mehr Rollout-Zeiten aus Microsoft-Meldungen.",

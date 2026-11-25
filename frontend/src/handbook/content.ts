@@ -1745,6 +1745,10 @@ export const AREAS: readonly Area[] = [
                 text: "Bausteine fügst du mit „+ Baustein“ in der Leiste ein oder tippst in einer leeren Zeile „/“: Text, Überschriften, Listen, Aufgaben zum Abhaken, Hinweis- und Warnkästen, Tabellen, Code, Zitate, Trennlinien, Verweise und Live-Bausteine. Die Leiste formatiert markierten Text: fett, kursiv, unterstrichen, durchgestrichen, Code und Links. Links gehen nur mit https://, mailto: oder auf Seiten der Werkbank.",
               },
               {
+                kind: "text",
+                text: "Tabellen: Beim Einfügen wählst du die Größe im Raster (bis 6 × 6) und ob die erste Zeile eine Kopfzeile ist. Steht die Schreibmarke in einer Tabelle, erscheint darüber die Leiste „Tabelle“: Zeile darüber oder darunter, Spalte links oder rechts, Zeile oder Spalte löschen, Kopfzeile an oder aus und „Tabelle löschen“ (mit Rückfrage, Strg+Z holt sie zurück). Die Zelle mit der Schreibmarke ist umrandet, ihre Zeile und Spalte leicht hinterlegt; die Leiste zeigt, wo du bist. „+ Zeile hinzufügen“ unter der Tabelle und „+“ rechts daneben hängen am Ende an. Mit Tab springst du zur nächsten Zelle, in der letzten Zelle entsteht eine neue Zeile. Am Handy stehen „Zeile +“, „Spalte +“, „Kopfzeile“ und „Mehr …“ unten am Bildschirm; „Mehr …“ öffnet alle übrigen Aktionen. Breite Tabellen schiebst du seitlich.",
+              },
+              {
                 kind: "hint",
                 text: "Hast du etwas versehentlich gelöscht, nimmst du es mit „Rückgängig“ in der Leiste oder mit Strg+Z zurück.",
               },

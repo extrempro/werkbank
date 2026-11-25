@@ -5,7 +5,7 @@ import {
   type Browser,
   type Page,
 } from "@playwright/test";
-import { BASE_URL, expectNoA11yViolations, loginAs } from "./helpers";
+import { BASE_URL, expectNoA11yViolations, isPhone, loginAs } from "./helpers";
 
 // Dokumentation (Phase D1): Arbeitsbereich, Seite anlegen und schreiben (automatisch gespeichert),
 // Bausteine, Versionen, eigene Rechte, Sperren, Papierkorb und Verwaltung.
@@ -558,4 +558,59 @@ test("Doku: Baustein-Menü erscheint an der Schreibmarke, die Seite springt nich
   }, `Neu ${stamp}`);
   expect(after).toBe(true);
   await expect(heading).toBeInViewport();
+});
+
+test("Doku: Tabelle in gewählter Größe einfügen und bearbeiten", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const editor = await apiAs(browser, ["Doku.Nutzer"], s.editor);
+  const created = await editor.post("/api/doku/pages", {
+    data: { space_id: s.spaceId, title: `Tabelle ${stamp}` },
+    headers: HEADERS,
+  });
+  const id = ((await created.json()) as { id: string }).id;
+
+  await loginAs(page, ["Doku.Nutzer"], s.editor);
+  await page.goto(`/doku/seite/${id}`);
+  const content = page.locator(".doku-content");
+  await content.click();
+  await page.keyboard.press("/");
+  await page.getByRole("combobox", { name: "Baustein suchen" }).fill("Tabelle");
+  await page.keyboard.press("Enter");
+  const picker = page.getByRole("dialog", { name: "Tabelle einfügen" });
+  await expect(picker).toBeVisible();
+  await expectNoA11yViolations(page);
+  await picker.getByRole("button", { name: "2 Zeilen × 3 Spalten" }).click();
+  await expect(content.locator("tr")).toHaveCount(2);
+  await expect(content.locator("tr").first().locator("th")).toHaveCount(3);
+  await page.keyboard.type("Name");
+
+  const tools = page.getByRole("toolbar", { name: "Tabelle" });
+  await expect(tools).toBeVisible();
+  if (isPhone(page)) {
+    await tools.getByRole("button", { name: "Zeile +" }).click();
+    await expect(content.locator("tr")).toHaveCount(3);
+    await tools.getByRole("button", { name: "Mehr …" }).click();
+    const sheet = page.getByRole("dialog", { name: /Tabelle bearbeiten/ });
+    await expect(sheet).toBeVisible();
+    await expectNoA11yViolations(page);
+    await sheet.getByRole("button", { name: "Spalte rechts einfügen" }).click();
+    await expect(sheet).toBeHidden();
+    await expect(content.locator("tr").first().locator("th")).toHaveCount(4);
+  } else {
+    await tools.getByRole("button", { name: "↓ darunter" }).click();
+    await expect(content.locator("tr")).toHaveCount(3);
+    await page.getByRole("button", { name: "+ Zeile hinzufügen" }).click();
+    await expect(content.locator("tr")).toHaveCount(4);
+    await page
+      .getByRole("button", { name: "Spalte am Ende hinzufügen" })
+      .click();
+    await expect(content.locator("tr").first().locator("th")).toHaveCount(4);
+    await expect(content.locator(".doku-cell-active")).toHaveCount(1);
+    await expectNoA11yViolations(page);
+  }
+  await expect(content.getByText("Name")).toBeVisible();
 });
