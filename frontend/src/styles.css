@@ -14156,7 +14156,8 @@ button.doku-tree-toggle:hover {
 .doku-name-form input,
 .doku-field input,
 .doku-field select,
-.doku-picker input {
+.doku-picker input,
+.doku-picker select {
   min-height: 44px;
   padding: 0 10px;
   border: 1px solid var(--farbe-rand-stark);
@@ -16083,4 +16084,35 @@ button.doku-thread-quote {
   border: 0;
   background: transparent;
   accent-color: var(--farbe-primaer);
+}
+
+/* Live-Baustein einfügen: Vorschau mit den aktuellen Einstellungen */
+.doku-live-preview {
+  display: grid;
+  gap: 4px;
+  font-weight: 400;
+}
+
+.doku-live-preview .doku-live {
+  margin: 0;
+}
+
+/* Baustein-Menü: nur die Liste scrollt, das Suchfeld bleibt stehen (kein Scrollbalken im Scrollbalken) */
+.doku-popover:has(> .doku-blockmenu) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.doku-popover > .doku-blockmenu {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.doku-popover > .doku-blockmenu ul {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }

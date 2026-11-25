@@ -196,6 +196,7 @@ describe("Gerät", () => {
       specs: [
         { name: "Model", value: "10T700BTGE" },
         { name: "Processor", value: "Intel Core i5-9400T" },
+        { name: "Graphics", value: "Integrated Intel UHD Graphics 630" },
         { name: "End of Support", value: "2025-01-26" },
       ],
     };
@@ -210,13 +211,16 @@ describe("Gerät", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bei PSREF abrufen" }));
     expect(await screen.findByText("Die Daten aus PSREF sind aktuell.")).toBeTruthy();
     expect(calls.some((call) => call.method === "POST" && call.url.endsWith("/psref"))).toBe(true);
-    expect(screen.getByText("Prozessor")).toBeTruthy();
+    // Eingeklappt unter den Werten aus NinjaOne; Prozessor kommt aus NinjaOne, nicht aus PSREF
+    expect(screen.getByText("Lenovo PSREF").closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByText("Grafik")).toBeTruthy();
+    expect(screen.queryByText("Prozessor")).toBeNull();
     expect(screen.getByText("Support-Ende bei Lenovo")).toBeTruthy();
     expect(screen.getByRole("link", { name: /Bei PSREF öffnen/ })).toHaveAttribute(
       "href",
       psref.url,
     );
-    expect(screen.getByText("Alle Merkmale (3)")).toBeTruthy();
+    expect(screen.getByText("Alle Merkmale (4)")).toBeTruthy();
   });
 
   it("zeigt die Übersicht und den Verlauf", async () => {

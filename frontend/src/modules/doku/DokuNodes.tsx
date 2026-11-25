@@ -364,6 +364,13 @@ export function LiveBlockForm({
   const set = (patch: Partial<LiveAttrs>) => setAttrs({ ...attrs, ...patch });
   const number = (value: string) => (value ? Number(value) : null);
   const floor = options?.floors.find((entry) => entry.id === attrs.floor);
+  // Vorschau in Echtzeit: kurz nach der letzten Änderung neu laden (nicht bei jedem Tastendruck)
+  const [preview, setPreview] = useState<LiveAttrs | null>(null);
+  useEffect(() => {
+    const ready = attrs.kind !== "projekt" || Boolean(attrs.project);
+    const timer = window.setTimeout(() => setPreview(ready ? cleanAttrs(attrs) : null), 300);
+    return () => window.clearTimeout(timer);
+  }, [attrs]);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (attrs.kind === "projekt" && !attrs.project) {
@@ -515,6 +522,14 @@ export function LiveBlockForm({
       <p className="small">
         Jede Person sieht im Baustein nur, was sie im jeweiligen Bereich sehen darf.
       </p>
+      <div className="doku-live-preview">
+        <span className="small">Vorschau</span>
+        {preview ? (
+          <LiveBlockContent attrs={preview} />
+        ) : (
+          <p className="small doku-live-empty">Wähle ein Projekt, dann erscheint die Vorschau.</p>
+        )}
+      </div>
       {problem && (
         <p className="hint-box hint-bad" role="alert">
           {problem}

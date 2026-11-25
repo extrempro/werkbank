@@ -24,6 +24,28 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.132.0",
+    date: "2026-11-25",
+    summary: "Mehr Hardware-Daten aus NinjaOne, Vorschau für Live-Bausteine.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Im Reiter „Technik“ stehen jetzt auch Prozessor und Laufwerke aus NinjaOne.",
+          "Die Daten von Lenovo (PSREF) stehen darunter und sind zuerst eingeklappt. Sie zeigen nur noch, was NinjaOne nicht weiß, zum Beispiel Grafik, WLAN, Garantie ab Werk und Support-Ende.",
+        ],
+      },
+      {
+        area: "Dokumentation",
+        entries: [
+          "Beim Einfügen eines Live-Bausteins siehst du gleich eine Vorschau, die sich beim Tippen und Umstellen anpasst.",
+          "Die Auswahlfelder dort sehen aus wie überall in der Werkbank.",
+          "Im Menü für Bausteine gibt es nur noch eine Scrollleiste; das Suchfeld bleibt oben stehen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.131.0",
     date: "2026-11-25",
     summary: "IT-Bestand: technische Daten von Lenovo sind zurück.",
