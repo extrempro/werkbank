@@ -4,17 +4,41 @@ import {
   fetchNotifications,
   markAllRead,
   markRead,
+  NOTIFICATION_SETTINGS_PATH,
   NOTIFICATIONS_PATH,
   safeLink,
   timeAgo,
   type NotificationList,
 } from "../notifications";
 import { navigate } from "../router";
+import { claimUntil, playTone, seenUntil, storedSounds, toneForBatch } from "../sounds";
 import { Icon } from "./Icon";
 
 /** Abstand, in dem die Glocke nachfragt. */
 const REFRESH_MS = 5 * 60 * 1000;
 const SHOWN = 10;
+
+/**
+ * Ein Ton für alles, was seit dem letzten Mal neu ist. Beim ersten Laden in diesem Browser nur
+ * merken, nicht klingeln. Mehrere offene Tabs klingeln nur einmal.
+ */
+function ring(list: NotificationList): void {
+  const newest = Math.max(0, ...list.entries.map((entry) => entry.id));
+  if (newest === 0) {
+    return;
+  }
+  const seen = seenUntil();
+  if (!claimUntil(newest) || seen === 0) {
+    return;
+  }
+  const settings = storedSounds();
+  const tone = toneForBatch(settings, list.entries, seen, {
+    hidden: document.visibilityState === "hidden",
+  });
+  if (tone) {
+    playTone(tone, settings.volume);
+  }
+}
 
 /** Glocke in der Kopfzeile: Zahl der ungelesenen Benachrichtigungen und die neuesten zum Aufklappen. */
 export function NotificationBell({ path }: { path: string }) {
@@ -35,6 +59,7 @@ export function NotificationBell({ path }: { path: string }) {
       fetchNotifications(SHOWN).then((result) => {
         if (active && mine === round) {
           setList(result);
+          ring(result);
         }
       });
     };
@@ -165,13 +190,22 @@ export function NotificationBell({ path }: { path: string }) {
             ))}
           </ul>
         )}
-        <a
-          className="bell-all"
-          href={NOTIFICATIONS_PATH}
-          onClick={(event) => go(event, NOTIFICATIONS_PATH)}
-        >
-          Alle anzeigen
-        </a>
+        <div className="bell-foot">
+          <a
+            className="bell-all"
+            href={NOTIFICATIONS_PATH}
+            onClick={(event) => go(event, NOTIFICATIONS_PATH)}
+          >
+            Alle anzeigen
+          </a>
+          <a
+            className="bell-all"
+            href={NOTIFICATION_SETTINGS_PATH}
+            onClick={(event) => go(event, NOTIFICATION_SETTINGS_PATH)}
+          >
+            Einstellungen
+          </a>
+        </div>
       </div>
     </div>
   );

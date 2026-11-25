@@ -5,6 +5,7 @@ import {
   fetchNotifications,
   markAllRead,
   markRead,
+  NOTIFICATION_SETTINGS_PATH,
   safeLink,
   timeAgo,
   type NotificationList,
@@ -13,7 +14,7 @@ import { navigate } from "../router";
 
 const ALL = 100;
 
-/** Alle Benachrichtigungen der letzten 90 Tage; eingestellt wird im Konto. */
+/** Alle Benachrichtigungen der letzten 90 Tage; eingestellt wird unter Konto › Benachrichtigungen. */
 export function NotificationsPage() {
   const [list, setList] = useState<NotificationList | null>(null);
 
@@ -99,8 +100,9 @@ export function NotificationsPage() {
       </section>
 
       <p>
-        Welche Benachrichtigungen du in der Glocke, per Mail oder in Teams bekommst, stellst du im{" "}
-        <Link to="/konto">Konto</Link> ein.
+        Welche Benachrichtigungen du in der Glocke, per Mail, in Teams oder als Push bekommst und
+        welcher Ton erklingt, stellst du unter{" "}
+        <Link to={NOTIFICATION_SETTINGS_PATH}>Konto › Benachrichtigungen</Link> ein.
       </p>
     </div>
   );

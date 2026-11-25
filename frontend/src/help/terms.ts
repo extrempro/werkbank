@@ -456,6 +456,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/konto": [["grundlagen", "konto"]],
   "/neuigkeiten": [["grundlagen", "konto"]],
   "/benachrichtigungen": [["grundlagen", "benachrichtigungen"]],
+  "/konto/benachrichtigungen": [["grundlagen", "benachrichtigungen"]],
   "/m365": [["m365", "uebersicht"]],
   "/m365/aenderungen": [
     ["m365", "aenderungen"],

@@ -2408,13 +2408,22 @@ details summary {
   font-weight: 600;
 }
 
+.bell-foot {
+  display: flex;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
 .bell-all {
   display: block;
+  flex: 1 1 0;
   padding: 12px 16px;
-  border-top: 1px solid var(--farbe-trenner);
   color: var(--farbe-link);
   font-weight: 600;
   text-align: center;
+}
+
+.bell-all + .bell-all {
+  border-left: 1px solid var(--farbe-trenner);
 }
 
 .bell-list-page a {
@@ -15681,4 +15690,214 @@ button.doku-thread-quote {
   font: inherit;
   font-size: 1rem;
   font-weight: 400;
+}
+
+/* Benachrichtigungen: Ton je Bereich */
+.notify-module-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.notify-tone {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}
+
+.notify-tone-label {
+  font-size: 0.875rem;
+  color: var(--farbe-text-leise);
+}
+
+.settings-form .notify-tone select {
+  min-width: 9rem;
+}
+
+.notify-listen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-primaer);
+  cursor: pointer;
+}
+
+.notify-listen:disabled {
+  color: var(--farbe-text-leise);
+  cursor: default;
+}
+
+/* Benachrichtigungen am Handy: je Bereich eine ruhige Liste, je Art aufklappbar */
+.notify-phone {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.notify-area-title {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--farbe-text-leise);
+}
+
+.notify-area-list {
+  border: 1px solid var(--farbe-rand);
+  border-radius: 12px;
+  background: var(--farbe-flaeche);
+}
+
+.notify-area-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 8px 8px 14px;
+}
+
+.notify-area-row .notify-tone {
+  flex: 1 1 auto;
+}
+
+.settings-form .notify-area-row .notify-tone select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.notify-kind {
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.notify-kind-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--farbe-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notify-kind-head .icon {
+  flex: none;
+  color: var(--farbe-text-leise);
+  transition: transform 0.15s;
+}
+
+.notify-kind-head[aria-expanded="true"] .icon {
+  transform: rotate(90deg);
+}
+
+.notify-kind-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notify-kind-body {
+  padding: 0 14px 8px;
+}
+
+.settings-form label.notify-switch {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+/* Schalter: ein Häkchen, das wie ein Schiebeschalter aussieht */
+.switch {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  border-radius: 13px;
+  background: var(--farbe-text-leise);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s;
+}
+
+.switch:checked {
+  background: var(--farbe-primaer);
+}
+
+.switch:checked::after {
+  left: 21px;
+}
+
+.switch:focus-visible {
+  outline: 3px solid var(--farbe-fokus, var(--farbe-primaer));
+  outline-offset: 2px;
+}
+
+.switch:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switch,
+  .switch::after,
+  .notify-kind-head .icon {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .switch {
+    border: 1px solid ButtonText;
+  }
+
+  .switch::after {
+    background: ButtonText;
+  }
+}
+
+.sound-volume {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 22rem;
+}
+
+.settings-form .sound-volume input[type="range"] {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--farbe-primaer);
 }

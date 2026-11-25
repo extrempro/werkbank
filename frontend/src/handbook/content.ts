@@ -187,15 +187,23 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Öffne die Seite „Konto“ (Klick auf deinen Namen oben rechts).",
-                  "Unter „Benachrichtigungen“ steht je Art, ob du sie in der Glocke, per Mail, in Teams oder als Push bekommst.",
-                  "Für Push: zuerst „Push auf diesem Gerät einschalten“ und die Mitteilungen erlauben, dann je Art die Spalte „Push“ anhaken. Auf iPhone und iPad geht das nur in der Werkbank-App vom Home-Bildschirm (Safari › Teilen › „Zum Home-Bildschirm“).",
+                  "Öffne im Kontomenü oben rechts „Benachrichtigungen“ (oder in der Glocke „Einstellungen“).",
+                  "Unter „Arten und Wege“ steht je Art, ob du sie in der Glocke, per Mail, in Teams oder als Push bekommst. Am Handy tippst du auf eine Art, dann klappen die Schalter auf.",
+                  "Für Push: zuerst „Push auf diesem Gerät einschalten“ und die Mitteilungen erlauben, dann je Art „Push“ einschalten. Auf iPhone und iPad geht das nur in der Werkbank-App vom Home-Bildschirm (Safari › Teilen › „Zum Home-Bildschirm“).",
                   "Hake an, was du möchtest. Jede Änderung gilt sofort.",
                 ],
               },
               {
                 kind: "text",
-                text: "Push kommt nach wenigen Minuten auf alle deine angemeldeten Geräte und nennt nur Bereich und Anzahl, zum Beispiel „IT-Budget: 2 neue Benachrichtigungen“. Ein Tippen öffnet die Benachrichtigungen. Geräte und eine Testnachricht findest du ebenfalls im Konto. Anfangs ist alles in der Glocke an, Mail, Teams und Push sind aus. Per Mail und in Teams bekommst du höchstens alle 15 Minuten eine Sammelnachricht: wie viele Benachrichtigungen es in welchem Bereich gibt, mit einem Link in die Werkbank. Was genau passiert ist, steht nur in der Werkbank. Mitgeteilt wird nur, was nach dem Einschalten entsteht und was du noch nicht gelesen hast.",
+                text: "Push kommt nach wenigen Minuten auf alle deine angemeldeten Geräte und nennt nur Bereich und Anzahl, zum Beispiel „IT-Budget: 2 neue Benachrichtigungen“. Ein Tippen öffnet die Benachrichtigungen. Geräte und eine Testnachricht findest du auf derselben Seite. Anfangs ist alles in der Glocke an, Mail, Teams und Push sind aus. Per Mail und in Teams bekommst du höchstens alle 15 Minuten eine Sammelnachricht: wie viele Benachrichtigungen es in welchem Bereich gibt, mit einem Link in die Werkbank. Was genau passiert ist, steht nur in der Werkbank. Mitgeteilt wird nur, was nach dem Einschalten entsteht und was du noch nicht gelesen hast.",
+              },
+              {
+                kind: "text",
+                text: "Töne: Unter „Töne“ schaltest du „Töne abspielen“ ein. Dann erklingt ein Ton, sobald eine neue Benachrichtigung in der Glocke ankommt. Den Ton wählst du je Bereich in „Arten und Wege“ neben dem Namen des Bereichs, mit dem Lautsprecher hörst du ihn an; „Kein Ton“ macht einen Bereich still. Kommen mehrere Benachrichtigungen auf einmal, erklingt nur ein Ton.",
+              },
+              {
+                kind: "hint",
+                text: "Töne gelten nur für diesen Browser und nur, solange die Werkbank in einem Tab offen ist. Mit „Ruhezeit“ bleibt es von 18 bis 7 Uhr still, mit „Nur, wenn die Werkbank im Hintergrund ist“ klingt es nur, wenn du gerade in einem anderen Fenster arbeitest. Push am Handy spielt den Ton des Geräts.",
               },
               {
                 kind: "hint",
@@ -204,7 +212,7 @@ export const AREAS: readonly Area[] = [
             ],
             links: [
               { to: "/benachrichtigungen", label: "Zu den Benachrichtigungen" },
-              { to: "/konto", label: "Zu den Einstellungen im Konto" },
+              { to: "/konto/benachrichtigungen", label: "Zu den Einstellungen" },
             ],
           },
           {
@@ -263,7 +271,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Das Kontomenü oben rechts (dein Bild oder deine Initialen) führt zur Seite „Konto“: deine Angaben aus Microsoft, deine Rechte je Bereich mit kurzer Erklärung, die angemeldeten Geräte, die Darstellung (automatisch, hell oder dunkel) die Schriftgröße im Menü (klein, normal, groß, sehr groß) und die Abstände im Menü (kompakt, normal, weiträumig; mit dem Finger bleiben Einträge immer gut antippbar; alles gilt nur für diesen Browser), deine Benachrichtigungen (Glocke, Mail, Teams) und die Version der Werkbank.",
+                text: "Das Kontomenü oben rechts (dein Bild oder deine Initialen) führt zur Seite „Konto“: deine Angaben aus Microsoft, deine Rechte je Bereich mit kurzer Erklärung, die angemeldeten Geräte, die Darstellung (automatisch, hell oder dunkel) die Schriftgröße im Menü (klein, normal, groß, sehr groß) und die Abstände im Menü (kompakt, normal, weiträumig; mit dem Finger bleiben Einträge immer gut antippbar; alles gilt nur für diesen Browser), einen Link zu den Einstellungen der Benachrichtigungen und die Version der Werkbank.",
               },
               {
                 kind: "text",

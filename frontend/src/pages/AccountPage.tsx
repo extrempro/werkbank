@@ -2,14 +2,13 @@ import type { Me } from "../api";
 import { AccountSessions } from "../components/AccountSessions";
 import { Avatar } from "../components/Avatar";
 import { Link } from "../components/Link";
-import { NotificationPreferences } from "../components/NotificationPreferences";
 import { MenuSizeSwitch } from "../components/MenuSizeSwitch";
 import { MenuSpacingSwitch } from "../components/MenuSpacingSwitch";
 import { TicketBarSettings } from "../modules/tickets/TicketBarSettings";
 import { ThemeSwitch } from "../components/ThemeSwitch";
 import { NEWS_PATH } from "../navigation";
 import { HANDBOOK_PATH } from "../handbook";
-import { NOTIFICATIONS_PATH } from "../notifications";
+import { NOTIFICATION_SETTINGS_PATH, NOTIFICATIONS_PATH } from "../notifications";
 import { ADMIN_ROLE, myRights } from "../user";
 
 /** Eigene Angaben, Rollen, angemeldete Geräte und persönliche Einstellungen. */
@@ -84,10 +83,21 @@ export function AccountPage({ me, tickets = false }: { me: Me; tickets?: boolean
 
       {tickets && <TicketBarSettings />}
 
-      <NotificationPreferences />
-      <p>
-        <Link to={NOTIFICATIONS_PATH}>Alle Benachrichtigungen ansehen</Link>
-      </p>
+      <section className="panel" aria-labelledby="konto-benachrichtigungen">
+        <div className="panel-head">
+          <h2 id="konto-benachrichtigungen">Benachrichtigungen</h2>
+        </div>
+        <div className="detail-body">
+          <p>
+            Welche Benachrichtigungen du in der Glocke, per Mail, in Teams und als Push bekommst,
+            welcher Ton dazu erklingt und welche Geräte Push bekommen.
+          </p>
+          <p className="handbook-links">
+            <Link to={NOTIFICATION_SETTINGS_PATH}>Benachrichtigungen einstellen</Link>
+            <Link to={NOTIFICATIONS_PATH}>Alle Benachrichtigungen ansehen</Link>
+          </p>
+        </div>
+      </section>
 
       <section className="panel" aria-labelledby="konto-version">
         <div className="panel-head">

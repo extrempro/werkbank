@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.129.0] – 2026-11-25
+
+### Neu
+
+- **Benachrichtigungen, eigene Seite:** Die Einstellungen stehen jetzt unter Konto › Benachrichtigungen (`/konto/benachrichtigungen`), erreichbar über das Kontomenü und über „Einstellungen“ in der Glocke. Das Konto zeigt nur noch einen kurzen Hinweis mit Link.
+- **Töne:** Für neue Benachrichtigungen in der Glocke kann ein Ton erklingen. Der Ton wird je Bereich gewählt (Glocke, Ping, Zwei Töne, Drei Töne, Sanft, Klopfen, Gong, Dringend oder „Kein Ton“) und lässt sich anhören. Dazu: an/aus (anfangs aus), Lautstärke, Ruhezeit 18–7 Uhr, „nur im Hintergrund“. Kommen mehrere Benachrichtigungen auf einmal, erklingt ein Ton (der Bereich der neuesten); mehrere offene Tabs klingeln nur einmal. Die Töne erzeugt der Browser (Web Audio), die Einstellungen gelten nur für diesen Browser (localStorage), kein Server-Speicher.
+- **Benachrichtigungen am Handy:** Statt der Tabelle je Bereich eine ruhige Liste; je Art eine Zeile mit kurzer Zusammenfassung, die Wege klappen als Schalter auf.
+
 ## [0.128.1] – 2026-11-25
 
 ### Behoben

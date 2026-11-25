@@ -1,6 +1,8 @@
 import { deleteJson, getJson, postJson, putJson } from "./api";
 
 export const NOTIFICATIONS_PATH = "/benachrichtigungen";
+/** Konto › Benachrichtigungen: Arten, Wege und Töne einstellen */
+export const NOTIFICATION_SETTINGS_PATH = "/konto/benachrichtigungen";
 const BASE = "/api/notifications";
 
 export interface NotificationEntry {

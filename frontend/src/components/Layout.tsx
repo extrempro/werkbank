@@ -69,6 +69,7 @@ import { AdminPage } from "../pages/AdminPage";
 import { AuditPage } from "../pages/AuditPage";
 import { NewsPage } from "../pages/NewsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
+import { NotificationSettingsPage } from "../pages/NotificationSettingsPage";
 import { HandbookPage } from "../pages/HandbookPage";
 import { DeviceAssociationPage } from "../modules/devices/DeviceAssociationPage";
 import { DnsCheckPage } from "../modules/monitoring/DnsCheckPage";
@@ -115,7 +116,7 @@ import {
   parseAdminPath as parseDokuAdminPath,
   parsePagePath as parseDokuPagePath,
 } from "../modules/doku/api";
-import { NOTIFICATIONS_PATH } from "../notifications";
+import { NOTIFICATION_SETTINGS_PATH, NOTIFICATIONS_PATH } from "../notifications";
 import { useMediaQuery } from "./FilterBar";
 import { HelpProvider, topicLink } from "../help/HelpContext";
 import { pageTopics } from "../help/terms";
@@ -434,6 +435,8 @@ export function Layout({ me }: LayoutProps) {
     page = <NewsPage onSeen={onNewsSeen} />;
   } else if (path === NOTIFICATIONS_PATH) {
     page = <NotificationsPage />;
+  } else if (path === NOTIFICATION_SETTINGS_PATH) {
+    page = <NotificationSettingsPage />;
   } else if (handbookKnown && handbookRoute) {
     page = (
       <HandbookPage
