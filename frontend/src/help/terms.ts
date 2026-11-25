@@ -280,6 +280,16 @@ export const HELP = {
     text: "Vergleicht die vergebenen Rechte mit dem, was die eingetragenen Typen laut Microsoft brauchen. So siehst du vor dem nächsten Abruf, was fehlt.",
     topic: ["verwaltung", "einstellungen"],
   },
+  "verwaltung.sicherung": {
+    term: "Datensicherung",
+    text: "Die Werkbank sichert Datenbank und Dateien verschlüsselt in einen Ordner auf dem Server. Ohne den Schlüssel „backup_key“ lässt sich keine Sicherung öffnen, bewahre ihn getrennt davon auf.",
+    topic: ["verwaltung", "datensicherung"],
+  },
+  "verwaltung.sicherung_aufbewahren": {
+    term: "Aufbewahren",
+    text: "So viele Sicherungen bleiben liegen, die ältesten löscht die Werkbank nach jeder neuen Sicherung. Bei täglicher Sicherung heißt 14: zwei Wochen zurück.",
+    topic: ["verwaltung", "datensicherung"],
+  },
   "verwaltung.berechtigungen": {
     term: "Berechtigungen",
     text: "Je Bereich legst du eine Stufe fest, etwa Lesen oder Bearbeiten. Anmelden darf sich nur, wer in der Zugangs-Gruppe ist; in die Verwaltung kommt nur die Admin-Gruppe.",
@@ -515,6 +525,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/it-tools": [["it-tools", "ueberblick"]],
   "/verwaltung": [["verwaltung", "einstellungen"]],
   "/verwaltung/berechtigungen": [["verwaltung", "berechtigungen"]],
+  "/verwaltung/datensicherung": [["verwaltung", "datensicherung"]],
   "/audit": [["verwaltung", "audit"]],
 };
 

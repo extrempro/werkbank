@@ -20,7 +20,8 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 ## 2. Docker-Host
 
 - [ ] Der Reverse Proxy erreicht den Host (gleicher Host oder internes Netz bzw. VPN); die Adresse des Hosts in diesem Netz ist bekannt
-- [ ] Secrets liegen in `/opt/werkbank/secrets` (sechs Dateien, siehe [`deploy/README.md`](../deploy/README.md))
+- [ ] Secrets liegen in `/opt/werkbank/secrets` (sieben Dateien, siehe [`deploy/README.md`](../deploy/README.md))
+- [ ] Kopien von `settings_key` und `backup_key` liegen getrennt vom Host, z. B. im Passwortmanager
 - [ ] Ausgehend erreichbar: `login.microsoftonline.com`, `graph.microsoft.com`, `ghcr.io` (Image holen); mit `TENANT_USAGE_ENABLED` auch `reports*.office.com` (z. B. `reports.office.com` oder regionale Hosts)
 
 ## 3. Projekt anlegen (Compose oder Git-Sync)
@@ -38,6 +39,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 | `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `COLLECTOR_CLIENT_ID` | aus Schritt 1 |
 | `ENTRA_ADMIN_GROUP_ID`, `ENTRA_ACCESS_GROUP_ID` | Objekt-IDs der beiden Gruppen ([`entra-setup.md`](entra-setup.md), 1.8); danach die Rechte unter Verwaltung › Berechtigungen vergeben |
 | `ENVIRONMENT` | `production` |
+| `WERKBANK_BACKUP_DIR` | freiwillig: Zielordner der Datensicherung auf dem Host, z. B. ein NAS-Mount (UID 10001 muss schreiben dürfen); ohne Angabe das Volume `backups` |
 | `ENABLE_TEST_LOGIN` | `false` |
 
 - [ ] Projekt bauen und starten; `web`, `worker` und `db` sind „healthy“
@@ -64,6 +66,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 | Snapshots nach einigen Minuten | Abruf „Erfolgreich“ mit Objekten; Einstellungen sind gefüllt |
 | Evergreen → Microsoft 365, einige Stunden nach dem Start | Meldungen aus dem Nachrichtencenter der letzten 30 Tage stehen als Einträge mit Status „Neu“ da |
 | Zweiter Abruf nach einer Änderung im Tenant | Änderung erscheint unter „Änderungen“ mit „Geändert von“ |
+| Verwaltung › Datensicherung | „Schlüssel: vorhanden“, „Zielordner: beschreibbar“; „Täglich sichern“ einschalten, „Jetzt sichern“ ergibt einen Lauf „erfolgreich“; einmal `python -m werkbank.backup pruefen` wie in [`deploy/README.md`](../deploy/README.md) |
 | Seite „Konto“ (Klick auf den Namen oben rechts) | Zeigt Rollen, Sitzung und die laufende Version |
 | Update auf eine neue Version | Images holen und neu bereitstellen (siehe [`deploy/README.md`](../deploy/README.md)); danach Banner „Neue Version“, „Neu laden“ lädt sie; auf der Seite „Konto“ steht die neue Version |
 | iPhone und iPad | Zum Home-Bildschirm hinzufügen, Anmeldung, Bedienung |
@@ -73,7 +76,7 @@ Notieren: Verzeichnis-ID, Anwendungs-ID „Werkbank“, Anwendungs-ID „Werkban
 - **Nach einem Update sieht die Werkbank aus wie vorher:** Das neue Image wurde nicht geholt; ein Neustart nimmt das vorhandene. Auf dem Docker-Host im Projektordner `docker compose pull` und `docker compose up -d` ausführen. Steht in der `.env` eine feste Version (`WERKBANK_IMAGE`), dort die neue eintragen.
 - **Anmeldung abgelehnt mit Grund `keine_gruppe` oder `gruppen_nicht_pruefbar` (Audit-Log):** Die Person ist in keiner der beiden Gruppen, eine Objekt-ID in `.env` stimmt nicht, oder an der App-Registrierung fehlt die delegierte Berechtigung `User.Read` mit Administratorzustimmung ([`entra-setup.md`](entra-setup.md), 1.5 und 1.8).
 - **Anmeldung schlägt fehl, nachdem `ENTRA_PROFILE_PHOTO=true` gesetzt wurde:** An der App-Registrierung fehlt die delegierte Berechtigung `User.Read` oder die Administratorzustimmung ([`entra-setup.md`](entra-setup.md), 1.5).
-- **Compose startet nicht, „bind source path does not exist: …/secrets/postgres_password“:** `WERKBANK_SECRETS_DIR` ist nicht gesetzt (dann sucht Compose im Ordner `secrets` neben der Compose-Datei) oder eine der sechs Dateien fehlt. Nach einem Update auf Version 0.6 fehlt oft `settings_key`; Anleitung in [`deploy/README.md`](../deploy/README.md), Schritt 2a.
+- **Compose startet nicht, „bind source path does not exist: …/secrets/postgres_password“:** `WERKBANK_SECRETS_DIR` ist nicht gesetzt (dann sucht Compose im Ordner `secrets` neben der Compose-Datei) oder eine der sieben Dateien fehlt. Nach einem Update auf Version 0.6 fehlt oft `settings_key`, nach einem Update auf Version 0.126 `backup_key`; Anleitung in [`deploy/README.md`](../deploy/README.md), Schritte 2a und 2b.
 - **„env file not found“:** Es gibt noch keine `.env` neben der Compose-Datei bzw. im Verwaltungswerkzeug sind noch keine Umgebungsvariablen für das Projekt eingetragen.
 - **Anmeldung endet mit „Anmeldung nicht möglich“:** Im Audit-Log steht der Grund (`anmeldung.abgelehnt`), z. B. `falscher_mandant` oder `keine_rolle`.
 - **Abruf fehlgeschlagen:** Unter Snapshots steht der Abruf als „Fehlgeschlagen“; die Fehlerangabe von Microsoft steht im Protokoll des Dienstes `worker`. Häufig fehlt dem Dienstprinzipal von UTCM ein Leserecht.

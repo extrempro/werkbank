@@ -23,6 +23,17 @@ RUN apt-get update \
     && apt-get upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
+# Datensicherung: gpg zum Verschlüsseln und die PostgreSQL-Werkzeuge (pg_dump, pg_restore, psql)
+# in der Version des Datenbank-Servers (16). Debian bringt nur die eigene Hauptversion mit, daher
+# die offizielle Paketquelle von PostgreSQL; ihren Signaturschlüssel liefert das Debian-Paket
+# postgresql-common mit. Wird die Datenbank auf eine neue Hauptversion gehoben, hier und in
+# BACKUP_PG_BIN_DIR (config.py) mitziehen.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gnupg postgresql-common \
+    && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+    && apt-get install -y --no-install-recommends postgresql-client-16 \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system --gid 10001 werkbank \
     && useradd --system --uid 10001 --gid werkbank --no-create-home werkbank
 
@@ -46,7 +57,10 @@ RUN pip install uv==0.13.8 \
 COPY --from=frontend /build/dist /app/static
 
 # Ablage der PDF-Belege: Ein Volume an dieser Stelle übernimmt beim ersten Anlegen den Besitzer.
-RUN mkdir -p /data/belege && chown werkbank:werkbank /data/belege
+# Ablage der Sicherungen ebenso (oder ein Ordner auf dem Host, siehe deploy/README.md).
+RUN mkdir -p /data/belege /data/backups \
+    && chown werkbank:werkbank /data/belege /data/backups \
+    && chmod 700 /data/backups
 
 USER werkbank
 EXPOSE 8000

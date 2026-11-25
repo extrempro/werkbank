@@ -75,6 +75,7 @@ describe("areasFor", () => {
       "/verwaltung/mail-teams",
       "/verwaltung/verbindungen",
       "/verwaltung/zabbix",
+      "/verwaltung/datensicherung",
       "/audit",
     ]);
     expect(paths(1).every((path) => path.startsWith("/m365"))).toBe(true);

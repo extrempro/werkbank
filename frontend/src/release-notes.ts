@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.126.0",
+    date: "2026-11-25",
+    summary: "Neu: Datensicherung in der Verwaltung.",
+    sections: [
+      {
+        area: "Verwaltung",
+        entries: [
+          "Neue Seite „Datensicherung“: Die Werkbank sichert täglich zur gewählten Uhrzeit alle Daten und Dateien verschlüsselt auf den Server. Du legst fest, wie viele Sicherungen bleiben, und kannst mit „Jetzt sichern“ sofort eine anlegen.",
+          "Die Seite zeigt, ob alles eingerichtet ist, welche Sicherungen da sind und wie die letzten Läufe ausgegangen sind. Schlägt eine Sicherung fehl, bekommst du eine Benachrichtigung.",
+          "Unten auf der Seite steht die Anleitung zum Einrichten und zum Zurückspielen einer Sicherung.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.125.1",
     date: "2026-11-24",
     summary: "Sicherheit: frische Anmeldung beim Vergeben von Rechten, Links strenger geprüft.",

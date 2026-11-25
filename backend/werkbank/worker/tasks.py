@@ -7,6 +7,9 @@ from typing import Any
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
 
+from werkbank.backup.jobs import JOB as BACKUP_JOB
+from werkbank.backup.jobs import JOB_INTERVAL as BACKUP_JOB_INTERVAL
+from werkbank.backup.jobs import backup_job
 from werkbank.config import Settings
 from werkbank.core.app_settings import audit_retention_days
 from werkbank.core.audit import write_audit
@@ -158,6 +161,7 @@ NOTIFICATION_SOURCES = (
 
 REGISTRY: dict[str, JobType] = {
     CLEANUP: JobType(handler=cleanup, interval=timedelta(hours=1)),
+    BACKUP_JOB: JobType(handler=backup_job, interval=BACKUP_JOB_INTERVAL),
     NOTIFY: JobType(handler=make_notify_job(NOTIFICATION_SOURCES), interval=NOTIFY_INTERVAL),
     DELIVER: JobType(handler=deliver_job, interval=DELIVER_INTERVAL),
     PUSH_DELIVER: JobType(handler=push_job, interval=PUSH_DELIVER_INTERVAL),

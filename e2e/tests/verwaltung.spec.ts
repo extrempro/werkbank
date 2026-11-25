@@ -377,6 +377,7 @@ test("Verwaltung ist ein eigener Bereich mit Unterseiten", async ({ page }) => {
     "Berechtigungen",
     "Mail & Teams",
     "Verbindungen",
+    "Datensicherung",
     "Audit-Log",
   ]) {
     await expect(
@@ -434,6 +435,60 @@ test("Verbindungen: Berechtigungen für den Abruf prüfen", async ({ page }) => 
   // In der Testumgebung ist keine Collector-App eingerichtet
   await expect(
     page.getByText("Die Verbindung zur Collector-App ist nicht eingerichtet."),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+});
+
+test("Datensicherung: Zeitplan einstellen und jetzt sichern", async ({
+  page,
+}) => {
+  await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
+  await page.goto("/verwaltung/datensicherung");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Datensicherung" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Schlüssel „backup_key“: vorhanden", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Zielordner: beschreibbar", { exact: true }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.getByLabel("Täglich sichern").check();
+  await page.getByLabel("Uhrzeit").selectOption("3");
+  await page.getByLabel("Aufbewahren", { exact: true }).fill("10");
+  await page.getByRole("button", { name: "Datensicherung speichern" }).click();
+  await expect(
+    page.getByText("Die Einstellungen der Datensicherung sind gespeichert."),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Aufbewahren", { exact: true })).toHaveValue(
+    "10",
+  );
+  await expect(page.getByLabel("Täglich sichern")).toBeChecked();
+
+  // Die Profile laufen parallel: Läuft schon eine Sicherung, wartet die Seite auf sie.
+  const start = page.getByRole("button", { name: "Jetzt sichern" });
+  if ((await start.count()) > 0 && (await start.isEnabled())) {
+    await start.click();
+    await expect(
+      page.getByText(
+        /Die Sicherung ist gestartet|Eine Sicherung läuft bereits/,
+      ),
+    ).toBeVisible();
+  }
+  const runs = page.getByRole("table", {
+    name: "Letzte Läufe, neueste zuerst",
+  });
+  await expect(runs.getByText("erfolgreich").first()).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(
+    page
+      .getByRole("table", { name: "Sicherungen im Zielordner, neueste zuerst" })
+      .getByText(/^werkbank-\d{4}-\d{2}-\d{2}-\d{6}$/)
+      .first(),
   ).toBeVisible();
   await expectNoA11yViolations(page);
 });

@@ -130,6 +130,13 @@ class Settings(BaseSettings):
     # Höchstgröße eines Grundrisses im IT-Bestand in Megabyte (Bild in der Datenbank)
     inventory_plan_max_mb: int = 10
 
+    # Datensicherung: Zielordner (Volume oder Ordner auf dem Host, z. B. ein NAS), Schlüssel
+    # für die Verschlüsselung (eigenes Docker-Secret, getrennt von settings_key) und die
+    # PostgreSQL-Werkzeuge in der Version des Datenbank-Servers
+    backup_dir: Path = Path("/data/backups")
+    backup_key_file: Path = Path("/run/secrets/backup_key")
+    backup_pg_bin_dir: Path = Path("/usr/lib/postgresql/16/bin")
+
     # Test-Login ohne Entra. Nur in den Umgebungen "test" und "development" zulässig.
     enable_test_login: bool = False
 

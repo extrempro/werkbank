@@ -6,6 +6,7 @@ from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     DateTime,
     ForeignKey,
@@ -275,3 +276,23 @@ class NavEntry(Base):
     path: Mapped[str] = mapped_column(String(120))
     position: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BackupRun(Base):
+    """Ein Lauf der Datensicherung (Zeitplan, Verwaltung oder Kommando).
+
+    ``status``: „laeuft“, „ok“ oder „fehler“. ``name`` ist der Ordner der Sicherung im
+    Zielordner; ``started_by`` der Name der Person bei einem Start aus der Verwaltung.
+    """
+
+    __tablename__ = "backup_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(16))
+    trigger: Mapped[str] = mapped_column(String(16))
+    started_by: Mapped[str | None] = mapped_column(String(200))
+    name: Mapped[str] = mapped_column(String(64))
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger)
+    error: Mapped[str | None] = mapped_column(Text)
