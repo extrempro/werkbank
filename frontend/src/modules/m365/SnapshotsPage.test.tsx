@@ -71,9 +71,17 @@ function stubFetch() {
 }
 
 describe("SnapshotsPage", () => {
-  it("bietet Export nur für Abrufe mit eigenem Stand", async () => {
+  it("zeigt den Export nur Systemadmins", async () => {
     stubFetch();
     render(<SnapshotsPage />);
+    const table = await screen.findByRole("region", { name: "Abrufe" });
+    expect(within(table).queryByRole("columnheader", { name: "Export" })).toBeNull();
+    expect(within(table).queryAllByRole("link", { name: /als (JSON|CSV)$/ })).toHaveLength(0);
+  });
+
+  it("bietet Export nur für Abrufe mit eigenem Stand", async () => {
+    stubFetch();
+    render(<SnapshotsPage canExport />);
     const table = await screen.findByRole("region", { name: "Abrufe" });
     const links = within(table).getAllByRole("link", { name: /als (JSON|CSV)$/ });
     expect(links.map((link) => link.getAttribute("href"))).toEqual([

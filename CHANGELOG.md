@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.132.1] – 2026-11-25
+
+### Sicherheit
+
+- **M365, Snapshots:** Export des Stands als JSON und CSV nur noch für Systemadmins (`Werkbank.Admin`); `Config.Reader` und `Config.Reviewer` bekommen 403, die Spalte „Export“ ist für sie ausgeblendet. Der Export enthält alle Einstellungen des Tenants.
+
 ## [0.132.0] – 2026-11-25
 
 ### Neu

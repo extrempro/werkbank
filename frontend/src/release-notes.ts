@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.132.1",
+    date: "2026-11-25",
+    summary: "Snapshots exportieren nur noch Admins.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Den Stand eines Snapshots als JSON oder CSV herunterladen können nur noch Admins der Werkbank. Alle anderen sehen die Spalte „Export“ nicht mehr.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.132.0",
     date: "2026-11-25",
     summary: "Mehr Hardware-Daten aus NinjaOne, Vorschau für Live-Bausteine.",

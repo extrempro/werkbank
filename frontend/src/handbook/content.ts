@@ -517,7 +517,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Über JSON oder CSV in der Spalte Export lädst du den Stand eines Abrufs herunter: alle Einstellungen mit dem Wert, der damals galt. Die CSV öffnet sich direkt in Excel. Jeder Export steht im Audit-Log.",
+                text: "Admins der Werkbank laden über JSON oder CSV in der Spalte Export den Stand eines Abrufs herunter: alle Einstellungen mit dem Wert, der damals galt. Die CSV öffnet sich direkt in Excel. Jeder Export steht im Audit-Log. Alle anderen sehen die Spalte nicht.",
               },
             ],
             links: [{ to: "/m365/snapshots", label: "Zu den Snapshots" }],
