@@ -64,6 +64,7 @@ export function ListChoice({
   placeholder,
   unit,
   none,
+  compact = false,
 }: {
   label: string;
   options: readonly ChoiceOption[];
@@ -78,9 +79,11 @@ export function ListChoice({
   unit?: string;
   /** Beschriftung der Karte ohne Auswahl, z. B. „Kein Projekt“ */
   none?: string;
+  /** Immer als Suchfeld, z. B. in einem kleinen Fenster an der Schreibmarke */
+  compact?: boolean;
 }) {
   const search = useListSearch(options);
-  if (options.length <= CARDS_MAX) {
+  if (!compact && options.length <= CARDS_MAX) {
     const cards = options.map((option) => ({
       value: String(option.id),
       label: option.label,
@@ -106,7 +109,7 @@ export function ListChoice({
         label={label}
         id={id}
         required={required}
-        hint={hint}
+        hint={hint ?? (none ? `Leer lassen: ${none}` : undefined)}
         error={error}
         placeholder={placeholder}
         unit={unit}

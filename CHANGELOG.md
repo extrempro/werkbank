@@ -16,6 +16,10 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 - Im Passwort-Hash heißt die Aktion „Kennwort prüfen“; „Prüfen“ ist der Modus.
 - Knöpfe der Knopfleiste tragen ihren Wert als `data-value` (für Tests).
 
+### Behoben
+
+- Doku, Live-Baustein einfügen: Mit wenigen Projekten machten die Auswahlkarten das Fenster an der Schreibmarke höher als den Bildschirm (Tablet). Beim Scrollen verrutschte es, und „Einfügen“ ließ sich nicht treffen. Im Live-Baustein wählst du Bereich, Etage, Raum, Art und Projekt deshalb immer im Suchfeld (`ListChoice` mit `compact`). Ein leeres Feld nennt seine Bedeutung, z. B. „Leer lassen: Alle deine Bereiche“.
+
 ## [0.137.0] – 2026-11-25
 
 ### Geändert

@@ -359,6 +359,7 @@ export function LiveBlockForm({
       {attrs.kind === "tickets" && (
         <>
           <ListChoice
+            compact
             label="Bereich"
             none="Alle deine Bereiche"
             unit="Bereiche"
@@ -394,6 +395,7 @@ export function LiveBlockForm({
       {attrs.kind === "geraete" && (
         <>
           <ListChoice
+            compact
             label="Etage"
             none="Alle Standorte"
             unit="Etagen"
@@ -404,6 +406,7 @@ export function LiveBlockForm({
           />
           {floor && (
             <ListChoice
+              compact
               label="Raum"
               none="Alle Räume"
               unit="Räume"
@@ -414,6 +417,7 @@ export function LiveBlockForm({
             />
           )}
           <ListChoice
+            compact
             label="Art"
             none="Alle Arten"
             unit="Arten"
@@ -426,6 +430,7 @@ export function LiveBlockForm({
       )}
       {attrs.kind === "projekt" && (
         <ListChoice
+          compact
           label="Projekt"
           required
           unit="Projekte"
