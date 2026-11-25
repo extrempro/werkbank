@@ -1,4 +1,14 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { EditorContent, mergeAttributes, Node, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
@@ -222,6 +232,74 @@ const BLOCKS: readonly BlockChoice[] = [
   },
 ];
 
+/** Abstand zwischen Schreibmarke und Menü sowie zum Rand in Pixeln */
+const POPOVER_GAP = 6;
+
+/**
+ * Schwebt unter der Schreibmarke statt über dem Text: So bleibt man an der Stelle, an der man
+ * schreibt, auch weit unten auf der Seite, und der Text darunter rutscht nicht weg. Reicht der
+ * Platz unten nicht, scrollt die Seite nur so weit, dass das Menü ganz zu sehen ist.
+ */
+export function CaretPopover({
+  editor,
+  wide = false,
+  children,
+}: {
+  editor: Editor;
+  /** Breiter für Formulare (Verweis, Live-Baustein) */
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  // Bis die Lage berechnet ist unsichtbar, aber nicht „hidden“: Das Suchfeld darin muss
+  // sofort den Fokus bekommen können
+  const [style, setStyle] = useState<CSSProperties>({ opacity: 0 });
+  useLayoutEffect(() => {
+    const element = box.current;
+    // Gerechnet wird vom nächsten positionierten Vorfahren aus (dort hängt „absolute“),
+    // begrenzt auf die Breite des Editors
+    const host = element?.offsetParent;
+    const area = element?.parentElement;
+    if (!element || !area || !(host instanceof HTMLElement)) {
+      return;
+    }
+    const place = () => {
+      const hostRect = host.getBoundingClientRect();
+      const areaRect = area.getBoundingClientRect();
+      let caret = { bottom: areaRect.top, left: areaRect.left };
+      try {
+        caret = editor.view.coordsAtPos(editor.state.selection.from);
+      } catch {
+        // Ohne Position (z. B. Editor gerade nicht sichtbar): oben links im Editor
+      }
+      const minLeft = areaRect.left + POPOVER_GAP;
+      const maxLeft = Math.max(minLeft, areaRect.right - element.offsetWidth - POPOVER_GAP);
+      setStyle({
+        top: caret.bottom - hostRect.top + POPOVER_GAP,
+        left: Math.min(Math.max(caret.left, minLeft), maxLeft) - hostRect.left,
+      });
+    };
+    place();
+    const frame = window.requestAnimationFrame(() =>
+      element.scrollIntoView({ block: "nearest", inline: "nearest" }),
+    );
+    window.addEventListener("resize", place);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", place);
+    };
+  }, [editor]);
+  return (
+    <div
+      ref={box}
+      className={wide ? "doku-popover doku-popover-wide" : "doku-popover"}
+      style={style}
+    >
+      {children}
+    </div>
+  );
+}
+
 /** Auswahl der Bausteine: mit „+ Baustein“ oder „/“ in einer leeren Zeile. */
 function BlockMenu({
   editor,
@@ -240,7 +318,8 @@ function BlockMenu({
     `${block.label} ${block.hint}`.toLowerCase().includes(query.trim().toLowerCase()),
   );
   useEffect(() => {
-    input.current?.focus();
+    // Ohne Scrollen: Das Menü steht schon an der Schreibmarke
+    input.current?.focus({ preventScroll: true });
   }, []);
   const pick = (choice: BlockChoice | undefined) => {
     onClose();
@@ -631,13 +710,19 @@ export function DokuEditor({
         />
       )}
       {editable && blocks && (
-        <BlockMenu editor={editor} onClose={() => setBlocks(false)} onOpen={setPicker} />
+        <CaretPopover editor={editor}>
+          <BlockMenu editor={editor} onClose={() => setBlocks(false)} onOpen={setPicker} />
+        </CaretPopover>
       )}
       {editable && picker === "verweis" && (
-        <RefPicker editor={editor} onClose={() => setPicker(null)} />
+        <CaretPopover editor={editor} wide>
+          <RefPicker editor={editor} onClose={() => setPicker(null)} />
+        </CaretPopover>
       )}
       {editable && picker === "live" && (
-        <LiveBlockForm initial={null} onSubmit={insertLive} onCancel={() => setPicker(null)} />
+        <CaretPopover editor={editor} wide>
+          <LiveBlockForm initial={null} onSubmit={insertLive} onCancel={() => setPicker(null)} />
+        </CaretPopover>
       )}
       <EditorContent editor={editor} />
     </div>

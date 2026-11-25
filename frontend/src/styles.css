@@ -14198,7 +14198,31 @@ img.ProseMirror-separator {
 }
 
 .doku-editor {
+  /* Bewusst nicht positioniert: sonst läge der Editor auf dem Handy über den Knöpfen im Kopf.
+     Die Menüs an der Schreibmarke rechnen vom nächsten positionierten Vorfahren aus. */
   min-width: 0;
+}
+
+/* Menüs und Formulare an der Schreibmarke (Bausteine, Verweis, Live-Baustein) */
+.doku-popover {
+  position: absolute;
+  z-index: 20;
+  /* Platz für die Leiste unten auf dem Handy beim Hineinscrollen */
+  scroll-margin-bottom: 96px;
+  width: min(22rem, calc(100vw - 24px));
+}
+
+.doku-popover-wide {
+  width: min(32rem, calc(100vw - 24px));
+}
+
+.doku-popover > .doku-blockmenu {
+  max-width: none;
+}
+
+.doku-popover > .doku-blockmenu,
+.doku-popover > .doku-picker {
+  margin: 0;
 }
 
 .doku-toolbar-wrap {
@@ -14330,7 +14354,8 @@ img.ProseMirror-separator {
 }
 
 .doku-blockmenu ul {
-  display: grid;
+  /* Kein Grid: In einer begrenzten Höhe würden die Zeilen gestaucht und überlappen */
+  display: block;
   max-height: 18rem;
   margin: 0;
   padding: 0;
@@ -14340,10 +14365,21 @@ img.ProseMirror-separator {
 
 .doku-blockmenu li[role="option"] {
   display: grid;
-  min-height: 40px;
-  padding: 4px 8px;
+  gap: 2px;
+  min-height: 44px;
+  margin-bottom: 2px;
+  padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+.doku-blockmenu li[role="option"] .small {
+  color: var(--farbe-text-mittel);
+}
+
+.doku-blockmenu li[role="option"]:hover .small,
+.doku-blockmenu-active .small {
+  color: inherit;
 }
 
 .doku-blockmenu li[role="option"]:hover,
