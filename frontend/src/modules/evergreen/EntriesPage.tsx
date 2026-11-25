@@ -270,10 +270,18 @@ export function EntriesPage({
               plain
               statusSelect
               search={{
-                label: "Einträge durchsuchen",
+                label: "Suchen",
                 value: search,
                 placeholder: "Nummer, Titel, MC…, Dienst …",
                 onChange: setSearch,
+                hits: (entries ?? []).map((entry) => ({
+                  key: entry.id,
+                  title: entry.title,
+                  extra: `${entry.services[0] ?? "–"} · ${ENTRY_STATES[entry.status].label}`,
+                  meta: entry.number,
+                  href: entryPath(entry.software, entry.id),
+                })),
+                total: data?.total ?? entries?.length ?? 0,
               }}
               status={{
                 label: "Status",

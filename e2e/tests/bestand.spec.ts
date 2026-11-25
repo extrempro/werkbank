@@ -64,7 +64,7 @@ test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
   // Liste: unter „Ausgemustert“ zu finden
   await page.goto("/bestand/hardware");
   await chooseStatus(page, "Status", "Ausgemustert");
-  await page.getByLabel("Geräte durchsuchen").fill(stamp);
+  await page.getByLabel("Suchen", { exact: true }).fill(stamp);
   await expect(page.getByRole("link", { name })).toBeVisible();
   await expectNoA11yViolations(page);
 
@@ -307,9 +307,7 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
   // Ohne Raum geht es nicht
   await form.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
   await expect(form.getByText("Bitte wähle einen Raum.")).toBeVisible();
-  await form
-    .getByRole("combobox", { name: "Raum" })
-    .fill(`R ${stamp}`);
+  await form.getByRole("combobox", { name: "Raum" }).fill(`R ${stamp}`);
   await form
     .getByRole("option", { name: new RegExp(`Raum R ${stamp}`) })
     .click();
@@ -368,9 +366,7 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
   await page.goto("/bestand/arbeitsplaetze");
   await page.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
   const poolForm = page.getByRole("region", { name: "Arbeitsplatz anlegen" });
-  await poolForm
-    .getByRole("combobox", { name: "Raum" })
-    .fill(`R ${stamp}`);
+  await poolForm.getByRole("combobox", { name: "Raum" }).fill(`R ${stamp}`);
   await poolForm
     .getByRole("option", { name: new RegExp(`Raum R ${stamp}`) })
     .click();
@@ -407,7 +403,7 @@ test("IT-Bestand: Vorgänge und Technik ohne NinjaOne", async ({ page }) => {
   // Suche und Filter stehen über der Tabelle; am Handy der Status als Auswahl und die Art
   // unter „Weitere Filter“.
   await expect(
-    page.getByRole("searchbox", { name: "Vorgänge durchsuchen" }),
+    page.getByRole("combobox", { name: "Suchen", exact: true }),
   ).toBeVisible();
   if (isPhone(page)) {
     await expect(page.getByRole("combobox", { name: "Status" })).toBeVisible();

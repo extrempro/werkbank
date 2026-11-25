@@ -574,10 +574,18 @@ export function LoansPage({
             <FilterBar
               plain
               search={{
-                label: "Verleihe durchsuchen",
+                label: "Suchen",
                 value: search,
                 placeholder: "Nummer, Person, Gerät, Seriennummer …",
                 onChange: setSearch,
+                hits: (loans ?? []).map((entry) => ({
+                  key: entry.id,
+                  title: entry.person_name,
+                  extra: `${LOAN_STATES[entry.state].label} · ${entry.items === 1 ? "1 Gerät" : `${entry.items} Geräte`}`,
+                  meta: entry.number,
+                  href: loanPath(entry.id),
+                })),
+                total: paged.total,
               }}
               status={{
                 label: "Status",

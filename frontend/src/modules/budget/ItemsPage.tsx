@@ -1151,10 +1151,20 @@ export function ItemsPage({
       {overview && all.length > 0 && (
         <FilterBar<StatusFilter>
           search={{
-            label: "Budgetposten suchen",
+            label: "Suchen",
             value: search,
             placeholder: "Nummer, Name, Konto, Partner oder Tag",
             onChange: setSearch,
+            hits: rows.map((row) => ({
+              key: row.item.id,
+              title: row.item.name,
+              extra: [`${row.item.account_number} ${row.item.account_name}`, row.item.partner_name]
+                .filter(Boolean)
+                .join(" · "),
+              meta: row.item.number,
+              href: itemPath(row.item.id, shownYear),
+            })),
+            total: rows.length,
           }}
           status={{
             label: "Status",

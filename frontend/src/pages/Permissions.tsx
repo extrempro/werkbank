@@ -183,10 +183,20 @@ export function Permissions() {
         <>
           <FilterBar<string>
             search={{
-              label: "Personen suchen",
+              label: "Suchen",
               value: search,
               placeholder: "Name oder Mail-Adresse",
               onChange: setSearch,
+              hits: shown.map((person) => ({
+                key: person.id,
+                title: person.display_name,
+                extra: person.email ?? undefined,
+                onOpen: () => {
+                  setAdding(false);
+                  setSelectedId(person.id);
+                },
+              })),
+              total: shown.length,
             }}
             moreActive={areaFilter !== "" ? 1 : 0}
             onReset={

@@ -1056,10 +1056,17 @@ export function DeviceAssociationPage() {
 
       <FilterBar
         search={{
-          label: "Seriennummer oder Modell suchen",
+          label: "Suchen",
           value: query,
           placeholder: "Seriennummer oder Modell",
           onChange: setQuery,
+          hits: entries.map((device) => ({
+            key: device.id,
+            title: device.serial_number,
+            extra: device.model ?? undefined,
+            onOpen: () => setSelected(device),
+          })),
+          total: list?.total ?? entries.length,
         }}
         status={{
           label: "Ansicht",

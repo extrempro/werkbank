@@ -147,7 +147,7 @@ test("Tickets: Status und Zuständigkeit gelten erst nach „Bestätigen“, Not
     page.getByRole("heading", { level: 1, name: "Alle Tickets" }),
   ).toBeVisible();
   await page
-    .getByRole("searchbox", { name: "Tickets durchsuchen" })
+    .getByRole("combobox", { name: "Suchen", exact: true })
     .fill(`T-${s.number}`);
   const link = page.getByRole("link", { name: new RegExp(`T-${s.number}`) });
   await expect(link).toBeVisible();

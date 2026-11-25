@@ -192,7 +192,21 @@ export function ProjectsPage({ roles }: { roles: readonly string[] }) {
           </div>
           <FilterBar
             plain
-            search={{ label: "Projekte suchen", value: query, onChange: setQuery }}
+            search={{
+              label: "Suchen",
+              placeholder: "Name oder Beschreibung",
+              value: query,
+              onChange: setQuery,
+              hits: shown.map((project) => ({
+                key: project.id,
+                title: project.name,
+                extra: [STATUS_LABELS[project.status], project.description]
+                  .filter(Boolean)
+                  .join(" · "),
+                href: projectPath(project.id),
+              })),
+              total: shown.length,
+            }}
             status={{
               label: "Status",
               value: view,

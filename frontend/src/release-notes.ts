@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.134.0",
+    date: "2026-11-25",
+    summary: "Suchen über Listen zeigen die Treffer sofort in einem Fenster.",
+    sections: [
+      {
+        area: "Überall",
+        entries: [
+          "Tippst du in die Suche über einer Liste, erscheinen die besten Treffer sofort in einem Fenster darunter. Ein Klick oder Enter öffnet den Eintrag, mit den Pfeiltasten wählst du, Esc schließt.",
+          "Das gilt für Hardware, Arbeitsplätze, Verleih, Vorgänge, Budgetposten, Verträge, Rechnungen, Evergreen, Zabbix-Hosts, Tickets, Projekte, Gerätezuordnung und Berechtigungen.",
+          "Die Suchfelder heißen überall „Suchen“; im Feld steht, wonach du suchen kannst.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.133.0",
     date: "2026-11-25",
     summary: "Einheitlichere Suche und Auswahl.",

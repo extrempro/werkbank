@@ -150,10 +150,18 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
         <FilterBar
           plain
           search={{
-            label: "Tickets durchsuchen",
+            label: "Suchen",
             value: search,
             placeholder: "Nr., Betreff oder Melder …",
             onChange: setSearch,
+            hits: (items ?? []).map((ticket) => ({
+              key: ticket.number,
+              title: ticket.subject,
+              extra: `${STATUS_LABELS[ticket.status]} · ${ticket.area.name}`,
+              meta: ticketLabel(ticket.number),
+              href: ticketPath(ticket.number),
+            })),
+            total: items?.length ?? 0,
           }}
           status={{
             label: "Auswahl",

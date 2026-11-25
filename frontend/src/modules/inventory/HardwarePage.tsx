@@ -408,10 +408,18 @@ export function HardwarePage({ roles }: { roles: readonly string[] }) {
         <FilterBar<ListState>
           plain
           search={{
-            label: "Geräte durchsuchen",
+            label: "Suchen",
             value: query,
             placeholder: "Bezeichnung, Seriennummer, Inventurnummer …",
             onChange: setQuery,
+            hits: (shown ?? []).map((device) => ({
+              key: device.id,
+              title: device.name,
+              extra: [device.kind, device.place].filter(Boolean).join(" · "),
+              meta: device.inventory_no ?? device.serial ?? undefined,
+              href: hardwarePath(device.id),
+            })),
+            total: paged.total,
           }}
           status={{
             label: "Status",

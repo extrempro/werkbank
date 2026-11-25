@@ -829,10 +829,17 @@ export function ZabbixHostsPage({
       )}
       <FilterBar<HostFilter>
         search={{
-          label: "Hosts durchsuchen",
+          label: "Suchen",
           value: search,
           placeholder: "Name, Gruppe, Seriennummer …",
           onChange: setSearch,
+          hits: shown.map((host) => ({
+            key: host.hostid,
+            title: host.name,
+            extra: `${host.site ?? "ohne Standort"}${host.groups.length > 0 ? ` · ${host.groups[0]}` : ""}`,
+            href: `${MONITORING_ZABBIX_HOSTS_PATH}/${host.hostid}`,
+          })),
+          total: shown.length,
         }}
         status={{
           label: "Zustand",

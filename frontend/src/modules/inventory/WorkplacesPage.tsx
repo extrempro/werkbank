@@ -548,10 +548,17 @@ export function WorkplacesPage({ roles }: { roles: readonly string[] }) {
         <FilterBar
           plain
           search={{
-            label: "Arbeitsplätze durchsuchen",
+            label: "Suchen",
             value: query,
             placeholder: "Nummer, Raum, Stelle …",
             onChange: setQuery,
+            hits: (list ?? []).map((entry) => ({
+              key: entry.id,
+              title: workplaceName(entry),
+              extra: [workplaceKind(entry), entry.place].filter(Boolean).join(" · "),
+              href: workplacePath(entry.id),
+            })),
+            total: paged.total,
           }}
           status={{
             label: "Filter",

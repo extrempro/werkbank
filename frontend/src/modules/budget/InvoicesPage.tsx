@@ -1044,10 +1044,18 @@ export function InvoicesPage({
       {data && entries.length > 0 && (
         <FilterBar<InvoiceFilter>
           search={{
-            label: "Rechnungen suchen",
+            label: "Suchen",
             value: search,
             placeholder: "Rechnungsnummer, Rechnungssteller oder Posten",
             onChange: setSearch,
+            hits: shown.map((entry) => ({
+              key: entry.id,
+              title: entry.invoicer_name,
+              extra: STATUS_LABELS[entry.status],
+              meta: entry.number,
+              href: invoicePath(entry.id, data?.list.year),
+            })),
+            total: shown.length,
           }}
           status={{
             label: "Status",
