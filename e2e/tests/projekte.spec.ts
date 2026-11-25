@@ -16,13 +16,16 @@ test("IT-Projekte: Projekt anlegen, einstellen, Jour Fixe und Aufgaben", async (
 
   // Neues Projekt: danach öffnen sich die Einstellungen.
   await page.getByRole("button", { name: "Neues Projekt" }).click();
-  await page.getByLabel("Name", { exact: true }).fill(name);
+  await page.getByRole("textbox", { name: "Name", exact: true }).fill(name);
   await page.getByRole("button", { name: "Projekt anlegen" }).click();
   await expect(page).toHaveURL(/\/projekte\/\d+\/einstellungen$/);
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
   await page.getByLabel(/^Betrag/).fill("10.000,00");
   await page.getByRole("button", { name: "Externe Person hinzufügen" }).click();
-  await page.getByLabel("Name", { exact: true }).nth(1).fill("Jana Muster");
+  await page
+    .getByRole("textbox", { name: "Name", exact: true })
+    .nth(1)
+    .fill("Jana Muster");
   await page.getByRole("button", { name: "Link hinzufügen" }).click();
   await page.getByLabel("Bezeichnung", { exact: true }).fill("Ablage");
   await page
@@ -49,7 +52,7 @@ test("IT-Projekte: Projekt anlegen, einstellen, Jour Fixe und Aufgaben", async (
   await page.getByRole("button", { name: "Vorschau" }).click();
   await expect(page.getByRole("heading", { name: "Stand" })).toBeVisible();
   await expectNoA11yViolations(page);
-  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+  await page.getByRole("button", { name: "Eintrag speichern" }).click();
   await expect(page.getByText(/ist gespeichert/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Stand" })).toBeVisible();
   await expectNoA11yViolations(page);

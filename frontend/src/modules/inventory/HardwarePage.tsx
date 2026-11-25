@@ -1,4 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
+import {
+  ErrorSummary,
+  Field,
+  problemFor,
+  RequiredNote,
+  Segmented,
+  type Problem,
+} from "../../components/Field";
+import { ListChoice } from "../../components/ListChoice";
 import { errorText } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { FilterBar } from "../../components/FilterBar";
@@ -72,60 +81,68 @@ export function DeviceFormFields({
   value,
   onChange,
   fromNinja = false,
+  problems = [],
 }: {
   master: MasterData;
   /** Hostname und Seriennummer kommen aus NinjaOne und sind dann nur lesbar. */
   fromNinja?: boolean;
   value: DeviceFields;
   onChange: (next: DeviceFields) => void;
+  /** Fehlende oder falsche Angaben nach dem Absenden (`deviceProblems`) */
+  problems?: readonly Problem[];
 }) {
   const set = (patch: Partial<DeviceFields>) => onChange({ ...value, ...patch });
+  const models = master.makers.flatMap((maker) =>
+    maker.models.map((model) => ({
+      id: model.id,
+      label: `${maker.name} ${model.name}`,
+      detail: maker.name,
+    })),
+  );
   return (
-    <>
-      <div className="tool-row">
-        <label>
-          Bezeichnung
+    <div className="form-grid">
+      <Field
+        label="Bezeichnung"
+        id="geraet-name"
+        required
+        error={problemFor(problems, "geraet-name")}
+      >
+        {(control) => (
           <input
+            {...control}
             type="text"
             value={value.name}
             maxLength={160}
             autoComplete="off"
             onChange={(event) => set({ name: event.target.value })}
           />
-        </label>
-        <label className="narrow">
-          Art
-          <select value={value.kindId} onChange={(event) => set({ kindId: event.target.value })}>
-            <option value="">Bitte wählen</option>
-            {master.kinds.map((kind) => (
-              <option key={kind.id} value={String(kind.id)}>
-                {kind.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="tool-row">
-        <label>
-          Hersteller und Modell (freiwillig)
-          <select value={value.modelId} onChange={(event) => set({ modelId: event.target.value })}>
-            <option value="">kein Modell</option>
-            {master.makers
-              .filter((maker) => maker.models.length > 0)
-              .map((maker) => (
-                <optgroup key={maker.id} label={maker.name}>
-                  {maker.models.map((model) => (
-                    <option key={model.id} value={String(model.id)}>
-                      {maker.name} {model.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-          </select>
-        </label>
-        <label className="narrow">
-          Seriennummer
+        )}
+      </Field>
+      <ListChoice
+        label="Art"
+        id="geraet-art"
+        required
+        unit="Arten"
+        placeholder="Art des Geräts …"
+        options={master.kinds.map((kind) => ({ id: kind.id, label: kind.name }))}
+        value={value.kindId}
+        onChange={(kindId) => set({ kindId })}
+        error={problemFor(problems, "geraet-art")}
+      />
+      <ListChoice
+        label="Hersteller und Modell"
+        none="Kein Modell"
+        unit="Modelle"
+        placeholder="Hersteller oder Modell …"
+        hint="freiwillig"
+        options={models}
+        value={value.modelId}
+        onChange={(modelId) => set({ modelId })}
+      />
+      <Field label="Seriennummer" hint={fromNinja ? "Kommt aus NinjaOne." : undefined}>
+        {(control) => (
           <input
+            {...control}
             type="text"
             value={value.serial}
             maxLength={80}
@@ -134,12 +151,12 @@ export function DeviceFormFields({
             readOnly={fromNinja}
             onChange={(event) => set({ serial: event.target.value })}
           />
-        </label>
-      </div>
-      <div className="tool-row">
-        <label className="narrow">
-          Hostname (freiwillig)
+        )}
+      </Field>
+      <Field label="Hostname" hint={fromNinja ? "Kommt aus NinjaOne." : "freiwillig"}>
+        {(control) => (
           <input
+            {...control}
             type="text"
             value={value.hostname}
             maxLength={80}
@@ -148,86 +165,103 @@ export function DeviceFormFields({
             readOnly={fromNinja}
             onChange={(event) => set({ hostname: event.target.value })}
           />
-        </label>
-        {fromNinja && <p className="small">Hostname und Seriennummer kommen aus NinjaOne.</p>}
-        <label>
-          Angeschafft am (freiwillig)
+        )}
+      </Field>
+      <Field
+        label="Angeschafft am"
+        id="geraet-angeschafft"
+        hint="freiwillig"
+        error={problemFor(problems, "geraet-angeschafft")}
+      >
+        {(control) => (
           <input
+            {...control}
             type="date"
             value={value.purchasedOn}
             min="1990-01-01"
             max={today()}
             onChange={(event) => set({ purchasedOn: event.target.value })}
           />
-        </label>
-        <label>
-          Notiz (freiwillig)
+        )}
+      </Field>
+      <Field label="Notiz" hint="freiwillig" wide>
+        {(control) => (
           <input
+            {...control}
             type="text"
             value={value.note}
             maxLength={500}
             onChange={(event) => set({ note: event.target.value })}
           />
-        </label>
-      </div>
-      <LookupPicker
-        kind="room"
-        label="Raum (freiwillig)"
-        placeholder="Raum, Etage oder Standort …"
-        value={value.room}
-        onChange={(room) => set({ room })}
-      />
-      <fieldset className="seg-field">
-        <legend>Zugeordnet zu (freiwillig)</legend>
-        <div className="chips">
-          {HOLDER_KINDS.map((entry) => (
-            <button
-              key={entry.label}
-              type="button"
-              className="chip chip-filter"
-              aria-pressed={value.holderKind === entry.value}
-              onClick={() =>
-                value.holderKind !== entry.value && set({ holderKind: entry.value, holder: null })
-              }
-            >
-              {entry.label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-      {value.holderKind !== "" && (
+        )}
+      </Field>
+      <div className="field-wide">
         <LookupPicker
-          kind={value.holderKind === "stelle" ? "position" : "workplace"}
-          label={value.holderKind === "stelle" ? "Stelle" : "Arbeitsplatz"}
-          required
-          placeholder={
-            value.holderKind === "stelle" ? "Nummer, Name oder Person …" : "Nummer oder Raum …"
-          }
-          value={value.holder}
-          onChange={(holder) => set({ holder })}
+          kind="room"
+          label="Raum"
+          hint="freiwillig"
+          placeholder="Raum, Etage oder Standort …"
+          value={value.room}
+          onChange={(room) => set({ room })}
         />
+      </div>
+      <Segmented
+        label="Zugeordnet zu"
+        wide
+        value={value.holderKind}
+        options={HOLDER_KINDS}
+        onChange={(holderKind) =>
+          holderKind !== value.holderKind && set({ holderKind, holder: null })
+        }
+      />
+      {value.holderKind !== "" && (
+        <div className="field-wide">
+          <LookupPicker
+            kind={value.holderKind === "stelle" ? "position" : "workplace"}
+            label={value.holderKind === "stelle" ? "Stelle" : "Arbeitsplatz"}
+            id="geraet-zuordnung"
+            required
+            placeholder={
+              value.holderKind === "stelle" ? "Nummer, Name oder Person …" : "Nummer oder Raum …"
+            }
+            value={value.holder}
+            onChange={(holder) => set({ holder })}
+            error={problemFor(problems, "geraet-zuordnung")}
+          />
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
-/** Prüft die Felder; liefert einen Fehlertext oder null. */
-export function deviceProblem(value: DeviceFields): string | null {
-  if (value.holderKind !== "" && !value.holder) {
-    return value.holderKind === "stelle"
-      ? "Bitte wähle die Stelle oder „Niemandem“."
-      : "Bitte wähle den Arbeitsplatz oder „Niemandem“.";
-  }
+/** Prüft die Felder; liefert die fehlenden oder falschen Angaben (leer: alles in Ordnung). */
+export function deviceProblems(value: DeviceFields): Problem[] {
+  const problems: Problem[] = [];
   if (!value.name.trim()) {
-    return "Bitte trag eine Bezeichnung ein.";
+    problems.push({ id: "geraet-name", label: "Bezeichnung", text: "Trag eine Bezeichnung ein." });
   }
   if (!value.kindId) {
-    return "Bitte wähle die Art.";
+    problems.push({ id: "geraet-art", label: "Art", text: "Wähle die Art." });
   }
   if (value.purchasedOn && (value.purchasedOn < "1990-01-01" || value.purchasedOn > today())) {
-    return "Das Anschaffungsdatum liegt nicht in einem sinnvollen Bereich.";
+    problems.push({
+      id: "geraet-angeschafft",
+      label: "Angeschafft am",
+      text: "Das Datum liegt nicht in einem sinnvollen Bereich.",
+    });
   }
-  return null;
+  if (value.holderKind !== "" && !value.holder) {
+    problems.push(
+      value.holderKind === "stelle"
+        ? { id: "geraet-zuordnung", label: "Stelle", text: "Wähle die Stelle oder „Niemandem“." }
+        : {
+            id: "geraet-zuordnung",
+            label: "Arbeitsplatz",
+            text: "Wähle den Arbeitsplatz oder „Niemandem“.",
+          },
+    );
+  }
+  return problems;
 }
 
 export function deviceInput(value: DeviceFields) {
@@ -252,6 +286,8 @@ function NewDeviceForm({ master, onCancel }: { master: MasterData; onCancel: () 
   const [ask, dialog] = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tried, setTried] = useState(false);
+  const problems = tried ? deviceProblems(fields) : [];
 
   const save = () => {
     setBusy(true);
@@ -266,9 +302,8 @@ function NewDeviceForm({ master, onCancel }: { master: MasterData; onCancel: () 
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    const problem = deviceProblem(fields);
-    if (problem) {
-      setError(problem);
+    setTried(true);
+    if (deviceProblems(fields).length > 0) {
       return;
     }
     if (inventoryNo.trim()) {
@@ -292,25 +327,29 @@ function NewDeviceForm({ master, onCancel }: { master: MasterData; onCancel: () 
         <h2 id="geraet-neu-titel">Gerät erfassen</h2>
       </div>
       <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-        <DeviceFormFields master={master} value={fields} onChange={setFields} />
-        <label className="narrow">
-          Inventurnummer (freiwillig)
-          <input
-            type="text"
-            value={inventoryNo}
-            maxLength={40}
-            autoComplete="off"
-            spellCheck={false}
-            disabled={busy}
-            onChange={(event) => setInventoryNo(event.target.value)}
-          />
-        </label>
+        <RequiredNote />
+        <ErrorSummary problems={problems} />
+        <DeviceFormFields master={master} value={fields} onChange={setFields} problems={problems} />
+        <Field label="Inventurnummer" hint="freiwillig; vergleiche sie mit dem Aufkleber am Gerät">
+          {(control) => (
+            <input
+              {...control}
+              type="text"
+              value={inventoryNo}
+              maxLength={40}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={busy}
+              onChange={(event) => setInventoryNo(event.target.value)}
+            />
+          )}
+        </Field>
         {error && (
           <p role="alert" className="hint-box hint-bad">
             {error}
           </p>
         )}
-        <div className="project-actions">
+        <div className="form-actions">
           <button type="submit" className="button button-primary" disabled={busy}>
             Gerät anlegen
           </button>

@@ -5,7 +5,13 @@ import {
   type Browser,
   type Page,
 } from "@playwright/test";
-import { BASE_URL, expectNoA11yViolations, isPhone, loginAs } from "./helpers";
+import {
+  BASE_URL,
+  expectNoA11yViolations,
+  isPhone,
+  loginAs,
+  pickChoice,
+} from "./helpers";
 
 // Dokumentation (Phase D1): Arbeitsbereich, Seite anlegen und schreiben (automatisch gespeichert),
 // Bausteine, Versionen, eigene Rechte, Sperren, Papierkorb und Verwaltung.
@@ -94,8 +100,8 @@ test("Doku: Seite anlegen, schreiben, Versionen, Rechte, Sperren und Papierkorb"
     .click();
   const dialog = page.getByRole("dialog", { name: "Neue Seite" });
   await dialog.getByLabel("Titel").fill(`Drucker ${stamp}`);
-  await dialog.getByLabel("Arbeitsbereich").selectOption({ label: s.space });
-  await dialog.getByRole("button", { name: "Anlegen" }).click();
+  await pickChoice(dialog, "Arbeitsbereich", s.space);
+  await dialog.getByRole("button", { name: "Seite anlegen" }).click();
   await expect(page).toHaveURL(/\/doku\/seite\/[0-9a-f-]{36}$/);
   const pageUrl = page.url();
   const pageId = pageUrl.split("/").pop() ?? "";
@@ -169,7 +175,7 @@ test("Doku: Seite anlegen, schreiben, Versionen, Rechte, Sperren und Papierkorb"
     .getByLabel(`Recht für ${s.reader}`)
     .selectOption({ label: "Kein Zugriff" });
   await expectNoA11yViolations(page);
-  await rights.getByRole("button", { name: "Speichern" }).click();
+  await rights.getByRole("button", { name: "Rechte speichern" }).click();
   await expect(page.getByText("Die Rechte wurden gespeichert.")).toBeVisible();
   expect((await reader.get(`/api/doku/pages/${pageId}`)).status()).toBe(404);
 
@@ -379,9 +385,7 @@ test("Doku D3: Verweis, Live-Baustein, Kommentar mit Erwähnung und Rückverweis
   await blocks.press("Enter");
   const form = page.getByRole("form", { name: "Live-Baustein einfügen" });
   await form.getByRole("radio", { name: "Projektstand" }).check();
-  await form
-    .getByRole("combobox", { name: /^Projekt/ })
-    .selectOption({ label: projectName });
+  await pickChoice(form, "Projekt", projectName);
   await form.getByRole("button", { name: "Einfügen" }).click();
   await expect(
     page.getByRole("region", { name: "Live-Baustein: Projektstand" }),

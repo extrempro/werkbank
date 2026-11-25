@@ -1,4 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
+import {
+  ErrorSummary,
+  Field,
+  problemFor,
+  RequiredNote,
+  Segmented,
+  type Problem,
+} from "../../components/Field";
+import { ListChoice } from "../../components/ListChoice";
 import { DokuBacklinks } from "../doku/DokuBacklinks";
 import { errorText } from "../../api";
 import { ConfirmButton } from "../../components/ConfirmDialog";
@@ -210,7 +219,6 @@ function WorkplaceForm({
     roomItem(choices.locations, initial.room_id),
   );
   const [spot, setSpot] = useState<{ x: number; y: number } | null>(null);
-  const [roomError, setRoomError] = useState<string | null>(null);
   const [type, setType] = useState<WorkplaceType>(
     initial.pool ? "pool" : initial.shared ? "geteilt" : "einzeln",
   );
@@ -219,7 +227,6 @@ function WorkplaceForm({
   const [purposeId, setPurposeId] = useState(
     initial.purpose_id === null ? "" : String(initial.purpose_id),
   );
-  const [purposeError, setPurposeError] = useState<string | null>(null);
   const [departmentId, setDepartmentId] = useState(
     initial.department_id === null ? "" : String(initial.department_id),
   );
@@ -235,18 +242,27 @@ function WorkplaceForm({
   const tooMany = type === "einzeln" && positionIds.length > 1;
   const canAdd = shared || positionIds.length === 0;
 
+  const [tried, setTried] = useState(false);
+  const all: Problem[] = [];
+  if (creating && !room) {
+    all.push({ id: "arbeitsplatz-raum", label: "Raum", text: "Wähle einen Raum." });
+  }
+  if (tooMany) {
+    all.push({
+      id: "arbeitsplatz-typ",
+      label: "Typ",
+      text: "Ein Einzelarbeitsplatz gehört zu höchstens einer Stelle.",
+    });
+  }
+  if (pool && !purposeId) {
+    all.push({ id: "arbeitsplatz-zweck", label: "Zweck", text: "Wähle den Zweck." });
+  }
+  const problems = tried ? all : [];
+
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (creating && !room) {
-      setRoomError("Bitte wähle einen Raum.");
-      return;
-    }
-    if (tooMany) {
-      setError("Ein Einzelarbeitsplatz gehört zu höchstens einer Stelle.");
-      return;
-    }
-    if (pool && !purposeId) {
-      setPurposeError("Bitte wähle den Zweck.");
+    setTried(true);
+    if (all.length > 0) {
       return;
     }
     setBusy(true);
@@ -269,109 +285,91 @@ function WorkplaceForm({
 
   return (
     <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
+      {creating && <RequiredNote />}
+      <ErrorSummary problems={problems} />
       <LookupPicker
         kind="room"
-        label={creating ? "Raum" : "Raum (freiwillig)"}
+        label="Raum"
+        id="arbeitsplatz-raum"
         required={creating}
+        hint={creating ? undefined : "freiwillig"}
         placeholder="Raum, Etage oder Standort …"
         value={room}
-        error={roomError}
+        error={problemFor(problems, "arbeitsplatz-raum")}
         onChange={(next) => {
           setRoom(next);
           setSpot(null);
-          setRoomError(null);
         }}
       />
       {creating && room && <SpotPicker room={room} spot={spot} onSpot={setSpot} />}
-      <fieldset className="seg-field">
-        <legend>
-          Typ <InfoTip term="bestand.pool" />
-        </legend>
-        <div className="chips">
-          {WORKPLACE_TYPES.map((entry) => (
-            <button
-              key={entry.value}
-              type="button"
-              className="chip chip-filter"
-              aria-pressed={type === entry.value}
-              onClick={() => {
-                setType(entry.value);
-                if (entry.value === "pool") {
-                  // Ein Pool-Arbeitsplatz gehört keiner Stelle
-                  setPositionIds([]);
-                }
-              }}
-            >
-              {entry.label}
-            </button>
-          ))}
-        </div>
-        <p className="small">
-          Ein Einzelarbeitsplatz gehört zu genau einer Stelle, ein geteilter zu mehreren. Ein
-          Pool-Arbeitsplatz gehört absichtlich keiner Stelle, zum Beispiel beim Desk-Sharing.
-        </p>
-      </fieldset>
+      <Segmented
+        label="Typ"
+        id="arbeitsplatz-typ"
+        info={<InfoTip term="bestand.pool" />}
+        value={type}
+        options={WORKPLACE_TYPES}
+        onChange={(next) => {
+          setType(next);
+          if (next === "pool") {
+            // Ein Pool-Arbeitsplatz gehört keiner Stelle
+            setPositionIds([]);
+          }
+        }}
+        hint="Ein Einzelarbeitsplatz gehört zu genau einer Stelle, ein geteilter zu mehreren. Ein Pool-Arbeitsplatz gehört absichtlich keiner Stelle, zum Beispiel beim Desk-Sharing."
+        error={problemFor(problems, "arbeitsplatz-typ")}
+      />
       {pool && (
-        <>
-          <label>
-            Zweck <span aria-hidden="true">*</span>
-            <select
-              value={purposeId}
-              required
-              aria-invalid={purposeError ? true : undefined}
-              aria-describedby={purposeError ? "pool-zweck-fehler" : undefined}
-              onChange={(event) => {
-                setPurposeId(event.target.value);
-                setPurposeError(null);
-              }}
-            >
-              <option value="">Bitte wählen</option>
-              {choices.purposes.map((entry) => (
-                <option key={entry.id} value={String(entry.id)}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {purposeError && (
-            <p id="pool-zweck-fehler" className="field-error">
-              {purposeError}
-            </p>
-          )}
-          {choices.purposes.length === 0 && (
-            <p className="small">
-              Zwecke legst du unter <Link to={INVENTORY_MASTER_PATH}>Stammdaten</Link> an.
-            </p>
-          )}
-          <label>
-            Verantwortliche Abteilung (freiwillig)
-            <select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
-              <option value="">keine</option>
-              {choices.departments.map((entry) => (
-                <option key={entry.id} value={String(entry.id)}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </>
+        <div className="form-grid">
+          <ListChoice
+            label="Zweck"
+            id="arbeitsplatz-zweck"
+            required
+            unit="Zwecke"
+            placeholder="Zweck …"
+            hint={
+              choices.purposes.length === 0 ? (
+                <>
+                  Zwecke legst du unter <Link to={INVENTORY_MASTER_PATH}>Stammdaten</Link> an.
+                </>
+              ) : undefined
+            }
+            options={choices.purposes.map((entry) => ({ id: entry.id, label: entry.name }))}
+            value={purposeId}
+            onChange={setPurposeId}
+            error={problemFor(problems, "arbeitsplatz-zweck")}
+          />
+          <ListChoice
+            label="Verantwortliche Abteilung"
+            none="Keine"
+            unit="Abteilungen"
+            placeholder="Name der Abteilung …"
+            hint="freiwillig"
+            options={choices.departments.map((entry) => ({ id: entry.id, label: entry.name }))}
+            value={departmentId}
+            onChange={setDepartmentId}
+          />
+        </div>
       )}
-      <label>
-        Ausstattung (Vorlage, freiwillig)
-        <select value={kitId} onChange={(event) => setKitId(event.target.value)}>
-          <option value="">keine Vorlage</option>
-          {choices.kits.map((kit) => (
-            <option key={kit.id} value={String(kit.id)}>
-              {kit.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {choices.kits.length === 0 && (
-        <p className="small">
-          Vorlagen legst du unter <Link to={INVENTORY_MASTER_PATH}>Stammdaten</Link> an.
-        </p>
-      )}
+      <div className="form-grid">
+        <ListChoice
+          label="Ausstattung (Vorlage)"
+          none="Keine Vorlage"
+          unit="Vorlagen"
+          placeholder="Name der Vorlage …"
+          hint={
+            choices.kits.length === 0 ? (
+              <>
+                Vorlagen legst du unter <Link to={INVENTORY_MASTER_PATH}>Stammdaten</Link> an.
+              </>
+            ) : (
+              "freiwillig"
+            )
+          }
+          options={choices.kits.map((kit) => ({ id: kit.id, label: kit.name }))}
+          value={kitId}
+          onChange={setKitId}
+        />
+      </div>
       {!pool && (
         <fieldset className="seg-field">
           <legend>Stellen ({positionIds.length})</legend>
@@ -431,21 +429,23 @@ function WorkplaceForm({
           )}
         </fieldset>
       )}
-      <label>
-        Notiz (freiwillig)
-        <input
-          type="text"
-          value={note}
-          maxLength={500}
-          onChange={(event) => setNote(event.target.value)}
-        />
-      </label>
+      <Field label="Notiz" hint="freiwillig">
+        {(control) => (
+          <input
+            {...control}
+            type="text"
+            value={note}
+            maxLength={500}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        )}
+      </Field>
       {error && (
         <p role="alert" className="hint-box hint-bad">
           {error}
         </p>
       )}
-      <div className="project-actions">
+      <div className="form-actions">
         <button type="submit" className="button button-primary" disabled={busy}>
           {submitLabel}
         </button>
@@ -686,7 +686,7 @@ function Overview({
         <WorkplaceForm
           choices={choices}
           initial={workplaceInput(workplace)}
-          submitLabel="Speichern"
+          submitLabel="Änderungen speichern"
           onCancel={() => setChoices(null)}
           onSave={(body) =>
             updateWorkplace(workplace.id, body).then((next) => {

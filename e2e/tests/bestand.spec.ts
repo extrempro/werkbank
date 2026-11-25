@@ -9,6 +9,7 @@ import {
   loginAs,
   openPage,
   confirmDialog,
+  pickChoice,
 } from "./helpers";
 
 test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
@@ -27,12 +28,12 @@ test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
 
   // Erfassen mit Inventurnummer: erst nach der Rückfrage
   await page.getByRole("button", { name: "Gerät erfassen" }).click();
-  await page.getByLabel("Bezeichnung", { exact: true }).fill(name);
   await page
-    .getByRole("combobox", { name: /^Art/ })
-    .selectOption({ label: "Monitor" });
+    .getByRole("textbox", { name: "Bezeichnung", exact: true })
+    .fill(name);
+  await pickChoice(page.locator("#inhalt"), "Art", "Monitor");
   await page.getByLabel("Seriennummer", { exact: true }).fill(`SN-${stamp}`);
-  await page.getByLabel("Inventurnummer (freiwillig)").fill(`INV-${stamp}`);
+  await page.getByLabel("Inventurnummer", { exact: true }).fill(`INV-${stamp}`);
   await page.getByRole("button", { name: "Gerät anlegen" }).click();
   await confirmDialog(page, "Gerät anlegen", true);
   await expect(page).toHaveURL(/\/bestand\/hardware\/\d+$/);
@@ -42,13 +43,9 @@ test("IT-Bestand: Gerät erfassen, Inventurnummer setzen, ausmustern", async ({
 
   // Ausmustern
   await page.getByRole("button", { name: "Ausmustern" }).click();
-  await page
-    .getByRole("combobox", { name: /^Grund/ })
-    .selectOption({ label: "defekt" });
-  await page
-    .getByRole("combobox", { name: /^Verbleib/ })
-    .selectOption({ label: "entsorgt" });
-  await page.getByRole("button", { name: "Weiter" }).click();
+  await pickChoice(page.locator("#inhalt"), "Grund", "defekt");
+  await page.getByRole("button", { name: "entsorgt", exact: true }).click();
+  await page.getByRole("button", { name: "Gerät ausmustern" }).click();
   await confirmDialog(page, "Ausmustern", true);
   await expect(
     page.getByRole("heading", { name: "Ausgemustert" }),
@@ -177,8 +174,9 @@ test("IT-Bestand: Standorte anlegen und Etage öffnen", async ({
   const plan = page.getByRole("group", { name: `Grundriss Etage ${stamp}` });
   await expect(plan).toHaveAttribute("style", /aspect-ratio: 200 \/ 100/);
   await page
-    .getByRole("combobox", { name: "Ausrichtung des Grundrisses" })
-    .selectOption({ label: "90° nach rechts gedreht" });
+    .getByRole("group", { name: "Ausrichtung des Grundrisses" })
+    .getByRole("button", { name: "90° nach rechts gedreht" })
+    .click();
   await expect(
     page.getByText("Die Ausrichtung des Grundrisses ist gespeichert."),
   ).toBeVisible();
@@ -240,10 +238,10 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
     page.getByRole("heading", { level: 1, name: "Stellen" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Stelle anlegen" }).click();
-  await page.getByLabel("Bezeichnung", { exact: true }).fill(`Stelle ${stamp}`);
   await page
-    .getByRole("combobox", { name: /^Abteilung/ })
-    .selectOption({ label: `Abteilung ${stamp}` });
+    .getByRole("textbox", { name: "Bezeichnung", exact: true })
+    .fill(`Stelle ${stamp}`);
+  await pickChoice(page.locator("#inhalt"), "Abteilung", `Abteilung ${stamp}`);
   await expectNoA11yViolations(page);
   await page.getByRole("button", { name: "Stelle anlegen" }).click();
   await expect(page).toHaveURL(/\/bestand\/stellen\/\d+$/);
@@ -306,7 +304,9 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
   const form = page.getByRole("region", { name: "Arbeitsplatz anlegen" });
   // Ohne Raum geht es nicht
   await form.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
-  await expect(form.getByText("Bitte wähle einen Raum.")).toBeVisible();
+  await expect(form.getByRole("alert").first()).toContainText(
+    "Wähle einen Raum.",
+  );
   await form.getByRole("combobox", { name: "Raum" }).fill(`R ${stamp}`);
   await form
     .getByRole("option", { name: new RegExp(`Raum R ${stamp}`) })
@@ -377,10 +377,10 @@ test("IT-Bestand: Stelle und Arbeitsplatz anlegen", async ({
     poolForm.getByRole("combobox", { name: "Stelle hinzufügen" }),
   ).toHaveCount(0);
   await poolForm.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
-  await expect(poolForm.getByText("Bitte wähle den Zweck.")).toBeVisible();
-  await poolForm
-    .getByRole("combobox", { name: /^Zweck/ })
-    .selectOption({ label: "Desk-Sharing" });
+  await expect(poolForm.getByRole("alert").first()).toContainText(
+    "Wähle den Zweck.",
+  );
+  await pickChoice(poolForm, "Zweck", "Desk-Sharing");
   await expectNoA11yViolations(page);
   await poolForm.getByRole("button", { name: "Arbeitsplatz anlegen" }).click();
   await expect(page).toHaveURL(/\/bestand\/arbeitsplaetze\/\d+$/);

@@ -65,7 +65,7 @@ test("Admin vergibt Rechte je Bereich, sie wirken sofort", async ({
 
   const budget = detail.getByRole("group", { name: /IT-Budget/ });
   await budget.getByRole("radio", { name: "Lesen", exact: true }).check();
-  await detail.getByRole("button", { name: "Speichern" }).click();
+  await detail.getByRole("button", { name: "Rechte speichern" }).click();
   await expect(page.getByText(/sind gespeichert/)).toBeVisible();
   // Die offene Sitzung der Person hat das Recht ohne neue Anmeldung
   expect((await otherPage.request.get("/api/budget/accounts")).status()).toBe(
@@ -265,6 +265,8 @@ test("Admin trägt einen KI-Anbieter ein, der Schlüssel bleibt verborgen", asyn
     page.getByText("Die KI-Einstellungen sind gespeichert."),
   ).toBeVisible();
   await expect(page.getByLabel("Neuer Schlüssel")).toHaveValue("");
+  // Oben prüfen: Beim Scrollen läge sonst die Kopfzeile über den Knöpfen.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
 
   const stored = await page.request.get("/api/admin/settings");
@@ -294,7 +296,9 @@ test("Zu große Bilder passt die Werkbank beim Hochladen selbst an", async ({
 }) => {
   await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
   await page.goto("/verwaltung");
-  await expect(page.getByLabel("Größe beim Hochladen")).toHaveValue("auto");
+  await expect(
+    page.getByRole("button", { name: "Automatisch anpassen (empfohlen)" }),
+  ).toHaveAttribute("aria-pressed", "true");
 
   await page
     .getByLabel(/^Bild (hochladen|ersetzen) – Logo für hellen Hintergrund$/)
@@ -316,7 +320,7 @@ test("Zu große Bilder passt die Werkbank beim Hochladen selbst an", async ({
   );
 
   // Im Original bleibt das große Bild zu groß; die Meldung nennt den Ausweg.
-  await page.getByLabel("Größe beim Hochladen").selectOption("original");
+  await page.getByRole("button", { name: "Original behalten" }).click();
   await page
     .getByLabel(/^Bild (hochladen|ersetzen) – Logo für dunklen Hintergrund$/)
     .setInputFiles("tests/fixtures/logo-gross.png");

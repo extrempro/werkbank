@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
+import { Segmented } from "../components/Field";
 import {
   errorText,
   saveAiSettings,
@@ -127,22 +128,21 @@ export function AiSettings({ ai, onChange }: AiSettingsProps) {
           Vorschläge für Evergreen einschalten
         </label>
         <div className="form-grid">
-          <label>
-            Art der Schnittstelle
-            <select
-              value={provider}
-              onChange={(event) => {
-                const next = event.target.value === "anthropic" ? "anthropic" : "openai";
-                setProvider(next);
-                if (next === "anthropic" && baseUrl.trim() === "") {
-                  setBaseUrl(ANTHROPIC_URL);
-                }
-              }}
-            >
-              <option value="openai">OpenAI-kompatibel</option>
-              <option value="anthropic">Anthropic (Claude)</option>
-            </select>
-          </label>
+          <Segmented
+            label="Art der Schnittstelle"
+            wide
+            value={provider}
+            options={[
+              { value: "openai", label: "OpenAI-kompatibel" },
+              { value: "anthropic", label: "Anthropic (Claude)" },
+            ]}
+            onChange={(next) => {
+              setProvider(next);
+              if (next === "anthropic" && baseUrl.trim() === "") {
+                setBaseUrl(ANTHROPIC_URL);
+              }
+            }}
+          />
           <label>
             Adresse der Schnittstelle
             <input

@@ -1,4 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
+import {
+  ErrorSummary,
+  Field,
+  problemFor,
+  RequiredNote,
+  Segmented,
+  type Problem,
+} from "../../components/Field";
 import { errorText } from "../../api";
 import { FilterBar } from "../../components/FilterBar";
 import { Link } from "../../components/Link";
@@ -39,10 +47,16 @@ function NewProjectForm({ onCancel }: { onCancel: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const [tried, setTried] = useState(false);
+  const all: Problem[] = name.trim()
+    ? []
+    : [{ id: "projekt-name", label: "Name", text: "Trag einen Namen ein." }];
+  const problems = tried ? all : [];
+
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!name.trim()) {
-      setError("Bitte trag einen Namen ein.");
+    setTried(true);
+    if (all.length > 0) {
       return;
     }
     setBusy(true);
@@ -72,36 +86,46 @@ function NewProjectForm({ onCancel }: { onCancel: () => void }) {
         <h2 id="projekt-neu-titel">Neues Projekt</h2>
       </div>
       <form className="detail-body settings-form" onSubmit={onSubmit} noValidate>
-        <div className="tool-row">
-          <label>
-            Name
-            <input
-              type="text"
-              value={name}
-              maxLength={160}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
-          <label className="narrow">
-            Status
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value as ProjectStatus)}
-            >
-              <option value="geplant">geplant</option>
-              <option value="aktiv">aktiv</option>
-            </select>
-          </label>
-        </div>
-        <label>
-          Kurzbeschreibung (freiwillig)
-          <input
-            type="text"
-            value={description}
-            maxLength={500}
-            onChange={(event) => setDescription(event.target.value)}
+        <RequiredNote />
+        <ErrorSummary problems={problems} />
+        <div className="form-grid">
+          <Field
+            label="Name"
+            id="projekt-name"
+            required
+            error={problemFor(problems, "projekt-name")}
+          >
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={name}
+                maxLength={160}
+                onChange={(event) => setName(event.target.value)}
+              />
+            )}
+          </Field>
+          <Segmented
+            label="Status"
+            value={status}
+            options={[
+              { value: "geplant", label: "geplant" },
+              { value: "aktiv", label: "aktiv" },
+            ]}
+            onChange={setStatus}
           />
-        </label>
+          <Field label="Kurzbeschreibung" hint="freiwillig" wide>
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={description}
+                maxLength={500}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            )}
+          </Field>
+        </div>
         <p className="small">
           Rollen, Links und das veranschlagte Budget trägst du danach in den Einstellungen des
           Projekts ein.
@@ -111,7 +135,7 @@ function NewProjectForm({ onCancel }: { onCancel: () => void }) {
             {error}
           </p>
         )}
-        <div className="project-actions">
+        <div className="form-actions">
           <button type="submit" className="button button-primary" disabled={busy}>
             Projekt anlegen
           </button>

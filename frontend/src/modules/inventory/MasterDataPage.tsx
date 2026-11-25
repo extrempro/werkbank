@@ -95,7 +95,7 @@ function LifetimeRow({
           className="button button-secondary"
           disabled={busy || trimmed === stored}
         >
-          Speichern
+          Nutzungsdauer speichern
         </button>
       </form>
       {error && (
@@ -156,7 +156,7 @@ function EntryRow({
             onChange={(event) => setValue(event.target.value)}
           />
           <button type="submit" className="button button-primary">
-            Speichern
+            Umbenennen
           </button>
           <button
             type="button"
@@ -464,7 +464,7 @@ function NumberRangeForm({
             className="button button-secondary"
             disabled={prefix.trim() === entry.prefix}
           >
-            Speichern
+            Präfix speichern
           </button>
         )}
       </div>

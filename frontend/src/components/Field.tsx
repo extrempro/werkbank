@@ -235,6 +235,9 @@ export function Segmented<T extends string>({
   hint,
   info,
   wide = false,
+  required = false,
+  error = null,
+  id,
 }: {
   label: string;
   value: T;
@@ -244,26 +247,34 @@ export function Segmented<T extends string>({
   /** z. B. ein Info-Symbol neben der Beschriftung */
   info?: ReactNode;
   wide?: boolean;
+  required?: boolean;
+  /** Fehler (ersetzt den Hinweis) */
+  error?: string | null;
+  /** Kennung des ersten Knopfs, z. B. für die Links der Fehlerübersicht */
+  id?: string;
 }) {
   const labelId = useId();
   const hintId = useId();
+  const note = error || hint ? hintId : undefined;
   return (
     <div className={wide ? "field field-wide" : "field"}>
       <span className="field-info-head">
         <span className="field-label" id={labelId}>
           {label}
+          {required && (
+            <span className="field-required" aria-hidden="true">
+              {" "}
+              *
+            </span>
+          )}
         </span>
         {info}
       </span>
-      <div
-        className="segmented"
-        role="group"
-        aria-labelledby={labelId}
-        aria-describedby={hint ? hintId : undefined}
-      >
-        {options.map((option) => (
+      <div className="segmented" role="group" aria-labelledby={labelId} aria-describedby={note}>
+        {options.map((option, index) => (
           <button
             key={option.value}
+            id={index === 0 ? id : undefined}
             type="button"
             aria-pressed={value === option.value}
             onClick={() => onChange(option.value)}
@@ -272,10 +283,16 @@ export function Segmented<T extends string>({
           </button>
         ))}
       </div>
-      {hint && (
-        <p id={hintId} className="field-hint">
-          {hint}
+      {error ? (
+        <p id={hintId} className="field-error">
+          {error}
         </p>
+      ) : (
+        hint && (
+          <p id={hintId} className="field-hint">
+            {hint}
+          </p>
+        )
       )}
     </div>
   );

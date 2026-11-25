@@ -233,7 +233,7 @@ describe("Doku: Rechte", () => {
     fireEvent.change(within(dialog).getByLabelText("Recht für Lea Leser"), {
       target: { value: "none" },
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Rechte speichern" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     const put = calls.find((call) => call.method === "PUT");
     expect(put?.body).toEqual({

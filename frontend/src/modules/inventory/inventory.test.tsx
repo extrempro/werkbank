@@ -158,13 +158,15 @@ describe("Hardware-Liste", () => {
     render(<HardwarePage roles={["Bestand.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Gerät erfassen" }));
     fireEvent.click(screen.getByRole("button", { name: "Gerät anlegen" }));
-    expect(await screen.findByText("Bitte trag eine Bezeichnung ein.")).toBeTruthy();
+    expect((await screen.findAllByRole("alert"))[0]).toHaveTextContent(
+      "Bezeichnung: Trag eine Bezeichnung ein.",
+    );
 
-    fireEvent.change(screen.getByLabelText("Bezeichnung"), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Bezeichnung" }), {
       target: { value: "Notebook 14 Zoll" },
     });
-    fireEvent.change(screen.getByLabelText("Art"), { target: { value: "1" } });
-    fireEvent.change(screen.getByLabelText("Inventurnummer (freiwillig)"), {
+    fireEvent.click(screen.getByRole("radio", { name: "Notebook" }));
+    fireEvent.change(screen.getByLabelText("Inventurnummer"), {
       target: { value: " INV-24-0500 " },
     });
     fireEvent.click(screen.getByRole("button", { name: "Gerät anlegen" }));
@@ -252,7 +254,7 @@ describe("Gerät", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Inventurnummer" }), {
       target: { value: "INV-24-0999" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    fireEvent.click(screen.getByRole("button", { name: "Inventurnummer übernehmen" }));
     expect(await screen.findByText(/von INV-24-0412 auf INV-24-0999 ändern/)).toBeTruthy();
     expect(calls.some((call) => call.method === "PUT")).toBe(false);
     await confirmDialog("Übernehmen");
@@ -280,13 +282,13 @@ describe("Gerät", () => {
     });
     render(<HardwareDetailPage hardwareId={7} tab="uebersicht" roles={["Bestand.Editor"]} />);
     fireEvent.click(await screen.findByRole("button", { name: "Ausmustern" }));
-    fireEvent.change(screen.getByLabelText("Grund"), { target: { value: "3" } });
-    fireEvent.change(screen.getByLabelText("Verbleib"), { target: { value: "entsorgt" } });
-    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
-    expect(screen.getByRole("alert").textContent).toContain("Datenträger");
+    fireEvent.click(screen.getByRole("radio", { name: "defekt" }));
+    fireEvent.click(screen.getByRole("button", { name: "entsorgt" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gerät ausmustern" }));
+    expect(screen.getAllByRole("alert")[0]?.textContent).toContain("Datenträger");
 
     fireEvent.click(screen.getByLabelText("Der Datenträger ist gelöscht oder vernichtet."));
-    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gerät ausmustern" }));
     await confirmDialog("Ausmustern");
     const section = await screen.findByRole("region", { name: "Ausgemustert" });
     expect(within(section).getByText("entsorgt")).toBeTruthy();

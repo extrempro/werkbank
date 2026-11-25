@@ -1,4 +1,6 @@
 import { useId, useRef, useState, type FormEvent } from "react";
+import { Field } from "../../components/Field";
+import { ListChoice } from "../../components/ListChoice";
 import { createPortal } from "react-dom";
 import { errorText } from "../../api";
 import { useModal } from "../../components/nav/useModal";
@@ -70,15 +72,16 @@ export function NewPageDialog({
         onSubmit={submit}
       >
         <h2 id={titleId}>Neue Seite</h2>
-        <label className="doku-field">
-          <span>Titel</span>
-          <input
-            value={title}
-            maxLength={200}
-            required
-            onChange={(event) => setTitle(event.target.value)}
-          />
-        </label>
+        <Field label="Titel" required>
+          {(control) => (
+            <input
+              {...control}
+              value={title}
+              maxLength={200}
+              onChange={(event) => setTitle(event.target.value)}
+            />
+          )}
+        </Field>
         {parent && (
           <label className="doku-check">
             <input
@@ -91,16 +94,15 @@ export function NewPageDialog({
           </label>
         )}
         {!(below && parent) && (
-          <label className="doku-field">
-            <span>Arbeitsbereich</span>
-            <select value={spaceId} onChange={(event) => setSpaceId(Number(event.target.value))}>
-              {writable.map((space) => (
-                <option key={space.id} value={space.id}>
-                  {space.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ListChoice
+            label="Arbeitsbereich"
+            required
+            unit="Arbeitsbereiche"
+            placeholder="Name des Arbeitsbereichs …"
+            options={writable.map((space) => ({ id: space.id, label: space.name }))}
+            value={String(spaceId)}
+            onChange={(value) => value && setSpaceId(Number(value))}
+          />
         )}
         {error && (
           <p className="hint-box hint-bad" role="alert">
@@ -112,7 +114,7 @@ export function NewPageDialog({
             Abbrechen
           </button>
           <button type="submit" className="button button-primary" disabled={busy}>
-            Anlegen
+            Seite anlegen
           </button>
         </div>
       </form>

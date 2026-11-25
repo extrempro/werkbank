@@ -98,10 +98,11 @@ describe("BrandingSettings", () => {
 
   it("bietet die Wahl zwischen automatischer Anpassung und Original", () => {
     render(<BrandingSettings />);
-    const select = screen.getByLabelText("Größe beim Hochladen");
-    expect(select).toHaveValue("auto");
-    fireEvent.change(select, { target: { value: "original" } });
-    expect(select).toHaveValue("original");
+    const auto = screen.getByRole("button", { name: "Automatisch anpassen (empfohlen)" });
+    expect(auto).toHaveAttribute("aria-pressed", "true");
+    const original = screen.getByRole("button", { name: "Original behalten" });
+    fireEvent.click(original);
+    expect(original).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/Vergrößert wird nie/)).toBeVisible();
   });
 

@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.137.0] – 2026-11-25
+
+### Geändert
+
+- **Masken in IT-Bestand, Doku, IT-Projekten und Verwaltung nach design.md §8:**
+  - **IT-Bestand:** Gerät erfassen und bearbeiten, Ausmustern, Inventurnummer, Stelle und Arbeitsplatz nutzen `Field`, die Fehlerübersicht mit Links und die haftende Knopfleiste.
+    - Art, Modell, Abteilung, Zweck, Vorlage und Grund werden mit `ListChoice` gewählt (Karten oder Suchfeld).
+    - Zuordnung, Typ, Verbleib und Ausrichtung des Grundrisses sind eine Knopfleiste.
+    - Knöpfe mit Verb: „Änderungen speichern“, „Gerät ausmustern“, „Inventurnummer übernehmen“, „Platz speichern“, „Umbenennen“, „Präfix speichern“, „Nutzungsdauer speichern“.
+  - **Doku:**
+    - Live-Baustein: Bereich, Etage, Raum, Art und Projekt per `ListChoice`, Status und Zeitraum als Knopfleiste.
+    - Neue Seite: Titel mit „*“, Arbeitsbereich per `ListChoice`, Knopf „Seite anlegen“.
+    - Einstellungen als Knopfleisten; „Rechte speichern“, „Einstellungen speichern“, „Arbeitsbereich anlegen“.
+  - **IT-Projekte:** Neues Projekt und Einstellungen mit `Field`. Status und Art der Person sind eine Knopfleiste. Jour Fixe: „Eintrag speichern“ bzw. „Änderungen speichern“.
+  - **Verwaltung:**
+    - Als Knopfleiste: Art der KI-Schnittstelle, Größe beim Hochladen, Verschlüsselung der Mail, Resolver in NetBox.
+    - NetBox-View per `ListChoice`, NinjaOne-Region als Auswahlkarten.
+    - Berechtigungen: „Rechte speichern“.
+- `Segmented` kennt Pflicht, Fehler und Kennung; neue E2E-Hilfe `pickChoice` für Karten oder Suchfeld.
+
 ## [0.136.0] – 2026-11-25
 
 ### Geändert

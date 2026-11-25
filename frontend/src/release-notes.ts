@@ -24,6 +24,35 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.137.0",
+    date: "2026-11-25",
+    summary:
+      "Einheitliche Masken auch im IT-Bestand, in der Doku, bei Projekten und in der Verwaltung.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Geräte, Stellen und Arbeitsplätze erfasst du in Masken mit Beschriftung über dem Feld und Stern für Pflichtfelder. Fehlt etwas, steht oben eine Liste mit Links zu den Feldern.",
+          "Art, Modell, Abteilung, Zweck und Vorlage wählst du auf Karten oder, bei vielen Einträgen, in einem Suchfeld.",
+        ],
+      },
+      {
+        area: "Doku",
+        entries: [
+          "Im Live-Baustein wählst du Bereich, Etage, Raum, Art und Projekt auf Karten oder im Suchfeld; Status und Zeitraum mit Knöpfen.",
+          "„Neue Seite“ fragt den Arbeitsbereich genauso ab.",
+        ],
+      },
+      {
+        area: "IT-Projekte und Verwaltung",
+        entries: [
+          "Status und feste Auswahlen sind Knöpfe statt Auswahllisten.",
+          "Die Knöpfe sagen, was passiert, z. B. „Rechte speichern“ oder „Eintrag speichern“.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.136.0",
     date: "2026-11-25",
     summary: "Personen und Verweise suchst du wie alle anderen Auswahlen.",

@@ -205,7 +205,7 @@ export function RightsDialog({
                 disabled={busy}
                 onClick={save}
               >
-                Speichern
+                Rechte speichern
               </button>
             </div>
           </>

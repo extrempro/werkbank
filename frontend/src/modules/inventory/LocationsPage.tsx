@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Segmented } from "../../components/Field";
 import { errorText } from "../../api";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { Icon } from "../../components/Icon";
@@ -595,7 +596,7 @@ function RenameDelete({
             </label>
           )}
           <button type="submit" className="button button-primary">
-            Speichern
+            Änderungen speichern
           </button>
           <button
             type="button"
@@ -1308,18 +1309,17 @@ export function LocationsPage({
                           )}
                         </div>
                         {shownFloor.plan && (
-                          <div className="field-info loc-plan-rotation">
-                            <span className="field-info-head">
-                              <label htmlFor="grundriss-ausrichtung">
-                                Ausrichtung des Grundrisses
-                              </label>
-                              <InfoTip term="bestand.grundriss_ausrichtung" />
-                            </span>
-                            <select
-                              id="grundriss-ausrichtung"
-                              value={shownFloor.plan.rotation}
-                              onChange={(event) => {
-                                const rotation = Number(event.target.value) as PlanRotation;
+                          <div className="loc-plan-rotation">
+                            <Segmented
+                              label="Ausrichtung des Grundrisses"
+                              info={<InfoTip term="bestand.grundriss_ausrichtung" />}
+                              value={String(shownFloor.plan.rotation)}
+                              options={PLAN_ROTATIONS.map((value) => ({
+                                value: String(value),
+                                label: ROTATION_LABELS[value],
+                              }))}
+                              onChange={(value) => {
+                                const rotation = Number(value) as PlanRotation;
                                 rotatePlan(shownFloor.id, rotation).then(
                                   (next) => {
                                     applyFloor(next);
@@ -1335,13 +1335,7 @@ export function LocationsPage({
                                     ),
                                 );
                               }}
-                            >
-                              {PLAN_ROTATIONS.map((value) => (
-                                <option key={value} value={value}>
-                                  {ROTATION_LABELS[value]}
-                                </option>
-                              ))}
-                            </select>
+                            />
                           </div>
                         )}
                         <RenameDelete
