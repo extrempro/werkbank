@@ -32,11 +32,16 @@ services:
       - source: collector_client_cert
         target: collector_client_cert.pem
       - settings_key
+      # Schlüssel der Datensicherung (getrennt von settings_key)
+      - backup_key
     ports:
       - "${BIND_IP:-127.0.0.1}:${BIND_PORT:-8080}:8000"
     volumes:
       # PDF-Belege des IT-Budgets; gehört in die Sicherung
       - belege:/data/belege
+      # Ziel der Datensicherung: Volume "backups" oder ein Ordner auf dem Host (z. B. ein
+      # NAS-Mount), siehe deploy/README.md, Abschnitt Datensicherung
+      - ${WERKBANK_BACKUP_DIR:-backups}:/data/backups
     depends_on:
       db:
         condition: service_healthy
@@ -67,9 +72,12 @@ services:
       - source: collector_client_cert
         target: collector_client_cert.pem
       - settings_key
+      - backup_key
     volumes:
       # Tickets: Anhänge und Originale eingehender Mails (Abruf der Postfächer im Worker)
       - belege:/data/belege
+      # Die Datensicherung läuft im Worker
+      - ${WERKBANK_BACKUP_DIR:-backups}:/data/backups
     depends_on:
       # web spielt beim Start die Datenbank-Migrationen ein
       web:
@@ -121,6 +129,7 @@ networks:
 volumes:
   db-data:
   belege:
+  backups:
 
 # Alle Dateien müssen vorhanden sein, sonst startet Compose nicht (siehe deploy/README.md).
 # WERKBANK_SECRETS_DIR: Ordner auf dem Docker-Host, am besten ein absoluter Pfad außerhalb
@@ -139,3 +148,8 @@ secrets:
   # Schlüssel für geheime Werte aus der Verwaltung (z. B. SMTP-Passwort)
   settings_key:
     file: ${WERKBANK_SECRETS_DIR:-./secrets}/settings_key
+  # Passphrase für die Verschlüsselung der Datensicherung (eine Zeile, mindestens 32 Zeichen).
+  # Getrennt von den Sicherungen aufbewahren, z. B. im Passwortmanager: Ohne sie lässt sich
+  # keine Sicherung zurückspielen.
+  backup_key:
+    file: ${WERKBANK_SECRETS_DIR:-./secrets}/backup_key

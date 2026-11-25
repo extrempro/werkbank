@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ApiError, fetchAdminSettings, stepUpLoginUrl, type AdminSettings } from "../api";
 import { AiSettings } from "./AiSettings";
+import { BackupSettings } from "./BackupSettings";
 import { BrandingSettings } from "./BrandingSettings";
 import { CollectorCheckPanel } from "./CollectorCheck";
 import { GeneralSettings } from "./GeneralSettings";
@@ -8,13 +9,15 @@ import { NinjaSettings } from "./NinjaSettings";
 import { Permissions } from "./Permissions";
 
 /** Seiten im Bereich Verwaltung (das Audit-Log hat eine eigene Seite). */
-export type AdminSection = "allgemein" | "berechtigungen" | "mail-teams" | "verbindungen";
+export type AdminSection =
+  "allgemein" | "berechtigungen" | "mail-teams" | "verbindungen" | "datensicherung";
 
 const SECTIONS: Record<AdminSection, { title: string; path: string }> = {
   allgemein: { title: "Allgemein", path: "/verwaltung" },
   berechtigungen: { title: "Berechtigungen", path: "/verwaltung/berechtigungen" },
   "mail-teams": { title: "Mail & Teams", path: "/verwaltung/mail-teams" },
   verbindungen: { title: "Verbindungen", path: "/verwaltung/verbindungen" },
+  datensicherung: { title: "Datensicherung", path: "/verwaltung/datensicherung" },
 };
 
 export function AdminPage({ section = "allgemein" }: { section?: AdminSection }) {
@@ -105,6 +108,12 @@ export function AdminPage({ section = "allgemein" }: { section?: AdminSection })
             parts={["netbox", "zabbix", "internet"]}
           />
           <NinjaSettings />
+        </div>
+      )}
+
+      {ready && section === "datensicherung" && (
+        <div className="admin-section">
+          <BackupSettings />
         </div>
       )}
 

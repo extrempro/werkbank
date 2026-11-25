@@ -31,7 +31,7 @@ Die öffentliche Adresse (mit `https://`) gehört in `PUBLIC_URL`.
 
 ## Secrets anlegen
 
-Compose erwartet **sechs Dateien** in einem Ordner auf dem Docker-Host. Fehlt eine, startet nichts. Der Ordner liegt am besten außerhalb des Projektordners, damit ein Git-Sync ihn nicht anfasst; sein Pfad steht in `WERKBANK_SECRETS_DIR`.
+Compose erwartet **sieben Dateien** in einem Ordner auf dem Docker-Host. Fehlt eine, startet nichts. Der Ordner liegt am besten außerhalb des Projektordners, damit ein Git-Sync ihn nicht anfasst; sein Pfad steht in `WERKBANK_SECRETS_DIR`.
 
 | Datei | Inhalt | Für |
 |---|---|---|
@@ -39,6 +39,7 @@ Compose erwartet **sechs Dateien** in einem Ordner auf dem Docker-Host. Fehlt ei
 | `entra_client_key.pem`, `entra_client_cert.pem` | Zertifikat der App-Registrierung „Werkbank“ (Anmeldung) | `web` |
 | `collector_client_key.pem`, `collector_client_cert.pem` | Zertifikat der App-Registrierung „Werkbank Collector“ (Abruf, Personensuche im IT-Bestand) | `worker`, `web` |
 | `settings_key` | Schlüssel, mit dem geheime Werte aus der Verwaltung (z. B. das SMTP-Passwort) verschlüsselt in der Datenbank liegen | `web`, `worker` |
+| `backup_key` | Passphrase, mit der die Datensicherung verschlüsselt wird (siehe [Datensicherung](#datensicherung)) | `web`, `worker` |
 
 Ein Secret ist hier eine Datei auf dem Docker-Host, die Docker beim Start in den Container einblendet. So stehen Passwort und Schlüssel weder im Repository noch in den Umgebungsvariablen.
 
@@ -62,6 +63,14 @@ openssl rand -base64 48 | sudo tee settings_key > /dev/null
 ```
 
 Diesen Schlüssel sichern (z. B. im Passwortmanager) und nicht ändern: Geht er verloren, lassen sich in der Verwaltung gespeicherte Passwörter nicht mehr lesen und müssen neu eingetragen werden.
+
+**2b. Schlüssel für die Datensicherung erzeugen.** Eine Zeile, zufällig.
+
+```bash
+openssl rand -base64 48 | tr -d '\n' | sudo tee backup_key > /dev/null
+```
+
+Auch diesen Schlüssel getrennt von den Sicherungen aufbewahren (z. B. im Passwortmanager): Ohne ihn lässt sich keine Sicherung öffnen.
 
 **3. Zertifikat für die Anmeldung** (App-Registrierung „Werkbank“)
 
@@ -142,8 +151,75 @@ Die ganze Reihenfolge mit Prüfschritten steht in [`docs/inbetriebnahme.md`](../
 
 ## Datensicherung
 
-Zwei Volumes enthalten Daten, die nicht wiederherstellbar sind, und gehören in die Sicherung:
+Die Werkbank sichert sich selbst: Unter **Verwaltung › Datensicherung** stellst du Uhrzeit und Aufbewahrung ein und startest bei Bedarf eine Sicherung sofort. Dieselbe Anleitung wie hier steht unten auf dieser Seite.
 
-- `db-data`: die Datenbank.
-- `belege`: die PDF-Belege des IT-Budgets und, im Unterordner `projekte`, die PDF-Anhänge aus dem Jour Fixe der IT-Projekte. Die Dateien liegen dort unter zufälligen Namen; welcher Beleg zu welcher Rechnung bzw. welcher Anhang zu welchem Eintrag gehört, steht nur in der Datenbank. Beide Volumes deshalb zusammen sichern und zusammen zurückspielen.
+Jede Sicherung ist ein Ordner `werkbank-JJJJ-MM-TT-HHMMSS` im Zielordner mit drei Dateien:
 
+| Datei | Inhalt |
+|---|---|
+| `datenbank.dump.gpg` | die Datenbank (`pg_dump`, Custom-Format), verschlüsselt |
+| `dateien.tar.gpg` | alle Dateien aus dem Volume `belege` (Belege, Ticket-Anhänge, Projektdokumente) als tar, verschlüsselt |
+| `info.json` | Version der Werkbank, Datenbank-Revision, Größen und SHA-256 der beiden Dateien (nicht geheim) |
+
+Verschlüsselt wird mit GnuPG (OpenPGP, symmetrisch, AES-256); die Passphrase ist das Secret `backup_key`. Datenbank und Dateien stammen aus demselben Lauf und passen zusammen.
+
+### Einrichten
+
+1. Secret `backup_key` anlegen (siehe [Secrets anlegen](#secrets-anlegen), Schritt 2b).
+2. Zielordner festlegen (freiwillig). Ohne Angabe landen die Sicherungen im Docker-Volume `backups`, also auf demselben Host. Besser ist ein Ordner, der mitgesichert wird, etwa ein NAS-Mount, in der `.env`:
+
+   ```bash
+   WERKBANK_BACKUP_DIR=/mnt/sicherung/werkbank
+   ```
+
+   Der Ordner muss dem Benutzer der Werkbank gehören (UID 10001):
+
+   ```bash
+   sudo mkdir -p /mnt/sicherung/werkbank
+   sudo chown 10001:10001 /mnt/sicherung/werkbank
+   sudo chmod 700 /mnt/sicherung/werkbank
+   ```
+
+3. `docker compose up -d`. In der Verwaltung steht dann „Schlüssel: vorhanden“ und „Zielordner: beschreibbar“. „Täglich sichern“ einschalten und einmal „Jetzt sichern“.
+
+Die Aufbewahrung zählt Sicherungen, nicht Tage: Nach jeder neuen Sicherung löscht die Werkbank die ältesten über der eingestellten Zahl (Vorgabe 14). Schlägt eine Sicherung fehl, bekommen die Admins eine Benachrichtigung; der geplante Lauf wird erst am nächsten Tag wiederholt.
+
+### Zurückspielen
+
+Das Zurückspielen ersetzt die ganze Datenbank und alle Dateien. Die Datenbank wird in einer Transaktion eingespielt: Schlägt etwas fehl, bleibt der alte Stand. Alle Befehle im Ordner mit der `docker-compose.yml`:
+
+```bash
+# 1. Sicherungen anzeigen und die gewünschte prüfen (Prüfsummen, Schlüssel, vollständig lesbar)
+docker compose exec worker python -m werkbank.backup liste
+docker compose exec worker python -m werkbank.backup pruefen werkbank-JJJJ-MM-TT-HHMMSS
+
+# 2. Werkbank anhalten, die Datenbank läuft weiter
+docker compose stop web worker
+
+# 3. Zurückspielen; der Befehl fragt nach dem Namen der Sicherung
+docker compose run --rm --no-deps worker python -m werkbank.backup wiederherstellen werkbank-JJJJ-MM-TT-HHMMSS
+
+# 4. Starten; web bringt die Datenbank auf den Stand der laufenden Version
+docker compose up -d
+```
+
+- Das Image muss mindestens die Version haben, mit der die Sicherung erstellt wurde (`info.json`). Sonst bricht der Befehl ab, ohne etwas zu ändern.
+- **Neuer Server:** Werkbank wie in [`docs/inbetriebnahme.md`](../docs/inbetriebnahme.md) einrichten, dabei dieselben Secrets verwenden, auch `settings_key` (sonst müssen gespeicherte Zugangsdaten neu eingetragen werden). Den Ordner der Sicherung in den Zielordner kopieren, dann ab Schritt 2.
+- `docker compose exec worker python -m werkbank.backup sichern` erstellt eine Sicherung von Hand, z. B. vor einem Update.
+
+### Im Notfall ohne Werkbank
+
+Auf jedem Rechner mit `gpg` und dem Schlüssel:
+
+```bash
+gpg --batch --pinentry-mode loopback --passphrase-file backup_key \
+  --decrypt datenbank.dump.gpg > datenbank.dump
+gpg --batch --pinentry-mode loopback --passphrase-file backup_key \
+  --decrypt dateien.tar.gpg | tar -x
+```
+
+`datenbank.dump` lässt sich mit `pg_restore` (PostgreSQL 16) in eine leere Datenbank einspielen.
+
+### Volumes von Hand sichern
+
+Wer zusätzlich auf Ebene des Hosts sichert: Die Volumes `db-data` (Datenbank) und `belege` (Dateien) gehören zusammen und werden zusammen gesichert und zurückgespielt; die Dateien liegen unter zufälligen Namen, die Zuordnung steht nur in der Datenbank. Den Schlüssel `backup_key` nie in dieselbe Sicherung legen wie die Sicherungen selbst.

@@ -150,6 +150,17 @@ jobs:
             sleep 2
           done
           echo "Kein erledigter Aufräum-Auftrag gefunden"; exit 1
+      - name: Datensicherung sichern, prüfen und zurückspielen
+        run: |
+          C="docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.build.yml"
+          $C exec -T worker python -m werkbank.backup sichern
+          NAME=$($C exec -T worker python -m werkbank.backup liste | head -n 1 | cut -d' ' -f1)
+          echo "Sicherung: $NAME"
+          $C exec -T worker python -m werkbank.backup pruefen "$NAME"
+          $C stop web worker
+          $C run --rm --no-deps -T worker python -m werkbank.backup wiederherstellen "$NAME" --ja
+          $C up -d --wait
+          curl --fail --silent http://127.0.0.1:8080/health/ready
       - name: Compose-Datei für den Betrieb ist gültig (Image aus der Registry, kein Build)
         run: |
           docker compose -f deploy/docker-compose.yml --env-file deploy/.env config > /tmp/betrieb.yml

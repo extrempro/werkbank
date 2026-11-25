@@ -15569,3 +15569,27 @@ button.doku-thread-quote {
 .ticket-bar-clear {
   margin: 6px 12px 0;
 }
+
+/* Befehle zum Abschreiben, z. B. in der Anleitung der Datensicherung */
+.command-block {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--farbe-grund);
+  font-family: var(--schrift-mono);
+  font-size: 0.8125rem;
+  white-space: pre;
+}
+
+.backup-guide details {
+  margin-top: 12px;
+}
+
+.backup-guide ol {
+  padding-left: 20px;
+}
+
+.backup-guide li {
+  margin-bottom: 8px;
+}

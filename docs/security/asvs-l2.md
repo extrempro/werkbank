@@ -134,6 +134,7 @@ Status: ✅ umgesetzt und getestet · ⚠️ teilweise · ❌ offen · n/a nicht
 - **Schützenswerte Daten:** Tickets und Anhänge (Personen, Inhalte von Mails), IT-Budget mit Verträgen und Belegen, Doku-Inhalte, Tenant-Einstellungen, gespeicherte Zugangsschlüssel (NetBox, Zabbix, KI, SMTP, Admin-Token der Gerätezuordnung, verschlüsselt).
 - **Protokollierung:** Anmeldungen, Ablehnungen, Abmeldungen, Rechteänderungen, Verwaltung, Exporte und Fehler der Hintergrundaufträge kommen ins Audit-Log. Aufbewahrung nach Einstellung (Standard 90 Tage), Einträge unter 30 Tagen sind nie löschbar. Keine Tokens, Passwörter oder Sitzungskennungen im Log.
 - **Abmeldung:** nur per POST; keine Front-Channel-Abmeldung von Entra.
+- **Datensicherung (ab 0.126.0):** Sicherungen von Datenbank und Dateien sind mit GnuPG verschlüsselt (OpenPGP, AES-256, S2K mit SHA-512 und hoher Iterationszahl); die Passphrase ist das eigene Docker-Secret `backup_key`, getrennt von `settings_key` und nie in der Datenbank. `info.json` enthält nur Version, Revision, Größen und Prüfsummen. Einstellen und „Jetzt sichern“ nur für Admins mit frischer Anmeldung, im Audit-Log; Zurückspielen nur per Kommando auf dem Server, nicht über die Oberfläche. Kommandos laufen ohne Shell mit festen Argumenten, das Datenbank-Passwort nur in der Prozessumgebung. Wiederherstellen prüft Prüfsummen und Schlüssel vorher und spielt die Datenbank in einer Transaktion ein; tar wird mit dem Filter `data` entpackt (keine Pfade außerhalb, keine Gerätedateien).
 
 ## Offene Punkte
 

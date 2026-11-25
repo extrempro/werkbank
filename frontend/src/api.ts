@@ -407,3 +407,57 @@ export function uploadBrandingImage(kind: BrandingImageKind, base64: string): Pr
 export function removeBrandingImage(kind: BrandingImageKind): Promise<Branding> {
   return deleteJson(`/api/admin/branding/assets/${kind}`);
 }
+
+// --- Verwaltung › Datensicherung ---
+
+export interface BackupState {
+  enabled: boolean;
+  hour: number;
+  keep: number;
+  keep_min: number;
+  keep_max: number;
+  readiness: { key: boolean; folder: boolean; tools: boolean; ready: boolean };
+  /** Eine Sicherung aus der Verwaltung wartet auf den Worker oder läuft gerade. */
+  requested: boolean;
+  backups: { name: string; created_at: string; version: string; size_bytes: number }[];
+  runs: {
+    id: number;
+    started_at: string;
+    finished_at: string | null;
+    status: "laeuft" | "ok" | "fehler";
+    trigger: "zeitplan" | "verwaltung" | "kommando";
+    started_by: string | null;
+    name: string;
+    size_bytes: number | null;
+    error: string | null;
+  }[];
+}
+
+const BACKUP = "/api/admin/backup";
+
+export function fetchBackup(): Promise<BackupState> {
+  return getJson(BACKUP);
+}
+
+export function saveBackup(update: {
+  enabled: boolean;
+  hour: number;
+  keep: number;
+}): Promise<BackupState> {
+  return putJson(BACKUP, update);
+}
+
+export function startBackup(): Promise<BackupState> {
+  return postJson(`${BACKUP}/jetzt`);
+}
+
+/** Größe für Menschen, z. B. „12,4 MB“. */
+export function formatBackupSize(bytes: number): string {
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024)).toLocaleString("de-DE")} KB`;
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB`;
+  }
+  return `${(bytes / 1024 / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} GB`;
+}

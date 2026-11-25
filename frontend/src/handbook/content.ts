@@ -2469,6 +2469,10 @@ export const AREAS: readonly Area[] = [
                     "Verbindungen",
                     "„Berechtigungen für den Abruf“ prüft, ob die Collector-App und der Dienstprinzipal von UTCM die Rechte für die eingetragenen Typen und eingeschalteten Funktionen haben, und nennt je fehlendem Recht die betroffenen Typen; Entra-Rollen wie „Globaler Leser“ prüft sie nicht. KI-Texte (Art der Schnittstelle: OpenAI-kompatibel oder Anthropic, Adresse, Modell, Schlüssel, Höchstzahl je Stunde; je ein Schalter für die Beschreibungen in M365 und die Vorschläge in Evergreen, Vorgabe: aus; „Verbindung testen“ zeigt bei Fehlern die Meldung des Anbieters), NetBox für den DNS-Abgleich, Abfragen der IT-Tools ins Internet (Vorgabe: erlaubt)",
                   ],
+                  [
+                    "Datensicherung",
+                    "tägliche, verschlüsselte Sicherung von Datenbank und Dateien mit Uhrzeit und Aufbewahrung, „Jetzt sichern“ (siehe „Datensicherung“)",
+                  ],
                   ["Audit-Log", "das Protokoll aller Aktionen (siehe oben)"],
                 ],
               },
@@ -2500,6 +2504,38 @@ export const AREAS: readonly Area[] = [
               { kind: "hint", text: "Jede Änderung steht mit vorher und nachher im Audit-Log." },
             ],
             links: [{ to: "/verwaltung/berechtigungen", label: "Zu den Berechtigungen" }],
+          },
+          {
+            id: "datensicherung",
+            title: "Datensicherung",
+            roles: [ADMIN],
+            blocks: [
+              {
+                kind: "text",
+                text: "Unter Verwaltung › Datensicherung schaltest du die tägliche Sicherung ein, wählst die Uhrzeit und wie viele Sicherungen aufbewahrt werden (Vorgabe 14). Gesichert werden die Datenbank und alle Dateien wie Belege, Ticket-Anhänge und Projektdokumente. „Jetzt sichern“ startet eine Sicherung sofort, etwa vor einem Update.",
+              },
+              {
+                kind: "text",
+                text: "Jede Sicherung ist ein eigener Ordner im Zielordner auf dem Server, zum Beispiel „werkbank-2026-11-25-020000“. Die Dateien darin sind verschlüsselt. Öffnen lassen sie sich nur mit dem Schlüssel „backup_key“, der als Secret auf dem Server liegt und nicht in der Werkbank.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "Oben siehst du, ob der Schlüssel da ist und der Zielordner beschreibbar ist. Fehlt etwas, richtet es die IT auf dem Server ein.",
+                  "„Letzte Läufe“ zeigt jede Sicherung mit Ergebnis. Schlägt eine fehl, bekommst du eine Benachrichtigung; der Grund steht in der Liste.",
+                  "Geplant sichert die Werkbank einmal am Tag. Schlägt die Sicherung fehl, versucht sie es erst am nächsten Tag wieder; mit „Jetzt sichern“ geht es sofort.",
+                ],
+              },
+              {
+                kind: "hint",
+                text: "Bewahre den Schlüssel „backup_key“ getrennt von den Sicherungen auf, zum Beispiel im Passwortmanager. Ohne ihn lässt sich keine Sicherung zurückspielen.",
+              },
+              {
+                kind: "text",
+                text: "Zurückspielen geht nicht in der Werkbank, weil es alle Daten ersetzt. Die IT spielt eine Sicherung auf dem Server mit einem Befehl zurück. Die Anleitung dazu steht unten auf der Seite Datensicherung, ebenso wie das Einrichten und das Öffnen einer Sicherung im Notfall ohne Werkbank.",
+              },
+            ],
+            links: [{ to: "/verwaltung/datensicherung", label: "Zur Datensicherung" }],
           },
           {
             id: "auftraege",

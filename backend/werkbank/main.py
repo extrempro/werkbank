@@ -5,6 +5,7 @@ import logging
 from fastapi import FastAPI, Response, status
 
 from werkbank import __version__
+from werkbank.backup.api import router as backup_router
 from werkbank.config import Settings, get_settings
 from werkbank.core.account_sessions import router as account_sessions_router
 from werkbank.core.admin_settings import router as admin_settings_router
@@ -136,6 +137,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(permissions_router)
     app.include_router(avatar_router)
     app.include_router(admin_settings_router)
+    app.include_router(backup_router)
     app.include_router(branding_router)
     app.include_router(search_router)
     app.include_router(navigation_router)

@@ -15,6 +15,7 @@ import {
   allNavItems,
   areaForPath,
   type NavArea,
+  ADMIN_BACKUP_PATH,
   ADMIN_CONNECTIONS_PATH,
   ADMIN_ZABBIX_PATH,
   ADMIN_MAIL_PATH,
@@ -457,6 +458,8 @@ export function Layout({ me }: LayoutProps) {
     page = <AdminPage key="mail-teams" section="mail-teams" />;
   } else if (path === ADMIN_CONNECTIONS_PATH && current) {
     page = <AdminPage key="verbindungen" section="verbindungen" />;
+  } else if (path === ADMIN_BACKUP_PATH && current) {
+    page = <AdminPage key="datensicherung" section="datensicherung" />;
   } else if (path === "/m365" && current) {
     page = <OverviewPage me={me} />;
   } else if (path === "/m365/aenderungen" && current) {

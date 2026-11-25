@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.126.0] – 2026-11-25
+
+> **Vor dem Update:** Neues Docker-Secret `backup_key` anlegen (`deploy/README.md`, Secrets anlegen, Schritt 2b). Ohne die Datei startet Compose nicht.
+
+### Neu
+
+- **Datensicherung (Verwaltung › Datensicherung):** Die Werkbank sichert Datenbank und alle Dateien (Belege, Ticket-Anhänge, Projektdokumente) täglich zur eingestellten Uhrzeit und auf Knopfdruck. Aufbewahrung als Anzahl (Vorgabe 14), Zustand von Schlüssel und Zielordner, vorhandene Sicherungen und letzte Läufe; fehlgeschlagene Läufe melden sich als Benachrichtigung. Auf der Seite steht die Anleitung zum Einrichten, Zurückspielen und Öffnen im Notfall.
+- Verschlüsselung mit GnuPG (OpenPGP, AES-256), Passphrase im neuen Docker-Secret `backup_key`. Je Sicherung ein Ordner mit `datenbank.dump.gpg`, `dateien.tar.gpg` und `info.json` (Version, Revision, Prüfsummen).
+- Kommando im Container: `python -m werkbank.backup liste | sichern | pruefen NAME | wiederherstellen NAME`. Zurückspielen nur bei angehaltener Werkbank, die Datenbank in einer Transaktion, mit Prüfung von Prüfsummen, Schlüssel und Version vorher.
+- Zielordner: Docker-Volume `backups` oder ein Ordner auf dem Host über `WERKBANK_BACKUP_DIR` (z. B. ein NAS-Mount).
+
+### Betrieb
+
+- Image: `gnupg` und `postgresql-client-16` aus der offiziellen Paketquelle von PostgreSQL (Signaturschlüssel aus dem Debian-Paket `postgresql-common`), passend zur Datenbank 16.
+- Migration `0086`: Tabelle `backup_runs`.
+- CI: Der Docker-Test sichert im gebauten Image, prüft die Sicherung und spielt sie zurück.
+
 ## [0.125.1] – 2026-11-24
 
 ### Sicherheit
