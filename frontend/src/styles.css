@@ -14241,8 +14241,10 @@ img.ProseMirror-separator {
 .doku-popover {
   position: absolute;
   z-index: 20;
-  /* Platz für die Leiste unten auf dem Handy beim Hineinscrollen */
-  scroll-margin-bottom: 96px;
+  /* Reicht der Platz nicht, scrollt das Menü innen (die Seite bleibt stehen) */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 10px;
   width: min(22rem, calc(100vw - 24px));
 }
 
@@ -15664,10 +15666,19 @@ button.doku-thread-quote {
   margin-bottom: 8px;
 }
 
-/* Ausrichtung des Grundrisses in den Einstellungen der Etage */
+/* Ausrichtung des Grundrisses in den Einstellungen der Etage (Feld wie in Formularen) */
 .loc-plan-rotation {
-  display: grid;
-  gap: 4px;
   max-width: 22rem;
-  margin: 8px 0;
+}
+
+.loc-plan-rotation select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
 }

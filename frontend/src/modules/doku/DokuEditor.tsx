@@ -235,10 +235,20 @@ const BLOCKS: readonly BlockChoice[] = [
 /** Abstand zwischen Schreibmarke und Menü sowie zum Rand in Pixeln */
 const POPOVER_GAP = 6;
 
+/** Höhe, unter der das Menü lieber nach oben klappt bzw. innen scrollt */
+const POPOVER_MIN_HEIGHT = 160;
+
+/** Unterkante des freien Bereichs: über der Leiste unten am Handy, sonst der Bildschirm. */
+function viewportBottom(): number {
+  const bar = document.querySelector<HTMLElement>('nav[aria-label="Schnellzugriff"]');
+  const top = bar && bar.offsetParent !== null ? bar.getBoundingClientRect().top : null;
+  return top !== null && top > 0 ? Math.min(top, window.innerHeight) : window.innerHeight;
+}
+
 /**
- * Schwebt unter der Schreibmarke statt über dem Text: So bleibt man an der Stelle, an der man
- * schreibt, auch weit unten auf der Seite, und der Text darunter rutscht nicht weg. Reicht der
- * Platz unten nicht, scrollt die Seite nur so weit, dass das Menü ganz zu sehen ist.
+ * Schwebt an der Schreibmarke statt über dem Text, und die Seite bleibt dabei stehen: Unter
+ * der Zeile, wenn dort Platz ist, sonst darüber (nie unter die feste Kopfzeile). Reicht der
+ * Platz nirgends, steht das Menü auf der größeren Seite und scrollt innen.
  */
 export function CaretPopover({
   editor,
@@ -266,28 +276,34 @@ export function CaretPopover({
     const place = () => {
       const hostRect = host.getBoundingClientRect();
       const areaRect = area.getBoundingClientRect();
-      let caret = { bottom: areaRect.top, left: areaRect.left };
+      let caret = { top: areaRect.top, bottom: areaRect.top, left: areaRect.left };
       try {
         caret = editor.view.coordsAtPos(editor.state.selection.from);
       } catch {
         // Ohne Position (z. B. Editor gerade nicht sichtbar): oben links im Editor
       }
+      // Die feste Kopfzeile verdeckt den oberen Rand; darunter darf das Menü nicht rutschen
+      const header = document.querySelector(".app-header")?.getBoundingClientRect().bottom ?? 0;
+      const spaceBelow = viewportBottom() - caret.bottom - 2 * POPOVER_GAP;
+      const spaceAbove = caret.top - Math.max(header, 0) - 2 * POPOVER_GAP;
+      // Natürliche Höhe, auch wenn schon eine Höchsthöhe gesetzt ist
+      const height = element.scrollHeight;
+      const below = height <= spaceBelow || spaceBelow >= spaceAbove;
+      const room = Math.max(below ? spaceBelow : spaceAbove, POPOVER_MIN_HEIGHT);
+      const shown = Math.min(height, room);
       const minLeft = areaRect.left + POPOVER_GAP;
       const maxLeft = Math.max(minLeft, areaRect.right - element.offsetWidth - POPOVER_GAP);
       setStyle({
-        top: caret.bottom - hostRect.top + POPOVER_GAP,
+        top: below
+          ? caret.bottom - hostRect.top + POPOVER_GAP
+          : caret.top - hostRect.top - POPOVER_GAP - shown,
         left: Math.min(Math.max(caret.left, minLeft), maxLeft) - hostRect.left,
+        maxHeight: height > room ? room : undefined,
       });
     };
     place();
-    const frame = window.requestAnimationFrame(() =>
-      element.scrollIntoView({ block: "nearest", inline: "nearest" }),
-    );
     window.addEventListener("resize", place);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", place);
-    };
+    return () => window.removeEventListener("resize", place);
   }, [editor]);
   return (
     <div
@@ -367,9 +383,14 @@ function BlockMenu({
         }}
         onKeyDown={onKey}
         onBlur={(event) => {
-          if (!event.currentTarget.parentElement?.contains(event.relatedTarget as Element | null)) {
-            onClose();
-          }
+          const menu = event.currentTarget.parentElement;
+          // Erst nachsehen, wo der Fokus gelandet ist: Wechselt man nur das Fenster oder die
+          // App, bleibt das Menü offen; ein Klick daneben oder Tab aus dem Menü schließt es.
+          window.setTimeout(() => {
+            if (document.hasFocus() && !menu?.contains(document.activeElement)) {
+              onClose();
+            }
+          }, 0);
         }}
       />
       <ul id={listId} role="listbox" aria-label="Bausteine">

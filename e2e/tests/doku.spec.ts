@@ -134,9 +134,6 @@ test("Doku: Seite anlegen, schreiben, Versionen, Rechte, Sperren und Papierkorb"
       { timeout: 10_000 },
     )
     .toContain("Toner bestellen");
-  // Das Baustein-Menü hat die Seite so weit gerückt, dass es ganz zu sehen war. Oben liegt
-  // dann einiges unter der festen Kopfzeile, was axe als verdeckt meldet: erst nach oben.
-  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
 
   // Im Seitenbaum
@@ -529,18 +526,19 @@ test("Doku: Baustein-Menü erscheint an der Schreibmarke, die Seite springt nich
   await page.keyboard.press("/");
   const search = page.getByRole("combobox", { name: "Baustein suchen" });
   await expect(search).toBeFocused();
-  // Das Menü steht direkt unter der Zeile, nicht oben über dem Text. Die Seite rückt höchstens
-  // so weit, dass das Menü ganz zu sehen ist; die Zeile bleibt im Blick.
+  // Das Menü steht an der Zeile (darunter oder, wenn unten kein Platz ist, darüber), nicht
+  // oben über dem Text, und die Seite bleibt stehen.
   const menu = page.locator(".doku-popover");
   await expect(menu).toBeInViewport({ ratio: 0.95 });
   await expect(last).toBeInViewport();
   const lineBox = (await last.boundingBox())!;
   const menuBox = (await menu.boundingBox())!;
-  expect(menuBox.y).toBeGreaterThanOrEqual(lineBox.y + lineBox.height - 1);
-  expect(menuBox.y - (lineBox.y + lineBox.height)).toBeLessThan(20);
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(
-    before,
-  );
+  const gapBelow = menuBox.y - (lineBox.y + lineBox.height);
+  const gapAbove = lineBox.y - (menuBox.y + menuBox.height);
+  expect(Math.min(Math.abs(gapBelow), Math.abs(gapAbove))).toBeLessThan(20);
+  expect(
+    Math.abs((await page.evaluate(() => window.scrollY)) - before),
+  ).toBeLessThan(5);
   await expectNoA11yViolations(page);
 
   await search.fill("Überschrift 2");
