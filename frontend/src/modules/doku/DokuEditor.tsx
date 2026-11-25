@@ -21,6 +21,7 @@ import { Icon } from "../../components/Icon";
 import type { DocJson, LiveAttrs } from "./api";
 import { CommentMarks, type CommentMarksOptions } from "./commentMarks";
 import { LiveBlock, LiveBlockForm, RefPicker, WerkbankRef } from "./DokuNodes";
+import { ActiveCell, TableEdges, TablePicker, TableTools, useTableSpot } from "./DokuTable";
 
 /** Hinweis-Kasten („Hinweis“, „Warnung“, „Erledigt“) mit Absätzen darin. */
 export const Callout = Node.create({
@@ -106,6 +107,7 @@ export function extensions(placeholder: string, live?: LiveDoc, comments?: Comme
     TableRow,
     TableHeader,
     TableCell,
+    ActiveCell,
     TaskList,
     TaskItem.configure({
       nested: true,
@@ -133,13 +135,15 @@ export function extensions(placeholder: string, live?: LiveDoc, comments?: Comme
   ];
 }
 
+type Picker = "verweis" | "live" | "tabelle";
+
 interface BlockChoice {
   id: string;
   label: string;
   hint: string;
   run: (editor: Editor) => void;
-  /** Öffnet stattdessen eine Auswahl (Verweis, Live-Baustein) */
-  open?: "verweis" | "live";
+  /** Öffnet stattdessen eine Auswahl (Verweis, Live-Baustein, Größe der Tabelle) */
+  open?: Picker;
 }
 
 const BLOCKS: readonly BlockChoice[] = [
@@ -195,8 +199,9 @@ const BLOCKS: readonly BlockChoice[] = [
   {
     id: "tabelle",
     label: "Tabelle",
-    hint: "3 × 3 mit Kopfzeile",
-    run: (e) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+    hint: "Größe wählen, mit oder ohne Kopfzeile",
+    run: () => undefined,
+    open: "tabelle",
   },
   {
     id: "code",
@@ -236,12 +241,16 @@ const BLOCKS: readonly BlockChoice[] = [
 const POPOVER_GAP = 6;
 
 /** Höhe, unter der das Menü lieber nach oben klappt bzw. innen scrollt */
-const POPOVER_MIN_HEIGHT = 160;
+const POPOVER_MIN_HEIGHT = 200;
+
+/** Das Baustein-Menü bleibt kompakt und scrollt innen, statt über die halbe Seite zu reichen */
+const POPOVER_MAX_HEIGHT = 360;
 
 /** Unterkante des freien Bereichs: über der Leiste unten am Handy, sonst der Bildschirm. */
 function viewportBottom(): number {
   const bar = document.querySelector<HTMLElement>('nav[aria-label="Schnellzugriff"]');
-  const top = bar && bar.offsetParent !== null ? bar.getBoundingClientRect().top : null;
+  // „fixed“: offsetParent ist immer null, sichtbar heißt hier „hat Fläche“
+  const top = bar && bar.getClientRects().length > 0 ? bar.getBoundingClientRect().top : null;
   return top !== null && top > 0 ? Math.min(top, window.innerHeight) : window.innerHeight;
 }
 
@@ -286,9 +295,13 @@ export function CaretPopover({
       const header = document.querySelector(".app-header")?.getBoundingClientRect().bottom ?? 0;
       const spaceBelow = viewportBottom() - caret.bottom - 2 * POPOVER_GAP;
       const spaceAbove = caret.top - Math.max(header, 0) - 2 * POPOVER_GAP;
-      // Natürliche Höhe, auch wenn schon eine Höchsthöhe gesetzt ist
-      const height = element.scrollHeight;
-      const below = height <= spaceBelow || spaceBelow >= spaceAbove;
+      // Natürliche Höhe (auch wenn schon eine Höchsthöhe gesetzt ist), beim Menü begrenzt
+      const height = wide
+        ? element.scrollHeight
+        : Math.min(element.scrollHeight, POPOVER_MAX_HEIGHT);
+      // Lieber unter der Zeile; nach oben nur, wenn unten wirklich kein Platz ist
+      const below =
+        height <= spaceBelow || spaceBelow >= POPOVER_MIN_HEIGHT || spaceBelow >= spaceAbove;
       const room = Math.max(below ? spaceBelow : spaceAbove, POPOVER_MIN_HEIGHT);
       const shown = Math.min(height, room);
       const minLeft = areaRect.left + POPOVER_GAP;
@@ -298,13 +311,13 @@ export function CaretPopover({
           ? caret.bottom - hostRect.top + POPOVER_GAP
           : caret.top - hostRect.top - POPOVER_GAP - shown,
         left: Math.min(Math.max(caret.left, minLeft), maxLeft) - hostRect.left,
-        maxHeight: height > room ? room : undefined,
+        maxHeight: height > room ? room : wide ? undefined : POPOVER_MAX_HEIGHT,
       });
     };
     place();
     window.addEventListener("resize", place);
     return () => window.removeEventListener("resize", place);
-  }, [editor]);
+  }, [editor, wide]);
   return (
     <div
       ref={box}
@@ -324,7 +337,7 @@ function BlockMenu({
 }: {
   editor: Editor;
   onClose: () => void;
-  onOpen: (what: "verweis" | "live") => void;
+  onOpen: (what: Picker) => void;
 }) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -523,7 +536,7 @@ function Toolbar({
       editor.off("transaction", update);
     };
   }, [editor]);
-  const inTable = editor.isActive("table");
+  const spot = useTableSpot(editor);
   return (
     <div className="doku-toolbar-wrap">
       <div className="doku-toolbar" role="toolbar" aria-label="Formatieren">
@@ -607,45 +620,7 @@ function Toolbar({
           onClick={() => editor.chain().focus().redo().run()}
         />
       </div>
-      {inTable && (
-        <div className="doku-toolbar doku-tabletools" role="toolbar" aria-label="Tabelle">
-          <button
-            type="button"
-            className="button button-secondary"
-            onClick={() => editor.chain().focus().addRowAfter().run()}
-          >
-            Zeile +
-          </button>
-          <button
-            type="button"
-            className="button button-secondary"
-            onClick={() => editor.chain().focus().addColumnAfter().run()}
-          >
-            Spalte +
-          </button>
-          <button
-            type="button"
-            className="button button-secondary"
-            onClick={() => editor.chain().focus().deleteRow().run()}
-          >
-            Zeile löschen
-          </button>
-          <button
-            type="button"
-            className="button button-secondary"
-            onClick={() => editor.chain().focus().deleteColumn().run()}
-          >
-            Spalte löschen
-          </button>
-          <button
-            type="button"
-            className="button button-secondary"
-            onClick={() => editor.chain().focus().deleteTable().run()}
-          >
-            Tabelle löschen
-          </button>
-        </div>
-      )}
+      {spot && <TableTools editor={editor} spot={spot} />}
       {linkOpen && <LinkForm editor={editor} onClose={() => setLinkOpen(false)} />}
     </div>
   );
@@ -676,7 +651,7 @@ export function DokuEditor({
   onReady?: (editor: Editor | null) => void;
 }) {
   const [blocks, setBlocks] = useState(false);
-  const [picker, setPicker] = useState<"verweis" | "live" | null>(null);
+  const [picker, setPicker] = useState<Picker | null>(null);
   const change = useRef(onChange);
   useEffect(() => {
     change.current = onChange;
@@ -740,6 +715,12 @@ export function DokuEditor({
           <RefPicker editor={editor} onClose={() => setPicker(null)} />
         </CaretPopover>
       )}
+      {editable && picker === "tabelle" && (
+        <CaretPopover editor={editor}>
+          <TablePicker editor={editor} onClose={() => setPicker(null)} />
+        </CaretPopover>
+      )}
+      {editable && <EdgesForTable editor={editor} />}
       {editable && picker === "live" && (
         <CaretPopover editor={editor} wide>
           <LiveBlockForm initial={null} onSubmit={insertLive} onCancel={() => setPicker(null)} />
@@ -748,4 +729,10 @@ export function DokuEditor({
       <EditorContent editor={editor} />
     </div>
   );
+}
+
+/** „+ Zeile“ und „+ Spalte“ an der Tabelle mit der Schreibmarke */
+function EdgesForTable({ editor }: { editor: Editor }) {
+  const spot = useTableSpot(editor);
+  return spot ? <TableEdges editor={editor} spot={spot} /> : null;
 }

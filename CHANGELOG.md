@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.130.0] – 2026-11-25
+
+### Neu
+
+- **Dokumentation, Tabellen:** Beim Einfügen Größe im Raster (bis 6 × 6) und Kopfzeile wählen (vorher fest 3 × 3). Neue Leiste „Tabelle“ mit Gruppen Zeile (darüber, darunter, löschen) und Spalte (links, rechts, löschen), Schalter „Kopfzeile“ (`toggleHeaderRow`), Position der Schreibmarke („Zeile 2, Spalte 3“) und „Tabelle löschen“ mit Bestätigungsdialog. Zelle mit der Schreibmarke umrandet, Zeile und Spalte leicht hinterlegt (ProseMirror-Dekoration). „+ Zeile hinzufügen“ unter und „+“ rechts neben der Tabelle hängen am Ende an. Am Handy eine Leiste unten (Zeile +, Spalte +, Kopfzeile, Mehr …) und ein Blatt mit allen Aktionen.
+
+### Behoben
+
+- **Dokumentation, Baustein-Menü:** höchstens 360 px hoch und innen scrollbar; es steht unter der Zeile, sobald dort mindestens 200 px frei sind, und klappt nur noch nach oben, wenn unten kaum Platz ist (vorher streckte es sich bei kurzen Seiten über die Werkzeugleiste).
+- **Handy:** Die Leiste „Schnellzugriff“ wurde beim Platzieren von Menüs nicht erkannt (fest positionierte Elemente haben keinen `offsetParent`).
+
 ## [0.129.1] – 2026-11-25
 
 ### Behoben
