@@ -159,8 +159,8 @@ def readiness(settings: Settings) -> Readiness:
 @contextmanager
 def _gnupg_home() -> Iterator[str]:
     """Eigenes, leeres GnuPG-Verzeichnis je Lauf (das Image ist schreibgeschützt)."""
+    # mkdtemp legt das Verzeichnis nur für den eigenen Benutzer an (0700), wie gpg es verlangt
     home = tempfile.mkdtemp(prefix="werkbank-gpg-")
-    os.chmod(home, 0o700)
     try:
         yield home
     finally:
