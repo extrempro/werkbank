@@ -4,7 +4,7 @@ import { areaColorClass } from "./areaColors";
 export function AreaTag({ name, color }: { name: string; color: string | undefined }) {
   return (
     <span className={`area-tag ${areaColorClass(color)}`}>
-      <span className="area-dot" aria-hidden="true" />
+      <span className="bereich-punkt" aria-hidden="true" />
       {name}
     </span>
   );

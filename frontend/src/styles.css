@@ -16483,7 +16483,8 @@ textarea.field-control {
   font-weight: 600;
 }
 
-.area-dot,
+/* Eigener Name: „.area-dot“ gehört dem Aufgaben-Punkt der Navigation (absolut positioniert). */
+.bereich-punkt,
 .color-choice-dot {
   flex: none;
   width: 10px;
@@ -16572,11 +16573,15 @@ textarea.field-control {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 14px;
-  margin: 0 0 12px;
+  gap: 4px 16px;
+  margin: 0;
+  /* gleicher Rand wie die Filterleiste darunter */
+  padding: 12px 12px 0;
+  color: var(--farbe-text-mittel);
   font-size: 0.875rem;
 }
 
 .ticket-quick-legend .area-tag {
+  color: var(--farbe-text);
   font-weight: 400;
 }

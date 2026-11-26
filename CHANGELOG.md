@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.142.1] – 2026-11-26
+
+### Behoben
+
+- **Ticketliste: Farbpunkte der Bereiche fehlten, Legende ohne Rand.** Der Klassenname `area-dot` war schon für den Aufgaben-Punkt der Navigation vergeben (absolut positioniert); die Punkte sprangen deshalb aus der Legende. Jetzt eigener Name `bereich-punkt`. Die Legende „Bereiche:“ hat denselben Innenabstand wie die Filterleiste.
+
 ## [0.142.0] – 2026-11-26
 
 ### Hinzugefügt
