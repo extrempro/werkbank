@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.147.0] – 2026-11-26
+
+### Geändert
+
+- **Doku: Fenster für Live-Baustein, Verweis und Tabelle in der Mitte.** Vorher hing das Fenster an der Schreibmarke und war je nach Platz mal scrollbar, mal nicht. Jetzt steht es immer in der Mitte (am Handy als Blatt von unten), Titel und „Abbrechen“/„Einfügen“ bleiben sichtbar, nur der Inhalt scrollt. Die vier Arten des Live-Bausteins stehen fest im Raster, das Fenster springt beim Wechsel nicht mehr. Auch „Einstellungen“ eines Live-Bausteins öffnet dieses Fenster.
+
 ### Abhängigkeiten
 
 - `highlight.js` 11.11.1 → 11.11.2 (Wartungsversion, neueste, die `lowlight` mit `~11.11.0` zulässt). In 0.146.0 war versehentlich 11.11.1 eingetragen.

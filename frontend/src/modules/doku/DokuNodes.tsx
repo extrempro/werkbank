@@ -20,6 +20,7 @@ import {
   type RefData,
   type RefKind,
 } from "./api";
+import { BlockDialog } from "./BlockDialog";
 
 /* Verweise auf Objekte der Werkbank und Live-Bausteine (D3). Im Dokument stehen nur Art und
    Kennung bzw. die Einstellungen; Titel und Stand holt die Seite mit den Rechten der Person,
@@ -234,7 +235,7 @@ export function RefPicker({ editor, onClose }: { editor: Editor; onClose: () => 
   };
 
   return (
-    <div className="doku-picker" role="dialog" aria-labelledby={`${id}-titel`}>
+    <div className="doku-picker" aria-labelledby={`${id}-titel`}>
       <h2 id={`${id}-titel`} className="doku-picker-title">
         Verweis einfügen
       </h2>
@@ -629,7 +630,7 @@ function LiveView({ node, editor, updateAttributes, deleteNode }: ReactNodeViewP
         </div>
       )}
       {editing && (
-        <div contentEditable={false}>
+        <BlockDialog label="Live-Baustein einstellen" tall onClose={() => setEditing(false)}>
           <LiveBlockForm
             initial={attrs}
             onSubmit={(next) => {
@@ -648,7 +649,7 @@ function LiveView({ node, editor, updateAttributes, deleteNode }: ReactNodeViewP
             }}
             onCancel={() => setEditing(false)}
           />
-        </div>
+        </BlockDialog>
       )}
     </NodeViewWrapper>
   );

@@ -21,6 +21,7 @@ import { CARET_COLORS, type LiveDoc } from "./useLiveDoc";
 import { Icon } from "../../components/Icon";
 import type { DocJson, LiveAttrs } from "./api";
 import { CommentMarks, type CommentMarksOptions } from "./commentMarks";
+import { BlockDialog } from "./BlockDialog";
 import { LiveBlock, LiveBlockForm, RefPicker, WerkbankRef } from "./DokuNodes";
 import { ActiveCell, TableEdges, TablePicker, TableTools, useTableSpot } from "./DokuTable";
 
@@ -699,6 +700,11 @@ export function DokuEditor({
     ready.current?.(editor);
     return () => ready.current?.(null);
   }, [editor]);
+  // Fenster zu, Schreibmarke zurück an die alte Stelle im Text
+  const closePicker = () => {
+    setPicker(null);
+    editor.commands.focus();
+  };
   const insertLive = (attrs: LiveAttrs) => {
     editor.chain().focus().insertContent({ type: "liveBlock", attrs }).run();
     setPicker(null);
@@ -718,20 +724,20 @@ export function DokuEditor({
         </CaretPopover>
       )}
       {editable && picker === "verweis" && (
-        <CaretPopover editor={editor} wide>
+        <BlockDialog label="Verweis einfügen" tall onClose={closePicker}>
           <RefPicker editor={editor} onClose={() => setPicker(null)} />
-        </CaretPopover>
+        </BlockDialog>
       )}
       {editable && picker === "tabelle" && (
-        <CaretPopover editor={editor}>
+        <BlockDialog label="Tabelle einfügen" onClose={closePicker}>
           <TablePicker editor={editor} onClose={() => setPicker(null)} />
-        </CaretPopover>
+        </BlockDialog>
       )}
       {editable && <EdgesForTable editor={editor} />}
       {editable && picker === "live" && (
-        <CaretPopover editor={editor} wide>
-          <LiveBlockForm initial={null} onSubmit={insertLive} onCancel={() => setPicker(null)} />
-        </CaretPopover>
+        <BlockDialog label="Live-Baustein einfügen" tall onClose={closePicker}>
+          <LiveBlockForm initial={null} onSubmit={insertLive} onCancel={closePicker} />
+        </BlockDialog>
       )}
       <EditorContent editor={editor} />
     </div>
