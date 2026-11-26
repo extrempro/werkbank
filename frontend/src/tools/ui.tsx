@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { CARDS_MAX, FixedChoice } from "../components/ListChoice";
 
 /** Kopiert einen Text in die Zwischenablage und bestätigt das kurz. */
 export function CopyButton({ value, label = "Kopieren" }: { value: string; label?: string }) {
@@ -110,7 +111,10 @@ export function ToolSection({ title, children }: { title: string; children: Reac
   );
 }
 
-/** Auswahl aus wenigen Möglichkeiten als Knopfgruppe; die gewählte ist gedrückt. */
+/**
+ * Auswahl aus wenigen Möglichkeiten als Knopfgruppe; die gewählte ist gedrückt. Ab fünf
+ * Möglichkeiten wird daraus das Suchfeld mit schwebendem Fenster (docs/design.md, §8).
+ */
 export function Segmented<T extends string>({
   label,
   value,
@@ -122,6 +126,16 @@ export function Segmented<T extends string>({
   options: readonly (readonly [T, string])[];
   onChange: (value: T) => void;
 }) {
+  if (options.length > CARDS_MAX) {
+    return (
+      <FixedChoice
+        label={label}
+        value={value}
+        options={options.map(([key, text]) => ({ value: key, label: text }))}
+        onChange={onChange}
+      />
+    );
+  }
   return (
     <div className="chips" role="group" aria-label={label}>
       {options.map(([key, text]) => (

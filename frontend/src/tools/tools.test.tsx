@@ -23,16 +23,36 @@ afterEach(() => {
   window.history.replaceState(null, "", "/");
 });
 
-/** Wählt in einer festen Auswahl (Knopfleiste oder Auswahlkarten) den Wert. */
-function choose(label: string, value: string) {
-  const group = screen.getByRole("group", { name: label });
-  const target = group.querySelector<HTMLElement>(
-    `[data-value="${value}"], input[type="radio"][value="${value}"]`,
-  );
-  if (!target) {
-    throw new Error(`Keine Möglichkeit „${value}“ in „${label}“`);
+/**
+ * Wählt in einer festen Auswahl den Wert: in der Knopfleiste per Klick, ab fünf Möglichkeiten
+ * im Suchfeld (erst „Ändern“, dann der Treffer im schwebenden Fenster).
+ */
+async function choose(label: string, value: string) {
+  const group = screen.queryByRole("group", { name: label });
+  if (group) {
+    const target = group.querySelector<HTMLElement>(
+      `[data-value="${value}"], input[type="radio"][value="${value}"]`,
+    );
+    if (!target) {
+      throw new Error(`Keine Möglichkeit „${value}“ in „${label}“`);
+    }
+    fireEvent.click(target);
+    return;
   }
-  fireEvent.click(target);
+  const change = screen.queryByRole("button", { name: new RegExp(`^${label} ändern`) });
+  if (change) {
+    fireEvent.click(change);
+  }
+  fireEvent.focus(screen.getByRole("combobox", { name: label }));
+  const list = await screen.findByRole("listbox", { name: label });
+  const option = await vi.waitFor(() => {
+    const found = list.querySelector<HTMLElement>(`[data-value="${value}"]`);
+    if (!found) {
+      throw new Error(`Kein Treffer „${value}“ in „${label}“`);
+    }
+    return found;
+  });
+  fireEvent.click(option);
 }
 
 describe("Verzeichnis der IT-Tools", () => {
@@ -121,7 +141,7 @@ describe("ToolPage", () => {
     const input = await screen.findByLabelText("Eingabe");
     fireEvent.change(input, { target: { value: "Grüße" } });
     expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("R3LDvMOfZQ==");
-    choose("Richtung", "dekodieren");
+    await choose("Richtung", "dekodieren");
     expect(window.location.search).toBe("?modus=dekodieren");
     fireEvent.change(input, { target: { value: "R3LDvMOfZQ==" } });
     expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("Grüße");
@@ -189,7 +209,7 @@ describe("ToolPage", () => {
     expect(screen.getByText(/Die eingegebene Adresse/)).toHaveTextContent("Nr. 77");
     fireEvent.change(screen.getByLabelText("Adresse"), { target: { value: "192.168.11.5" } });
     expect(screen.getByText(/liegt nicht in 192.168.10.0\/24/)).toBeVisible();
-    choose("In Netze der Größe", "26");
+    await choose("In Netze der Größe", "26");
     const subnets = screen.getByRole("region", { name: "Teilnetze" });
     expect(within(subnets).getAllByRole("row")).toHaveLength(5);
     fireEvent.click(within(subnets).getByRole("button", { name: "192.168.10.64/26" }));
@@ -253,7 +273,7 @@ describe("ToolPage", () => {
     expect(screen.getByRole("row", { name: /^IPv6 Link-Local/ })).toHaveTextContent(
       "fe80::200:ff:feab:cdef",
     );
-    choose("Ausgabeformat", "cisco");
+    await choose("Ausgabeformat", "cisco");
     expect(screen.getByLabelText("1 Adresse umgewandelt")).toHaveTextContent("0000.00ab.cdef");
     // In der Adresszeile steht nur das Format, nie die Adresse.
     expect(window.location.search).toBe("?format=cisco");
@@ -279,9 +299,9 @@ describe("ToolPage", () => {
     const input = await screen.findByRole("textbox", { name: "Eingabe" });
     fireEvent.change(input, { target: { value: "a b&c" } });
     expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("a%20b%26c");
-    choose("Art", "form");
+    await choose("Art", "form");
     expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("a+b%26c");
-    choose("Modus", "zerlegen");
+    await choose("Modus", "zerlegen");
     expect(window.location.search).toBe("?modus=zerlegen&art=form");
     fireEvent.change(screen.getByRole("textbox", { name: "URL" }), {
       target: { value: "https://nutzer:geheim@example.com:8443/pfad?a=1&a=2#oben" },
@@ -300,9 +320,9 @@ describe("ToolPage", () => {
     const input = await screen.findByRole("textbox", { name: "Eingabe" });
     fireEvent.change(input, { target: { value: "<b>Grüße</b>" } });
     expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("&lt;b&gt;Grüße&lt;/b&gt;");
-    choose("Umfang", "named");
+    await choose("Umfang", "named");
     expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("Gr&uuml;&szlig;e");
-    choose("Richtung", "dekodieren");
+    await choose("Richtung", "dekodieren");
     fireEvent.change(input, { target: { value: "&euro; &amp; &#228;" } });
     expect(screen.getByLabelText("Ergebnis")).toHaveTextContent("€ & ä");
   });
@@ -353,7 +373,7 @@ describe("ToolPage", () => {
     expect(screen.getByLabelText("Formatiert").textContent).toBe(
       '{\n  "a": [\n    1,\n    2\n  ]\n}',
     );
-    choose("Einrückung", "minify");
+    await choose("Einrückung", "minify");
     expect(window.location.search).toBe("?einrueckung=minify");
     expect(screen.getByLabelText("Formatiert").textContent).toBe('{"a":[1,2]}');
     fireEvent.change(input, { target: { value: "{a}" } });
@@ -376,7 +396,7 @@ describe("ToolPage", () => {
     fireEvent.change(input, { target: { value: "<a><b>x</b><c/></a>" } });
     expect(screen.getByText("wohlgeformt · 3 Elemente")).toBeVisible();
     expect(screen.getByLabelText("Formatiert").textContent).toBe("<a>\n  <b>x</b>\n  <c/>\n</a>");
-    choose("Ausgabe", "minify");
+    await choose("Ausgabe", "minify");
     expect(screen.getByLabelText("Formatiert").textContent).toBe("<a><b>x</b><c/></a>");
     fireEvent.change(input, { target: { value: "<a>\n<b></a>" } });
     expect(screen.getByRole("alert")).toHaveTextContent("Zeile 2");
@@ -389,7 +409,7 @@ describe("ToolPage", () => {
     });
     expect(screen.getByText("1 Zeilen · 2 Spalten · Trennzeichen „;“")).toBeVisible();
     expect(screen.getByLabelText("Ergebnis")).toHaveTextContent('"a": 1');
-    choose("Richtung", "json-csv");
+    await choose("Richtung", "json-csv");
     expect(window.location.search).toBe("?richtung=json-csv");
     fireEvent.change(screen.getByRole("textbox", { name: /^JSON/ }), {
       target: { value: '[{"a":1,"b":{"c":2}}]' },
@@ -406,7 +426,7 @@ describe("ToolPage", () => {
     });
     expect(screen.getByText("erkannt: JSON")).toBeVisible();
     expect(screen.getByLabelText("Ergebnis").textContent).toBe("a:\n  b: 1\n");
-    choose("Nach", "toml");
+    await choose("Nach", "toml");
     expect(screen.getByLabelText("Ergebnis").textContent).toBe("[a]\nb = 1\n");
     expect(window.location.search).toBe("?nach=toml");
   });
@@ -462,11 +482,11 @@ describe("ToolPage", () => {
     });
     expect(screen.getByText("2 Einträge")).toBeVisible();
     expect(screen.getByText("1 Duplikate entfernt")).toBeVisible();
-    choose("Sortieren", "asc");
+    await choose("Sortieren", "asc");
     expect(screen.getByLabelText("Ergebnis").textContent).toBe("a\nb");
-    choose("Ausgabe", "powershell");
+    await choose("Ausgabe", "powershell");
     expect(screen.getByLabelText("Ergebnis").textContent).toBe('@("a", "b")');
-    choose("Funktion", "vergleichen");
+    await choose("Funktion", "vergleichen");
     fireEvent.change(screen.getByRole("textbox", { name: "Liste B" }), {
       target: { value: "a\nc" },
     });
@@ -519,7 +539,7 @@ describe("ToolPage", () => {
     expect(screen.getByText("1 entfernt")).toBeVisible();
     expect(screen.getByText("1 hinzugefügt")).toBeVisible();
     expect(screen.getByRole("region", { name: "Vergleich" })).toBeVisible();
-    choose("Ansicht", "unified");
+    await choose("Ansicht", "unified");
     expect(window.location.search).toBe("?ansicht=unified");
     const unified = screen.getByRole("region", { name: "Unified-Diff" });
     expect(unified).toHaveTextContent("-b");
@@ -538,10 +558,10 @@ describe("ToolPage", () => {
     expect(screen.getByLabelText("Formatiert").textContent).toBe(
       "SELECT\n  a\nFROM t\nWHERE\n  x = 1",
     );
-    choose("Bereich", "joins");
+    await choose("Bereich", "joins");
     expect(screen.getByRole("heading", { name: "Ergebnis: 5 Zeilen" })).toBeVisible();
     expect(screen.getByRole("img", { name: "Mengendiagramm LEFT JOIN" })).toBeVisible();
-    choose("JOIN-Art", "inner");
+    await choose("JOIN-Art", "inner");
     expect(screen.getByRole("heading", { name: "Ergebnis: 3 Zeilen" })).toBeVisible();
     expect(window.location.search).toBe("?bereich=joins&join=inner");
     const left = within(screen.getByRole("group", { name: "Linke Tabelle" }));
@@ -598,7 +618,7 @@ describe("ToolPage", () => {
     expect(screen.getByRole("status")).toHaveTextContent("12 h 20 min");
     fireEvent.click(screen.getByRole("button", { name: "1 Gbit/s" }));
     expect(window.location.search).toBe("?rate=1&einheit=Gbit");
-    choose("Modus", "bandbreite");
+    await choose("Modus", "bandbreite");
     expect(screen.getByRole("status")).toHaveTextContent("154,32 Mbit/s");
   });
 
@@ -611,7 +631,7 @@ describe("ToolPage", () => {
 
   it("VoIP: rechnet die Bandbreite je Gespräch und die Zahl möglicher Gespräche", async () => {
     render(<ToolPage id="voip" />);
-    await screen.findByRole("group", { name: "Codec" });
+    await screen.findByRole("button", { name: /^Codec ändern/ });
     expect(tile("je Gespräch und Richtung")).toHaveTextContent("87,2 kbit/s");
     expect(screen.getByText("114 Gespräche")).toBeVisible();
   });
@@ -620,12 +640,12 @@ describe("ToolPage", () => {
     render(<ToolPage id="raid" />);
     await screen.findByLabelText("Bereich");
     expect(tile("nutzbar (Hersteller-TB)")).toHaveTextContent("32 TB");
-    choose("Bereich", "plattenbedarf");
+    await choose("Bereich", "plattenbedarf");
     expect(screen.getByRole("row", { name: /^RAID 6 \(doppelte/ })).toHaveTextContent("40 TB");
     expect(screen.getByRole("row", { name: /^RAID 1 \(Spiegel/ })).toHaveTextContent(
       "nicht erreichbar",
     );
-    choose("Bereich", "ausfall");
+    await choose("Bereich", "ausfall");
     fireEvent.click(screen.getByRole("button", { name: "Platte 1" }));
     expect(screen.getByText("Degraded, 1 ausgefallen")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Platte 2" }));
@@ -700,7 +720,7 @@ describe("ToolPage", () => {
     const input = await screen.findByRole("textbox", { name: "Eingabe" });
     fireEvent.change(input, { target: { value: "Muster (IT) *" } });
     expect(screen.getByLabelText("Ergebnis").textContent).toBe("Muster \\28IT\\29 \\2a");
-    choose("Modus", "dn");
+    await choose("Modus", "dn");
     fireEvent.change(input, { target: { value: "Muster, Max" } });
     expect(screen.getByLabelText("Ergebnis").textContent).toBe("Muster\\, Max");
     expect(window.location.search).toBe("?modus=dn");
@@ -763,8 +783,8 @@ describe("ToolPage", () => {
 
   it("Passwort-Hash: erzeugt einen Hash und prüft ihn wieder", async () => {
     render(<ToolPage id="passwort-hash" />);
-    await screen.findByRole("group", { name: "Format" });
-    choose("Format", "apr1");
+    await screen.findByRole("button", { name: /^Format ändern/ });
+    await choose("Format", "apr1");
     fireEvent.click(screen.getByRole("button", { name: "Hash erzeugen" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Bitte gib ein Kennwort ein");
     fireEvent.change(screen.getByLabelText("Kennwort"), { target: { value: "ein-testwert" } });
@@ -773,7 +793,7 @@ describe("ToolPage", () => {
     const hash = output.textContent ?? "";
     expect(hash).toMatch(/^\$apr1\$/);
 
-    choose("Modus", "pruefen");
+    await choose("Modus", "pruefen");
     fireEvent.change(screen.getByRole("textbox", { name: /^Hash oder Zeile/ }), {
       target: { value: `admin:${hash}` },
     });
@@ -790,7 +810,7 @@ describe("ToolPage", () => {
     render(<ToolPage id="lorem-ipsum" />);
     await screen.findByLabelText("Einheit");
     expect(screen.getByLabelText("Text").textContent).toMatch(/^Lorem ipsum dolor sit amet/);
-    choose("Einheit", "woerter");
+    await choose("Einheit", "woerter");
     fireEvent.change(screen.getByLabelText("Anzahl"), { target: { value: "7" } });
     expect(screen.getByText(/^7 Wörter, \d+ Zeichen$/)).toBeVisible();
     expect(window.location.search).toBe("?einheit=woerter&anzahl=7");

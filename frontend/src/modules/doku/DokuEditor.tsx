@@ -304,14 +304,17 @@ export function CaretPopover({
         height <= spaceBelow || spaceBelow >= POPOVER_MIN_HEIGHT || spaceBelow >= spaceAbove;
       const room = Math.max(below ? spaceBelow : spaceAbove, POPOVER_MIN_HEIGHT);
       const shown = Math.min(height, room);
+      // Nie breiter als der Editor (am Tablet ist er schmaler als das Fenster)
+      const width = Math.min(element.offsetWidth, areaRect.width - 2 * POPOVER_GAP);
       const minLeft = areaRect.left + POPOVER_GAP;
-      const maxLeft = Math.max(minLeft, areaRect.right - element.offsetWidth - POPOVER_GAP);
+      const maxLeft = Math.max(minLeft, areaRect.right - width - POPOVER_GAP);
       setStyle({
         top: below
           ? caret.bottom - hostRect.top + POPOVER_GAP
           : caret.top - hostRect.top - POPOVER_GAP - shown,
         left: Math.min(Math.max(caret.left, minLeft), maxLeft) - hostRect.left,
         maxHeight: height > room ? room : wide ? undefined : POPOVER_MAX_HEIGHT,
+        maxWidth: areaRect.width - 2 * POPOVER_GAP,
       });
     };
     place();

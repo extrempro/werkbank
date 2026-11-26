@@ -369,7 +369,7 @@ test("Doku D3: Verweis, Live-Baustein, Kommentar mit Erwähnung und Rückverweis
     .getByRole("button", { name: "Verweis auf Ticket, Gerät, Projekt …" })
     .click();
   const picker = page.getByRole("dialog", { name: "Verweis einfügen" });
-  await picker.getByRole("radio", { name: "IT-Projekt", exact: true }).check();
+  await pickChoice(picker, "Art", "IT-Projekt");
   await picker.getByRole("combobox", { name: "Suchen" }).fill(projectName);
   await picker.getByRole("option", { name: new RegExp(projectName) }).click();
   await expect(

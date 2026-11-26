@@ -1,6 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { ListChoice } from "../components/ListChoice";
-import { Segmented } from "../components/Field";
+import { FixedChoice, ListChoice } from "../components/ListChoice";
 import { errorText } from "../api";
 import {
   fetchNetboxSettings,
@@ -242,7 +241,7 @@ function NetboxForm({
           value={viewId === null ? "" : String(viewId)}
           onChange={(value) => setViewId(value === "" ? null : Number(value))}
         />
-        <Segmented
+        <FixedChoice
           label="Öffentlicher Resolver"
           wide
           value={resolver}

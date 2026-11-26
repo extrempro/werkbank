@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { ChoiceCards } from "../components/Field";
+import { FixedChoice } from "../components/ListChoice";
 import { errorText } from "../api";
 import {
   fetchNinjaOptions,
@@ -161,8 +161,8 @@ function NinjaForm({
           Services (machine-to-machine)“, dem Scope „Monitoring“ und der Freigabe „Client
           Credentials“. Die Werkbank liest nur.
         </p>
-        <ChoiceCards
-          legend="Region"
+        <FixedChoice
+          label="Region"
           value={region}
           options={stored.regions.map((entry) => ({
             value: entry.id,

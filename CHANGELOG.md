@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.139.0] – 2026-11-26
+
+### Geändert
+
+- **Auswahl ab 5 Möglichkeiten immer als Suchfeld** (design.md §8, Entwurf „Wann welche Auswahl“). Bis 4 bleibt es bei Knopfleiste bzw. Karten:
+  - Daten (`ListChoice`): 1–4 Auswahlkarten, ab 5 Suchfeld mit schwebendem Fenster (vorher ab 11).
+  - Feste Werte (`FixedChoice`): einer als Text, 2–4 Knopfleiste, ab 5 Suchfeld (vorher 5–10 Karten).
+  - Die Knopfleiste der IT-Tools wird ab 5 Möglichkeiten ebenfalls zum Suchfeld.
+  - Neu als Suchfeld:
+    - IT-Tools: Sortieren und Ausgabe (Liste bereinigen), Ausgabeformat (MAC), Codec und Paketintervall (VoIP), Format (Passwort-Hash), Netzgröße (Subnetz), JOIN-Art (SQL), Trennzeichen (Passphrase), Größe (Bilder), Schlüsseltyp (CSR), Vollsicherung am (Sicherungsplan), Art des QR-Inhalts
+    - Doku: Art bei „Verweis einfügen“
+    - Verwaltung: NinjaOne-Region
+    - jede Datenauswahl mit 5 oder mehr Einträgen (z. B. Konto)
+- Treffer im Fenster tragen ihren Wert als `data-value` (für Tests).
+
+### Behoben
+
+- **Texte laufen nicht mehr heraus:**
+  - Karten: Der Auswahlpunkt hat eine eigene Spalte, lange Wörter werden getrennt (notfalls überall). Das Raster hält Karten mindestens 240 px breit (PC höchstens drei Spalten, Handy eine).
+  - Knöpfe der Knopfleiste und Treffer im Fenster brechen um und werden höher statt breiter.
+- Doku: Fenster an der Schreibmarke (z. B. „Verweis einfügen“) sind höchstens so breit wie der Editor; am Tablet ragten sie rechts heraus und waren abgeschnitten.
+
 ## [0.138.0] – 2026-11-25
 
 ### Geändert

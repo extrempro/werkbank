@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
+import { FixedChoice, ListChoice } from "../../components/ListChoice";
 import { ComboField, type ComboItem } from "../../components/ComboField";
-import { ChoiceCards, Field, Segmented } from "../../components/Field";
-import { ListChoice } from "../../components/ListChoice";
+import { Field, Segmented } from "../../components/Field";
 import { mergeAttributes, Node, type Editor } from "@tiptap/react";
 import { NodeViewWrapper, ReactNodeViewRenderer, type ReactNodeViewProps } from "@tiptap/react";
 import { errorText, formatDateTime } from "../../api";
@@ -238,8 +238,8 @@ export function RefPicker({ editor, onClose }: { editor: Editor; onClose: () => 
       <h2 id={`${id}-titel`} className="doku-picker-title">
         Verweis einfügen
       </h2>
-      <ChoiceCards
-        legend="Art"
+      <FixedChoice
+        label="Art"
         value={kind}
         options={REF_ORDER.map((entry) => ({ value: entry, label: REF_KIND_LABELS[entry] }))}
         onChange={setKind}
