@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.142.1",
+    date: "2026-11-26",
+    summary: "Die Farbpunkte der Bereiche in der Ticketliste sind wieder zu sehen.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "In der Ticketliste stehen die Farbpunkte jetzt neben den Namen der Bereiche, und die Zeile „Bereiche:“ hat wieder Abstand zum Rand.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.142.0",
     date: "2026-11-26",
     summary: "Tickets: Bereiche in Farbe, deine Tickets hervorgehoben und ein klarerer Verlauf.",
