@@ -28,7 +28,6 @@ test("Bereichsleiste und Seitenmenü mit Gruppen zum Aufklappen", async ({
   expect(await areaNames(page)).toEqual([
     "Start",
     "Microsoft 365",
-    "Evergreen",
     "IT-Monitoring",
     "IT-Budget",
   ]);
@@ -106,11 +105,11 @@ test("Menü einklappen: nur die Bereichsleiste bleibt, ein Bereich öffnet es wi
   ).toBeVisible();
   await page
     .getByRole("navigation", { name: "Bereiche" })
-    .getByRole("link", { name: /^Evergreen/ })
+    .getByRole("link", { name: /^Start/ })
     .click();
-  await expect(page).toHaveURL(/\/evergreen\/m365$/);
+  await expect(page).toHaveURL(/\/$/);
   await expect(
-    page.getByRole("navigation", { name: "Seiten: Evergreen" }),
+    page.getByRole("navigation", { name: "Seiten: Start" }),
   ).toBeVisible();
 });
 
@@ -260,10 +259,10 @@ test("Schnellsuche findet Seiten nach Name, Gruppe und Bereich", async ({
     dialog.getByRole("link", { name: /In allen Einträgen suchen/ }),
   ).toHaveAttribute("href", "/suche?q=import");
   await expectNoA11yViolations(page);
-  await field.fill("microsoft");
+  await field.fill("nachrichtencenter");
   await page.keyboard.press("Enter");
   await expect(dialog).toBeHidden();
-  await expect(page).toHaveURL(/\/evergreen\/m365$/);
+  await expect(page).toHaveURL(/\/m365\/neuerungen$/);
 
   if (isPhone(page)) {
     await page

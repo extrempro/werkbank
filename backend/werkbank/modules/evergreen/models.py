@@ -49,6 +49,7 @@ class NoteKind(StrEnum):
     UPDATED = "aktualisiert"
     SCHEDULE = "zeitplan"
     ASSESSED = "bewertet"
+    TOPIC = "kategorie"
     AI = "ki"
 
 
@@ -87,6 +88,8 @@ class EvEntry(Base):
     # Kennung in der Quelle (z. B. MC123456 oder aenderung:17); verhindert doppelte Einträge
     source_ref: Mapped[str | None] = mapped_column(String(128))
     services: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    # Kategorie von Hand (sonst aus den Diensten, siehe topics.py)
+    topic: Mapped[str | None] = mapped_column(String(20))
     category: Mapped[str | None] = mapped_column(String(32))
     major_change: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     action_required_by: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

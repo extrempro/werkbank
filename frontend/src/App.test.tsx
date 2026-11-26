@@ -36,13 +36,13 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: /^(Guten Morgen|Hallo|Guten Abend), Erika$/ }),
     ).toBeVisible();
-    // Auf der Startseite zeigt die Navigation den Start-Bereich; Evergreen ist ein eigener.
+    // Auf der Startseite zeigt die Navigation den Start-Bereich; die Neuerungen stehen unter M365.
     const bar = screen.getByRole("navigation", { name: "Bereiche" });
-    expect(within(bar).getByRole("link", { name: "Evergreen" })).toHaveAttribute(
+    expect(within(bar).getByRole("link", { name: "Microsoft 365" })).toHaveAttribute(
       "href",
-      "/evergreen/m365",
+      "/m365/neuerungen",
     );
-    expect(within(bar).queryByRole("link", { name: "Microsoft 365" })).toBeNull();
+    expect(within(bar).queryByRole("link", { name: "Evergreen" })).toBeNull();
     expect(within(bar).getByRole("link", { name: "Start" })).toHaveAttribute(
       "aria-current",
       "true",

@@ -63,6 +63,7 @@ import {
   USERS_PATH,
   USAGE_PATH,
   DEVICE_ASSOCIATION_PATH,
+  EVERGREEN_M365_PATH,
   TICKETS_MEMBER,
 } from "../navigation";
 import { AccountPage } from "../pages/AccountPage";
@@ -213,10 +214,6 @@ const DokuStartPage = lazy(() =>
 );
 
 export function listViewPage(path: string): string | null {
-  const evergreen = parseEvergreenPath(path);
-  if (evergreen) {
-    return `/evergreen/${evergreen.software}`;
-  }
   return parseLoanPath(path) ? INVENTORY_LOANS_PATH : null;
 }
 
@@ -365,9 +362,16 @@ export function Layout({ me }: LayoutProps) {
   const recommendationId = recommendationMatch ? Number(recommendationMatch[1]) : null;
 
   const evergreenRoute = parseEvergreenPath(path);
+  // Alte Adressen (Evergreen › Microsoft 365) führen auf die neue Seite unter Microsoft 365.
+  const evergreenMoved = evergreenRoute?.moved ?? null;
+  useEffect(() => {
+    if (evergreenMoved) {
+      window.history.replaceState(null, "", evergreenMoved);
+      window.dispatchEvent(new Event("werkbank:navigate"));
+    }
+  }, [evergreenMoved]);
   const evergreenAllowed =
-    evergreenRoute !== null &&
-    items.some((item) => item.path === `/evergreen/${evergreenRoute.software}`);
+    evergreenRoute !== null && items.some((item) => item.path === EVERGREEN_M365_PATH);
 
   const toolMatch = /^\/it-tools\/([a-z0-9-]{1,40})$/.exec(path);
   const toolId = toolMatch ? (toolMatch[1] ?? null) : null;

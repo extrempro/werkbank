@@ -46,7 +46,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Die Werkbank ist die Plattform der IT für wiederkehrende Arbeit rund um Microsoft 365, Freigaben, das IT-Budget und kleine Werkzeuge. Jeder Bereich ist ein eigenes Modul. Was du siehst, hängt von deinen Rollen ab: Wer zum Beispiel nur Evergreen lesen darf, sieht nur die Startseite und Evergreen.",
+                text: "Die Werkbank ist die Plattform der IT für wiederkehrende Arbeit rund um Microsoft 365, Freigaben, das IT-Budget und kleine Werkzeuge. Jeder Bereich ist ein eigenes Modul. Was du siehst, hängt von deinen Rollen ab: Wer zum Beispiel nur Evergreen lesen darf, sieht nur die Startseite und unter Microsoft 365 die Neuerungen.",
               },
               {
                 kind: "terms",
@@ -54,11 +54,7 @@ export const AREAS: readonly Area[] = [
                   ["Werkbank", "Startseite und Suche"],
                   [
                     "Microsoft 365",
-                    "Einstellungen des Tenants, Lizenzen, Benutzerzahlen, Zertifikate, Dienststatus und das Zuordnen neuer Geräte",
-                  ],
-                  [
-                    "Evergreen",
-                    "Neuerungen von Software (zurzeit Microsoft 365) sichten, mit Notizen festhalten und abschließen",
+                    "Einstellungen des Tenants, Lizenzen, Benutzerzahlen, Zertifikate, Dienststatus, das Zuordnen neuer Geräte und die Neuerungen aus dem Nachrichtencenter (Evergreen): sichten, bewerten, mit Notizen festhalten und abschließen",
                   ],
                   [
                     "IT-Budget",
@@ -108,7 +104,7 @@ export const AREAS: readonly Area[] = [
                 kind: "list",
                 items: [
                   "Kopfzeile: Name der Werkbank, Suchfeld, Glocke für Benachrichtigungen, „Meine Aufgaben“ und rechts dein Kontomenü.",
-                  "Bereichsleiste ganz links: ein Symbol je Bereich, zum Beispiel Start, M365, Evergreen, Monitoring, Bestand, Budget, Projekte und Tools. Fährst du mit der Maus darüber, steht der volle Name da. Handbuch und Verwaltung findest du im Kontomenü oben rechts.",
+                  "Bereichsleiste ganz links: ein Symbol je Bereich, zum Beispiel Start, M365, Monitoring, Bestand, Budget, Projekte und Tools. Fährst du mit der Maus darüber, steht der volle Name da. Handbuch und Verwaltung findest du im Kontomenü oben rechts.",
                   "Ein Punkt an einem Symbol zeigt: In diesem Bereich warten Aufgaben auf dich.",
                   "Seitenmenü daneben: oben der Name des Bereichs, darunter seine Seiten in Gruppen. Eine Gruppe klappst du mit einem Klick auf ihre Überschrift auf oder zu; dein Browser merkt sich das. Zähler zeigen, wie viele Aufgaben auf einer Seite warten.",
                   "„Menü einklappen“ unten im Seitenmenü lässt nur die Bereichsleiste stehen. Ein Klick auf einen Bereich öffnet das Menü wieder.",
@@ -768,7 +764,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Je Software gibt es einen eigenen Abschnitt. Zurzeit ist das Microsoft 365; weitere können später dazukommen.",
+                text: "Die Neuerungen von Microsoft 365 findest du unter Microsoft 365 › Neuerungen › Nachrichtencenter, gleich neben der Konfiguration. Kommt später weitere Software dazu, bekommt sie einen eigenen Abschnitt. Alte Links auf Evergreen führen automatisch auf die neue Seite.",
               },
               {
                 kind: "terms",
@@ -793,7 +789,7 @@ export const AREAS: readonly Area[] = [
                 ],
               },
             ],
-            links: [{ to: "/evergreen/m365", label: "Zu Microsoft 365" }],
+            links: [{ to: "/m365/neuerungen", label: "Zu den Neuerungen" }],
           },
           {
             id: "liste",
@@ -801,7 +797,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Links steht die Liste, rechts die Ansicht des gewählten Eintrags. Oben in der Liste suchst du nach Nummer, Titel, Kennung der Meldung (z. B. MC123456), Dienst oder Text und wählst den Status: Offen, Neu, Mit Frist oder Abgeschlossen. Offene Einträge stehen in Gruppen: zuerst die mit einer Frist von Microsoft (die früheste oben), dann neue, dann die in Bearbeitung.",
+                text: "Die Liste ordnet die Einträge nach Kategorien, zum Beispiel „Exchange & Outlook“, „Teams“ oder „Copilot & KI“. Jede Kategorie hat eine Farbe und zeigt, wie viele Meldungen sie hat, wie viele davon neu sind oder eine Frist haben und welche Dienste vorkommen. Mit einem Klick auf die Überschrift klappst du eine Kategorie zu oder auf. Innerhalb einer Kategorie stehen zuerst die Einträge mit einer Frist von Microsoft (die früheste oben), dann neue, dann die übrigen.",
               },
               {
                 kind: "text",
@@ -809,7 +805,15 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Auf mittelgroßen Bildschirmen ist das Seitenmenü eingeklappt, damit der Eintrag Platz hat; mit „Menü ausklappen“ in der Bereichsleiste holst du es zurück. Auf schmalen Bildschirmen siehst du erst nur die Liste. Ein gewählter Eintrag füllt dann die ganze Breite, mit „Zur Liste“ geht es zurück.",
+                text: "Oben suchst du nach Nummer, Titel, Kennung der Meldung (z. B. MC123456), Dienst oder Text, wählst den Status (Offen, Neu, Mit Frist oder Abgeschlossen) und unter „Kategorie“ eine einzelne Kategorie.",
+              },
+              {
+                kind: "text",
+                text: "Ein Eintrag öffnet sich als eigene Seite. Oben steht der Pfad, zum Beispiel Microsoft 365 › Neuerungen › Teams › MC123456; mit „Neuerungen“ geht es zurück zur Liste. Unten blätterst du mit „Vorherige“ und „Nächste“ durch die Einträge derselben Kategorie.",
+              },
+              {
+                kind: "text",
+                text: "Die Kategorie wählt die Werkbank automatisch aus dem Dienst der Meldung. Passt sie nicht, wählst du mit „Kategorie ändern“ im Steckbrief eine andere; mit „Automatisch“ gilt wieder die Wahl der Werkbank. Eine eigene Wahl bleibt, auch wenn Microsoft die Meldung aktualisiert, und steht im Verlauf.",
               },
             ],
           },

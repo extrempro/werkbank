@@ -45,7 +45,7 @@ def evergreen_search(db: Session, user: CurrentUser, query: str) -> list[SearchH
                 f"{entry.number} · {SOFTWARE.get(entry.software, entry.software)}"
                 f" · {STATUS_LABEL.get(entry.status, entry.status)}"
             ),
-            link=f"/evergreen/{entry.software}/{entry.id}",
+            link=f"/m365/neuerungen/{entry.id}",
         )
         for entry in rows
     ]

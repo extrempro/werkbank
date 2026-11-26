@@ -43,14 +43,14 @@ def test_evergreen_hits_for_readers_and_editors(migrated_db: None) -> None:
     number = it.get(f"{EVERGREEN}/entries/{entry_id}").json()["number"]
 
     found = hits(it, "zeppelin")
-    assert [hit["link"] for hit in found] == [f"/evergreen/m365/{entry_id}"]
+    assert [hit["link"] for hit in found] == [f"/m365/neuerungen/{entry_id}"]
     assert found[0]["module"] == "Evergreen"
     assert found[0]["kind"] == "Eintrag"
     assert number in found[0]["subtitle"] and "Microsoft 365" in found[0]["subtitle"]
-    assert [hit["link"] for hit in hits(it, number)] == [f"/evergreen/m365/{entry_id}"]
+    assert [hit["link"] for hit in hits(it, number)] == [f"/m365/neuerungen/{entry_id}"]
 
     reader = client_for(["Evergreen.Reader"], "suche-ev-leser", "Bea Beispiel")
-    assert [hit["link"] for hit in hits(reader, "zeppelin")] == [f"/evergreen/m365/{entry_id}"]
+    assert [hit["link"] for hit in hits(reader, "zeppelin")] == [f"/m365/neuerungen/{entry_id}"]
 
     # Ohne Evergreen-Rolle gibt es keine Treffer aus Evergreen.
     other = client_for(["Config.Reader"], "suche-leser")

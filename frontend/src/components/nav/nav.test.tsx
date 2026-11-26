@@ -195,7 +195,7 @@ describe("QuickSearch", () => {
   });
 
   it("zeigt ohne Eingabe die zuletzt besuchten Seiten und verlinkt die volle Suche", () => {
-    resetNavPrefs({ pinned: [], recent: ["/evergreen/m365", "/budget/import"] });
+    resetNavPrefs({ pinned: [], recent: ["/m365/neuerungen", "/budget/import"] });
     render(<QuickSearch areas={areas} onClose={() => undefined} onNavigate={() => undefined} />);
     expect(screen.getByText("Zuletzt besucht")).toBeVisible();
     expect(screen.getAllByRole("option").map((option) => option.id)).toHaveLength(1);
@@ -288,7 +288,7 @@ describe("MobileNav", () => {
         activePath="/budget"
         taskCount={3}
         searchOpen={false}
-        hasOpen={(area) => area.id === "evergreen"}
+        hasOpen={(area) => area.id === "m365"}
         badgeFor={() => 0}
         onNavigate={() => undefined}
         onSearch={() => undefined}
@@ -305,11 +305,13 @@ describe("MobileNav", () => {
     expect(within(sheet).getByRole("link", { name: "Rechnungen angeheftet" })).toBeVisible();
     fireEvent.click(within(sheet).getByRole("button", { name: "Alle Bereiche" }));
     const all = screen.getByRole("dialog", { name: "Alle Bereiche" });
-    expect(within(all).getByRole("button", { name: /^Evergreen.*offene Aufgaben/ })).toBeVisible();
+    expect(
+      within(all).getByRole("button", { name: /^Microsoft 365.*offene Aufgaben/ }),
+    ).toBeVisible();
     // Handbuch und Verwaltung stehen im Kontomenü
     expect(within(all).queryByRole("link", { name: "Handbuch" })).toBeNull();
-    fireEvent.click(within(all).getByRole("button", { name: /^Evergreen/ }));
-    expect(screen.getByRole("dialog", { name: "Evergreen" })).toBeVisible();
+    fireEvent.click(within(all).getByRole("button", { name: /^Microsoft 365/ }));
+    expect(screen.getByRole("dialog", { name: "Microsoft 365" })).toBeVisible();
   });
 
   it("zeigt Admins die Verwaltung nicht in der Liste der Bereiche", () => {

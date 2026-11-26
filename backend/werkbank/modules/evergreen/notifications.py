@@ -30,5 +30,5 @@ def evergreen_notifications(db: Session, settings: Settings, now: datetime) -> I
                 if count == 1
                 else f"Evergreen {name}: {count} neue Einträge"
             ),
-            link=f"/evergreen/{software}",
+            link="/m365/neuerungen",
         )

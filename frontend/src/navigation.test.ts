@@ -10,12 +10,12 @@ import {
 } from "./navigation";
 
 describe("navigationFor", () => {
-  it("zeigt Evergreen-Lesern nur Start und Evergreen › Microsoft 365", () => {
+  it("zeigt Evergreen-Lesern nur Start und Microsoft 365 › Neuerungen", () => {
     const groups = navigationFor(["Evergreen.Reader"]);
     expect(allNavItems(groups).map((item) => item.path)).toEqual([
       "/",
       "/suche",
-      "/evergreen/m365",
+      "/m365/neuerungen",
     ]);
   });
 
@@ -53,23 +53,13 @@ describe("navigationFor", () => {
 describe("areasFor", () => {
   const all = ["Werkbank.Admin", "Config.Reader", "Evergreen.Editor"];
 
-  it("gibt Microsoft 365 und Evergreen je einen eigenen Bereich", () => {
+  it("führt die Neuerungen unter Microsoft 365, ohne eigenen Bereich Evergreen", () => {
     const areas = areasFor(all);
-    expect(areas.map((area) => area.label)).toEqual([
-      "Start",
-      "Microsoft 365",
-      "Evergreen",
-      "Verwaltung",
-    ]);
-    expect(areas.map((area) => area.home)).toEqual([
-      "/",
-      "/m365",
-      "/evergreen/m365",
-      "/verwaltung",
-    ]);
+    expect(areas.map((area) => area.label)).toEqual(["Start", "Microsoft 365", "Verwaltung"]);
+    expect(areas.map((area) => area.home)).toEqual(["/", "/m365", "/verwaltung"]);
     const paths = (index: number) => allNavItems(areas[index]?.groups ?? []).map((i) => i.path);
     expect(paths(0)).toEqual(["/", "/suche"]);
-    expect(paths(3)).toEqual([
+    expect(paths(2)).toEqual([
       "/verwaltung",
       "/verwaltung/berechtigungen",
       "/verwaltung/mail-teams",
@@ -79,7 +69,7 @@ describe("areasFor", () => {
       "/audit",
     ]);
     expect(paths(1).every((path) => path.startsWith("/m365"))).toBe(true);
-    expect(paths(2)).toEqual(["/evergreen/m365"]);
+    expect(paths(1)).toContain("/m365/neuerungen");
   });
 
   it("zeigt Admins das IT-Monitoring nur mit Monitoring.Reader", () => {
@@ -93,10 +83,8 @@ describe("areasFor", () => {
   });
 
   it("zeigt nur Bereiche, für die es eine Rolle gibt", () => {
-    expect(areasFor(["Evergreen.Reader"]).map((area) => area.id)).toEqual([
-      "werkbank",
-      "evergreen",
-    ]);
+    expect(areasFor(["Evergreen.Reader"]).map((area) => area.id)).toEqual(["werkbank", "m365"]);
+    expect(areasFor(["Evergreen.Reader"])[1]?.home).toBe("/m365/neuerungen");
     expect(areasFor(["Config.Reader"]).map((area) => area.id)).toEqual(["werkbank", "m365"]);
     expect(areasFor(["Monitoring.Reader"]).map((area) => area.id)).toEqual([
       "werkbank",
@@ -149,7 +137,7 @@ describe("areasFor", () => {
     expect(id("/konto")).toBe("werkbank");
     expect(id("/m365/einstellungen/12")).toBe("m365");
     expect(id("/m365/empfehlungen")).toBe("m365");
-    expect(id("/evergreen/m365/7")).toBe("evergreen");
+    expect(id("/m365/neuerungen/7")).toBe("m365");
     expect(id("/verwaltung")).toBe("verwaltung");
     expect(id("/verwaltung/berechtigungen")).toBe("verwaltung");
     expect(id("/audit")).toBe("verwaltung");
@@ -270,7 +258,6 @@ describe("areasFor", () => {
     expect(areas.map((area) => [area.short, area.section])).toEqual([
       ["Start", "start"],
       ["M365", "anwendungen"],
-      ["Evergreen", "anwendungen"],
       ["Monitoring", "betrieb"],
       ["Bestand", "betrieb"],
       ["Budget", "planung"],

@@ -38,6 +38,7 @@ export const NOTE_LABELS: Record<string, string> = {
   aktualisiert: "Meldung aktualisiert",
   zeitplan: "Zeitplan geändert",
   bewertet: "Bewertung geändert",
+  kategorie: "Kategorie geändert",
 };
 
 export type DefaultState = "an" | "aus" | "entfaellt";
@@ -79,6 +80,9 @@ export interface EntrySummary {
   last_editor: string | null;
   kind: string | null;
   info_only: boolean;
+  /** Kategorie (aus den Diensten oder von Hand) */
+  topic: string;
+  topic_manual: boolean;
 }
 
 export interface EntryList {
@@ -161,27 +165,81 @@ export interface Entry extends EntrySummary, Assessment {
   can_edit: boolean;
 }
 
-export function entriesPath(software: string): string {
-  return `/evergreen/${software}`;
+/** Neuerungen aus dem Nachrichtencenter stehen unter Microsoft 365. */
+export const NEWS_PATH = "/m365/neuerungen";
+
+export function entriesPath(): string {
+  return NEWS_PATH;
 }
 
-export function entryPath(software: string, id: number): string {
-  return `/evergreen/${software}/${id}`;
+export function entryPath(id: number): string {
+  return `${NEWS_PATH}/${id}`;
 }
 
-/** Pfad /evergreen/<software>[/<id>] lesen. */
+/**
+ * Pfad /m365/neuerungen[/<id>] lesen. Alte Adressen (/evergreen, /evergreen/m365[/<id>])
+ * liefern `moved` mit der neuen Adresse.
+ */
 export function parseEvergreenPath(
   path: string,
-): { software: SoftwareKey; entryId: number | null } | null {
-  // „/evergreen“ allein (alte Links) führt zu Microsoft 365
-  if (path === "/evergreen") {
-    return { software: "m365", entryId: null };
+): { software: SoftwareKey; entryId: number | null; moved: string | null } | null {
+  const old = /^\/evergreen(?:\/m365(?:\/(\d{1,9}))?)?$/.exec(path);
+  if (old) {
+    return {
+      software: "m365",
+      entryId: old[1] ? Number(old[1]) : null,
+      moved: old[1] ? `${NEWS_PATH}/${old[1]}` : NEWS_PATH,
+    };
   }
-  const match = /^\/evergreen\/([a-z0-9]{1,20})(?:\/(\d{1,9}))?$/.exec(path);
-  if (!match || !match[1] || !(match[1] in SOFTWARE)) {
+  const match = /^\/m365\/neuerungen(?:\/(\d{1,9}))?$/.exec(path);
+  if (!match) {
     return null;
   }
-  return { software: match[1] as SoftwareKey, entryId: match[2] ? Number(match[2]) : null };
+  return { software: "m365", entryId: match[1] ? Number(match[1]) : null, moved: null };
+}
+
+/** Kategorien der Neuerungen (wie backend/werkbank/modules/evergreen/topics.py). */
+export const TOPICS = [
+  "exchange",
+  "teams",
+  "sharepoint",
+  "apps",
+  "copilot",
+  "sicherheit",
+  "geraete",
+  "allgemein",
+] as const;
+export type Topic = (typeof TOPICS)[number];
+
+export const TOPIC_LABELS: Record<Topic, string> = {
+  exchange: "Exchange & Outlook",
+  teams: "Teams",
+  sharepoint: "SharePoint & OneDrive",
+  apps: "Microsoft 365 Apps",
+  copilot: "Copilot & KI",
+  sicherheit: "Sicherheit & Identität",
+  geraete: "Geräte & Intune",
+  allgemein: "Verwaltung & Allgemein",
+};
+
+/** Farbe je Kategorie (Klassen wie bei den Ticket-Bereichen); der Name steht immer dabei. */
+export const TOPIC_COLORS: Record<Topic, string> = {
+  exchange: "blau",
+  teams: "violett",
+  sharepoint: "petrol",
+  apps: "orange",
+  copilot: "pink",
+  sicherheit: "rot",
+  geraete: "gruen",
+  allgemein: "grau",
+};
+
+export function topicOf(value: string): Topic {
+  return (TOPICS as readonly string[]).includes(value) ? (value as Topic) : "allgemein";
+}
+
+export function setTopic(id: number, topic: Topic | null): Promise<Entry> {
+  return putJson(`/api/evergreen/entries/${id}/topic`, { topic });
 }
 
 export function fetchEntries(

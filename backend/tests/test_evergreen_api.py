@@ -361,3 +361,45 @@ def test_list_due_info_filter_and_kind(db: Session) -> None:
     kinds = {e["id"]: (e["kind"], e["info_only"]) for e in listed["entries"]}
     assert kinds[due] == ("Abkündigung", False)
     assert kinds[info] == ("Information", True)
+
+
+def test_topics_from_services() -> None:
+    from werkbank.modules.evergreen.topics import topic_for
+
+    assert topic_for(["Exchange Online"]) == "exchange"
+    assert topic_for(["Microsoft Teams"]) == "teams"
+    assert topic_for(["Microsoft 365 Copilot", "Microsoft Teams"]) == "copilot"
+    assert topic_for(["SharePoint Online", "OneDrive for Business"]) == "sharepoint"
+    assert topic_for(["Microsoft Entra"]) == "sicherheit"
+    assert topic_for(["Microsoft Intune"]) == "geraete"
+    assert topic_for(["Microsoft 365 apps"]) == "apps"
+    assert topic_for(["Planner"]) == "allgemein"
+    assert topic_for([]) == "allgemein"
+
+
+@pytest.mark.db
+def test_topic_automatic_and_manual(db: Session) -> None:
+    client = editor()
+    entry_id = new_entry(client, "Neue Ansicht", service="Exchange Online")
+    data = client.get(f"{BASE}/entries/{entry_id}").json()
+    assert (data["topic"], data["topic_manual"]) == ("exchange", False)
+    listed = client.get(f"{BASE}/entries").json()["entries"]
+    assert [e["topic"] for e in listed] == ["exchange"]
+    changed = client.put(
+        f"{BASE}/entries/{entry_id}/topic", json={"topic": "teams"}, headers=HEADERS
+    )
+    assert changed.status_code == 200, changed.text
+    assert (changed.json()["topic"], changed.json()["topic_manual"]) == ("teams", True)
+    assert changed.json()["notes"][-1]["text"] == "Kategorie: Exchange & Outlook → Teams"
+    back = client.put(f"{BASE}/entries/{entry_id}/topic", json={"topic": None}, headers=HEADERS)
+    assert back.json()["topic"] == "exchange"
+    assert back.json()["notes"][-1]["text"] == "Kategorie: Teams → Exchange & Outlook (automatisch)"
+    bad = client.put(f"{BASE}/entries/{entry_id}/topic", json={"topic": "x"}, headers=HEADERS)
+    assert bad.status_code == 422
+    reader = client_for(["Evergreen.Reader"], "ev-leser")
+    assert (
+        reader.put(
+            f"{BASE}/entries/{entry_id}/topic", json={"topic": "teams"}, headers=HEADERS
+        ).status_code
+        == 403
+    )

@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { navigate } from "../../router";
 import { entryPath, parseEvergreenPath, type Entry, type EntrySummary } from "./api";
-import { EntriesPage, groupEntries } from "./EntriesPage";
+import { EntriesPage, groupByTopic, groupEntries } from "./EntriesPage";
 import { confirmDialog } from "../../test/confirm";
 
 vi.mock("../../router", () => ({ navigate: vi.fn() }));
@@ -43,6 +43,8 @@ const entry: Entry = {
   source: "nachrichtencenter",
   source_ref: "MC100001",
   services: ["Microsoft Teams"],
+  topic: "teams",
+  topic_manual: false,
   major_change: true,
   action_required_by: "2026-12-01T00:00:00Z",
   status: "neu",
@@ -142,13 +144,22 @@ const routes = {
 };
 
 describe("Evergreen-Pfade", () => {
-  it("liest Software und Eintrag aus dem Pfad", () => {
-    expect(parseEvergreenPath("/evergreen/m365")).toEqual({ software: "m365", entryId: null });
-    expect(parseEvergreenPath("/evergreen/m365/12")).toEqual({ software: "m365", entryId: 12 });
-    expect(parseEvergreenPath("/evergreen")).toEqual({ software: "m365", entryId: null });
+  it("liest den Eintrag aus dem Pfad und leitet alte Adressen um", () => {
+    expect(parseEvergreenPath("/m365/neuerungen")).toEqual({
+      software: "m365",
+      entryId: null,
+      moved: null,
+    });
+    expect(parseEvergreenPath("/m365/neuerungen/12")).toEqual({
+      software: "m365",
+      entryId: 12,
+      moved: null,
+    });
+    expect(parseEvergreenPath("/evergreen/m365/12")?.moved).toBe("/m365/neuerungen/12");
+    expect(parseEvergreenPath("/evergreen")?.moved).toBe("/m365/neuerungen");
     expect(parseEvergreenPath("/evergreen/andere")).toBeNull();
-    expect(parseEvergreenPath("/evergreen/m365/x")).toBeNull();
-    expect(entryPath("m365", 3)).toBe("/evergreen/m365/3");
+    expect(parseEvergreenPath("/m365/neuerungen/x")).toBeNull();
+    expect(entryPath(3)).toBe("/m365/neuerungen/3");
   });
 
   it("gruppiert offene Einträge: mit Frist, neu, in Bearbeitung", () => {
@@ -161,39 +172,95 @@ describe("Evergreen-Pfade", () => {
     ]);
     expect(groupEntries([listed[0] as EntrySummary]).map((group) => group.label)).toEqual(["Neu"]);
   });
+
+  it("ordnet nach Kategorien in fester Reihenfolge, innen Frist zuerst", () => {
+    const mail = summary({
+      id: 12,
+      topic: "exchange",
+      services: ["Exchange Online"],
+      status: "bearbeitet",
+      action_required_by: null,
+    });
+    const groups = groupByTopic([...listed, mail]);
+    expect(groups.map((group) => [group.topic, group.entries.map((e) => e.id)])).toEqual([
+      ["exchange", [12]],
+      ["teams", [5, 7, 8]],
+    ]);
+    expect(groups[1]).toMatchObject({ newCount: 2, dueCount: 1, services: ["Microsoft Teams"] });
+  });
 });
 
 describe("EntriesPage", () => {
-  it("zeigt die Liste in Gruppen und öffnet einen Eintrag per Verweis", async () => {
-    const calls = stubFetch(routes);
-    render(<EntriesPage software="m365" entryId={8} roles={["Evergreen.Reader"]} />);
-    expect(screen.getByRole("heading", { level: 1, name: "Microsoft 365" })).toBeVisible();
-    const nav = await screen.findByRole("navigation", { name: "Einträge Microsoft 365" });
+  it("zeigt die Liste nach Kategorien und öffnet einen Eintrag per Verweis", async () => {
+    const calls = stubFetch({
+      ...routes,
+      "GET /api/evergreen/entries": {
+        ...list,
+        entries: [
+          ...listed,
+          summary({ id: 12, title: "Postfach", topic: "exchange", action_required_by: null }),
+        ],
+      },
+    });
+    render(<EntriesPage software="m365" entryId={null} roles={["Evergreen.Reader"]} />);
+    expect(screen.getByRole("heading", { level: 1, name: "Nachrichtencenter" })).toBeVisible();
+    const region = await screen.findByRole("region", { name: "Neuerungen Microsoft 365" });
     expect(screen.getByText("3 offen, davon 2 neu")).toBeVisible();
-    const status = screen.getByRole("combobox", { name: "Status" });
-    expect(screen.getByRole("option", { name: "Mit Frist · 1" })).toBeTruthy();
-    expect(screen.getByRole("option", { name: "Abgeschlossen · 4" })).toBeTruthy();
-    expect(screen.queryByRole("group", { name: "Status" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Neuer Eintrag" })).toBeNull();
-    const heads = nav.querySelectorAll("h2");
-    expect([...heads].map((head) => head.textContent)).toEqual([
-      "Mit Frist1",
-      "Neu1",
-      "In Bearbeitung1",
-    ]);
+    await screen.findByRole("button", { name: /Teams/ });
+    const heads = region.querySelectorAll("h2");
+    expect([...heads].map((head) => head.textContent)).toEqual(["▾Exchange & Outlook1", "▾Teams3"]);
+    expect(screen.getByText(/3 Meldungen, 2 neu, 1 mit Frist · Microsoft Teams/)).toBeVisible();
     expect(screen.getByText("bis 01.12.2026")).toBeVisible();
-    const current = screen.getByRole("link", { name: /In Arbeit/ });
-    expect(current).toHaveAttribute("aria-current", "true");
     const first = calls.find((call) => call.url.includes("state="));
     expect(first?.url).toContain("state=offen");
     expect(first?.url).toContain("hide_info=true");
 
-    fireEvent.click(screen.getByRole("link", { name: /Ohne Frist neu/ }));
-    expect(navigate).toHaveBeenCalledWith("/evergreen/m365/7");
+    // Zuklappen versteckt die Einträge der Kategorie
+    const teams = screen.getByRole("button", { name: /Teams/ });
+    fireEvent.click(teams);
+    expect(teams).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: /Ohne Frist neu/ })).toBeNull();
+    fireEvent.click(teams);
 
-    fireEvent.change(status, { target: { value: "abgeschlossen" } });
+    fireEvent.click(screen.getByRole("link", { name: /Ohne Frist neu/ }));
+    expect(navigate).toHaveBeenCalledWith("/m365/neuerungen/7");
+
+    fireEvent.click(screen.getByRole("button", { name: /Abgeschlossen/ }));
     await waitFor(() => expect(calls.at(-1)?.url).toContain("state=abgeschlossen"));
-    await waitFor(() => expect(nav.querySelectorAll("h2")).toHaveLength(0));
+  });
+
+  it("zeigt den Eintrag mit Pfad und blättert in der Kategorie", async () => {
+    stubFetch({ ...routes, "GET /api/evergreen/entries/7": { ...entry, id: 7, can_edit: false } });
+    render(<EntriesPage software="m365" entryId={7} roles={["Evergreen.Reader"]} />);
+    const path = await screen.findByRole("navigation", { name: "Pfad" });
+    await waitFor(() => expect(path).toHaveTextContent("Microsoft 365 › Neuerungen › Teams"));
+    expect(await screen.findByText("Teams", { selector: ".ev-topic" })).toBeVisible();
+    const pager = await screen.findByRole("navigation", { name: "Blättern in Teams" });
+    expect(pager).toHaveTextContent("‹ Vorherige in Teams");
+    expect(screen.getByRole("link", { name: "Nächste in Teams ›" })).toHaveAttribute(
+      "href",
+      "/m365/neuerungen/8",
+    );
+    expect(screen.queryByRole("button", { name: "Kategorie ändern" })).toBeNull();
+  });
+
+  it("ändert als Bearbeiter die Kategorie", async () => {
+    const calls = stubFetch({
+      ...routes,
+      "PUT /api/evergreen/entries/5/topic": { ...entry, topic: "copilot", topic_manual: true },
+    });
+    render(<EntriesPage software="m365" entryId={5} roles={["Evergreen.Editor"]} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Kategorie ändern" }));
+    fireEvent.click(screen.getByRole("button", { name: "Kategorie ändern: Automatisch" }));
+    const field = screen.getByRole("combobox", { name: "Kategorie" });
+    fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: "copilot" } });
+    fireEvent.click(await screen.findByRole("option", { name: /Copilot & KI/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    expect(await screen.findByText("Kategorie gespeichert.")).toBeVisible();
+    expect(calls.find((call) => call.url.endsWith("/topic"))?.body).toEqual({ topic: "copilot" });
+    expect(screen.getByText("Copilot & KI", { selector: ".ev-topic" })).toBeVisible();
   });
 
   it("merkt sich den Schalter für Info-Meldungen im Browser", async () => {
@@ -201,7 +268,6 @@ describe("EntriesPage", () => {
     render(<EntriesPage software="m365" entryId={null} roles={["Evergreen.Reader"]} />);
     const toggle = await screen.findByRole("checkbox", { name: "Reine Info-Meldungen ausblenden" });
     expect(toggle).toBeChecked();
-    expect(screen.getByText(/Wähle links einen Eintrag/)).toBeVisible();
     fireEvent.click(toggle);
     await waitFor(() => expect(calls.at(-1)?.url).toContain("hide_info=false"));
     expect(window.localStorage.getItem("werkbank-evergreen-info")).toBe("aus");
@@ -352,7 +418,7 @@ describe("EntriesPage", () => {
     });
     fireEvent.change(screen.getByLabelText("Dienst (optional)"), { target: { value: "Teams" } });
     fireEvent.click(screen.getByRole("button", { name: "Anlegen" }));
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/evergreen/m365/9"));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/m365/neuerungen/9"));
     const created = calls.find((call) => call.method === "POST");
     expect(created?.body).toEqual({
       software: "m365",

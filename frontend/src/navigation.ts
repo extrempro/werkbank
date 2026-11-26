@@ -86,7 +86,8 @@ export const TICKETS_NEW_PATH = "/tickets/neu";
 export const TICKETS_SETTINGS_PATH = "/tickets/einstellungen";
 export const TICKETS_OVERVIEW_PATH = "/tickets/uebersicht";
 export const TICKETS_ACHIEVEMENTS_PATH = "/tickets/erfolge";
-export const EVERGREEN_M365_PATH = "/evergreen/m365";
+/** Neuerungen aus dem Nachrichtencenter (früher Evergreen › Microsoft 365). */
+export const EVERGREEN_M365_PATH = "/m365/neuerungen";
 export const DOKU_PATH = "/doku";
 export const DOKU_ADMIN_PATH = "/doku/verwaltung";
 
@@ -136,7 +137,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       ],
     },
   ];
-  if (hasAny(roles, [...CONFIG_ROLES, TENANT_READER, DEVICES_ROLE])) {
+  if (hasAny(roles, [...CONFIG_ROLES, TENANT_READER, DEVICES_ROLE, ...EVERGREEN_ROLES])) {
     const groups: NavGroup[] = [];
     if (hasAny(roles, CONFIG_ROLES)) {
       groups.push({
@@ -148,6 +149,12 @@ export function areasFor(roles: readonly string[]): NavArea[] {
           { path: "/m365/empfehlungen", label: "Empfehlungen", icon: "empfehlungen" },
           { path: "/m365/snapshots", label: "Snapshots", icon: "snapshots" },
         ],
+      });
+    }
+    if (hasAny(roles, EVERGREEN_ROLES)) {
+      groups.push({
+        title: "Neuerungen",
+        items: [{ path: EVERGREEN_M365_PATH, label: "Nachrichtencenter", icon: "evergreen" }],
       });
     }
     if (roles.includes(TENANT_READER)) {
@@ -176,26 +183,16 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       section: "anwendungen",
       home: hasAny(roles, CONFIG_ROLES)
         ? "/m365"
-        : roles.includes(TENANT_READER)
-          ? LICENSES_PATH
-          : DEVICE_ASSOCIATION_PATH,
+        : hasAny(roles, EVERGREEN_ROLES)
+          ? EVERGREEN_M365_PATH
+          : roles.includes(TENANT_READER)
+            ? LICENSES_PATH
+            : DEVICE_ASSOCIATION_PATH,
       groups,
     });
   }
-  if (hasAny(roles, EVERGREEN_ROLES)) {
-    // Je Software ein Unterabschnitt; weitere kommen später dazu.
-    const items: NavItem[] = [{ path: EVERGREEN_M365_PATH, label: "Microsoft 365", icon: "m365" }];
-    areas.push({
-      id: "evergreen",
-      label: "Evergreen",
-      short: "Evergreen",
-      icon: "evergreen",
-      section: "anwendungen",
-      home: EVERGREEN_M365_PATH,
-      // Ohne Überschrift: Der Bereich heißt schon so.
-      groups: [{ title: null, items }],
-    });
-  }
+  // Evergreen (weitere Software) erscheint wieder, sobald es dort mehr als Microsoft 365 gibt;
+  // die Neuerungen von Microsoft 365 stehen unter Microsoft 365 › Neuerungen.
   // Admins sehen das Monitoring nur mit Monitoring.Reader (entschieden).
   const monitoringFull = roles.includes(MONITORING_READER);
   const reportsItem = {

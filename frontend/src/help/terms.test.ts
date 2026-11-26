@@ -36,7 +36,7 @@ describe("Erklärungen der Info-Symbole", () => {
       ["it-budget", "posten"],
       ["it-budget", "verknuepft"],
     ]);
-    expect(pageTopics("/evergreen/m365/12")).toEqual([["evergreen", "liste"]]);
+    expect(pageTopics("/m365/neuerungen/12")).toEqual([["evergreen", "liste"]]);
     expect(pageTopics("/it-tools/verlauf")).toEqual([["it-tools", "verlauf"]]);
     expect(pageTopics("/it-tools/netzwerk")).toEqual([["it-tools", "ueberblick"]]);
     expect(pageTopics("/handbuch")).toEqual([]);

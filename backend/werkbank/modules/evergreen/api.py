@@ -45,6 +45,7 @@ from werkbank.modules.evergreen.service import (
     add_note,
     create_entry,
 )
+from werkbank.modules.evergreen.topics import TOPIC_LABELS, effective_topic
 from werkbank.modules.inventory.search import escape_like
 from werkbank.modules.m365_config.models import CfgChange, CfgSetting, CfgSettingVersion
 
@@ -83,6 +84,9 @@ class EntrySummaryOut(BaseModel):
     last_editor: str | None
     kind: str | None
     info_only: bool
+    # Kategorie (aus den Diensten oder von Hand, siehe topics.py)
+    topic: str
+    topic_manual: bool
 
 
 class EntryListOut(BaseModel):
@@ -254,6 +258,8 @@ def _summary(entry: EvEntry, editors: dict[int, str]) -> dict[str, Any]:
         "last_editor": editors.get(entry.id),
         "kind": kind_label(entry.tags, entry.category),
         "info_only": info_only(entry.tags, entry.category),
+        "topic": effective_topic(entry.topic, entry.services or []),
+        "topic_manual": entry.topic in TOPIC_LABELS,
     }
 
 
@@ -584,6 +590,33 @@ def _show(db: Session, field: str, value: Any) -> str | None:
     if text is None:
         return None
     return text if len(text) <= DETAIL_MAX else text[: DETAIL_MAX - 1] + "…"
+
+
+class TopicIn(BaseModel):
+    # None: wieder automatisch aus den Diensten
+    topic: str | None = Field(default=None, max_length=20)
+
+
+@router.put("/entries/{entry_id}/topic")
+def set_topic(
+    request: Request, entry_id: EntryId, body: TopicIn, user: Editor, db: DbDep
+) -> EntryOut:
+    """Kategorie von Hand setzen oder wieder automatisch bestimmen lassen."""
+    entry = _entry(db, entry_id)
+    if body.topic is not None and body.topic not in TOPIC_LABELS:
+        raise HTTPException(status_code=422, detail="Unbekannte Kategorie")
+    before = effective_topic(entry.topic, entry.services or [])
+    if body.topic == entry.topic:
+        return _entry_out(db, entry, user)
+    entry.topic = body.topic
+    after = effective_topic(entry.topic, entry.services or [])
+    text = f"Kategorie: {TOPIC_LABELS[before]} → {TOPIC_LABELS[after]}" + (
+        "" if body.topic else " (automatisch)"
+    )
+    add_note(db, entry, NoteKind.TOPIC, text, user.user_id)
+    _audit(db, request, user, "eintrag.kategorie", entry, {"kategorie": after})
+    db.commit()
+    return _entry_out(db, entry, user)
 
 
 @router.put("/entries/{entry_id}/assessment")

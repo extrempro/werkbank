@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { errorText } from "../../api";
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { InfoTip } from "../../components/InfoTip";
@@ -31,6 +31,7 @@ import {
   type Phase,
 } from "./api";
 import { Feedback } from "../../components/Feedback";
+import { TopicControl } from "./TopicControl";
 
 const NOTE_MAX = 4000;
 const TEXT_MAX = 4000;
@@ -172,6 +173,7 @@ function Profile({
         {entry.major_change && <li className="pill pill-todo">Größere Änderung</li>}
         {entry.action_required_by && <li className="pill pill-todo">Handlung nötig</li>}
       </ul>
+      <TopicControl entry={entry} onChanged={onChanged} />
       <dl className="ev-facts">
         <Fact
           label="Betroffen"
@@ -759,10 +761,13 @@ function History({ entry, onChanged }: { entry: Entry; onChanged: (entry: Entry)
 /** Ansicht eines Eintrags: Steckbrief mit Rollout, darunter drei Reiter. */
 export function EntryDetail({
   entryId,
+  onLoaded,
   onChanged,
   onClose,
 }: {
   entryId: number;
+  /** nach dem Laden und nach jeder Änderung, z. B. für die Kategorie im Pfad */
+  onLoaded?: (entry: Entry) => void;
   onChanged: () => void;
   onClose: () => void;
 }) {
@@ -772,11 +777,20 @@ export function EntryDetail({
   // Neue Vorschläge der KI setzen die Maske neu auf
   const [formRound, setFormRound] = useState(0);
   const prefix = `ev-${entryId}`;
+  const onLoadedRef = useRef(onLoaded);
+  useEffect(() => {
+    onLoadedRef.current = onLoaded;
+  });
 
   useEffect(() => {
     let active = true;
     fetchEntry(entryId).then(
-      (loaded) => active && setEntry(loaded),
+      (loaded) => {
+        if (active) {
+          setEntry(loaded);
+          onLoadedRef.current?.(loaded);
+        }
+      },
       (problem: unknown) =>
         active && setFailed(errorText(problem, "Der Eintrag konnte nicht geladen werden.")),
     );
@@ -797,6 +811,7 @@ export function EntryDetail({
   }
   const update = (updated: Entry) => {
     setEntry(updated);
+    onLoaded?.(updated);
     onChanged();
   };
   const tabs: { id: TabId; label: string }[] = [

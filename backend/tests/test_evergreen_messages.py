@@ -179,14 +179,14 @@ def test_tasks_and_notifications_only_for_editors(db: Session) -> None:
     tasks = editor.get("/api/tasks").json()["tasks"]
     mine = [task for task in tasks if task["module"] == "Evergreen"]
     assert [(task["title"], task["count"], task["link"]) for task in mine] == [
-        ("Microsoft 365: neue Einträge sichten", 2, "/evergreen/m365")
+        ("Microsoft 365: neue Einträge sichten", 2, "/m365/neuerungen")
     ]
     assert not [t for t in reader.get("/api/tasks").json()["tasks"] if t["module"] == "Evergreen"]
 
     events = list(evergreen_notifications(db, Settings(environment="test"), moment.now(UTC)))
     assert len(events) == 1
     assert events[0].title == "Evergreen Microsoft 365: 2 neue Einträge"
-    assert events[0].link == "/evergreen/m365"
+    assert events[0].link == "/m365/neuerungen"
 
 
 SCHEDULE_HTML = (

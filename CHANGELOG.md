@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.144.0] – 2026-11-26
+
+### Geändert
+
+- **Evergreen: Neuerungen von Microsoft 365 ziehen unter Microsoft 365.** Neue Adresse `/m365/neuerungen` (Gruppe „Neuerungen“ › „Nachrichtencenter“ im Bereich Microsoft 365, sichtbar mit den Evergreen-Rollen). Der eigene Bereich „Evergreen“ ist ausgeblendet, bis weitere Software dazukommt. Alte Adressen `/evergreen` und `/evergreen/m365[/<ID>]` leiten um; Links in Aufgaben, Benachrichtigungen, Suche, Startkachel und Handbuch zeigen auf die neue Adresse. Migration 0092 zieht angeheftete und zuletzt besuchte Seiten mit um.
+- **Liste nach Kategorien statt Liste und Ansicht nebeneinander.** Acht feste Kategorien (Exchange & Outlook, Teams, SharePoint & OneDrive, Microsoft 365 Apps, Copilot & KI, Sicherheit & Identität, Geräte & Intune, Verwaltung & Allgemein), automatisch aus den Diensten (`modules/evergreen/topics.py`), je Kategorie ein aufklappbarer Abschnitt mit Farbe, Zähler und Zusammenfassung; Filter „Kategorie“ in der Filterzeile. Ein Eintrag ist eine eigene Seite mit Pfad und „Vorherige/Nächste in Kategorie“.
+
+### Hinzugefügt
+
+- **Kategorie von Hand** (`Evergreen.Editor`): `PUT /api/evergreen/entries/{id}/topic` (`null` = automatisch), Spalte `ev_entries.topic` (Migration 0092), Verlauf „Kategorie geändert“, Audit `eintrag.kategorie`. `EntrySummary` liefert `topic` und `topic_manual`.
+- Info-Symbol „Kategorie (Neuerungen)“; Handbuch, `docs/spec.md` (8, 8.3, Seitenübersicht), `docs/design.md` und `docs/datenschutz.md` angepasst.
+
 ## [0.143.0] – 2026-11-26
 
 ### Hinzugefügt
@@ -12,6 +24,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 - Backend: `achievements.py`, `achievements_api.py` (`/api/tickets/erfolge`, `/vitrine`, `/gesehen`, `/personen/{oid}`), Migration 0091 (`ticket_achievement_profiles`, `ticket_achievement_events`, `ticket_templates.created_by_oid`). Zählstellen in Lösung, Übergabe, Zusammenführen, Eingang von außen und Antwort/Notiz (`templates`).
 - Neue gemeinsame Komponente `components/PreviewChoice.tsx` (Auswahl mit Vorschau).
 - Handbuch „Meine Erfolge“, Info-Symbole „Erfolge“, „Sichtbarkeit der Erfolge“, „Meisterkranz“; `docs/spec.md` und `docs/datenschutz.md` ergänzt.
+- E2E: Der Erfolge-Test scrollt vor der Barrierefreiheitsprüfung nach oben (auf dem Handy lag die feste Kopfzeile über dem Info-Symbol).
 
 ## [0.142.1] – 2026-11-26
 

@@ -2,7 +2,8 @@ import { useEffect, useId, useState, type FormEvent, type MouseEvent } from "rea
 import { errorText } from "../../api";
 import { FilterBar } from "../../components/FilterBar";
 import { InfoTip } from "../../components/InfoTip";
-import { Placeholder } from "../../components/Placeholder";
+import { Link } from "../../components/Link";
+import { FixedChoice } from "../../components/ListChoice";
 import { navigate } from "../../router";
 import { useDebounced } from "../inventory/paged";
 import {
@@ -11,15 +12,20 @@ import {
   LIST_MAX,
   SOFTWARE,
   SOURCE_LABELS,
+  TOPICS,
+  TOPIC_COLORS,
+  TOPIC_LABELS,
   createEntry,
   entriesPath,
   entryPath,
   fetchEntries,
   formatDate,
+  topicOf,
   type EntryFilter,
   type EntryList,
   type EntrySummary,
   type SoftwareKey,
+  type Topic,
 } from "./api";
 import { EntryDetail } from "./EntryDetail";
 
@@ -66,9 +72,52 @@ export function groupEntries(entries: readonly EntrySummary[]): Group[] {
   ].filter((group) => group.entries.length > 0);
 }
 
+export interface TopicGroup {
+  topic: Topic;
+  entries: EntrySummary[];
+  /** die häufigsten Dienste der Kategorie, für die Zeile unter der Überschrift */
+  services: string[];
+  newCount: number;
+  dueCount: number;
+}
+
+/** Einträge nach Kategorie, in der festen Reihenfolge; innen erst mit Frist, dann neu, dann der Rest. */
+export function groupByTopic(entries: readonly EntrySummary[]): TopicGroup[] {
+  return TOPICS.map((topic) => {
+    const own = entries.filter((entry) => topicOf(entry.topic) === topic);
+    const ordered = groupEntries(own).flatMap((group) => group.entries);
+    const tally = new Map<string, number>();
+    own.forEach((entry) =>
+      entry.services.forEach((service) => tally.set(service, (tally.get(service) ?? 0) + 1)),
+    );
+    const services = [...tally.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "de"))
+      .slice(0, 3)
+      .map(([service]) => service);
+    return {
+      topic,
+      entries: ordered,
+      services,
+      newCount: own.filter((entry) => entry.status === "neu").length,
+      dueCount: own.filter((entry) => entry.action_required_by).length,
+    };
+  }).filter((group) => group.entries.length > 0);
+}
+
+function groupSummary(group: TopicGroup): string {
+  const parts = [`${group.entries.length} ${group.entries.length === 1 ? "Meldung" : "Meldungen"}`];
+  if (group.newCount) {
+    parts.push(`${group.newCount} neu`);
+  }
+  if (group.dueCount) {
+    parts.push(`${group.dueCount} mit Frist`);
+  }
+  return parts.join(", ");
+}
+
 /** Listeneintrag: der ganze Eintrag ist ein Verweis auf die Ansicht. */
 function EntryItem({ entry, selected }: { entry: EntrySummary; selected: boolean }) {
-  const path = entryPath(entry.software, entry.id);
+  const path = entryPath(entry.id);
   const state = ENTRY_STATES[entry.status];
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
@@ -129,7 +178,7 @@ function NewEntryForm({ software, onCancel }: { software: SoftwareKey; onCancel:
       service: service.trim() || undefined,
       body: body.trim() || undefined,
     }).then(
-      (created) => navigate(entryPath(software, created.id)),
+      (created) => navigate(entryPath(created.id)),
       (problem: unknown) => {
         setBusy(false);
         setError(errorText(problem, "Der Eintrag konnte nicht angelegt werden."));
@@ -182,8 +231,8 @@ function NewEntryForm({ software, onCancel }: { software: SoftwareKey; onCancel:
   );
 }
 
-/** Evergreen › Software: Liste und Ansicht (spec.md 8.3). Links die Liste mit Suche, Status
- *  und Gruppen, rechts die Ansicht; schmal erst die Liste, gewählt nur die Ansicht. */
+/** Microsoft 365 › Neuerungen (spec.md 8.3): die Liste nach Kategorien, gewählt ein Eintrag als
+ *  eigene Seite mit Pfad und Blättern innerhalb der Kategorie. */
 export function EntriesPage({
   software,
   entryId,
@@ -196,11 +245,14 @@ export function EntriesPage({
   const canEdit = roles.includes(EDITOR_ROLE);
   const [filter, setFilter] = useState<EntryFilter>("offen");
   const [search, setSearch] = useState("");
+  const [topic, setTopicFilter] = useState<Topic | "alle">("alle");
   const [hideInfo, setHideInfo] = useState(readHideInfo);
+  const [closed, setClosed] = useState<ReadonlySet<Topic>>(new Set());
   const [reload, setReload] = useState(0);
   const [creating, setCreating] = useState(false);
   const [list, setList] = useState<{ key: string; data: EntryList } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  const [current, setCurrent] = useState<{ id: number; topic: string } | null>(null);
   const query = useDebounced(search);
   const infoId = useId();
   const key = `${software}|${filter}|${query}|${hideInfo}`;
@@ -224,7 +276,7 @@ export function EntriesPage({
 
   const data = list?.data ?? null;
   const entries = list && list.key === key ? list.data.entries : null;
-  const listPath = entriesPath(software);
+  const listPath = entriesPath();
   const backToList = () => navigate(listPath);
   const name = SOFTWARE[software] ?? software;
   const counts: Record<EntryFilter, number | null> = {
@@ -233,14 +285,69 @@ export function EntriesPage({
     frist: data ? data.due : null,
     abgeschlossen: data ? data.done : null,
   };
-  const groups = entries && filter === "offen" ? groupEntries(entries) : null;
+  const allGroups = entries ? groupByTopic(entries) : null;
+  const groups = allGroups?.filter((group) => topic === "alle" || group.topic === topic) ?? null;
+  const toggle = (key: Topic) =>
+    setClosed((before) => {
+      const next = new Set(before);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+
+  if (entryId !== null) {
+    // Kategorie aus der geladenen Ansicht (sie kann gerade geändert worden sein), sonst aus der Liste
+    const listed = entries?.find((entry) => entry.id === entryId) ?? null;
+    const entryTopic = topicOf(
+      current && current.id === entryId ? current.topic : (listed?.topic ?? "allgemein"),
+    );
+    const siblings = entries?.filter((entry) => topicOf(entry.topic) === entryTopic) ?? [];
+    const ordered = groupByTopic(siblings)[0]?.entries ?? [];
+    const index = ordered.findIndex((entry) => entry.id === entryId);
+    const previous = index > 0 ? ordered[index - 1] : undefined;
+    const next = index >= 0 ? ordered[index + 1] : undefined;
+    const label = TOPIC_LABELS[entryTopic];
+    return (
+      <div className="page page-wide ev-page">
+        <nav aria-label="Pfad" className="loc-crumbs small ev-crumbs">
+          <span>{name}</span>
+          {" › "}
+          <Link to={listPath}>Neuerungen</Link>
+          {" › "}
+          <span>{label}</span>
+          {listed && (
+            <>
+              {" › "}
+              <span aria-current="page">{listed.number}</span>
+            </>
+          )}
+        </nav>
+        <EntryDetail
+          key={entryId}
+          entryId={entryId}
+          onLoaded={(entry) => setCurrent({ id: entry.id, topic: entry.topic })}
+          onChanged={() => setReload((value) => value + 1)}
+          onClose={backToList}
+        />
+        {(previous || next) && (
+          <nav className="ev-pager" aria-label={`Blättern in ${label}`}>
+            {previous ? <Link to={entryPath(previous.id)}>‹ Vorherige in {label}</Link> : <span />}
+            {next && <Link to={entryPath(next.id)}>Nächste in {label} ›</Link>}
+          </nav>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="page page-wide ev-page">
       <header className="page-head case-top">
         <div>
-          <p className="module-label">Evergreen</p>
-          <h1>{name}</h1>
+          <p className="module-label">{name} · Neuerungen</p>
+          <h1>Nachrichtencenter</h1>
         </div>
         {data && (
           <p className="case-count small">
@@ -263,115 +370,118 @@ export function EntriesPage({
         </p>
       )}
       {creating && <NewEntryForm software={software} onCancel={() => setCreating(false)} />}
-      <div className={entryId === null ? "case-layout" : "case-layout case-layout-detail"}>
-        <nav className="panel case-list ev-list" aria-label={`Einträge ${name}`}>
-          <div className="case-filters">
-            <FilterBar
-              plain
-              statusSelect
-              search={{
-                label: "Suchen",
-                value: search,
-                placeholder: "Nummer, Titel, MC…, Dienst …",
-                onChange: setSearch,
-                hits: (entries ?? []).map((entry) => ({
-                  key: entry.id,
-                  title: entry.title,
-                  extra: `${entry.services[0] ?? "–"} · ${ENTRY_STATES[entry.status].label}`,
-                  meta: entry.number,
-                  href: entryPath(entry.software, entry.id),
+      <section className="panel ev-list" aria-label={`Neuerungen ${name}`}>
+        <FilterBar
+          plain
+          search={{
+            label: "Suchen",
+            value: search,
+            placeholder: "Nummer, Titel, MC…, Dienst …",
+            onChange: setSearch,
+            hits: (entries ?? []).map((entry) => ({
+              key: entry.id,
+              title: entry.title,
+              extra: `${TOPIC_LABELS[topicOf(entry.topic)]} · ${ENTRY_STATES[entry.status].label}`,
+              meta: entry.number,
+              href: entryPath(entry.id),
+            })),
+            total: data?.total ?? entries?.length ?? 0,
+          }}
+          status={{
+            label: "Status",
+            value: filter,
+            onChange: setFilter,
+            options: ENTRY_FILTERS.map((item) => ({
+              value: item.id,
+              label: item.label,
+              count: counts[item.id],
+            })),
+          }}
+          more={
+            <FixedChoice
+              label="Kategorie"
+              value={topic}
+              options={[
+                { value: "alle", label: "Alle Kategorien", hint: `${entries?.length ?? 0}` },
+                ...TOPICS.map((item) => ({
+                  value: item,
+                  label: TOPIC_LABELS[item],
+                  hint: `${allGroups?.find((group) => group.topic === item)?.entries.length ?? 0}`,
                 })),
-                total: data?.total ?? entries?.length ?? 0,
-              }}
-              status={{
-                label: "Status",
-                value: filter,
-                onChange: setFilter,
-                options: ENTRY_FILTERS.map((item) => ({
-                  value: item.id,
-                  label: item.label,
-                  count: counts[item.id],
-                })),
+              ]}
+              onChange={(value) => setTopicFilter(value)}
+            />
+          }
+          moreTitle="Kategorie"
+          moreActive={topic === "alle" ? 0 : 1}
+          onReset={topic === "alle" ? undefined : () => setTopicFilter("alle")}
+        />
+        <div className="ev-info-row">
+          <label className="check-label ev-info-toggle" htmlFor={infoId}>
+            <input
+              id={infoId}
+              type="checkbox"
+              className="check"
+              checked={hideInfo}
+              onChange={(event) => {
+                setHideInfo(event.target.checked);
+                storeHideInfo(event.target.checked);
               }}
             />
-            <div className="ev-info-row">
-              <label className="check-label ev-info-toggle" htmlFor={infoId}>
-                <input
-                  id={infoId}
-                  type="checkbox"
-                  className="check"
-                  checked={hideInfo}
-                  onChange={(event) => {
-                    setHideInfo(event.target.checked);
-                    storeHideInfo(event.target.checked);
-                  }}
-                />
-                Reine Info-Meldungen ausblenden
-              </label>
-              <InfoTip term="evergreen.info-meldungen" />
-            </div>
-          </div>
-          <div className="case-scroll">
-            {!entries && !failed && <p role="status">Wird geladen …</p>}
-            {entries && entries.length === 0 && (
-              <p className="empty">
-                {query.trim() ? "Kein Eintrag passt zur Suche." : "Keine Einträge in dieser Liste."}
+            Reine Info-Meldungen ausblenden
+          </label>
+          <InfoTip term="evergreen.info-meldungen" />
+        </div>
+        {!entries && !failed && <p role="status">Wird geladen …</p>}
+        {groups && groups.length === 0 && (
+          <p className="empty">
+            {query.trim() ? "Kein Eintrag passt zur Suche." : "Keine Einträge in dieser Liste."}
+          </p>
+        )}
+        {groups?.map((group) => {
+          const open = !closed.has(group.topic);
+          const bodyId = `ev-t-${group.topic}`;
+          return (
+            <section
+              key={group.topic}
+              className={`ev-topic-group bereich-${TOPIC_COLORS[group.topic]}`}
+              aria-labelledby={`${bodyId}-kopf`}
+            >
+              <h2 className="ev-topic-head">
+                <button
+                  type="button"
+                  id={`${bodyId}-kopf`}
+                  className="ev-topic-toggle"
+                  aria-expanded={open}
+                  aria-controls={bodyId}
+                  onClick={() => toggle(group.topic)}
+                >
+                  <span className="ev-topic-chevron" aria-hidden="true">
+                    {open ? "▾" : "▸"}
+                  </span>
+                  <span className="ev-topic-name">{TOPIC_LABELS[group.topic]}</span>
+                  <span className="ev-group-count">{group.entries.length}</span>
+                </button>
+              </h2>
+              <p className="small ev-topic-summary">
+                {groupSummary(group)}
+                {group.services.length > 0 && ` · ${group.services.join(", ")}`}
               </p>
-            )}
-            {groups &&
-              groups.map((group) => (
-                <section key={group.key} className="ev-group" aria-labelledby={`ev-g-${group.key}`}>
-                  <h2 id={`ev-g-${group.key}`} className="ev-group-head">
-                    <span>{group.label}</span>
-                    <span className="ev-group-count">{group.entries.length}</span>
-                  </h2>
-                  <ul>
-                    {group.entries.map((entry) => (
-                      <EntryItem key={entry.id} entry={entry} selected={entry.id === entryId} />
-                    ))}
-                  </ul>
-                </section>
-              ))}
-            {entries && !groups && entries.length > 0 && (
-              <ul>
-                {entries.map((entry) => (
-                  <EntryItem key={entry.id} entry={entry} selected={entry.id === entryId} />
+              <ul id={bodyId} hidden={!open}>
+                {group.entries.map((entry) => (
+                  <EntryItem key={entry.id} entry={entry} selected={false} />
                 ))}
               </ul>
-            )}
-            {entries && data && data.total > entries.length && (
-              <p className="small ev-more" role="status">
-                {entries.length} von {data.total} Einträgen – grenze die Suche ein (höchstens{" "}
-                {LIST_MAX}).
-              </p>
-            )}
-          </div>
-        </nav>
-        <div className="case-main">
-          {entryId === null ? (
-            <Placeholder>Wähle links einen Eintrag, um ihn anzusehen und zu bewerten.</Placeholder>
-          ) : (
-            <>
-              <a
-                className="case-back"
-                href={listPath}
-                onClick={(event) => {
-                  event.preventDefault();
-                  backToList();
-                }}
-              >
-                ‹ Zur Liste
-              </a>
-              <EntryDetail
-                key={entryId}
-                entryId={entryId}
-                onChanged={() => setReload((value) => value + 1)}
-                onClose={backToList}
-              />
-            </>
-          )}
-        </div>
-      </div>
+            </section>
+          );
+        })}
+        {entries && data && data.total > entries.length && (
+          <p className="small ev-more" role="status">
+            {entries.length} von {data.total} Einträgen – grenze die Suche ein (höchstens {LIST_MAX}
+            ).
+          </p>
+        )}
+      </section>
     </div>
   );
 }

@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.144.0",
+    date: "2026-11-26",
+    summary:
+      "Die Neuerungen von Microsoft 365 stehen jetzt unter Microsoft 365, geordnet nach Kategorien.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Die Meldungen aus dem Nachrichtencenter findest du jetzt unter Microsoft 365 › Neuerungen › Nachrichtencenter, gleich neben der Konfiguration. Der eigene Bereich Evergreen entfällt vorerst; alte Links und angeheftete Seiten führen automatisch auf die neue Seite.",
+          "Die Liste ist nach Kategorien geordnet, zum Beispiel Exchange & Outlook, Teams oder Copilot & KI. Jede Kategorie lässt sich auf- und zuklappen und zeigt, wie viele Meldungen neu sind oder eine Frist haben. Über „Kategorie“ in der Filterzeile siehst du nur eine davon.",
+          "Ein Eintrag öffnet sich jetzt als eigene Seite mit Pfad oben. Unten blätterst du zur vorherigen oder nächsten Meldung derselben Kategorie.",
+          "Die Kategorie wählt die Werkbank aus dem Dienst der Meldung. Passt sie nicht, änderst du sie mit „Kategorie ändern“; deine Wahl bleibt, auch wenn Microsoft die Meldung aktualisiert.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.143.0",
     date: "2026-11-26",
     summary: "Neu bei den Tickets: freiwillige Erfolge mit Abzeichen in sieben Stilen.",
