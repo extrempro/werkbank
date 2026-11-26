@@ -343,7 +343,7 @@ export function DokuPageView({ pageId }: { pageId: string }) {
     setSession((value) => value + 1);
     load();
   }, [load]);
-  const { live, status, synced, presence } = useLiveDoc(pageId, session, reload);
+  const { live, status, synced, ready, presence } = useLiveDoc(pageId, session, reload);
 
   // Titel: eigenes Speichern (der Inhalt läuft über die Live-Bearbeitung)
   const flushRef = useRef<() => void>(() => undefined);
@@ -626,7 +626,7 @@ export function DokuPageView({ pageId }: { pageId: string }) {
 
       <div className="doku-layout">
         <article className="panel doku-article" aria-label="Seiteninhalt">
-          {!viewing && !(live && synced) && (
+          {!viewing && !(live && ready) && (
             <p className="doku-connecting" role="status">
               {status === "kein-zugriff"
                 ? "Der Inhalt lässt sich gerade nicht laden."
@@ -642,7 +642,7 @@ export function DokuPageView({ pageId }: { pageId: string }) {
             />
           ) : (
             live &&
-            synced && (
+            ready && (
               <DokuEditor
                 key={`${session}-${editable ? "schreiben" : "lesen"}`}
                 live={live}

@@ -18,6 +18,8 @@ vi.mock("./useLiveDoc", async (original) => {
       live: { doc, provider: { awareness }, color: "#1f57c3", pageId, session },
       status: liveState.status,
       synced: liveState.status === "live",
+      // Einmal abgeglichen (die Seite war schon offen)
+      ready: true,
       presence: liveState.presence,
     }),
   };
@@ -179,6 +181,9 @@ describe("Doku: Seite", () => {
     expect(
       await screen.findByText("Verbindung unterbrochen – Änderungen werden nachgereicht"),
     ).toBeInTheDocument();
+    // Der Editor bleibt stehen (sonst baut er sich beim Wiederverbinden neu auf und springt)
+    expect(screen.getByRole("textbox", { name: "Inhalt der Seite" })).toBeInTheDocument();
+    expect(screen.queryByText("Wird verbunden …")).toBeNull();
     liveState.status = "live";
   });
 
