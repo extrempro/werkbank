@@ -10,6 +10,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 - **Doku springt nicht mehr bei kurzer Verbindungsunterbrechung:** Riss die Live-Verbindung ab („Verbindung unterbrochen – Änderungen werden nachgereicht“), wurde der Editor ausgeblendet und nach dem Wiederverbinden neu aufgebaut; die Seite sprang. Jetzt bleibt der Editor stehen, sobald die Seite einmal abgeglichen ist (`useLiveDoc` liefert `ready`). Oben steht weiter der Hinweis, und was du währenddessen schreibst, wird nachgereicht. E2E trennt die Live-Verbindung über eine WebSocket-Weiche und prüft, dass derselbe Editor bleibt.
 - **Stern bei Pflichtfeldern wieder neben der Beschriftung:** Eine ältere Regel für Masken (`.settings-form label`, auch in Ticket-Lösung und Doku-Fenstern) stapelte jede Beschriftung, auch die neue `field-label`; der Stern stand darunter in einer eigenen Zeile (z. B. „Posten hinzufügen“).
+- **Auswahlpunkte in Auswahlkarten 24 px groß:** Die Radio-Punkte waren 20 px; stand eine Karte beim Scrollen unter dem Seitenkopf, meldete axe die Zielgröße nach WCAG 2.5.8 (E2E IT-Bestand auf dem Handy).
 - **Code-Scanning (CodeQL, Log Injection) in `doku/collab.py`:** Der Name der Ausnahme wird vor dem Protokollieren von Zeilenumbrüchen bereinigt, die Seiten-ID als geprüfte UUID geschrieben.
 
 ## [0.139.0] – 2026-11-26

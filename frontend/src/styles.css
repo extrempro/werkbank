@@ -16288,7 +16288,7 @@ textarea.field-control {
 /* Auswahlpunkt in einer eigenen Spalte, der Text bricht daneben um */
 .choice-card {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
   min-height: 44px;
@@ -16300,9 +16300,10 @@ textarea.field-control {
 }
 
 .choice-card input {
-  width: 20px;
-  height: 20px;
-  margin: 2px 0 0;
+  /* mindestens 24 px Zielgröße (WCAG 2.5.8), auch wenn die Karte unter dem Kopf steht */
+  width: 24px;
+  height: 24px;
+  margin: 0;
   accent-color: var(--farbe-primaer);
 }
 
