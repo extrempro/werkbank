@@ -194,13 +194,15 @@ def build_message(
     *,
     auto: bool,
     cc_all: bool = False,
+    recipients: tuple[list[str], list[str]] | None = None,
     status: str | None = None,
     author: str = "",
 ) -> tuple[EmailMessage, str, list[str]]:
     """MIME-Nachricht an den Melder, mit `cc_all` auch an die Beteiligten in Kopie; liefert
     (Nachricht, Message-ID, Empfänger). Automatische Mails gehen nur an den Melder.
     `status`: Status, den die Mail nennt (sonst der aktuelle des Tickets). `author`: wer
-    antwortet (steht über dem Text und im Kasten)."""
+    antwortet (steht über dem Text und im Kasten). `recipients`: An und Cc wie im Mailprogramm
+    gewählt (ersetzen Melder und `cc_all`)."""
     brand = load_mail_brand(db)
     participants = db.scalars(
         select(TicketParticipant.mail).where(TicketParticipant.ticket_id == ticket.id)
@@ -209,8 +211,23 @@ def build_message(
     message_id = make_msgid(domain=domain)
     message = EmailMessage()
     message["From"] = formataddr((one_line(area.sender_name or area.name), area.mailbox))
-    message["To"] = formataddr((one_line(ticket.reporter_name), ticket.reporter_mail))
-    cc = [p for p in participants if p and p != ticket.reporter_mail] if cc_all else []
+    if recipients is not None:
+        names: dict[str, str] = {
+            mail: name
+            for mail, name in db.execute(
+                select(TicketParticipant.mail, TicketParticipant.name).where(
+                    TicketParticipant.ticket_id == ticket.id
+                )
+            )
+        }
+        if ticket.reporter_mail:
+            names[ticket.reporter_mail.lower()] = ticket.reporter_name
+        to, cc = recipients
+        message["To"] = ", ".join(formataddr((one_line(names.get(m, "")), m)) for m in to)
+    else:
+        message["To"] = formataddr((one_line(ticket.reporter_name), ticket.reporter_mail))
+        to = [ticket.reporter_mail]
+        cc = [p for p in participants if p and p != ticket.reporter_mail] if cc_all else []
     if cc:
         message["Cc"] = ", ".join(cc)
     message["Subject"] = subject_for(ticket)
@@ -231,7 +248,7 @@ def build_message(
         lambda cid: render_html(area, brand, ticket, body, cid, status, extra, author),
         domain,
     )
-    return message, message_id.strip("<>").lower(), [ticket.reporter_mail, *cc]
+    return message, message_id.strip("<>").lower(), [*to, *cc]
 
 
 def send_to_reporter(
@@ -244,30 +261,32 @@ def send_to_reporter(
     kind: str,
     auto: bool,
     cc_all: bool = False,
+    recipients: tuple[list[str], list[str]] | None = None,
     sent_to: list[str] | None = None,
     status: str | None = None,
     author: str = "",
 ) -> tuple[str | None, str]:
     """Senden und im Ausgang vermerken. Liefert (Message-ID oder None, Fehlertext); die
     Empfänger landen in `sent_to`, wenn angegeben."""
-    if not ticket.reporter_mail:
+    if recipients is None and not ticket.reporter_mail:
         return None, "Für den Melder ist keine Mailadresse eingetragen."
     if not area.mailbox:
         return None, "Für den Bereich ist kein Postfach eingetragen."
     if mailbox is None:
         return None, "Die Postfächer der Tickets sind nicht eingerichtet."
-    message, message_id, recipients = build_message(
+    message, message_id, addresses = build_message(
         db,
         area,
         ticket,
         body,
         auto=auto,
         cc_all=cc_all and not auto,
+        recipients=None if auto else recipients,
         status=status,
         author=author,
     )
     if sent_to is not None:
-        sent_to.extend(recipients)
+        sent_to.extend(addresses)
     error = ""
     try:
         mailbox.send(area.mailbox, mime_bytes(message))
@@ -278,7 +297,7 @@ def send_to_reporter(
             ticket_id=ticket.id,
             area_id=area.id,
             kind=kind,
-            recipients=", ".join(recipients)[:2000],
+            recipients=", ".join(addresses)[:2000],
             message_id="" if error else message_id,
             error=error,
         )

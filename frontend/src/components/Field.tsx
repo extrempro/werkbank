@@ -25,9 +25,12 @@ export function Field({
   error,
   wide = false,
   id: fixedId,
+  info,
   children,
 }: {
   label: string;
+  /** Info-Symbol neben der Beschriftung (InfoTip) */
+  info?: ReactNode;
   /** feste Kennung des Eingabeelements, z. B. für die Links der Fehlerübersicht */
   id?: string;
   required?: boolean;
@@ -43,15 +46,30 @@ export function Field({
   const note = error || hint ? noteId : undefined;
   return (
     <div className={wide ? "field field-wide" : "field"}>
-      <label htmlFor={id} className="field-label">
-        {label}
-        {required && (
-          <span className="field-required" aria-hidden="true">
-            {" "}
-            *
-          </span>
-        )}
-      </label>
+      {info ? (
+        <span className="field-info-head">
+          <label htmlFor={id} className="field-label">
+            {label}
+            {required && (
+              <span className="field-required" aria-hidden="true">
+                {" "}
+                *
+              </span>
+            )}
+          </label>
+          {info}
+        </span>
+      ) : (
+        <label htmlFor={id} className="field-label">
+          {label}
+          {required && (
+            <span className="field-required" aria-hidden="true">
+              {" "}
+              *
+            </span>
+          )}
+        </label>
+      )}
       {children({
         id,
         className: "field-control",

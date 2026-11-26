@@ -378,6 +378,9 @@ class TicketEntry(Base):
     # Absender eingehender Mails; Empfänger gesendeter Antworten und Weiterleitungen
     author_mail: Mapped[str] = mapped_column(String(320), default="", server_default="")
     recipients: Mapped[str] = mapped_column(String(2000), default="", server_default="")
+    # Antworten seit 0.148: Empfänger in Kopie getrennt von „An“ (vorher NULL, dann stehen alle
+    # Empfänger in `recipients`)
+    recipients_cc: Mapped[str | None] = mapped_column(String(2000), nullable=True)
 
     __table_args__ = (
         CheckConstraint(

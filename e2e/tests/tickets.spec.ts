@@ -339,19 +339,27 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
   // Antwort an den Melder
   await page.getByRole("button", { name: "Antworten", exact: true }).click();
   await expect(
-    page.getByText("Geht per E-Mail an: m.muster@example.com"),
-  ).toBeVisible();
+    page.getByRole("list", { name: "An: gewählte Empfänger" }),
+  ).toContainText("m.muster@example.com");
+  // Weitere Adresse in Kopie wie im Mailprogramm
+  const cc = page.getByRole("combobox", { name: /^Cc/ });
+  await cc.fill("kollegin@example.com");
+  await cc.press("Enter");
+  await expect(
+    page.getByRole("list", { name: "Cc: gewählte Empfänger" }),
+  ).toContainText("kollegin@example.com");
   // Am Seitenende liegt die Antwortleiste an ihrem Platz und verdeckt keine Links.
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await expectNoA11yViolations(page);
   await page
-    .getByRole("textbox", { name: /Antwort an M. Muster/ })
+    .getByRole("textbox", { name: "Text der Antwort" })
     .fill("Bitte einmal neu starten.");
   await page
     .getByLabel("Status danach")
     .selectOption({ label: "Wartet auf Rückmeldung" });
-  await page.getByRole("button", { name: "An M. Muster senden" }).click();
+  await page.getByRole("button", { name: "Senden", exact: true }).click();
   await expect(page.getByText("Antwort an den Melder")).toBeVisible();
+  await expect(page.getByText("CC: kollegin@example.com")).toBeVisible();
   await expect(page.getByLabel("Status")).toHaveValue("waiting");
   outbox = (await (
     await editor.get("/api/tickets/test/outbox", { params: { ticket: number } })
@@ -570,7 +578,7 @@ test("Tickets: Zusammenführen, Textbaustein, ohne Fristen keine Frist", async (
 
   // Textbaustein über /kürzel
   await page.getByRole("button", { name: "Antworten", exact: true }).click();
-  const field = page.getByRole("textbox", { name: /^Antwort an M. Muster/ });
+  const field = page.getByRole("textbox", { name: "Text der Antwort" });
   await field.fill("/dru");
   await expect(
     page.getByRole("listbox", { name: "Textbausteine" }),

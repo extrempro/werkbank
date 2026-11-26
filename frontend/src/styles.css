@@ -13190,6 +13190,133 @@ html:has(.ticket-composer) {
   margin: 0;
 }
 
+/* Empfänger beim Antworten (An, Cc) */
+.ticket-recipients {
+  display: grid;
+  gap: 10px;
+}
+
+.ticket-recipients .field {
+  margin: 0;
+}
+
+.mail-recipients {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 6px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  box-sizing: border-box;
+}
+
+.mail-recipients:focus-within {
+  outline: 3px solid var(--farbe-akzent);
+  outline-offset: 1px;
+}
+
+.mail-recipients > .field-control {
+  flex: 1 1 12rem;
+  min-width: 8rem;
+  min-height: 34px;
+  border: 0;
+  padding: 0 4px;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+.mail-recipients-chips {
+  display: contents;
+  list-style: none;
+}
+
+.mail-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 2px 2px 10px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 999px;
+  background: var(--farbe-grund);
+  font-size: 0.875rem;
+}
+
+.mail-chip-name {
+  font-weight: 600;
+}
+
+.mail-chip-mail {
+  overflow: hidden;
+  color: var(--farbe-text-leise);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--farbe-text);
+  cursor: pointer;
+}
+
+.mail-chip-remove:hover {
+  background: var(--farbe-hover);
+}
+
+.mail-chip-remove svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2.5;
+}
+
+.mail-recipients-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  width: min(100%, 28rem);
+  max-height: 16rem;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  box-shadow: var(--schatten-blase);
+  list-style: none;
+}
+
+.mail-recipients-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.mail-recipients-list li:hover,
+.mail-recipients-list li[aria-selected="true"] {
+  background: var(--farbe-hover);
+}
+
 .ticket-note-label {
   display: inline-flex;
   align-items: center;
@@ -13786,22 +13913,22 @@ button.ticket-file-thumb {
 }
 
 .ticket-reminder {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 0.875rem;
+  display: grid;
+  gap: 12px;
+  max-width: 36rem;
 }
 
 .ticket-reminder-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
-  font-weight: 600;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
 }
 
-.ticket-reminder input {
-  max-width: 20rem;
+@media (max-width: 480px) {
+  .ticket-reminder-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .ticket-reminder-info {

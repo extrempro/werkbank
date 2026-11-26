@@ -132,6 +132,8 @@ export interface Entry {
   origin: "reporter" | "participant" | "external" | "";
   /** Empfänger gesendeter Antworten und Weiterleitungen. */
   recipients: string;
+  /** Antworten seit 0.148: Kopie getrennt; null bei älteren Einträgen */
+  recipients_cc: string | null;
   author_name: string;
   original: boolean;
   created_at: string;
@@ -329,14 +331,15 @@ export function sendReply(
   number: number,
   body: string,
   statusAfter: StatusAfter,
-  replyAll = false,
+  recipients: { to: string[]; cc: string[] },
   solution: SolutionInput | null = null,
   templates: number[] = [],
 ): Promise<Ticket> {
   return postJson(`${BASE}/${number}/replies`, {
     body,
     status_after: statusAfter,
-    reply_all: replyAll,
+    to: recipients.to,
+    cc: recipients.cc,
     solution: statusAfter === "solved" ? solution : null,
     templates,
   });

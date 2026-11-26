@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.148.0] – 2026-11-26
+
+### Tickets
+
+- **Antworten mit „An“ und „Cc“ wie im Mailprogramm.** „Antworten“ setzt den Melder in An, „Antworten an alle“ zusätzlich alle Beteiligten in Cc. Danach frei änderbar: Empfänger als Chips mit ×, Vorschläge aus den Beteiligten, neue Adressen eintippen (geprüft, werden Beteiligte). Der Melder darf aus An heraus; mindestens eine Adresse in An; kein Bcc (entschieden). Der Server lehnt Postfächer der Ticket-Bereiche als Empfänger ab.
+- **Verlauf** zeigt An und Cc einer Antwort getrennt (neue Spalte `ticket_entries.recipients_cc`, Migration `0093`; ältere Einträge wie bisher).
+- **Icons wie im Mailprogramm:** Pfeil zurück (Antworten), Doppelpfeil (an alle), Pfeil nach vorn (Weiterleiten), Notizblatt mit Schloss (interne Notiz), auch an den Einträgen im Verlauf.
+- **Erinnerung im Design der Masken:** „Erinnern am“, „Uhrzeit“ und „Stichwort“ nutzen die gemeinsamen Felder (`Field`, neu mit Info-Symbol neben der Beschriftung).
+- Neue gemeinsame Komponente `components/MailRecipients.tsx` (Empfängerfeld mit Chips und Vorschlägen). „Kopieren“ am Codeblock der Doku nutzt jetzt das Symbol aus `Icon.tsx`.
+- Tests: `test_reply_with_to_and_cc`, Unit-Tests der Antwort, E2E „Mail wird Ticket …“ mit Cc. Doku: `spec.md`, `datenschutz.md`, Handbuch, `design.md`.
+
 ## [0.147.0] – 2026-11-26
 
 ### Geändert
