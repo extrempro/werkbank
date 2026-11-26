@@ -7,6 +7,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 ### Abhängigkeiten
 
 - `highlight.js` 11.11.1 → 11.11.2 (Wartungsversion, neueste, die `lowlight` mit `~11.11.0` zulässt). In 0.146.0 war versehentlich 11.11.1 eingetragen.
+- Hinweis in `CodeBlock.tsx`, warum `highlight.js` bei 11.11.x bleibt (Vorgabe von `lowlight`).
 
 ## [0.146.0] – 2026-11-26
 
