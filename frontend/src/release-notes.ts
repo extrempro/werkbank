@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.144.1",
+    date: "2026-11-26",
+    summary: "Der Abruf der M365-Einstellungen funktioniert wieder.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Seit 0.141.0 scheiterte der Abruf der Einstellungen schon beim Start, weil Microsoft die Namen der Abrufaufträge zu lang fand. Die Namen sind jetzt kürzer.",
+          "Lehnt Microsoft eine Anfrage ab, nennt der Fehlertext jetzt auch, welche Angabe nicht gepasst hat.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.144.0",
     date: "2026-11-26",
     summary:

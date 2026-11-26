@@ -12,10 +12,13 @@ from sqlalchemy.orm import Session
 from werkbank.config import Settings
 from werkbank.modules.m365_config.collector import (
     SHAREPOINT_SOURCE,
+    WORKLOAD_LABELS,
     CollectorError,
+    _job_key,
     collect,
     group_key,
     group_resources,
+    job_description,
     job_name,
 )
 from werkbank.modules.m365_config.models import (
@@ -26,7 +29,15 @@ from werkbank.modules.m365_config.models import (
     ChangeKind,
     SnapshotStatus,
 )
-from werkbank.modules.m365_config.utcm import UTCM_URL, UtcmClient, UtcmError
+from werkbank.modules.m365_config.utcm import (
+    ERROR_TEXT_LENGTH,
+    JOB_TEXT_MAX,
+    UTCM_URL,
+    UtcmClient,
+    UtcmError,
+    check_job_text,
+    graph_error_text,
+)
 
 CA = "microsoft.entra.conditionalaccesspolicy"
 NL = "microsoft.entra.namedlocationpolicy"
@@ -244,11 +255,130 @@ def test_timeouts_are_retried_but_post_and_delete_are_not() -> None:
     )
     assert client.get_job("job-1") == {}
     with pytest.raises(UtcmError, match="502"):
-        client.create_snapshot("Werkbank x", [CA])
+        client.create_snapshot("Werkbank x", "Werkbank entra 12345678", [CA])
     with pytest.raises(UtcmError, match="502"):
         client.delete_job("job-1")
     assert attempts == ["GET", "GET", "POST", "DELETE"]
     assert waits == [5]
+
+
+def test_job_names_are_short_plain_and_distinct() -> None:
+    started = datetime(2026, 11, 26, 7, 52, 20, tzinfo=UTC)
+    names = set()
+    for workload in WORKLOAD_LABELS:
+        key = group_key(workload, [f"microsoft.{workload}.typ"])
+        name, description = job_name(key, started), job_description(key)
+        check_job_text(name, description)
+        assert name.startswith("Werkbank 261126 075220 ")
+        assert description.startswith("Werkbank ")
+        assert description.endswith(key.split(" ")[1])
+        names.add(name)
+    # Mehrere Gruppen in derselben Sekunde: der Digest unterscheidet die Namen
+    assert len(names) == len(WORKLOAD_LABELS)
+    assert job_description(group_key("securityandcompliance", ["a"])).startswith(
+        "Werkbank securityandcom "
+    )
+
+
+def test_job_key_reads_group_from_description() -> None:
+    started = datetime(2026, 11, 26, 7, 52, 20, tzinfo=UTC)
+    key = group_key("entra", [CA, NL])
+    other = group_key("exchange", [DOMAIN])
+    keys = {key, other}
+    job = {"displayName": job_name(key, started), "description": job_description(key)}
+    assert _job_key(job, keys) == key
+    # andere Typenliste: keine Übernahme
+    assert _job_key(job, {other}) is None
+    # alte Formate: eigene Aufträge, aber keine Gruppe
+    for name in ("Werkbank 20261126 075220", f"Werkbank {key} 20261126 075220"):
+        assert _job_key({"displayName": name, "description": job_description(key)}, keys) is None
+    assert _job_key({"displayName": job_name(key, started)}, keys) is None
+
+
+def test_check_job_text_rejects_long_names_and_other_characters() -> None:
+    check_job_text("Werkbank 261126 075220 3f9a", "Werkbank entra 3f9a2c1b")
+    with pytest.raises(UtcmError, match="zu lang"):
+        check_job_text("Werkbank entra 3f9a2c1b 20261126 075220", "Werkbank")
+    with pytest.raises(UtcmError, match=r"Beschreibung.*unerlaubte Zeichen"):
+        check_job_text("Werkbank", "Werkbank Security & Compliance")
+    with pytest.raises(UtcmError, match="unerlaubte Zeichen"):
+        check_job_text("Werkbank_1", "Werkbank")
+    with pytest.raises(UtcmError, match="unerlaubte Zeichen"):
+        check_job_text("", "Werkbank")
+
+
+def test_invalid_job_text_is_not_sent() -> None:
+    requests: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request.method)
+        return httpx.Response(200, json={"id": "job-1"})
+
+    client = UtcmClient(httpx.Client(transport=httpx.MockTransport(handler)), lambda: "t")
+    with pytest.raises(UtcmError, match="zu lang"):
+        client.create_snapshot("Werkbank " + "x" * 30, "Werkbank", [CA])
+    assert requests == []
+
+
+def _bad_request(body: dict[str, Any]) -> httpx.Response:
+    return httpx.Response(400, json=body, headers={"request-id": "abc-123"})
+
+
+def test_graph_error_text_names_rejected_fields() -> None:
+    base = {"code": "BadRequest", "message": "One or more validation errors occurred."}
+    details = graph_error_text(
+        _bad_request(
+            {
+                "error": {
+                    **base,
+                    "details": [
+                        {"code": "MaxLength", "target": "displayName", "message": "Too long."}
+                    ],
+                }
+            }
+        )
+    )
+    assert details == (
+        "Microsoft Graph antwortet mit 400 (BadRequest): One or more validation errors "
+        "occurred. Details: displayName: Too long. · request-id abc-123"
+    )
+    errors = graph_error_text(
+        _bad_request({"error": {**base, "errors": {"DisplayName": ["Max 32.", "Bad char."]}}})
+    )
+    assert "Details: DisplayName: Max 32., Bad char." in errors
+    top = graph_error_text(
+        _bad_request({"title": "Validation failed", "errors": {"Description": "Too long"}})
+    )
+    assert top == (
+        "Microsoft Graph antwortet mit 400: Validation failed Details: Description: Too long"
+        " · request-id abc-123"
+    )
+    inner = graph_error_text(
+        _bad_request(
+            {
+                "error": {
+                    **base,
+                    "innerError": {"message": "resources must not be empty", "request-id": "r-1"},
+                }
+            }
+        )
+    )
+    assert inner.endswith("Details: resources must not be empty · request-id r-1")
+    plain = graph_error_text(_bad_request({"error": base}))
+    assert plain == (
+        "Microsoft Graph antwortet mit 400 (BadRequest): One or more validation errors "
+        "occurred. · request-id abc-123"
+    )
+
+
+def test_graph_error_text_stays_short() -> None:
+    many = [{"target": f"feld{i}", "message": "x" * 200} for i in range(20)]
+    text = graph_error_text(
+        _bad_request({"error": {"code": "BadRequest", "message": "m" * 400, "details": many}})
+    )
+    body = text.split(": ", 1)[1].rsplit(" · request-id", 1)[0]
+    assert len(body) <= ERROR_TEXT_LENGTH
+    assert text.endswith(" · request-id abc-123")
 
 
 # --- mit Datenbank --------------------------------------------------------------------
@@ -261,7 +391,9 @@ def test_one_job_per_workload_into_one_snapshot(db: Session) -> None:
 
     assert result.status == SnapshotStatus.OK
     assert [body["resources"] for body in graph.created] == [[CA, NL], [DOMAIN]]
-    assert graph.created[0]["displayName"].startswith("Werkbank entra ")
+    assert graph.created[0]["displayName"].startswith("Werkbank ")
+    assert len(graph.created[0]["displayName"]) <= JOB_TEXT_MAX
+    assert graph.created[0]["description"] == job_description(group_key("entra", [CA, NL]))
     assert sorted(graph.deleted) == ["job-entra", "job-exchange"]
     assert db.scalars(select(CfgSnapshot)).all() == [db.get(CfgSnapshot, result.snapshot_id)]
     snapshot = db.get(CfgSnapshot, result.snapshot_id)
@@ -320,6 +452,7 @@ def test_finished_job_of_earlier_run_is_taken_over(db: Session) -> None:
         {
             "id": "job-exchange",
             "displayName": job_name(exchange_key, started),
+            "description": job_description(exchange_key),
             "status": "succeeded",
             "resourceLocation": f"{UTCM_URL}/configurationSnapshots('exchange')",
             "createdDateTime": started.isoformat().replace("+00:00", "Z"),
@@ -328,14 +461,25 @@ def test_finished_job_of_earlier_run_is_taken_over(db: Session) -> None:
         {
             "id": "job-alt",
             "displayName": job_name(exchange_key, started - timedelta(days=2)),
+            "description": job_description(exchange_key),
             "status": "succeeded",
             "resourceLocation": f"{UTCM_URL}/configurationSnapshots('alt')",
             "createdDateTime": (started - timedelta(days=2)).isoformat().replace("+00:00", "Z"),
+        },
+        # altes Namensformat (0.141 bis 0.144), sonst passend: wird nur aufgeräumt
+        {
+            "id": "job-format-141",
+            "displayName": f"Werkbank {exchange_key} {started:%Y%m%d %H%M%S}",
+            "description": "Automatischer Abruf der Werkbank",
+            "status": "succeeded",
+            "resourceLocation": f"{UTCM_URL}/configurationSnapshots('f141')",
+            "createdDateTime": started.isoformat().replace("+00:00", "Z"),
         },
         # andere Typengruppe (Typenliste geändert): wird gelöscht
         {
             "id": "job-anders",
             "displayName": job_name(group_key("exchange", [DOMAIN, "x"]), started),
+            "description": job_description(group_key("exchange", [DOMAIN, "x"])),
             "status": "succeeded",
             "resourceLocation": f"{UTCM_URL}/configurationSnapshots('anders')",
             "createdDateTime": started.isoformat().replace("+00:00", "Z"),
@@ -350,7 +494,13 @@ def test_finished_job_of_earlier_run_is_taken_over(db: Session) -> None:
     assert result.status == SnapshotStatus.OK
     assert [body["resources"] for body in graph.created] == [[CA, NL]]
     assert graph.downloads == ["entra", "exchange"]
-    assert graph.deleted == ["job-alt", "job-anders", "job-entra", "job-exchange"]
+    assert graph.deleted == [
+        "job-alt",
+        "job-format-141",
+        "job-anders",
+        "job-entra",
+        "job-exchange",
+    ]
 
 
 @pytest.mark.db

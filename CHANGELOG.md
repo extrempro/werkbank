@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.144.1] – 2026-11-26
+
+### Behoben
+
+- **M365-Abruf: Anlegen der UTCM-Aufträge scheiterte mit 400 (BadRequest).** Seit 0.141.0 trug der Name die Workload und die Kennung der Typengruppe (39 Zeichen); UTCM lehnte das ab. Der Name ist jetzt kurz (`Werkbank <JJMMTT> <HHMMSS> <4 Zeichen der Kennung>`, 27 Zeichen), die Typengruppe steht in der Beschreibung (`Werkbank <workload> <Kennung>`, gekürzt). Name und Beschreibung werden vor dem Senden geprüft (höchstens 32 Zeichen, nur Buchstaben, Ziffern, Leerzeichen; die Grenze ist beobachtet, nicht dokumentiert). Alte Aufträge werden nur aufgeräumt, nie übernommen; `JOB_SELECT` liest die Beschreibung mit.
+- **Fehlertext bei Ablehnungen von Graph vollständiger:** `graph_error_text()` hängt Validierungsdetails an (`error.details[]`, `errors`-Objekt, `innerError.message`), nur Feldnamen und Meldungen von Graph, weiter auf 300 Zeichen begrenzt, die request-id am Ende.
+- Tests für Namen, Beschreibung, Erkennung der Gruppe, Prüfung vor dem Senden und den Fehlertext; `docs/spec.md` (Ablauf mit UTCM) ergänzt.
+
 ## [0.144.0] – 2026-11-26
 
 ### Geändert
