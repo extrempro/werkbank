@@ -16,10 +16,6 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 - **Kategorie von Hand** (`Evergreen.Editor`): `PUT /api/evergreen/entries/{id}/topic` (`null` = automatisch), Spalte `ev_entries.topic` (Migration 0092), Verlauf „Kategorie geändert“, Audit `eintrag.kategorie`. `EntrySummary` liefert `topic` und `topic_manual`.
 - Info-Symbol „Kategorie (Neuerungen)“; Handbuch, `docs/spec.md` (8, 8.3, Seitenübersicht), `docs/design.md` und `docs/datenschutz.md` angepasst.
 
-### Tests
-
-- E2E: Erfolge-Test scrollt vor der Barrierefreiheitsprüfung nach oben (auf dem Handy lag die feste Kopfzeile über dem Info-Symbol).
-
 ## [0.143.0] – 2026-11-26
 
 ### Hinzugefügt
@@ -28,6 +24,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 - Backend: `achievements.py`, `achievements_api.py` (`/api/tickets/erfolge`, `/vitrine`, `/gesehen`, `/personen/{oid}`), Migration 0091 (`ticket_achievement_profiles`, `ticket_achievement_events`, `ticket_templates.created_by_oid`). Zählstellen in Lösung, Übergabe, Zusammenführen, Eingang von außen und Antwort/Notiz (`templates`).
 - Neue gemeinsame Komponente `components/PreviewChoice.tsx` (Auswahl mit Vorschau).
 - Handbuch „Meine Erfolge“, Info-Symbole „Erfolge“, „Sichtbarkeit der Erfolge“, „Meisterkranz“; `docs/spec.md` und `docs/datenschutz.md` ergänzt.
+- E2E: Der Erfolge-Test scrollt vor der Barrierefreiheitsprüfung nach oben (auf dem Handy lag die feste Kopfzeile über dem Info-Symbol).
 
 ## [0.142.1] – 2026-11-26
 
