@@ -977,6 +977,8 @@ test("Tickets: Erfolge einschalten, Lösung zählt, Vitrine für Kolleginnen und
   await expect(
     page.getByText("Mitglieder deiner Bereiche sehen jetzt deine Vitrine."),
   ).toBeVisible();
+  // Auf dem Handy liegt sonst die feste Kopfzeile über dem Info-Symbol der Überschrift
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
 
   // Kollegin sieht die Vitrine auf der Ticketseite, in ihrem eigenen Stil (Standard: Wappen)
