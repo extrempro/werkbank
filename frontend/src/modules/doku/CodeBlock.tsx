@@ -7,6 +7,8 @@ import {
   type ReactNodeViewProps,
 } from "@tiptap/react";
 import { createLowlight } from "lowlight";
+// Version von highlight.js (package.json): lowlight 3.3.0 lässt nur ~11.11.0 zu, deshalb 11.11.x
+// statt der neueren 11.12. Anheben, sobald eine neue lowlight-Version höhere Versionen erlaubt.
 import bash from "highlight.js/lib/languages/bash";
 import css from "highlight.js/lib/languages/css";
 import diff from "highlight.js/lib/languages/diff";
