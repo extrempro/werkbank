@@ -173,8 +173,6 @@ export function TablePicker({ editor, onClose }: { editor: Editor; onClose: () =
   return (
     <div
       className="doku-picker doku-table-picker"
-      role="dialog"
-      aria-label="Tabelle einfügen"
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.preventDefault();
@@ -183,7 +181,7 @@ export function TablePicker({ editor, onClose }: { editor: Editor; onClose: () =
         }
       }}
     >
-      <strong>Tabelle einfügen</strong>
+      <h2 className="doku-picker-title">Tabelle einfügen</h2>
       <span className="small" aria-live="polite">
         Größe: {size.rows} Zeilen × {size.cols} Spalten
       </span>

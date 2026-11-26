@@ -24,6 +24,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.147.0",
+    date: "2026-11-26",
+    summary:
+      "Live-Bausteine, Verweise und Tabellen fügst du in der Doku jetzt über ein ruhiges Fenster ein.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Live-Baustein, Verweis und Tabelle öffnen ein Fenster in der Mitte, am Handy von unten. Es steht immer an derselben Stelle und springt nicht mehr.",
+          "Titel, „Abbrechen“ und „Einfügen“ bleiben immer sichtbar; ist der Inhalt länger, scrollt nur er.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.146.0",
     date: "2026-11-26",
     summary: "Code in der Doku wird farbig hervorgehoben.",
