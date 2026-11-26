@@ -211,7 +211,7 @@ describe("EntriesPage", () => {
     const heads = region.querySelectorAll("h2");
     expect([...heads].map((head) => head.textContent)).toEqual(["▾Exchange & Outlook1", "▾Teams3"]);
     expect(screen.getByText(/3 Meldungen, 2 neu, 1 mit Frist · Microsoft Teams/)).toBeVisible();
-    expect(screen.getByText("bis 01.12.2026")).toBeVisible();
+    expect(screen.getByText("Handeln bis 01.12.2026")).toBeVisible();
     const first = calls.find((call) => call.url.includes("state="));
     expect(first?.url).toContain("state=offen");
     expect(first?.url).toContain("hide_info=true");

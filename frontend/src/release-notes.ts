@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.145.0",
+    date: "2026-11-26",
+    summary: "Die Meldungen unter Microsoft 365 › Neuerungen sind besser voneinander getrennt.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Jede Meldung steht jetzt als eigene Karte mit etwas Abstand zur nächsten. So siehst du auf einen Blick, wo eine Meldung aufhört.",
+          "Die Liste ist ruhiger: weniger Farbe, der Status steht als kurzer Text mit Punkt. Nur eine Frist („Handeln bis …“) ist noch farbig hervorgehoben.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.144.1",
     date: "2026-11-26",
     summary: "Der Abruf der M365-Einstellungen funktioniert wieder.",
