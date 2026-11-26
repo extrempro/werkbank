@@ -183,12 +183,12 @@ describe("StartPage", () => {
     expect(screen.queryByRole("region", { name: "Evergreen" })).toBeNull();
   });
 
-  it("zählt in der Evergreen-Kachel neue und offene Einträge", async () => {
+  it("zählt in der Kachel der M365-Neuerungen neue und offene Einträge", async () => {
     mockApi({
       "/api/evergreen/entries": { entries: [], total: 5, open: 5, new: 3, can_edit: false },
     });
     render(<StartPage me={{ ...me, roles: ["Evergreen.Reader"] }} tasks={[]} />);
-    const tile = await screen.findByRole("region", { name: "Evergreen" });
+    const tile = await screen.findByRole("region", { name: "M365-Neuerungen" });
     expect(tile).toHaveTextContent("3 neu");
     expect(tile).toHaveTextContent("Microsoft 365: offen5");
     expect(tile).toHaveTextContent("davon neu3");

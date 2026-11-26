@@ -27,7 +27,7 @@ test("Dunkel bleibt nach dem Neuladen und ist auf allen Seiten gut lesbar", asyn
     "/m365",
     "/m365/aenderungen",
     "/m365/einstellungen",
-    "/evergreen/m365",
+    "/m365/neuerungen",
     "/audit",
   ]) {
     await page.goto(path);

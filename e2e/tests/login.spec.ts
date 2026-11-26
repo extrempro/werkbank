@@ -41,17 +41,19 @@ test("Admin sieht alle Bereiche", async ({ page }) => {
   await page.keyboard.press("Escape");
   await openPage(page, "Microsoft 365", "Änderungen");
   await expect(page).toHaveURL(/\/m365\/aenderungen$/);
-  await openPage(page, "Evergreen", "Microsoft 365");
-  await expect(page).toHaveURL(/\/evergreen\/m365$/);
+  await openPage(page, "Microsoft 365", "Nachrichtencenter");
+  await expect(page).toHaveURL(/\/m365\/neuerungen$/);
   await expectNoA11yViolations(page);
 });
 
-test("Evergreen-Leser sehen nur Start und Evergreen", async ({ page }) => {
+test("Evergreen-Leser sehen nur Start und die Neuerungen unter Microsoft 365", async ({
+  page,
+}) => {
   await loginAs(page, ["Evergreen.Reader"], "Karl Rat");
   await page.goto("/");
-  expect(await areaNames(page)).toEqual(["Start", "Evergreen"]);
-  await openPage(page, "Evergreen", "Microsoft 365");
-  await expect(page).toHaveURL(/\/evergreen\/m365$/);
+  expect(await areaNames(page)).toEqual(["Start", "Microsoft 365"]);
+  await openPage(page, "Microsoft 365", "Nachrichtencenter");
+  await expect(page).toHaveURL(/\/m365\/neuerungen$/);
 });
 
 test("Abmelden führt zur Login-Seite", async ({ page }) => {

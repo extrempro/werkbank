@@ -37,18 +37,20 @@ test("Handy: Leiste unten, Menü als Blatt mit allen Bereichen", async ({
   await expect(all.getByRole("button", { name: /^IT-Budget/ })).toBeVisible();
   // Das Handbuch steht im Kontomenü oben rechts
   await expect(all.getByRole("link", { name: "Handbuch" })).toHaveCount(0);
-  await all.getByRole("button", { name: /^Evergreen/ }).click();
-  const evergreen = page.getByRole("dialog", { name: "Evergreen" });
-  await evergreen.getByRole("link", { name: /^Microsoft 365/ }).click();
-  await expect(evergreen).toBeHidden();
-  await expect(page).toHaveURL(/\/evergreen\/m365$/);
+  await all.getByRole("button", { name: /^Microsoft 365/ }).click();
+  const m365 = page.getByRole("dialog", { name: "Microsoft 365" });
+  await m365.getByRole("link", { name: /^Nachrichtencenter/ }).click();
+  await expect(m365).toBeHidden();
+  await expect(page).toHaveURL(/\/m365\/neuerungen$/);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Microsoft 365" }),
+    page.getByRole("heading", { level: 1, name: "Nachrichtencenter" }),
   ).toBeVisible();
 
-  // Das Blatt zeigt jetzt gleich die Seiten von Evergreen; Esc schließt es.
+  // Das Blatt zeigt jetzt gleich die Seiten von Microsoft 365; Esc schließt es.
   await toggle.click();
-  await expect(page.getByRole("dialog", { name: "Evergreen" })).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Microsoft 365" }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(toggle).toBeFocused();

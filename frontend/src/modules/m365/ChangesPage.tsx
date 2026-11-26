@@ -189,7 +189,7 @@ export function ChangesPage({ me }: ChangesPageProps) {
     setMessage(null);
     createEntryFromChange(entry.id)
       .then((created) => {
-        navigate(entryPath(created.software, created.id));
+        navigate(entryPath(created.id));
       })
       .catch((error: unknown) => {
         const detail = error instanceof ApiError ? error.detail : null;

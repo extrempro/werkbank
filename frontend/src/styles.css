@@ -8730,12 +8730,135 @@ td > .budget-row-actions {
   font-size: 1.125rem;
 }
 
-/* Status-Chips in einer Zeile, bei Platzmangel seitlich scrollbar */
-.ev-list .filter-chips {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: thin;
+/* Neuerungen: Liste nach Kategorien über die volle Breite */
+.ev-list {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.ev-list .filter-bar {
+  padding: 12px 16px 0;
+}
+
+.ev-topic-group {
+  margin: 0 16px;
+  border: 1px solid var(--farbe-rand);
+  border-left: 4px solid var(--bereich);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ev-topic-group ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.ev-topic-group ul[hidden] {
+  display: none;
+}
+
+.ev-topic-group li {
+  display: grid;
+}
+
+.ev-topic-head {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ev-topic-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 16px 0;
+  border: 0;
+  background: none;
+  color: var(--farbe-text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ev-topic-toggle:hover .ev-topic-name {
+  text-decoration: underline;
+}
+
+.ev-group-count {
+  min-width: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--farbe-grund);
+  color: var(--farbe-text-mittel);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.ev-topic-chevron {
+  width: 1em;
+  color: var(--farbe-text-leise);
+}
+
+.ev-topic-name {
+  flex: 1 1 auto;
+}
+
+.ev-topic-summary {
+  margin: 0;
+  padding: 0 16px 10px calc(16px + 1em + 8px);
+  color: var(--farbe-text-leise);
+}
+
+.ev-topic-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 8px 0;
+}
+
+.ev-topic {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border: 1px solid var(--bereich);
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.ev-topic-edit {
+  display: grid;
+  flex: 1 1 100%;
+  grid-template-columns: minmax(0, 480px);
+  gap: 8px;
+}
+
+.ev-crumbs {
+  margin-bottom: 8px;
+}
+
+.ev-pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 16px;
+}
+
+.ev-pager a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
 }
 
 .ev-info-row {

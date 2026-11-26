@@ -85,6 +85,11 @@ export const HELP = {
     text: "Meldungen, die Microsoft nur zur Information schickt und die weder Nutzer noch Admins betreffen.",
     topic: ["evergreen", "liste"],
   },
+  "evergreen.kategorie": {
+    term: "Kategorie (Neuerungen)",
+    text: "Ordnet die Meldung einem Thema wie „Teams“ zu, automatisch aus dem Dienst. Passt sie nicht, wählst du eine andere; deine Wahl bleibt auch bei neuen Texten von Microsoft.",
+    topic: ["evergreen", "liste"],
+  },
   "evergreen.betroffen": {
     term: "Betroffen",
     text: "Wer die Änderung bemerkt, zum Beispiel alle Nutzer mit einer bestimmten Lizenz.",
@@ -496,7 +501,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/m365/dienststatus": [["m365", "dienststatus"]],
   "/m365/nutzung": [["m365", "nutzung"]],
   "/m365/geraete/zuordnung": [["m365", "worum-es-geht"]],
-  "/evergreen": [["evergreen", "liste"]],
+  "/m365/neuerungen": [["evergreen", "liste"]],
   "/monitoring/dns": [["it-monitoring", "dns-abgleich"]],
   "/verwaltung/zabbix": [
     ["it-monitoring", "zabbix-einrichten"],

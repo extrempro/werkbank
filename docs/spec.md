@@ -414,7 +414,7 @@ Entfällt (entschieden im November 2026): Für die M365-Konfiguration gibt es ke
 
 ## 8. Modul Evergreen
 
-Evergreen ist nur für die IT (seit 0.76; vorher Freigabe-Ablauf mit Betriebsrat und Geschäftsführung, dessen Daten beim Update gelöscht wurden). Je Software gibt es einen Unterabschnitt; zurzeit **Microsoft 365** (`/evergreen/m365`), weitere können folgen (`software` am Eintrag).
+Evergreen ist nur für die IT (seit 0.76; vorher Freigabe-Ablauf mit Betriebsrat und Geschäftsführung, dessen Daten beim Update gelöscht wurden). Je Software gibt es einen Unterabschnitt; zurzeit **Microsoft 365**, seit 0.144 im Bereich Microsoft 365 unter **Neuerungen › Nachrichtencenter** (`/m365/neuerungen`). Der eigene Bereich „Evergreen“ ist ausgeblendet, bis weitere Software dazukommt (`software` am Eintrag). Alte Adressen (`/evergreen`, `/evergreen/m365[/<ID>]`) leiten auf die neue Adresse um; angeheftete Seiten und zuletzt besuchte Seiten zieht die Migration `0092` mit um.
 
 ### 8.1 Quellen für Einträge
 
@@ -439,15 +439,17 @@ Doppelte Einträge verhindert die Kombination aus Quelle und Kennung (z. B. `MC1
 - Verlauf (`ev_notes`): Notiz, Abgeschlossen, Wieder geöffnet, Meldung aktualisiert; mit Person (bzw. „Werkbank“) und Zeitpunkt. Audit-Log: `eintrag.angelegt`, `eintrag.notiz`, `eintrag.abgeschlossen`, `eintrag.wieder_geoeffnet`, `nachrichtencenter.abgerufen`.
 - Texte (Meldung, Notizen) werden nur als Text dargestellt, nie als HTML.
 
-### 8.3 Liste und Ansicht
+### 8.3 Liste nach Kategorien und Seite des Eintrags
 
-Muster „Liste und Ansicht“ aus `design.md` (seit 0.83; vorher Tabelle mit Ansicht rechts).
+Seit 0.144: Liste über die volle Breite, nach Kategorien geordnet; ein Eintrag ist eine eigene Seite (vorher seit 0.83 „Liste und Ansicht“ nebeneinander).
 
-- Nummer `EV-JJJJ-NNN`. Links eine Liste mit fester Breite (280–360 px); sie scrollt mit der Seite, die Ansicht rechts bleibt stehen.
-- Oben in der Liste: Suche (Nummer, Titel, Kennung der Meldung, Dienste, Text), Status als Chips mit Anzahl – **Offen** (Standard: neu und bearbeitet), **Neu**, **Mit Frist** (offen und „Handeln bis“ gesetzt), **Abgeschlossen** –, bei Platzmangel seitlich scrollbar; darunter der Schalter „Reine Info-Meldungen ausblenden“ (Standard an, `werkbank-evergreen-info` im Browser). Reine Info-Meldung: Kategorie `stayInformed` und weder „User impact“ noch „Admin impact“ in den Kennzeichen. Am Handy wie alle Filter (`design.md`): Status als Auswahl.
-- Offene Einträge stehen in Gruppen mit Zähler, deren Überschriften beim Scrollen oben haften: 1. **Mit Frist** (nach Frist, früheste zuerst), 2. **Neu**, 3. **In Bearbeitung**; innerhalb von 2 und 3 neueste zuerst. Die Filter „Neu“ und „Abgeschlossen“ zeigen eine Liste ohne Gruppen. Die ganze Liste wird geladen (keine Seiten mehr); bei mehr als 500 Treffern Hinweis, die Suche einzugrenzen.
-- Listeneintrag: Nummer (Schrift für Werte) und Status-Badge in einer Zeile, Titel (höchstens zwei Zeilen, dann abgeschnitten), darunter Dienst · Art und gegebenenfalls „bis TT.MM.JJJJ“ in Orange. Der ganze Eintrag ist ein Link (`/evergreen/m365/<ID>`), gewählt mit Hintergrund, Balken links und `aria-current`.
-- Ohne Auswahl zeigt die Ansicht den Platzhalter. Unter 1100 px erst nur die Liste, gewählt nur die Ansicht mit „‹ Zur Liste“; unter 1200 px ist das Seitenmenü eingeklappt (Bereichsleiste bleibt, „Menü ausklappen“ öffnet es wieder).
+- Nummer `EV-JJJJ-NNN`. Kopf: „Microsoft 365 · Neuerungen“, Überschrift „Nachrichtencenter“, rechts „N offen, davon M neu“.
+- Filterzeile (`FilterBar`): Suche (Nummer, Titel, Kennung der Meldung, Dienste, Text), Status mit Anzahl – **Offen** (Standard: neu und bearbeitet), **Neu**, **Mit Frist** (offen und „Handeln bis“ gesetzt), **Abgeschlossen** – und unter „Kategorie“ eine einzelne Kategorie (Anzahl je Kategorie in der geladenen Liste); darunter der Schalter „Reine Info-Meldungen ausblenden“ (Standard an, `werkbank-evergreen-info` im Browser). Reine Info-Meldung: Kategorie `stayInformed` und weder „User impact“ noch „Admin impact“ in den Kennzeichen. Am Handy wie alle Filter (`design.md`): Status als Auswahl, Kategorie im Blatt.
+- **Kategorien** (feste Reihenfolge, je mit Farbe der Bereichsfarben und immer mit Namen): Exchange & Outlook, Teams, SharePoint & OneDrive, Microsoft 365 Apps, Copilot & KI, Sicherheit & Identität, Geräte & Intune, Verwaltung & Allgemein. Automatisch aus den Diensten der Meldung nach festen Stichwörtern (`modules/evergreen/topics.py`, Copilot vor allem anderen, sonst der erste passende Dienst, sonst „Verwaltung & Allgemein“); berechnet beim Lesen, gespeichert wird nur eine Wahl von Hand (`ev_entries.topic`).
+- Je Kategorie ein Abschnitt mit farbigem Rand links, Überschrift als Knopf zum Auf- und Zuklappen (`aria-expanded`, Zähler) und einer Zeile „N Meldungen, M neu, K mit Frist · häufigste Dienste“. Innerhalb: zuerst mit Frist (früheste zuerst), dann neu, dann die übrigen. Leere Kategorien entfallen. Die ganze Liste wird geladen; bei mehr als 500 Treffern Hinweis, die Suche einzugrenzen.
+- Listeneintrag: Nummer (Schrift für Werte) und Status-Badge in einer Zeile, Titel (höchstens zwei Zeilen, dann abgeschnitten), darunter Dienst · Art und gegebenenfalls „bis TT.MM.JJJJ“ in Orange. Der ganze Eintrag ist ein Link (`/m365/neuerungen/<ID>`).
+- **Seite des Eintrags:** oben der Pfad „Microsoft 365 › Neuerungen › Kategorie › MC…“ („Neuerungen“ führt zur Liste), dann Steckbrief, Rollout und Reiter (8.4), unten „‹ Vorherige in Kategorie“ und „Nächste in Kategorie ›“ in der Reihenfolge der Liste (mit dem gewählten Status und der Suche).
+- **Kategorie ändern** (`Evergreen.Editor`, im Steckbrief unter den Badges): Chip mit Namen und „(automatisch)“, Knopf „Kategorie ändern“ öffnet die Auswahl (`FixedChoice`: „Automatisch“ und die acht Kategorien) mit „Übernehmen“. `PUT /api/evergreen/entries/{id}/topic` mit `{topic}` (oder `null` für automatisch); Verlauf „Kategorie geändert“ („Kategorie: A → B“), Audit `eintrag.kategorie`. Eine Wahl von Hand bleibt bei Aktualisierungen aus dem Nachrichtencenter.
 - Aufgabe auf der Startseite und Benachrichtigung „Neue Einträge“ nur für `Evergreen.Editor`.
 
 ### 8.4 Ansicht eines Eintrags
@@ -1003,7 +1005,7 @@ Evergreen:
 | IT-Budget › Konten | Budget.* (Ändern: Budget.Editor, Budget.Manager) | Liste der Konten; anlegen, ändern, stilllegen |
 | IT-Budget › Einstellungen | Budget.Manager | Beginn und Bezeichnung des Geschäftsjahrs, Kostenstelle; Liste der Tags anlegen, umbenennen, löschen |
 | M365 › Snapshots | Config.* | Abrufe mit Status; Vergleich zweier Abrufe (neu, geändert, entfernt mit Vorher/Nachher); Stand eines Abrufs als JSON und CSV nur für `Werkbank.Admin` (Server prüft, Spalte sonst ausgeblendet) |
-| Evergreen › Microsoft 365 | Evergreen.Reader, Evergreen.Editor | Liste und Ansicht (8.3): Liste mit Suche, Status (Offen, Neu, Mit Frist, Abgeschlossen), „Reine Info-Meldungen ausblenden“ und Gruppen; Ansicht mit Steckbrief, Rollout und Reitern Unsere Bewertung, Text von Microsoft, Notizen und Verlauf; Bearbeiter: Neuer Eintrag, Bewertung speichern, Notiz anfügen, Abschließen, Wieder öffnen |
+| Microsoft 365 › Neuerungen › Nachrichtencenter | Evergreen.Reader, Evergreen.Editor | Liste nach Kategorien (8.3) mit Suche, Status (Offen, Neu, Mit Frist, Abgeschlossen), Kategorie und „Reine Info-Meldungen ausblenden“; Seite des Eintrags mit Pfad, Steckbrief, Kategorie, Rollout, Reitern Unsere Bewertung, Text von Microsoft, Notizen und Verlauf sowie Blättern in der Kategorie; Bearbeiter: Neuer Eintrag, Kategorie ändern, Bewertung speichern, Notiz anfügen, Abschließen, Wieder öffnen |
 | Reports | später | Berichtsvorlagen, Download, geplanter Versand. Noch nicht gebaut; ohne Eintrag in der Navigation |
 | Verwaltung (über das Kontomenü oben rechts, Seiten im Seitenmenü) | Admin (mit Step-up) | Seiten **Allgemein** (Branding mit Logo, Fußzeile und Datenschutz-Link für alle Mails, Aufbewahrung des Audit-Logs, Vorlauf für ablaufende Zertifikate und Secrets), **Rollen** (nach Rolle oder nach Person, jeweils mit den Rollen der letzten Anmeldung), **Mail & Teams** (SMTP-Server, Teams), **Verbindungen** (KI-Texte, NetBox, Abfragen ins Internet), **Datensicherung** (täglich zu einer Uhrzeit, Aufbewahrung als Anzahl, „Jetzt sichern“, Zustand von Schlüssel und Zielordner, vorhandene Sicherungen und letzte Läufe, Anleitung zum Einrichten und Zurückspielen) und **Audit-Log**. Später: Module, Kommentarregeln |
 | Verwaltung › Audit-Log | Admin | Filterbare Tabelle, Export |

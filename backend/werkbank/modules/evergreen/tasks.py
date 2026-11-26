@@ -24,7 +24,7 @@ def evergreen_tasks(db: Session, user: CurrentUser, settings: Settings) -> list[
             module="Evergreen",
             title=f"{SOFTWARE.get(software, software)}: neue Einträge sichten",
             subtitle="Notiz anfügen oder abschließen",
-            link=f"/evergreen/{software}",
+            link="/m365/neuerungen",
             count=int(count),
         )
         for software, count in sorted(rows)

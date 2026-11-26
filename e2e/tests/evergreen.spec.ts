@@ -14,12 +14,11 @@ test("Bearbeiter legen einen Eintrag an, bewerten ihn, fügen Notizen an und sch
   page,
 }, testInfo) => {
   const title = `Neue Funktion ${testInfo.project.name} ${Date.now()}`;
-  const wide = (page.viewportSize()?.width ?? 0) >= 1100;
 
   await loginAs(page, ["Evergreen.Editor"], "Ina Beispiel");
-  await page.goto("/evergreen/m365");
+  await page.goto("/m365/neuerungen");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Microsoft 365" }),
+    page.getByRole("heading", { level: 1, name: "Nachrichtencenter" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Neuer Eintrag" }).click();
   await page.getByLabel("Titel").fill(title);
@@ -30,7 +29,12 @@ test("Bearbeiter legen einen Eintrag an, bewerten ihn, fügen Notizen an und sch
   await expect(
     page.getByRole("heading", { level: 2, name: title }),
   ).toBeVisible();
-  await expect(page).toHaveURL(/\/evergreen\/m365\/\d+$/);
+  await expect(page).toHaveURL(/\/m365\/neuerungen\/\d+$/);
+  // Kategorie automatisch aus dem Dienst, im Pfad und im Steckbrief
+  await expect(page.getByRole("navigation", { name: "Pfad" })).toContainText(
+    "Microsoft 365 › Neuerungen › Teams",
+  );
+  await expect(page.locator(".ev-topic")).toContainText("Teams (automatisch)");
   const entryUrl = new URL(page.url()).pathname;
   await expect(page.getByText("Noch kein Zeitplan eingetragen.")).toBeVisible();
   await expect(
@@ -74,21 +78,37 @@ test("Bearbeiter legen einen Eintrag an, bewerten ihn, fügen Notizen an und sch
   await page.getByRole("button", { name: "Notiz anfügen" }).click();
   await expect(page.getByText("Mit der Fachabteilung klären")).toBeVisible();
 
-  // Liste: breit daneben mit Markierung, schmal über „Zur Liste“
-  if (wide) {
-    await expect(
-      page.getByRole("link", { name: new RegExp(title) }),
-    ).toHaveAttribute("aria-current", "true");
-  } else {
-    await page.getByRole("link", { name: "‹ Zur Liste" }).click();
-    await expect(
-      page.getByRole("link", { name: new RegExp(title) }),
-    ).toBeVisible();
-    await page.getByRole("link", { name: new RegExp(title) }).click();
-    await expect(
-      page.getByRole("heading", { level: 2, name: title }),
-    ).toBeVisible();
-  }
+  // Kategorie von Hand ändern: steht im Verlauf und im Pfad
+  await page.getByRole("button", { name: "Kategorie ändern" }).click();
+  await page
+    .getByRole("button", { name: "Kategorie ändern: Automatisch" })
+    .click();
+  await page.getByRole("combobox", { name: "Kategorie" }).fill("Copilot");
+  await page.getByRole("option", { name: /Copilot & KI/ }).click();
+  await page.getByRole("button", { name: "Übernehmen" }).click();
+  await expect(page.getByText("Kategorie gespeichert.")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Pfad" })).toContainText(
+    "Neuerungen › Copilot & KI",
+  );
+  await expect(page.getByText("Kategorie geändert")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Zurück zur Liste über den Pfad, der Eintrag steht in seiner Kategorie
+  await page
+    .getByRole("navigation", { name: "Pfad" })
+    .getByRole("link", { name: "Neuerungen" })
+    .click();
+  const copilot = page
+    .locator(".ev-topic-group")
+    .filter({ has: page.getByRole("heading", { name: /Copilot & KI/ }) });
+  await expect(
+    copilot.getByRole("link", { name: new RegExp(title) }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+  await copilot.getByRole("link", { name: new RegExp(title) }).click();
+  await expect(
+    page.getByRole("heading", { level: 2, name: title }),
+  ).toBeVisible();
 
   // Ein zweiter Bearbeiter ergänzt und schließt ab
   await loginAs(page, ["Evergreen.Editor"], "Ole Beispiel");
@@ -113,7 +133,7 @@ test("Liste: Status wählen und Info-Meldungen ausblenden (gemerkt)", async ({
   page,
 }) => {
   await loginAs(page, ["Evergreen.Reader"], "Lea Beispiel");
-  await page.goto("/evergreen/m365");
+  await page.goto("/m365/neuerungen");
   const toggle = page.getByRole("checkbox", {
     name: "Reine Info-Meldungen ausblenden",
   });
@@ -138,8 +158,13 @@ test("Leser sehen Einträge ohne Bearbeitung und haben keine Aufgaben", async ({
   const id = (await created.json()).id as number;
 
   await loginAs(page, ["Evergreen.Reader"], "Lea Beispiel");
+  // Alte Adressen führen auf die neue Seite
   await page.goto(`/evergreen/m365/${id}`);
+  await expect(page).toHaveURL(new RegExp(`/m365/neuerungen/${id}$`));
   await expect(page.getByText("Noch nicht bewertet.").first()).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Kategorie ändern" }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "Bewertung speichern" }),
   ).toHaveCount(0);
@@ -172,7 +197,7 @@ test("Ohne Evergreen-Rolle bleibt der Bereich verschlossen", async ({
   page,
 }) => {
   await loginAs(page, ["Config.Reader"], "Lea Leser");
-  await page.goto("/evergreen/m365");
+  await page.goto("/m365/neuerungen");
   await expect(
     page.getByRole("heading", { name: "Seite nicht gefunden" }),
   ).toBeVisible();

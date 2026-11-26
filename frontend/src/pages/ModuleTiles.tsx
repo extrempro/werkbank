@@ -55,8 +55,8 @@ function configTile(overview: Overview): Tile {
 function evergreenTile(list: EntryList): Tile {
   const fresh = count(list.new);
   return {
-    title: "Evergreen",
-    link: "/evergreen/m365",
+    title: "M365-Neuerungen",
+    link: "/m365/neuerungen",
     status: fresh > 0 ? `${fresh} neu` : "nichts Neues",
     attention: fresh > 0,
     lines: [

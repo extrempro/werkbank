@@ -29,7 +29,7 @@ test("Suche findet Evergreen-Einträge und beachtet, wer sie sehen darf", async 
   await expect(page.getByText("1 Treffer")).toBeVisible();
   await expectNoA11yViolations(page);
   await hit.click();
-  await expect(page).toHaveURL(new RegExp(`/evergreen/m365/${id}$`));
+  await expect(page).toHaveURL(new RegExp(`/m365/neuerungen/${id}$`));
 
   // Ohne Evergreen-Rolle findet die Suche den Eintrag nicht.
   const context = await browser.newContext();
