@@ -18,6 +18,7 @@ from werkbank.modules.inventory.models import (
     InventoryPosition,
 )
 from werkbank.modules.inventory.search import escape_like
+from werkbank.modules.tickets import achievements
 from werkbank.modules.tickets.access import AccessDep, TicketAccess, forbidden, not_found
 from werkbank.modules.tickets.api import (
     TicketNumber,
@@ -140,6 +141,8 @@ def merge_ticket(
         )
     me = actor(access)
     merge(db, source, target, me)
+    # Erfolg „Ordnungshüter“: je zusammengeführtem Ticket einmal
+    achievements.record(db, access.oid, "ordnung", f"ticket:{source.id}")
     if body.notify_reporter and source.reporter_mail:
         area = db.get(TicketArea, target.area_id)
         if area is not None:
@@ -592,7 +595,7 @@ def add_template(
     area_id: AreaId, body: TemplateIn, access: AccessDep, db: DbDep
 ) -> list[TemplateOut]:
     area = _area_for_settings(db, access, area_id)
-    db.add(TicketTemplate(area_id=area.id, **body.model_dump()))
+    db.add(TicketTemplate(area_id=area.id, created_by_oid=access.oid, **body.model_dump()))
     try:
         db.flush()
     except IntegrityError as exc:

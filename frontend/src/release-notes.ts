@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.143.0",
+    date: "2026-11-26",
+    summary: "Neu bei den Tickets: freiwillige Erfolge mit Abzeichen in sieben Stilen.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Unter Tickets › Meine Erfolge kannst du Erfolge einschalten. Sie sind freiwillig und zählen erst ab dem Einschalten, zum Beispiel beschriebene Lösungen, Übergaben mit Notiz oder zusammengeführte Tickets. Es gibt keine Rangliste und keine Zeitmessung.",
+          "Jeder Erfolg hat 30 Stufen; mit jeder Stufe wird das Abzeichen prächtiger. Den Stil wählst du selbst: Wappen, Neon, Fantasy, Pixel, Flach, Rangabzeichen oder Sammelkarte.",
+          "Bis zu drei Erfolge stellst du in deine Vitrine. Wenn du willst, sehen Kolleginnen und Kollegen aus deinen Bereichen sie auf der Ticketseite. Neue Stufen blendet die Werkbank kurz ein.",
+          "Schaltest du die Erfolge wieder aus, löscht die Werkbank alles Gesammelte.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.142.1",
     date: "2026-11-26",
     summary: "Die Farbpunkte der Bereiche in der Ticketliste sind wieder zu sehen.",

@@ -352,6 +352,21 @@ export const HELP = {
     text: "Markiert die Tickets eines Bereichs in der Liste mit einem Punkt und einem Streifen. Der Name des Bereichs steht immer daneben.",
     topic: ["tickets", "einstellungen"],
   },
+  "tickets.erfolge": {
+    term: "Erfolge",
+    text: "Freiwillige Abzeichen für sorgfältige Ticketarbeit, zum Beispiel beschriebene Lösungen oder Übergaben mit Notiz. Gezählt wird erst ab dem Einschalten; es gibt keine Rangliste und keine Zeitmessung.",
+    topic: ["tickets", "erfolge"],
+  },
+  "tickets.erfolge-sichtbar": {
+    term: "Sichtbarkeit der Erfolge",
+    text: "Mit „Mitglieder meiner Bereiche“ sehen Personen aus deinen Ticket-Bereichen deine Gesamtstufe und deine Vitrine, aber keine Zahlen. Mit „Nur ich“ sieht sie niemand sonst.",
+    topic: ["tickets", "erfolge"],
+  },
+  "tickets.meisterkranz": {
+    term: "Meisterkranz",
+    text: "Je Rang ein Abzeichen. Es wird frei, sobald alle sechs Kategorien diesen Rang erreicht haben.",
+    topic: ["tickets", "erfolge"],
+  },
   "tickets.leiste": {
     term: "Favoriten und Geöffnet",
     text: "Unter „Neues Ticket“ stehen deine Favoriten und die zuletzt geöffneten Tickets. Hier stellst du ein, wie viele es höchstens sind und wie sie aussehen.",
@@ -496,6 +511,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/doku": [["doku", "seiten"]],
   "/doku/verwaltung": [["doku", "verwaltung"]],
   "/tickets": [["tickets", "uebersicht"]],
+  "/tickets/erfolge": [["tickets", "erfolge"]],
   "/tickets/neu": [["tickets", "uebersicht"]],
   "/tickets/einstellungen": [["tickets", "einstellungen"]],
   "/tickets/uebersicht": [["tickets", "uebersicht"]],

@@ -19,6 +19,8 @@ from werkbank.main import create_app
 from werkbank.modules.tickets.jobs import housekeeping
 from werkbank.modules.tickets.models import (
     Ticket,
+    TicketAchievementEvent,
+    TicketAchievementProfile,
     TicketArea,
     TicketAreaGrant,
     TicketAudit,
@@ -80,6 +82,8 @@ def join(db: Session, group: str, name: str) -> None:
 @pytest.fixture
 def db(db_session: Session) -> Session:
     for table in (
+        TicketAchievementEvent,
+        TicketAchievementProfile,
         TicketParticipant,
         TicketEntry,
         Ticket,

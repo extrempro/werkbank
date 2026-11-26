@@ -85,6 +85,7 @@ export const TICKETS_PATH = "/tickets";
 export const TICKETS_NEW_PATH = "/tickets/neu";
 export const TICKETS_SETTINGS_PATH = "/tickets/einstellungen";
 export const TICKETS_OVERVIEW_PATH = "/tickets/uebersicht";
+export const TICKETS_ACHIEVEMENTS_PATH = "/tickets/erfolge";
 export const EVERGREEN_M365_PATH = "/evergreen/m365";
 export const DOKU_PATH = "/doku";
 export const DOKU_ADMIN_PATH = "/doku/verwaltung";
@@ -248,6 +249,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
           { path: TICKETS_OVERVIEW_PATH, label: "Übersicht", icon: "uebersicht" },
           { path: TICKETS_PATH, label: "Alle Tickets", icon: "tickets" },
           { path: TICKETS_NEW_PATH, label: "Neues Ticket", icon: "plus" },
+          { path: TICKETS_ACHIEVEMENTS_PATH, label: "Meine Erfolge", icon: "stern" },
         ],
       });
     }

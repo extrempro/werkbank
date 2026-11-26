@@ -319,8 +319,8 @@ export function moveTicket(
   return postJson(`${BASE}/${number}/move`, { area_id: areaId });
 }
 
-export function addNote(number: number, body: string): Promise<Ticket> {
-  return postJson(`${BASE}/${number}/notes`, { body });
+export function addNote(number: number, body: string, templates: number[] = []): Promise<Ticket> {
+  return postJson(`${BASE}/${number}/notes`, { body, templates });
 }
 
 export type StatusAfter = "" | "waiting" | "solved";
@@ -331,12 +331,14 @@ export function sendReply(
   statusAfter: StatusAfter,
   replyAll = false,
   solution: SolutionInput | null = null,
+  templates: number[] = [],
 ): Promise<Ticket> {
   return postJson(`${BASE}/${number}/replies`, {
     body,
     status_after: statusAfter,
     reply_all: replyAll,
     solution: statusAfter === "solved" ? solution : null,
+    templates,
   });
 }
 

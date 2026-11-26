@@ -168,6 +168,7 @@ describe("Hilfsfunktionen", () => {
       "/tickets/uebersicht",
       "/tickets",
       "/tickets/neu",
+      "/tickets/erfolge",
     ]);
     expect(areasFor([]).some((a) => a.id === "tickets")).toBe(false);
   });
@@ -299,7 +300,7 @@ describe("TicketPage", () => {
       target: { value: "Toner bestellt" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Interne Notiz speichern" }));
-    await waitFor(() => expect(bodies).toEqual([{ body: "Toner bestellt" }]));
+    await waitFor(() => expect(bodies).toEqual([{ body: "Toner bestellt", templates: [] }]));
   });
 
   it("öffnet bei der letzten Mitteilung, nicht bei Systemeinträgen", async () => {
@@ -359,7 +360,13 @@ describe("Antwort an den Melder", () => {
     fireEvent.click(screen.getByRole("button", { name: "An M. Muster senden" }));
     await waitFor(() =>
       expect(bodies).toEqual([
-        { body: "Bitte starte neu.", status_after: "waiting", reply_all: true, solution: null },
+        {
+          body: "Bitte starte neu.",
+          status_after: "waiting",
+          reply_all: true,
+          solution: null,
+          templates: [],
+        },
       ]),
     );
   });
@@ -702,9 +709,14 @@ describe("TicketPage: Arbeitshilfen", () => {
   });
 
   it("fügt Textbausteine über /kürzel ein und übernimmt „Status danach“", async () => {
+    const sent: unknown[] = [];
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (url: string) => {
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.endsWith("/replies")) {
+          sent.push(JSON.parse(String(init?.body)));
+          return new Response(JSON.stringify(ticket()), { status: 201 });
+        }
         if (url.endsWith("/templates")) {
           return new Response(
             JSON.stringify({
@@ -732,6 +744,9 @@ describe("TicketPage: Arbeitshilfen", () => {
     fireEvent.keyDown(field, { key: "Enter" });
     expect(field.value).toBe("Danke! Hallo Max, zu T-1042: drucker");
     expect((screen.getByLabelText("Status danach") as HTMLSelectElement).value).toBe("solved");
+    // Der genutzte Baustein geht mit (für den Erfolg „Wissensquelle“)
+    fireEvent.click(screen.getByRole("button", { name: "An M. Muster senden" }));
+    await waitFor(() => expect(sent).toMatchObject([{ templates: [1] }]));
   });
 });
 

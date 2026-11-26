@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from werkbank.config import Settings
 from werkbank.core.models import BrandingAsset
 from werkbank.core.sessions import now_utc
+from werkbank.modules.tickets import achievements
 from werkbank.modules.tickets.files import store_file
 from werkbank.modules.tickets.mailbox import (
     FOLDER_IGNORED,
@@ -391,6 +392,9 @@ def _reply(
     }
     if known:
         _participants(db, ticket, mail, mailboxes)
+    else:
+        # Antwort von außen: zählt für den Erfolg „Brückenbauer“ der letzten Weiterleitung
+        achievements.external_answer(db, ticket)
     old = ticket.status
     if known and old in (STATUS_WAITING, STATUS_SOLVED, STATUS_CLOSED, STATUS_REMINDER):
         set_status(ticket, STATUS_IN_PROGRESS, db)

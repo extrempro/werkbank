@@ -22,6 +22,7 @@ from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, SettingsDep
 from werkbank.core.sessions import now_utc
 from werkbank.modules.inventory.search import escape_like
+from werkbank.modules.tickets import achievements
 from werkbank.modules.tickets.access import (
     AccessDep,
     TicketAccess,
@@ -310,6 +311,9 @@ def _set_solution(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
+    # Erfolge erst, wenn die Lösung wirklich steht (bei Antworten nach dem Senden)
+    if note:
+        achievements.solved(db, ticket, me.oid)
 
 
 def _area_names(db: Session) -> dict[int, str]:
@@ -810,6 +814,7 @@ def change_ticket(
         new_oid = (body.assignee_oid or "").lower() or None
         if new_oid != ticket.assignee_oid:
             _check_handover(db, access, ticket, new_oid)
+            handing_over = ticket.assignee_oid == access.oid and new_oid not in (None, access.oid)
             old_name = ticket.assignee_name or "niemand"
             if new_oid is None:
                 new_name = ""
@@ -832,6 +837,11 @@ def change_ticket(
                 details={"zugewiesen": new_oid is not None},
             )
             note = body.handover_note.strip()
+            if note and handing_over:
+                # Erfolg „Staffelläufer“: eigenes Ticket mit Übergabenotiz weitergegeben
+                achievements.record(
+                    db, access.oid, "staffel", f"ticket:{ticket.id}:{now_utc().isoformat()}"
+                )
             if note:
                 db.add(
                     TicketEntry(
@@ -1005,6 +1015,8 @@ def move_ticket(
 
 class NoteIn(BaseModel):
     body: str = Field(min_length=1, max_length=BODY_MAX)
+    # Eingefügte Textbausteine (für den Erfolg „Wissensquelle“ der Person, die sie angelegt hat)
+    templates: list[int] = Field(default_factory=list, max_length=10)
 
     @field_validator("body")
     @classmethod
@@ -1021,15 +1033,16 @@ def add_note(
 ) -> TicketOut:
     """Interne Notiz. Der Melder sieht sie nicht und bekommt keine Mail."""
     ticket = _visible_ticket(db, access, number, write=True)
-    db.add(
-        TicketEntry(
-            ticket_id=ticket.id,
-            kind=ENTRY_NOTE,
-            body=body.body,
-            author_oid=access.oid,
-            author_name=access.user.display_name,
-        )
+    entry = TicketEntry(
+        ticket_id=ticket.id,
+        kind=ENTRY_NOTE,
+        body=body.body,
+        author_oid=access.oid,
+        author_name=access.user.display_name,
     )
+    db.add(entry)
+    db.flush()
+    achievements.templates_used(db, ticket, body.templates, access.oid, f"entry:{entry.id}")
     ticket.updated_at = now_utc()
     db.commit()
     db.refresh(ticket)
@@ -1038,6 +1051,8 @@ def add_note(
 
 class ReplyIn(BaseModel):
     body: str = Field(min_length=1, max_length=BODY_MAX)
+    # Eingefügte Textbausteine (für den Erfolg „Wissensquelle“ der Person, die sie angelegt hat)
+    templates: list[int] = Field(default_factory=list, max_length=10)
     # Status danach: "" = unverändert
     status_after: Literal["", "waiting", "solved"] = ""
     # An alle: Beteiligte in Kopie; sonst nur an den Melder
@@ -1104,17 +1119,18 @@ def send_reply(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Die Antwort konnte nicht gesendet werden: {error}",
         )
-    db.add(
-        TicketEntry(
-            ticket_id=ticket.id,
-            kind="reply",
-            body=body.body,
-            author_oid=access.oid,
-            author_name=me_actor.name,
-            message_id=message_id,
-            recipients=", ".join(sent_to)[:2000],
-        )
+    reply_entry = TicketEntry(
+        ticket_id=ticket.id,
+        kind="reply",
+        body=body.body,
+        author_oid=access.oid,
+        author_name=me_actor.name,
+        message_id=message_id,
+        recipients=", ".join(sent_to)[:2000],
     )
+    db.add(reply_entry)
+    db.flush()
+    achievements.templates_used(db, ticket, body.templates, access.oid, f"entry:{reply_entry.id}")
     now = now_utc()
     if ticket.first_response_at is None:
         ticket.first_response_at = now
