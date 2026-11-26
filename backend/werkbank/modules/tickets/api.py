@@ -122,9 +122,13 @@ class AreaRef(BaseModel):
     id: int
     name: str
     role: str | None = None
+    # Farbe des Bereichs (Schlüssel aus AREA_COLORS); in /me und am einzelnen Ticket gefüllt
+    color: str = ""
 
 
 class MeOut(BaseModel):
+    # Eigene Kennung, damit die Liste eigene Tickets hervorheben kann
+    oid: str
     manager: bool
     settings: bool
     areas: list[AreaRef]
@@ -381,6 +385,9 @@ def reply_problem(settings: Settings, area: TicketArea | None, ticket: Ticket) -
 def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticket) -> TicketOut:
     names = _area_names(db)
     item = _item(ticket, names, access, _category_names(db))
+    item.area.color = (
+        db.scalar(select(TicketArea.color).where(TicketArea.id == ticket.area_id)) or ""
+    )
     entries = db.scalars(
         select(TicketEntry)
         .where(TicketEntry.ticket_id == ticket.id)
@@ -536,12 +543,22 @@ def _merged_number(db: Session, ticket: Ticket) -> int | None:
 @router.get("/me")
 def me(access: AccessDep, db: DbDep, settings: SettingsDep) -> MeOut:
     """Eigene Rechte im Modul: Bereiche mit Rolle, Ticket-Verwaltung, Einstellungen sichtbar."""
-    names = _area_names(db)
+    areas = {
+        row.id: row
+        for row in db.execute(select(TicketArea.id, TicketArea.name, TicketArea.color)).all()
+    }
     return MeOut(
+        oid=access.oid,
         manager=access.manager,
         settings=access.settings_visible,
         areas=[
-            AreaRef(id=a, name=names.get(a, ""), role=access.role(a)) for a in access.visible_areas
+            AreaRef(
+                id=a,
+                name=areas[a].name if a in areas else "",
+                role=access.role(a),
+                color=areas[a].color if a in areas else "",
+            )
+            for a in access.visible_areas
         ],
     )
 

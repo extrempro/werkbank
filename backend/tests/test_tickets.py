@@ -149,7 +149,12 @@ def new_ticket(client: TestClient, area: int, **extra: Any) -> dict[str, Any]:
 def test_manager_sees_settings_but_no_tickets(areas: dict[str, int]) -> None:
     manager = client_for("Vera Verwaltung", ["Tickets.Verwaltung"])
     me = manager.get(f"{BASE}/me").json()
-    assert me == {"manager": True, "settings": True, "areas": []}
+    assert me == {
+        "oid": oid_of("Vera Verwaltung"),
+        "manager": True,
+        "settings": True,
+        "areas": [],
+    }
     max_ = client_for("Max Muster")
     ticket = new_ticket(max_, areas["it"])
     assert manager.get(f"{BASE}/{ticket['number']}").status_code == 404
@@ -338,6 +343,33 @@ def test_settings_rights(areas: dict[str, int]) -> None:
         "admin": {"role": "admin", "kind": "person", "oid": oid_of("Ina Beispiel"), "name": "Ina"},
     }
     assert manager.post(f"{SETTINGS}/areas", json=dup).status_code == 409
+
+
+def test_area_colors(areas: dict[str, int]) -> None:
+    manager = client_for("Vera Verwaltung", ["Tickets.Verwaltung"])
+    colors = {a["name"]: a["color"] for a in manager.get(SETTINGS).json()["areas"]}
+    # Neue Bereiche bekommen die am wenigsten genutzte Farbe
+    assert colors == {"IT": "blau", "Haustechnik": "petrol"}
+    body = {"name": "IT", "mailbox": "it@example.com", "active": True, "color": "orange"}
+    assert manager.put(f"{SETTINGS}/areas/{areas['it']}", json=body).json()["color"] == "orange"
+    # Ohne Farbe bleibt sie, unbekannte Farben werden abgelehnt
+    del body["color"]
+    assert manager.put(f"{SETTINGS}/areas/{areas['it']}", json=body).json()["color"] == "orange"
+    body["color"] = "#ff0000"
+    assert manager.put(f"{SETTINGS}/areas/{areas['it']}", json=body).status_code == 422
+    # Farbe ändert nur die Ticket-Verwaltung
+    ina = client_for("Ina Beispiel")
+    body["color"] = "gruen"
+    assert ina.put(f"{SETTINGS}/areas/{areas['it']}", json=body).status_code == 403
+    # Die eigene Sicht kennt Kennung und Farben der Bereiche
+    me = client_for("Max Muster").get(f"{BASE}/me").json()
+    assert me["oid"] == oid_of("Max Muster")
+    assert [(a["name"], a["color"]) for a in me["areas"]] == [("IT", "orange")]
+    # Am einzelnen Ticket steht die Farbe des Bereichs mit
+    max_ = client_for("Max Muster")
+    ticket = new_ticket(max_, areas["it"])
+    assert ticket["area"]["color"] == "orange"
+    assert max_.get(f"{BASE}/{ticket['number']}").json()["area"]["color"] == "orange"
 
 
 def test_auto_close_after_five_days(db: Session, areas: dict[str, int]) -> None:

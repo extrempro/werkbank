@@ -28,6 +28,7 @@ from werkbank.modules.tickets.access import (
 from werkbank.modules.tickets.api import Mail, actor
 from werkbank.modules.tickets.models import (
     AREA_ADMIN,
+    AREA_COLORS,
     TicketArea,
     TicketAreaGrant,
     TicketAudit,
@@ -59,6 +60,7 @@ class AreaOut(BaseModel):
     mailbox: str
     assignment: str
     active: bool
+    color: str
     # Darf die Person hier Bereichsverwaltung vergeben, Name und Postfach ändern?
     manage: bool
     grants: list[GrantOut]
@@ -117,6 +119,7 @@ def _area_out(db: Session, access: TicketAccess, area: TicketArea) -> AreaOut:
         mailbox=area.mailbox,
         assignment=area.assignment,
         active=area.active,
+        color=area.color,
         manage=access.manager,
         grants=_grants(db, area.id),
     )
@@ -151,10 +154,15 @@ class GrantIn(BaseModel):
         return value.strip()
 
 
+AreaColor = Literal["blau", "petrol", "violett", "orange", "gruen", "rot", "pink", "grau"]
+
+
 class AreaIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     mailbox: Mail | Literal[""] = ""
     active: bool = True
+    # Ohne Angabe: beim Anlegen die am wenigsten genutzte Farbe, beim Ändern unverändert
+    color: AreaColor | None = None
 
     @field_validator("name")
     @classmethod
@@ -168,6 +176,12 @@ class AreaIn(BaseModel):
 class NewAreaIn(AreaIn):
     # Erste Bereichsverwaltung (Pflicht: jeder Bereich braucht mindestens eine)
     admin: GrantIn
+
+
+def _free_color(db: Session) -> str:
+    """Die am wenigsten genutzte Bereichsfarbe, bei Gleichstand die erste der Auswahl."""
+    used = list(db.scalars(select(TicketArea.color)))
+    return min(AREA_COLORS, key=lambda color: (used.count(color), AREA_COLORS.index(color)))
 
 
 def _check_grant(body: GrantIn, settings_ok: bool) -> None:
@@ -221,7 +235,12 @@ def create_area(body: NewAreaIn, access: AccessDep, db: DbDep, settings: Setting
         )
     _check_grant(body.admin, valid_oid(body.admin.oid, settings))
     _unique_name(db, body.name)
-    area = TicketArea(name=body.name, mailbox=body.mailbox, active=body.active)
+    area = TicketArea(
+        name=body.name,
+        mailbox=body.mailbox,
+        active=body.active,
+        color=body.color or _free_color(db),
+    )
     db.add(area)
     db.flush()
     _add_grant(db, area, body.admin)
@@ -248,9 +267,9 @@ def update_area(area_id: AreaId, body: AreaIn, access: AccessDep, db: DbDep) -> 
         raise forbidden("Name und Postfach ändert nur die Ticket-Verwaltung.")
     _unique_name(db, body.name, area.id)
     changes: dict[str, object] = {}
-    for field in ("name", "mailbox", "active"):
+    for field in ("name", "mailbox", "active", "color"):
         new = getattr(body, field)
-        if getattr(area, field) != new:
+        if new is not None and getattr(area, field) != new:
             changes[field] = new
             setattr(area, field, new)
     if changes:

@@ -227,7 +227,7 @@ def test_stats_only_own_areas(db: Session, areas: dict[str, int]) -> None:
     stats = max_.get(f"{BASE}/stats").json()
     assert stats["open"] == 2
     assert stats["mine"] == 1
-    assert stats["unassigned_new"] == 1
+    assert stats["unassigned_new"] == stats["unassigned"] == 1
     assert stats["overdue"] is None and stats["sla"] is None
     channels = {c["key"]: c["count"] for c in stats["created_by_channel"]}
     assert channels == {"mail": 0, "manual": 1, "phone": 1}

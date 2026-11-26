@@ -70,6 +70,10 @@ ENTRY_SYSTEM = "system"  # Systemeintrag
 ENTRY_FORWARD = "forward"  # weitergeleitet (intern)
 
 
+# Feste Auswahl an Bereichsfarben; die Oberfläche kennt dieselben Schlüssel.
+AREA_COLORS = ("blau", "petrol", "violett", "orange", "gruen", "rot", "pink", "grau")
+
+
 class TicketArea(Base):
     """Bereich, z. B. eine Abteilung, mit genau einem Postfach."""
 
@@ -84,6 +88,8 @@ class TicketArea(Base):
     )
     active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Farbe in Listen und Verlauf (Schlüssel aus AREA_COLORS), der Name steht immer daneben
+    color: Mapped[str] = mapped_column(String(12), default="blau", server_default="blau")
     # Mails an den Melder (Phase 2)
     sender_name: Mapped[str] = mapped_column(String(120), default="", server_default="")
     header_title: Mapped[str] = mapped_column(String(120), default="", server_default="")

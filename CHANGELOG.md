@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.142.0] – 2026-11-26
+
+### Hinzugefügt
+
+- **Tickets: Farbe je Bereich.** Neues Feld `ticket_areas.color` (Migration 0090, vorhandene Bereiche bekommen die acht Farben der Reihe nach), neue Bereiche die am wenigsten genutzte Farbe. Die Ticket-Verwaltung wählt sie in den Einstellungen (neue gemeinsame Komponente `components/ColorChoice.tsx`, Punkt mit Namen). In der Liste Streifen am Zeilenanfang, Punkt neben dem Bereichsnamen und Legende; die Farbe ist nie das einzige Merkmal. `/api/tickets/me` liefert `oid` und die Farben, das einzelne Ticket die Farbe seines Bereichs.
+- **Tickets: eigene Tickets hervorgehoben und Zahlen in der Auswahl.** Getönte Zeile, fetter Betreff und „Du“ bei der Zuständigkeit; „Offen“, „Mir zugewiesen“ und „Nicht zugewiesen“ zeigen die Anzahl (`stats.unassigned`).
+
+### Geändert
+
+- **Ticket-Verlauf „Von → An“:** Jeder Eintrag zeigt Absender und Empfänger, bei Antworten weitere Empfänger als CC. Eingänge links und weiß, Antworten rechts und blau, interne Notizen gelb („Interne Notiz · nur für das Team“), Weiterleitungen nach außen türkis mit gestricheltem Rand („Weitergeleitet nach außen · der Melder sieht das nicht“, Empfänger mit „(extern)“). Gleichmäßige Abstände im Verlauf.
+- **Ticket-Seitenleiste:** „Verschieben nach“ und „Beteiligte hinzufügen“ stehen untereinander (Feld volle Breite, Knopf darunter), nichts wird mehr abgeschnitten; der Bereich steht mit seiner Farbe da.
+
 ## [0.141.0] – 2026-11-26
 
 ### Behoben

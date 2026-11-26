@@ -4,8 +4,11 @@ import { FilterBar } from "../../components/FilterBar";
 import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
 import { useDebounced } from "../inventory/paged";
+import { AreaTag } from "./AreaTag";
+import { areaColorClass, colorsOf } from "./areaColors";
 import {
   exportUrl,
+  fetchStats,
   fetchTickets,
   PRIORITY_LABELS,
   STATUS_LABELS,
@@ -13,6 +16,7 @@ import {
   ticketPath,
   TICKETS_NEW_PATH,
   VIEW_LABELS,
+  type Stats,
   type TicketAccess,
   type TicketItem,
   type TicketStatus,
@@ -57,6 +61,7 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
   const total = current ? current.total : 0;
   const hasMore = current ? current.hasMore : false;
   const [loadingMore, setLoadingMore] = useState(false);
+  const [counts, setCounts] = useState<Stats | null>(null);
   const canCreate = access.areas.some((a) => a.role === "edit" || a.role === "admin");
   // Export nur für die Bereichsverwaltung, nur aus deren Bereichen
   const adminAreas = access.areas.filter((a) => a.role === "admin");
@@ -85,6 +90,18 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
     };
   }, [view, area, query]);
 
+  // Zahlen der Schnellfilter, je gewähltem Bereich
+  useEffect(() => {
+    let active = true;
+    fetchStats(area).then(
+      (stats) => active && setCounts(stats),
+      () => active && setCounts(null),
+    );
+    return () => {
+      active = false;
+    };
+  }, [area]);
+
   const loadMore = () => {
     if (!current) {
       return;
@@ -106,6 +123,13 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
 
   const filtered = view !== "open" || area !== null || search.trim() !== "";
   const showArea = access.areas.length > 1;
+  const colors = colorsOf(access.areas);
+  // Zahlen der Schnellfilter direkt in der Auswahl
+  const counted: Partial<Record<View, number>> = counts
+    ? { open: counts.open, mine: counts.mine, unassigned: counts.unassigned }
+    : {};
+  const viewLabel = (id: View) =>
+    counted[id] === undefined ? VIEW_LABELS[id] : `${VIEW_LABELS[id]} · ${counted[id]}`;
 
   return (
     <div className="page page-wide">
@@ -147,6 +171,14 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
         <div className="panel-head">
           <h2 id="tickets-liste">Tickets</h2>
         </div>
+        {showArea && (
+          <p className="ticket-quick-legend">
+            <span>Bereiche:</span>
+            {access.areas.map((a) => (
+              <AreaTag key={a.id} name={a.name} color={a.color} />
+            ))}
+          </p>
+        )}
         <FilterBar
           plain
           search={{
@@ -167,7 +199,7 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
             label: "Auswahl",
             value: view,
             onChange: setView,
-            options: VIEWS.map((id) => ({ value: id, label: VIEW_LABELS[id] })),
+            options: VIEWS.map((id) => ({ value: id, label: viewLabel(id) })),
           }}
           more={
             showArea ? (
@@ -217,7 +249,9 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
               : `${items.length} von ${total} Tickets`}
           </p>
         )}
-        {items && items.length > 0 && <TicketTable items={items} showArea={showArea} />}
+        {items && items.length > 0 && (
+          <TicketTable items={items} showArea={showArea} colors={colors} meOid={access.oid} />
+        )}
         {hasMore && (
           <p className="detail-body">
             <button type="button" className="button" onClick={loadMore} disabled={loadingMore}>
@@ -230,8 +264,22 @@ export function TicketsPage({ access }: { access: TicketAccess }) {
   );
 }
 
-/** Tabelle der Tickets; Kategorie und Frist nur, wenn ein Ticket sie hat. */
-export function TicketTable({ items, showArea }: { items: TicketItem[]; showArea: boolean }) {
+/**
+ * Tabelle der Tickets; Kategorie und Frist nur, wenn ein Ticket sie hat. Mit `colors` steht
+ * am Zeilenanfang ein Streifen in der Farbe des Bereichs, mit `meOid` sind eigene Tickets
+ * hervorgehoben („Du“, fetter Betreff, getönte Zeile).
+ */
+export function TicketTable({
+  items,
+  showArea,
+  colors,
+  meOid,
+}: {
+  items: TicketItem[];
+  showArea: boolean;
+  colors?: Record<number, string>;
+  meOid?: string;
+}) {
   const showCategory = items.some((t) => t.category);
   const showDue = items.some((t) => t.sla_solution_due);
   return (
@@ -252,35 +300,57 @@ export function TicketTable({ items, showArea }: { items: TicketItem[]; showArea
           </tr>
         </thead>
         <tbody>
-          {items.map((ticket) => (
-            <tr key={ticket.number}>
-              <th scope="row">
-                <Link to={ticketPath(ticket.number)}>
-                  <span className="mono">{ticketLabel(ticket.number)}</span> {ticket.subject}
-                </Link>
-              </th>
-              <td data-label="Status">
-                <span className={STATUS_PILLS[ticket.status]}>{STATUS_LABELS[ticket.status]}</span>
-                {ticket.status === "reminder" && ticket.reminder_at && (
-                  <span className="small"> bis {formatDateTime(ticket.reminder_at)}</span>
-                )}
-              </td>
-              {showArea && <td data-label="Bereich">{ticket.area.name}</td>}
-              {showCategory && <td data-label="Kategorie">{ticket.category || "–"}</td>}
-              <td data-label="Priorität">{PRIORITY_LABELS[ticket.priority]}</td>
-              {showDue && (
-                <td className="nowrap" data-label="Frist">
-                  {ticket.sla_solution_due ? formatDateTime(ticket.sla_solution_due) : "–"}
-                  {ticket.sla_overdue && <span className="pill pill-bad">überfällig</span>}
+          {items.map((ticket) => {
+            const mine = Boolean(meOid) && ticket.assignee_oid === meOid;
+            const classes = [
+              colors ? areaColorClass(colors[ticket.area.id]) : "",
+              mine ? "ticket-row-mine" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+            return (
+              <tr key={ticket.number} className={classes || undefined}>
+                <th scope="row">
+                  <Link to={ticketPath(ticket.number)}>
+                    <span className="mono">{ticketLabel(ticket.number)}</span> {ticket.subject}
+                  </Link>
+                </th>
+                <td data-label="Status">
+                  <span className={STATUS_PILLS[ticket.status]}>
+                    {STATUS_LABELS[ticket.status]}
+                  </span>
+                  {ticket.status === "reminder" && ticket.reminder_at && (
+                    <span className="small"> bis {formatDateTime(ticket.reminder_at)}</span>
+                  )}
                 </td>
-              )}
-              <td data-label="Zuständig">{ticket.assignee_name || "–"}</td>
-              <td data-label="Melder">{ticket.reporter_name || "–"}</td>
-              <td className="nowrap" data-label="Geändert">
-                {formatDateTime(ticket.updated_at)}
-              </td>
-            </tr>
-          ))}
+                {showArea && (
+                  <td data-label="Bereich">
+                    {colors ? (
+                      <AreaTag name={ticket.area.name} color={colors[ticket.area.id]} />
+                    ) : (
+                      ticket.area.name
+                    )}
+                  </td>
+                )}
+                {showCategory && <td data-label="Kategorie">{ticket.category || "–"}</td>}
+                <td data-label="Priorität">{PRIORITY_LABELS[ticket.priority]}</td>
+                {showDue && (
+                  <td className="nowrap" data-label="Frist">
+                    {ticket.sla_solution_due ? formatDateTime(ticket.sla_solution_due) : "–"}
+                    {ticket.sla_overdue && <span className="pill pill-bad">überfällig</span>}
+                  </td>
+                )}
+                <td data-label="Zuständig">
+                  {mine && <span className="badge-du">Du</span>}
+                  {ticket.assignee_name || "–"}
+                </td>
+                <td data-label="Melder">{ticket.reporter_name || "–"}</td>
+                <td className="nowrap" data-label="Geändert">
+                  {formatDateTime(ticket.updated_at)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

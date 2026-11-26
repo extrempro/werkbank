@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.142.0",
+    date: "2026-11-26",
+    summary: "Tickets: Bereiche in Farbe, deine Tickets hervorgehoben und ein klarerer Verlauf.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Jeder Bereich hat eine Farbe. In der Liste steht sie als Streifen am Anfang der Zeile und als Punkt neben dem Namen des Bereichs. Die Ticket-Verwaltung wählt die Farbe in den Einstellungen.",
+          "Tickets, für die du zuständig bist, sind in der Liste hervorgehoben: getönte Zeile, fetter Betreff und „Du“.",
+          "Bei „Offen“, „Mir zugewiesen“ und „Nicht zugewiesen“ siehst du gleich, wie viele Tickets es dort gibt.",
+          "Im Verlauf steht bei jedem Eintrag, von wem an wen er ging. Eingänge stehen links, Antworten rechts in Blau, interne Notizen gelb. Weiterleitungen nach außen sind türkis mit gestricheltem Rand, damit du sie nicht mit Notizen verwechselst.",
+          "„Verschieben nach“ und „Beteiligte“ rechts beim Ticket haben mehr Platz und werden nicht mehr abgeschnitten.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.141.0",
     date: "2026-11-26",
     summary: "Der Abruf der Microsoft-365-Einstellungen klappt zuverlässiger.",

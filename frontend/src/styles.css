@@ -4,6 +4,19 @@
    das erledigt public/theme.js (Auswahl der Person oder Einstellung des Geräts). */
 
 :root {
+  /* Weiterleitung nach außen im Ticketverlauf */
+  --farbe-extern-flaeche: #e6f3f6;
+  --farbe-extern-rand: #4f9db1;
+  --farbe-extern-text: #0b4f63;
+  /* Bereichsfarben (Tickets): immer mit Namen daneben, nie allein */
+  --bereich-blau: #1f57c3;
+  --bereich-petrol: #0e7090;
+  --bereich-violett: #6b3fc4;
+  --bereich-orange: #b54708;
+  --bereich-gruen: #1d7a3a;
+  --bereich-rot: #c0352b;
+  --bereich-pink: #b42c7a;
+  --bereich-grau: #5b6472;
   color-scheme: light;
   --farbe-kopf: #14213d;
   --farbe-kopf-flaeche: #1e2f52;
@@ -67,6 +80,17 @@
 }
 
 :root[data-theme="dunkel"] {
+  --farbe-extern-flaeche: #12333b;
+  --farbe-extern-rand: #4fa9bf;
+  --farbe-extern-text: #a9e1ee;
+  --bereich-blau: #6f9cf0;
+  --bereich-petrol: #3fb3cf;
+  --bereich-violett: #a98af0;
+  --bereich-orange: #f0954a;
+  --bereich-gruen: #4fc274;
+  --bereich-rot: #f07a70;
+  --bereich-pink: #ee7ab8;
+  --bereich-grau: #a3abb8;
   color-scheme: dark;
   --farbe-kopf: #0f182c;
   --farbe-kopf-flaeche: #1b2a4a;
@@ -3635,7 +3659,7 @@ p.badges {
   gap: 12px 16px;
 }
 
-.settings-form label:not(.check-label, .choice-card, .field-label) {
+.settings-form label:not(.check-label, .choice-card, .field-label, .color-choice-option) {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -12767,17 +12791,24 @@ input[type="file"] {
   font-weight: 600;
 }
 
+/* In der schmalen Seitenleiste untereinander: Feld volle Breite, Knopf darunter */
 .ticket-move,
 .ticket-participant-add {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .ticket-move select,
 .ticket-participant-add input {
-  flex: 1 1 8rem;
+  width: 100%;
   min-width: 0;
+}
+
+.ticket-move .button,
+.ticket-participant-add .button {
+  justify-self: start;
+  max-width: 100%;
 }
 
 .ticket-participants li {
@@ -12803,26 +12834,79 @@ input[type="file"] {
 .ticket-entries {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   margin: 12px 0 0;
   padding: 0;
   list-style: none;
 }
 
+/* Eingang links, Antworten rechts, Interne Notiz gelb, Weiterleitung nach außen gestrichelt */
 .ticket-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   scroll-margin-top: calc(var(--kopf-hoehe) + 16px);
-  padding: 12px 14px;
-  border: 1px solid var(--farbe-rand);
-  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 12px;
   background: var(--farbe-flaeche);
+}
+
+@media (min-width: 720px) {
+  .ticket-entry-inbound {
+    margin-right: 48px;
+  }
+
+  .ticket-entry-reply {
+    margin-left: 48px;
+  }
 }
 
 .ticket-entry-head {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
   gap: 4px 12px;
-  margin-bottom: 6px;
+}
+
+.ticket-entry > p,
+.ticket-entry > div {
+  margin: 0;
+}
+
+.ticket-parties {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.ticket-party {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 999px;
+  background: var(--farbe-grund);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ticket-party-from {
+  border-color: transparent;
+  background: var(--farbe-neutral-flaeche);
+}
+
+.ticket-party-arrow {
+  color: var(--farbe-text-mittel);
+  font-weight: 700;
+}
+
+.ticket-party-cc {
+  color: var(--farbe-text-mittel);
+  overflow-wrap: anywhere;
 }
 
 .ticket-marker {
@@ -12844,12 +12928,26 @@ input[type="file"] {
 }
 
 .ticket-entry-reply {
-  border-left: 4px solid var(--farbe-info-rand);
+  border-color: var(--farbe-info-rand);
+  background: var(--farbe-info-flaeche);
+}
+
+.ticket-entry-reply .ticket-marker,
+.ticket-entry-reply .ticket-party-from {
+  color: var(--farbe-info-text);
+}
+
+.ticket-entry-reply .ticket-party-from {
+  background: var(--farbe-flaeche);
 }
 
 .ticket-entry-note {
-  border-left: 4px solid var(--farbe-warn-rand-stark);
+  border-color: var(--farbe-warn-rand-stark);
   background: var(--farbe-warn-flaeche);
+}
+
+.ticket-entry-note .ticket-marker {
+  color: var(--farbe-warn-text);
 }
 
 .ticket-entry-system {
@@ -13497,7 +13595,7 @@ button.ticket-file-thumb {
   font-weight: 600;
 }
 
-.ticket-solution label:not(.check-label, .choice-card, .field-label) {
+.ticket-solution label:not(.check-label, .choice-card, .field-label, .color-choice-option) {
   display: grid;
   gap: 4px;
 }
@@ -13710,18 +13808,17 @@ button.ticket-file-thumb {
 }
 
 .ticket-entry-forward {
-  border-left: 4px solid var(--farbe-warn-rand-stark);
-  background: var(--farbe-warn-flaeche);
+  border: 2px dashed var(--farbe-extern-rand);
+  padding: 13px 15px;
+  background: var(--farbe-extern-flaeche);
+}
+
+.ticket-entry-forward .ticket-marker {
+  color: var(--farbe-extern-text);
 }
 
 .ticket-entry-external {
-  border-left: 4px solid var(--farbe-rand-kontrast);
-  background: var(--farbe-neutral-flaeche);
-}
-
-.ticket-recipients {
-  margin: 0 0 4px;
-  overflow-wrap: anywhere;
+  border-left: 4px solid var(--farbe-extern-rand);
 }
 
 .ticket-reply-all {
@@ -15361,7 +15458,7 @@ a.doku-ref:focus-visible {
   gap: 8px 12px;
 }
 
-.doku-picker label:not(.choice-card, .field-label) {
+.doku-picker label:not(.choice-card, .field-label, .color-choice-option) {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -16351,4 +16448,135 @@ textarea.field-control {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Bereichsfarben: Klasse setzt die Farbe, Punkt und Streifen nutzen sie */
+.bereich-blau {
+  --bereich: var(--bereich-blau);
+}
+.bereich-petrol {
+  --bereich: var(--bereich-petrol);
+}
+.bereich-violett {
+  --bereich: var(--bereich-violett);
+}
+.bereich-orange {
+  --bereich: var(--bereich-orange);
+}
+.bereich-gruen {
+  --bereich: var(--bereich-gruen);
+}
+.bereich-rot {
+  --bereich: var(--bereich-rot);
+}
+.bereich-pink {
+  --bereich: var(--bereich-pink);
+}
+.bereich-grau {
+  --bereich: var(--bereich-grau);
+}
+
+.area-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.area-dot,
+.color-choice-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bereich, var(--farbe-rand-kontrast));
+}
+
+/* Farbauswahl (components/ColorChoice.tsx): Punkt mit Namen, mindestens 44 px hoch */
+.color-choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.color-choice > legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.color-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+}
+
+.color-choice-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 10px;
+  background: var(--farbe-flaeche);
+  cursor: pointer;
+}
+
+.color-choice-option input {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--farbe-primaer);
+}
+
+.color-choice-on {
+  padding: 0 11px;
+  border: 2px solid var(--farbe-primaer);
+  background: var(--farbe-auswahl);
+}
+
+.color-choice-dot {
+  width: 14px;
+  height: 14px;
+}
+
+/* Ticketliste: Streifen in Bereichsfarbe am Zeilenanfang, eigene Tickets hervorgehoben */
+.ticket-table tbody tr > th:first-child {
+  box-shadow: inset 5px 0 0 var(--bereich, transparent);
+  padding-left: 16px;
+}
+
+.ticket-row-mine,
+.ticket-row-mine > th,
+.ticket-row-mine > td {
+  background: color-mix(in srgb, var(--farbe-info-flaeche) 70%, var(--farbe-flaeche));
+}
+
+.ticket-row-mine th a {
+  font-weight: 700;
+}
+
+.badge-du {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--farbe-primaer);
+  color: var(--farbe-auf-primaer);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ticket-quick-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+}
+
+.ticket-quick-legend .area-tag {
+  font-weight: 400;
 }
