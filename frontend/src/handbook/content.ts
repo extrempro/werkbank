@@ -1794,6 +1794,10 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
+                text: "Bei einem Codeblock wählst du oben am Block die Sprache, zum Beispiel PowerShell, Bash, YAML oder SQL. Dann färbt die Werkbank Befehle, Texte und Kommentare ein. Ohne Auswahl bleibt es „Text“ in einer Farbe. Beim Lesen steht die Sprache oben am Block, mit „Kopieren“ landet der ganze Code in der Zwischenablage.",
+              },
+              {
+                kind: "text",
                 text: "Tabellen: Beim Einfügen wählst du die Größe im Raster (bis 6 × 6) und ob die erste Zeile eine Kopfzeile ist. Steht die Schreibmarke in einer Tabelle, erscheint darüber die Leiste „Tabelle“: Zeile darüber oder darunter, Spalte links oder rechts, Zeile oder Spalte löschen, Kopfzeile an oder aus und „Tabelle löschen“ (mit Rückfrage, Strg+Z holt sie zurück). Die Zelle mit der Schreibmarke ist umrandet, ihre Zeile und Spalte leicht hinterlegt; die Leiste zeigt, wo du bist. „+ Zeile hinzufügen“ unter der Tabelle und „+“ rechts daneben hängen am Ende an. Mit Tab springst du zur nächsten Zelle, in der letzten Zelle entsteht eine neue Zeile. Am Handy stehen „Zeile +“, „Spalte +“, „Kopfzeile“ und „Mehr …“ unten am Bildschirm; „Mehr …“ öffnet alle übrigen Aktionen. Breite Tabellen schiebst du seitlich.",
               },
               {

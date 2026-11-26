@@ -1,7 +1,7 @@
 {
   "name": "werkbank-frontend",
   "private": true,
-  "version": "0.145.0",
+  "version": "0.146.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@tiptap/extension-code-block-lowlight": "3.34.0",
     "@tiptap/extension-collaboration": "3.34.0",
     "@tiptap/extension-collaboration-caret": "3.34.0",
     "@tiptap/extension-list": "3.34.0",
@@ -21,6 +22,8 @@
     "@tiptap/react": "3.34.0",
     "@tiptap/starter-kit": "3.34.0",
     "@tiptap/y-tiptap": "3.3.0",
+    "highlight.js": "11.11.1",
+    "lowlight": "3.3.0",
     "pdfjs-dist": "6.5.438",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

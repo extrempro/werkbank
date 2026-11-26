@@ -86,3 +86,14 @@ gebündelt ausgeliefert, ohne CDN und ohne Tiptap-Cloud-Dienste.
   MIT-Lizenz, Copyright (c) Tiptap GmbH bzw. Kevin Jahns (y-prosemirror, auf dem y-tiptap beruht).
 - pycrdt, https://github.com/y-crdt/pycrdt – MIT-Lizenz, Copyright (c) 2023 David Brochart;
   enthält y-crdt (yrs) – MIT-Lizenz.
+
+## Hervorhebung von Code in der Doku
+
+Farbige Hervorhebung in Codeblöcken der Dokumentation. Die Sprachdateien von highlight.js werden
+in das Frontend gebündelt (nur Bash, PowerShell, Python, JSON, YAML, XML, SQL, INI, Dockerfile,
+Nginx, JavaScript, CSS, Markdown, Diff).
+
+- highlight.js, https://github.com/highlightjs/highlight.js – BSD-3-Clause-Lizenz,
+  Copyright (c) 2006, Ivan Sagalaev (Lizenztext im Paket unter `node_modules/highlight.js/LICENSE`).
+- lowlight, https://github.com/wooorm/lowlight – MIT-Lizenz, Copyright (c) Titus Wormer.
+- @tiptap/extension-code-block-lowlight – MIT-Lizenz, Copyright (c) Tiptap GmbH.

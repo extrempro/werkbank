@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.146.0] – 2026-11-26
+
+### Hinzugefügt
+
+- **Doku: Codeblöcke mit Sprache und Hervorhebung.** Beim Bearbeiten wählst du oben am Block die Sprache (Text, Bash/Shell, PowerShell, Python, JSON, YAML, XML/HTML, SQL, INI/Config, Dockerfile, Nginx, JavaScript, CSS, Markdown, Diff). Ohne Auswahl einfarbig, keine automatische Erkennung. Beim Lesen zeigt der Block die Sprache und „Kopieren“. Farben über Klassen in hell und dunkel.
+- Neue Abhängigkeiten: `@tiptap/extension-code-block-lowlight` 3.34.0 (MIT, passend zum Editor), `lowlight` 3.3.0 (MIT), `highlight.js` 11.11.1 (BSD-3-Clause, Version von `lowlight` vorgegeben, nur die genannten Sprachen eingebunden).
+- Tests: Unit-Tests für Sprache, Hervorhebung, Speichern am Block, Lesen und Kopieren; E2E „Codeblock mit Sprache und Hervorhebung“ auf allen Geräten.
+
 ## [0.145.0] – 2026-11-26
 
 ### Geändert
