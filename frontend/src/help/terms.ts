@@ -347,6 +347,11 @@ export const HELP = {
     text: "Eine Abteilung mit eigenem Postfach, zum Beispiel die IT. Du siehst nur Tickets der Bereiche, in denen du Mitglied bist.",
     topic: ["tickets", "uebersicht"],
   },
+  "tickets.bereichsfarbe": {
+    term: "Farbe des Bereichs",
+    text: "Markiert die Tickets eines Bereichs in der Liste mit einem Punkt und einem Streifen. Der Name des Bereichs steht immer daneben.",
+    topic: ["tickets", "einstellungen"],
+  },
   "tickets.leiste": {
     term: "Favoriten und Geöffnet",
     text: "Unter „Neues Ticket“ stehen deine Favoriten und die zuletzt geöffneten Tickets. Hier stellst du ein, wie viele es höchstens sind und wie sie aussehen.",

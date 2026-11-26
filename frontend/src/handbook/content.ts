@@ -1181,7 +1181,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "„Alle Tickets“ zeigt zuerst die offenen Tickets, zuletzt geänderte oben. Über die Auswahl wechselst du zu „Mir zugewiesen“, „Nicht zugewiesen“, „Wartet“, „Gelöst und geschlossen“ oder „Alle“. Die Suche findet Nummer, Betreff und Melder. Ein Ticket von Hand legst du unter „Neues Ticket“ an, zum Beispiel nach einem Anruf. Beim Namen des Melders erscheinen ab zwei Buchstaben Vorschläge aus Entra; wählst du einen, trägt die Werkbank die Mailadresse mit ein. Du kannst Name und Mailadresse auch frei eintragen.",
+                text: "„Alle Tickets“ zeigt zuerst die offenen Tickets, zuletzt geänderte oben. Über die Auswahl wechselst du zu „Mir zugewiesen“, „Nicht zugewiesen“, „Wartet“, „Gelöst und geschlossen“ oder „Alle“. Neben „Offen“, „Mir zugewiesen“ und „Nicht zugewiesen“ steht, wie viele Tickets es dort gerade gibt. Tickets, für die du zuständig bist, sind hervorgehoben: getönte Zeile, fetter Betreff und „Du“ bei der Zuständigkeit. Jeder Bereich hat eine Farbe; sie steht als Streifen am Anfang der Zeile und als Punkt neben dem Namen des Bereichs, oben in der Liste erklärt. Der Name steht immer dabei, die Farbe hilft nur beim schnellen Erkennen. Die Suche findet Nummer, Betreff und Melder. Ein Ticket von Hand legst du unter „Neues Ticket“ an, zum Beispiel nach einem Anruf. Beim Namen des Melders erscheinen ab zwei Buchstaben Vorschläge aus Entra; wählst du einen, trägt die Werkbank die Mailadresse mit ein. Du kannst Name und Mailadresse auch frei eintragen.",
               },
             ],
             links: [
@@ -1204,7 +1204,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Im Verlauf steht die ursprüngliche Meldung immer oben, darunter die letzten vier Einträge. Ältere Einträge klappst du mit „ältere Einträge anzeigen“ auf. Jeder Eintrag ist gekennzeichnet, zum Beispiel „vom Melder“, „Anruf erfasst“ oder „Intern“. Änderungen an Status und Zuständigkeit stehen als kurze Zeile dazwischen.",
+                text: "Im Verlauf steht die ursprüngliche Meldung immer oben, darunter die letzten vier Einträge. Ältere Einträge klappst du mit „ältere Einträge anzeigen“ auf. Jeder Eintrag ist gekennzeichnet, zum Beispiel „Eingang vom Melder“, „Antwort an den Melder“ oder „Interne Notiz · nur für das Team“, und zeigt darunter, von wem an wen er ging, bei Antworten auch, wer in Kopie (CC) stand. Eingänge stehen links und weiß, Antworten rechts und blau, interne Notizen gelb. Eine Weiterleitung nach außen ist türkis mit gestricheltem Rand und heißt „Weitergeleitet nach außen · der Melder sieht das nicht“; der Empfänger ist mit „(extern)“ markiert. Änderungen an Status und Zuständigkeit stehen als kurze Zeile dazwischen.",
               },
               {
                 kind: "text",
@@ -1216,7 +1216,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Mit „Weiterleiten“ im Kopf schickst du die ursprüngliche Meldung weiter, mit „Weiterleiten“ an einer Nachricht genau diese, zum Beispiel an einen Dienstleister. Du trägst Empfänger und einen Text ein und wählst, ob die Anhänge mitgehen. Die Mail geht aus dem Postfach des Bereichs, der Melder bekommt davon nichts mit, und im Verlauf steht ein interner Eintrag. Antwortet der Empfänger, landet das im Ticket als „Antwort von extern“; der Status ändert sich dadurch nicht. Antworten von Beteiligten heißen „von Beteiligten“.",
+                text: "Mit „Weiterleiten“ im Kopf schickst du die ursprüngliche Meldung weiter, mit „Weiterleiten“ an einer Nachricht genau diese, zum Beispiel an einen Dienstleister. Du trägst Empfänger und einen Text ein und wählst, ob die Anhänge mitgehen. Die Mail geht aus dem Postfach des Bereichs, der Melder bekommt davon nichts mit, und im Verlauf steht der Eintrag „Weitergeleitet nach außen“. Antwortet der Empfänger, landet das im Ticket als „Antwort von extern“; der Status ändert sich dadurch nicht. Antworten von Beteiligten heißen „Eingang von Beteiligten“.",
               },
               {
                 kind: "text",
@@ -1327,7 +1327,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Die Ticket-Verwaltung legt Bereiche an, trägt das Postfach ein und vergibt die Rollen, auch die Bereichsverwaltung. Sie selbst sieht dadurch keine Tickets. Die Bereichsverwaltung vergibt in ihrem Bereich „Bearbeiten“ und legt fest, wie neue Tickets zugewiesen werden.",
+                text: "Die Ticket-Verwaltung legt Bereiche an, trägt das Postfach ein und vergibt die Rollen, auch die Bereichsverwaltung. Sie selbst sieht dadurch keine Tickets. Die Bereichsverwaltung vergibt in ihrem Bereich „Bearbeiten“ und legt fest, wie neue Tickets zugewiesen werden. Die Ticket-Verwaltung wählt außerdem je Bereich eine von acht Farben, mit der seine Tickets in der Liste markiert sind. Ein neuer Bereich bekommt die Farbe, die am wenigsten vergeben ist.",
               },
               {
                 kind: "text",

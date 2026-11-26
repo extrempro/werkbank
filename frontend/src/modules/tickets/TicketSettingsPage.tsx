@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { errorText } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
+import { ColorChoice } from "../../components/ColorChoice";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
 import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
@@ -21,6 +22,8 @@ import {
   type GrantInput,
   type TicketSettings,
 } from "./api";
+import { AREA_COLOR_LABELS, AREA_COLORS, areaColorClass, type AreaColor } from "./areaColors";
+import { AreaTag } from "./AreaTag";
 import {
   BlocksSection,
   IntakeSection,
@@ -223,13 +226,20 @@ function AreaPanel({
   const [name, setName] = useState(area.name);
   const [mailbox, setMailbox] = useState(area.mailbox);
   const [active, setActive] = useState(area.active);
+  const [color, setColor] = useState<AreaColor>(
+    AREA_COLORS.find((c) => c === area.color) ?? "grau",
+  );
   const headingId = useId();
   const assignmentId = useId();
-  const changed = name !== area.name || mailbox !== area.mailbox || active !== area.active;
+  const changed =
+    name !== area.name ||
+    mailbox !== area.mailbox ||
+    active !== area.active ||
+    color !== area.color;
 
   const saveArea = (event: FormEvent) => {
     event.preventDefault();
-    updateArea(area.id, { name, mailbox, active })
+    updateArea(area.id, { name, mailbox, active, color })
       .then((result) => {
         onSaved(result);
         onMessage({ kind: "status", text: "Der Bereich wurde gespeichert." });
@@ -259,7 +269,7 @@ function AreaPanel({
     <section className="panel ticket-area" aria-labelledby={headingId}>
       <div className="panel-head">
         <h2 id={headingId}>
-          {area.name}
+          <AreaTag name={area.name} color={area.color} />
           {!area.active && <span className="pill pill-neutral">inaktiv</span>}
         </h2>
       </div>
@@ -285,6 +295,22 @@ function AreaPanel({
                 onChange={(event) => setMailbox(event.target.value)}
               />
             </label>
+            <ColorChoice
+              legend="Farbe in Listen"
+              value={color}
+              options={AREA_COLORS.map((c) => ({
+                value: c,
+                label: AREA_COLOR_LABELS[c],
+                className: areaColorClass(c),
+              }))}
+              onChange={setColor}
+              hint={
+                <>
+                  Markiert Tickets dieses Bereichs in der Liste; der Name steht immer daneben.
+                  <InfoTip term="tickets.bereichsfarbe" />
+                </>
+              }
+            />
             <label className="check-label">
               <input
                 type="checkbox"

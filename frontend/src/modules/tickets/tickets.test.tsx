@@ -18,6 +18,7 @@ import { parseSettingsPath, settingsPath, TicketSettingsPage } from "./TicketSet
 import {
   changeSummary,
   entryMarker,
+  entryParties,
   inFuture,
   matchTemplates,
   reminderIso,
@@ -126,9 +127,9 @@ describe("Hilfsfunktionen", () => {
   it("kennzeichnet Einträge mit Text", () => {
     const t = ticket();
     expect(entryMarker(entry("a", "inbound", true), t)).toBe("Anruf erfasst");
-    expect(entryMarker(entry("a", "inbound"), t)).toBe("vom Melder");
-    expect(entryMarker(entry("b", "note"), t)).toBe("Intern");
-    expect(entryMarker(entry("r", "reply"), t)).toBe("an Melder gesendet");
+    expect(entryMarker(entry("a", "inbound"), t)).toBe("Eingang vom Melder");
+    expect(entryMarker(entry("b", "note"), t)).toBe("Interne Notiz · nur für das Team");
+    expect(entryMarker(entry("r", "reply"), t)).toBe("Antwort an den Melder");
   });
 
   it("fasst offene Änderungen zusammen", () => {
@@ -152,10 +153,11 @@ describe("Hilfsfunktionen", () => {
   });
 
   it("zeigt Tickets nur mit Bereich oder Einstellungsrolle in der Navigation", () => {
-    expect(ticketNavRoles({ manager: true, settings: true, areas: [] })).toEqual([
+    expect(ticketNavRoles({ oid: "test:ina", manager: true, settings: true, areas: [] })).toEqual([
       TICKETS_SETTINGS,
     ]);
     const roles = ticketNavRoles({
+      oid: "test:ina",
       manager: false,
       settings: false,
       areas: [{ id: 1, name: "IT", role: "edit" }],
@@ -503,7 +505,12 @@ describe("TicketsPage", () => {
     );
     render(
       <TicketsPage
-        access={{ manager: false, settings: false, areas: [{ id: 1, name: "IT", role: "edit" }] }}
+        access={{
+          oid: "test:ina",
+          manager: false,
+          settings: false,
+          areas: [{ id: 1, name: "IT", role: "edit" }],
+        }}
       />,
     );
     const table = await screen.findByRole("region", { name: "Ticketliste" });
@@ -582,6 +589,27 @@ describe("TicketTable", () => {
     expect(screen.getByRole("columnheader", { name: "Frist" })).toBeTruthy();
     expect(screen.getByText("Drucker")).toBeTruthy();
     expect(screen.getByText("überfällig")).toBeTruthy();
+  });
+
+  it("zeigt den Bereich mit Farbe und hebt eigene Tickets hervor", () => {
+    render(
+      <TicketTable
+        items={[
+          ticket({ assignee_oid: "oid-ina", assignee_name: "Ina Beispiel" }),
+          ticket({ number: 1043, assignee_oid: "oid-max", assignee_name: "Max Muster" }),
+        ]}
+        showArea
+        colors={{ 1: "orange" }}
+        meOid="oid-ina"
+      />,
+    );
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows[0]?.className).toBe("bereich-orange ticket-row-mine");
+    expect(within(rows[0]!).getByText("Du")).toBeTruthy();
+    expect(rows[1]?.className).toBe("bereich-orange");
+    expect(within(rows[1]!).queryByText("Du")).toBeNull();
+    // Der Name des Bereichs steht immer neben der Farbe
+    expect(within(rows[1]!).getByText("IT")).toBeTruthy();
   });
 });
 
@@ -711,6 +739,7 @@ function stats(extra: Partial<Stats> = {}): Stats {
   return {
     open: 5,
     mine: 2,
+    unassigned: 1,
     unassigned_new: 1,
     waiting: 1,
     reminder: 0,
@@ -780,7 +809,12 @@ describe("Übersicht und Export", () => {
     );
     render(
       <TicketsOverviewPage
-        access={{ manager: false, settings: false, areas: [{ id: 1, name: "IT", role: "edit" }] }}
+        access={{
+          oid: "test:ina",
+          manager: false,
+          settings: false,
+          areas: [{ id: 1, name: "IT", role: "edit" }],
+        }}
       />,
     );
     const tiles = await screen.findByRole("list", { name: "Kennzahlen" });
@@ -803,7 +837,12 @@ describe("Übersicht und Export", () => {
     );
     const { unmount } = render(
       <TicketsPage
-        access={{ manager: false, settings: false, areas: [{ id: 1, name: "IT", role: "edit" }] }}
+        access={{
+          oid: "test:ina",
+          manager: false,
+          settings: false,
+          areas: [{ id: 1, name: "IT", role: "edit" }],
+        }}
       />,
     );
     await screen.findByText("Keine Tickets für diese Auswahl.");
@@ -812,6 +851,7 @@ describe("Übersicht und Export", () => {
     render(
       <TicketsPage
         access={{
+          oid: "test:ina",
           manager: false,
           settings: true,
           areas: [
@@ -986,7 +1026,12 @@ describe("Melder und IT-Bestand", () => {
     );
     render(
       <NewTicketPage
-        access={{ manager: false, settings: false, areas: [{ id: 1, name: "IT", role: "edit" }] }}
+        access={{
+          oid: "test:ina",
+          manager: false,
+          settings: false,
+          areas: [{ id: 1, name: "IT", role: "edit" }],
+        }}
       />,
     );
     fireEvent.change(screen.getByRole("textbox", { name: "Name des Melders" }), {
@@ -1066,17 +1111,40 @@ describe("Weiterleiten und Kennzeichnung", () => {
   it("kennzeichnet Antworten von Beteiligten, von außen und Weiterleitungen", () => {
     const t = ticket();
     expect(entryMarker({ ...entry("x", "inbound"), origin: "participant" }, t)).toBe(
-      "von Beteiligten",
+      "Eingang von Beteiligten",
     );
     expect(entryMarker({ ...entry("x", "inbound"), origin: "external" }, t)).toBe(
       "Antwort von extern",
     );
     expect(entryMarker({ ...entry("x", "forward"), recipients: "service@example.com" }, t)).toBe(
-      "Weitergeleitet an service@example.com",
+      "Weitergeleitet nach außen · der Melder sieht das nicht",
     );
     expect(
       entryMarker({ ...entry("x", "reply"), recipients: "a@example.com, b@example.com" }, t),
-    ).toBe("an Melder und Beteiligte gesendet");
+    ).toBe("Antwort an Melder und Beteiligte");
+  });
+
+  it("zeigt bei jedem Eintrag, von wem an wen", () => {
+    const t = ticket();
+    expect(entryParties(entry("a", "inbound"), t)).toEqual({
+      from: "M. Muster",
+      to: ["IT"],
+      cc: [],
+    });
+    expect(
+      entryParties(
+        { ...entry("r", "reply"), recipients: "b@example.com, M.Muster@example.com" },
+        t,
+      ),
+    ).toEqual({ from: "Ina Beispiel (IT)", to: ["M. Muster"], cc: ["b@example.com"] });
+    expect(entryParties(entry("n", "note"), t)).toEqual({
+      from: "Ina Beispiel",
+      to: ["Team IT"],
+      cc: [],
+    });
+    expect(
+      entryParties({ ...entry("f", "forward"), recipients: "service@example.com" }, t).to,
+    ).toEqual(["service@example.com (extern)"]);
   });
 
   it("leitet eine Nachricht mit Text weiter", async () => {

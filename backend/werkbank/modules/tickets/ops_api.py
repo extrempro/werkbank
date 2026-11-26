@@ -93,6 +93,8 @@ class SlaShare(BaseModel):
 class StatsOut(BaseModel):
     open: int
     mine: int
+    # Offen und ohne Zuständige (Schnellfilter der Liste), unabhängig vom Status
+    unassigned: int
     unassigned_new: int
     waiting: int
     reminder: int
@@ -193,6 +195,7 @@ def stats(access: AccessDep, db: DbDep, area: AreaQuery = None) -> StatsOut:
     return StatsOut(
         open=count(*open_),
         mine=count(*mine),
+        unassigned=count(*open_, Ticket.assignee_oid.is_(None)),
         unassigned_new=count(*unassigned_new),
         waiting=count(in_areas, Ticket.status == STATUS_WAITING),
         reminder=count(in_areas, Ticket.status == STATUS_REMINDER),

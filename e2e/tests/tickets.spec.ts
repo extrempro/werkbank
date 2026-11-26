@@ -319,7 +319,7 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
 
   await loginAs(page, ["Tickets.Nutzer"], s.editor);
   await page.goto(`/tickets/${number}`);
-  await expect(page.getByText("vom Melder").first()).toBeVisible();
+  await expect(page.getByText("Eingang vom Melder").first()).toBeVisible();
   await expect(
     page.getByRole("link", { name: /Original-Mail/ }).first(),
   ).toBeVisible();
@@ -351,7 +351,7 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
     .getByLabel("Status danach")
     .selectOption({ label: "Wartet auf Rückmeldung" });
   await page.getByRole("button", { name: "An M. Muster senden" }).click();
-  await expect(page.getByText("an Melder gesendet")).toBeVisible();
+  await expect(page.getByText("Antwort an den Melder")).toBeVisible();
   await expect(page.getByLabel("Status")).toHaveValue("waiting");
   outbox = (await (
     await editor.get("/api/tickets/test/outbox", { params: { ticket: number } })
@@ -371,7 +371,11 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
   await expectNoA11yViolations(page);
   await panel.getByRole("button", { name: "Weiterleiten" }).click();
   await expect(
-    page.getByText("Weitergeleitet an service@example.com").first(),
+    page.getByText("Weitergeleitet nach außen · der Melder sieht das nicht").first(),
+  ).toBeVisible();
+  // Von wem an wen: der Empfänger ist als extern markiert
+  await expect(
+    page.getByText("service@example.com (extern)").first(),
   ).toBeVisible();
   outbox = (await (
     await editor.get("/api/tickets/test/outbox", { params: { ticket: number } })

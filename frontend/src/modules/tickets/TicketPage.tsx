@@ -57,6 +57,7 @@ import {
 import { formatDate, hardwarePath, positionPath } from "../inventory/api";
 import { parseMails } from "./NewTicketPage";
 import { EntryContent } from "./AttachmentPreview";
+import { AreaTag } from "./AreaTag";
 import { SolutionFields } from "./SolutionFields";
 import { STATUS_PILLS } from "./TicketsPage";
 import { ticketOpened } from "./ticketBar";
@@ -77,26 +78,60 @@ const FILTER_LABELS: Record<EntryFilter, string> = {
 /** Kennzeichnung eines Eintrags (Text, nicht nur Farbe). */
 export function entryMarker(entry: Entry, ticket: Ticket): string {
   if (entry.kind === "note") {
-    return "Intern";
+    return "Interne Notiz · nur für das Team";
   }
   if (entry.kind === "forward") {
-    return `Weitergeleitet an ${entry.recipients}`;
+    return "Weitergeleitet nach außen · der Melder sieht das nicht";
   }
   if (entry.kind === "reply") {
     return entry.recipients.includes(",")
-      ? "an Melder und Beteiligte gesendet"
-      : "an Melder gesendet";
+      ? "Antwort an Melder und Beteiligte"
+      : "Antwort an den Melder";
   }
   if (entry.kind === "inbound" && entry.original && ticket.channel === "phone") {
     return "Anruf erfasst";
   }
   if (entry.origin === "participant") {
-    return "von Beteiligten";
+    return "Eingang von Beteiligten";
   }
   if (entry.origin === "external") {
     return "Antwort von extern";
   }
-  return "vom Melder";
+  return "Eingang vom Melder";
+}
+
+/** Von wem an wen ein Eintrag ging; bei Antworten der Melder als Empfänger, der Rest in Kopie. */
+export function entryParties(
+  entry: Entry,
+  ticket: Ticket,
+): { from: string; to: string[]; cc: string[] } {
+  const reporter = ticket.reporter_name || ticket.reporter_mail || "Melder";
+  const list = entry.recipients
+    .split(",")
+    .map((address) => address.trim())
+    .filter(Boolean);
+  if (entry.kind === "inbound") {
+    const from =
+      entry.origin === "reporter" ? ticket.reporter_name || entry.author_name : entry.author_name;
+    return { from: from || "Unbekannt", to: [ticket.area.name], cc: [] };
+  }
+  if (entry.kind === "note") {
+    return { from: entry.author_name, to: [`Team ${ticket.area.name}`], cc: [] };
+  }
+  if (entry.kind === "forward") {
+    return { from: entry.author_name, to: list.map((address) => `${address} (extern)`), cc: [] };
+  }
+  const mail = ticket.reporter_mail.toLowerCase();
+  const isReporter = (address: string) => mail !== "" && address.toLowerCase() === mail;
+  const to = list.some(isReporter) ? [reporter] : list.slice(0, 1);
+  const cc = list.filter((address, index) =>
+    list.some(isReporter) ? !isReporter(address) : index > 0,
+  );
+  return {
+    from: `${entry.author_name} (${ticket.area.name})`,
+    to: to.length ? to : [reporter],
+    cc,
+  };
 }
 
 function matches(entry: Entry, filter: EntryFilter): boolean {
@@ -149,6 +184,7 @@ function EntryItem({
   const long = entry.body.length > LONG_MESSAGE;
   const text = long && !full ? `${entry.body.slice(0, LONG_MESSAGE).trimEnd()} …` : entry.body;
   const marker = entryMarker(entry, ticket);
+  const parties = entryParties(entry, ticket);
   return (
     <li
       className={`ticket-entry ticket-entry-${entry.kind}${entry.origin === "external" ? " ticket-entry-external" : ""}`}
@@ -163,16 +199,26 @@ function EntryItem({
           )}
         </span>
         <span className="small">
-          {entry.kind === "inbound" && entry.origin === "reporter"
-            ? ticket.reporter_name || entry.author_name
-            : entry.author_name}{" "}
-          · {formatDateTime(entry.created_at)}
+          {formatDateTime(entry.created_at)}
           {entry.original && " · ursprüngliche Meldung"}
         </span>
       </div>
-      {entry.kind === "reply" && entry.recipients && (
-        <p className="small ticket-recipients">An: {entry.recipients}</p>
-      )}
+      <p className="ticket-parties">
+        <span className="visually-hidden">Von </span>
+        <span className="ticket-party ticket-party-from">{parties.from}</span>
+        <span className="ticket-party-arrow" aria-hidden="true">
+          →
+        </span>
+        <span className="visually-hidden"> an </span>
+        {parties.to.map((name) => (
+          <span key={name} className="ticket-party">
+            {name}
+          </span>
+        ))}
+        {parties.cc.length > 0 && (
+          <span className="small ticket-party-cc">CC: {parties.cc.join(", ")}</span>
+        )}
+      </p>
       <EntryContent number={ticket.number} entry={entry} text={text}>
         {long && (
           <button type="button" className="row-button" onClick={() => setFull(!full)}>
@@ -828,7 +874,7 @@ function Facts({
             </h2>
             <div className="ticket-fact">
               <span className="ticket-fact-label">Bereich</span>
-              <span>{ticket.area.name}</span>
+              <AreaTag name={ticket.area.name} color={ticket.area.color} />
               {ticket.permissions.move && ticket.move_targets.length > 0 && (
                 <div className="ticket-move">
                   <label htmlFor={areaId} className="visually-hidden">

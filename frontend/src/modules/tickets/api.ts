@@ -59,9 +59,13 @@ export interface AreaRef {
   id: number;
   name: string;
   role: AreaRole | null;
+  /** Farbe des Bereichs (nur in der eigenen Sicht `/me`), siehe areaColors.ts */
+  color?: string;
 }
 
 export interface TicketAccess {
+  /** Eigene Kennung, um eigene Tickets hervorzuheben */
+  oid: string;
   manager: boolean;
   settings: boolean;
   areas: AreaRef[];
@@ -388,6 +392,7 @@ export interface AreaSettings {
   mailbox: string;
   assignment: "first" | "round_robin";
   active: boolean;
+  color: string;
   manage: boolean;
   grants: Grant[];
 }
@@ -428,7 +433,7 @@ export function createArea(body: {
 
 export function updateArea(
   id: number,
-  body: { name: string; mailbox: string; active: boolean },
+  body: { name: string; mailbox: string; active: boolean; color?: string },
 ): Promise<AreaSettings> {
   return putJson(`${SETTINGS}/areas/${id}`, body);
 }
@@ -763,6 +768,8 @@ export interface Count {
 export interface Stats {
   open: number;
   mine: number;
+  /** Offen und ohne Zuständige */
+  unassigned: number;
   unassigned_new: number;
   waiting: number;
   reminder: number;
