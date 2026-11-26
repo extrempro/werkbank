@@ -3635,7 +3635,7 @@ p.badges {
   gap: 12px 16px;
 }
 
-.settings-form label:not(.check-label, .choice-card) {
+.settings-form label:not(.check-label, .choice-card, .field-label) {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -13497,7 +13497,7 @@ button.ticket-file-thumb {
   font-weight: 600;
 }
 
-.ticket-solution label:not(.check-label, .choice-card) {
+.ticket-solution label:not(.check-label, .choice-card, .field-label) {
   display: grid;
   gap: 4px;
 }
@@ -15361,7 +15361,7 @@ a.doku-ref:focus-visible {
   gap: 8px 12px;
 }
 
-.doku-picker label:not(.choice-card) {
+.doku-picker label:not(.choice-card, .field-label) {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -16050,6 +16050,8 @@ button.doku-thread-quote {
 }
 
 .field-label {
+  /* Beschriftung mit Stern in einer Zeile, auch in Masken mit eigener Label-Regel */
+  display: block;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--farbe-text);
@@ -16286,7 +16288,7 @@ textarea.field-control {
 /* Auswahlpunkt in einer eigenen Spalte, der Text bricht daneben um */
 .choice-card {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: start;
   gap: 10px;
   min-height: 44px;
@@ -16298,9 +16300,10 @@ textarea.field-control {
 }
 
 .choice-card input {
-  width: 20px;
-  height: 20px;
-  margin: 2px 0 0;
+  /* mindestens 24 px Zielgröße (WCAG 2.5.8), auch wenn die Karte unter dem Kopf steht */
+  width: 24px;
+  height: 24px;
+  margin: 0;
   accent-color: var(--farbe-primaer);
 }
 

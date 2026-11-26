@@ -3,6 +3,7 @@ import {
   test,
   type APIRequestContext,
   type Browser,
+  type WebSocketRoute,
   type Page,
 } from "@playwright/test";
 import {
@@ -86,6 +87,20 @@ test("Doku: Seite anlegen, schreiben, Versionen, Rechte, Sperren und Papierkorb"
   const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
   const s = await setup(browser, stamp);
 
+  // Die Live-Verbindung läuft über eine Weiche, damit der Test sie trennen kann
+  const live: { socket: WebSocketRoute | null; blocked: boolean } = {
+    socket: null,
+    blocked: false,
+  };
+  await page.routeWebSocket(/\/api\/doku\/live/, (ws) => {
+    if (live.blocked) {
+      void ws.close({ code: 4000, reason: "Test: Verbindung weg" });
+      return;
+    }
+    ws.connectToServer();
+    live.socket = ws;
+  });
+
   await loginAs(page, ["Doku.Nutzer"], s.editor);
   await page.goto("/doku");
   await expect(
@@ -124,6 +139,31 @@ test("Doku: Seite anlegen, schreiben, Versionen, Rechte, Sperren und Papierkorb"
   await blocks.press("Enter");
   await content.pressSequentially("Toner bestellen");
   await expect(content.getByRole("checkbox")).toHaveCount(1);
+
+  // Reißt die Verbindung ab, bleibt der Editor stehen (kein Neuaufbau, die Seite springt nicht);
+  // was du dabei schreibst, wird nach dem Wiederverbinden nachgereicht
+  const editorBefore = await content.elementHandle();
+  live.blocked = true;
+  await live.socket?.close({ code: 4000, reason: "Test: Verbindung weg" });
+  await expect(
+    page.getByText("Verbindung unterbrochen – Änderungen werden nachgereicht"),
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(content).toBeVisible();
+  await content.press("End");
+  await content.pressSequentially(" offline");
+  live.blocked = false;
+  await expect(
+    page.getByText("Live · wird automatisch gespeichert"),
+  ).toBeVisible({ timeout: 15_000 });
+  // Derselbe Editor wie vorher, nicht neu aufgebaut
+  expect(
+    await page.evaluate(
+      (before) =>
+        before === document.querySelector('[aria-label="Inhalt der Seite"]'),
+      editorBefore,
+    ),
+  ).toBe(true);
+  await expect(content).toContainText("Toner bestellen offline");
   // Der Server speichert kurz nach der letzten Änderung
   await expect
     .poll(

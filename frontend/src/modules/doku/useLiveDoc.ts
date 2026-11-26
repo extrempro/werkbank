@@ -48,10 +48,19 @@ export function useLiveDoc(
   pageId: string,
   session: number,
   onReload: () => void,
-): { live: LiveDoc | null; status: LiveStatus; synced: boolean; presence: Presence[] } {
+): {
+  live: LiveDoc | null;
+  status: LiveStatus;
+  synced: boolean;
+  ready: boolean;
+  presence: Presence[];
+} {
   const [live, setLive] = useState<LiveDoc | null>(null);
   const [status, setStatus] = useState<LiveStatus>("verbinden");
   const [synced, setSynced] = useState(false);
+  // Einmal abgeglichen: Der Editor bleibt stehen, auch wenn die Verbindung kurz abreißt
+  // (sonst baut er sich beim Wiederverbinden neu auf und die Seite springt)
+  const [ready, setReady] = useState(false);
   const [presence, setPresence] = useState<Presence[]>([]);
 
   useEffect(() => {
@@ -66,6 +75,7 @@ export function useLiveDoc(
         setLive({ doc, provider, color, pageId, session });
         setStatus("verbinden");
         setSynced(false);
+        setReady(false);
         setPresence([]);
       }
     });
@@ -80,7 +90,12 @@ export function useLiveDoc(
               ? "verbinden"
               : "getrennt",
       );
-    const onSync = (state: boolean) => setSynced(state);
+    const onSync = (state: boolean) => {
+      setSynced(state);
+      if (state) {
+        setReady(true);
+      }
+    };
     const onClose = (event: CloseEvent | null) => {
       if (event?.code === CLOSE_RELOAD) {
         provider.disconnect();
@@ -130,6 +145,7 @@ export function useLiveDoc(
     live: current,
     status: current ? status : "verbinden",
     synced: current ? synced : false,
+    ready: current ? ready : false,
     presence: current ? presence : [],
   };
 }

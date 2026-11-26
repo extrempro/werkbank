@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.140.0",
+    date: "2026-11-26",
+    summary: "Die Doku springt nicht mehr, wenn die Verbindung kurz abreißt.",
+    sections: [
+      {
+        area: "Doku",
+        entries: [
+          "Reißt die Verbindung kurz ab, bleibt die Seite, wo sie ist, und du kannst weiterschreiben. Oben steht „Verbindung unterbrochen – Änderungen werden nachgereicht“; danach wird alles abgeglichen.",
+        ],
+      },
+      {
+        area: "Überall",
+        entries: ["Der Stern bei Pflichtfeldern steht wieder direkt neben der Beschriftung."],
+      },
+    ],
+  },
+  {
     version: "0.139.0",
     date: "2026-11-26",
     summary: "Ab fünf Möglichkeiten suchst du direkt im Feld; lange Texte passen in die Karten.",
