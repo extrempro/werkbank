@@ -13,7 +13,8 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 - **Icons wie im Mailprogramm:** Pfeil zurück (Antworten), Doppelpfeil (an alle), Pfeil nach vorn (Weiterleiten), Notizblatt mit Schloss (interne Notiz), auch an den Einträgen im Verlauf.
 - **Erinnerung im Design der Masken:** „Erinnern am“, „Uhrzeit“ und „Stichwort“ nutzen die gemeinsamen Felder (`Field`, neu mit Info-Symbol neben der Beschriftung).
 - Neue gemeinsame Komponente `components/MailRecipients.tsx` (Empfängerfeld mit Chips und Vorschlägen). „Kopieren“ am Codeblock der Doku nutzt jetzt das Symbol aus `Icon.tsx`.
-- Tests: `test_reply_with_to_and_cc`, Unit-Tests der Antwort, E2E „Mail wird Ticket …“ mit Cc. Doku: `spec.md`, `datenschutz.md`, Handbuch, `design.md`.
+- Tests: `test_reply_with_to_and_cc`, Unit-Tests der Antwort, E2E „Mail wird Ticket …“ mit Cc.
+- Versehentlich mit 0.147.0 eingecheckte lokale Playwright-Konfiguration `e2e/local.config.ts` entfernt und in `e2e/.gitignore` aufgenommen. Doku: `spec.md`, `datenschutz.md`, Handbuch, `design.md`.
 
 ## [0.147.0] – 2026-11-26
 

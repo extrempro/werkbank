@@ -336,6 +336,10 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
   ).json()) as { kind: string }[];
   expect(outbox).toEqual([]);
 
+  // Am Seitenende liegt die Antwortleiste an ihrem Platz und verdeckt keine Links.
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expectNoA11yViolations(page);
+
   // Antwort an den Melder
   await page.getByRole("button", { name: "Antworten", exact: true }).click();
   await expect(
@@ -348,8 +352,10 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
   await expect(
     page.getByRole("list", { name: "Cc: gewählte Empfänger" }),
   ).toContainText("kollegin@example.com");
-  // Am Seitenende liegt die Antwortleiste an ihrem Platz und verdeckt keine Links.
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  // Empfängerfelder mittig, damit die feste Kopfzeile am Handy nichts verdeckt
+  await page
+    .locator(".ticket-recipients")
+    .evaluate((element) => element.scrollIntoView({ block: "center" }));
   await expectNoA11yViolations(page);
   await page
     .getByRole("textbox", { name: "Text der Antwort" })
