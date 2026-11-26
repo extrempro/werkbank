@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { formatDateTime } from "../../api";
 import { Feedback } from "../../components/Feedback";
+import { InfoTip } from "../../components/InfoTip";
 import {
   areaLabel,
   compareSnapshots,
@@ -64,7 +65,7 @@ function SourceCell({ snapshot }: { snapshot: Snapshot }) {
                 ))}
               </p>
             ) : (
-              <p className="snapshot-error">{group.message ?? "Fehler ohne nähere Angabe"}</p>
+              <p className="snapshot-error">{group.message ?? "Kein Fehlertext gespeichert"}</p>
             )}
             <p className="small">
               {group.sources.length === 1
@@ -264,7 +265,9 @@ export function SnapshotsPage({ canExport = false }: { canExport?: boolean }) {
               <thead>
                 <tr>
                   <th scope="col">Beginn</th>
-                  <th scope="col">Ergebnis</th>
+                  <th scope="col">
+                    Ergebnis <InfoTip term="m365.abruf-ergebnis" />
+                  </th>
                   <th scope="col">Objekte</th>
                   <th scope="col">Änderungen</th>
                   <th scope="col">Quellen</th>

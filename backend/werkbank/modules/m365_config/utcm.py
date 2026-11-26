@@ -5,9 +5,12 @@ Verändert wird dabei nur die Liste der Snapshot-Aufträge in UTCM, nie eine Ein
 Tenants. Siehe docs/entra-setup.md, Abschnitt 4.
 """
 
+import logging
 import re
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -25,10 +28,69 @@ JOB_SELECT = "id,displayName,status,resourceLocation,errorDetails,createdDateTim
 MAX_PAGES = 20
 ERROR_TEXT_LENGTH = 300
 _JOB_ID = re.compile(r"^[0-9A-Za-z-]{1,64}$")
+_REQUEST_ID = re.compile(r"^[0-9A-Za-z-]{1,64}$")
+
+logger = logging.getLogger(__name__)
+
+# Vorübergehende Fehler: Lesende Anfragen (GET) werden mit wachsender Wartezeit wiederholt.
+# Anlegen (POST) und Löschen (DELETE) nie, damit nichts doppelt passiert.
+RETRY_STATUS = frozenset({429, 502, 503, 504})
+RETRY_DELAYS: tuple[float, ...] = (5, 15, 45, 90)
+# Höchstens so lange wird einem Retry-After von Microsoft gefolgt
+RETRY_AFTER_MAX = 120.0
 
 
 class UtcmError(RuntimeError):
     """Fehler beim Zugriff auf Microsoft Graph."""
+
+    def __init__(self, message: str, *, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+def _retry_after(response: httpx.Response) -> float | None:
+    """Wartezeit aus dem Header Retry-After (Sekunden oder Datum), begrenzt."""
+    value = response.headers.get("Retry-After", "").strip()
+    if not value:
+        return None
+    try:
+        seconds = float(value)
+    except ValueError:
+        try:
+            seconds = (parsedate_to_datetime(value) - datetime.now(UTC)).total_seconds()
+        except TypeError, ValueError:
+            return None
+    return min(max(seconds, 0.0), RETRY_AFTER_MAX)
+
+
+def graph_error_text(response: httpx.Response) -> str:
+    """Kurzer Fehlertext: Status, Fehlercode und Meldung von Graph, dazu die request-id.
+
+    Beispiel: „Microsoft Graph antwortet mit 502 (UnknownError) · request-id 1a2b…“.
+    """
+    code = message = request_id = ""
+    try:
+        data = response.json()
+    except ValueError:
+        data = None
+    error = data.get("error") if isinstance(data, dict) else None
+    if isinstance(error, dict):
+        code = str(error.get("code") or "")
+        message = str(error.get("message") or "")
+        inner = error.get("innerError")
+        if isinstance(inner, dict):
+            request_id = str(inner.get("request-id") or "")
+    elif response.text:
+        message = response.text
+    request_id = request_id or response.headers.get("request-id", "")
+    text = f"Microsoft Graph antwortet mit {response.status_code}"
+    if code:
+        text += f" ({code[:60]})"
+    if message.strip():
+        text += f": {' '.join(message.split())[:ERROR_TEXT_LENGTH]}"
+    if _REQUEST_ID.match(request_id):
+        text += f" · request-id {request_id}"
+    return text
 
 
 def check_graph_url(url: str) -> str:
@@ -94,23 +156,62 @@ def graph_token_provider(settings: Settings) -> Callable[[], str]:
 class UtcmClient:
     """Die wenigen Aufrufe von Microsoft Graph, die der Abruf braucht."""
 
-    def __init__(self, http: httpx.Client, token: Callable[[], str]) -> None:
+    def __init__(
+        self,
+        http: httpx.Client,
+        token: Callable[[], str],
+        *,
+        wait: Callable[[float], None] = time.sleep,
+        retry_delays: tuple[float, ...] = RETRY_DELAYS,
+    ) -> None:
         self._http = http
         self._token = token
+        self._wait = wait
+        self._retry_delays = retry_delays
 
     def _request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
+        """Eine Anfrage an Graph. GET wird bei vorübergehenden Fehlern wiederholt."""
         check_graph_url(url)
-        try:
-            headers = {"Authorization": f"Bearer {self._token()}", **kwargs.pop("headers", {})}
-            response = self._http.request(method, url, headers=headers, **kwargs)
-        except httpx.HTTPError as exc:
-            raise UtcmError(f"Microsoft Graph nicht erreichbar: {type(exc).__name__}") from exc
-        if response.status_code >= 400:
-            raise UtcmError(
-                f"Microsoft Graph antwortet mit {response.status_code}: "
-                f"{response.text[:ERROR_TEXT_LENGTH]}"
-            )
-        return response
+        extra_headers = kwargs.pop("headers", {})
+        delays = self._retry_delays if method == "GET" else ()
+        attempt = 0
+        while True:
+            try:
+                headers = {"Authorization": f"Bearer {self._token()}", **extra_headers}
+                response = self._http.request(method, url, headers=headers, **kwargs)
+            except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                if attempt < len(delays):
+                    self._retry(method, type(exc).__name__, attempt, delays[attempt])
+                    attempt += 1
+                    continue
+                raise UtcmError(f"Microsoft Graph nicht erreichbar: {type(exc).__name__}") from exc
+            except httpx.HTTPError as exc:
+                raise UtcmError(f"Microsoft Graph nicht erreichbar: {type(exc).__name__}") from exc
+            if response.status_code in RETRY_STATUS and attempt < len(delays):
+                delay = _retry_after(response)
+                self._retry(
+                    method,
+                    str(response.status_code),
+                    attempt,
+                    delays[attempt] if delay is None else delay,
+                )
+                attempt += 1
+                continue
+            if response.status_code >= 400:
+                raise UtcmError(graph_error_text(response), status=response.status_code)
+            return response
+
+    def _retry(self, method: str, reason: str, attempt: int, delay: float) -> None:
+        # Ohne Adresse und Tenant-Daten: nur Methode, Grund und Wartezeit
+        logger.warning(
+            "Microsoft Graph: %s mit %s, Wiederholung %d von %d in %.0f s",
+            method,
+            reason,
+            attempt + 1,
+            len(self._retry_delays),
+            delay,
+        )
+        self._wait(delay)
 
     def _json(self, method: str, url: str, **kwargs: Any) -> dict[str, Any]:
         try:

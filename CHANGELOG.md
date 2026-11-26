@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.141.0] – 2026-11-26
+
+### Behoben
+
+- **M365-Abruf robuster:** Der tägliche Abruf scheiterte komplett, sobald der Download des einen großen UTCM-Auftrags mit 502 abbrach; alle Typen standen dann als Fehler da. Jetzt:
+  - ein UTCM-Auftrag je Workload (Präfix `microsoft.<workload>.`), nacheinander, alle Ergebnisse in einem `apply_snapshot`. Scheitert eine Workload, ist der Snapshot „teilweise“, nur ihre Typen fehlen, nichts gilt als entfernt. Das Limit von 12 sichtbaren Aufträgen und das Monatskontingent werden je Workload geprüft.
+  - GET-Anfragen an Microsoft Graph werden bei 429/502/503/504, Zeitüberschreitung und Verbindungsfehlern bis zu viermal wiederholt (5/15/45/90 s, `Retry-After` hat Vorrang, höchstens 120 s); POST und DELETE nie. Jede Wiederholung als WARNING im Log, ohne Tenant-Daten. Die Wartefunktion ist injizierbar.
+  - Scheitert nur der Download eines fertigen Auftrags, bleibt er bei UTCM stehen; der nächste Lauf übernimmt ihn, wenn er dieselbe Typengruppe betrifft und höchstens 24 h alt ist (Kennung aus Workload und Prüfsumme der Typen im Auftragsnamen). Andere eigene, fertige Aufträge werden gelöscht.
+  - Fehlertexte nennen Workload und Schritt (Auftrag anlegen, Status, Zeitüberschreitung, Download, UTCM meldet Fehler), z. B. „Exchange · Download: Microsoft Graph antwortet mit 502 (UnknownError) · request-id …“, gekürzt auf `ERROR_LENGTH`. Auch ein Totalausfall (Kontingent, Anmeldung) steht je Typ in `source_errors`.
+  - SharePoint wird immer gelesen, auch wenn UTCM scheitert, mit eigenem Status.
+- **Snapshots:** Info-Symbol am Ergebnis erklärt „Teilweise“; ältere Abrufe ohne Text zeigen „Kein Fehlertext gespeichert“. Handbuch (Snapshots) und `docs/spec.md` (Ablauf mit UTCM) beschreiben Gruppen, Wiederholungen und Fehlertexte.
+
 ## [0.140.0] – 2026-11-26
 
 ### Behoben

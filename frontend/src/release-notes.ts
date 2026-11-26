@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.141.0",
+    date: "2026-11-26",
+    summary: "Der Abruf der Microsoft-365-Einstellungen klappt zuverlässiger.",
+    sections: [
+      {
+        area: "Microsoft 365",
+        entries: [
+          "Die Einstellungen werden jetzt je Dienst getrennt gelesen (zum Beispiel Entra, Exchange, Teams). Hakt ein Dienst, fehlen nur seine Einstellungen; der Abruf heißt dann „Teilweise“ und die übrigen Dienste kommen trotzdem an.",
+          "Antwortet Microsoft nur kurz nicht, versucht die Werkbank es von selbst noch einige Male. Waren die Daten bei Microsoft schon fertig, holt sie der nächste Abruf ab.",
+          "Bei den Snapshots siehst du bei jedem Fehler, welcher Dienst und welcher Schritt betroffen war. Ein Info-Symbol erklärt, was „Teilweise“ bedeutet.",
+          "SharePoint und OneDrive werden auch dann gelesen, wenn der übrige Abruf scheitert.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.140.0",
     date: "2026-11-26",
     summary: "Die Doku springt nicht mehr, wenn die Verbindung kurz abreißt.",
