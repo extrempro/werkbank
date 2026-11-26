@@ -8751,11 +8751,13 @@ td > .budget-row-actions {
 
 .ev-topic-group ul {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 10px;
   margin: 0;
-  padding: 0;
+  padding: 12px;
   list-style: none;
-  border-top: 1px solid var(--farbe-trenner);
+  border-top: 1px solid var(--farbe-rand);
+  background: var(--farbe-grund);
 }
 
 .ev-topic-group ul[hidden] {
@@ -8911,24 +8913,74 @@ td > .budget-row-actions {
   font-weight: 700;
 }
 
-.ev-item {
+/* Eine Meldung als eigene, ruhige Karte */
+.ev-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
   text-decoration: none;
 }
 
-.ev-item-title {
+.ev-card:hover {
+  border-color: var(--farbe-rand-stark);
+  box-shadow: 0 1px 4px rgb(20 33 61 / 8%);
+}
+
+.ev-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--farbe-text-leise);
+  font-size: 0.8125rem;
+}
+
+.ev-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--farbe-text-mittel);
+}
+
+.ev-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--farbe-text-leise);
+}
+
+.ev-state-neu .ev-state-dot {
+  background: var(--farbe-primaer);
+}
+
+.ev-state-abgeschlossen .ev-state-dot {
+  background: var(--farbe-ok-text);
+}
+
+.ev-card-title {
   display: -webkit-box;
   overflow: hidden;
-  color: var(--farbe-link);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
 
-.ev-item-meta {
+.ev-card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 8px;
+  gap: 2px 12px;
   color: var(--farbe-text-leise);
+  font-size: 0.8125rem;
 }
 
 .ev-due {

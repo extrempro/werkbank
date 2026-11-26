@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.145.0] – 2026-11-26
+
+### Geändert
+
+- **M365-Neuerungen: jede Meldung als eigene Karte.** Innerhalb einer Kategorie stehen die Meldungen als einzelne Karten mit Rand und Abstand auf grauem Grund (statt Raster mit Trennlinien). Ruhiger: Titel dunkel statt als Link-Farbe, Status als Text mit Punkt (blau bei Neu) statt farbigem Badge, nur „Handeln bis …“ bleibt farbig.
+
 ## [0.144.1] – 2026-11-26
 
 ### Behoben

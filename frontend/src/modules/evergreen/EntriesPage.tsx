@@ -115,8 +115,8 @@ function groupSummary(group: TopicGroup): string {
   return parts.join(", ");
 }
 
-/** Listeneintrag: der ganze Eintrag ist ein Verweis auf die Ansicht. */
-function EntryItem({ entry, selected }: { entry: EntrySummary; selected: boolean }) {
+/** Eine Meldung als eigene Karte; die ganze Karte ist ein Verweis auf die Seite des Eintrags. */
+function EntryItem({ entry }: { entry: EntrySummary }) {
   const path = entryPath(entry.id);
   const state = ENTRY_STATES[entry.status];
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -129,23 +129,21 @@ function EntryItem({ entry, selected }: { entry: EntrySummary; selected: boolean
   };
   return (
     <li>
-      <a
-        className="case-item ev-item"
-        href={path}
-        aria-current={selected ? "true" : undefined}
-        onClick={onClick}
-      >
-        <span className="case-item-head">
-          <span className="mono small">{entry.number}</span>
-          <span className={`pill ${state.pill}`}>{state.label}</span>
+      <a className="ev-card" href={path} onClick={onClick}>
+        <span className="ev-card-head">
+          <span className="mono">{entry.number}</span>
+          <span className={`ev-state ev-state-${entry.status}`}>
+            <span className="ev-state-dot" aria-hidden="true" />
+            {state.label}
+          </span>
         </span>
-        <strong className="ev-item-title">{entry.title}</strong>
-        <span className="small ev-item-meta">
+        <strong className="ev-card-title">{entry.title}</strong>
+        <span className="ev-card-meta">
           <span>
             {entry.services[0] ?? "–"} · {entry.kind ?? SOURCE_LABELS[entry.source] ?? entry.source}
           </span>
           {entry.action_required_by && (
-            <span className="ev-due">bis {formatDate(entry.action_required_by)}</span>
+            <span className="ev-due">Handeln bis {formatDate(entry.action_required_by)}</span>
           )}
         </span>
       </a>
@@ -469,7 +467,7 @@ export function EntriesPage({
               </p>
               <ul id={bodyId} hidden={!open}>
                 {group.entries.map((entry) => (
-                  <EntryItem key={entry.id} entry={entry} selected={false} />
+                  <EntryItem key={entry.id} entry={entry} />
                 ))}
               </ul>
             </section>
