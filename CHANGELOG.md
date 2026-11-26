@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.140.0] – 2026-11-26
+
+### Behoben
+
+- **Doku springt nicht mehr bei kurzer Verbindungsunterbrechung:** Riss die Live-Verbindung ab („Verbindung unterbrochen – Änderungen werden nachgereicht“), wurde der Editor ausgeblendet und nach dem Wiederverbinden neu aufgebaut; die Seite sprang. Jetzt bleibt der Editor stehen, sobald die Seite einmal abgeglichen ist (`useLiveDoc` liefert `ready`). Oben steht weiter der Hinweis, und was du währenddessen schreibst, wird nachgereicht. E2E trennt die Live-Verbindung über eine WebSocket-Weiche und prüft, dass derselbe Editor bleibt.
+- **Stern bei Pflichtfeldern wieder neben der Beschriftung:** Eine ältere Regel für Masken (`.settings-form label`, auch in Ticket-Lösung und Doku-Fenstern) stapelte jede Beschriftung, auch die neue `field-label`; der Stern stand darunter in einer eigenen Zeile (z. B. „Posten hinzufügen“).
+- **Code-Scanning (CodeQL, Log Injection) in `doku/collab.py`:** Der Name der Ausnahme wird vor dem Protokollieren von Zeilenumbrüchen bereinigt, die Seiten-ID als geprüfte UUID geschrieben.
+
 ## [0.139.0] – 2026-11-26
 
 ### Geändert
