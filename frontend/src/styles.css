@@ -14914,6 +14914,157 @@ img.ProseMirror-separator {
   background: none;
 }
 
+/* Codeblock mit Sprache, Hervorhebung und „Kopieren“ */
+.doku-code {
+  --code-schluessel: #a0111f;
+  --code-text: #0a3069;
+  --code-kommentar: #59636e;
+  --code-variable: #8a3c00;
+  --code-befehl: #6639ba;
+  --code-zahl: #0550ae;
+
+  margin: 0;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--farbe-grund);
+}
+
+:root[data-theme="dunkel"] .doku-code {
+  --code-schluessel: #ff7b72;
+  --code-text: #a5d6ff;
+  --code-kommentar: #8b949e;
+  --code-variable: #ffa657;
+  --code-befehl: #d2a8ff;
+  --code-zahl: #79c0ff;
+}
+
+.doku-content .doku-code pre {
+  border-radius: 0;
+}
+
+.doku-code-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid var(--farbe-rand);
+  background: var(--farbe-flaeche);
+  font-family: var(--schrift);
+  user-select: none;
+}
+
+.doku-code-label {
+  color: var(--farbe-text-leise);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.doku-code-select {
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 6px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.doku-code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  min-width: 44px;
+  margin-left: auto;
+  padding: 0 10px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--farbe-text);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.doku-code-copy:hover {
+  border-color: var(--farbe-rand-stark);
+  background: var(--farbe-hover);
+}
+
+.doku-code-copy svg {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+}
+
+.doku-code-error {
+  flex: 1 1 100%;
+  color: var(--farbe-bad-text);
+  font-size: 0.8125rem;
+}
+
+.doku-code .hljs-keyword,
+.doku-code .hljs-selector-tag,
+.doku-code .hljs-literal,
+.doku-code .hljs-section,
+.doku-code .hljs-doctag,
+.doku-code .hljs-name,
+.doku-code .hljs-deletion {
+  color: var(--code-schluessel);
+}
+
+.doku-code .hljs-string,
+.doku-code .hljs-regexp,
+.doku-code .hljs-addition,
+.doku-code .hljs-meta .hljs-string {
+  color: var(--code-text);
+}
+
+.doku-code .hljs-comment,
+.doku-code .hljs-quote {
+  color: var(--code-kommentar);
+  font-style: italic;
+}
+
+.doku-code .hljs-variable,
+.doku-code .hljs-template-variable,
+.doku-code .hljs-attr,
+.doku-code .hljs-attribute,
+.doku-code .hljs-symbol,
+.doku-code .hljs-selector-attr,
+.doku-code .hljs-selector-class,
+.doku-code .hljs-selector-id {
+  color: var(--code-variable);
+}
+
+.doku-code .hljs-title,
+.doku-code .hljs-built_in,
+.doku-code .hljs-type,
+.doku-code .hljs-meta,
+.doku-code .hljs-function {
+  color: var(--code-befehl);
+}
+
+.doku-code .hljs-number,
+.doku-code .hljs-bullet,
+.doku-code .hljs-link {
+  color: var(--code-zahl);
+}
+
+.doku-code .hljs-emphasis {
+  font-style: italic;
+}
+
+.doku-code .hljs-strong {
+  font-weight: 700;
+}
+
 .doku-content hr {
   border: 0;
   border-top: 1px solid var(--farbe-rand-stark);

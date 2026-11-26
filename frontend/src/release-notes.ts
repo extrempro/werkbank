@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.146.0",
+    date: "2026-11-26",
+    summary: "Code in der Doku wird farbig hervorgehoben.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Bei einem Codeblock wählst du oben die Sprache, zum Beispiel PowerShell, Bash, YAML, JSON oder SQL. Befehle, Texte und Kommentare erscheinen dann in eigenen Farben, in hell und dunkel.",
+          "Beim Lesen steht die Sprache oben am Block. Mit „Kopieren“ landet der ganze Code in der Zwischenablage.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.145.0",
     date: "2026-11-26",
     summary: "Die Meldungen unter Microsoft 365 › Neuerungen sind besser voneinander getrennt.",

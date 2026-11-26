@@ -11,6 +11,7 @@ import {
 } from "react";
 import { EditorContent, mergeAttributes, Node, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { DokuCodeBlock } from "./CodeBlock";
 import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import { Placeholder } from "@tiptap/extensions";
@@ -94,6 +95,8 @@ export function extensions(placeholder: string, live?: LiveDoc, comments?: Comme
       // Mit Live-Bearbeitung kommt „Rückgängig“ aus dem gemeinsamen Dokument (nur eigene Änderungen)
       ...(live ? { undoRedo: false as const } : {}),
       heading: { levels: [1, 2, 3] },
+      // eigener Codeblock mit Sprache und Hervorhebung (CodeBlock.tsx)
+      codeBlock: false,
       link: {
         openOnClick: false,
         autolink: true,
@@ -103,6 +106,7 @@ export function extensions(placeholder: string, live?: LiveDoc, comments?: Comme
         HTMLAttributes: { rel: "noopener noreferrer nofollow", target: "_blank" },
       },
     }),
+    DokuCodeBlock,
     Table.configure({ resizable: false }),
     TableRow,
     TableHeader,

@@ -658,3 +658,39 @@ test("Doku: Tabelle in gewählter Größe einfügen und bearbeiten", async ({
   }
   await expect(content.getByText("Name")).toBeVisible();
 });
+
+test("Doku: Codeblock mit Sprache und Hervorhebung", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const editor = await apiAs(browser, ["Doku.Nutzer"], s.editor);
+  const created = await editor.post("/api/doku/pages", {
+    data: { space_id: s.spaceId, title: `Code ${stamp}` },
+    headers: HEADERS,
+  });
+  const id = ((await created.json()) as { id: string }).id;
+
+  await loginAs(page, ["Doku.Nutzer"], s.editor);
+  await page.goto(`/doku/seite/${id}`);
+  const content = page.locator(".doku-content");
+  await content.click();
+  await page.keyboard.press("/");
+  await page.getByRole("combobox", { name: "Baustein suchen" }).fill("Code");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type('Get-Service -Name "W3SVC" # Dienst');
+
+  const block = content.locator(".doku-code");
+  const language = block.getByRole("combobox", { name: "Sprache" });
+  await expect(language).toHaveValue("");
+  // Ohne Sprache: einfarbig
+  await expect(block.locator("[class^='hljs-']")).toHaveCount(0);
+  await language.selectOption({ label: "PowerShell" });
+  await expect(block.locator(".hljs-string")).toHaveText('"W3SVC"');
+  await expect(block.locator(".hljs-comment")).toHaveText("# Dienst");
+  await expect(
+    block.getByRole("button", { name: "Code kopieren (PowerShell)" }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+});
