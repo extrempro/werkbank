@@ -24,9 +24,16 @@ GRAPH_URL = f"https://{GRAPH_HOST}/v1.0"
 UTCM_URL = f"{GRAPH_URL}/admin/configurationManagement"
 GRAPH_SCOPE = f"https://{GRAPH_HOST}/.default"
 
-JOB_SELECT = "id,displayName,status,resourceLocation,errorDetails,createdDateTime"
+JOB_SELECT = "id,displayName,description,status,resourceLocation,errorDetails,createdDateTime"
 MAX_PAGES = 20
 ERROR_TEXT_LENGTH = 300
+# Name und Beschreibung eines Snapshot-Auftrags: höchstens so viele Zeichen. Die Grenze ist nicht
+# dokumentiert, sondern beobachtet: Namen mit 24 Zeichen nahm UTCM an, mit 39 Zeichen lehnte es
+# sie mit 400 (BadRequest) ab. Mit 32 Zeichen bleibt die Werkbank sicher darunter.
+JOB_TEXT_MAX = 32
+_JOB_TEXT = re.compile(r"^[A-Za-z0-9 ]+$")
+# Höchstens so viele Validierungsdetails von Graph im Fehlertext
+ERROR_DETAILS_MAX = 5
 _JOB_ID = re.compile(r"^[0-9A-Za-z-]{1,64}$")
 _REQUEST_ID = re.compile(r"^[0-9A-Za-z-]{1,64}$")
 
@@ -63,34 +70,96 @@ def _retry_after(response: httpx.Response) -> float | None:
     return min(max(seconds, 0.0), RETRY_AFTER_MAX)
 
 
-def graph_error_text(response: httpx.Response) -> str:
-    """Kurzer Fehlertext: Status, Fehlercode und Meldung von Graph, dazu die request-id.
+def _clean(value: object, limit: int = 120) -> str:
+    """Text aus einer Antwort von Graph: Leerraum zusammengefasst, gekürzt."""
+    return " ".join(str(value).split())[:limit] if value is not None else ""
 
-    Beispiel: „Microsoft Graph antwortet mit 502 (UnknownError) · request-id 1a2b…“.
+
+def _error_details(error: dict[str, Any], data: dict[str, Any]) -> list[str]:
+    """Validierungsdetails von Graph als kurze Texte (Feld und Meldung, keine Werte der Anfrage).
+
+    Graph liefert sie je nach Dienst als `error.details[]`, als `errors`-Objekt im Format von
+    ASP.NET (Feld → Meldungen, im Fehler oder auf oberster Ebene) oder als `innerError.message`.
+    """
+    parts: list[str] = []
+    details = error.get("details")
+    if isinstance(details, list):
+        for item in details:
+            if not isinstance(item, dict):
+                continue
+            where = _clean(item.get("target") or item.get("code"), 60)
+            what = _clean(item.get("message"))
+            if what or where:
+                parts.append(f"{where}: {what}" if where and what else where or what)
+    errors = error.get("errors") if isinstance(error.get("errors"), dict) else data.get("errors")
+    if isinstance(errors, dict):
+        for field_name, messages in errors.items():
+            texts = messages if isinstance(messages, list) else [messages]
+            joined = ", ".join(_clean(text) for text in texts if _clean(text))
+            where = _clean(field_name, 60)
+            parts.append(f"{where}: {joined}" if joined else where)
+    inner = error.get("innerError") or error.get("innererror")
+    if isinstance(inner, dict) and _clean(inner.get("message")):
+        parts.append(_clean(inner.get("message")))
+    return [part for part in parts if part][:ERROR_DETAILS_MAX]
+
+
+def graph_error_text(response: httpx.Response) -> str:
+    """Kurzer Fehlertext: Status, Fehlercode, Meldung und Details von Graph, dazu die request-id.
+
+    Beispiel: „Microsoft Graph antwortet mit 400 (BadRequest): One or more validation errors
+    occurred. Details: displayName: The field displayName must be … · request-id 1a2b…“.
     """
     code = message = request_id = ""
+    details: list[str] = []
     try:
         data = response.json()
     except ValueError:
         data = None
     error = data.get("error") if isinstance(data, dict) else None
-    if isinstance(error, dict):
+    if isinstance(error, dict) and isinstance(data, dict):
         code = str(error.get("code") or "")
         message = str(error.get("message") or "")
-        inner = error.get("innerError")
+        inner = error.get("innerError") or error.get("innererror")
         if isinstance(inner, dict):
             request_id = str(inner.get("request-id") or "")
+        details = _error_details(error, data)
+    elif isinstance(data, dict) and isinstance(data.get("errors"), dict):
+        # ASP.NET-Format ohne „error“: title und errors auf oberster Ebene
+        message = str(data.get("title") or "")
+        details = _error_details({}, data)
     elif response.text:
         message = response.text
     request_id = request_id or response.headers.get("request-id", "")
     text = f"Microsoft Graph antwortet mit {response.status_code}"
     if code:
         text += f" ({code[:60]})"
-    if message.strip():
-        text += f": {' '.join(message.split())[:ERROR_TEXT_LENGTH]}"
+    body = " ".join(message.split())
+    if details:
+        body = f"{body} Details: {'; '.join(details)}".strip()
+    if body:
+        text += f": {body[:ERROR_TEXT_LENGTH]}"
     if _REQUEST_ID.match(request_id):
         text += f" · request-id {request_id}"
     return text
+
+
+def check_job_text(display_name: str, description: str) -> None:
+    """Prüft Name und Beschreibung eines Auftrags vor dem Senden.
+
+    Erlaubt: höchstens JOB_TEXT_MAX Zeichen, nur Buchstaben ohne Umlaute, Ziffern, Leerzeichen.
+    """
+    for label, value in (("Name", display_name), ("Beschreibung", description)):
+        if len(value) > JOB_TEXT_MAX:
+            raise UtcmError(
+                f"{label} des Snapshot-Auftrags ist zu lang ({len(value)} statt höchstens "
+                f"{JOB_TEXT_MAX} Zeichen)"
+            )
+        if not _JOB_TEXT.match(value):
+            raise UtcmError(
+                f"{label} des Snapshot-Auftrags enthält unerlaubte Zeichen "
+                "(erlaubt: Buchstaben ohne Umlaute, Ziffern, Leerzeichen)"
+            )
 
 
 def check_graph_url(url: str) -> str:
@@ -240,14 +309,15 @@ class UtcmClient:
             raise UtcmError("Unerwartete Kennung eines Snapshot-Auftrags")
         return f"{UTCM_URL}/configurationSnapshotJobs/{job_id}"
 
-    def create_snapshot(self, display_name: str, resources: list[str]) -> str:
+    def create_snapshot(self, display_name: str, description: str, resources: list[str]) -> str:
         """Startet einen Snapshot und liefert die Kennung des Auftrags."""
+        check_job_text(display_name, description)
         data = self._json(
             "POST",
             f"{UTCM_URL}/configurationSnapshots/createSnapshot",
             json={
                 "displayName": display_name,
-                "description": "Automatischer Abruf der Werkbank",
+                "description": description,
                 "resources": resources,
             },
         )

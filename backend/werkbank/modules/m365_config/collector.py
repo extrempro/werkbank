@@ -10,6 +10,7 @@ Werkbank; UTCM selbst bewahrt Snapshots nur wenige Tage auf.
 
 import hashlib
 import logging
+import re
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -28,7 +29,7 @@ from werkbank.modules.m365_config.normalize import (
     SettingValue,
     normalize_object,
 )
-from werkbank.modules.m365_config.utcm import UtcmClient, UtcmError
+from werkbank.modules.m365_config.utcm import JOB_TEXT_MAX, UtcmClient, UtcmError
 from werkbank.modules.m365_config.versioning import SnapshotResult, apply_snapshot
 
 logger = logging.getLogger(__name__)
@@ -41,9 +42,13 @@ SHAREPOINT_WORKLOAD = "sharepoint"
 SHAREPOINT_AREA = "tenantsettings"
 SHAREPOINT_OBJECT = "tenant"
 SHAREPOINT_NAME = "SharePoint und OneDrive"
-# Namen der Snapshot-Aufträge der Werkbank in UTCM (nur diese räumt sie auch wieder weg):
-# „Werkbank <workload> <Kennung der Typengruppe> <Zeitpunkt>“
+# Snapshot-Aufträge der Werkbank in UTCM (nur diese räumt sie auch wieder weg), je höchstens
+# JOB_TEXT_MAX Zeichen, nur Buchstaben, Ziffern und Leerzeichen:
+# Name „Werkbank <JJMMTT> <HHMMSS> <4 Zeichen der Kennung>“, Beschreibung „Werkbank <workload>
+# <Kennung der Typengruppe>“. Ältere Namen (bis 0.144) gelten als eigene, werden aber nur
+# aufgeräumt.
 JOB_NAME_PREFIX = "Werkbank "
+_JOB_NAME = re.compile(r"^Werkbank \d{6} \d{6} [0-9a-f]{4}$")
 # UTCM zeigt höchstens so viele Aufträge je Tenant; darüber lässt sich keiner mehr anlegen
 MAX_VISIBLE_JOBS = 12
 # Ein fertiger, nicht abgeholter Auftrag wird so lange im nächsten Lauf übernommen
@@ -291,13 +296,33 @@ def group_key(workload: str, resources: list[str]) -> str:
 
 
 def job_name(key: str, started_at: datetime) -> str:
-    return f"{JOB_NAME_PREFIX}{key} {started_at:%Y%m%d %H%M%S}"
+    """Name des Auftrags, z. B. „Werkbank 261126 075220 3f9a“ (27 Zeichen)."""
+    digest = key.split(" ")[-1][:4]
+    return f"{JOB_NAME_PREFIX}{started_at:%y%m%d %H%M%S} {digest}"
 
 
-def _job_key(name: str) -> str | None:
-    """Typengruppe aus dem Namen eines eigenen Auftrags (alte Namen ohne Gruppe: None)."""
-    parts = name[len(JOB_NAME_PREFIX) :].split(" ")
-    return f"{parts[0]} {parts[1]}" if len(parts) == 4 else None
+def job_description(key: str) -> str:
+    """Beschreibung mit der Typengruppe, z. B. „Werkbank entra 3f9a2c1b“.
+
+    Lange Workload-Namen werden gekürzt, damit die Grenze von UTCM eingehalten wird.
+    """
+    workload, digest = key.split(" ", 1)
+    room = JOB_TEXT_MAX - len(JOB_NAME_PREFIX) - len(digest) - 1
+    return f"{JOB_NAME_PREFIX}{workload[:room]} {digest}"
+
+
+def _job_key(job: Mapping[str, Any], keys: set[str]) -> str | None:
+    """Typengruppe eines eigenen Auftrags aus seiner Beschreibung.
+
+    Nur Aufträge mit dem aktuellen Namensformat kommen in Frage; ältere Formate (ohne Gruppe in
+    der Beschreibung) liefern None und werden damit nur aufgeräumt, nie übernommen.
+    """
+    name = job.get("displayName")
+    if not isinstance(name, str) or not _JOB_NAME.match(name):
+        return None
+    description = job.get("description")
+    wanted = {job_description(key): key for key in keys}
+    return wanted.get(description) if isinstance(description, str) else None
 
 
 def _created(job: Mapping[str, Any]) -> datetime | None:
@@ -333,11 +358,11 @@ def plan_jobs(client: UtcmClient, keys: set[str], now: datetime) -> JobPlan:
         if not own or status not in FINAL_STATES:
             plan.visible += 1
             continue
-        key = _job_key(str(name))
+        key = _job_key(job, keys)
         created = _created(job)
         location = job.get("resourceLocation")
         if (
-            key in keys
+            key is not None
             and key not in plan.reusable
             and status in USABLE_STATES
             and isinstance(location, str)
@@ -345,7 +370,7 @@ def plan_jobs(client: UtcmClient, keys: set[str], now: datetime) -> JobPlan:
             and created is not None
             and now - created <= REUSE_JOB_MAX_AGE
         ):
-            plan.reusable[str(key)] = job
+            plan.reusable[key] = job
             plan.visible += 1
             continue
         try:
@@ -401,7 +426,9 @@ def _run_group(
                 f"In UTCM stehen schon {plan.visible} Aufträge (höchstens {MAX_VISIBLE_JOBS})",
             )
         try:
-            job_id = client.create_snapshot(job_name(key, started_at), resources)
+            job_id = client.create_snapshot(
+                job_name(key, started_at), job_description(key), resources
+            )
         except UtcmError as exc:
             raise _fail(label, STEP_CREATE, exc) from exc
         plan.visible += 1
