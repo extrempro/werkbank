@@ -121,7 +121,7 @@ Kopfzeile, Navigation, Seitentitel, Filter-Chips, Tabelle, Listeneintrag, Detail
 
 ## 8. Masken und Suche
 
-Gilt für jede Suche, jeden Filter und jede Eingabemaske auf PC, Tablet und Handy. Gemeinsame Komponenten: `components/Field.tsx` (`Field`, `Segmented`, `ChoiceCards`, `ErrorSummary`, `RequiredNote`, `problemFor`), `components/ListChoice.tsx` (`ListChoice` für Daten: bis vier Karten, ab fünf Suchfeld; `FixedChoice` für feste Werte: bis vier Knopfleiste, ab fünf Suchfeld), `components/ComboField.tsx`, `components/SearchField.tsx`, `components/FilterBar.tsx`, `components/FormStep.tsx`; Lage der schwebenden Fenster in `components/floating.ts`. Nie je Seite nachbauen.
+Gilt für jede Suche, jeden Filter und jede Eingabemaske auf PC, Tablet und Handy. Gemeinsame Komponenten: `components/Field.tsx` (`Field`, `Segmented`, `ChoiceCards`, `ErrorSummary`, `RequiredNote`, `problemFor`), `components/ListChoice.tsx` (`ListChoice` für Daten: bis vier Karten, ab fünf Suchfeld; `FixedChoice` für feste Werte: bis vier Knopfleiste, ab fünf Suchfeld), `components/ComboField.tsx`, `components/SearchField.tsx`, `components/FilterBar.tsx`, `components/FormStep.tsx`, `components/MailRecipients.tsx` (Empfänger wie im Mailprogramm: Adressen als Chips mit ×, Vorschläge aus bekannten Kontakten, neue Adresse tippen und mit Enter, Komma oder Verlassen übernehmen, Prüfung der Adresse am Feld); Lage der schwebenden Fenster in `components/floating.ts`. Nie je Seite nachbauen.
 
 ### Suche und Filter
 

@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.148.0",
+    date: "2026-11-26",
+    summary: "Antworten in Tickets haben jetzt „An“ und „Cc“ wie im Mailprogramm.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Beim Antworten stehen oben die Felder „An“ und „Cc“. Mit dem × nimmst du jemanden heraus, auch den Melder. Beim Klick ins Feld siehst du die Beteiligten, eine andere Adresse tippst du einfach ein.",
+          "„Antworten an alle“ setzt alle Beteiligten in Cc. Neue Adressen werden Beteiligte des Tickets, und im Verlauf steht, wer die Antwort in An und Cc bekommen hat.",
+          "Antworten, Antworten an alle, Weiterleiten und interne Notizen haben Symbole wie im Mailprogramm.",
+          "Die Felder für eine Erinnerung sehen jetzt aus wie alle anderen Eingabefelder.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.147.0",
     date: "2026-11-26",
     summary:

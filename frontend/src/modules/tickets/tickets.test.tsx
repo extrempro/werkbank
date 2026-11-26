@@ -48,6 +48,7 @@ function entry(id: string, kind: Entry["kind"], original = false): Entry {
     from_number: null,
     origin: kind === "inbound" ? "reporter" : "",
     recipients: kind === "reply" ? "m.muster@example.com" : "",
+    recipients_cc: null,
     attachments: [],
   };
 }
@@ -341,29 +342,45 @@ describe("Antwort an den Melder", () => {
     );
     render(<TicketPage number={1042} />);
     fireEvent.click(await screen.findByRole("button", { name: /^Antworten( \(Entwurf\))?$/ }));
-    expect(screen.getByText("Geht per E-Mail an: m.muster@example.com")).toBeTruthy();
-    // „An alle“: Beteiligte in Kopie
-    fireEvent.click(screen.getByRole("button", { name: "An alle" }));
-    expect(
-      screen.getByText("Geht per E-Mail an: m.muster@example.com · Kopie an kopie@example.com"),
-    ).toBeTruthy();
-    fireEvent.change(screen.getByRole("textbox", { name: /Antwort an alle/ }), {
+    // „Antworten“: Melder in An, Cc leer
+    expect(screen.getByRole("list", { name: "An: gewählte Empfänger" })).toHaveTextContent(
+      "m.muster@example.com",
+    );
+    expect(screen.queryByRole("list", { name: "Cc: gewählte Empfänger" })).toBeNull();
+    expect(screen.getByText(/Geht per E-Mail an 1 Person/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Einklappen" }));
+    // „Antworten an alle“: Beteiligte in Cc
+    fireEvent.click(screen.getByRole("button", { name: "Antworten an alle" }));
+    expect(screen.getByRole("list", { name: "Cc: gewählte Empfänger" })).toHaveTextContent(
+      "kopie@example.com",
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "Text der Antwort" }), {
       target: { value: "Bitte starte neu." },
     });
     fireEvent.change(screen.getByLabelText("Status danach"), { target: { value: "waiting" } });
-    // Einklappen behält den Entwurf
-    fireEvent.click(screen.getByRole("button", { name: "Einklappen" }));
-    fireEvent.click(screen.getByRole("button", { name: "Antworten an alle" }));
-    expect(
-      (screen.getByRole("textbox", { name: /Antwort an alle/ }) as HTMLTextAreaElement).value,
-    ).toBe("Bitte starte neu.");
-    fireEvent.click(screen.getByRole("button", { name: "An M. Muster senden" }));
+    // Melder aus An entfernen, neue Adresse in Cc tippen
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /m.muster@example.com aus „An“ entfernen|M. Muster aus „An“ entfernen/,
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Senden" }));
+    expect(await screen.findByText("Trag mindestens eine Adresse bei „An“ ein.")).toBeTruthy();
+    const toField = screen.getByRole("combobox", { name: /^An/ });
+    fireEvent.change(toField, { target: { value: "Neu@Example.com" } });
+    fireEvent.keyDown(toField, { key: "Enter" });
+    const ccField = screen.getByRole("combobox", { name: /^Cc/ });
+    fireEvent.change(ccField, { target: { value: "keine-adresse" } });
+    fireEvent.blur(ccField);
+    expect(screen.getByText("keine-adresse ist keine gültige Mailadresse.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Senden" }));
     await waitFor(() =>
       expect(bodies).toEqual([
         {
           body: "Bitte starte neu.",
           status_after: "waiting",
-          reply_all: true,
+          to: ["neu@example.com"],
+          cc: ["kopie@example.com"],
           solution: null,
           templates: [],
         },
@@ -736,7 +753,7 @@ describe("TicketPage: Arbeitshilfen", () => {
     render(<TicketPage number={1042} />);
     fireEvent.click(await screen.findByRole("button", { name: /^Antworten( \(Entwurf\))?$/ }));
     await screen.findByText(/Schrägstrich und Kürzel tippen/);
-    const field = screen.getByLabelText(/^Antwort an M. Muster/) as HTMLTextAreaElement;
+    const field = screen.getByLabelText("Text der Antwort") as HTMLTextAreaElement;
     fireEvent.change(field, { target: { value: "Danke! /dr", selectionStart: 10 } });
     const list = await screen.findByRole("listbox", { name: "Textbausteine" });
     // Notiz-Bausteine erscheinen in der Antwort nicht
@@ -745,7 +762,7 @@ describe("TicketPage: Arbeitshilfen", () => {
     expect(field.value).toBe("Danke! Hallo Max, zu T-1042: drucker");
     expect((screen.getByLabelText("Status danach") as HTMLSelectElement).value).toBe("solved");
     // Der genutzte Baustein geht mit (für den Erfolg „Wissensquelle“)
-    fireEvent.click(screen.getByRole("button", { name: "An M. Muster senden" }));
+    fireEvent.click(screen.getByRole("button", { name: "Senden" }));
     await waitFor(() => expect(sent).toMatchObject([{ templates: [1] }]));
   });
 });

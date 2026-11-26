@@ -189,8 +189,10 @@ class EntryOut(BaseModel):
     kind: str
     # Eingehende Mails: reporter (Melder), participant (Beteiligte), external (von außen)
     origin: str
-    # Empfänger gesendeter Antworten und Weiterleitungen
+    # Empfänger gesendeter Antworten und Weiterleitungen (bei Antworten seit 0.148 nur „An“)
     recipients: str
+    # Antworten seit 0.148: Empfänger in Kopie; None bei älteren Einträgen
+    recipients_cc: str | None = None
     # Beim Zusammenführen übernommen: Nummer des Quelltickets
     from_number: int | None
     body: str
@@ -440,6 +442,7 @@ def _detail(db: Session, settings: Settings, access: TicketAccess, ticket: Ticke
                 kind=e.kind,
                 origin=_origin(e, ticket, {p.mail for p in participants}),
                 recipients=e.recipients,
+                recipients_cc=e.recipients_cc,
                 body=e.body,
                 quote=e.quote,
                 from_number=e.from_number,
@@ -1049,14 +1052,21 @@ def add_note(
     return _detail(db, settings, access, ticket)
 
 
+# Höchstens so viele Adressen je Feld (An, Cc)
+RECIPIENTS_MAX = 20
+
+
 class ReplyIn(BaseModel):
     body: str = Field(min_length=1, max_length=BODY_MAX)
     # Eingefügte Textbausteine (für den Erfolg „Wissensquelle“ der Person, die sie angelegt hat)
     templates: list[int] = Field(default_factory=list, max_length=10)
     # Status danach: "" = unverändert
     status_after: Literal["", "waiting", "solved"] = ""
-    # An alle: Beteiligte in Kopie; sonst nur an den Melder
+    # An alle: Beteiligte in Kopie; sonst nur an den Melder (gilt nur ohne `to`)
     reply_all: bool = False
+    # Empfänger wie im Mailprogramm; gesetzt ersetzen sie Melder und `reply_all`
+    to: list[Mail] | None = Field(default=None, max_length=RECIPIENTS_MAX)
+    cc: list[Mail] = Field(default_factory=list, max_length=RECIPIENTS_MAX)
     # Bei „Status danach: Gelöst“: Lösung (freiwillig), steht dann auch in dieser Mail
     solution: SolutionIn | None = None
 
@@ -1067,6 +1077,44 @@ class ReplyIn(BaseModel):
         if not value:
             raise ValueError("Darf nicht leer sein.")
         return value
+
+
+def _reply_recipients(
+    db: Session, area: TicketArea | None, ticket: Ticket, body: ReplyIn
+) -> tuple[list[str], list[str]] | None:
+    """An und Cc aus der Antwort (ohne doppelte, Kopie ohne Adressen aus „An“); None ohne
+    `to` (dann Melder und gegebenenfalls „an alle“). Postfächer der Bereiche sind kein
+    Empfänger, sonst landet die Antwort wieder als Mail im Ticket."""
+    if body.to is None:
+        return None
+    to = list(dict.fromkeys(body.to))
+    cc = [mail for mail in dict.fromkeys(body.cc) if mail not in to]
+    if not to:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Trag mindestens eine Adresse bei „An“ ein.",
+        )
+    own = {m.lower() for m in db.scalars(select(TicketArea.mailbox)) if m}
+    if area is not None and area.mailbox:
+        own.add(area.mailbox.lower())
+    if any(mail in own for mail in [*to, *cc]):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Das Postfach eines Ticket-Bereichs kann kein Empfänger sein.",
+        )
+    return to, cc
+
+
+def _add_participants(db: Session, ticket: Ticket, mails: list[str]) -> None:
+    """Neue Adressen aus „An“ und „Cc“ werden Beteiligte (der Melder nicht)."""
+    known = set(
+        db.scalars(select(TicketParticipant.mail).where(TicketParticipant.ticket_id == ticket.id))
+    )
+    reporter = (ticket.reporter_mail or "").lower()
+    for mail in mails:
+        if mail != reporter and mail not in known:
+            known.add(mail)
+            db.add(TicketParticipant(ticket_id=ticket.id, name="", mail=mail))
 
 
 @router.post("/{number}/replies", status_code=status.HTTP_201_CREATED)
@@ -1083,6 +1131,7 @@ def send_reply(
     if problem or area is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=problem)
     me_actor = actor(access)
+    recipients = _reply_recipients(db, area, ticket, body)
     solving = body.status_after == STATUS_SOLVED and ticket.status != STATUS_SOLVED
     before = (ticket.solution_type_id, ticket.solution_text, ticket.solution_public)
     if solving:
@@ -1106,6 +1155,7 @@ def send_reply(
             kind="antwort",
             auto=False,
             cc_all=body.reply_all,
+            recipients=recipients,
             sent_to=sent_to,
             # Die Mail nennt den Status nach der Antwort
             status=body.status_after
@@ -1126,9 +1176,12 @@ def send_reply(
         author_oid=access.oid,
         author_name=me_actor.name,
         message_id=message_id,
-        recipients=", ".join(sent_to)[:2000],
+        recipients=", ".join(recipients[0] if recipients else sent_to)[:2000],
+        recipients_cc=", ".join(recipients[1])[:2000] if recipients else None,
     )
     db.add(reply_entry)
+    if recipients:
+        _add_participants(db, ticket, [*recipients[0], *recipients[1]])
     db.flush()
     achievements.templates_used(db, ticket, body.templates, access.oid, f"entry:{reply_entry.id}")
     now = now_utc()
@@ -1158,7 +1211,17 @@ def send_reply(
         set_status(ticket, STATUS_IN_PROGRESS, db)
         system_entry(db, ticket, f"Status: {STATUS_LABELS[old]} → In Arbeit", me_actor)
     ticket.updated_at = now
-    protocol(db, me_actor, "ticket_antwort", ticket=ticket, details={"an_alle": body.reply_all})
+    protocol(
+        db,
+        me_actor,
+        "ticket_antwort",
+        ticket=ticket,
+        details=(
+            {"an": len(recipients[0]), "cc": len(recipients[1])}
+            if recipients
+            else {"an_alle": body.reply_all}
+        ),
+    )
     db.commit()
     db.refresh(ticket)
     return _detail(db, settings, access, ticket)

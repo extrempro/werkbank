@@ -183,6 +183,11 @@ const PATHS = {
   rueckgaengig: ["M9 14L4 9l5-5", "M4 9h11a5 5 0 0 1 0 10h-3"],
   wiederholen: ["M15 14l5-5-5-5", "M20 9H9a5 5 0 0 0 0 10h3"],
   doku: ["M5 3h10l4 4v14H5z", "M15 3v4h4", "M8 11h8", "M8 15h8", "M8 19h5"],
+  // Tickets: wie im Mailprogramm
+  antworten: ["M9 14L4 9l5-5", "M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5V20"],
+  "allen-antworten": ["M7 14L2 9l5-5", "M12 14L7 9l5-5", "M7 9h9.5a5.5 5.5 0 0 1 5.5 5.5V20"],
+  weiterleiten: ["M15 14l5-5-5-5", "M20 9H9.5A5.5 5.5 0 0 0 4 14.5V20"],
+  notiz: ["M5 3h10l4 4v14H5z", "M15 3v4h4", "M9 12h6v5H9z", "M10.5 12v-1.5a1.5 1.5 0 0 1 3 0V12"],
   "alles-einklappen": ["M7 20l5-5 5 5", "M7 4l5 5 5-5"],
 } as const;
 

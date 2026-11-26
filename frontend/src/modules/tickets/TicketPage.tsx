@@ -1,4 +1,5 @@
 import { Field } from "../../components/Field";
+import { MailRecipients } from "../../components/MailRecipients";
 import {
   useEffect,
   useId,
@@ -125,6 +126,19 @@ export function entryParties(
   }
   const mail = ticket.reporter_mail.toLowerCase();
   const isReporter = (address: string) => mail !== "" && address.toLowerCase() === mail;
+  if (entry.recipients_cc !== null && entry.recipients_cc !== undefined) {
+    // Seit 0.148: An und Cc getrennt gespeichert; der Melder steht mit Namen da
+    const named = (address: string) => (isReporter(address) ? reporter : address);
+    const cc = entry.recipients_cc
+      .split(",")
+      .map((address) => address.trim())
+      .filter(Boolean);
+    return {
+      from: `${entry.author_name} (${ticket.area.name})`,
+      to: list.length ? list.map(named) : [reporter],
+      cc: cc.map(named),
+    };
+  }
   const to = list.some(isReporter) ? [reporter] : list.slice(0, 1);
   const cc = list.filter((address, index) =>
     list.some(isReporter) ? !isReporter(address) : index > 0,
@@ -193,8 +207,11 @@ function EntryItem({
     >
       <div className="ticket-entry-head">
         <span className="ticket-marker">
-          {(entry.kind === "note" || entry.kind === "forward") && <Icon name="schloss" />}
-          {entry.kind === "reply" && <Icon name="brief" />}
+          {entry.kind === "note" && <Icon name="notiz" />}
+          {entry.kind === "forward" && <Icon name="weiterleiten" />}
+          {entry.kind === "reply" && (
+            <Icon name={entry.recipients_cc ? "allen-antworten" : "antworten"} />
+          )}
           {marker}
           {entry.from_number !== null && (
             <span className="small ticket-from"> · aus T-{entry.from_number}</span>
@@ -236,6 +253,7 @@ function EntryItem({
       </EntryContent>
       {onForward && (entry.kind === "inbound" || entry.kind === "reply") && (
         <button type="button" className="row-button" onClick={() => onForward(entry)}>
+          <Icon name="weiterleiten" />
           Weiterleiten
         </button>
       )}
@@ -348,6 +366,10 @@ function Composer({
   const [note, setNote] = useState("");
   const [statusAfter, setStatusAfter] = useState<StatusAfter>("");
   const [replySolution, setReplySolution] = useState<SolutionInput>(EMPTY_SOLUTION);
+  // Empfänger wie im Mailprogramm; „Antworten“ und „Antworten an alle“ belegen sie vor
+  const [to, setTo] = useState<string[]>([]);
+  const [cc, setCc] = useState<string[]>([]);
+  const [toMissing, setToMissing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [templates, setTemplates] = useState<TemplatesForTicket | null>(null);
   const [slash, setSlash] = useState<{ start: number; word: string } | null>(null);
@@ -431,7 +453,18 @@ function Composer({
     }
   };
   const reporter = ticket.reporter_name || ticket.reporter_mail || "Der Melder";
-  const copies = ticket.participants.map((p) => p.mail);
+  const copies = ticket.participants.map((p) => p.mail.toLowerCase());
+  const reporterMail = ticket.reporter_mail.toLowerCase();
+  const contacts = [
+    ...(reporterMail ? [{ name: ticket.reporter_name, mail: reporterMail }] : []),
+    ...ticket.participants.filter((p) => p.mail.toLowerCase() !== reporterMail),
+  ];
+  const startReply = (next: "reply" | "all") => {
+    setTo(reporterMail ? [reporterMail] : []);
+    setCc(next === "all" ? copies.filter((mail) => mail !== reporterMail) : []);
+    setToMissing(false);
+    setMode(next);
+  };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -439,18 +472,15 @@ function Composer({
     if (!text.trim()) {
       return;
     }
+    if (mode !== "note" && to.length === 0) {
+      setToMissing(true);
+      return;
+    }
     setBusy(true);
     const request =
       mode === "note"
         ? addNote(ticket.number, text, noteTemplates)
-        : sendReply(
-            ticket.number,
-            text,
-            statusAfter,
-            mode === "all",
-            replySolution,
-            replyTemplates,
-          );
+        : sendReply(ticket.number, text, statusAfter, { to, cc }, replySolution, replyTemplates);
     request
       .then((result) => {
         if (mode !== "note") {
@@ -468,7 +498,7 @@ function Composer({
           kind: "status",
           text:
             mode !== "note"
-              ? `Die Antwort an ${reporter} wurde gesendet.`
+              ? `Die Antwort wurde an ${to.length + cc.length === 1 ? "1 Person" : `${to.length + cc.length} Personen`} gesendet.`
               : "Die interne Notiz wurde gespeichert.",
         });
       })
@@ -499,9 +529,9 @@ function Composer({
               className="button ticket-reply-button"
               disabled={!ticket.can_reply}
               aria-describedby={ticket.can_reply ? undefined : `${fieldId}-hint`}
-              onClick={() => setMode("reply")}
+              onClick={() => startReply("reply")}
             >
-              <Icon name="brief" />
+              <Icon name="antworten" />
               Antworten
               {reply.trim() && <span className="small"> (Entwurf)</span>}
             </button>
@@ -512,9 +542,10 @@ function Composer({
               className="button ticket-reply-button ticket-reply-all"
               disabled={!ticket.can_reply}
               aria-describedby={ticket.can_reply ? undefined : `${fieldId}-hint`}
-              onClick={() => setMode("all")}
+              onClick={() => startReply("all")}
               aria-label="Antworten an alle"
             >
+              <Icon name="allen-antworten" />
               <span className="label-wide">Antworten an alle</span>
               <span className="label-narrow">An alle</span>
             </button>
@@ -525,7 +556,7 @@ function Composer({
             onClick={() => setMode("note")}
             aria-label={note.trim() ? "Interne Notiz (Entwurf)" : "Interne Notiz"}
           >
-            <Icon name="schloss" />
+            <Icon name="notiz" />
             <span className="label-wide">Interne Notiz</span>
             <span className="label-narrow">Notiz</span>
             {note.trim() && <span className="small"> (Entwurf)</span>}
@@ -543,40 +574,41 @@ function Composer({
   return (
     <div className="ticket-composer">
       <form className={isReply ? "ticket-reply-form" : "ticket-note-form"} onSubmit={submit}>
-        <label htmlFor={fieldId} className="ticket-note-label">
-          <Icon name={isReply ? "brief" : "schloss"} />
-          {mode === "all"
-            ? "Antwort an alle"
-            : isReply
-              ? `Antwort an ${reporter}`
-              : "Interne Notiz"}
-          {!isReply && <InfoTip term="tickets.notiz" />}
-        </label>
-        {isReply && copies.length > 0 && (
-          <div className="chips" role="group" aria-label="Empfänger">
-            <button
-              type="button"
-              className="chip chip-filter"
-              aria-pressed={mode === "reply"}
-              onClick={() => setMode("reply")}
-            >
-              Nur Melder
-            </button>
-            <button
-              type="button"
-              className="chip chip-filter"
-              aria-pressed={mode === "all"}
-              onClick={() => setMode("all")}
-            >
-              An alle
-            </button>
+        {isReply && (
+          <div className="ticket-recipients">
+            <MailRecipients
+              label="An"
+              required
+              value={to}
+              onChange={(next) => {
+                setTo(next);
+                setToMissing(false);
+              }}
+              contacts={contacts}
+              error={toMissing ? "Trag mindestens eine Adresse bei „An“ ein." : null}
+            />
+            <MailRecipients
+              label="Cc"
+              value={cc}
+              onChange={setCc}
+              contacts={contacts}
+              placeholder="Weitere Empfänger in Kopie"
+            />
+            <p className="small">
+              Geht per E-Mail an{" "}
+              {to.length + cc.length === 1 ? "1 Person" : `${to.length + cc.length} Personen`}. Neue
+              Adressen werden Beteiligte des Tickets.
+            </p>
           </div>
         )}
-        <p className="small">
-          {isReply
-            ? `Geht per E-Mail an: ${ticket.reporter_mail}${mode === "all" && copies.length > 0 ? ` · Kopie an ${copies.join(", ")}` : ""}`
-            : `${reporter} sieht diesen Text nicht und bekommt keine Mail.`}
-        </p>
+        <label htmlFor={fieldId} className="ticket-note-label">
+          <Icon name={mode === "all" ? "allen-antworten" : isReply ? "antworten" : "notiz"} />
+          {isReply ? "Text der Antwort" : "Interne Notiz"}
+          {!isReply && <InfoTip term="tickets.notiz" />}
+        </label>
+        {!isReply && (
+          <p className="small">{`${reporter} sieht diesen Text nicht und bekommt keine Mail.`}</p>
+        )}
         <div className="ticket-template-anchor">
           <textarea
             id={fieldId}
@@ -668,7 +700,7 @@ function Composer({
                 ? "Wird gesendet …"
                 : "Wird gespeichert …"
               : isReply
-                ? `An ${reporter} senden`
+                ? "Senden"
                 : "Interne Notiz speichern"}
           </button>
           <button type="button" className="button button-secondary" onClick={() => setMode(null)}>
@@ -1785,6 +1817,7 @@ export function TicketPage({ number }: { number: number }) {
               aria-expanded={forwarding !== undefined}
               onClick={() => setForwarding(forwarding === undefined ? null : undefined)}
             >
+              <Icon name="weiterleiten" />
               Weiterleiten
             </button>
           )}
@@ -1839,40 +1872,44 @@ export function TicketPage({ number }: { number: number }) {
             {wantsReminder && (
               <div className="ticket-reminder">
                 <div className="ticket-reminder-row">
-                  <label htmlFor={reminderDateId}>
-                    Erinnern am
-                    <InfoTip term="tickets.erinnerung" />
-                  </label>
-                  <input
+                  <Field
+                    label="Erinnern am"
                     id={reminderDateId}
-                    type="date"
                     required
-                    value={reminderDate}
-                    aria-invalid={reminderMissing}
-                    aria-describedby={reminderMissing ? `${reminderDateId}-hint` : undefined}
-                    onChange={(event) => setReminderDate(event.target.value)}
-                  />
-                  <label htmlFor={reminderTimeId}>um</label>
-                  <input
-                    id={reminderTimeId}
-                    type="time"
-                    value={reminderTime}
-                    onChange={(event) => setReminderTime(event.target.value || "08:00")}
-                  />
+                    info={<InfoTip term="tickets.erinnerung" />}
+                    error={reminderMissing ? "Wähle einen Zeitpunkt in der Zukunft." : null}
+                  >
+                    {(control) => (
+                      <input
+                        {...control}
+                        type="date"
+                        value={reminderDate}
+                        onChange={(event) => setReminderDate(event.target.value)}
+                      />
+                    )}
+                  </Field>
+                  <Field label="Uhrzeit" id={reminderTimeId}>
+                    {(control) => (
+                      <input
+                        {...control}
+                        type="time"
+                        value={reminderTime}
+                        onChange={(event) => setReminderTime(event.target.value || "08:00")}
+                      />
+                    )}
+                  </Field>
                 </div>
-                {reminderMissing && (
-                  <p id={`${reminderDateId}-hint`} className="small">
-                    Wähle einen Zeitpunkt in der Zukunft.
-                  </p>
-                )}
-                <label htmlFor={reminderNoteId}>Stichwort (freiwillig)</label>
-                <input
-                  id={reminderNoteId}
-                  type="text"
-                  maxLength={200}
-                  value={reminderNote}
-                  onChange={(event) => setReminderNote(event.target.value)}
-                />
+                <Field label="Stichwort (freiwillig)" id={reminderNoteId}>
+                  {(control) => (
+                    <input
+                      {...control}
+                      type="text"
+                      maxLength={200}
+                      value={reminderNote}
+                      onChange={(event) => setReminderNote(event.target.value)}
+                    />
+                  )}
+                </Field>
               </div>
             )}
             {wantsSolved && (

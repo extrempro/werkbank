@@ -7,6 +7,7 @@ import {
   type ReactNodeViewProps,
 } from "@tiptap/react";
 import { createLowlight } from "lowlight";
+import { Icon } from "../../components/Icon";
 // Version von highlight.js (package.json): lowlight 3.3.0 lässt nur ~11.11.0 zu, deshalb 11.11.x
 // statt der neueren 11.12. Anheben, sobald eine neue lowlight-Version höhere Versionen erlaubt.
 import bash from "highlight.js/lib/languages/bash";
@@ -131,10 +132,7 @@ function CodeView({ node, editor, updateAttributes }: ReactNodeViewProps) {
           aria-label={`Code kopieren (${label})`}
           onClick={copy}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="9" y="9" width="12" height="12" rx="2" />
-            <path d="M5 15V5a2 2 0 0 1 2-2h10" />
-          </svg>
+          <Icon name="kopieren" />
           {copied === "ja" ? "Kopiert" : "Kopieren"}
         </button>
         <span role="status" className="visually-hidden">

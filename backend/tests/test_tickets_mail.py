@@ -656,6 +656,45 @@ def test_reply_all_forward_and_external_answer(db: Session, areas: dict[str, int
 
 
 @pytest.mark.db
+def test_reply_with_to_and_cc(db: Session, areas: dict[str, int]) -> None:
+    max_ = client_for("Max Muster")
+    number = inbound(max_, areas["it"], mail(cc="kopie@example.com"))["ticket_number"]
+    # An und Cc frei: Melder raus, neue Adresse in Kopie, doppelte fallen weg
+    sent = max_.post(
+        f"{BASE}/{number}/replies",
+        json={
+            "body": "Rückfrage",
+            "to": ["Kopie@Example.com"],
+            "cc": ["neu@example.com", "kopie@example.com", "neu@example.com"],
+        },
+    )
+    assert sent.status_code == 201, sent.text
+    detail = sent.json()
+    reply = next(e for e in detail["entries"] if e["kind"] == "reply")
+    assert reply["recipients"] == "kopie@example.com"
+    assert reply["recipients_cc"] == "neu@example.com"
+    assert {p["mail"] for p in detail["participants"]} == {"kopie@example.com", "neu@example.com"}
+    outbox = max_.get(f"{BASE}/test/outbox", params={"ticket": number}).json()
+    assert outbox[-1]["recipients"] == "kopie@example.com, neu@example.com"
+    # Ältere Form bleibt: ohne „to“ an den Melder, Kopie getrennt nicht gespeichert
+    old = max_.post(f"{BASE}/{number}/replies", json={"body": "Nur an dich"}).json()
+    assert [e["recipients_cc"] for e in old["entries"] if e["kind"] == "reply"] == [
+        "neu@example.com",
+        None,
+    ]
+    # Leeres „An“, ungültige Adresse oder Postfach eines Bereichs: abgelehnt, nichts gesendet
+    for bad in (
+        {"to": [], "cc": ["neu@example.com"]},
+        {"to": ["kein-mail"]},
+        {"to": ["it@example.com"]},
+        {"to": ["m.muster@example.com"], "cc": ["IT@example.com"]},
+    ):
+        assert (
+            max_.post(f"{BASE}/{number}/replies", json={"body": "x", **bad}).status_code == 422
+        ), bad
+    assert len(max_.get(f"{BASE}/test/outbox", params={"ticket": number}).json()) == len(outbox) + 1
+
+
 def test_reply_solved_with_solution(db: Session, areas: dict[str, int]) -> None:
     max_ = client_for("Max Muster")
     number = inbound(max_, areas["it"], mail())["ticket_number"]

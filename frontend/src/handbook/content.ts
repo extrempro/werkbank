@@ -1216,7 +1216,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Unten auf der Seite wählst du „Antworten“ (nur an den Melder), „Antworten an alle“ (Melder und Beteiligte in Kopie) oder „Interne Notiz“. Im offenen Antwortfeld wechselst du mit „Nur Melder“ und „An alle“, ohne dass der Text verloren geht; darüber steht, an wen die Mail geht. Mit „Status danach“ setzt du beim Senden gleich „Wartet auf Rückmeldung“ oder „Gelöst“. In der Mail steht dein Name über dem Text („… schreibt“) und im Kasten unter „Bearbeitet von“, damit der Melder weiß, wer ihm antwortet. Ein Entwurf bleibt erhalten, wenn du das Feld einklappst. Automatische Mails wie die Eingangsbestätigung gehen nur an den Melder.",
+                text: "Unten auf der Seite wählst du „Antworten“ (an den Melder), „Antworten an alle“ (Melder und alle Beteiligten in Kopie) oder „Interne Notiz“. Wie im Mailprogramm stehen oben die Felder „An“ und „Cc“: Mit dem × nimmst du jemanden heraus, auch den Melder; beim Klick ins Feld schlägt die Werkbank die Beteiligten vor, eine andere Adresse tippst du einfach ein und bestätigst mit Enter. Neue Adressen werden Beteiligte des Tickets. Bei „An“ muss mindestens eine Adresse stehen. Mit „Status danach“ setzt du beim Senden gleich „Wartet auf Rückmeldung“ oder „Gelöst“. In der Mail steht dein Name über dem Text („… schreibt“) und im Kasten unter „Bearbeitet von“, damit der Melder weiß, wer ihm antwortet. Ein Entwurf bleibt erhalten, wenn du das Feld einklappst. Automatische Mails wie die Eingangsbestätigung gehen nur an den Melder.",
               },
               {
                 kind: "text",
