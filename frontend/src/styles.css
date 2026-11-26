@@ -16585,3 +16585,393 @@ textarea.field-control {
   color: var(--farbe-text);
   font-weight: 400;
 }
+
+/* Erfolge (Tickets): Animationen der Abzeichen; entfallen bei reduzierter Bewegung */
+@keyframes erfolg-glanz {
+  0% {
+    background-position: 150% 0;
+  }
+  60%,
+  100% {
+    background-position: -50% 0;
+  }
+}
+
+@keyframes erfolg-funkeln {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes erfolg-puls {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes erfolg-dreh {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes erfolg-holo {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .erfolg-badge,
+  .erfolg-badge * {
+    animation: none !important;
+  }
+}
+
+/* Auswahl mit Vorschau (components/PreviewChoice.tsx) */
+.preview-choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.preview-choice > legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.preview-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.preview-choice-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px 8px;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 12px;
+  background: #0e1533;
+  cursor: pointer;
+}
+
+.preview-choice-on {
+  padding: 11px 7px 7px;
+  border: 2px solid var(--farbe-primaer);
+  box-shadow: 0 0 0 2px var(--farbe-auswahl);
+}
+
+.preview-choice-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 74px;
+}
+
+.preview-choice-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.preview-choice-label input {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--farbe-primaer);
+}
+
+/* Erfolge: Trophäenraum, immer dunkel (wie ein Spielbildschirm), Texte mit genug Kontrast */
+.erfolg-raum {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px;
+  border-radius: 16px;
+  color: #e8ecf8;
+  background:
+    radial-gradient(900px 400px at 20% -10%, #2a3570 0%, transparent 60%),
+    radial-gradient(700px 400px at 110% 10%, #3a1d5b 0%, transparent 55%), #0d1226;
+}
+
+.erfolg-raum h2,
+.erfolg-raum h3 {
+  margin: 0;
+  color: #ffffff;
+}
+
+.erfolg-raum .small,
+.erfolg-raum p {
+  color: #c3cbe6;
+}
+
+.erfolg-titel {
+  margin: 0 0 12px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffd27a !important;
+}
+
+.erfolg-spieler {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.erfolg-spieler > div:first-child {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.erfolg-spieler p {
+  margin: 0;
+}
+
+.erfolg-balken {
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.erfolg-balken > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f2a33a, #ffd27a);
+}
+
+.erfolg-vitrine {
+  flex: 1 1 300px;
+}
+
+.erfolg-vitrine h3 {
+  margin-bottom: 8px;
+  font-size: 0.8125rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffd27a;
+}
+
+.erfolg-vitrine ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.erfolg-platz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 104px;
+  min-height: 118px;
+  padding: 12px 4px 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 210, 122, 0.4);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.erfolg-frei {
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  color: #c3cbe6;
+}
+
+.erfolg-karten {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 12px;
+}
+
+.erfolg-karte {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 18px 16px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.erfolg-karte-vitrine {
+  box-shadow: inset 0 0 0 2px rgba(255, 210, 122, 0.75);
+}
+
+.erfolg-karte-text {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.erfolg-karte-text p {
+  margin: 0;
+}
+
+.erfolg-karte-kopf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.erfolg-karte-kopf h3 {
+  font-size: 1rem;
+}
+
+.erfolg-karte-kopf span {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #ffd27a;
+}
+
+.erfolg-karte-aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.erfolg-raum .row-button {
+  color: #9cc3ff;
+}
+
+.erfolg-raum .row-button:disabled {
+  color: #8a93a3;
+}
+
+.erfolg-leiter {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.erfolg-leiter li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: 6px;
+  text-align: center;
+  opacity: 0.55;
+}
+
+.erfolg-leiter li.erfolg-erreicht {
+  opacity: 1;
+}
+
+.erfolg-kranz {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.erfolg-kranz li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 6px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.erfolg-kranz-frei {
+  box-shadow: inset 0 0 0 1px rgba(255, 210, 122, 0.6);
+}
+
+/* Einblendung bei neuer Stufe: unten, immer sichtbar, verschwindet von selbst */
+.erfolg-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 60;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  max-width: min(92vw, 460px);
+  padding: 14px 18px 12px 18px;
+  border-radius: 14px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2a1a52, #121833);
+  box-shadow:
+    0 0 0 1px rgba(192, 140, 255, 0.5),
+    0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.erfolg-toast p {
+  margin: 0;
+}
+
+.erfolg-toast .erfolg-toast-kopf {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: #d9b8ff;
+}
+
+.erfolg-toast button {
+  align-self: flex-start;
+  min-width: 32px;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+/* Vitrine einer anderen Person (Ticketseite) */
+.erfolg-peek {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  color: #e8ecf8;
+  background: #0d1226;
+}
+
+.erfolg-peek li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 92px;
+  font-size: 0.75rem;
+  text-align: center;
+}

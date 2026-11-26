@@ -329,6 +329,8 @@ class TicketTemplate(Base):
     kind: Mapped[str] = mapped_column(String(10))  # reply | note
     status_after: Mapped[str] = mapped_column(String(10), default="", server_default="")
     body: Mapped[str] = mapped_column(Text)
+    # Wer den Baustein angelegt hat (für den Erfolg „Wissensquelle“; ältere Bausteine: leer)
+    created_by_oid: Mapped[str | None] = mapped_column(String(64))
 
     __table_args__ = (
         UniqueConstraint("area_id", "shortcut", name="uq_ticket_template_shortcut"),
@@ -558,3 +560,41 @@ class TicketNavPrefs(Base):
     oid: Mapped[str] = mapped_column(String(64), primary_key=True)
     recent_limit: Mapped[int] = mapped_column(Integer, default=15, server_default=text("15"))
     compact: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+
+
+class TicketAchievementProfile(Base):
+    """Erfolge einer Person: freiwillig, Standard aus. Nur wenn eingeschaltet wird gezählt."""
+
+    __tablename__ = "ticket_achievement_profiles"
+
+    oid: Mapped[str] = mapped_column(String(64), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # Wer sieht die Erfolge: nur ich (me) oder Mitglieder meiner Bereiche (areas)
+    audience: Mapped[str] = mapped_column(String(10), default="me", server_default="me")
+    toast: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    style: Mapped[str] = mapped_column(String(12), default="wappen", server_default="wappen")
+    # Bis zu drei Erfolge in der Vitrine (Kennungen der Kategorien oder „allrounder“)
+    showcase: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
+    # Zuletzt gesehene Stufen je Kategorie, für die Einblendung „neue Stufe“
+    seen: Mapped[dict[str, int]] = mapped_column(JSONB, default=dict, server_default="{}")
+    enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint("audience IN ('me', 'areas')", name="ck_ticket_achievement_audience"),
+    )
+
+
+class TicketAchievementEvent(Base):
+    """Ein gezähltes Ereignis; derselbe Anlass (ref) zählt je Person und Kategorie nur einmal."""
+
+    __tablename__ = "ticket_achievement_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    oid: Mapped[str] = mapped_column(String(64), index=True)
+    category: Mapped[str] = mapped_column(String(20))
+    ref: Mapped[str] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("oid", "category", "ref", name="uq_ticket_achievement_event"),
+    )

@@ -57,6 +57,8 @@ import {
 import { formatDate, hardwarePath, positionPath } from "../inventory/api";
 import { parseMails } from "./NewTicketPage";
 import { EntryContent } from "./AttachmentPreview";
+import { AchievementPeek } from "./achievements/AchievementPeek";
+import { AchievementToast } from "./achievements/AchievementToast";
 import { AreaTag } from "./AreaTag";
 import { SolutionFields } from "./SolutionFields";
 import { STATUS_PILLS } from "./TicketsPage";
@@ -341,6 +343,8 @@ function Composer({
   const [mode, setMode] = useState<ComposerMode>(null);
   // Entwürfe bleiben beim Einklappen erhalten
   const [reply, setReply] = useState("");
+  const [replyTemplates, setReplyTemplates] = useState<number[]>([]);
+  const [noteTemplates, setNoteTemplates] = useState<number[]>([]);
   const [note, setNote] = useState("");
   const [statusAfter, setStatusAfter] = useState<StatusAfter>("");
   const [replySolution, setReplySolution] = useState<SolutionInput>(EMPTY_SOLUTION);
@@ -385,6 +389,10 @@ function Composer({
     if (!slash) {
       return;
     }
+    // Für den Erfolg „Wissensquelle“: welche Bausteine im Text stecken
+    (mode === "note" ? setNoteTemplates : setReplyTemplates)((ids) =>
+      ids.includes(template.id) ? ids : [...ids, template.id],
+    );
     const current = mode === "note" ? note : reply;
     const text = fillTemplate(template.body, templates?.values ?? {});
     const end = slash.start + 1 + slash.word.length;
@@ -434,15 +442,24 @@ function Composer({
     setBusy(true);
     const request =
       mode === "note"
-        ? addNote(ticket.number, text)
-        : sendReply(ticket.number, text, statusAfter, mode === "all", replySolution);
+        ? addNote(ticket.number, text, noteTemplates)
+        : sendReply(
+            ticket.number,
+            text,
+            statusAfter,
+            mode === "all",
+            replySolution,
+            replyTemplates,
+          );
     request
       .then((result) => {
         if (mode !== "note") {
+          setReplyTemplates([]);
           setReply("");
           setStatusAfter("");
           setReplySolution(EMPTY_SOLUTION);
         } else {
+          setNoteTemplates([]);
           setNote("");
         }
         setMode(null);
@@ -1689,6 +1706,7 @@ export function TicketPage({ number }: { number: number }) {
 
   return (
     <div className="ticket-page">
+      <AchievementToast trigger={ticket.updated_at} />
       <header className="ticket-head">
         <div className="ticket-head-row">
           <Link to={TICKETS_PATH} className="ticket-back">
@@ -1742,6 +1760,13 @@ export function TicketPage({ number }: { number: number }) {
             <button type="button" className="button" onClick={() => setAssignee(meOid)}>
               Mir zuweisen
             </button>
+          )}
+          {ticket.assignee_oid !== null && ticket.assignee_oid !== ticket.me_oid && (
+            <AchievementPeek
+              key={ticket.assignee_oid}
+              oid={ticket.assignee_oid}
+              name={ticket.assignee_name || "der Person"}
+            />
           )}
           {canEdit && (
             <button

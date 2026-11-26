@@ -371,7 +371,9 @@ test("Tickets: Mail wird Ticket, Antwort landet im selben Ticket, Notiz erzeugt 
   await expectNoA11yViolations(page);
   await panel.getByRole("button", { name: "Weiterleiten" }).click();
   await expect(
-    page.getByText("Weitergeleitet nach außen · der Melder sieht das nicht").first(),
+    page
+      .getByText("Weitergeleitet nach außen · der Melder sieht das nicht")
+      .first(),
   ).toBeVisible();
   // Von wem an wen: der Empfänger ist als extern markiert
   await expect(
@@ -926,4 +928,61 @@ test("Tickets: Leiste „Favoriten“ und „Geöffnet“, Einstellung im Konto"
     data: { limit: 15, compact: true },
     headers: { Origin: BASE_URL },
   });
+});
+
+test("Tickets: Erfolge einschalten, Lösung zählt, Vitrine für Kolleginnen und Kollegen", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const manager = await apiAs(browser, ["Tickets.Verwaltung"], `Vera ${stamp}`);
+  const colleague = `Kim ${stamp}`;
+  await membership(manager, s.group, colleague);
+
+  await loginAs(page, ["Tickets.Nutzer"], s.editor);
+  await page.goto("/tickets/erfolge");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Meine Erfolge" }),
+  ).toBeVisible();
+  // Gespeichert wird sofort; das Häkchen steht, sobald der Server bestätigt
+  await page.getByRole("checkbox", { name: "Erfolge sammeln" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Gesamtstufe 0" }),
+  ).toBeVisible();
+
+  // Lösung mit Beschreibung: zählt für „Chronist“
+  const editor = await apiAs(browser, ["Tickets.Nutzer"], s.editor);
+  const solved = await editor.patch(`/api/tickets/${s.number}`, {
+    data: {
+      expected_status: "new",
+      expected_assignee_oid: null,
+      status: "solved",
+      change_assignee: true,
+      assignee_oid: `test:${slug(s.editor)}`,
+      solution: { text: "Toner getauscht.", public: false },
+    },
+    headers: HEADERS,
+  });
+  expect(solved.status()).toBe(200);
+
+  await page.reload();
+  const card = page.getByRole("listitem").filter({
+    has: page.getByRole("heading", { name: "Chronist" }),
+  });
+  await expect(card.getByText("Holz I · 1/30")).toBeVisible();
+  await card.getByRole("button", { name: "In die Vitrine" }).click();
+  await expect(page.getByText("In die Vitrine gestellt.")).toBeVisible();
+  await page.getByRole("radio", { name: "Mitglieder meiner Bereiche" }).click();
+  await expect(
+    page.getByText("Mitglieder deiner Bereiche sehen jetzt deine Vitrine."),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Kollegin sieht die Vitrine auf der Ticketseite, in ihrem eigenen Stil (Standard: Wappen)
+  await loginAs(page, ["Tickets.Nutzer"], colleague);
+  await page.goto(`/tickets/${s.number}`);
+  await page.getByRole("button", { name: `Erfolge von ${s.editor}` }).click();
+  await expect(page.getByText("Chronist · Holz I")).toBeVisible();
+  await expectNoA11yViolations(page);
 });

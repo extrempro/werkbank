@@ -1277,6 +1277,30 @@ export const AREAS: readonly Area[] = [
             links: [{ to: "/tickets/einstellungen", label: "Zu den Einstellungen" }],
           },
           {
+            id: "erfolge",
+            title: "Meine Erfolge",
+            roles: [TICKETS_MEMBER],
+            blocks: [
+              {
+                kind: "text",
+                text: "Erfolge sind kleine Abzeichen für sorgfältige Ticketarbeit. Sie sind freiwillig und anfangs ausgeschaltet. Du schaltest sie unter Tickets › Meine Erfolge ein. Gezählt wird erst ab dann, nichts rückwirkend. Schaltest du sie wieder aus, löscht die Werkbank alles Gesammelte. Es gibt keine Rangliste, keine Zeitmessung und keine Auswertung für Vorgesetzte.",
+              },
+              {
+                kind: "text",
+                text: "Es gibt sechs Erfolge: Chronist (gelöste Tickets mit beschriebener Lösung), Wissensquelle (deine Textbausteine, wenn andere sie nutzen), Staffelläufer (eigene Tickets mit Übergabenotiz weitergegeben), Ordnungshüter (doppelte Tickets zusammengeführt), Langer Atem (gelöste Tickets, die über einen Monat offen waren) und Brückenbauer (Weiterleitungen nach außen, auf die eine Antwort kam). Jeder Anlass zählt nur einmal.",
+              },
+              {
+                kind: "text",
+                text: "Jeder Erfolg hat 30 Stufen: sechs Ränge mit je fünf Stufen (I bis V). Mit jedem Rang ändert sich das Abzeichen deutlich, mit jeder Stufe kommt ein Detail dazu. Die ersten Stufen kommen schnell, die letzten sind ein Ziel über Jahre. Dazu kommen zwei Kombi-Erfolge: Der Allrounder hat die Stufe, die du in mindestens drei Erfolgen erreicht hast. Den Meisterkranz eines Rangs bekommst du, sobald alle sechs Erfolge diesen Rang erreicht haben.",
+              },
+              {
+                kind: "text",
+                text: "Den Stil der Abzeichen wählst du selbst: Wappen, Neon, Fantasy, Pixel, Flach, Rangabzeichen oder Sammelkarte. Bis zu drei erreichte Erfolge stellst du mit „In die Vitrine“ aus. Wählst du „Mitglieder meiner Bereiche“, sehen Personen aus deinen Ticket-Bereichen auf der Ticketseite bei „Erfolge“ neben deinem Namen deine Gesamtstufe und deine Vitrine, in ihrem eigenen Stil und ohne Zahlen. Mit „Nur ich“ sieht sie niemand sonst. Auf Wunsch blendet die Werkbank eine neue Stufe kurz unten ein.",
+              },
+            ],
+            links: [{ to: "/tickets/erfolge", label: "Zu meinen Erfolgen" }],
+          },
+          {
             id: "arbeitshilfen",
             title: "Arbeitshilfen: Kategorie, Frist, Erinnerung, IT-Bestand, Textbausteine",
             blocks: [

@@ -29,6 +29,7 @@ import {
   DOKU_PATH,
   TICKETS_SETTINGS_PATH,
   TICKETS_OVERVIEW_PATH,
+  TICKETS_ACHIEVEMENTS_PATH,
   BUDGET_ACCOUNTS_PATH,
   BUDGET_IMPORT_PATH,
   BUDGET_CONTRACTS_PATH,
@@ -97,6 +98,7 @@ import { TicketBar } from "../modules/tickets/TicketBar";
 import { TicketPage } from "../modules/tickets/TicketPage";
 import { parseSettingsPath, TicketSettingsPage } from "../modules/tickets/TicketSettingsPage";
 import { TicketsPage } from "../modules/tickets/TicketsPage";
+import { AchievementsPage } from "../modules/tickets/achievements/AchievementsPage";
 import { TicketsOverviewPage } from "../modules/tickets/TicketsOverviewPage";
 import { ticketNavRoles, useTicketAccess } from "../modules/tickets/useTicketAccess";
 import { LoansPage } from "../modules/inventory/LoansPage";
@@ -643,6 +645,8 @@ export function Layout({ me }: LayoutProps) {
     page = <TicketSettingsPage key={settingsTab} tab={settingsTab} />;
   } else if (path === TICKETS_OVERVIEW_PATH && current && ticketAccess) {
     page = <TicketsOverviewPage access={ticketAccess} />;
+  } else if (path === TICKETS_ACHIEVEMENTS_PATH && current && ticketAccess) {
+    page = <AchievementsPage />;
   } else if (path === DOKU_PATH && current) {
     page = (
       <Suspense fallback={<p role="status">Wird geladen …</p>}>

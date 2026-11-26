@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.143.0] – 2026-11-26
+
+### Hinzugefügt
+
+- **Tickets: Erfolge (freiwillig).** Neue Seite Tickets › Meine Erfolge (`/tickets/erfolge`). Standard aus; gezählt wird erst ab dem Einschalten, Ausschalten löscht alles (mit Bestätigung). Sechs Kategorien mit je 30 Stufen (6 Ränge mit je 5), Schwellen bis 6.000 je nach Kategorie gestreckt; Kombi-Erfolge Allrounder und Meisterkranz. Sieben Stile der Abzeichen frei wählbar (Wappen, Neon, Fantasy, Pixel, Flach, Rangabzeichen, Sammelkarte; `achievements/badges.ts`, Animationen entfallen bei reduzierter Bewegung). Vitrine mit bis zu drei Erfolgen; mit „Mitglieder meiner Bereiche“ sehen Personen aus gemeinsamen Bereichen auf der Ticketseite Gesamtstufe und Vitrine (ohne Zahlen). Kurze Einblendung bei neuer Stufe (abschaltbar).
+- Backend: `achievements.py`, `achievements_api.py` (`/api/tickets/erfolge`, `/vitrine`, `/gesehen`, `/personen/{oid}`), Migration 0091 (`ticket_achievement_profiles`, `ticket_achievement_events`, `ticket_templates.created_by_oid`). Zählstellen in Lösung, Übergabe, Zusammenführen, Eingang von außen und Antwort/Notiz (`templates`).
+- Neue gemeinsame Komponente `components/PreviewChoice.tsx` (Auswahl mit Vorschau).
+- Handbuch „Meine Erfolge“, Info-Symbole „Erfolge“, „Sichtbarkeit der Erfolge“, „Meisterkranz“; `docs/spec.md` und `docs/datenschutz.md` ergänzt.
+
 ## [0.142.1] – 2026-11-26
 
 ### Behoben
