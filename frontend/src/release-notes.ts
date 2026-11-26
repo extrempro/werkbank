@@ -24,6 +24,24 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.139.0",
+    date: "2026-11-26",
+    summary: "Ab fünf Möglichkeiten suchst du direkt im Feld; lange Texte passen in die Karten.",
+    sections: [
+      {
+        area: "Überall",
+        entries: [
+          "Bis vier Möglichkeiten wählst du auf Karten oder mit Knöpfen, ab fünf in einem Suchfeld: Beim Antippen öffnet ein Fenster mit allen Einträgen, jedes Zeichen grenzt ein.",
+          "Lange Bezeichnungen brechen in Karten, Knöpfen und Treffern um, statt herauszulaufen.",
+        ],
+      },
+      {
+        area: "Doku",
+        entries: ["Das Fenster „Verweis einfügen“ passt am Tablet wieder ganz auf den Bildschirm."],
+      },
+    ],
+  },
+  {
     version: "0.138.0",
     date: "2026-11-25",
     summary: "Die IT-Tools wählen wie der Rest der Werkbank.",

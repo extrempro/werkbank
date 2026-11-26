@@ -146,7 +146,7 @@ export function ErrorSummary({
 }
 
 /**
- * Auswahlkarten für 5–10 Möglichkeiten oder eine Liste, die wachsen kann: Name und kurze
+ * Auswahlkarten für Daten mit 1–4 Einträgen (über `ListChoice`): Name und kurze
  * Erklärung je Karte, Raster bricht um (PC drei Spalten, Handy eine). Darunter echte
  * Auswahlknöpfe (Tastatur, Screenreader).
  */

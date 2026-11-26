@@ -253,25 +253,34 @@ export async function pickFromList(
 ) {
   const box = scope.getByRole("combobox", { name: label });
   await box.fill(text);
+  // Nur im Fenster des Felds suchen (eine Filterauswahl daneben hat oft dieselben Werte)
   await scope
+    .getByRole("listbox", { name: label })
     .getByRole("option", { name: new RegExp(escapeRegExp(text)) })
     .click();
 }
 
 /**
- * Wählt in einer Listen-Auswahl (`ListChoice`): bis zehn Möglichkeiten sind Auswahlkarten,
- * darüber ein Suchfeld mit schwebendem Fenster.
+ * Wählt in einer Auswahl nach Anzahl (`ListChoice`, `FixedChoice`): bis vier Möglichkeiten
+ * Auswahlkarten oder Knopfleiste, ab fünf ein Suchfeld mit schwebendem Fenster (ist schon
+ * etwas gewählt, erst „Ändern“).
  */
 export async function pickChoice(scope: Locator, label: string, text: string) {
-  const cards = scope.getByRole("group", { name: label, exact: true });
-  if (
-    (await cards.count()) > 0 &&
-    (await cards.getByRole("radio").count()) > 0
-  ) {
-    await cards
-      .getByRole("radio", { name: new RegExp(escapeRegExp(text)) })
-      .check();
+  const group = scope.getByRole("group", { name: label, exact: true });
+  if ((await group.count()) > 0) {
+    const name = new RegExp(escapeRegExp(text));
+    if ((await group.getByRole("radio").count()) > 0) {
+      await group.getByRole("radio", { name }).check();
+    } else {
+      await group.getByRole("button", { name }).click();
+    }
     return;
+  }
+  const change = scope.getByRole("button", {
+    name: new RegExp(`^${escapeRegExp(label)} ändern`),
+  });
+  if ((await change.count()) > 0) {
+    await change.click();
   }
   await pickFromList(scope, new RegExp(`^${escapeRegExp(label)}`), text);
 }

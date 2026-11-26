@@ -255,6 +255,7 @@ export function ComboField<T extends ComboItem>({
             <li
               key={item.id}
               id={optionId(index)}
+              data-value={String(item.id)}
               role="option"
               aria-selected={index === selected}
               onMouseEnter={() => setActive(index)}

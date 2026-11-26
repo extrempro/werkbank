@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { ComboField, type ComboItem, type ComboResult } from "./ComboField";
 import { ChoiceCards, Segmented } from "./Field";
 
-/** Bis zu so vielen Möglichkeiten zeigt `ListChoice` Auswahlkarten, darüber ein Suchfeld. */
-export const CARDS_MAX = 10;
+/**
+ * Bis zu so vielen Möglichkeiten zeigt `ListChoice` Auswahlkarten und `FixedChoice` eine
+ * Knopfleiste; ab einer mehr das Suchfeld mit schwebendem Fenster (docs/design.md, §8).
+ */
+export const CARDS_MAX = 4;
 /** Höchstens so viele Treffer zeigt das Suchfeld über eine geladene Liste. */
 const LIST_HITS = 20;
 
@@ -47,7 +50,7 @@ export function useListSearch(
 }
 
 /**
- * Auswahl aus einer Liste, die wachsen kann (docs/design.md, „Masken und Suche“): bis zehn
+ * Auswahl aus einer Liste, die wachsen kann (docs/design.md, „Masken und Suche“): bis vier
  * Möglichkeiten als Auswahlkarten, darüber als Feld mit Echtzeitsuche im schwebenden Fenster.
  * Der Wert ist die Nummer als Text, leer ohne Auswahl. Mit `none` gibt es bei den Karten eine
  * Karte für „nichts gewählt“ (z. B. „Kein Projekt“); im Suchfeld leert „Ändern“ die Wahl.
@@ -122,8 +125,8 @@ export function ListChoice({
 }
 
 /**
- * Auswahl aus festen Möglichkeiten (docs/design.md, „Masken und Suche“): 2–4 als Knopfleiste,
- * 5–10 als Auswahlkarten, darüber als Feld mit Echtzeitsuche. Die Werte sind Texte.
+ * Auswahl aus festen Möglichkeiten (docs/design.md, „Masken und Suche“): eine steht als Text da,
+ * 2–4 als Knopfleiste, ab 5 als Feld mit Echtzeitsuche im schwebenden Fenster. Die Werte sind Texte.
  */
 export function FixedChoice<T extends string>({
   label,
@@ -162,30 +165,20 @@ export function FixedChoice<T extends string>({
       total: hits.length,
     });
   }, []);
-  if (disabled) {
+  if (disabled || options.length === 1) {
     return (
       <div className={wide ? "field field-wide" : "field"}>
         <span className="field-label">{label}</span>
-        <span>{options.find((option) => option.value === value)?.label ?? value}</span>
+        <span>
+          {options.find((option) => option.value === value)?.label ?? options[0]?.label ?? value}
+        </span>
       </div>
-    );
-  }
-  if (options.length <= 4) {
-    return (
-      <Segmented
-        label={label}
-        value={value}
-        options={options}
-        onChange={onChange}
-        hint={hint}
-        wide={wide}
-      />
     );
   }
   if (options.length <= CARDS_MAX) {
     return (
-      <ChoiceCards
-        legend={label}
+      <Segmented
+        label={label}
         value={value}
         options={options}
         onChange={onChange}

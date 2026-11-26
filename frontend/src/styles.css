@@ -10636,7 +10636,12 @@ td > .budget-row-actions {
 
 .segmented button {
   min-height: 44px;
-  padding: 0 14px;
+  max-width: 100%;
+  padding: 8px 14px;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  white-space: normal;
+  text-align: center;
   border: 1px solid var(--farbe-rand-kontrast);
   border-radius: 8px;
   background: var(--farbe-flaeche);
@@ -16183,6 +16188,8 @@ textarea.field-control {
   gap: 12px;
   min-height: 44px;
   padding: 4px 10px;
+  overflow-wrap: anywhere;
+  hyphens: auto;
   border-radius: 6px;
   cursor: pointer;
 }
@@ -16249,9 +16256,11 @@ textarea.field-control {
   display: grid;
   gap: 2px;
   min-width: 0;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
-/* Auswahlkarten (5–10 Möglichkeiten oder eine Liste, die wachsen kann) */
+/* Auswahlkarten (Daten mit 1–4 Einträgen) */
 .choice-cards {
   display: flex;
   flex-direction: column;
@@ -16269,13 +16278,16 @@ textarea.field-control {
 
 .choice-cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* So viele Spalten, wie mit mindestens 240 px passen, höchstens drei */
+  grid-template-columns: repeat(auto-fill, minmax(max(240px, calc((100% - 16px) / 3)), 1fr));
   gap: 8px;
 }
 
+/* Auswahlpunkt in einer eigenen Spalte, der Text bricht daneben um */
 .choice-card {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
   gap: 10px;
   min-height: 44px;
   padding: 10px 12px;
@@ -16286,7 +16298,6 @@ textarea.field-control {
 }
 
 .choice-card input {
-  flex: none;
   width: 20px;
   height: 20px;
   margin: 2px 0 0;
@@ -16303,16 +16314,13 @@ textarea.field-control {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .choice-card-label {
   font-weight: 600;
-}
-
-@media (max-width: 1024px) {
-  .choice-cards-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 760px) {
