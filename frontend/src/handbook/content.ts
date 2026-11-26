@@ -513,6 +513,18 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
+                text: "Die Werkbank liest die Einstellungen je Dienst getrennt (zum Beispiel Entra, Exchange, Teams). Klappt ein Dienst nicht, sind nur seine Typen betroffen: Der Abruf heißt dann „Teilweise“, die übrigen Dienste werden normal übernommen, und die Einstellungen des fehlenden Dienstes bleiben unverändert stehen. Erst wenn gar nichts gelesen werden konnte, heißt der Abruf „Fehlgeschlagen“.",
+              },
+              {
+                kind: "text",
+                text: "Antwortet Microsoft nur kurz nicht (zum Beispiel weil der Dienst überlastet ist), versucht die Werkbank es bis zu viermal erneut und wartet dazwischen immer länger, insgesamt etwa zweieinhalb Minuten. Waren die Daten bei Microsoft schon fertig, kamen aber nicht an, holt der nächste Abruf sie ab, statt sie neu anzufordern.",
+              },
+              {
+                kind: "text",
+                text: "Jeder Fehlertext beginnt mit dem Dienst und dem Schritt, in dem es hakte, zum Beispiel „Exchange · Download: Microsoft Graph antwortet mit 502“. Die Schritte sind: Auftrag anlegen, Status, Zeitüberschreitung, Download und „UTCM meldet Fehler“. Am Ende steht oft eine request-id; die brauchst du, wenn du den Fall bei Microsoft meldest.",
+              },
+              {
+                kind: "text",
                 text: "Die Liste zeigt zuerst die letzten 10 Abrufe; über „Weitere 10 anzeigen“ holst du ältere dazu. Bei den Quellen steht nur, wie viele vollständig gelesen wurden und wie viele einen Fehler hatten. Aufgeklappt siehst du die Fehler, zusammengefasst nach der fehlenden Berechtigung, und welche Typen betroffen sind. Abrufe ohne Änderungen löscht die Werkbank nach einiger Zeit (Vorgabe 90 Tage); Abrufe mit Änderungen und die letzten 10 bleiben immer erhalten.",
               },
               {

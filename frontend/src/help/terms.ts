@@ -53,6 +53,11 @@ export const HELP = {
     text: "Wie stark Mitarbeitende die Umsetzung der Empfehlung laut Microsoft bemerken.",
     topic: ["m365", "empfehlungen"],
   },
+  "m365.abruf-ergebnis": {
+    term: "Ergebnis eines Abrufs",
+    text: "„Teilweise“ heißt: Ein Teil der Typen konnte nicht gelesen werden. Deren Einstellungen bleiben unverändert stehen und gelten nicht als entfernt.",
+    topic: ["m365", "snapshots"],
+  },
   // Microsoft 365: Tenant und Geräte
   "tenant.frei": {
     term: "Freie Lizenzen",

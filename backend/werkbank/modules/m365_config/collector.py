@@ -1,13 +1,18 @@
 """Abruf der Einstellungen aus dem Tenant über UTCM (spec.md 7.1).
 
-Ablauf: Snapshot bei UTCM anstoßen, auf das Ergebnis warten, herunterladen, in einzelne
-Einstellungen zerlegen und mit dem Bestand vergleichen (versioning.py). Der Verlauf liegt
-danach in der Werkbank; UTCM selbst bewahrt Snapshots nur wenige Tage auf.
+Ablauf: Die Typen werden nach Workload gruppiert (entra, exchange, teams, …). Je Gruppe stößt
+die Werkbank nacheinander einen Snapshot bei UTCM an, wartet auf das Ergebnis und lädt es
+herunter. Alle Ergebnisse werden in einzelne Einstellungen zerlegt und zusammen mit dem Bestand
+verglichen (versioning.py, ein Snapshot der Werkbank). Scheitert eine Gruppe, gelten nur ihre
+Typen als nicht gelesen; ihr Bestand bleibt unverändert. Der Verlauf liegt danach in der
+Werkbank; UTCM selbst bewahrt Snapshots nur wenige Tage auf.
 """
 
+import hashlib
 import logging
 import time
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -36,8 +41,30 @@ SHAREPOINT_WORKLOAD = "sharepoint"
 SHAREPOINT_AREA = "tenantsettings"
 SHAREPOINT_OBJECT = "tenant"
 SHAREPOINT_NAME = "SharePoint und OneDrive"
-# Namen der Snapshot-Aufträge der Werkbank in UTCM (nur diese räumt sie auch wieder weg)
+# Namen der Snapshot-Aufträge der Werkbank in UTCM (nur diese räumt sie auch wieder weg):
+# „Werkbank <workload> <Kennung der Typengruppe> <Zeitpunkt>“
 JOB_NAME_PREFIX = "Werkbank "
+# UTCM zeigt höchstens so viele Aufträge je Tenant; darüber lässt sich keiner mehr anlegen
+MAX_VISIBLE_JOBS = 12
+# Ein fertiger, nicht abgeholter Auftrag wird so lange im nächsten Lauf übernommen
+REUSE_JOB_MAX_AGE = timedelta(hours=24)
+WORKLOAD_LABELS = {
+    "entra": "Entra",
+    "exchange": "Exchange",
+    "teams": "Teams",
+    "intune": "Intune",
+    "securityandcompliance": "Security & Compliance",
+    "sharepoint": "SharePoint",
+    "onedrive": "OneDrive",
+    "powerplatform": "Power Platform",
+    "defender": "Defender",
+}
+# Schritte im Fehlertext
+STEP_CREATE = "Auftrag anlegen"
+STEP_STATUS = "Status"
+STEP_TIMEOUT = "Zeitüberschreitung"
+STEP_DOWNLOAD = "Download"
+STEP_FAILED = "UTCM meldet Fehler"
 # UTCM liest höchstens so viele Objekte pro Tenant und Monat
 MONTHLY_RESOURCE_LIMIT = 20_000
 QUOTA_WARNING_SHARE = 0.8
@@ -239,19 +266,174 @@ def attribute_changes(db: Session, client: UtcmClient, snapshot_id: int, since: 
     return found
 
 
-def _remove_own_jobs(client: UtcmClient) -> None:
-    """Räumt alte Snapshot-Aufträge der Werkbank in UTCM weg (dort sind nur wenige erlaubt)."""
+def workload_of(resource_type: str) -> str:
+    """Workload eines Typs: „microsoft.exchange.accepteddomain“ → „exchange“."""
+    parts = resource_type.lower().split(".")
+    return parts[1] if len(parts) >= 3 and parts[0] == "microsoft" else "sonstige"
+
+
+def workload_label(workload: str) -> str:
+    return WORKLOAD_LABELS.get(workload, workload.capitalize())
+
+
+def group_resources(resources: list[str]) -> dict[str, list[str]]:
+    """Typen nach Workload, in der Reihenfolge des ersten Vorkommens."""
+    groups: dict[str, list[str]] = {}
+    for name in resources:
+        groups.setdefault(workload_of(name), []).append(name)
+    return groups
+
+
+def group_key(workload: str, resources: list[str]) -> str:
+    """Kennung einer Typengruppe im Namen des Auftrags (ändert sich mit der Typenliste)."""
+    digest = hashlib.sha256(",".join(sorted(resources)).encode()).hexdigest()[:8]
+    return f"{workload} {digest}"
+
+
+def job_name(key: str, started_at: datetime) -> str:
+    return f"{JOB_NAME_PREFIX}{key} {started_at:%Y%m%d %H%M%S}"
+
+
+def _job_key(name: str) -> str | None:
+    """Typengruppe aus dem Namen eines eigenen Auftrags (alte Namen ohne Gruppe: None)."""
+    parts = name[len(JOB_NAME_PREFIX) :].split(" ")
+    return f"{parts[0]} {parts[1]}" if len(parts) == 4 else None
+
+
+def _created(job: Mapping[str, Any]) -> datetime | None:
+    value = job.get("createdDateTime")
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+@dataclass
+class JobPlan:
+    """Fertige, noch nicht abgeholte Aufträge je Typengruppe und die Zahl sichtbarer Aufträge."""
+
+    reusable: dict[str, dict[str, Any]] = field(default_factory=dict)
+    visible: int = 0
+
+
+def plan_jobs(client: UtcmClient, keys: set[str], now: datetime) -> JobPlan:
+    """Räumt alte eigene Aufträge in UTCM weg (dort sind nur wenige erlaubt).
+
+    Ein fertiger, nicht abgeholter Auftrag derselben Typengruppe, jünger als 24 Stunden, bleibt
+    stehen und wird in diesem Lauf übernommen. Laufende und fremde Aufträge bleiben unberührt.
+    """
+    plan = JobPlan()
     for job in client.list_jobs():
         name = job.get("displayName")
         job_id = job.get("id")
-        finished = job.get("status") in FINAL_STATES
-        if isinstance(name, str) and name.startswith(JOB_NAME_PREFIX) and finished and job_id:
+        status = job.get("status")
+        own = isinstance(name, str) and name.startswith(JOB_NAME_PREFIX) and bool(job_id)
+        if not own or status not in FINAL_STATES:
+            plan.visible += 1
+            continue
+        key = _job_key(str(name))
+        created = _created(job)
+        location = job.get("resourceLocation")
+        if (
+            key in keys
+            and key not in plan.reusable
+            and status in USABLE_STATES
+            and isinstance(location, str)
+            and location
+            and created is not None
+            and now - created <= REUSE_JOB_MAX_AGE
+        ):
+            plan.reusable[str(key)] = job
+            plan.visible += 1
+            continue
+        try:
             client.delete_job(str(job_id))
+        except UtcmError:
+            logger.warning("Alter Snapshot-Auftrag konnte nicht entfernt werden", exc_info=True)
+            plan.visible += 1
+    return plan
 
 
-def _record_failure(db: Session, sources: list[str], started_at: datetime) -> None:
-    apply_snapshot(db, [], {name: False for name in sources}, started_at=started_at)
-    db.commit()
+class GroupError(RuntimeError):
+    """Eine Typengruppe konnte nicht gelesen werden; der Text nennt Workload und Schritt."""
+
+
+@dataclass
+class GroupResult:
+    document: dict[str, Any]
+    job: dict[str, Any]
+    job_id: str
+
+
+def _text(label: str, step: str, detail: object) -> str:
+    """Fehlertext einer Gruppe, z. B. „Exchange · Download: Microsoft Graph antwortet mit 502“."""
+    return f"{label} · {step}: {detail}"[:ERROR_LENGTH]
+
+
+def _fail(label: str, step: str, detail: object) -> GroupError:
+    return GroupError(_text(label, step, detail))
+
+
+def _run_group(
+    client: UtcmClient,
+    settings: Settings,
+    key: str,
+    resources: list[str],
+    started_at: datetime,
+    plan: JobPlan,
+    *,
+    sleep: Callable[[float], None],
+    clock: Callable[[], float],
+) -> GroupResult:
+    """Ein Snapshot-Auftrag für eine Typengruppe: anlegen (oder übernehmen), warten, laden."""
+    label = workload_label(key.split(" ")[0])
+    job = plan.reusable.get(key)
+    if job is not None:
+        job_id = str(job["id"])
+        logger.info("%s: fertiger Snapshot-Auftrag aus einem früheren Lauf wird übernommen", label)
+    else:
+        if plan.visible >= MAX_VISIBLE_JOBS:
+            raise _fail(
+                label,
+                STEP_CREATE,
+                f"In UTCM stehen schon {plan.visible} Aufträge (höchstens {MAX_VISIBLE_JOBS})",
+            )
+        try:
+            job_id = client.create_snapshot(job_name(key, started_at), resources)
+        except UtcmError as exc:
+            raise _fail(label, STEP_CREATE, exc) from exc
+        plan.visible += 1
+        deadline = clock() + settings.collector_timeout_minutes * 60
+        while True:
+            try:
+                job = client.get_job(job_id)
+            except UtcmError as exc:
+                raise _fail(label, STEP_STATUS, exc) from exc
+            if job.get("status") in FINAL_STATES:
+                break
+            if clock() >= deadline:
+                raise _fail(
+                    label, STEP_TIMEOUT, "UTCM hat den Snapshot nicht rechtzeitig fertiggestellt"
+                )
+            sleep(settings.collector_poll_seconds)
+    location = job.get("resourceLocation")
+    if job.get("status") not in USABLE_STATES or not isinstance(location, str) or not location:
+        details = "; ".join(str(item) for item in job.get("errorDetails") or [])
+        # Ein gescheiterter Auftrag nützt nichts mehr: gleich wegräumen
+        try:
+            client.delete_job(job_id)
+            plan.visible -= 1
+        except UtcmError:
+            logger.warning("Snapshot-Auftrag konnte nicht entfernt werden", exc_info=True)
+        raise _fail(label, STEP_FAILED, details or "ohne Angabe")
+    try:
+        document = client.download(location)
+    except UtcmError as exc:
+        # Der fertige Auftrag bleibt stehen; der nächste Lauf holt ihn ab
+        raise _fail(label, STEP_DOWNLOAD, exc) from exc
+    return GroupResult(document=document, job=job, job_id=job_id)
 
 
 def collect(
@@ -262,65 +444,89 @@ def collect(
     sleep: Callable[[float], None] = time.sleep,
     clock: Callable[[], float] = time.monotonic,
 ) -> SnapshotResult:
-    """Holt einen Snapshot und übernimmt ihn. Wirft CollectorError, wenn das nicht gelingt."""
+    """Holt die Einstellungen und übernimmt sie in einen Snapshot.
+
+    Je Workload ein UTCM-Auftrag; scheitert einer, gelten nur seine Typen als nicht gelesen.
+    Wirft CollectorError, wenn gar nichts gelesen werden konnte (der Snapshot steht dann mit
+    Fehlertext je Quelle als fehlgeschlagen in der Werkbank).
+    """
     started_at = now_utc()
     resources = settings.collector_resource_list()
     if not resources:
         raise CollectorError("Keine Ressourcentypen für den Abruf eingetragen")
     used = resources_used_this_month(db, started_at)
-    if used >= MONTHLY_RESOURCE_LIMIT:
-        raise CollectorError("Monatskontingent von UTCM ist ausgeschöpft, kein Abruf")
     previous = db.scalar(
         select(func.max(CfgSnapshot.started_at)).where(
             CfgSnapshot.status.in_((SnapshotStatus.OK, SnapshotStatus.PARTIAL))
         )
     )
+    groups = {
+        group_key(workload, names): names for workload, names in group_resources(resources).items()
+    }
 
-    try:
-        _remove_own_jobs(client)
-    except UtcmError:
-        logger.warning("Alte Snapshot-Aufträge konnten nicht entfernt werden", exc_info=True)
+    items: list[SettingValue] = []
+    status: dict[str, bool] = {}
+    errors: dict[str, str] = {}
+    resource_count = 0
+    finished_jobs: list[str] = []
 
-    job_id = ""
-    try:
-        job_id = client.create_snapshot(f"{JOB_NAME_PREFIX}{started_at:%Y%m%d %H%M%S}", resources)
-        deadline = clock() + settings.collector_timeout_minutes * 60
-        while True:
-            job = client.get_job(job_id)
-            if job.get("status") in FINAL_STATES:
-                break
-            if clock() >= deadline:
-                raise CollectorError("UTCM hat den Snapshot nicht rechtzeitig fertiggestellt")
-            sleep(settings.collector_poll_seconds)
-        location = job.get("resourceLocation")
-        if job.get("status") not in USABLE_STATES or not isinstance(location, str) or not location:
-            details = "; ".join(str(item) for item in job.get("errorDetails") or [])
-            raise CollectorError(
-                f"Snapshot fehlgeschlagen: {details or 'ohne Angabe'}"[:ERROR_LENGTH]
+    def fail_group(names: list[str], text: str) -> None:
+        for name in names:
+            status[source_name(name)] = False
+            errors[source_name(name)] = text
+
+    if used >= MONTHLY_RESOURCE_LIMIT:
+        for key, names in groups.items():
+            fail_group(
+                names,
+                _text(
+                    workload_label(key.split(" ")[0]),
+                    STEP_CREATE,
+                    "Monatskontingent von UTCM ist ausgeschöpft, kein Abruf",
+                ),
             )
-        document = client.download(location)
-    except (UtcmError, CollectorError) as exc:
-        db.rollback()
-        sources = [source_name(name) for name in resources]
-        if settings.collector_sharepoint_enabled:
-            sources.append(SHAREPOINT_SOURCE)
-        _record_failure(db, sources, started_at)
-        if isinstance(exc, CollectorError):
-            raise
-        raise CollectorError(str(exc)[:ERROR_LENGTH]) from exc
+    else:
+        try:
+            plan = plan_jobs(client, set(groups), started_at)
+        except UtcmError as exc:
+            logger.warning("Snapshot-Aufträge in UTCM konnten nicht gelesen werden: %s", exc)
+            plan = JobPlan()
+        for key, names in groups.items():
+            if used + resource_count >= MONTHLY_RESOURCE_LIMIT:
+                fail_group(
+                    names,
+                    _text(
+                        workload_label(key.split(" ")[0]),
+                        STEP_CREATE,
+                        "Monatskontingent von UTCM ist ausgeschöpft, kein Abruf",
+                    ),
+                )
+                continue
+            try:
+                group = _run_group(
+                    client, settings, key, names, started_at, plan, sleep=sleep, clock=clock
+                )
+            except GroupError as exc:
+                logger.warning("Abruf aus UTCM: %s", exc)
+                fail_group(names, str(exc))
+                continue
+            group_items, count = parse_snapshot(group.document)
+            items.extend(group_items)
+            resource_count += count
+            status.update(source_status(names, group.job))
+            errors.update(source_errors(names, group.job))
+            finished_jobs.append(group.job_id)
 
-    items, resource_count = parse_snapshot(document)
-    status = source_status(resources, job)
-    errors = source_errors(resources, job)
     if settings.collector_sharepoint_enabled:
-        # Zählt nicht gegen das Kontingent von UTCM. Schlägt es fehl, bleibt der Bestand stehen.
+        # Unabhängig von UTCM und ohne Kontingent. Schlägt es fehl, bleibt der Bestand stehen.
         try:
             items.extend(parse_sharepoint(client.sharepoint_settings()))
             status[SHAREPOINT_SOURCE] = True
         except UtcmError as exc:
             logger.warning("SharePoint-Einstellungen konnten nicht gelesen werden: %s", exc)
             status[SHAREPOINT_SOURCE] = False
-            errors[SHAREPOINT_SOURCE] = str(exc)[:ERROR_LENGTH]
+            errors[SHAREPOINT_SOURCE] = f"SharePoint · Lesen: {exc}"[:ERROR_LENGTH]
+
     result = apply_snapshot(
         db,
         items,
@@ -343,6 +549,9 @@ def collect(
         logger.warning(
             "UTCM-Monatskontingent zu %d %% verbraucht", round(100 * total / MONTHLY_RESOURCE_LIMIT)
         )
+    failed_groups = sum(
+        1 for names in groups.values() if not all(status.get(source_name(n)) for n in names)
+    )
     write_audit(
         db,
         module=MODULE,
@@ -353,6 +562,8 @@ def collect(
         details={
             "objekte": resource_count,
             "objekte_im_monat": total,
+            "gruppen": len(groups),
+            "gruppen_mit_fehler": failed_groups,
             "ausgangsstand": result.baseline,
             "neu": result.new,
             "geaendert": result.changed,
@@ -362,8 +573,13 @@ def collect(
     )
     db.commit()
 
-    try:
-        client.delete_job(job_id)
-    except UtcmError:
-        logger.warning("Snapshot-Auftrag konnte nicht entfernt werden", exc_info=True)
+    for job_id in finished_jobs:
+        try:
+            client.delete_job(job_id)
+        except UtcmError:
+            logger.warning("Snapshot-Auftrag konnte nicht entfernt werden", exc_info=True)
+
+    if result.status == SnapshotStatus.FAILED:
+        texts = list(dict.fromkeys(errors.values()))
+        raise CollectorError("; ".join(texts)[:ERROR_LENGTH] or "Abruf fehlgeschlagen")
     return result
