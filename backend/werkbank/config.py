@@ -3,8 +3,10 @@
 import re
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 from urllib.parse import urlsplit
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
 
@@ -85,6 +87,9 @@ class Settings(BaseSettings):
     # SharePoint nicht); braucht SharePointTenantSettings.Read.All für die Collector-App
     collector_sharepoint_enabled: bool = False
     collector_timeout_minutes: int = 30
+    # Höchstens so viele Typen je UTCM-Auftrag; größere Workloads (z. B. Intune) werden in
+    # gleich große Teile geteilt, weil sehr große Ergebnisse beim Download scheitern können
+    collector_max_types_per_job: Annotated[int, Field(ge=1, le=50)] = 10
     # Abstand, in dem das Nachrichtencenter von Microsoft gelesen wird (Bereich Evergreen)
     message_center_interval_hours: int = 6
     # Gerätezuordnung: offene Einträge im Hintergrund mit der Collector-App prüfen (nur lesend;

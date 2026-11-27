@@ -341,7 +341,18 @@ class UtcmClient:
 
     def download(self, location: str) -> dict[str, Any]:
         """Lädt den fertigen Snapshot von der Adresse aus dem Auftrag."""
-        return self._json("GET", location)
+        return self.download_with_size(location)[0]
+
+    def download_with_size(self, location: str) -> tuple[dict[str, Any], int]:
+        """Wie ``download``, dazu die Größe der Antwort in Bytes (für das Protokoll)."""
+        response = self._request("GET", location)
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise UtcmError("Antwort von Microsoft Graph ist kein JSON") from exc
+        if not isinstance(data, dict):
+            raise UtcmError("Unerwartete Antwort von Microsoft Graph")
+        return data, len(response.content)
 
     def report_csv(self, report: str, period: str) -> str:
         """Nutzungsbericht als CSV (nur Summen). Graph leitet auf eine vorab angemeldete

@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.150.1",
+    date: "2026-11-27",
+    summary: "Der Abruf der M365-Einstellungen fragt große Dienste wie Intune in Teilen ab.",
+    sections: [
+      {
+        area: "M365-Konfiguration",
+        entries: [
+          "Dienste mit vielen Einstellungstypen, zum Beispiel Intune, werden jetzt in mehreren Teilen abgefragt, damit die Antworten nicht zu groß werden. Klappt ein Teil nicht, werden die übrigen trotzdem übernommen.",
+          "Fehlermeldungen nennen dabei auch den Teil, zum Beispiel „Intune · Teil 2/3“.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.150.0",
     date: "2026-11-27",
     summary: "Im IT-Bestand gibt es jetzt Ausgabe und Rückgabe von Geräten.",

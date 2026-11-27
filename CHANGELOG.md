@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.150.1] – 2026-11-27
+
+### Behoben
+
+- **M365-Abruf: große Workloads in mehrere UTCM-Aufträge geteilt.** Intune (29 Typen) scheiterte jedes Mal beim Download mit 502; Arbeitsthese: das Ergebnis eines Auftrags war zu groß. Neue Einstellung `COLLECTOR_MAX_TYPES_PER_JOB` (`.env`, Vorgabe 10, gültig 1–50, ungültige Werte verhindern den Start): Jede Workload wird in möglichst gleich große Teile mit höchstens so vielen Typen geteilt (29 → 10/10/9), in stabiler Reihenfolge und mit eigener Kennung je Teil, damit fertige Aufträge im nächsten Lauf weiter übernommen werden. Alle Teile fließen in einen Abruf.
+- Vor dem Anlegen zählt die Werkbank die freien Plätze bei UTCM (höchstens 12 Aufträge); Teile ohne Platz werden mit „<Workload> · Teil x/y: kein freier Platz bei UTCM“ übersprungen, ohne Gesamtfehler.
+- Fehlertexte nennen Workload und Teil („Intune · Teil 2/3 · Download: …“); geklappte Teile werden übernommen, der Abruf steht auf „teilweise“.
+- Protokoll: Zahl geplanter Aufträge beim Start (Warnung ab mehr als 10), je Download Workload, Teil, Typen, Objekte, Größe in KB und Dauer (ohne Inhalte).
+- Tests: `test_m365_collector_parts.py`. Doku: `spec.md`, `entra-setup.md` (Intune), `deploy/.env.example`, Handbuch.
+
 ## [0.150.0] – 2026-11-27
 
 ### IT-Bestand

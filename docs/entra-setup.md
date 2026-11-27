@@ -406,6 +406,7 @@ foreach ($name in 'DeviceManagementConfiguration.Read.All', 'DeviceManagementApp
 
 Hinweise:
 
+- **Aufteilung:** Bei vielen Typen fragt die Werkbank Intune in mehreren Aufträgen ab, höchstens `COLLECTOR_MAX_TYPES_PER_JOB` Typen je Auftrag (Vorgabe 10, z. B. 29 Typen → 10/10/9). Scheitert ein Teil weiter beim Download mit 502, den Wert in der `.env` kleiner setzen und die Werkbank neu starten.
 - **Kontingent:** Intune hat oft viele Profile; jedes zählt als Objekt (4.7). Erst eine Gruppe eintragen und nach einem Abruf in der Übersicht nachsehen, wie viele Objekte gelesen wurden.
 - **BitLocker und Firewall** stehen bei Windows im Profil „Endpunktschutz“ (`deviceconfigurationendpointprotectionpolicywindows10`); eigene Typen dafür nennt Microsoft für UTCM nicht.
 - **Nicht eintragen:** Gerätebereinigung, Rollen und Rollenzuweisungen, Wi-Fi-, VPN- und Zertifikatsprofile sowie Kiosk-Profile. Sie enthalten Netzwerk- und Zertifikatsangaben oder gehören nicht zu den Richtlinien, die die Werkbank überwacht.
