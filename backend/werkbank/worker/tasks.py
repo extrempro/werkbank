@@ -36,7 +36,7 @@ from werkbank.modules.evergreen.ai_suggest import (
 )
 from werkbank.modules.evergreen.jobs import FETCH_MESSAGES, fetch_messages_job
 from werkbank.modules.evergreen.notifications import evergreen_notifications
-from werkbank.modules.feedback.api import purge_screenshots
+from werkbank.modules.feedback.api import purge_feedback
 from werkbank.modules.feedback.notifications import feedback_notifications
 from werkbank.modules.inventory.entra_sync import ENTRA_SYNC, ENTRA_SYNC_INTERVAL, entra_sync_job
 from werkbank.modules.inventory.loans import LOAN_JOB, LOAN_JOB_INTERVAL, loan_job
@@ -100,7 +100,7 @@ def cleanup(db: Session, settings: Settings, payload: dict[str, Any]) -> None:
             Job.finished_at < now - timedelta(days=JOB_RETENTION_DAYS),
         )
     )
-    purge_screenshots(db, now)
+    purge_feedback(db, now)
     purge_audit_log(db)
 
 
