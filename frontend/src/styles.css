@@ -2550,6 +2550,12 @@ details summary {
   color: var(--farbe-bad-text);
 }
 
+.hint-ok {
+  border-color: var(--farbe-ok-text);
+  background: var(--farbe-ok-flaeche);
+  color: var(--farbe-ok-text);
+}
+
 .hint-title {
   font-weight: 700;
 }
@@ -13301,30 +13307,77 @@ html:has(.ticket-composer) {
   list-style: none;
 }
 
-.mail-recipients-list li {
+.mail-recipients-group {
+  padding: 8px 10px 4px;
+  color: var(--farbe-text-leise);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mail-recipients-list [role="group"] + [role="group"] {
+  margin-top: 4px;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.mail-recipients-option {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 40px;
+  gap: 10px;
+  min-height: 48px;
   align-items: center;
-  padding: 0 10px;
+  padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
 }
 
-.mail-recipients-list li:hover,
-.mail-recipients-list li[aria-selected="true"] {
-  background: var(--farbe-hover);
+.mail-recipients-option:hover {
+  background: var(--farbe-neutral-flaeche);
 }
 
-.mail-recipients-source {
-  margin-left: 8px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--farbe-flaeche-2, var(--farbe-hover));
-  color: var(--farbe-text-leise);
-  font-size: 0.75rem;
+.mail-recipients-option[aria-selected="true"] {
+  background: var(--farbe-auswahl);
+}
+
+.mail-recipients-avatar {
+  display: inline-flex;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.mail-recipients-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.mail-recipients-name {
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-recipients-meta {
+  overflow: hidden;
+  color: var(--farbe-text-leise);
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mail-recipients-status {
+  padding: 8px 10px;
+  color: var(--farbe-text-leise);
+  font-size: 0.85rem;
 }
 
 .ticket-note-label {
@@ -17587,4 +17640,203 @@ textarea.field-control {
   width: 92px;
   font-size: 0.75rem;
   text-align: center;
+}
+
+/* IT-Bestand: Ausgabe und Rückgabe */
+.issue-devices > li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.issue-devices .check-label,
+.issue-tasks .check-label,
+.issue-accessories .check-label,
+.issue-check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-height: 32px;
+}
+
+.issue-accessories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 0 0 4px 34px;
+  padding: 0;
+  border: 0;
+}
+
+.issue-accessories legend {
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 0;
+}
+
+.issue-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.issue-steps li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.issue-steps li.is-current {
+  border: 2px solid var(--farbe-primaer);
+  font-weight: 600;
+}
+
+.issue-step-number {
+  display: inline-flex;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--farbe-neutral-flaeche);
+  color: var(--farbe-text-mittel);
+  font-weight: 700;
+}
+
+.issue-steps .is-current .issue-step-number {
+  background: var(--farbe-primaer);
+  color: var(--farbe-auf-primaer);
+}
+
+.issue-steps .is-done .issue-step-number {
+  background: var(--farbe-ok-text);
+  color: #fff;
+}
+
+.issue-tasks {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+  list-style: none;
+}
+
+.issue-tasks li {
+  padding: 8px 12px;
+}
+
+.issue-tasks li + li {
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.issue-task-done {
+  color: var(--farbe-text-leise);
+  text-decoration: line-through;
+}
+
+.issue-rules summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.pre-line {
+  white-space: pre-line;
+}
+
+.signature {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.signature-pad {
+  width: 100%;
+  max-width: 560px;
+  height: 160px;
+  border: 2px dashed var(--farbe-rand-stark);
+  border-radius: 10px;
+  background: var(--farbe-flaeche);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.signature-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 560px;
+}
+
+.issue-signature {
+  display: block;
+  max-width: 320px;
+  margin-top: 12px;
+  border-bottom: 1px solid var(--farbe-rand-stark);
+  background: #fff;
+}
+
+.return-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.return-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.return-bars {
+  display: flex;
+  gap: 4px;
+}
+
+.return-bars span {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--farbe-rand-stark);
+}
+
+.return-bars .is-back {
+  background: var(--farbe-ok-text);
+}
+
+.return-bars .is-missing {
+  background: var(--farbe-zaehler);
+}
+
+.confirm-page {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 32px 16px 48px;
+}
+
+@media (max-width: 760px) {
+  .issue-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .issue-protocol {
+    border: 0;
+  }
 }

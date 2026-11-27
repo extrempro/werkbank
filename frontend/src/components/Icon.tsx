@@ -104,6 +104,15 @@ const PATHS = {
   ],
   arbeitsplatz: ["M3 11h18", "M5 11v9", "M19 11v9", "M8 4h8v5H8z", "M12 9v2"],
   verleih: ["M3 7h11v10H3z", "M14 12h7", "M18 9l3 3-3 3"],
+  // Ausgabe: Paket mit Pfeil hinaus; Rückgabe: Paket mit Pfeil herein
+  ausgabe: ["M3 8l7-4 7 4v8l-7 4-7-4z", "M3 8l7 4 7-4", "M10 12v8", "M17 13h5", "M20 11l2 2-2 2"],
+  rueckgabe: [
+    "M3 8l7-4 7 4v8l-7 4-7-4z",
+    "M3 8l7 4 7-4",
+    "M10 12v8",
+    "M22 13h-5",
+    "M19 11l-2 2 2 2",
+  ],
   standort: [
     "M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z",
     "M12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",

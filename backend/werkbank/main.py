@@ -38,6 +38,8 @@ from werkbank.modules.evergreen.search import evergreen_search
 from werkbank.modules.evergreen.tasks import evergreen_tasks
 from werkbank.modules.inventory.api import router as inventory_router
 from werkbank.modules.inventory.cases import router as inventory_cases_router
+from werkbank.modules.inventory.issues import public_router as inventory_issue_public_router
+from werkbank.modules.inventory.issues import router as inventory_issues_router
 from werkbank.modules.inventory.loans import router as inventory_loans_router
 from werkbank.modules.inventory.locations import router as inventory_locations_router
 from werkbank.modules.inventory.lookup import router as inventory_lookup_router
@@ -165,6 +167,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(inventory_cases_router)
     app.include_router(inventory_ninja_admin_router)
     app.include_router(inventory_loans_router)
+    app.include_router(inventory_issues_router)
+    app.include_router(inventory_issue_public_router)
     app.include_router(inventory_psref_router)
     app.include_router(inventory_statistics_router)
     app.include_router(inventory_whereabouts_router)

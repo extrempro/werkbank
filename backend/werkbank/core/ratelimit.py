@@ -97,6 +97,8 @@ def default_rules(settings: Settings) -> list[RateLimitRule]:
             ("/auth/login", "/auth/callback", "/auth/test-login"),
             settings.rate_limit_login_per_minute,
         ),
+        # Bestätigung einer Ausgabe per Einmal-Link (ohne Anmeldung): so streng wie die Anmeldung
+        RateLimitRule("bestaetigung", ("/api/public/",), settings.rate_limit_login_per_minute),
         RateLimitRule("export", ("/api/audit/export.csv",), settings.rate_limit_export_per_minute),
         RateLimitRule(
             "werkzeuge-netz", ("/api/tools/net/",), settings.rate_limit_tools_net_per_minute

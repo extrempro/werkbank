@@ -18,6 +18,8 @@ from werkbank.modules.inventory.models import (
     InventoryEvent,
     InventoryFloor,
     InventoryHardware,
+    InventoryIssue,
+    InventoryIssueItem,
     InventoryKind,
     InventoryKit,
     InventoryKitRow,
@@ -566,6 +568,16 @@ def open_loan(db: Session, hardware_id: int) -> InventoryLoan | None:
     ).first()
 
 
+def active_issue(db: Session, hardware_id: int) -> InventoryIssue | None:
+    """Laufende Ausgabe (Vorbereitung oder bereit), für die das Gerät reserviert ist."""
+    return db.scalars(
+        select(InventoryIssue)
+        .join(InventoryIssueItem, InventoryIssueItem.issue_id == InventoryIssue.id)
+        .where(InventoryIssueItem.hardware_id == hardware_id, InventoryIssueItem.active)
+        .limit(1)
+    ).first()
+
+
 def loan_ref(loan: InventoryLoan | None) -> LoanRef | None:
     if loan is None:
         return None
@@ -870,6 +882,16 @@ def update_hardware(
         raise _conflict(
             "Das Gerät ist verliehen. Trag zuerst die Rückgabe ein, dann kannst du es zuordnen."
         )
+    issue = active_issue(db, row.id)
+    if (
+        (position is not None or workplace is not None)
+        and issue is not None
+        and (row.position_id, row.workplace_id) != (body.position_id, body.workplace_id)
+    ):
+        raise _conflict(
+            f"Das Gerät ist für die Ausgabe {issue.number} reserviert. Es wird mit der Übergabe "
+            "zugeordnet."
+        )
     before = _details(row)
     changes: list[str] = []
     if row.name != body.name:
@@ -969,6 +991,8 @@ def retire_hardware(
         raise _conflict("Das Gerät ist schon ausgemustert.")
     if open_loan(db, row.id) is not None:
         raise _conflict("Das Gerät ist verliehen. Trag zuerst die Rückgabe ein.")
+    if active_issue(db, row.id) is not None:
+        raise _conflict("Das Gerät ist für eine Ausgabe reserviert. Brich zuerst die Ausgabe ab.")
     reason = db.get(InventoryRetireReason, body.reason_id)
     if reason is None:
         raise HTTPException(

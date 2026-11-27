@@ -45,6 +45,7 @@ from werkbank.modules.inventory.api import (
     ObjectId,
     Reader,
     _audit,
+    active_issue,
     add_event,
     open_loan,
     single_line,
@@ -52,6 +53,7 @@ from werkbank.modules.inventory.api import (
 from werkbank.modules.inventory.models import (
     InventoryCase,
     InventoryHardware,
+    InventoryIssueItem,
     InventoryKind,
     InventoryLoan,
     InventoryLoanItem,
@@ -355,6 +357,8 @@ def loanable(db: Session, device: InventoryHardware) -> str | None:
         return f"„{device.name}“ ist einer Stelle oder einem Arbeitsplatz zugeordnet."
     if open_loan(db, device.id) is not None:
         return f"„{device.name}“ ist schon verliehen."
+    if active_issue(db, device.id) is not None:
+        return f"„{device.name}“ ist für eine Ausgabe reserviert."
     return None
 
 
@@ -452,6 +456,7 @@ def list_loans(
 def available_devices(user: Editor, db: DbDep) -> list[AvailableOut]:
     """Verleihbare Geräte: aktiv, ohne Stelle oder Arbeitsplatz, nicht schon verliehen."""
     on_loan = select(InventoryLoanItem.hardware_id).where(InventoryLoanItem.returned_on.is_(None))
+    reserved = select(InventoryIssueItem.hardware_id).where(InventoryIssueItem.active)
     rows = db.execute(
         select(InventoryHardware, InventoryKind.name)
         .join(InventoryKind, InventoryKind.id == InventoryHardware.kind_id)
@@ -460,6 +465,7 @@ def available_devices(user: Editor, db: DbDep) -> list[AvailableOut]:
             InventoryHardware.position_id.is_(None),
             InventoryHardware.workplace_id.is_(None),
             InventoryHardware.id.not_in(on_loan),
+            InventoryHardware.id.not_in(reserved),
         )
         .order_by(InventoryKind.name, InventoryHardware.name, InventoryHardware.id)
         .limit(LIST_MAX)
@@ -894,5 +900,9 @@ def check_loans(db: Session, now: datetime | None = None) -> tuple[int, int]:
 
 
 def loan_job(db: Session, settings: Settings, payload: dict[str, Any]) -> None:
+    # Ausgaben nutzen denselben Auftrag für offene Nachrichten (Modul baut auf diesem auf)
+    from werkbank.modules.inventory.issues import send_issue_messages
+
     check_loans(db)
     send_pending(db, settings)
+    send_issue_messages(db, settings)

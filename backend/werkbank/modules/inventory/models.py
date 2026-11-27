@@ -601,3 +601,215 @@ class InventoryPersonState(Base):
     state: Mapped[str] = mapped_column(String(12), default="aktiv", server_default="aktiv")
     inactive_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class InventoryAccessory(Base):
+    """Zubehör, das bei einer Ausgabe zu einer Geräteart vorgeschlagen wird (Stammdaten)."""
+
+    __tablename__ = "inventory_accessories"
+    __table_args__ = (
+        UniqueConstraint("kind_id", "name", name="uq_inventory_accessories_kind_name"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_kinds.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+
+
+class InventoryChecklistTemplate(Base):
+    """Punkt einer Checkliste für die Vorbereitung einer Ausgabe (Stammdaten).
+
+    Gilt entweder für einen Anlass (``reason``: neu, ersatz, zusatz) oder für eine Geräteart.
+    """
+
+    __tablename__ = "inventory_checklist_templates"
+    __table_args__ = (
+        CheckConstraint("(reason IS NULL) <> (kind_id IS NULL)", name="reason_or_kind"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    reason: Mapped[str | None] = mapped_column(String(16))
+    kind_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_kinds.id", ondelete="CASCADE"), index=True
+    )
+    label: Mapped[str] = mapped_column(String(160))
+    sort: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
+class InventoryIssue(Base):
+    """Eine Ausgabe: Geräte dauerhaft an eine Person an ihrer Stelle, mit Übergabeprotokoll.
+
+    Ablauf: vorbereitung → bereit (Nachricht an die Person) → uebergeben; oder abgebrochen.
+    Bestätigt wird mit Unterschrift (bzw. getipptem Namen) bei der IT oder über einen
+    Einmal-Link ohne Anmeldung; vom Link speichert die Werkbank nur den Hash.
+    """
+
+    __tablename__ = "inventory_issues"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(20), unique=True)
+    person_oid: Mapped[str] = mapped_column(String(36), index=True)
+    person_name: Mapped[str] = mapped_column(String(200))
+    person_upn: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    person_mail: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    position_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_positions.id", ondelete="RESTRICT"), index=True
+    )
+    # neu, ersatz, zusatz
+    reason: Mapped[str] = mapped_column(String(16))
+    # vorbereitung, bereit, uebergeben, abgebrochen
+    state: Mapped[str] = mapped_column(
+        String(16), default="vorbereitung", server_default="vorbereitung", index=True
+    )
+    # neuwertig, gebraucht, maengel
+    condition: Mapped[str] = mapped_column(
+        String(16), default="neuwertig", server_default="neuwertig"
+    )
+    condition_note: Mapped[str] = mapped_column(String(300), default="", server_default="")
+    attach_rules: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    notify_teams: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # unterschrift oder link
+    confirm_method: Mapped[str] = mapped_column(String(16))
+    pickup_place: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    pickup_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    token_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
+    token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Bestätigung: Unterschrift als PNG oder getippter Name, Regeln wie bestätigt
+    signature_png: Mapped[bytes | None] = mapped_column(LargeBinary)
+    signed_name: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    rules_text: Mapped[str] = mapped_column(Text, default="", server_default="")
+    confirmed_via: Mapped[str] = mapped_column(String(16), default="", server_default="")
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    handed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ready_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    handed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class InventoryIssueItem(Base):
+    """Ein Gerät einer Ausgabe mit dem gewählten Zubehör (Namen zum Zeitpunkt der Ausgabe)."""
+
+    __tablename__ = "inventory_issue_items"
+    __table_args__ = (
+        UniqueConstraint("issue_id", "hardware_id", name="uq_inventory_issue_items_issue_hardware"),
+        # Ein Gerät steckt höchstens in einer laufenden Ausgabe
+        Index(
+            "uq_inventory_issue_items_active",
+            "hardware_id",
+            unique=True,
+            postgresql_where=sql_text("active"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    issue_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_issues.id", ondelete="CASCADE"), index=True
+    )
+    hardware_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_hardware.id", ondelete="CASCADE"), index=True
+    )
+    accessories: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
+    # solange die Ausgabe läuft (vorbereitung oder bereit)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+
+
+class InventoryIssueTask(Base):
+    """Punkt der Checkliste einer Ausgabe; ``done_at`` gesetzt heißt: erledigt."""
+
+    __tablename__ = "inventory_issue_tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    issue_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_issues.id", ondelete="CASCADE"), index=True
+    )
+    hardware_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_hardware.id", ondelete="SET NULL")
+    )
+    label: Mapped[str] = mapped_column(String(160))
+    sort: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    done_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+
+class InventoryIssueMessage(Base):
+    """Nachricht an die Person einer Ausgabe (bereit zur Abholung), per Mail oder Teams."""
+
+    __tablename__ = "inventory_issue_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    issue_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_issues.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(16))
+    channel: Mapped[str] = mapped_column(String(8))
+    status: Mapped[str] = mapped_column(String(10), default="offen", server_default="offen")
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    error: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class InventoryReturn(Base):
+    """Eine Rückgabe aller Geräte einer Person (Stellen und offene Verleihe).
+
+    Entsteht von Hand oder automatisch, wenn Entra das Konto deaktiviert (``reason``
+    austritt oder manuell). offen → abgeschlossen.
+    """
+
+    __tablename__ = "inventory_returns"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(20), unique=True)
+    person_oid: Mapped[str] = mapped_column(String(36), index=True)
+    person_name: Mapped[str] = mapped_column(String(200))
+    reason: Mapped[str] = mapped_column(String(16))
+    state: Mapped[str] = mapped_column(
+        String(16), default="offen", server_default="offen", index=True
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    closed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class InventoryReturnItem(Base):
+    """Ein Gerät einer Rückgabe und was damit passiert."""
+
+    __tablename__ = "inventory_return_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "return_id", "hardware_id", name="uq_inventory_return_items_return_hardware"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    return_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_returns.id", ondelete="CASCADE"), index=True
+    )
+    hardware_id: Mapped[int] = mapped_column(
+        ForeignKey("inventory_hardware.id", ondelete="CASCADE"), index=True
+    )
+    # Herkunft: Stelle oder Verleih
+    position_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_positions.id", ondelete="SET NULL")
+    )
+    loan_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_loans.id", ondelete="SET NULL")
+    )
+    # offen, zurueck, fehlt
+    state: Mapped[str] = mapped_column(String(10), default="offen", server_default="offen")
+    # in_ordnung, maengel, defekt
+    condition: Mapped[str] = mapped_column(
+        String(16), default="in_ordnung", server_default="in_ordnung"
+    )
+    room_id: Mapped[int | None] = mapped_column(
+        ForeignKey("inventory_rooms.id", ondelete="SET NULL")
+    )
+    accessories_ok: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    wiped: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

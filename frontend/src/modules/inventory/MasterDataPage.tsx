@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type FormEvent, type ReactNode } from "reac
 import { ConfirmButton } from "../../components/ConfirmDialog";
 import { InfoTip } from "../../components/InfoTip";
 import { errorText } from "../../api";
+import { IssueSettingsPanel } from "./IssueSettings";
 import {
   createEntry,
   createModel,
@@ -24,7 +25,14 @@ import {
 } from "./api";
 
 type Section =
-  "arten" | "hersteller" | "gruende" | "abteilungen" | "zwecke" | "ausstattung" | "nummern";
+  | "arten"
+  | "hersteller"
+  | "gruende"
+  | "abteilungen"
+  | "zwecke"
+  | "ausstattung"
+  | "ausgabe"
+  | "nummern";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "arten", label: "Hardware-Arten" },
@@ -33,6 +41,7 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: "abteilungen", label: "Abteilungen" },
   { id: "zwecke", label: "Zwecke für Pool-Arbeitsplätze" },
   { id: "ausstattung", label: "Ausstattung Arbeitsplatz" },
+  { id: "ausgabe", label: "Ausgabe" },
   { id: "nummern", label: "Nummernkreise" },
 ];
 
@@ -847,6 +856,8 @@ export function MasterDataPage({ roles }: { roles: readonly string[] }) {
               }}
             />
           )}
+
+          {section === "ausgabe" && <IssueSettingsPanel kinds={data.kinds} canEdit={canEdit} />}
 
           {section === "nummern" && (
             <section className="panel" aria-labelledby="stamm-nummern">
