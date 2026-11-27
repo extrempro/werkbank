@@ -11,6 +11,7 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 - **Rückmeldungen:** Knopf mit Daumen oben rechts (am Handy im Kontomenü) öffnet „Rückmeldung geben“ über der aktuellen Seite: Fehler oder Idee mit Text, die Seite geht automatisch mit. Bei Fehlern freiwillig ein Bildschirmfoto (aufnehmen, auswählen, einfügen; im Browser verkleinert, Server prüft PNG/JPEG/WebP bis 300 KB) und sichtbar, welche technischen Angaben mitgehen (Version, Fenstergröße, Browser, letzte Fehlermeldungen des Browsers). Höchstens 10 je Stunde und Person.
 - **Konto › Meine Rückmeldungen** mit Stand und Antworten; **Verwaltung › Rückmeldungen** (nur `Werkbank.Admin`) mit Filter, technischen Angaben, Bildschirmfoto, Stand und Antwort. Benachrichtigungen nur über die Glocke (`rueckmeldung.neu`, `rueckmeldung.antwort`, `rueckmeldung.stand`), ohne Inhalt. Bildschirmfotos 30 Tage nach Abschluss gelöscht.
 - Neues Modul `modules/feedback`, Migration `0095`, gemeinsame Komponente `components/FeedbackDialog.tsx`.
+- Kontomenü: scrollt auf kleinen Bildschirmen und endet am Handy über der Leiste unten (vorher konnte der unterste Eintrag verdeckt sein).
 
 ### Sicherheit
 

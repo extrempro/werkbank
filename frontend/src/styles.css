@@ -965,6 +965,10 @@ a {
   z-index: 50;
   width: 264px;
   max-width: calc(100vw - 24px);
+  /* Auf kleinen Bildschirmen scrollt das Menü, statt unten abgeschnitten zu werden */
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px;
   border: 1px solid var(--farbe-rand-stark);
   border-radius: 12px;
@@ -1356,6 +1360,11 @@ a {
   .app-nav,
   .user > .header-tasks {
     display: none;
+  }
+
+  /* Kontomenü endet über der Leiste unten */
+  .account-popup {
+    max-height: calc(100dvh - 140px - env(safe-area-inset-bottom));
   }
 
   .mobile-bar {
