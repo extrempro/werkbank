@@ -472,6 +472,21 @@ export const HELP = {
     text: "Ein Verleih, dessen Rückgabedatum vorbei ist, obwohl noch nicht alles zurück ist.",
     topic: ["it-bestand", "verleih"],
   },
+  "bestand.ausgabe-vorbereitung": {
+    term: "Vorbereitung",
+    text: "Die Punkte, die vor der Übergabe erledigt sein müssen. Erst wenn alles abgehakt ist, bekommt die Person die Nachricht, dass ihre Geräte bereit sind.",
+    topic: ["it-bestand", "ausgabe"],
+  },
+  "bestand.nutzungsregeln": {
+    term: "Nutzungsregeln",
+    text: "Der Text aus den Stammdaten, den die Person mit der Übernahme bestätigt. Er steht danach im Übergabeprotokoll.",
+    topic: ["it-bestand", "ausgabe"],
+  },
+  "bestand.rueckgabe-daten": {
+    term: "Daten gelöscht",
+    text: "Hake das an, wenn das Gerät zurückgesetzt ist, zum Beispiel über Intune, und keine Daten der Person mehr darauf sind.",
+    topic: ["it-bestand", "rueckgabe"],
+  },
 } as const satisfies Record<string, HelpTerm>;
 
 export type HelpKey = keyof typeof HELP;
@@ -537,6 +552,8 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/bestand/arbeitsplaetze": [["it-bestand", "arbeitsplaetze"]],
   "/bestand/standorte": [["it-bestand", "standorte"]],
   "/bestand/verleih": [["it-bestand", "verleih"]],
+  "/bestand/ausgaben": [["it-bestand", "ausgabe"]],
+  "/bestand/rueckgaben": [["it-bestand", "rueckgabe"]],
   "/bestand/stammdaten": [["it-bestand", "stammdaten"]],
   "/budget": [["it-budget", "uebersicht"]],
   "/budget/planung": [["it-budget", "auswertung"]],

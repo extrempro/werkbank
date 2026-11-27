@@ -62,6 +62,8 @@ export const INVENTORY_POSITIONS_PATH = "/bestand/stellen";
 export const INVENTORY_CASES_PATH = "/bestand/vorgaenge";
 export const INVENTORY_WORKPLACES_PATH = "/bestand/arbeitsplaetze";
 export const INVENTORY_LOANS_PATH = "/bestand/verleih";
+export const INVENTORY_ISSUES_PATH = "/bestand/ausgaben";
+export const INVENTORY_RETURNS_PATH = "/bestand/rueckgaben";
 export const INVENTORY_STATISTICS_PATH = "/bestand/statistik";
 export const ADMIN_PATH = "/verwaltung";
 export const ADMIN_PERMISSIONS_PATH = "/verwaltung/berechtigungen";
@@ -293,8 +295,12 @@ export function areasFor(roles: readonly string[]): NavArea[] {
           ],
         },
         {
-          title: "Verleih",
-          items: [{ path: INVENTORY_LOANS_PATH, label: "Verleih", icon: "verleih" }],
+          title: "Ausgabe & Verleih",
+          items: [
+            { path: INVENTORY_ISSUES_PATH, label: "Ausgabe", icon: "ausgabe" },
+            { path: INVENTORY_RETURNS_PATH, label: "Rückgabe", icon: "rueckgabe" },
+            { path: INVENTORY_LOANS_PATH, label: "Verleih", icon: "verleih" },
+          ],
         },
         {
           title: "Verwaltung",

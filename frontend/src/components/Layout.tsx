@@ -49,7 +49,9 @@ import {
   MONITORING_ZABBIX_REPORTS_PATH,
   PROJECTS_PATH,
   INVENTORY_CASES_PATH,
+  INVENTORY_ISSUES_PATH,
   INVENTORY_LOANS_PATH,
+  INVENTORY_RETURNS_PATH,
   INVENTORY_STATISTICS_PATH,
   INVENTORY_HARDWARE_PATH,
   INVENTORY_LOCATIONS_PATH,
@@ -103,6 +105,9 @@ import { AchievementsPage } from "../modules/tickets/achievements/AchievementsPa
 import { TicketsOverviewPage } from "../modules/tickets/TicketsOverviewPage";
 import { ticketNavRoles, useTicketAccess } from "../modules/tickets/useTicketAccess";
 import { LoansPage } from "../modules/inventory/LoansPage";
+import { IssuesPage } from "../modules/inventory/IssuesPage";
+import { ReturnsPage } from "../modules/inventory/ReturnsPage";
+import { parseIssuePath, parseReturnPath } from "../modules/inventory/issuesApi";
 import { InventoryStatisticsPage } from "../modules/inventory/StatisticsPage";
 import { LocationsPage } from "../modules/inventory/LocationsPage";
 import { PositionDetailPage, PositionsPage } from "../modules/inventory/PositionsPage";
@@ -214,7 +219,13 @@ const DokuStartPage = lazy(() =>
 );
 
 export function listViewPage(path: string): string | null {
-  return parseLoanPath(path) ? INVENTORY_LOANS_PATH : null;
+  if (parseLoanPath(path)) {
+    return INVENTORY_LOANS_PATH;
+  }
+  if (parseIssuePath(path)) {
+    return INVENTORY_ISSUES_PATH;
+  }
+  return parseReturnPath(path) ? INVENTORY_RETURNS_PATH : null;
 }
 
 /** Abstand, in dem die Aufgaben für die Zähler nachgeladen werden. */
@@ -414,6 +425,8 @@ export function Layout({ me }: LayoutProps) {
   const settingsTab = parseSettingsPath(path);
   const zabbixHost = parseZabbixHostPath(path);
   const loanRoute = parseLoanPath(path);
+  const issueRoute = parseIssuePath(path);
+  const returnRoute = parseReturnPath(path);
   const workplaceRoute = parseWorkplacePath(path);
 
   const licenseMatch = /^\/m365\/lizenzen\/(\d{1,9})$/.exec(path);
@@ -541,6 +554,10 @@ export function Layout({ me }: LayoutProps) {
     page = <CasesPage caseId={caseRoute.id} roles={me.roles} />;
   } else if (loanRoute !== null && items.some((item) => item.path === INVENTORY_LOANS_PATH)) {
     page = <LoansPage loanId={loanRoute.id} roles={me.roles} />;
+  } else if (issueRoute !== null && items.some((item) => item.path === INVENTORY_ISSUES_PATH)) {
+    page = <IssuesPage issueId={issueRoute.id} roles={me.roles} />;
+  } else if (returnRoute !== null && items.some((item) => item.path === INVENTORY_RETURNS_PATH)) {
+    page = <ReturnsPage returnId={returnRoute.id} roles={me.roles} />;
   } else if (path === INVENTORY_STATISTICS_PATH && current) {
     page = <InventoryStatisticsPage />;
   } else if (path === INVENTORY_POSITIONS_PATH && current) {

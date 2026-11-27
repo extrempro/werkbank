@@ -442,6 +442,78 @@ test("IT-Bestand: Verleih ansehen und neuen Verleih öffnen", async ({
   await expectNoA11yViolations(page);
 });
 
+test("IT-Bestand: Ausgabe und Rückgabe ansehen, neue Ausgabe öffnen", async ({
+  page,
+}) => {
+  await loginAs(page, ["Bestand.Editor"], "Bernd Bestand");
+  await page.goto("/bestand/ausgaben");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Ausgabe" }),
+  ).toBeVisible();
+  const wide = (page.viewportSize()?.width ?? 1280) >= 1024;
+  await expect(page.getByText("Wähle links eine Ausgabe.")).toBeVisible({
+    visible: wide,
+  });
+  await expectNoA11yViolations(page);
+  await page.getByRole("button", { name: "Neue Ausgabe" }).click();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Neue Ausgabe" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Anlegen und Vorbereitung starten" })
+    .click();
+  await expect(page.getByRole("link", { name: "Person" })).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/bestand/rueckgaben");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Rückgabe" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Rückgabe starten" }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+});
+
+test("IT-Bestand: Stammdaten der Ausgabe pflegen", async ({ page }) => {
+  await loginAs(page, ["Bestand.Editor"], "Bernd Bestand");
+  await page.goto("/bestand/stammdaten");
+  await page.getByRole("button", { name: "Ausgabe", exact: true }).click();
+  const rules = page.getByRole("region", { name: "Nutzungsregeln" });
+  const text = `Bitte pfleglich behandeln (${Date.now()}).`;
+  await rules.getByLabel("Text").fill(text);
+  await rules.getByRole("button", { name: "Nutzungsregeln speichern" }).click();
+  await expect(
+    page.getByText("Die Nutzungsregeln sind gespeichert."),
+  ).toBeVisible();
+  const templates = page.getByRole("region", {
+    name: /Vorlagen der Checkliste/,
+  });
+  const label = `Konto anlegen ${Date.now()}`;
+  await templates.getByLabel("Punkt").fill(label);
+  await templates.getByRole("button", { name: "Punkt hinzufügen" }).click();
+  await expect(templates.getByText(label)).toBeVisible();
+  await expectNoA11yViolations(page);
+  await templates
+    .getByRole("listitem")
+    .filter({ hasText: label })
+    .getByRole("button", { name: "Entfernen" })
+    .click();
+  await confirmDialog(page, "Entfernen");
+  await expect(templates.getByText(label)).toHaveCount(0);
+});
+
+test("IT-Bestand: Bestätigung per Link ohne Anmeldung", async ({ page }) => {
+  await page.goto(`/bestaetigen/${"x".repeat(43)}`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Empfang bestätigen" }),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText(
+    "Wende dich bitte an die IT",
+  );
+  await expectNoA11yViolations(page);
+});
+
 test("IT-Bestand: Statistik", async ({ page }) => {
   await loginAs(page, ["Bestand.Reader"], "Lena Leser");
   await page.goto("/bestand/statistik");

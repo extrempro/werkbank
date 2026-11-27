@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.150.0] – 2026-11-27
+
+### IT-Bestand
+
+- **Ausgabe** (`/bestand/ausgaben`): Geräte dauerhaft an eine Person an ihrer Stelle, mit Zubehör, Zustand und Übergabeprotokoll. Ablauf Vorbereitung → Bereit zur Abholung → Übergeben. Die Vorbereitung ist eine Checkliste aus Vorlagen (je Anlass und je Hardware-Art) plus eigenen Punkten; erst wenn alles abgehakt ist, geht die Nachricht an die Person (Mail immer, Teams auf Wunsch; nur Nummer, Abholort und -zeit). Bestätigung mit Unterschrift oder getipptem Namen bei der IT oder über einen Einmal-Link ohne Anmeldung (14 Tage, nur als Hash gespeichert, Seite `/bestaetigen/<token>`). Ab dem Anlegen sind die Geräte reserviert; mit der Bestätigung hängen sie an der Stelle.
+- **Rückgabe** (`/bestand/rueckgaben`): alle Geräte einer Person an ihren Stellen und aus offenen Verleihen, je Gerät zurück/offen/fehlt mit Zustand, Raum, Zubehör und „Daten gelöscht“. Entsteht automatisch, wenn Entra das Konto deaktiviert oder löscht, oder von Hand ab einer Stelle. Abschließen löst die Geräte von der Stelle und trägt Verleihe zurück.
+- **Stammdaten › Ausgabe:** Zubehör je Hardware-Art, Vorlagen der Checkliste, Text der Nutzungsregeln. Neue Nummernkreise `ausgabe` (A-) und `rueckgabe` (R-).
+- Neue Tabellen (Migration `0094`), Endpunkte unter `/api/inventory/issues…`, `/api/inventory/returns…`, `/api/inventory/accessories`, `/api/inventory/checklist-templates`, `/api/inventory/issue-settings`, öffentlich `/api/public/ausgabe/{token}` mit eigenem Ratelimit. Neue gemeinsame Komponente `components/SignaturePad.tsx`.
+
+### Tickets
+
+- **Vorschläge in „An“ und „Cc“ übersichtlicher:** Gruppen „Beteiligte“ und „Aus Entra“, je Person Kreis mit Anfangsbuchstaben, Name und darunter Mailadresse · Abteilung, Hinweis „Suche in Entra …“, deutlich sichtbare Auswahl.
+
+### Sonstiges
+
+- Tests: `test_inventory_issues.py`, `issues.test.tsx`, `MailRecipients.test.tsx`, E2E in `bestand.spec.ts`. Doku: `spec.md`, `datenschutz.md`, `design.md`, `security/asvs-l2.md`, Handbuch, Info-Texte.
+
 ## [0.149.0] – 2026-11-27
 
 ### Tickets

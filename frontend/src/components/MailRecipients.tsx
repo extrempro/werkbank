@@ -27,6 +27,19 @@ export function parseAddresses(text: string): { valid: string[]; invalid: string
   return { valid, invalid };
 }
 
+/** Anfangsbuchstaben für den runden Platzhalter in den Vorschlägen, z. B. „IB“. */
+export function initials(text: string): string {
+  const words = text
+    .replace(/@.*$/, "")
+    .split(/[\s._-]+/)
+    .filter(Boolean);
+  const letters = words.length > 1 ? [words[0], words[words.length - 1]] : words;
+  return letters
+    .map((word) => (word ?? "").charAt(0).toUpperCase())
+    .join("")
+    .slice(0, 2);
+}
+
 /**
  * Empfängerfeld wie im Mailprogramm (An, Cc): Adressen als Chips mit „entfernen“, darunter
  * Vorschläge aus den bekannten Kontakten. Neue Adressen tippen und mit Enter, Komma oder
@@ -100,6 +113,7 @@ export function MailRecipients({
         )
       : [];
   const offers = [...local, ...remote];
+  const searching = Boolean(search) && query.length >= 2 && found.query !== query;
 
   const pick = (contact: MailContact) => {
     if (contact.name) {
@@ -206,33 +220,71 @@ export function MailRecipients({
               commit();
             }}
           />
-          {open && offers.length > 0 && (
-            <ul id={listId} role="listbox" aria-label="Vorschläge" className="mail-recipients-list">
-              {offers.map((c, index) => (
-                <li
-                  key={c.mail}
-                  id={`${listId}-${index}`}
-                  role="option"
-                  aria-selected={index === active}
-                  onMouseDown={(event) => {
-                    // vor dem Verlassen des Felds übernehmen
-                    event.preventDefault();
-                    pick(c);
-                  }}
-                >
-                  <span>
-                    {c.name || c.mail}
-                    {index === local.length && remote.length > 0 && (
-                      <span className="mail-recipients-source">aus Entra</span>
+          {open && (offers.length > 0 || searching) && (
+            <div
+              id={listId}
+              role="listbox"
+              aria-label="Vorschläge"
+              className="mail-recipients-list"
+            >
+              {[
+                { key: "local", title: search ? "Beteiligte" : "", items: local, start: 0 },
+                { key: "remote", title: "Aus Entra", items: remote, start: local.length },
+              ].map((group) =>
+                group.items.length === 0 ? null : (
+                  <div
+                    key={group.key}
+                    role="group"
+                    aria-labelledby={group.title ? `${listId}-${group.key}` : undefined}
+                    aria-label={group.title ? undefined : "Bekannte Kontakte"}
+                  >
+                    {group.title && (
+                      <div
+                        id={`${listId}-${group.key}`}
+                        role="presentation"
+                        className="mail-recipients-group"
+                      >
+                        {group.title}
+                      </div>
                     )}
-                  </span>
-                  <span className="small">
-                    {c.name ? c.mail : ""}
-                    {c.detail ? ` · ${c.detail}` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                    {group.items.map((c, offset) => {
+                      const index = group.start + offset;
+                      return (
+                        <div
+                          key={c.mail}
+                          id={`${listId}-${index}`}
+                          role="option"
+                          aria-selected={index === active}
+                          className="mail-recipients-option"
+                          onMouseDown={(event) => {
+                            // vor dem Verlassen des Felds übernehmen
+                            event.preventDefault();
+                            pick(c);
+                          }}
+                        >
+                          <span className="mail-recipients-avatar" aria-hidden="true">
+                            {initials(c.name || c.mail)}
+                          </span>
+                          <span className="mail-recipients-text">
+                            <span className="mail-recipients-name">{c.name || c.mail}</span>
+                            {(c.name || c.detail) && (
+                              <span className="mail-recipients-meta">
+                                {[c.name ? c.mail : "", c.detail ?? ""].filter(Boolean).join(" · ")}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ),
+              )}
+              {searching && (
+                <div role="presentation" className="mail-recipients-status">
+                  Suche in Entra …
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

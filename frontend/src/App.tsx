@@ -3,6 +3,8 @@ import { AUTH_EVENT, fetchMe, type AuthProblem, type Me } from "./api";
 import { AuthBanner } from "./components/AuthBanner";
 import { Layout } from "./components/Layout";
 import { UpdateBanner } from "./components/UpdateBanner";
+import { parseConfirmPath } from "./modules/inventory/issuesApi";
+import { ConfirmIssuePage } from "./pages/ConfirmIssuePage";
 import { LoginPage } from "./pages/LoginPage";
 
 type State =
@@ -15,6 +17,12 @@ type State =
 const RECHECK_MS = 60_000;
 
 export function App() {
+  // Einmal-Link zum Bestätigen einer Ausgabe: ohne Anmeldung, ohne Navigation
+  const confirmToken = parseConfirmPath(window.location.pathname);
+  return confirmToken ? <ConfirmIssuePage token={confirmToken} /> : <SignedInApp />;
+}
+
+function SignedInApp() {
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {

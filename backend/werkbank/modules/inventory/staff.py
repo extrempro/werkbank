@@ -45,6 +45,7 @@ from werkbank.modules.inventory.models import (
     InventoryEvent,
     InventoryFloor,
     InventoryHardware,
+    InventoryIssue,
     InventoryKind,
     InventoryKit,
     InventoryKitRow,
@@ -52,6 +53,7 @@ from werkbank.modules.inventory.models import (
     InventoryLoan,
     InventoryNumberRange,
     InventoryPosition,
+    InventoryReturn,
     InventoryRoom,
     InventorySection,
     InventorySite,
@@ -73,6 +75,8 @@ RANGE_LABELS = {
     "arbeitsplatz": "Arbeitsplätze",
     "vorgang": "Vorgänge",
     "verleih": "Verleih",
+    "ausgabe": "Ausgabe",
+    "rueckgabe": "Rückgabe",
 }
 _PREFIX = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,9}$")
 _OID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
@@ -357,7 +361,9 @@ def next_number(
     table: type[InventoryPosition]
     | type[InventoryWorkplace]
     | type[InventoryCase]
-    | type[InventoryLoan],
+    | type[InventoryLoan]
+    | type[InventoryIssue]
+    | type[InventoryReturn],
 ) -> str:
     """Nächste freie Nummer des Kreises; die Zeile ist bis zum Commit gesperrt."""
     number_range = db.scalars(
@@ -710,7 +716,7 @@ def read_number_ranges(user: Reader, db: DbDep) -> list[NumberRangeOut]:
 @router.put("/number-ranges/{key}")
 def update_number_range(
     request: Request,
-    key: Literal["stelle", "arbeitsplatz", "vorgang", "verleih"],
+    key: Literal["stelle", "arbeitsplatz", "vorgang", "verleih", "ausgabe", "rueckgabe"],
     body: NumberRangeIn,
     user: Editor,
     db: DbDep,

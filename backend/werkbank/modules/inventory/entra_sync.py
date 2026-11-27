@@ -246,6 +246,10 @@ def run_entra_sync(
             state.state = new_state
             db.flush()
             created += _inactive_cases(db, oid, state, own_positions, own_loans)
+            # Rückgabe aller Geräte der Person automatisch anlegen (einmal, solange keine läuft)
+            from werkbank.modules.inventory.issues import ensure_exit_return
+
+            ensure_exit_return(db, oid, state.name)
         db.commit()
     return changed, created
 

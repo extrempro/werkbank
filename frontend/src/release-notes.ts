@@ -24,6 +24,28 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.150.0",
+    date: "2026-11-27",
+    summary: "Im IT-Bestand gibt es jetzt Ausgabe und Rückgabe von Geräten.",
+    sections: [
+      {
+        area: "IT-Bestand",
+        entries: [
+          "Neu: „Ausgabe“. Damit bekommt eine Person Geräte dauerhaft für ihre Arbeit. Erst bereitest du alles mit einer Checkliste vor, dann bekommt die Person eine Mail (auf Wunsch auch in Teams), dass ihre Geräte bereit sind.",
+          "Die Person bestätigt den Empfang mit ihrer Unterschrift bei der IT oder über einen Link in der Mail, ohne Anmeldung. Danach steht das Übergabeprotokoll bei der Ausgabe und lässt sich drucken.",
+          "Neu: „Rückgabe“. Sie zeigt alle Geräte einer Person auf einen Blick, auch aus Verleihen. Wird das Konto der Person deaktiviert, legt die Werkbank die Rückgabe selbst an.",
+          "In den Stammdaten pflegst du unter „Ausgabe“ das Zubehör je Hardware-Art, die Vorlagen der Checkliste und die Nutzungsregeln.",
+        ],
+      },
+      {
+        area: "Tickets",
+        entries: [
+          "Die Vorschläge in „An“ und „Cc“ sind übersichtlicher: getrennt nach Beteiligten und Personen aus dem Firmenverzeichnis, mit Name, Mailadresse und Abteilung untereinander.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.149.0",
     date: "2026-11-27",
     summary: "Die Einstellungen eines Ticket-Bereichs sind in vier Reiter geordnet.",

@@ -1730,6 +1730,74 @@ export const AREAS: readonly Area[] = [
             ],
             links: [{ to: "/bestand/verleih", label: "Zum Verleih" }],
           },
+          {
+            id: "ausgabe",
+            title: "Ausgabe",
+            blocks: [
+              {
+                kind: "text",
+                text: "Mit einer Ausgabe bekommt eine Person Geräte dauerhaft für ihre Arbeit, zum Beispiel beim Start an einer neuen Stelle. Für Geräte auf Zeit nimmst du den Verleih. Eine Ausgabe läuft in drei Stufen: Vorbereitung, Bereit zur Abholung, Übergeben.",
+              },
+              {
+                kind: "steps",
+                items: [
+                  "Öffne „Ausgabe“ und tippe auf „Neue Ausgabe“.",
+                  "Wähle die Person aus Entra und ihre Stelle. Die Person muss im IT-Bestand an einer Stelle eingetragen sein.",
+                  "Wähle den Anlass und die Geräte. Bei jedem Gerät kreuzt du das Zubehör an, das dazugehört.",
+                  "Trag den Zustand ein und wähle, wie die Person bestätigt: mit Unterschrift bei der IT oder über einen Link in der Mail. Auf Wunsch kommt die Nachricht zusätzlich per Teams.",
+                  "Tippe auf „Anlegen und Vorbereitung starten“. Die Geräte sind ab jetzt reserviert.",
+                ],
+              },
+              {
+                kind: "text",
+                text: "In der Vorbereitung stehen die Punkte aus den Vorlagen der Stammdaten: für den Anlass und für jede Geräteart. Hake sie ab, sobald sie erledigt sind, und ergänze bei Bedarf eigene Punkte. Trag ein, wo und ab wann die Person die Geräte abholen kann.",
+              },
+              {
+                kind: "text",
+                text: "Erst wenn alles abgehakt ist, kannst du „Vorbereitung abschließen und benachrichtigen“ tippen. Dann bekommt die Person eine Mail, dass ihre Geräte bereit sind, mit Abholort und Zeitpunkt. Gerätedaten stehen nicht darin.",
+              },
+              {
+                kind: "steps",
+                items: [
+                  "Bei „Unterschrift bei der IT“: Öffne die Ausgabe bei der Übergabe auf dem Tablet oder Handy, lass die Person unterschreiben und tippe auf „Übergeben“. Kann sie nicht unterschreiben, tippt sie stattdessen ihren Namen ein.",
+                  "Bei „Per Link“: Die Person öffnet den Link aus der Mail, sieht ihre Geräte und die Nutzungsregeln und bestätigt mit einem Klick. Der Link gilt 14 Tage und nur einmal; mit „Neuen Link senden“ verschickst du einen neuen.",
+                ],
+              },
+              {
+                kind: "text",
+                text: "Mit der Bestätigung hängen die Geräte an der Stelle. Bei der Ausgabe steht dann das Übergabeprotokoll mit Unterschrift und den bestätigten Nutzungsregeln; mit „Protokoll drucken“ druckst du es oder speicherst es als PDF.",
+              },
+              {
+                kind: "hint",
+                text: "Brauchst du die Geräte doch nicht, tippe auf „Ausgabe abbrechen“. Die Geräte sind dann wieder frei, und ein verschickter Link gilt nicht mehr.",
+              },
+            ],
+            links: [{ to: "/bestand/ausgaben", label: "Zur Ausgabe" }],
+          },
+          {
+            id: "rueckgabe",
+            title: "Rückgabe",
+            blocks: [
+              {
+                kind: "text",
+                text: "Eine Rückgabe sammelt alle Geräte einer Person: an ihren Stellen und aus offenen Verleihen. Wird das Konto der Person in Entra deaktiviert, legt die Werkbank die Rückgabe selbst an. Du kannst sie auch von Hand starten.",
+              },
+              {
+                kind: "steps",
+                items: [
+                  "Öffne „Rückgabe“, wähle bei „Rückgabe starten“ die Stelle der Person und tippe auf „Rückgabe starten“.",
+                  "Wähle bei jedem Gerät „Zurück“, „Noch offen“ oder „Fehlt“.",
+                  "Bei zurückgegebenen Geräten trägst du den Zustand ein, wohin das Gerät kommt und ob Zubehör vollständig und die Daten gelöscht sind. Alles wird sofort gespeichert.",
+                  "Sind alle Geräte zurück oder als fehlend markiert, tippe auf „Rückgabe abschließen“.",
+                ],
+              },
+              {
+                kind: "text",
+                text: "Beim Abschließen werden zurückgegebene Geräte von der Stelle gelöst und, wenn du einen Raum gewählt hast, dort eingetragen. Geräte aus einem Verleih werden dort zurückgetragen. Was fehlt, bleibt an der Stelle und steht im Verlauf des Geräts.",
+              },
+            ],
+            links: [{ to: "/bestand/rueckgaben", label: "Zur Rückgabe" }],
+          },
         ],
       },
       {
@@ -1748,7 +1816,8 @@ export const AREAS: readonly Area[] = [
                   "Abteilungen: Auswahl bei der Stelle und als verantwortliche Abteilung beim Pool-Arbeitsplatz.",
                   "Zwecke für Pool-Arbeitsplätze: Auswahl beim Pool-Arbeitsplatz, zum Beispiel Desk-Sharing, Gast oder Schulung.",
                   "Ausstattung Arbeitsplatz: Vorlagen mit Zeilen, zum Beispiel „1 Rechner (Notebook oder PC)“ und „2 Monitore“.",
-                  "Nummernkreise: Präfix für die Nummern von Stellen und Arbeitsplätzen. Ein neues Präfix gilt nur für neue Einträge.",
+                  "Nummernkreise: Präfix für die Nummern von Stellen, Arbeitsplätzen, Vorgängen, Verleihen, Ausgaben und Rückgaben. Ein neues Präfix gilt nur für neue Einträge.",
+                  "Ausgabe: Zubehör je Hardware-Art (zum Ankreuzen bei der Ausgabe), Vorlagen der Checkliste je Anlass und je Hardware-Art sowie der Text der Nutzungsregeln.",
                 ],
               },
               {

@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MailRecipients, type MailContact } from "./MailRecipients";
+import { initials, MailRecipients, type MailContact } from "./MailRecipients";
 
 function Harness({ search }: { search?: (q: string) => Promise<MailContact[]> }) {
   const [value, setValue] = useState<string[]>([]);
@@ -15,6 +15,15 @@ function Harness({ search }: { search?: (q: string) => Promise<MailContact[]> })
     />
   );
 }
+
+describe("initials", () => {
+  it("nimmt erste und letzte Anfangsbuchstaben", () => {
+    expect(initials("Ina Beispiel")).toBe("IB");
+    expect(initials("Max von Muster")).toBe("MM");
+    expect(initials("m.muster@example.com")).toBe("MM");
+    expect(initials("service")).toBe("S");
+  });
+});
 
 describe("MailRecipients mit Suche", () => {
   beforeEach(() => vi.useFakeTimers());
@@ -48,7 +57,8 @@ describe("MailRecipients mit Suche", () => {
     expect(screen.getAllByRole("option", { name: /M. Muster/ })).toHaveLength(1);
     const hit = screen.getByRole("option", { name: /A. Beispiel/ });
     expect(hit).toHaveTextContent("a.beispiel@example.com · Technik");
-    expect(hit).toHaveTextContent("aus Entra");
+    expect(screen.getByRole("group", { name: "Aus Entra" })).toContainElement(hit);
+    expect(screen.getByRole("group", { name: "Beteiligte" })).toHaveTextContent("M. Muster");
 
     fireEvent.mouseDown(hit);
     fireEvent.click(hit);

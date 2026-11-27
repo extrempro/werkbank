@@ -238,7 +238,7 @@ describe("areasFor", () => {
     ).toEqual([
       [null, ["Vorgänge", "Statistik"]],
       ["Bestand", ["Hardware", "Stellen", "Arbeitsplätze", "Standorte"]],
-      ["Verleih", ["Verleih"]],
+      ["Ausgabe & Verleih", ["Ausgabe", "Rückgabe", "Verleih"]],
       ["Verwaltung", ["Stammdaten"]],
     ]);
     expect(bestand?.groups[3]?.collapsed).toBe(true);
