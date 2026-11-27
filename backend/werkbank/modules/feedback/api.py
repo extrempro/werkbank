@@ -4,8 +4,8 @@ Jede angemeldete Person kann eine Rückmeldung zu der Seite geben, auf der sie g
 sieht unter „Meine Rückmeldungen“ ihre eigenen mit Stand und Antworten. Lesen, Stand setzen und
 antworten dürfen nur Werkbank-Admins. Ideen bleiben privat. Bei Fehlern gehen technische
 Angaben (Version, Fenstergröße, Browser, letzte Fehlermeldungen des Browsers) und auf Wunsch ein
-Bildschirmfoto mit; beides sehen nur Admins. Das Bildschirmfoto wird 30 Tage nach Abschluss
-gelöscht. Benachrichtigungen (Glocke) nennen nur die Nummer.
+Bildschirmfoto mit; beides sehen nur Admins. Abgeschlossene Rückmeldungen werden 30 Tage nach
+Abschluss ganz gelöscht. Benachrichtigungen (Glocke) nennen nur die Nummer.
 """
 
 import base64
@@ -16,7 +16,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response, status
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from werkbank.core.audit import truncate_ip, write_audit
@@ -37,7 +37,7 @@ TEXT_MIN = 5
 TEXT_MAX = 2000
 REPLY_MAX = 2000
 SCREENSHOT_MAX = 300 * 1024
-SCREENSHOT_KEEP = timedelta(days=30)
+KEEP_AFTER_CLOSE = timedelta(days=30)
 PER_HOUR = 10
 BROWSER_ERRORS_MAX = 5
 LIST_MAX = 200
@@ -437,16 +437,13 @@ def add_reply(
 # --- Aufräumen ----------------------------------------------------------------------------
 
 
-def purge_screenshots(db: Session, now: datetime | None = None) -> int:
-    """Bildschirmfotos 30 Tage nach Abschluss löschen."""
+def purge_feedback(db: Session, now: datetime | None = None) -> int:
+    """Abgeschlossene Rückmeldungen 30 Tage nach Abschluss ganz löschen (mit Antworten und Bild)."""
     now = now or now_utc()
     result = db.execute(
-        update(FeedbackEntry)
-        .where(
-            FeedbackEntry.screenshot.is_not(None),
+        delete(FeedbackEntry).where(
             FeedbackEntry.closed_at.is_not(None),
-            FeedbackEntry.closed_at < now - SCREENSHOT_KEEP,
+            FeedbackEntry.closed_at < now - KEEP_AFTER_CLOSE,
         )
-        .values(screenshot=None, screenshot_type="")
     )
     return int(getattr(result, "rowcount", 0) or 0)

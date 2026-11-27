@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from tests.test_admin_settings import HEADERS
 from tests.test_m365_api import client_for
 from werkbank.config import Settings
-from werkbank.modules.feedback.api import PER_HOUR, image_type, purge_screenshots
+from werkbank.modules.feedback.api import PER_HOUR, image_type, purge_feedback
 from werkbank.modules.feedback.models import FeedbackEntry
 from werkbank.modules.feedback.notifications import feedback_notifications
 
@@ -147,12 +147,11 @@ def test_admin_reads_answers_and_closes(db: Session) -> None:
     assert any(event.kind == "rueckmeldung.neu" for event in events)
     assert all("Diagramm" not in event.title for event in events)
 
-    # Bildschirmfoto 30 Tage nach Abschluss weg
-    stored = db.get(FeedbackEntry, entry["id"])
-    assert stored is not None
-    db.refresh(stored)
-    assert purge_screenshots(db, datetime.now(UTC) + timedelta(days=29)) == 0
-    assert purge_screenshots(db, datetime.now(UTC) + timedelta(days=31)) == 1
+    # 30 Tage nach Abschluss ist die Rückmeldung ganz weg, offene bleiben
+    assert purge_feedback(db, datetime.now(UTC) + timedelta(days=29)) == 0
+    assert purge_feedback(db, datetime.now(UTC) + timedelta(days=31)) == 1
     db.commit()
-    db.refresh(stored)
-    assert stored.screenshot is None
+    db.expire_all()
+    assert db.get(FeedbackEntry, entry["id"]) is None
+    assert db.get(FeedbackEntry, idea["id"]) is not None
+    assert [row["id"] for row in person.get(f"{BASE}/mine").json()] == [idea["id"]]

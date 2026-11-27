@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.151.1] – 2026-11-27
+
+### Geändert
+
+- **Rückmeldungen: Aufbewahrung festgelegt.** Abgeschlossene Rückmeldungen („Erledigt“, „Nicht umgesetzt“) werden 30 Tage nach Abschluss ganz gelöscht, mit Antworten und Bildschirmfoto (vorher nur das Bildschirmfoto). Offene bleiben. Aufräumen im stündlichen Auftrag (`purge_feedback`). Doku: `spec.md`, `datenschutz.md` (Punkt nicht mehr offen), Handbuch.
+
 ## [0.151.0] – 2026-11-27
 
 ### Neu

@@ -310,7 +310,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Unter Kontomenü › „Meine Rückmeldungen“ siehst du, was du gemeldet hast, mit Stand und Antworten der IT. Bei einer Antwort oder einem neuen Stand bekommst du eine Benachrichtigung an der Glocke. Deine Rückmeldungen sieht nur die Verwaltung der Werkbank.",
+                text: "Unter Kontomenü › „Meine Rückmeldungen“ siehst du, was du gemeldet hast, mit Stand und Antworten der IT. Bei einer Antwort oder einem neuen Stand bekommst du eine Benachrichtigung an der Glocke. Deine Rückmeldungen sieht nur die Verwaltung der Werkbank. 30 Tage nachdem eine Rückmeldung abgeschlossen ist, löscht die Werkbank sie mit allen Antworten.",
               },
             ],
             links: [{ to: "/konto/rueckmeldungen", label: "Zu meinen Rückmeldungen" }],
@@ -2726,7 +2726,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "hint",
-                text: "Bildschirmfotos löscht die Werkbank 30 Tage nach „Erledigt“ oder „Nicht umgesetzt“. Ideen sieht nur die Person selbst und die Verwaltung.",
+                text: "30 Tage nach „Erledigt“ oder „Nicht umgesetzt“ löscht die Werkbank die Rückmeldung ganz, mit Antworten und Bildschirmfoto. Offene Rückmeldungen bleiben. Ideen sieht nur die Person selbst und die Verwaltung.",
               },
             ],
             links: [{ to: "/verwaltung/rueckmeldungen", label: "Zu den Rückmeldungen" }],

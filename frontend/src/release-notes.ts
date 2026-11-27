@@ -24,6 +24,19 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.151.1",
+    date: "2026-11-27",
+    summary: "Abgeschlossene Rückmeldungen werden nach 30 Tagen gelöscht.",
+    sections: [
+      {
+        area: "Werkbank",
+        entries: [
+          "Ist eine Rückmeldung erledigt oder nicht umgesetzt, löscht die Werkbank sie 30 Tage später ganz, mit Antworten und Bildschirmfoto. Offene Rückmeldungen bleiben.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.151.0",
     date: "2026-11-27",
     summary: "Fehler melden und Ideen geben, direkt aus jeder Seite.",

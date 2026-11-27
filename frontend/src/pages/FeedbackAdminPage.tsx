@@ -243,7 +243,8 @@ export function FeedbackAdminPage({ id }: { id: number | null }) {
         <p className="module-label">Verwaltung</p>
         <h1>Rückmeldungen</h1>
         <p className="page-sub">
-          Fehler und Ideen aus der Werkbank. Bildschirmfotos werden 30 Tage nach Abschluss gelöscht.
+          Fehler und Ideen aus der Werkbank. Abgeschlossene Rückmeldungen werden 30 Tage nach
+          Abschluss ganz gelöscht.
         </p>
       </header>
       {failed && (
