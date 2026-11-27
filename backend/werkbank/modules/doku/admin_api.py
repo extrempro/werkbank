@@ -27,6 +27,7 @@ from werkbank.modules.doku.models import DokuPage, DokuPageRight, DokuSpace, Dok
 from werkbank.modules.doku.service import (
     TRASH_DAYS,
     DokuSettings,
+    clean_vault_url,
     load_settings,
     restore,
     save_settings,
@@ -95,6 +96,12 @@ class TrashItem(BaseModel):
 class SettingsOut(BaseModel):
     version_minutes: Literal[5, 10, 30]
     keep_auto: Literal["1y", "immer"]
+    vault_url: str = Field(default="", max_length=200)
+
+    @field_validator("vault_url")
+    @classmethod
+    def _vault_url(cls, value: str) -> str:
+        return clean_vault_url(value)
 
 
 def _audit(db: Session, access: DokuAccess, action: str, object_type: str, object_id: str) -> None:
@@ -271,14 +278,22 @@ def reset_rights(
 @router.get("/settings")
 def read_settings(access: AdminDep, db: DbDep) -> SettingsOut:
     value = load_settings(db)
-    return SettingsOut(version_minutes=value.version_minutes, keep_auto=value.keep_auto)  # type: ignore[arg-type]
+    return SettingsOut(
+        version_minutes=value.version_minutes,  # type: ignore[arg-type]
+        keep_auto=value.keep_auto,
+        vault_url=value.vault_url,
+    )
 
 
 @router.put("/settings")
 def write_settings(body: SettingsOut, access: AdminDep, db: DbDep) -> SettingsOut:
     save_settings(
         db,
-        DokuSettings(version_minutes=body.version_minutes, keep_auto=body.keep_auto),
+        DokuSettings(
+            version_minutes=body.version_minutes,
+            keep_auto=body.keep_auto,
+            vault_url=body.vault_url,
+        ),
         access.user.user_id,
     )
     _audit(db, access, "einstellungen_geaendert", "einstellungen", "doku")

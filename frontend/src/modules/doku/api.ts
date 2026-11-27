@@ -35,6 +35,8 @@ export interface SpaceRef {
 export interface DokuMe {
   is_admin: boolean;
   spaces: SpaceRef[];
+  /** Adresse des Passwort-Tresors für „Bitwarden-Einträge“, leer: keiner eingestellt */
+  vault_url: string;
 }
 
 export interface TreePage {
@@ -286,6 +288,7 @@ export interface TrashItem {
 export interface DokuSettings {
   version_minutes: 5 | 10 | 30;
   keep_auto: "1y" | "immer";
+  vault_url: string;
 }
 
 const ADMIN = `${BASE}/admin`;

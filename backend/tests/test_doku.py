@@ -1,6 +1,7 @@
 """Dokumentation (Phase D1): Rollen, Arbeitsbereiche, Seiten, Inhalt, eigene Rechte, Sperren,
 Versionen, Papierkorb, Verwaltung."""
 
+import json
 import tempfile
 from datetime import timedelta
 from pathlib import Path
@@ -18,7 +19,7 @@ from werkbank.core.deps import STEP_UP_HEADER
 from werkbank.core.models import UserSession
 from werkbank.core.sessions import SESSION_COOKIE, hash_token, now_utc
 from werkbank.main import create_app
-from werkbank.modules.doku.content import ContentError, clean_content
+from werkbank.modules.doku.content import ContentError, clean_content, vault_items
 from werkbank.modules.doku.models import (
     DokuPage,
     DokuPageRight,
@@ -221,7 +222,7 @@ def test_roles_and_admin(db: Session, space: int) -> None:
     listed = admin.get(f"{ADMIN}/spaces").json()
     assert [(s["name"], s["people"], s["pages"]) for s in listed] == [("IT", 3, 0)]
     # Doku.Admin ist nicht automatisch Mitglied und sieht keine Inhalte
-    assert admin.get(f"{BASE}/me").json() == {"is_admin": True, "spaces": []}
+    assert admin.get(f"{BASE}/me").json() == {"is_admin": True, "spaces": [], "vault_url": ""}
     assert admin.post(f"{ADMIN}/spaces", json={"name": "it"}).status_code == 409
     me = client_for("Ina Beispiel").get(f"{BASE}/me").json()
     assert me["spaces"][0]["role"] == "manage" and me["is_admin"] is False
@@ -407,9 +408,13 @@ def test_members_by_manager_archive_and_settings(db: Session, space: int) -> Non
     )
     assert archived.status_code == 200
     assert client_for("Ina Beispiel").get(f"{BASE}/pages/{page['id']}").json()["role"] == "read"
-    assert admin.get(f"{ADMIN}/settings").json() == {"version_minutes": 10, "keep_auto": "1y"}
+    assert admin.get(f"{ADMIN}/settings").json() == {
+        "version_minutes": 10,
+        "keep_auto": "1y",
+        "vault_url": "",
+    }
     changed = admin.put(f"{ADMIN}/settings", json={"version_minutes": 30, "keep_auto": "immer"})
-    assert changed.json() == {"version_minutes": 30, "keep_auto": "immer"}
+    assert changed.json() == {"version_minutes": 30, "keep_auto": "immer", "vault_url": ""}
     assert (
         admin.put(f"{ADMIN}/settings", json={"version_minutes": 7, "keep_auto": "1y"}).status_code
         == 422
@@ -477,3 +482,63 @@ def test_granting_rights_needs_recent_login(db: Session, space: int) -> None:
     # Nach erneuter Anmeldung klappt es
     fresh = client_for("Ada Admin", ["Doku.Admin"])
     assert fresh.put(f"{ADMIN}/spaces/{space}", json=grab).status_code == 200
+
+
+def test_vault_items_only_links_and_names() -> None:
+    good = json.dumps(
+        [
+            {
+                "url": "https://vault.example.com/#/vault?itemId=abc",
+                "name": "Firewall",
+                "hint": "Admin",
+            },
+            {"url": "https://vault.example.com/#/vault?collectionId=x", "name": "Netzwerk"},
+        ]
+    )
+    assert [item["name"] for item in vault_items(good)] == ["Firewall", "Netzwerk"]
+    content, text = clean_content(
+        {"type": "doc", "content": [{"type": "bitwarden", "attrs": {"items": good}}]}
+    )
+    assert content["content"][0]["attrs"]["items"] == good
+    assert "Firewall Admin" in text
+    bad_items = [
+        [{"url": "http://vault.example.com/", "name": "X"}],
+        [{"url": "javascript:alert(1)", "name": "X"}],
+        [{"url": "https://vault.example.com/", "name": ""}],
+        [{"url": "https://vault.example.com/", "name": "X", "password": "geheim"}],
+        [{"url": "https://vault.example.com/", "name": "X\nY"}],
+        [{"url": "https://vault.example.com/", "name": "X", "hint": "h" * 161}],
+        [{"url": "https://vault.example.com/", "name": "X"}] * 21,
+    ]
+    for items in bad_items:
+        with pytest.raises(ContentError):
+            clean_content(
+                {
+                    "type": "doc",
+                    "content": [{"type": "bitwarden", "attrs": {"items": json.dumps(items)}}],
+                }
+            )
+    with pytest.raises(ContentError):
+        clean_content({"type": "doc", "content": [{"type": "bitwarden", "attrs": {"items": "{"}}]})
+
+
+@pytest.mark.db
+def test_vault_url_setting(db: Session, space: int) -> None:
+    admin = client_for("Ada Admin", ["Doku.Admin"])
+    base = {"version_minutes": 10, "keep_auto": "1y"}
+    saved = admin.put(f"{ADMIN}/settings", json={**base, "vault_url": "https://vault.example.com/"})
+    assert saved.status_code == 200 and saved.json()["vault_url"] == "https://vault.example.com"
+    for bad in (
+        "http://vault.example.com",
+        "https://user:pw@vault.example.com",
+        "https://vault.example.com/?x=1",
+        "https://vault.example.com/#/vault",
+        "javascript:alert(1)",
+        "https:///pfad",
+    ):
+        response = admin.put(f"{ADMIN}/settings", json={**base, "vault_url": bad})
+        assert response.status_code == 422, bad
+    # Mitglieder bekommen die Adresse für den Baustein, nicht die übrigen Einstellungen
+    me = client_for("Lea Leser").get(f"{BASE}/me").json()
+    assert me["vault_url"] == "https://vault.example.com"
+    assert client_for("Lea Leser").get(f"{ADMIN}/settings").status_code == 403

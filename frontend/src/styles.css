@@ -17966,3 +17966,89 @@ textarea.field-control {
   border: 1px solid var(--farbe-rand);
   border-radius: 8px;
 }
+
+/* Doku: Baustein „Bitwarden-Einträge“ (modules/doku/BitwardenBlock.tsx) */
+
+.doku-vault-wrap {
+  margin: 12px 0;
+}
+
+.doku-vault {
+  overflow: hidden;
+  border: 1px solid var(--farbe-rand-kontrast);
+  border-radius: 10px;
+  background: var(--farbe-flaeche);
+}
+
+.doku-vault-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--farbe-auswahl);
+}
+
+.doku-vault-head .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.doku-vault-count {
+  margin-left: auto;
+}
+
+.doku-vault-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doku-vault-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.doku-vault-text {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doku-vault-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.doku-vault-hint {
+  color: var(--farbe-text-mittel);
+}
+
+.doku-vault-bad {
+  color: var(--farbe-bad-text);
+}
+
+.doku-vault-open {
+  gap: 6px;
+}
+
+.doku-vault-open .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.doku-vault-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.doku-vault-empty {
+  margin: 0;
+  padding: 10px 12px;
+}

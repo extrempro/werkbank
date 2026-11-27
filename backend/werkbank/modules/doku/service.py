@@ -4,6 +4,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
@@ -24,23 +25,58 @@ class DokuSettings:
     version_minutes: int = 10
     # Automatische Versionen aufbewahren: 1 Jahr oder immer (benannte bleiben immer)
     keep_auto: Literal["1y", "immer"] = "1y"
+    # Adresse des Passwort-Tresors (Bitwarden oder Vaultwarden im Web), leer: kein Baustein
+    vault_url: str = ""
 
 
 def load_settings(db: Session) -> DokuSettings:
     raw = get_setting(db, SETTINGS_KEY, {}) or {}
     minutes = raw.get("version_minutes") if isinstance(raw, dict) else None
     keep = raw.get("keep_auto") if isinstance(raw, dict) else None
+    vault = raw.get("vault_url") if isinstance(raw, dict) else None
+    try:
+        vault_url = clean_vault_url(vault) if isinstance(vault, str) else ""
+    except ValueError:
+        vault_url = ""
     return DokuSettings(
         version_minutes=minutes if minutes in VERSION_MINUTES else 10,
         keep_auto="immer" if keep == "immer" else "1y",
+        vault_url=vault_url,
     )
+
+
+def clean_vault_url(value: str) -> str:
+    """Adresse des Tresors: https, ohne Zugangsdaten, Abfrage oder Anker; ohne „/“ am Ende."""
+    value = value.strip()
+    if not value:
+        return ""
+    if len(value) > 200 or any(ord(ch) <= 32 for ch in value) or "\\" in value:
+        raise ValueError("Die Adresse ist ungültig.")
+    parts = urlsplit(value)
+    if (
+        parts.scheme != "https"
+        or not parts.hostname
+        or parts.username
+        or parts.password
+        or parts.query
+        or parts.fragment
+        or value.lower()[len("https://") :].startswith("/")
+    ):
+        raise ValueError(
+            "Die Adresse muss mit https:// beginnen und darf nur Server und Pfad enthalten."
+        )
+    return value.rstrip("/")
 
 
 def save_settings(db: Session, value: DokuSettings, user_id: uuid.UUID | None) -> None:
     set_setting(
         db,
         SETTINGS_KEY,
-        {"version_minutes": value.version_minutes, "keep_auto": value.keep_auto},
+        {
+            "version_minutes": value.version_minutes,
+            "keep_auto": value.keep_auto,
+            "vault_url": value.vault_url,
+        },
         user_id,
     )
 

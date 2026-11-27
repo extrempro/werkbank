@@ -22,6 +22,59 @@ LIVE_KINDS = ("tickets", "geraete", "projekt", "vertraege")
 CALLOUT_KINDS = ("info", "warnung", "erfolg")
 
 
+# Bitwarden-Einträge: Verweise auf Einträge im Passwort-Tresor, nie Passwörter
+VAULT_ITEMS_MAX = 20
+VAULT_NAME_MAX = 120
+VAULT_HINT_MAX = 160
+VAULT_URL_MAX = 2000
+
+
+def _plain_line(value: object, limit: int, required: bool) -> bool:
+    if not isinstance(value, str) or len(value) > limit:
+        return False
+    if required and not value.strip():
+        return False
+    return not any(ord(ch) < 32 for ch in value)
+
+
+def vault_items(value: object) -> list[dict[str, str]]:
+    """Einträge eines Bitwarden-Bausteins (JSON-Text). Wirft ValueError, wenn etwas nicht passt.
+
+    Nur https-Links; ob sie zum eingestellten Tresor führen, prüft die Seite beim Anzeigen, weil
+    sich die Adresse des Tresors später ändern kann."""
+    if not isinstance(value, str) or len(value) > 12_000:
+        raise ValueError("Einträge ungültig.")
+    try:
+        items = json.loads(value)
+    except ValueError as exc:
+        raise ValueError("Einträge ungültig.") from exc
+    if not isinstance(items, list) or len(items) > VAULT_ITEMS_MAX:
+        raise ValueError("Einträge ungültig.")
+    result: list[dict[str, str]] = []
+    for item in items:
+        if not isinstance(item, dict) or set(item) - {"url", "name", "hint"}:
+            raise ValueError("Eintrag ungültig.")
+        url, name, hint = item.get("url"), item.get("name"), item.get("hint", "")
+        if (
+            not _plain_line(url, VAULT_URL_MAX, True)
+            or not str(url).lower().startswith("https://")
+            or "\\" in str(url)
+            or not _plain_line(name, VAULT_NAME_MAX, True)
+            or not _plain_line(hint, VAULT_HINT_MAX, False)
+        ):
+            raise ValueError("Eintrag ungültig.")
+        result.append({"url": str(url), "name": str(name).strip(), "hint": str(hint).strip()})
+    return result
+
+
+def _valid_vault_items(value: object) -> bool:
+    try:
+        vault_items(value)
+    except ValueError:
+        return False
+    return True
+
+
 def _opt_id(value: object) -> bool:
     return value is None or (
         isinstance(value, int) and not isinstance(value, bool) and 0 < value < 2**31
@@ -66,6 +119,7 @@ _NODES: dict[str, dict[str, Any]] = {
         "project": _opt_id,
         "months": lambda v: v is None or v in (3, 6, 12),
     },
+    "bitwarden": {"items": _valid_vault_items},
 }
 _CELL_ATTRS = {
     "colspan": lambda v: isinstance(v, int) and 1 <= v <= 50,
@@ -191,6 +245,10 @@ class _Walker:
             raise ContentError("Verweis oder Live-Baustein ohne Art.")
         if kind == "werkbankRef" and "id" not in attrs:
             raise ContentError("Verweis ohne Kennung.")
+        if kind == "bitwarden":
+            # Namen und Hinweise sind über die Suche zu finden
+            for item in vault_items(attrs.get("items", "[]")):
+                self.text.append(f"{item['name']} {item['hint']}\n")
         if kind in ("paragraph", "heading", "codeBlock", "tableCell", "tableHeader", "taskItem"):
             self.text.append("\n")
         return result

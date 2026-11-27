@@ -22,6 +22,7 @@ import { Icon } from "../../components/Icon";
 import type { DocJson, LiveAttrs } from "./api";
 import { CommentMarks, type CommentMarksOptions } from "./commentMarks";
 import { BlockDialog } from "./BlockDialog";
+import { BitwardenBlock, serializeItems, useVaultUrl, VaultItemForm } from "./BitwardenBlock";
 import { LiveBlock, LiveBlockForm, RefPicker, WerkbankRef } from "./DokuNodes";
 import { ActiveCell, TableEdges, TablePicker, TableTools, useTableSpot } from "./DokuTable";
 
@@ -124,6 +125,7 @@ export function extensions(placeholder: string, live?: LiveDoc, comments?: Comme
     Callout,
     WerkbankRef,
     LiveBlock,
+    BitwardenBlock,
     ...(comments ? [CommentMarks.configure(comments)] : []),
     Placeholder.configure({ placeholder }),
     ...(live
@@ -140,7 +142,7 @@ export function extensions(placeholder: string, live?: LiveDoc, comments?: Comme
   ];
 }
 
-type Picker = "verweis" | "live" | "tabelle";
+type Picker = "verweis" | "live" | "tabelle" | "bitwarden";
 
 interface BlockChoice {
   id: string;
@@ -239,6 +241,13 @@ const BLOCKS: readonly BlockChoice[] = [
     hint: "Ticketliste, Geräte, Projektstand, Vertragsfristen",
     run: () => undefined,
     open: "live",
+  },
+  {
+    id: "bitwarden",
+    label: "Bitwarden-Einträge",
+    hint: "Verweise auf Zugänge im Passwort-Tresor",
+    run: () => undefined,
+    open: "bitwarden",
   },
 ];
 
@@ -351,8 +360,12 @@ function BlockMenu({
   const [active, setActive] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const listId = useId();
-  const choices = BLOCKS.filter((block) =>
-    `${block.label} ${block.hint}`.toLowerCase().includes(query.trim().toLowerCase()),
+  const vault = useVaultUrl();
+  // Bitwarden-Einträge nur, wenn die Doku-Verwaltung einen Tresor eingestellt hat
+  const choices = BLOCKS.filter(
+    (block) =>
+      (block.id !== "bitwarden" || Boolean(vault)) &&
+      `${block.label} ${block.hint}`.toLowerCase().includes(query.trim().toLowerCase()),
   );
   useEffect(() => {
     // Ohne Scrollen: Das Menü steht schon an der Schreibmarke
@@ -705,6 +718,7 @@ export function DokuEditor({
     setPicker(null);
     editor.commands.focus();
   };
+  const vault = useVaultUrl();
   const insertLive = (attrs: LiveAttrs) => {
     editor.chain().focus().insertContent({ type: "liveBlock", attrs }).run();
     setPicker(null);
@@ -737,6 +751,23 @@ export function DokuEditor({
       {editable && picker === "live" && (
         <BlockDialog label="Live-Baustein einfügen" tall onClose={closePicker}>
           <LiveBlockForm initial={null} onSubmit={insertLive} onCancel={closePicker} />
+        </BlockDialog>
+      )}
+      {editable && picker === "bitwarden" && vault && (
+        <BlockDialog label="Bitwarden-Eintrag hinzufügen" onClose={closePicker}>
+          <VaultItemForm
+            initial={null}
+            vault={vault}
+            onSubmit={(item) => {
+              editor
+                .chain()
+                .focus()
+                .insertContent({ type: "bitwarden", attrs: { items: serializeItems([item]) } })
+                .run();
+              setPicker(null);
+            }}
+            onCancel={closePicker}
+          />
         </BlockDialog>
       )}
       <EditorContent editor={editor} />
