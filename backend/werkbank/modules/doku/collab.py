@@ -197,8 +197,9 @@ def _save(page_id: uuid.UUID, state: bytes, content: dict[str, Any], editors: li
     """Geprüften Inhalt speichern. False: Inhalt nicht erlaubt (nichts gespeichert)."""
     try:
         cleaned, text = clean_content(content)
-    except ContentError as exc:
-        logger.warning("Doku %s: Inhalt aus der Live-Bearbeitung abgelehnt: %s", page_id, exc)
+    except ContentError:
+        # Ohne den Fehlertext: Er kann Teile des Inhalts nennen (Log Injection)
+        logger.warning("Doku %s: Inhalt aus der Live-Bearbeitung abgelehnt", page_id.hex)
         return False
     with get_sessionmaker()() as db:
         page = db.get(DokuPage, page_id)
@@ -336,6 +337,19 @@ async def _leave(room: Room, peer: Peer) -> None:
         await _close_room(room, 1000, persist=True)
 
 
+def _error_kind(exc: Exception) -> str:
+    """Feste Bezeichnung der Fehlerart für das Protokoll (kein Text aus der Nachricht)."""
+    for kind, label in (
+        (ValueError, "ungültiger Inhalt"),
+        (KeyError, "fehlendes Feld"),
+        (TypeError, "falscher Typ"),
+        (IndexError, "zu kurz"),
+    ):
+        if isinstance(exc, kind):
+            return label
+    return "anderer Fehler"
+
+
 @router.websocket("/api/doku/live/{page_id}")
 async def live(websocket: WebSocket, page_id: uuid.UUID) -> None:
     settings: Settings = websocket.app.state.settings
@@ -374,10 +388,10 @@ async def live(websocket: WebSocket, page_id: uuid.UUID) -> None:
             try:
                 await _handle(room, peer, message)
             except Exception as exc:  # fehlerhafte Nachricht: Verbindung trennen
-                # Nur die Art des Fehlers, ohne Zeilenumbrüche: Der Text kann Teile der
-                # Nachricht enthalten (Log Injection)
-                kind = type(exc).__name__.replace("\r", "").replace("\n", "")
-                logger.warning("Doku %s: Nachricht nicht verarbeitet (%s)", str(page_id), kind)
+                # Nur ein fester Text je Fehlerart, nichts aus der Nachricht (Log Injection)
+                logger.warning(
+                    "Doku %s: Nachricht nicht verarbeitet (%s)", room.page_id.hex, _error_kind(exc)
+                )
                 await websocket.close(1003)
                 break
     except WebSocketDisconnect:

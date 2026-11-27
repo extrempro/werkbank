@@ -70,6 +70,7 @@ export const ADMIN_PERMISSIONS_PATH = "/verwaltung/berechtigungen";
 export const ADMIN_MAIL_PATH = "/verwaltung/mail-teams";
 export const ADMIN_CONNECTIONS_PATH = "/verwaltung/verbindungen";
 export const ADMIN_BACKUP_PATH = "/verwaltung/datensicherung";
+export const ADMIN_FEEDBACK_PATH = "/verwaltung/rueckmeldungen";
 export const AUDIT_PATH = "/audit";
 
 /** Seite einer Kategorie der IT-Tools. */
@@ -444,6 +445,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
             { path: ADMIN_CONNECTIONS_PATH, label: "Verbindungen", icon: "netzwerk" },
             { path: ADMIN_ZABBIX_PATH, label: "Zabbix", icon: "monitoring" },
             { path: ADMIN_BACKUP_PATH, label: "Datensicherung", icon: "snapshots" },
+            { path: ADMIN_FEEDBACK_PATH, label: "Rückmeldungen", icon: "rueckmeldung" },
             { path: AUDIT_PATH, label: "Audit-Log", icon: "audit" },
           ],
         },

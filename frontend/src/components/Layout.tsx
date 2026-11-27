@@ -73,6 +73,10 @@ import { AdminPage } from "../pages/AdminPage";
 import { AuditPage } from "../pages/AuditPage";
 import { NewsPage } from "../pages/NewsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
+import { FeedbackAdminPage } from "../pages/FeedbackAdminPage";
+import { MyFeedbackPage } from "../pages/MyFeedbackPage";
+import { FeedbackDialog } from "./FeedbackDialog";
+import { FEEDBACK_ADMIN_PATH, FEEDBACK_PATH, parseFeedbackAdminPath } from "../feedback";
 import { NotificationSettingsPage } from "../pages/NotificationSettingsPage";
 import { HandbookPage } from "../pages/HandbookPage";
 import { DeviceAssociationPage } from "../modules/devices/DeviceAssociationPage";
@@ -222,6 +226,9 @@ export function listViewPage(path: string): string | null {
   if (parseLoanPath(path)) {
     return INVENTORY_LOANS_PATH;
   }
+  if (parseFeedbackAdminPath(path)) {
+    return FEEDBACK_ADMIN_PATH;
+  }
   if (parseIssuePath(path)) {
     return INVENTORY_ISSUES_PATH;
   }
@@ -248,6 +255,7 @@ export function Layout({ me }: LayoutProps) {
   const [openedOn, setOpenedOn] = useState<string | null>(null);
   const collapsed = stored || (midWidth && listView !== null && openedOn !== listView);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const closeSearch = useCallback(() => setSearchOpen(false), []);
   const onNewsSeen = useCallback(() => setNewsUnseen(false), []);
   const taskCount = (tasks ?? []).reduce((sum, task) => sum + task.count, 0);
@@ -425,6 +433,7 @@ export function Layout({ me }: LayoutProps) {
   const settingsTab = parseSettingsPath(path);
   const zabbixHost = parseZabbixHostPath(path);
   const loanRoute = parseLoanPath(path);
+  const feedbackAdminRoute = parseFeedbackAdminPath(path);
   const issueRoute = parseIssuePath(path);
   const returnRoute = parseReturnPath(path);
   const workplaceRoute = parseWorkplacePath(path);
@@ -455,6 +464,13 @@ export function Layout({ me }: LayoutProps) {
     page = <NewsPage onSeen={onNewsSeen} />;
   } else if (path === NOTIFICATIONS_PATH) {
     page = <NotificationsPage />;
+  } else if (path === FEEDBACK_PATH) {
+    page = <MyFeedbackPage onNew={() => setFeedbackOpen(true)} />;
+  } else if (
+    feedbackAdminRoute !== null &&
+    items.some((item) => item.path === FEEDBACK_ADMIN_PATH)
+  ) {
+    page = <FeedbackAdminPage id={feedbackAdminRoute.id} />;
   } else if (path === NOTIFICATION_SETTINGS_PATH) {
     page = <NotificationSettingsPage />;
   } else if (handbookKnown && handbookRoute) {
@@ -719,6 +735,15 @@ export function Layout({ me }: LayoutProps) {
             <kbd aria-hidden="true">{shortcutLabel()}</kbd>
           </button>
           <div className="user">
+            <button
+              type="button"
+              className="header-tasks header-feedback"
+              aria-label="Rückmeldung geben"
+              aria-haspopup="dialog"
+              onClick={() => setFeedbackOpen(true)}
+            >
+              <Icon name="rueckmeldung" />
+            </button>
             <NotificationBell path={path} />
             <a
               className="header-tasks"
@@ -736,7 +761,12 @@ export function Layout({ me }: LayoutProps) {
                 </span>
               )}
             </a>
-            <AccountMenu me={me} newsUnseen={newsUnseen} onNavigate={go} />
+            <AccountMenu
+              me={me}
+              newsUnseen={newsUnseen}
+              onNavigate={go}
+              onFeedback={() => setFeedbackOpen(true)}
+            />
           </div>
         </header>
         <div className="app-body">
@@ -806,6 +836,17 @@ export function Layout({ me }: LayoutProps) {
           extraFor={(area, navigateTo) => ticketBarFor(area, "sheet", navigateTo)}
         />
         {searchOpen && <QuickSearch areas={areas} onClose={closeSearch} onNavigate={go} />}
+        {feedbackOpen && (
+          <FeedbackDialog
+            page={path}
+            pageTitle={
+              current
+                ? `${currentArea?.label ? `${currentArea.label} › ` : ""}${current.label}`
+                : document.title || path
+            }
+            onClose={() => setFeedbackOpen(false)}
+          />
+        )}
         <ScrollTop />
       </div>
     </HelpProvider>

@@ -71,3 +71,41 @@ test("Profilbilder gibt es nur mit Anmeldung", async ({ page }) => {
   );
   expect(missing.status()).toBe(404);
 });
+
+test("Rückmeldung geben, eigene sehen, Verwaltung antwortet", async ({
+  page,
+}) => {
+  await loginAs(page, ["Werkbank.Admin"], "Rita Rückmeldung");
+  await page.goto("/");
+  const menu = await openAccountMenu(page);
+  await menu.getByRole("menuitem", { name: "Rückmeldung geben" }).click();
+  const dialog = page.getByRole("dialog", { name: "Rückmeldung geben" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("radio", { name: /Fehler/ }).check();
+  await expect(dialog.getByText("Was zusätzlich mitgeht")).toBeVisible();
+  await expectNoA11yViolations(page);
+  const text = `Testfehler ${Date.now()}: Diagramm bleibt leer`;
+  await dialog.getByLabel(/Was ist passiert/).fill(text);
+  await dialog.getByRole("button", { name: "Senden" }).click();
+  await expect(dialog.getByText(/ist angekommen/)).toBeVisible();
+  await dialog.getByRole("button", { name: "Schließen" }).first().click();
+
+  await page.goto("/konto/rueckmeldungen");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Meine Rückmeldungen" }),
+  ).toBeVisible();
+  await expect(page.getByText(text).first()).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await page.goto("/verwaltung/rueckmeldungen");
+  await page
+    .getByRole("button", { name: new RegExp(text.slice(0, 20)) })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 2, name: text }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Erledigt", exact: true }).click();
+  await expect(page.getByText(/Der Stand ist jetzt „Erledigt“/)).toBeVisible();
+  await expectNoA11yViolations(page);
+});

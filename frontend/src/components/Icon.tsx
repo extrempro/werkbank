@@ -159,6 +159,11 @@ const PATHS = {
     "M14 18h2",
     "M18 14h2",
   ],
+  // Rückmeldung: Daumen hoch
+  rueckmeldung: [
+    "M7 10v11H4V10z",
+    "M7 10l4-7c1.5 0 2.5 1 2.2 2.6L12.7 9H19a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 17.8 20H7",
+  ],
   kamera: ["M4 8h3l2-3h6l2 3h3v11H4z", "M12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"],
   aktualisieren: [
     "M20 11a8 8 0 0 0-14.3-4.9L4 8",

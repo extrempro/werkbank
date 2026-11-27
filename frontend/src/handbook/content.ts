@@ -288,6 +288,34 @@ export const AREAS: readonly Area[] = [
             ],
           },
           {
+            id: "rueckmeldung",
+            title: "Fehler melden und Ideen geben",
+            blocks: [
+              {
+                kind: "text",
+                text: "Mit dem Daumen oben rechts gibst du eine Rückmeldung zur Seite, auf der du gerade bist. Am Handy findest du „Rückmeldung geben“ im Kontomenü.",
+              },
+              {
+                kind: "steps",
+                items: [
+                  "Wähle „Fehler“ oder „Idee“.",
+                  "Beschreib, was passiert ist oder was besser werden kann (5 bis 2000 Zeichen). Trag keine Passwörter oder Daten anderer Personen ein.",
+                  "Bei einem Fehler kannst du ein Bildschirmfoto mitschicken: am Rechner den Bildschirm aufnehmen, ein Bild auswählen oder mit Strg + V einfügen. Du siehst es vor dem Senden und kannst es wieder entfernen.",
+                  "Tippe auf „Senden“.",
+                ],
+              },
+              {
+                kind: "text",
+                text: "Bei einem Fehler gehen ein paar technische Angaben mit, damit die IT ihn nachstellen kann: Version, Seite, Fenstergröße, Browser und die letzten Fehlermeldungen des Browsers. Was genau, siehst du unter „Was zusätzlich mitgeht“. Schließt du das Fenster, bleibt dein Text für diese Seite erhalten, bis du die Werkbank neu lädst.",
+              },
+              {
+                kind: "text",
+                text: "Unter Kontomenü › „Meine Rückmeldungen“ siehst du, was du gemeldet hast, mit Stand und Antworten der IT. Bei einer Antwort oder einem neuen Stand bekommst du eine Benachrichtigung an der Glocke. Deine Rückmeldungen sieht nur die Verwaltung der Werkbank.",
+              },
+            ],
+            links: [{ to: "/konto/rueckmeldungen", label: "Zu meinen Rückmeldungen" }],
+          },
+          {
             id: "app",
             title: "Als App auf Handy oder Rechner",
             blocks: [
@@ -2674,6 +2702,34 @@ export const AREAS: readonly Area[] = [
               },
             ],
             links: [{ to: "/verwaltung/datensicherung", label: "Zur Datensicherung" }],
+          },
+          {
+            id: "rueckmeldungen",
+            title: "Rückmeldungen bearbeiten",
+            roles: [ADMIN],
+            blocks: [
+              {
+                kind: "text",
+                text: "Unter Verwaltung › Rückmeldungen stehen die Fehler und Ideen, die Personen über den Daumen oben rechts geschickt haben. Oben wählst du, was angezeigt wird: offene, nur Fehler, nur Ideen, abgeschlossene oder alle.",
+              },
+              {
+                kind: "text",
+                text: "Bei einem Fehler siehst du zusätzlich die Version, die Fenstergröße, den Browser, die letzten Fehlermeldungen des Browsers und, falls mitgeschickt, das Bildschirmfoto. Die Seite, auf der die Meldung entstand, öffnest du mit einem Klick.",
+              },
+              {
+                kind: "steps",
+                items: [
+                  "Setz den Stand: Neu, In Arbeit, Erledigt oder Nicht umgesetzt.",
+                  "Schreib bei Bedarf eine Antwort und tippe auf „Antwort senden“.",
+                  "Die Person bekommt bei jeder Antwort und jedem neuen Stand eine Benachrichtigung an der Glocke, ohne Inhalt, und liest alles unter „Meine Rückmeldungen“.",
+                ],
+              },
+              {
+                kind: "hint",
+                text: "Bildschirmfotos löscht die Werkbank 30 Tage nach „Erledigt“ oder „Nicht umgesetzt“. Ideen sieht nur die Person selbst und die Verwaltung.",
+              },
+            ],
+            links: [{ to: "/verwaltung/rueckmeldungen", label: "Zu den Rückmeldungen" }],
           },
           {
             id: "auftraege",
