@@ -24,6 +24,23 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.149.0",
+    date: "2026-11-27",
+    summary: "Die Einstellungen eines Ticket-Bereichs sind in vier Reiter geordnet.",
+    sections: [
+      {
+        area: "Tickets",
+        entries: [
+          "Die Einstellungen eines Bereichs haben jetzt vier Reiter: Allgemein, E-Mail, Arbeit und Pflege. Jeder Reiter zeigt seine Schritte nummeriert untereinander.",
+          "Neue Bereiche, alle Bereiche im Überblick, Rollen und das Protokoll findest du unter „Bereiche verwalten“. Alte Lesezeichen führen automatisch an die richtige Stelle.",
+          "Die erlaubten Dateitypen für Anhänge sind in Gruppen sortiert, ein Häkchen wählt eine ganze Gruppe.",
+          "In „An“ und „Cc“ findest du jetzt auch Personen aus dem Firmenverzeichnis, nicht nur die Beteiligten des Tickets.",
+          "„Gelöst“ beim Abschließen eines Tickets sieht jetzt aus wie die übrigen Eingabefelder.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.148.0",
     date: "2026-11-26",
     summary: "Antworten in Tickets haben jetzt „An“ und „Cc“ wie im Mailprogramm.",

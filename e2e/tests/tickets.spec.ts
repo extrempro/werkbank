@@ -245,9 +245,9 @@ test("Tickets: Einstellungen nur mit Rolle; Ticket-Verwaltung sieht keine Ticket
   const s = await setup(browser, stamp);
 
   await loginAs(page, ["Tickets.Verwaltung"], `Vera ${stamp}`);
-  await page.goto("/tickets/einstellungen");
+  await page.goto("/tickets/einstellungen/bereiche");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Einstellungen" }),
+    page.getByRole("heading", { level: 1, name: "Bereiche verwalten" }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 2, name: s.areaName }),
@@ -512,27 +512,32 @@ test("Tickets: Einstellungen zur E-Mail und „Letzte Eingänge“", async ({
   await loginAs(page, ["Tickets.Nutzer"], `Ina ${stamp}`);
   await page.goto("/tickets/einstellungen/email");
   const panel = page.locator("#inhalt");
-  await expect(
-    panel.getByRole("combobox", { name: /^Externe Absender/ }),
-  ).toBeVisible();
+  await panel.getByRole("button", { name: "unbekannte erst prüfen" }).click();
   await panel
-    .getByRole("combobox", { name: /^Externe Absender/ })
-    .selectOption({ label: "unbekannte erst prüfen" });
+    .getByRole("button", { name: "E-Mail-Einstellungen speichern" })
+    .click();
+  await expect(
+    page.getByText("Die Einstellungen zur E-Mail wurden gespeichert."),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  // Löschfristen des Eingangs stehen unter „Pflege“
+  await page.getByRole("link", { name: "Pflege", exact: true }).click();
   await expect(
     panel.getByRole("spinbutton", {
-      name: "„Zu prüfen“ verwerfen nach (Tagen ohne Entscheidung)",
+      name: "„Zu prüfen“ ohne Entscheidung verwerfen nach",
     }),
   ).toHaveValue("30");
   await panel
     .getByRole("spinbutton", {
-      name: "„Letzte Eingänge“ ohne Ticket löschen nach (Tagen)",
+      name: "„Letzte Eingänge“ ohne Ticket löschen nach",
     })
     .fill("60");
   await panel
-    .getByRole("button", { name: "Mail-Einstellungen speichern" })
+    .getByRole("button", { name: "Aufbewahrung des Eingangs speichern" })
     .click();
   await expect(
-    page.getByText("Die Einstellungen zur E-Mail wurden gespeichert."),
+    page.getByText("Die Aufbewahrung des Eingangs wurde gespeichert."),
   ).toBeVisible();
   await expect(
     panel.getByText("Abwesenheitsnotiz oder automatische Antwort", {
@@ -671,8 +676,8 @@ test("Tickets: Einstellungen für Kategorien, Fristen und Textbausteine", async 
       .filter({ hasText: "Die Fristen wurden gespeichert." }),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: "Textbausteine", exact: true }).click();
-  await expect(page).toHaveURL(/\/tickets\/einstellungen\/textbausteine/);
+  // Textbausteine stehen im selben Reiter „Arbeit“
+  await expect(page).toHaveURL(/\/tickets\/einstellungen\/arbeit/);
   await panel.getByRole("button", { name: "Textbaustein anlegen" }).click();
   await panel.getByLabel("Name", { exact: true }).fill("Drucker gelöst");
   await panel.getByLabel("Kürzel (ohne Schrägstrich)").fill("drucker");
@@ -715,7 +720,9 @@ test("Tickets: Übersicht, Aufbewahrung mit Ausnahme, Export und Protokoll", asy
 
   // Bereichsverwaltung: eigene Regel mit Vorschau und Bestätigung
   await loginAs(page, ["Tickets.Nutzer"], `Ina ${stamp}`);
+  // alter Reiter „Aufbewahrung“ führt auf „Pflege“
   await page.goto("/tickets/einstellungen/aufbewahrung");
+  await expect(page).toHaveURL(/\/tickets\/einstellungen\/pflege/);
   const panel = page.locator("#inhalt");
   await panel.getByRole("radio", { name: "Eigene Regel" }).check();
   await panel
@@ -723,11 +730,13 @@ test("Tickets: Übersicht, Aufbewahrung mit Ausnahme, Export und Protokoll", asy
       name: "Nach einer Frist anonymisieren oder löschen",
     })
     .check();
-  await panel.getByRole("spinbutton", { name: "Nach" }).fill("2");
+  await panel.getByRole("spinbutton", { name: "Nach", exact: true }).fill("2");
   await panel.getByRole("combobox", { name: "Einheit" }).selectOption("years");
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectNoA11yViolations(page);
-  await panel.getByRole("button", { name: "Aufbewahrung speichern" }).click();
+  await panel
+    .getByRole("button", { name: "Aufbewahrung speichern", exact: true })
+    .click();
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toContainText(
     "2 Jahre nach dem Schließen anonymisieren",
@@ -769,10 +778,10 @@ test("Tickets: Übersicht, Aufbewahrung mit Ausnahme, Export und Protokoll", asy
   expect(file.status()).toBe(200);
   expect(file.headers()["content-disposition"]).toContain("attachment");
 
-  // Rollen und Protokoll im Reiter „Rollen“
-  await page.goto("/tickets/einstellungen/rollen");
+  // Rechte und Protokoll unter „Alle Bereiche und Rechte“
+  await page.goto("/tickets/einstellungen/bereiche");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Einstellungen" }),
+    page.getByRole("heading", { level: 1, name: "Bereiche verwalten" }),
   ).toBeVisible();
   const log = page.getByRole("region", { name: "Protokoll" });
   await expect(log.getByText("Export als Excel").first()).toBeVisible();

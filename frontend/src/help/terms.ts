@@ -520,14 +520,16 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/tickets/neu": [["tickets", "uebersicht"]],
   "/tickets/einstellungen": [["tickets", "einstellungen"]],
   "/tickets/uebersicht": [["tickets", "uebersicht"]],
-  "/tickets/einstellungen/aufbewahrung": [["tickets", "betrieb"]],
-  "/tickets/einstellungen/rollen": [
+  "/tickets/einstellungen/pflege": [
+    ["tickets", "email"],
+    ["tickets", "betrieb"],
+  ],
+  "/tickets/einstellungen/bereiche": [
     ["tickets", "einstellungen"],
     ["tickets", "betrieb"],
   ],
   "/tickets/einstellungen/email": [["tickets", "email"]],
-  "/tickets/einstellungen/textbausteine": [["tickets", "arbeitshilfen"]],
-  "/tickets/einstellungen/kategorien": [["tickets", "arbeitshilfen"]],
+  "/tickets/einstellungen/arbeit": [["tickets", "arbeitshilfen"]],
   "/bestand/vorgaenge": [["it-bestand", "vorgaenge"]],
   "/bestand/statistik": [["it-bestand", "statistik"]],
   "/bestand/hardware": [["it-bestand", "hardware"]],

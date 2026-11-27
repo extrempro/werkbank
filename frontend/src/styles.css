@@ -13317,6 +13317,16 @@ html:has(.ticket-composer) {
   background: var(--farbe-hover);
 }
 
+.mail-recipients-source {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--farbe-flaeche-2, var(--farbe-hover));
+  color: var(--farbe-text-leise);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .ticket-note-label {
   display: inline-flex;
   align-items: center;
@@ -13882,29 +13892,32 @@ button.ticket-file-thumb {
 /* Lösung beim Wechsel auf „Gelöst“ (Kopf und Antwort) */
 .ticket-solution {
   display: grid;
-  gap: 6px;
+  gap: 12px;
+  max-width: 36rem;
   min-width: 0;
   margin: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--farbe-rand);
-  border-radius: 8px;
-  font-size: 0.875rem;
+  padding: 0;
+  border: 0;
 }
 
 .ticket-solution legend {
-  float: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
   padding: 0;
   font-weight: 600;
 }
 
-.ticket-solution label:not(.check-label, .choice-card, .field-label, .color-choice-option) {
-  display: grid;
-  gap: 4px;
+.ticket-solution .field {
+  margin: 0;
 }
 
-.ticket-solution select,
-.ticket-solution textarea {
-  width: 100%;
+.ticket-solution-public {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
 }
 
 .ticket-solution-scope {
@@ -16974,6 +16987,80 @@ textarea.field-control {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Ticket-Einstellungen: Bereich oben, vier Reiter, nummerierte Abschnitte */
+.ticket-settings-area {
+  display: grid;
+  gap: 4px;
+  max-width: 900px;
+}
+
+.ticket-settings-steps,
+.ticket-mail-form {
+  display: grid;
+  gap: 16px;
+}
+
+.settings-step .panel-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-step-hint {
+  max-width: 46rem;
+  margin: 0 0 12px;
+  color: var(--farbe-text-leise);
+}
+
+.settings-subhead {
+  margin: 20px 0 8px;
+  font-size: 1rem;
+}
+
+.input-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-unit input {
+  width: 7rem;
+}
+
+.settings-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 0 20px;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.settings-checks legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.settings-checks .check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 0;
+}
+
+.check-hint {
+  display: block;
+  color: var(--farbe-text-leise);
+  font-size: 0.8125rem;
+}
+
+.ticket-mail-form > .form-actions {
+  padding-inline: 4px;
+  background: var(--farbe-grund);
 }
 
 /* Bereichsfarben: Klasse setzt die Farbe, Punkt und Streifen nutzen sie */

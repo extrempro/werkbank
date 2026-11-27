@@ -1,10 +1,12 @@
-import { useId, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useState, type KeyboardEvent } from "react";
 import { Field } from "./Field";
 import { Icon } from "./Icon";
 
 export interface MailContact {
   name: string;
   mail: string;
+  /** Zusatz in den Vorschlägen, z. B. Abteilung */
+  detail?: string;
 }
 
 // Wie die Prüfung im Server: etwas@etwas.tld, ohne Leerzeichen
@@ -38,6 +40,7 @@ export function MailRecipients({
   required = false,
   error,
   placeholder = "Name oder Adresse",
+  search,
 }: {
   label: string;
   value: readonly string[];
@@ -47,21 +50,61 @@ export function MailRecipients({
   required?: boolean;
   error?: string | null;
   placeholder?: string;
+  /** Weitere Vorschläge, z. B. aus Entra; ab zwei Zeichen, kurz verzögert */
+  search?: (query: string) => Promise<MailContact[]>;
 }) {
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
   const [wrong, setWrong] = useState<string | null>(null);
   const [active, setActive] = useState(-1);
   const listId = useId();
-  const nameOf = (mail: string) => contacts.find((c) => c.mail.toLowerCase() === mail)?.name ?? "";
+  const [found, setFound] = useState<{ query: string; hits: MailContact[] }>({
+    query: "",
+    hits: [],
+  });
   const query = text.trim().toLowerCase();
-  const offers = contacts.filter(
+
+  useEffect(() => {
+    if (!search || query.length < 2) {
+      return;
+    }
+    let active = true;
+    const timer = window.setTimeout(() => {
+      search(query).then(
+        (hits) => active && setFound({ query, hits }),
+        () => active && setFound({ query, hits: [] }),
+      );
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [search, query]);
+
+  // Namen auch für Adressen aus der Suche merken, damit der Chip ihn zeigt
+  const [named, setNamed] = useState<readonly MailContact[]>([]);
+  const nameOf = (mail: string) =>
+    [...contacts, ...named].find((c) => c.mail.toLowerCase() === mail)?.name ?? "";
+  const local = contacts.filter(
     (c) =>
       !value.includes(c.mail.toLowerCase()) &&
       (!query || c.mail.toLowerCase().includes(query) || c.name.toLowerCase().includes(query)),
   );
+  const remote =
+    search && query.length >= 2 && found.query === query
+      ? found.hits.filter(
+          (hit) =>
+            hit.mail &&
+            !value.includes(hit.mail.toLowerCase()) &&
+            !local.some((c) => c.mail.toLowerCase() === hit.mail.toLowerCase()),
+        )
+      : [];
+  const offers = [...local, ...remote];
 
   const pick = (contact: MailContact) => {
+    if (contact.name) {
+      setNamed((before) => [...before, { name: contact.name, mail: contact.mail.toLowerCase() }]);
+    }
     add([contact.mail.toLowerCase()]);
     setText("");
     setWrong(null);
@@ -177,8 +220,16 @@ export function MailRecipients({
                     pick(c);
                   }}
                 >
-                  <span>{c.name || c.mail}</span>
-                  {c.name && <span className="small">{c.mail}</span>}
+                  <span>
+                    {c.name || c.mail}
+                    {index === local.length && remote.length > 0 && (
+                      <span className="mail-recipients-source">aus Entra</span>
+                    )}
+                  </span>
+                  <span className="small">
+                    {c.name ? c.mail : ""}
+                    {c.detail ? ` · ${c.detail}` : ""}
+                  </span>
                 </li>
               ))}
             </ul>
