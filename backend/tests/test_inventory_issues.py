@@ -2,6 +2,7 @@
 
 import base64
 import re
+import secrets
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
@@ -279,7 +280,7 @@ def test_issue_confirm_by_link(db: Session, monkeypatch: pytest.MonkeyPatch) -> 
     client = editor()
     place = position(db)
     headset = device(db, "Headset", "Headset 1", "HS-1")
-    monkeypatch.setattr(issues.secrets, "token_urlsafe", lambda _n: TOKEN)
+    monkeypatch.setattr(secrets, "token_urlsafe", lambda _n: TOKEN)
     sent: list[Any] = []
     real = issues.send_issue_messages
 

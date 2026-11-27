@@ -6,6 +6,7 @@ Erstellt: 2026-11-27
 """
 
 from collections.abc import Sequence
+from typing import Any
 
 import sqlalchemy as sa
 from alembic import op
@@ -17,11 +18,11 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-def _user(name: str) -> sa.Column:
+def _user(name: str) -> sa.Column[Any]:
     return sa.Column(name, sa.Uuid(), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
 
-def _created() -> sa.Column:
+def _created() -> sa.Column[Any]:
     return sa.Column(
         "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
