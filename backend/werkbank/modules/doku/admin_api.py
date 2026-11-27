@@ -23,6 +23,7 @@ from werkbank.modules.doku.api import (
     replace_members,
 )
 from werkbank.modules.doku.collab import reset_space
+from werkbank.modules.doku.content import clean_icon
 from werkbank.modules.doku.models import DokuPage, DokuPageRight, DokuSpace, DokuSpaceMember
 from werkbank.modules.doku.service import (
     TRASH_DAYS,
@@ -38,6 +39,7 @@ router = APIRouter(prefix="/api/doku/admin")
 class SpaceOut(BaseModel):
     id: int
     name: str
+    icon: str
     description: str
     archived: bool
     people: int
@@ -50,6 +52,7 @@ class SpaceOut(BaseModel):
 class SpaceIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: str = Field(default="", max_length=500)
+    icon: str = Field(default="", max_length=64)
     archived: bool = False
     members: list[PersonRightIn] = Field(default_factory=list, max_length=1000)
 
@@ -65,6 +68,11 @@ class SpaceIn(BaseModel):
     @classmethod
     def _description(cls, value: str) -> str:
         return _clean_line(value, "Beschreibung", 500)
+
+    @field_validator("icon")
+    @classmethod
+    def _icon(cls, value: str) -> str:
+        return clean_icon(value)
 
     @field_validator("members")
     @classmethod
@@ -124,6 +132,7 @@ def _space_out(db: Session, space: DokuSpace) -> SpaceOut:
     return SpaceOut(
         id=space.id,
         name=space.name,
+        icon=space.icon,
         description=space.description,
         archived=space.archived,
         people=len(members),
@@ -159,7 +168,9 @@ def create_space(body: SpaceIn, access: AdminDep, db: DbDep, settings: SettingsD
         # Rechte vergeben: nur mit frischer Anmeldung
         check_recent_login(access.user, settings)
     _name_taken(db, body.name, None)
-    space = DokuSpace(name=body.name, description=body.description, archived=body.archived)
+    space = DokuSpace(
+        name=body.name, description=body.description, icon=body.icon, archived=body.archived
+    )
     db.add(space)
     db.flush()
     replace_members(db, space, body.members)
@@ -186,6 +197,7 @@ def update_space(
     _name_taken(db, body.name, space.id)
     space.name = body.name
     space.description = body.description
+    space.icon = body.icon
     space.archived = body.archived
     replace_members(db, space, body.members)
     _audit(db, access, "arbeitsbereich_geaendert", "arbeitsbereich", str(space.id))

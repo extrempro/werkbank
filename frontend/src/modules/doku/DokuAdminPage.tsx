@@ -1,3 +1,4 @@
+import { EmojiPicker } from "../../components/EmojiPicker";
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import { Segmented } from "../../components/Field";
 import { errorText, formatDateTime } from "../../api";
@@ -47,13 +48,20 @@ function SpaceForm({
   const id = useId();
   const [name, setName] = useState(space?.name ?? "");
   const [description, setDescription] = useState(space?.description ?? "");
+  const [icon, setIcon] = useState(space?.icon ?? "");
   const [archived, setArchived] = useState(space?.archived ?? false);
   const [members, setMembers] = useState<PersonRight[]>(space?.members ?? []);
   const [busy, setBusy] = useState(false);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
-    const body = { name: name.trim(), description: description.trim(), archived, members };
+    const body = {
+      name: name.trim(),
+      description: description.trim(),
+      icon,
+      archived,
+      members,
+    };
     (space ? updateSpace(space.id, body) : createSpace(body)).then(
       () => {
         notifyTreeChanged();
@@ -76,6 +84,10 @@ function SpaceForm({
         <span>Name</span>
         <input value={name} maxLength={120} required onChange={(e) => setName(e.target.value)} />
       </label>
+      <div className="doku-field">
+        <span>Emoji (freiwillig)</span>
+        <EmojiPicker value={icon} onChange={setIcon} label="Emoji des Arbeitsbereichs wählen" />
+      </div>
       <label className="doku-field">
         <span>Beschreibung (freiwillig)</span>
         <input
@@ -168,6 +180,7 @@ function SpacesTab({ notify }: { notify: Notify }) {
               {spaces.map((space) => (
                 <tr key={space.id}>
                   <th scope="row">
+                    {space.icon && <span aria-hidden="true">{space.icon} </span>}
                     {space.name}
                     {space.archived && <span className="doku-badge">archiviert</span>}
                     {space.description && (

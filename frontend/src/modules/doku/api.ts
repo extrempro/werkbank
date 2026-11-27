@@ -26,6 +26,8 @@ export type DocJson = Record<string, unknown>;
 export interface SpaceRef {
   id: number;
   name: string;
+  /** Emoji vor dem Namen, leer: keins */
+  icon: string;
   description: string;
   /** „none“: nicht Mitglied, nur einzelne Seiten mit eigenen Rechten */
   role: SpaceRole;
@@ -41,6 +43,7 @@ export interface TreePage {
   id: string;
   parent_id: string | null;
   title: string;
+  icon: string;
   position: number;
   own_rights: boolean;
   locked: boolean;
@@ -54,6 +57,7 @@ export interface TreeSpace extends SpaceRef {
 export interface Crumb {
   id: string;
   title: string;
+  icon?: string;
 }
 
 export interface DokuPageData {
@@ -63,6 +67,8 @@ export interface DokuPageData {
   parent_id: string | null;
   path: Crumb[];
   title: string;
+  icon: string;
+  space_icon: string;
   content: DocJson;
   revision: number;
   role: "read" | "edit";
@@ -83,6 +89,7 @@ export interface DokuPageData {
 export interface SearchHit {
   id: string;
   title: string;
+  icon: string;
   space: string;
   snippet: string;
 }
@@ -180,8 +187,13 @@ export function createPage(body: {
   space_id: number;
   parent_id: string | null;
   title: string;
+  icon?: string;
 }): Promise<DokuPageData> {
   return postJson(`${BASE}/pages`, body, QUIET);
+}
+
+export function setPageIcon(id: string, icon: string): Promise<DokuPageData> {
+  return putJson(`${BASE}/pages/${id}/icon`, { icon }, QUIET);
 }
 
 export function savePage(
@@ -248,6 +260,7 @@ export function searchPeople(q: string): Promise<Person[]> {
 export interface AdminSpace {
   id: number;
   name: string;
+  icon: string;
   description: string;
   archived: boolean;
   people: number;
@@ -259,6 +272,7 @@ export interface AdminSpace {
 
 export interface SpaceInput {
   name: string;
+  icon: string;
   description: string;
   archived: boolean;
   members: PersonRight[];

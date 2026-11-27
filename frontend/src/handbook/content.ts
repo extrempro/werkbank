@@ -1884,10 +1884,14 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Klick im Menü auf „Neue Seite“.",
-                  "Gib einen Titel ein. Steht gerade eine Seite offen, kannst du die neue darunter anlegen; sonst wählst du den Arbeitsbereich.",
+                  "Fahr im Menü über einen Arbeitsbereich oder eine Seite und klick auf das kleine Plus rechts. Am Arbeitsbereich entsteht eine neue Seite, an einer Seite eine Unterseite. Am Tablet und Handy steht das Plus immer da.",
+                  "Tipp den Titel direkt im Baum ein und drück Enter. Die Seite wird angelegt und geöffnet. Mit Esc brichst du ab. Alternativ geht es weiter über „Neue Seite“ oben im Menü.",
                   "Schreib einfach los. Jede Änderung wird nach einem kurzen Moment automatisch gespeichert; oben rechts steht „Live · wird automatisch gespeichert“.",
                 ],
+              },
+              {
+                kind: "text",
+                text: "Vor jeden Titel kannst du ein Emoji setzen, zum Beispiel 🖥️ für Server oder 🔒 für Zugänge. Klick dazu beim Anlegen auf den Knopf links vom Titel oder auf einer offenen Seite auf das Feld vor dem Titel. Such ein Emoji oder wähl eins aus der Liste; „Emoji entfernen“ nimmt es wieder weg. Das Emoji steht dann auch im Baum, in der Suche und im Pfad. Ein Emoji für einen ganzen Arbeitsbereich setzt die Doku-Verwaltung.",
               },
               {
                 kind: "text",

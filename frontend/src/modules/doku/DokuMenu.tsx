@@ -1,9 +1,14 @@
-import { useEffect, useId, useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type MouseEvent } from "react";
 import { errorText } from "../../api";
+import { EmojiPicker } from "../../components/EmojiPicker";
+import { Field } from "../../components/Field";
 import { Icon } from "../../components/Icon";
+import { navigate } from "../../router";
 import { NewPageDialog } from "./NewPageDialog";
 import {
   buildTree,
+  createPage,
+  notifyTreeChanged,
   DOKU_ADMIN_PATH,
   DOKU_PATH,
   fetchDokuMe,
@@ -71,23 +76,113 @@ function ancestors(spaces: TreeSpace[], id: string | null): Set<string> {
   return result;
 }
 
+/** Wo gerade eine Seite direkt im Baum angelegt wird: oben im Arbeitsbereich oder unter einer Seite. */
+interface Adding {
+  spaceId: number;
+  parentId: string | null;
+}
+
+/** Titel (und wahlweise Emoji) einer neuen Seite direkt im Baum; Enter legt an, Esc bricht ab. */
+function InlineNewPage({
+  spaceId,
+  parentId,
+  where,
+  onDone,
+  onCreated,
+}: {
+  spaceId: number;
+  parentId: string | null;
+  /** Beschriftung, z. B. „Unterseite zu „Netzwerk““ */
+  where: string;
+  onDone: () => void;
+  onCreated?: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [icon, setIcon] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => input.current?.focus(), []);
+
+  const submit = () => {
+    const text = title.trim();
+    if (!text) {
+      onDone();
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    createPage({ space_id: spaceId, parent_id: parentId, title: text, icon }).then(
+      (page) => {
+        notifyTreeChanged();
+        onDone();
+        onCreated?.();
+        navigate(pagePath(page.id));
+      },
+      (problem: unknown) => {
+        setBusy(false);
+        setError(errorText(problem, "Die Seite konnte nicht angelegt werden."));
+        input.current?.focus();
+      },
+    );
+  };
+
+  return (
+    <form
+      className="doku-tree-new"
+      onSubmit={(event) => {
+        event.preventDefault();
+        submit();
+      }}
+    >
+      <Field label={where} hint="Enter legt an und öffnet die Seite, Esc bricht ab." error={error}>
+        {(control) => (
+          <div className="doku-tree-new-row">
+            <EmojiPicker value={icon} onChange={setIcon} label="Emoji wählen" disabled={busy} />
+            <input
+              {...control}
+              ref={input}
+              value={title}
+              maxLength={200}
+              autoComplete="off"
+              placeholder="Titel"
+              disabled={busy}
+              onChange={(event) => setTitle(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onDone();
+                }
+              }}
+            />
+          </div>
+        )}
+      </Field>
+    </form>
+  );
+}
+
 interface MenuProps {
   /** Geöffnete Seite (für Hervorhebung und offenen Weg). */
   pageId: string | null;
   adminOpen: boolean;
   onNavigate: (event: MouseEvent<HTMLAnchorElement>, path: string) => void;
+  /** Nach dem Anlegen im Baum (die Seite wird dann geöffnet), z. B. um das Blatt am Handy zu schließen */
+  onCreated?: () => void;
 }
 
 /**
  * Inhalt des Doku-Menüs: Suche, „Neue Seite“, die Arbeitsbereiche mit ihren Seiten als Baum
  * und für die Doku-Verwaltung der Weg zur Verwaltung. Steht im Seitenmenü und am Handy im Blatt.
  */
-export function DokuMenuContent({ pageId, adminOpen, onNavigate }: MenuProps) {
+export function DokuMenuContent({ pageId, adminOpen, onNavigate, onCreated }: MenuProps) {
   const { spaces, isAdmin, failed } = useDokuTree();
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[] | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [creating, setCreating] = useState(false);
+  const [adding, setAdding] = useState<Adding | null>(null);
   const baseId = useId();
   const term = query.trim();
 
@@ -127,10 +222,20 @@ export function DokuMenuContent({ pageId, adminOpen, onNavigate }: MenuProps) {
     </a>
   );
 
-  const renderPages = (nodes: PageNode[], depth: number) => (
+  const startAdding = (spaceId: number, parentId: string | null) => {
+    const same = adding?.spaceId === spaceId && adding.parentId === parentId;
+    setAdding(same ? null : { spaceId, parentId });
+    if (!same && parentId) {
+      setOpen((current) => ({ ...current, [parentId]: true }));
+    }
+  };
+
+  const renderPages = (nodes: PageNode[], depth: number, space: TreeSpace) => (
     <ul className="doku-tree-list" role={depth === 0 ? undefined : "group"}>
       {nodes.map((node) => {
         const expanded = isOpen(node.id, false);
+        const canAdd = node.can_edit && !node.locked && !space.archived;
+        const addingHere = adding?.spaceId === space.id && adding.parentId === node.id;
         return (
           <li key={node.id} className="doku-tree-item">
             <div className="doku-tree-row">
@@ -150,6 +255,11 @@ export function DokuMenuContent({ pageId, adminOpen, onNavigate }: MenuProps) {
               {link(
                 pagePath(node.id),
                 <>
+                  {node.icon && (
+                    <span className="doku-emoji" aria-hidden="true">
+                      {node.icon}
+                    </span>
+                  )}
                   <span className="doku-tree-title">{node.title}</span>
                   {node.own_rights && (
                     <span className="doku-tree-mark" title="eigene Rechte">
@@ -162,8 +272,29 @@ export function DokuMenuContent({ pageId, adminOpen, onNavigate }: MenuProps) {
                 node.id === pageId,
                 "doku-tree-link",
               )}
+              {canAdd && (
+                <button
+                  type="button"
+                  className="doku-tree-add"
+                  aria-label={`Unterseite zu ${node.title} anlegen`}
+                  title="Unterseite anlegen"
+                  aria-expanded={addingHere}
+                  onClick={() => startAdding(space.id, node.id)}
+                >
+                  <Icon name="plus" />
+                </button>
+              )}
             </div>
-            {expanded && node.children.length > 0 && renderPages(node.children, depth + 1)}
+            {addingHere && (
+              <InlineNewPage
+                spaceId={space.id}
+                parentId={node.id}
+                where={`Unterseite zu „${node.title}“`}
+                onDone={() => setAdding(null)}
+                onCreated={onCreated}
+              />
+            )}
+            {expanded && node.children.length > 0 && renderPages(node.children, depth + 1, space)}
           </li>
         );
       })}
@@ -220,6 +351,7 @@ export function DokuMenuContent({ pageId, adminOpen, onNavigate }: MenuProps) {
                   {link(
                     pagePath(hit.id),
                     <span className="nav-label">
+                      {hit.icon && <span aria-hidden="true">{hit.icon} </span>}
                       {hit.title}
                       <span className="small doku-hit-space"> · {hit.space}</span>
                     </span>,
@@ -245,29 +377,64 @@ export function DokuMenuContent({ pageId, adminOpen, onNavigate }: MenuProps) {
               const key = `s${space.id}`;
               const expanded = isOpen(key, spaces.length <= 3 && !space.archived);
               const listId = `${baseId}-${space.id}`;
+              const canAdd = !space.archived && (space.role === "edit" || space.role === "manage");
+              const addingHere = adding?.spaceId === space.id && adding.parentId === null;
               return (
                 <div className="side-group doku-space" key={space.id}>
-                  <button
-                    type="button"
-                    className="side-group-toggle handbook-area-toggle"
-                    aria-expanded={expanded}
-                    aria-controls={listId}
-                    onClick={() => toggle(key, spaces.length <= 3 && !space.archived)}
-                  >
-                    <Icon name="pfeil-unten" />
-                    <span className="handbook-area-title">
-                      {space.name}
-                      {space.archived && <span className="small"> · Archiv</span>}
-                    </span>
-                    <span className="handbook-area-count" aria-hidden="true">
-                      {space.pages.length}
-                    </span>
-                  </button>
+                  <div className="doku-space-head">
+                    <button
+                      type="button"
+                      className="side-group-toggle handbook-area-toggle"
+                      aria-expanded={expanded}
+                      aria-controls={listId}
+                      onClick={() => toggle(key, spaces.length <= 3 && !space.archived)}
+                    >
+                      <Icon name="pfeil-unten" />
+                      <span className="handbook-area-title">
+                        {space.icon && (
+                          <span className="doku-emoji" aria-hidden="true">
+                            {space.icon}{" "}
+                          </span>
+                        )}
+                        {space.name}
+                        {space.archived && <span className="small"> · Archiv</span>}
+                      </span>
+                      <span className="handbook-area-count" aria-hidden="true">
+                        {space.pages.length}
+                      </span>
+                    </button>
+                    {canAdd && (
+                      <button
+                        type="button"
+                        className="doku-tree-add"
+                        aria-label={`Neue Seite in ${space.name} anlegen`}
+                        title="Neue Seite anlegen"
+                        aria-expanded={addingHere}
+                        onClick={() => {
+                          startAdding(space.id, null);
+                          if (!expanded) {
+                            toggle(key, spaces.length <= 3 && !space.archived);
+                          }
+                        }}
+                      >
+                        <Icon name="plus" />
+                      </button>
+                    )}
+                  </div>
+                  {addingHere && (
+                    <InlineNewPage
+                      spaceId={space.id}
+                      parentId={null}
+                      where={`Neue Seite in ${space.name}`}
+                      onDone={() => setAdding(null)}
+                      onCreated={onCreated}
+                    />
+                  )}
                   <div id={listId} hidden={!expanded}>
                     {space.pages.length === 0 ? (
                       <p className="small doku-tree-empty">Noch keine Seiten.</p>
                     ) : (
-                      renderPages(buildTree(space.pages), 0)
+                      renderPages(buildTree(space.pages), 0, space)
                     )}
                   </div>
                 </div>

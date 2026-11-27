@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { ApiError, errorText, formatDateTime } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
+import { EmojiPicker } from "../../components/EmojiPicker";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
 import { PHONE_QUERY, useMediaQuery } from "../../components/FilterBar";
 import { Icon } from "../../components/Icon";
@@ -27,6 +28,7 @@ import {
   fetchVersion,
   lockPage,
   notifyTreeChanged,
+  setPageIcon,
   pagePath,
   restoreVersion,
   savePage,
@@ -153,7 +155,12 @@ function PhonePages({ pageId }: { pageId: string | null }) {
               </button>
             </div>
             <div className="sheet-body handbook-menu">
-              <DokuMenuContent pageId={pageId} adminOpen={false} onNavigate={go} />
+              <DokuMenuContent
+                pageId={pageId}
+                adminOpen={false}
+                onNavigate={go}
+                onCreated={() => setOpen(false)}
+              />
             </div>
           </div>
         </div>
@@ -206,6 +213,7 @@ export function DokuStartPage() {
               aria-labelledby={`bereich-${space.id}`}
             >
               <h2 id={`bereich-${space.id}`}>
+                {space.icon && <span aria-hidden="true">{space.icon} </span>}
                 {space.name}
                 {space.archived && <span className="doku-badge">Archiv</span>}
               </h2>
@@ -216,7 +224,10 @@ export function DokuStartPage() {
                 <ul className="doku-space-pages">
                   {top.slice(0, 12).map((page) => (
                     <li key={page.id}>
-                      <Link to={pagePath(page.id)}>{page.title}</Link>
+                      <Link to={pagePath(page.id)}>
+                        {page.icon && <span aria-hidden="true">{page.icon} </span>}
+                        {page.title}
+                      </Link>
                       {page.children.length > 0 && (
                         <span className="small"> · {page.children.length} Unterseiten</span>
                       )}
@@ -411,6 +422,23 @@ export function DokuPageView({ pageId }: { pageId: string }) {
       (problem: unknown) => setMessage({ kind: "alert", text: errorText(problem, fail) }),
     );
 
+  const changeIcon = (icon: string) =>
+    setPageIcon(pageId, icon).then(
+      (data) => {
+        apply(data, false);
+        notifyTreeChanged();
+        setMessage({
+          kind: "status",
+          text: icon ? "Das Emoji wurde gespeichert." : "Das Emoji wurde entfernt.",
+        });
+      },
+      (problem: unknown) =>
+        setMessage({
+          kind: "alert",
+          text: errorText(problem, "Das Emoji konnte nicht gespeichert werden."),
+        }),
+    );
+
   if (failed) {
     return (
       <div className="page page-wide">
@@ -464,12 +492,29 @@ export function DokuPageView({ pageId }: { pageId: string }) {
               {page.path.map((crumb, index) => (
                 <span key={crumb.id}>
                   {index > 0 && " › "}
-                  <Link to={pagePath(crumb.id)}>{crumb.title}</Link>
+                  <Link to={pagePath(crumb.id)}>
+                    {crumb.icon && <span aria-hidden="true">{crumb.icon} </span>}
+                    {crumb.title}
+                  </Link>
                 </span>
               ))}
             </nav>
           )}
           <h1 className="doku-title">
+            {editable ? (
+              <EmojiPicker
+                value={page.icon}
+                size="gross"
+                label="Emoji der Seite ändern"
+                onChange={changeIcon}
+              />
+            ) : (
+              page.icon && (
+                <span className="doku-title-emoji" aria-hidden="true">
+                  {page.icon}
+                </span>
+              )
+            )}
             {editable ? (
               <input
                 aria-label="Titel der Seite"

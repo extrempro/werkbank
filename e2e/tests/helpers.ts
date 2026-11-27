@@ -26,6 +26,10 @@ export async function loginAs(
 
 /** Barrierefreiheit nach WCAG 2.2 AA mit axe-core: keine Verstöße. */
 export async function expectNoA11yViolations(page: Page) {
+  // Inhalt läuft absichtlich unter der festen Kopfzeile durch. Ist die Seite gerade gescrollt,
+  // meldet axe Knöpfe darunter als „teilweise verdeckt“ (target-size); geprüft wird deshalb
+  // immer im Zustand ganz oben.
+  await page.evaluate(() => window.scrollTo(0, 0));
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
   expect(
     results.violations,

@@ -213,3 +213,50 @@ def clean_content(raw: object) -> tuple[dict[str, Any], str]:
 def doc_size(doc: dict[str, Any]) -> int:
     """Grobe Größe für die Grenze (Zeichen im JSON)."""
     return len(json.dumps(doc, ensure_ascii=False, separators=(",", ":")))
+
+
+# --- Emoji vor Titeln ---------------------------------------------------------------------
+
+ICON_MAX_CODEPOINTS = 10
+_ICON_RANGES = (
+    (0x1F000, 0x1FAFF),  # Bildzeichen, Flaggen, Hauttöne
+    (0x2190, 0x21FF),  # Pfeile
+    (0x2300, 0x23FF),  # Technik (Uhr, Tastatur …)
+    (0x2460, 0x24FF),
+    (0x25A0, 0x27BF),  # Formen, Dingbats, Wetter
+    (0x2900, 0x297F),
+    (0x2B00, 0x2BFF),
+    (0x3030, 0x3030),
+    (0x303D, 0x303D),
+    (0x3297, 0x3299),
+    (0x00A9, 0x00A9),
+    (0x00AE, 0x00AE),
+    (0x203C, 0x203C),
+    (0x2049, 0x2049),
+    (0x2122, 0x2122),
+    (0x2139, 0x2139),
+    (0x200D, 0x200D),  # Verbinder für zusammengesetzte Emoji
+    (0xFE0F, 0xFE0F),  # Darstellung als Emoji
+    (0x20E3, 0x20E3),  # Tastenkappe
+    (0xE0020, 0xE007F),  # Tags (Flaggen von Landesteilen)
+)
+
+
+def clean_icon(value: str) -> str:
+    """Genau ein Emoji oder leer. Buchstaben, Ziffern (außer Tastenkappen) und Steuerzeichen
+    werden abgelehnt, damit hier kein Text und kein Markup landet."""
+    value = value.strip()
+    if not value:
+        return ""
+    points = [ord(ch) for ch in value]
+    if len(points) > ICON_MAX_CODEPOINTS:
+        raise ValueError("Bitte genau ein Emoji wählen.")
+    keycap = 0x20E3 in points
+    for point in points:
+        if keycap and (0x30 <= point <= 0x39 or point in (0x23, 0x2A)):
+            continue
+        if not any(low <= point <= high for low, high in _ICON_RANGES):
+            raise ValueError("Bitte genau ein Emoji wählen.")
+    if all(point in (0x200D, 0xFE0F, 0x20E3) for point in points):
+        raise ValueError("Bitte genau ein Emoji wählen.")
+    return value
