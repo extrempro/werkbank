@@ -1,6 +1,7 @@
 """Abruf der Einstellungen aus dem Tenant über UTCM (spec.md 7.1).
 
-Ablauf: Die Typen werden nach Workload gruppiert (entra, exchange, teams, …). Je Gruppe stößt
+Ablauf: Die Typen werden nach Workload gruppiert (entra, exchange, teams, …); große Gruppen
+werden in Teile mit höchstens ``COLLECTOR_MAX_TYPES_PER_JOB`` Typen geteilt. Je Teil stößt
 die Werkbank nacheinander einen Snapshot bei UTCM an, wartet auf das Ergebnis und lädt es
 herunter. Alle Ergebnisse werden in einzelne Einstellungen zerlegt und zusammen mit dem Bestand
 verglichen (versioning.py, ein Snapshot der Werkbank). Scheitert eine Gruppe, gelten nur ihre
@@ -51,6 +52,8 @@ JOB_NAME_PREFIX = "Werkbank "
 _JOB_NAME = re.compile(r"^Werkbank \d{6} \d{6} [0-9a-f]{4}$")
 # UTCM zeigt höchstens so viele Aufträge je Tenant; darüber lässt sich keiner mehr anlegen
 MAX_VISIBLE_JOBS = 12
+# Ab so vielen geplanten Aufträgen warnt das Protokoll (Platz bei UTCM wird knapp)
+PLANNED_JOBS_WARNING = 10
 # Ein fertiger, nicht abgeholter Auftrag wird so lange im nächsten Lauf übernommen
 REUSE_JOB_MAX_AGE = timedelta(hours=24)
 WORKLOAD_LABELS = {
@@ -295,6 +298,61 @@ def group_key(workload: str, resources: list[str]) -> str:
     return f"{workload} {digest}"
 
 
+def split_types(resources: list[str], limit: int) -> list[list[str]]:
+    """Teilt eine Typengruppe in möglichst gleich große Teile mit höchstens ``limit`` Typen.
+
+    Die Reihenfolge bleibt erhalten (z. B. 29 Typen bei 10 → 10/10/9), damit die Teile und ihre
+    Kennungen von Lauf zu Lauf gleich bleiben und fertige Aufträge übernommen werden können.
+    """
+    if not resources:
+        return []
+    limit = max(1, limit)
+    parts = -(-len(resources) // limit)
+    base, extra = divmod(len(resources), parts)
+    result: list[list[str]] = []
+    start = 0
+    for index in range(parts):
+        size = base + (1 if index < extra else 0)
+        result.append(resources[start : start + size])
+        start += size
+    return result
+
+
+@dataclass(frozen=True)
+class JobGroup:
+    """Ein UTCM-Auftrag: Typen einer Workload, ggf. ein Teil davon."""
+
+    key: str
+    workload: str
+    resources: list[str]
+    part: int = 1
+    parts: int = 1
+
+    @property
+    def label(self) -> str:
+        """Für Fehlertexte und Protokoll, z. B. „Intune · Teil 2/3“."""
+        name = workload_label(self.workload)
+        return name if self.parts == 1 else f"{name} · Teil {self.part}/{self.parts}"
+
+
+def plan_groups(resources: list[str], limit: int) -> list[JobGroup]:
+    """Aufträge eines Laufs: je Workload, große Workloads in Teile mit höchstens ``limit`` Typen."""
+    groups: list[JobGroup] = []
+    for workload, names in group_resources(resources).items():
+        chunks = split_types(names, limit)
+        for index, chunk in enumerate(chunks, start=1):
+            groups.append(
+                JobGroup(
+                    key=group_key(workload, chunk),
+                    workload=workload,
+                    resources=chunk,
+                    part=index,
+                    parts=len(chunks),
+                )
+            )
+    return groups
+
+
 def job_name(key: str, started_at: datetime) -> str:
     """Name des Auftrags, z. B. „Werkbank 261126 075220 3f9a“ (27 Zeichen)."""
     digest = key.split(" ")[-1][:4]
@@ -404,8 +462,7 @@ def _fail(label: str, step: str, detail: object) -> GroupError:
 def _run_group(
     client: UtcmClient,
     settings: Settings,
-    key: str,
-    resources: list[str],
+    group: JobGroup,
     started_at: datetime,
     plan: JobPlan,
     *,
@@ -413,18 +470,16 @@ def _run_group(
     clock: Callable[[], float],
 ) -> GroupResult:
     """Ein Snapshot-Auftrag für eine Typengruppe: anlegen (oder übernehmen), warten, laden."""
-    label = workload_label(key.split(" ")[0])
+    key = group.key
+    resources = group.resources
+    label = group.label
     job = plan.reusable.get(key)
     if job is not None:
         job_id = str(job["id"])
         logger.info("%s: fertiger Snapshot-Auftrag aus einem früheren Lauf wird übernommen", label)
     else:
         if plan.visible >= MAX_VISIBLE_JOBS:
-            raise _fail(
-                label,
-                STEP_CREATE,
-                f"In UTCM stehen schon {plan.visible} Aufträge (höchstens {MAX_VISIBLE_JOBS})",
-            )
+            raise GroupError(f"{label}: kein freier Platz bei UTCM"[:ERROR_LENGTH])
         try:
             job_id = client.create_snapshot(
                 job_name(key, started_at), job_description(key), resources
@@ -455,11 +510,21 @@ def _run_group(
         except UtcmError:
             logger.warning("Snapshot-Auftrag konnte nicht entfernt werden", exc_info=True)
         raise _fail(label, STEP_FAILED, details or "ohne Angabe")
+    began = clock()
     try:
-        document = client.download(location)
+        document, size = client.download_with_size(location)
     except UtcmError as exc:
         # Der fertige Auftrag bleibt stehen; der nächste Lauf holt ihn ab
         raise _fail(label, STEP_DOWNLOAD, exc) from exc
+    resources_in = document.get("resources")
+    logger.info(
+        "%s: %d Typen, %d Objekte, %.0f KB, Download %.1f s",
+        label,
+        len(resources),
+        len(resources_in) if isinstance(resources_in, list) else 0,
+        size / 1024,
+        clock() - began,
+    )
     return GroupResult(document=document, job=job, job_id=job_id)
 
 
@@ -473,7 +538,8 @@ def collect(
 ) -> SnapshotResult:
     """Holt die Einstellungen und übernimmt sie in einen Snapshot.
 
-    Je Workload ein UTCM-Auftrag; scheitert einer, gelten nur seine Typen als nicht gelesen.
+    Je Workload (bzw. Teil einer großen Workload) ein UTCM-Auftrag; scheitert einer, gelten nur
+    seine Typen als nicht gelesen.
     Wirft CollectorError, wenn gar nichts gelesen werden konnte (der Snapshot steht dann mit
     Fehlertext je Quelle als fehlgeschlagen in der Werkbank).
     """
@@ -487,9 +553,19 @@ def collect(
             CfgSnapshot.status.in_((SnapshotStatus.OK, SnapshotStatus.PARTIAL))
         )
     )
-    groups = {
-        group_key(workload, names): names for workload, names in group_resources(resources).items()
-    }
+    jobs = plan_groups(resources, settings.collector_max_types_per_job)
+    logger.info(
+        "Abruf aus UTCM: %d Typen, %d Aufträge geplant (höchstens %d Typen je Auftrag)",
+        len(resources),
+        len(jobs),
+        settings.collector_max_types_per_job,
+    )
+    if len(jobs) > PLANNED_JOBS_WARNING:
+        logger.warning(
+            "Abruf aus UTCM: %d Aufträge geplant; UTCM zeigt höchstens %d gleichzeitig",
+            len(jobs),
+            MAX_VISIBLE_JOBS,
+        )
 
     items: list[SettingValue] = []
     status: dict[str, bool] = {}
@@ -503,27 +579,34 @@ def collect(
             errors[source_name(name)] = text
 
     if used >= MONTHLY_RESOURCE_LIMIT:
-        for key, names in groups.items():
+        for job in jobs:
             fail_group(
-                names,
+                job.resources,
                 _text(
-                    workload_label(key.split(" ")[0]),
-                    STEP_CREATE,
-                    "Monatskontingent von UTCM ist ausgeschöpft, kein Abruf",
+                    job.label, STEP_CREATE, "Monatskontingent von UTCM ist ausgeschöpft, kein Abruf"
                 ),
             )
     else:
         try:
-            plan = plan_jobs(client, set(groups), started_at)
+            plan = plan_jobs(client, {job.key for job in jobs}, started_at)
         except UtcmError as exc:
             logger.warning("Snapshot-Aufträge in UTCM konnten nicht gelesen werden: %s", exc)
             plan = JobPlan()
-        for key, names in groups.items():
+        new_jobs = sum(1 for job in jobs if job.key not in plan.reusable)
+        free = max(0, MAX_VISIBLE_JOBS - plan.visible)
+        if new_jobs > free:
+            logger.warning(
+                "Abruf aus UTCM: %d neue Aufträge nötig, aber nur %d Plätze frei; "
+                "die übrigen Teile werden in diesem Lauf übersprungen",
+                new_jobs,
+                free,
+            )
+        for job in jobs:
             if used + resource_count >= MONTHLY_RESOURCE_LIMIT:
                 fail_group(
-                    names,
+                    job.resources,
                     _text(
-                        workload_label(key.split(" ")[0]),
+                        job.label,
                         STEP_CREATE,
                         "Monatskontingent von UTCM ist ausgeschöpft, kein Abruf",
                     ),
@@ -531,17 +614,17 @@ def collect(
                 continue
             try:
                 group = _run_group(
-                    client, settings, key, names, started_at, plan, sleep=sleep, clock=clock
+                    client, settings, job, started_at, plan, sleep=sleep, clock=clock
                 )
             except GroupError as exc:
                 logger.warning("Abruf aus UTCM: %s", exc)
-                fail_group(names, str(exc))
+                fail_group(job.resources, str(exc))
                 continue
             group_items, count = parse_snapshot(group.document)
             items.extend(group_items)
             resource_count += count
-            status.update(source_status(names, group.job))
-            errors.update(source_errors(names, group.job))
+            status.update(source_status(job.resources, group.job))
+            errors.update(source_errors(job.resources, group.job))
             finished_jobs.append(group.job_id)
 
     if settings.collector_sharepoint_enabled:
@@ -577,7 +660,7 @@ def collect(
             "UTCM-Monatskontingent zu %d %% verbraucht", round(100 * total / MONTHLY_RESOURCE_LIMIT)
         )
     failed_groups = sum(
-        1 for names in groups.values() if not all(status.get(source_name(n)) for n in names)
+        1 for job in jobs if not all(status.get(source_name(n)) for n in job.resources)
     )
     write_audit(
         db,
@@ -589,7 +672,7 @@ def collect(
         details={
             "objekte": resource_count,
             "objekte_im_monat": total,
-            "gruppen": len(groups),
+            "gruppen": len(jobs),
             "gruppen_mit_fehler": failed_groups,
             "ausgangsstand": result.baseline,
             "neu": result.new,

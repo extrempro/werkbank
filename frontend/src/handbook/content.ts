@@ -521,6 +521,10 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
+                text: "Dienste mit vielen Typen, zum Beispiel Intune, fragt die Werkbank in mehreren Teilen ab, damit die Antworten nicht zu groß werden. Der Fehlertext nennt dann auch den Teil, zum Beispiel „Intune · Teil 2/3 · Download: …“; nur die Typen dieses Teils fehlen in dem Abruf, die übrigen werden übernommen. „Kein freier Platz bei UTCM“ heißt: Microsoft lässt nur zwölf Aufträge gleichzeitig zu, der Teil kommt beim nächsten Abruf dran.",
+              },
+              {
+                kind: "text",
                 text: "Die Liste zeigt zuerst die letzten 10 Abrufe; über „Weitere 10 anzeigen“ holst du ältere dazu. Bei den Quellen steht nur, wie viele vollständig gelesen wurden und wie viele einen Fehler hatten. Aufgeklappt siehst du die Fehler, zusammengefasst nach der fehlenden Berechtigung, und welche Typen betroffen sind. Abrufe ohne Änderungen löscht die Werkbank nach einiger Zeit (Vorgabe 90 Tage); Abrufe mit Änderungen und die letzten 10 bleiben immer erhalten.",
               },
               {
