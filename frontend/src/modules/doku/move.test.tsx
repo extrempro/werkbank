@@ -10,6 +10,7 @@ function tree(role: TreeSpace["role"] = "edit"): TreeSpace[] {
     id,
     parent_id: parent,
     title,
+    icon: "",
     position,
     own_rights: false,
     locked: false,
@@ -19,6 +20,7 @@ function tree(role: TreeSpace["role"] = "edit"): TreeSpace[] {
     {
       id: 1,
       name: "IT",
+      icon: "",
       description: "",
       role,
       archived: false,

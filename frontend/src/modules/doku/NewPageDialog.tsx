@@ -1,4 +1,5 @@
 import { useId, useRef, useState, type FormEvent } from "react";
+import { EmojiPicker } from "../../components/EmojiPicker";
 import { Field } from "../../components/Field";
 import { ListChoice } from "../../components/ListChoice";
 import { createPortal } from "react-dom";
@@ -29,6 +30,7 @@ export function NewPageDialog({
     (space) => !space.archived && (space.role === "edit" || space.role === "manage"),
   );
   const [title, setTitle] = useState("");
+  const [icon, setIcon] = useState("");
   const [below, setBelow] = useState(parent !== undefined);
   const [spaceId, setSpaceId] = useState<number>(parent?.space.id ?? writable[0]?.id ?? 0);
   const [busy, setBusy] = useState(false);
@@ -47,6 +49,7 @@ export function NewPageDialog({
       space_id: below && parent ? parent.space.id : spaceId,
       parent_id: below && parent ? parent.page.id : null,
       title: title.trim(),
+      icon,
     }).then(
       (page) => {
         notifyTreeChanged();
@@ -74,12 +77,15 @@ export function NewPageDialog({
         <h2 id={titleId}>Neue Seite</h2>
         <Field label="Titel" required>
           {(control) => (
-            <input
-              {...control}
-              value={title}
-              maxLength={200}
-              onChange={(event) => setTitle(event.target.value)}
-            />
+            <div className="doku-tree-new-row">
+              <EmojiPicker value={icon} onChange={setIcon} label="Emoji wählen" disabled={busy} />
+              <input
+                {...control}
+                value={title}
+                maxLength={200}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+            </div>
           )}
         </Field>
         {parent && (

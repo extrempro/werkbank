@@ -43,6 +43,8 @@ class DokuSpace(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), unique=True)
     description: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    # Ein Emoji vor dem Namen (leer: keins)
+    icon: Mapped[str] = mapped_column(String(32), default="", server_default="")
     # Archiviert: nur noch lesbar, im Seitenbaum unten unter „Archiv“
     archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sql_text("false"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -78,6 +80,8 @@ class DokuPage(Base):
     )
     position: Mapped[int] = mapped_column(Integer, default=0, server_default=sql_text("0"))
     title: Mapped[str] = mapped_column(String(200))
+    # Ein Emoji vor dem Titel (leer: keins)
+    icon: Mapped[str] = mapped_column(String(32), default="", server_default="")
     content: Mapped[dict[str, Any]] = mapped_column(JSONB)
     # Stand des gemeinsamen Dokuments (Yjs) für die Live-Bearbeitung; leer: aus `content` aufbauen
     ystate: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
