@@ -987,58 +987,69 @@ describe("TicketPage: Aufbewahrung", () => {
 });
 
 describe("Einstellungen in Reitern", () => {
-  it("liest den Reiter aus dem Pfad", () => {
-    expect(parseSettingsPath("/tickets/einstellungen")).toBe("bereiche");
+  it("liest den Reiter aus dem Pfad, alte Reiter führen auf die neuen", () => {
+    expect(parseSettingsPath("/tickets/einstellungen")).toBe("allgemein");
     expect(parseSettingsPath("/tickets/einstellungen/email")).toBe("email");
+    expect(parseSettingsPath("/tickets/einstellungen/bereiche")).toBe("bereiche");
+    expect(parseSettingsPath("/tickets/einstellungen/kategorien")).toBe("arbeit");
+    expect(parseSettingsPath("/tickets/einstellungen/textbausteine")).toBe("arbeit");
+    expect(parseSettingsPath("/tickets/einstellungen/aufbewahrung")).toBe("pflege");
+    expect(parseSettingsPath("/tickets/einstellungen/rollen")).toBe("allgemein");
     expect(parseSettingsPath("/tickets/einstellungen/unbekannt")).toBeNull();
     expect(parseSettingsPath("/tickets")).toBeNull();
-    expect(settingsPath("bereiche")).toBe("/tickets/einstellungen");
-    expect(settingsPath("aufbewahrung", 3)).toBe("/tickets/einstellungen/aufbewahrung?bereich=3");
+    expect(settingsPath("allgemein")).toBe("/tickets/einstellungen");
+    expect(settingsPath("pflege", 3)).toBe("/tickets/einstellungen/pflege?bereich=3");
   });
 
-  it("zeigt die Reiter der Einstellungen, ohne eigene Mail-Gestaltung", async () => {
+  it("zeigt vier Reiter je Bereich und „Bereiche verwalten“ für die Verwaltung", async () => {
+    const area = (id: number, name: string) => ({
+      id,
+      name,
+      mailbox: `${name.toLowerCase()}@example.com`,
+      assignment: "first",
+      active: true,
+      manage: true,
+      color: "blau",
+      grants: [],
+    });
     const settings = (manager: boolean) =>
-      new Response(
-        JSON.stringify({
-          manager,
-          areas: [
-            {
-              id: 1,
-              name: "IT",
-              mailbox: "it@example.com",
-              assignment: "first",
-              active: true,
-              manage: true,
-              grants: [],
-            },
-          ],
-        }),
-        { status: 200 },
-      );
+      new Response(JSON.stringify({ manager, areas: [area(1, "IT"), area(2, "Haus")] }), {
+        status: 200,
+      });
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => settings(false)),
     );
-    const { unmount } = render(<TicketSettingsPage tab="bereiche" />);
-    const nav = await screen.findByRole("navigation", { name: "Einstellungen der Tickets" });
-    await screen.findByRole("heading", { name: "IT" });
-    expect(within(nav).queryByRole("link", { name: "E-Mail-Gestaltung" })).toBeNull();
-    expect(within(nav).getByRole("link", { name: "Bereiche" }).getAttribute("aria-current")).toBe(
+    const { unmount } = render(<TicketSettingsPage tab="allgemein" />);
+    const nav = await screen.findByRole("navigation", { name: "Einstellungen des Bereichs" });
+    expect(
+      within(nav)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Allgemein", "E-Mail", "Arbeit", "Pflege"]);
+    expect(within(nav).getByRole("link", { name: "Allgemein" }).getAttribute("aria-current")).toBe(
       "page",
     );
-    expect(within(nav).getByRole("link", { name: "Aufbewahrung" }).getAttribute("href")).toBe(
-      "/tickets/einstellungen/aufbewahrung?bereich=1",
+    expect(within(nav).getByRole("link", { name: "Pflege" }).getAttribute("href")).toBe(
+      "/tickets/einstellungen/pflege?bereich=1",
     );
+    // Bereich einmal oben wählen, die Reiter folgen
+    fireEvent.click(screen.getByRole("radio", { name: /Haus/ }));
+    expect(within(nav).getByRole("link", { name: "Pflege" }).getAttribute("href")).toBe(
+      "/tickets/einstellungen/pflege?bereich=2",
+    );
+    expect(screen.getByRole("link", { name: "Alle Bereiche und Rechte" })).toBeTruthy();
     unmount();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => settings(true)),
     );
     render(<TicketSettingsPage tab="bereiche" />);
-    const nav2 = await screen.findByRole("navigation", { name: "Einstellungen der Tickets" });
-    await screen.findByRole("heading", { name: "IT" });
-    expect(within(nav2).queryByRole("link", { name: "E-Mail-Gestaltung" })).toBeNull();
-    expect(within(nav2).getByRole("link", { name: "Textbausteine" })).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Bereiche verwalten" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Einstellungen des Bereichs" })).toBeNull();
+    expect(screen.getByRole("link", { name: "‹ Zurück zu den Einstellungen" })).toBeTruthy();
   });
 });
 

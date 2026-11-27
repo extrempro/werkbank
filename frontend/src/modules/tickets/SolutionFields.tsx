@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { Field } from "../../components/Field";
 import { ListChoice } from "../../components/ListChoice";
 import { InfoTip } from "../../components/InfoTip";
 import type { SolutionInput, SolutionType } from "./api";
@@ -19,13 +19,11 @@ export function SolutionFields({
   /** Hinweis, dass die Lösung in der Mail steht (nur, wenn eine Mail rausgeht) */
   mailHint?: boolean;
 }) {
-  const id = useId();
   return (
     <fieldset className="ticket-solution">
       <legend>
-        Lösung <span className="small">(freiwillig)</span>
+        Lösung <span className="small">(freiwillig)</span> <InfoTip term="tickets.loesung" />
       </legend>
-      <InfoTip term="tickets.loesung" />
       {types.length > 0 && (
         <ListChoice
           label="Lösungsart"
@@ -37,17 +35,18 @@ export function SolutionFields({
           onChange={(next) => onChange({ ...value, type_id: next ? Number(next) : null })}
         />
       )}
-      <label htmlFor={`${id}-text`}>
-        Was wurde gemacht?
-        <textarea
-          id={`${id}-text`}
-          rows={2}
-          maxLength={2000}
-          value={value.text}
-          onChange={(event) => onChange({ ...value, text: event.target.value })}
-        />
-      </label>
-      <label className="check-label">
+      <Field label="Was wurde gemacht?">
+        {(control) => (
+          <textarea
+            {...control}
+            rows={3}
+            maxLength={2000}
+            value={value.text}
+            onChange={(event) => onChange({ ...value, text: event.target.value })}
+          />
+        )}
+      </Field>
+      <label className="check-label ticket-solution-public">
         <input
           type="checkbox"
           checked={value.public}

@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.149.0] – 2026-11-27
+
+### Tickets
+
+- **Einstellungen eines Bereichs neu geordnet.** Oben der Bereich (Auswahl bei mehreren), darunter vier Reiter: **Allgemein** (Name, Postfach, Rollen), **E-Mail** (Eingang, Anhänge, Mails an den Melder, automatische Mails als nummerierte Schritte, ein Speichern-Knopf unten), **Arbeit** (Kategorien, Lösungsarten, Fristen, Textbausteine) und **Pflege** (Zu prüfen, Sperrliste, Letzte Eingänge, Aufbewahrung inkl. Löschfristen des Eingangs). Neuer Bereich anlegen, alle Bereiche, Standard-Aufbewahrung, Rollenübersicht und Protokoll liegen unter „Bereiche verwalten“ (`/tickets/einstellungen/bereiche`). Alte Adressen (`kategorien`, `textbausteine`, `aufbewahrung`, `rollen`) werden umgeleitet; der Link in der Hinweis-Mail zu „Zu prüfen“ zeigt auf „Pflege“.
+- Dateitypen der Anhänge in Gruppen (PDF, Bilder, Office, Text und CSV, Mails, ZIP, Sonstige) mit Sammelhäkchen.
+- **„Gelöst“ im Design der Masken:** Info-Symbol an der Überschrift, „Was wurde gemacht?“ als gemeinsames Feld.
+- **Personensuche in „An“ und „Cc“:** neben den Beteiligten auch Personen aus Entra (ab zwei Zeichen, über `/api/tickets/people`), mit Abteilung und Hinweis „aus Entra“. `MailRecipients` hat dafür die optionale Eigenschaft `search`.
+- Tests: Unit-Tests der Einstellungen in Reitern und der Suche in `MailRecipients`, E2E der Einstellungen an die neuen Pfade angepasst. Doku: `spec.md`, `design.md`, Handbuch, Info-Texte.
+
 ## [0.148.0] – 2026-11-26
 
 ### Tickets

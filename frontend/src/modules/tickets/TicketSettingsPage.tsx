@@ -5,6 +5,7 @@ import { ColorChoice } from "../../components/ColorChoice";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
 import { InfoTip } from "../../components/InfoTip";
 import { Link } from "../../components/Link";
+import { ListChoice } from "../../components/ListChoice";
 import type { HelpKey } from "../../help/terms";
 import { TICKETS_SETTINGS_PATH } from "../../navigation";
 import {
@@ -557,44 +558,81 @@ function NewAreaForm({
   );
 }
 
+/** Vier Reiter je Bereich, dazu „Bereiche verwalten“ (alle Bereiche, Vorgaben, Rechte). */
 export const SETTINGS_TABS = [
-  { id: "bereiche", label: "Bereiche" },
-  { id: "kategorien", label: "Kategorien, Lösungen und Fristen" },
-  { id: "email", label: "E-Mail-Eingang" },
-  { id: "textbausteine", label: "Textbausteine" },
-  { id: "aufbewahrung", label: "Aufbewahrung" },
-  { id: "rollen", label: "Rollen" },
+  { id: "allgemein", label: "Allgemein" },
+  { id: "email", label: "E-Mail" },
+  { id: "arbeit", label: "Arbeit" },
+  { id: "pflege", label: "Pflege" },
 ] as const;
-export type SettingsTab = (typeof SETTINGS_TABS)[number]["id"];
+export type SettingsTab = (typeof SETTINGS_TABS)[number]["id"] | "bereiche";
 
-/** Reiter aus dem Pfad: `/tickets/einstellungen` → Bereiche, `/tickets/einstellungen/email` → … */
+// Reiter bis 0.148, damit alte Links und Lesezeichen weiter passen
+const OLD_TABS: Record<string, SettingsTab> = {
+  kategorien: "arbeit",
+  textbausteine: "arbeit",
+  aufbewahrung: "pflege",
+  rollen: "allgemein",
+};
+
+/** Reiter aus dem Pfad: `/tickets/einstellungen` → Allgemein, `/tickets/einstellungen/email` → … */
 export function parseSettingsPath(path: string): SettingsTab | null {
   if (path === TICKETS_SETTINGS_PATH) {
-    return "bereiche";
+    return "allgemein";
   }
   const rest = path.startsWith(`${TICKETS_SETTINGS_PATH}/`)
     ? path.slice(TICKETS_SETTINGS_PATH.length + 1)
     : null;
-  return SETTINGS_TABS.find((t) => t.id === rest)?.id ?? null;
+  if (rest === "bereiche") {
+    return "bereiche";
+  }
+  return SETTINGS_TABS.find((t) => t.id === rest)?.id ?? (rest ? (OLD_TABS[rest] ?? null) : null);
 }
 
 export function settingsPath(tab: SettingsTab, area: number | null = null): string {
-  const base = tab === "bereiche" ? TICKETS_SETTINGS_PATH : `${TICKETS_SETTINGS_PATH}/${tab}`;
+  const base = tab === "allgemein" ? TICKETS_SETTINGS_PATH : `${TICKETS_SETTINGS_PATH}/${tab}`;
   return area === null ? base : `${base}?bereich=${area}`;
 }
-
-/** Reiter, die je Bereich gelten (mit Auswahl des Bereichs). */
-const AREA_TABS: readonly SettingsTab[] = [
-  "kategorien",
-  "email",
-  "textbausteine",
-  "aufbewahrung",
-  "rollen",
-];
 
 function areaFromUrl(): number | null {
   const value = Number(new URLSearchParams(window.location.search).get("bereich"));
   return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+/** Abschnitt eines Reiters: Nummer, Überschrift und ein Satz Erklärung. */
+function SettingsStep({
+  number,
+  title,
+  hint,
+  term,
+  id,
+  children,
+}: {
+  number: number;
+  title: string;
+  hint?: string;
+  term?: HelpKey;
+  id?: string;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <section className="panel settings-step" aria-labelledby={headingId} id={id}>
+      <div className="panel-head">
+        <h2 id={headingId}>
+          <span className="form-step-number" aria-hidden="true">
+            {number}
+          </span>
+          {title}
+        </h2>
+        {term && <InfoTip term={term} />}
+      </div>
+      <div className="detail-body">
+        {hint && <p className="settings-step-hint">{hint}</p>}
+        {children}
+      </div>
+    </section>
+  );
 }
 
 export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
@@ -602,7 +640,6 @@ export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
   const [failed, setFailed] = useState<string | null>(null);
   const [message, setMessage] = useState<FeedbackMessage | null>(null);
   const [wanted, setWanted] = useState<number | null>(() => areaFromUrl());
-  const areaSelectId = useId();
 
   useEffect(() => {
     let active = true;
@@ -630,10 +667,17 @@ export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
     window.dispatchEvent(new Event(TICKET_ACCESS_CHANGED));
   };
 
-  const tabs = SETTINGS_TABS;
-  const current = tabs.some((t) => t.id === tab) ? tab : "bereiche";
+  const current = tab;
   const area = data?.areas.find((a) => a.id === wanted) ?? data?.areas[0] ?? null;
-  const perArea = AREA_TABS.includes(current);
+  const perArea = current !== "bereiche";
+
+  // Alte Reiter (bis 0.148) auf die neue Adresse umschreiben, ohne Eintrag im Verlauf
+  useEffect(() => {
+    const wantedPath = settingsPath(current, areaFromUrl());
+    if (`${window.location.pathname}${window.location.search}` !== wantedPath) {
+      window.history.replaceState(null, "", wantedPath);
+    }
+  }, [current]);
 
   const chooseArea = (id: number) => {
     setWanted(id);
@@ -642,29 +686,18 @@ export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
   };
 
   return (
-    <div className="page page-wide">
+    <div className="page page-wide ticket-settings">
       <header className="page-head">
         <div>
           <p className="module-label">Tickets</p>
-          <h1>Einstellungen</h1>
+          <h1>{current === "bereiche" ? "Bereiche verwalten" : "Einstellungen"}</h1>
           <p className="page-sub">
-            Bereiche, Kategorien, Lösungen und Fristen, E-Mail, Textbausteine, Aufbewahrung und
-            Rollen.
+            {current === "bereiche"
+              ? "Alle Bereiche, Vorgaben für neue Bereiche und wer welche Rechte hat."
+              : "Wähle den Bereich, dann den Reiter. Was du änderst, speicherst du im jeweiligen Abschnitt."}
           </p>
         </div>
       </header>
-      <nav className="project-tabs" aria-label="Einstellungen der Tickets">
-        {tabs.map((t) => (
-          <Link
-            key={t.id}
-            to={settingsPath(t.id, AREA_TABS.includes(t.id) && area ? area.id : null)}
-            className={t.id === current ? "project-tab project-tab-on" : "project-tab"}
-            aria-current={t.id === current ? "page" : undefined}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
       {failed && (
         <p role="alert" className="hint-box hint-bad">
           {failed}
@@ -675,37 +708,56 @@ export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
       {data && perArea && data.areas.length === 0 && (
         <p className="panel panel-empty">
           Es gibt noch keinen Bereich.
-          {data.manager ? " Leg ihn unter „Bereiche“ an." : ""}
+          {data.manager ? " Leg ihn unter „Bereiche verwalten“ an." : ""}
         </p>
       )}
-      {data && perArea && area && data.areas.length > 1 && (
-        <section className="panel stat-filters" aria-label="Bereich wählen">
-          <label htmlFor={areaSelectId} className="filter-field">
-            Bereich
-            <select
-              id={areaSelectId}
-              value={area.id}
-              onChange={(event) => chooseArea(Number(event.target.value))}
+      {data && perArea && area && (
+        <div className="ticket-settings-area">
+          {data.areas.length > 1 && (
+            <ListChoice
+              label="Bereich"
+              unit="Bereiche"
+              value={String(area.id)}
+              onChange={(value) => chooseArea(Number(value))}
+              options={data.areas.map((a) => ({
+                id: a.id,
+                label: a.active ? a.name : `${a.name} (inaktiv)`,
+                detail: a.mailbox || "ohne Postfach",
+              }))}
+            />
+          )}
+          <p className="small">
+            <Link to={settingsPath("bereiche")}>
+              {data.manager ? "Bereiche verwalten" : "Alle Bereiche und Rechte"}
+            </Link>
+          </p>
+        </div>
+      )}
+      {data && current === "bereiche" && (
+        <p className="small">
+          <Link to={settingsPath("allgemein", area?.id ?? null)}>
+            ‹ Zurück zu den Einstellungen
+          </Link>
+        </p>
+      )}
+      {data && perArea && area && (
+        <nav className="project-tabs" aria-label="Einstellungen des Bereichs">
+          {SETTINGS_TABS.map((t) => (
+            <Link
+              key={t.id}
+              to={settingsPath(t.id, area.id)}
+              className={t.id === current ? "project-tab project-tab-on" : "project-tab"}
+              aria-current={t.id === current ? "page" : undefined}
             >
-              {data.areas.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                  {a.active ? "" : " (inaktiv)"}
-                </option>
-              ))}
-            </select>
-          </label>
-        </section>
+              {t.label}
+            </Link>
+          ))}
+        </nav>
       )}
 
       {data && current === "bereiche" && (
         <>
           {data.manager && <NewAreaForm onCreated={replace} onMessage={setMessage} />}
-          {data.areas.length === 0 && (
-            <p className="panel panel-empty">
-              Es gibt noch keinen Bereich.{data.manager ? " Lege oben den ersten an." : ""}
-            </p>
-          )}
           {data.areas.map((a) => (
             <AreaPanel
               key={a.id}
@@ -715,96 +767,94 @@ export function TicketSettingsPage({ tab }: { tab: SettingsTab }) {
               onMessage={setMessage}
             />
           ))}
-        </>
-      )}
-      {data && area && current === "kategorien" && (
-        <div key={area.id}>
-          <SettingsPanel title="Kategorien" term="tickets.kategorie">
-            <CategoriesSection areaId={area.id} onMessage={setMessage} />
-          </SettingsPanel>
-          <SettingsPanel title="Lösungsarten" term="tickets.loesung">
-            <SolutionTypesSection areaId={area.id} onMessage={setMessage} />
-          </SettingsPanel>
-          <SettingsPanel title="Fristen" term="tickets.frist">
-            <WorkSection areaId={area.id} onMessage={setMessage} />
-          </SettingsPanel>
-        </div>
-      )}
-      {data && area && current === "email" && (
-        <div key={area.id}>
-          <SettingsPanel title="Postfach und Mails an den Melder">
-            <MailSettingsSection areaId={area.id} onMessage={setMessage} />
-          </SettingsPanel>
-          <SettingsPanel title="Zu prüfen" id="pruefen">
-            <ReviewSection areaId={area.id} onMessage={setMessage} />
-          </SettingsPanel>
-          <SettingsPanel title="Sperrliste">
-            <BlocksSection areaId={area.id} onMessage={setMessage} />
-          </SettingsPanel>
-          <SettingsPanel title="Letzte Eingänge">
-            <IntakeSection areaId={area.id} />
-          </SettingsPanel>
-        </div>
-      )}
-      {data && area && current === "textbausteine" && (
-        <SettingsPanel key={area.id} title="Textbausteine" term="tickets.textbausteine">
-          <TemplatesSection areaId={area.id} onMessage={setMessage} />
-        </SettingsPanel>
-      )}
-      {data && current === "aufbewahrung" && (
-        <>
           {data.manager && <RetentionDefaultSection onMessage={setMessage} />}
-          {area && (
-            <SettingsPanel
-              key={area.id}
-              title={`Aufbewahrung im Bereich „${area.name}“`}
-              term="tickets.aufbewahrung"
-            >
-              <RetentionSection areaId={area.id} onMessage={setMessage} />
-            </SettingsPanel>
-          )}
-        </>
-      )}
-      {data && current === "rollen" && (
-        <>
-          {area && (
-            <AreaRoles
-              key={area.id}
-              area={area}
-              manager={data.manager}
-              onSaved={replace}
-              onMessage={setMessage}
-            />
-          )}
           <RolesOverview settings={data} />
           <AuditLog areas={data.areas} />
         </>
       )}
+      {data && area && current === "allgemein" && (
+        <div key={area.id} className="ticket-settings-steps">
+          <AreaPanel area={area} manager={data.manager} onSaved={replace} onMessage={setMessage} />
+          <AreaRoles area={area} manager={data.manager} onSaved={replace} onMessage={setMessage} />
+        </div>
+      )}
+      {data && area && current === "email" && (
+        <div key={area.id} className="ticket-settings-steps">
+          <MailSettingsSection areaId={area.id} part="email" onMessage={setMessage} />
+        </div>
+      )}
+      {data && area && current === "arbeit" && (
+        <div key={area.id} className="ticket-settings-steps">
+          <SettingsStep
+            number={1}
+            title="Kategorien"
+            term="tickets.kategorie"
+            hint="Schlagen beim Anlegen eine Priorität vor. Abgeschaltete bleiben an alten Tickets stehen."
+          >
+            <CategoriesSection areaId={area.id} onMessage={setMessage} />
+          </SettingsStep>
+          <SettingsStep
+            number={2}
+            title="Lösungsarten"
+            term="tickets.loesung"
+            hint="Wählt man beim Wechsel auf „Gelöst“."
+          >
+            <SolutionTypesSection areaId={area.id} onMessage={setMessage} />
+          </SettingsStep>
+          <SettingsStep
+            number={3}
+            title="Fristen"
+            term="tickets.frist"
+            hint="Ohne Fristen erscheint im Bereich nirgends eine Frist."
+          >
+            <WorkSection areaId={area.id} onMessage={setMessage} />
+          </SettingsStep>
+          <SettingsStep
+            number={4}
+            title="Textbausteine"
+            term="tickets.textbausteine"
+            hint="Mit /kürzel in Antworten und Notizen."
+          >
+            <TemplatesSection areaId={area.id} onMessage={setMessage} />
+          </SettingsStep>
+        </div>
+      )}
+      {data && area && current === "pflege" && (
+        <div key={area.id} className="ticket-settings-steps">
+          <SettingsStep
+            number={1}
+            title="Zu prüfen"
+            id="pruefen"
+            hint="Mails von unbekannten Absendern: annehmen oder verwerfen."
+          >
+            <ReviewSection areaId={area.id} onMessage={setMessage} />
+          </SettingsStep>
+          <SettingsStep
+            number={2}
+            title="Sperrliste"
+            hint="Absender und Domänen, deren Mails nie ein Ticket werden."
+          >
+            <BlocksSection areaId={area.id} onMessage={setMessage} />
+          </SettingsStep>
+          <SettingsStep
+            number={3}
+            title="Letzte Eingänge"
+            hint="Was mit den letzten Mails passiert ist."
+          >
+            <IntakeSection areaId={area.id} />
+          </SettingsStep>
+          <SettingsStep
+            number={4}
+            title="Aufbewahrung"
+            term="tickets.aufbewahrung"
+            hint="Alle Löschfristen des Bereichs an einer Stelle."
+          >
+            <RetentionSection areaId={area.id} onMessage={setMessage} />
+            <MailSettingsSection areaId={area.id} part="pflege" onMessage={setMessage} />
+          </SettingsStep>
+        </div>
+      )}
       <Feedback message={message} onClose={() => setMessage(null)} />
     </div>
-  );
-}
-
-/** Abschnitt einer Einstellungsseite mit Überschrift. */
-function SettingsPanel({
-  title,
-  term,
-  id,
-  children,
-}: {
-  title: string;
-  term?: HelpKey;
-  id?: string;
-  children: ReactNode;
-}) {
-  const headingId = useId();
-  return (
-    <section className="panel" aria-labelledby={headingId} id={id}>
-      <div className="panel-head">
-        <h2 id={headingId}>{title}</h2>
-        {term && <InfoTip term={term} />}
-      </div>
-      <div className="detail-body">{children}</div>
-    </section>
   );
 }

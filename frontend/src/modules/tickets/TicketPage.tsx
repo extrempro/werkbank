@@ -41,6 +41,7 @@ import {
   ticketLabel,
   TICKETS_PATH,
   sendReply,
+  searchReporters,
   type Candidate,
   type ReporterInventory,
   type Entry,
@@ -585,6 +586,7 @@ function Composer({
                 setToMissing(false);
               }}
               contacts={contacts}
+              search={searchReporters}
               error={toMissing ? "Trag mindestens eine Adresse bei „An“ ein." : null}
             />
             <MailRecipients
@@ -592,6 +594,7 @@ function Composer({
               value={cc}
               onChange={setCc}
               contacts={contacts}
+              search={searchReporters}
               placeholder="Weitere Empfänger in Kopie"
             />
             <p className="small">

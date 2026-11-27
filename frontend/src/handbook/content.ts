@@ -1216,7 +1216,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Unten auf der Seite wählst du „Antworten“ (an den Melder), „Antworten an alle“ (Melder und alle Beteiligten in Kopie) oder „Interne Notiz“. Wie im Mailprogramm stehen oben die Felder „An“ und „Cc“: Mit dem × nimmst du jemanden heraus, auch den Melder; beim Klick ins Feld schlägt die Werkbank die Beteiligten vor, eine andere Adresse tippst du einfach ein und bestätigst mit Enter. Neue Adressen werden Beteiligte des Tickets. Bei „An“ muss mindestens eine Adresse stehen. Mit „Status danach“ setzt du beim Senden gleich „Wartet auf Rückmeldung“ oder „Gelöst“. In der Mail steht dein Name über dem Text („… schreibt“) und im Kasten unter „Bearbeitet von“, damit der Melder weiß, wer ihm antwortet. Ein Entwurf bleibt erhalten, wenn du das Feld einklappst. Automatische Mails wie die Eingangsbestätigung gehen nur an den Melder.",
+                text: "Unten auf der Seite wählst du „Antworten“ (an den Melder), „Antworten an alle“ (Melder und alle Beteiligten in Kopie) oder „Interne Notiz“. Wie im Mailprogramm stehen oben die Felder „An“ und „Cc“: Mit dem × nimmst du jemanden heraus, auch den Melder; beim Klick ins Feld schlägt die Werkbank die Beteiligten vor, ab zwei Buchstaben auch Personen aus Entra (mit Abteilung); eine andere Adresse tippst du einfach ein und bestätigst mit Enter. Neue Adressen werden Beteiligte des Tickets. Bei „An“ muss mindestens eine Adresse stehen. Mit „Status danach“ setzt du beim Senden gleich „Wartet auf Rückmeldung“ oder „Gelöst“. In der Mail steht dein Name über dem Text („… schreibt“) und im Kasten unter „Bearbeitet von“, damit der Melder weiß, wer ihm antwortet. Ein Entwurf bleibt erhalten, wenn du das Feld einklappst. Automatische Mails wie die Eingangsbestätigung gehen nur an den Melder.",
               },
               {
                 kind: "text",
@@ -1322,7 +1322,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Stellst du ein Ticket auf „Gelöst“, im Kopf oder mit „Status danach“ bei einer Antwort, fragt die Werkbank nach der Lösung: Lösungsart (wenn der Bereich welche hat) und was gemacht wurde. Beides ist freiwillig. Mit „In der Mail an den Melder zeigen“ steht die Lösung in der Mail, sonst bleibt sie intern. Die Lösung steht danach rechts bei den Angaben zum Ticket. Die Lösungsarten pflegt die Bereichsverwaltung unter Einstellungen › Kategorien, Lösungen und Fristen.",
+                text: "Stellst du ein Ticket auf „Gelöst“, im Kopf oder mit „Status danach“ bei einer Antwort, fragt die Werkbank nach der Lösung: Lösungsart (wenn der Bereich welche hat) und was gemacht wurde. Beides ist freiwillig. Mit „In der Mail an den Melder zeigen“ steht die Lösung in der Mail, sonst bleibt sie intern. Die Lösung steht danach rechts bei den Angaben zum Ticket. Die Lösungsarten pflegt die Bereichsverwaltung unter Einstellungen › Arbeit.",
               },
               {
                 kind: "text",
@@ -1351,7 +1351,7 @@ export const AREAS: readonly Area[] = [
             blocks: [
               {
                 kind: "text",
-                text: "Die Einstellungen haben Reiter: Bereiche, Kategorien, Lösungen und Fristen, E-Mail-Eingang, Textbausteine, Aufbewahrung und Rollen. In den Reitern, die je Bereich gelten, wählst du oben den Bereich. Du siehst nur Bereiche, die du einstellen darfst.",
+                text: "Oben wählst du einmal den Bereich, darunter stehen vier Reiter: „Allgemein“ (Name, Farbe, Zuweisung, Rollen), „E-Mail“ (Eingang, Anhänge, Mails an den Melder, automatische Mails), „Arbeit“ (Kategorien, Lösungsarten, Fristen, Textbausteine) und „Pflege“ (Zu prüfen, Sperrliste, Letzte Eingänge, Aufbewahrung). Jeder Reiter ist in nummerierte Abschnitte mit einem Satz Erklärung gegliedert. Du siehst nur Bereiche, die du einstellen darfst. Unter „Bereiche verwalten“ (bzw. „Alle Bereiche und Rechte“) stehen alle Bereiche, die Vorgabe für die Aufbewahrung, der Überblick über die Rechte und das Protokoll.",
               },
               {
                 kind: "text",
@@ -1391,12 +1391,12 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Der Reiter „Rollen“ zeigt die Rollen des gewählten Bereichs, darunter alle Bereiche im Überblick und das Protokoll: Änderungen an Einstellungen und Rollen, Zuständigkeit, Status, Zusammenführen, Exporte, Ausnahmen und Aufbewahrungsläufe, jeweils mit Person und Zeitpunkt, aber ohne Texte. Die Ticket-Verwaltung sieht alle Bereiche, die Bereichsverwaltung ihre eigenen. Einträge bleiben drei Jahre.",
+                text: "Die Rollen des gewählten Bereichs stehen im Reiter „Allgemein“. Unter „Bereiche verwalten“ stehen alle Bereiche im Überblick und das Protokoll: Änderungen an Einstellungen und Rollen, Zuständigkeit, Status, Zusammenführen, Exporte, Ausnahmen und Aufbewahrungsläufe, jeweils mit Person und Zeitpunkt, aber ohne Texte. Die Ticket-Verwaltung sieht alle Bereiche, die Bereichsverwaltung ihre eigenen. Einträge bleiben drei Jahre.",
               },
             ],
             links: [
-              { to: "/tickets/einstellungen/aufbewahrung", label: "Zur Aufbewahrung" },
-              { to: "/tickets/einstellungen/rollen", label: "Zu den Rollen" },
+              { to: "/tickets/einstellungen/pflege", label: "Zur Aufbewahrung" },
+              { to: "/tickets/einstellungen/bereiche", label: "Zu Rechten und Protokoll" },
             ],
           },
         ],
