@@ -2327,6 +2327,19 @@ details summary {
   text-decoration: none;
 }
 
+.header-feedback {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Am Handy ist der Platz knapp: Rückmeldung über das Kontomenü */
+@media (max-width: 760px) {
+  .header-feedback {
+    display: none;
+  }
+}
+
 .header-tasks-count {
   position: absolute;
   top: 4px;
@@ -17839,4 +17852,108 @@ textarea.field-control {
   .issue-protocol {
     border: 0;
   }
+}
+
+/* Rückmeldung geben (components/FeedbackDialog.tsx): PC und Tablet rechts oben über der Seite,
+   am Handy wie alle Dialoge als Blatt von unten */
+@media (min-width: 761px) {
+  .feedback-backdrop {
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 72px 24px 24px;
+  }
+}
+
+.feedback-dialog {
+  width: 480px;
+  gap: 12px;
+}
+
+.feedback-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feedback-head h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.feedback-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.feedback-shot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feedback-shot-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+}
+
+.feedback-shot-preview img {
+  width: 140px;
+  max-height: 100px;
+  object-fit: contain;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 6px;
+}
+
+.feedback-tech {
+  padding: 8px 12px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 10px;
+  font-size: 0.875rem;
+}
+
+.feedback-tech summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.feedback-tech dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 8px 0 0;
+}
+
+.feedback-tech dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.feedback-actions {
+  justify-content: flex-end;
+}
+
+.feedback-reply {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--farbe-neutral-flaeche);
+}
+
+.feedback-reply p {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.feedback-screenshot {
+  display: block;
+  max-width: 100%;
+  max-height: 420px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 8px;
 }

@@ -499,6 +499,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/": [["grundlagen", "aufgaben"]],
   "/suche": [["grundlagen", "suche"]],
   "/konto": [["grundlagen", "konto"]],
+  "/konto/rueckmeldungen": [["grundlagen", "rueckmeldung"]],
   "/neuigkeiten": [["grundlagen", "konto"]],
   "/benachrichtigungen": [["grundlagen", "benachrichtigungen"]],
   "/konto/benachrichtigungen": [["grundlagen", "benachrichtigungen"]],
@@ -582,6 +583,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/verwaltung": [["verwaltung", "einstellungen"]],
   "/verwaltung/berechtigungen": [["verwaltung", "berechtigungen"]],
   "/verwaltung/datensicherung": [["verwaltung", "datensicherung"]],
+  "/verwaltung/rueckmeldungen": [["verwaltung", "rueckmeldungen"]],
   "/audit": [["verwaltung", "audit"]],
 };
 

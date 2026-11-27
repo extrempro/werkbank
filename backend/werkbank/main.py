@@ -36,6 +36,7 @@ from werkbank.modules.doku.d3_api import router as doku_d3_router
 from werkbank.modules.evergreen.api import router as evergreen_router
 from werkbank.modules.evergreen.search import evergreen_search
 from werkbank.modules.evergreen.tasks import evergreen_tasks
+from werkbank.modules.feedback.api import router as feedback_router
 from werkbank.modules.inventory.api import router as inventory_router
 from werkbank.modules.inventory.cases import router as inventory_cases_router
 from werkbank.modules.inventory.issues import public_router as inventory_issue_public_router
@@ -148,6 +149,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(tasks_router)
     app.include_router(push_router)
     app.include_router(notifications_router)
+    app.include_router(feedback_router)
     app.include_router(m365_snapshots_router)
     app.include_router(m365_config_router)
     app.include_router(recommendations_router)

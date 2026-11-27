@@ -7,6 +7,7 @@ import { NOTIFICATION_SETTINGS_PATH } from "../../notifications";
 import { saveTheme, storedTheme, type ThemeChoice } from "../../theme";
 import { ADMIN_ROLE, roleLabel } from "../../user";
 import { Avatar } from "../Avatar";
+import { FEEDBACK_PATH } from "../../feedback";
 import { Icon, type IconName } from "../Icon";
 
 export const ACCOUNT_PATH = "/konto";
@@ -21,6 +22,8 @@ interface AccountMenuProps {
   me: Me;
   newsUnseen: boolean;
   onNavigate: (path: string) => void;
+  /** öffnet das Fenster „Rückmeldung geben“ */
+  onFeedback?: () => void;
 }
 
 /**
@@ -28,7 +31,7 @@ interface AccountMenuProps {
  * „Zuletzt besucht leeren“, Abmelden.
  * Bedienbar mit Tastatur (Pfeiltasten, Pos1/Ende, Esc schließt und gibt den Fokus zurück).
  */
-export function AccountMenu({ me, newsUnseen, onNavigate }: AccountMenuProps) {
+export function AccountMenu({ me, newsUnseen, onNavigate, onFeedback }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState(storedTheme);
   const [cleared, setCleared] = useState(false);
@@ -175,6 +178,29 @@ export function AccountMenu({ me, newsUnseen, onNavigate }: AccountMenuProps) {
             >
               <Icon name="handbuch" />
               <span>Handbuch</span>
+            </a>
+            {onFeedback && (
+              <button
+                type="button"
+                role="menuitem"
+                tabIndex={-1}
+                onClick={() => {
+                  close(false);
+                  onFeedback();
+                }}
+              >
+                <Icon name="rueckmeldung" />
+                <span>Rückmeldung geben</span>
+              </button>
+            )}
+            <a
+              role="menuitem"
+              tabIndex={-1}
+              href={FEEDBACK_PATH}
+              onClick={(e) => go(e, FEEDBACK_PATH)}
+            >
+              <Icon name="eingang" />
+              <span>Meine Rückmeldungen</span>
             </a>
             {admin && (
               <a role="menuitem" tabIndex={-1} href={ADMIN_PATH} onClick={(e) => go(e, ADMIN_PATH)}>

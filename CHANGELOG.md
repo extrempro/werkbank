@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.151.0] – 2026-11-27
+
+### Neu
+
+- **Rückmeldungen:** Knopf mit Daumen oben rechts (am Handy im Kontomenü) öffnet „Rückmeldung geben“ über der aktuellen Seite: Fehler oder Idee mit Text, die Seite geht automatisch mit. Bei Fehlern freiwillig ein Bildschirmfoto (aufnehmen, auswählen, einfügen; im Browser verkleinert, Server prüft PNG/JPEG/WebP bis 300 KB) und sichtbar, welche technischen Angaben mitgehen (Version, Fenstergröße, Browser, letzte Fehlermeldungen des Browsers). Höchstens 10 je Stunde und Person.
+- **Konto › Meine Rückmeldungen** mit Stand und Antworten; **Verwaltung › Rückmeldungen** (nur `Werkbank.Admin`) mit Filter, technischen Angaben, Bildschirmfoto, Stand und Antwort. Benachrichtigungen nur über die Glocke (`rueckmeldung.neu`, `rueckmeldung.antwort`, `rueckmeldung.stand`), ohne Inhalt. Bildschirmfotos 30 Tage nach Abschluss gelöscht.
+- Neues Modul `modules/feedback`, Migration `0095`, gemeinsame Komponente `components/FeedbackDialog.tsx`.
+
+### Sicherheit
+
+- Code-Scanning-Fund „Log Injection“ in `doku/collab.py` behoben: Das Protokoll enthält bei abgelehnten Nachrichten der Live-Bearbeitung nur noch eine feste Fehlerart, beim Ablehnen von Inhalt keinen Fehlertext mehr.
+
+### Sonstiges
+
+- Tests: `test_feedback.py`, `feedback.test.tsx`, E2E in `konto.spec.ts`. Doku: `spec.md` (6.7a), `datenschutz.md`, `design.md`, `security/asvs-l2.md`, Handbuch, Seitenhilfe.
+
 ## [0.150.1] – 2026-11-27
 
 ### Behoben

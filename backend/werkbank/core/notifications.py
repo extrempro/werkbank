@@ -180,6 +180,13 @@ KINDS: dict[str, KindInfo] = {
         "Abgleich mit NinjaOne ist fehlgeschlagen",
         (Role.INVENTORY_EDITOR, Role.WERKBANK_ADMIN),
     ),
+    "rueckmeldung.neu": KindInfo(
+        "Werkbank", "Neue Rückmeldung (Fehler oder Idee)", (Role.WERKBANK_ADMIN,)
+    ),
+    "rueckmeldung.antwort": KindInfo("Werkbank", "Antwort der IT auf deine Rückmeldung", ALL_ROLES),
+    "rueckmeldung.stand": KindInfo(
+        "Werkbank", "Stand deiner Rückmeldung hat sich geändert", ALL_ROLES
+    ),
     "kern.auftrag_fehlgeschlagen": KindInfo(
         "Werkbank", "Ein Hintergrundauftrag ist fehlgeschlagen", (Role.WERKBANK_ADMIN,)
     ),

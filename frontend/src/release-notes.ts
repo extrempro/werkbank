@@ -24,6 +24,22 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.151.0",
+    date: "2026-11-27",
+    summary: "Fehler melden und Ideen geben, direkt aus jeder Seite.",
+    sections: [
+      {
+        area: "Werkbank",
+        entries: [
+          "Neu: der Daumen oben rechts. Damit meldest du einen Fehler oder gibst eine Idee zur Seite, auf der du gerade bist. Am Handy findest du „Rückmeldung geben“ im Kontomenü.",
+          "Bei einem Fehler kannst du ein Bildschirmfoto mitschicken: aufnehmen, auswählen oder mit Strg + V einfügen. Vor dem Senden siehst du, welche technischen Angaben mitgehen.",
+          "Unter „Meine Rückmeldungen“ im Kontomenü siehst du den Stand und die Antworten der IT. Bei einer Antwort meldet sich die Glocke.",
+          "Für die Verwaltung gibt es die neue Seite „Rückmeldungen“ zum Bearbeiten und Antworten.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.150.1",
     date: "2026-11-27",
     summary: "Der Abruf der M365-Einstellungen fragt große Dienste wie Intune in Teilen ab.",
