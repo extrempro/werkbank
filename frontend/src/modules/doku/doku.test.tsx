@@ -75,6 +75,8 @@ function pageData(extra: Partial<DokuPageData> = {}): DokuPageData {
     parent_id: null,
     path: [],
     title: "Drucker",
+    icon: "",
+    space_icon: "",
     content: {
       type: "doc",
       content: [{ type: "paragraph", content: [{ type: "text", text: "Toner im Lager" }] }],
@@ -111,6 +113,7 @@ describe("Doku: Adressen, Baum, Links", () => {
       id,
       parent_id: parent,
       title: id,
+      icon: "",
       position,
       own_rights: false,
       locked: false,

@@ -695,6 +695,87 @@ test("Doku: Codeblock mit Sprache und Hervorhebung", async ({
   await expectNoA11yViolations(page);
 });
 
+test("Doku: Seite und Unterseite über das Plus im Baum, mit Emoji", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  await loginAs(page, ["Doku.Nutzer"], s.editor);
+  await page.goto("/doku");
+  await expect(
+    page.getByRole("heading", { level: 2, name: s.space }),
+  ).toBeVisible();
+
+  // Seite oben im Arbeitsbereich
+  let menu = await tree(page);
+  await menu
+    .getByRole("button", { name: `Neue Seite in ${s.space} anlegen` })
+    .click();
+  const title = menu.getByRole("textbox", { name: `Neue Seite in ${s.space}` });
+  await expect(title).toBeFocused();
+  await menu.getByRole("button", { name: "Emoji wählen" }).click();
+  const picker = page.getByRole("dialog", { name: "Emoji wählen" });
+  await expect(picker).toBeVisible();
+  await expectNoA11yViolations(page);
+  await picker.getByRole("searchbox", { name: "Emoji suchen" }).fill("server");
+  await picker.getByRole("button", { name: "Server" }).first().click();
+  await title.fill(`Server ${stamp}`);
+  await title.press("Enter");
+  await expect(page).toHaveURL(/\/doku\/seite\//);
+  await expect(
+    page.getByRole("textbox", { name: "Titel der Seite" }),
+  ).toHaveValue(`Server ${stamp}`);
+  const trigger = page.getByRole("button", {
+    name: /^Emoji der Seite ändern \(jetzt/,
+  });
+  await expect(trigger).toContainText("🗄️");
+
+  // Emoji im Seitenkopf ändern
+  await trigger.click();
+  await page
+    .getByRole("dialog", { name: "Emoji wählen" })
+    .getByRole("button", { name: "Schloss" })
+    .first()
+    .click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Das Emoji wurde gespeichert." }),
+  ).toBeVisible();
+  await expect(trigger).toContainText("🔒");
+
+  // Unterseite über das Plus an der Seite; Esc bricht ab, Enter legt an
+  menu = await tree(page);
+  const add = menu.getByRole("button", {
+    name: `Unterseite zu Server ${stamp} anlegen`,
+  });
+  await add.click();
+  const child = menu.getByRole("textbox", {
+    name: `Unterseite zu „Server ${stamp}“`,
+  });
+  await child.press("Escape");
+  await expect(child).toHaveCount(0);
+  await add.click();
+  await child.fill(`Dienste ${stamp}`);
+  await child.press("Enter");
+  await expect(
+    page.getByRole("textbox", { name: "Titel der Seite" }),
+  ).toHaveValue(`Dienste ${stamp}`);
+  await expect(
+    page.getByRole("navigation", { name: "Pfad" }).getByRole("link", {
+      name: `Server ${stamp}`,
+    }),
+  ).toContainText("🔒");
+  if (!isPhone(page)) {
+    await expect(
+      page
+        .getByRole("navigation", { name: "Seiten: Dokumentation" })
+        .getByRole("link", { name: `Dienste ${stamp}` }),
+    ).toBeVisible();
+  }
+});
+
 test("Doku: Baustein „Bitwarden-Einträge“ mit Link in den Tresor", async ({
   page,
   browser,

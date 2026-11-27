@@ -1884,14 +1884,22 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "steps",
                 items: [
-                  "Klick im Menü auf „Neue Seite“.",
-                  "Gib einen Titel ein. Steht gerade eine Seite offen, kannst du die neue darunter anlegen; sonst wählst du den Arbeitsbereich.",
+                  "Fahr im Menü über einen Arbeitsbereich oder eine Seite und klick auf das kleine Plus rechts. Am Arbeitsbereich entsteht eine neue Seite, an einer Seite eine Unterseite. Am Tablet und Handy steht das Plus immer da.",
+                  "Tipp den Titel direkt im Baum ein und drück Enter. Die Seite wird angelegt und geöffnet. Mit Esc brichst du ab. Alternativ geht es weiter über „Neue Seite“ oben im Menü.",
                   "Schreib einfach los. Jede Änderung wird nach einem kurzen Moment automatisch gespeichert; oben rechts steht „Live · wird automatisch gespeichert“.",
                 ],
               },
               {
                 kind: "text",
+                text: "Vor jeden Titel kannst du ein Emoji setzen, zum Beispiel 🖥️ für Server oder 🔒 für Zugänge. Klick dazu beim Anlegen auf den Knopf links vom Titel oder auf einer offenen Seite auf das Feld vor dem Titel. Such ein Emoji oder wähl eins aus der Liste; „Emoji entfernen“ nimmt es wieder weg. Das Emoji steht dann auch im Baum, in der Suche und im Pfad. Ein Emoji für einen ganzen Arbeitsbereich setzt die Doku-Verwaltung.",
+              },
+              {
+                kind: "text",
                 text: "Bausteine fügst du mit „+ Baustein“ in der Leiste ein oder tippst in einer leeren Zeile „/“: Text, Überschriften, Listen, Aufgaben zum Abhaken, Hinweis- und Warnkästen, Tabellen, Code, Zitate, Trennlinien, Verweise und Live-Bausteine. Die Leiste formatiert markierten Text: fett, kursiv, unterstrichen, durchgestrichen, Code und Links. Links gehen nur mit https://, mailto: oder auf Seiten der Werkbank.",
+              },
+              {
+                kind: "text",
+                text: "Mit dem Baustein „Bitwarden-Einträge“ verweist du auf Zugänge im Passwort-Tresor. Öffne den Eintrag in Bitwarden im Web, kopier die Adresse aus dem Browser und füg sie mit Anzeigename und einem kurzen Hinweis ein, wofür der Zugang ist. Ein Klick auf „Öffnen“ bringt dich zum Eintrag; anmelden musst du dich dort wie gewohnt. In die Werkbank gehören nie Passwörter oder Benutzernamen. Den Baustein gibt es erst, wenn die Doku-Verwaltung die Adresse des Tresors eingetragen hat.",
               },
               {
                 kind: "text",

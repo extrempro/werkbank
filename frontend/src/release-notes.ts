@@ -24,6 +24,34 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.153.0",
+    date: "2026-11-27",
+    summary: "Neuer Baustein in der Dokumentation: Verweise auf Zugänge in Bitwarden.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Mit dem Baustein „Bitwarden-Einträge“ setzt du auf einer Seite Verweise auf die passenden Zugänge im Passwort-Tresor. Ein Klick auf „Öffnen“ bringt dich direkt zum Eintrag. Passwörter stehen dabei nie in der Werkbank.",
+          "Die Doku-Verwaltung trägt dafür unter „Versionen“ die Adresse des Tresors ein.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "0.152.0",
+    date: "2026-11-27",
+    summary: "Seiten in der Dokumentation über das Plus im Baum anlegen, mit Emoji vor dem Titel.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Im Seitenbaum steht rechts an jedem Arbeitsbereich und jeder Seite ein kleines Plus. Damit legst du eine Seite oder Unterseite an und tippst den Titel direkt im Baum ein. Enter legt an und öffnet die Seite, Esc bricht ab.",
+          "Seiten und Arbeitsbereiche können ein Emoji vor dem Namen haben. Du wählst es beim Anlegen oder über das Feld vor dem Titel einer Seite; es steht dann im Baum, in der Suche und im Pfad.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.151.1",
     date: "2026-11-27",
     summary: "Abgeschlossene Rückmeldungen werden nach 30 Tagen gelöscht.",

@@ -17967,6 +17967,203 @@ textarea.field-control {
   border-radius: 8px;
 }
 
+/* Emoji-Auswahl (components/EmojiPicker.tsx) ------------------------------------------------ */
+
+.emoji-trigger {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--farbe-rand-stark);
+  border-radius: 8px;
+  background: var(--farbe-flaeche);
+  color: var(--farbe-text-leise);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.emoji-trigger:hover {
+  background: var(--farbe-grund);
+}
+
+.emoji-trigger-gross {
+  width: 52px;
+  height: 52px;
+  border-style: dashed;
+  font-size: 1.75rem;
+}
+
+.emoji-trigger-leer {
+  font-size: 1.125rem;
+}
+
+.emoji-trigger:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.emoji-panel {
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: 12px;
+  background: var(--farbe-flaeche);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  overflow: hidden;
+}
+
+.emoji-panel .search-field,
+.emoji-panel .field {
+  margin: 0;
+}
+
+.emoji-sections {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.emoji-group-label {
+  margin: 6px 2px 4px;
+  color: var(--farbe-text-leise);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+
+.emoji-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  min-width: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.emoji-cell:hover {
+  background: var(--farbe-grund);
+}
+
+.emoji-cell[aria-pressed="true"] {
+  border-color: var(--farbe-primaer);
+  background: var(--farbe-auswahl);
+}
+
+.emoji-none {
+  margin: 8px 2px;
+}
+
+.emoji-foot {
+  border-top: 1px solid var(--farbe-rand);
+  padding-top: 6px;
+}
+
+.emoji-foot .button-link {
+  min-height: 44px;
+}
+
+/* Doku: Plus im Seitenbaum, Anlegen direkt im Baum, Emoji vor Titeln */
+
+.doku-space-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.doku-space-head .side-group-toggle {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.doku-tree-add {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--farbe-text-leise);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.doku-tree-add .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.doku-tree-row:hover .doku-tree-add,
+.doku-space-head:hover .doku-tree-add,
+.doku-tree-add:focus-visible,
+.doku-tree-add[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.doku-tree-add:hover,
+.doku-tree-add[aria-expanded="true"] {
+  background: var(--farbe-auswahl);
+  color: var(--farbe-auswahl-text);
+}
+
+/* Ohne Maus gibt es kein Überfahren: Plus immer sichtbar und groß genug zum Tippen */
+@media (hover: none), (pointer: coarse) {
+  .doku-tree-add {
+    width: 44px;
+    height: 44px;
+    opacity: 1;
+  }
+}
+
+.doku-tree-new {
+  margin: 2px 4px 6px 24px;
+}
+
+.doku-tree-new .field {
+  margin: 0;
+}
+
+.doku-tree-new-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doku-tree-new-row .field-control {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.doku-emoji {
+  flex: none;
+}
+
+.doku-title-emoji {
+  flex: none;
+}
+
 /* Doku: Baustein „Bitwarden-Einträge“ (modules/doku/BitwardenBlock.tsx) */
 
 .doku-vault-wrap {

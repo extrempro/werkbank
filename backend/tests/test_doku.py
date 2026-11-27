@@ -19,7 +19,7 @@ from werkbank.core.deps import STEP_UP_HEADER
 from werkbank.core.models import UserSession
 from werkbank.core.sessions import SESSION_COOKIE, hash_token, now_utc
 from werkbank.main import create_app
-from werkbank.modules.doku.content import ContentError, clean_content, vault_items
+from werkbank.modules.doku.content import ContentError, clean_content, clean_icon, vault_items
 from werkbank.modules.doku.models import (
     DokuPage,
     DokuPageRight,
@@ -122,6 +122,15 @@ def save(client: TestClient, page: Any, *paragraphs: str, title: str | None = No
 
 
 # --- ohne Datenbank -------------------------------------------------------------------------
+
+
+def test_clean_icon_allows_one_emoji_only() -> None:
+    for ok in ("", "🔒", "🖥️", "🧑‍💻", "1️⃣", "🇩🇪", "☁️", "\u2139\ufe0f"):
+        assert clean_icon(ok) == ok
+    assert clean_icon("  ⭐ ") == "⭐"
+    for bad in ("A", "1", "<b>", "🔒x", "\u200d", "\ufe0f", "🔒" * 11, "🔒\t🔒"):
+        with pytest.raises(ValueError):
+            clean_icon(bad)
 
 
 def test_content_size_limit() -> None:
@@ -235,7 +244,7 @@ def test_pages_save_search_and_conflict(db: Session, space: int) -> None:
     lea = client_for("Lea Leser")
     page = new_page(max_, space, "Drucker einrichten")
     child = new_page(max_, space, "Treiber", page["id"])
-    assert child["path"] == [{"id": page["id"], "title": "Drucker einrichten"}]
+    assert child["path"] == [{"id": page["id"], "title": "Drucker einrichten", "icon": ""}]
     # Lesen darf nicht anlegen oder speichern
     assert lea.post(f"{BASE}/pages", json={"space_id": space, "title": "X"}).status_code == 403
     assert save(lea, page, "Hallo").status_code == 403
@@ -542,3 +551,47 @@ def test_vault_url_setting(db: Session, space: int) -> None:
     me = client_for("Lea Leser").get(f"{BASE}/me").json()
     assert me["vault_url"] == "https://vault.example.com"
     assert client_for("Lea Leser").get(f"{ADMIN}/settings").status_code == 403
+
+
+@pytest.mark.db
+def test_page_and_space_icons(db: Session, space: int) -> None:
+    max_ = client_for("Max Muster")
+    lea = client_for("Lea Leser")
+    created = max_.post(
+        f"{BASE}/pages", json={"space_id": space, "title": "Netzwerk", "icon": "🌐"}
+    )
+    assert created.status_code == 201, created.text
+    page = created.json()
+    assert page["icon"] == "🌐"
+    child = new_page(max_, space, "VLAN", page["id"])
+    assert child["path"][0]["icon"] == "🌐"
+    # Kein Text und kein Markup statt eines Emojis
+    bad = max_.post(f"{BASE}/pages", json={"space_id": space, "title": "X", "icon": "<b>"})
+    assert bad.status_code == 422
+    assert max_.put(f"{BASE}/pages/{page['id']}/icon", json={"icon": "abc"}).status_code == 422
+    # Lesen darf das Emoji nicht ändern
+    assert lea.put(f"{BASE}/pages/{page['id']}/icon", json={"icon": "🔒"}).status_code == 403
+    changed = max_.put(f"{BASE}/pages/{page['id']}/icon", json={"icon": "🔒"})
+    assert changed.status_code == 200 and changed.json()["icon"] == "🔒"
+    tree = lea.get(f"{BASE}/tree").json()[0]
+    assert {p["title"]: p["icon"] for p in tree["pages"]} == {"Netzwerk": "🔒", "VLAN": ""}
+    hits = lea.get(f"{BASE}/search", params={"q": "Netz"}).json()
+    assert hits[0]["icon"] == "🔒"
+    # Gesperrte Seite: Emoji bleibt
+    assert max_.post(f"{BASE}/pages/{page['id']}/lock").status_code == 200
+    assert max_.put(f"{BASE}/pages/{page['id']}/icon", json={"icon": ""}).status_code == 409
+    # Emoji am Arbeitsbereich setzt die Doku-Verwaltung
+    admin = client_for("Ada Admin", ["Doku.Admin"])
+    listed = admin.get(f"{ADMIN}/spaces").json()[0]
+    body = {
+        "name": listed["name"],
+        "description": listed["description"],
+        "icon": "🖥️",
+        "archived": False,
+        "members": listed["members"],
+    }
+    updated = admin.put(f"{ADMIN}/spaces/{space}", json=body)
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["icon"] == "🖥️"
+    assert lea.get(f"{BASE}/tree").json()[0]["icon"] == "🖥️"
+    assert admin.put(f"{ADMIN}/spaces/{space}", json={**body, "icon": "IT"}).status_code == 422

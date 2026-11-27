@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.153.0] – 2026-11-27
+
+### Neu
+
+- **Doku: Baustein „Bitwarden-Einträge“.** Verweise auf Einträge oder Sammlungen im Passwort-Tresor mit Link, Anzeigename und Hinweis (bis zu 20 je Baustein, Knoten `bitwarden`, Prüfung `vault_items`). Adresse des Tresors als neue Doku-Einstellung `vault_url` (Verwaltung › Versionen, auch in `/api/doku/me`); ohne Adresse kein Baustein. „Öffnen“ nur für Links auf diese Adresse, Warnung, wenn Name oder Hinweis wie ein Passwort aussehen. Keine Abfrage des Tresors. Doku: `spec.md`, `design.md`, `security/asvs-l2.md`, Handbuch.
+
+## [0.152.0] – 2026-11-27
+
+### Neu
+
+- **Doku: Seiten über das Plus im Seitenbaum anlegen.** Plus rechts an Arbeitsbereichen (Seite oben) und Seiten (Unterseite), am PC beim Überfahren oder mit Fokus, ohne Maus immer sichtbar; Titel direkt im Baum, Enter legt an und öffnet, Esc bricht ab. Nur mit Schreibrecht, nicht im Archiv und nicht an gesperrten Seiten.
+- **Doku: Emoji vor Seiten und Arbeitsbereichen.** Neue Spalte `icon` (Migration 0096), `PUT /api/doku/pages/{id}/icon`, Emoji im Baum, in Suche, Pfad, Übersicht und Seitenkopf; Arbeitsbereiche in der Doku-Verwaltung. Server prüft auf genau ein Emoji (`clean_icon`). Neue gemeinsame Komponente `components/EmojiPicker.tsx` (Suche, „Zuletzt benutzt“, Raster mit Pfeiltasten). Doku: `spec.md`, `design.md`, `security/asvs-l2.md`, Handbuch.
+
 ## [0.151.1] – 2026-11-27
 
 ### Geändert

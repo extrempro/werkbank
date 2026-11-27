@@ -24,7 +24,13 @@ from werkbank.modules.doku.access import (
     visible_page,
 )
 from werkbank.modules.doku.collab import reset_page, reset_space
-from werkbank.modules.doku.content import TITLE_MAX, ContentError, clean_content, empty_doc
+from werkbank.modules.doku.content import (
+    TITLE_MAX,
+    ContentError,
+    clean_content,
+    clean_icon,
+    empty_doc,
+)
 from werkbank.modules.doku.models import (
     PAGE_ROLES,
     ROLE_EDIT,
@@ -69,6 +75,7 @@ def _clean_line(value: str, field: str, limit: int) -> str:
 class SpaceRef(BaseModel):
     id: int
     name: str
+    icon: str
     description: str
     role: str
     archived: bool
@@ -85,6 +92,7 @@ class TreePage(BaseModel):
     id: uuid.UUID
     parent_id: uuid.UUID | None
     title: str
+    icon: str
     position: int
     own_rights: bool
     locked: bool
@@ -98,6 +106,7 @@ class TreeSpace(SpaceRef):
 class Crumb(BaseModel):
     id: uuid.UUID
     title: str
+    icon: str = ""
 
 
 class PageOut(BaseModel):
@@ -107,6 +116,8 @@ class PageOut(BaseModel):
     parent_id: uuid.UUID | None
     path: list[Crumb]
     title: str
+    icon: str
+    space_icon: str
     content: dict[str, Any]
     revision: int
     role: Literal["read", "edit"]
@@ -128,6 +139,7 @@ class PageOut(BaseModel):
 class SearchHit(BaseModel):
     id: uuid.UUID
     title: str
+    icon: str
     space: str
     snippet: str
 
@@ -174,6 +186,7 @@ class PageIn(BaseModel):
     space_id: int = Field(ge=1)
     parent_id: uuid.UUID | None = None
     title: str = Field(min_length=1, max_length=TITLE_MAX)
+    icon: str = Field(default="", max_length=64)
 
     @field_validator("title")
     @classmethod
@@ -182,6 +195,20 @@ class PageIn(BaseModel):
         if not value:
             raise ValueError("Titel fehlt.")
         return value
+
+    @field_validator("icon")
+    @classmethod
+    def _icon(cls, value: str) -> str:
+        return clean_icon(value)
+
+
+class IconIn(BaseModel):
+    icon: str = Field(default="", max_length=64)
+
+    @field_validator("icon")
+    @classmethod
+    def _icon(cls, value: str) -> str:
+        return clean_icon(value)
 
 
 class SaveIn(BaseModel):
@@ -277,6 +304,7 @@ def _space_ref(space: DokuSpace, role: str) -> SpaceRef:
     return SpaceRef(
         id=space.id,
         name=space.name,
+        icon=space.icon,
         description=space.description,
         role=role,
         archived=space.archived,
@@ -301,7 +329,7 @@ def _path(db: Session, page: DokuPage) -> list[Crumb]:
     current = db.get(DokuPage, page.parent_id) if page.parent_id else None
     while current is not None and current.id not in seen and len(crumbs) < 50:
         seen.add(current.id)
-        crumbs.append(Crumb(id=current.id, title=current.title))
+        crumbs.append(Crumb(id=current.id, title=current.title, icon=current.icon))
         current = db.get(DokuPage, current.parent_id) if current.parent_id else None
     return list(reversed(crumbs))
 
@@ -320,6 +348,8 @@ def _page_out(db: Session, access: DokuAccess, page: DokuPage, role: str) -> Pag
         parent_id=page.parent_id,
         path=_path(db, page),
         title=page.title,
+        icon=page.icon,
+        space_icon=space.icon,
         content=page.content,
         revision=page.revision,
         role="edit" if can_edit(role) else "read",
@@ -388,6 +418,7 @@ def tree(access: AccessDep, db: DbDep) -> list[TreeSpace]:
                 id=p.id,
                 parent_id=p.parent_id if p.parent_id in visible else None,
                 title=p.title,
+                icon=p.icon,
                 position=p.position,
                 own_rights=p.own_rights,
                 locked=p.locked_at is not None,
@@ -434,7 +465,11 @@ def search(
         snippet = page.text[max(index - 60, 0) : index + 100] if index >= 0 else page.text[:160]
         hits.append(
             SearchHit(
-                id=page.id, title=page.title, space=names.get(page.space_id, ""), snippet=snippet
+                id=page.id,
+                title=page.title,
+                icon=page.icon,
+                space=names.get(page.space_id, ""),
+                snippet=snippet,
             )
         )
         if len(hits) >= SEARCH_MAX:
@@ -468,6 +503,7 @@ def create_page(body: PageIn, access: AccessDep, db: DbDep) -> PageOut:
         parent_id=body.parent_id,
         position=next_position(db, space.id, body.parent_id),
         title=body.title,
+        icon=body.icon,
         content=empty_doc(),
         text="",
         created_by_name=access.name,
@@ -519,6 +555,20 @@ def save_page(page_id: PageId, body: SaveIn, access: AccessDep, db: DbDep) -> Pa
     db.commit()
     reset_page(page.id, persist=False)
     db.refresh(page)
+    return _page_out(db, access, page, role)
+
+
+@router.put("/pages/{page_id}/icon")
+def set_icon(page_id: PageId, body: IconIn, access: AccessDep, db: DbDep) -> PageOut:
+    """Emoji vor dem Titel setzen oder entfernen (leer)."""
+    page, role = visible_page(db, access, page_id, write=True)
+    _writable(page)
+    if body.icon != page.icon:
+        page.icon = body.icon
+        page.updated_at = now_utc()
+        page.updated_by_name = access.name
+        db.commit()
+        db.refresh(page)
     return _page_out(db, access, page, role)
 
 
