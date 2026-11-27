@@ -775,3 +775,92 @@ test("Doku: Seite und Unterseite über das Plus im Baum, mit Emoji", async ({
     ).toBeVisible();
   }
 });
+
+test("Doku: Baustein „Bitwarden-Einträge“ mit Link in den Tresor", async ({
+  page,
+  browser,
+}, testInfo) => {
+  const stamp = `${testInfo.project.name}-${Date.now()}`.replace(/\s+/g, "-");
+  const s = await setup(browser, stamp);
+  const admin = await apiAs(browser, ["Doku.Admin"], s.admin);
+  const settings = await admin.put("/api/doku/admin/settings", {
+    data: {
+      version_minutes: 10,
+      keep_auto: "1y",
+      vault_url: "https://vault.example.com",
+    },
+    headers: HEADERS,
+  });
+  expect(settings.status()).toBe(200);
+  const editor = await apiAs(browser, ["Doku.Nutzer"], s.editor);
+  const created = await editor.post("/api/doku/pages", {
+    data: { space_id: s.spaceId, title: `Firewall ${stamp}` },
+    headers: HEADERS,
+  });
+  const id = ((await created.json()) as { id: string }).id;
+
+  await loginAs(page, ["Doku.Nutzer"], s.editor);
+  await page.goto(`/doku/seite/${id}`);
+  const content = page.locator(".doku-content");
+  await content.click();
+  await page.keyboard.press("/");
+  await page
+    .getByRole("combobox", { name: "Baustein suchen" })
+    .fill("Bitwarden");
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", {
+    name: "Bitwarden-Eintrag hinzufügen",
+  });
+  await dialog
+    .getByRole("textbox", { name: /Link zum Eintrag/ })
+    .fill("https://fremd.example.com/x");
+  await dialog.getByRole("textbox", { name: /Anzeigename/ }).fill("Firewall");
+  await dialog.getByRole("button", { name: "Hinzufügen" }).click();
+  await expect(dialog.getByText(/führt nicht zu eurem Tresor/)).toBeVisible();
+  await expectNoA11yViolations(page);
+  await dialog
+    .getByRole("textbox", { name: /Link zum Eintrag/ })
+    .fill("https://vault.example.com/#/vault?itemId=abc");
+  await dialog
+    .getByRole("textbox", { name: /Hinweis/ })
+    .fill("Admin-Konto, nur im Notfall");
+  await dialog.getByRole("button", { name: "Hinzufügen" }).click();
+  await expect(dialog).toBeHidden();
+  const block = page.getByRole("region", { name: "Zugänge in Bitwarden" });
+  const open = block.getByRole("link", {
+    name: "Firewall in Bitwarden öffnen (neues Fenster)",
+  });
+  await expect(open).toHaveAttribute(
+    "href",
+    "https://vault.example.com/#/vault?itemId=abc",
+  );
+  await expect(block.getByText("Admin-Konto, nur im Notfall")).toBeVisible();
+  // Der Server speichert den Baustein mit
+  await expect
+    .poll(
+      async () =>
+        JSON.stringify(
+          (
+            (await (await editor.get(`/api/doku/pages/${id}`)).json()) as {
+              content: unknown;
+            }
+          ).content,
+        ),
+      { timeout: 10_000 },
+    )
+    .toContain("bitwarden");
+  await expectNoA11yViolations(page);
+
+  // Lesen sieht den Link ebenfalls, ohne Knöpfe zum Bearbeiten
+  await loginAs(page, ["Doku.Nutzer"], s.reader);
+  await page.goto(`/doku/seite/${id}`);
+  const readerBlock = page.getByRole("region", {
+    name: "Zugänge in Bitwarden",
+  });
+  await expect(
+    readerBlock.getByRole("link", { name: /Firewall in Bitwarden öffnen/ }),
+  ).toBeVisible();
+  await expect(
+    readerBlock.getByRole("button", { name: "Firewall bearbeiten" }),
+  ).toHaveCount(0);
+});

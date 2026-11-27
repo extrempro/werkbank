@@ -1899,6 +1899,10 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
+                text: "Mit dem Baustein „Bitwarden-Einträge“ verweist du auf Zugänge im Passwort-Tresor. Öffne den Eintrag in Bitwarden im Web, kopier die Adresse aus dem Browser und füg sie mit Anzeigename und einem kurzen Hinweis ein, wofür der Zugang ist. Ein Klick auf „Öffnen“ bringt dich zum Eintrag; anmelden musst du dich dort wie gewohnt. In die Werkbank gehören nie Passwörter oder Benutzernamen. Den Baustein gibt es erst, wenn die Doku-Verwaltung die Adresse des Tresors eingetragen hat.",
+              },
+              {
+                kind: "text",
                 text: "Bei einem Codeblock wählst du oben am Block die Sprache, zum Beispiel PowerShell, Bash, YAML oder SQL. Dann färbt die Werkbank Befehle, Texte und Kommentare ein. Ohne Auswahl bleibt es „Text“ in einer Farbe. Beim Lesen steht die Sprache oben am Block, mit „Kopieren“ landet der ganze Code in der Zwischenablage.",
               },
               {

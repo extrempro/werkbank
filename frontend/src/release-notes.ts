@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.153.0",
+    date: "2026-11-27",
+    summary: "Neuer Baustein in der Dokumentation: Verweise auf Zugänge in Bitwarden.",
+    sections: [
+      {
+        area: "Dokumentation",
+        entries: [
+          "Mit dem Baustein „Bitwarden-Einträge“ setzt du auf einer Seite Verweise auf die passenden Zugänge im Passwort-Tresor. Ein Klick auf „Öffnen“ bringt dich direkt zum Eintrag. Passwörter stehen dabei nie in der Werkbank.",
+          "Die Doku-Verwaltung trägt dafür unter „Versionen“ die Adresse des Tresors ein.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.152.0",
     date: "2026-11-27",
     summary: "Seiten in der Dokumentation über das Plus im Baum anlegen, mit Emoji vor dem Titel.",

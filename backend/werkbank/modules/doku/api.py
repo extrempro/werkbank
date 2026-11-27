@@ -84,6 +84,8 @@ class SpaceRef(BaseModel):
 class MeOut(BaseModel):
     is_admin: bool
     spaces: list[SpaceRef]
+    # Adresse des Passwort-Tresors für den Baustein „Bitwarden-Einträge“ (leer: kein Baustein)
+    vault_url: str
 
 
 class TreePage(BaseModel):
@@ -396,6 +398,7 @@ def me(access: AccessDep, db: DbDep) -> MeOut:
     return MeOut(
         is_admin=access.is_admin,
         spaces=[_space_ref(s, access.space_role(s.id)) for s in _my_spaces(db, access)],
+        vault_url=load_settings(db).vault_url,
     )
 
 

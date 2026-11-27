@@ -1,6 +1,6 @@
 import { EmojiPicker } from "../../components/EmojiPicker";
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
-import { Segmented } from "../../components/Field";
+import { Field, Segmented } from "../../components/Field";
 import { errorText, formatDateTime } from "../../api";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { Feedback, type FeedbackMessage } from "../../components/Feedback";
@@ -385,6 +385,22 @@ function VersionsTab({ notify }: { notify: Notify }) {
         Benannte Versionen bleiben immer erhalten. Ältere automatische Versionen werden nachts
         gelöscht, die jüngste je Tag bleibt.
       </p>
+      <Field
+        label="Adresse des Passwort-Tresors"
+        hint="Bitwarden oder Vaultwarden im Web, z. B. https://vault.example.com. Damit gibt es den Baustein „Bitwarden-Einträge“; nur Links auf diese Adresse werden geöffnet. Leer lassen schaltet den Baustein ab."
+      >
+        {(control) => (
+          <input
+            {...control}
+            type="url"
+            inputMode="url"
+            maxLength={200}
+            autoComplete="off"
+            value={settings.vault_url}
+            onChange={(event) => setSettings({ ...settings, vault_url: event.target.value })}
+          />
+        )}
+      </Field>
       <button type="submit" className="button button-primary">
         Einstellungen speichern
       </button>
