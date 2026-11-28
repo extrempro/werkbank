@@ -21,6 +21,7 @@ const CONFIG_ROLES = ["Config.Reader", "Config.Reviewer"];
 const TOOLS_USER = "Tools.User";
 const MONITORING_READER = "Monitoring.Reader";
 const MONITORING_REPORTS = "Monitoring.Berichte";
+const FORTIGATE_READER = "FortiGate.Reader";
 const PROJECT_ROLES = ["Projekte.Reader", "Projekte.Editor"];
 const INVENTORY_ROLES = ["Bestand.Reader", "Bestand.Editor"];
 const TENANT_READER = "Tenant.Reader";
@@ -54,6 +55,10 @@ export const MONITORING_ZABBIX_HOSTS_PATH = "/monitoring/zabbix/hosts";
 export const MONITORING_ZABBIX_MAINTENANCE_PATH = "/monitoring/zabbix/wartungen";
 export const ADMIN_ZABBIX_PATH = "/verwaltung/zabbix";
 export const MONITORING_ZABBIX_REPORTS_PATH = "/monitoring/zabbix/berichte";
+export const MONITORING_FORTIGATE_PATH = "/monitoring/fortigate";
+export const MONITORING_FORTIGATE_POLICIES_PATH = "/monitoring/fortigate/policies";
+export const MONITORING_FORTIGATE_OBJECTS_PATH = "/monitoring/fortigate/objekte";
+export const ADMIN_FORTIGATE_PATH = "/verwaltung/fortigate";
 export const PROJECTS_PATH = "/projekte";
 export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
 export const INVENTORY_MASTER_PATH = "/bestand/stammdaten";
@@ -196,48 +201,58 @@ export function areasFor(roles: readonly string[]): NavArea[] {
   }
   // Evergreen (weitere Software) erscheint wieder, sobald es dort mehr als Microsoft 365 gibt;
   // die Neuerungen von Microsoft 365 stehen unter Microsoft 365 › Neuerungen.
-  // Admins sehen das Monitoring nur mit Monitoring.Reader (entschieden).
+  // Admins sehen das Monitoring nur mit Monitoring.Reader (entschieden). FortiGate hat eigene
+  // Rechte, unabhängig davon (auch ohne Monitoring.Reader).
   const monitoringFull = roles.includes(MONITORING_READER);
   const reportsItem = {
     path: MONITORING_ZABBIX_REPORTS_PATH,
     label: "Berichte",
     icon: "statistik" as const,
   };
-  if (!monitoringFull && roles.includes(MONITORING_REPORTS)) {
+  const monitoringGroups: NavGroup[] = [];
+  if (monitoringFull) {
+    monitoringGroups.push(
+      {
+        title: "Zabbix",
+        items: [
+          { path: MONITORING_ZABBIX_PATH, label: "Übersicht", icon: "uebersicht" },
+          { path: MONITORING_ZABBIX_HOSTS_PATH, label: "Hosts", icon: "geraet" },
+          { path: MONITORING_ZABBIX_MAINTENANCE_PATH, label: "Wartungen", icon: "kalender" },
+          reportsItem,
+        ],
+      },
+      {
+        title: "NetBox",
+        items: [{ path: MONITORING_DNS_PATH, label: "DNS-Abgleich", icon: "netzwerk" }],
+      },
+    );
+  } else if (roles.includes(MONITORING_REPORTS)) {
     // Nur die Berichte, ohne Hostdetails
-    areas.push({
-      id: "monitoring",
-      label: "IT-Monitoring",
-      short: "Monitoring",
-      icon: "monitoring",
-      section: "betrieb",
-      home: MONITORING_ZABBIX_REPORTS_PATH,
-      groups: [{ title: "Zabbix", items: [reportsItem] }],
+    monitoringGroups.push({ title: "Zabbix", items: [reportsItem] });
+  }
+  if (roles.includes(FORTIGATE_READER)) {
+    monitoringGroups.push({
+      title: "FortiGate",
+      items: [
+        { path: MONITORING_FORTIGATE_PATH, label: "Übersicht", icon: "uebersicht" },
+        { path: MONITORING_FORTIGATE_POLICIES_PATH, label: "Policies", icon: "schloss" },
+        { path: MONITORING_FORTIGATE_OBJECTS_PATH, label: "Adressen & Dienste", icon: "netzwerk" },
+      ],
     });
   }
-  if (monitoringFull) {
+  if (monitoringGroups.length > 0) {
     areas.push({
       id: "monitoring",
       label: "IT-Monitoring",
       short: "Monitoring",
       icon: "monitoring",
       section: "betrieb",
-      home: MONITORING_ZABBIX_PATH,
-      groups: [
-        {
-          title: "Zabbix",
-          items: [
-            { path: MONITORING_ZABBIX_PATH, label: "Übersicht", icon: "uebersicht" },
-            { path: MONITORING_ZABBIX_HOSTS_PATH, label: "Hosts", icon: "geraet" },
-            { path: MONITORING_ZABBIX_MAINTENANCE_PATH, label: "Wartungen", icon: "kalender" },
-            reportsItem,
-          ],
-        },
-        {
-          title: "NetBox",
-          items: [{ path: MONITORING_DNS_PATH, label: "DNS-Abgleich", icon: "netzwerk" }],
-        },
-      ],
+      home: monitoringFull
+        ? MONITORING_ZABBIX_PATH
+        : roles.includes(MONITORING_REPORTS)
+          ? MONITORING_ZABBIX_REPORTS_PATH
+          : MONITORING_FORTIGATE_PATH,
+      groups: monitoringGroups,
     });
   }
   if (hasAny(roles, [TICKETS_MEMBER, TICKETS_SETTINGS])) {
@@ -444,6 +459,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
             { path: ADMIN_MAIL_PATH, label: "Mail & Teams", icon: "eingang" },
             { path: ADMIN_CONNECTIONS_PATH, label: "Verbindungen", icon: "netzwerk" },
             { path: ADMIN_ZABBIX_PATH, label: "Zabbix", icon: "monitoring" },
+            { path: ADMIN_FORTIGATE_PATH, label: "FortiGate", icon: "schloss" },
             { path: ADMIN_BACKUP_PATH, label: "Datensicherung", icon: "snapshots" },
             { path: ADMIN_FEEDBACK_PATH, label: "Rückmeldungen", icon: "rueckmeldung" },
             { path: AUDIT_PATH, label: "Audit-Log", icon: "audit" },

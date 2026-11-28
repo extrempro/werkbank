@@ -12,6 +12,7 @@ const BUDGET_MANAGER = "Budget.Manager";
 const TOOLS = "Tools.User";
 const MONITORING = "Monitoring.Reader";
 const MONITORING_REPORTS = "Monitoring.Berichte";
+const FORTIGATE = "FortiGate.Reader";
 const PROJECTS_READER = "Projekte.Reader";
 const PROJECTS_EDITOR = "Projekte.Editor";
 const INVENTORY_READER = "Bestand.Reader";
@@ -938,8 +939,9 @@ export const AREAS: readonly Area[] = [
   {
     id: "it-monitoring",
     title: "IT-Monitoring",
-    summary: "Überwachung der IT aus Zabbix und der DNS-Abgleich mit NetBox.",
-    roles: [MONITORING, MONITORING_REPORTS],
+    summary:
+      "Überwachung der IT aus Zabbix, der DNS-Abgleich mit NetBox und die Regeln der FortiGates.",
+    roles: [MONITORING, MONITORING_REPORTS, FORTIGATE, ADMIN],
     parts: [
       {
         title: "Zabbix",
@@ -1183,6 +1185,127 @@ export const AREAS: readonly Area[] = [
                 text: "Den Bereich sieht, wer für IT-Monitoring „Lesen“ hat, auch in der Admin-Gruppe. „Jetzt prüfen“ darf, wer in der Admin-Gruppe ist und zusätzlich „Lesen“ hat. Der Token liegt verschlüsselt in der Datenbank und wird nie angezeigt.",
               },
             ],
+          },
+        ],
+      },
+      {
+        title: "FortiGate",
+        roles: [FORTIGATE, ADMIN],
+        topics: [
+          {
+            id: "fortigate-uebersicht",
+            title: "Übersicht und Abruf",
+            roles: [FORTIGATE],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Werkbank liest Policies, Adressen, Dienste und VIPs aller FortiGates der Security Fabric und zeigt sie zusammen an. Sie fragt jedes Gerät direkt ab, nur lesend, und ändert nie etwas an den Firewalls. Wie oft sie abfragt, legt ein Admin fest, meist stündlich. Die Konfiguration speichert sie nur, wenn sich etwas geändert hat. Oben auf jeder Seite steht, von wann die Daten sind; lässt sich ein Gerät nicht abrufen, steht der Fehler dort und du siehst den letzten Stand.",
+              },
+              {
+                kind: "terms",
+                items: [
+                  [
+                    "Rolle im Fabric",
+                    "Root ist das Gerät an der Spitze der Security Fabric, die anderen sind Mitglieder",
+                  ],
+                  [
+                    "HA",
+                    "Aktiv-Passiv oder Aktiv-Aktiv mit der Zahl der Cluster-Mitglieder; „kein HA“ bei einem einzelnen Gerät",
+                  ],
+                  [
+                    "Änderungen",
+                    "neue Konfigurationsstände der letzten 24 Stunden über alle Geräte",
+                  ],
+                ],
+              },
+              {
+                kind: "text",
+                text: "Mit „Bearbeiten“ für FortiGate gibt es zusätzlich „Jetzt abrufen“: Dann fragt die Werkbank alle Geräte in den nächsten Minuten ab, ohne auf den nächsten Takt zu warten.",
+              },
+            ],
+            links: [{ to: "/monitoring/fortigate", label: "Zur Übersicht" }],
+          },
+          {
+            id: "fortigate-policies",
+            title: "Policies",
+            roles: [FORTIGATE],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Liste zeigt die Policies aller Geräte in der Reihenfolge, in der die FortiGate sie prüft: Je Gerät greift die erste passende Policy, die späteren nicht mehr. Offene Angaben wie „all“, „ALL“ oder „any“ sind farbig markiert. Ein Klick auf eine Zeile zeigt rechts alle Angaben, am Handy darunter.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "Suche nach einer IP: Treffer sind auch Policies mit Netzen, Bereichen oder Gruppen, in denen die IP liegt. „all“ zählt dabei nicht, sonst würde fast jede Policy passen.",
+                  "Suche nach einer Zahl: als Port (auch in Dienstgruppen) und als Policy-ID. „tcp/443“ sucht nur TCP, „#12“ nur die Policy-ID.",
+                  "Sonst sucht das Feld in Namen, Kommentaren, Interfaces, Adressen und Diensten.",
+                  "Weitere Filter: Gerät, Interface-Paar, Aktion und Status. „CSV exportieren“ lädt die gefilterte Liste herunter.",
+                ],
+              },
+              {
+                kind: "terms",
+                items: [
+                  [
+                    "Treffer",
+                    "so oft hat die Policy seit dem letzten Zurücksetzen des Zählers gegriffen; nach einem Neustart beginnt der Zähler neu",
+                  ],
+                  ["Zuletzt genutzt", "wann die Policy zuletzt gegriffen hat, laut FortiGate"],
+                  ["Position", "Platz der Policy in der Reihenfolge des Geräts"],
+                ],
+              },
+            ],
+            links: [{ to: "/monitoring/fortigate/policies", label: "Zu den Policies" }],
+          },
+          {
+            id: "fortigate-objekte",
+            title: "Adressen und Dienste",
+            roles: [FORTIGATE],
+            blocks: [
+              {
+                kind: "text",
+                text: "Hier stehen Adressen, Adressgruppen, Dienste, Dienstgruppen und VIPs aller Geräte, nach Namen zusammengefasst. Gibt es ein Objekt auf mehreren Geräten mit unterschiedlichem Inhalt, steht „unterschiedlich je Gerät“ da; rechts siehst du die Werte je Gerät und bei Gruppen die Mitglieder je Gerät.",
+              },
+              {
+                kind: "terms",
+                items: [
+                  [
+                    "Fabric-Objekt",
+                    "ein Objekt, das die Security Fabric vom Root an die anderen Geräte verteilt",
+                  ],
+                  [
+                    "Verwendet",
+                    "so oft steht das Objekt direkt in Policies und Gruppen; unter „Verwendet in“ stehen auch Policies, die es über eine Gruppe nutzen",
+                  ],
+                ],
+              },
+              {
+                kind: "text",
+                text: "Die Suche nach einer IP findet auch Netze, Bereiche und Gruppen, in denen sie liegt; die nach einer Zahl Dienste und Dienstgruppen mit diesem Port.",
+              },
+            ],
+            links: [{ to: "/monitoring/fortigate/objekte", label: "Zu Adressen & Dienste" }],
+          },
+          {
+            id: "fortigate-einrichten",
+            title: "FortiGate einrichten",
+            roles: [ADMIN],
+            blocks: [
+              {
+                kind: "steps",
+                items: [
+                  "Lege auf jeder FortiGate einen REST-API-Benutzer mit einem Nur-Lese-Profil an. Trag unter Trusted Hosts die Adresse des Servers der Werkbank ein und erzeuge ein API-Token.",
+                  "Öffne Verwaltung › FortiGate und wähle „Gerät hinzufügen“. Trag Name, die https-Adresse der Verwaltung (bei HA die Adresse des Clusters) und das Token ein.",
+                  "Wähle „Verbindung prüfen“. Stammt das Zertifikat aus einer eigenen Zertifizierungsstelle, füge deren CA-Zertifikat unten im PEM-Format ein.",
+                  "Leg Abrufabstand und Aufbewahrung fest und speichere. Den Bereich sieht nur, wem du unter Berechtigungen „FortiGate: Lesen“ oder „Bearbeiten“ gibst, auch in der Admin-Gruppe.",
+                ],
+              },
+              {
+                kind: "text",
+                text: "Die Aufbewahrung gilt für Abrufe und Konfigurationsstände (1 bis 36 Monate, Vorgabe 3). Verkürzt du sie, fragt die Werkbank vorher nach und nennt, wie viel wegfällt; gelöscht wird beim nächsten Abruf. Der jüngste Stand je Gerät bleibt immer. Den FortiAnalyzer kannst du schon eintragen; er liefert später im Änderungsverlauf, wer etwas geändert hat. Lässt sich ein Gerät dreimal hintereinander nicht abrufen, meldet die Glocke das den Admins.",
+              },
+            ],
+            links: [{ to: "/verwaltung/fortigate", label: "Zur Verwaltung › FortiGate" }],
           },
         ],
       },

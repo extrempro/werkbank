@@ -24,6 +24,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.154.0",
+    date: "2026-11-28",
+    summary: "Neu im IT-Monitoring: FortiGate mit Policies, Adressen und Diensten aller Firewalls.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Unter FortiGate siehst du die Policies aller Firewalls in der Reihenfolge, in der sie greifen. Offene Angaben wie „all“ oder „ALL“ sind markiert. Die Suche findet zu einer IP auch die Netze und Gruppen, in denen sie liegt, und zu einer Zahl den Port oder die Policy-ID.",
+          "„Adressen & Dienste“ fasst die Objekte aller Geräte nach Namen zusammen und zeigt, wo sie verwendet werden und ob sie sich zwischen den Geräten unterscheiden.",
+          "Den Bereich siehst du mit dem neuen Recht „FortiGate“. Die Werkbank liest die Firewalls nur und ändert nichts an ihnen.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter Verwaltung › FortiGate trägst du die Geräte ein, prüfst die Verbindung und legst fest, wie oft abgerufen wird und wie lange die Daten bleiben.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.153.0",
     date: "2026-11-27",
     summary: "Neuer Baustein in der Dokumentation: Verweise auf Zugänge in Bitwarden.",

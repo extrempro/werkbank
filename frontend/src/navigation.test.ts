@@ -51,6 +51,17 @@ describe("navigationFor", () => {
 });
 
 describe("areasFor", () => {
+  it("zeigt FortiGate auch ohne Monitoring.Reader, Admins nur mit dem Recht", () => {
+    const only = areasFor(["FortiGate.Reader"]).find((area) => area.id === "monitoring");
+    expect(only?.home).toBe("/monitoring/fortigate");
+    expect(only?.groups.map((group) => group.title)).toEqual(["FortiGate"]);
+    const both = areasFor(["Monitoring.Reader", "FortiGate.Reader"]).find(
+      (area) => area.id === "monitoring",
+    );
+    expect(both?.groups.map((group) => group.title)).toEqual(["Zabbix", "NetBox", "FortiGate"]);
+    expect(areasFor(["Werkbank.Admin"]).some((area) => area.id === "monitoring")).toBe(false);
+  });
+
   const all = ["Werkbank.Admin", "Config.Reader", "Evergreen.Editor"];
 
   it("führt die Neuerungen unter Microsoft 365, ohne eigenen Bereich Evergreen", () => {
@@ -65,6 +76,7 @@ describe("areasFor", () => {
       "/verwaltung/mail-teams",
       "/verwaltung/verbindungen",
       "/verwaltung/zabbix",
+      "/verwaltung/fortigate",
       "/verwaltung/datensicherung",
       "/verwaltung/rueckmeldungen",
       "/audit",

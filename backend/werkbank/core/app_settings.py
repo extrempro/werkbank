@@ -29,6 +29,7 @@ PUSH_KEY = "push"
 NETBOX_KEY = "netbox"
 ZABBIX_KEY = "monitoring.zabbix"
 ZABBIX_OPTIONS_KEY = "monitoring.zabbix.optionen"
+FORTIGATE_KEY = "monitoring.fortigate"
 NINJA_KEY = "inventory.ninjaone"
 
 MIN_KEY_LENGTH = 32

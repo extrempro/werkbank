@@ -101,6 +101,15 @@ AREAS: tuple[Area, ...] = (
         ),
     ),
     Area(
+        "fortigate",
+        "FortiGate",
+        "Lesen: Policies, Adressen und Dienste der Firewalls. Bearbeiten: zusätzlich abrufen.",
+        _levels(
+            ("Lesen", [Role.FORTIGATE_READER]),
+            ("Bearbeiten", [Role.FORTIGATE_READER, Role.FORTIGATE_EDITOR]),
+        ),
+    ),
+    Area(
         "m365",
         "M365-Einstellungen",
         "Lesen schließt die Tenant-Übersicht ein. Prüfen: Änderungen bewerten, Soll-Werte pflegen.",

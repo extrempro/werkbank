@@ -22,6 +22,8 @@ class Role(StrEnum):
     BUDGET_READER = "Budget.Reader"
     MONITORING_READER = "Monitoring.Reader"
     MONITORING_REPORTS = "Monitoring.Berichte"
+    FORTIGATE_READER = "FortiGate.Reader"
+    FORTIGATE_EDITOR = "FortiGate.Editor"
     PROJECTS_READER = "Projekte.Reader"
     PROJECTS_EDITOR = "Projekte.Editor"
     INVENTORY_READER = "Bestand.Reader"

@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.154.0] – 2026-11-28
+
+### Neu
+
+- **IT-Monitoring › FortiGate, Phase 1.** Lesende Sicht auf alle FortiGates einer Security Fabric (FortiOS 7.6): Abruf je Gerät direkt über die REST-API (nur GET, Token je Gerät), Konfiguration als neuer Stand nur bei Änderung, Trefferzähler und HA als Laufzeitstand. Seiten Übersicht, Policies (FortiOS-Reihenfolge, offene Angaben markiert, Suche nach IP inkl. enthaltender Netze und Gruppen, Port, Policy-ID, Filter, Detail rechts, CSV) und Adressen & Dienste (nach Namen über alle Geräte, Mitglieder je Gerät, Verwendungen mit Links, CSV). Verwaltung › FortiGate mit Geräten, Verbindungstest, CA-Zertifikat, FortiAnalyzer (für später), Abrufabstand und Aufbewahrung (1–36 Monate, Verkürzung mit Bestätigung). Neuer Bereich „FortiGate“ in der Rechteverwaltung (`FortiGate.Reader`, `FortiGate.Editor`), unabhängig von IT-Monitoring. Glocke an Admins nach drei fehlgeschlagenen Abrufen. Migration 0097. Doku: `spec.md`, `design.md`, `datenschutz.md`, `security/asvs-l2.md`, Handbuch, Info-Symbole.
+
 ## [0.153.0] – 2026-11-27
 
 ### Neu

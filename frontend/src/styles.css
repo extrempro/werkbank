@@ -18249,3 +18249,243 @@ textarea.field-control {
   margin: 0;
   padding: 10px 12px;
 }
+
+/* IT-Monitoring › FortiGate (modules/monitoring/fortigate) ---------------------------------- */
+
+.fg-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fg-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fg-state,
+.fg-count {
+  margin: 0;
+  color: var(--farbe-text-mittel);
+}
+
+.fg-failing {
+  margin: 0;
+  padding-left: 32px;
+}
+
+/* Liste mit mitlaufender Detailansicht: die Tabelle scrollt mit der Seite, nur breite Tabellen
+   seitlich in ihrer Box; die Detailansicht bleibt am PC neben der Liste stehen. */
+.fg-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: 16px;
+  align-items: start;
+}
+
+.fg-list {
+  min-width: 0;
+}
+
+.fg-detail {
+  position: sticky;
+  top: calc(var(--kopf-hoehe, 56px) + 16px);
+  max-height: calc(100vh - var(--kopf-hoehe, 56px) - 32px);
+  overflow-y: auto;
+  scroll-margin-top: calc(var(--kopf-hoehe, 56px) + 16px);
+}
+
+@media (max-width: 1023px) {
+  .fg-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fg-detail {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+.fg-detail-empty {
+  margin: 0;
+  padding: 16px;
+}
+
+.fg-detail-title {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+
+.fg-detail-sub {
+  margin: 16px 0 6px;
+  font-size: 0.95rem;
+}
+
+.fg-table td,
+.fg-table th {
+  vertical-align: top;
+}
+
+.fg-table tr.is-selected > * {
+  background: var(--farbe-auswahl);
+}
+
+.fg-table tr.fg-disabled > * {
+  color: var(--farbe-text-leise);
+}
+
+.fg-pick {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 44px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.fg-sub {
+  display: block;
+  color: var(--farbe-text-mittel);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.fg-name {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.fg-match {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--farbe-info-flaeche);
+  color: var(--farbe-info-text);
+  font-size: 0.8rem;
+}
+
+/* Offene Angaben: farbig und gerahmt, nicht nur durch Farbe zu erkennen */
+.fg-open {
+  padding: 0 5px;
+  border: 1px solid var(--farbe-warn-rand-stark);
+  border-radius: 4px;
+  background: var(--farbe-warn-flaeche);
+  color: var(--farbe-warn-text);
+  font-weight: 600;
+}
+
+.fg-negate {
+  font-style: italic;
+}
+
+.fg-accept {
+  color: var(--farbe-ok-text);
+  font-weight: 600;
+}
+
+.fg-deny {
+  color: var(--farbe-bad-text);
+  font-weight: 600;
+}
+
+.fg-muted {
+  color: var(--farbe-text-leise);
+}
+
+.fg-differs {
+  color: var(--farbe-warn-text);
+  font-weight: 600;
+}
+
+.fg-missing {
+  color: var(--farbe-bad-text);
+  font-weight: 600;
+}
+
+.fg-comment {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.fg-value {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.fg-plain {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fg-members {
+  font-size: 0.85rem;
+}
+
+.fg-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: var(--farbe-text-mittel);
+}
+
+.fg-notes,
+.fg-error {
+  display: block;
+  color: var(--farbe-text-mittel);
+}
+
+.fg-error {
+  color: var(--farbe-bad-text);
+}
+
+.fg-row-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.fg-device-form {
+  margin: 0 0 16px;
+  padding: 16px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius);
+  background: var(--farbe-grund);
+}
+
+.fg-device-form h3 {
+  margin: 0;
+}
+
+.fg-fieldset {
+  margin: 8px 0 0;
+  padding: 12px 16px 16px;
+  border: 1px solid var(--farbe-rand);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fg-fieldset legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.fg-field-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.fg-field-tip > :first-child {
+  flex: 1 1 auto;
+}
