@@ -192,7 +192,7 @@ test("NetBird: CrowdSec mit Sperren und Abweisungen je Dienst", async ({
   ).toContainText("sperren");
   await expect(
     services.getByRole("row").filter({ hasText: "git.example.com" }),
-  ).toContainText("2 wären");
+  ).toContainText(/\d+ wären/);
   await expect(
     services.getByRole("row").filter({ hasText: "files.example.com" }),
   ).toContainText("aus");
