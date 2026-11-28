@@ -46,6 +46,8 @@ class FgSnapshot(Base):
     # SHA-256 der Konfiguration (normalisiert), um Änderungen zu erkennen
     digest: Mapped[str] = mapped_column(String(64))
     data: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    # „Geändert von“ aus dem FortiAnalyzer: {"events": […]} oder {"error": "…"}; None ohne FAZ
+    analyzer: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class FgRun(Base):

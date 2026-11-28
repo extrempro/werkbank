@@ -328,7 +328,7 @@ def test_api_rights_and_views(db: Session, tmp_path: Path) -> None:
     login_as(client, ["FortiGate.Reader"], oid="fg-leser")
     overview = client.get(f"{BASE}/overview").json()
     assert overview["configured"] is True and overview["can_refresh"] is False
-    assert overview["policies"] == 9 and overview["disabled"] == 1 and overview["reachable"] == 3
+    assert overview["policies"] == 10 and overview["disabled"] == 1 and overview["reachable"] == 3
     assert overview["changes_24h"] == 0
     devices = {d["name"]: d for d in overview["devices"]}
     assert devices["fw-edge"]["fabric"] == "Root" and devices["fw-core"]["fabric"] == "Mitglied"
@@ -337,7 +337,7 @@ def test_api_rights_and_views(db: Session, tmp_path: Path) -> None:
     assert "geheimes-token" not in json.dumps(overview)
 
     everything = client.get(f"{BASE}/policies").json()
-    assert everything["total"] == 9 and len(everything["rows"]) == 9
+    assert everything["total"] == 10 and len(everything["rows"]) == 10
     assert [r["id"] for r in everything["rows"][:4]] == [15, 12, 7, 18]
     found = client.get(f"{BASE}/policies", params={"q": "10.20.30.15"}).json()
     assert found["query"] == "ip"
@@ -345,6 +345,7 @@ def test_api_rights_and_views(db: Session, tmp_path: Path) -> None:
         ("fw-edge", 12),
         ("fw-core", 31),
         ("fw-core", 44),
+        ("fw-core", 60),
     }
     edge = client.get(f"{BASE}/policies", params={"device": "fw-edge", "action": "accept"}).json()
     assert {r["id"] for r in edge["rows"]} == {15, 12, 7, 18}
@@ -944,3 +945,258 @@ def test_admin_rules(db: Session, tmp_path: Path) -> None:
     assert db.scalars(
         select(AuditLog).where(AuditLog.action == "einstellungen.fortigate_regeln_geaendert")
     ).first()
+
+
+# --- Pfad-Analyse, Topologie, Änderungen (Phase 4) -----------------------------------------
+
+
+def _devices() -> list[Any]:
+    from werkbank.modules.monitoring.fortigate.path import Device
+
+    out = []
+    for name in sample.DEVICES:
+        data = fetched(name)
+        out.append(Device(name, data.config, data.runtime))
+    return out
+
+
+def test_path_through_tunnel_and_uplink() -> None:
+    from werkbank.modules.monitoring.fortigate.path import Flow, trace
+
+    ip = ipaddress.IPv4Address
+    devices = _devices()
+    result = trace(devices, Flow(ip("10.40.12.7"), ip("203.0.113.10"), "tcp", 443))
+    assert result.allowed and [h.device for h in result.hops] == ["fw-standort-b", "fw-edge"]
+    first, second = result.hops
+    assert first.ingress == "lan" and first.egress == "ipsec-zentrale"
+    assert "OSPF" in first.route and first.policy and first.policy["id"] == 3
+    assert second.ingress == "ipsec-standort-b" and second.policy and second.policy["id"] == 18
+    assert second.skipped == ["#15 davor passt nicht (Dienst nur DNS)"]
+    assert second.snat.startswith("SNAT auf wan1") and "Internet über wan1" in second.outcome
+    assert "Ausgang ins Internet: fw-edge wan1" in result.verdict
+
+    office = trace(devices, Flow(ip("10.20.30.20"), ip("203.0.113.10"), "tcp", 443))
+    assert [h.device for h in office.hops] == ["fw-core", "fw-edge"]
+    assert office.hops[1].ingress == "lan" and office.hops[1].policy["id"] == 12  # type: ignore[index]
+    # Dienst passt nicht: implizites Deny auf fw-core
+    ssh = trace(devices, Flow(ip("10.20.30.20"), ip("203.0.113.10"), "tcp", 22))
+    assert not ssh.allowed and "keine passende Policy" in ssh.verdict
+    # Explizites Deny auf fw-standort-b
+    denied = trace(devices, Flow(ip("10.40.12.7"), ip("10.40.5.9"), "udp", 161))
+    assert denied.hops[0].outcome.startswith("Zugestellt") or not denied.allowed
+    # VIP mit Ziel-NAT, Startgerät gewählt
+    vip = trace(devices, Flow(ip("198.18.0.5"), ip("192.0.2.10"), "tcp", 3389), start="fw-edge")
+    assert vip.allowed and vip.hops[0].ingress == "wan1"
+    assert "10.20.30.50" in vip.hops[0].dnat and vip.hops[0].policy["id"] == 7  # type: ignore[index]
+    # Quelle ohne Gerät: Startgerät nötig
+    assert trace(devices, Flow(ip("198.18.0.5"), ip("10.20.30.5"), "tcp", 443)).error
+    assert trace(devices, Flow(ip("10.20.30.20"), ip("10.20.31.10"), "icmp", None)).verdict
+
+
+def test_internet_exits_and_topology() -> None:
+    from werkbank.modules.monitoring.fortigate.path import internet_exits, topology
+
+    devices = _devices()
+    exits = {(r["device"], r["interface"]): r for r in internet_exits(devices)}
+    assert exits[("fw-standort-b", "lan")]["allowed"] is True
+    assert exits[("fw-standort-b", "lan")]["exit"] == "fw-edge wan1"
+    assert exits[("fw-core", "lan")]["policies"] == ["fw-core #60", "fw-edge #12"]
+    assert exits[("fw-core", "server")]["allowed"] is False
+    assert ("fw-edge", "wan1") not in exits  # WAN selbst ist kein internes Netz
+    topo = topology(devices)
+    kinds = {(link["a"], link["b"], link["kind"]) for link in topo["links"]}
+    assert ("fw-edge", "fw-standort-b", "IPsec") in kinds
+    assert ("fw-core", "fw-edge", "Route") in kinds
+    assert {n["name"]: n["internet"] for n in topo["nodes"]}["fw-core"] == []
+
+
+def test_diff_configs() -> None:
+    from werkbank.modules.monitoring.fortigate.diff import diff_configs, match_events
+
+    old = fetched("fw-edge").config
+    new = copy.deepcopy(old)
+    new["policies"][0], new["policies"][1] = new["policies"][1], new["policies"][0]
+    new["policies"][2]["service"] = ["HTTPS"]
+    new["addresses"] = [a for a in new["addresses"] if a["name"] != "test-host-1"]
+    new["addresses"].append({"name": "neu-host", "type": "ipmask", "value": "10.1.1.1/32"})
+    new["ha"]["mode"] = "standalone"
+    changes = {(c.section, c.kind, c.key): c for c in diff_configs(old, new)}
+    moved = changes[("policies", "geändert", "15")]
+    assert any(f["field"] == "Position" for f in moved.fields)
+    service = changes[("policies", "geändert", "7")]
+    assert {"field": "Dienst", "before": "ALL", "after": "HTTPS"} in service.fields
+    assert ("addresses", "entfernt", "test-host-1") in changes
+    assert ("addresses", "neu", "neu-host") in changes
+    assert ("ha", "geändert", "ha") in changes
+    # Neue Bereiche einer neueren Werkbank sind keine Änderung am Gerät
+    legacy = {k: v for k, v in old.items() if k != "vpn_tunnels"}
+    assert diff_configs(legacy, old) == []
+    events = [
+        {"cfgpath": "firewall.policy", "cfgobj": "7", "user": "admin-a", "ui": "GUI"},
+        {"cfgpath": "firewall.address", "cfgobj": "neu-host", "user": "admin-b", "ui": "CLI"},
+    ]
+    assert [e["user"] for e in match_events(service, events)] == ["admin-a"]
+
+
+def _faz_transport(calls: list[dict[str, Any]]) -> Any:
+    def send(config: Any, payload: dict[str, Any]) -> dict[str, Any]:
+        calls.append(payload)
+        if payload["method"] == "add":
+            return {"result": {"tid": 42}}
+        return {
+            "result": {
+                "percentage": 100,
+                "data": [
+                    {
+                        "itime": "2026-11-28 10:00:00",
+                        "user": "admin-a",
+                        "ui": "GUI(10.0.0.5)",
+                        "action": "Edit",
+                        "cfgpath": "firewall.policy",
+                        "cfgobj": "7",
+                        "cfgattr": "service[ALL->HTTPS]",
+                    }
+                ],
+            }
+        }
+
+    return send
+
+
+@pytest.mark.db
+def test_changes_compare_analyzer_and_bell(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    add_devices(db, settings)
+    db.add(
+        AppSetting(
+            key=FORTIGATE_KEY,
+            value={
+                "analyzer": {
+                    "enabled": True,
+                    "url": "https://faz.example.com",
+                    "adom": "root",
+                    "key_encrypted": encrypt_secret(settings, "faz-schluessel"),
+                }
+            },
+        )
+    )
+    db.commit()
+    calls: list[dict[str, Any]] = []
+    collector.collect(
+        db, settings, transport=sample.sample_transport, analyzer_transport=_faz_transport(calls)
+    )
+    assert calls == []  # erster Stand: niemand hat etwas geändert
+
+    changed = copy.deepcopy(sample.DEVICES)
+    changed["fw-edge"]["firewall/policy"][2]["service"] = [{"name": "HTTPS"}]
+
+    def transport(config: Any, path: str, params: Any) -> Any:
+        original = sample.DEVICES
+        try:
+            sample.DEVICES = changed
+            return sample.sample_transport(config, path, params)
+        finally:
+            sample.DEVICES = original
+
+    collector.collect(
+        db, settings, force=True, transport=transport, analyzer_transport=_faz_transport(calls)
+    )
+    assert [c["method"] for c in calls] == ["add", "get"]
+    assert calls[0]["params"][0]["device"] == [{"devname": "fw-edge"}]
+
+    client = client_for(make_app(settings))
+    login_as(client, ["FortiGate.Reader"], oid="fg-aenderungen")
+    data = client.get(f"{BASE}/changes").json()
+    entry = data["entries"][0]
+    assert entry["device"] == "fw-edge" and entry["analyzer"] is True
+    change = next(c for c in entry["changes"] if c["key"] == "7")
+    assert change["kind"] == "geändert" and change["who"][0]["user"] == "admin-a"
+    assert client.get(f"{BASE}/changes", params={"kind": "route"}).json()["entries"] == []
+    assert client.get(f"{BASE}/changes", params={"kind": "unsinn"}).status_code == 422
+
+    snaps = client.get(f"{BASE}/snapshots", params={"device": "fw-edge"}).json()["snapshots"]
+    assert len(snaps) == 2
+    compared = client.get(
+        f"{BASE}/compare", params={"device": "fw-edge", "a": snaps[0]["id"], "b": snaps[1]["id"]}
+    ).json()
+    assert compared["from"]["id"] == snaps[1]["id"] and compared["changes"]
+    core = client.get(f"{BASE}/snapshots", params={"device": "fw-core"}).json()["snapshots"]
+    assert (
+        client.get(
+            f"{BASE}/compare", params={"device": "fw-edge", "a": snaps[0]["id"], "b": core[0]["id"]}
+        ).status_code
+        == 404
+    )
+
+    events = [
+        e
+        for e in fortigate_notifications(db, settings, now_utc())
+        if e.kind == "monitoring.fortigate_aenderung"
+    ]
+    assert [e.title for e in events] == ["FortiGate „fw-edge“: Konfiguration geändert"]
+
+
+@pytest.mark.db
+def test_api_path_exits_and_lookup(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    add_devices(db, settings)
+    collector.collect(db, settings, transport=sample.sample_transport)
+    app = make_app(settings)
+    app.dependency_overrides[get_fortigate_transport] = lambda: sample.sample_transport
+    client = client_for(app)
+    login_as(client, ["FortiGate.Reader"], oid="fg-pfad")
+    params = {"src": "10.40.12.7", "dst": "203.0.113.10", "proto": "tcp", "port": 443}
+    data = client.get(f"{BASE}/path", params={**params, "check": "true"}).json()
+    assert data["allowed"] is True and len(data["hops"]) == 2
+    assert data["hops"][0]["check"]["ok"] is True
+    assert data["hops"][1]["check"]["text"] == "Policy-Lookup bestätigt #18"
+    assert "Internet-Dienste" in data["limits"]
+    assert client.get(f"{BASE}/path", params={**params, "port": ""}).status_code == 422
+    assert client.get(f"{BASE}/path", params={**params, "src": "kein-ip"}).status_code == 422
+    assert (
+        client.get(f"{BASE}/path", params={**params, "src": "198.18.0.5"}).status_code == 422
+    )  # Startgerät nötig
+    vip = client.get(
+        f"{BASE}/path",
+        params={"src": "198.18.0.5", "dst": "192.0.2.10", "port": 3389, "device": "fw-edge"},
+    ).json()
+    assert vip["hops"][0]["findings"]  # Policy 7 hat Befunde
+    exits = client.get(f"{BASE}/exits").json()
+    assert exits["probe"] == "203.0.113.10" and exits["topology"]["links"]
+    login_as(client, ["Monitoring.Reader"], oid="fg-ohne-recht")
+    assert client.get(f"{BASE}/path", params=params).status_code == 403
+    assert client.get(f"{BASE}/exits").status_code == 403
+
+
+@pytest.mark.db
+def test_admin_analyzer_test(db: Session, tmp_path: Path) -> None:
+    from werkbank.modules.monitoring.fortigate.admin import get_analyzer_transport
+    from werkbank.modules.monitoring.fortigate.faz import AnalyzerError
+
+    settings = settings_with_key(tmp_path)
+    client = admin(settings)
+    calls: list[dict[str, Any]] = []
+    client.app.dependency_overrides[get_analyzer_transport] = lambda: _faz_transport(calls)  # type: ignore[attr-defined]
+    assert client.post(f"{ADMIN}/analyzer/test", headers=HEADERS).status_code == 409
+    client.put(
+        ADMIN,
+        json={
+            "interval_minutes": 60,
+            "retention_months": 3,
+            "analyzer_enabled": True,
+            "analyzer_url": "https://faz.example.com",
+            "analyzer_key": "faz-schluessel",
+        },
+        headers=HEADERS,
+    )
+    assert client.post(f"{ADMIN}/analyzer/test", headers=HEADERS).status_code == 409  # kein Gerät
+    add_devices(db, settings, ("fw-edge",))
+    result = client.post(f"{ADMIN}/analyzer/test", headers=HEADERS).json()
+    assert result == {"device": "fw-edge", "events": 1}
+
+    def failing(config: Any, payload: dict[str, Any]) -> dict[str, Any]:
+        raise AnalyzerError("Der FortiAnalyzer ist nicht erreichbar.")
+
+    client.app.dependency_overrides[get_analyzer_transport] = lambda: failing  # type: ignore[attr-defined]
+    answer = client.post(f"{ADMIN}/analyzer/test", headers=HEADERS)
+    assert answer.status_code == 502 and "nicht erreichbar" in answer.json()["detail"]

@@ -2,6 +2,8 @@
 
 import csv
 import io
+import ipaddress
+from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
@@ -16,9 +18,11 @@ from werkbank.core.deps import DbDep, SettingsDep, require_roles
 from werkbank.core.models import Job, JobStatus
 from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
-from werkbank.modules.monitoring.fortigate import analysis, views
+from werkbank.modules.monitoring.fortigate import analysis, path, views
+from werkbank.modules.monitoring.fortigate.admin import get_fortigate_transport
+from werkbank.modules.monitoring.fortigate.client import FortiGateClient, FortiGateError, Transport
 from werkbank.modules.monitoring.fortigate.collector import FORTIGATE_JOB
-from werkbank.modules.monitoring.fortigate.config import load_options
+from werkbank.modules.monitoring.fortigate.config import device_config, load_options, load_settings
 from werkbank.modules.monitoring.fortigate.findings import RULES_BY_CODE, SEVERITY_LABELS
 from werkbank.modules.monitoring.fortigate.models import FgDevice, FgException
 from werkbank.worker.jobs import enqueue
@@ -81,18 +85,24 @@ def get_policies(
     """Policies aller Geräte in FortiOS-Reihenfolge, gefiltert und durchsucht."""
     query = analysis.parse_query(q)
     data = views.policies(db, query, device, pair, action, state)
-    by_policy: dict[str, list[dict[str, Any]]] = {}
-    for item in views.findings(db, load_options(db), now_utc())["rows"]:
-        if item["policy_id"] is not None:
-            by_policy.setdefault(f"{item['device']}:{item['policy_id']}", []).append(
-                {"code": item["code"], "rule": item["rule"], "severity": item["severity"]}
-            )
+    by_policy = _findings_by_policy(db)
     data["rows"] = [
         {**_policy_out(row), "findings": by_policy.get(f"{row['device']}:{row['id']}", [])}
         for row in data["rows"]
     ]
     data["query"] = _query_kind(query)
     return data
+
+
+def _findings_by_policy(db: DbDep) -> dict[str, list[dict[str, Any]]]:
+    """Befunde (ohne Ausnahmen) je „Gerät:Policy-ID“."""
+    by_policy: dict[str, list[dict[str, Any]]] = {}
+    for item in views.findings(db, load_options(db), now_utc())["rows"]:
+        if item["policy_id"] is not None:
+            by_policy.setdefault(f"{item['device']}:{item['policy_id']}", []).append(
+                {"code": item["code"], "rule": item["rule"], "severity": item["severity"]}
+            )
+    return by_policy
 
 
 def _query_kind(query: analysis.Query) -> str:
@@ -517,6 +527,158 @@ def delete_exception(
     db.delete(exception)
     db.commit()
     return {"id": exception_id}
+
+
+# --- Pfad-Analyse, Internet-Ausgang, Topologie --------------------------------------------
+
+ProtoQuery = Annotated[Literal["tcp", "udp", "icmp"], Query()]
+TransportDep = Annotated[Transport, Depends(get_fortigate_transport)]
+
+
+def _ip(value: str, label: str) -> ipaddress.IPv4Address:
+    try:
+        return ipaddress.IPv4Address(value.strip())
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422, detail=f"Bitte gib als {label} eine IPv4-Adresse an."
+        ) from error
+
+
+def _lookup(
+    db: DbDep, settings: SettingsDep, transport: Transport, hop: path.Hop, flow: path.Flow
+) -> dict[str, Any]:
+    """Gegenprüfung mit dem Policy-Lookup des Geräts (nur lesend, live)."""
+    device = db.scalars(select(FgDevice).where(FgDevice.name == hop.device)).first()
+    config = (
+        device_config(device, settings, load_settings(db).ca_pem) if device is not None else None
+    )
+    if config is None:
+        return {"ok": False, "text": "Kein Zugang zum Gerät."}
+    params = {
+        "sourceip": hop.src,
+        "dest": str(flow.dst),
+        "protocol": str(path.PROTOCOLS[flow.proto]),
+        "srcintf": hop.ingress,
+    }
+    if flow.proto == "icmp":
+        params |= {"icmptype": "8", "icmpcode": "0"}
+    else:
+        params |= {"sourceport": "50000", "destport": str(flow.port or 0)}
+    try:
+        answer = FortiGateClient(config, transport).monitor("firewall/policy-lookup", **params)
+    except FortiGateError as error:
+        return {"ok": False, "text": f"Gegenprüfung nicht möglich: {error}"}
+    result = (
+        answer.results[0] if isinstance(answer.results, list) and answer.results else answer.results
+    )
+    found = result.get("policy_id") if isinstance(result, dict) else None
+    expected = hop.policy["id"] if hop.policy else None
+    if found == expected:
+        return {"ok": True, "text": f"Policy-Lookup bestätigt #{found}"}
+    shown = f"#{found}" if found else "keine Policy"
+    return {"ok": False, "text": f"Policy-Lookup des Geräts nennt {shown}"}
+
+
+@router.get("/path")
+def get_path(
+    user: ReaderUser,
+    db: DbDep,
+    settings: SettingsDep,
+    transport: TransportDep,
+    src: Annotated[str, Query(max_length=15)],
+    dst: Annotated[str, Query(max_length=15)],
+    proto: ProtoQuery = "tcp",
+    port: Annotated[int | None, Query(ge=1, le=65535)] = None,
+    device: NameQuery = None,
+    check: bool = False,
+) -> dict[str, Any]:
+    """Weg einer Verbindung über die FortiGates, berechnet aus dem letzten Abruf."""
+    if proto != "icmp" and port is None:
+        raise HTTPException(status_code=422, detail="Bitte gib für TCP und UDP einen Port an.")
+    flow = path.Flow(_ip(src, "Quelle"), _ip(dst, "Ziel"), proto, port if proto != "icmp" else None)
+    rows_state = views.states(db)
+    result = path.trace(views.path_devices(rows_state), flow, start=device or None)
+    if result.error:
+        raise HTTPException(status_code=422, detail=result.error)
+    by_policy = _findings_by_policy(db)
+    hops = []
+    for hop in result.hops:
+        item = asdict(hop)
+        item["findings"] = (
+            by_policy.get(f"{hop.device}:{hop.policy['id']}", []) if hop.policy else []
+        )
+        if check and hop.policy:
+            hop_flow = path.Flow(
+                ipaddress.IPv4Address(hop.src), ipaddress.IPv4Address(hop.dst), proto, flow.port
+            )
+            item["check"] = _lookup(db, settings, transport, hop, hop_flow)
+        hops.append(item)
+    return {
+        "hops": hops,
+        "verdict": result.verdict,
+        "allowed": result.allowed,
+        "limits": path.LIMITS,
+        "devices": [state.device.name for state in rows_state],
+        "data_at": max(
+            (state.snapshot.seen_at for state in rows_state if state.snapshot), default=None
+        ),
+    }
+
+
+@router.get("/exits")
+def get_exits(user: ReaderUser, db: DbDep) -> dict[str, Any]:
+    """Internet-Ausgang je internem Netz und die Topologie der Geräte."""
+    devices = views.path_devices(views.states(db))
+    return {
+        "exits": path.internet_exits(devices),
+        "topology": path.topology(devices),
+        "probe": str(path.INTERNET_PROBE),
+        "limits": path.LIMITS,
+    }
+
+
+# --- Änderungen ----------------------------------------------------------------------------
+
+ChangeKindQuery = Annotated[
+    Literal["policy", "adresse", "gruppe", "dienst", "route", "sonstiges"] | None, Query()
+]
+
+
+@router.get("/changes")
+def get_changes(
+    user: ReaderUser,
+    db: DbDep,
+    device: NameQuery = None,
+    kind: ChangeKindQuery = None,
+    days: Annotated[int, Query(ge=0, le=3650)] = 30,
+) -> dict[str, Any]:
+    """Änderungen der Konfiguration je Stand; `days=0`: ganze Aufbewahrung."""
+    return views.changes(db, now_utc(), device=device, kind=kind, days=days or None)
+
+
+@router.get("/snapshots")
+def get_snapshots(
+    user: ReaderUser, db: DbDep, device: Annotated[str, Query(max_length=200)]
+) -> dict[str, Any]:
+    rows = views.snapshot_list(db, device)
+    if rows is None:
+        raise HTTPException(status_code=404, detail="Dieses Gerät gibt es nicht.")
+    return {"device": device, "snapshots": rows}
+
+
+@router.get("/compare")
+def get_compare(
+    user: ReaderUser,
+    db: DbDep,
+    device: Annotated[str, Query(max_length=200)],
+    first: Annotated[int, Query(alias="a")],
+    second: Annotated[int, Query(alias="b")],
+) -> dict[str, Any]:
+    """Zwei Abrufe (Stände) desselben Geräts vergleichen."""
+    data = views.compare(db, device, first, second)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Diese Stände gibt es nicht (mehr).")
+    return data
 
 
 class RefreshOut(BaseModel):

@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.157.0] – 2026-11-28
+
+### Neu
+
+- **IT-Monitoring › FortiGate, Phase 4: Pfad-Analyse, Internet & Topologie, Änderungen.** Pfad-Analyse über alle Geräte (VIP, Policy-Routen, Routingtabelle inkl. OSPF/BGP, erste passende Policy mit Begründung und übersprungenen Policies davor, SNAT, Profile, Befunde; weiter über Gateway oder IPsec-Gegenstelle), optional mit Gegenprüfung über den Policy-Lookup der Geräte; Grenzen in der Oberfläche. „Internet & Topologie“ mit Internet-Ausgang je internem Netz und Skizze samt Liste der Verbindungen. „Änderungen“ je neuem Stand mit Feldern vorher/nachher, Filter, „Zwei Abrufe vergleichen“; mit FortiAnalyzer „geändert von“ (Event-Logs per JSON-RPC, Migration 0100) und „FortiAnalyzer prüfen“ in der Verwaltung. Glocke `monitoring.fortigate_aenderung`. Der Abruf liest zusätzlich die Routingtabelle (Laufzeitstand) und die IPsec-Tunnel (Phase 1). Doku: `spec.md`, `design.md`, `datenschutz.md`, `security/asvs-l2.md`, Handbuch, Info-Symbole.
+
 ## [0.156.0] – 2026-11-28
 
 ### Neu

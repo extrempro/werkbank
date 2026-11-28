@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from werkbank.config import Settings
 from werkbank.core.app_settings import FORTIGATE_KEY, decrypt_secret, get_setting
 from werkbank.modules.monitoring.fortigate.client import DeviceConfig
+from werkbank.modules.monitoring.fortigate.faz import AnalyzerConfig
 from werkbank.modules.monitoring.fortigate.findings import (
     RULES_BY_CODE,
     UNUSED_DAYS,
@@ -107,4 +108,20 @@ def load_options(db: Session) -> Options:
         if isinstance(sensitive, list)
         else frozenset(),
         unused_days=days if days in UNUSED_DAYS else UNUSED_DAYS_DEFAULT,
+    )
+
+
+def analyzer_config(db: Session, settings: Settings) -> AnalyzerConfig | None:
+    """Zugang zum FortiAnalyzer, wenn eingeschaltet und der Schlüssel lesbar ist."""
+    options = load_settings(db)
+    if not options.analyzer.enabled or not options.analyzer.url:
+        return None
+    raw = stored(db).get("analyzer")
+    data: dict[str, Any] = raw if isinstance(raw, dict) else {}
+    encrypted = data.get("key_encrypted")
+    key = decrypt_secret(settings, encrypted) if isinstance(encrypted, str) else None
+    if not key:
+        return None
+    return AnalyzerConfig(
+        url=options.analyzer.url, adom=options.analyzer.adom, key=key, ca_pem=options.ca_pem
     )

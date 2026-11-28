@@ -61,7 +61,7 @@ test("FortiGate: Übersicht, Policies mit IP-Suche und Adressen & Dienste", asyn
     page.getByRole("heading", { level: 1, name: "Policies" }),
   ).toBeVisible();
   await page.getByRole("searchbox", { name: "Suchen" }).fill("10.20.30.15");
-  await expect(page.getByText(/^3 von \d+ Policies/)).toBeVisible();
+  await expect(page.getByText(/^4 von \d+ Policies/)).toBeVisible();
   const table = page.getByRole("table", { name: "Policies" });
   const row = table.getByRole("row", { name: /LAN ins Internet/ });
   await expect(row).toContainText("10.20.30.15 in Quelle");
@@ -262,6 +262,57 @@ test("FortiGate: Prüfregeln in der Verwaltung", async ({ page }) => {
     page
       .getByRole("status")
       .filter({ hasText: "Die Prüfregeln sind gespeichert." }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+});
+
+test("FortiGate: Pfad-Analyse mit Gegenprüfung, Internet-Ausgang und Änderungen", async ({
+  page,
+}) => {
+  await loadSample(page);
+  await loginAs(page, ["FortiGate.Reader"], "Fritz Firewall");
+  await page.goto("/monitoring/fortigate/pfad");
+  await page.getByRole("textbox", { name: /Quelle/ }).fill("10.40.12.7");
+  await page.getByRole("textbox", { name: /Ziel/ }).fill("203.0.113.10");
+  await page.getByRole("textbox", { name: /Port/ }).fill("443");
+  await page.getByRole("button", { name: "Pfad berechnen" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Ausgang ins Internet: fw-edge wan1" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 3, name: /fw-standort-b/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("#15 davor passt nicht (Dienst nur DNS)"),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/quelle=10\.40\.12\.7/);
+  await expectNoA11yViolations(page);
+
+  await page.goto("/monitoring/fortigate/internet");
+  const table = page.getByRole("table", { name: "Internet-Ausgang je Netz" });
+  const row = table.getByRole("row", { name: /10\.40\.0\.0\/16/ });
+  await expect(row).toContainText("fw-standort-b #3 → fw-edge #18");
+  await expect(
+    page.getByText("fw-edge ↔ fw-standort-b: IPsec ipsec-standort-b"),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+  await row.getByRole("link", { name: "Pfad im Detail" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Ausgang ins Internet" }),
+  ).toBeVisible();
+
+  await page.goto("/monitoring/fortigate/aenderungen");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Änderungen" }),
+  ).toBeVisible();
+  const compare = page.getByRole("region", { name: /Zwei Abrufe vergleichen/ });
+  await compare
+    .getByRole("combobox", { name: "Gerät" })
+    .selectOption("fw-edge");
+  await expect(
+    compare.getByRole("combobox", { name: "Neuerer Abruf" }),
   ).toBeVisible();
   await expectNoA11yViolations(page);
 });

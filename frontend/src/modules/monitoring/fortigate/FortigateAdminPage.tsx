@@ -11,6 +11,7 @@ import {
   fetchFgRules,
   fetchRetentionPreview,
   saveFgRules,
+  testFgAnalyzer,
   saveFgSettings,
   testFgDevice,
   updateFgDevice,
@@ -565,8 +566,8 @@ function SettingsForm({
         <fieldset className="fg-fieldset">
           <legend>FortiAnalyzer (freiwillig)</legend>
           <p className="small">
-            Mit dem FortiAnalyzer zeigt der Änderungsverlauf später auch, wer etwas geändert hat
-            (aus den Event-Logs). Ohne ihn steht dort nur, was sich geändert hat.
+            Mit dem FortiAnalyzer zeigt „Änderungen“ auch, wer etwas geändert hat (aus den
+            Event-Logs). Ohne ihn steht dort nur, was sich geändert hat.
           </p>
           <label className="check-label">
             <input
@@ -624,6 +625,30 @@ function SettingsForm({
               />
             )}
           </Field>
+          {data.analyzer_enabled && data.analyzer_key_set && (
+            <div className="actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() =>
+                  testFgAnalyzer().then(
+                    (result) =>
+                      onMessage({
+                        kind: "status",
+                        text: `Der FortiAnalyzer antwortet: ${result.events} Änderungen an ${result.device} in den letzten 7 Tagen.`,
+                      }),
+                    (error: unknown) =>
+                      onMessage({
+                        kind: "alert",
+                        text: errorText(error, "Der FortiAnalyzer ließ sich nicht abfragen."),
+                      }),
+                  )
+                }
+              >
+                FortiAnalyzer prüfen
+              </button>
+            </div>
+          )}
         </fieldset>
         <div className="actions">
           <button type="submit" className="button button-primary" disabled={busy}>

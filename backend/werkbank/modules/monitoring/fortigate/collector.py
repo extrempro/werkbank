@@ -22,9 +22,16 @@ from werkbank.modules.monitoring.fortigate.client import (
     Transport,
 )
 from werkbank.modules.monitoring.fortigate.config import (
+    analyzer_config,
     device_config,
     load_settings,
     months_ago,
+)
+from werkbank.modules.monitoring.fortigate.faz import (
+    AnalyzerConfig,
+    AnalyzerError,
+    AnalyzerTransport,
+    config_events,
 )
 from werkbank.modules.monitoring.fortigate.models import FgDevice, FgRun, FgSnapshot, FgUnused
 from werkbank.modules.monitoring.fortigate.normalize import Fetched, digest, fetch
@@ -101,12 +108,35 @@ def track_unused(db: Session, device_id: int, config: dict[str, Any], now: datet
         db.add(FgUnused(device_id=device_id, kind=kind, name=name[:255], since=now))
 
 
+# Etwas Vorlauf vor dem letzten gesehenen Stand, falls Uhren leicht abweichen
+ANALYZER_SLACK = timedelta(minutes=2)
+
+
+def changed_by(
+    analyzer: AnalyzerConfig,
+    devname: str,
+    since: datetime,
+    now: datetime,
+    transport: AnalyzerTransport | None,
+) -> dict[str, Any]:
+    """Wer hat seit dem letzten Stand geändert? Fehler stehen am Stand, der Abruf gilt trotzdem."""
+    try:
+        return {"events": config_events(analyzer, devname, since - ANALYZER_SLACK, now, transport)}
+    except AnalyzerError as error:
+        return {"error": str(error)[:ERROR_MAX]}
+    except Exception:
+        logger.exception("FortiGate: FortiAnalyzer-Abfrage fehlgeschlagen")
+        return {"error": "Unerwarteter Fehler beim Abfragen des FortiAnalyzers."}
+
+
 def collect_device(
     db: Session,
     settings: Settings,
     device: FgDevice,
     ca_pem: str | None,
     transport: Transport | None,
+    analyzer: AnalyzerConfig | None = None,
+    analyzer_transport: AnalyzerTransport | None = None,
 ) -> FgRun:
     now = now_utc()
     started = time.monotonic()
@@ -119,7 +149,13 @@ def collect_device(
                 "Bitte in der Verwaltung neu eintragen."
             )
         fetched = fetch(FortiGateClient(config, transport))
+        previous = latest_snapshot(db, device.id)
         snapshot, changed = store(db, device, fetched, now)
+        if changed and previous is not None and analyzer is not None:
+            devname = str(fetched.runtime.get("hostname") or device.name)
+            snapshot.analyzer = changed_by(
+                analyzer, devname, previous.seen_at, now, analyzer_transport
+            )
         track_unused(db, device.id, fetched.config, now)
         run.snapshot_id = snapshot.id
         run.changed = changed
@@ -181,11 +217,15 @@ def collect(
     *,
     force: bool = False,
     transport: Transport | None = None,
+    analyzer_transport: AnalyzerTransport | None = None,
 ) -> list[FgRun]:
     options = load_settings(db)
+    analyzer = analyzer_config(db, settings)
     now = now_utc()
     runs = [
-        collect_device(db, settings, device, options.ca_pem, transport)
+        collect_device(
+            db, settings, device, options.ca_pem, transport, analyzer, analyzer_transport
+        )
         for device in due_devices(db, now, timedelta(minutes=options.interval_minutes), force)
     ]
     removed = purge(db, options.retention_months)

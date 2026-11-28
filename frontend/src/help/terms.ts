@@ -232,6 +232,21 @@ export const HELP = {
     text: "Interfaces oder Zonen, in denen jede erlaubte Verbindung protokolliert werden soll. Fehlt das Protokoll, gibt es einen Befund der Stufe hoch.",
     topic: ["it-monitoring", "fortigate-einrichten"],
   },
+  "fortigate.policy-lookup": {
+    term: "Policy-Lookup",
+    text: "Fragt jedes Gerät auf dem Weg live, welche Policy es für diese Verbindung wählen würde. Nur lesend; weicht das Ergebnis ab, steht es am Gerät.",
+    topic: ["it-monitoring", "fortigate-pfad"],
+  },
+  "fortigate.internet-ausgang": {
+    term: "Internet-Ausgang",
+    text: "Über welche Firewall, welche Policies und mit welchem NAT ein internes Netz ins Internet kommt. Berechnet wie die Pfad-Analyse.",
+    topic: ["it-monitoring", "fortigate-pfad"],
+  },
+  "fortigate.abruf-vergleich": {
+    term: "Abrufe vergleichen",
+    text: "Zeigt alle Unterschiede zwischen zwei gespeicherten Konfigurationsständen eines Geräts. Ältere Stände fallen nach der Aufbewahrung weg.",
+    topic: ["it-monitoring", "fortigate-aenderungen"],
+  },
   "fortigate.verwendet": {
     term: "Verwendet",
     text: "So oft steht das Objekt direkt in Policies und Gruppen, über alle Geräte. Policies, die es über eine Gruppe nutzen, stehen in der Detailansicht.",
@@ -590,6 +605,9 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/monitoring/fortigate/objekte": [["it-monitoring", "fortigate-objekte"]],
   "/monitoring/fortigate/unbenutzt": [["it-monitoring", "fortigate-unbenutzt"]],
   "/monitoring/fortigate/befunde": [["it-monitoring", "fortigate-befunde"]],
+  "/monitoring/fortigate/pfad": [["it-monitoring", "fortigate-pfad"]],
+  "/monitoring/fortigate/internet": [["it-monitoring", "fortigate-pfad"]],
+  "/monitoring/fortigate/aenderungen": [["it-monitoring", "fortigate-aenderungen"]],
   "/verwaltung/fortigate": [["it-monitoring", "fortigate-einrichten"]],
   "/doku": [["doku", "seiten"]],
   "/doku/verwaltung": [["doku", "verwaltung"]],

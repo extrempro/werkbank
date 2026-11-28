@@ -4,7 +4,7 @@ Nur für System-Admins mit frischer Anmeldung. Tokens und der API-Schlüssel des
 liegen verschlüsselt in der Datenbank und werden nie wieder ausgegeben.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -21,6 +21,7 @@ from werkbank.core.app_settings import (
 )
 from werkbank.core.audit import write_audit
 from werkbank.core.deps import DbDep, SettingsDep
+from werkbank.core.sessions import now_utc
 from werkbank.modules.monitoring.fortigate.client import (
     FortiGateClient,
     FortiGateError,
@@ -34,11 +35,18 @@ from werkbank.modules.monitoring.fortigate.config import (
     INTERVALS,
     RETENTION_MAX,
     RETENTION_MIN,
+    analyzer_config,
     device_config,
     load_options,
     load_settings,
     stored,
 )
+from werkbank.modules.monitoring.fortigate.faz import (
+    AnalyzerError,
+    AnalyzerTransport,
+    config_events,
+)
+from werkbank.modules.monitoring.fortigate.faz import http_transport as analyzer_http
 from werkbank.modules.monitoring.fortigate.findings import RULES, UNUSED_DAYS
 from werkbank.modules.monitoring.fortigate.models import FgDevice
 
@@ -467,3 +475,58 @@ def put_rules(request: Request, body: RulesIn, user: AdminUser, db: DbDep) -> Ru
     )
     db.commit()
     return _rules_out(db)
+
+
+# --- FortiAnalyzer prüfen ------------------------------------------------------------------
+
+
+def get_analyzer_transport() -> AnalyzerTransport:
+    """Abhängigkeit, damit Tests den FortiAnalyzer ersetzen können."""
+    return analyzer_http
+
+
+class AnalyzerTestOut(BaseModel):
+    device: str
+    events: int
+
+
+@router.post("/analyzer/test")
+def test_analyzer(
+    request: Request,
+    user: AdminUser,
+    db: DbDep,
+    settings: SettingsDep,
+    transport: Annotated[AnalyzerTransport, Depends(get_analyzer_transport)],
+) -> AnalyzerTestOut:
+    """Sucht die Konfigurationsänderungen der letzten 7 Tage am ersten Gerät (nur lesend)."""
+    config = analyzer_config(db, settings)
+    if config is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Der FortiAnalyzer ist nicht eingeschaltet oder der API-Schlüssel fehlt. "
+            "Bitte erst speichern.",
+        )
+    device = db.scalars(
+        select(FgDevice).where(FgDevice.enabled.is_(True)).order_by(FgDevice.position, FgDevice.id)
+    ).first()
+    if device is None:
+        raise HTTPException(status_code=409, detail="Es ist noch kein Gerät eingetragen.")
+    devname = str((device.runtime or {}).get("hostname") or device.name)
+    now = now_utc()
+    try:
+        events = config_events(config, devname, now - timedelta(days=7), now, transport)
+    except AnalyzerError as error:
+        _audit(
+            db,
+            request,
+            user,
+            "fortianalyzer_geprueft",
+            FORTIGATE_KEY,
+            note=str(error)[:300],
+            ok=False,
+        )
+        db.commit()
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    _audit(db, request, user, "fortianalyzer_geprueft", FORTIGATE_KEY, {"ereignisse": len(events)})
+    db.commit()
+    return AnalyzerTestOut(device=devname, events=len(events))

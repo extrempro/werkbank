@@ -1369,6 +1369,60 @@ export const AREAS: readonly Area[] = [
             links: [{ to: "/monitoring/fortigate/befunde", label: "Zu den Befunden" }],
           },
           {
+            id: "fortigate-pfad",
+            title: "Pfad-Analyse und Internet-Ausgang",
+            roles: [FORTIGATE],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Pfad-Analyse zeigt, welche Firewalls eine Verbindung passiert und welche Policy jeweils zuerst greift. Sie rechnet mit dem letzten Abruf und erzeugt keinen Datenverkehr.",
+              },
+              {
+                kind: "steps",
+                items: [
+                  "Gib Quelle und Ziel als IP-Adresse an, wähle das Protokoll und bei TCP oder UDP den Port.",
+                  "Lass das Startgerät auf „automatisch“: Die Werkbank nimmt das Gerät mit dem Netz der Quelle. Kommt die Verbindung von außen, wähle das Gerät, an dem sie ankommt.",
+                  "Wähle „Pfad berechnen“. Je Gerät siehst du Eingang, Route, die greifende Policy mit Begründung, NAT, Profile und Befunde.",
+                ],
+              },
+              {
+                kind: "list",
+                items: [
+                  "Je Gerät gilt: zuerst eine passende VIP (Ziel-NAT), dann die Route (Policy-Routen, dann die Routingtabelle des Geräts mit längstem Präfix), dann die erste passende Policy in der Reihenfolge des Geräts.",
+                  "Das nächste Gerät ist das, dem die Gateway-Adresse gehört, oder bei IPsec das Gerät am anderen Ende des Tunnels.",
+                  "„Mit Policy-Lookup gegenprüfen“ fragt jedes Gerät auf dem Weg live, welche Policy es nehmen würde. Weicht das ab, steht es am Gerät.",
+                  "Nicht ausgewertet werden Internet-Dienste, Regeln nach Benutzer oder Gruppe, Zeitpläne und die SD-WAN-Auswahl nach Leitungsqualität.",
+                  "„Internet & Topologie“ prüft für jedes interne Netz eine Verbindung ins Internet und zeigt Ausgang, Policies, NAT und Profile. Darunter siehst du, wie die Geräte verbunden sind (gemeinsame Netze, Gateways, IPsec-Tunnel).",
+                ],
+              },
+            ],
+            links: [
+              { to: "/monitoring/fortigate/pfad", label: "Zur Pfad-Analyse" },
+              { to: "/monitoring/fortigate/internet", label: "Zu Internet & Topologie" },
+            ],
+          },
+          {
+            id: "fortigate-aenderungen",
+            title: "Änderungen und Vergleich",
+            roles: [FORTIGATE],
+            blocks: [
+              {
+                kind: "text",
+                text: "„Änderungen“ listet je Abruf mit neuem Konfigurationsstand, was neu, entfernt oder geändert ist, mit den Feldern vorher und nachher. Bei Policies zählt auch eine neue Position, denn sie ändert, welche Policy zuerst greift.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "Ist der FortiAnalyzer eingerichtet, steht an jeder Änderung, wer sie gemacht hat und wie (Oberfläche oder Kommandozeile).",
+                  "Unter „Zwei Abrufe vergleichen“ wählst du ein Gerät und zwei gespeicherte Stände und siehst alle Unterschiede dazwischen.",
+                  "Ältere Stände löscht die Werkbank nach der eingestellten Aufbewahrung.",
+                  "Geänderte Konfigurationen meldet die Glocke allen mit dem Recht „FortiGate“.",
+                ],
+              },
+            ],
+            links: [{ to: "/monitoring/fortigate/aenderungen", label: "Zu den Änderungen" }],
+          },
+          {
             id: "fortigate-einrichten",
             title: "FortiGate einrichten",
             roles: [ADMIN],
@@ -1384,7 +1438,7 @@ export const AREAS: readonly Area[] = [
               },
               {
                 kind: "text",
-                text: "Die Aufbewahrung gilt für Abrufe und Konfigurationsstände (1 bis 36 Monate, Vorgabe 3). Verkürzt du sie, fragt die Werkbank vorher nach und nennt, wie viel wegfällt; gelöscht wird beim nächsten Abruf. Der jüngste Stand je Gerät bleibt immer. Den FortiAnalyzer kannst du schon eintragen; er liefert später im Änderungsverlauf, wer etwas geändert hat. Lässt sich ein Gerät dreimal hintereinander nicht abrufen, meldet die Glocke das den Admins.",
+                text: "Die Aufbewahrung gilt für Abrufe und Konfigurationsstände (1 bis 36 Monate, Vorgabe 3). Verkürzt du sie, fragt die Werkbank vorher nach und nennt, wie viel wegfällt; gelöscht wird beim nächsten Abruf. Der jüngste Stand je Gerät bleibt immer. Mit dem FortiAnalyzer (Adresse, ADOM, API-Schlüssel eines Benutzers mit Leserecht auf die Logs) zeigt „Änderungen“, wer etwas geändert hat; „FortiAnalyzer prüfen“ testet den Zugang. Lässt sich ein Gerät dreimal hintereinander nicht abrufen, meldet die Glocke das den Admins.",
               },
               {
                 kind: "text",

@@ -24,6 +24,29 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.157.0",
+    date: "2026-11-28",
+    summary:
+      "FortiGate zeigt den Weg einer Verbindung, den Internet-Ausgang je Netz und alle Änderungen.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Die Pfad-Analyse zeigt, welche Firewalls eine Verbindung passiert und welche Policy jeweils greift, mit NAT, Profilen und Befunden. Auf Wunsch prüft jedes Gerät das Ergebnis selbst gegen.",
+          "„Internet & Topologie“ zeigt, über welche Firewall jedes interne Netz ins Internet kommt, und wie die Geräte verbunden sind.",
+          "„Änderungen“ listet, was sich an der Konfiguration geändert hat, mit den Werten vorher und nachher. Zwei beliebige Abrufe kannst du vergleichen. Mit FortiAnalyzer steht dabei, wer geändert hat.",
+          "Geänderte Konfigurationen meldet die Glocke.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter FortiGate prüfst du mit „FortiAnalyzer prüfen“, ob der Zugang zum FortiAnalyzer klappt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.156.0",
     date: "2026-11-28",
     summary:
