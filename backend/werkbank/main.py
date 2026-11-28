@@ -61,6 +61,8 @@ from werkbank.modules.monitoring.admin import router as monitoring_admin_router
 from werkbank.modules.monitoring.api import router as monitoring_router
 from werkbank.modules.monitoring.fortigate.admin import router as fortigate_admin_router
 from werkbank.modules.monitoring.fortigate.api import router as fortigate_router
+from werkbank.modules.monitoring.netbird.admin import router as netbird_admin_router
+from werkbank.modules.monitoring.netbird.api import router as netbird_router
 from werkbank.modules.monitoring.zabbix.admin import router as zabbix_admin_router
 from werkbank.modules.monitoring.zabbix.api import router as zabbix_router
 from werkbank.modules.monitoring.zabbix.reports_api import router as zabbix_reports_router
@@ -187,6 +189,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(zabbix_admin_router)
     app.include_router(fortigate_router)
     app.include_router(fortigate_admin_router)
+    app.include_router(netbird_router)
+    app.include_router(netbird_admin_router)
     app.include_router(evergreen_router)
     app.include_router(devices_admin_router)
     app.include_router(devices_router)

@@ -86,6 +86,10 @@ PAGES: dict[str, tuple[str, ...]] = {
     "/monitoring/fortigate/internet": (Role.FORTIGATE_READER,),
     "/monitoring/fortigate/aenderungen": (Role.FORTIGATE_READER,),
     "/verwaltung/fortigate": (Role.WERKBANK_ADMIN,),
+    # NetBird: eigenes Recht (Peer-Liste ist personenbezogen), Admins nur mit dem Recht
+    "/monitoring/netbird": (Role.NETBIRD_READER,),
+    "/monitoring/netbird/peers": (Role.NETBIRD_READER,),
+    "/verwaltung/netbird": (Role.WERKBANK_ADMIN,),
     "/verwaltung": (Role.WERKBANK_ADMIN,),
     "/verwaltung/berechtigungen": (Role.WERKBANK_ADMIN,),
     "/verwaltung/mail-teams": (Role.WERKBANK_ADMIN,),

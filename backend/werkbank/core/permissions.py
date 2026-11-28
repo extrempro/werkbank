@@ -110,6 +110,12 @@ AREAS: tuple[Area, ...] = (
         ),
     ),
     Area(
+        "netbird",
+        "NetBird",
+        "Lesen: Peers, Netze, Dienste und Richtlinien aus NetBird (personenbezogen).",
+        _levels(("Lesen", [Role.NETBIRD_READER])),
+    ),
+    Area(
         "m365",
         "M365-Einstellungen",
         "Lesen schließt die Tenant-Übersicht ein. Prüfen: Änderungen bewerten, Soll-Werte pflegen.",

@@ -77,6 +77,7 @@ describe("areasFor", () => {
       "/verwaltung/verbindungen",
       "/verwaltung/zabbix",
       "/verwaltung/fortigate",
+      "/verwaltung/netbird",
       "/verwaltung/datensicherung",
       "/verwaltung/rueckmeldungen",
       "/audit",

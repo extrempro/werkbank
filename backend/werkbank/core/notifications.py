@@ -150,6 +150,11 @@ KINDS: dict[str, KindInfo] = {
         "Die Konfiguration einer FortiGate hat sich geändert",
         (Role.FORTIGATE_READER,),
     ),
+    "monitoring.netbird_fehler": KindInfo(
+        "IT-Monitoring",
+        "NetBird lässt sich mehrmals hintereinander nicht abrufen",
+        (Role.WERKBANK_ADMIN,),
+    ),
     "monitoring.zabbix_dienstkonto": KindInfo(
         "IT-Monitoring",
         "Token für Zabbix läuft ab oder die Rolle des Dienstkontos erlaubt zu viel",

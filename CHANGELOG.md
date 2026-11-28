@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.158.0] – 2026-11-28
+
+### Neu
+
+- **IT-Monitoring › NetBird, Phase 1.** Lesende Sicht auf ein selbst gehostetes NetBird über die Management-API (nur GET, Token eines Dienstkontos): Abruf alle 5 Minuten, jüngster Stand in schlanker Form, Tageswerte der verbundenen Peers und Verbindungstage je Peer (90 Tage). Übersicht mit Kacheln, Hinweisen (Anmeldung läuft ab, Client zwei Releases zurück, Freigabe offen nur wenn geliefert, 90 Tage nicht gesehen), Client-Versionen, Betriebssystemen, Verlauf 14/30/90 Tage und Druckansicht. Peers mit Suche, Filtern, Detail rechts (Gruppen, 7-Tage-Verlauf, Hinweis auf den IT-Bestand über den Hostnamen, „In NetBird öffnen“). Verwaltung › NetBird mit Adresse, verschlüsseltem Token, Ping-Schalter und Verbindungstest. Neuer Bereich „NetBird“ in der Rechteverwaltung (`NetBird.Reader`), Admins ohne Recht sehen nichts; „Jetzt abrufen“ und CSV nur für System-Admins mit Recht. Glocke an Admins nach drei fehlgeschlagenen Abrufen. Migration 0101. Doku: `spec.md`, `datenschutz.md`, `security/asvs-l2.md`, Handbuch, Info-Symbole.
+
 ## [0.157.0] – 2026-11-28
 
 ### Neu

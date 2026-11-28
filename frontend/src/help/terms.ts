@@ -247,6 +247,46 @@ export const HELP = {
     text: "Zeigt alle Unterschiede zwischen zwei gespeicherten Konfigurationsständen eines Geräts. Ältere Stände fallen nach der Aufbewahrung weg.",
     topic: ["it-monitoring", "fortigate-aenderungen"],
   },
+  "netbird.verbunden": {
+    term: "Peers verbunden",
+    text: "So viele Geräte sind gerade mit dem NetBird-Management verbunden. Routing-Peers verbinden ganze Netze; ist einer offline, fehlt womöglich der Weg in ein Netz.",
+    topic: ["it-monitoring", "netbird-uebersicht"],
+  },
+  "netbird.hinweis": {
+    term: "Hinweise",
+    text: "Kritisch heißt: Etwas funktioniert nicht oder ist gefährlich offen. Warnungen und Infos zeigen, was du bald prüfen solltest; erledigte Hinweise verschwinden von selbst.",
+    topic: ["it-monitoring", "netbird-uebersicht"],
+  },
+  "netbird.version": {
+    term: "Client-Versionen",
+    text: "Vergleich mit dem neuesten Release, das der NetBird-Server meldet. Ab zwei Releases Rückstand gibt es eine Warnung.",
+    topic: ["it-monitoring", "netbird-uebersicht"],
+  },
+  "netbird.verlauf": {
+    term: "Verbundene Peers",
+    text: "Höchstzahl gleichzeitig verbundener Geräte je Tag, aus den Abrufen alle fünf Minuten. Die Werkbank hebt die Werte 90 Tage auf.",
+    topic: ["it-monitoring", "netbird-uebersicht"],
+  },
+  "netbird.anmeldung": {
+    term: "Anmeldung bis",
+    text: "Geräte mit Benutzerkonto müssen sich nach der eingestellten Zeit neu anmelden. Sieben Tage vorher gibt es eine Warnung.",
+    topic: ["it-monitoring", "netbird-peers"],
+  },
+  "netbird.bestand": {
+    term: "IT-Bestand",
+    text: "Gerät im IT-Bestand mit gleichem Hostnamen. Das ist nur ein Hinweis, keine feste Zuordnung.",
+    topic: ["it-monitoring", "netbird-peers"],
+  },
+  "netbird.token": {
+    term: "API-Token",
+    text: "Token eines Dienstkontos in NetBird mit Leserecht. Die Werkbank speichert es verschlüsselt und zeigt es nie wieder an.",
+    topic: ["it-monitoring", "netbird-einrichten"],
+  },
+  "netbird.ping": {
+    term: "Ping in die Netze",
+    text: "Prüft echte Erreichbarkeit der Netze über ein Testziel. Dafür braucht der Server der Werkbank selbst einen NetBird-Peer.",
+    topic: ["it-monitoring", "netbird-einrichten"],
+  },
   "fortigate.verwendet": {
     term: "Verwendet",
     text: "So oft steht das Objekt direkt in Policies und Gruppen, über alle Geräte. Policies, die es über eine Gruppe nutzen, stehen in der Detailansicht.",
@@ -609,6 +649,9 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/monitoring/fortigate/internet": [["it-monitoring", "fortigate-pfad"]],
   "/monitoring/fortigate/aenderungen": [["it-monitoring", "fortigate-aenderungen"]],
   "/verwaltung/fortigate": [["it-monitoring", "fortigate-einrichten"]],
+  "/monitoring/netbird": [["it-monitoring", "netbird-uebersicht"]],
+  "/monitoring/netbird/peers": [["it-monitoring", "netbird-peers"]],
+  "/verwaltung/netbird": [["it-monitoring", "netbird-einrichten"]],
   "/doku": [["doku", "seiten"]],
   "/doku/verwaltung": [["doku", "verwaltung"]],
   "/tickets": [["tickets", "uebersicht"]],
