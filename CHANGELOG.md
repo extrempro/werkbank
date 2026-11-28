@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.156.0] – 2026-11-28
+
+### Neu
+
+- **IT-Monitoring › FortiGate, Phase 3: Befunde und Ausnahmen.** Neue Seite „Befunde“ mit Prüfregeln über alle Geräte: hoch (any/any/ALL, aus dem Internet mit Quelle „all“ nach innen, ohne Protokoll in schützenswerter Zone), mittel (Dienst „ALL“, Ziel „all“ ins interne Netz, verdeckte Policy, gleicher Name mit anderem Inhalt, abweichendes Fabric-Objekt), Hinweis (keine Treffer im Zeitraum, unbenutzte Objekte, ins Internet ohne Sicherheitsprofile). Filter, Detail rechts, CSV; Zahlen auf der Übersicht und Befunde an der Policy. Ausnahmen mit Begründung und Frist (6/12 Monate, unbegrenzt) für `FortiGate.Editor`, mit Bestätigung und Audit; sie fallen weg, wenn die Frist abläuft oder sich der Gegenstand ändert. Glocke `monitoring.fortigate_befund` für neue Befunde hoch und mittel. Verwaltung › FortiGate um „Prüfregeln“ ergänzt (Regeln abschalten, schützenswerte Zonen, Zeitraum, Vorgabe 90 Tage). Der Abruf liest zusätzlich die SD-WAN-Zonen und ihre Mitglieder (Fingerabdruck ändert sich einmalig). Migration 0099 (`mon_fg_findings`, `mon_fg_exceptions`). Doku: `spec.md`, `design.md`, `datenschutz.md`, `security/asvs-l2.md`, Handbuch, Info-Symbole.
+
 ## [0.155.0] – 2026-11-28
 
 ### Neu

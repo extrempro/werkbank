@@ -24,6 +24,28 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.156.0",
+    date: "2026-11-28",
+    summary:
+      "FortiGate prüft die Policies und zeigt Befunde, die du als Ausnahme hinnehmen kannst.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Neu unter FortiGate ist die Seite „Befunde“: Sie zeigt Policies, die zu viel erlauben, die nie greifen oder lange keinen Treffer hatten, sowie Objekte, die sich zwischen den Firewalls unterscheiden. Jeder Befund hat eine Stufe (hoch, mittel, Hinweis) und führt zur Policy oder zum Objekt.",
+          "Ist ein Befund gewollt, nimmst du ihn mit Begründung und Frist als Ausnahme hin. Ändert sich die Policy, gilt die Ausnahme nicht mehr.",
+          "Neue Befunde der Stufe hoch oder mittel meldet die Glocke.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter FortiGate › Prüfregeln schaltest du einzelne Regeln ab, trägst schützenswerte Zonen ein und legst fest, ab wann eine Policy ohne Treffer auffällt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.155.0",
     date: "2026-11-28",
     summary: "FortiGate zeigt jetzt den Fabric-Sync und unbenutzte Objekte.",

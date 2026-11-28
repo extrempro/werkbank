@@ -6,11 +6,14 @@ import { InfoTip } from "../../../components/InfoTip";
 import { Link } from "../../../components/Link";
 import {
   ADMIN_FORTIGATE_PATH,
+  MONITORING_FORTIGATE_FINDINGS_PATH,
   MONITORING_FORTIGATE_OBJECTS_PATH,
   MONITORING_FORTIGATE_POLICIES_PATH,
   MONITORING_FORTIGATE_UNUSED_PATH,
 } from "../../../navigation";
-import { navigate, useSearchParam } from "../../../router";
+import { useSearchParam } from "../../../router";
+import { replaceParams } from "./params";
+import { SeverityPill } from "./FortigateFindingsPage";
 import { useDebounced } from "../../inventory/paged";
 import { age } from "../zabbix/ZabbixPages";
 import {
@@ -28,6 +31,7 @@ import {
   type FgPolicies,
   type FgPolicy,
   type FgPolicyFilter,
+  type FgSeverity,
   type FgSyncDevice,
   type FgSyncState,
 } from "./api";
@@ -227,6 +231,21 @@ export function FortigateOverviewPage({ roles }: { roles: readonly string[] }) {
               <dd className="kpi-number">{data.changes_24h}</dd>
               <dd className="small">neue Konfigurationsstände seit gestern</dd>
             </div>
+            <div className="kpi">
+              <dt>
+                Befunde <InfoTip term="fortigate.befund-stufe" />
+              </dt>
+              <dd className="kpi-number">
+                {data.findings.hoch + data.findings.mittel + data.findings.hinweis}
+              </dd>
+              <dd className="small">
+                <Link to={`${MONITORING_FORTIGATE_FINDINGS_PATH}?stufe=hoch`}>
+                  {data.findings.hoch} hoch
+                </Link>{" "}
+                · {data.findings.mittel} mittel · {data.findings.hinweis} Hinweise
+                {data.findings.excepted > 0 && ` · ${data.findings.excepted} Ausnahmen`}
+              </dd>
+            </div>
           </dl>
           <SyncBar devices={data.sync} />
           <section className="panel" aria-labelledby="fg-geraete">
@@ -322,19 +341,6 @@ function lastUsed(value: string | null): string {
 
 function selectionKey(row: { device: string; id: number }): string {
   return `${row.device}:${row.id}`;
-}
-
-function replaceParams(values: Record<string, string>) {
-  const query = new URLSearchParams(window.location.search);
-  for (const [key, value] of Object.entries(values)) {
-    if (value) {
-      query.set(key, value);
-    } else {
-      query.delete(key);
-    }
-  }
-  const text = query.toString();
-  navigate(`${window.location.pathname}${text ? `?${text}` : ""}`);
 }
 
 const QUERY_HINT: Record<string, string> = {
@@ -543,6 +549,14 @@ export function FortigatePoliciesPage({ roles }: { roles: readonly string[] }) {
                           {row.match && row.match !== "Text" && (
                             <span className="fg-match">{row.match}</span>
                           )}
+                          {row.findings.length > 0 && (
+                            <span className="fg-findings">
+                              <SeverityPill severity={worst(row.findings)} />{" "}
+                              {row.findings.length === 1
+                                ? "1 Befund"
+                                : `${row.findings.length} Befunde`}
+                            </span>
+                          )}
                         </td>
                         <td data-label="Quelle">
                           <Names
@@ -705,9 +719,32 @@ function PolicyDetail({ row }: { row: FgPolicy }) {
           </div>
         )}
       </dl>
+      {row.findings.length > 0 && (
+        <section className="fg-detail-findings" aria-label="Befunde zu dieser Policy">
+          <h3>Befunde</h3>
+          <ul>
+            {row.findings.map((item) => (
+              <li key={item.code}>
+                <SeverityPill severity={item.severity} />{" "}
+                <Link
+                  to={`${MONITORING_FORTIGATE_FINDINGS_PATH}?geraet=${encodeURIComponent(row.device)}&auswahl=${encodeURIComponent(`${row.device}|${item.code}|policy:${row.id}`)}`}
+                >
+                  {item.rule}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <p className="small fg-muted">Nur ansehen: Die Werkbank ändert nichts an den FortiGates.</p>
     </div>
   );
+}
+
+const SEVERITY_ORDER: FgSeverity[] = ["hoch", "mittel", "hinweis"];
+
+function worst(items: { severity: FgSeverity }[]): FgSeverity {
+  return SEVERITY_ORDER.find((level) => items.some((item) => item.severity === level)) ?? "hinweis";
 }
 
 // --- Adressen & Dienste -------------------------------------------------------------------

@@ -351,8 +351,20 @@ def fetch(client: FortiGateClient) -> Fetched:
         sdwan = client.cmdb("system/sdwan")
         rules = sdwan[0].get("service") if sdwan else None
         config["sdwan_rules"] = [sdwan_rule(item) for item in rules or [] if isinstance(item, dict)]
+        # SD-WAN-Zonen mit ihren Mitgliedern (Policies verweisen auf die Zone)
+        zones: dict[str, list[str]] = {}
+        settings_sdwan = sdwan[0] if sdwan else {}
+        for item in settings_sdwan.get("zone") or []:
+            if isinstance(item, dict) and item.get("name"):
+                zones[_text(item["name"])] = []
+        for item in settings_sdwan.get("members") or []:
+            if isinstance(item, dict) and item.get("interface"):
+                zone_name = _text(item.get("zone")) or "virtual-wan-link"
+                zones.setdefault(zone_name, []).append(_text(item["interface"]))
+        config["sdwan_zones"] = zones
     except FortiGateError as error:
         config["sdwan_rules"] = []
+        config["sdwan_zones"] = {}
         notes.append(f"{LABELS['sdwan']}: {error}")
     try:
         csf = client.cmdb("system/csf")

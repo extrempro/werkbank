@@ -42,6 +42,7 @@ export interface FgOverview {
   policies: number;
   disabled: number;
   changes_24h: number;
+  findings: Record<FgSeverity, number> & { excepted: number };
 }
 
 export interface FgOpen {
@@ -52,7 +53,14 @@ export interface FgOpen {
   service: boolean;
 }
 
+export interface FgPolicyFinding {
+  code: string;
+  rule: string;
+  severity: FgSeverity;
+}
+
 export interface FgPolicy {
+  findings: FgPolicyFinding[];
   device: string;
   id: number;
   position: number;
@@ -266,6 +274,85 @@ export async function downloadCleanupList(
   URL.revokeObjectURL(url);
 }
 
+// --- Befunde ------------------------------------------------------------------------------
+
+export type FgSeverity = "hoch" | "mittel" | "hinweis";
+
+export interface FgRule {
+  code: string;
+  severity: FgSeverity;
+  title: string;
+  description: string;
+  active: boolean;
+}
+
+export interface FgException {
+  id: number;
+  reason: string;
+  expires_at: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface FgFinding {
+  key: string;
+  code: string;
+  rule: string;
+  severity: FgSeverity;
+  device: string;
+  label: string;
+  detail: string;
+  policy_id: number | null;
+  since: string | null;
+  link: string;
+  exception: FgException | null;
+}
+
+export interface FgFindings {
+  rows: FgFinding[];
+  counts: Record<FgSeverity, number>;
+  excepted: number;
+  devices: string[];
+  rules: FgRule[];
+  can_except: boolean;
+}
+
+export interface FgFindingFilter {
+  severity: string;
+  device: string;
+  code: string;
+  excepted: boolean;
+}
+
+export function findingQuery(filter: FgFindingFilter): string {
+  return params({
+    severity: filter.severity,
+    device: filter.device,
+    code: filter.code,
+    excepted: filter.excepted ? "true" : "",
+  });
+}
+
+export function fetchFgFindings(filter: FgFindingFilter): Promise<FgFindings> {
+  return getJson(`${BASE}/findings${findingQuery(filter)}`);
+}
+
+export function findingsCsvUrl(filter: FgFindingFilter): string {
+  return `${BASE}/findings.csv${findingQuery(filter)}`;
+}
+
+export function createFgException(
+  key: string,
+  reason: string,
+  months: 0 | 6 | 12,
+): Promise<{ id: number; expires_at: string | null }> {
+  return postJson(`${BASE}/exceptions`, { key, reason, months });
+}
+
+export function deleteFgException(id: number): Promise<{ id: number }> {
+  return deleteJson(`${BASE}/exceptions/${id}`);
+}
+
 export function refreshFortigate(): Promise<{ scheduled_at: string }> {
   return postJson(`${BASE}/refresh`);
 }
@@ -344,4 +431,23 @@ export function testFgDevice(
   id: number,
 ): Promise<{ hostname: string; model: string; version: string; policies: number }> {
   return postJson(`${ADMIN}/devices/${id}/test`);
+}
+
+export interface FgRules {
+  rules: FgRule[];
+  sensitive: string[];
+  unused_days: number;
+  unused_days_options: number[];
+}
+
+export function fetchFgRules(): Promise<FgRules> {
+  return getJson(`${ADMIN}/rules`);
+}
+
+export function saveFgRules(update: {
+  disabled: string[];
+  sensitive: string[];
+  unused_days: number;
+}): Promise<FgRules> {
+  return putJson(`${ADMIN}/rules`, update);
 }

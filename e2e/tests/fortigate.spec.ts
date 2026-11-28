@@ -167,3 +167,101 @@ test("FortiGate: Fabric-Sync und unbenutzte Objekte mit Aufräumliste", async ({
     page.getByRole("status").filter({ hasText: "Gelöscht wurde nichts" }),
   ).toBeVisible();
 });
+
+test("FortiGate: Befunde mit Ausnahme und Verweis auf die Policy", async ({
+  page,
+}) => {
+  await loadSample(page);
+  await loginAs(
+    page,
+    ["FortiGate.Reader", "FortiGate.Editor"],
+    "Fritz Firewall",
+  );
+  // Ausnahmen aus einem abgebrochenen früheren Lauf entfernen
+  const old = await page.request.get(
+    "/api/monitoring/fortigate/findings?excepted=true",
+  );
+  for (const item of (await old.json()).rows as {
+    exception: { id: number };
+  }[]) {
+    await page.request.delete(
+      `/api/monitoring/fortigate/exceptions/${item.exception.id}`,
+      { headers: { Origin: ORIGIN } },
+    );
+  }
+  await page.goto("/monitoring/fortigate");
+  await page.getByRole("link", { name: /\d+ hoch/ }).click();
+  await expect(page).toHaveURL(/\/monitoring\/fortigate\/befunde\?stufe=hoch/);
+  const table = page.getByRole("table", { name: "Befunde" });
+  const row = table.getByRole("row", { name: /Fernwartung Altsystem/ }).first();
+  await expect(row).toContainText("Hoch");
+  await expectNoA11yViolations(page);
+  await row.getByRole("button", { name: /Aus dem Internet/ }).click();
+  const detail = page.getByRole("complementary", {
+    name: "Detail des Befunds",
+  });
+  await detail
+    .getByRole("textbox", { name: /Begründung/ })
+    .fill("Fernwartung für Altsystem bewusst offen");
+  await detail.getByRole("radio", { name: /6 Monate/ }).check();
+  await detail.getByRole("button", { name: "Als Ausnahme hinnehmen" }).click();
+  await page
+    .getByRole("alertdialog", { name: /als Ausnahme hinnehmen/ })
+    .getByRole("button", { name: "Hinnehmen" })
+    .click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Der Befund ist als Ausnahme hingenommen." }),
+  ).toBeVisible();
+  await expect(
+    table.getByRole("row", { name: /Aus dem Internet.*Fernwartung/ }),
+  ).toHaveCount(0);
+  await page.getByRole("checkbox", { name: /Ausnahmen zeigen/ }).check();
+  const excepted = page
+    .getByRole("table", { name: "Befunde" })
+    .getByRole("row", { name: /Fernwartung Altsystem/ });
+  await excepted.getByRole("button").first().click();
+  await expect(detail).toContainText("Fernwartung für Altsystem bewusst offen");
+  await detail.getByRole("button", { name: "Ausnahme aufheben" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Ausnahme aufheben?" })
+    .getByRole("button", { name: "Aufheben" })
+    .click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Die Ausnahme ist aufgehoben." }),
+  ).toBeVisible();
+
+  // Policy mit Befund und Link zurück
+  await page.goto(
+    "/monitoring/fortigate/policies?geraet=fw-core&q=%2344&auswahl=fw-core%3A44",
+  );
+  const policyDetail = page.getByRole("complementary", {
+    name: "Detail der Policy",
+  });
+  await policyDetail.getByRole("link", { name: "Verdeckte Policy" }).click();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Verdeckte Policy" }),
+  ).toBeVisible();
+});
+
+test("FortiGate: Prüfregeln in der Verwaltung", async ({ page }) => {
+  await loginAs(page, ["Werkbank.Admin"], "Ada Admin");
+  await page.goto("/verwaltung/fortigate");
+  const section = page.getByRole("region", { name: "Prüfregeln für Befunde" });
+  await expect(
+    section.getByRole("checkbox", { name: /Verdeckte Policy/ }),
+  ).toBeChecked();
+  await section
+    .getByRole("textbox", { name: /Schützenswerte Zonen/ })
+    .fill("dmz-server");
+  await section.getByRole("button", { name: "Prüfregeln speichern" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Die Prüfregeln sind gespeichert." }),
+  ).toBeVisible();
+  await expectNoA11yViolations(page);
+});

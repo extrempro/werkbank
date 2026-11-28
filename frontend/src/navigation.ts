@@ -59,6 +59,7 @@ export const MONITORING_FORTIGATE_PATH = "/monitoring/fortigate";
 export const MONITORING_FORTIGATE_POLICIES_PATH = "/monitoring/fortigate/policies";
 export const MONITORING_FORTIGATE_OBJECTS_PATH = "/monitoring/fortigate/objekte";
 export const MONITORING_FORTIGATE_UNUSED_PATH = "/monitoring/fortigate/unbenutzt";
+export const MONITORING_FORTIGATE_FINDINGS_PATH = "/monitoring/fortigate/befunde";
 export const ADMIN_FORTIGATE_PATH = "/verwaltung/fortigate";
 export const PROJECTS_PATH = "/projekte";
 export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
@@ -236,6 +237,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       title: "FortiGate",
       items: [
         { path: MONITORING_FORTIGATE_PATH, label: "Übersicht", icon: "uebersicht" },
+        { path: MONITORING_FORTIGATE_FINDINGS_PATH, label: "Befunde", icon: "warnung" },
         { path: MONITORING_FORTIGATE_POLICIES_PATH, label: "Policies", icon: "schloss" },
         { path: MONITORING_FORTIGATE_OBJECTS_PATH, label: "Adressen & Dienste", icon: "netzwerk" },
         { path: MONITORING_FORTIGATE_UNUSED_PATH, label: "Unbenutzte Objekte", icon: "loeschen" },

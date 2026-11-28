@@ -81,6 +81,7 @@ PAGES: dict[str, tuple[str, ...]] = {
     "/monitoring/fortigate/policies": (Role.FORTIGATE_READER,),
     "/monitoring/fortigate/objekte": (Role.FORTIGATE_READER,),
     "/monitoring/fortigate/unbenutzt": (Role.FORTIGATE_READER,),
+    "/monitoring/fortigate/befunde": (Role.FORTIGATE_READER,),
     "/verwaltung/fortigate": (Role.WERKBANK_ADMIN,),
     "/verwaltung": (Role.WERKBANK_ADMIN,),
     "/verwaltung/berechtigungen": (Role.WERKBANK_ADMIN,),

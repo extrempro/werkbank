@@ -189,6 +189,12 @@ def collect(
         for device in due_devices(db, now, timedelta(minutes=options.interval_minutes), force)
     ]
     removed = purge(db, options.retention_months)
+    if runs:
+        # Erst nach allen Geräten: Befunde über Geräte hinweg (Objekte gleichen Namens)
+        from werkbank.modules.monitoring.fortigate.config import load_options
+        from werkbank.modules.monitoring.fortigate.views import track_findings
+
+        track_findings(db, load_options(db), now_utc())
     db.commit()
     if removed["runs"] or removed["snapshots"]:
         logger.info(

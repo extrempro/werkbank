@@ -8,12 +8,15 @@ import {
   createFgDevice,
   deleteFgDevice,
   fetchFgAdmin,
+  fetchFgRules,
   fetchRetentionPreview,
+  saveFgRules,
   saveFgSettings,
   testFgDevice,
   updateFgDevice,
   type FgAdminDevice,
   type FgAdminSettings,
+  type FgRules,
   type FgSettingsUpdate,
 } from "./api";
 
@@ -83,6 +86,7 @@ export function FortigateAdminPage() {
             onSaved={setData}
             onMessage={setMessage}
           />
+          <RulesSection onMessage={setMessage} />
         </>
       )}
       <Feedback message={message} onClose={() => setMessage(null)} />
@@ -629,5 +633,178 @@ function SettingsForm({
         {confirmDialog}
       </form>
     </section>
+  );
+}
+
+// --- Prüfregeln ---------------------------------------------------------------------------
+
+const SEVERITY_TEXT: Record<string, string> = {
+  hoch: "hoch",
+  mittel: "mittel",
+  hinweis: "Hinweis",
+};
+
+function RulesSection({ onMessage }: { onMessage: (message: FeedbackMessage) => void }) {
+  const [data, setData] = useState<FgRules | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetchFgRules().then(
+      (value) => active && setData(value),
+      (caught: unknown) =>
+        active && setError(errorText(caught, "Die Prüfregeln konnten nicht geladen werden.")),
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
+  return (
+    <section className="panel" aria-labelledby="fg-admin-regeln">
+      <div className="panel-head">
+        <h2 id="fg-admin-regeln">Prüfregeln für Befunde</h2>
+      </div>
+      {error && (
+        <p role="alert" className="hint-box hint-bad">
+          {error}
+        </p>
+      )}
+      {data && (
+        <RulesForm key={JSON.stringify(data)} data={data} onSaved={setData} onMessage={onMessage} />
+      )}
+    </section>
+  );
+}
+
+function RulesForm({
+  data,
+  onSaved,
+  onMessage,
+}: {
+  data: FgRules;
+  onSaved: (data: FgRules) => void;
+  onMessage: (message: FeedbackMessage) => void;
+}) {
+  const [active, setActive] = useState<Set<string>>(
+    () => new Set(data.rules.filter((rule) => rule.active).map((rule) => rule.code)),
+  );
+  const [zones, setZones] = useState(data.sensitive.join("\n"));
+  const [days, setDays] = useState(data.unused_days);
+  const [busy, setBusy] = useState(false);
+  const [ask, confirmDialog] = useConfirm();
+
+  const save = () => {
+    setBusy(true);
+    return saveFgRules({
+      disabled: data.rules.filter((rule) => !active.has(rule.code)).map((rule) => rule.code),
+      sensitive: zones
+        .split(/[\n,]/)
+        .map((name) => name.trim())
+        .filter(Boolean),
+      unused_days: days,
+    })
+      .then((next) => {
+        onSaved(next);
+        onMessage({ kind: "status", text: "Die Prüfregeln sind gespeichert." });
+      })
+      .catch((caught: unknown) => {
+        onMessage({
+          kind: "alert",
+          text: errorText(caught, "Die Prüfregeln konnten nicht gespeichert werden."),
+        });
+        setBusy(false);
+      });
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const switchedOff = data.rules.filter((rule) => rule.active && !active.has(rule.code));
+    if (switchedOff.length === 0) {
+      void save();
+      return;
+    }
+    ask(
+      {
+        title:
+          switchedOff.length === 1
+            ? "Prüfregel abschalten?"
+            : `${switchedOff.length} Prüfregeln abschalten?`,
+        text: `Befunde aus ${switchedOff.map((rule) => `„${rule.title}“`).join(", ")} erscheinen dann für niemanden mehr. Du kannst die Regel jederzeit wieder einschalten.`,
+        action: "Abschalten",
+      },
+      save,
+    );
+  };
+
+  return (
+    <form className="detail-body settings-form" onSubmit={submit}>
+      <fieldset className="fg-fieldset">
+        <legend>Regeln</legend>
+        {data.rules.map((rule) => (
+          <label key={rule.code} className="check-label">
+            <input
+              type="checkbox"
+              className="check"
+              checked={active.has(rule.code)}
+              onChange={(event) =>
+                setActive((current) => {
+                  const next = new Set(current);
+                  if (event.target.checked) {
+                    next.add(rule.code);
+                  } else {
+                    next.delete(rule.code);
+                  }
+                  return next;
+                })
+              }
+            />
+            <span>
+              {rule.title} ({SEVERITY_TEXT[rule.severity] ?? rule.severity})
+              <span className="fg-sub">{rule.description}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      <div className="fg-field-tip">
+        <Field
+          label="Schützenswerte Zonen"
+          hint="Namen von Interfaces oder Zonen, eine je Zeile, z. B. dmz-server. Gilt auf allen Geräten."
+        >
+          {(control) => (
+            <textarea
+              {...control}
+              rows={3}
+              value={zones}
+              spellCheck={false}
+              onChange={(event) => setZones(event.target.value)}
+            />
+          )}
+        </Field>
+        <InfoTip term="fortigate.schuetzenswert" />
+      </div>
+      <Field
+        label="Zeitraum für „keine Treffer“ und „unbenutzt“"
+        hint="Ab dann gibt es einen Hinweis zu Policies ohne Treffer und zu unbenutzten Objekten."
+      >
+        {(control) => (
+          <select
+            {...control}
+            value={days}
+            onChange={(event) => setDays(Number(event.target.value))}
+          >
+            {data.unused_days_options.map((value) => (
+              <option key={value} value={value}>
+                {value} Tage
+              </option>
+            ))}
+          </select>
+        )}
+      </Field>
+      <div className="actions">
+        <button type="submit" className="button button-primary" disabled={busy}>
+          Prüfregeln speichern
+        </button>
+      </div>
+      {confirmDialog}
+    </form>
   );
 }

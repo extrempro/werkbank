@@ -193,7 +193,9 @@ def test_months_ago() -> None:
 
 @pytest.fixture
 def db(migrated_db: None, db_session: Session) -> Session:
-    for table in (FgRun, FgSnapshot, FgDevice, AppSetting):
+    from werkbank.modules.monitoring.fortigate.models import FgException, FgFinding
+
+    for table in (FgException, FgFinding, FgRun, FgSnapshot, FgDevice, AppSetting):
         db_session.execute(delete(table))
     db_session.execute(delete(Job).where(Job.type == collector.FORTIGATE_JOB))
     db_session.commit()
@@ -251,7 +253,11 @@ def test_unreachable_device_does_not_stop_others(db: Session, tmp_path: Path) ->
     # Nach drei Fehlern in Folge meldet die Glocke den Admins
     for _ in range(2):
         collector.collect(db, settings, force=True, transport=sample.sample_transport)
-    events = list(fortigate_notifications(db, settings, now_utc()))
+    events = [
+        e
+        for e in fortigate_notifications(db, settings, now_utc())
+        if e.kind == "monitoring.fortigate_fehler"
+    ]
     assert [event.title for event in events] == [
         "FortiGate „fw-unbekannt“ lässt sich nicht abrufen"
     ]
@@ -647,3 +653,294 @@ def test_api_unused_and_sync(db: Session, tmp_path: Path) -> None:
     assert {r["name"] for r in local["rows"]} == {"test-host-1", "Drucker-Netz"}
     overview = client.get(f"{BASE}/overview").json()
     assert len(overview["sync"]) == 3
+
+
+# --- Befunde und Ausnahmen (Phase 3) -------------------------------------------------------
+
+
+def _policy(pid: int, **values: Any) -> dict[str, Any]:
+    base = {
+        "id": pid,
+        "name": f"p{pid}",
+        "status": True,
+        "srcintf": ["lan"],
+        "dstintf": ["wan1"],
+        "srcaddr": ["Netz-A"],
+        "dstaddr": ["all"],
+        "service": ["HTTPS"],
+        "action": "accept",
+        "schedule": "always",
+        "log": "all",
+        "profiles": {"web": "Standard"},
+    }
+    return {**base, **values}
+
+
+def _config(*policies: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "policies": list(policies),
+        "addresses": [
+            {"name": "all", "type": "ipmask", "value": "0.0.0.0/0"},
+            {"name": "Netz-A", "type": "ipmask", "value": "10.0.0.0/24"},
+            {"name": "host-a", "type": "ipmask", "value": "10.0.0.5/32"},
+            {"name": "srv", "type": "ipmask", "value": "10.1.0.10/32"},
+            {"name": "web.example.com", "type": "fqdn", "value": "web.example.com"},
+        ],
+        "address_groups": [],
+        "services": [
+            {"name": "ALL", "protocol": "IP", "protocol_number": 0},
+            {"name": "HTTPS", "protocol": "TCP/UDP/SCTP", "tcp": "443"},
+            {"name": "WEB", "protocol": "TCP/UDP/SCTP", "tcp": "80 443"},
+            {"name": "PING", "protocol": "ICMP"},
+        ],
+        "service_groups": [],
+        "interfaces": [
+            {"name": "wan1", "role": "wan"},
+            {"name": "wan2", "role": "wan"},
+            {"name": "lan", "role": "lan"},
+            {"name": "dmz", "role": "dmz"},
+        ],
+        "zones": [{"name": "z-dmz", "interfaces": ["dmz"]}],
+        "sdwan_zones": {"virtual-wan-link": ["wan1", "wan2"]},
+    }
+
+
+def _codes(config: dict[str, Any], **kwargs: Any) -> dict[int, set[str]]:
+    from werkbank.modules.monitoring.fortigate.findings import Options, policy_findings
+
+    now = datetime(2026, 11, 1, tzinfo=UTC)
+    options = kwargs.pop("options", Options())
+    out: dict[int, set[str]] = {}
+    for item in policy_findings(
+        "fw", config, kwargs.pop("runtime", {}), options, now=now, **kwargs
+    ):
+        out.setdefault(item.policy_id or 0, set()).add(item.code)
+    return out
+
+
+def test_findings_rules() -> None:
+    from werkbank.modules.monitoring.fortigate.findings import Options, wan_names
+
+    config = _config(
+        _policy(1, srcaddr=["all"], service=["ALL"], dstintf=["lan"], srcintf=["wan1"]),
+        _policy(2, srcintf=["wan1"], dstintf=["lan"], srcaddr=["all"], dstaddr=["srv"]),
+        _policy(3, srcintf=["virtual-wan-link"], dstintf=["z-dmz"], srcaddr=["all"]),
+        _policy(4, service=["ALL"]),
+        _policy(5, dstintf=["lan"], srcintf=["dmz"]),
+        _policy(6, profiles={"ssl": "certificate-inspection"}),
+        _policy(7, srcaddr=["all"], service=["ALL"], dstintf=["lan"], action="deny"),
+        _policy(8, srcaddr=["all"], service=["ALL"], dstintf=["lan"], status=False),
+        _policy(9, dstintf=["z-dmz"], srcintf=["lan"], log="disable", dstaddr=["srv"]),
+    )
+    assert wan_names(config) == {"wan1", "wan2", "virtual-wan-link"}
+    found = _codes(config, observed_since=None)
+    assert found[1] == {"any_any_all", "wan_any_internal"}
+    assert found[2] == {"wan_any_internal", "shadowed"}  # von 1 verdeckt
+    assert "wan_any_internal" in found[3] and "dst_any_internal" in found[3]
+    assert found[4] == {"service_all"}  # Ziel „all“ nur ins Internet: kein Befund
+    assert found[5] == {"dst_any_internal"}
+    assert "internet_no_profiles" in found[6]  # von 4 zudem verdeckt
+    assert 7 not in found and 8 not in found  # deny und deaktiviert zählen nicht
+    assert 9 not in found  # ohne schützenswerte Zone
+    sensitive = _codes(config, observed_since=None, options=Options(sensitive=frozenset({"z-dmz"})))
+    assert "sensitive_nolog" in sensitive[9]
+    # Über das Interface einer schützenswerten Zone
+    by_member = _codes(
+        _config(_policy(10, dstintf=["dmz"], log="disable", dstaddr=["srv"])),
+        observed_since=None,
+        options=Options(sensitive=frozenset({"z-dmz"})),
+    )
+    assert "sensitive_nolog" in by_member[10]
+    # Abgeschaltete Regeln
+    off = _codes(
+        config,
+        observed_since=None,
+        options=Options(disabled=frozenset({"service_all", "wan_any_internal"})),
+    )
+    assert 4 not in off and off[2] == {"shadowed"}
+
+
+def test_findings_shadowed() -> None:
+    from werkbank.modules.monitoring.fortigate.findings import shadowed
+
+    config = _config(
+        _policy(1, service=["WEB"]),
+        _policy(2, srcaddr=["host-a"], service=["HTTPS"]),  # in 1 enthalten
+        _policy(3, srcaddr=["host-a"], service=["HTTPS"], srcintf=["dmz"]),  # anderes Interface
+        _policy(4, srcaddr=["host-a"], service=["PING"]),  # ICMP: nur über den Namen
+        _policy(5, dstaddr=["web.example.com"], service=["HTTPS"]),  # FQDN: nur über den Namen
+        _policy(
+            6, srcintf=["any"], srcaddr=["all"], dstaddr=["all"], service=["ALL"], status=False
+        ),
+        _policy(7, srcaddr=["host-a"], service=["HTTPS"], schedule="nachts", users=[]),
+        _policy(8, srcaddr=["host-a"], service=["HTTPS"], users=["grp-beispiel-a"]),
+    )
+    hidden = shadowed(config)
+    assert hidden[2]["id"] == 1
+    assert 3 not in hidden and 4 not in hidden
+    assert hidden[5]["id"] == 1  # Ziel „all“ deckt auch einen FQDN ab
+    assert hidden[7]["id"] == 1  # „always“ deckt jeden Zeitplan ab
+    assert 8 not in hidden  # mit Benutzern nicht vergleichbar
+    assert 6 not in hidden  # deaktivierte Policies weder verdeckt noch verdeckend
+
+
+def test_findings_no_hits() -> None:
+    from werkbank.modules.monitoring.fortigate.findings import Options
+
+    now = datetime(2026, 11, 1, tzinfo=UTC)
+    old = int((now - timedelta(days=120)).timestamp())
+    recent = int((now - timedelta(days=5)).timestamp())
+    config = _config(_policy(1), _policy(2), _policy(3), _policy(4))
+    runtime = {
+        "hits": {
+            "1": {"hits": 0, "last_used": None},
+            "2": {"hits": 10, "last_used": old},
+            "3": {"hits": 10, "last_used": recent},
+        }
+    }
+    found = _codes(config, runtime=runtime, observed_since=now - timedelta(days=200))
+    assert "no_hits" in found[1] and "no_hits" in found[2]
+    assert "no_hits" not in found.get(3, set()) and "no_hits" not in found.get(4, set())
+    # Zu kurz beobachtet: kein Hinweis
+    young = _codes(config, runtime=runtime, observed_since=now - timedelta(days=10))
+    assert all("no_hits" not in codes for codes in young.values())
+    # Längerer Zeitraum
+    long = _codes(
+        config,
+        runtime=runtime,
+        observed_since=now - timedelta(days=400),
+        options=Options(unused_days=180),
+    )
+    assert "no_hits" not in long.get(2, set()) and "no_hits" in long[1]
+
+
+@pytest.mark.db
+def test_findings_api_exceptions_and_bell(db: Session, tmp_path: Path) -> None:
+    from werkbank.modules.monitoring.fortigate.models import FgException, FgFinding
+
+    settings = settings_with_key(tmp_path)
+    add_devices(db, settings)
+    collector.collect(db, settings, transport=sample.sample_transport)
+    assert db.scalar(select(func.count()).select_from(FgFinding)) > 0
+
+    client = client_for(make_app(settings))
+    login_as(client, ["FortiGate.Reader"], oid="fg-befund-leser")
+    data = client.get(f"{BASE}/findings").json()
+    assert data["can_except"] is False
+    codes = {(r["device"], r["code"], r["label"]) for r in data["rows"]}
+    assert ("fw-edge", "wan_any_internal", "Policy 7 „Fernwartung Altsystem“") in codes
+    assert ("fw-core", "shadowed", "Policy 44 „Buero zu Servern (alt)“") in codes
+    assert data["counts"]["hoch"] >= 1 and data["rows"][0]["severity"] == "hoch"
+    assert all(r["since"] for r in data["rows"])
+    high = client.get(f"{BASE}/findings", params={"severity": "hoch"}).json()
+    assert {r["severity"] for r in high["rows"]} == {"hoch"}
+    assert client.get(f"{BASE}/findings", params={"code": "gibt_es_nicht"}).status_code == 422
+    key = next(r["key"] for r in data["rows"] if r["code"] == "wan_any_internal")
+    body = {"key": key, "reason": "Fernwartung bewusst offen", "months": 6}
+    assert client.post(f"{BASE}/exceptions", json=body, headers=HEADERS).status_code == 403
+    policies = client.get(f"{BASE}/policies", params={"q": "#7"}).json()["rows"]
+    assert any(f["code"] == "wan_any_internal" for f in policies[0]["findings"])
+    csv_text = client.get(f"{BASE}/findings.csv").text
+    assert "Fernwartung Altsystem" in csv_text
+
+    editor = client_for(make_app(settings))
+    login_as(editor, ["FortiGate.Reader", "FortiGate.Editor"], oid="fg-befund-editor")
+    assert (
+        editor.post(
+            f"{BASE}/exceptions", json={**body, "reason": "  "}, headers=HEADERS
+        ).status_code
+        == 422
+    )
+    assert (
+        editor.post(f"{BASE}/exceptions", json={**body, "months": 3}, headers=HEADERS).status_code
+        == 422
+    )
+    created = editor.post(f"{BASE}/exceptions", json=body, headers=HEADERS)
+    assert created.status_code == 201 and created.json()["expires_at"]
+    after = editor.get(f"{BASE}/findings").json()
+    assert key not in {r["key"] for r in after["rows"]} and after["excepted"] == 1
+    excepted = editor.get(f"{BASE}/findings", params={"excepted": "true"}).json()["rows"]
+    assert excepted[0]["exception"]["reason"] == "Fernwartung bewusst offen"
+    overview = editor.get(f"{BASE}/overview").json()
+    assert overview["findings"]["excepted"] == 1
+
+    # Ändert sich die Policy, fällt die Ausnahme beim nächsten Abruf weg (mit Audit)
+    exception = db.scalars(select(FgException)).one()
+    exception.digest = "0" * 64
+    db.commit()
+    collector.collect(db, settings, force=True, transport=sample.sample_transport)
+    assert db.scalar(select(func.count()).select_from(FgException)) == 0
+    assert db.scalars(
+        select(AuditLog).where(AuditLog.action == "fortigate.ausnahme_entfernt")
+    ).first()
+
+    # Abgelaufene Frist
+    created = editor.post(f"{BASE}/exceptions", json={**body, "months": 0}, headers=HEADERS)
+    assert created.json()["expires_at"] is None
+    exception = db.scalars(select(FgException)).one()
+    exception.expires_at = now_utc() - timedelta(days=1)
+    db.commit()
+    assert editor.get(f"{BASE}/findings").json()["excepted"] == 0  # sofort nicht mehr wirksam
+    collector.collect(db, settings, force=True, transport=sample.sample_transport)
+    assert db.scalar(select(func.count()).select_from(FgException)) == 0
+
+    # Aufheben
+    exception_id = editor.post(f"{BASE}/exceptions", json=body, headers=HEADERS).json()["id"]
+    assert editor.delete(f"{BASE}/exceptions/{exception_id}", headers=HEADERS).status_code == 200
+    assert editor.delete(f"{BASE}/exceptions/{exception_id}", headers=HEADERS).status_code == 404
+    assert (
+        editor.post(
+            f"{BASE}/exceptions",
+            json={**body, "key": "fw-edge|shadowed|policy:999"},
+            headers=HEADERS,
+        ).status_code
+        == 404
+    )
+
+    # Glocke: ein Ereignis je Gerät mit Befunden hoch/mittel
+    events = list(fortigate_notifications(db, settings, now_utc()))
+    kinds = {e.kind for e in events}
+    assert "monitoring.fortigate_befund" in kinds
+    links = {e.link for e in events if e.kind == "monitoring.fortigate_befund"}
+    assert "/monitoring/fortigate/befunde?geraet=fw-edge" in links
+
+
+@pytest.mark.db
+def test_admin_rules(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    client = admin(settings)
+    data = client.get(f"{ADMIN}/rules").json()
+    assert data["unused_days"] == 90 and all(r["active"] for r in data["rules"])
+    body = {"disabled": ["service_all"], "sensitive": ["z-dmz", "z-dmz"], "unused_days": 180}
+    assert (
+        client.put(f"{ADMIN}/rules", json={**body, "unused_days": 7}, headers=HEADERS).status_code
+        == 422
+    )
+    assert (
+        client.put(
+            f"{ADMIN}/rules", json={**body, "disabled": ["gibt_es_nicht"]}, headers=HEADERS
+        ).status_code
+        == 422
+    )
+    assert (
+        client.put(
+            f"{ADMIN}/rules", json={**body, "sensitive": ["<b>"]}, headers=HEADERS
+        ).status_code
+        == 422
+    )
+    saved = client.put(f"{ADMIN}/rules", json=body, headers=HEADERS).json()
+    assert saved["unused_days"] == 180 and saved["sensitive"] == ["z-dmz"]
+    assert not next(r for r in saved["rules"] if r["code"] == "service_all")["active"]
+    # Die allgemeinen Einstellungen lassen die Regeln stehen
+    general = client.get(ADMIN).json()
+    client.put(
+        ADMIN,
+        json={"interval_minutes": general["interval_minutes"], "retention_months": 3},
+        headers=HEADERS,
+    )
+    rules = client.get(f"{ADMIN}/rules")
+    assert rules.status_code == 200, rules.text
+    assert rules.json()["unused_days"] == 180
+    assert db.scalars(
+        select(AuditLog).where(AuditLog.action == "einstellungen.fortigate_regeln_geaendert")
+    ).first()
