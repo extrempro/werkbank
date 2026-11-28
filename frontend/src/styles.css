@@ -18860,3 +18860,35 @@ textarea.field-control {
 .nb-break {
   overflow-wrap: anywhere;
 }
+
+/* NetBird, Phase 5: Gruppen & Policies */
+.nb-open-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.nb-day-row th {
+  background: var(--farbe-neutral-flaeche);
+  font-weight: 700;
+  text-align: left;
+}
+
+.nb-diff-changed th,
+.nb-diff-changed td {
+  background: var(--farbe-warn-flaeche);
+  font-weight: 700;
+}
+
+.nb-watch-list {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.nb-confirm {
+  display: grid;
+  gap: 8px;
+  margin-block: 12px;
+}

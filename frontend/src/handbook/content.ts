@@ -1559,6 +1559,32 @@ export const AREAS: readonly Area[] = [
             ],
           },
           {
+            id: "netbird-gruppen",
+            title: "Gruppen & Policies",
+            roles: [NETBIRD],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Werkbank vergleicht bei jedem Abruf die überwachten Gruppen und Policies mit dem Stand davor. Überwacht wird, was mit einem Präfix aus der Verwaltung beginnt, auf Wunsch auch jede Policy, die eine überwachte Gruppe nutzt.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "Erkannt werden: angelegt, geändert (Quelle, Ziel, Protokoll und Ports, Posture Checks, Richtung), gelöscht, aktiviert oder deaktiviert, umbenannt und Mitglieder hinzu oder weg.",
+                  "„Ausgelöst von“ kommt aus dem Ereignisprotokoll. Ohne passendes Ereignis steht dort „Entra (SCIM)“ bei Gruppen aus Entra, sonst „unbekannt (per Abgleich erkannt)“.",
+                  "„fremde Gruppe“ (kritisch): Eine überwachte Policy nutzt jetzt eine Gruppe ohne Präfix oder „All“. „von Hand“: Eine Gruppe mit Präfix kommt nicht über SCIM.",
+                  "Status: offen (gemeldet, noch nicht bestätigt), bestätigt, automatisch (nur protokolliert, nicht gemeldet).",
+                  "Die Liste ist nach Tagen gruppiert. Filter: Status, Objekt, Art, ausgelöst von, Zeitraum und Suche. Rechts siehst du Vorher und Nachher, wer und wie es erkannt wurde und wem es gemeldet wurde.",
+                ],
+              },
+              {
+                kind: "text",
+                text: "Bestätigen kann nur, wer „NetBird: Bestätigen“ hat, auch eigene Änderungen. Du kannst einen Kommentar dazuschreiben oder mit „Alle offenen bestätigen“ alle auf einmal bestätigen. Person, Zeitpunkt und Kommentar lassen sich danach nicht mehr ändern. Offene Änderungen bleiben als Hinweis auf der Übersicht und in der Glocke, bis sie bestätigt sind.",
+              },
+            ],
+            links: [{ to: "/monitoring/netbird/gruppen", label: "Zu Gruppen & Policies" }],
+          },
+          {
             id: "netbird-einrichten",
             title: "NetBird einrichten",
             roles: [ADMIN],
@@ -1571,6 +1597,7 @@ export const AREAS: readonly Area[] = [
                   "Wähle „Verbindung prüfen“. Die Werkbank meldet, wie viele Peers und Gruppen sie lesen kann.",
                   "Trag für die Kacheln Signal und Relay deren Adressen als Host:Port ein (stehen nicht in der API). Den Ping in die Netze schaltest du nur ein, wenn der Server der Werkbank selbst ein NetBird-Peer ist.",
                   "Trag unter „Server-Gruppen“ die Gruppen ein, in denen Server stehen. Dann prüft die Werkbank, ob Richtlinien ohne Posture Check auf sie zugreifen.",
+                  "Unter „Überwachung von Gruppen und Policies“ trägst du die Präfixe ein, prüfst die Treffer mit „Vorschau der Treffer“ und legst fest, was die Glocke meldet, wie lange Änderungen aufbewahrt werden und wann an offene Änderungen erinnert wird. Wer bestätigen darf, legst du unter Berechtigungen mit „NetBird: Bestätigen“ fest.",
                   "Für die Kachel CrowdSec legst du einen eigenen Bouncer-Schlüssel an (z. B. „cscli bouncers add werkbank“) und trägst ihn mit der Adresse der Local API unter „CrowdSec“ ein. Dienste, die bewusst ohne CrowdSec laufen, trägst du unter „Bewusst ohne CrowdSec“ ein.",
                   "Gib unter Berechtigungen „NetBird: Lesen“ an, wer den Bereich sehen soll. Die Admin-Gruppe bekommt das nicht automatisch, weil die Peer-Liste personenbezogen ist.",
                 ],

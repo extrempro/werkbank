@@ -1,17 +1,25 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { errorText, formatDateTime } from "../../../api";
 import { Feedback, type FeedbackMessage } from "../../../components/Feedback";
+import { useConfirm } from "../../../components/ConfirmDialog";
 import { Field, RequiredNote } from "../../../components/Field";
 import { InfoTip } from "../../../components/InfoTip";
 import {
   fetchNbAdmin,
   fetchNbCrowdSec,
+  fetchNbWatch,
+  previewNbWatch,
+  saveNbWatch,
   saveNbAdmin,
   saveNbCrowdSec,
   testNbConnection,
   testNbCrowdSec,
   type NbAdminSettings,
   type NbCrowdSecSettings,
+  type NbNotify,
+  type NbWatchInput,
+  type NbWatchPreview,
+  type NbWatchSettings,
 } from "./api";
 
 /* Verwaltung › NetBird: Management-URL, API-Token, Ping, Verbindungstest; CrowdSec. */
@@ -25,8 +33,13 @@ export function NetbirdAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<FeedbackMessage | null>(null);
   const [crowdsec, setCrowdsec] = useState<NbCrowdSecSettings | null>(null);
+  const [watch, setWatch] = useState<NbWatchSettings | null>(null);
   useEffect(() => {
     let active = true;
+    fetchNbWatch().then(
+      (value) => active && setWatch(value),
+      () => undefined,
+    );
     fetchNbCrowdSec().then(
       (value) => active && setCrowdsec(value),
       () => undefined,
@@ -70,6 +83,14 @@ export function NetbirdAdminPage() {
           ])}
           data={data}
           onSaved={setData}
+          onMessage={setMessage}
+        />
+      )}
+      {watch && (
+        <WatchForm
+          key={JSON.stringify(watch)}
+          data={watch}
+          onSaved={setWatch}
           onMessage={setMessage}
         />
       )}
@@ -471,6 +492,264 @@ function CrowdSecForm({
           </button>
         </div>
       </form>
+    </section>
+  );
+}
+
+const RETENTION_ORDER: NbWatchInput["retention"][] = ["unbegrenzt", "3j", "1j", "90t"];
+
+const NOTIFY_ROWS: [keyof NbNotify, string][] = [
+  ["policy_change", "Policy angelegt, geändert, gelöscht"],
+  ["policy_toggle", "Policy aktiviert oder deaktiviert"],
+  ["group_change", "Gruppe angelegt, umbenannt, gelöscht"],
+  ["members_manual", "Mitglieder von Hand geändert"],
+  ["members_scim", "Mitglieder über SCIM geändert"],
+];
+
+function WatchForm({
+  data,
+  onSaved,
+  onMessage,
+}: {
+  data: NbWatchSettings;
+  onSaved: (data: NbWatchSettings) => void;
+  onMessage: (message: FeedbackMessage) => void;
+}) {
+  const [input, setInput] = useState<NbWatchInput>(() => ({
+    group_prefixes: data.group_prefixes,
+    policy_prefixes: data.policy_prefixes,
+    by_prefix: data.by_prefix,
+    by_group: data.by_group,
+    notify: { ...data.notify },
+    critical_mail: data.critical_mail,
+    retention: data.retention,
+    reminder: data.reminder,
+    auto_confirm: data.auto_confirm,
+  }));
+  const [hits, setHits] = useState<NbWatchPreview>(data.preview);
+  const [showPreview, setShowPreview] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [ask, dialog] = useConfirm();
+  const set = (next: Partial<NbWatchInput>) => setInput((current) => ({ ...current, ...next }));
+
+  const loadPreview = () => {
+    previewNbWatch(input).then(
+      (value) => {
+        setHits(value);
+        setShowPreview(true);
+      },
+      (caught: unknown) =>
+        onMessage({
+          kind: "alert",
+          text: errorText(caught, "Die Vorschau ließ sich nicht laden."),
+        }),
+    );
+  };
+
+  const save = () => {
+    setBusy(true);
+    return saveNbWatch(input)
+      .then((next) => {
+        onSaved(next);
+        onMessage({
+          kind: "status",
+          text: "Die Überwachung von Gruppen und Policies ist gespeichert.",
+        });
+      })
+      .catch((caught: unknown) => {
+        onMessage({
+          kind: "alert",
+          text: errorText(caught, "Die Überwachung konnte nicht gespeichert werden."),
+        });
+        setBusy(false);
+      });
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (RETENTION_ORDER.indexOf(input.retention) > RETENTION_ORDER.indexOf(data.retention)) {
+      ask(
+        {
+          title: "Aufbewahrung verkürzen?",
+          text: "Ältere Änderungen werden beim nächsten Abruf gelöscht und lassen sich nicht wiederherstellen.",
+          action: "Verkürzen",
+          danger: true,
+        },
+        save,
+      );
+      return;
+    }
+    void save();
+  };
+
+  return (
+    <section className="panel" aria-labelledby="nb-ueberwachung">
+      <div className="panel-head">
+        <h2 id="nb-ueberwachung">
+          Überwachung von Gruppen und Policies <InfoTip term="netbird.ueberwacht" />
+        </h2>
+      </div>
+      <form className="detail-body settings-form" noValidate onSubmit={submit}>
+        <Field
+          label="Präfixe für Gruppen"
+          hint={`Mehrere mit Komma, Groß-/Kleinschreibung egal · ${hits.groups.length} Treffer`}
+        >
+          {(control) => (
+            <input
+              {...control}
+              value={input.group_prefixes}
+              maxLength={1000}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="grp-it-"
+              onChange={(event) => set({ group_prefixes: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field
+          label="Präfixe für Policies"
+          hint={`Mehrere mit Komma · ${hits.policies_by_prefix} Treffer`}
+        >
+          {(control) => (
+            <input
+              {...control}
+              value={input.policy_prefixes}
+              maxLength={1000}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="pol-it-"
+              onChange={(event) => set({ policy_prefixes: event.target.value })}
+            />
+          )}
+        </Field>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            className="check"
+            checked={input.by_prefix}
+            onChange={(event) => set({ by_prefix: event.target.checked })}
+          />
+          Policies mit eigenem Präfix überwachen
+        </label>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            className="check"
+            checked={input.by_group}
+            onChange={(event) => set({ by_group: event.target.checked })}
+          />
+          Policies mit überwachter Gruppe als Quelle oder Ziel überwachen (+
+          {hits.policies_by_group})
+        </label>
+        <div className="actions">
+          <button type="button" className="button button-secondary" onClick={loadPreview}>
+            Vorschau der Treffer
+          </button>
+        </div>
+        {showPreview && (
+          <div className="hint-box" role="status">
+            <p>
+              <strong>{hits.groups.length} Gruppen:</strong> {hits.groups.join(", ") || "keine"}
+            </p>
+            <p>
+              <strong>{hits.policies.length} Policies:</strong>{" "}
+              {hits.policies_known
+                ? hits.policies.join(", ") || "keine"
+                : "NetBird liefert keine Richtlinien."}
+            </p>
+          </div>
+        )}
+        <div className="table-wrap">
+          <table className="nb-mini-table" aria-label="Was gemeldet wird">
+            <caption className="small">Was gemeldet wird (protokolliert wird immer alles)</caption>
+            <thead>
+              <tr>
+                <th scope="col">Änderung</th>
+                <th scope="col">Glocke an NetBird-Leser</th>
+              </tr>
+            </thead>
+            <tbody>
+              {NOTIFY_ROWS.map(([key, label]) => (
+                <tr key={key}>
+                  <th scope="row">{label}</th>
+                  <td>
+                    <input
+                      type="checkbox"
+                      className="check"
+                      aria-label={`${label} melden`}
+                      checked={input.notify[key]}
+                      onChange={(event) =>
+                        set({ notify: { ...input.notify, [key]: event.target.checked } })
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            className="check"
+            checked={input.critical_mail}
+            onChange={(event) => set({ critical_mail: event.target.checked })}
+          />
+          Kritische Änderungen zusätzlich per Mail und Teams an alle Bestätiger
+        </label>
+        <p className="small">
+          Vorgabe aus. Gilt unabhängig von den Kontoeinstellungen; ohne Inhalte in der Nachricht.
+        </p>
+        <label className="check-label">
+          <input
+            type="checkbox"
+            className="check"
+            checked={input.auto_confirm}
+            onChange={(event) => set({ auto_confirm: event.target.checked })}
+          />
+          Nur protokollierte Änderungen automatisch bestätigen
+        </label>
+        <p className="small">
+          Gemeldete bleiben offen, bis jemand mit „NetBird: Bestätigen“ sie bestätigt.
+        </p>
+        <Field label="Aufbewahrung der Änderungen">
+          {(control) => (
+            <select
+              {...control}
+              value={input.retention}
+              onChange={(event) =>
+                set({ retention: event.target.value as NbWatchInput["retention"] })
+              }
+            >
+              <option value="unbegrenzt">unbegrenzt</option>
+              <option value="3j">3 Jahre</option>
+              <option value="1j">1 Jahr</option>
+              <option value="90t">90 Tage</option>
+            </select>
+          )}
+        </Field>
+        <Field label="Erinnerung an offene Änderungen">
+          {(control) => (
+            <select
+              {...control}
+              value={input.reminder}
+              onChange={(event) =>
+                set({ reminder: Number(event.target.value) as NbWatchInput["reminder"] })
+              }
+            >
+              <option value={3}>nach 3 Tagen</option>
+              <option value={7}>nach 7 Tagen</option>
+              <option value={0}>keine</option>
+            </select>
+          )}
+        </Field>
+        <div className="actions">
+          <button type="submit" className="button button-primary" disabled={busy}>
+            Überwachung speichern
+          </button>
+        </div>
+      </form>
+      {dialog}
     </section>
   );
 }

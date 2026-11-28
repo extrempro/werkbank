@@ -288,6 +288,98 @@ export function fetchNbEvents(filter: {
   );
 }
 
+// --- Gruppen & Policies -----------------------------------------------------------------
+
+export type NbChangeStatus = "offen" | "bestaetigt" | "automatisch";
+
+export interface NbChange {
+  id: number;
+  detected_at: string;
+  kind: "group" | "policy";
+  object_id: string;
+  object_name: string;
+  action: string;
+  action_label: string;
+  summary: string;
+  initiator: string;
+  initiator_kind: "person" | "scim" | "unbekannt";
+  flag: "" | "fremde_gruppe" | "von_hand";
+  critical: boolean;
+  status: NbChangeStatus;
+}
+
+export interface NbChangeDetail extends NbChange {
+  fields: [string, string, string, boolean][];
+  via: string;
+  flag_text: string;
+  notified: string;
+  reported: boolean;
+  confirmed_by_name: string;
+  confirmed_at: string | null;
+  comment: string;
+  related: number;
+  can_confirm?: boolean;
+}
+
+export interface NbWatchPreview {
+  groups: string[];
+  policies: string[];
+  policies_by_prefix: number;
+  policies_by_group: number;
+  policies_known: boolean;
+}
+
+export interface NbChanges extends NbBase {
+  watch: NbWatchPreview & {
+    active: boolean;
+    group_prefixes: string[];
+    policy_prefixes: string[];
+    by_group: boolean;
+  };
+  open_count: number;
+  total: number;
+  items: NbChange[];
+  can_confirm: boolean;
+  can_configure: boolean;
+}
+
+export interface NbChangeFilter {
+  q: string;
+  state: string;
+  kind: string;
+  action: string;
+  initiator: string;
+  days: string;
+  object: string;
+}
+
+export function fetchNbChanges(filter: NbChangeFilter, limit: number): Promise<NbChanges> {
+  return getJson(
+    `${BASE}/changes${params({
+      q: filter.q,
+      state: filter.state,
+      kind: filter.kind,
+      action: filter.action,
+      initiator: filter.initiator,
+      days: filter.days,
+      object_id: filter.object,
+      limit: String(limit),
+    })}`,
+  );
+}
+
+export function fetchNbChange(id: number): Promise<NbChangeDetail> {
+  return getJson(`${BASE}/changes/${id}`);
+}
+
+export function confirmNbChange(id: number, comment: string): Promise<NbChangeDetail> {
+  return postJson(`${BASE}/changes/${id}/confirm`, { comment });
+}
+
+export function confirmAllNbChanges(): Promise<{ confirmed: number }> {
+  return postJson(`${BASE}/changes/confirm-all`);
+}
+
 export function refreshNetbird(): Promise<{ scheduled: boolean }> {
   return postJson(`${BASE}/refresh`);
 }
@@ -351,4 +443,40 @@ export function saveNbCrowdSec(update: {
 
 export function testNbCrowdSec(): Promise<{ total: number; own: number }> {
   return postJson(`${ADMIN}/crowdsec/test`);
+}
+
+export interface NbNotify {
+  policy_change: boolean;
+  policy_toggle: boolean;
+  group_change: boolean;
+  members_manual: boolean;
+  members_scim: boolean;
+}
+
+export interface NbWatchInput {
+  group_prefixes: string;
+  policy_prefixes: string;
+  by_prefix: boolean;
+  by_group: boolean;
+  notify: NbNotify;
+  critical_mail: boolean;
+  retention: "unbegrenzt" | "3j" | "1j" | "90t";
+  reminder: 3 | 7 | 0;
+  auto_confirm: boolean;
+}
+
+export interface NbWatchSettings extends NbWatchInput {
+  preview: NbWatchPreview;
+}
+
+export function fetchNbWatch(): Promise<NbWatchSettings> {
+  return getJson(`${ADMIN}/watch`);
+}
+
+export function previewNbWatch(input: NbWatchInput): Promise<NbWatchPreview> {
+  return postJson(`${ADMIN}/watch/preview`, input);
+}
+
+export function saveNbWatch(input: NbWatchInput): Promise<NbWatchSettings> {
+  return putJson(`${ADMIN}/watch`, input);
 }

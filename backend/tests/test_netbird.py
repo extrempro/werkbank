@@ -1,4 +1,4 @@
-"""IT-Monitoring, NetBird: Abruf, Hinweise, Seiten, Rechte, Verwaltung (Phasen 1 bis 4).
+"""IT-Monitoring, NetBird: Abruf, Hinweise, Seiten, Rechte, Verwaltung (Phasen 1 bis 5).
 
 Alle Antworten von NetBird sind erfundene Beispieldaten (sample.py).
 """
@@ -17,7 +17,15 @@ from werkbank.config import Settings
 from werkbank.core.app_settings import NETBIRD_KEY, encrypt_secret, set_setting
 from werkbank.core.models import AppSetting, AuditLog, Job, Notification, NotificationKind, User
 from werkbank.core.sessions import now_utc
-from werkbank.modules.monitoring.netbird import collector, crowdsec, hints, policies, sample, views
+from werkbank.modules.monitoring.netbird import (
+    collector,
+    crowdsec,
+    hints,
+    policies,
+    sample,
+    views,
+    watch,
+)
 from werkbank.modules.monitoring.netbird.admin import get_lapi_transport, get_netbird_transport
 from werkbank.modules.monitoring.netbird.client import (
     NetBirdClient,
@@ -27,6 +35,7 @@ from werkbank.modules.monitoring.netbird.client import (
 )
 from werkbank.modules.monitoring.netbird.models import (
     NbBlock,
+    NbChange,
     NbCheck,
     NbDaily,
     NbEvent,
@@ -132,6 +141,7 @@ def db(migrated_db: None, db_session: Session) -> Session:
         NbPolicySeen,
         NbHint,
         NbBlock,
+        NbChange,
     ):
         db_session.execute(delete(table))
     db_session.execute(delete(AppSetting))
@@ -798,3 +808,232 @@ def test_collect_crowdsec_and_networks_api(db: Session, tmp_path: Path) -> None:
     db.commit()
     collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
     assert "alt" not in set(db.scalars(select(NbBlock.service_id)))
+
+
+# --- Phase 5: Gruppen & Policies -----------------------------------------------------------
+
+
+def watch_settings(**extra: Any) -> watch.WatchSettings:
+    return watch.load_watch({"watch": {**sample.WATCH, **extra}})
+
+
+def test_watch_settings_and_preview() -> None:
+    assert watch.load_watch({}).active is False
+    settings = watch_settings()
+    assert settings.notify["members_scim"] is False and settings.reminder == 3
+    data = fetched()
+    result = watch.preview(data, settings)
+    assert "grp-beispiel-it" in result["groups"] and "All" not in result["groups"]
+    assert result["policies_by_prefix"] == 6 and result["policies_by_group"] == 0
+    only_groups = watch.preview(data, watch_settings(policy_prefixes=[]))
+    # Policies über überwachte Gruppen: alle außer pol-beispiel-admin (nur „All“)
+    assert only_groups["policies_by_group"] == 5
+    assert watch.load_watch({"watch": {"retention": "unsinn", "reminder": 5}}).retention == (
+        "unbegrenzt"
+    )
+
+
+def test_detect_changes_and_flags() -> None:
+    old = fetched()
+    new = fetch(NetBirdClient(CONFIG, sample.changed_transport)).data
+    drafts = {(d.object_id, d.action): d for d in watch.detect(old, new, watch_settings())}
+    assert set(drafts) == {
+        ("g-labor", "angelegt"),
+        ("g-vertrieb", "mitglieder"),
+        ("pol-server", "geaendert"),
+        ("pol-dev", "deaktiviert"),
+    }
+    server = drafts[("pol-server", "geaendert")]
+    assert server.flag == "fremde_gruppe" and server.summary == "Quelle geändert"
+    assert ["Quelle", "grp-beispiel-vertrieb", "All", True] in server.fields
+    labor = drafts[("g-labor", "angelegt")]
+    assert labor.flag == "von_hand"
+    members = drafts[("g-vertrieb", "mitglieder")]
+    assert members.summary == "1 Mitglied hinzu" and members.scim_group
+    assert ["Neu", "\u2013", "nb-peer-07", True] in members.fields
+    # Gleiche Einstellungen auf beiden Seiten: neues Präfix erzeugt keine Scheinänderungen
+    assert watch.detect(old, old, watch_settings()) == []
+    assert watch.detect(old, new, watch.WatchSettings()) == []
+    events = [{"code": "policy.update", "target_id": "pol-server", "initiator": "Ina Beispiel"}]
+    assert watch.who(server, events).name == "Ina Beispiel"
+    assert watch.who(members, []).kind == "scim"
+    assert watch.who(drafts[("pol-dev", "deaktiviert")], []).name == watch.UNKNOWN
+
+
+def configure_watch(db: Session, settings: Settings, **extra: Any) -> None:
+    set_setting(
+        db,
+        NETBIRD_KEY,
+        {
+            "url": "https://netbird.example.com",
+            "token_encrypted": encrypt_secret(settings, "t"),
+            "watch": {**sample.WATCH, **extra},
+        },
+        None,
+    )
+    db.commit()
+
+
+@pytest.mark.db
+def test_collect_records_changes_and_bell(db: Session, tmp_path: Path) -> None:
+    from werkbank.core.notifications import dispatch
+    from werkbank.modules.monitoring.netbird.notifications import netbird_notifications
+
+    settings = settings_with_key(tmp_path)
+    configure_watch(db, settings, critical_mail=True)
+    db.execute(delete(Notification).where(Notification.kind.like("monitoring.netbird%")))
+    db.execute(delete(NotificationKind).where(NotificationKind.kind.like("monitoring.netbird%")))
+    db.commit()
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
+    assert db.scalar(select(func.count()).select_from(NbChange)) == 0  # erster Stand
+    dispatch(db, netbird_notifications(db, settings, now_utc()))  # Arten gelten als begonnen
+    db.commit()
+    collector.collect(db, settings, transport=sample.changed_transport, checker=CHECKER)
+    rows = {(c.object_id, c.action): c for c in db.scalars(select(NbChange))}
+    assert rows[("pol-server", "geaendert")].initiator == "Ina Beispiel"
+    assert rows[("pol-server", "geaendert")].critical is True
+    assert "Mail und Teams" in rows[("pol-server", "geaendert")].notified
+    assert rows[("g-labor", "angelegt")].initiator == "Max Muster"
+    assert rows[("g-vertrieb", "mitglieder")].status == "automatisch"  # SCIM: nicht gemeldet
+    assert rows[("g-vertrieb", "mitglieder")].initiator == watch.SCIM
+    assert rows[("pol-dev", "deaktiviert")].status == "offen"
+
+    reader = db.scalars(select(User).limit(1)).first()
+    assert reader is not None
+    reader.last_roles = ["NetBird.Reader", "NetBird.Approver"]
+    db.commit()
+    dispatch(db, netbird_notifications(db, settings, now_utc()))
+    db.commit()
+    kinds = sorted(
+        n.kind
+        for n in db.scalars(select(Notification).where(Notification.user_id == reader.id))
+        if n.kind.startswith("monitoring.netbird_")
+        and n.kind in ("monitoring.netbird_aenderung", "monitoring.netbird_kritisch")
+    )
+    assert kinds.count("monitoring.netbird_aenderung") == 3
+    assert kinds.count("monitoring.netbird_kritisch") == 1
+    from werkbank.core.notify_channels import forced_kinds
+
+    assert "monitoring.netbird_kritisch" in forced_kinds(db)
+    # Erinnerung nach drei Tagen
+    for change in rows.values():
+        change.detected_at = now_utc() - timedelta(days=4)
+    db.commit()
+    reminders = [
+        e
+        for e in netbird_notifications(db, settings, now_utc())
+        if e.kind == "monitoring.netbird_erinnerung"
+    ]
+    assert len(reminders) == 3
+    db.execute(delete(Notification).where(Notification.kind.like("monitoring.netbird%")))
+    db.commit()
+
+
+@pytest.mark.db
+def test_changes_api_rights_and_confirm(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    configure_watch(db, settings)
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
+    collector.collect(db, settings, transport=sample.changed_transport, checker=CHECKER)
+    client = client_for(make_app(settings))
+    login_as(client, ["Werkbank.Admin"], oid="nb-aenderung-admin")
+    assert client.get(f"{BASE}/changes").status_code == 403
+
+    login_as(client, ["NetBird.Reader"], oid="nb-aenderung-leser")
+    data = client.get(f"{BASE}/changes").json()
+    assert data["total"] == 4 and data["open_count"] == 3 and data["can_confirm"] is False
+    assert data["watch"]["group_prefixes"] == ["grp-beispiel-"]
+    assert "grp-beispiel-labor" in data["watch"]["groups"]
+    server = next(i for i in data["items"] if i["object_id"] == "pol-server")
+    assert server["flag"] == "fremde_gruppe" and server["status"] == "offen"
+    assert (
+        client.post(f"{BASE}/changes/{server['id']}/confirm", json={}, headers=HEADERS).status_code
+        == 403
+    )
+    assert client.post(f"{BASE}/changes/confirm-all", headers=HEADERS).status_code == 403
+    only = client.get(f"{BASE}/changes", params={"state": "automatisch"}).json()["items"]
+    assert [i["object_id"] for i in only] == ["g-vertrieb"]
+    assert len(client.get(f"{BASE}/changes", params={"kind": "group"}).json()["items"]) == 2
+    assert len(client.get(f"{BASE}/changes", params={"action": "geaendert"}).json()["items"]) == 2
+    assert len(client.get(f"{BASE}/changes", params={"initiator": "person"}).json()["items"]) == 2
+    assert client.get(f"{BASE}/changes", params={"q": "labor"}).json()["total"] == 1
+    assert client.get(f"{BASE}/changes", params={"days": 5}).status_code == 422
+    detail = client.get(f"{BASE}/changes/{server['id']}").json()
+    assert detail["via"].startswith("Abgleich, Person") and detail["related"] == 1
+    assert ["Quelle", "grp-beispiel-vertrieb", "All", True] in detail["fields"]
+    assert client.get(f"{BASE}/changes/999999").status_code == 404
+    overview = client.get(f"{BASE}/overview").json()
+    codes = {h["code"] for h in overview["hints"]}
+    assert {"aenderung_kritisch", "aenderungen_offen"} <= codes
+
+    login_as(client, ["NetBird.Reader", "NetBird.Approver"], oid="nb-bestaetiger")
+    confirmed = client.post(
+        f"{BASE}/changes/{server['id']}/confirm",
+        json={"comment": "Gewollt, Freigabe für alle."},
+        headers=HEADERS,
+    ).json()
+    assert (
+        confirmed["status"] == "bestaetigt"
+        and confirmed["comment"] == "Gewollt, Freigabe für alle."
+    )
+    assert confirmed["confirmed_at"]
+    again = client.post(f"{BASE}/changes/{server['id']}/confirm", json={}, headers=HEADERS)
+    assert again.status_code == 409  # nicht mehr änderbar
+    assert db.scalars(
+        select(AuditLog).where(AuditLog.action == "netbird.aenderung_bestaetigt")
+    ).first()
+    result = client.post(f"{BASE}/changes/confirm-all", headers=HEADERS).json()
+    assert result == {"confirmed": 2}
+    assert client.get(f"{BASE}/changes").json()["open_count"] == 0
+    codes = {h["code"] for h in client.get(f"{BASE}/overview").json()["hints"]}
+    assert "aenderungen_offen" not in codes
+
+
+@pytest.mark.db
+def test_admin_watch_settings_preview_and_retention(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    configure(db, settings)
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
+    client = admin(settings)
+    data = client.get(f"{ADMIN}/watch").json()
+    assert data["group_prefixes"] == "" and data["notify"]["members_scim"] is False
+    body = {
+        "group_prefixes": "grp-beispiel-, GRP-BEISPIEL-",
+        "policy_prefixes": "pol-beispiel-",
+        "retention": "90t",
+        "reminder": 7,
+        "notify": {"members_scim": True},
+    }
+    hits = client.post(f"{ADMIN}/watch/preview", json=body, headers=HEADERS).json()
+    assert hits["policies_by_prefix"] == 6 and "grp-beispiel-vertrieb" in hits["groups"]
+    saved = client.put(f"{ADMIN}/watch", json=body, headers=HEADERS).json()
+    assert saved["group_prefixes"] == "grp-beispiel-" and saved["retention"] == "90t"
+    assert saved["notify"]["members_scim"] is True and saved["reminder"] == 7
+    assert (
+        client.put(
+            f"{ADMIN}/watch", json={**body, "retention": "ewig"}, headers=HEADERS
+        ).status_code
+        == 422
+    )
+    assert db.scalars(
+        select(AuditLog).where(AuditLog.action == "einstellungen.netbird_ueberwachung_geaendert")
+    ).first()
+    # Aufbewahrung 90 Tage: ältere Änderungen fallen weg
+    db.add(
+        NbChange(
+            detected_at=now_utc() - timedelta(days=100),
+            kind="group",
+            object_id="alt",
+            object_name="grp-beispiel-alt",
+            action="angelegt",
+            summary="angelegt",
+            fields=[],
+            initiator=watch.UNKNOWN,
+            initiator_kind="unbekannt",
+            via="",
+            status="automatisch",
+        )
+    )
+    db.commit()
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
+    assert "alt" not in set(db.scalars(select(NbChange.object_id)))

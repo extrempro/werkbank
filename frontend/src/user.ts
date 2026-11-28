@@ -16,6 +16,7 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["FortiGate.Editor", "FortiGate"],
   ["FortiGate.Reader", "FortiGate"],
   ["NetBird.Reader", "NetBird"],
+  ["NetBird.Approver", "NetBird"],
   ["Projekte.Editor", "IT-Projekte"],
   ["Projekte.Reader", "IT-Projekte"],
   ["Bestand.Editor", "IT-Bestand"],
@@ -96,7 +97,14 @@ const RIGHT_AREAS: readonly RightArea[] = [
   },
   {
     name: "NetBird",
-    levels: [["Lesen", "NetBird.Reader", "Peers, Netze, Dienste und Richtlinien ansehen"]],
+    levels: [
+      [
+        "Bestätigen",
+        "NetBird.Approver",
+        "Wie Lesen, dazu Änderungen an Gruppen und Policies bestätigen",
+      ],
+      ["Lesen", "NetBird.Reader", "Peers, Netze, Dienste und Richtlinien ansehen"],
+    ],
   },
   {
     name: "M365-Einstellungen",

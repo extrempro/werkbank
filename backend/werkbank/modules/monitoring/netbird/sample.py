@@ -534,3 +534,70 @@ def sample_lapi(config: Any) -> Any:
         {"id": 100 + i, "origin": "CAPI", "type": "ban", "value": f"192.0.2.{i}"} for i in range(10)
     ]
     return own + manual + community
+
+
+def changed_responses(now: datetime | None = None) -> dict[str, Any]:
+    """Zweiter Stand für Gruppen & Policies: Quelle von pol-beispiel-server jetzt „All“ (fremde
+    Gruppe), pol-beispiel-dev deaktiviert, neue Gruppe grp-beispiel-labor von Hand, ein Peer mehr
+    in grp-beispiel-vertrieb (SCIM)."""
+    now = now or datetime.now(UTC)
+    data = responses(now)
+    for policy in data["policies"]:
+        if policy["id"] == "pol-server":
+            policy["rules"][0]["sources"] = [{"id": "g-all", "name": "All"}]
+        if policy["id"] == "pol-dev":
+            policy["enabled"] = False
+    for group in data["groups"]:
+        if group["id"] == "g-vertrieb":
+            group["peers"].append({"id": "p-07", "name": "p-07"})
+            group["peers_count"] += 1
+    data["groups"].append(
+        {
+            "id": "g-labor",
+            "name": "grp-beispiel-labor",
+            "issued": "api",
+            "peers_count": 1,
+            "peers": [{"id": "p-44", "name": "p-44"}],
+        }
+    )
+    data["events/audit"] = [
+        *data["events/audit"],
+        {
+            "id": f"1006-{int(now.timestamp())}",
+            "timestamp": _iso(now - timedelta(seconds=30)),
+            "activity": "Policy updated",
+            "activity_code": "policy.update",
+            "initiator_id": "u-ina",
+            "initiator_name": "Ina Beispiel",
+            "target_id": "pol-server",
+            "meta": {"name": "pol-beispiel-server"},
+        },
+        {
+            "id": f"1007-{int(now.timestamp())}",
+            "timestamp": _iso(now - timedelta(seconds=20)),
+            "activity": "Group created",
+            "activity_code": "group.add",
+            "initiator_id": "u-max",
+            "initiator_name": "Max Muster",
+            "target_id": "g-labor",
+            "meta": {"name": "grp-beispiel-labor"},
+        },
+    ]
+    return data
+
+
+def changed_transport(config: NetBirdConfig, path: str, params: Mapping[str, str]) -> Any:
+    if path == "events/proxy":
+        return sample_transport(config, path, params)
+    data = changed_responses()
+    if path in data:
+        return data[path]
+    raise NotAvailableError(f"Den Endpunkt {path} gibt es auf diesem Server nicht.")
+
+
+WATCH = {
+    "group_prefixes": ["grp-beispiel-"],
+    "policy_prefixes": ["pol-beispiel-"],
+    "by_prefix": True,
+    "by_group": True,
+}

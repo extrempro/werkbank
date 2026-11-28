@@ -165,6 +165,21 @@ KINDS: dict[str, KindInfo] = {
         "Neuer Hinweis zu NetBird der Stufe Info",
         (Role.NETBIRD_READER,),
     ),
+    "monitoring.netbird_aenderung": KindInfo(
+        "IT-Monitoring",
+        "Gemeldete Änderung an einer überwachten Gruppe oder Policy in NetBird",
+        (Role.NETBIRD_READER,),
+    ),
+    "monitoring.netbird_kritisch": KindInfo(
+        "IT-Monitoring",
+        "Kritische Änderung an einer überwachten Policy in NetBird (fremde Gruppe)",
+        (Role.NETBIRD_APPROVER,),
+    ),
+    "monitoring.netbird_erinnerung": KindInfo(
+        "IT-Monitoring",
+        "Änderung an Gruppen oder Policies in NetBird wartet auf Bestätigung",
+        (Role.NETBIRD_APPROVER,),
+    ),
     "monitoring.zabbix_dienstkonto": KindInfo(
         "IT-Monitoring",
         "Token für Zabbix läuft ab oder die Rolle des Dienstkontos erlaubt zu viel",
@@ -243,6 +258,10 @@ class Event:
 
 
 NotificationSource = Callable[[Session, Settings, datetime], Iterable[Event]]
+
+# Arten, die per Mail und Teams gehen, auch wenn die Person den Kanal nicht eingeschaltet hat;
+# der Wert sagt, ob das gerade gilt (Schalter eines Moduls). Module tragen sich selbst ein.
+FORCED_CHANNELS: dict[str, Callable[[Session], bool]] = {}
 
 
 def _mark_key(event: Event) -> str:

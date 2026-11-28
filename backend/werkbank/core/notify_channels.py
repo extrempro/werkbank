@@ -40,7 +40,7 @@ from werkbank.core.mail_layout import (
     render_html,
 )
 from werkbank.core.models import Notification, NotificationChannel, User
-from werkbank.core.notifications import KINDS
+from werkbank.core.notifications import FORCED_CHANNELS, KINDS
 from werkbank.core.sessions import now_utc
 
 logger = logging.getLogger(__name__)
@@ -249,24 +249,56 @@ def sample_digest(name: str) -> Digest:
     return Digest(name=name, total=1, modules=[("Werkbank", 1)])
 
 
-def _pending(db: Session, channel: str, since: datetime) -> dict[uuid.UUID, list[Notification]]:
+def forced_kinds(db: Session) -> list[str]:
+    """Arten, die ein Modul gerade für alle Empfänger per Mail und Teams verlangt."""
+    out = []
+    for kind, active in FORCED_CHANNELS.items():
+        try:
+            if active(db):
+                out.append(kind)
+        except Exception:
+            logger.exception("Schalter für Mail und Teams nicht lesbar: %s", kind)
+    return out
+
+
+def _pending(
+    db: Session, channel: str, since: datetime, forced: list[str] | None = None
+) -> dict[uuid.UUID, list[Notification]]:
     sent = Notification.mailed_at if channel == CHANNEL_MAIL else Notification.teams_at
-    rows = db.scalars(
-        select(Notification)
-        .join(
-            NotificationChannel,
-            (NotificationChannel.user_id == Notification.user_id)
-            & (NotificationChannel.kind == Notification.kind)
-            & (NotificationChannel.channel == channel),
+    rows = list(
+        db.scalars(
+            select(Notification)
+            .join(
+                NotificationChannel,
+                (NotificationChannel.user_id == Notification.user_id)
+                & (NotificationChannel.kind == Notification.kind)
+                & (NotificationChannel.channel == channel),
+            )
+            .where(
+                sent.is_(None),
+                Notification.read_at.is_(None),
+                Notification.created_at >= since,
+                Notification.created_at >= NotificationChannel.created_at,
+            )
+            .order_by(Notification.id)
         )
-        .where(
-            sent.is_(None),
-            Notification.read_at.is_(None),
-            Notification.created_at >= since,
-            Notification.created_at >= NotificationChannel.created_at,
-        )
-        .order_by(Notification.id)
-    ).all()
+    )
+    if forced:
+        known = {row.id for row in rows}
+        rows += [
+            row
+            for row in db.scalars(
+                select(Notification)
+                .where(
+                    sent.is_(None),
+                    Notification.read_at.is_(None),
+                    Notification.created_at >= since,
+                    Notification.kind.in_(forced),
+                )
+                .order_by(Notification.id)
+            )
+            if row.id not in known
+        ]
     grouped: dict[uuid.UUID, list[Notification]] = {}
     for row in rows:
         grouped.setdefault(row.user_id, []).append(row)
@@ -294,10 +326,11 @@ def deliver(
         smtp = None
     teams_url = load_teams_url(db, settings)
     targets: dict[str, bool] = {CHANNEL_MAIL: smtp is not None, CHANNEL_TEAMS: bool(teams_url)}
+    forced = forced_kinds(db)
     for channel in CHANNELS:
         if not targets[channel]:
             continue
-        for user_id, rows in _pending(db, channel, since).items():
+        for user_id, rows in _pending(db, channel, since, forced).items():
             user = db.get(User, user_id)
             if user is None or not user.email:
                 continue

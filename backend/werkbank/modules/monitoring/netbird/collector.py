@@ -29,6 +29,7 @@ from werkbank.modules.monitoring.netbird.config import (
     client_config,
     lapi_config,
     load_settings,
+    stored,
 )
 from werkbank.modules.monitoring.netbird.crowdsec import (
     CrowdSecError,
@@ -39,6 +40,7 @@ from werkbank.modules.monitoring.netbird.crowdsec import (
 from werkbank.modules.monitoring.netbird.hints import all_hints
 from werkbank.modules.monitoring.netbird.models import (
     NbBlock,
+    NbChange,
     NbCheck,
     NbDaily,
     NbEvent,
@@ -54,6 +56,13 @@ from werkbank.modules.monitoring.netbird.policies import (
     category,
     digest,
     parse_iso,
+)
+from werkbank.modules.monitoring.netbird.watch import (
+    EVENT_SLACK,
+    RETENTIONS,
+    detect,
+    load_watch,
+    who,
 )
 
 logger = logging.getLogger(__name__)
@@ -349,6 +358,65 @@ def collect_lapi(
         data["crowdsec"] = {"configured": True, "ok": False, "error": str(error)[:300]}
 
 
+def record_changes(
+    db: Session,
+    old: dict[str, Any] | None,
+    old_at: datetime | None,
+    new: dict[str, Any],
+    now: datetime,
+) -> list[NbChange]:
+    """Änderungen an überwachten Gruppen und Policies seit dem letzten Stand speichern."""
+    watch = load_watch(stored(db))
+    if old is None or old_at is None or not watch.active:
+        return []
+    drafts = detect(old, new, watch)
+    if not drafts:
+        return []
+    events = [
+        {"code": e.code, "target_id": e.target_id, "initiator": e.initiator, "meta": e.meta}
+        for e in db.scalars(select(NbEvent).where(NbEvent.at >= old_at - EVENT_SLACK))
+    ]
+    created = []
+    for draft in drafts:
+        author = who(draft, events)
+        category = draft.category
+        if draft.action == "mitglieder":
+            category = (
+                "members_scim"
+                if author.kind == "scim" or (draft.scim_group and author.kind != "person")
+                else "members_manual"
+            )
+        reported = bool(watch.notify.get(category)) or draft.flag == "fremde_gruppe"
+        critical = draft.flag == "fremde_gruppe"
+        notified = []
+        if reported:
+            notified.append("Glocke an NetBird-Leser")
+            if critical and watch.critical_mail:
+                notified.append("Mail und Teams an Bestätiger")
+        change = NbChange(
+            detected_at=now,
+            kind=draft.kind,
+            object_id=draft.object_id[:64],
+            object_name=draft.object_name[:255],
+            action=draft.action,
+            summary=draft.summary[:300],
+            fields=draft.fields,
+            initiator=author.name,
+            initiator_kind=author.kind,
+            via=author.via,
+            flag=draft.flag,
+            flag_text=draft.flag_text[:300],
+            critical=critical,
+            reported=reported,
+            notified=" · ".join(notified) or "nicht gemeldet (nur protokolliert)",
+            status="offen" if reported or not watch.auto_confirm else "automatisch",
+        )
+        db.add(change)
+        created.append(change)
+    db.flush()
+    return created
+
+
 def purge(db: Session, now: datetime) -> None:
     db.execute(delete(NbCheck).where(NbCheck.checked_at < now - timedelta(days=CHECK_DAYS + 1)))
     cutoff = local_day(now) - timedelta(days=HISTORY_DAYS)
@@ -357,6 +425,9 @@ def purge(db: Session, now: datetime) -> None:
     db.execute(delete(NbRun).where(NbRun.started_at < now - timedelta(days=HISTORY_DAYS)))
     db.execute(delete(NbEvent).where(NbEvent.at < now - timedelta(days=HISTORY_DAYS)))
     db.execute(delete(NbBlock).where(NbBlock.hour < now - timedelta(days=BLOCK_DAYS)))
+    days = RETENTIONS.get(load_watch(stored(db)).retention)
+    if days is not None:
+        db.execute(delete(NbChange).where(NbChange.detected_at < now - timedelta(days=days)))
 
 
 def collect(
@@ -385,6 +456,10 @@ def collect(
         if fetched.data.get("services") is not None:
             collect_blocks(db, client, fetched.data, now)
         collect_lapi(db, settings, fetched.data, lapi)
+        previous = latest_state(db)
+        old_data = dict(previous.data) if previous else None
+        old_at = previous.fetched_at if previous else None
+        record_changes(db, old_data, old_at, fetched.data, now)
         store(db, fetched.data, now)
         sync_hints(db, fetched.data, now)
     except NetBirdError as error:

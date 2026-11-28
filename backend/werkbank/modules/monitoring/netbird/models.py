@@ -1,10 +1,11 @@
 """Tabellen für NetBird. Die Werkbank liest NetBird nur; gespeichert werden der jüngste Stand
 und Tageswerte für die Verläufe (90 Tage)."""
 
+import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, Date, DateTime, Integer, SmallInteger, String
+from sqlalchemy import Boolean, Date, DateTime, Integer, SmallInteger, String, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -115,3 +116,40 @@ class NbCheck(Base):
     ok: Mapped[bool] = mapped_column(Boolean)
     status_code: Mapped[int | None] = mapped_column(SmallInteger)
     ms: Mapped[int | None] = mapped_column(Integer)
+
+
+class NbChange(Base):
+    """Erkannte Änderung an einer überwachten Gruppe oder Policy (Phase 5).
+
+    Bestätigung (Person, Zeitpunkt, Kommentar) ist danach nicht mehr änderbar.
+    """
+
+    __tablename__ = "mon_nb_changes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    # group | policy
+    kind: Mapped[str] = mapped_column(String(10))
+    object_id: Mapped[str] = mapped_column(String(64), index=True)
+    object_name: Mapped[str] = mapped_column(String(255))
+    # angelegt | geaendert | geloescht | aktiviert | deaktiviert | umbenannt | mitglieder
+    action: Mapped[str] = mapped_column(String(20))
+    summary: Mapped[str] = mapped_column(String(300))
+    # [[Feld, vorher, nachher, geändert]]
+    fields: Mapped[list[Any]] = mapped_column(JSONB)
+    initiator: Mapped[str] = mapped_column(String(300))
+    # person | scim | unbekannt
+    initiator_kind: Mapped[str] = mapped_column(String(10))
+    via: Mapped[str] = mapped_column(String(200))
+    # fremde_gruppe | von_hand | ""
+    flag: Mapped[str] = mapped_column(String(20), default="")
+    flag_text: Mapped[str] = mapped_column(String(300), default="")
+    critical: Mapped[bool] = mapped_column(Boolean, default=False)
+    reported: Mapped[bool] = mapped_column(Boolean, default=False)
+    notified: Mapped[str] = mapped_column(String(200), default="")
+    # offen | bestaetigt | automatisch
+    status: Mapped[str] = mapped_column(String(12), index=True)
+    confirmed_by: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    confirmed_by_name: Mapped[str] = mapped_column(String(200), default="")
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    comment: Mapped[str] = mapped_column(String(500), default="")

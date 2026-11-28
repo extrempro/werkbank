@@ -7,12 +7,15 @@ import type {
   NbOverview,
   NbPeerDetail,
   NbPeers,
+  NbChangeDetail,
+  NbChanges,
   NbPolicies,
 } from "./api";
 import { NetbirdAdminPage } from "./NetbirdAdminPage";
 import { NetbirdNetworksPage } from "./NetbirdNetworksPage";
 import { NetbirdOverviewPage, NetbirdPeersPage } from "./NetbirdPages";
 import { NetbirdPoliciesPage } from "./NetbirdPoliciesPage";
+import { NetbirdChangesPage } from "./NetbirdChangesPage";
 
 afterEach(() => {
   cleanup();
@@ -250,6 +253,30 @@ describe("NetBird", () => {
     };
     const calls = stub({
       "GET /api/admin/settings/netbird/crowdsec": crowdsec,
+      "GET /api/admin/settings/netbird/watch": {
+        group_prefixes: "grp-beispiel-",
+        policy_prefixes: "pol-beispiel-",
+        by_prefix: true,
+        by_group: true,
+        notify: {
+          policy_change: true,
+          policy_toggle: true,
+          group_change: true,
+          members_manual: true,
+          members_scim: false,
+        },
+        critical_mail: false,
+        retention: "unbegrenzt",
+        reminder: 3,
+        auto_confirm: true,
+        preview: {
+          groups: ["grp-beispiel-it"],
+          policies: ["pol-beispiel-it"],
+          policies_by_prefix: 1,
+          policies_by_group: 0,
+          policies_known: true,
+        },
+      },
       "PUT /api/admin/settings/netbird/crowdsec": {
         ...crowdsec,
         url: "http://crowdsec.example.com:8080",
@@ -490,5 +517,83 @@ describe("NetBird", () => {
       target: { value: "peer" },
     });
     await waitFor(() => expect(calls.some((call) => call.includes("kind=peer"))).toBe(true));
+  });
+
+  it("zeigt Änderungen nach Tagen, Vorher/Nachher und bestätigt mit Kommentar", async () => {
+    window.history.replaceState(null, "", "/monitoring/netbird/gruppen?auswahl=7");
+    const row = {
+      id: 7,
+      detected_at: new Date().toISOString(),
+      kind: "policy" as const,
+      object_id: "pol-server",
+      object_name: "pol-beispiel-server",
+      action: "geaendert",
+      action_label: "geändert",
+      summary: "Quelle geändert",
+      initiator: "Ina Beispiel",
+      initiator_kind: "person" as const,
+      flag: "fremde_gruppe" as const,
+      critical: true,
+      status: "offen" as const,
+    };
+    const changes: NbChanges = {
+      ...base,
+      watch: {
+        active: true,
+        group_prefixes: ["grp-beispiel-"],
+        policy_prefixes: ["pol-beispiel-"],
+        by_group: true,
+        groups: ["grp-beispiel-it", "grp-beispiel-labor"],
+        policies: ["pol-beispiel-server"],
+        policies_by_prefix: 6,
+        policies_by_group: 0,
+        policies_known: true,
+      },
+      open_count: 1,
+      total: 1,
+      items: [row],
+      can_confirm: true,
+      can_configure: false,
+    };
+    const detail: NbChangeDetail = {
+      ...row,
+      fields: [
+        ["Quelle", "grp-beispiel-vertrieb", "All", true],
+        ["Ziel", "grp-beispiel-server", "grp-beispiel-server", false],
+      ],
+      via: "Abgleich, Person aus dem Ereignisprotokoll",
+      flag_text: "Die überwachte Policy nutzt jetzt All, eine Gruppe ohne Präfix oder „All“.",
+      notified: "Glocke an NetBird-Leser",
+      reported: true,
+      confirmed_by_name: "",
+      confirmed_at: null,
+      comment: "",
+      related: 1,
+      can_confirm: true,
+    };
+    const calls = stub({
+      "POST /api/monitoring/netbird/changes/7/confirm": { ...detail, status: "bestaetigt" },
+      "GET /api/monitoring/netbird/changes/7": detail,
+      "GET /api/monitoring/netbird/changes": changes,
+    });
+    render(<NetbirdChangesPage />);
+    const table = await screen.findByRole("table", { name: "Änderungen" });
+    expect(within(table).getByRole("columnheader", { name: "Heute" })).toBeInTheDocument();
+    expect(within(table).getByRole("row", { name: /pol-beispiel-server/ })).toHaveTextContent(
+      "fremde Gruppe",
+    );
+    expect(screen.getByText(/Gruppen mit „grp-beispiel-“ \(2 Treffer\)/)).toBeInTheDocument();
+    const aside = screen.getByRole("complementary", { name: "Detail der Änderung" });
+    const diff = await within(aside).findByRole("table", { name: "Vorher und Nachher" });
+    expect(within(diff).getByRole("row", { name: /Quelle/ })).toHaveClass("nb-diff-changed");
+    fireEvent.change(within(aside).getByRole("textbox", { name: /Kommentar/ }), {
+      target: { value: "Gewollt" },
+    });
+    fireEvent.click(within(aside).getByRole("button", { name: "Änderung bestätigen" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Änderung bestätigen?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Bestätigen" }));
+    expect(await screen.findByText("Die Änderung ist bestätigt.")).toBeInTheDocument();
+    expect(calls).toContain("POST /api/monitoring/netbird/changes/7/confirm");
+    expect(calls.some((call) => call.includes("state=offen"))).toBe(true);
   });
 });
