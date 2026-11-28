@@ -821,7 +821,7 @@ def test_findings_api_exceptions_and_bell(db: Session, tmp_path: Path) -> None:
     settings = settings_with_key(tmp_path)
     add_devices(db, settings)
     collector.collect(db, settings, transport=sample.sample_transport)
-    assert db.scalar(select(func.count()).select_from(FgFinding)) > 0
+    assert (db.scalar(select(func.count()).select_from(FgFinding)) or 0) > 0
 
     client = client_for(make_app(settings))
     login_as(client, ["FortiGate.Reader"], oid="fg-befund-leser")
