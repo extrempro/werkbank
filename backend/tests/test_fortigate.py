@@ -494,3 +494,156 @@ def test_sample_endpoint_only_in_tests(db: Session, tmp_path: Path) -> None:
     with pytest.raises(HTTPException) as error:
         load_sample(None, db, production)  # type: ignore[arg-type]
     assert error.value.status_code == 404
+
+
+# --- Phase 2: Fabric-Sync und unbenutzte Objekte ------------------------------------------
+
+
+def test_unused_respects_switches_and_references() -> None:
+    from werkbank.modules.monitoring.fortigate.unused import references, unused
+
+    core = fetched("fw-core").config
+    names = {(item.kind, item.name): item.reason for item in unused(core)}
+    # nur in der deaktivierten Policy #52
+    assert names[("addresses", "test-host-1")].startswith("nur in deaktivierten Einträgen: #52")
+    assert ("addresses", "Drucker-Netz") in names
+    assert ("addresses", "srv-app") not in names  # über Grp-Server in genutzter Policy
+    strict_off = {(i.kind, i.name) for i in unused(core, disabled_is_unused=False)}
+    assert ("addresses", "test-host-1") not in strict_off
+
+    edge = fetched("fw-edge").config
+    refs = references(edge)
+    sources = {ref.source for ref in refs.get("addr", "Netz-Standort-B")}
+    assert {"Policy", "Statische Route", "VPN-Selektor"} <= sources
+    assert {ref.source for ref in refs.get("addr", "srv-app")} == {"Gruppe", "SD-WAN-Regel"}
+    edge_unused = {(i.kind, i.name): i.reason for i in unused(edge)}
+    # Grp-Alt-Buero ist unbenutzt, also zählt test-host-1 darin nicht
+    assert ("address_groups", "Grp-Alt-Buero") in edge_unused
+    assert edge_unused[("addresses", "test-host-1")].startswith("nur in unbenutzten Gruppen")
+    loose = {(i.kind, i.name) for i in unused(edge, unused_groups_count=False)}
+    assert ("addresses", "test-host-1") not in loose
+    # Lokal genutzte Adresse (Local-in) ist nicht unbenutzt
+    assert ("addresses", "Netz-Buero") not in edge_unused
+
+
+def test_fabric_states() -> None:
+    from werkbank.modules.monitoring.fortigate.fabric import Entry, device_role, object_state
+
+    edge, core, branch = (fetched(n).config for n in ("fw-edge", "fw-core", "fw-standort-b"))
+    roles = {
+        "fw-edge": device_role(edge),
+        "fw-core": device_role(core),
+        "fw-standort-b": device_role(branch),
+    }
+    assert roles == {"fw-edge": "Quelle", "fw-core": "Sync an", "fw-standort-b": "nur lokal"}
+    same = [
+        Entry("fw-edge", "10.0.0.0/24", True, True),
+        Entry("fw-core", "10.0.0.0/24", True, False),
+    ]
+    assert object_state(same, roles).label == "synchronisiert (2/2 Geräte)"
+    differs = [Entry("fw-edge", "a", True, True), Entry("fw-core", "b", True, True)]
+    assert object_state(differs, roles).state == "abweichend"
+    missing = [Entry("fw-edge", "a", True, True)]
+    assert object_state(missing, roles).state == "abweichend"
+    local = [Entry("fw-core", "a", False, True), Entry("fw-standort-b", "b", False, True)]
+    state = object_state(local, roles)
+    assert state.state == "lokal_mehrfach" and state.candidate is True
+    assert object_state([Entry("fw-core", "a", False, False)], roles).state == "lokal"
+
+
+@pytest.mark.db
+def test_unused_since_is_tracked_and_cleared(db: Session, tmp_path: Path) -> None:
+    from werkbank.modules.monitoring.fortigate.models import FgUnused
+
+    settings = settings_with_key(tmp_path)
+    add_devices(db, settings, ("fw-core",))
+    collector.collect(db, settings, transport=sample.sample_transport)
+    rows = {r.name: r for r in db.scalars(select(FgUnused))}
+    assert {"test-host-1", "Drucker-Netz"} <= set(rows)
+    first = rows["Drucker-Netz"].since
+    # Weiterer Abruf: das Datum bleibt
+    collector.collect(db, settings, force=True, transport=sample.sample_transport)
+    assert db.scalar(select(FgUnused.since).where(FgUnused.name == "Drucker-Netz")) == first
+    # Wird das Objekt genutzt, fällt es heraus
+    original = sample.DEVICES["fw-core"]["firewall/policy"]
+    sample.DEVICES["fw-core"]["firewall/policy"] = [
+        *original,
+        {
+            "policyid": 70,
+            "name": "Drucker",
+            "srcaddr": [{"name": "Drucker-Netz"}],
+            "action": "accept",
+        },
+    ]
+    try:
+        collector.collect(db, settings, force=True, transport=sample.sample_transport)
+    finally:
+        sample.DEVICES["fw-core"]["firewall/policy"] = original
+    assert db.scalar(select(FgUnused).where(FgUnused.name == "Drucker-Netz")) is None
+    # „unbenutzt seit“ fällt nicht unter die Aufbewahrung
+    db.execute(
+        FgUnused.__table__.update().values(since=now_utc() - timedelta(days=800))  # type: ignore[attr-defined]
+    )
+    db.commit()
+    collector.purge(db, 1)
+    db.commit()
+    assert (db.scalar(select(func.count()).select_from(FgUnused)) or 0) > 0
+
+
+@pytest.mark.db
+def test_api_unused_and_sync(db: Session, tmp_path: Path) -> None:
+    from werkbank.modules.monitoring.fortigate.models import FgUnused
+
+    settings = settings_with_key(tmp_path)
+    add_devices(db, settings)
+    collector.collect(db, settings, transport=sample.sample_transport)
+    client = client_for(make_app(settings))
+    login_as(client, ["FortiGate.Reader"], oid="fg-aufraeumer")
+    data = client.get(f"{BASE}/unused").json()
+    keys = {(r["kind"], r["name"]): r for r in data["rows"]}
+    gast = keys[("addresses", "Netz-Gast-alt")]
+    assert gast["fabric"] is True and set(gast["devices"]) == {
+        "fw-edge",
+        "fw-core",
+        "fw-standort-b",
+    }
+    assert ("addresses", "all") not in keys  # Standardobjekt
+    assert ("services", "HTTP") not in keys or keys[("services", "HTTP")]
+    with_defaults = client.get(f"{BASE}/unused", params={"defaults": "true"}).json()
+    assert len(with_defaults["rows"]) >= len(data["rows"])
+    # Fabric-Objekt, das auf einem Gerät genutzt wird, ist nicht unbenutzt
+    assert ("addresses", "srv-druck") not in keys
+    only_core = client.get(
+        f"{BASE}/unused", params={"device": "fw-core", "kind": "addresses"}
+    ).json()
+    assert all("fw-core" in r["devices"] and r["kind"] == "addresses" for r in only_core["rows"])
+    # Zeitraum: frisch beobachtet ist noch nicht 30 Tage unbenutzt
+    assert client.get(f"{BASE}/unused", params={"days": 30}).json()["rows"] == []
+    db.execute(
+        FgUnused.__table__.update().values(since=now_utc() - timedelta(days=40))  # type: ignore[attr-defined]
+    )
+    db.commit()
+    assert client.get(f"{BASE}/unused", params={"days": 30}).json()["rows"]
+    assert client.get(f"{BASE}/unused", params={"days": 7}).status_code == 422
+
+    listing = client.post(
+        f"{BASE}/unused/cleanup.csv",
+        json={"items": [{"kind": "addresses", "name": "Netz-Gast-alt"}]},
+        headers=HEADERS,
+    )
+    assert listing.status_code == 200
+    assert listing.text.count("\n") == 2 and "Netz-Gast-alt" in listing.text
+    assert client.get(f"{BASE}/unused.csv").text.startswith("﻿Art;Name")
+
+    objects = client.get(f"{BASE}/objects", params={"kind": "address_groups"}).json()
+    server = next(r for r in objects["rows"] if r["name"] == "Grp-Server")
+    assert server["sync"]["state"] == "abweichend"
+    bar = {b["device"]: b for b in objects["sync_bar"]}
+    assert bar["fw-edge"]["role"] == "Quelle" and bar["fw-standort-b"]["role"] == "nur lokal"
+    assert objects["unused"] > 0
+    local = client.get(
+        f"{BASE}/objects", params={"kind": "addresses", "sync": "lokal_mehrfach"}
+    ).json()
+    assert {r["name"] for r in local["rows"]} == {"test-host-1", "Drucker-Netz"}
+    overview = client.get(f"{BASE}/overview").json()
+    assert len(overview["sync"]) == 3

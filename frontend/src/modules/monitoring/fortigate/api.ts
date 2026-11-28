@@ -24,10 +24,20 @@ export interface FgDeviceState {
   notes: string[];
 }
 
+export interface FgSyncDevice {
+  device: string;
+  role: string;
+  synchronisiert: number;
+  lokal: number;
+  abweichend: number;
+  kandidaten: number;
+}
+
 export interface FgOverview {
   configured: boolean;
   can_refresh: boolean;
   devices: FgDeviceState[];
+  sync: FgSyncDevice[];
   reachable: number;
   policies: number;
   disabled: number;
@@ -111,8 +121,11 @@ export interface FgUsedIn {
   via_group: boolean;
 }
 
+export type FgSyncState = "synchronisiert" | "abweichend" | "lokal" | "lokal_mehrfach";
+
 export interface FgObject {
   name: string;
+  sync: { state: FgSyncState; label: string; candidate: boolean } | null;
   value: string;
   same_value: boolean;
   devices: FgObjectDevice[];
@@ -124,6 +137,8 @@ export interface FgObject {
 
 export interface FgObjects {
   kind: FgKind;
+  sync_bar: FgSyncDevice[];
+  unused: number;
   rows: FgObject[];
   counts: Record<FgKind, number>;
   devices: string[];
@@ -157,16 +172,98 @@ export function policiesCsvUrl(filter: FgPolicyFilter): string {
   return `${BASE}/policies.csv${policyQuery(filter)}`;
 }
 
-export function objectQuery(kind: FgKind, q: string, device: string): string {
-  return params({ kind, q, device });
+export function objectQuery(kind: FgKind, q: string, device: string, sync = ""): string {
+  return params({ kind, q, device, sync });
 }
 
-export function fetchFgObjects(kind: FgKind, q: string, device: string): Promise<FgObjects> {
-  return getJson(`${BASE}/objects${objectQuery(kind, q, device)}`);
+export function fetchFgObjects(
+  kind: FgKind,
+  q: string,
+  device: string,
+  sync = "",
+): Promise<FgObjects> {
+  return getJson(`${BASE}/objects${objectQuery(kind, q, device, sync)}`);
 }
 
-export function objectsCsvUrl(kind: FgKind, q: string, device: string): string {
-  return `${BASE}/objects.csv${objectQuery(kind, q, device)}`;
+export function objectsCsvUrl(kind: FgKind, q: string, device: string, sync = ""): string {
+  return `${BASE}/objects.csv${objectQuery(kind, q, device, sync)}`;
+}
+
+// --- Unbenutzte Objekte -------------------------------------------------------------------
+
+export type FgUnusedKind = FgKind | "ippools";
+
+export interface FgUnusedRow {
+  kind: FgUnusedKind;
+  name: string;
+  value: string;
+  devices: string[];
+  reasons: string[];
+  since: string | null;
+  fabric: boolean;
+}
+
+export interface FgUnused {
+  rows: FgUnusedRow[];
+  counts: Record<FgUnusedKind, number>;
+  devices: string[];
+}
+
+export interface FgUnusedFilter {
+  device: string;
+  kind: string;
+  days: string;
+  disabled: boolean;
+  groups: boolean;
+  defaults: boolean;
+}
+
+export function unusedQuery(filter: FgUnusedFilter): string {
+  return params({
+    device: filter.device,
+    kind: filter.kind,
+    days: filter.days,
+    disabled: filter.disabled ? "" : "false",
+    groups: filter.groups ? "" : "false",
+    defaults: filter.defaults ? "true" : "",
+  });
+}
+
+export function fetchFgUnused(filter: FgUnusedFilter): Promise<FgUnused> {
+  return getJson(`${BASE}/unused${unusedQuery(filter)}`);
+}
+
+export function unusedCsvUrl(filter: FgUnusedFilter): string {
+  return `${BASE}/unused.csv${unusedQuery(filter)}`;
+}
+
+/** Aufräumliste der gewählten Objekte als CSV herunterladen. */
+export async function downloadCleanupList(
+  items: { kind: FgUnusedKind; name: string }[],
+  filter: FgUnusedFilter,
+): Promise<void> {
+  const response = await fetch(`${BASE}/unused/cleanup.csv`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      items,
+      disabled: filter.disabled,
+      groups: filter.groups,
+      defaults: filter.defaults,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error("Die Aufräumliste konnte nicht erstellt werden.");
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "fortigate-aufraeumliste.csv";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function refreshFortigate(): Promise<{ scheduled_at: string }> {

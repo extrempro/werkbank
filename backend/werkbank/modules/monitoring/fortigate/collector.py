@@ -26,8 +26,9 @@ from werkbank.modules.monitoring.fortigate.config import (
     load_settings,
     months_ago,
 )
-from werkbank.modules.monitoring.fortigate.models import FgDevice, FgRun, FgSnapshot
+from werkbank.modules.monitoring.fortigate.models import FgDevice, FgRun, FgSnapshot, FgUnused
 from werkbank.modules.monitoring.fortigate.normalize import Fetched, digest, fetch
+from werkbank.modules.monitoring.fortigate.unused import unused
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,21 @@ def store(
     return snapshot, True
 
 
+def track_unused(db: Session, device_id: int, config: dict[str, Any], now: datetime) -> None:
+    """Merkt sich, seit wann Objekte unbenutzt sind (weite Prüfung: deaktivierte Policies und
+    unbenutzte Gruppen zählen nicht als Verwendung). Nicht mehr unbenutzte fallen heraus."""
+    current = {(item.kind, item.name) for item in unused(config)}
+    known = {
+        (row.kind, row.name): row
+        for row in db.scalars(select(FgUnused).where(FgUnused.device_id == device_id))
+    }
+    for key, row in known.items():
+        if key not in current:
+            db.delete(row)
+    for kind, name in current - set(known):
+        db.add(FgUnused(device_id=device_id, kind=kind, name=name[:255], since=now))
+
+
 def collect_device(
     db: Session,
     settings: Settings,
@@ -104,6 +120,7 @@ def collect_device(
             )
         fetched = fetch(FortiGateClient(config, transport))
         snapshot, changed = store(db, device, fetched, now)
+        track_unused(db, device.id, fetched.config, now)
         run.snapshot_id = snapshot.id
         run.changed = changed
     except FortiGateError as error:

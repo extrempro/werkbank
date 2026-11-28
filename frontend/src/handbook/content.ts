@@ -1287,6 +1287,50 @@ export const AREAS: readonly Area[] = [
             links: [{ to: "/monitoring/fortigate/objekte", label: "Zu Adressen & Dienste" }],
           },
           {
+            id: "fortigate-unbenutzt",
+            title: "Fabric-Sync und unbenutzte Objekte",
+            roles: [FORTIGATE],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Leiste „Objekt-Synchronisierung“ zeigt je Gerät, ob es Objekte an die Fabric verteilt (Quelle), sie übernimmt (Sync an) oder nur mit eigenen Objekten arbeitet (nur lokal), und wie viele Objekte synchronisiert, lokal oder abweichend sind.",
+              },
+              {
+                kind: "terms",
+                items: [
+                  [
+                    "synchronisiert",
+                    "Fabric-Objekt mit gleichem Inhalt auf allen Geräten, die den Sync übernehmen",
+                  ],
+                  [
+                    "Sync abweichend",
+                    "Fabric-Objekt mit anderem Inhalt oder fehlend auf einem Gerät mit Sync",
+                  ],
+                  ["lokal", "nur auf einem Gerät angelegt"],
+                  [
+                    "lokal, gleicher Name auf mehreren Geräten",
+                    "auf mehreren Geräten einzeln angelegt; wird es auf mindestens zwei Geräten gebraucht, steht „Kandidat für Fabric-Sync“ daneben",
+                  ],
+                ],
+              },
+              {
+                kind: "text",
+                text: "„Unbenutzte Objekte“ listet, was nirgends gebraucht wird. Als genutzt zählt jeder Verweis: Firewall-, Local-in- und DoS-Policies, Gruppen, VIP-Gruppen, IP-Pools in Policies, statische Routen, Policy-Routen, SD-WAN-Regeln und VPN-Selektoren. Fabric-Objekte zählen erst, wenn sie auf keinem Gerät genutzt werden. Standardobjekte von FortiOS (z. B. „all“ oder die mitgelieferten Dienste) sind ausgeblendet, bis du sie einschaltest.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "„Nur in deaktivierten Policies zählt als unbenutzt“ und „Nur in unbenutzten Gruppen zählt als unbenutzt“ sind vorab an; schaltest du sie aus, zählen auch diese Verweise als Verwendung.",
+                  "„Unbenutzt seit mindestens“ filtert nach dem Datum, seit dem die Werkbank das Objekt als unbenutzt sieht. Das Datum gibt es erst ab Einbau dieser Funktion, nicht rückwirkend, und es bleibt, solange das Objekt besteht und unbenutzt ist.",
+                  "Hake Objekte an und wähle „Auswahl als Aufräumliste“: Du bekommst eine CSV-Liste zum Abarbeiten auf den Geräten. Die Werkbank löscht nichts.",
+                ],
+              },
+            ],
+            links: [
+              { to: "/monitoring/fortigate/unbenutzt", label: "Zu den unbenutzten Objekten" },
+            ],
+          },
+          {
             id: "fortigate-einrichten",
             title: "FortiGate einrichten",
             roles: [ADMIN],

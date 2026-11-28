@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FgAdminSettings, FgObjects, FgOverview, FgPolicies, FgPolicy } from "./api";
 import { FortigateAdminPage } from "./FortigateAdminPage";
+import { FortigateUnusedPage } from "./FortigateUnusedPage";
 import {
   FortigateObjectsPage,
   FortigateOverviewPage,
@@ -47,6 +48,16 @@ const overview: FgOverview = {
       error: "Das Gerät ist nicht erreichbar.",
       data_at: null,
       notes: [],
+    },
+  ],
+  sync: [
+    {
+      device: "fw-edge",
+      role: "Quelle",
+      synchronisiert: 5,
+      lokal: 2,
+      abweichend: 1,
+      kandidaten: 0,
     },
   ],
   reachable: 1,
@@ -108,9 +119,12 @@ const policies: FgPolicies = {
 
 const objects: FgObjects = {
   kind: "address_groups",
+  sync_bar: overview.sync,
+  unused: 4,
   rows: [
     {
       name: "Grp-Server",
+      sync: { state: "abweichend", label: "Sync abweichend", candidate: false },
       value: "unterschiedlich je Gerät",
       same_value: false,
       devices: [
@@ -220,7 +234,11 @@ describe("FortiGate", () => {
       "href",
       "/monitoring/fortigate/policies?geraet=fw-edge&q=%2331&auswahl=fw-edge%3A31",
     );
-    expect(within(table).getByText("ja (2/2)")).toBeInTheDocument();
+    expect(within(table).getByText("Sync abweichend")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Nur unbenutzte anzeigen (4)" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Objekt-Synchronisierung" })).toHaveTextContent(
+      "1 abweichend",
+    );
   });
 
   it("prüft das Gerät beim Anlegen und fragt vor dem Verkürzen der Aufbewahrung", async () => {
@@ -264,5 +282,66 @@ describe("FortiGate", () => {
     expect(
       await screen.findByText("Die Einstellungen für FortiGate sind gespeichert."),
     ).toBeInTheDocument();
+  });
+
+  it("listet unbenutzte Objekte, filtert mit Schaltern und lädt die Aufräumliste", async () => {
+    const unused = {
+      rows: [
+        {
+          kind: "addresses",
+          name: "Netz-Gast-alt",
+          value: "10.99.0.0/24",
+          devices: ["fw-edge", "fw-core"],
+          reasons: ["keine Verwendung"],
+          since: "2026-11-01T10:00:00Z",
+          fabric: true,
+        },
+        {
+          kind: "addresses",
+          name: "test-host-1",
+          value: "10.20.40.9/32",
+          devices: ["fw-core"],
+          reasons: ["nur in deaktivierten Einträgen: #52"],
+          since: null,
+          fabric: false,
+        },
+      ],
+      counts: {
+        addresses: 2,
+        address_groups: 0,
+        services: 0,
+        service_groups: 0,
+        vips: 0,
+        ippools: 0,
+      },
+      devices: ["fw-edge", "fw-core"],
+    };
+    const calls = stub({
+      "GET /api/monitoring/fortigate/unused": unused,
+      "POST /api/monitoring/fortigate/unused/cleanup.csv": "Art;Name",
+    });
+    URL.createObjectURL = vi.fn(() => "blob:test");
+    URL.revokeObjectURL = vi.fn();
+    render(<FortigateUnusedPage />);
+    const table = await screen.findByRole("table", { name: "Unbenutzte Objekte" });
+    expect(within(table).getByRole("row", { name: /Netz-Gast-alt/ })).toHaveTextContent(
+      "Fabric-Objekt",
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: /Nur in deaktivierten Policies/ }));
+    await waitFor(() => expect(calls.some((call) => call.includes("disabled=false"))).toBe(true));
+    const exportButton = await screen.findByRole("button", {
+      name: "Auswahl als Aufräumliste (0)",
+    });
+    expect(exportButton).toBeDisabled();
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: "Netz-Gast-alt für die Aufräumliste wählen" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Auswahl als Aufräumliste (1)" }));
+    expect(
+      await screen.findByText(/Aufräumliste mit 1 Objekten ist heruntergeladen/),
+    ).toBeInTheDocument();
+    expect(
+      calls.some((call) => call.startsWith("POST /api/monitoring/fortigate/unused/cleanup.csv")),
+    ).toBe(true);
   });
 });

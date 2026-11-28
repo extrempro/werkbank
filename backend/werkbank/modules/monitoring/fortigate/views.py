@@ -2,7 +2,7 @@
 
 from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -21,7 +21,14 @@ from werkbank.modules.monitoring.fortigate.analysis import (
     usages,
 )
 from werkbank.modules.monitoring.fortigate.collector import last_run, latest_snapshot
-from werkbank.modules.monitoring.fortigate.models import FgDevice, FgRun, FgSnapshot
+from werkbank.modules.monitoring.fortigate.fabric import (
+    SYNC_KINDS,
+    Entry,
+    device_role,
+    object_state,
+)
+from werkbank.modules.monitoring.fortigate.models import FgDevice, FgRun, FgSnapshot, FgUnused
+from werkbank.modules.monitoring.fortigate.unused import UNUSED_KINDS, is_default, unused
 
 
 @dataclass
@@ -115,11 +122,62 @@ def overview(db: Session, now: datetime) -> dict[str, Any]:
     )
     return {
         "devices": devices,
+        "sync": sync_bar(rows),
         "reachable": sum(1 for d in devices if d["last_ok"]),
         "policies": policies,
         "disabled": disabled,
         "changes_24h": max(changed - first, 0),
     }
+
+
+# --- Fabric-Sync ---------------------------------------------------------------------------
+
+
+def _sync_rows(rows: list[DeviceState]) -> tuple[dict[str, str], dict[tuple[str, str], Any]]:
+    """Rollen je Gerät und Zustand je (Art, Name) über alle Geräte."""
+    roles = {state.device.name: device_role(state.config) for state in rows if state.snapshot}
+    entries: dict[tuple[str, str], list[Entry]] = {}
+    for state in rows:
+        if state.snapshot is None:
+            continue
+        uses = usages(state.config)
+        for kind in SYNC_KINDS:
+            for entry in state.config.get(kind) or []:
+                name = str(entry.get("name") or "")
+                if is_default(kind, entry):
+                    # Standardobjekte bringt jedes Gerät mit; kein Thema für den Sync
+                    continue
+                usage = uses.get(name)
+                entries.setdefault((kind, name), []).append(
+                    Entry(
+                        device=state.device.name,
+                        value=object_value(kind, entry),
+                        fabric=bool(entry.get("fabric")),
+                        used=bool(usage and usage.count),
+                    )
+                )
+    return roles, {key: (items, object_state(items, roles)) for key, items in entries.items()}
+
+
+def sync_bar(rows: list[DeviceState]) -> list[dict[str, Any]]:
+    """Je Gerät: Rolle beim Objekt-Sync und Zahl synchronisierter, lokaler, abweichender Objekte."""
+    roles, states_by_key = _sync_rows(rows)
+    out = []
+    for name, role in roles.items():
+        counts = {"synchronisiert": 0, "lokal": 0, "abweichend": 0, "kandidaten": 0}
+        for items, state in states_by_key.values():
+            if not any(entry.device == name for entry in items):
+                continue
+            if state.state == "synchronisiert":
+                counts["synchronisiert"] += 1
+            elif state.state == "abweichend":
+                counts["abweichend"] += 1
+            else:
+                counts["lokal"] += 1
+                if state.candidate:
+                    counts["kandidaten"] += 1
+        out.append({"device": name, "role": role, **counts})
+    return out
 
 
 # --- Policies ------------------------------------------------------------------------------
@@ -172,14 +230,18 @@ def policies(
 # --- Objekte -------------------------------------------------------------------------------
 
 
-def objects(db: Session, kind: str, query: Query, device: str | None = None) -> dict[str, Any]:
-    """Objekte einer Art über alle Geräte, nach Namen zusammengefasst."""
+def objects(
+    db: Session, kind: str, query: Query, device: str | None = None, sync: str | None = None
+) -> dict[str, Any]:
+    """Objekte einer Art über alle Geräte, nach Namen zusammengefasst, mit Fabric-Sync."""
     if kind not in KINDS:
         kind = "addresses"
     counts = {key: 0 for key in KINDS}
     merged: dict[str, dict[str, Any]] = {}
     device_names: list[str] = []
-    for state in states(db):
+    rows_state = states(db)
+    _, sync_states = _sync_rows(rows_state)
+    for state in rows_state:
         device_names.append(state.device.name)
         if state.snapshot is None:
             continue
@@ -222,7 +284,15 @@ def objects(db: Session, kind: str, query: Query, device: str | None = None) -> 
                 )
     rows = []
     for entry in merged.values():
+        found = sync_states.get((kind, entry["name"]))
+        entry["sync"] = (
+            {"state": found[1].state, "label": found[1].label, "candidate": found[1].candidate}
+            if found
+            else None
+        )
         if entry["match"] is None:
+            continue
+        if sync and (entry["sync"] is None or entry["sync"]["state"] != sync):
             continue
         values = {d["value"] for d in entry["devices"]}
         entry["value"] = next(iter(values)) if len(values) == 1 else "unterschiedlich je Gerät"
@@ -235,4 +305,99 @@ def objects(db: Session, kind: str, query: Query, device: str | None = None) -> 
             ]
         rows.append(entry)
     rows.sort(key=lambda e: e["name"].lower())
-    return {"kind": kind, "rows": rows, "counts": counts, "devices": device_names}
+    return {
+        "kind": kind,
+        "rows": rows,
+        "counts": counts,
+        "devices": device_names,
+        "unused": len(unused_rows(db, rows_state)),
+    }
+
+
+# --- Unbenutzte Objekte --------------------------------------------------------------------
+
+DAY = timedelta(days=1)
+
+
+def unused_rows(
+    db: Session,
+    rows_state: list[DeviceState] | None = None,
+    *,
+    device: str | None = None,
+    kind: str | None = None,
+    min_days: int | None = None,
+    disabled_is_unused: bool = True,
+    unused_groups_count: bool = True,
+    hide_defaults: bool = True,
+    now: datetime | None = None,
+) -> list[dict[str, Any]]:
+    """Unbenutzte Objekte. Fabric-Objekte erst, wenn sie auf keinem Gerät genutzt werden."""
+    rows_state = rows_state if rows_state is not None else states(db)
+    since: dict[tuple[str, str, str], datetime] = {}
+    ids = {state.device.id: state.device.name for state in rows_state}
+    for row in db.scalars(select(FgUnused).where(FgUnused.device_id.in_(list(ids) or [0]))):
+        since[(ids[row.device_id], row.kind, row.name)] = row.since
+    found: dict[tuple[str, str], dict[str, Any]] = {}
+    present: dict[tuple[str, str], list[str]] = {}
+    fabric_names: set[tuple[str, str]] = set()
+    for state in rows_state:
+        if state.snapshot is None:
+            continue
+        config = state.config
+        for key in UNUSED_KINDS:
+            for entry in config.get(key) or []:
+                name = str(entry.get("name") or "")
+                present.setdefault((key, name), []).append(state.device.name)
+                if entry.get("fabric"):
+                    fabric_names.add((key, name))
+        entries = {
+            (key, str(e.get("name") or "")): e
+            for key in UNUSED_KINDS
+            for e in config.get(key) or []
+        }
+        for item in unused(
+            config,
+            disabled_is_unused=disabled_is_unused,
+            unused_groups_count=unused_groups_count,
+        ):
+            entry = entries.get((item.kind, item.name), {})
+            if hide_defaults and is_default(item.kind, entry):
+                continue
+            target = found.setdefault(
+                (item.kind, item.name),
+                {
+                    "kind": item.kind,
+                    "name": item.name,
+                    "value": object_value(item.kind, entry)
+                    if item.kind in KINDS
+                    else (f"{entry.get('start') or ''}-{entry.get('end') or ''}"),
+                    "devices": [],
+                    "reasons": [],
+                    "since": None,
+                    "fabric": False,
+                },
+            )
+            target["devices"].append(state.device.name)
+            if item.reason not in target["reasons"]:
+                target["reasons"].append(item.reason)
+            seen = since.get((state.device.name, item.kind, item.name))
+            if seen is not None and (target["since"] is None or seen > target["since"]):
+                # Über alle Geräte zählt der späteste Beginn: erst ab dann überall unbenutzt
+                target["since"] = seen
+    out = []
+    limit = (now or datetime.now(UTC)) - DAY * min_days if min_days else None
+    for object_key, entry in found.items():
+        if object_key in fabric_names:
+            # Fabric-Objekt: nur, wenn es auf keinem Gerät genutzt wird
+            if set(entry["devices"]) != set(present.get(object_key, [])):
+                continue
+            entry["fabric"] = True
+        if device and device not in entry["devices"]:
+            continue
+        if kind and entry["kind"] != kind:
+            continue
+        if limit is not None and (entry["since"] is None or entry["since"] > limit):
+            continue
+        out.append(entry)
+    out.sort(key=lambda e: (e["kind"], e["name"].lower()))
+    return out

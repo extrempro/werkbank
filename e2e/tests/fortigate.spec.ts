@@ -126,3 +126,44 @@ test("FortiGate: Verwaltung mit Geräten, Bearbeiten und Jetzt abrufen", async (
     page.getByRole("status").filter({ hasText: "Der Abruf ist angestoßen" }),
   ).toBeVisible();
 });
+
+test("FortiGate: Fabric-Sync und unbenutzte Objekte mit Aufräumliste", async ({
+  page,
+}) => {
+  await loadSample(page);
+  await loginAs(page, ["FortiGate.Reader"], "Fritz Firewall");
+  await page.goto("/monitoring/fortigate/objekte?art=address_groups");
+  const sync = page.getByRole("region", { name: "Objekt-Synchronisierung" });
+  await expect(sync).toContainText("fw-standort-b");
+  await expect(sync).toContainText("nur lokal");
+  await expect(
+    page
+      .getByRole("table", { name: "Adressgruppen" })
+      .getByRole("row", { name: /Grp-Server/ }),
+  ).toContainText("Sync abweichend");
+  await page.getByRole("link", { name: /Nur unbenutzte anzeigen/ }).click();
+  await expect(page).toHaveURL(/\/monitoring\/fortigate\/unbenutzt$/);
+  const table = page.getByRole("table", { name: "Unbenutzte Objekte" });
+  await expect(table.getByRole("row", { name: /Netz-Gast-alt/ })).toContainText(
+    "Fabric-Objekt",
+  );
+  await expect(table.getByRole("row", { name: /test-host-1/ })).toBeVisible();
+  await expectNoA11yViolations(page);
+  await page
+    .getByRole("checkbox", { name: /Nur in deaktivierten Policies/ })
+    .uncheck();
+  await expect(table.getByRole("row", { name: /Drucker-Netz/ })).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: "Drucker-Netz für die Aufräumliste wählen" })
+    .check();
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Auswahl als Aufräumliste (1)" })
+    .click();
+  expect((await download).suggestedFilename()).toBe(
+    "fortigate-aufraeumliste.csv",
+  );
+  await expect(
+    page.getByRole("status").filter({ hasText: "Gelöscht wurde nichts" }),
+  ).toBeVisible();
+});
