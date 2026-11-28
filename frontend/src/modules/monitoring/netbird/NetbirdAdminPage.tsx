@@ -3,19 +3,34 @@ import { errorText, formatDateTime } from "../../../api";
 import { Feedback, type FeedbackMessage } from "../../../components/Feedback";
 import { Field, RequiredNote } from "../../../components/Field";
 import { InfoTip } from "../../../components/InfoTip";
-import { fetchNbAdmin, saveNbAdmin, testNbConnection, type NbAdminSettings } from "./api";
+import {
+  fetchNbAdmin,
+  fetchNbCrowdSec,
+  saveNbAdmin,
+  saveNbCrowdSec,
+  testNbConnection,
+  testNbCrowdSec,
+  type NbAdminSettings,
+  type NbCrowdSecSettings,
+} from "./api";
 
-/* Verwaltung › NetBird: Management-URL, API-Token, Ping, Verbindungstest. */
+/* Verwaltung › NetBird: Management-URL, API-Token, Ping, Verbindungstest; CrowdSec. */
 
 const URL_PATTERN = /^https:\/\/[^/\s?#@]+\/?$/;
 const TARGET_PATTERN = /^[A-Za-z0-9][A-Za-z0-9.-]{0,252}:\d{1,5}$/;
+const LAPI_PATTERN = /^https?:\/\/[^/\s?#@]+\/?$/;
 
 export function NetbirdAdminPage() {
   const [data, setData] = useState<NbAdminSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<FeedbackMessage | null>(null);
+  const [crowdsec, setCrowdsec] = useState<NbCrowdSecSettings | null>(null);
   useEffect(() => {
     let active = true;
+    fetchNbCrowdSec().then(
+      (value) => active && setCrowdsec(value),
+      () => undefined,
+    );
     fetchNbAdmin().then(
       (value) => active && setData(value),
       (caught: unknown) =>
@@ -55,6 +70,14 @@ export function NetbirdAdminPage() {
           ])}
           data={data}
           onSaved={setData}
+          onMessage={setMessage}
+        />
+      )}
+      {crowdsec && (
+        <CrowdSecForm
+          key={JSON.stringify([crowdsec.url, crowdsec.key_set, crowdsec.exempt])}
+          data={crowdsec}
+          onSaved={setCrowdsec}
           onMessage={setMessage}
         />
       )}
@@ -287,6 +310,166 @@ function AccessForm({
             ? `Letzter Abruf ${formatDateTime(data.last_run_at)}: ${data.last_ok ? "in Ordnung" : `fehlgeschlagen (${data.last_error ?? ""})`}.`
             : "Noch kein Abruf."}
         </p>
+      </form>
+    </section>
+  );
+}
+
+function CrowdSecForm({
+  data,
+  onSaved,
+  onMessage,
+}: {
+  data: NbCrowdSecSettings;
+  onSaved: (data: NbCrowdSecSettings) => void;
+  onMessage: (message: FeedbackMessage) => void;
+}) {
+  const [url, setUrl] = useState(data.url);
+  const [key, setKey] = useState("");
+  const [removeKey, setRemoveKey] = useState(false);
+  const [exempt, setExempt] = useState(data.exempt);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const value = url.trim();
+    if (value && !LAPI_PATTERN.test(value)) {
+      setProblem(
+        "Bitte die Adresse der Local API ohne Pfad eintragen, z. B. http://crowdsec.example.com:8080.",
+      );
+      return;
+    }
+    setProblem(null);
+    setBusy(true);
+    saveNbCrowdSec({
+      url: value,
+      exempt,
+      ...(removeKey ? { key: "" } : key.trim() ? { key: key.trim() } : {}),
+    })
+      .then((next) => {
+        onSaved(next);
+        onMessage({ kind: "status", text: "Die Einstellungen für CrowdSec sind gespeichert." });
+      })
+      .catch((caught: unknown) => {
+        onMessage({
+          kind: "alert",
+          text: errorText(
+            caught,
+            "Die Einstellungen für CrowdSec konnten nicht gespeichert werden.",
+          ),
+        });
+        setBusy(false);
+      });
+  };
+
+  const test = () => {
+    testNbCrowdSec().then(
+      (result) =>
+        onMessage({
+          kind: "status",
+          text: `Die Local API antwortet: ${result.total} aktive Sperren, davon ${result.own} eigene.`,
+        }),
+      (caught: unknown) =>
+        onMessage({
+          kind: "alert",
+          text: errorText(caught, "Die Local API ließ sich nicht prüfen."),
+        }),
+    );
+  };
+
+  return (
+    <section className="panel" aria-labelledby="nb-crowdsec">
+      <div className="panel-head">
+        <h2 id="nb-crowdsec">
+          CrowdSec <InfoTip term="netbird.crowdsec" />
+        </h2>
+      </div>
+      <form className="detail-body settings-form" noValidate onSubmit={submit}>
+        <p className="small">
+          Ein eigener Bouncer-Schlüssel nur für die Werkbank (z. B. mit „cscli bouncers add
+          werkbank“): Er liest nur die Sperren und ändert nichts. Abgewiesene Anfragen je Dienst
+          kommen aus dem Zugriffsprotokoll von NetBird, dafür braucht es keinen Zugang zu CrowdSec.
+        </p>
+        <Field
+          label="URL der Local API"
+          error={problem}
+          hint="http oder https, ohne Pfad. Mit http geht der Schlüssel unverschlüsselt durchs Netz."
+        >
+          {(control) => (
+            <input
+              {...control}
+              type="url"
+              value={url}
+              maxLength={300}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="http://crowdsec.example.com:8080"
+              onChange={(event) => setUrl(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label={data.key_set ? "Neuer Bouncer-Schlüssel" : "Bouncer-Schlüssel"}
+          hint={
+            data.key_set
+              ? "Ein Schlüssel ist gespeichert; leer lassen, um ihn zu behalten. Er wird nie wieder angezeigt."
+              : "Verschlüsselt gespeichert."
+          }
+        >
+          {(control) => (
+            <input
+              {...control}
+              type="password"
+              value={key}
+              maxLength={500}
+              autoComplete="new-password"
+              disabled={removeKey || !data.token_storage_available}
+              onChange={(event) => setKey(event.target.value)}
+            />
+          )}
+        </Field>
+        {data.key_set && (
+          <label className="check-label">
+            <input
+              type="checkbox"
+              className="check"
+              checked={removeKey}
+              onChange={(event) => setRemoveKey(event.target.checked)}
+            />
+            Gespeicherten Schlüssel entfernen
+          </label>
+        )}
+        <Field
+          label="Bewusst ohne CrowdSec"
+          info={<InfoTip term="netbird.ohne_crowdsec" />}
+          hint="Domains der Dienste, für die es keinen Hinweis „ohne CrowdSec“ geben soll, mehrere mit Komma."
+        >
+          {(control) => (
+            <input
+              {...control}
+              value={exempt}
+              maxLength={4000}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="login.example.com"
+              onChange={(event) => setExempt(event.target.value)}
+            />
+          )}
+        </Field>
+        <div className="actions">
+          <button type="submit" className="button button-primary" disabled={busy}>
+            Speichern
+          </button>
+          <button
+            type="button"
+            className="button button-secondary"
+            disabled={!data.url || !data.key_set}
+            onClick={test}
+          >
+            Verbindung prüfen
+          </button>
+        </div>
       </form>
     </section>
   );

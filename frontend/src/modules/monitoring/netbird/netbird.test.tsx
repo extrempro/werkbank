@@ -242,7 +242,20 @@ describe("NetBird", () => {
       last_ok: null,
       last_error: null,
     };
+    const crowdsec = {
+      url: "",
+      key_set: false,
+      exempt: "",
+      token_storage_available: true,
+    };
     const calls = stub({
+      "GET /api/admin/settings/netbird/crowdsec": crowdsec,
+      "PUT /api/admin/settings/netbird/crowdsec": {
+        ...crowdsec,
+        url: "http://crowdsec.example.com:8080",
+        key_set: true,
+      },
+      "POST /api/admin/settings/netbird/crowdsec/test": { total: 14, own: 4 },
       "GET /api/admin/settings/netbird": settings,
       "PUT /api/admin/settings/netbird": {
         ...settings,
@@ -253,15 +266,16 @@ describe("NetBird", () => {
     });
     render(<NetbirdAdminPage />);
     const url = await screen.findByRole("textbox", { name: /Management-URL/ });
+    const access = screen.getByRole("region", { name: "Zugang zur Management-API" });
     fireEvent.change(url, { target: { value: "http://netbird.example.com/api" } });
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(within(access).getByRole("button", { name: "Speichern" }));
     expect(screen.getByText(/https-Adresse ohne Pfad/)).toBeInTheDocument();
     expect(calls.some((call) => call.startsWith("PUT"))).toBe(false);
     fireEvent.change(url, { target: { value: "https://netbird.example.com" } });
     fireEvent.change(screen.getByRole("textbox", { name: /Signal/ }), {
       target: { value: "signal.example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(within(access).getByRole("button", { name: "Speichern" }));
     expect(screen.getByText(/als Host:Port eintragen/)).toBeInTheDocument();
     expect(calls.some((call) => call.startsWith("PUT"))).toBe(false);
     fireEvent.change(screen.getByRole("textbox", { name: /Signal/ }), {
@@ -270,12 +284,40 @@ describe("NetBird", () => {
     fireEvent.change(screen.getByLabelText("API-Token", { selector: "input" }), {
       target: { value: "geheim" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(within(access).getByRole("button", { name: "Speichern" }));
     expect(
       await screen.findByText("Die Einstellungen für NetBird sind gespeichert."),
     ).toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "Verbindung prüfen" }));
+    fireEvent.click(
+      within(screen.getByRole("region", { name: "Zugang zur Management-API" })).getByRole(
+        "button",
+        { name: "Verbindung prüfen" },
+      ),
+    );
     expect(await screen.findByText(/6 Peers, 5 Gruppen, 3 Richtlinien/)).toBeInTheDocument();
+
+    const section = await screen.findByRole("region", { name: /CrowdSec/ });
+    const lapi = within(section).getByRole("textbox", { name: /URL der Local API/ });
+    fireEvent.change(lapi, { target: { value: "crowdsec.example.com" } });
+    fireEvent.click(within(section).getByRole("button", { name: "Speichern" }));
+    expect(within(section).getByText(/ohne Pfad eintragen/)).toBeInTheDocument();
+    fireEvent.change(lapi, { target: { value: "http://crowdsec.example.com:8080" } });
+    fireEvent.change(within(section).getByLabelText("Bouncer-Schlüssel", { selector: "input" }), {
+      target: { value: "bouncer" },
+    });
+    fireEvent.click(within(section).getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText("Die Einstellungen für CrowdSec sind gespeichert."),
+    ).toBeInTheDocument();
+    expect(calls.some((call) => call.startsWith("PUT /api/admin/settings/netbird/crowdsec"))).toBe(
+      true,
+    );
+    fireEvent.click(
+      within(screen.getByRole("region", { name: /CrowdSec/ })).getByRole("button", {
+        name: "Verbindung prüfen",
+      }),
+    );
+    expect(await screen.findByText(/14 aktive Sperren, davon 4 eigene/)).toBeInTheDocument();
   });
 
   it("zeigt Komponenten, Netze mit Ausfallweg und Dienste mit Zertifikat", async () => {
@@ -286,8 +328,18 @@ describe("NetBird", () => {
         signal: { target: "signal.example.com:443", ok: true, ms: 12, error: "" },
         relay: null,
         proxy: { services: 4, errors: 1, online: true, crowdsec: true },
+        crowdsec: {
+          configured: true,
+          ok: true,
+          total: 14,
+          own: 4,
+          error: "",
+          blocked_24h: 3,
+          observed_24h: 2,
+        },
       },
       ping_enabled: false,
+      proxy_log_available: true,
       networks: [
         {
           id: "n-b",
@@ -317,6 +369,26 @@ describe("NetBird", () => {
           availability: 98.9,
           cert_expires: new Date(Date.now() + 21 * 24 * 3600 * 1000).toISOString(),
           crowdsec_mode: "enforce",
+          blocked_24h: 3,
+          observed_24h: 0,
+          crowdsec_exempt: false,
+        },
+        {
+          id: "s-files",
+          domain: "files.example.com",
+          target: "10.0.30.27:443",
+          access: "Passwort",
+          private: false,
+          status_code: 200,
+          answered: true,
+          error: "",
+          ms: 80,
+          availability: 100,
+          cert_expires: null,
+          crowdsec_mode: "off",
+          blocked_24h: 0,
+          observed_24h: 0,
+          crowdsec_exempt: true,
         },
       ],
     };
@@ -335,6 +407,13 @@ describe("NetBird", () => {
     expect(wiki).toHaveTextContent("502");
     expect(wiki).toHaveTextContent("98,9 %");
     expect(wiki).toHaveTextContent(/in 2[01] Tagen/);
+    expect(wiki).toHaveTextContent("sperren");
+    const files = within(services)
+      .getByRole("rowheader", { name: "files.example.com" })
+      .closest("tr");
+    expect(files).toHaveTextContent("bewusst ohne");
+    expect(screen.getByText("14 aktive Sperren")).toBeInTheDocument();
+    expect(screen.getByText(/davon 4 eigene · 3 abgewiesen in 24 h · 2 wären/)).toBeInTheDocument();
   });
 
   it("zeigt Prüfung, Setup-Keys, Richtlinien und filtert das Ereignisprotokoll", async () => {

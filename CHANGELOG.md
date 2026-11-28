@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.161.0] – 2026-11-28
+
+### Neu
+
+- **IT-Monitoring › NetBird, Phase 4: CrowdSec.** Netze & Dienste zeigt je Dienst den Modus von CrowdSec (aus, beobachten, sperren) und die in 24 Stunden abgewiesenen Anfragen aus dem Zugriffsprotokoll von NetBird (im Modus „beobachten“ „x wären“), nur als Zähler je Dienst und Stunde ohne Adressen. Neue Kachel CrowdSec mit aktiven Sperren aus der Local API (eigener Bouncer-Schlüssel, nur lesend) und wie viele davon eigene sind. Neuer Hinweis „öffentlicher Dienst ohne CrowdSec“ mit Ausnahmeliste „Bewusst ohne CrowdSec“ in der Verwaltung. Migration 0104. Doku: `spec.md`, `datenschutz.md`, `security/asvs-l2.md`, Handbuch, Info-Symbole.
+
 ## [0.160.0] – 2026-11-28
 
 ### Neu

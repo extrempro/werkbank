@@ -312,6 +312,21 @@ export const HELP = {
     text: "Gruppen in NetBird, in denen Server stehen. Greift eine Richtlinie ohne Posture Check auf sie zu, zeigt die Prüfung eine Warnung.",
     topic: ["it-monitoring", "netbird-einrichten"],
   },
+  "netbird.crowdsec": {
+    term: "CrowdSec",
+    text: "Weist Anfragen von bekannten Angreifern am Reverse Proxy ab. „Beobachten“ lässt sie durch und vermerkt nur, dass sie abgewiesen worden wären.",
+    topic: ["it-monitoring", "netbird-netze"],
+  },
+  "netbird.abgewiesen": {
+    term: "Abgewiesen 24 h",
+    text: "Anfragen der letzten 24 Stunden, die CrowdSec bei diesem Dienst abgewiesen hat, laut Zugriffsprotokoll von NetBird. „wären“ zählt die im Modus „beobachten“.",
+    topic: ["it-monitoring", "netbird-netze"],
+  },
+  "netbird.ohne_crowdsec": {
+    term: "Bewusst ohne CrowdSec",
+    text: "Öffentliche Dienste ohne CrowdSec bekommen eine Warnung. Trag hier die ein, bei denen das gewollt ist, etwa die Anmeldeseite.",
+    topic: ["it-monitoring", "netbird-einrichten"],
+  },
   "netbird.ausfallweg": {
     term: "Ausfallweg",
     text: "Wie viele Routing-Peers des Netzes verbunden sind. Ist es nur einer, fehlt der Ausfallweg.",

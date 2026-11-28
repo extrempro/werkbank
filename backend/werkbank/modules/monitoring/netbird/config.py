@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from werkbank.config import Settings
 from werkbank.core.app_settings import NETBIRD_KEY, decrypt_secret, get_setting
 from werkbank.modules.monitoring.netbird.client import NetBirdConfig
+from werkbank.modules.monitoring.netbird.crowdsec import LapiConfig
 
 # Verlauf der verbundenen Peers und Verbindungstage je Peer
 HISTORY_DAYS = 90
@@ -24,6 +25,10 @@ class NetBirdSettings:
     relay: str
     # Namen der Gruppen mit Servern (für die Prüfung „ohne Posture Check“)
     server_groups: tuple[str, ...] = ()
+    # CrowdSec (Phase 4): Local API mit Bouncer-Schlüssel, Dienste bewusst ohne CrowdSec
+    crowdsec_url: str = ""
+    crowdsec_key_set: bool = False
+    crowdsec_exempt: tuple[str, ...] = ()
 
 
 def stored(db: Session) -> dict[str, Any]:
@@ -42,6 +47,11 @@ def load_settings(db: Session) -> NetBirdSettings:
         server_groups=tuple(
             str(name) for name in data.get("server_groups") or [] if isinstance(name, str)
         ),
+        crowdsec_url=str(data.get("crowdsec_url") or ""),
+        crowdsec_key_set=bool(data.get("crowdsec_key_encrypted")),
+        crowdsec_exempt=tuple(
+            str(name) for name in data.get("crowdsec_exempt") or [] if isinstance(name, str)
+        ),
     )
 
 
@@ -54,3 +64,14 @@ def client_config(db: Session, settings: Settings) -> NetBirdConfig | None:
     if not url or not token:
         return None
     return NetBirdConfig(url=url, token=token)
+
+
+def lapi_config(db: Session, settings: Settings) -> LapiConfig | None:
+    """Zugang zur Local API von CrowdSec; None, wenn nicht eingerichtet."""
+    data = stored(db)
+    url = str(data.get("crowdsec_url") or "")
+    encrypted = data.get("crowdsec_key_encrypted")
+    key = decrypt_secret(settings, encrypted) if isinstance(encrypted, str) else None
+    if not url or not key:
+        return None
+    return LapiConfig(url=url, key=key)

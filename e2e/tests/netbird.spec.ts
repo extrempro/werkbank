@@ -78,11 +78,27 @@ test("NetBird: Verwaltung mit Zugang und Abruf für Admins mit Recht", async ({
   await page.goto("/verwaltung/netbird");
   const url = page.getByRole("textbox", { name: /Management-URL/ });
   await expect(url).toHaveValue("https://netbird.example.com");
-  await page.getByRole("button", { name: "Speichern" }).click();
+  await page
+    .getByRole("region", { name: "Zugang zur Management-API" })
+    .getByRole("button", { name: "Speichern" })
+    .click();
   await expect(
     page
       .getByRole("status")
       .filter({ hasText: "Die Einstellungen für NetBird sind gespeichert." }),
+  ).toBeVisible();
+  const crowdsec = page.getByRole("region", { name: /CrowdSec/ });
+  await expect(
+    crowdsec.getByRole("textbox", { name: /URL der Local API/ }),
+  ).toHaveValue("http://crowdsec.example.com:8080");
+  await crowdsec
+    .getByRole("textbox", { name: /Bewusst ohne CrowdSec/ })
+    .fill("files.example.com");
+  await crowdsec.getByRole("button", { name: "Speichern" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Die Einstellungen für CrowdSec sind gespeichert." }),
   ).toBeVisible();
   await expectNoA11yViolations(page);
   await page.goto("/monitoring/netbird");
@@ -158,5 +174,27 @@ test("NetBird: Richtlinien & Ereignisse mit Prüfung, Setup-Keys und Protokoll",
   await expect(
     log.getByRole("row", { name: /Richtlinie geändert/ }),
   ).toHaveCount(0);
+  await expectNoA11yViolations(page);
+});
+
+test("NetBird: CrowdSec mit Sperren und Abweisungen je Dienst", async ({
+  page,
+}) => {
+  await loadSample(page);
+  await loginAs(page, ["NetBird.Reader"], "Nora NetBird");
+  await page.goto("/monitoring/netbird/netze");
+  await expect(page.getByText("14 aktive Sperren")).toBeVisible();
+  const services = page.getByRole("table", {
+    name: "Dienste am Reverse Proxy",
+  });
+  await expect(
+    services.getByRole("row").filter({ hasText: "wiki.example.com" }),
+  ).toContainText("sperren");
+  await expect(
+    services.getByRole("row").filter({ hasText: "git.example.com" }),
+  ).toContainText(/\d+ wären/);
+  await expect(
+    services.getByRole("row").filter({ hasText: "files.example.com" }),
+  ).toContainText("aus");
   await expectNoA11yViolations(page);
 });

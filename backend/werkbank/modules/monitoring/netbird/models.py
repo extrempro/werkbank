@@ -92,6 +92,18 @@ class NbHint(Base):
     since: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class NbBlock(Base):
+    """Von CrowdSec abgewiesene (oder im Modus „beobachten“ markierte) Anfragen je Dienst und
+    Stunde, gezählt aus dem Zugriffsprotokoll des Reverse Proxy (7 Tage, ohne Adressen)."""
+
+    __tablename__ = "mon_nb_blocks"
+
+    service_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    hour: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, index=True)
+    observe: Mapped[bool] = mapped_column(Boolean, primary_key=True)
+    count: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class NbCheck(Base):
     """Ein HTTPS-Abruf eines Dienstes am Reverse Proxy (für die Verfügbarkeit über 30 Tage)."""
 

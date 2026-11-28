@@ -164,6 +164,9 @@ export interface NbService {
   availability: number | null;
   cert_expires: string | null;
   crowdsec_mode: string;
+  blocked_24h: number;
+  observed_24h: number;
+  crowdsec_exempt: boolean;
 }
 
 export interface NbTcp {
@@ -179,8 +182,18 @@ export interface NbNetworks extends NbBase {
     signal: NbTcp | null;
     relay: NbTcp | null;
     proxy: { services: number; errors: number; online: boolean | null; crowdsec: boolean };
+    crowdsec: {
+      configured: boolean;
+      ok: boolean | null;
+      total: number | null;
+      own: number | null;
+      error: string;
+      blocked_24h: number | null;
+      observed_24h: number | null;
+    };
   };
   ping_enabled: boolean;
+  proxy_log_available: boolean;
   networks: NbNetwork[];
   services: NbService[];
 }
@@ -315,4 +328,27 @@ export function testNbConnection(): Promise<{
   policies: number | null;
 }> {
   return postJson(`${ADMIN}/test`);
+}
+
+export interface NbCrowdSecSettings {
+  url: string;
+  key_set: boolean;
+  exempt: string;
+  token_storage_available: boolean;
+}
+
+export function fetchNbCrowdSec(): Promise<NbCrowdSecSettings> {
+  return getJson(`${ADMIN}/crowdsec`);
+}
+
+export function saveNbCrowdSec(update: {
+  url: string;
+  key?: string;
+  exempt: string;
+}): Promise<NbCrowdSecSettings> {
+  return putJson(`${ADMIN}/crowdsec`, update);
+}
+
+export function testNbCrowdSec(): Promise<{ total: number; own: number }> {
+  return postJson(`${ADMIN}/crowdsec/test`);
 }

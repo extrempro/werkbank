@@ -17,15 +17,28 @@ from werkbank.config import Settings
 from werkbank.core.models import Notification
 from werkbank.core.sessions import now_utc
 from werkbank.modules.monitoring.netbird.checks import Checker, run_https
-from werkbank.modules.monitoring.netbird.client import NetBirdClient, NetBirdError, Transport
+from werkbank.modules.monitoring.netbird.client import (
+    NetBirdClient,
+    NetBirdError,
+    NotAvailableError,
+    Transport,
+)
 from werkbank.modules.monitoring.netbird.config import (
     CHECK_DAYS,
     HISTORY_DAYS,
     client_config,
+    lapi_config,
     load_settings,
+)
+from werkbank.modules.monitoring.netbird.crowdsec import (
+    CrowdSecError,
+    LapiTransport,
+    read_lapi,
+    read_proxy_blocks,
 )
 from werkbank.modules.monitoring.netbird.hints import all_hints
 from werkbank.modules.monitoring.netbird.models import (
+    NbBlock,
     NbCheck,
     NbDaily,
     NbEvent,
@@ -281,6 +294,61 @@ def sync_hints(db: Session, data: dict[str, Any], now: datetime) -> None:
 HINT_KINDS = ("monitoring.netbird_hinweis", "monitoring.netbird_info")
 
 
+BLOCK_DAYS = 7
+
+
+def collect_blocks(db: Session, client: NetBirdClient, data: dict[str, Any], now: datetime) -> None:
+    """Abweisungen durch CrowdSec aus dem Zugriffsprotokoll seit dem letzten Abruf zählen."""
+    previous = latest_state(db)
+    old = previous.data if previous else {}
+    try:
+        blocks = read_proxy_blocks(
+            client,
+            str(old.get("proxy_cursor") or ""),
+            [str(i) for i in old.get("proxy_cursor_ids") or []],
+            now,
+        )
+    except NotAvailableError:
+        data["proxy_log"] = {"available": False, "complete": True}
+        return
+    except NetBirdError as error:
+        data["notes"] = [*(data.get("notes") or []), f"Zugriffsprotokoll: {error}"]
+        data["proxy_log"] = {"available": True, "complete": False}
+        data["proxy_cursor"] = old.get("proxy_cursor") or ""
+        data["proxy_cursor_ids"] = old.get("proxy_cursor_ids") or []
+        return
+    for (service_id, hour, observe), count in blocks.counts.items():
+        row = db.get(NbBlock, (service_id, hour, observe))
+        if row is None:
+            db.add(NbBlock(service_id=service_id, hour=hour, observe=observe, count=count))
+        else:
+            row.count += count
+    db.flush()
+    data["proxy_log"] = {"available": True, "complete": blocks.complete}
+    data["proxy_cursor"] = blocks.cursor
+    data["proxy_cursor_ids"] = blocks.cursor_ids
+    if not blocks.complete:
+        data["notes"] = [
+            *(data.get("notes") or []),
+            "Zugriffsprotokoll: mehr Einträge als in einem Abruf gelesen werden; die Zahlen "
+            "holen beim nächsten Abruf auf.",
+        ]
+
+
+def collect_lapi(
+    db: Session, settings: Settings, data: dict[str, Any], transport: LapiTransport | None
+) -> None:
+    data["crowdsec_exempt"] = list(load_settings(db).crowdsec_exempt)
+    config = lapi_config(db, settings)
+    if config is None:
+        data["crowdsec"] = {"configured": False}
+        return
+    try:
+        data["crowdsec"] = {"configured": True, "ok": True, **read_lapi(config, transport)}
+    except CrowdSecError as error:
+        data["crowdsec"] = {"configured": True, "ok": False, "error": str(error)[:300]}
+
+
 def purge(db: Session, now: datetime) -> None:
     db.execute(delete(NbCheck).where(NbCheck.checked_at < now - timedelta(days=CHECK_DAYS + 1)))
     cutoff = local_day(now) - timedelta(days=HISTORY_DAYS)
@@ -288,6 +356,7 @@ def purge(db: Session, now: datetime) -> None:
     db.execute(delete(NbPeerDay).where(NbPeerDay.day < cutoff))
     db.execute(delete(NbRun).where(NbRun.started_at < now - timedelta(days=HISTORY_DAYS)))
     db.execute(delete(NbEvent).where(NbEvent.at < now - timedelta(days=HISTORY_DAYS)))
+    db.execute(delete(NbBlock).where(NbBlock.hour < now - timedelta(days=BLOCK_DAYS)))
 
 
 def collect(
@@ -296,6 +365,7 @@ def collect(
     *,
     transport: Transport | None = None,
     checker: Checker | None = None,
+    lapi: LapiTransport | None = None,
 ) -> NbRun | None:
     """Ein Abruf; None, wenn NetBird nicht eingerichtet ist."""
     config = client_config(db, settings)
@@ -305,12 +375,16 @@ def collect(
     started = time.monotonic()
     run = NbRun(started_at=now, ok=True)
     try:
-        fetched = fetch(NetBirdClient(config, transport))
+        client = NetBirdClient(config, transport)
+        fetched = fetch(client)
         fetched.data["events_available"] = fetched.events is not None
         if fetched.events is not None:
             store_events(db, fetched.events, now)
         fetched.data["policy_meta"] = track_policies(db, fetched.data, now, fetched.events)
         fetched.data["checks"] = run_checks(db, fetched.data, now, checker or Checker())
+        if fetched.data.get("services") is not None:
+            collect_blocks(db, client, fetched.data, now)
+        collect_lapi(db, settings, fetched.data, lapi)
         store(db, fetched.data, now)
         sync_hints(db, fetched.data, now)
     except NetBirdError as error:
