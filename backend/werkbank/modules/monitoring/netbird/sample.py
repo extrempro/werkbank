@@ -384,7 +384,7 @@ def responses(now: datetime | None = None) -> dict[str, Any]:
                 "enabled": True,
                 "targets": [{"host": "10.0.30.22", "port": 3000, "protocol": "http"}],
                 "auth": {"bearer_auth": {"enabled": True}},
-                "access_restrictions": {"crowdsec_mode": "enforce"},
+                "access_restrictions": {"crowdsec_mode": "observe"},
                 "meta": {"status": "active"},
             },
             {
@@ -433,7 +433,73 @@ def responses(now: datetime | None = None) -> dict[str, Any]:
     }
 
 
+def _access_log(now: datetime) -> list[dict[str, Any]]:
+    """Zugriffsprotokoll: wiki mit Sperren, git im Modus „beobachten“, dazu normale Zugriffe."""
+    rows = []
+    for index in range(3):
+        rows.append(
+            {
+                "id": f"a-ban-{index}",
+                "service_id": "s-wiki",
+                "timestamp": _iso(now - timedelta(minutes=30 + index)),
+                "host": "wiki.example.com",
+                "path": "/",
+                "status_code": 403,
+                "source_ip": "203.0.113.7",
+                "auth_method_used": "crowdsec_ban",
+                "metadata": {"crowdsec_verdict": "crowdsec_ban"},
+            }
+        )
+    for index in range(2):
+        rows.append(
+            {
+                "id": f"a-obs-{index}",
+                "service_id": "s-git",
+                "timestamp": _iso(now - timedelta(minutes=20 + index)),
+                "host": "git.example.com",
+                "path": "/",
+                "status_code": 200,
+                "source_ip": "203.0.113.8",
+                "metadata": {"crowdsec_verdict": "crowdsec_ban", "crowdsec_mode": "observe"},
+            }
+        )
+    rows.append(
+        {
+            "id": "a-ok",
+            "service_id": "s-files",
+            "timestamp": _iso(now - timedelta(minutes=10)),
+            "host": "files.example.com",
+            "path": "/",
+            "status_code": 200,
+            "source_ip": "198.51.100.30",
+            "user_id": "u-ina",
+        }
+    )
+    rows.append(
+        {
+            "id": "a-alt",
+            "service_id": "s-wiki",
+            "timestamp": _iso(now - timedelta(days=3)),
+            "host": "wiki.example.com",
+            "status_code": 403,
+            "metadata": {"crowdsec_verdict": "crowdsec_ban"},
+        }
+    )
+    rows.sort(key=lambda row: str(row["timestamp"]))
+    return rows
+
+
 def sample_transport(config: NetBirdConfig, path: str, params: Mapping[str, str]) -> Any:
+    if path == "events/proxy":
+        start = params.get("start_date") or ""
+        rows = [r for r in _access_log(datetime.now(UTC)) if str(r["timestamp"]) >= start]
+        return {
+            "data": rows,
+            "page": 1,
+            "page_size": 100,
+            "total_records": len(rows),
+            "total_pages": 1,
+        }
     data = responses()
     if path in data:
         return data[path]
@@ -458,3 +524,13 @@ def sample_checker() -> Checker:
         tcp=lambda target: TcpResult(True, 12, ""),
         ping=lambda address: True,
     )
+
+
+def sample_lapi(config: Any) -> Any:
+    """Aktive Sperren der Local API: vier eigene, zehn aus Community-Listen."""
+    own = [{"id": i, "origin": "crowdsec", "type": "ban", "value": "203.0.113.7"} for i in range(3)]
+    manual = [{"id": 9, "origin": "cscli", "type": "ban", "value": "203.0.113.9"}]
+    community = [
+        {"id": 100 + i, "origin": "CAPI", "type": "ban", "value": f"192.0.2.{i}"} for i in range(10)
+    ]
+    return own + manual + community

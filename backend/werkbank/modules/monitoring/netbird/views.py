@@ -20,7 +20,13 @@ from werkbank.modules.monitoring.netbird.hints import (
     releases_behind,
     status,
 )
-from werkbank.modules.monitoring.netbird.models import NbCheck, NbDaily, NbEvent, NbPeerDay
+from werkbank.modules.monitoring.netbird.models import (
+    NbBlock,
+    NbCheck,
+    NbDaily,
+    NbEvent,
+    NbPeerDay,
+)
 from werkbank.modules.monitoring.netbird.policies import (
     CATEGORIES,
     event_change,
@@ -354,6 +360,20 @@ def availability(db: Session, now: datetime) -> dict[str, float]:
     return {sid: round(100 * (ok or 0) / total, 1) for sid, total, ok in rows if total}
 
 
+def blocks_24h(db: Session, now: datetime) -> dict[str, dict[str, int]]:
+    """Abweisungen durch CrowdSec je Dienst in den letzten 24 Stunden (ganze Stunden)."""
+    since = now - timedelta(hours=24)
+    out: dict[str, dict[str, int]] = {}
+    for service_id, observe, total in db.execute(
+        select(NbBlock.service_id, NbBlock.observe, func.sum(NbBlock.count))
+        .where(NbBlock.hour >= since.replace(minute=0, second=0, microsecond=0))
+        .group_by(NbBlock.service_id, NbBlock.observe)
+    ):
+        entry = out.setdefault(service_id, {"blocked": 0, "observed": 0})
+        entry["observed" if observe else "blocked"] += int(total or 0)
+    return out
+
+
 def networks_page(db: Session, now: datetime) -> dict[str, Any]:
     out = _base(db)
     state = latest_state(db)
@@ -364,6 +384,9 @@ def networks_page(db: Session, now: datetime) -> dict[str, Any]:
     services = public_services(data)
     results = checks.get("services") or {}
     uptime = availability(db, now)
+    blocks = blocks_24h(db, now)
+    proxy_log = data.get("proxy_log") or {}
+    crowdsec = data.get("crowdsec") or {}
 
     def tcp(key: str) -> dict[str, Any] | None:
         value = checks.get(key)
@@ -385,6 +408,19 @@ def networks_page(db: Session, now: datetime) -> dict[str, Any]:
             ),
             "online": any(c.get("online") for c in clusters) if clusters else None,
             "crowdsec": any(c.get("crowdsec") for c in clusters),
+        },
+        "crowdsec": {
+            "configured": bool(crowdsec.get("configured")),
+            "ok": crowdsec.get("ok"),
+            "total": crowdsec.get("total"),
+            "own": crowdsec.get("own"),
+            "error": crowdsec.get("error") or "",
+            "blocked_24h": sum(b["blocked"] for b in blocks.values())
+            if proxy_log.get("available")
+            else None,
+            "observed_24h": sum(b["observed"] for b in blocks.values())
+            if proxy_log.get("available")
+            else None,
         },
     }
     networks = []
@@ -426,6 +462,10 @@ def networks_page(db: Session, now: datetime) -> dict[str, Any]:
                 "availability": uptime.get(item["id"]),
                 "cert_expires": parse_time(result.get("cert_expires")) if result else None,
                 "crowdsec_mode": item.get("crowdsec_mode") or "off",
+                "blocked_24h": (blocks.get(item["id"]) or {}).get("blocked", 0),
+                "observed_24h": (blocks.get(item["id"]) or {}).get("observed", 0),
+                "crowdsec_exempt": str(item.get("domain") or "").lower()
+                in {d.lower() for d in options.crowdsec_exempt},
             }
         )
     service_rows.sort(key=lambda r: (r["answered"] is not False, str(r["domain"]).lower()))
@@ -433,6 +473,7 @@ def networks_page(db: Session, now: datetime) -> dict[str, Any]:
         {
             "components": components,
             "ping_enabled": options.ping,
+            "proxy_log_available": bool(proxy_log.get("available")),
             "networks": networks,
             "services": service_rows,
         }

@@ -1,4 +1,4 @@
-"""IT-Monitoring, NetBird: Abruf, Hinweise, Seiten, Rechte, Verwaltung (Phasen 1 bis 3).
+"""IT-Monitoring, NetBird: Abruf, Hinweise, Seiten, Rechte, Verwaltung (Phasen 1 bis 4).
 
 Alle Antworten von NetBird sind erfundene Beispieldaten (sample.py).
 """
@@ -17,8 +17,8 @@ from werkbank.config import Settings
 from werkbank.core.app_settings import NETBIRD_KEY, encrypt_secret, set_setting
 from werkbank.core.models import AppSetting, AuditLog, Job, Notification, NotificationKind, User
 from werkbank.core.sessions import now_utc
-from werkbank.modules.monitoring.netbird import collector, hints, policies, sample, views
-from werkbank.modules.monitoring.netbird.admin import get_netbird_transport
+from werkbank.modules.monitoring.netbird import collector, crowdsec, hints, policies, sample, views
+from werkbank.modules.monitoring.netbird.admin import get_lapi_transport, get_netbird_transport
 from werkbank.modules.monitoring.netbird.client import (
     NetBirdClient,
     NetBirdConfig,
@@ -26,6 +26,7 @@ from werkbank.modules.monitoring.netbird.client import (
     NotAvailableError,
 )
 from werkbank.modules.monitoring.netbird.models import (
+    NbBlock,
     NbCheck,
     NbDaily,
     NbEvent,
@@ -121,7 +122,17 @@ def test_hints_on_sample() -> None:
 
 @pytest.fixture
 def db(migrated_db: None, db_session: Session) -> Session:
-    for table in (NbState, NbRun, NbDaily, NbPeerDay, NbCheck, NbEvent, NbPolicySeen, NbHint):
+    for table in (
+        NbState,
+        NbRun,
+        NbDaily,
+        NbPeerDay,
+        NbCheck,
+        NbEvent,
+        NbPolicySeen,
+        NbHint,
+        NbBlock,
+    ):
         db_session.execute(delete(table))
     db_session.execute(delete(AppSetting))
     db_session.execute(delete(Job).where(Job.type == collector.NETBIRD_JOB))
@@ -634,3 +645,156 @@ def test_admin_server_groups(db: Session, tmp_path: Path) -> None:
         client.put(ADMIN, json={**body, "server_groups": too_many}, headers=HEADERS).status_code
         == 422
     )
+
+
+# --- Phase 4: CrowdSec ---------------------------------------------------------------------
+
+
+def test_lapi_url_and_summary() -> None:
+    assert crowdsec.valid_lapi_url("http://crowdsec.example.com:8080")
+    assert crowdsec.valid_lapi_url("https://crowdsec.example.com")
+    for bad in (
+        "ftp://crowdsec.example.com",
+        "http://user:pw@crowdsec.example.com",
+        "http://crowdsec.example.com/v1",
+        "http://crowdsec.example.com:99999",
+        "http://crowdsec.example.com?x=1",
+    ):
+        assert not crowdsec.valid_lapi_url(bad), bad
+    assert crowdsec.summarize(None) == {"total": 0, "own": 0}
+    assert crowdsec.summarize(sample.sample_lapi(None)) == {"total": 14, "own": 4}
+    with pytest.raises(crowdsec.CrowdSecError):
+        crowdsec.summarize({"unerwartet": True})
+
+
+def test_proxy_blocks_counted_without_addresses() -> None:
+    now = datetime.now(UTC)
+    client = NetBirdClient(CONFIG, sample.sample_transport)
+    blocks = crowdsec.read_proxy_blocks(client, "", [], now)
+    by_service: dict[tuple[str, bool], int] = {}
+    for (service, _hour, observe), count in blocks.counts.items():
+        by_service[(service, observe)] = by_service.get((service, observe), 0) + count
+    # Eintrag vor drei Tagen liegt außerhalb der ersten 24 Stunden
+    assert by_service == {("s-wiki", False): 3, ("s-git", True): 2}
+    assert blocks.complete and blocks.cursor and blocks.cursor_ids == ["a-ok"]
+    again = crowdsec.read_proxy_blocks(client, blocks.cursor, blocks.cursor_ids, now)
+    assert again.counts == {}  # nichts doppelt
+    assert "203.0.113" not in str(blocks)
+
+    pages: list[str] = []
+
+    def endless(config: NetBirdConfig, path: str, params: Any) -> Any:
+        pages.append(params["page"])
+        stamp = (now - timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        row = {"id": f"x-{params['page']}", "service_id": "s", "timestamp": stamp}
+        return {"data": [row], "total_pages": 999}
+
+    partial = crowdsec.read_proxy_blocks(NetBirdClient(CONFIG, endless), "", [], now)
+    assert not partial.complete and len(pages) == crowdsec.MAX_PAGES
+
+
+def test_crowdsec_hint_with_exceptions() -> None:
+    data = fetched()
+    found = {(h.code, h.subject) for h in hints.all_hints(data, datetime.now(UTC))}
+    assert ("ohne_crowdsec", "dienst:s-files") in found
+    assert ("ohne_crowdsec", "dienst:s-intern") not in found  # nur NetBird
+    assert ("ohne_crowdsec", "dienst:s-wiki") not in found
+    data["crowdsec_exempt"] = ["FILES.example.com"]
+    assert not any(h.code == "ohne_crowdsec" for h in hints.all_hints(data, datetime.now(UTC)))
+    data["crowdsec_exempt"] = []
+    data["clusters"][0]["crowdsec"] = False  # Proxy kann kein CrowdSec
+    assert not any(h.code == "ohne_crowdsec" for h in hints.all_hints(data, datetime.now(UTC)))
+
+
+@pytest.mark.db
+def test_collect_crowdsec_and_networks_api(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    configure(db, settings)
+    collector.collect(
+        db, settings, transport=sample.sample_transport, checker=CHECKER, lapi=sample.sample_lapi
+    )
+    state = db.get(NbState, 1)
+    assert state is not None and state.data["crowdsec"] == {"configured": False}
+    assert db.scalar(select(func.sum(NbBlock.count))) == 5
+    # Zweiter Abruf zählt nichts doppelt
+    collector.collect(
+        db, settings, transport=sample.sample_transport, checker=CHECKER, lapi=sample.sample_lapi
+    )
+    assert db.scalar(select(func.sum(NbBlock.count))) == 5
+
+    client = admin(settings)
+    assert (
+        client.put(
+            f"{ADMIN}/crowdsec", json={"url": "crowdsec.example.com"}, headers=HEADERS
+        ).status_code
+        == 422
+    )
+    saved = client.put(
+        f"{ADMIN}/crowdsec",
+        json={
+            "url": "http://crowdsec.example.com:8080/",
+            "key": "bouncer-geheim",
+            "exempt": "Files.example.com, files.example.com",
+        },
+        headers=HEADERS,
+    ).json()
+    assert saved == {
+        "url": "http://crowdsec.example.com:8080",
+        "key_set": True,
+        "exempt": "files.example.com",
+        "token_storage_available": True,
+    }
+    stored_value = db.scalars(select(AppSetting).where(AppSetting.key == NETBIRD_KEY)).one()
+    assert "bouncer-geheim" not in str(stored_value.value)
+    assert (
+        client.put(
+            f"{ADMIN}/crowdsec", json={"exempt": "kein domain/pfad"}, headers=HEADERS
+        ).status_code
+        == 422
+    )
+    client.app.dependency_overrides[get_lapi_transport] = lambda: sample.sample_lapi  # type: ignore[attr-defined]
+    assert client.post(f"{ADMIN}/crowdsec/test", headers=HEADERS).json() == {
+        "total": 14,
+        "own": 4,
+    }
+
+    collector.collect(
+        db, settings, transport=sample.sample_transport, checker=CHECKER, lapi=sample.sample_lapi
+    )
+    state = db.get(NbState, 1)
+    assert state is not None
+    assert state.data["crowdsec"] == {"configured": True, "ok": True, "total": 14, "own": 4}
+    assert not any(h.code == "ohne_crowdsec" for h in hints.all_hints(state.data, now_utc()))
+
+    reader = client_for(make_app(settings))
+    login_as(reader, ["NetBird.Reader"], oid="nb-crowdsec")
+    data = reader.get(f"{BASE}/networks").json()
+    assert data["proxy_log_available"] is True
+    assert data["components"]["crowdsec"] == {
+        "configured": True,
+        "ok": True,
+        "total": 14,
+        "own": 4,
+        "error": "",
+        "blocked_24h": 3,
+        "observed_24h": 2,
+    }
+    services = {r["domain"]: r for r in data["services"]}
+    assert services["wiki.example.com"]["blocked_24h"] == 3
+    assert services["git.example.com"]["observed_24h"] == 2
+    assert services["git.example.com"]["crowdsec_mode"] == "observe"
+    assert services["files.example.com"]["crowdsec_exempt"] is True
+
+    def lapi_down(config: Any) -> Any:
+        raise crowdsec.CrowdSecError("Die Local API ist nicht erreichbar.")
+
+    collector.collect(
+        db, settings, transport=sample.sample_transport, checker=CHECKER, lapi=lapi_down
+    )
+    state = db.get(NbState, 1)
+    assert state is not None and state.data["crowdsec"]["ok"] is False
+    # Alte Stunden fallen nach 7 Tagen weg
+    db.add(NbBlock(service_id="alt", hour=now_utc() - timedelta(days=9), observe=False, count=1))
+    db.commit()
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
+    assert "alt" not in set(db.scalars(select(NbBlock.service_id)))

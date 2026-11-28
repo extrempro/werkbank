@@ -212,12 +212,18 @@ def load_sample(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     from werkbank.core.app_settings import NETBIRD_KEY, encrypt_secret, get_setting, set_setting
     from werkbank.modules.monitoring.netbird.collector import collect
-    from werkbank.modules.monitoring.netbird.sample import sample_checker, sample_transport
+    from werkbank.modules.monitoring.netbird.sample import (
+        sample_checker,
+        sample_lapi,
+        sample_transport,
+    )
 
     current = get_setting(db, NETBIRD_KEY)
     data = dict(current) if isinstance(current, dict) else {}
     data["url"] = data.get("url") or "https://netbird.example.com"
     data["token_encrypted"] = encrypt_secret(settings, "beispiel-token")
+    data["crowdsec_url"] = data.get("crowdsec_url") or "http://crowdsec.example.com:8080"
+    data["crowdsec_key_encrypted"] = encrypt_secret(settings, "beispiel-bouncer")
     set_setting(db, NETBIRD_KEY, data, user.user_id)
     db.commit()
-    collect(db, settings, transport=sample_transport, checker=sample_checker())
+    collect(db, settings, transport=sample_transport, checker=sample_checker(), lapi=sample_lapi)

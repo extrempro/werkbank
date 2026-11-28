@@ -5,6 +5,7 @@ Phase 1: Anmeldung läuft bald ab, Client zwei oder mehr Releases zurück, Freig
 wenn NetBird die Freigabe liefert), Peer lange nicht gesehen.
 Phase 2: Netz ohne verbundenen Routing-Peer, Netz ohne Ausfallweg, Dienst antwortet nicht oder
 mit Serverfehler, Zertifikat läuft bald ab.
+Phase 4: öffentlicher Dienst ohne CrowdSec (außer „Bewusst ohne CrowdSec“).
 Phase 3: Richtlinie mit Quelle und Ziel „All“ und allen Ports, Setup-Key läuft in 30 bzw. 7 Tagen
 ab, leere Gruppe in einer Richtlinie, Richtlinie seit über 90 Tagen deaktiviert.
 """
@@ -290,6 +291,38 @@ def service_hints(data: Mapping[str, Any], now: datetime) -> list[Hint]:
     return out
 
 
+def crowdsec_hints(data: Mapping[str, Any]) -> list[Hint]:
+    """Öffentlicher Dienst ohne CrowdSec, obwohl der Reverse Proxy es kann (Phase 4).
+
+    Dienste auf der Liste „Bewusst ohne CrowdSec“ (Verwaltung) bekommen keinen Hinweis.
+    """
+    if not any(c.get("crowdsec") for c in data.get("clusters") or []):
+        return []
+    exempt = {str(d).strip().lower() for d in data.get("crowdsec_exempt") or []}
+    out: list[Hint] = []
+    for item in data.get("services") or []:
+        domain = str(item.get("domain") or item.get("name") or "")
+        if (
+            not item.get("enabled")
+            or item.get("private")
+            or (item.get("crowdsec_mode") or "off") != "off"
+            or domain.lower() in exempt
+        ):
+            continue
+        out.append(
+            Hint(
+                WARNING,
+                "ohne_crowdsec",
+                f"Öffentlicher Dienst {domain} ohne CrowdSec",
+                "Bekannte Angreifer werden für diesen Dienst nicht abgewiesen. Ist das gewollt, "
+                "trag ihn in der Verwaltung unter „Bewusst ohne CrowdSec“ ein.",
+                "/monitoring/netbird/netze",
+                f"dienst:{item['id']}",
+            )
+        )
+    return out
+
+
 POLICIES_LINK = "/monitoring/netbird/richtlinien"
 # Befunde der Richtlinien-Prüfung, die auch als Hinweis erscheinen (spec.md)
 POLICY_HINT_CODES = ("richtlinie_all", "gruppe_leer", "richtlinie_deaktiviert")
@@ -325,6 +358,7 @@ def all_hints(data: Mapping[str, Any], now: datetime) -> list[Hint]:
         peer_hints(data, now)
         + network_hints(data)
         + service_hints(data, now)
+        + crowdsec_hints(data)
         + policy_hints(data, now)
     )
     order = {level: index for index, level in enumerate(LEVELS)}

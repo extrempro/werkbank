@@ -10,6 +10,12 @@ const REFRESH_MS = 60_000;
 const SERVICES_SHOWN = 20;
 const DAY = 24 * 3600 * 1000;
 
+const CROWDSEC_LABELS: Record<string, string> = {
+  off: "aus",
+  observe: "beobachten",
+  enforce: "sperren",
+};
+
 const STATE_CLASS: Record<NbNetworkState, string> = {
   erreichbar: "pill pill-ok",
   ohne_ausfallweg: "pill pill-todo",
@@ -83,6 +89,7 @@ export function NetbirdNetworksPage() {
               </div>
               <TcpKpi label="Signal" value={data.components.signal} />
               <TcpKpi label="Relay" value={data.components.relay} />
+              <CrowdSecKpi data={data} />
               <div className="kpi">
                 <dt>Reverse Proxy</dt>
                 <dd>
@@ -205,6 +212,14 @@ export function NetbirdNetworksPage() {
                       </th>
                       <th scope="col">Zertifikat bis</th>
                       <th scope="col">Zugriff</th>
+                      <th scope="col">
+                        CrowdSec <InfoTip term="netbird.crowdsec" />
+                      </th>
+                      {data.proxy_log_available && (
+                        <th scope="col" className="number">
+                          Abgewiesen 24 h <InfoTip term="netbird.abgewiesen" />
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -254,6 +269,34 @@ export function NetbirdNetworksPage() {
                             )}
                           </td>
                           <td data-label="Zugriff">{service.access}</td>
+                          <td data-label="CrowdSec">
+                            {service.private ? (
+                              "–"
+                            ) : (
+                              <>
+                                <span
+                                  className={
+                                    service.crowdsec_mode === "off" && !service.crowdsec_exempt
+                                      ? "nb-warn"
+                                      : undefined
+                                  }
+                                >
+                                  {CROWDSEC_LABELS[service.crowdsec_mode] ?? service.crowdsec_mode}
+                                </span>
+                                {service.crowdsec_mode === "off" && service.crowdsec_exempt && (
+                                  <span className="fg-sub">bewusst ohne</span>
+                                )}
+                              </>
+                            )}
+                          </td>
+                          {data.proxy_log_available && (
+                            <td data-label="Abgewiesen 24 h" className="number">
+                              {service.blocked_24h}
+                              {service.observed_24h > 0 && (
+                                <span className="fg-sub">{service.observed_24h} wären</span>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -275,6 +318,39 @@ export function NetbirdNetworksPage() {
               </div>
             )}
           </section>
+        </>
+      )}
+    </div>
+  );
+}
+
+function CrowdSecKpi({ data }: { data: NbNetworks }) {
+  const value = data.components.crowdsec;
+  const blocked =
+    value.blocked_24h !== null
+      ? `${value.blocked_24h} abgewiesen in 24 h${value.observed_24h ? ` · ${value.observed_24h} wären` : ""}`
+      : "";
+  return (
+    <div className="kpi">
+      <dt>
+        CrowdSec <InfoTip term="netbird.crowdsec" />
+      </dt>
+      {!value.configured ? (
+        <>
+          <dd>nicht eingetragen</dd>
+          <dd className="small">{blocked || "Local API in Verwaltung › NetBird"}</dd>
+        </>
+      ) : value.ok ? (
+        <>
+          <dd className="nb-ok">{value.total ?? 0} aktive Sperren</dd>
+          <dd className="small">
+            davon {value.own ?? 0} eigene{blocked ? ` · ${blocked}` : ""}
+          </dd>
+        </>
+      ) : (
+        <>
+          <dd className="nb-bad">nicht lesbar</dd>
+          <dd className="small">{value.error}</dd>
         </>
       )}
     </div>
