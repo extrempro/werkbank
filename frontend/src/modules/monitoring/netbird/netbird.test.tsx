@@ -409,8 +409,8 @@ describe("NetBird", () => {
     expect(wiki).toHaveTextContent(/in 2[01] Tagen/);
     expect(wiki).toHaveTextContent("sperren");
     const files = within(services)
-      .getAllByRole("row")
-      .find((row) => row.textContent?.includes("files.example.com"));
+      .getByRole("rowheader", { name: "files.example.com" })
+      .closest("tr");
     expect(files).toHaveTextContent("bewusst ohne");
     expect(screen.getByText("14 aktive Sperren")).toBeInTheDocument();
     expect(screen.getByText(/davon 4 eigene · 3 abgewiesen in 24 h · 2 wären/)).toBeInTheDocument();
