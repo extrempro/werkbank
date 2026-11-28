@@ -24,6 +24,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.161.0",
+    date: "2026-11-28",
+    summary: "NetBird zeigt jetzt, was CrowdSec am Reverse Proxy abweist.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Unter „Netze & Dienste“ siehst du je Dienst, ob CrowdSec aus ist, nur beobachtet oder sperrt, und wie viele Anfragen in den letzten 24 Stunden abgewiesen wurden.",
+          "Die Kachel CrowdSec zeigt die aktiven Sperren und wie viele davon eure eigene CrowdSec-Instanz erkannt hat.",
+          "Ist ein öffentlicher Dienst ohne CrowdSec, bekommst du einen Hinweis.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter NetBird trägst du die Local API von CrowdSec mit einem eigenen Bouncer-Schlüssel ein und legst fest, welche Dienste bewusst ohne CrowdSec laufen.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.160.0",
     date: "2026-11-28",
     summary: "NetBird prüft jetzt die Richtlinien und zeigt das Ereignisprotokoll.",
