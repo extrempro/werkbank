@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.162.0] – 2026-11-28
+
+### Neu
+
+- **IT-Monitoring › NetBird, Phase 5: Gruppen & Policies.** Überwachung von Gruppen und Policies per Präfix (Policies auch über überwachte Gruppen), Erkennung von angelegt, geändert, gelöscht, aktiviert/deaktiviert, umbenannt und Mitgliederänderungen mit Vorher/Nachher und auslösender Person aus dem Ereignisprotokoll („Entra (SCIM)“ oder „unbekannt (per Abgleich erkannt)“), Kennzeichnungen „fremde Gruppe“ (kritisch) und „von Hand“. Neue Stufe „Bestätigen“ (`NetBird.Approver`): Änderungen einzeln mit Kommentar oder alle offenen bestätigen, danach nicht mehr änderbar und im Audit. Meldungen über die Glocke je Art schaltbar, kritische Änderungen auf Wunsch per Mail und Teams an alle Bestätiger, Erinnerung an offene Änderungen nach 3 oder 7 Tagen, Aufbewahrung wählbar. Offene Änderungen als Hinweis auf der Übersicht. Migration 0105. Doku: `spec.md`, `datenschutz.md`, `security/asvs-l2.md`, Handbuch, Info-Symbole.
+
 ## [0.161.0] – 2026-11-28
 
 ### Neu

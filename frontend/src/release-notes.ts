@@ -24,6 +24,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.162.0",
+    date: "2026-11-28",
+    summary: "NetBird erkennt jetzt Änderungen an Gruppen und Policies.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Unter „Gruppen & Policies“ siehst du jede Änderung an überwachten Gruppen und Policies mit Vorher und Nachher und wer sie ausgelöst hat.",
+          "Nutzt eine überwachte Policy plötzlich eine fremde Gruppe oder „All“, ist das ein kritischer Hinweis.",
+          "Mit dem neuen Recht „NetBird: Bestätigen“ bestätigst du Änderungen einzeln mit Kommentar oder alle offenen auf einmal. Bis dahin bleiben sie als Hinweis offen.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter NetBird legst du fest, welche Gruppen und Policies überwacht werden, was die Glocke meldet, wie lange Änderungen aufbewahrt werden und wann an offene erinnert wird.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.161.0",
     date: "2026-11-28",
     summary: "NetBird zeigt jetzt, was CrowdSec am Reverse Proxy abweist.",
