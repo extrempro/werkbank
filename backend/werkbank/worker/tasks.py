@@ -54,6 +54,12 @@ from werkbank.modules.monitoring.fortigate.collector import (
     fortigate_job,
 )
 from werkbank.modules.monitoring.fortigate.notifications import fortigate_notifications
+from werkbank.modules.monitoring.netbird.collector import (
+    NETBIRD_JOB,
+    NETBIRD_JOB_INTERVAL,
+    netbird_job,
+)
+from werkbank.modules.monitoring.netbird.notifications import netbird_notifications
 from werkbank.modules.monitoring.notifications import (
     monitoring_notifications,
     zabbix_notifications,
@@ -164,6 +170,7 @@ NOTIFICATION_SOURCES = (
     monitoring_notifications,
     zabbix_notifications,
     fortigate_notifications,
+    netbird_notifications,
     inventory_notifications,
     tickets_notifications,
     devices_notifications,
@@ -180,6 +187,7 @@ REGISTRY: dict[str, JobType] = {
     DNS_CHECK: JobType(handler=dns_check_job, interval=DNS_CHECK_INTERVAL),
     ZABBIX_JOB: JobType(handler=zabbix_job, interval=ZABBIX_JOB_INTERVAL),
     FORTIGATE_JOB: JobType(handler=fortigate_job, interval=FORTIGATE_JOB_INTERVAL),
+    NETBIRD_JOB: JobType(handler=netbird_job, interval=NETBIRD_JOB_INTERVAL),
     NINJA_SYNC: JobType(handler=ninja_sync_job, interval=NINJA_SYNC_INTERVAL),
     PSREF_SYNC: JobType(handler=psref_job, interval=PSREF_SYNC_INTERVAL),
     LOAN_JOB: JobType(handler=loan_job, interval=LOAN_JOB_INTERVAL),

@@ -13,6 +13,7 @@ const TOOLS = "Tools.User";
 const MONITORING = "Monitoring.Reader";
 const MONITORING_REPORTS = "Monitoring.Berichte";
 const FORTIGATE = "FortiGate.Reader";
+const NETBIRD = "NetBird.Reader";
 const PROJECTS_READER = "Projekte.Reader";
 const PROJECTS_EDITOR = "Projekte.Editor";
 const INVENTORY_READER = "Bestand.Reader";
@@ -940,8 +941,8 @@ export const AREAS: readonly Area[] = [
     id: "it-monitoring",
     title: "IT-Monitoring",
     summary:
-      "Überwachung der IT aus Zabbix, der DNS-Abgleich mit NetBox und die Regeln der FortiGates.",
-    roles: [MONITORING, MONITORING_REPORTS, FORTIGATE, ADMIN],
+      "Überwachung der IT aus Zabbix, der DNS-Abgleich mit NetBox, die Regeln der FortiGates und NetBird.",
+    roles: [MONITORING, MONITORING_REPORTS, FORTIGATE, NETBIRD, ADMIN],
     parts: [
       {
         title: "Zabbix",
@@ -1446,6 +1447,81 @@ export const AREAS: readonly Area[] = [
               },
             ],
             links: [{ to: "/verwaltung/fortigate", label: "Zur Verwaltung › FortiGate" }],
+          },
+        ],
+      },
+      {
+        title: "NetBird",
+        roles: [NETBIRD, ADMIN],
+        topics: [
+          {
+            id: "netbird-uebersicht",
+            title: "Übersicht und Hinweise",
+            roles: [NETBIRD],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Werkbank liest NetBird alle fünf Minuten und ändert dort nichts. Die Übersicht zeigt, wie viele Geräte (Peers) verbunden sind, offene Hinweise, Client-Versionen, Betriebssysteme und den Verlauf der verbundenen Peers über 14, 30 oder 90 Tage.",
+              },
+              {
+                kind: "terms",
+                items: [
+                  ["Kritisch", "etwas funktioniert nicht oder ist gefährlich offen"],
+                  [
+                    "Warnung",
+                    "z. B. Anmeldung eines Geräts läuft in 7 Tagen ab, Client zwei oder mehr Releases zurück, Gerät wartet auf Freigabe (nur wenn NetBird die Freigabe liefert)",
+                  ],
+                  ["Info", "z. B. Gerät seit über 90 Tagen nicht gesehen"],
+                ],
+              },
+              {
+                kind: "text",
+                text: "Ein Hinweis verschwindet von selbst, sobald er nicht mehr zutrifft. „Bericht drucken“ öffnet die Druckansicht des Browsers.",
+              },
+            ],
+            links: [{ to: "/monitoring/netbird", label: "Zur Übersicht" }],
+          },
+          {
+            id: "netbird-peers",
+            title: "Peers",
+            roles: [NETBIRD],
+            blocks: [
+              {
+                kind: "text",
+                text: "„Peers“ listet alle Geräte mit Person, Status, NetBird-IP, System und Version. Filtere nach Status, Gruppe, Betriebssystem oder nur Geräten mit Hinweis; die Suche findet Name, Person und IP.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "Rechts siehst du alle Angaben zum gewählten Peer: DNS-Name, Anmeldung bis, Land der Verbindung, ob er ein Routing-Peer ist, Gruppen und an welchen der letzten 7 Tage er verbunden war.",
+                  "Mit Zugriff auf den IT-Bestand steht dort ein Gerät mit gleichem Hostnamen. Das ist nur ein Hinweis, keine feste Zuordnung.",
+                  "„In NetBird öffnen“ führt zum Gerät in NetBird.",
+                  "Die Liste ist personenbezogen. Sie sieht nur, wer „NetBird: Lesen“ hat; den CSV-Export gibt es nur für System-Admins.",
+                ],
+              },
+            ],
+            links: [{ to: "/monitoring/netbird/peers", label: "Zu den Peers" }],
+          },
+          {
+            id: "netbird-einrichten",
+            title: "NetBird einrichten",
+            roles: [ADMIN],
+            blocks: [
+              {
+                kind: "steps",
+                items: [
+                  "Lege in NetBird ein Dienstkonto mit Leserecht an und erzeuge dafür ein API-Token.",
+                  "Öffne Verwaltung › NetBird, trag die Management-URL (nur https, ohne Pfad) und das Token ein und speichere.",
+                  "Wähle „Verbindung prüfen“. Die Werkbank meldet, wie viele Peers und Gruppen sie lesen kann.",
+                  "Gib unter Berechtigungen „NetBird: Lesen“ an, wer den Bereich sehen soll. Die Admin-Gruppe bekommt das nicht automatisch, weil die Peer-Liste personenbezogen ist.",
+                ],
+              },
+              {
+                kind: "text",
+                text: "„Jetzt abrufen“ und den CSV-Export gibt es nur für System-Admins, die zusätzlich „NetBird: Lesen“ haben. Lässt sich NetBird dreimal hintereinander nicht abrufen, meldet die Glocke das den Admins.",
+              },
+            ],
+            links: [{ to: "/verwaltung/netbird", label: "Zur Verwaltung › NetBird" }],
           },
         ],
       },

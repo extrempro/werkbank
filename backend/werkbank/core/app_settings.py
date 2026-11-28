@@ -30,6 +30,7 @@ NETBOX_KEY = "netbox"
 ZABBIX_KEY = "monitoring.zabbix"
 ZABBIX_OPTIONS_KEY = "monitoring.zabbix.optionen"
 FORTIGATE_KEY = "monitoring.fortigate"
+NETBIRD_KEY = "monitoring.netbird"
 NINJA_KEY = "inventory.ninjaone"
 
 MIN_KEY_LENGTH = 32

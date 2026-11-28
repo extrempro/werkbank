@@ -19,6 +19,9 @@ import {
   ADMIN_CONNECTIONS_PATH,
   ADMIN_ZABBIX_PATH,
   ADMIN_FORTIGATE_PATH,
+  ADMIN_NETBIRD_PATH,
+  MONITORING_NETBIRD_PATH,
+  MONITORING_NETBIRD_PEERS_PATH,
   MONITORING_FORTIGATE_OBJECTS_PATH,
   MONITORING_FORTIGATE_PATH,
   MONITORING_FORTIGATE_POLICIES_PATH,
@@ -90,6 +93,8 @@ import { NotificationSettingsPage } from "../pages/NotificationSettingsPage";
 import { HandbookPage } from "../pages/HandbookPage";
 import { DeviceAssociationPage } from "../modules/devices/DeviceAssociationPage";
 import { FortigateAdminPage } from "../modules/monitoring/fortigate/FortigateAdminPage";
+import { NetbirdAdminPage } from "../modules/monitoring/netbird/NetbirdAdminPage";
+import { NetbirdOverviewPage, NetbirdPeersPage } from "../modules/monitoring/netbird/NetbirdPages";
 import { FortigateUnusedPage } from "../modules/monitoring/fortigate/FortigateUnusedPage";
 import { FortigateFindingsPage } from "../modules/monitoring/fortigate/FortigateFindingsPage";
 import { FortigatePathPage } from "../modules/monitoring/fortigate/FortigatePathPage";
@@ -659,6 +664,12 @@ export function Layout({ me }: LayoutProps) {
     page = <FortigateChangesPage />;
   } else if (path === ADMIN_FORTIGATE_PATH && current) {
     page = <FortigateAdminPage />;
+  } else if (path === MONITORING_NETBIRD_PATH && current) {
+    page = <NetbirdOverviewPage />;
+  } else if (path === MONITORING_NETBIRD_PEERS_PATH && current) {
+    page = <NetbirdPeersPage />;
+  } else if (path === ADMIN_NETBIRD_PATH && current) {
+    page = <NetbirdAdminPage />;
   } else if (path === BUDGET_PATH && current) {
     page = <BudgetOverviewPage roles={me.roles} />;
   } else if (path === BUDGET_ACCOUNTS_PATH && current) {

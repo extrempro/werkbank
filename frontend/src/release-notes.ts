@@ -24,6 +24,25 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.158.0",
+    date: "2026-11-28",
+    summary: "Neu im IT-Monitoring: NetBird mit Übersicht und Peers.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Unter NetBird siehst du, wie viele Geräte verbunden sind, welche Client-Versionen laufen und was du prüfen solltest, z. B. Anmeldungen, die bald ablaufen, oder Geräte, die lange nicht da waren.",
+          "„Peers“ listet alle Geräte mit Person, Status und Version. Rechts siehst du Gruppen, die Verbindungen der letzten sieben Tage und, wenn vorhanden, das passende Gerät im IT-Bestand.",
+          "Den Bereich siehst du mit dem neuen Recht „NetBird“. Die Werkbank liest NetBird nur und ändert nichts.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: ["Unter NetBird trägst du Adresse und API-Token ein und prüfst die Verbindung."],
+      },
+    ],
+  },
+  {
     version: "0.157.0",
     date: "2026-11-28",
     summary:

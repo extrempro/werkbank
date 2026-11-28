@@ -18686,3 +18686,137 @@ textarea.field-control {
   flex-wrap: wrap;
   margin-top: 12px;
 }
+
+/* IT-Monitoring › NetBird */
+.nb-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.nb-columns > .panel {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.nb-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.nb-hints {
+  list-style: none;
+  margin: 0;
+  padding: 0 16px 8px;
+}
+
+.nb-hints li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-top: 1px solid var(--farbe-trenner);
+}
+
+.nb-hints p {
+  margin: 2px 0 0;
+}
+
+.nb-hints-compact {
+  padding: 0;
+}
+
+.nb-versions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 8px 0 0;
+}
+
+.nb-versions dt {
+  font-size: 0.85rem;
+  color: var(--farbe-text-mittel);
+}
+
+.nb-versions dd {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.nb-warn,
+.nb-warn dd {
+  color: var(--farbe-todo-text);
+  font-weight: 600;
+}
+
+.nb-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.nb-mini-table th,
+.nb-mini-table td {
+  padding: 6px 16px;
+  border-top: 1px solid var(--farbe-trenner);
+  text-align: left;
+}
+
+.nb-mini-table .number {
+  text-align: right;
+}
+
+.nb-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 140px;
+  border-bottom: 1px solid var(--farbe-rand-stark);
+}
+
+.nb-bar {
+  flex: 1;
+  min-height: 1px;
+  background: var(--farbe-primaer);
+  border-radius: 3px 3px 0 0;
+}
+
+.nb-bar-weekend {
+  background: var(--farbe-text-leise);
+}
+
+.nb-detail-title {
+  font-size: 1rem;
+  margin: 16px 0 8px;
+}
+
+.nb-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.nb-day {
+  display: grid;
+  place-items: center;
+  height: 32px;
+  border-radius: 4px;
+  background: var(--farbe-neutral-flaeche);
+  font-size: 0.8rem;
+  color: var(--farbe-text-mittel);
+}
+
+.nb-day-on {
+  background: var(--farbe-primaer);
+  color: var(--farbe-auf-primaer);
+}
+
+.nb-day-unknown {
+  background: none;
+  border: 1px dashed var(--farbe-rand-stark);
+}

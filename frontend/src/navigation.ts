@@ -22,6 +22,7 @@ const TOOLS_USER = "Tools.User";
 const MONITORING_READER = "Monitoring.Reader";
 const MONITORING_REPORTS = "Monitoring.Berichte";
 const FORTIGATE_READER = "FortiGate.Reader";
+const NETBIRD_READER = "NetBird.Reader";
 const PROJECT_ROLES = ["Projekte.Reader", "Projekte.Editor"];
 const INVENTORY_ROLES = ["Bestand.Reader", "Bestand.Editor"];
 const TENANT_READER = "Tenant.Reader";
@@ -64,6 +65,9 @@ export const MONITORING_FORTIGATE_PATH_PATH = "/monitoring/fortigate/pfad";
 export const MONITORING_FORTIGATE_INTERNET_PATH = "/monitoring/fortigate/internet";
 export const MONITORING_FORTIGATE_CHANGES_PATH = "/monitoring/fortigate/aenderungen";
 export const ADMIN_FORTIGATE_PATH = "/verwaltung/fortigate";
+export const MONITORING_NETBIRD_PATH = "/monitoring/netbird";
+export const MONITORING_NETBIRD_PEERS_PATH = "/monitoring/netbird/peers";
+export const ADMIN_NETBIRD_PATH = "/verwaltung/netbird";
 export const PROJECTS_PATH = "/projekte";
 export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
 export const INVENTORY_MASTER_PATH = "/bestand/stammdaten";
@@ -254,6 +258,15 @@ export function areasFor(roles: readonly string[]): NavArea[] {
       ],
     });
   }
+  if (roles.includes(NETBIRD_READER)) {
+    monitoringGroups.push({
+      title: "NetBird",
+      items: [
+        { path: MONITORING_NETBIRD_PATH, label: "Übersicht", icon: "uebersicht" },
+        { path: MONITORING_NETBIRD_PEERS_PATH, label: "Peers", icon: "geraet" },
+      ],
+    });
+  }
   if (monitoringGroups.length > 0) {
     areas.push({
       id: "monitoring",
@@ -265,7 +278,9 @@ export function areasFor(roles: readonly string[]): NavArea[] {
         ? MONITORING_ZABBIX_PATH
         : roles.includes(MONITORING_REPORTS)
           ? MONITORING_ZABBIX_REPORTS_PATH
-          : MONITORING_FORTIGATE_PATH,
+          : roles.includes(FORTIGATE_READER)
+            ? MONITORING_FORTIGATE_PATH
+            : MONITORING_NETBIRD_PATH,
       groups: monitoringGroups,
     });
   }
@@ -474,6 +489,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
             { path: ADMIN_CONNECTIONS_PATH, label: "Verbindungen", icon: "netzwerk" },
             { path: ADMIN_ZABBIX_PATH, label: "Zabbix", icon: "monitoring" },
             { path: ADMIN_FORTIGATE_PATH, label: "FortiGate", icon: "schloss" },
+            { path: ADMIN_NETBIRD_PATH, label: "NetBird", icon: "netzwerk" },
             { path: ADMIN_BACKUP_PATH, label: "Datensicherung", icon: "snapshots" },
             { path: ADMIN_FEEDBACK_PATH, label: "Rückmeldungen", icon: "rueckmeldung" },
             { path: AUDIT_PATH, label: "Audit-Log", icon: "audit" },
