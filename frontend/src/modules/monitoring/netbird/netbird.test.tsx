@@ -1,9 +1,18 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { NbAdminSettings, NbNetworks, NbOverview, NbPeerDetail, NbPeers } from "./api";
+import type {
+  NbAdminSettings,
+  NbEvent,
+  NbNetworks,
+  NbOverview,
+  NbPeerDetail,
+  NbPeers,
+  NbPolicies,
+} from "./api";
 import { NetbirdAdminPage } from "./NetbirdAdminPage";
 import { NetbirdNetworksPage } from "./NetbirdNetworksPage";
 import { NetbirdOverviewPage, NetbirdPeersPage } from "./NetbirdPages";
+import { NetbirdPoliciesPage } from "./NetbirdPoliciesPage";
 
 afterEach(() => {
   cleanup();
@@ -30,6 +39,16 @@ const hint = {
   link: "/monitoring/netbird/peers?auswahl=p-07",
 };
 
+const event: NbEvent = {
+  id: "1005",
+  at: "2026-11-28T09:00:00Z",
+  category: "policy",
+  label: "Richtlinie geändert",
+  object: "pol-beispiel-admin",
+  initiator: "Ina Beispiel",
+  change: "–",
+};
+
 const overview: NbOverview = {
   ...base,
   can_refresh: false,
@@ -53,6 +72,8 @@ const overview: NbOverview = {
       title: `Peer nb-peer-${index} seit über 90 Tagen nicht gesehen`,
     })),
   ],
+  events_available: true,
+  events: [event],
   latest_version: "0.60.2",
   versions: { neuestes: 4, eins: 0, zwei: 2, unbekannt: 0 },
   systems: [
@@ -125,6 +146,8 @@ const detail: NbPeerDetail = {
   })),
   latest_version: "0.60.2",
   asset: { id: 41, name: "Notebook Beispiel", inventory_no: "IT-0041" },
+  policies_available: true,
+  targets: [{ target: "Büronetz", ports: "TCP 22, 443", policy: "pol-beispiel-it" }],
 };
 
 function stub(routes: Record<string, unknown>, calls: string[] = []) {
@@ -162,6 +185,10 @@ describe("NetBird", () => {
     fireEvent.click(screen.getByRole("button", { name: "als Tabelle zeigen" }));
     const table = screen.getByRole("table", { name: "Verbundene Peers je Tag" });
     expect(within(table).getAllByRole("row")).toHaveLength(15);
+    const recent = screen.getByRole("table", { name: "Letzte Ereignisse" });
+    expect(within(recent).getByRole("row", { name: /Richtlinie geändert/ })).toHaveTextContent(
+      "Ina Beispiel",
+    );
     fireEvent.click(screen.getByRole("button", { name: "30 Tage" }));
     await waitFor(() => expect(calls.some((call) => call.includes("days=30"))).toBe(true));
   });
@@ -194,6 +221,7 @@ describe("NetBird", () => {
       "href",
       "https://netbird.example.com/peer?id=p-07",
     );
+    expect(within(aside).getByText("Büronetz")).toBeInTheDocument();
     expect(window.location.search).toContain("auswahl=p-07");
     fireEvent.change(screen.getByRole("searchbox", { name: "Suchen" }), {
       target: { value: "Ina" },
@@ -208,6 +236,7 @@ describe("NetBird", () => {
       ping: false,
       signal: "",
       relay: "",
+      server_groups: "",
       token_storage_available: true,
       last_run_at: null,
       last_ok: null,
@@ -306,5 +335,81 @@ describe("NetBird", () => {
     expect(wiki).toHaveTextContent("502");
     expect(wiki).toHaveTextContent("98,9 %");
     expect(wiki).toHaveTextContent(/in 2[01] Tagen/);
+  });
+
+  it("zeigt Prüfung, Setup-Keys, Richtlinien und filtert das Ereignisprotokoll", async () => {
+    const policies: NbPolicies = {
+      ...base,
+      policies_available: true,
+      setup_keys_available: true,
+      events_available: true,
+      server_groups: [],
+      findings: [
+        {
+          key: "richtlinie_all|policy:pol-admin",
+          level: "kritisch",
+          code: "richtlinie_all",
+          title: "Richtlinie pol-beispiel-admin: Quelle und Ziel „All“, alle Ports",
+          text: "Jeder Peer erreicht damit jeden anderen auf allen Ports.",
+        },
+      ],
+      policies: [
+        {
+          id: "pol-test",
+          name: "pol-beispiel-test",
+          sources: ["grp-beispiel-it"],
+          destinations: ["nb-peer-44"],
+          ports: "ICMP",
+          posture_checks: [],
+          enabled: false,
+          disabled_days: 124,
+          changed_at: null,
+        },
+      ],
+      setup_keys: [
+        {
+          id: "k-1",
+          name: "key-beispiel-server",
+          type: "reusable",
+          groups: ["grp-beispiel-server"],
+          expires: "2026-12-04T10:00:00Z",
+          days_left: 6,
+          state: "valid",
+          active: true,
+          used_times: 7,
+          usage_limit: 0,
+          ephemeral: false,
+        },
+      ],
+      categories: [
+        { value: "peer", label: "Peers" },
+        { value: "policy", label: "Richtlinien" },
+      ],
+    };
+    const calls = stub({
+      "GET /api/monitoring/netbird/policies": policies,
+      "GET /api/monitoring/netbird/events": { total: 1, days: 7, items: [event] },
+    });
+    render(<NetbirdPoliciesPage />);
+    const check = await screen.findByRole("region", { name: /Prüfung der Richtlinien/ });
+    expect(within(check).getByText(/Quelle und Ziel „All“/)).toBeInTheDocument();
+    expect(within(check).getByRole("link", { name: "NetBird" })).toHaveAttribute(
+      "href",
+      "/verwaltung/netbird",
+    );
+    const keys = screen.getByRole("table", { name: "Setup-Keys" });
+    expect(within(keys).getByRole("row", { name: /key-beispiel-server/ })).toHaveTextContent(
+      "in 6 Tagen",
+    );
+    const rules = screen.getByRole("table", { name: "Richtlinien" });
+    expect(within(rules).getByRole("row", { name: /pol-beispiel-test/ })).toHaveTextContent(
+      "deaktiviert seit 124 Tagen",
+    );
+    const log = await screen.findByRole("table", { name: "Ereignisse" });
+    expect(within(log).getByRole("row", { name: /Richtlinie geändert/ })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "Art" }), {
+      target: { value: "peer" },
+    });
+    await waitFor(() => expect(calls.some((call) => call.includes("kind=peer"))).toBe(true));
   });
 });

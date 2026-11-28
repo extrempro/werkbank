@@ -5,6 +5,8 @@ Phase 1: Anmeldung läuft bald ab, Client zwei oder mehr Releases zurück, Freig
 wenn NetBird die Freigabe liefert), Peer lange nicht gesehen.
 Phase 2: Netz ohne verbundenen Routing-Peer, Netz ohne Ausfallweg, Dienst antwortet nicht oder
 mit Serverfehler, Zertifikat läuft bald ab.
+Phase 3: Richtlinie mit Quelle und Ziel „All“ und allen Ports, Setup-Key läuft in 30 bzw. 7 Tagen
+ab, leere Gruppe in einer Richtlinie, Richtlinie seit über 90 Tagen deaktiviert.
 """
 
 import re
@@ -12,6 +14,14 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
+
+from werkbank.modules.monitoring.netbird.policies import (
+    KEY_SOON,
+    KEY_WARN,
+    findings,
+    key_active,
+    key_expires,
+)
 
 CRITICAL = "kritisch"
 WARNING = "warnung"
@@ -280,8 +290,43 @@ def service_hints(data: Mapping[str, Any], now: datetime) -> list[Hint]:
     return out
 
 
+POLICIES_LINK = "/monitoring/netbird/richtlinien"
+# Befunde der Richtlinien-Prüfung, die auch als Hinweis erscheinen (spec.md)
+POLICY_HINT_CODES = ("richtlinie_all", "gruppe_leer", "richtlinie_deaktiviert")
+
+
+def policy_hints(data: Mapping[str, Any], now: datetime) -> list[Hint]:
+    out = [
+        Hint(f.level, f.code, f.title, f.text, POLICIES_LINK, f.subject)
+        for f in findings(data, now)
+        if f.code in POLICY_HINT_CODES
+    ]
+    for key in data.get("setup_keys") or []:
+        expires = key_expires(key)
+        if not key_active(key) or expires is None or not now <= expires <= now + KEY_WARN:
+            continue
+        soon = expires <= now + KEY_SOON
+        name = key.get("name") or key["id"]
+        out.append(
+            Hint(
+                WARNING,
+                "setupkey_7" if soon else "setupkey_30",
+                f"Setup-Key {name} läuft am {_date(expires)} ab",
+                "Danach lassen sich damit keine Geräte mehr anmelden.",
+                POLICIES_LINK,
+                f"setupkey:{key['id']}",
+            )
+        )
+    return out
+
+
 def all_hints(data: Mapping[str, Any], now: datetime) -> list[Hint]:
-    hints = peer_hints(data, now) + network_hints(data) + service_hints(data, now)
+    hints = (
+        peer_hints(data, now)
+        + network_hints(data)
+        + service_hints(data, now)
+        + policy_hints(data, now)
+    )
     order = {level: index for index, level in enumerate(LEVELS)}
     hints.sort(key=lambda h: (order[h.level], h.title.lower()))
     return hints

@@ -68,6 +68,7 @@ export const ADMIN_FORTIGATE_PATH = "/verwaltung/fortigate";
 export const MONITORING_NETBIRD_PATH = "/monitoring/netbird";
 export const MONITORING_NETBIRD_PEERS_PATH = "/monitoring/netbird/peers";
 export const MONITORING_NETBIRD_NETWORKS_PATH = "/monitoring/netbird/netze";
+export const MONITORING_NETBIRD_POLICIES_PATH = "/monitoring/netbird/richtlinien";
 export const ADMIN_NETBIRD_PATH = "/verwaltung/netbird";
 export const PROJECTS_PATH = "/projekte";
 export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
@@ -266,6 +267,11 @@ export function areasFor(roles: readonly string[]): NavArea[] {
         { path: MONITORING_NETBIRD_PATH, label: "Übersicht", icon: "uebersicht" },
         { path: MONITORING_NETBIRD_PEERS_PATH, label: "Peers", icon: "geraet" },
         { path: MONITORING_NETBIRD_NETWORKS_PATH, label: "Netze & Dienste", icon: "netzwerk" },
+        {
+          path: MONITORING_NETBIRD_POLICIES_PATH,
+          label: "Richtlinien & Ereignisse",
+          icon: "schloss",
+        },
       ],
     });
   }

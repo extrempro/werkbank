@@ -277,6 +277,41 @@ export const HELP = {
     text: "Ohne Ping heißt erreichbar: Mindestens ein Routing-Peer des Netzes ist verbunden. Mit Ping muss zusätzlich das Testziel im Netz antworten.",
     topic: ["it-monitoring", "netbird-netze"],
   },
+  "netbird.pruefung": {
+    term: "Prüfung der Richtlinien",
+    text: "Die Werkbank sucht in den Richtlinien nach zu weiten Freigaben, leeren Gruppen und lange ausgeschalteten Regeln. Kritisch ist „All“ zu „All“ auf allen Ports.",
+    topic: ["it-monitoring", "netbird-richtlinien"],
+  },
+  "netbird.setupkey": {
+    term: "Setup-Key",
+    text: "Schlüssel, mit dem sich ein Gerät ohne Benutzer bei NetBird anmeldet. Läuft er ab, lassen sich damit keine neuen Geräte mehr anmelden.",
+    topic: ["it-monitoring", "netbird-richtlinien"],
+  },
+  "netbird.posture": {
+    term: "Posture Check",
+    text: "Bedingung, die ein Gerät erfüllen muss, bevor eine Richtlinie greift. Beispiel: eine Mindestversion des Clients.",
+    topic: ["it-monitoring", "netbird-richtlinien"],
+  },
+  "netbird.geaendert": {
+    term: "Geändert",
+    text: "Letzte Änderung laut Ereignisprotokoll oder, falls dort nichts steht, laut Abgleich der Werkbank. Ältere Änderungen kennt die Werkbank nicht.",
+    topic: ["it-monitoring", "netbird-richtlinien"],
+  },
+  "netbird.ereignisse": {
+    term: "Ereignisprotokoll",
+    text: "Was in NetBird geändert wurde, wann und von wem. Die Werkbank behält die Einträge 90 Tage; „System“ heißt, NetBird nennt keine Person.",
+    topic: ["it-monitoring", "netbird-richtlinien"],
+  },
+  "netbird.ziele": {
+    term: "Erreichbare Ziele",
+    text: "Gruppen, Netze und Peers, die dieses Gerät laut den eingeschalteten Richtlinien erreichen darf, mit Protokoll und Ports.",
+    topic: ["it-monitoring", "netbird-peers"],
+  },
+  "netbird.servergruppen": {
+    term: "Server-Gruppen",
+    text: "Gruppen in NetBird, in denen Server stehen. Greift eine Richtlinie ohne Posture Check auf sie zu, zeigt die Prüfung eine Warnung.",
+    topic: ["it-monitoring", "netbird-einrichten"],
+  },
   "netbird.ausfallweg": {
     term: "Ausfallweg",
     text: "Wie viele Routing-Peers des Netzes verbunden sind. Ist es nur einer, fehlt der Ausfallweg.",
@@ -677,6 +712,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/monitoring/netbird": [["it-monitoring", "netbird-uebersicht"]],
   "/monitoring/netbird/peers": [["it-monitoring", "netbird-peers"]],
   "/monitoring/netbird/netze": [["it-monitoring", "netbird-netze"]],
+  "/monitoring/netbird/richtlinien": [["it-monitoring", "netbird-richtlinien"]],
   "/verwaltung/netbird": [["it-monitoring", "netbird-einrichten"]],
   "/doku": [["doku", "seiten"]],
   "/doku/verwaltung": [["doku", "verwaltung"]],

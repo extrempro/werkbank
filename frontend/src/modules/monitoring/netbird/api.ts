@@ -48,6 +48,8 @@ export interface NbOverview extends NbBase {
   systems: { name: string; total: number; online: number }[];
   chart_days: number;
   chart: { day: string; weekend: boolean; max_connected: number | null; total: number | null }[];
+  events_available: boolean;
+  events: NbEvent[];
 }
 
 export interface NbPeerRow {
@@ -88,6 +90,8 @@ export interface NbPeerDetail extends NbPeerRow {
   history: { day: string; connected: boolean; known: boolean }[];
   latest_version: string;
   asset: { id: number; name: string; inventory_no: string } | null;
+  policies_available: boolean;
+  targets: { target: string; ports: string; policy: string }[];
 }
 
 export interface NbPeerFilter {
@@ -185,6 +189,92 @@ export function fetchNbNetworks(): Promise<NbNetworks> {
   return getJson(`${BASE}/networks`);
 }
 
+// --- Richtlinien & Ereignisse --------------------------------------------------------------
+
+export type NbEventKind =
+  "peer" | "policy" | "group" | "setupkey" | "user" | "network" | "service" | "account" | "other";
+
+export interface NbEvent {
+  id: string;
+  at: string;
+  category: NbEventKind;
+  label: string;
+  object: string;
+  initiator: string;
+  change: string;
+}
+
+export interface NbFinding {
+  key: string;
+  level: NbLevel;
+  code: string;
+  title: string;
+  text: string;
+}
+
+export interface NbPolicy {
+  id: string;
+  name: string;
+  sources: string[];
+  destinations: string[];
+  ports: string;
+  posture_checks: string[];
+  enabled: boolean;
+  disabled_days: number | null;
+  changed_at: string | null;
+}
+
+export interface NbSetupKey {
+  id: string;
+  name: string;
+  type: string;
+  groups: string[];
+  expires: string | null;
+  days_left: number | null;
+  state: string;
+  active: boolean;
+  used_times: number;
+  usage_limit: number;
+  ephemeral: boolean;
+}
+
+export interface NbPolicies extends NbBase {
+  policies_available: boolean;
+  setup_keys_available: boolean;
+  events_available: boolean;
+  server_groups: string[];
+  findings: NbFinding[];
+  policies: NbPolicy[];
+  setup_keys: NbSetupKey[];
+  categories: { value: NbEventKind; label: string }[];
+}
+
+export interface NbEvents {
+  total: number;
+  days: number;
+  items: NbEvent[];
+}
+
+export function fetchNbPolicies(): Promise<NbPolicies> {
+  return getJson(`${BASE}/policies`);
+}
+
+export function fetchNbEvents(filter: {
+  kind: string;
+  days: number;
+  offset: number;
+  limit: number;
+}): Promise<NbEvents> {
+  return getJson(
+    `${BASE}/events${params({
+      kind: filter.kind,
+      days: String(filter.days),
+      offset: filter.offset ? String(filter.offset) : "",
+      limit: String(filter.limit),
+    })}`,
+  );
+}
+
 export function refreshNetbird(): Promise<{ scheduled: boolean }> {
   return postJson(`${BASE}/refresh`);
 }
@@ -197,6 +287,7 @@ export interface NbAdminSettings {
   ping: boolean;
   signal: string;
   relay: string;
+  server_groups: string;
   token_storage_available: boolean;
   last_run_at: string | null;
   last_ok: boolean | null;
@@ -213,6 +304,7 @@ export function saveNbAdmin(update: {
   ping: boolean;
   signal: string;
   relay: string;
+  server_groups: string;
 }): Promise<NbAdminSettings> {
   return putJson(ADMIN, update);
 }

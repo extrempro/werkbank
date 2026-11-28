@@ -122,3 +122,41 @@ test("NetBird: Netze & Dienste mit Ausfallweg und Dienstprüfung", async ({
   ).toContainText("nicht geprüft");
   await expectNoA11yViolations(page);
 });
+
+test("NetBird: Richtlinien & Ereignisse mit Prüfung, Setup-Keys und Protokoll", async ({
+  page,
+}) => {
+  await loadSample(page);
+  await loginAs(page, ["NetBird.Reader"], "Nora NetBird");
+  await page.goto("/monitoring/netbird");
+  const recent = page.getByRole("table", { name: "Letzte Ereignisse" });
+  await expect(
+    recent.getByRole("row", { name: /Richtlinie geändert/ }),
+  ).toContainText("Ina Beispiel");
+  await page.getByRole("link", { name: "Alle Ereignisse" }).click();
+  await expect(page).toHaveURL(/\/monitoring\/netbird\/richtlinien$/);
+  const check = page.getByRole("region", { name: /Prüfung der Richtlinien/ });
+  await expect(
+    check.getByText(/pol-beispiel-admin: Quelle und Ziel/),
+  ).toBeVisible();
+  const keys = page.getByRole("table", { name: "Setup-Keys" });
+  await expect(
+    keys.getByRole("row", { name: /key-beispiel-router/ }),
+  ).toContainText("kein Ablauf");
+  const rules = page.getByRole("table", { name: "Richtlinien" });
+  await expect(
+    rules.getByRole("row", { name: /pol-beispiel-test/ }),
+  ).toContainText("deaktiviert seit");
+  const log = page.getByRole("table", { name: "Ereignisse" });
+  await expect(
+    log.getByRole("row", { name: /Richtlinie geändert/ }),
+  ).toBeVisible();
+  await page.getByRole("combobox", { name: "Art" }).selectOption("peer");
+  await expect(
+    log.getByRole("row", { name: /Peer freigegeben/ }),
+  ).toBeVisible();
+  await expect(
+    log.getByRole("row", { name: /Richtlinie geändert/ }),
+  ).toHaveCount(0);
+  await expectNoA11yViolations(page);
+});

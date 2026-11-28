@@ -9,10 +9,12 @@ import {
   ADMIN_NETBIRD_PATH,
   INVENTORY_HARDWARE_PATH,
   MONITORING_NETBIRD_NETWORKS_PATH,
+  MONITORING_NETBIRD_POLICIES_PATH,
 } from "../../../navigation";
 import { useSearchParam } from "../../../router";
 import { useDebounced } from "../../inventory/paged";
 import { replaceParams } from "../fortigate/params";
+import { NbEventTable } from "./NetbirdEvents";
 import {
   PEERS_CSV_URL,
   fetchNbOverview,
@@ -63,7 +65,15 @@ export function LevelPill({ level }: { level: NbLevel }) {
   return <span className={LEVEL_CLASS[level]}>{LEVEL_LABELS[level]}</span>;
 }
 
-function NbHead({ title, sub, actions }: { title: string; sub: string; actions?: ReactNode }) {
+export function NbHead({
+  title,
+  sub,
+  actions,
+}: {
+  title: string;
+  sub: string;
+  actions?: ReactNode;
+}) {
   return (
     <header className="page-head fg-head">
       <div>
@@ -144,7 +154,7 @@ function RefreshButton() {
   );
 }
 
-function useLoaded<T>(load: () => Promise<T>, message: string, deps: unknown[]) {
+export function useLoaded<T>(load: () => Promise<T>, message: string, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -336,6 +346,23 @@ export function NetbirdOverviewPage() {
             days={days}
             onDays={(value) => setDays(value as "14" | "30" | "90")}
           />
+          {data.events_available && (
+            <section className="panel" aria-labelledby="nb-letzte-ereignisse">
+              <div className="panel-head nb-panel-head">
+                <h2 id="nb-letzte-ereignisse">
+                  Letzte Ereignisse <InfoTip term="netbird.ereignisse" />
+                </h2>
+                <Link to={MONITORING_NETBIRD_POLICIES_PATH} className="no-print">
+                  Alle Ereignisse
+                </Link>
+              </div>
+              {data.events.length === 0 ? (
+                <p className="empty">Noch keine Ereignisse in den letzten 90 Tagen.</p>
+              ) : (
+                <NbEventTable events={data.events} label="Letzte Ereignisse" />
+              )}
+            </section>
+          )}
         </>
       )}
     </div>
@@ -840,6 +867,25 @@ function PeerDetail({ id, dashboard }: { id: string; dashboard: string }) {
           dunkel: mindestens einmal verbunden · gestrichelt: noch nicht erfasst
         </p>
       </section>
+      {data.policies_available && (
+        <section aria-labelledby="nb-ziele">
+          <h3 id="nb-ziele" className="nb-detail-title">
+            Erreichbare Ziele <InfoTip term="netbird.ziele" />
+          </h3>
+          {data.targets.length === 0 ? (
+            <p className="small">Laut den eingeschalteten Richtlinien erreicht der Peer nichts.</p>
+          ) : (
+            <ul className="nb-targets">
+              {data.targets.map((target) => (
+                <li key={`${target.target}|${target.ports}|${target.policy}`}>
+                  <strong>{target.target}</strong> · {target.ports}
+                  <span className="fg-sub">über {target.policy}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
       {data.hints.length > 0 && (
         <ul className="nb-hints nb-hints-compact" aria-label="Hinweise zu diesem Peer">
           {data.hints.map((hint) => (

@@ -1471,12 +1471,15 @@ export const AREAS: readonly Area[] = [
                     "Warnung",
                     "z. B. Anmeldung eines Geräts läuft in 7 Tagen ab, Client zwei oder mehr Releases zurück, Gerät wartet auf Freigabe (nur wenn NetBird die Freigabe liefert)",
                   ],
-                  ["Info", "z. B. Gerät seit über 90 Tagen nicht gesehen"],
+                  [
+                    "Info",
+                    "z. B. Gerät seit über 90 Tagen nicht gesehen, leere Gruppe in einer Richtlinie",
+                  ],
                 ],
               },
               {
                 kind: "text",
-                text: "Ein Hinweis verschwindet von selbst, sobald er nicht mehr zutrifft. „Bericht drucken“ öffnet die Druckansicht des Browsers.",
+                text: "Neue Hinweise meldet die Glocke. Ein Hinweis verschwindet von selbst, sobald er nicht mehr zutrifft; seine Meldung in der Glocke gilt dann als gelesen. Darunter stehen die letzten fünf Ereignisse aus NetBird. „Bericht drucken“ öffnet die Druckansicht des Browsers.",
               },
             ],
             links: [{ to: "/monitoring/netbird", label: "Zur Übersicht" }],
@@ -1524,6 +1527,35 @@ export const AREAS: readonly Area[] = [
             links: [{ to: "/monitoring/netbird/netze", label: "Zu Netze & Dienste" }],
           },
           {
+            id: "netbird-richtlinien",
+            title: "Richtlinien & Ereignisse",
+            roles: [NETBIRD],
+            blocks: [
+              {
+                kind: "text",
+                text: "Die Seite prüft die Richtlinien von NetBird, zeigt die Setup-Keys mit Ablauf und das Ereignisprotokoll der letzten 90 Tage.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "Kritisch: eine Richtlinie mit Quelle und Ziel „All“ auf allen Ports. Damit erreicht jedes Gerät jedes andere.",
+                  "Warnung: Zugriff auf eine Server-Gruppe ohne Posture Check (nur wenn ein Admin die Server-Gruppen eingetragen hat) und TCP oder UDP mit allen Ports.",
+                  "Info: eine leere Gruppe in einer Richtlinie, eine Richtlinie, die seit über 90 Tagen ausgeschaltet ist, und Gruppen aus Entra (SCIM), die in keiner Richtlinie stehen.",
+                  "Setup-Keys: Läuft ein Schlüssel in 30 Tagen ab, gibt es eine Warnung, in 7 Tagen noch einmal. Den Schlüssel selbst speichert die Werkbank nie.",
+                  "„Geändert“ kommt aus dem Ereignisprotokoll oder aus dem eigenen Abgleich der Werkbank.",
+                  "Im Ereignisprotokoll filterst du nach Art (Peers, Richtlinien, Gruppen, Setup-Keys, Benutzer und mehr) und Zeitraum (7, 30 oder 90 Tage). „System“ heißt: NetBird nennt keine Person, z. B. bei Änderungen über Entra.",
+                ],
+              },
+              {
+                kind: "text",
+                text: "Auf der Übersicht stehen die letzten fünf Ereignisse. Im Detail eines Peers siehst du unter „Erreichbare Ziele“, was das Gerät laut den Richtlinien erreichen darf.",
+              },
+            ],
+            links: [
+              { to: "/monitoring/netbird/richtlinien", label: "Zu Richtlinien & Ereignisse" },
+            ],
+          },
+          {
             id: "netbird-einrichten",
             title: "NetBird einrichten",
             roles: [ADMIN],
@@ -1535,12 +1567,13 @@ export const AREAS: readonly Area[] = [
                   "Öffne Verwaltung › NetBird, trag die Management-URL (nur https, ohne Pfad) und das Token ein und speichere.",
                   "Wähle „Verbindung prüfen“. Die Werkbank meldet, wie viele Peers und Gruppen sie lesen kann.",
                   "Trag für die Kacheln Signal und Relay deren Adressen als Host:Port ein (stehen nicht in der API). Den Ping in die Netze schaltest du nur ein, wenn der Server der Werkbank selbst ein NetBird-Peer ist.",
+                  "Trag unter „Server-Gruppen“ die Gruppen ein, in denen Server stehen. Dann prüft die Werkbank, ob Richtlinien ohne Posture Check auf sie zugreifen.",
                   "Gib unter Berechtigungen „NetBird: Lesen“ an, wer den Bereich sehen soll. Die Admin-Gruppe bekommt das nicht automatisch, weil die Peer-Liste personenbezogen ist.",
                 ],
               },
               {
                 kind: "text",
-                text: "„Jetzt abrufen“ und den CSV-Export gibt es nur für System-Admins, die zusätzlich „NetBird: Lesen“ haben. Lässt sich NetBird dreimal hintereinander nicht abrufen, meldet die Glocke das den Admins.",
+                text: "„Jetzt abrufen“ und den CSV-Export gibt es nur für System-Admins, die zusätzlich „NetBird: Lesen“ haben. Lässt sich NetBird dreimal hintereinander nicht abrufen, meldet die Glocke das den Admins. Neue Hinweise meldet die Glocke allen mit „NetBird: Lesen“; trifft ein Hinweis nicht mehr zu, gilt seine Meldung als gelesen.",
               },
             ],
             links: [{ to: "/verwaltung/netbird", label: "Zur Verwaltung › NetBird" }],

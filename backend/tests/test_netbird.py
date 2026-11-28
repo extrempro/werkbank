@@ -1,4 +1,4 @@
-"""IT-Monitoring, NetBird: Abruf, Hinweise, Seiten, Rechte, Verwaltung (Phase 1).
+"""IT-Monitoring, NetBird: Abruf, Hinweise, Seiten, Rechte, Verwaltung (Phasen 1 bis 3).
 
 Alle Antworten von NetBird sind erfundene Beispieldaten (sample.py).
 """
@@ -15,9 +15,9 @@ from tests.test_admin_settings import HEADERS, admin, settings_with_key
 from tests.test_auth import client_for, login_as, make_app
 from werkbank.config import Settings
 from werkbank.core.app_settings import NETBIRD_KEY, encrypt_secret, set_setting
-from werkbank.core.models import AppSetting, AuditLog, Job
+from werkbank.core.models import AppSetting, AuditLog, Job, Notification, NotificationKind, User
 from werkbank.core.sessions import now_utc
-from werkbank.modules.monitoring.netbird import collector, hints, sample, views
+from werkbank.modules.monitoring.netbird import collector, hints, policies, sample, views
 from werkbank.modules.monitoring.netbird.admin import get_netbird_transport
 from werkbank.modules.monitoring.netbird.client import (
     NetBirdClient,
@@ -25,7 +25,16 @@ from werkbank.modules.monitoring.netbird.client import (
     NetBirdError,
     NotAvailableError,
 )
-from werkbank.modules.monitoring.netbird.models import NbCheck, NbDaily, NbPeerDay, NbRun, NbState
+from werkbank.modules.monitoring.netbird.models import (
+    NbCheck,
+    NbDaily,
+    NbEvent,
+    NbHint,
+    NbPeerDay,
+    NbPolicySeen,
+    NbRun,
+    NbState,
+)
 from werkbank.modules.monitoring.netbird.normalize import fetch
 from werkbank.modules.monitoring.netbird.notifications import netbird_notifications
 
@@ -112,8 +121,9 @@ def test_hints_on_sample() -> None:
 
 @pytest.fixture
 def db(migrated_db: None, db_session: Session) -> Session:
-    for table in (NbState, NbRun, NbDaily, NbPeerDay, NbCheck, AppSetting):
+    for table in (NbState, NbRun, NbDaily, NbPeerDay, NbCheck, NbEvent, NbPolicySeen, NbHint):
         db_session.execute(delete(table))
+    db_session.execute(delete(AppSetting))
     db_session.execute(delete(Job).where(Job.type == collector.NETBIRD_JOB))
     db_session.commit()
     return db_session
@@ -160,7 +170,8 @@ def test_collect_state_history_and_failures(db: Session, tmp_path: Path) -> None
         assert failed is not None and not failed.ok
     assert db.get(NbState, 1) is not None  # letzter Stand bleibt
     events = list(netbird_notifications(db, settings, now_utc()))
-    assert [e.title for e in events] == ["NetBird lässt sich nicht abrufen"]
+    failures = [e.title for e in events if e.kind == "monitoring.netbird_fehler"]
+    assert failures == ["NetBird lässt sich nicht abrufen"]
 
 
 @pytest.mark.db
@@ -178,7 +189,7 @@ def test_api_rights_overview_peers(db: Session, tmp_path: Path) -> None:
     assert overview["configured"] is True and overview["can_refresh"] is False
     assert overview["peers"] == 6 and overview["connected"] == 3
     assert overview["routers"] == 2 and overview["routers_offline"] == 1
-    assert overview["hint_counts"]["warnung"] >= 3 and overview["hint_counts"]["info"] == 1
+    assert overview["hint_counts"]["warnung"] >= 3 and overview["hint_counts"]["info"] == 3
     assert overview["versions"]["neuestes"] == 4 and overview["versions"]["zwei"] == 2
     assert len(overview["chart"]) == 14 and overview["chart"][-1]["max_connected"] == 3
     assert len(client.get(f"{BASE}/overview", params={"days": 30}).json()["chart"]) == 30
@@ -275,7 +286,7 @@ def test_admin_settings_and_test(db: Session, tmp_path: Path) -> None:
     again = client.put(ADMIN, json={"url": "https://netbird.example.com"}, headers=HEADERS).json()
     assert again["token_set"] is True and again["ping"] is False
     result = client.post(f"{ADMIN}/test", headers=HEADERS).json()
-    assert result == {"peers": 6, "groups": 5, "policies": None}
+    assert result == {"peers": 6, "groups": 7, "policies": 6}
 
     def failing(config: NetBirdConfig, path: str, params: Any) -> Any:
         raise NetBirdError("Das API-Token wird abgelehnt (HTTP 401).")
@@ -407,7 +418,7 @@ def test_checks_hints_and_networks_api(db: Session, tmp_path: Path) -> None:
     overview = client.get(f"{BASE}/overview").json()
     assert overview["networks_total"] == 3 and overview["networks_ok"] == 2
     assert overview["services_ok"] == 2 and overview["services_checked"] == 3
-    assert overview["hint_counts"]["kritisch"] == 2
+    assert overview["hint_counts"]["kritisch"] == 3
     login_as(client, ["Werkbank.Admin"], oid="nb-netze-admin")
     assert client.get(f"{BASE}/networks").status_code == 403
 
@@ -428,3 +439,198 @@ def test_admin_signal_relay(db: Session, tmp_path: Path) -> None:
     assert saved.json()["relay"] == "relay.example.com:443"
     for bad in ("signal.example.com", "http://x.example.com:443", "x y:1"):
         assert client.put(ADMIN, json={**body, "signal": bad}, headers=HEADERS).status_code == 422
+
+
+# --- Phase 3: Richtlinien, Setup-Keys, Ereignisse, Glocke ----------------------------------
+
+
+def test_policies_setup_keys_and_events_fetch() -> None:
+    result = fetch(NetBirdClient(CONFIG, sample.sample_transport))
+    data = result.data
+    assert {p["id"] for p in data["policies"]} >= {"pol-admin", "pol-test"}
+    keys = {k["id"]: k for k in data["setup_keys"]}
+    assert "key" not in keys["k-1"] and keys["k-1"]["groups"] == ["g-server"]
+    assert result.events is not None
+    event = next(e for e in result.events if e["id"] == "1004")
+    # Verbindungsadresse und Seriennummer werden nie übernommen
+    assert set(event["meta"]) == {"name", "fqdn", "ip"}
+    scim = next(e for e in result.events if e["id"] == "1003")
+    assert scim["initiator"] == "" and scim["meta"]["group"] == "grp-beispiel-vertrieb"
+
+
+def test_policy_findings_and_labels() -> None:
+    data = fetched()
+    now = datetime.now(UTC)
+    data["policy_meta"] = {"pol-test": {"disabled_since": (now - timedelta(days=124)).isoformat()}}
+    found = {(f.code, f.subject): f for f in policies.findings(data, now)}
+    assert found[("richtlinie_all", "policy:pol-admin")].level == "kritisch"
+    assert ("alle_ports", "policy:pol-dev") in found
+    assert ("gruppe_leer", "group:g-extern") in found
+    assert found[("richtlinie_deaktiviert", "policy:pol-test")].title.endswith(
+        "124 Tagen deaktiviert"
+    )
+    assert "grp-beispiel-einkauf" in found[("scim_ungenutzt", "scim")].title
+    # Ohne Server-Gruppen keine Prüfung auf Posture Checks
+    assert not any(code == "server_ohne_posture" for code, _ in found)
+    with_servers = policies.findings(data, now, ["GRP-beispiel-server"])
+    server = {f.subject for f in with_servers if f.code == "server_ohne_posture"}
+    assert server == {"policy:pol-server", "policy:pol-extern"}  # pol-dev hat Posture Check
+    levels = [f.level for f in with_servers]
+    assert levels == sorted(levels, key=["kritisch", "warnung", "info"].index)
+    assert policies.ports_label(
+        {"protocol": "tcp", "ports": ["22"], "port_ranges": [[8000, 8100]]}
+    ) == ("TCP 22, 8000\u20138100")
+    assert policies.ports_label({"protocol": "udp"}) == "UDP alle Ports"
+    assert policies.category("peer.group.add") == "group"
+    assert policies.category("setupkey.group.add") == "setupkey"
+    assert policies.category("user.peer.delete") == "peer"
+    assert policies.event_change("peer.group.delete", {"group": "g"}) == "\u2212 g"
+    hint_codes = {(h.code, h.subject) for h in hints.all_hints(data, now)}
+    assert ("richtlinie_all", "policy:pol-admin") in hint_codes
+    assert ("alle_ports", "policy:pol-dev") not in hint_codes  # nur auf der Seite
+    assert ("setupkey_7", "setupkey:k-1") in hint_codes
+    assert ("setupkey_30", "setupkey:k-2") in hint_codes
+    assert not any(s == "setupkey:k-3" for _, s in hint_codes)  # kein Ablauf
+
+
+def test_peer_targets() -> None:
+    data = fetched()
+    targets = {(t["target"], t["ports"]) for t in policies.peer_targets(data, "p-07")}
+    assert ("Büronetz", "TCP 22, 443, 3389") in targets
+    assert ("grp-beispiel-router", "TCP alle Ports") in targets
+    assert ("All", "alle") in targets
+    # pol-test ist aus: p-44 nicht als Ziel
+    assert not any(t[0] == "nb-peer-44" for t in targets)
+    # Bidirektional: Ziel-Seite erreicht auch die Quelle
+    assert ("All", "alle") in {
+        (t["target"], t["ports"]) for t in policies.peer_targets(data, "p-44")
+    }
+    assert policies.peer_targets(data, "gibt-es-nicht") == []
+
+
+@pytest.mark.db
+def test_collect_events_policies_and_bell(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    configure(db, settings)
+    db.execute(delete(Notification).where(Notification.kind.like("monitoring.netbird%")))
+    db.commit()
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
+    # Ereignis älter als 90 Tage wird nicht gespeichert
+    assert set(db.scalars(select(NbEvent.id))) == {"1002", "1003", "1004", "1005"}
+    seen = db.get(NbPolicySeen, "pol-test")
+    assert seen is not None and seen.disabled_since is not None
+    assert (now_utc() - seen.disabled_since).days >= 123  # aus dem Protokoll
+    state = db.get(NbState, 1)
+    assert state is not None
+    assert state.data["policy_meta"]["pol-admin"]["changed_at"]  # Ereignis vor einer Stunde
+    hint_keys = set(db.scalars(select(NbHint.key)))
+    assert "richtlinie_all|policy:pol-admin" in hint_keys
+
+    # Glocke: erster Lauf gilt als gemeldet, ein neuer Hinweis wird gemeldet
+    from werkbank.core.notifications import dispatch
+    from werkbank.modules.monitoring.netbird.notifications import netbird_notifications
+
+    reader = db.scalars(select(User).limit(1)).first()
+    assert reader is not None
+    reader.last_roles = ["NetBird.Reader"]
+    db.execute(delete(NotificationKind).where(NotificationKind.kind.like("monitoring.netbird%")))
+    db.commit()
+    dispatch(db, netbird_notifications(db, settings, now_utc()))
+    db.commit()
+    assert not db.scalars(
+        select(Notification).where(
+            Notification.user_id == reader.id, Notification.kind.like("monitoring.netbird%")
+        )
+    ).first()
+
+    changed = sample.responses()
+
+    def with_new_policy(config: NetBirdConfig, path: str, params: Any) -> Any:
+        if path == "policies":
+            extra = dict(changed["policies"][0], id="pol-neu", name="pol-beispiel-neu")
+            return [*changed["policies"], extra]
+        return sample.sample_transport(config, path, params)
+
+    collector.collect(db, settings, transport=with_new_policy, checker=CHECKER)
+    dispatch(db, netbird_notifications(db, settings, now_utc()))
+    db.commit()
+    notes = list(
+        db.scalars(
+            select(Notification).where(
+                Notification.user_id == reader.id, Notification.kind == "monitoring.netbird_hinweis"
+            )
+        )
+    )
+    assert [n.title for n in notes] == [
+        "NetBird: Richtlinie pol-beispiel-neu: Quelle und Ziel \u201eAll\u201c, alle Ports"
+    ]
+    assert "hinweis=" in notes[0].link and notes[0].read_at is None
+    # Trifft der Hinweis nicht mehr zu, schließt er sich: Meldung gilt als gelesen
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
+    db.refresh(notes[0])
+    assert notes[0].read_at is not None
+    assert "richtlinie_all|policy:pol-neu" not in set(db.scalars(select(NbHint.key)))
+    db.execute(delete(Notification).where(Notification.kind.like("monitoring.netbird%")))
+    db.commit()
+
+
+@pytest.mark.db
+def test_policies_and_events_api(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    configure(db, settings)
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
+    client = client_for(make_app(settings))
+    login_as(client, ["Werkbank.Admin"], oid="nb-richtlinien-admin")
+    assert client.get(f"{BASE}/policies").status_code == 403
+    assert client.get(f"{BASE}/events").status_code == 403
+    login_as(client, ["NetBird.Reader"], oid="nb-richtlinien")
+    data = client.get(f"{BASE}/policies").json()
+    assert data["findings"][0]["level"] == "kritisch"
+    assert data["server_groups"] == []
+    rows = {r["name"]: r for r in data["policies"]}
+    assert rows["pol-beispiel-it"]["posture_checks"] == ["Client-Version", "Betriebssystem"]
+    assert rows["pol-beispiel-it"]["destinations"] == ["Büronetz"]
+    assert rows["pol-beispiel-test"]["disabled_days"] >= 123
+    assert rows["pol-beispiel-admin"]["changed_at"]
+    assert data["policies"][-1]["name"] == "pol-beispiel-test"  # deaktivierte zuletzt
+    keys = data["setup_keys"]
+    assert keys[0]["name"] == "key-beispiel-server" and keys[0]["days_left"] in (5, 6)
+    assert keys[-1]["expires"] is None
+    assert "A6160" not in str(data)
+
+    events = client.get(f"{BASE}/events").json()
+    assert events["total"] == 4 and events["items"][0]["label"] == "Richtlinie geändert"
+    assert events["items"][0]["initiator"] == "Ina Beispiel"
+    by_id = {e["id"]: e for e in events["items"]}
+    assert by_id["1003"]["initiator"] == "System"
+    assert by_id["1003"]["object"] == "nb-peer-19.netbird.example.com"
+    assert by_id["1003"]["change"] == "+ grp-beispiel-vertrieb"
+    only = client.get(f"{BASE}/events", params={"kind": "peer"}).json()
+    assert {e["id"] for e in only["items"]} == {"1002", "1004"}
+    page = client.get(f"{BASE}/events", params={"limit": 2, "offset": 2}).json()
+    assert len(page["items"]) == 2 and page["total"] == 4
+    assert client.get(f"{BASE}/events", params={"days": 5}).status_code == 422
+    assert client.get(f"{BASE}/events", params={"days": 30}).json()["days"] == 30
+    assert client.get(f"{BASE}/events", params={"kind": "unsinn"}).status_code == 422
+
+    overview = client.get(f"{BASE}/overview").json()
+    assert len(overview["events"]) == 4 and overview["events_available"] is True
+    detail = client.get(f"{BASE}/peers/p-07").json()
+    assert detail["policies_available"] is True
+    assert any(t["target"] == "Büronetz" for t in detail["targets"])
+
+
+@pytest.mark.db
+def test_admin_server_groups(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    client = admin(settings)
+    body = {"url": "https://netbird.example.com"}
+    saved = client.put(
+        ADMIN, json={**body, "server_groups": "grp-a, grp-b, GRP-A, "}, headers=HEADERS
+    )
+    assert saved.json()["server_groups"] == "grp-a, grp-b"
+    too_many = ", ".join(f"g{i}" for i in range(51))
+    assert (
+        client.put(ADMIN, json={**body, "server_groups": too_many}, headers=HEADERS).status_code
+        == 422
+    )

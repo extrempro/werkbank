@@ -155,6 +155,16 @@ KINDS: dict[str, KindInfo] = {
         "NetBird lässt sich mehrmals hintereinander nicht abrufen",
         (Role.WERKBANK_ADMIN,),
     ),
+    "monitoring.netbird_hinweis": KindInfo(
+        "IT-Monitoring",
+        "Neuer Hinweis zu NetBird der Stufe kritisch oder Warnung",
+        (Role.NETBIRD_READER,),
+    ),
+    "monitoring.netbird_info": KindInfo(
+        "IT-Monitoring",
+        "Neuer Hinweis zu NetBird der Stufe Info",
+        (Role.NETBIRD_READER,),
+    ),
     "monitoring.zabbix_dienstkonto": KindInfo(
         "IT-Monitoring",
         "Token für Zabbix läuft ab oder die Rolle des Dienstkontos erlaubt zu viel",

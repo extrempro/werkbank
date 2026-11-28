@@ -18,6 +18,8 @@ GROUPS = {
     "g-router": ("grp-beispiel-router", "api"),
     "g-server": ("grp-beispiel-server", "api"),
     "g-all": ("All", "api"),
+    "g-extern": ("grp-beispiel-extern", "api"),
+    "g-einkauf": ("grp-beispiel-einkauf", "integration"),
 }
 
 
@@ -60,6 +62,144 @@ def _peer(
         "connection_ip": "198.51.100.20",
         "serial_number": "SN-0000",
     }
+
+
+def _rule(sources: list[str], destinations: list[str], protocol: str, **extra: Any) -> Any:
+    return {
+        "name": "Regel",
+        "enabled": True,
+        "action": "accept",
+        "bidirectional": False,
+        "protocol": protocol,
+        "sources": [{"id": g, "name": GROUPS[g][0]} for g in sources],
+        "destinations": [{"id": g, "name": GROUPS[g][0]} for g in destinations],
+        **extra,
+    }
+
+
+def _policies() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": "pol-admin",
+            "name": "pol-beispiel-admin",
+            "enabled": True,
+            "source_posture_checks": [],
+            "rules": [_rule(["g-all"], ["g-all"], "all", bidirectional=True)],
+        },
+        {
+            "id": "pol-it",
+            "name": "pol-beispiel-it",
+            "enabled": True,
+            "source_posture_checks": ["pc-1", "pc-2"],
+            "rules": [
+                _rule(
+                    ["g-it"],
+                    [],
+                    "tcp",
+                    ports=["22", "443", "3389"],
+                    destinationResource={"id": "res-a", "type": "subnet"},
+                )
+            ],
+        },
+        {
+            "id": "pol-server",
+            "name": "pol-beispiel-server",
+            "enabled": True,
+            "source_posture_checks": [],
+            "rules": [_rule(["g-vertrieb"], ["g-server"], "tcp", ports=["443"])],
+        },
+        {
+            "id": "pol-dev",
+            "name": "pol-beispiel-dev",
+            "enabled": True,
+            "source_posture_checks": ["pc-1"],
+            "rules": [_rule(["g-it"], ["g-router"], "tcp")],
+        },
+        {
+            "id": "pol-extern",
+            "name": "pol-beispiel-extern",
+            "enabled": True,
+            "source_posture_checks": [],
+            "rules": [_rule(["g-extern"], ["g-server"], "icmp")],
+        },
+        {
+            "id": "pol-test",
+            "name": "pol-beispiel-test",
+            "enabled": False,
+            "source_posture_checks": [],
+            "rules": [
+                _rule(["g-it"], [], "icmp", destinationResource={"id": "p-44", "type": "peer"})
+            ],
+        },
+    ]
+
+
+def _events(now: datetime) -> list[dict[str, Any]]:
+    hour = timedelta(hours=1)
+    return [
+        {
+            "id": "1005",
+            "timestamp": _iso(now - hour),
+            "activity": "Policy updated",
+            "activity_code": "policy.update",
+            "initiator_id": "u-ina",
+            "initiator_name": "Ina Beispiel",
+            "initiator_email": "ina@example.com",
+            "target_id": "pol-admin",
+            "meta": {"name": "pol-beispiel-admin"},
+        },
+        {
+            "id": "1004",
+            "timestamp": _iso(now - 2 * hour),
+            "activity": "Peer added",
+            "activity_code": "peer.setupkey.add",
+            "initiator_id": "k-1",
+            "initiator_name": "key-beispiel-server",
+            "target_id": "p-44",
+            "meta": {
+                "name": "nb-peer-44",
+                "fqdn": "nb-peer-44.netbird.example.com",
+                "ip": "100.64.0.52",
+                "location_connection_ip": "198.51.100.20",
+                "serial_number": "SN-0000",
+            },
+        },
+        {
+            "id": "1003",
+            "timestamp": _iso(now - 3 * hour),
+            "activity": "Group added to peer",
+            "activity_code": "peer.group.add",
+            "initiator_id": "",
+            "initiator_name": "",
+            "target_id": "p-19",
+            "meta": {
+                "group": "grp-beispiel-vertrieb",
+                "group_id": "g-vertrieb",
+                "peer_fqdn": "nb-peer-19.netbird.example.com",
+                "peer_ip": "100.64.0.45",
+            },
+        },
+        {
+            "id": "1002",
+            "timestamp": _iso(now - 26 * hour),
+            "activity": "Peer approved",
+            "activity_code": "peer.approve",
+            "initiator_id": "u-max",
+            "initiator_name": "Max Muster",
+            "target_id": "p-07",
+            "meta": {"name": "nb-peer-07"},
+        },
+        {
+            "id": "1001",
+            "timestamp": _iso(now - timedelta(days=124)),
+            "activity": "Policy updated",
+            "activity_code": "policy.update",
+            "initiator_id": "u-max",
+            "initiator_name": "Max Muster",
+            "target_id": "pol-test",
+            "meta": {"name": "pol-beispiel-test"},
+        },
+    ]
 
 
 def responses(now: datetime | None = None) -> dict[str, Any]:
@@ -151,6 +291,53 @@ def responses(now: datetime | None = None) -> dict[str, Any]:
     return {
         "peers": peers,
         "groups": groups,
+        "policies": _policies(),
+        "posture-checks": [
+            {"id": "pc-1", "name": "Client-Version"},
+            {"id": "pc-2", "name": "Betriebssystem"},
+        ],
+        "setup-keys": [
+            {
+                "id": "k-1",
+                "name": "key-beispiel-server",
+                "key": "A6160****",
+                "type": "reusable",
+                "expires": _iso(now + 6 * day),
+                "valid": True,
+                "revoked": False,
+                "state": "valid",
+                "used_times": 7,
+                "usage_limit": 0,
+                "auto_groups": ["g-server"],
+            },
+            {
+                "id": "k-2",
+                "name": "key-beispiel-kiosk",
+                "key": "B7271****",
+                "type": "one-off",
+                "expires": _iso(now + 29 * day),
+                "valid": True,
+                "revoked": False,
+                "state": "valid",
+                "used_times": 0,
+                "usage_limit": 1,
+                "auto_groups": ["g-extern"],
+            },
+            {
+                "id": "k-3",
+                "name": "key-beispiel-router",
+                "key": "C8382****",
+                "type": "reusable",
+                "expires": "0001-01-01T00:00:00Z",
+                "valid": True,
+                "revoked": False,
+                "state": "valid",
+                "used_times": 4,
+                "usage_limit": 0,
+                "auto_groups": ["g-router"],
+            },
+        ],
+        "events/audit": _events(now),
         "users": [
             {"id": "u-ina", "name": "Ina Beispiel", "email": "ina@example.com"},
             {"id": "u-max", "name": "Max Muster", "email": "max@example.com"},

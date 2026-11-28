@@ -52,6 +52,46 @@ class NbPeerDay(Base):
     day: Mapped[date] = mapped_column(Date, primary_key=True, index=True)
 
 
+class NbEvent(Base):
+    """Ein Eintrag aus dem Ereignisprotokoll von NetBird (90 Tage)."""
+
+    __tablename__ = "mon_nb_events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    code: Mapped[str] = mapped_column(String(80))
+    category: Mapped[str] = mapped_column(String(20), index=True)
+    activity: Mapped[str] = mapped_column(String(255))
+    target_id: Mapped[str] = mapped_column(String(64), index=True)
+    initiator: Mapped[str] = mapped_column(String(255))
+    initiator_id: Mapped[str] = mapped_column(String(255))
+    meta: Mapped[dict[str, Any]] = mapped_column(JSONB)
+
+
+class NbPolicySeen(Base):
+    """Beobachteter Stand einer Richtlinie: wann zuletzt geändert, seit wann deaktiviert."""
+
+    __tablename__ = "mon_nb_policies_seen"
+
+    policy_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    digest: Mapped[str] = mapped_column(String(64))
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    disabled_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class NbHint(Base):
+    """Offener Hinweis; verschwindet, sobald er nicht mehr zutrifft (für die Glocke)."""
+
+    __tablename__ = "mon_nb_hints"
+
+    key: Mapped[str] = mapped_column(String(300), primary_key=True)
+    level: Mapped[str] = mapped_column(String(10))
+    title: Mapped[str] = mapped_column(String(300))
+    link: Mapped[str] = mapped_column(String(300))
+    since: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class NbCheck(Base):
     """Ein HTTPS-Abruf eines Dienstes am Reverse Proxy (für die Verfügbarkeit über 30 Tage)."""
 

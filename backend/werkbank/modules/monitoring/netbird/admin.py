@@ -68,6 +68,7 @@ class SettingsOut(BaseModel):
     ping: bool
     signal: str
     relay: str
+    server_groups: str
     token_storage_available: bool
     last_run_at: Any = None
     last_ok: bool | None = None
@@ -83,6 +84,7 @@ def _out(db: DbDep, settings: SettingsDep) -> SettingsOut:
         ping=options.ping,
         signal=options.signal,
         relay=options.relay,
+        server_groups=", ".join(options.server_groups),
         token_storage_available=secret_key_available(settings),
         last_run_at=run.started_at if run else None,
         last_ok=run.ok if run else None,
@@ -103,6 +105,27 @@ class SettingsIn(BaseModel):
     # Host:Port für die TCP-Prüfung; leer: keine Prüfung
     signal: str = Field(default="", max_length=260, pattern=TARGET_PATTERN)
     relay: str = Field(default="", max_length=260, pattern=TARGET_PATTERN)
+    # Gruppennamen mit Servern, mit Komma getrennt
+    server_groups: str = Field(default="", max_length=2000)
+
+
+GROUP_NAME_MAX = 255
+GROUPS_MAX = 50
+
+
+def parse_groups(value: str) -> list[str]:
+    """„a, b, A“ → ["a", "b"]: ohne Leere und doppelte (Groß-/Kleinschreibung egal)."""
+    out: list[str] = []
+    for part in value.split(","):
+        name = part.strip()
+        if name and name.casefold() not in {n.casefold() for n in out}:
+            out.append(name)
+    if len(out) > GROUPS_MAX or any(len(n) > GROUP_NAME_MAX for n in out):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Höchstens {GROUPS_MAX} Server-Gruppen mit je bis zu {GROUP_NAME_MAX} Zeichen.",
+        )
+    return out
 
 
 @router.put("")
@@ -127,8 +150,10 @@ def put_settings(
                 detail="Auf dem Server fehlt die Schlüsseldatei (settings_key). Ohne sie kann kein "
                 "Token gespeichert werden.",
             ) from error
+    groups = parse_groups(body.server_groups)
     before = load_settings(db)
     data["url"] = url
+    data["server_groups"] = groups
     data["ping"] = body.ping
     data["signal"] = body.signal.strip()
     data["relay"] = body.relay.strip()
@@ -144,6 +169,7 @@ def put_settings(
             "ping": body.ping,
             "signal": body.signal.strip(),
             "relay": body.relay.strip(),
+            "server_gruppen": len(groups),
         },
     )
     db.commit()
