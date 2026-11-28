@@ -95,3 +95,30 @@ test("NetBird: Verwaltung mit Zugang und Abruf für Admins mit Recht", async ({
     page.getByRole("link", { name: "CSV exportieren" }),
   ).toBeVisible();
 });
+
+test("NetBird: Netze & Dienste mit Ausfallweg und Dienstprüfung", async ({
+  page,
+}) => {
+  await loadSample(page);
+  await loginAs(page, ["NetBird.Reader"], "Nora NetBird");
+  await page.goto("/monitoring/netbird");
+  await page.getByRole("link", { name: /ohne Ausfallweg/ }).click();
+  await expect(page).toHaveURL(/\/monitoring\/netbird\/netze$/);
+  const nets = page.getByRole("table", { name: "Netze" });
+  await expect(nets.getByRole("row", { name: /net-beispiel-b/ })).toContainText(
+    "nicht erreichbar",
+  );
+  await expect(nets.getByRole("row", { name: /net-beispiel-a/ })).toContainText(
+    "ohne Ausfallweg",
+  );
+  const services = page.getByRole("table", {
+    name: "Dienste am Reverse Proxy",
+  });
+  await expect(
+    services.getByRole("row", { name: /wiki\.example\.com/ }),
+  ).toContainText("502");
+  await expect(
+    services.getByRole("row", { name: /intern\.example\.com/ }),
+  ).toContainText("nicht geprüft");
+  await expectNoA11yViolations(page);
+});

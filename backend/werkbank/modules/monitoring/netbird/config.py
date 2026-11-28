@@ -11,6 +11,8 @@ from werkbank.modules.monitoring.netbird.client import NetBirdConfig
 
 # Verlauf der verbundenen Peers und Verbindungstage je Peer
 HISTORY_DAYS = 90
+# Verfügbarkeit der Dienste am Reverse Proxy
+CHECK_DAYS = 30
 
 
 @dataclass(frozen=True)
@@ -18,6 +20,8 @@ class NetBirdSettings:
     url: str
     token_set: bool
     ping: bool
+    signal: str
+    relay: str
 
 
 def stored(db: Session) -> dict[str, Any]:
@@ -31,6 +35,8 @@ def load_settings(db: Session) -> NetBirdSettings:
         url=str(data.get("url") or ""),
         token_set=bool(data.get("token_encrypted")),
         ping=data.get("ping") is True,
+        signal=str(data.get("signal") or ""),
+        relay=str(data.get("relay") or ""),
     )
 
 

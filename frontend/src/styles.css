@@ -18820,3 +18820,26 @@ textarea.field-control {
   background: none;
   border: 1px dashed var(--farbe-rand-stark);
 }
+
+.nb-section-title {
+  font-size: 1.05rem;
+  margin: 0 0 8px;
+}
+
+.nb-ok {
+  color: var(--farbe-ok-text);
+  font-weight: 600;
+}
+
+.nb-bad {
+  color: var(--farbe-bad-text);
+  font-weight: 600;
+}
+
+.nb-router {
+  display: block;
+}
+
+.nb-row-bad {
+  background: var(--farbe-bad-flaeche);
+}

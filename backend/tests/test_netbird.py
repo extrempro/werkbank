@@ -25,13 +25,14 @@ from werkbank.modules.monitoring.netbird.client import (
     NetBirdError,
     NotAvailableError,
 )
-from werkbank.modules.monitoring.netbird.models import NbDaily, NbPeerDay, NbRun, NbState
+from werkbank.modules.monitoring.netbird.models import NbCheck, NbDaily, NbPeerDay, NbRun, NbState
 from werkbank.modules.monitoring.netbird.normalize import fetch
 from werkbank.modules.monitoring.netbird.notifications import netbird_notifications
 
 BASE = "/api/monitoring/netbird"
 ADMIN = "/api/admin/settings/netbird"
 CONFIG = NetBirdConfig(url="https://netbird.example.com", token="t")  # noqa: S106
+CHECKER = sample.sample_checker()
 
 
 def fetched() -> dict[str, Any]:
@@ -111,7 +112,7 @@ def test_hints_on_sample() -> None:
 
 @pytest.fixture
 def db(migrated_db: None, db_session: Session) -> Session:
-    for table in (NbState, NbRun, NbDaily, NbPeerDay, AppSetting):
+    for table in (NbState, NbRun, NbDaily, NbPeerDay, NbCheck, AppSetting):
         db_session.execute(delete(table))
     db_session.execute(delete(Job).where(Job.type == collector.NETBIRD_JOB))
     db_session.commit()
@@ -131,9 +132,11 @@ def configure(db: Session, settings: Settings) -> None:
 @pytest.mark.db
 def test_collect_state_history_and_failures(db: Session, tmp_path: Path) -> None:
     settings = settings_with_key(tmp_path)
-    assert collector.collect(db, settings, transport=sample.sample_transport) is None
+    assert (
+        collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER) is None
+    )
     configure(db, settings)
-    run = collector.collect(db, settings, transport=sample.sample_transport)
+    run = collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
     assert run is not None and run.ok
     state = db.get(NbState, 1)
     assert state is not None and len(state.data["peers"]) == 6
@@ -145,7 +148,7 @@ def test_collect_state_history_and_failures(db: Session, tmp_path: Path) -> None
     db.add(NbDaily(day=today - timedelta(days=95), max_connected=1, total=1))
     db.add(NbPeerDay(peer_id="alt", day=date(2020, 1, 1)))
     db.commit()
-    collector.collect(db, settings, transport=sample.sample_transport)
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
     assert db.get(NbDaily, today - timedelta(days=95)) is None
     assert "alt" not in set(db.scalars(select(NbPeerDay.peer_id)))
 
@@ -153,7 +156,7 @@ def test_collect_state_history_and_failures(db: Session, tmp_path: Path) -> None
         raise NetBirdError("NetBird ist nicht erreichbar.")
 
     for _ in range(3):
-        failed = collector.collect(db, settings, transport=failing)
+        failed = collector.collect(db, settings, transport=failing, checker=CHECKER)
         assert failed is not None and not failed.ok
     assert db.get(NbState, 1) is not None  # letzter Stand bleibt
     events = list(netbird_notifications(db, settings, now_utc()))
@@ -164,7 +167,7 @@ def test_collect_state_history_and_failures(db: Session, tmp_path: Path) -> None
 def test_api_rights_overview_peers(db: Session, tmp_path: Path) -> None:
     settings = settings_with_key(tmp_path)
     configure(db, settings)
-    collector.collect(db, settings, transport=sample.sample_transport)
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
     client = client_for(make_app(settings))
     login_as(client, ["Werkbank.Admin", "Monitoring.Reader"], oid="nb-admin-ohne-recht")
     assert client.get(f"{BASE}/overview").status_code == 403
@@ -223,7 +226,7 @@ def test_peer_detail_asset_hint(db: Session, tmp_path: Path) -> None:
 
     settings = settings_with_key(tmp_path)
     configure(db, settings)
-    collector.collect(db, settings, transport=sample.sample_transport)
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
     kind = db.scalars(select(InventoryKind).limit(1)).first()
     if kind is None:
         kind = InventoryKind(name="Notebook")
@@ -299,3 +302,129 @@ def test_sample_endpoint_only_in_tests(db: Session, tmp_path: Path) -> None:
     with pytest.raises(HTTPException) as error:
         load_sample(user=None, db=db, settings=settings)  # type: ignore[arg-type]
     assert error.value.status_code == 404
+
+
+# --- Netze & Dienste (Phase 2) -------------------------------------------------------------
+
+
+def test_services_never_keep_secrets() -> None:
+    data = fetched()
+    services = {item["id"]: item for item in data["services"]}
+    assert services["s-files"]["access"] == "Passwort"
+    assert (
+        services["s-wiki"]["access"] == "SSO" and services["s-wiki"]["crowdsec_mode"] == "enforce"
+    )
+    assert services["s-intern"]["access"] == "nur NetBird"
+    assert services["s-files"]["crowdsec_mode"] == "off"
+    assert "geheim-beispiel" not in str(data)
+    assert data["clusters"][0]["crowdsec"] is True
+    nets = {n["id"]: n for n in data["networks"]}
+    assert nets["n-a"]["routers"][0]["peer"] == "p-router-01"
+    assert nets["n-s"]["routers"][0]["peer_groups"] == ["g-router"]
+
+
+def test_network_status_and_hints() -> None:
+    data = fetched()
+    data["checks"] = {"services": {}, "ping": {}}
+    nets = {n["id"]: hints.network_status(n, data) for n in data["networks"]}
+    assert nets["n-a"]["state"] == "ohne_ausfallweg" and nets["n-a"]["connected"] == 1
+    assert nets["n-b"]["state"] == "nicht_erreichbar"
+    assert nets["n-s"]["total"] == 2 and nets["n-s"]["state"] == "ohne_ausfallweg"
+    codes = {(h.code, h.subject) for h in hints.network_hints(data)}
+    assert ("netz_offline", "netz:n-b") in codes and ("netz_ausfallweg", "netz:n-a") in codes
+    # Ping schlägt fehl, obwohl Routing-Peers verbunden sind
+    data["peers"][1]["connected"] = True
+    data["checks"]["ping"] = {"n-s": {"target": "10.0.30.1", "ok": False}}
+    status = hints.network_status(data["networks"][2], data)
+    assert status["state"] == "nicht_erreichbar" and status["ping"] is False
+    assert any(h.code == "netz_ping" for h in hints.network_hints(data))
+    assert collector.ping_target(data["networks"][0]) == "10.0.0.20"
+    assert collector.ping_target(data["networks"][2]) == ""
+
+
+def test_check_helpers() -> None:
+    from werkbank.modules.monitoring.netbird.checks import tcp_check, valid_domain
+
+    assert valid_domain("wiki.example.com")
+    assert not valid_domain("localhost") and not valid_domain("a.example.com/pfad")
+    assert not valid_domain("user@example.com") and not valid_domain("example.com:8443")
+    assert tcp_check("ohne-port").ok is False
+
+
+@pytest.mark.db
+def test_checks_hints_and_networks_api(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    configure(db, settings)
+    set_setting(
+        db,
+        NETBIRD_KEY,
+        {
+            "url": "https://netbird.example.com",
+            "token_encrypted": encrypt_secret(settings, "t"),
+            "signal": "signal.example.com:443",
+            "ping": True,
+        },
+        None,
+    )
+    db.commit()
+    for _ in range(2):
+        collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
+    state = db.get(NbState, 1)
+    assert state is not None
+    checks = state.data["checks"]
+    assert set(checks["services"]) == {"s-wiki", "s-git", "s-files"}  # privat: nicht geprüft
+    assert checks["signal"]["ok"] is True and "relay" not in checks
+    assert checks["ping"]["n-a"] == {"target": "10.0.0.20", "ok": True}
+    assert db.scalar(select(func.count()).select_from(NbCheck)) == 6
+    found = {(h.code, h.subject) for h in hints.all_hints(state.data, now_utc())}
+    assert ("dienst_fehler", "dienst:s-wiki") in found
+    assert ("zertifikat", "dienst:s-git") in found
+    assert ("zertifikat", "dienst:s-files") not in found
+
+    client = client_for(make_app(settings))
+    login_as(client, ["NetBird.Reader"], oid="nb-netze")
+    data = client.get(f"{BASE}/networks").json()
+    assert data["components"]["signal"]["ok"] is True and data["components"]["relay"] is None
+    assert data["components"]["proxy"] == {
+        "services": 4,
+        "errors": 1,
+        "online": True,
+        "crowdsec": True,
+    }
+    states = {n["name"]: n["state"] for n in data["networks"]}
+    assert states == {
+        "net-beispiel-a": "ohne_ausfallweg",
+        "net-beispiel-b": "nicht_erreichbar",
+        "net-beispiel-server": "ohne_ausfallweg",
+    }
+    assert data["networks"][0]["name"] == "net-beispiel-b"  # schlimmstes zuerst
+    services = {r["domain"]: r for r in data["services"]}
+    assert services["wiki.example.com"]["status_code"] == 502
+    assert services["wiki.example.com"]["availability"] == 0.0
+    assert services["files.example.com"]["availability"] == 100.0
+    assert services["intern.example.com"]["answered"] is None
+    assert data["services"][0]["domain"] == "wiki.example.com"
+    overview = client.get(f"{BASE}/overview").json()
+    assert overview["networks_total"] == 3 and overview["networks_ok"] == 2
+    assert overview["services_ok"] == 2 and overview["services_checked"] == 3
+    assert overview["hint_counts"]["kritisch"] == 2
+    login_as(client, ["Werkbank.Admin"], oid="nb-netze-admin")
+    assert client.get(f"{BASE}/networks").status_code == 403
+
+    # Alte Prüfungen fallen nach 31 Tagen weg
+    db.add(NbCheck(service_id="alt", checked_at=now_utc() - timedelta(days=40), ok=True))
+    db.commit()
+    collector.collect(db, settings, transport=sample.sample_transport, checker=CHECKER)
+    assert "alt" not in set(db.scalars(select(NbCheck.service_id)))
+
+
+@pytest.mark.db
+def test_admin_signal_relay(db: Session, tmp_path: Path) -> None:
+    settings = settings_with_key(tmp_path)
+    client = admin(settings)
+    body = {"url": "https://netbird.example.com", "signal": "signal.example.com:443"}
+    saved = client.put(ADMIN, json={**body, "relay": "relay.example.com:443"}, headers=HEADERS)
+    assert saved.json()["signal"] == "signal.example.com:443"
+    assert saved.json()["relay"] == "relay.example.com:443"
+    for bad in ("signal.example.com", "http://x.example.com:443", "x y:1"):
+        assert client.put(ADMIN, json={**body, "signal": bad}, headers=HEADERS).status_code == 422

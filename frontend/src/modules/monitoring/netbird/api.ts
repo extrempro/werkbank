@@ -31,6 +31,12 @@ export interface NbBase {
 
 export interface NbOverview extends NbBase {
   can_refresh: boolean;
+  networks_total: number;
+  networks_ok: number;
+  networks_single: number;
+  services_total: number;
+  services_ok: number;
+  services_checked: number;
   peers: number;
   connected: number;
   routers: number;
@@ -125,6 +131,60 @@ export function fetchNbPeer(id: string): Promise<NbPeerDetail> {
 
 export const PEERS_CSV_URL = `${BASE}/peers.csv`;
 
+export type NbNetworkState = "erreichbar" | "ohne_ausfallweg" | "nicht_erreichbar" | "ohne_router";
+
+export interface NbNetwork {
+  id: string;
+  name: string;
+  kind: string;
+  ranges: string[];
+  routers: { id: string; name: string; connected: boolean }[];
+  connected: number;
+  total: number;
+  state: NbNetworkState;
+  state_label: string;
+  target: string;
+  ping: boolean | null;
+}
+
+export interface NbService {
+  id: string;
+  domain: string;
+  target: string;
+  access: string;
+  private: boolean;
+  status_code: number | null;
+  answered: boolean | null;
+  error: string;
+  ms: number | null;
+  availability: number | null;
+  cert_expires: string | null;
+  crowdsec_mode: string;
+}
+
+export interface NbTcp {
+  target: string;
+  ok: boolean;
+  ms: number | null;
+  error: string;
+}
+
+export interface NbNetworks extends NbBase {
+  components: {
+    management: { ok: boolean; ms: number | null };
+    signal: NbTcp | null;
+    relay: NbTcp | null;
+    proxy: { services: number; errors: number; online: boolean | null; crowdsec: boolean };
+  };
+  ping_enabled: boolean;
+  networks: NbNetwork[];
+  services: NbService[];
+}
+
+export function fetchNbNetworks(): Promise<NbNetworks> {
+  return getJson(`${BASE}/networks`);
+}
+
 export function refreshNetbird(): Promise<{ scheduled: boolean }> {
   return postJson(`${BASE}/refresh`);
 }
@@ -135,6 +195,8 @@ export interface NbAdminSettings {
   url: string;
   token_set: boolean;
   ping: boolean;
+  signal: string;
+  relay: string;
   token_storage_available: boolean;
   last_run_at: string | null;
   last_ok: boolean | null;
@@ -149,6 +211,8 @@ export function saveNbAdmin(update: {
   url: string;
   token?: string;
   ping: boolean;
+  signal: string;
+  relay: string;
 }): Promise<NbAdminSettings> {
   return putJson(ADMIN, update);
 }

@@ -1,7 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { NbAdminSettings, NbOverview, NbPeerDetail, NbPeers } from "./api";
+import type { NbAdminSettings, NbNetworks, NbOverview, NbPeerDetail, NbPeers } from "./api";
 import { NetbirdAdminPage } from "./NetbirdAdminPage";
+import { NetbirdNetworksPage } from "./NetbirdNetworksPage";
 import { NetbirdOverviewPage, NetbirdPeersPage } from "./NetbirdPages";
 
 afterEach(() => {
@@ -32,6 +33,12 @@ const hint = {
 const overview: NbOverview = {
   ...base,
   can_refresh: false,
+  networks_total: 3,
+  networks_ok: 2,
+  networks_single: 2,
+  services_total: 4,
+  services_ok: 2,
+  services_checked: 3,
   peers: 6,
   connected: 3,
   routers: 2,
@@ -199,6 +206,8 @@ describe("NetBird", () => {
       url: "",
       token_set: false,
       ping: false,
+      signal: "",
+      relay: "",
       token_storage_available: true,
       last_run_at: null,
       last_ok: null,
@@ -220,6 +229,15 @@ describe("NetBird", () => {
     expect(screen.getByText(/https-Adresse ohne Pfad/)).toBeInTheDocument();
     expect(calls.some((call) => call.startsWith("PUT"))).toBe(false);
     fireEvent.change(url, { target: { value: "https://netbird.example.com" } });
+    fireEvent.change(screen.getByRole("textbox", { name: /Signal/ }), {
+      target: { value: "signal.example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(screen.getByText(/als Host:Port eintragen/)).toBeInTheDocument();
+    expect(calls.some((call) => call.startsWith("PUT"))).toBe(false);
+    fireEvent.change(screen.getByRole("textbox", { name: /Signal/ }), {
+      target: { value: "signal.example.com:443" },
+    });
     fireEvent.change(screen.getByLabelText("API-Token", { selector: "input" }), {
       target: { value: "geheim" },
     });
@@ -229,5 +247,62 @@ describe("NetBird", () => {
     ).toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "Verbindung prüfen" }));
     expect(await screen.findByText(/6 Peers, 5 Gruppen, 3 Richtlinien/)).toBeInTheDocument();
+  });
+
+  it("zeigt Komponenten, Netze mit Ausfallweg und Dienste mit Zertifikat", async () => {
+    const networks: NbNetworks = {
+      ...base,
+      components: {
+        management: { ok: true, ms: 84 },
+        signal: { target: "signal.example.com:443", ok: true, ms: 12, error: "" },
+        relay: null,
+        proxy: { services: 4, errors: 1, online: true, crowdsec: true },
+      },
+      ping_enabled: false,
+      networks: [
+        {
+          id: "n-b",
+          name: "net-beispiel-b",
+          kind: "network",
+          ranges: ["10.0.20.0/24"],
+          routers: [{ id: "p-router-02", name: "nb-router-02", connected: false }],
+          connected: 0,
+          total: 1,
+          state: "nicht_erreichbar",
+          state_label: "nicht erreichbar",
+          target: "",
+          ping: null,
+        },
+      ],
+      services: [
+        {
+          id: "s-wiki",
+          domain: "wiki.example.com",
+          target: "10.0.30.21:3000",
+          access: "SSO",
+          private: false,
+          status_code: 502,
+          answered: false,
+          error: "",
+          ms: 120,
+          availability: 98.9,
+          cert_expires: new Date(Date.now() + 21 * 24 * 3600 * 1000).toISOString(),
+          crowdsec_mode: "enforce",
+        },
+      ],
+    };
+    stub({ "GET /api/monitoring/netbird/networks": networks });
+    render(<NetbirdNetworksPage />);
+    expect(await screen.findByText("API in 84 ms")).toBeInTheDocument();
+    expect(screen.getByText("nicht eingetragen")).toBeInTheDocument();
+    expect(screen.getByText("1 mit Fehler")).toBeInTheDocument();
+    const nets = screen.getByRole("table", { name: "Netze" });
+    expect(within(nets).getByRole("row", { name: /net-beispiel-b/ })).toHaveTextContent("0 von 1");
+    expect(within(nets).queryByRole("columnheader", { name: /Testziel/ })).not.toBeInTheDocument();
+    const services = screen.getByRole("table", { name: "Dienste am Reverse Proxy" });
+    const wiki = within(services).getByRole("row", { name: /wiki.example.com/ });
+    expect(wiki).toHaveTextContent("502");
+    expect(wiki).toHaveTextContent("98,9 %");
+    expect(wiki).toHaveTextContent(/in 2[01] Tagen/);
   });
 });
