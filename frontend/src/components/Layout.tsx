@@ -18,6 +18,10 @@ import {
   ADMIN_BACKUP_PATH,
   ADMIN_CONNECTIONS_PATH,
   ADMIN_ZABBIX_PATH,
+  ADMIN_FORTIGATE_PATH,
+  MONITORING_FORTIGATE_OBJECTS_PATH,
+  MONITORING_FORTIGATE_PATH,
+  MONITORING_FORTIGATE_POLICIES_PATH,
   ADMIN_MAIL_PATH,
   ADMIN_PATH,
   ADMIN_PERMISSIONS_PATH,
@@ -80,6 +84,12 @@ import { FEEDBACK_ADMIN_PATH, FEEDBACK_PATH, parseFeedbackAdminPath } from "../f
 import { NotificationSettingsPage } from "../pages/NotificationSettingsPage";
 import { HandbookPage } from "../pages/HandbookPage";
 import { DeviceAssociationPage } from "../modules/devices/DeviceAssociationPage";
+import { FortigateAdminPage } from "../modules/monitoring/fortigate/FortigateAdminPage";
+import {
+  FortigateObjectsPage,
+  FortigateOverviewPage,
+  FortigatePoliciesPage,
+} from "../modules/monitoring/fortigate/FortigatePages";
 import { DnsCheckPage } from "../modules/monitoring/DnsCheckPage";
 import {
   ZabbixConnectionPage,
@@ -621,6 +631,14 @@ export function Layout({ me }: LayoutProps) {
     page = <ZabbixReportsPage />;
   } else if (path === ADMIN_ZABBIX_PATH && current) {
     page = <ZabbixConnectionPage />;
+  } else if (path === MONITORING_FORTIGATE_PATH && current) {
+    page = <FortigateOverviewPage roles={me.roles} />;
+  } else if (path === MONITORING_FORTIGATE_POLICIES_PATH && current) {
+    page = <FortigatePoliciesPage roles={me.roles} />;
+  } else if (path === MONITORING_FORTIGATE_OBJECTS_PATH && current) {
+    page = <FortigateObjectsPage />;
+  } else if (path === ADMIN_FORTIGATE_PATH && current) {
+    page = <FortigateAdminPage />;
   } else if (path === BUDGET_PATH && current) {
     page = <BudgetOverviewPage roles={me.roles} />;
   } else if (path === BUDGET_ACCOUNTS_PATH && current) {

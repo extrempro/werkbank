@@ -13,6 +13,8 @@ const ROLE_LABELS: readonly (readonly [string, string])[] = [
   ["Tools.User", "IT-Tools"],
   ["Monitoring.Reader", "IT-Monitoring"],
   ["Monitoring.Berichte", "Monitoring-Berichte"],
+  ["FortiGate.Editor", "FortiGate"],
+  ["FortiGate.Reader", "FortiGate"],
   ["Projekte.Editor", "IT-Projekte"],
   ["Projekte.Reader", "IT-Projekte"],
   ["Bestand.Editor", "IT-Bestand"],
@@ -82,6 +84,13 @@ const RIGHT_AREAS: readonly RightArea[] = [
     levels: [
       ["Lesen", "Monitoring.Reader", "Den ganzen Bereich ansehen"],
       ["Nur Berichte", "Monitoring.Berichte", "Nur die Berichte, ohne Hostdetails"],
+    ],
+  },
+  {
+    name: "FortiGate",
+    levels: [
+      ["Bearbeiten", "FortiGate.Editor", "Wie Lesen, dazu „Jetzt abrufen“"],
+      ["Lesen", "FortiGate.Reader", "Policies, Adressen und Dienste der Firewalls ansehen"],
     ],
   },
   {

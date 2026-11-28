@@ -186,6 +186,37 @@ export const HELP = {
     text: "Der Host steckt gerade in einer Wartung aus Zabbix. Seine Probleme blendet Zabbix dann meist aus.",
     topic: ["it-monitoring", "zabbix-uebersicht"],
   },
+  // IT-Monitoring: FortiGate
+  "fortigate.aenderungen": {
+    term: "Änderungen",
+    text: "So viele neue Konfigurationsstände gab es in den letzten 24 Stunden über alle Geräte. Ein Stand entsteht nur, wenn sich an einem Gerät etwas geändert hat.",
+    topic: ["it-monitoring", "fortigate-uebersicht"],
+  },
+  "fortigate.position": {
+    term: "Position",
+    text: "Platz der Policy in der Reihenfolge des Geräts. Die FortiGate prüft von oben nach unten, die erste passende Policy greift.",
+    topic: ["it-monitoring", "fortigate-policies"],
+  },
+  "fortigate.treffer": {
+    term: "Treffer",
+    text: "So oft hat die Policy gegriffen, seit der Zähler zuletzt zurückgesetzt wurde. Nach einem Neustart des Geräts beginnt er neu.",
+    topic: ["it-monitoring", "fortigate-policies"],
+  },
+  "fortigate.fabric-objekt": {
+    term: "Fabric-Objekt",
+    text: "Ein Objekt, das die Security Fabric vom Root an die anderen Geräte verteilt. „ja (2/3)“ heißt: auf zwei von drei Geräten als Fabric-Objekt vorhanden.",
+    topic: ["it-monitoring", "fortigate-objekte"],
+  },
+  "fortigate.verwendet": {
+    term: "Verwendet",
+    text: "So oft steht das Objekt direkt in Policies und Gruppen, über alle Geräte. Policies, die es über eine Gruppe nutzen, stehen in der Detailansicht.",
+    topic: ["it-monitoring", "fortigate-objekte"],
+  },
+  "fortigate.aufbewahrung": {
+    term: "Aufbewahrung der FortiGate-Daten",
+    text: "So lange bleiben Abrufe und Konfigurationsstände gespeichert, danach löscht die Werkbank sie. Der jüngste Stand je Gerät bleibt immer.",
+    topic: ["it-monitoring", "fortigate-einrichten"],
+  },
   // IT-Budget
   "budget.geplant": {
     term: "Geplant",
@@ -529,6 +560,10 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
     ["it-monitoring", "zabbix-bestand"],
   ],
   "/monitoring/zabbix": [["it-monitoring", "zabbix-uebersicht"]],
+  "/monitoring/fortigate": [["it-monitoring", "fortigate-uebersicht"]],
+  "/monitoring/fortigate/policies": [["it-monitoring", "fortigate-policies"]],
+  "/monitoring/fortigate/objekte": [["it-monitoring", "fortigate-objekte"]],
+  "/verwaltung/fortigate": [["it-monitoring", "fortigate-einrichten"]],
   "/doku": [["doku", "seiten"]],
   "/doku/verwaltung": [["doku", "verwaltung"]],
   "/tickets": [["tickets", "uebersicht"]],

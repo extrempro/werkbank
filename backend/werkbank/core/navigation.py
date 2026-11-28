@@ -76,6 +76,11 @@ PAGES: dict[str, tuple[str, ...]] = {
     "/monitoring/zabbix/wartungen": (Role.MONITORING_READER,),
     "/monitoring/zabbix/berichte": (Role.MONITORING_READER, Role.MONITORING_REPORTS),
     "/verwaltung/zabbix": (Role.WERKBANK_ADMIN,),
+    # FortiGate: eigene Rechte, unabhängig von Monitoring.Reader; Admins nur mit dem Recht
+    "/monitoring/fortigate": (Role.FORTIGATE_READER,),
+    "/monitoring/fortigate/policies": (Role.FORTIGATE_READER,),
+    "/monitoring/fortigate/objekte": (Role.FORTIGATE_READER,),
+    "/verwaltung/fortigate": (Role.WERKBANK_ADMIN,),
     "/verwaltung": (Role.WERKBANK_ADMIN,),
     "/verwaltung/berechtigungen": (Role.WERKBANK_ADMIN,),
     "/verwaltung/mail-teams": (Role.WERKBANK_ADMIN,),
