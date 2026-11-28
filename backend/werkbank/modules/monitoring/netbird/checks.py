@@ -56,6 +56,7 @@ def valid_domain(value: str) -> bool:
 
 def cert_expiry(domain: str, timeout: float = TIMEOUT) -> datetime | None:
     context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     with (
         socket.create_connection((domain, 443), timeout=timeout) as sock,
         context.wrap_socket(sock, server_hostname=domain) as tls,
