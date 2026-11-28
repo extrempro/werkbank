@@ -65,3 +65,19 @@ class FgRun(Base):
     snapshot_id: Mapped[int | None] = mapped_column(
         ForeignKey("mon_fg_snapshots.id", ondelete="SET NULL")
     )
+
+
+class FgUnused(Base):
+    """Seit wann ein Objekt auf einem Gerät unbenutzt ist (eigene Beobachtung, nicht rückwirkend).
+
+    Fällt nicht unter die Aufbewahrung: Der Eintrag bleibt, solange das Objekt existiert und
+    unbenutzt ist, und verschwindet, sobald es genutzt oder gelöscht wird."""
+
+    __tablename__ = "mon_fg_unused"
+
+    device_id: Mapped[int] = mapped_column(
+        ForeignKey("mon_fg_devices.id", ondelete="CASCADE"), primary_key=True
+    )
+    kind: Mapped[str] = mapped_column(String(20), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), primary_key=True)
+    since: Mapped[datetime] = mapped_column(DateTime(timezone=True))

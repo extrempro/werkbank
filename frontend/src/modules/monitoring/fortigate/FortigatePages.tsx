@@ -8,6 +8,7 @@ import {
   ADMIN_FORTIGATE_PATH,
   MONITORING_FORTIGATE_OBJECTS_PATH,
   MONITORING_FORTIGATE_POLICIES_PATH,
+  MONITORING_FORTIGATE_UNUSED_PATH,
 } from "../../../navigation";
 import { navigate, useSearchParam } from "../../../router";
 import { useDebounced } from "../../inventory/paged";
@@ -27,6 +28,8 @@ import {
   type FgPolicies,
   type FgPolicy,
   type FgPolicyFilter,
+  type FgSyncDevice,
+  type FgSyncState,
 } from "./api";
 
 /* IT-Monitoring › FortiGate: Übersicht, Policies, Adressen & Dienste. Nur lesend. */
@@ -146,6 +149,38 @@ function DataBar({ overview }: { overview: FgOverview | null }) {
   );
 }
 
+/** Leiste „Objekt-Synchronisierung“: je Gerät Rolle und Zahlen. */
+export function SyncBar({ devices }: { devices: FgSyncDevice[] }) {
+  if (devices.length === 0) {
+    return null;
+  }
+  return (
+    <section className="panel fg-sync" aria-labelledby="fg-sync-titel">
+      <div className="panel-head">
+        <h2 id="fg-sync-titel">Objekt-Synchronisierung</h2>
+        <InfoTip term="fortigate.fabric-sync" />
+      </div>
+      <ul className="fg-sync-list">
+        {devices.map((entry) => (
+          <li key={entry.device}>
+            <strong>{entry.device}</strong> <span className="pill pill-neutral">{entry.role}</span>
+            <span className="fg-sub">
+              {entry.synchronisiert} synchronisiert · {entry.lokal} lokal
+              {entry.abweichend > 0 && (
+                <>
+                  {" · "}
+                  <span className="fg-differs">{entry.abweichend} abweichend</span>
+                </>
+              )}
+              {entry.kandidaten > 0 && ` · ${entry.kandidaten} Kandidaten`}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 // --- Übersicht ----------------------------------------------------------------------------
 
 export function FortigateOverviewPage({ roles }: { roles: readonly string[] }) {
@@ -193,6 +228,7 @@ export function FortigateOverviewPage({ roles }: { roles: readonly string[] }) {
               <dd className="small">neue Konfigurationsstände seit gestern</dd>
             </div>
           </dl>
+          <SyncBar devices={data.sync} />
           <section className="panel" aria-labelledby="fg-geraete">
             <div className="panel-head">
               <h2 id="fg-geraete">Geräte</h2>
@@ -685,6 +721,20 @@ const KIND_LABELS: Record<FgKind, string> = {
 };
 const KIND_ORDER: FgKind[] = ["addresses", "address_groups", "services", "service_groups", "vips"];
 
+const SYNC_OPTIONS: { value: FgSyncState; label: string }[] = [
+  { value: "synchronisiert", label: "synchronisiert" },
+  { value: "lokal", label: "lokal" },
+  { value: "lokal_mehrfach", label: "lokal, gleicher Name auf mehreren Geräten" },
+  { value: "abweichend", label: "Sync abweichend" },
+];
+
+const SYNC_CLASS: Record<FgSyncState, string> = {
+  synchronisiert: "fg-sync-ok",
+  abweichend: "fg-differs",
+  lokal: "",
+  lokal_mehrfach: "",
+};
+
 function isKind(value: string): value is FgKind {
   return (KIND_ORDER as string[]).includes(value);
 }
@@ -701,12 +751,13 @@ export function FortigateObjectsPage() {
     () => new URLSearchParams(window.location.search).get("q") ?? "",
   );
   const [device, setDevice] = useState("");
+  const [sync, setSync] = useState("");
   const selected = useSearchParam("auswahl");
   const q = useDebounced(search.trim());
   const { data, error } = useLoaded<FgObjects>(
-    () => fetchFgObjects(kind, q, device),
+    () => fetchFgObjects(kind, q, device, sync),
     "Die Objekte konnten nicht geladen werden.",
-    [kind, q, device],
+    [kind, q, device, sync],
   );
   const detailRef = useRef<HTMLElement>(null);
   const current = data?.rows.find((row) => row.name === selected) ?? null;
@@ -717,12 +768,22 @@ export function FortigateObjectsPage() {
         title="Adressen & Dienste"
         sub="Objekte aller Geräte, nach Namen zusammengefasst, mit ihren Verwendungen."
         actions={
-          <a className="button button-secondary" href={objectsCsvUrl(kind, q, device)} download>
-            CSV exportieren
-          </a>
+          <>
+            <Link className="button button-secondary" to={MONITORING_FORTIGATE_UNUSED_PATH}>
+              Nur unbenutzte anzeigen{data ? ` (${data.unused})` : ""}
+            </Link>
+            <a
+              className="button button-secondary"
+              href={objectsCsvUrl(kind, q, device, sync)}
+              download
+            >
+              CSV exportieren
+            </a>
+          </>
         }
       />
       <DataBar overview={overview.data} />
+      {data && kind !== "vips" && <SyncBar devices={data.sync_bar} />}
       <FilterBar<FgKind>
         search={{
           label: "Suchen",
@@ -740,27 +801,41 @@ export function FortigateObjectsPage() {
             count: data ? data.counts[value] : null,
           })),
         }}
-        moreActive={device ? 1 : 0}
+        moreActive={[device, sync].filter(Boolean).length}
         onReset={
-          search || device
+          search || device || sync
             ? () => {
                 setSearch("");
                 setDevice("");
+                setSync("");
               }
             : undefined
         }
         more={
-          <label className="filter-field">
-            Gerät
-            <select value={device} onChange={(event) => setDevice(event.target.value)}>
-              <option value="">Alle Geräte</option>
-              {(data?.devices ?? []).map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <>
+            <label className="filter-field">
+              Gerät
+              <select value={device} onChange={(event) => setDevice(event.target.value)}>
+                <option value="">Alle Geräte</option>
+                {(data?.devices ?? []).map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="filter-field">
+              Fabric-Sync
+              <select value={sync} onChange={(event) => setSync(event.target.value)}>
+                <option value="">Alle Zustände</option>
+                {SYNC_OPTIONS.map((entry) => (
+                  <option key={entry.value} value={entry.value}>
+                    {entry.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
         }
       />
       {error && (
@@ -790,7 +865,7 @@ export function FortigateObjectsPage() {
                     <th scope="col">Name</th>
                     <th scope="col">Wert</th>
                     <th scope="col">Geräte</th>
-                    <th scope="col">Fabric-Objekt</th>
+                    <th scope="col">Fabric-Sync</th>
                     <th scope="col" className="number">
                       Verwendet
                     </th>
@@ -832,7 +907,7 @@ export function FortigateObjectsPage() {
         </aside>
       </div>
       <p className="small fg-legend">
-        Fabric-Objekt <InfoTip term="fortigate.fabric-objekt" /> · Verwendet{" "}
+        Fabric-Sync <InfoTip term="fortigate.fabric-sync" /> · Verwendet{" "}
         <InfoTip term="fortigate.verwendet" />
       </p>
     </div>
@@ -872,8 +947,17 @@ function ObjectRow({
           ? `alle ${total}`
           : row.devices.map((entry) => entry.device).join(", ")}
       </td>
-      <td data-label="Fabric-Objekt">
-        {fabric === 0 ? "nein" : `ja (${fabric}/${row.devices.length})`}
+      <td data-label="Fabric-Sync">
+        {row.sync ? (
+          <>
+            <span className={SYNC_CLASS[row.sync.state]}>{row.sync.label}</span>
+            {row.sync.candidate && <span className="fg-sub">Kandidat für Fabric-Sync</span>}
+          </>
+        ) : fabric > 0 ? (
+          `Fabric-Objekt (${fabric}/${row.devices.length})`
+        ) : (
+          <span className="fg-muted">Standard oder VIP</span>
+        )}
       </td>
       <td data-label="Verwendet" className="number">
         {row.uses}

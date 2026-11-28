@@ -202,6 +202,80 @@ def zone(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def local_in(item: dict[str, Any]) -> dict[str, Any]:
+    intf = item.get("intf")
+    return {
+        "id": item.get("policyid"),
+        "intf": _names(intf) if isinstance(intf, list) else ([_text(intf)] if intf else []),
+        "srcaddr": _names(item.get("srcaddr")),
+        "dstaddr": _names(item.get("dstaddr")),
+        "service": _names(item.get("service")),
+        "action": _text(item.get("action")),
+        "status": item.get("status") != "disable",
+    }
+
+
+def dos_policy(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": item.get("policyid"),
+        "intf": [_text(item.get("interface"))] if item.get("interface") else [],
+        "srcaddr": _names(item.get("srcaddr")),
+        "dstaddr": _names(item.get("dstaddr")),
+        "service": _names(item.get("service")),
+        "status": item.get("status") != "disable",
+    }
+
+
+def static_route(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "seq": item.get("seq-num"),
+        "dst": cidr(item.get("dst")) or "0.0.0.0/0",
+        "dstaddr": _text(item.get("dstaddr")),
+        "gateway": _text(item.get("gateway")),
+        "device": _text(item.get("device")),
+        "distance": item.get("distance") if isinstance(item.get("distance"), int) else None,
+        "blackhole": _on(item.get("blackhole")),
+        "status": item.get("status") != "disable",
+    }
+
+
+def policy_route(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "seq": item.get("seq-num"),
+        "input": _names(item.get("input-device")),
+        "srcaddr": _names(item.get("srcaddr")),
+        "dstaddr": _names(item.get("dstaddr")),
+        "output": _text(item.get("output-device")),
+        "gateway": _text(item.get("gateway")),
+        "status": item.get("status") != "disable",
+    }
+
+
+def sdwan_rule(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": item.get("id"),
+        "name": _text(item.get("name")),
+        "srcaddr": _names(item.get("src")),
+        "dstaddr": _names(item.get("dst")),
+        "status": item.get("status") != "disable",
+    }
+
+
+def vpn_selector(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": _text(item.get("name")),
+        "tunnel": _text(item.get("phase1name")),
+        "srcaddr": [_text(item.get("src-name"))]
+        if item.get("src-addr-type") in ("name", "name6") and item.get("src-name")
+        else [],
+        "dstaddr": [_text(item.get("dst-name"))]
+        if item.get("dst-addr-type") in ("name", "name6") and item.get("dst-name")
+        else [],
+        "src_subnet": cidr(item.get("src-subnet")),
+        "dst_subnet": cidr(item.get("dst-subnet")),
+    }
+
+
 def digest(config: dict[str, Any]) -> str:
     raw = json.dumps(config, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(raw.encode()).hexdigest()
@@ -229,6 +303,11 @@ OPTIONAL: dict[str, tuple[str, Any]] = {
     "ippools": ("firewall/ippool", ippool),
     "interfaces": ("system/interface", interface),
     "zones": ("system/zone", zone),
+    "local_in": ("firewall/local-in-policy", local_in),
+    "dos": ("firewall/DoS-policy", dos_policy),
+    "static_routes": ("router/static", static_route),
+    "policy_routes": ("router/policy", policy_route),
+    "vpn_selectors": ("vpn.ipsec/phase2-interface", vpn_selector),
 }
 LABELS = {
     "vips": "VIPs",
@@ -236,6 +315,12 @@ LABELS = {
     "ippools": "IP-Pools",
     "interfaces": "Interfaces",
     "zones": "Zonen",
+    "local_in": "Local-in-Policies",
+    "dos": "DoS-Policies",
+    "static_routes": "Statische Routen",
+    "policy_routes": "Policy-Routen",
+    "vpn_selectors": "VPN-Selektoren",
+    "sdwan": "SD-WAN-Regeln",
     "fabric": "Security Fabric",
     "ha": "HA-Einstellungen",
     "hits": "Trefferzähler",
@@ -262,6 +347,13 @@ def fetch(client: FortiGateClient) -> Fetched:
         except FortiGateError as error:
             config[key] = []
             notes.append(f"{LABELS[key]}: {error}")
+    try:
+        sdwan = client.cmdb("system/sdwan")
+        rules = sdwan[0].get("service") if sdwan else None
+        config["sdwan_rules"] = [sdwan_rule(item) for item in rules or [] if isinstance(item, dict)]
+    except FortiGateError as error:
+        config["sdwan_rules"] = []
+        notes.append(f"{LABELS['sdwan']}: {error}")
     try:
         csf = client.cmdb("system/csf")
         settings = csf[0] if csf else {}

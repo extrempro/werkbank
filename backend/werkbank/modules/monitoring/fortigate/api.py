@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from werkbank.core.admin_settings import client_ip
@@ -32,6 +32,15 @@ NameQuery = Annotated[str | None, Query(max_length=200)]
 KindQuery = Annotated[
     Literal["addresses", "address_groups", "services", "service_groups", "vips"], Query()
 ]
+SyncQuery = Annotated[
+    Literal["synchronisiert", "abweichend", "lokal", "lokal_mehrfach"] | None, Query()
+]
+UnusedKindQuery = Annotated[
+    Literal["addresses", "address_groups", "services", "service_groups", "vips", "ippools"] | None,
+    Query(),
+]
+DaysQuery = Annotated[int | None, Query(ge=1, le=3650)]
+DAYS = (30, 90, 365)
 
 
 def _time(value: int | None) -> datetime | None:
@@ -180,10 +189,12 @@ def get_objects(
     kind: KindQuery = "addresses",
     q: SearchQuery = "",
     device: NameQuery = None,
+    sync: SyncQuery = None,
 ) -> dict[str, Any]:
     """Adressen, Gruppen, Dienste und VIPs aller Geräte, nach Namen zusammengefasst."""
     query = analysis.parse_query(q)
-    data = views.objects(db, kind, query, device)
+    data = views.objects(db, kind, query, device, sync)
+    data["sync_bar"] = views.sync_bar(views.states(db))
     data["query"] = _query_kind(query)
     return data
 
@@ -196,9 +207,12 @@ def export_objects(
     kind: KindQuery = "addresses",
     q: SearchQuery = "",
     device: NameQuery = None,
+    sync: SyncQuery = None,
 ) -> Response:
-    data = views.objects(db, kind, analysis.parse_query(q), device)
-    lines: list[list[Any]] = [["Name", "Wert", "Geräte", "Fabric-Objekt", "Verwendungen"]]
+    data = views.objects(db, kind, analysis.parse_query(q), device, sync)
+    lines: list[list[Any]] = [
+        ["Name", "Wert", "Geräte", "Fabric-Objekt", "Fabric-Sync", "Verwendungen"]
+    ]
     for row in data["rows"]:
         lines.append(
             [
@@ -206,11 +220,130 @@ def export_objects(
                 row["value"],
                 ", ".join(d["device"] for d in row["devices"]),
                 ", ".join(d["device"] for d in row["devices"] if d["fabric"]),
+                row["sync"]["label"] if row.get("sync") else "",
                 row["uses"],
             ]
         )
     _audit_export(db, request, user, kind, len(lines) - 1)
     return _csv(lines, f"fortigate-{kind}.csv")
+
+
+UNUSED_LABELS = {
+    "addresses": "Adresse",
+    "address_groups": "Adressgruppe",
+    "services": "Dienst",
+    "service_groups": "Dienstgruppe",
+    "vips": "VIP",
+    "ippools": "IP-Pool",
+}
+
+
+def _unused(
+    db: DbDep,
+    device: str | None,
+    kind: str | None,
+    days: int | None,
+    disabled: bool,
+    groups: bool,
+    defaults: bool,
+) -> list[dict[str, Any]]:
+    if days is not None and days not in DAYS:
+        raise HTTPException(status_code=422, detail="Erlaubt sind 30, 90 oder 365 Tage.")
+    return views.unused_rows(
+        db,
+        device=device,
+        kind=kind,
+        min_days=days,
+        disabled_is_unused=disabled,
+        unused_groups_count=groups,
+        hide_defaults=not defaults,
+    )
+
+
+@router.get("/unused")
+def get_unused(
+    user: ReaderUser,
+    db: DbDep,
+    device: NameQuery = None,
+    kind: UnusedKindQuery = None,
+    days: DaysQuery = None,
+    disabled: bool = True,
+    groups: bool = True,
+    defaults: bool = False,
+) -> dict[str, Any]:
+    """Unbenutzte Objekte. `disabled`/`groups`: Verweise nur aus deaktivierten Einträgen bzw.
+    nur aus unbenutzten Gruppen zählen als unbenutzt. `defaults`: Standardobjekte zeigen."""
+    rows = _unused(db, device, kind, days, disabled, groups, defaults)
+    counts = {key: 0 for key in UNUSED_LABELS}
+    for row in rows:
+        counts[row["kind"]] += 1
+    return {
+        "rows": rows,
+        "counts": counts,
+        "devices": [state.device.name for state in views.states(db)],
+    }
+
+
+def _unused_lines(rows: list[dict[str, Any]]) -> list[list[Any]]:
+    lines: list[list[Any]] = [
+        ["Art", "Name", "Wert", "Geräte", "Fabric-Objekt", "Unbenutzt seit", "Grund"]
+    ]
+    for row in rows:
+        since = row.get("since")
+        lines.append(
+            [
+                UNUSED_LABELS.get(row["kind"], row["kind"]),
+                row["name"],
+                row["value"],
+                ", ".join(row["devices"]),
+                "ja" if row["fabric"] else "nein",
+                since.strftime("%d.%m.%Y") if since else "",
+                "; ".join(row["reasons"]),
+            ]
+        )
+    return lines
+
+
+@router.get("/unused.csv")
+def export_unused(
+    request: Request,
+    user: ReaderUser,
+    db: DbDep,
+    device: NameQuery = None,
+    kind: UnusedKindQuery = None,
+    days: DaysQuery = None,
+    disabled: bool = True,
+    groups: bool = True,
+    defaults: bool = False,
+) -> Response:
+    rows = _unused(db, device, kind, days, disabled, groups, defaults)
+    _audit_export(db, request, user, "unbenutzt", len(rows))
+    return _csv(_unused_lines(rows), "fortigate-unbenutzte-objekte.csv")
+
+
+class CleanupItem(BaseModel):
+    kind: Literal["addresses", "address_groups", "services", "service_groups", "vips", "ippools"]
+    name: str = Field(min_length=1, max_length=255)
+
+
+class CleanupIn(BaseModel):
+    items: list[CleanupItem] = Field(min_length=1, max_length=2000)
+    disabled: bool = True
+    groups: bool = True
+    defaults: bool = False
+
+
+@router.post("/unused/cleanup.csv")
+def cleanup_list(request: Request, body: CleanupIn, user: ReaderUser, db: DbDep) -> Response:
+    """Aufräumliste der gewählten unbenutzten Objekte als CSV. Gelöscht wird nichts."""
+    wanted = {(item.kind, item.name) for item in body.items}
+    rows = [
+        row
+        for row in _unused(db, None, None, None, body.disabled, body.groups, body.defaults)
+        if (row["kind"], row["name"]) in wanted
+    ]
+    _audit_export(db, request, user, "aufraeumliste", len(rows))
+    return _csv(_unused_lines(rows), "fortigate-aufraeumliste.csv")
 
 
 class RefreshOut(BaseModel):

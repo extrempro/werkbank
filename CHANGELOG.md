@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.155.0] – 2026-11-28
+
+### Neu
+
+- **IT-Monitoring › FortiGate, Phase 2: Fabric-Sync und unbenutzte Objekte.** Rolle je Gerät (Quelle, Sync an, nur lokal, ohne Fabric) und Zustand je Objekt über alle Geräte (synchronisiert, Sync abweichend, lokal, lokal mehrfach mit Hinweis „Kandidat für Fabric-Sync“); Leiste „Objekt-Synchronisierung“ auf Übersicht und Adressen & Dienste, Spalte und Filter „Fabric-Sync“. Neue Seite „Unbenutzte Objekte“ mit weiter Verweisprüfung (Firewall-, Local-in- und DoS-Policies, Gruppen, IP-Pools, statische und Policy-Routen, SD-WAN-Regeln, VPN-Selektoren), Schaltern für deaktivierte Einträge und unbenutzte Gruppen, ausgeblendeten Standardobjekten, „unbenutzt seit“ (Tabelle `mon_fg_unused`, Migration 0098), Filter 30/90/365 Tage, CSV und Aufräumliste. Der Abruf liest dafür zusätzlich Local-in-, DoS-Policies, Routen, SD-WAN und VPN-Phase-2 (freiwillig); der Inhalts-Fingerabdruck ändert sich deshalb einmalig. Doku: `spec.md`, `security/asvs-l2.md`, Handbuch, Info-Symbole.
+
 ## [0.154.0] – 2026-11-28
 
 ### Neu

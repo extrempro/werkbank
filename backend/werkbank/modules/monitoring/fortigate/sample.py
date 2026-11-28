@@ -153,6 +153,47 @@ DEVICES: dict[str, dict[str, Any]] = {
             }
         ],
         "system/ha": [{"mode": "a-p", "group-name": "cluster-edge"}],
+        "firewall/local-in-policy": [
+            {
+                "policyid": 1,
+                "intf": _n("lan"),
+                "srcaddr": _n("Netz-Buero"),
+                "dstaddr": _n("all"),
+                "service": _n("HTTPS"),
+                "action": "accept",
+            },
+        ],
+        "router/static": [
+            {
+                "seq-num": 1,
+                "dst": "0.0.0.0 0.0.0.0",
+                "gateway": "192.0.2.1",
+                "device": "wan1",
+                "distance": 10,
+            },
+            {
+                "seq-num": 2,
+                "dst": "0.0.0.0 0.0.0.0",
+                "dstaddr": "Netz-Standort-B",
+                "device": "ipsec-standort-b",
+            },
+        ],
+        "vpn.ipsec/phase2-interface": [
+            {
+                "name": "standort-b-p2",
+                "phase1name": "ipsec-standort-b",
+                "src-addr-type": "name",
+                "src-name": "Netz-Buero",
+                "dst-addr-type": "name",
+                "dst-name": "Netz-Standort-B",
+            },
+        ],
+        "system/sdwan": {
+            "status": "enable",
+            "service": [
+                {"id": 1, "name": "Server bevorzugt", "src": _n("Netz-Buero"), "dst": _n("srv-app")}
+            ],
+        },
         "monitor/firewall/policy": [
             {"policyid": 15, "hit_count": 1200, "last_used": 1795800000},
             {

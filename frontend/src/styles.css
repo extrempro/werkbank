@@ -18489,3 +18489,28 @@ textarea.field-control {
 .fg-field-tip > :first-child {
   flex: 1 1 auto;
 }
+
+.fg-sync-list {
+  margin: 0;
+  padding: 12px 16px 16px;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.fg-sync-ok {
+  color: var(--farbe-ok-text);
+}
+
+.fg-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+
+.fg-cleanup {
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}

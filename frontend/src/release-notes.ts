@@ -24,6 +24,20 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.155.0",
+    date: "2026-11-28",
+    summary: "FortiGate zeigt jetzt den Fabric-Sync und unbenutzte Objekte.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Die Leiste „Objekt-Synchronisierung“ zeigt je Firewall, ob sie Objekte aus der Security Fabric übernimmt, und wie viele Objekte synchron, abweichend oder nur lokal sind. In „Adressen & Dienste“ kannst du danach filtern.",
+          "Neu ist die Seite „Unbenutzte Objekte“: Adressen, Gruppen, Dienste, VIPs und IP-Pools, auf die nichts mehr verweist, mit dem Datum, seit dem sie unbenutzt sind. Ausgewählte Objekte lädst du als Aufräumliste herunter. Gelöscht wird nichts.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.154.0",
     date: "2026-11-28",
     summary: "Neu im IT-Monitoring: FortiGate mit Policies, Adressen und Diensten aller Firewalls.",

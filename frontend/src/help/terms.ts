@@ -207,6 +207,16 @@ export const HELP = {
     text: "Ein Objekt, das die Security Fabric vom Root an die anderen Geräte verteilt. „ja (2/3)“ heißt: auf zwei von drei Geräten als Fabric-Objekt vorhanden.",
     topic: ["it-monitoring", "fortigate-objekte"],
   },
+  "fortigate.fabric-sync": {
+    term: "Fabric-Sync",
+    text: "Ob die Security Fabric ein Objekt an alle Geräte verteilt (synchronisiert) oder ob es nur auf einem Gerät angelegt ist (lokal). „Sync abweichend“ heißt: Inhalt oder Vorhandensein passt nicht über alle Geräte.",
+    topic: ["it-monitoring", "fortigate-objekte"],
+  },
+  "fortigate.unbenutzt-seit": {
+    term: "Unbenutzt seit",
+    text: "Seit wann die Werkbank das Objekt als unbenutzt sieht. Gezählt wird erst ab dem Einbau dieser Funktion, nicht rückwirkend.",
+    topic: ["it-monitoring", "fortigate-unbenutzt"],
+  },
   "fortigate.verwendet": {
     term: "Verwendet",
     text: "So oft steht das Objekt direkt in Policies und Gruppen, über alle Geräte. Policies, die es über eine Gruppe nutzen, stehen in der Detailansicht.",
@@ -563,6 +573,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/monitoring/fortigate": [["it-monitoring", "fortigate-uebersicht"]],
   "/monitoring/fortigate/policies": [["it-monitoring", "fortigate-policies"]],
   "/monitoring/fortigate/objekte": [["it-monitoring", "fortigate-objekte"]],
+  "/monitoring/fortigate/unbenutzt": [["it-monitoring", "fortigate-unbenutzt"]],
   "/verwaltung/fortigate": [["it-monitoring", "fortigate-einrichten"]],
   "/doku": [["doku", "seiten"]],
   "/doku/verwaltung": [["doku", "verwaltung"]],
