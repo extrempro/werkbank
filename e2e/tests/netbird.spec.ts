@@ -115,10 +115,10 @@ test("NetBird: Netze & Dienste mit Ausfallweg und Dienstprüfung", async ({
     name: "Dienste am Reverse Proxy",
   });
   await expect(
-    services.getByRole("row", { name: /wiki\.example\.com/ }),
+    services.getByRole("row").filter({ hasText: "wiki.example.com" }),
   ).toContainText("502");
   await expect(
-    services.getByRole("row", { name: /intern\.example\.com/ }),
+    services.getByRole("row").filter({ hasText: "intern.example.com" }),
   ).toContainText("nicht geprüft");
   await expectNoA11yViolations(page);
 });

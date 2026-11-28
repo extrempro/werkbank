@@ -329,7 +329,12 @@ describe("NetBird", () => {
     expect(within(nets).getByRole("row", { name: /net-beispiel-b/ })).toHaveTextContent("0 von 1");
     expect(within(nets).queryByRole("columnheader", { name: /Testziel/ })).not.toBeInTheDocument();
     const services = screen.getByRole("table", { name: "Dienste am Reverse Proxy" });
-    const wiki = within(services).getByRole("row", { name: /wiki.example.com/ });
+    const wiki = within(services)
+      .getAllByRole("row")
+      .find((row) => row.textContent?.includes("wiki.example.com"));
+    if (!wiki) {
+      throw new Error("Zeile wiki fehlt");
+    }
     expect(wiki).toHaveTextContent("502");
     expect(wiki).toHaveTextContent("98,9 %");
     expect(wiki).toHaveTextContent(/in 2[01] Tagen/);
