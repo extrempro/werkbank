@@ -67,6 +67,9 @@ def group(item: dict[str, Any]) -> dict[str, Any]:
         "issued": _text(item.get("issued")),
         "peers": _ids(item.get("peers")),
         "peers_count": item.get("peers_count") if isinstance(item.get("peers_count"), int) else 0,
+        "resources_count": (
+            item.get("resources_count") if isinstance(item.get("resources_count"), int) else 0
+        ),
     }
 
 
@@ -167,6 +170,104 @@ def cluster(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _resource_ref(value: object) -> dict[str, str] | None:
+    if not isinstance(value, dict) or not value.get("id"):
+        return None
+    return {"id": _text(value.get("id")), "type": _text(value.get("type"))}
+
+
+def _port_ranges(value: object) -> list[list[int]]:
+    out = []
+    for item in value if isinstance(value, list) else []:
+        if isinstance(item, dict):
+            start, end = item.get("start"), item.get("end")
+            if isinstance(start, int) and isinstance(end, int):
+                out.append([start, end])
+    return out
+
+
+def policy_rule(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": _text(item.get("name")),
+        "enabled": item.get("enabled") is not False,
+        "action": _text(item.get("action")) or "accept",
+        "bidirectional": item.get("bidirectional") is True,
+        "protocol": _text(item.get("protocol")) or "all",
+        "ports": [_text(p, 20) for p in item.get("ports") or [] if isinstance(p, (str, int))],
+        "port_ranges": _port_ranges(item.get("port_ranges")),
+        "sources": _ids(item.get("sources")),
+        "destinations": _ids(item.get("destinations")),
+        "source_resource": _resource_ref(item.get("sourceResource")),
+        "destination_resource": _resource_ref(item.get("destinationResource")),
+    }
+
+
+def policy(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": _text(item.get("id")),
+        "name": _text(item.get("name")),
+        "enabled": item.get("enabled") is True,
+        "posture_checks": _ids(item.get("source_posture_checks")),
+        "rules": [policy_rule(r) for r in item.get("rules") or [] if isinstance(r, dict)],
+    }
+
+
+def setup_key(item: dict[str, Any]) -> dict[str, Any]:
+    """Setup-Key ohne den Schlüssel selbst."""
+    used, limit = item.get("used_times"), item.get("usage_limit")
+    return {
+        "id": _text(item.get("id")),
+        "name": _text(item.get("name")),
+        "type": _text(item.get("type")),
+        "expires": _text(item.get("expires")),
+        "valid": item.get("valid") is True,
+        "revoked": item.get("revoked") is True,
+        "state": _text(item.get("state")),
+        "used_times": used if isinstance(used, int) else 0,
+        "usage_limit": limit if isinstance(limit, int) else 0,
+        "last_used": _text(item.get("last_used")),
+        "groups": _ids(item.get("auto_groups")),
+        "ephemeral": item.get("ephemeral") is True,
+    }
+
+
+def posture_check(item: dict[str, Any]) -> dict[str, Any]:
+    return {"id": _text(item.get("id")), "name": _text(item.get("name"))}
+
+
+# Nur diese Angaben eines Ereignisses werden übernommen; nie Verbindungsadressen, Seriennummern
+# oder Schlüssel (NetBird liefert bei Peers und Setup-Keys mehr mit).
+EVENT_META = (
+    "name",
+    "fqdn",
+    "ip",
+    "peer_fqdn",
+    "peer_ip",
+    "group",
+    "group_id",
+    "type",
+    "resource_name",
+    "resource_type",
+    "email",
+    "role",
+)
+
+
+def event(item: dict[str, Any]) -> dict[str, Any]:
+    meta = item.get("meta")
+    meta = meta if isinstance(meta, dict) else {}
+    return {
+        "id": _text(item.get("id"), 64),
+        "at": _text(item.get("timestamp")),
+        "code": _text(item.get("activity_code"), 80),
+        "activity": _text(item.get("activity")),
+        "target_id": _text(item.get("target_id"), 64),
+        "initiator_id": _text(item.get("initiator_id")),
+        "initiator": _text(item.get("initiator_name")) or _text(item.get("initiator_email")),
+        "meta": {key: _text(meta[key]) for key in EVENT_META if _text(meta.get(key))},
+    }
+
+
 def route_network(item: dict[str, Any]) -> dict[str, Any]:
     """Alte Route (vor „Networks“) als Netz mit einem Router-Eintrag."""
     return {
@@ -206,6 +307,8 @@ def networks(client: NetBirdClient) -> list[dict[str, Any]]:
 class Fetched:
     data: dict[str, Any]
     notes: list[str] = field(default_factory=list)
+    # Ereignisprotokoll; None, wenn nicht lesbar (wird getrennt vom Stand gespeichert)
+    events: list[dict[str, Any]] | None = None
 
 
 def fetch(client: NetBirdClient) -> Fetched:
@@ -270,5 +373,19 @@ def fetch(client: NetBirdClient) -> Fetched:
         "Reverse Proxy",
         lambda: [cluster(item) for item in client.list("reverse-proxies/clusters")],
     )
+    optional("policies", "Richtlinien", lambda: [policy(i) for i in client.list("policies")])
+    optional("setup_keys", "Setup-Keys", lambda: [setup_key(i) for i in client.list("setup-keys")])
+    optional(
+        "posture_checks",
+        "Posture Checks",
+        lambda: [posture_check(i) for i in client.list("posture-checks")],
+    )
+    events: list[dict[str, Any]] | None = None
+    try:
+        events = [event(item) for item in client.list("events/audit")]
+    except NotAvailableError:
+        events = None
+    except NetBirdError as error:
+        notes.append(f"Ereignisse: {error}")
     data["notes"] = notes
-    return Fetched(data=data, notes=notes)
+    return Fetched(data=data, notes=notes, events=events)

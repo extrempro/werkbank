@@ -24,6 +24,29 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.160.0",
+    date: "2026-11-28",
+    summary: "NetBird prüft jetzt die Richtlinien und zeigt das Ereignisprotokoll.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Unter „Richtlinien & Ereignisse“ prüft die Werkbank die Richtlinien von NetBird, z. B. auf Freigaben von allen zu allen auf allen Ports, leere Gruppen und lange ausgeschaltete Richtlinien.",
+          "Du siehst die Setup-Keys mit Ablauf und bekommst einen Hinweis, wenn einer in 30 oder 7 Tagen abläuft.",
+          "Das Ereignisprotokoll zeigt, was in NetBird geändert wurde und von wem, filterbar nach Art und Zeitraum. Die letzten fünf Ereignisse stehen auf der Übersicht.",
+          "Im Detail eines Peers siehst du, welche Ziele das Gerät laut den Richtlinien erreichen darf.",
+          "Neue Hinweise meldet die Glocke. Trifft ein Hinweis nicht mehr zu, gilt die Meldung als gelesen.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter NetBird trägst du die Server-Gruppen ein, damit die Werkbank Zugriffe ohne Posture Check auf Server erkennt.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.159.0",
     date: "2026-11-28",
     summary: "NetBird zeigt jetzt Netze und die Dienste am Reverse Proxy.",

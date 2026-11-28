@@ -22,6 +22,8 @@ class NetBirdSettings:
     ping: bool
     signal: str
     relay: str
+    # Namen der Gruppen mit Servern (für die Prüfung „ohne Posture Check“)
+    server_groups: tuple[str, ...] = ()
 
 
 def stored(db: Session) -> dict[str, Any]:
@@ -37,6 +39,9 @@ def load_settings(db: Session) -> NetBirdSettings:
         ping=data.get("ping") is True,
         signal=str(data.get("signal") or ""),
         relay=str(data.get("relay") or ""),
+        server_groups=tuple(
+            str(name) for name in data.get("server_groups") or [] if isinstance(name, str)
+        ),
     )
 
 

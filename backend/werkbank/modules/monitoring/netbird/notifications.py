@@ -1,4 +1,6 @@
-"""Benachrichtigungen für NetBird: wiederholt fehlgeschlagener Abruf (an Admins)."""
+"""Benachrichtigungen für NetBird: wiederholt fehlgeschlagener Abruf (an Admins), neue Hinweise
+(an alle mit NetBird.Reader). Ein Hinweis, der nicht mehr zutrifft, schließt sich selbst (siehe
+collector.sync_hints); kommt er später wieder, ist er eine neue Meldung."""
 
 from collections.abc import Iterable
 from datetime import datetime
@@ -8,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
 from werkbank.core.notifications import Event
-from werkbank.modules.monitoring.netbird.models import NbRun
+from werkbank.modules.monitoring.netbird.models import NbHint, NbRun
 
 ADMIN_LINK = "/verwaltung/netbird"
 FAILURES = 3
@@ -25,4 +27,14 @@ def netbird_notifications(db: Session, settings: Settings, now: datetime) -> Ite
             key=str(last_ok or 0),
             title="NetBird lässt sich nicht abrufen",
             link=ADMIN_LINK,
+        )
+
+    for hint in db.scalars(select(NbHint).order_by(NbHint.since)):
+        yield Event(
+            kind="monitoring.netbird_info"
+            if hint.level == "info"
+            else "monitoring.netbird_hinweis",
+            key=f"{hint.key}@{int(hint.since.timestamp())}",
+            title=f"NetBird: {hint.title}",
+            link=hint.link,
         )

@@ -18843,3 +18843,20 @@ textarea.field-control {
 .nb-row-bad {
   background: var(--farbe-bad-flaeche);
 }
+
+/* NetBird, Phase 3: erreichbare Ziele im Peer-Detail, lange Objektnamen im Ereignisprotokoll */
+.nb-targets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.nb-targets .fg-sub {
+  display: block;
+}
+
+.nb-break {
+  overflow-wrap: anywhere;
+}

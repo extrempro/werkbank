@@ -45,7 +45,14 @@ export function NetbirdAdminPage() {
       {!data && !error && <p role="status">Wird geladen …</p>}
       {data && (
         <AccessForm
-          key={JSON.stringify([data.url, data.token_set, data.ping, data.signal, data.relay])}
+          key={JSON.stringify([
+            data.url,
+            data.token_set,
+            data.ping,
+            data.signal,
+            data.relay,
+            data.server_groups,
+          ])}
           data={data}
           onSaved={setData}
           onMessage={setMessage}
@@ -71,6 +78,7 @@ function AccessForm({
   const [ping, setPing] = useState(data.ping);
   const [signal, setSignal] = useState(data.signal);
   const [relay, setRelay] = useState(data.relay);
+  const [serverGroups, setServerGroups] = useState(data.server_groups);
   const [problem, setProblem] = useState<string | null>(null);
   const [targetProblem, setTargetProblem] = useState<{ signal?: string; relay?: string }>({});
   const [busy, setBusy] = useState(false);
@@ -98,6 +106,7 @@ function AccessForm({
       ping,
       signal: signal.trim(),
       relay: relay.trim(),
+      server_groups: serverGroups,
       ...(removeToken ? { token: "" } : token.trim() ? { token: token.trim() } : {}),
     })
       .then((next) => {
@@ -223,6 +232,23 @@ function AccessForm({
               spellCheck={false}
               placeholder="relay.example.com:443"
               onChange={(event) => setRelay(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label="Server-Gruppen"
+          info={<InfoTip term="netbird.servergruppen" />}
+          hint="Namen der Gruppen in NetBird, mehrere mit Komma. Für die Prüfung „Zugriff auf Server ohne Posture Check“; gilt ab dem nächsten Abruf."
+        >
+          {(control) => (
+            <input
+              {...control}
+              value={serverGroups}
+              maxLength={2000}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="grp-server, grp-datenbanken"
+              onChange={(event) => setServerGroups(event.target.value)}
             />
           )}
         </Field>

@@ -1,4 +1,4 @@
-"""Aufbereitung für die Seiten: Übersicht und Peers."""
+"""Aufbereitung für die Seiten: Übersicht, Peers, Netze & Dienste, Richtlinien & Ereignisse."""
 
 from collections import Counter
 from collections.abc import Mapping
@@ -20,7 +20,17 @@ from werkbank.modules.monitoring.netbird.hints import (
     releases_behind,
     status,
 )
-from werkbank.modules.monitoring.netbird.models import NbCheck, NbDaily, NbPeerDay
+from werkbank.modules.monitoring.netbird.models import NbCheck, NbDaily, NbEvent, NbPeerDay
+from werkbank.modules.monitoring.netbird.policies import (
+    CATEGORIES,
+    event_change,
+    event_label,
+    event_object,
+    findings,
+    peer_targets,
+    policy_rows,
+    setup_key_rows,
+)
 
 STATUS_LABELS = {
     "verbunden": "verbunden",
@@ -169,6 +179,11 @@ def overview(db: Session, now: datetime, days: int = 14) -> dict[str, Any]:
             ],
             "chart_days": days,
             "chart": chart,
+            "events_available": bool(data.get("events_available")),
+            "events": [
+                event_row(e)
+                for e in db.scalars(select(NbEvent).order_by(NbEvent.at.desc()).limit(5))
+            ],
         }
     )
     return out
@@ -304,6 +319,8 @@ def peer_detail(db: Session, now: datetime, peer_id: str) -> dict[str, Any] | No
             "group_names": sorted(groups.get(g, g) for g in peer.get("groups") or []),
             "history": history,
             "latest_version": latest,
+            "policies_available": data.get("policies") is not None,
+            "targets": peer_targets(data, peer_id),
         }
     )
     return row
@@ -421,3 +438,63 @@ def networks_page(db: Session, now: datetime) -> dict[str, Any]:
         }
     )
     return out
+
+
+# --- Richtlinien & Ereignisse ------------------------------------------------------------
+
+EVENT_DAYS = (7, 30, 90)
+
+
+def event_row(event: NbEvent) -> dict[str, Any]:
+    return {
+        "id": event.id,
+        "at": event.at,
+        "category": event.category,
+        "label": event_label(event.code, event.activity),
+        "object": event_object(event.code, event.meta or {}, event.target_id),
+        "initiator": event.initiator or "System",
+        "change": event_change(event.code, event.meta or {}),
+    }
+
+
+def policies_page(db: Session, now: datetime) -> dict[str, Any]:
+    out = _base(db)
+    state = latest_state(db)
+    data: Mapping[str, Any] = state.data if state else {}
+    options = load_settings(db)
+    out.update(
+        {
+            "policies_available": data.get("policies") is not None,
+            "setup_keys_available": data.get("setup_keys") is not None,
+            "events_available": bool(data.get("events_available")),
+            "server_groups": list(options.server_groups),
+            "findings": [
+                {
+                    "level": f.level,
+                    "code": f.code,
+                    "title": f.title,
+                    "text": f.text,
+                    "key": f"{f.code}|{f.subject}",
+                }
+                for f in findings(data, now, options.server_groups)
+            ],
+            "policies": policy_rows(data, now),
+            "setup_keys": setup_key_rows(data, now),
+            "categories": [{"value": k, "label": v} for k, v in CATEGORIES.items()],
+        }
+    )
+    return out
+
+
+def events(
+    db: Session, now: datetime, *, kind: str = "", days: int = 7, offset: int = 0, limit: int = 50
+) -> dict[str, Any]:
+    days = days if days in EVENT_DAYS else 7
+    query = select(NbEvent).where(NbEvent.at >= now - timedelta(days=days))
+    if kind:
+        query = query.where(NbEvent.category == kind)
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    rows = db.scalars(
+        query.order_by(NbEvent.at.desc(), NbEvent.id.desc()).offset(offset).limit(limit)
+    )
+    return {"total": total, "days": days, "items": [event_row(e) for e in rows]}

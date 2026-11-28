@@ -52,6 +52,33 @@ def get_networks(user: ReaderUser, db: DbDep) -> dict[str, Any]:
     return views.networks_page(db, now_utc())
 
 
+@router.get("/policies")
+def get_policies(user: ReaderUser, db: DbDep) -> dict[str, Any]:
+    """Prüfung der Richtlinien, Richtlinien und Setup-Keys (ohne Schlüssel)."""
+    return views.policies_page(db, now_utc())
+
+
+EventKind = Annotated[
+    Literal["peer", "policy", "group", "setupkey", "user", "network", "service", "account", "other"]
+    | None,
+    Query(),
+]
+
+
+@router.get("/events")
+def get_events(
+    user: ReaderUser,
+    db: DbDep,
+    kind: EventKind = None,
+    days: Annotated[int, Query(ge=1, le=90)] = 7,
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> dict[str, Any]:
+    if days not in views.EVENT_DAYS:
+        raise HTTPException(status_code=422, detail="Zeitraum: 7, 30 oder 90 Tage.")
+    return views.events(db, now_utc(), kind=kind or "", days=days, offset=offset, limit=limit)
+
+
 @router.get("/peers")
 def get_peers(
     user: ReaderUser,

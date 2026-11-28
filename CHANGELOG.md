@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.160.0] – 2026-11-28
+
+### Neu
+
+- **IT-Monitoring › NetBird, Phase 3: Richtlinien & Ereignisse.** Neue Seite mit Prüfung der Richtlinien (kritisch: Quelle und Ziel „All“ mit allen Ports; Warnung: Zugriff auf Server-Gruppen ohne Posture Check, TCP/UDP mit allen Ports; Info: leere Gruppe in einer Richtlinie, Richtlinie seit über 90 Tagen deaktiviert, SCIM-Gruppen in keiner Richtlinie), Setup-Keys mit Ablauf (Hinweis bei 30 und 7 Tagen), Richtlinien mit Quelle, Ziel, Ports, Posture Checks, Status und letzter Änderung sowie dem Ereignisprotokoll (90 Tage, Filter Art und Zeitraum). Übersicht mit den letzten fünf Ereignissen, Peer-Detail mit den erreichbaren Zielen laut Richtlinien. Neue Hinweise meldet die Glocke allen mit `NetBird.Reader`; ein Hinweis, der nicht mehr zutrifft, schließt sich selbst. Verwaltung › NetBird um Server-Gruppen ergänzt. Migration 0103. Doku: `spec.md`, `datenschutz.md`, `security/asvs-l2.md`, Handbuch, Info-Symbole.
+
 ## [0.159.0] – 2026-11-28
 
 ### Neu
