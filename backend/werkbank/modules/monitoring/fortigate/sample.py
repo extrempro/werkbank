@@ -178,6 +178,10 @@ DEVICES: dict[str, dict[str, Any]] = {
                 "device": "ipsec-standort-b",
             },
         ],
+        "vpn.ipsec/phase1-interface": [
+            {"name": "ipsec-standort-b", "interface": "wan1", "remote-gw": "198.51.100.2"},
+        ],
+        "monitor/firewall/policy-lookup": {"success": True, "policy_id": 18},
         "vpn.ipsec/phase2-interface": [
             {
                 "name": "standort-b-p2",
@@ -239,6 +243,17 @@ DEVICES: dict[str, dict[str, Any]] = {
                 "logtraffic": "all",
             },
             {
+                "policyid": 60,
+                "name": "Büro ins Internet",
+                "srcintf": _n("lan"),
+                "dstintf": _n("uplink"),
+                "srcaddr": _n("Netz-Buero"),
+                "dstaddr": _n("all"),
+                "service": _n("HTTPS", "HTTP"),
+                "action": "accept",
+                "logtraffic": "all",
+            },
+            {
                 "policyid": 52,
                 "name": "Testzugang",
                 "status": "disable",
@@ -270,13 +285,19 @@ DEVICES: dict[str, dict[str, Any]] = {
         "system/interface": [
             {"name": "lan", "ip": "10.20.30.1 255.255.255.0", "type": "physical", "role": "lan"},
             {"name": "server", "ip": "10.20.31.1 255.255.255.0", "type": "physical", "role": "lan"},
+            {"name": "uplink", "ip": "10.20.0.2 255.255.255.0", "type": "physical", "role": "lan"},
         ],
+        "router/static": [
+            {"seq-num": 1, "dst": "0.0.0.0 0.0.0.0", "gateway": "10.20.0.1", "device": "uplink"},
+        ],
+        "monitor/firewall/policy-lookup": {"success": True, "policy_id": 60},
         "system/zone": [],
         "system/csf": [{"status": "enable", "upstream": "fw-edge.example.com"}],
         "system/ha": [{"mode": "a-p", "group-name": "cluster-core"}],
         "monitor/firewall/policy": [
             {"policyid": 31, "hit_count": 882110, "last_used": 1795810000},
             {"policyid": 44, "hit_count": 0},
+            {"policyid": 60, "hit_count": 51200, "last_used": 1795810000},
             {"policyid": 52, "hit_count": 0},
         ],
         "monitor/system/ha-peer": [
@@ -326,7 +347,29 @@ DEVICES: dict[str, dict[str, Any]] = {
         "system/interface": [
             {"name": "lan", "ip": "10.40.0.1 255.255.0.0", "type": "physical", "role": "lan"},
             {"name": "ipsec-zentrale", "ip": "0.0.0.0 0.0.0.0", "type": "tunnel"},
+            {
+                "name": "wan1",
+                "ip": "198.51.100.2 255.255.255.248",
+                "type": "physical",
+                "role": "wan",
+            },
         ],
+        "vpn.ipsec/phase1-interface": [
+            {"name": "ipsec-zentrale", "interface": "wan1", "remote-gw": "192.0.2.2"},
+        ],
+        "monitor/router/ipv4": [
+            {
+                "ip_mask": "0.0.0.0/0",
+                "gateway": "0.0.0.0",  # noqa: S104
+                "interface": "ipsec-zentrale",
+                "type": "ospf",
+                "distance": 110,
+                "metric": 20,
+            },
+            {"ip_mask": "10.40.0.0/16", "interface": "lan", "type": "connect", "distance": 0},
+            {"ip_mask": "198.51.100.0/29", "interface": "wan1", "type": "connect", "distance": 0},
+        ],
+        "monitor/firewall/policy-lookup": {"success": True, "policy_id": 3},
         "system/zone": [],
         "system/csf": [
             {

@@ -276,6 +276,34 @@ def vpn_selector(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def vpn_tunnel(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": _text(item.get("name")),
+        "interface": _text(item.get("interface")),
+        "remote_gw": _text(item.get("remote-gw")),
+    }
+
+
+def runtime_route(item: dict[str, Any]) -> dict[str, Any] | None:
+    """Eine Zeile der Routingtabelle (monitor/router/ipv4)."""
+    network = _text(item.get("ip_mask"))
+    if not network and item.get("ip"):
+        network = cidr(f"{_text(item.get('ip'))} {_text(item.get('mask'))}")
+    try:
+        network = str(ipaddress.IPv4Network(network, strict=False))
+    except ValueError:
+        return None
+    gateway = _text(item.get("gateway"))
+    return {
+        "dst": network,
+        "gateway": "" if gateway in ("", "0.0.0.0") else gateway,  # noqa: S104
+        "interface": _text(item.get("interface")),
+        "type": _text(item.get("type")),
+        "distance": _number(item.get("distance")),
+        "metric": _number(item.get("metric")),
+    }
+
+
 def digest(config: dict[str, Any]) -> str:
     raw = json.dumps(config, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(raw.encode()).hexdigest()
@@ -308,6 +336,7 @@ OPTIONAL: dict[str, tuple[str, Any]] = {
     "static_routes": ("router/static", static_route),
     "policy_routes": ("router/policy", policy_route),
     "vpn_selectors": ("vpn.ipsec/phase2-interface", vpn_selector),
+    "vpn_tunnels": ("vpn.ipsec/phase1-interface", vpn_tunnel),
 }
 LABELS = {
     "vips": "VIPs",
@@ -320,6 +349,8 @@ LABELS = {
     "static_routes": "Statische Routen",
     "policy_routes": "Policy-Routen",
     "vpn_selectors": "VPN-Selektoren",
+    "vpn_tunnels": "VPN-Tunnel",
+    "routes": "Routingtabelle",
     "sdwan": "SD-WAN-Regeln",
     "fabric": "Security Fabric",
     "ha": "HA-Einstellungen",
@@ -410,6 +441,19 @@ def fetch(client: FortiGateClient) -> Fetched:
     except FortiGateError as error:
         notes.append(f"{LABELS['hits']}: {error}")
     runtime["hits"] = hits
+    # Routingtabelle (auch OSPF, BGP); fehlt sie, rechnet die Pfad-Analyse mit statischen Routen
+    routes: list[dict[str, Any]] = []
+    try:
+        for row in client.monitor("router/ipv4").results or []:
+            if isinstance(row, dict):
+                shaped = runtime_route(row)
+                if shaped is not None:
+                    routes.append(shaped)
+    except NotAvailableError:
+        pass
+    except FortiGateError as error:
+        notes.append(f"{LABELS['routes']}: {error}")
+    runtime["routes"] = routes
     peers: list[dict[str, Any]] = []
     if config["ha"].get("mode") not in ("", "standalone", None):
         try:

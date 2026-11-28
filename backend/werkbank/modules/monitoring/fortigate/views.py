@@ -3,6 +3,7 @@
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from itertools import pairwise
 from typing import Any
 from urllib.parse import quote
 
@@ -24,6 +25,12 @@ from werkbank.modules.monitoring.fortigate.analysis import (
     usages,
 )
 from werkbank.modules.monitoring.fortigate.collector import last_run, latest_snapshot
+from werkbank.modules.monitoring.fortigate.diff import (
+    KIND_GROUPS,
+    Change,
+    diff_configs,
+    match_events,
+)
 from werkbank.modules.monitoring.fortigate.fabric import (
     SYNC_KINDS,
     Entry,
@@ -47,6 +54,7 @@ from werkbank.modules.monitoring.fortigate.models import (
     FgSnapshot,
     FgUnused,
 )
+from werkbank.modules.monitoring.fortigate.path import Device
 from werkbank.modules.monitoring.fortigate.unused import UNUSED_KINDS, is_default, unused
 
 
@@ -617,3 +625,128 @@ def finding_by_key(db: Session, options: Options, now: datetime, key: str) -> Fi
         if finding.key == key:
             return finding
     return None
+
+
+# --- Pfad-Analyse und Topologie ------------------------------------------------------------
+
+
+def path_devices(rows_state: list[DeviceState]) -> list[Device]:
+    return [
+        Device(state.device.name, state.config, state.runtime)
+        for state in rows_state
+        if state.snapshot is not None
+    ]
+
+
+# --- Änderungen ----------------------------------------------------------------------------
+
+SNAPSHOTS_MAX = 300
+
+
+def _device_snapshots(db: Session, device_id: int) -> list[FgSnapshot]:
+    return list(
+        db.scalars(
+            select(FgSnapshot)
+            .where(FgSnapshot.device_id == device_id)
+            .order_by(FgSnapshot.taken_at.desc(), FgSnapshot.id.desc())
+            .limit(SNAPSHOTS_MAX)
+        )
+    )[::-1]
+
+
+def change_rows(changes: list[Change], analyzer: dict[str, Any] | None) -> list[dict[str, Any]]:
+    events = (analyzer or {}).get("events") or []
+    rows = []
+    for change in changes:
+        who = match_events(change, events)
+        rows.append(
+            {
+                "section": change.section,
+                "label": change.label,
+                "kind": change.kind,
+                "key": change.key,
+                "title": change.title,
+                "fields": change.fields,
+                "who": [
+                    {"user": e.get("user"), "ui": e.get("ui"), "time": e.get("time")} for e in who
+                ],
+            }
+        )
+    return rows
+
+
+def changes(
+    db: Session,
+    now: datetime,
+    *,
+    device: str | None = None,
+    kind: str | None = None,
+    days: int | None = None,
+) -> dict[str, Any]:
+    """Konfigurationsstände mit ihren Änderungen gegenüber dem Stand davor, neueste zuerst."""
+    cutoff = now - timedelta(days=days) if days else None
+    sections = set(KIND_GROUPS.get(kind or "", ())) if kind else None
+    entries: list[dict[str, Any]] = []
+    names = []
+    for state in states(db):
+        names.append(state.device.name)
+        if device and state.device.name != device:
+            continue
+        snaps = _device_snapshots(db, state.device.id)
+        for previous, current in pairwise(snaps):
+            if cutoff is not None and current.taken_at < cutoff:
+                continue
+            items = diff_configs(previous.data, current.data)
+            if sections is not None:
+                items = [item for item in items if item.section in sections]
+            if not items:
+                continue
+            analyzer = current.analyzer or None
+            entries.append(
+                {
+                    "snapshot_id": current.id,
+                    "previous_id": previous.id,
+                    "device": state.device.name,
+                    "at": current.taken_at,
+                    "since": previous.seen_at,
+                    "analyzer_error": (analyzer or {}).get("error"),
+                    "analyzer": analyzer is not None,
+                    "changes": change_rows(items, analyzer),
+                }
+            )
+    entries.sort(key=lambda e: (e["at"], e["snapshot_id"]), reverse=True)
+    return {"entries": entries, "devices": names, "kinds": list(KIND_GROUPS)}
+
+
+def snapshot_list(db: Session, device: str) -> list[dict[str, Any]] | None:
+    found = db.scalars(select(FgDevice).where(FgDevice.name == device)).first()
+    if found is None:
+        return None
+    return [
+        {"id": snap.id, "taken_at": snap.taken_at, "seen_at": snap.seen_at}
+        for snap in reversed(_device_snapshots(db, found.id))
+    ]
+
+
+def compare(db: Session, device: str, first: int, second: int) -> dict[str, Any] | None:
+    """Unterschiede zwischen zwei Ständen desselben Geräts (älterer → neuerer)."""
+    found = db.scalars(select(FgDevice).where(FgDevice.name == device)).first()
+    if found is None:
+        return None
+    snaps = {
+        snap.id: snap
+        for snap in db.scalars(
+            select(FgSnapshot).where(
+                FgSnapshot.device_id == found.id, FgSnapshot.id.in_([first, second])
+            )
+        )
+    }
+    if first not in snaps or second not in snaps:
+        return None
+    old, new = sorted((snaps[first], snaps[second]), key=lambda s: (s.taken_at, s.id))
+    return {
+        "device": device,
+        "from": {"id": old.id, "taken_at": old.taken_at},
+        "to": {"id": new.id, "taken_at": new.taken_at},
+        "changes": change_rows(diff_configs(old.data, new.data), None),
+    }

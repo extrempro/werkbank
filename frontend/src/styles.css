@@ -18541,6 +18541,146 @@ textarea.field-control {
   justify-self: start;
 }
 
+.fg-path-form,
+.fg-compare-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px 16px;
+  align-items: start;
+}
+
+.fg-path-form > .field-hint,
+.fg-path-form > .error-summary,
+.fg-path-form > .actions,
+.fg-compare-form > .actions,
+.fg-compare-form > p {
+  grid-column: 1 / -1;
+}
+
+.fg-path-verdict .fg-sub {
+  margin-top: 4px;
+}
+
+.fg-hops {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.fg-hop-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.fg-hop-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.fg-hop-number {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  background: var(--farbe-primaer);
+  color: var(--farbe-auf-primaer);
+  font-size: 0.85rem;
+}
+
+.fg-topology {
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  display: block;
+}
+
+.fg-topology-line {
+  stroke: var(--farbe-text-mittel);
+  stroke-width: 2;
+}
+
+.fg-topology-vpn {
+  stroke-dasharray: 6 4;
+}
+
+.fg-topology-wan {
+  stroke: var(--farbe-rand);
+}
+
+.fg-topology-box {
+  fill: var(--farbe-flaeche);
+  stroke: var(--farbe-primaer);
+  stroke-width: 2;
+}
+
+.fg-topology-cloud {
+  fill: var(--farbe-info-flaeche);
+  stroke: var(--farbe-info-rand);
+}
+
+.fg-topology-name {
+  fill: var(--farbe-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fg-topology-label {
+  fill: var(--farbe-text-mittel);
+  font-size: 12px;
+}
+
+.fg-topology-list-title {
+  font-size: 1rem;
+  margin: 16px 0 8px;
+}
+
+.fg-topology-list {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.fg-change-list {
+  margin: 0;
+  padding: 0 16px 16px;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.fg-change-list summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+
+.fg-diff {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0 8px;
+  font-size: 0.9rem;
+}
+
+.fg-diff th,
+.fg-diff td {
+  text-align: left;
+  vertical-align: top;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--farbe-rand);
+  overflow-wrap: anywhere;
+}
+
+.fg-diff-before {
+  color: var(--farbe-bad-text);
+}
+
+.fg-diff-after {
+  color: var(--farbe-ok-text);
+}
+
 .fg-cleanup {
   align-items: center;
   flex-wrap: wrap;

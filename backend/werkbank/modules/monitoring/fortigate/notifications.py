@@ -2,7 +2,7 @@
 neue Befunde der Stufe hoch oder mittel (an alle mit dem Recht „FortiGate lesen“)."""
 
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import quote
 
 from sqlalchemy import func, select
@@ -10,10 +10,14 @@ from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
 from werkbank.core.notifications import Event
-from werkbank.modules.monitoring.fortigate.models import FgDevice, FgFinding, FgRun
+from werkbank.modules.monitoring.fortigate.diff import diff_configs
+from werkbank.modules.monitoring.fortigate.models import FgDevice, FgFinding, FgRun, FgSnapshot
 
 ADMIN_LINK = "/verwaltung/fortigate"
 FINDINGS_LINK = "/monitoring/fortigate/befunde"
+CHANGES_LINK = "/monitoring/fortigate/aenderungen"
+# Nur Stände der letzten Zeit melden (die Glocke läuft alle fünf Minuten)
+CHANGES_WINDOW = timedelta(days=1)
 # So viele fehlgeschlagene Abrufe in Folge, bevor die Glocke meldet
 FAILURES = 3
 
@@ -62,3 +66,35 @@ def fortigate_notifications(db: Session, settings: Settings, now: datetime) -> I
             title=f"{label}: neuer Befund",
             link=link,
         )
+    # Geänderte Konfiguration: ein Ereignis je neuem Stand mit sichtbaren Änderungen
+    for device in db.scalars(select(FgDevice).where(FgDevice.enabled.is_(True))):
+        snapshots = list(
+            db.scalars(
+                select(FgSnapshot)
+                .where(
+                    FgSnapshot.device_id == device.id, FgSnapshot.taken_at >= now - CHANGES_WINDOW
+                )
+                .order_by(FgSnapshot.taken_at, FgSnapshot.id)
+            )
+        )
+        for snapshot in snapshots:
+            previous = db.scalars(
+                select(FgSnapshot)
+                .where(
+                    FgSnapshot.device_id == device.id,
+                    FgSnapshot.taken_at < snapshot.taken_at,
+                )
+                .order_by(FgSnapshot.taken_at.desc(), FgSnapshot.id.desc())
+                .limit(1)
+            ).first()
+            if previous is None:
+                continue  # erster Stand eines Geräts
+            count = len(diff_configs(previous.data, snapshot.data))
+            if not count:
+                continue
+            yield Event(
+                kind="monitoring.fortigate_aenderung",
+                key=str(snapshot.id),
+                title=f"FortiGate „{device.name}“: Konfiguration geändert",
+                link=f"{CHANGES_LINK}?geraet={quote(device.name, safe='')}",
+            )

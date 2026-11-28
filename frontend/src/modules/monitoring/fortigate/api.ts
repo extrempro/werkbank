@@ -353,6 +353,145 @@ export function deleteFgException(id: number): Promise<{ id: number }> {
   return deleteJson(`${BASE}/exceptions/${id}`);
 }
 
+// --- Pfad-Analyse, Internet-Ausgang, Topologie --------------------------------------------
+
+export type FgProto = "tcp" | "udp" | "icmp";
+
+export interface FgHop {
+  device: string;
+  ingress: string;
+  src: string;
+  dst: string;
+  dnat: string;
+  route: string;
+  egress: string;
+  policy: { id: number; name: string; action: string } | null;
+  why: string[];
+  skipped: string[];
+  snat: string;
+  profiles: Record<string, string>;
+  notes: string[];
+  outcome: string;
+  check: { ok: boolean; text: string } | null;
+  findings: FgPolicyFinding[];
+}
+
+export interface FgPath {
+  hops: FgHop[];
+  verdict: string;
+  allowed: boolean;
+  limits: string;
+  devices: string[];
+  data_at: string | null;
+}
+
+export interface FgPathQuery {
+  src: string;
+  dst: string;
+  proto: FgProto;
+  port: string;
+  device: string;
+  check: boolean;
+}
+
+export function fetchFgPath(query: FgPathQuery): Promise<FgPath> {
+  return getJson(
+    `${BASE}/path${params({
+      src: query.src.trim(),
+      dst: query.dst.trim(),
+      proto: query.proto,
+      port: query.proto === "icmp" ? "" : query.port.trim(),
+      device: query.device,
+      check: query.check ? "true" : "",
+    })}`,
+  );
+}
+
+export interface FgExit {
+  device: string;
+  interface: string;
+  network: string;
+  allowed: boolean;
+  verdict: string;
+  exit: string;
+  path: string[];
+  policies: string[];
+  snat: string;
+  profiles: Record<string, string>;
+}
+
+export interface FgTopology {
+  nodes: { name: string; internet: string[] }[];
+  links: { a: string; b: string; kind: string; label: string }[];
+}
+
+export interface FgExits {
+  exits: FgExit[];
+  topology: FgTopology;
+  probe: string;
+  limits: string;
+}
+
+export function fetchFgExits(): Promise<FgExits> {
+  return getJson(`${BASE}/exits`);
+}
+
+// --- Änderungen ---------------------------------------------------------------------------
+
+export interface FgChangeField {
+  field: string;
+  before: string;
+  after: string;
+}
+
+export interface FgChange {
+  section: string;
+  label: string;
+  kind: "neu" | "entfernt" | "geändert";
+  key: string;
+  title: string;
+  fields: FgChangeField[];
+  who: { user: string; ui: string; time: string }[];
+}
+
+export interface FgChangeEntry {
+  snapshot_id: number;
+  previous_id: number;
+  device: string;
+  at: string;
+  since: string;
+  analyzer: boolean;
+  analyzer_error: string | null;
+  changes: FgChange[];
+}
+
+export interface FgChanges {
+  entries: FgChangeEntry[];
+  devices: string[];
+  kinds: string[];
+}
+
+export function fetchFgChanges(device: string, kind: string, days: string): Promise<FgChanges> {
+  return getJson(`${BASE}/changes${params({ device, kind, days })}`);
+}
+
+export function fetchFgSnapshots(
+  device: string,
+): Promise<{ device: string; snapshots: { id: number; taken_at: string; seen_at: string }[] }> {
+  return getJson(`${BASE}/snapshots${params({ device })}`);
+}
+
+export interface FgCompare {
+  device: string;
+  from: { id: number; taken_at: string };
+  to: { id: number; taken_at: string };
+  changes: FgChange[];
+}
+
+export function fetchFgCompare(device: string, a: number, b: number): Promise<FgCompare> {
+  return getJson(`${BASE}/compare${params({ device, a: String(a), b: String(b) })}`);
+}
+
 export function refreshFortigate(): Promise<{ scheduled_at: string }> {
   return postJson(`${BASE}/refresh`);
 }
@@ -450,4 +589,8 @@ export function saveFgRules(update: {
   unused_days: number;
 }): Promise<FgRules> {
   return putJson(`${ADMIN}/rules`, update);
+}
+
+export function testFgAnalyzer(): Promise<{ device: string; events: number }> {
+  return postJson(`${ADMIN}/analyzer/test`);
 }
