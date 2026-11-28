@@ -8,6 +8,7 @@ import { fetchNbAdmin, saveNbAdmin, testNbConnection, type NbAdminSettings } fro
 /* Verwaltung › NetBird: Management-URL, API-Token, Ping, Verbindungstest. */
 
 const URL_PATTERN = /^https:\/\/[^/\s?#@]+\/?$/;
+const TARGET_PATTERN = /^[A-Za-z0-9][A-Za-z0-9.-]{0,252}:\d{1,5}$/;
 
 export function NetbirdAdminPage() {
   const [data, setData] = useState<NbAdminSettings | null>(null);
@@ -44,7 +45,7 @@ export function NetbirdAdminPage() {
       {!data && !error && <p role="status">Wird geladen …</p>}
       {data && (
         <AccessForm
-          key={JSON.stringify([data.url, data.token_set, data.ping])}
+          key={JSON.stringify([data.url, data.token_set, data.ping, data.signal, data.relay])}
           data={data}
           onSaved={setData}
           onMessage={setMessage}
@@ -68,7 +69,10 @@ function AccessForm({
   const [token, setToken] = useState("");
   const [removeToken, setRemoveToken] = useState(false);
   const [ping, setPing] = useState(data.ping);
+  const [signal, setSignal] = useState(data.signal);
+  const [relay, setRelay] = useState(data.relay);
   const [problem, setProblem] = useState<string | null>(null);
+  const [targetProblem, setTargetProblem] = useState<{ signal?: string; relay?: string }>({});
   const [busy, setBusy] = useState(false);
 
   const submit = (event: FormEvent) => {
@@ -79,10 +83,21 @@ function AccessForm({
       return;
     }
     setProblem(null);
+    const wrong = "Bitte als Host:Port eintragen, z. B. signal.example.com:443.";
+    const targets = {
+      signal: signal.trim() && !TARGET_PATTERN.test(signal.trim()) ? wrong : undefined,
+      relay: relay.trim() && !TARGET_PATTERN.test(relay.trim()) ? wrong : undefined,
+    };
+    setTargetProblem(targets);
+    if (targets.signal || targets.relay) {
+      return;
+    }
     setBusy(true);
     saveNbAdmin({
       url: value,
       ping,
+      signal: signal.trim(),
+      relay: relay.trim(),
       ...(removeToken ? { token: "" } : token.trim() ? { token: token.trim() } : {}),
     })
       .then((next) => {
@@ -177,6 +192,40 @@ function AccessForm({
             Gespeichertes Token löschen
           </label>
         )}
+        <Field
+          label="Signal (Host:Port)"
+          error={targetProblem.signal ?? null}
+          hint="Für die Kachel „Signal“ (TCP-Prüfung); leer lassen, um sie auszublenden."
+        >
+          {(control) => (
+            <input
+              {...control}
+              value={signal}
+              maxLength={260}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="signal.example.com:443"
+              onChange={(event) => setSignal(event.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label="Relay (Host:Port)"
+          error={targetProblem.relay ?? null}
+          hint="Für die Kachel „Relay“ (TCP-Prüfung); leer lassen, um sie auszublenden."
+        >
+          {(control) => (
+            <input
+              {...control}
+              value={relay}
+              maxLength={260}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="relay.example.com:443"
+              onChange={(event) => setRelay(event.target.value)}
+            />
+          )}
+        </Field>
         <div className="fg-field-tip">
           <label className="check-label">
             <input

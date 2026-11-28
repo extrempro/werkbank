@@ -24,6 +24,27 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: "0.159.0",
+    date: "2026-11-28",
+    summary: "NetBird zeigt jetzt Netze und die Dienste am Reverse Proxy.",
+    sections: [
+      {
+        area: "IT-Monitoring",
+        entries: [
+          "Unter „Netze & Dienste“ siehst du, ob jedes Netz über NetBird erreichbar ist und ob es einen Ausfallweg gibt, also mehr als einen verbundenen Routing-Peer.",
+          "Die Werkbank ruft die Dienste am Reverse Proxy alle fünf Minuten auf und zeigt Antwort, Antwortzeit, Verfügbarkeit über 30 Tage und wann das Zertifikat abläuft.",
+          "Antwortet ein Dienst nicht oder fällt ein Netz aus, steht das als kritischer Hinweis auf der Übersicht.",
+        ],
+      },
+      {
+        area: "Verwaltung",
+        entries: [
+          "Unter NetBird trägst du die Adressen von Signal und Relay ein, damit die Werkbank sie prüft.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.158.0",
     date: "2026-11-28",
     summary: "Neu im IT-Monitoring: NetBird mit Übersicht und Peers.",

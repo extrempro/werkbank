@@ -89,6 +89,7 @@ PAGES: dict[str, tuple[str, ...]] = {
     # NetBird: eigenes Recht (Peer-Liste ist personenbezogen), Admins nur mit dem Recht
     "/monitoring/netbird": (Role.NETBIRD_READER,),
     "/monitoring/netbird/peers": (Role.NETBIRD_READER,),
+    "/monitoring/netbird/netze": (Role.NETBIRD_READER,),
     "/verwaltung/netbird": (Role.WERKBANK_ADMIN,),
     "/verwaltung": (Role.WERKBANK_ADMIN,),
     "/verwaltung/berechtigungen": (Role.WERKBANK_ADMIN,),

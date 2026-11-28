@@ -5,6 +5,7 @@ Verbindungsadressen, Seriennummern, Netzwerkkarten und E-Mail-Adressen (bis auf 
 ein Konto keinen Namen hat).
 """
 
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -87,6 +88,120 @@ def router(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def resource(item: dict[str, Any]) -> dict[str, Any]:
+    kind = item.get("type")
+    return {
+        "id": _text(item.get("id")),
+        "name": _text(item.get("name")),
+        "address": _text(item.get("address")),
+        "type": _text(kind) if isinstance(kind, str) else "",
+        "enabled": item.get("enabled") is not False,
+    }
+
+
+def access_label(auth: object, private: bool) -> str:
+    """Zugriff auf einen Dienst am Reverse Proxy; Passwörter und PINs werden nie übernommen."""
+    if private:
+        return "nur NetBird"
+    data = auth if isinstance(auth, dict) else {}
+
+    def on(key: str) -> bool:
+        part = data.get(key)
+        return isinstance(part, dict) and part.get("enabled") is True
+
+    labels = []
+    if on("bearer_auth"):
+        labels.append("SSO")
+    if on("password_auth"):
+        labels.append("Passwort")
+    if on("pin_auth"):
+        labels.append("PIN")
+    if on("link_auth"):
+        labels.append("Link")
+    if data.get("header_auths"):
+        labels.append("Header")
+    return " · ".join(labels) or "öffentlich"
+
+
+def service(item: dict[str, Any]) -> dict[str, Any]:
+    restrictions = item.get("access_restrictions")
+    restrictions = restrictions if isinstance(restrictions, dict) else {}
+    meta = item.get("meta")
+    meta = meta if isinstance(meta, dict) else {}
+    targets = []
+    for target in item.get("targets") or []:
+        if isinstance(target, dict):
+            port = target.get("port")
+            targets.append(
+                {
+                    "host": _text(target.get("host")),
+                    "port": port if isinstance(port, int) else None,
+                    "protocol": _text(target.get("protocol")),
+                    "path": _text(target.get("path")),
+                    "enabled": target.get("enabled") is not False,
+                }
+            )
+    private = item.get("private") is True
+    return {
+        "id": _text(item.get("id")),
+        "name": _text(item.get("name")),
+        "domain": _text(item.get("domain")),
+        "mode": _text(item.get("mode")) or "http",
+        "enabled": item.get("enabled") is not False,
+        "private": private,
+        "status": _text(meta.get("status")),
+        "targets": targets,
+        "access": access_label(item.get("auth"), private),
+        "crowdsec_mode": _text(restrictions.get("crowdsec_mode")) or "off",
+        "cluster": _text(item.get("proxy_cluster")),
+    }
+
+
+def cluster(item: dict[str, Any]) -> dict[str, Any]:
+    count = item.get("connected_proxies")
+    return {
+        "address": _text(item.get("address")),
+        "online": item.get("online") is True,
+        "connected": count if isinstance(count, int) else 0,
+        "crowdsec": item.get("supports_crowdsec") is True,
+    }
+
+
+def route_network(item: dict[str, Any]) -> dict[str, Any]:
+    """Alte Route (vor „Networks“) als Netz mit einem Router-Eintrag."""
+    return {
+        "id": f"route:{_text(item.get('id'))}",
+        "name": _text(item.get("network_id")) or _text(item.get("network")),
+        "kind": "route",
+        "routers": [router(item)],
+        "resources": [
+            {
+                "id": _text(item.get("id")),
+                "name": "",
+                "address": _text(item.get("network")) or ", ".join(item.get("domains") or []),
+                "type": "subnet",
+                "enabled": item.get("enabled") is not False,
+            }
+        ],
+    }
+
+
+def networks(client: NetBirdClient) -> list[dict[str, Any]]:
+    out = []
+    for item in client.list("networks"):
+        nid = _text(item.get("id"))
+        out.append(
+            {
+                "id": nid,
+                "name": _text(item.get("name")),
+                "kind": "network",
+                "routers": [router(r) for r in client.list(f"networks/{nid}/routers")],
+                "resources": [resource(r) for r in client.list(f"networks/{nid}/resources")],
+            }
+        )
+    return out
+
+
 @dataclass
 class Fetched:
     data: dict[str, Any]
@@ -96,8 +211,11 @@ class Fetched:
 def fetch(client: NetBirdClient) -> Fetched:
     """Liest den aktuellen Stand. Peers und Gruppen sind Pflicht, der Rest ist freiwillig."""
     notes: list[str] = []
+    started = time.monotonic()
+    peers = [peer(item) for item in client.list("peers")]
     data: dict[str, Any] = {
-        "peers": [peer(item) for item in client.list("peers")],
+        "management_ms": int((time.monotonic() - started) * 1000),
+        "peers": peers,
         "groups": [group(item) for item in client.list("groups")],
     }
 
@@ -116,7 +234,9 @@ def fetch(client: NetBirdClient) -> Fetched:
         "Routing-Peers",
         lambda: [router(item) for item in client.list("networks/routers")],
     )
-    optional("legacy_routes", "Routen", lambda: [router(item) for item in client.list("routes")])
+    optional(
+        "legacy_routes", "Routen", lambda: [route_network(item) for item in client.list("routes")]
+    )
 
     def account() -> dict[str, Any]:
         rows = client.list("accounts")
@@ -139,5 +259,16 @@ def fetch(client: NetBirdClient) -> Fetched:
         }
 
     optional("version", "Version", version)
+    optional("networks", "Netze", lambda: networks(client))
+    optional(
+        "services",
+        "Dienste am Reverse Proxy",
+        lambda: [service(item) for item in client.list("reverse-proxies/services")],
+    )
+    optional(
+        "clusters",
+        "Reverse Proxy",
+        lambda: [cluster(item) for item in client.list("reverse-proxies/clusters")],
+    )
     data["notes"] = notes
     return Fetched(data=data, notes=notes)

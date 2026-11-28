@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an der Werkbank. Format nach [Keep a Changelog](h
 
 ## [Unveröffentlicht]
 
+## [0.159.0] – 2026-11-28
+
+### Neu
+
+- **IT-Monitoring › NetBird, Phase 2: Netze & Dienste.** Neue Seite mit Server-Komponenten (Management, Signal und Relay per TCP, Reverse Proxy), Netzen mit Routing-Peers, Ausfallweg und Status (erreichbar, ohne Ausfallweg, nicht erreichbar; optional mit Ping auf ein Testziel) und den Diensten am Reverse Proxy mit HTTPS-Abruf alle 5 Minuten (Antwort, Antwortzeit, Verfügbarkeit 30 Tage, Ablauf des Zertifikats, Zugriff). Neue Hinweise: Netz ohne verbundenen Routing-Peer, Netz ohne Antwort auf den Ping, Dienst mit Fehler oder ohne Antwort (kritisch), Netz ohne Ausfallweg, Zertifikat läuft in 30 Tagen ab (Warnung). Übersicht mit Kacheln für Netze und Dienste. Verwaltung › NetBird um Signal und Relay (Host:Port) ergänzt. Migration 0102. Doku: `spec.md`, `datenschutz.md`, `security/asvs-l2.md`, Handbuch, Info-Symbole.
+
 ## [0.158.0] – 2026-11-28
 
 ### Neu

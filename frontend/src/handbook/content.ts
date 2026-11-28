@@ -1503,6 +1503,27 @@ export const AREAS: readonly Area[] = [
             links: [{ to: "/monitoring/netbird/peers", label: "Zu den Peers" }],
           },
           {
+            id: "netbird-netze",
+            title: "Netze & Dienste",
+            roles: [NETBIRD],
+            blocks: [
+              {
+                kind: "text",
+                text: "Oben stehen die Server-Komponenten: Management (Antwort der API), Signal und Relay (TCP-Verbindung zu den Adressen aus der Verwaltung) und der Reverse Proxy mit der Zahl seiner Dienste.",
+              },
+              {
+                kind: "list",
+                items: [
+                  "„Netze“ zeigt je Netz den Bereich, die Routing-Peers mit Status und den Ausfallweg („x von y“ verbunden). Ohne Ping heißt „erreichbar“: Mindestens ein Routing-Peer ist verbunden. Mit eingeschaltetem Ping muss zusätzlich das Testziel (erste einzelne Adresse im Netz) antworten.",
+                  "Ist kein Routing-Peer eines Netzes verbunden, gibt es einen kritischen Hinweis; ist es nur einer, eine Warnung („ohne Ausfallweg“).",
+                  "„Dienste am Reverse Proxy“ ruft jeden öffentlichen Dienst alle fünf Minuten per HTTPS ab: Antwort, Antwortzeit, Verfügbarkeit über 30 Tage, Ablauf des Zertifikats und Art des Zugriffs (SSO, Passwort, PIN, öffentlich). Weiterleitungen zur Anmeldung zählen als Antwort.",
+                  "Antwortet ein Dienst mit einem Fehler ab 500 oder gar nicht, gibt es einen kritischen Hinweis; läuft ein Zertifikat in 30 Tagen ab, eine Warnung. Dienste „nur NetBird“ prüft die Werkbank nicht.",
+                ],
+              },
+            ],
+            links: [{ to: "/monitoring/netbird/netze", label: "Zu Netze & Dienste" }],
+          },
+          {
             id: "netbird-einrichten",
             title: "NetBird einrichten",
             roles: [ADMIN],
@@ -1513,6 +1534,7 @@ export const AREAS: readonly Area[] = [
                   "Lege in NetBird ein Dienstkonto mit Leserecht an und erzeuge dafür ein API-Token.",
                   "Öffne Verwaltung › NetBird, trag die Management-URL (nur https, ohne Pfad) und das Token ein und speichere.",
                   "Wähle „Verbindung prüfen“. Die Werkbank meldet, wie viele Peers und Gruppen sie lesen kann.",
+                  "Trag für die Kacheln Signal und Relay deren Adressen als Host:Port ein (stehen nicht in der API). Den Ping in die Netze schaltest du nur ein, wenn der Server der Werkbank selbst ein NetBird-Peer ist.",
                   "Gib unter Berechtigungen „NetBird: Lesen“ an, wer den Bereich sehen soll. Die Admin-Gruppe bekommt das nicht automatisch, weil die Peer-Liste personenbezogen ist.",
                 ],
               },

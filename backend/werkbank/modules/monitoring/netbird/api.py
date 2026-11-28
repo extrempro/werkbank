@@ -46,6 +46,12 @@ def get_overview(
     return data
 
 
+@router.get("/networks")
+def get_networks(user: ReaderUser, db: DbDep) -> dict[str, Any]:
+    """Server-Komponenten, Netze mit Routing-Peers und Dienste am Reverse Proxy."""
+    return views.networks_page(db, now_utc())
+
+
 @router.get("/peers")
 def get_peers(
     user: ReaderUser,
@@ -179,7 +185,7 @@ def load_sample(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     from werkbank.core.app_settings import NETBIRD_KEY, encrypt_secret, get_setting, set_setting
     from werkbank.modules.monitoring.netbird.collector import collect
-    from werkbank.modules.monitoring.netbird.sample import sample_transport
+    from werkbank.modules.monitoring.netbird.sample import sample_checker, sample_transport
 
     current = get_setting(db, NETBIRD_KEY)
     data = dict(current) if isinstance(current, dict) else {}
@@ -187,4 +193,4 @@ def load_sample(
     data["token_encrypted"] = encrypt_secret(settings, "beispiel-token")
     set_setting(db, NETBIRD_KEY, data, user.user_id)
     db.commit()
-    collect(db, settings, transport=sample_transport)
+    collect(db, settings, transport=sample_transport, checker=sample_checker())

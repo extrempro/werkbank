@@ -3,6 +3,8 @@ ein Hinweis, der nicht mehr zutrifft, verschwindet von selbst.
 
 Phase 1: Anmeldung läuft bald ab, Client zwei oder mehr Releases zurück, Freigabe offen (nur
 wenn NetBird die Freigabe liefert), Peer lange nicht gesehen.
+Phase 2: Netz ohne verbundenen Routing-Peer, Netz ohne Ausfallweg, Dienst antwortet nicht oder
+mit Serverfehler, Zertifikat läuft bald ab.
 """
 
 import re
@@ -17,6 +19,7 @@ INFO = "info"
 LEVELS = (CRITICAL, WARNING, INFO)
 
 LOGIN_WARN = timedelta(days=7)
+CERT_WARN = timedelta(days=30)
 NOT_SEEN = timedelta(days=90)
 OLD_RELEASES = 2
 
@@ -149,8 +152,136 @@ def peer_hints(data: Mapping[str, Any], now: datetime) -> list[Hint]:
     return out
 
 
+def network_status(network: Mapping[str, Any], data: Mapping[str, Any]) -> dict[str, Any]:
+    """Routing-Peers eines Netzes mit Status und daraus „erreichbar“ (ohne Ping) bzw. mit Ping."""
+    peers = {p["id"]: p for p in data.get("peers") or []}
+    members = {g["id"]: list(g.get("peers") or []) for g in data.get("groups") or []}
+    ids: list[str] = []
+    for item in network.get("routers") or []:
+        if not item.get("enabled", True):
+            continue
+        candidates = [item["peer"]] if item.get("peer") else []
+        for gid in item.get("peer_groups") or []:
+            candidates.extend(members.get(gid, []))
+        for pid in candidates:
+            if pid not in ids:
+                ids.append(pid)
+    routers = [
+        {
+            "id": pid,
+            "name": (peers.get(pid) or {}).get("name") or pid,
+            "connected": bool((peers.get(pid) or {}).get("connected")),
+        }
+        for pid in ids
+    ]
+    connected = sum(1 for r in routers if r["connected"])
+    checks = data.get("checks") or {}
+    probe = (checks.get("ping") or {}).get(network.get("id"))
+    if not routers:
+        state = "ohne_router"
+    elif connected == 0 or (probe is not None and probe.get("ok") is False):
+        state = "nicht_erreichbar"
+    elif connected == 1:
+        state = "ohne_ausfallweg"
+    else:
+        state = "erreichbar"
+    return {
+        "routers": routers,
+        "connected": connected,
+        "total": len(routers),
+        "state": state,
+        "target": probe.get("target") if probe else "",
+        "ping": probe.get("ok") if probe else None,
+    }
+
+
+def network_hints(data: Mapping[str, Any]) -> list[Hint]:
+    out: list[Hint] = []
+    link = "/monitoring/netbird/netze"
+    for network in (data.get("networks") or []) + (data.get("legacy_routes") or []):
+        info = network_status(network, data)
+        name = network.get("name") or network.get("id")
+        subject = f"netz:{network.get('id')}"
+        offline = [r["name"] for r in info["routers"] if not r["connected"]]
+        if info["total"] and info["connected"] == 0:
+            out.append(
+                Hint(
+                    CRITICAL,
+                    "netz_offline",
+                    f"Netz „{name}“ ohne verbundenen Routing-Peer",
+                    f"Offline: {', '.join(offline)}. Das Netz ist über NetBird nicht erreichbar.",
+                    link,
+                    subject,
+                )
+            )
+        elif info["state"] == "nicht_erreichbar":
+            out.append(
+                Hint(
+                    CRITICAL,
+                    "netz_ping",
+                    f"Netz „{name}“ antwortet nicht auf den Ping",
+                    f"Testziel {info['target']} ist nicht erreichbar, obwohl ein Routing-Peer "
+                    "verbunden ist.",
+                    link,
+                    subject,
+                )
+            )
+        elif info["connected"] == 1:
+            out.append(
+                Hint(
+                    WARNING,
+                    "netz_ausfallweg",
+                    f"Netz „{name}“ nur mit einem verbundenen Routing-Peer",
+                    "Fällt dieser Routing-Peer aus, ist das Netz nicht mehr erreichbar.",
+                    link,
+                    subject,
+                )
+            )
+    return out
+
+
+def service_hints(data: Mapping[str, Any], now: datetime) -> list[Hint]:
+    out: list[Hint] = []
+    link = "/monitoring/netbird/netze"
+    results = (data.get("checks") or {}).get("services") or {}
+    for item in data.get("services") or []:
+        result = results.get(item["id"])
+        if result is None:
+            continue
+        subject = f"dienst:{item['id']}"
+        domain = item.get("domain") or item.get("name")
+        if not result.get("answered"):
+            code = result.get("status_code")
+            out.append(
+                Hint(
+                    CRITICAL,
+                    "dienst_fehler",
+                    f"Dienst {domain} antwortet mit {code}"
+                    if code
+                    else f"Dienst {domain} antwortet nicht",
+                    result.get("error") or "Der HTTPS-Abruf der Werkbank ist fehlgeschlagen.",
+                    link,
+                    subject,
+                )
+            )
+        expires = parse_time(result.get("cert_expires"))
+        if expires is not None and expires <= now + CERT_WARN:
+            out.append(
+                Hint(
+                    WARNING,
+                    "zertifikat",
+                    f"Zertifikat von {domain} läuft am {_date(expires)} ab",
+                    "Normalerweise erneuert der Reverse Proxy es selbst. Läuft es trotzdem ab, "
+                    "prüfe den Dienst in NetBird.",
+                    link,
+                    subject,
+                )
+            )
+    return out
+
+
 def all_hints(data: Mapping[str, Any], now: datetime) -> list[Hint]:
-    hints = peer_hints(data, now)
+    hints = peer_hints(data, now) + network_hints(data) + service_hints(data, now)
     order = {level: index for index, level in enumerate(LEVELS)}
     hints.sort(key=lambda h: (order[h.level], h.title.lower()))
     return hints

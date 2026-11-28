@@ -27,6 +27,7 @@ from werkbank.modules.monitoring.netbird.collector import last_run
 from werkbank.modules.monitoring.netbird.config import client_config, load_settings, stored
 
 router = APIRouter(prefix="/api/admin/settings/netbird")
+TARGET_PATTERN = r"^$|^[A-Za-z0-9]([A-Za-z0-9.-]{0,252}):(\d{1,5})$"
 MODULE = "verwaltung"
 
 
@@ -65,6 +66,8 @@ class SettingsOut(BaseModel):
     url: str
     token_set: bool
     ping: bool
+    signal: str
+    relay: str
     token_storage_available: bool
     last_run_at: Any = None
     last_ok: bool | None = None
@@ -78,6 +81,8 @@ def _out(db: DbDep, settings: SettingsDep) -> SettingsOut:
         url=options.url,
         token_set=options.token_set,
         ping=options.ping,
+        signal=options.signal,
+        relay=options.relay,
         token_storage_available=secret_key_available(settings),
         last_run_at=run.started_at if run else None,
         last_ok=run.ok if run else None,
@@ -95,6 +100,9 @@ class SettingsIn(BaseModel):
     # None: unverändert, leer: löschen
     token: str | None = Field(default=None, max_length=500)
     ping: bool = False
+    # Host:Port für die TCP-Prüfung; leer: keine Prüfung
+    signal: str = Field(default="", max_length=260, pattern=TARGET_PATTERN)
+    relay: str = Field(default="", max_length=260, pattern=TARGET_PATTERN)
 
 
 @router.put("")
@@ -122,6 +130,8 @@ def put_settings(
     before = load_settings(db)
     data["url"] = url
     data["ping"] = body.ping
+    data["signal"] = body.signal.strip()
+    data["relay"] = body.relay.strip()
     set_setting(db, NETBIRD_KEY, data, user.user_id)
     _audit(
         db,
@@ -132,6 +142,8 @@ def put_settings(
             "adresse_geaendert": url != before.url,
             "token_geaendert": body.token is not None,
             "ping": body.ping,
+            "signal": body.signal.strip(),
+            "relay": body.relay.strip(),
         },
     )
     db.commit()

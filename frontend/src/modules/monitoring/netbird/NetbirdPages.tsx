@@ -5,7 +5,11 @@ import { FilterBar } from "../../../components/FilterBar";
 import { InfoTip } from "../../../components/InfoTip";
 import { Link } from "../../../components/Link";
 import { Segmented } from "../../../components/Field";
-import { ADMIN_NETBIRD_PATH, INVENTORY_HARDWARE_PATH } from "../../../navigation";
+import {
+  ADMIN_NETBIRD_PATH,
+  INVENTORY_HARDWARE_PATH,
+  MONITORING_NETBIRD_NETWORKS_PATH,
+} from "../../../navigation";
 import { useSearchParam } from "../../../router";
 import { useDebounced } from "../../inventory/paged";
 import { replaceParams } from "../fortigate/params";
@@ -222,6 +226,33 @@ export function NetbirdOverviewPage() {
                   : data.routers > 0
                     ? "alle Routing-Peers verbunden"
                     : "keine Routing-Peers"}
+              </dd>
+            </div>
+            <div className="kpi">
+              <dt>
+                Netze erreichbar <InfoTip term="netbird.erreichbar" />
+              </dt>
+              <dd className="kpi-number">
+                {data.networks_ok} / {data.networks_total}
+              </dd>
+              <dd className="small">
+                <Link to={MONITORING_NETBIRD_NETWORKS_PATH}>
+                  {data.networks_single > 0
+                    ? `${data.networks_single} ohne Ausfallweg`
+                    : "zu den Netzen"}
+                </Link>
+              </dd>
+            </div>
+            <div className="kpi">
+              <dt>Dienste am Reverse Proxy</dt>
+              <dd className="kpi-number">
+                {data.services_ok} / {data.services_checked}
+              </dd>
+              <dd className="small">
+                erreichbar
+                {data.services_total > data.services_checked
+                  ? ` · ${data.services_total - data.services_checked} nicht geprüft`
+                  : ""}
               </dd>
             </div>
             <div className="kpi">

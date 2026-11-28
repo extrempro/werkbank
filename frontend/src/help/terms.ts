@@ -267,6 +267,31 @@ export const HELP = {
     text: "Höchstzahl gleichzeitig verbundener Geräte je Tag, aus den Abrufen alle fünf Minuten. Die Werkbank hebt die Werte 90 Tage auf.",
     topic: ["it-monitoring", "netbird-uebersicht"],
   },
+  "netbird.komponenten": {
+    term: "Server-Komponenten",
+    text: "Management prüft die Werkbank über die API, Signal und Relay per TCP-Verbindung zu den Adressen aus der Verwaltung. Der Reverse Proxy zeigt die Zahl der Dienste.",
+    topic: ["it-monitoring", "netbird-netze"],
+  },
+  "netbird.erreichbar": {
+    term: "Erreichbar",
+    text: "Ohne Ping heißt erreichbar: Mindestens ein Routing-Peer des Netzes ist verbunden. Mit Ping muss zusätzlich das Testziel im Netz antworten.",
+    topic: ["it-monitoring", "netbird-netze"],
+  },
+  "netbird.ausfallweg": {
+    term: "Ausfallweg",
+    text: "Wie viele Routing-Peers des Netzes verbunden sind. Ist es nur einer, fehlt der Ausfallweg.",
+    topic: ["it-monitoring", "netbird-netze"],
+  },
+  "netbird.http": {
+    term: "HTTP-Antwort",
+    text: "Antwort auf den HTTPS-Abruf der Werkbank. Weiterleitungen zur Anmeldung zählen als Antwort, Fehler ab 500 oder keine Antwort nicht.",
+    topic: ["it-monitoring", "netbird-netze"],
+  },
+  "netbird.verfuegbarkeit": {
+    term: "Verfügbarkeit der Dienste",
+    text: "Anteil der HTTPS-Abrufe der letzten 30 Tage mit Antwort. Gezählt wird erst ab Einrichtung der Prüfung.",
+    topic: ["it-monitoring", "netbird-netze"],
+  },
   "netbird.anmeldung": {
     term: "Anmeldung bis",
     text: "Geräte mit Benutzerkonto müssen sich nach der eingestellten Zeit neu anmelden. Sieben Tage vorher gibt es eine Warnung.",
@@ -651,6 +676,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/verwaltung/fortigate": [["it-monitoring", "fortigate-einrichten"]],
   "/monitoring/netbird": [["it-monitoring", "netbird-uebersicht"]],
   "/monitoring/netbird/peers": [["it-monitoring", "netbird-peers"]],
+  "/monitoring/netbird/netze": [["it-monitoring", "netbird-netze"]],
   "/verwaltung/netbird": [["it-monitoring", "netbird-einrichten"]],
   "/doku": [["doku", "seiten"]],
   "/doku/verwaltung": [["doku", "verwaltung"]],

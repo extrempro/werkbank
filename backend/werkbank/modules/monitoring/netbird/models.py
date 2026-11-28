@@ -4,7 +4,7 @@ und Tageswerte für die Verläufe (90 Tage)."""
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, Date, DateTime, Integer, String
+from sqlalchemy import Boolean, Date, DateTime, Integer, SmallInteger, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -50,3 +50,16 @@ class NbPeerDay(Base):
 
     peer_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     day: Mapped[date] = mapped_column(Date, primary_key=True, index=True)
+
+
+class NbCheck(Base):
+    """Ein HTTPS-Abruf eines Dienstes am Reverse Proxy (für die Verfügbarkeit über 30 Tage)."""
+
+    __tablename__ = "mon_nb_checks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    service_id: Mapped[str] = mapped_column(String(64), index=True)
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ok: Mapped[bool] = mapped_column(Boolean)
+    status_code: Mapped[int | None] = mapped_column(SmallInteger)
+    ms: Mapped[int | None] = mapped_column(Integer)

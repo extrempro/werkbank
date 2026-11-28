@@ -5,9 +5,12 @@ Zeiten sind relativ zum Aufruf, damit Hinweise wie „läuft in 7 Tagen ab“ im
 
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from werkbank.modules.monitoring.netbird.client import NetBirdConfig, NotAvailableError
+
+if TYPE_CHECKING:
+    from werkbank.modules.monitoring.netbird.checks import Checker
 
 GROUPS = {
     "g-it": ("grp-beispiel-it", "integration"),
@@ -156,6 +159,75 @@ def responses(now: datetime | None = None) -> dict[str, Any]:
         "networks/routers": [
             {"id": "r-1", "peer": "p-router-01", "enabled": True},
             {"id": "r-2", "peer": "p-router-02", "enabled": True},
+            {"id": "r-3", "peer_groups": ["g-router"], "enabled": True},
+        ],
+        "networks": [
+            {"id": "n-a", "name": "net-beispiel-a", "routers": ["r-1"], "resources": ["res-a"]},
+            {"id": "n-b", "name": "net-beispiel-b", "routers": ["r-2"], "resources": ["res-b"]},
+            {"id": "n-s", "name": "net-beispiel-server", "routers": ["r-3"], "resources": []},
+        ],
+        "networks/n-a/routers": [{"id": "r-1", "peer": "p-router-01", "enabled": True}],
+        "networks/n-a/resources": [
+            {"id": "res-a", "name": "Büronetz", "address": "10.0.0.0/24", "type": "subnet"},
+            {"id": "res-a2", "name": "Drucker", "address": "10.0.0.20/32", "type": "host"},
+        ],
+        "networks/n-b/routers": [{"id": "r-2", "peer": "p-router-02", "enabled": True}],
+        "networks/n-b/resources": [
+            {"id": "res-b", "name": "Labor", "address": "10.0.20.0/24", "type": "subnet"}
+        ],
+        "networks/n-s/routers": [{"id": "r-3", "peer_groups": ["g-router"], "enabled": True}],
+        "networks/n-s/resources": [],
+        "reverse-proxies/services": [
+            {
+                "id": "s-wiki",
+                "name": "wiki",
+                "domain": "wiki.example.com",
+                "mode": "http",
+                "enabled": True,
+                "targets": [{"host": "10.0.30.21", "port": 3000, "protocol": "http"}],
+                "auth": {"bearer_auth": {"enabled": True}},
+                "access_restrictions": {"crowdsec_mode": "enforce"},
+                "meta": {"status": "active"},
+            },
+            {
+                "id": "s-git",
+                "name": "git",
+                "domain": "git.example.com",
+                "mode": "http",
+                "enabled": True,
+                "targets": [{"host": "10.0.30.22", "port": 3000, "protocol": "http"}],
+                "auth": {"bearer_auth": {"enabled": True}},
+                "access_restrictions": {"crowdsec_mode": "enforce"},
+                "meta": {"status": "active"},
+            },
+            {
+                "id": "s-files",
+                "name": "files",
+                "domain": "files.example.com",
+                "mode": "http",
+                "enabled": True,
+                "targets": [{"host": "10.0.30.27", "port": 443, "protocol": "https"}],
+                "auth": {"password_auth": {"enabled": True, "password": "geheim-beispiel"}},
+                "meta": {"status": "active"},
+            },
+            {
+                "id": "s-intern",
+                "name": "intern",
+                "domain": "intern.example.com",
+                "mode": "http",
+                "enabled": True,
+                "private": True,
+                "targets": [{"host": "10.0.30.30", "port": 80, "protocol": "http"}],
+                "meta": {"status": "active"},
+            },
+        ],
+        "reverse-proxies/clusters": [
+            {
+                "address": "proxy.example.com",
+                "online": True,
+                "connected_proxies": 1,
+                "supports_crowdsec": True,
+            }
         ],
         "routes": [],
         "accounts": [
@@ -179,3 +251,23 @@ def sample_transport(config: NetBirdConfig, path: str, params: Mapping[str, str]
     if path in data:
         return data[path]
     raise NotAvailableError(f"Den Endpunkt {path} gibt es auf diesem Server nicht.")
+
+
+def sample_checker() -> Checker:
+    """Prüfungen ohne Netz: wiki antwortet mit 502, git mit Zertifikat kurz vor Ablauf."""
+    from werkbank.modules.monitoring.netbird.checks import Checker, HttpsResult, TcpResult
+
+    now = datetime.now(UTC)
+
+    def https(domain: str) -> HttpsResult:
+        if domain == "wiki.example.com":
+            return HttpsResult(502, 120, now + timedelta(days=80), "")
+        if domain == "git.example.com":
+            return HttpsResult(302, 142, now + timedelta(days=21), "")
+        return HttpsResult(200, 210, now + timedelta(days=60), "")
+
+    return Checker(
+        https=https,
+        tcp=lambda target: TcpResult(True, 12, ""),
+        ping=lambda address: True,
+    )

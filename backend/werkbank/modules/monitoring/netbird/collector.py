@@ -14,9 +14,21 @@ from sqlalchemy.orm import Session
 
 from werkbank.config import Settings
 from werkbank.core.sessions import now_utc
+from werkbank.modules.monitoring.netbird.checks import Checker, run_https
 from werkbank.modules.monitoring.netbird.client import NetBirdClient, NetBirdError, Transport
-from werkbank.modules.monitoring.netbird.config import HISTORY_DAYS, client_config
-from werkbank.modules.monitoring.netbird.models import NbDaily, NbPeerDay, NbRun, NbState
+from werkbank.modules.monitoring.netbird.config import (
+    CHECK_DAYS,
+    HISTORY_DAYS,
+    client_config,
+    load_settings,
+)
+from werkbank.modules.monitoring.netbird.models import (
+    NbCheck,
+    NbDaily,
+    NbPeerDay,
+    NbRun,
+    NbState,
+)
 from werkbank.modules.monitoring.netbird.normalize import fetch
 
 logger = logging.getLogger(__name__)
@@ -60,14 +72,72 @@ def store(db: Session, data: dict[str, Any], now: datetime) -> None:
         db.add(NbPeerDay(peer_id=peer_id[:64], day=day))
 
 
+def ping_target(network: dict[str, Any]) -> str:
+    """Testziel eines Netzes: die erste eingeschaltete einzelne Adresse (Ressource „host“)."""
+    for item in network.get("resources") or []:
+        address = str(item.get("address") or "")
+        if item.get("enabled", True) and item.get("type") == "host" and address:
+            return address.removesuffix("/32")
+    return ""
+
+
+def run_checks(
+    db: Session, data: dict[str, Any], now: datetime, checker: Checker
+) -> dict[str, Any]:
+    """HTTPS-Abruf der öffentlichen Dienste, TCP zu Signal und Relay, optional Ping."""
+    options = load_settings(db)
+    services = [
+        s
+        for s in data.get("services") or []
+        if s.get("enabled") and not s.get("private") and s.get("mode") == "http" and s.get("domain")
+    ]
+    results = run_https(checker, [s["domain"] for s in services])
+    out: dict[str, Any] = {"services": {}, "ping": {}, "ping_enabled": options.ping}
+    for item in services:
+        result = results[item["domain"]]
+        out["services"][item["id"]] = {
+            "status_code": result.status_code,
+            "ms": result.ms,
+            "cert_expires": result.cert_expires.isoformat() if result.cert_expires else None,
+            "error": result.error,
+            "answered": result.answered,
+        }
+        db.add(
+            NbCheck(
+                service_id=item["id"][:64],
+                checked_at=now,
+                ok=result.answered,
+                status_code=result.status_code,
+                ms=result.ms,
+            )
+        )
+    for key, target in (("signal", options.signal), ("relay", options.relay)):
+        if target:
+            tcp = checker.tcp(target)
+            out[key] = {"target": target, "ok": tcp.ok, "ms": tcp.ms, "error": tcp.error}
+    if options.ping:
+        for network in (data.get("networks") or []) + (data.get("legacy_routes") or []):
+            target = ping_target(network)
+            if target:
+                out["ping"][network["id"]] = {"target": target, "ok": checker.ping(target)}
+    return out
+
+
 def purge(db: Session, now: datetime) -> None:
+    db.execute(delete(NbCheck).where(NbCheck.checked_at < now - timedelta(days=CHECK_DAYS + 1)))
     cutoff = local_day(now) - timedelta(days=HISTORY_DAYS)
     db.execute(delete(NbDaily).where(NbDaily.day < cutoff))
     db.execute(delete(NbPeerDay).where(NbPeerDay.day < cutoff))
     db.execute(delete(NbRun).where(NbRun.started_at < now - timedelta(days=HISTORY_DAYS)))
 
 
-def collect(db: Session, settings: Settings, *, transport: Transport | None = None) -> NbRun | None:
+def collect(
+    db: Session,
+    settings: Settings,
+    *,
+    transport: Transport | None = None,
+    checker: Checker | None = None,
+) -> NbRun | None:
     """Ein Abruf; None, wenn NetBird nicht eingerichtet ist."""
     config = client_config(db, settings)
     if config is None:
@@ -77,6 +147,7 @@ def collect(db: Session, settings: Settings, *, transport: Transport | None = No
     run = NbRun(started_at=now, ok=True)
     try:
         fetched = fetch(NetBirdClient(config, transport))
+        fetched.data["checks"] = run_checks(db, fetched.data, now, checker or Checker())
         store(db, fetched.data, now)
     except NetBirdError as error:
         db.rollback()

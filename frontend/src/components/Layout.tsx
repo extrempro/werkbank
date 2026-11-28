@@ -22,6 +22,7 @@ import {
   ADMIN_NETBIRD_PATH,
   MONITORING_NETBIRD_PATH,
   MONITORING_NETBIRD_PEERS_PATH,
+  MONITORING_NETBIRD_NETWORKS_PATH,
   MONITORING_FORTIGATE_OBJECTS_PATH,
   MONITORING_FORTIGATE_PATH,
   MONITORING_FORTIGATE_POLICIES_PATH,
@@ -94,6 +95,7 @@ import { HandbookPage } from "../pages/HandbookPage";
 import { DeviceAssociationPage } from "../modules/devices/DeviceAssociationPage";
 import { FortigateAdminPage } from "../modules/monitoring/fortigate/FortigateAdminPage";
 import { NetbirdAdminPage } from "../modules/monitoring/netbird/NetbirdAdminPage";
+import { NetbirdNetworksPage } from "../modules/monitoring/netbird/NetbirdNetworksPage";
 import { NetbirdOverviewPage, NetbirdPeersPage } from "../modules/monitoring/netbird/NetbirdPages";
 import { FortigateUnusedPage } from "../modules/monitoring/fortigate/FortigateUnusedPage";
 import { FortigateFindingsPage } from "../modules/monitoring/fortigate/FortigateFindingsPage";
@@ -668,6 +670,8 @@ export function Layout({ me }: LayoutProps) {
     page = <NetbirdOverviewPage />;
   } else if (path === MONITORING_NETBIRD_PEERS_PATH && current) {
     page = <NetbirdPeersPage />;
+  } else if (path === MONITORING_NETBIRD_NETWORKS_PATH && current) {
+    page = <NetbirdNetworksPage />;
   } else if (path === ADMIN_NETBIRD_PATH && current) {
     page = <NetbirdAdminPage />;
   } else if (path === BUDGET_PATH && current) {

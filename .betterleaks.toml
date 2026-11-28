@@ -38,6 +38,9 @@ paths = [
   '''^frontend/src/.+\.test\.tsx?$''',
   '''^e2e/tests/''',
   '''^\.github/workflows/ci\.yml$''',
+  # Erfundene Beispieldaten der Monitoring-Module für Tests und die Test-Umgebung
+  # (z. B. ein Beispielkennwort, das zeigt, dass Kennwörter der Dienste nie gespeichert werden)
+  '''^backend/werkbank/modules/monitoring/[a-z]+/sample\.py$''',
   # Diese Datei selbst (ein früherer Stand des Kommentars enthielt ein Beispiel)
   '''^\.betterleaks\.toml$''',
 ]

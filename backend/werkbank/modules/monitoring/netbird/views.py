@@ -5,21 +5,22 @@ from collections.abc import Mapping
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import Integer, cast, func, select
 from sqlalchemy.orm import Session
 
 from werkbank.modules.monitoring.netbird.collector import last_run, latest_state, local_day
-from werkbank.modules.monitoring.netbird.config import load_settings
+from werkbank.modules.monitoring.netbird.config import CHECK_DAYS, load_settings
 from werkbank.modules.monitoring.netbird.hints import (
     LEVELS,
     Hint,
     all_hints,
     login_expires,
+    network_status,
     parse_time,
     releases_behind,
     status,
 )
-from werkbank.modules.monitoring.netbird.models import NbDaily, NbPeerDay
+from werkbank.modules.monitoring.netbird.models import NbCheck, NbDaily, NbPeerDay
 
 STATUS_LABELS = {
     "verbunden": "verbunden",
@@ -51,7 +52,10 @@ def routing_peers(data: Mapping[str, Any]) -> set[str]:
     """Peers, die als Routing-Peer eingetragen sind (direkt oder über eine Gruppe)."""
     members = {g["id"]: set(g.get("peers") or []) for g in data.get("groups") or []}
     out: set[str] = set()
-    for item in (data.get("routers") or []) + (data.get("legacy_routes") or []):
+    items = list(data.get("routers") or [])
+    for network in (data.get("networks") or []) + (data.get("legacy_routes") or []):
+        items.extend(network.get("routers") or [])
+    for item in items:
         if not item.get("enabled", True):
             continue
         if item.get("peer"):
@@ -134,8 +138,19 @@ def overview(db: Session, now: datetime, days: int = 14) -> dict[str, Any]:
                 "total": row.total if row else None,
             }
         )
+    nets = [network_status(n, data) for n in all_networks(data)]
+    services = public_services(data)
+    results = (data.get("checks") or {}).get("services") or {}
     out.update(
         {
+            "networks_total": len(nets),
+            "networks_ok": sum(1 for n in nets if n["state"] in ("erreichbar", "ohne_ausfallweg")),
+            "networks_single": sum(1 for n in nets if n["state"] == "ohne_ausfallweg"),
+            "services_total": len(services),
+            "services_ok": sum(
+                1 for item in services if (results.get(item["id"]) or {}).get("answered")
+            ),
+            "services_checked": sum(1 for item in services if item["id"] in results),
             "peers": len(peers),
             "connected": sum(1 for p in peers if p.get("connected")),
             "routers": len(routers & {p["id"] for p in peers}),
@@ -292,3 +307,117 @@ def peer_detail(db: Session, now: datetime, peer_id: str) -> dict[str, Any] | No
         }
     )
     return row
+
+
+# --- Netze & Dienste ----------------------------------------------------------------------
+
+NETWORK_STATES = {
+    "erreichbar": "erreichbar",
+    "ohne_ausfallweg": "ohne Ausfallweg",
+    "nicht_erreichbar": "nicht erreichbar",
+    "ohne_router": "ohne Routing-Peer",
+}
+
+
+def all_networks(data: Mapping[str, Any]) -> list[dict[str, Any]]:
+    return list(data.get("networks") or []) + list(data.get("legacy_routes") or [])
+
+
+def public_services(data: Mapping[str, Any]) -> list[dict[str, Any]]:
+    return [s for s in data.get("services") or [] if s.get("enabled")]
+
+
+def availability(db: Session, now: datetime) -> dict[str, float]:
+    since = now - timedelta(days=CHECK_DAYS)
+    rows = db.execute(
+        select(NbCheck.service_id, func.count(), func.sum(cast(NbCheck.ok, Integer)))
+        .where(NbCheck.checked_at >= since)
+        .group_by(NbCheck.service_id)
+    ).all()
+    return {sid: round(100 * (ok or 0) / total, 1) for sid, total, ok in rows if total}
+
+
+def networks_page(db: Session, now: datetime) -> dict[str, Any]:
+    out = _base(db)
+    state = latest_state(db)
+    data: Mapping[str, Any] = state.data if state else {}
+    checks = data.get("checks") or {}
+    options = load_settings(db)
+    clusters = data.get("clusters") or []
+    services = public_services(data)
+    results = checks.get("services") or {}
+    uptime = availability(db, now)
+
+    def tcp(key: str) -> dict[str, Any] | None:
+        value = checks.get(key)
+        return dict(value) if isinstance(value, dict) else None
+
+    components = {
+        "management": {
+            "ok": state is not None and out["last_ok"] is not False,
+            "ms": data.get("management_ms"),
+        },
+        "signal": tcp("signal") if options.signal else None,
+        "relay": tcp("relay") if options.relay else None,
+        "proxy": {
+            "services": len(services),
+            "errors": sum(
+                1
+                for item in services
+                if item["id"] in results and not results[item["id"]].get("answered")
+            ),
+            "online": any(c.get("online") for c in clusters) if clusters else None,
+            "crowdsec": any(c.get("crowdsec") for c in clusters),
+        },
+    }
+    networks = []
+    for network in all_networks(data):
+        info = network_status(network, data)
+        networks.append(
+            {
+                "id": network["id"],
+                "name": network.get("name") or network["id"],
+                "kind": network.get("kind") or "network",
+                "ranges": [
+                    r.get("address")
+                    for r in network.get("resources") or []
+                    if r.get("enabled", True) and r.get("address")
+                ],
+                **info,
+                "state_label": NETWORK_STATES[info["state"]],
+            }
+        )
+    order = {"nicht_erreichbar": 0, "ohne_ausfallweg": 1, "ohne_router": 2, "erreichbar": 3}
+    networks.sort(key=lambda n: (order[n["state"]], str(n["name"]).lower()))
+    service_rows = []
+    for item in services:
+        result = results.get(item["id"])
+        target = next((t for t in item.get("targets") or [] if t.get("enabled", True)), None)
+        service_rows.append(
+            {
+                "id": item["id"],
+                "domain": item.get("domain") or item.get("name"),
+                "target": f"{target['host']}:{target['port']}"
+                if target and target.get("port")
+                else (target or {}).get("host", ""),
+                "access": item.get("access") or "",
+                "private": bool(item.get("private")),
+                "status_code": result.get("status_code") if result else None,
+                "answered": result.get("answered") if result else None,
+                "error": result.get("error") if result else "",
+                "ms": result.get("ms") if result else None,
+                "availability": uptime.get(item["id"]),
+                "cert_expires": parse_time(result.get("cert_expires")) if result else None,
+                "crowdsec_mode": item.get("crowdsec_mode") or "off",
+            }
+        )
+    service_rows.sort(key=lambda r: (r["answered"] is not False, str(r["domain"]).lower()))
+    out.update(
+        {
+            "components": components,
+            "ping_enabled": options.ping,
+            "networks": networks,
+            "services": service_rows,
+        }
+    )
+    return out
