@@ -851,6 +851,11 @@ def test_detect_changes_and_flags() -> None:
     members = drafts[("g-vertrieb", "mitglieder")]
     assert members.summary == "1 Mitglied hinzu" and members.scim_group
     assert ["Neu", "\u2013", "nb-peer-07", True] in members.fields
+    # Älterer Stand ohne Zahl der Ressourcen: keine Scheinänderung
+    legacy = fetched()
+    for group in legacy["groups"]:
+        group.pop("resources_count")
+    assert watch.detect(legacy, old, watch_settings()) == []
     # Gleiche Einstellungen auf beiden Seiten: neues Präfix erzeugt keine Scheinänderungen
     assert watch.detect(old, old, watch_settings()) == []
     assert watch.detect(old, new, watch.WatchSettings()) == []

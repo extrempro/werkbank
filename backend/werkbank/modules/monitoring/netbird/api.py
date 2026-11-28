@@ -100,7 +100,7 @@ def get_changes(
     q: TextQuery = "",
     object_id: Annotated[str, Query(max_length=64)] = "",
     offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    limit: Annotated[int, Query(ge=1, le=2000)] = 50,
 ) -> dict[str, Any]:
     """Erkannte Änderungen an überwachten Gruppen und Policies."""
     if days not in views.CHANGE_DAYS:

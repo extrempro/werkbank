@@ -295,6 +295,9 @@ def _group_drafts(
         if prev is None or cur is None:
             continue
         before, after = group_view(old, prev), group_view(new, cur)
+        if "resources_count" not in prev:
+            # Stand einer älteren Werkbank ohne Zahl der Ressourcen: nicht als Änderung werten
+            before["Ressourcen"] = after["Ressourcen"]
         if before["Name"] != after["Name"]:
             fields = compare({"Name": before["Name"]}, {"Name": after["Name"]})
             out.append(
