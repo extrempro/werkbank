@@ -9,7 +9,7 @@ from sqlalchemy import Integer, cast, func, select
 from sqlalchemy.orm import Session
 
 from werkbank.modules.monitoring.netbird.collector import last_run, latest_state, local_day
-from werkbank.modules.monitoring.netbird.config import CHECK_DAYS, load_settings
+from werkbank.modules.monitoring.netbird.config import CHECK_DAYS, load_settings, stored
 from werkbank.modules.monitoring.netbird.hints import (
     LEVELS,
     Hint,
@@ -22,6 +22,7 @@ from werkbank.modules.monitoring.netbird.hints import (
 )
 from werkbank.modules.monitoring.netbird.models import (
     NbBlock,
+    NbChange,
     NbCheck,
     NbDaily,
     NbEvent,
@@ -37,6 +38,7 @@ from werkbank.modules.monitoring.netbird.policies import (
     policy_rows,
     setup_key_rows,
 )
+from werkbank.modules.monitoring.netbird.watch import load_watch, preview
 
 STATUS_LABELS = {
     "verbunden": "verbunden",
@@ -121,7 +123,9 @@ def overview(db: Session, now: datetime, days: int = 14) -> dict[str, Any]:
     data: Mapping[str, Any] = state.data if state else {}
     peers = data.get("peers") or []
     routers = routing_peers(data)
-    hints = all_hints(data, now) if state else []
+    hints = (all_hints(data, now) if state else []) + change_hints(db)
+    order = {level: index for index, level in enumerate(LEVELS)}
+    hints.sort(key=lambda h: order[h.level])
     latest = str((data.get("version") or {}).get("available") or "")
     versions: Counter[str] = Counter()
     systems: dict[str, dict[str, int]] = {}
@@ -539,3 +543,156 @@ def events(
         query.order_by(NbEvent.at.desc(), NbEvent.id.desc()).offset(offset).limit(limit)
     )
     return {"total": total, "days": days, "items": [event_row(e) for e in rows]}
+
+
+# --- Gruppen & Policies ------------------------------------------------------------------
+
+CHANGES_LINK = "/monitoring/netbird/gruppen"
+ACTION_LABELS = {
+    "angelegt": "angelegt",
+    "geaendert": "geändert",
+    "geloescht": "gelöscht",
+    "aktiviert": "aktiviert",
+    "deaktiviert": "deaktiviert",
+    "umbenannt": "umbenannt",
+    "mitglieder": "Mitglieder",
+}
+# Filter „Art“ fasst Aktionen zusammen
+ACTION_FILTER = {
+    "angelegt": ("angelegt",),
+    "geaendert": ("geaendert", "aktiviert", "deaktiviert", "umbenannt"),
+    "geloescht": ("geloescht",),
+    "mitglieder": ("mitglieder",),
+}
+CHANGE_DAYS = (7, 30, 90, 0)
+
+
+def change_hints(db: Session) -> list[Hint]:
+    """Offene Änderungen bleiben als Hinweis, bis sie bestätigt sind."""
+    out: list[Hint] = []
+    open_count = 0
+    for change in db.scalars(
+        select(NbChange).where(NbChange.status == "offen").order_by(NbChange.detected_at.desc())
+    ):
+        open_count += 1
+        if change.critical:
+            label = "Policy" if change.kind == "policy" else "Gruppe"
+            out.append(
+                Hint(
+                    "kritisch",
+                    "aenderung_kritisch",
+                    f"Unbestätigte kritische Änderung an {label} {change.object_name}",
+                    change.flag_text or "Die Policy nutzt eine Gruppe ohne Präfix oder „All“.",
+                    f"{CHANGES_LINK}?auswahl={change.id}",
+                    f"aenderung:{change.id}",
+                )
+            )
+    if open_count:
+        out.append(
+            Hint(
+                "warnung",
+                "aenderungen_offen",
+                f"{open_count} offene Änderung{'en' if open_count != 1 else ''} an Gruppen und "
+                "Policies",
+                "Gemeldete Änderungen bleiben offen, bis jemand mit „NetBird: Bestätigen“ sie "
+                "bestätigt.",
+                f"{CHANGES_LINK}?status=offen",
+                "aenderungen",
+            )
+        )
+    return out
+
+
+def change_row(change: NbChange) -> dict[str, Any]:
+    return {
+        "id": change.id,
+        "detected_at": change.detected_at,
+        "kind": change.kind,
+        "object_id": change.object_id,
+        "object_name": change.object_name,
+        "action": change.action,
+        "action_label": ACTION_LABELS.get(change.action, change.action),
+        "summary": change.summary,
+        "initiator": change.initiator,
+        "initiator_kind": change.initiator_kind,
+        "flag": change.flag,
+        "critical": change.critical,
+        "status": change.status,
+    }
+
+
+def change_detail(change: NbChange, related: int) -> dict[str, Any]:
+    return {
+        **change_row(change),
+        "fields": change.fields,
+        "via": change.via,
+        "flag_text": change.flag_text,
+        "notified": change.notified,
+        "reported": change.reported,
+        "confirmed_by_name": change.confirmed_by_name,
+        "confirmed_at": change.confirmed_at,
+        "comment": change.comment,
+        "related": related,
+    }
+
+
+def changes_page(
+    db: Session,
+    now: datetime,
+    *,
+    status: str = "",
+    kind: str = "",
+    action: str = "",
+    initiator: str = "",
+    days: int = 30,
+    query: str = "",
+    object_id: str = "",
+    offset: int = 0,
+    limit: int = 50,
+) -> dict[str, Any]:
+    out = _base(db)
+    state = latest_state(db)
+    data: Mapping[str, Any] = state.data if state else {}
+    watch = load_watch(stored(db))
+    stmt = select(NbChange)
+    if status:
+        stmt = stmt.where(NbChange.status == status)
+    if kind:
+        stmt = stmt.where(NbChange.kind == kind)
+    if action:
+        stmt = stmt.where(NbChange.action.in_(ACTION_FILTER[action]))
+    if initiator:
+        stmt = stmt.where(NbChange.initiator_kind == initiator)
+    if days:
+        stmt = stmt.where(NbChange.detected_at >= now - timedelta(days=days))
+    if object_id:
+        stmt = stmt.where(NbChange.object_id == object_id)
+    if query:
+        pattern = f"%{query.lower()}%"
+        stmt = stmt.where(
+            func.lower(NbChange.object_name).like(pattern)
+            | func.lower(NbChange.summary).like(pattern)
+            | func.lower(NbChange.initiator).like(pattern)
+        )
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    rows = db.scalars(
+        stmt.order_by(NbChange.detected_at.desc(), NbChange.id.desc()).offset(offset).limit(limit)
+    )
+    open_count = db.scalar(
+        select(func.count()).select_from(NbChange).where(NbChange.status == "offen")
+    )
+    out.update(
+        {
+            "watch": {
+                "active": watch.active,
+                "group_prefixes": list(watch.group_prefixes),
+                "policy_prefixes": list(watch.policy_prefixes) if watch.by_prefix else [],
+                "by_group": watch.by_group,
+                **preview(data, watch),
+            },
+            "open_count": open_count or 0,
+            "total": total,
+            "items": [change_row(c) for c in rows],
+        }
+    )
+    return out

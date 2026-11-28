@@ -112,8 +112,12 @@ AREAS: tuple[Area, ...] = (
     Area(
         "netbird",
         "NetBird",
-        "Lesen: Peers, Netze, Dienste und Richtlinien aus NetBird (personenbezogen).",
-        _levels(("Lesen", [Role.NETBIRD_READER])),
+        "Lesen: Peers, Netze, Dienste und Richtlinien aus NetBird (personenbezogen). "
+        "Bestätigen: zusätzlich Änderungen an Gruppen und Policies bestätigen.",
+        _levels(
+            ("Lesen", [Role.NETBIRD_READER]),
+            ("Bestätigen", [Role.NETBIRD_READER, Role.NETBIRD_APPROVER]),
+        ),
     ),
     Area(
         "m365",

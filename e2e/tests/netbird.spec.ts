@@ -147,7 +147,7 @@ test("NetBird: Richtlinien & Ereignisse mit Prüfung, Setup-Keys und Protokoll",
   await page.goto("/monitoring/netbird");
   const recent = page.getByRole("table", { name: "Letzte Ereignisse" });
   await expect(
-    recent.getByRole("row", { name: /Richtlinie geändert/ }),
+    recent.getByRole("row", { name: /Richtlinie geändert/ }).first(),
   ).toContainText("Ina Beispiel");
   await page.getByRole("link", { name: "Alle Ereignisse" }).click();
   await expect(page).toHaveURL(/\/monitoring\/netbird\/richtlinien$/);
@@ -165,7 +165,7 @@ test("NetBird: Richtlinien & Ereignisse mit Prüfung, Setup-Keys und Protokoll",
   ).toContainText("deaktiviert seit");
   const log = page.getByRole("table", { name: "Ereignisse" });
   await expect(
-    log.getByRole("row", { name: /Richtlinie geändert/ }),
+    log.getByRole("row", { name: /Richtlinie geändert/ }).first(),
   ).toBeVisible();
   await page.getByRole("combobox", { name: "Art" }).selectOption("peer");
   await expect(
@@ -196,5 +196,61 @@ test("NetBird: CrowdSec mit Sperren und Abweisungen je Dienst", async ({
   await expect(
     services.getByRole("row").filter({ hasText: "files.example.com" }),
   ).toContainText("aus");
+  await expectNoA11yViolations(page);
+});
+
+test("NetBird: Gruppen & Policies – Leser sehen, Bestätiger bestätigen", async ({
+  page,
+}) => {
+  await loadSample(page);
+  await loginAs(page, ["NetBird.Reader"], "Nora NetBird");
+  await page.goto("/monitoring/netbird/gruppen");
+  const table = page.getByRole("table", { name: "Änderungen" });
+  const server = table
+    .getByRole("row")
+    .filter({ hasText: "pol-beispiel-server" });
+  await expect(server).toContainText("fremde Gruppe");
+  await expect(server).toContainText("Ina Beispiel");
+  await expect(
+    page.getByRole("button", { name: "Alle offenen bestätigen" }),
+  ).toHaveCount(0);
+  await server.getByRole("button", { name: "pol-beispiel-server" }).click();
+  const detail = page.getByRole("complementary", {
+    name: "Detail der Änderung",
+  });
+  await expect(
+    detail.getByRole("table", { name: "Vorher und Nachher" }),
+  ).toContainText("grp-beispiel-vertrieb");
+  await expect(
+    detail.getByRole("button", { name: "Änderung bestätigen" }),
+  ).toHaveCount(0);
+  await expectNoA11yViolations(page);
+
+  await loginAs(page, ["NetBird.Reader", "NetBird.Approver"], "Bea Bestätigt");
+  await page.goto("/monitoring/netbird/gruppen");
+  await table
+    .getByRole("row")
+    .filter({ hasText: "pol-beispiel-server" })
+    .getByRole("button", { name: "pol-beispiel-server" })
+    .click();
+  await detail.getByRole("textbox", { name: /Kommentar/ }).fill("Gewollt");
+  await detail.getByRole("button", { name: "Änderung bestätigen" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Änderung bestätigen?" })
+    .getByRole("button", { name: "Bestätigen" })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Die Änderung ist bestätigt." }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Alle offenen bestätigen" }).click();
+  await page
+    .getByRole("alertdialog", { name: /offene Änderungen bestätigen/ })
+    .getByRole("button", { name: "Bestätigen" })
+    .click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: /offene Änderung(en)? (ist|sind) bestätigt/ }),
+  ).toBeVisible();
   await expectNoA11yViolations(page);
 });

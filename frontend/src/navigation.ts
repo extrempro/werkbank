@@ -69,6 +69,7 @@ export const MONITORING_NETBIRD_PATH = "/monitoring/netbird";
 export const MONITORING_NETBIRD_PEERS_PATH = "/monitoring/netbird/peers";
 export const MONITORING_NETBIRD_NETWORKS_PATH = "/monitoring/netbird/netze";
 export const MONITORING_NETBIRD_POLICIES_PATH = "/monitoring/netbird/richtlinien";
+export const MONITORING_NETBIRD_CHANGES_PATH = "/monitoring/netbird/gruppen";
 export const ADMIN_NETBIRD_PATH = "/verwaltung/netbird";
 export const PROJECTS_PATH = "/projekte";
 export const INVENTORY_HARDWARE_PATH = "/bestand/hardware";
@@ -272,6 +273,7 @@ export function areasFor(roles: readonly string[]): NavArea[] {
           label: "Richtlinien & Ereignisse",
           icon: "schloss",
         },
+        { path: MONITORING_NETBIRD_CHANGES_PATH, label: "Gruppen & Policies", icon: "aenderungen" },
       ],
     });
   }

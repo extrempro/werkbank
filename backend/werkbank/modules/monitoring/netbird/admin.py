@@ -2,7 +2,7 @@
 Verbindungstest; CrowdSec (Local API mit Bouncer-Schlüssel, Dienste bewusst ohne CrowdSec).
 Nur für System-Admins mit frischer Anmeldung."""
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
@@ -24,7 +24,7 @@ from werkbank.modules.monitoring.netbird.client import (
     http_transport,
     valid_url,
 )
-from werkbank.modules.monitoring.netbird.collector import last_run
+from werkbank.modules.monitoring.netbird.collector import last_run, latest_state
 from werkbank.modules.monitoring.netbird.config import (
     client_config,
     lapi_config,
@@ -37,6 +37,12 @@ from werkbank.modules.monitoring.netbird.crowdsec import (
     http_lapi,
     read_lapi,
     valid_lapi_url,
+)
+from werkbank.modules.monitoring.netbird.watch import (
+    NOTIFY_DEFAULTS,
+    WatchSettings,
+    load_watch,
+    preview,
 )
 
 router = APIRouter(prefix="/api/admin/settings/netbird")
@@ -348,3 +354,146 @@ def test_crowdsec(
     _audit(db, request, user, "crowdsec_geprueft", result)
     db.commit()
     return CrowdSecTestOut(**result)
+
+
+# --- Gruppen & Policies (Phase 5) ------------------------------------------------------------
+
+
+class Notify(BaseModel):
+    policy_change: bool = NOTIFY_DEFAULTS["policy_change"]
+    policy_toggle: bool = NOTIFY_DEFAULTS["policy_toggle"]
+    group_change: bool = NOTIFY_DEFAULTS["group_change"]
+    members_manual: bool = NOTIFY_DEFAULTS["members_manual"]
+    members_scim: bool = NOTIFY_DEFAULTS["members_scim"]
+
+
+class WatchIn(BaseModel):
+    group_prefixes: str = Field(default="", max_length=1000)
+    policy_prefixes: str = Field(default="", max_length=1000)
+    by_prefix: bool = True
+    by_group: bool = True
+    notify: Notify = Field(default_factory=Notify)
+    critical_mail: bool = False
+    retention: Literal["unbegrenzt", "3j", "1j", "90t"] = "unbegrenzt"
+    reminder: Literal[3, 7, 0] = 3
+    auto_confirm: bool = True
+
+
+class WatchOut(BaseModel):
+    group_prefixes: str
+    policy_prefixes: str
+    by_prefix: bool
+    by_group: bool
+    notify: Notify
+    critical_mail: bool
+    retention: str
+    reminder: int
+    auto_confirm: bool
+    preview: dict[str, Any]
+
+
+PREFIX_MAX = 20
+PREFIX_LEN = 100
+
+
+def parse_prefixes(value: str) -> list[str]:
+    out: list[str] = []
+    for part in value.split(","):
+        prefix = part.strip()
+        if prefix and prefix.casefold() not in {p.casefold() for p in out}:
+            out.append(prefix)
+    if len(out) > PREFIX_MAX or any(len(p) > PREFIX_LEN for p in out):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Höchstens {PREFIX_MAX} Präfixe mit je bis zu {PREFIX_LEN} Zeichen.",
+        )
+    return out
+
+
+def _watch_settings(body: WatchIn) -> WatchSettings:
+    return WatchSettings(
+        group_prefixes=tuple(parse_prefixes(body.group_prefixes)),
+        policy_prefixes=tuple(parse_prefixes(body.policy_prefixes)),
+        by_prefix=body.by_prefix,
+        by_group=body.by_group,
+        notify=body.notify.model_dump(),
+        critical_mail=body.critical_mail,
+        retention=body.retention,
+        reminder=body.reminder,
+        auto_confirm=body.auto_confirm,
+    )
+
+
+def _preview(db: DbDep, watch: WatchSettings) -> dict[str, Any]:
+    state = latest_state(db)
+    return preview(state.data if state else {}, watch)
+
+
+def _watch_out(db: DbDep) -> WatchOut:
+    watch = load_watch(stored(db))
+    return WatchOut(
+        group_prefixes=", ".join(watch.group_prefixes),
+        policy_prefixes=", ".join(watch.policy_prefixes),
+        by_prefix=watch.by_prefix,
+        by_group=watch.by_group,
+        notify=Notify(**dict(watch.notify)),
+        critical_mail=watch.critical_mail,
+        retention=watch.retention,
+        reminder=watch.reminder,
+        auto_confirm=watch.auto_confirm,
+        preview=_preview(db, watch),
+    )
+
+
+@router.get("/watch")
+def get_watch(user: AdminUser, db: DbDep) -> WatchOut:
+    return _watch_out(db)
+
+
+@router.post("/watch/preview")
+def preview_watch(body: WatchIn, user: AdminUser, db: DbDep) -> dict[str, Any]:
+    """Treffer der Präfixe auf dem jüngsten Stand, ohne zu speichern."""
+    return _preview(db, _watch_settings(body))
+
+
+@router.put("/watch")
+def put_watch(request: Request, body: WatchIn, user: AdminUser, db: DbDep) -> WatchOut:
+    watch = _watch_settings(body)
+    before = load_watch(stored(db))
+    data = dict(stored(db))
+    data["watch"] = {
+        "group_prefixes": list(watch.group_prefixes),
+        "policy_prefixes": list(watch.policy_prefixes),
+        "by_prefix": watch.by_prefix,
+        "by_group": watch.by_group,
+        "notify": dict(watch.notify),
+        "critical_mail": watch.critical_mail,
+        "retention": watch.retention,
+        "reminder": watch.reminder,
+        "auto_confirm": watch.auto_confirm,
+    }
+    set_setting(db, NETBIRD_KEY, data, user.user_id)
+    _audit(
+        db,
+        request,
+        user,
+        "ueberwachung_geaendert",
+        {
+            "vorher": {
+                "gruppen": list(before.group_prefixes),
+                "policies": list(before.policy_prefixes),
+                "aufbewahrung": before.retention,
+            },
+            "nachher": {
+                "gruppen": list(watch.group_prefixes),
+                "policies": list(watch.policy_prefixes),
+                "aufbewahrung": watch.retention,
+                "melden": dict(watch.notify),
+                "mail_teams": watch.critical_mail,
+                "erinnerung": watch.reminder,
+                "automatisch": watch.auto_confirm,
+            },
+        },
+    )
+    db.commit()
+    return _watch_out(db)

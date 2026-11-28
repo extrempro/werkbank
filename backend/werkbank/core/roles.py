@@ -25,6 +25,7 @@ class Role(StrEnum):
     FORTIGATE_READER = "FortiGate.Reader"
     FORTIGATE_EDITOR = "FortiGate.Editor"
     NETBIRD_READER = "NetBird.Reader"
+    NETBIRD_APPROVER = "NetBird.Approver"
     PROJECTS_READER = "Projekte.Reader"
     PROJECTS_EDITOR = "Projekte.Editor"
     INVENTORY_READER = "Bestand.Reader"

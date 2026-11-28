@@ -327,6 +327,21 @@ export const HELP = {
     text: "Öffentliche Dienste ohne CrowdSec bekommen eine Warnung. Trag hier die ein, bei denen das gewollt ist, etwa die Anmeldeseite.",
     topic: ["it-monitoring", "netbird-einrichten"],
   },
+  "netbird.ueberwacht": {
+    term: "Überwacht",
+    text: "Gruppen und Policies, deren Name mit einem eingetragenen Präfix beginnt. Nur ihre Änderungen erkennt, meldet und protokolliert die Werkbank.",
+    topic: ["it-monitoring", "netbird-gruppen"],
+  },
+  "netbird.fremde_gruppe": {
+    term: "Fremde Gruppe",
+    text: "Eine überwachte Policy nutzt eine Gruppe ohne Präfix oder „All“. Das kann Zugriff für Geräte öffnen, die nicht dazugehören.",
+    topic: ["it-monitoring", "netbird-gruppen"],
+  },
+  "netbird.von_hand": {
+    term: "Von Hand",
+    text: "Die Gruppe hat das Präfix, kommt aber nicht über SCIM aus Entra. Mitglieder pflegt hier jemand direkt in NetBird.",
+    topic: ["it-monitoring", "netbird-gruppen"],
+  },
   "netbird.ausfallweg": {
     term: "Ausfallweg",
     text: "Wie viele Routing-Peers des Netzes verbunden sind. Ist es nur einer, fehlt der Ausfallweg.",
@@ -728,6 +743,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/monitoring/netbird/peers": [["it-monitoring", "netbird-peers"]],
   "/monitoring/netbird/netze": [["it-monitoring", "netbird-netze"]],
   "/monitoring/netbird/richtlinien": [["it-monitoring", "netbird-richtlinien"]],
+  "/monitoring/netbird/gruppen": [["it-monitoring", "netbird-gruppen"]],
   "/verwaltung/netbird": [["it-monitoring", "netbird-einrichten"]],
   "/doku": [["doku", "seiten"]],
   "/doku/verwaltung": [["doku", "verwaltung"]],

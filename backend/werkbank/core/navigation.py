@@ -91,6 +91,7 @@ PAGES: dict[str, tuple[str, ...]] = {
     "/monitoring/netbird/peers": (Role.NETBIRD_READER,),
     "/monitoring/netbird/netze": (Role.NETBIRD_READER,),
     "/monitoring/netbird/richtlinien": (Role.NETBIRD_READER,),
+    "/monitoring/netbird/gruppen": (Role.NETBIRD_READER,),
     "/verwaltung/netbird": (Role.WERKBANK_ADMIN,),
     "/verwaltung": (Role.WERKBANK_ADMIN,),
     "/verwaltung/berechtigungen": (Role.WERKBANK_ADMIN,),

@@ -10,8 +10,8 @@ import io
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from pydantic import BaseModel
-from sqlalchemy import func, select
+from pydantic import BaseModel, Field
+from sqlalchemy import delete, func, select, update
 
 from werkbank.core.admin_settings import client_ip
 from werkbank.core.audit import write_audit
@@ -22,6 +22,7 @@ from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.modules.monitoring.netbird import views
 from werkbank.modules.monitoring.netbird.collector import NETBIRD_JOB
+from werkbank.modules.monitoring.netbird.models import NbChange
 from werkbank.worker.jobs import enqueue
 
 router = APIRouter(prefix="/api/monitoring/netbird")
@@ -77,6 +78,151 @@ def get_events(
     if days not in views.EVENT_DAYS:
         raise HTTPException(status_code=422, detail="Zeitraum: 7, 30 oder 90 Tage.")
     return views.events(db, now_utc(), kind=kind or "", days=days, offset=offset, limit=limit)
+
+
+ChangeStatus = Annotated[Literal["offen", "bestaetigt", "automatisch"] | None, Query()]
+ChangeKind = Annotated[Literal["group", "policy"] | None, Query()]
+ChangeAction = Annotated[
+    Literal["angelegt", "geaendert", "geloescht", "mitglieder"] | None, Query()
+]
+ChangeInitiator = Annotated[Literal["person", "scim", "unbekannt"] | None, Query()]
+
+
+@router.get("/changes")
+def get_changes(
+    user: ReaderUser,
+    db: DbDep,
+    state: ChangeStatus = None,
+    kind: ChangeKind = None,
+    action: ChangeAction = None,
+    initiator: ChangeInitiator = None,
+    days: Annotated[int, Query(ge=0, le=90)] = 30,
+    q: TextQuery = "",
+    object_id: Annotated[str, Query(max_length=64)] = "",
+    offset: Annotated[int, Query(ge=0, le=100_000)] = 0,
+    limit: Annotated[int, Query(ge=1, le=2000)] = 50,
+) -> dict[str, Any]:
+    """Erkannte Änderungen an überwachten Gruppen und Policies."""
+    if days not in views.CHANGE_DAYS:
+        raise HTTPException(status_code=422, detail="Zeitraum: 7, 30, 90 Tage oder alles (0).")
+    data = views.changes_page(
+        db,
+        now_utc(),
+        status=state or "",
+        kind=kind or "",
+        action=action or "",
+        initiator=initiator or "",
+        days=days,
+        query=q.strip(),
+        object_id=object_id,
+        offset=offset,
+        limit=limit,
+    )
+    data["can_confirm"] = user.has_any_role(Role.NETBIRD_APPROVER)
+    data["can_configure"] = user.has_any_role(Role.WERKBANK_ADMIN)
+    return data
+
+
+def _change(db: DbDep, change_id: int) -> NbChange:
+    change = db.get(NbChange, change_id)
+    if change is None:
+        raise HTTPException(status_code=404, detail="Diese Änderung gibt es nicht.")
+    return change
+
+
+@router.get("/changes/{change_id}")
+def get_change(user: ReaderUser, db: DbDep, change_id: int) -> dict[str, Any]:
+    change = _change(db, change_id)
+    related = db.scalar(
+        select(func.count()).select_from(NbChange).where(NbChange.object_id == change.object_id)
+    )
+    data = views.change_detail(change, related or 0)
+    data["can_confirm"] = user.has_any_role(Role.NETBIRD_APPROVER)
+    return data
+
+
+def _approver(user: ReaderUser) -> CurrentUser:
+    """Bestätigen nur mit NetBird.Approver (zusätzlich zu NetBird.Reader)."""
+    if not user.has_any_role(Role.NETBIRD_APPROVER):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Nur mit dem Recht „NetBird: Bestätigen“."
+        )
+    return user
+
+
+ApproverUser = Annotated[CurrentUser, Depends(_approver)]
+
+
+class ConfirmIn(BaseModel):
+    comment: str = Field(default="", max_length=500)
+
+
+def _confirm(db: DbDep, change: NbChange, user: CurrentUser, comment: str) -> None:
+    from werkbank.core.models import Notification, User
+    from werkbank.modules.monitoring.netbird.notifications import change_link
+
+    person = db.get(User, user.user_id)
+    now = now_utc()
+    change.status = "bestaetigt"
+    change.confirmed_by = user.user_id
+    change.confirmed_by_name = (person.display_name if person else "")[:200]
+    change.confirmed_at = now
+    change.comment = comment.strip()[:500]
+    # Meldungen zur Änderung in der Glocke gelten als erledigt
+    db.execute(
+        update(Notification)
+        .where(Notification.link == change_link(change.id), Notification.read_at.is_(None))
+        .values(read_at=now)
+    )
+
+
+@router.post("/changes/{change_id}/confirm")
+def confirm_change(
+    request: Request, body: ConfirmIn, user: ApproverUser, db: DbDep, change_id: int
+) -> dict[str, Any]:
+    """Bestätigen mit freiwilligem Kommentar; danach nicht mehr änderbar."""
+    change = _change(db, change_id)
+    if change.status != "offen":
+        raise HTTPException(
+            status_code=409, detail="Die Änderung ist schon bestätigt und lässt sich nicht ändern."
+        )
+    _confirm(db, change, user, body.comment)
+    write_audit(
+        db,
+        module=MODULE,
+        action="netbird.aenderung_bestaetigt",
+        user_id=user.user_id,
+        object_type="netbird_aenderung",
+        object_id=str(change.id),
+        ip=client_ip(request),
+        details={"objekt": change.object_name, "kommentar": bool(change.comment)},
+    )
+    db.commit()
+    return views.change_detail(change, 0)
+
+
+class ConfirmAllOut(BaseModel):
+    confirmed: int
+
+
+@router.post("/changes/confirm-all")
+def confirm_all(request: Request, user: ApproverUser, db: DbDep) -> ConfirmAllOut:
+    """Alle offenen Änderungen bestätigen (ohne Kommentar)."""
+    changes = list(db.scalars(select(NbChange).where(NbChange.status == "offen")))
+    for change in changes:
+        _confirm(db, change, user, "")
+    write_audit(
+        db,
+        module=MODULE,
+        action="netbird.aenderungen_alle_bestaetigt",
+        user_id=user.user_id,
+        object_type="netbird_aenderung",
+        object_id="alle",
+        ip=client_ip(request),
+        details={"anzahl": len(changes)},
+    )
+    db.commit()
+    return ConfirmAllOut(confirmed=len(changes))
 
 
 @router.get("/peers")
@@ -213,6 +359,8 @@ def load_sample(
     from werkbank.core.app_settings import NETBIRD_KEY, encrypt_secret, get_setting, set_setting
     from werkbank.modules.monitoring.netbird.collector import collect
     from werkbank.modules.monitoring.netbird.sample import (
+        WATCH,
+        changed_transport,
         sample_checker,
         sample_lapi,
         sample_transport,
@@ -224,6 +372,11 @@ def load_sample(
     data["token_encrypted"] = encrypt_secret(settings, "beispiel-token")
     data["crowdsec_url"] = data.get("crowdsec_url") or "http://crowdsec.example.com:8080"
     data["crowdsec_key_encrypted"] = encrypt_secret(settings, "beispiel-bouncer")
+    data["watch"] = {**WATCH, **(data.get("watch") or {})}
     set_setting(db, NETBIRD_KEY, data, user.user_id)
     db.commit()
     collect(db, settings, transport=sample_transport, checker=sample_checker(), lapi=sample_lapi)
+    # Gruppen & Policies: zweiter Stand mit Änderungen, alte Beispieländerungen vorher weg
+    db.execute(delete(NbChange))
+    db.commit()
+    collect(db, settings, transport=changed_transport, checker=sample_checker(), lapi=sample_lapi)
