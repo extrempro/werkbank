@@ -32,7 +32,7 @@ export const RELEASES: readonly Release[] = [
         area: "IT-Monitoring",
         entries: [
           "Unter „Netze & Dienste“ siehst du je Dienst, ob CrowdSec aus ist, nur beobachtet oder sperrt, und wie viele Anfragen in den letzten 24 Stunden abgewiesen wurden.",
-          "Die Kachel CrowdSec zeigt die aktiven Sperren und wie viele davon eure eigene CrowdSec-Instanz erkannt hat.",
+          "Die Kachel CrowdSec zeigt die aktiven Sperren und wie viele davon die eigene CrowdSec-Instanz erkannt hat.",
           "Ist ein öffentlicher Dienst ohne CrowdSec, bekommst du einen Hinweis.",
         ],
       },
