@@ -2,7 +2,7 @@
 
 import csv
 import io
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -18,7 +18,9 @@ from werkbank.core.roles import Role
 from werkbank.core.sessions import CurrentUser, now_utc
 from werkbank.modules.monitoring.fortigate import analysis, views
 from werkbank.modules.monitoring.fortigate.collector import FORTIGATE_JOB
-from werkbank.modules.monitoring.fortigate.models import FgDevice
+from werkbank.modules.monitoring.fortigate.config import load_options
+from werkbank.modules.monitoring.fortigate.findings import RULES_BY_CODE, SEVERITY_LABELS
+from werkbank.modules.monitoring.fortigate.models import FgDevice, FgException
 from werkbank.worker.jobs import enqueue
 
 router = APIRouter(prefix="/api/monitoring/fortigate")
@@ -53,6 +55,8 @@ def get_overview(user: ReaderUser, db: DbDep) -> dict[str, Any]:
     data = views.overview(db, now_utc())
     data["configured"] = db.scalar(select(FgDevice.id).limit(1)) is not None
     data["can_refresh"] = user.has_any_role(Role.FORTIGATE_EDITOR)
+    found = views.findings(db, load_options(db), now_utc())
+    data["findings"] = {**found["counts"], "excepted": found["excepted"]}
     return data
 
 
@@ -77,7 +81,16 @@ def get_policies(
     """Policies aller Geräte in FortiOS-Reihenfolge, gefiltert und durchsucht."""
     query = analysis.parse_query(q)
     data = views.policies(db, query, device, pair, action, state)
-    data["rows"] = [_policy_out(row) for row in data["rows"]]
+    by_policy: dict[str, list[dict[str, Any]]] = {}
+    for item in views.findings(db, load_options(db), now_utc())["rows"]:
+        if item["policy_id"] is not None:
+            by_policy.setdefault(f"{item['device']}:{item['policy_id']}", []).append(
+                {"code": item["code"], "rule": item["rule"], "severity": item["severity"]}
+            )
+    data["rows"] = [
+        {**_policy_out(row), "findings": by_policy.get(f"{row['device']}:{row['id']}", [])}
+        for row in data["rows"]
+    ]
     data["query"] = _query_kind(query)
     return data
 
@@ -344,6 +357,166 @@ def cleanup_list(request: Request, body: CleanupIn, user: ReaderUser, db: DbDep)
     ]
     _audit_export(db, request, user, "aufraeumliste", len(rows))
     return _csv(_unused_lines(rows), "fortigate-aufraeumliste.csv")
+
+
+# --- Befunde und Ausnahmen -----------------------------------------------------------------
+
+SeverityQuery = Annotated[Literal["hoch", "mittel", "hinweis"] | None, Query()]
+CodeQuery = Annotated[str | None, Query(max_length=40, pattern=r"^[a-z_]*$")]
+
+
+def _findings(
+    db: DbDep,
+    severity: str | None,
+    device: str | None,
+    code: str | None,
+    excepted: bool,
+) -> dict[str, Any]:
+    if code and code not in RULES_BY_CODE:
+        raise HTTPException(status_code=422, detail="Diese Regel gibt es nicht.")
+    return views.findings(
+        db,
+        load_options(db),
+        now_utc(),
+        severity=severity,
+        device=device,
+        code=code or None,
+        excepted=excepted,
+    )
+
+
+@router.get("/findings")
+def get_findings(
+    user: ReaderUser,
+    db: DbDep,
+    severity: SeverityQuery = None,
+    device: NameQuery = None,
+    code: CodeQuery = None,
+    excepted: bool = False,
+) -> dict[str, Any]:
+    """Befunde nach Stufe; mit `excepted` die bewusst hingenommenen (Ausnahmen)."""
+    data = _findings(db, severity, device, code, excepted)
+    data["can_except"] = user.has_any_role(Role.FORTIGATE_EDITOR)
+    return data
+
+
+@router.get("/findings.csv")
+def export_findings(
+    request: Request,
+    user: ReaderUser,
+    db: DbDep,
+    severity: SeverityQuery = None,
+    device: NameQuery = None,
+    code: CodeQuery = None,
+    excepted: bool = False,
+) -> Response:
+    rows = _findings(db, severity, device, code, excepted)["rows"]
+    lines: list[list[Any]] = [
+        ["Stufe", "Regel", "Gerät", "Gegenstand", "Hinweis", "Seit", "Ausnahme", "Ausnahme bis"]
+    ]
+    for row in rows:
+        exception = row["exception"] or {}
+        lines.append(
+            [
+                SEVERITY_LABELS[row["severity"]],
+                row["rule"],
+                row["device"] or "alle Geräte",
+                row["label"],
+                row["detail"],
+                row["since"].strftime("%d.%m.%Y") if row["since"] else "",
+                exception.get("reason", ""),
+                exception["expires_at"].strftime("%d.%m.%Y")
+                if exception.get("expires_at")
+                else ("unbegrenzt" if exception else ""),
+            ]
+        )
+    _audit_export(db, request, user, "befunde", len(rows))
+    return _csv(lines, "fortigate-befunde.csv")
+
+
+class ExceptionIn(BaseModel):
+    key: str = Field(min_length=3, max_length=600)
+    reason: str = Field(min_length=3, max_length=500)
+    # 6 oder 12 Monate; 0: unbegrenzt
+    months: Literal[0, 6, 12] = 12
+
+
+class ExceptionOut(BaseModel):
+    id: int
+    expires_at: datetime | None
+
+
+@router.post("/exceptions", status_code=status.HTTP_201_CREATED)
+def create_exception(
+    request: Request, body: ExceptionIn, user: EditorUser, db: DbDep
+) -> ExceptionOut:
+    """Befund als Ausnahme hinnehmen. Gilt bis zur Frist oder bis sich der Gegenstand ändert."""
+    now = now_utc()
+    finding = views.finding_by_key(db, load_options(db), now, body.key)
+    if finding is None:
+        raise HTTPException(
+            status_code=404, detail="Den Befund gibt es nicht mehr. Bitte lade die Seite neu."
+        )
+    reason = " ".join(body.reason.split())
+    if len(reason) < 3:
+        raise HTTPException(status_code=422, detail="Bitte gib eine Begründung an.")
+    expires = now + timedelta(days=round(body.months * 30.44)) if body.months else None
+    existing = db.scalars(select(FgException).where(FgException.key == finding.key)).first()
+    if existing is not None:
+        db.delete(existing)
+        db.flush()
+    exception = FgException(
+        key=finding.key,
+        device=finding.device,
+        code=finding.code,
+        subject=finding.subject[:500],
+        label=finding.label[:300],
+        digest=finding.digest,
+        reason=reason,
+        expires_at=expires,
+        created_by=user.user_id,
+    )
+    db.add(exception)
+    db.flush()
+    write_audit(
+        db,
+        module=MODULE,
+        action="fortigate.ausnahme_angelegt",
+        user_id=user.user_id,
+        object_type="fortigate_ausnahme",
+        object_id=str(exception.id),
+        ip=client_ip(request),
+        details={
+            "regel": finding.code,
+            "geraet": finding.device,
+            "gegenstand": finding.subject,
+            "monate": body.months or "unbegrenzt",
+        },
+    )
+    db.commit()
+    return ExceptionOut(id=exception.id, expires_at=expires)
+
+
+@router.delete("/exceptions/{exception_id}")
+def delete_exception(
+    request: Request, exception_id: int, user: EditorUser, db: DbDep
+) -> dict[str, int]:
+    exception = db.get(FgException, exception_id)
+    if exception is None:
+        raise HTTPException(status_code=404, detail="Die Ausnahme gibt es nicht mehr.")
+    write_audit(
+        db,
+        module=MODULE,
+        action="fortigate.ausnahme_aufgehoben",
+        user_id=user.user_id,
+        object_type="fortigate_ausnahme",
+        object_id=str(exception.id),
+        ip=client_ip(request),
+        details={"regel": exception.code, "geraet": exception.device},
+    )
+    db.delete(exception)
+    db.commit()
+    return {"id": exception_id}
 
 
 class RefreshOut(BaseModel):

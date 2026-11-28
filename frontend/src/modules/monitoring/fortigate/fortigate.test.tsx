@@ -1,7 +1,16 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { FgAdminSettings, FgObjects, FgOverview, FgPolicies, FgPolicy } from "./api";
+import type {
+  FgAdminSettings,
+  FgFindings,
+  FgObjects,
+  FgOverview,
+  FgPolicies,
+  FgPolicy,
+  FgRules,
+} from "./api";
 import { FortigateAdminPage } from "./FortigateAdminPage";
+import { FortigateFindingsPage } from "./FortigateFindingsPage";
 import { FortigateUnusedPage } from "./FortigateUnusedPage";
 import {
   FortigateObjectsPage,
@@ -64,9 +73,13 @@ const overview: FgOverview = {
   policies: 4,
   disabled: 0,
   changes_24h: 2,
+  findings: { hoch: 1, mittel: 2, hinweis: 3, excepted: 1 },
 };
 
 const policy: FgPolicy = {
+  findings: [
+    { code: "wan_any_internal", rule: "Aus dem Internet von überall nach innen", severity: "hoch" },
+  ],
   device: "fw-edge",
   id: 7,
   position: 3,
@@ -109,6 +122,7 @@ const policies: FgPolicies = {
       srcaddr: ["Netz-Buero"],
       open: { ...policy.open, srcaddr: false, service: false },
       service: ["HTTPS"],
+      findings: [],
     },
   ],
   total: 9,
@@ -159,6 +173,64 @@ const objects: FgObjects = {
   counts: { addresses: 10, address_groups: 1, services: 5, service_groups: 1, vips: 1 },
   devices: ["fw-edge", "fw-standort-b"],
   query: "",
+};
+
+const rules: FgRules = {
+  rules: [
+    {
+      code: "any_any_all",
+      severity: "hoch",
+      title: "Alles erlaubt (any/any/ALL)",
+      description: "Erlaubt Quelle „all“, Ziel „all“ und alle Dienste.",
+      active: true,
+    },
+    {
+      code: "no_hits",
+      severity: "hinweis",
+      title: "Keine Treffer im Zeitraum",
+      description: "Die Policy hatte im eingestellten Zeitraum keinen Treffer.",
+      active: true,
+    },
+  ],
+  sensitive: ["dmz-server"],
+  unused_days: 90,
+  unused_days_options: [30, 60, 90, 180, 365],
+};
+
+const findings: FgFindings = {
+  rows: [
+    {
+      key: "fw-edge|wan_any_internal|policy:7",
+      code: "wan_any_internal",
+      rule: "Aus dem Internet von überall nach innen",
+      severity: "hoch",
+      device: "fw-edge",
+      label: "Policy 7 „Fernwartung Altsystem“",
+      detail: "Von wan1 mit Quelle „all“ nach lan.",
+      policy_id: 7,
+      since: "2026-11-28T10:00:00Z",
+      link: "/monitoring/fortigate/policies?geraet=fw-edge&q=%237&auswahl=fw-edge%3A7",
+      exception: null,
+    },
+    {
+      key: "|name_differs|addresses:srv-app",
+      code: "name_differs",
+      rule: "Gleicher Name, anderer Inhalt",
+      severity: "mittel",
+      device: "",
+      label: "srv-app",
+      detail: "fw-core: 10.20.31.10/32; fw-edge: 10.20.31.11/32",
+      policy_id: null,
+      since: null,
+      link: "/monitoring/fortigate/objekte?art=addresses&q=srv-app&auswahl=srv-app",
+      exception: null,
+    },
+  ],
+  counts: { hoch: 1, mittel: 1, hinweis: 0 },
+  excepted: 0,
+  devices: ["fw-edge", "fw-core"],
+  rules: rules.rules,
+  can_except: true,
 };
 
 function stub(routes: Record<string, unknown>, calls: string[] = []) {
@@ -255,6 +327,7 @@ describe("FortiGate", () => {
       devices: [],
     };
     const calls = stub({
+      "GET /api/admin/settings/fortigate/rules": rules,
       "GET /api/admin/settings/fortigate/retention-preview": { runs: 12, snapshots: 4 },
       "GET /api/admin/settings/fortigate": settings,
       "PUT /api/admin/settings/fortigate": { ...settings, retention_months: 1 },
@@ -343,5 +416,95 @@ describe("FortiGate", () => {
     expect(
       calls.some((call) => call.startsWith("POST /api/monitoring/fortigate/unused/cleanup.csv")),
     ).toBe(true);
+  });
+
+  it("zeigt Befunde, nimmt einen als Ausnahme mit Begründung hin und prüft die Eingabe", async () => {
+    const calls = stub({
+      "GET /api/monitoring/fortigate/findings": findings,
+      "POST /api/monitoring/fortigate/exceptions": { id: 3, expires_at: null },
+    });
+    render(<FortigateFindingsPage />);
+    const table = await screen.findByRole("table", { name: "Befunde" });
+    const row = within(table).getByRole("row", { name: /Fernwartung Altsystem/ });
+    expect(row).toHaveTextContent("Hoch");
+    expect(within(table).getByRole("row", { name: /srv-app/ })).toHaveTextContent("alle Geräte");
+    fireEvent.click(within(row).getByRole("button", { name: /Aus dem Internet/ }));
+    const detail = await screen.findByRole("complementary", { name: "Detail des Befunds" });
+    expect(within(detail).getByRole("link", { name: "Policy ansehen" })).toHaveAttribute(
+      "href",
+      findings.rows[0]!.link,
+    );
+    fireEvent.click(within(detail).getByRole("button", { name: "Als Ausnahme hinnehmen" }));
+    expect(within(detail).getByText(/Bitte gib eine Begründung an/)).toBeInTheDocument();
+    fireEvent.change(within(detail).getByRole("textbox", { name: /Begründung/ }), {
+      target: { value: "Fernwartung bewusst offen" },
+    });
+    fireEvent.click(within(detail).getByRole("radio", { name: /unbegrenzt/ }));
+    fireEvent.click(within(detail).getByRole("button", { name: "Als Ausnahme hinnehmen" }));
+    const dialog = await screen.findByRole("alertdialog", { name: /als Ausnahme hinnehmen/ });
+    expect(calls.some((call) => call.startsWith("POST"))).toBe(false);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Hinnehmen" }));
+    await waitFor(() => expect(calls.some((call) => call.startsWith("POST"))).toBe(true));
+    expect(await screen.findByText("Der Befund ist als Ausnahme hingenommen.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Ausnahmen zeigen/ }));
+    await waitFor(() => expect(calls.some((call) => call.includes("excepted=true"))).toBe(true));
+  });
+
+  it("zeigt Befunde in der Übersicht und an der Policy", async () => {
+    stub({
+      "GET /api/monitoring/fortigate/overview": overview,
+      "GET /api/monitoring/fortigate/policies": policies,
+    });
+    render(<FortigatePoliciesPage roles={["FortiGate.Reader"]} />);
+    const table = await screen.findByRole("table", { name: "Policies" });
+    const row = within(table).getByRole("row", { name: /Fernwartung Altsystem/ });
+    expect(row).toHaveTextContent("1 Befund");
+    fireEvent.click(within(row).getByRole("button", { name: /fw-edge/ }));
+    const detail = await screen.findByRole("complementary", { name: "Detail der Policy" });
+    expect(within(detail).getByRole("link", { name: /Aus dem Internet/ })).toHaveAttribute(
+      "href",
+      "/monitoring/fortigate/befunde?geraet=fw-edge&auswahl=fw-edge%7Cwan_any_internal%7Cpolicy%3A7",
+    );
+    cleanup();
+    stub({ "GET /api/monitoring/fortigate/overview": overview });
+    render(<FortigateOverviewPage roles={["FortiGate.Reader"]} />);
+    expect(await screen.findByRole("link", { name: "1 hoch" })).toHaveAttribute(
+      "href",
+      "/monitoring/fortigate/befunde?stufe=hoch",
+    );
+  });
+
+  it("speichert Prüfregeln und fragt vor dem Abschalten", async () => {
+    const settings: FgAdminSettings = {
+      interval_minutes: 60,
+      intervals: [60],
+      retention_months: 3,
+      ca_set: false,
+      analyzer_enabled: false,
+      analyzer_url: "",
+      analyzer_adom: "root",
+      analyzer_key_set: false,
+      token_storage_available: true,
+      devices: [],
+    };
+    const calls = stub({
+      "GET /api/admin/settings/fortigate/rules": rules,
+      "PUT /api/admin/settings/fortigate/rules": rules,
+      "GET /api/admin/settings/fortigate": settings,
+    });
+    render(<FortigateAdminPage />);
+    const box = await screen.findByRole("checkbox", { name: /Keine Treffer im Zeitraum/ });
+    expect(screen.getByRole("textbox", { name: /Schützenswerte Zonen/ })).toHaveValue("dmz-server");
+    fireEvent.click(box);
+    fireEvent.click(screen.getByRole("button", { name: "Prüfregeln speichern" }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Prüfregel abschalten?" });
+    expect(dialog).toHaveTextContent("Keine Treffer im Zeitraum");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Abschalten" }));
+    await waitFor(() =>
+      expect(calls.some((call) => call.startsWith("PUT /api/admin/settings/fortigate/rules"))).toBe(
+        true,
+      ),
+    );
+    expect(await screen.findByText("Die Prüfregeln sind gespeichert.")).toBeInTheDocument();
   });
 });

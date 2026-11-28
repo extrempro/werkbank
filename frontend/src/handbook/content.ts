@@ -1331,6 +1331,44 @@ export const AREAS: readonly Area[] = [
             ],
           },
           {
+            id: "fortigate-befunde",
+            title: "Befunde und Ausnahmen",
+            roles: [FORTIGATE],
+            blocks: [
+              {
+                kind: "text",
+                text: "„Befunde“ zeigt, was die Prüfregeln in den Policies und Objekten aller Geräte finden. Geprüft werden nur eingeschaltete Policies, die etwas erlauben; „all“ in einer Policy, die etwas verbietet, ist kein Befund. Als Internet-Seite zählen Interfaces mit der Rolle „WAN“ und Zonen mit einem solchen Interface.",
+              },
+              {
+                kind: "terms",
+                items: [
+                  [
+                    "Hoch",
+                    "alles erlaubt (Quelle, Ziel und Dienst offen); aus dem Internet mit Quelle „all“ nach innen; erlaubt ohne Protokoll in einer schützenswerten Zone",
+                  ],
+                  [
+                    "Mittel",
+                    "Dienst „ALL“; Ziel „all“, obwohl es nicht nur ins Internet geht; verdeckte Policy, die nie greift; gleicher Objektname mit anderem Inhalt; abweichendes Fabric-Objekt",
+                  ],
+                  [
+                    "Hinweis",
+                    "keine Treffer im eingestellten Zeitraum; unbenutzte Objekte; ins Internet ohne Sicherheitsprofile",
+                  ],
+                ],
+              },
+              {
+                kind: "list",
+                items: [
+                  "„Keine Treffer“ beruht auf den Zählern der FortiGate. Ein Neustart oder Update setzt sie zurück; prüfe also, bevor du eine Policy entfernst.",
+                  "Eine verdeckte Policy steht unter einer anderen, die alle ihre Verbindungen schon abdeckt. Gruppen und Netze werden dabei aufgelöst; Policies mit Benutzern, Internet-Diensten oder Negation vergleicht die Werkbank nicht.",
+                  "Mit dem Recht „FortiGate: Bearbeiten“ nimmst du einen Befund als Ausnahme hin: Begründung angeben, Frist wählen (6 Monate, 12 Monate oder unbegrenzt). Die Ausnahme fällt weg, wenn die Frist abläuft oder sich die Policy oder das Objekt ändert. Alles steht im Audit.",
+                  "Neue Befunde der Stufe hoch oder mittel meldet die Glocke allen mit dem Recht „FortiGate“.",
+                ],
+              },
+            ],
+            links: [{ to: "/monitoring/fortigate/befunde", label: "Zu den Befunden" }],
+          },
+          {
             id: "fortigate-einrichten",
             title: "FortiGate einrichten",
             roles: [ADMIN],
@@ -1347,6 +1385,10 @@ export const AREAS: readonly Area[] = [
               {
                 kind: "text",
                 text: "Die Aufbewahrung gilt für Abrufe und Konfigurationsstände (1 bis 36 Monate, Vorgabe 3). Verkürzt du sie, fragt die Werkbank vorher nach und nennt, wie viel wegfällt; gelöscht wird beim nächsten Abruf. Der jüngste Stand je Gerät bleibt immer. Den FortiAnalyzer kannst du schon eintragen; er liefert später im Änderungsverlauf, wer etwas geändert hat. Lässt sich ein Gerät dreimal hintereinander nicht abrufen, meldet die Glocke das den Admins.",
+              },
+              {
+                kind: "text",
+                text: "Unter „Prüfregeln“ schaltest du einzelne Regeln ab, trägst schützenswerte Zonen ein (Namen von Interfaces oder Zonen, auf allen Geräten gleich) und legst den Zeitraum für „keine Treffer“ und „unbenutzt“ fest (Vorgabe 90 Tage). Jede Änderung steht im Audit.",
               },
             ],
             links: [{ to: "/verwaltung/fortigate", label: "Zur Verwaltung › FortiGate" }],

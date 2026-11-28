@@ -35,9 +35,11 @@ from werkbank.modules.monitoring.fortigate.config import (
     RETENTION_MAX,
     RETENTION_MIN,
     device_config,
+    load_options,
     load_settings,
     stored,
 )
+from werkbank.modules.monitoring.fortigate.findings import RULES, UNUSED_DAYS
 from werkbank.modules.monitoring.fortigate.models import FgDevice
 
 router = APIRouter(prefix="/api/admin/settings/fortigate")
@@ -212,6 +214,8 @@ def put_settings(
                 "adom": body.analyzer_adom.strip() or ADOM_DEFAULT,
                 "key_encrypted": key,
             },
+            # Prüfregeln haben eigene Speicherung (PUT …/rules) und bleiben erhalten
+            "rules": previous.get("rules") or {},
         },
         user.user_id,
     )
@@ -379,3 +383,87 @@ def test_device(
     if failure is not None or result is None:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=failure)
     return result
+
+
+# --- Prüfregeln der Befunde ----------------------------------------------------------------
+
+ZONE_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9 ._:/-]{0,34}$"
+
+
+class RuleOut(BaseModel):
+    code: str
+    severity: str
+    title: str
+    description: str
+    active: bool
+
+
+class RulesOut(BaseModel):
+    rules: list[RuleOut]
+    sensitive: list[str]
+    unused_days: int
+    unused_days_options: list[int]
+
+
+class RulesIn(BaseModel):
+    disabled: list[Annotated[str, Field(max_length=40)]] = Field(default=[], max_length=20)
+    sensitive: list[Annotated[str, Field(pattern=ZONE_PATTERN)]] = Field(default=[], max_length=50)
+    unused_days: int
+
+
+def _rules_out(db: DbDep) -> RulesOut:
+    options = load_options(db)
+    return RulesOut(
+        rules=[
+            RuleOut(
+                code=rule.code,
+                severity=rule.severity,
+                title=rule.title,
+                description=rule.description,
+                active=options.active(rule.code),
+            )
+            for rule in RULES
+        ],
+        sensitive=sorted(options.sensitive),
+        unused_days=options.unused_days,
+        unused_days_options=list(UNUSED_DAYS),
+    )
+
+
+@router.get("/rules")
+def get_rules(user: AdminUser, db: DbDep) -> RulesOut:
+    return _rules_out(db)
+
+
+@router.put("/rules")
+def put_rules(request: Request, body: RulesIn, user: AdminUser, db: DbDep) -> RulesOut:
+    """Regeln ein- und ausschalten, schützenswerte Zonen und Zeitraum für „ungenutzt“."""
+    codes = {rule.code for rule in RULES}
+    unknown = [code for code in body.disabled if code not in codes]
+    if unknown:
+        raise HTTPException(status_code=422, detail="Diese Regel gibt es nicht.")
+    if body.unused_days not in UNUSED_DAYS:
+        raise HTTPException(status_code=422, detail="Diesen Zeitraum gibt es nicht.")
+    before = load_options(db)
+    data = dict(stored(db))
+    sensitive = sorted({name.strip() for name in body.sensitive if name.strip()})
+    disabled = sorted(set(body.disabled))
+    data["rules"] = {"disabled": disabled, "sensitive": sensitive, "unused_days": body.unused_days}
+    set_setting(db, FORTIGATE_KEY, data, user.user_id)
+    _audit(
+        db,
+        request,
+        user,
+        "regeln_geaendert",
+        FORTIGATE_KEY,
+        {
+            "abgeschaltet_vorher": sorted(before.disabled),
+            "abgeschaltet": disabled,
+            "zonen_vorher": sorted(before.sensitive),
+            "zonen": sensitive,
+            "tage_vorher": before.unused_days,
+            "tage": body.unused_days,
+        },
+    )
+    db.commit()
+    return _rules_out(db)

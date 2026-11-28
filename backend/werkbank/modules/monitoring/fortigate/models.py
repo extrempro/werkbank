@@ -1,6 +1,7 @@
 """Tabellen für FortiGate. Die Werkbank liest die Firewalls nur; gespeichert wird die
 Konfiguration je Gerät (nur wenn sie sich geändert hat) und der letzte Laufzeitstand."""
 
+import uuid
 from datetime import datetime
 from typing import Any
 
@@ -81,3 +82,39 @@ class FgUnused(Base):
     kind: Mapped[str] = mapped_column(String(20), primary_key=True)
     name: Mapped[str] = mapped_column(String(255), primary_key=True)
     since: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class FgFinding(Base):
+    """Seit wann ein Befund besteht (für „seit“ und die Glocke). Verschwindet ein Befund, fällt
+    der Eintrag weg; taucht er wieder auf, gilt er als neu."""
+
+    __tablename__ = "mon_fg_findings"
+
+    # „Gerät|Regel|Gegenstand“, siehe findings.Finding.key
+    key: Mapped[str] = mapped_column(String(600), primary_key=True)
+    device: Mapped[str] = mapped_column(String(80), index=True)
+    code: Mapped[str] = mapped_column(String(40))
+    severity: Mapped[str] = mapped_column(String(10))
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class FgException(Base):
+    """Bewusst hingenommener Befund mit Begründung. Fällt weg, wenn die Frist abläuft oder sich
+    der Gegenstand ändert (anderer Fingerabdruck)."""
+
+    __tablename__ = "mon_fg_exceptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Wie FgFinding.key
+    key: Mapped[str] = mapped_column(String(600), unique=True)
+    device: Mapped[str] = mapped_column(String(80))
+    code: Mapped[str] = mapped_column(String(40))
+    subject: Mapped[str] = mapped_column(String(500))
+    label: Mapped[str] = mapped_column(String(300))
+    digest: Mapped[str] = mapped_column(String(64))
+    reason: Mapped[str] = mapped_column(String(500))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

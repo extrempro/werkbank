@@ -10,6 +10,12 @@ from sqlalchemy.orm import Session
 from werkbank.config import Settings
 from werkbank.core.app_settings import FORTIGATE_KEY, decrypt_secret, get_setting
 from werkbank.modules.monitoring.fortigate.client import DeviceConfig
+from werkbank.modules.monitoring.fortigate.findings import (
+    RULES_BY_CODE,
+    UNUSED_DAYS,
+    UNUSED_DAYS_DEFAULT,
+    Options,
+)
 from werkbank.modules.monitoring.fortigate.models import FgDevice
 
 INTERVALS = (15, 30, 60, 120, 240)
@@ -84,3 +90,21 @@ def months_ago(now: datetime, months: int) -> datetime:
         except ValueError:
             continue
     return now.replace(year=year, month=month, day=28)
+
+
+def load_options(db: Session) -> Options:
+    """Einstellungen der Befunde: abgeschaltete Regeln, schützenswerte Zonen, Zeitraum."""
+    raw = stored(db).get("rules")
+    data: dict[str, Any] = raw if isinstance(raw, dict) else {}
+    disabled = data.get("disabled")
+    sensitive = data.get("sensitive")
+    days = data.get("unused_days")
+    return Options(
+        disabled=frozenset(str(code) for code in disabled or [] if str(code) in RULES_BY_CODE)
+        if isinstance(disabled, list)
+        else frozenset(),
+        sensitive=frozenset(str(name) for name in sensitive or [] if name)
+        if isinstance(sensitive, list)
+        else frozenset(),
+        unused_days=days if days in UNUSED_DAYS else UNUSED_DAYS_DEFAULT,
+    )

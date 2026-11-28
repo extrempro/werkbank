@@ -18509,6 +18509,38 @@ textarea.field-control {
   gap: 4px 20px;
 }
 
+.fg-findings {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.85rem;
+}
+
+.fg-detail-findings ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.fg-detail-findings h3,
+.fg-exception h3 {
+  font-size: 1rem;
+  margin: 16px 0 8px;
+}
+
+.fg-exception {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--farbe-rand);
+}
+
+.fg-exception .button {
+  justify-self: start;
+}
+
 .fg-cleanup {
   align-items: center;
   flex-wrap: wrap;

@@ -4,10 +4,13 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import quote
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from werkbank.core.audit import write_audit
+from werkbank.core.models import User
 from werkbank.modules.monitoring.fortigate.analysis import (
     KINDS,
     Query,
@@ -27,7 +30,23 @@ from werkbank.modules.monitoring.fortigate.fabric import (
     device_role,
     object_state,
 )
-from werkbank.modules.monitoring.fortigate.models import FgDevice, FgRun, FgSnapshot, FgUnused
+from werkbank.modules.monitoring.fortigate.findings import (
+    RULES,
+    SEVERITIES,
+    Finding,
+    Options,
+    object_findings,
+    policy_findings,
+    unused_finding,
+)
+from werkbank.modules.monitoring.fortigate.models import (
+    FgDevice,
+    FgException,
+    FgFinding,
+    FgRun,
+    FgSnapshot,
+    FgUnused,
+)
 from werkbank.modules.monitoring.fortigate.unused import UNUSED_KINDS, is_default, unused
 
 
@@ -401,3 +420,200 @@ def unused_rows(
         out.append(entry)
     out.sort(key=lambda e: (e["kind"], e["name"].lower()))
     return out
+
+
+# --- Befunde -------------------------------------------------------------------------------
+
+
+def current_findings(
+    db: Session, rows_state: list[DeviceState], options: Options, now: datetime
+) -> list[Finding]:
+    """Alle Befunde aus den jüngsten Ständen (ohne Rücksicht auf Ausnahmen)."""
+    out: list[Finding] = []
+    unused_by_device: dict[str, list[str]] = {}
+    if options.active("unused_objects"):
+        for entry in unused_rows(db, rows_state, min_days=options.unused_days, now=now):
+            for name in entry["devices"]:
+                unused_by_device.setdefault(name, []).append(f"{entry['kind']}:{entry['name']}")
+    for state in rows_state:
+        if state.snapshot is None:
+            continue
+        name = state.device.name
+        out.extend(
+            policy_findings(
+                name,
+                state.config,
+                state.runtime,
+                options,
+                now=now,
+                observed_since=state.device.created_at,
+            )
+        )
+        extra = unused_finding(name, unused_by_device.get(name, []), options)
+        if extra is not None:
+            out.append(extra)
+    _, sync_states = _sync_rows(rows_state)
+    out.extend(object_findings(sync_states, options))
+    return out
+
+
+def exception_active(exception: FgException, finding: Finding, now: datetime) -> bool:
+    return exception.digest == finding.digest and (
+        exception.expires_at is None or exception.expires_at > now
+    )
+
+
+def track_findings(db: Session, options: Options, now: datetime) -> None:
+    """Nach dem Abruf: merkt sich neue Befunde (für „seit“ und die Glocke), vergisst
+    verschwundene und entfernt Ausnahmen, deren Frist abgelaufen ist oder deren Gegenstand sich
+    geändert hat oder weg ist. Das Entfernen steht im Audit."""
+    rows_state = states(db)
+    current = {f.key: f for f in current_findings(db, rows_state, options, now)}
+    known = {row.key: row for row in db.scalars(select(FgFinding))}
+    gone = [key for key in known if key not in current]
+    if gone:
+        db.execute(delete(FgFinding).where(FgFinding.key.in_(gone)))
+    for key, finding in current.items():
+        if key not in known:
+            db.add(
+                FgFinding(
+                    key=key[:600],
+                    device=finding.device,
+                    code=finding.code,
+                    severity=finding.severity,
+                    first_seen=now,
+                )
+            )
+    evaluated = {state.device.name for state in rows_state if state.snapshot is not None}
+    for exception in db.scalars(select(FgException)):
+        match = current.get(exception.key)
+        reason = None
+        if exception.expires_at is not None and exception.expires_at <= now:
+            reason = "frist_abgelaufen"
+        elif match is not None and match.digest != exception.digest:
+            reason = "gegenstand_geaendert"
+        elif (
+            match is None
+            and options.active(exception.code)
+            and (exception.device == "" or exception.device in evaluated)
+        ):
+            reason = "befund_entfallen"
+        if reason is None:
+            continue
+        write_audit(
+            db,
+            module="monitoring",
+            action="fortigate.ausnahme_entfernt",
+            object_type="fortigate_ausnahme",
+            object_id=str(exception.id),
+            details={"grund": reason, "regel": exception.code, "geraet": exception.device},
+        )
+        db.delete(exception)
+
+
+def finding_link(finding: Finding) -> str:
+    device = quote(finding.device, safe="")
+    if finding.policy_id is not None:
+        selection = quote(f"{finding.device}:{finding.policy_id}", safe="")
+        return (
+            f"/monitoring/fortigate/policies?geraet={device}&q=%23{finding.policy_id}"
+            f"&auswahl={selection}"
+        )
+    if finding.code == "unused_objects":
+        return f"/monitoring/fortigate/unbenutzt?geraet={device}"
+    kind, _, name = finding.subject.partition(":")
+    name = quote(name, safe="")
+    return f"/monitoring/fortigate/objekte?art={kind}&q={name}&auswahl={name}"
+
+
+def findings(
+    db: Session,
+    options: Options,
+    now: datetime,
+    *,
+    severity: str | None = None,
+    device: str | None = None,
+    code: str | None = None,
+    excepted: bool = False,
+) -> dict[str, Any]:
+    """Befunde für die Seite: Zahlen je Stufe, Liste mit Ausnahmen, Regeln und Geräte."""
+    rows_state = states(db)
+    items = current_findings(db, rows_state, options, now)
+    since = {row.key: row.first_seen for row in db.scalars(select(FgFinding))}
+    exceptions = {row.key: row for row in db.scalars(select(FgException))}
+    names = {
+        user.id: user.display_name
+        for user in db.scalars(
+            select(User).where(
+                User.id.in_([e.created_by for e in exceptions.values() if e.created_by])
+            )
+        )
+    }
+    counts = {key: 0 for key in SEVERITIES}
+    excepted_count = 0
+    rows: list[dict[str, Any]] = []
+    for finding in items:
+        exception = exceptions.get(finding.key)
+        active = exception is not None and exception_active(exception, finding, now)
+        if active:
+            excepted_count += 1
+        else:
+            counts[finding.severity] += 1
+        if active != excepted:
+            continue
+        if severity and finding.severity != severity:
+            continue
+        if device and finding.device != device:
+            continue
+        if code and finding.code != code:
+            continue
+        rows.append(
+            {
+                "key": finding.key,
+                "code": finding.code,
+                "rule": finding.rule.title,
+                "severity": finding.severity,
+                "device": finding.device,
+                "label": finding.label,
+                "detail": finding.detail,
+                "policy_id": finding.policy_id,
+                "since": since.get(finding.key),
+                "link": finding_link(finding),
+                "exception": {
+                    "id": exception.id,
+                    "reason": exception.reason,
+                    "expires_at": exception.expires_at,
+                    "created_at": exception.created_at,
+                    "created_by": names.get(exception.created_by, "")
+                    if exception.created_by
+                    else "",
+                }
+                if exception is not None and active
+                else None,
+            }
+        )
+    order = {key: index for index, key in enumerate(SEVERITIES)}
+    rows.sort(key=lambda r: (order[r["severity"]], r["device"], str(r["label"]).lower()))
+    return {
+        "rows": rows,
+        "counts": counts,
+        "excepted": excepted_count,
+        "devices": [state.device.name for state in rows_state],
+        "rules": [
+            {
+                "code": rule.code,
+                "severity": rule.severity,
+                "title": rule.title,
+                "description": rule.description,
+                "active": options.active(rule.code),
+            }
+            for rule in RULES
+        ],
+    }
+
+
+def finding_by_key(db: Session, options: Options, now: datetime, key: str) -> Finding | None:
+    for finding in current_findings(db, states(db), options, now):
+        if finding.key == key:
+            return finding
+    return None

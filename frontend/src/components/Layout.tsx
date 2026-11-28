@@ -23,6 +23,7 @@ import {
   MONITORING_FORTIGATE_PATH,
   MONITORING_FORTIGATE_POLICIES_PATH,
   MONITORING_FORTIGATE_UNUSED_PATH,
+  MONITORING_FORTIGATE_FINDINGS_PATH,
   ADMIN_MAIL_PATH,
   ADMIN_PATH,
   ADMIN_PERMISSIONS_PATH,
@@ -87,6 +88,7 @@ import { HandbookPage } from "../pages/HandbookPage";
 import { DeviceAssociationPage } from "../modules/devices/DeviceAssociationPage";
 import { FortigateAdminPage } from "../modules/monitoring/fortigate/FortigateAdminPage";
 import { FortigateUnusedPage } from "../modules/monitoring/fortigate/FortigateUnusedPage";
+import { FortigateFindingsPage } from "../modules/monitoring/fortigate/FortigateFindingsPage";
 import {
   FortigateObjectsPage,
   FortigateOverviewPage,
@@ -641,6 +643,8 @@ export function Layout({ me }: LayoutProps) {
     page = <FortigateObjectsPage />;
   } else if (path === MONITORING_FORTIGATE_UNUSED_PATH && current) {
     page = <FortigateUnusedPage />;
+  } else if (path === MONITORING_FORTIGATE_FINDINGS_PATH && current) {
+    page = <FortigateFindingsPage />;
   } else if (path === ADMIN_FORTIGATE_PATH && current) {
     page = <FortigateAdminPage />;
   } else if (path === BUDGET_PATH && current) {

@@ -140,6 +140,11 @@ KINDS: dict[str, KindInfo] = {
         "Eine FortiGate lässt sich mehrmals hintereinander nicht abrufen",
         (Role.WERKBANK_ADMIN,),
     ),
+    "monitoring.fortigate_befund": KindInfo(
+        "IT-Monitoring",
+        "Neuer Befund der Stufe hoch oder mittel bei einer FortiGate",
+        (Role.FORTIGATE_READER,),
+    ),
     "monitoring.zabbix_dienstkonto": KindInfo(
         "IT-Monitoring",
         "Token für Zabbix läuft ab oder die Rolle des Dienstkontos erlaubt zu viel",

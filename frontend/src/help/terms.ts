@@ -217,6 +217,21 @@ export const HELP = {
     text: "Seit wann die Werkbank das Objekt als unbenutzt sieht. Gezählt wird erst ab dem Einbau dieser Funktion, nicht rückwirkend.",
     topic: ["it-monitoring", "fortigate-unbenutzt"],
   },
+  "fortigate.befund-stufe": {
+    term: "Stufe eines Befunds",
+    text: "Hoch heißt: Die Policy öffnet viel mehr als nötig. Mittel und Hinweis zeigen Dinge, die du prüfen und aufräumen solltest.",
+    topic: ["it-monitoring", "fortigate-befunde"],
+  },
+  "fortigate.ausnahme": {
+    term: "Ausnahme",
+    text: "Ein Befund, den du bewusst hinnimmst, mit Begründung und Frist. Ändert sich die Policy oder das Objekt, gilt die Ausnahme nicht mehr.",
+    topic: ["it-monitoring", "fortigate-befunde"],
+  },
+  "fortigate.schuetzenswert": {
+    term: "Schützenswerte Zone",
+    text: "Interfaces oder Zonen, in denen jede erlaubte Verbindung protokolliert werden soll. Fehlt das Protokoll, gibt es einen Befund der Stufe hoch.",
+    topic: ["it-monitoring", "fortigate-einrichten"],
+  },
   "fortigate.verwendet": {
     term: "Verwendet",
     text: "So oft steht das Objekt direkt in Policies und Gruppen, über alle Geräte. Policies, die es über eine Gruppe nutzen, stehen in der Detailansicht.",
@@ -574,6 +589,7 @@ export const PAGE_HELP: Readonly<Record<string, readonly TopicRef[]>> = {
   "/monitoring/fortigate/policies": [["it-monitoring", "fortigate-policies"]],
   "/monitoring/fortigate/objekte": [["it-monitoring", "fortigate-objekte"]],
   "/monitoring/fortigate/unbenutzt": [["it-monitoring", "fortigate-unbenutzt"]],
+  "/monitoring/fortigate/befunde": [["it-monitoring", "fortigate-befunde"]],
   "/verwaltung/fortigate": [["it-monitoring", "fortigate-einrichten"]],
   "/doku": [["doku", "seiten"]],
   "/doku/verwaltung": [["doku", "verwaltung"]],
